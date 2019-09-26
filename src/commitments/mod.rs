@@ -20,13 +20,13 @@
 ///! must be extended to cover sign-to-contract scheme, Schnorr's signatures, multisig outputs etc
 
 use bitcoin::{Transaction, Script};
+use bitcoin::util::key::PublicKey as BitcoinPublicKey;
+use bitcoin::util::contracthash::{Template, ScriptPubkeyType, ScriptPubkeyType::*, WitnessScriptVersion};
 use secp256k1::PublicKey;
 use hashes::Hash as HashTrait;
 
-use crate::common::{OutputType, WitnessScriptVersion};
-
-/// Return values identifying result of commitment precence check
 #[derive(Debug, Clone)]
+/// Return values identifying result of commitment precence check
 pub enum CommitmentPresence {
     /// Commitment with the given parameters was found in the corresponding transaction output
     Present,
@@ -36,32 +36,31 @@ pub enum CommitmentPresence {
 
     /// There is no support for cryptographic commitments to the output type under the given
     /// output number
-    WrongOutput(OutputType),
+    WrongOutput(ScriptPubkeyType),
 
     /// Commitment with the given parameters was not found in the corresponding transaction output
     NoCommitment
 }
 
 #[derive(Debug, Clone)]
+/// Cryptographic commitment types
 pub enum Commitment<HT: HashTrait> {
     Pay2Contract(String, HT, PublicKey),
     OpReturn(String, HT)
 }
 
-///
-
 impl<HT: HashTrait> Commitment<HT> {
-    pub fn all_supported_output_types() -> Vec<OutputType> {
-        return vec![OutputType::P2PKH, OutputType::P2WPH(WitnessScriptVersion::V0),
-                    OutputType::P2WPH(WitnessScriptVersion::LegacyP2SH), OutputType::OpReturn];
+    pub fn all_supported_output_types() -> Vec<ScriptPubkeyType> {
+        return vec![P2PKH, P2WPKH(WitnessScriptVersion::V0),
+                    P2WPKH(WitnessScriptVersion::LegacyP2SH), OpReturn];
     }
 
-    pub fn supported_output_types(&self) -> Vec<OutputType> {
+    pub fn supported_output_types(&self) -> Vec<ScriptPubkeyType> {
         return match self {
-            Commitment::Pay2Contract(_,_,_) => vec![OutputType::P2PKH,
-                                             OutputType::P2WPH(WitnessScriptVersion::V0),
-                                             OutputType::P2WPH(WitnessScriptVersion::LegacyP2SH)],
-            Commitment::OpReturn(_,_) => vec![OutputType::OpReturn],
+            Commitment::Pay2Contract(_,_,_) => vec![P2PKH,
+                                                    P2WPKH(WitnessScriptVersion::V0),
+                                                    P2WPKH(WitnessScriptVersion::LegacyP2SH)],
+            Commitment::OpReturn(_,_) => vec![OpReturn],
         }
     }
 
@@ -70,12 +69,26 @@ impl<HT: HashTrait> Commitment<HT> {
             return CommitmentPresence::NoOutput
         }
         match self {
-            Commitment::Pay2Contract(tag, hash, pubkey) => CommitmentPresence::Present,
-            Commitment::OpReturn(tag, hash) => CommitmentPresence::Present,
+            Commitment::Pay2Contract(tag, hash, pubkey) => {
+                CommitmentPresence::Present
+            },
+            Commitment::OpReturn(tag, hash) => {
+                CommitmentPresence::Present
+            },
         }
     }
 
-    pub fn script_sig(&self) -> Script {
-        unimplemented!()
+    pub fn script_pubkey(&self) -> Script {
+        match self {
+            Commitment::Pay2Contract(tag, hash, pubkey) => {
+                let template = Template::for_scriptpubkey_type(P2PKH).unwrap();
+                let bitcoin_pk = BitcoinPublicKey{ compressed: true, key: *pubkey };
+                template.to_script(&[bitcoin_pk][..])
+            },
+            Commitment::OpReturn(tag, hash) => {
+                let template = Template::for_scriptpubkey_type(OpReturn).unwrap();
+                template.to_script(&[])
+            },
+        }.unwrap()
     }
 }

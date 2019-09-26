@@ -13,9 +13,9 @@ name = "lbpbp"
 path = "src/lib.rs"
 
 [dependencies]
-bitcoin = "~0.18.0"
+bitcoin = { git = "https://github.com/pandoracore/rust-bitcoin.git", branch = "develop" }
 bitcoin_hashes = { git = "https://github.com/pandoracore/bitcoin_hashes.git", branch = "hashnewtype-fix" }
 
 [dependencies.secp256k1]
-version = "~0.12.0" # We require this version because of compatibility issues with bitcoin 0.18.0
+version = "0.15.0"
 features = [ "rand" ]
