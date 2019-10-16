@@ -17,18 +17,15 @@
 ///! support must be extended to cover sign-to-contract scheme, Schnorr's signatures etc
 ///!
 ///! To use, first implement `Committable` trait for the data structure to which you'd like commit to.
-///! Define which of the provided commitment schemes you plan to use and return corresponding
-///! `CommitmentSource` type containing all data necessary for constructing the actual commitment.
-///! Then use corresponding `CommitmentEngine` to produce `RevealData`-typed structure.
+///! Define which of the provided commitment schemes you plan to use and consruct corresponding
+///! `CommitmentSource` type containing all data necessary for constructing the actual commitment,
+///! for instance implementing trait `From` for CommitmentSource-derived type on some source data
+///! type. Then use corresponding `CommitmentEngine` to produce `RevealData`-typed structure.
 ///! From the reveal data you can both generate the actual commitment with `commit` function or
 ///! verify existing commitment with `verify` function.
 
 /// In order to commit to some data the data structure must implement this trait
-pub trait Committable<CS: CommitmentSource> {
-
-    /// Produces CommitmentSource that can be used in the commitment procedure
-    fn get_commitment_source(&self) -> &CS;
-}
+pub trait Committable<CS: CommitmentSource> {}
 
 /// Data structure containing all necessary information for producing deterministic commitment
 pub trait CommitmentSource {}

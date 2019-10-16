@@ -17,20 +17,22 @@ use bitcoin::hashes::{sha256, HmacEngine, HashEngine, Hmac, Hash};
 use crate::commitments::base::*;
 
 /// Data structure for elliptic curve-based commitments from LNPBPS-0001
-pub struct TweakSource {
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct TweakSource<'a> {
     /// Protocol tag
     pub protocol: &'static str,
 
     /// Message to commit to
-    pub message: Vec<u8>,
+    pub message: &'a [u8],
 }
 
-impl CommitmentSource for TweakSource {}
+impl<'a> CommitmentSource for TweakSource<'a> {}
 
 impl CommitTarget for PublicKey {}
 
 pub type TweakFactor = sha256::Hash;
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TweakData {
     pub ec: Secp256k1<All>,
     pub factor: TweakFactor,
@@ -63,9 +65,10 @@ impl TweakData {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct TweakingEngine(PublicKey);
 
-impl CommitmentEngine<PublicKey, TweakSource, TweakData> for TweakingEngine {
+impl<'a> CommitmentEngine<PublicKey, TweakSource<'a>, TweakData> for TweakingEngine {
     fn reveal(&self, src: &TweakSource) -> TweakData {
         let ec = Secp256k1::new();
 
@@ -104,5 +107,32 @@ impl CommitmentEngine<PublicKey, TweakSource, TweakData> for TweakingEngine {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hashes::core::str::FromStr;
+    use bitcoin::hashes::hex::ToHex;
+
+    impl<'a> From<&'a str> for TweakSource<'a> {
+        fn from(msg: &'a str) -> Self {
+            TweakSource {
+                protocol: "str",
+                message: msg.as_bytes()
+            }
+        }
+    }
+
+    #[test]
+    fn commit() {
+        let original_pubkey = PublicKey::from_str("02d1d80235fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679cceb").unwrap();
+        let engine = TweakingEngine(original_pubkey);
+        let msg = "Some message";
+        let tweak = engine.reveal(&TweakSource::from(msg));
+        let commitment = tweak.commit();
+        println!("Tweak: {:?}", tweak);
+        println!("Tweaked public key with commitment: {}", commitment.to_hex());
     }
 }
