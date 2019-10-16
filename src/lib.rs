@@ -14,5 +14,5 @@
 extern crate bitcoin;
 extern crate bitcoin_hashes as hashes;
 
-pub mod common;
 pub mod commitments;
+pub mod common;
