@@ -11,15 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::any::Any;
-
 use secp256k1::{rand::random, PublicKey, SecretKey, Secp256k1, All};
 use bitcoin::hashes::{sha256, HmacEngine, HashEngine, Hmac, Hash};
 
 use crate::commitments::base::*;
 
 /// Data structure for elliptic curve-based commitments from LNPBPS-0001
-pub struct TweakCommitmentSource {
+pub struct TweakSource {
     /// Protocol tag
     pub protocol: &'static str,
 
@@ -27,11 +25,7 @@ pub struct TweakCommitmentSource {
     pub message: Vec<u8>,
 }
 
-impl CommitmentSource for TweakCommitmentSource {
-    fn as_any(&self) -> &(dyn Any) {
-        self
-    }
-}
+impl CommitmentSource for TweakSource {}
 
 impl CommitTarget for PublicKey {}
 
@@ -71,13 +65,8 @@ impl TweakData {
 
 pub struct TweakingEngine(PublicKey);
 
-impl CommitmentEngine<PublicKey, TweakData> for TweakingEngine {
-    fn reveal(&self, src: &CommitmentSource) -> TweakData {
-        let a: Box<&dyn CommitmentSource> = Box::new(src);
-        let src: &TweakCommitmentSource = match a.as_any().downcast_ref::<TweakCommitmentSource>() {
-            Some(b) => b,
-            None => panic!("src must be of TweakCommitmentSource type"),
-        };
+impl CommitmentEngine<PublicKey, TweakSource, TweakData> for TweakingEngine {
+    fn reveal(&self, src: &TweakSource) -> TweakData {
         let ec = Secp256k1::new();
 
         // 1. Compute HMAC-SHA256 of the `msg` and `P`: `hmac = HMAC_SHA256(msg, P)`

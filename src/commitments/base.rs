@@ -11,8 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::any::Any;
-
 ///! Implementation of different cryptographic commitment primitives, focused around LNPBPS-0001
 ///! (collision-resistant elliptic curve-based commitments). Also covers more standard hash
 ///! commitments. In the future, with the addition of new LNPBPS for cryptographic commitments the
@@ -33,16 +31,14 @@ pub trait Committable<CS: CommitmentSource> {
 }
 
 /// Data structure containing all necessary information for producing deterministic commitment
-pub trait CommitmentSource: Any {
-    fn as_any(&self) -> &(dyn Any);
-}
+pub trait CommitmentSource {}
 
 /// Any structure which may contain cryptographic commitment must implement this trait
 pub trait CommitTarget {}
 
 /// Trait for preparing structured data for commitment and verification from some source data
-pub trait CommitmentEngine<CT: CommitTarget, RD: RevealData<CT>> {
-    fn reveal(&self, src: &CommitmentSource) -> RD;
+pub trait CommitmentEngine<CT: CommitTarget, CS: CommitmentSource, RD: RevealData<CT>> {
+    fn reveal(&self, src: &CS) -> RD;
 }
 
 /// Trait that must be implemented by a structured data that have to be committed to
