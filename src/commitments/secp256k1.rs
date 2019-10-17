@@ -31,17 +31,17 @@
 //! ```
 //!
 //! After this, define an original public key you would like to use for a commitment and create
-//! and instance of `TweakingEngine` using this key. Method `engine.reveal` will create the data
-//! for public key tweaking procedure (`TweakData`), including the tweaking `factor` and random
-//! `nonce`. These data can be used later for both commit phase (public key will be tweaked with
-//! these data creating an actual commitment) and reveal phase (i.e. they will allow any third
+//! and instance of `TweakingEngine` using this key. Method `engine.construct` will create the data
+//! for public key tweaking procedure (`TweakCommitment`), including the tweaking `factor` and
+//! random `nonce`. These data can be used later for both commit phase (public key will be tweaked
+//! with these data creating an actual commitment) and reveal phase (i.e. they will allow any third
 //! party to verify the actual commitment):
 //!
 //! ```rust
 //! let original_pubkey = PublicKey::from_str("02d1d80235fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679cceb").unwrap();
 //! let engine = TweakingEngine(original_pubkey);
 //! let msg = "Some message";
-//! let tweak = engine.reveal(&TweakSource::from(msg));
+//! let tweak = engine.construct(&TweakSource::from(msg));
 //! let commitment = tweak.commit();
 //! assert!()
 //! ```
@@ -83,10 +83,10 @@ pub type TweakFactor = sha256::Hash;
 /// and HMAC procedure over the source message from `TweakSource` with original public key coming
 /// from `TweakingEngine`, the original public key itself and a `nonce`. These data are sufficient
 /// to compute the tweaked version of both public and private keys – or to verify that an existing
-/// tweaked public key contain a commitment to message under given protocol from which `TweakData`
-/// was created.
+/// tweaked public key contain a commitment to message under given protocol from which `
+/// TweakCommitment` was created.
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct TweakData {
+pub struct TweakCommitment {
     /// Used elliptic curve family
     pub ec: Secp256k1<All>,
 
@@ -99,7 +99,7 @@ pub struct TweakData {
     /// 2. Prevent `factor` overflow beyond elliptoc-curve order
     ///
     /// It is present separately from the `factor` since w/o it the factor can't be reconstructed
-    /// from the original message, making `reveal` procedure impossible.
+    /// from the original message, making `construct` procedure impossible.
     pub nonce: u8,
     // FIXME: consider making random part a 32-bit number, to reduce probability of rainbow-table attacks
 
@@ -107,7 +107,7 @@ pub struct TweakData {
     pub key: PublicKey,
 }
 
-impl RevealData<PublicKey> for TweakData {
+impl CommitmentScheme<PublicKey> for TweakCommitment {
     /// Commitment procedure, which basically calls crate-internal `tweak_public` function
     /// tweaking the public key with a given factor
     fn commit(&self) -> PublicKey {
@@ -122,7 +122,7 @@ impl RevealData<PublicKey> for TweakData {
     }
 }
 
-impl TweakData {
+impl TweakCommitment {
     /// Tweaks original public key (stored in `key` field) producing commitment (tweaked key) by
     /// adding a second elliptic curve point created from a generator point multiplied by
     /// a tweaking `factor`.
@@ -148,18 +148,18 @@ impl TweakData {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct TweakingEngine(PublicKey);
 
-impl<'a> CommitmentEngine<PublicKey, TweakSource<'a>, TweakData> for TweakingEngine {
-    /// The function produces a tweaking factor and related data packed into the returned `TweakData`
-    /// type for a given source message and protocol information from it's `src` argument of
-    /// `TweakSource` type.
+impl<'a> CommitmentEngine<PublicKey, TweakSource<'a>, TweakCommitment> for TweakingEngine {
+    /// The function produces a tweaking factor and related data packed into the returned
+    /// `TweakCommitment` type for a given source message and protocol information from it's `src`
+    /// argument of `TweakSource` type.
     ///
-    /// The resulting `TweakData` can be used for producing the actual commitment to the tweak factor
-    /// in form of a tweaked public key (with `commit` method) -- or to verify some public key to
-    /// contain the commitment to the factor from the `TweakData` with `verify` method
+    /// The resulting `TweakCommitment` can be used for producing the actual commitment to the tweak
+    /// factor in form of a tweaked public key (with `commit` method) -- or to verify some public
+    /// key to contain the commitment to the factor from the `TweakCommitment` with `verify` method.
     ///
     /// The function implementation strictly follows the specification from
     /// [LNPBPS-0001](https://github.com/LNP-BP/lnpbps/blob/master/lnpbps-0001.md#Specification)
-    fn reveal(&self, src: &TweakSource) -> TweakData {
+    fn construct(&self, src: &TweakSource) -> TweakCommitment {
         let ec = Secp256k1::new();
 
         // 1. Compute HMAC-SHA256 of the `msg` and `P`: `hmac = HMAC_SHA256(msg, P)`
@@ -190,7 +190,7 @@ impl<'a> CommitmentEngine<PublicKey, TweakSource<'a>, TweakData> for TweakingEng
             // from step 3 with a different nonce
             let mut pk = self.0.clone();
             if pk.add_exp_assign(&ec, &factor[..]).is_ok() {
-                return TweakData {
+                return TweakCommitment {
                     ec,
                     factor: *factor,
                     nonce,
@@ -215,6 +215,7 @@ mod tests {
         }
     }
 
+    // TODO: Add other public key variants and tests covering use of different public keys
     fn get_public_key(index: usize) -> PublicKey {
         [
             PublicKey::from_str("02d1d80235fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679cceb").unwrap(),
@@ -243,25 +244,25 @@ mod tests {
         assert_eq!(src1.protocol, src2.protocol);
     }
 
-    /// `TweakEngine::reveal` must be a non-deterministic tweak-generation procedure due to the
+    /// `TweakEngine::construct` must be a non-deterministic tweak-generation procedure due to the
     /// presence of random `nonce`
     #[test]
-    fn reveal_nondeterministic() {
+    fn construct_nondeterministic() {
         let engine = TweakingEngine(get_public_key(0));
 
         let msg = "Some message";
         let src = TweakSource::from(msg);
-        let tweak1 = engine.reveal(&src);
-        let mut tweak2 = engine.reveal(&src);
+        let tweak1 = engine.construct(&src);
+        let mut tweak2 = engine.construct(&src);
         // There are 1/256 probability that both tweaks will be the same, so we need to avoid
         // occasional test failures due to this probability and re-compute the second tweak,
         // so the probability of two tweaks matching will be reduced to 1/(256^3), which is
         // sufficient to have stable test results
         if tweak1 == tweak2 {
-            tweak2 = engine.reveal(&src);
+            tweak2 = engine.construct(&src);
         }
         if tweak1 == tweak2 {
-            tweak2 = engine.reveal(&src);
+            tweak2 = engine.construct(&src);
         }
         // Here we check both equation function and each of the fields which must be non-equal
         assert_ne!(tweak1, tweak2);
@@ -271,17 +272,17 @@ mod tests {
         assert_eq!(tweak1.key, tweak2.key);
     }
 
-    /// `TweakEngine::reveal` must *always* produce unique tweaks for two distinct messages
+    /// `TweakEngine::construct` must *always* produce unique tweaks for two distinct messages
     #[test]
-    fn reveal_unique() {
+    fn construct_unique() {
         let engine = TweakingEngine(get_public_key(0));
 
         let msg1 = "Some message";
         let msg2 = "Some messagè";
         let src1 = TweakSource::from(msg1);
         let src2 = TweakSource::from(msg2);
-        let tweak1 = engine.reveal(&src1);
-        let tweak2 = engine.reveal(&src2);
+        let tweak1 = engine.construct(&src1);
+        let tweak2 = engine.construct(&src2);
         assert_ne!(tweak1, tweak2);
         assert_ne!(tweak1.factor, tweak2.factor);
         // But the original public key should still be the same (it's provided by the engine)
@@ -290,12 +291,12 @@ mod tests {
 
     /// The commitment must be verifiable given the same tweak data
     #[test]
-    fn commit_reveal() {
+    fn commit_verify() {
         let engine = TweakingEngine(get_public_key(0));
 
         let msg = "Some message";
         let src = TweakSource::from(msg);
-        let tweak = engine.reveal(&src);
+        let tweak = engine.construct(&src);
         let commitment = tweak.commit();
         assert!(tweak.verify(commitment));
     }
@@ -303,26 +304,26 @@ mod tests {
     /// The commitment must fail verification for a tweak data produced by some other message
     /// or having the different nonce
     #[test]
-    fn failed_reveal() {
+    fn failed_verify() {
         let engine = TweakingEngine(get_public_key(0));
 
         let msg1 = "Some message";
         let src1 = TweakSource::from(msg1);
-        let tweak1 = engine.reveal(&src1);
+        let tweak1 = engine.construct(&src1);
         let commitment = tweak1.commit();
 
         let msg2 = "Some messagè";
         let src2 = TweakSource::from(msg2);
-        let tweak2 = engine.reveal(&src2);
+        let tweak2 = engine.construct(&src2);
 
         assert!( !tweak2.verify(commitment) );
 
-        let mut tweak3 = engine.reveal(&src1);
+        let mut tweak3 = engine.construct(&src1);
         if tweak1 == tweak2 {
-            tweak3 = engine.reveal(&src1);
+            tweak3 = engine.construct(&src1);
         }
         if tweak1 == tweak2 {
-            tweak3 = engine.reveal(&src1);
+            tweak3 = engine.construct(&src1);
         }
 
         assert!( !tweak3.verify(commitment) );

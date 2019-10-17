@@ -17,7 +17,7 @@
 //! support must be extended to cover sign-to-contract scheme, Schnorr's signatures etc
 //!
 //! To use, first implement `Committable` trait for the data structure to which you'd like commit to.
-//! Define which of the provided commitment schemes you plan to use and consruct corresponding
+//! Define which of the provided commitment schemes you plan to use and construct corresponding
 //! `CommitmentSource` type containing all data necessary for constructing the actual commitment,
 //! for instance implementing trait `From` for CommitmentSource-derived type on some source data
 //! type. Then use corresponding `CommitmentEngine` to produce `RevealData`-typed structure.
@@ -34,14 +34,14 @@ pub trait CommitmentSource {}
 pub trait CommitTarget {}
 
 /// Trait for preparing structured data for commitment and verification from some source data
-pub trait CommitmentEngine<CT: CommitTarget, CS: CommitmentSource, RD: RevealData<CT>> {
+pub trait CommitmentEngine<CT: CommitTarget, CSRC: CommitmentSource, CS: CommitmentScheme<CT>> {
     /// Creates data in form of `RevealData` that is used for both commit and verify procedures.
     /// Takes `CommitmentSource`-enabled data source.
-    fn reveal(&self, src: &CS) -> RD;
+    fn construct(&self, src: &CSRC) -> CS;
 }
 
 /// Trait that must be implemented by a structured data that have to be committed to
-pub trait RevealData<CT: CommitTarget>: Sized {
+pub trait CommitmentScheme<CT: CommitTarget>: Sized {
     /// Commits to it's content returning the actual commitment supporting `CommitTarget` trait
     fn commit(&self) -> CT;
 
