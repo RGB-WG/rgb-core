@@ -1,28 +1,36 @@
-use bitcoin::{PublicKey, Transaction, TxOut};
-use crate::commitments::{base::*, secp256k1::*, script::*};
+// LNP/BP Rust Library
+// Written in 2019 by
+//     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
+//
+// To the extent possible under law, the author(s) have dedicated all
+// copyright and related and neighboring rights to this software to
+// the public domain worldwide. This software is distributed without
+// any warranty.
+//
+// You should have received a copy of the MIT License
+// along with this software.
+// If not, see <https://opensource.org/licenses/MIT>.
 
-impl CommitTarget for Transaction {}
+use bitcoin::{PublicKey, Transaction, Script};
+use crate::commitments::{base::*, secp256k1::*, txout::*};
 
-pub struct TxCommitment {
+pub struct TxContainer {
     pub tx: Transaction,
-    pub locator: VoutLocator,
+    pub redeem_script: Option<Script>,
+    pub vout: Option<u64>,
+    pub entropy: u32,
 }
 
-impl CommitmentScheme<Transaction> for TxCommitment {
-    fn commit(&self) -> Transaction {
-        unimplemented!()
-    }
-
-    fn verify(&self, tx: Transaction) -> bool {
-        unimplemented!()
-    }
+pub struct TxProofs {
+    pub redeem_script: Option<Script>,
+    pub original_pubkeys: Vec<PublicKey>,
+    pub entropy: u32,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct TxEngine(Transaction);
+impl CommitmentContainer for TxContainer {}
+impl CommitmentProofs for TxProofs {}
 
-impl<'a> CommitmentEngine<Transaction, TweakSource<'a>, TxCommitment> for TxEngine {
-    fn construct(&self, src: &TweakSource<'a>) -> TxCommitment {
-        unimplemented!()
-    }
+impl CommitmentEngine<TweakSource, TxContainer, TxProofs> for TweakEngine {
+    fn commit(&self, message: &TweakSource, container: &mut TxContainer) -> TxProofs { unimplemented!() }
+    fn verify(&self, message: &TweakSource, container: &TxContainer, proofs: &TxProofs) -> bool { unimplemented!() }
 }

@@ -16,5 +16,3 @@ extern crate bitcoin_hashes as hashes;
 
 pub mod commitments;
 pub mod common;
-pub mod vout_locator;
-pub mod sealgraph;
