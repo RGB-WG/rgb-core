@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 //! Library for Secp256k1 elliptic curve based collision-resistant commitments, implementing
-//! [LNPBPS-0001](https://github.com/LNP-BP/lnpbps/blob/master/lnpbps-0001.md)
+//! [LNPBPS-1](https://github.com/LNP-BP/lnpbps/blob/master/lnpbps-0001.md)
 //!
 //! In order to use, first implement `TweakSource` traid for your source data type, which you
 //! would like to commit to. `from` function must transform your custom data structure into
@@ -88,7 +88,7 @@ pub type TweakFactor = sha256::Hash;
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TweakCommitment {
     /// Used elliptic curve family
-    pub ec: Secp256k1<All>,
+    pub(crate) ec: Secp256k1<All>,
 
     /// Tweak factor created from `TweakSource` by tweaking procedure, unique for each `TweakSource`
     /// Non-deterministic, because it includes a `nonce` non-determinism.
@@ -96,12 +96,11 @@ pub struct TweakCommitment {
 
     /// Non-deterministic part for the tweak, generated randomly. Required for:
     /// 1. Reducing probability of rainbow-table attacks
-    /// 2. Prevent `factor` overflow beyond elliptoc-curve order
+    /// 2. Prevent `factor` overflow beyond elliptic-curve order
     ///
     /// It is present separately from the `factor` since w/o it the factor can't be reconstructed
     /// from the original message, making `construct` procedure impossible.
-    pub nonce: u8,
-    // FIXME: consider making random part a 32-bit number, to reduce probability of rainbow-table attacks
+    pub nonce: u16,
 
     /// The original (untweaked) public key, required for the verification procedure
     pub key: PublicKey,
@@ -158,7 +157,7 @@ impl<'a> CommitmentEngine<PublicKey, TweakSource<'a>, TweakCommitment> for Tweak
     /// key to contain the commitment to the factor from the `TweakCommitment` with `verify` method.
     ///
     /// The function implementation strictly follows the specification from
-    /// [LNPBPS-0001](https://github.com/LNP-BP/lnpbps/blob/master/lnpbps-0001.md#Specification)
+    /// [LNPBPS-1](https://github.com/LNP-BP/lnpbps/blob/master/lnpbps-0001.md#Specification)
     fn construct(&self, src: &TweakSource) -> TweakCommitment {
         let ec = Secp256k1::new();
 
@@ -172,21 +171,20 @@ impl<'a> CommitmentEngine<PublicKey, TweakSource<'a>, TweakCommitment> for Tweak
         let mut t = tag_hash.clone();
         t.extend(&tag_hash);
 
-        // TODO: Avoid unbonded loop; transform the return type into `Result` and return a error if it was impossible to find a proper nonce
-        loop {
-            // 3. Compute a random 8-bit nonce
-            let nonce: u8 = random();
+        for _ in 0..10 {
+            // 3. Compute a random nonce
+            let nonce: u16 = random();
 
-            // 4.  Compute tweaking string `s = t || SHA256('LNPBPS-0001') || hmac || n`
+            // 4.  Compute tweaking string `s = t || SHA256('LNPBPS-1') || hmac || n`
             let mut s = t.clone();
-            s.extend(&sha256::Hash::hash(b"LNPBPS-0001").to_vec());
+            s.extend(&sha256::Hash::hash(b"LNPBPS-1").to_vec());
             s.extend(&hmac_sha256[..].to_vec());
             s.extend(&vec![nonce]);
 
             // 5. Compute tweaking factor `h = SHA256(s)`
             let factor = &sha256::Hash::hash(&s);
 
-            // 6. If the factor value is equal of greater than the elliptic curve order repeat
+            // 6. If the addition procedure resulted in an infinity point, repeat
             // from step 3 with a different nonce
             let mut pk = self.0.clone();
             if pk.add_exp_assign(&ec, &factor[..]).is_ok() {
@@ -198,6 +196,10 @@ impl<'a> CommitmentEngine<PublicKey, TweakSource<'a>, TweakCommitment> for Tweak
                 }
             }
         }
+        panic!("""General Secp256k1 library failure: addition of different public key permanently
+                  produces point in infinity after 10 attempts; check the library and source code
+                  integrity
+                  """)
     }
 }
 
@@ -232,7 +234,7 @@ mod tests {
         assert_eq!(src1, src2);
     }
 
-    /// `TweakSource::from` must produce unique tweak for two slightnly-different messages
+    /// `TweakSource::from` must produce unique tweak for two slightly-different messages
     #[test]
     fn tweaksource_unique() {
         let msg1 = "Some message";
