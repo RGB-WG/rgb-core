@@ -18,12 +18,12 @@ Inputs: tweaked public key, hmac, message
 Output: true/false
 
 ```shell script
-$ lbx crecc-commit 02d1d80235fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679cceb "This is the message"
+$ lbx pubkey-commit 02d1d80235fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679cceb "This is the message"
 
 deadbeaf35fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679cceb
 35fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679ccebdeadbeaf
 
-$ lbx crecc-verify deadbeaf35fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679cceb \
+$ lbx pubkey-verify deadbeaf35fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679cceb \
 > 35fa5bba42e9612a7fe7cd74c6b2bf400c92d866f28d429846c679ccebdeadbeaf "This is the message"
 
 process exited with the code 0
