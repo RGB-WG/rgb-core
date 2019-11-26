@@ -14,3 +14,4 @@
 
 //! Common data types, structures and functions for LNPBPs
 
+pub mod raw_representable;

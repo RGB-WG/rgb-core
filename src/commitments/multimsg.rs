@@ -13,8 +13,8 @@
 
 use secp256k1::{PublicKey, Secp256k1, All};
 use bitcoin::hashes::sha256;
-use crate::commitments::base::*;
 
+/*
 pub struct MessageSource {
     pub msg: sha256::Hash,
     pub protocol: sha256::Hash,
@@ -39,3 +39,4 @@ impl CommitmentEngine<MultimsgSource, MultimsgContainer, MultimsgProofs> for Mul
     fn commit(&self, message: &MultimsgSource, container: &mut MultimsgContainer) -> MultimsgProofs { unimplemented!() }
     fn verify(&self, message: &MultimsgSource, container: &MultimsgContainer, proofs: &MultimsgProofs) -> bool { unimplemented!() }
 }
+*/

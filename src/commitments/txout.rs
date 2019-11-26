@@ -12,22 +12,3 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::{TxOut, Script, PublicKey};
-use crate::commitments::{base::*, secp256k1::*};
-
-pub struct TxoutContainer {
-    pub txout: TxOut,
-    pub redeem_script: Option<Script>,
-}
-
-pub struct TxoutProofs {
-    pub redeem_script: Option<Script>,
-    pub original_pubkeys: Vec<PublicKey>,
-}
-
-impl CommitmentContainer for TxoutContainer {}
-impl CommitmentProofs for TxoutProofs {}
-
-impl CommitmentEngine<TweakSource, TxoutContainer, TxoutProofs> for TweakEngine {
-    fn commit(&self, message: &TweakSource, container: &mut TxoutContainer) -> TxoutProofs { unimplemented!() }
-    fn verify(&self, message: &TweakSource, container: &TxoutContainer, proofs: &TxoutProofs) -> bool { unimplemented!() }
-}
