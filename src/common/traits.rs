@@ -13,11 +13,11 @@
 
 use std::ops::{Index, RangeFull};
 
-pub trait AsBytes: Index<RangeFull, Output = [u8]> {
+pub trait AsBytes: Eq + Index<RangeFull, Output = [u8]> {
     fn as_bytes(&self) -> &[u8];
 }
 
-impl<T> AsBytes for T where T: Index<RangeFull, Output = [u8]> {
+impl<T> AsBytes for T where T: Eq + Index<RangeFull, Output = [u8]> {
     fn as_bytes(&self) -> &[u8] { &self[..] }
 }
 

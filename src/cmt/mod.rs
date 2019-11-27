@@ -11,10 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod contained;
 pub mod committable;
 pub mod digests;
+pub mod pubkey;
 
-pub use contained::*;
 pub use committable::*;
 pub use digests::*;
+pub use pubkey::*;
