@@ -11,7 +11,23 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub trait Container: Clone + Eq {
+pub trait Wrapper<T: Clone> {
+    fn inner_ref(&self) -> &T;
+}
+
+#[macro_export]
+macro_rules! impl_wrapper {
+    ($type:ident, $inner:ident) => (
+        #[derive(Clone, PartialEq, Eq)]
+        pub struct $type($inner);
+        impl Wrapper<$inner> for $type {
+            #[inline]
+            fn inner_ref(&self) -> &$inner { &self.0 }
+        }
+    )
+}
+
+pub trait Container<T: Clone + Eq>: Wrapper<T> + Clone + Eq {
     type Message;
 
     fn commit(&mut self, msg: &Self::Message);

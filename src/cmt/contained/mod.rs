@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[macro_use]
 pub mod container;
 pub mod pubkey;
 pub mod txout;

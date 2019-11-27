@@ -12,3 +12,16 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::{TxOut, Script, PublicKey};
+
+use crate::common::AsBytes;
+use super::container::*;
+
+impl_wrapper!(TxoutCommitment, TxOut);
+
+impl Container<TxOut> for TxoutCommitment {
+    type Message = Box<dyn AsBytes>;
+
+    fn commit(&mut self, msg: &Self::Message) {
+
+    }
+}

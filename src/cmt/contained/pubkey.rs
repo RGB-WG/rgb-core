@@ -23,8 +23,9 @@ use std::convert::TryInto;
 use secp256k1::{PublicKey, Secp256k1, All};
 use bitcoin::hashes::{Hmac, HmacEngine, sha256, Hash, HashEngine};
 
+use crate::cmt::BitcoinTag;
 use crate::common::AsBytes;
-use super::{Container, super::BitcoinTag};
+use super::container::*;
 
 const TAG: &'static str = "LNPBP-1";
 static INIT: Once = Once::new();
@@ -33,10 +34,9 @@ static mut PREFIX: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct PubkeyCommitment(PublicKey);
+impl_wrapper!(PubkeyCommitment, PublicKey);
 
-impl Container for PubkeyCommitment {
+impl Container<PublicKey> for PubkeyCommitment {
     type Message = Box<dyn AsBytes>;
 
     fn commit(&mut self, msg: &Self::Message) {
