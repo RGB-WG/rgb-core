@@ -13,12 +13,12 @@
 
 use bitcoin::{TxOut, Script, PublicKey};
 
-use crate::common::AsBytes;
+use crate::common::*;
 use super::container::*;
 
 impl_wrapper!(TxoutCommitment, TxOut);
 
-impl Container<TxOut> for TxoutCommitment {
+impl Container for TxoutCommitment {
     type Message = Box<dyn AsBytes>;
 
     fn commit(&mut self, msg: &Self::Message) {

@@ -12,12 +12,9 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 pub mod contained;
-pub mod util;
 pub mod committable;
 pub mod digests;
 
 pub use contained::*;
-pub use util::*;
-
 pub use committable::*;
 pub use digests::*;

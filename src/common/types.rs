@@ -11,8 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::{sha256, Hash, Error};
+use bitcoin::hashes::{Hash, Error, sha256, sha256d, hash160};
 use std::ops::{Index, RangeFull};
+use bitcoin::Script;
+use secp256k1::PublicKey;
 
 pub struct BitcoinTag(sha256::Hash);
 

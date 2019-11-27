@@ -13,12 +13,12 @@
 
 use bitcoin::{PublicKey, Transaction, Script};
 
-use crate::common::AsBytes;
+use crate::common::*;
 use super::container::*;
 
 impl_wrapper!(TxCommitment, Transaction);
 
-impl Container<Transaction> for TxCommitment {
+impl Container for TxCommitment {
     type Message = Box<dyn AsBytes>;
 
     fn commit(&mut self, msg: &Self::Message) {

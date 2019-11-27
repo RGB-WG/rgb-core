@@ -14,7 +14,10 @@
 extern crate bitcoin;
 extern crate bitcoin_hashes as hashes;
 
+#[macro_use]
 pub mod common;
 pub mod cmt;
 pub mod cvp;
 pub mod state;
+
+pub use common::*;
