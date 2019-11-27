@@ -11,8 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod data;
-pub mod multimsg;
-
-pub use data::*;
-pub use multimsg::*;
+pub struct SplitData<ONCH, OFFCH> {
+    pub onchain: ONCH,
+    pub offchain: OFFCH,
+}
