@@ -11,9 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub trait Container: Clone + Eq {
+    type Message;
 
-//! Common data types, structures and functions for LNPBPs
+    fn commit(&mut self, msg: &Self::Message);
 
-pub mod traits;
-
-pub use traits::*;
+    fn verify(&self, msg: &Self::Message, origin: &Self) -> bool {
+        let mut origin = origin.clone();
+        origin.commit(msg);
+        origin == *self
+    }
+}

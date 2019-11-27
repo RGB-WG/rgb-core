@@ -11,9 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub mod container;
+pub mod pubkey;
+pub mod txout;
+pub mod tx;
 
-//! Common data types, structures and functions for LNPBPs
-
-pub mod traits;
-
-pub use traits::*;
+pub use container::*;
+pub use pubkey::*;
+pub use txout::*;
+pub use tx::*;

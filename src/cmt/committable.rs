@@ -1,7 +1,7 @@
 use std::ops::*;
-use crate::common::raw_representable::RawRepresentable;
+use crate::common::AsBytes;
 
-pub trait Committable<CMT: Sized + Eq + RawRepresentable> {
+pub trait Committable<CMT: Sized + Eq + AsBytes> {
     fn commit(&self) -> CMT;
     fn verify(&self, commitment: &CMT) -> bool { self.commit() == *commitment }
 }

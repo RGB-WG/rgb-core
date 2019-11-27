@@ -11,9 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::ops::{Index, RangeFull};
 
-//! Common data types, structures and functions for LNPBPs
+pub trait AsBytes: Index<RangeFull, Output = [u8]> {
+    fn as_bytes(&self) -> &[u8];
+}
 
-pub mod traits;
-
-pub use traits::*;
+impl<T> AsBytes for T where T: Index<RangeFull, Output = [u8]> {
+    fn as_bytes(&self) -> &[u8] { &self[..] }
+}

@@ -11,11 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod tag;
-pub mod committable;
-pub mod digests;
-pub mod container;
-pub mod pubkey;
-pub mod txout;
-pub mod tx;
 pub mod multimsg;
+
+pub use multimsg::*;

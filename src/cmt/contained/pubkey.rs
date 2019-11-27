@@ -17,16 +17,14 @@
 //! NB: The library works with `secp256k1::PublicKey` and `secp256k1::SecretKey` keys, not
 //! their wrapped bitcoin counterparts `bitcoin::PublickKey` and `bitcoin::PrivateKey`.
 
-use std::ops::{Index, RangeFull};
 use std::sync::Once;
 use std::convert::TryInto;
 
 use secp256k1::{PublicKey, Secp256k1, All};
 use bitcoin::hashes::{Hmac, HmacEngine, sha256, Hash, HashEngine};
 
-use crate::commitments::container::Container;
-use crate::common::raw_representable::RawRepresentable;
-use crate::commitments::tag::BitcoinTag;
+use crate::common::AsBytes;
+use super::{Container, super::BitcoinTag};
 
 const TAG: &'static str = "LNPBP-1";
 static INIT: Once = Once::new();
@@ -39,7 +37,7 @@ static mut PREFIX: [u8; 32] = [
 pub struct PubkeyCommitment(PublicKey);
 
 impl Container for PubkeyCommitment {
-    type Message = Box<RawRepresentable>;
+    type Message = Box<dyn AsBytes>;
 
     fn commit(&mut self, msg: &Self::Message) {
         let ec: Secp256k1<All> = Secp256k1::new();
@@ -47,13 +45,15 @@ impl Container for PubkeyCommitment {
             PREFIX = BitcoinTag::tag(TAG)[..].try_into()
                 .expect("SHA256 length is 32 bytes always");
         });
+        let mut buff = msg[..].to_vec();
         unsafe {
             let prefix = BitcoinTag::from_slice(&PREFIX)
                 .expect("Can't fail since it reads hash value");
+            buff.extend(&prefix[..]);
         }
         let origin = self.clone();
         let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&origin.0.serialize());
-        hmac_engine.input(&msg[..]);
+        hmac_engine.input(&buff[..]);
         let factor = &Hmac::from_engine(hmac_engine)[..];
         self.0.add_exp_assign(&ec, factor)
             .expect("Key tweaking has resulted in point at infinity");

@@ -11,9 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub mod tag;
 
-//! Common data types, structures and functions for LNPBPs
-
-pub mod traits;
-
-pub use traits::*;
+pub use tag::*;

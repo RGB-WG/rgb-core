@@ -11,9 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub mod contained;
+pub mod util;
+pub mod committable;
+pub mod digests;
 
-//! Common data types, structures and functions for LNPBPs
+pub use contained::*;
+pub use util::*;
 
-pub mod traits;
-
-pub use traits::*;
+pub use committable::*;
+pub use digests::*;

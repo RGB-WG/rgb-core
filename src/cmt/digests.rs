@@ -2,7 +2,7 @@ use std::ops::{Index, RangeFull};
 
 use bitcoin::hashes::Hash;
 
-use crate::commitments::committable::*;
+use super::Committable;
 
 struct DigestCommitment<HF: Hash>(HF);
 
