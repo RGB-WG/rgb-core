@@ -14,7 +14,9 @@
 pub mod committable;
 pub mod digests;
 pub mod pubkey;
+pub mod txout;
 
 pub use committable::*;
 pub use digests::*;
 pub use pubkey::*;
+pub use txout::*;

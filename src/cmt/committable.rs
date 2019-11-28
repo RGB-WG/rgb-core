@@ -28,15 +28,6 @@ pub trait StandaloneCommitment<MSG>: CommitmentVerify<MSG> where
     fn reveal_verify(&self, msg: &MSG) -> bool { Self::from(msg) == *self }
 }
 
-/*
-impl<MSG> CommitmentVerify<MSG> for dyn StandaloneCommitment<MSG> {
-    #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
-        <dyn StandaloneCommitment<MSG>>::reveal_verify(msg)
-    }
-}
-*/
-
 pub trait EmbeddedCommitment<CONT, MSG>: CommitmentVerify<MSG> where
     MSG: EmbedCommittable<CONT, Self>,
     Self: Sized + Eq
@@ -54,14 +45,6 @@ pub trait EmbeddedCommitment<CONT, MSG>: CommitmentVerify<MSG> where
     }
 }
 
-/*
-impl<CONT, MSG, ERR> CommitmentVerify<MSG> for dyn EmbeddedCommitment<CONT, MSG, Error=ERR> {
-    #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
-        Self::from(self.get_original_container(), msg) == self
-    }
-}
-*/
 
 pub trait Verifiable<CMT: CommitmentVerify<Self>> where
     Self: Sized

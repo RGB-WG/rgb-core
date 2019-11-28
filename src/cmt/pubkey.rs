@@ -71,12 +71,13 @@ impl<MSG> EmbeddedCommitment<PublicKey, MSG> for PubkeyCommitment where
                 .expect("SHA256 length is 32 bytes always");
         });
 
-        let mut buff = msg[..].to_vec();
+        let mut buff = vec!();
         unsafe {
             let prefix = BitcoinTag::from_slice(&PREFIX)
                 .expect("Can't fail since it reads hash value");
             buff.extend(&prefix[..]);
         }
+        buff.extend(&msg[..]);
         let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&container.serialize());
         hmac_engine.input(&buff[..]);
         let factor = &Hmac::from_engine(hmac_engine)[..];
@@ -99,7 +100,7 @@ impl From<CurveError> for self::Error {
     fn from(error: CurveError) -> Self {
         match error {
             CurveError::InvalidTweak => ECPointAtInfinity,
-            _ => panic!("This errors should never fire"),
+            _ => panic!("Other types of Secp256k1 errors can't be fired by `add_exp_assign`"),
         }
     }
 }
