@@ -21,18 +21,17 @@ impl<T> AsBytes for T where T: Eq + Index<RangeFull, Output = [u8]> {
     fn as_bytes(&self) -> &[u8] { &self[..] }
 }
 
-pub trait Wrapper<T: Clone> {
-    fn inner_ref(&self) -> &T;
-}
 
-#[macro_export]
-macro_rules! impl_wrapper {
-    ($type:ident, $inner:ident) => (
-        #[derive(Clone, PartialEq, Eq)]
-        pub struct $type($inner);
-        impl Wrapper<$inner> for $type {
-            #[inline]
-            fn inner_ref(&self) -> &$inner { &self.0 }
-        }
-    )
+#[derive(Clone, PartialEq, Eq)]
+pub struct Wrapper<T>(T);
+
+impl<T> From<T> for Wrapper<T> {
+    #[inline]
+    fn from(x: T) -> Self { Self(x) }
 }
+/*
+impl<T> Into<T> for Wrapper<T> {
+    #[inline]
+    fn into(self) -> T { self.0 }
+}
+*/

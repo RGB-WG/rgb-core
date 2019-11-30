@@ -15,15 +15,9 @@ use bitcoin::hashes::Hash;
 use super::committable::*;
 use crate::{AsBytes, Wrapper};
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct DigestCommitment<HT: Hash>(HT);
+#[allow(type_alias_bounds)]
+type DigestCommitment<HT: Hash> = Wrapper<HT>;
 
-impl<HT> Wrapper<HT> for DigestCommitment<HT> where
-    HT: Hash
-{
-    #[inline]
-    fn inner_ref(&self) -> &HT { &self.0 }
-}
 
 impl<HT, MSG> CommitmentVerify<MSG> for DigestCommitment<HT> where
     HT: Hash,
@@ -36,12 +30,14 @@ impl<HT, MSG> CommitmentVerify<MSG> for DigestCommitment<HT> where
     }
 }
 
+/*
 impl<HT, MSG> StandaloneCommitment<MSG> for DigestCommitment<HT> where
     HT: Hash,
     MSG: AsBytes + Committable<Self>
 {
     #[inline]
     fn from(msg: &MSG) -> DigestCommitment<HT> {
-        DigestCommitment(<HT as Hash>::hash(&msg[..]))
+        DigestCommitment::from(<HT as Hash>::hash(&msg[..]))
     }
 }
+*/

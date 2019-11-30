@@ -11,10 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::{Hash, Error, sha256, sha256d, hash160};
+use bitcoin::hashes::{Hash, Error, sha256};
 use std::ops::{Index, RangeFull};
-use bitcoin::Script;
-use secp256k1::PublicKey;
 
 pub struct BitcoinTag(sha256::Hash);
 
@@ -33,5 +31,5 @@ impl BitcoinTag {
 
 impl Index<RangeFull> for BitcoinTag {
     type Output = [u8];
-    fn index(&self, index: RangeFull) -> &[u8] { &self.0[..] }
+    fn index(&self, _: RangeFull) -> &[u8] { &self.0[..] }
 }
