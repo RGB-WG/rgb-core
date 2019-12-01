@@ -15,26 +15,26 @@ use bitcoin::{Amount, TxOut, Transaction, hashes::sha256};
 use secp256k1::PublicKey;
 
 use crate::common::*;
-use super::*;
+use super::{*, pubkey::Error};
 
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct TxContainer {
-    pub entropy: u64,
-    pub script_root: Option<sha256::Hash>,
+    pub entropy: u32,
     pub tx: Transaction,
+    pub container: TxoutContainer,
 }
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct TxCommitment {
-    pub entropy: u64,
-    pub fee: Amount,
+    pub entropy: u32,
+    pub tx: Transaction,
     pub tweaked: TxoutCommitment,
-    pub original: Transaction,
+    pub original: TxoutContainer,
 }
 
 impl<MSG> CommitmentVerify<MSG> for TxCommitment where
-    MSG: EmbedCommittable<Self> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<TxoutCommitment> + AsSlice
 {
 
     #[inline]
@@ -44,35 +44,39 @@ impl<MSG> CommitmentVerify<MSG> for TxCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
-    MSG: EmbedCommittable<Self> + AsSlice,
+    MSG: EmbedCommittable<Self> + EmbedCommittable<TxoutCommitment> + AsSlice
 {
     type Container = TxContainer;
-    type Error = ();
+    type Error = Error;
 
     #[inline]
-    fn get_original_container(&self) -> &Self::Container {
+    fn get_original_container(&self) -> Self::Container {
         let root = match &self.tweaked {
             TxoutCommitment::LockScript(script) => None,
-            TxoutCommitment::TapRoot(cmt) => Ok(cmt.script_root),
+            TxoutCommitment::TapRoot(cmt) => Some(cmt.script_root),
         };
-        &TxContainer {
+        TxContainer {
             entropy: self.entropy,
-            script_root: root,
-            tx: self.tx
+            tx: self.tx.clone(),
+            container: self.original.clone()
         }
     }
 
     fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let tx = &container.tx;
+        let tx = container.tx.clone();
+        let fee = 0; // FIXME: tx.get_fee();
         let entropy = container.entropy;
-        let fee = tx.get_fee();
         let nouts = tx.output.len();
-        let vout = (fee + entropy) % nouts;
-        let txout = tx.output[vout];
-        let txout_container = TxoutContainer::from(txout, container.script_root)?;
-        let tweaked = TxoutCommitment::from(&txout_container, msg)?;
+        let vout = (fee + entropy) % (nouts as u32);
+        let txout = tx.output[vout as usize].clone();
+        let txout_container = container.container.clone();
+        let tweaked: TxoutCommitment = EmbeddedCommitment::<MSG>::from(&txout_container, msg)?;
         Ok(Self {
-            entropy, fee, original: txout, tweaked
+            entropy, tx, original: txout_container, tweaked
         })
     }
 }
+
+impl<T> Verifiable<TxCommitment> for T where T: AsSlice { }
+
+impl<T> EmbedCommittable<TxCommitment> for T where T: AsSlice { }

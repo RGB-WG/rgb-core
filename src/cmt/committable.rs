@@ -11,6 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::ops::{Index, Range, RangeTo, RangeFrom, RangeFull};
+use crate::AsSlice;
+
 pub trait CommitmentVerify<MSG> where
     MSG: Verifiable<Self>,
     Self: Sized
@@ -35,11 +38,11 @@ pub trait EmbeddedCommitment<MSG>: CommitmentVerify<MSG> where
     type Container;
     type Error;
 
-    fn get_original_container(&self) -> &Self::Container;
+    fn get_original_container(&self) -> Self::Container;
     fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error>;
 
     fn reveal_verify(&self, msg: &MSG) -> bool {
-        match Self::from(self.get_original_container(), msg) {
+        match Self::from(&self.get_original_container(), msg) {
             Ok(commitment) => commitment == *self,
             Err(_) => false
         }
@@ -69,3 +72,11 @@ pub trait EmbedCommittable<CMT>: Verifiable<CMT> where
         CMT::from(container, &self)
     }
 }
+
+
+/*
+impl<MSG, CMT> EmbedCommittable<CMT> for MSG where
+    MSG: Eq + EmbedCommittable<CMT> + AsSlice,
+    CMT: Eq + EmbeddedCommitment<MSG>
+{ }
+*/

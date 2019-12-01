@@ -14,7 +14,7 @@
 use bitcoin::{Script, PublicKey, hashes::sha256};
 
 use crate::common::*;
-use super::committable::*;
+use super::{committable::*, pubkey::Error};
 
 
 #[derive(Clone, Eq, PartialEq)]
@@ -34,18 +34,18 @@ impl<MSG> CommitmentVerify<MSG> for LockscriptCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
-    MSG: EmbedCommittable<Self> + AsSlice,
+    MSG: EmbedCommittable<Self> + AsSlice
 {
     type Container = LockScript;
-    type Error = ();
+    type Error = Error;
 
     #[inline]
-    fn get_original_container(&self) -> &Self::Container {
-        &self.original
+    fn get_original_container(&self) -> Self::Container {
+        self.original.clone()
     }
 
     fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let tweaked: LockScript;
+        let tweaked = LockScript::from(Script::new());
         // Parse script
         // Find all required patterns
         // Extract public keys
@@ -56,3 +56,7 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
         })
     }
 }
+
+impl<T> Verifiable<LockscriptCommitment> for T where T: AsSlice { }
+
+impl<T> EmbedCommittable<LockscriptCommitment> for T where T: AsSlice { }

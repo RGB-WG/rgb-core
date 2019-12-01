@@ -41,14 +41,14 @@ impl<MSG> CommitmentVerify<MSG> for TaprootCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsSlice,
+    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsSlice
 {
     type Container = TaprootContainer;
     type Error = Error;
 
     #[inline]
-    fn get_original_container(&self) -> &Self::Container {
-        &TaprootContainer {
+    fn get_original_container(&self) -> Self::Container {
+        TaprootContainer {
             script_root: self.script_root,
             intermediate_key: self.pubkey_commitment.original
         }
@@ -62,3 +62,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
         })
     }
 }
+
+impl<T> Verifiable<TaprootCommitment> for T where T: AsSlice { }
+
+impl<T> EmbedCommittable<TaprootCommitment> for T where T: AsSlice { }

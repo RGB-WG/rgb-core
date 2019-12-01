@@ -61,8 +61,8 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
     type Error = CurveError;
 
     #[inline]
-    fn get_original_container(&self) -> &Self::Container {
-        &self.original
+    fn get_original_container(&self) -> Self::Container {
+        self.original
     }
 
     fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {

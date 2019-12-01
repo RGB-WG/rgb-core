@@ -14,7 +14,7 @@
 use bitcoin::{TxOut, Script, PublicKey, hashes::sha256};
 
 use crate::common::*;
-use super::{committable::*, LockscriptCommitment, TaprootCommitment, TaprootContainer};
+use super::{committable::*, LockscriptCommitment, TaprootCommitment, TaprootContainer, pubkey::Error};
 
 
 #[derive(Clone, Eq, PartialEq)]
@@ -42,30 +42,39 @@ impl<MSG> CommitmentVerify<MSG> for TxoutCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<LockscriptCommitment> + AsSlice,
+    MSG: EmbedCommittable<Self> + EmbedCommittable<LockscriptCommitment> + AsSlice
 {
     type Container = TxoutContainer;
-    type Error = ();
+    type Error = Error;
 
     #[inline]
-    fn get_original_container(&self) -> &Self::Container {
-        &match self {
+    fn get_original_container(&self) -> Self::Container {
+        match self {
             Self::LockScript(cmt) => {
-                let container: &LockScript = EmbedCommittable::<LockscriptCommitment>::get_original_container(&cmt);
-                TxoutContainer::LockScript(*container)
+                let container: LockScript = EmbeddedCommitment::<MSG>::get_original_container(cmt);
+                TxoutContainer::LockScript(container)
             },
             Self::TapRoot(cmt) => {
-                TxoutContainer::TapRoot(*cmt.get_original_container())
+                let container: TaprootContainer = EmbeddedCommitment::<MSG>::get_original_container(cmt);
+                TxoutContainer::TapRoot(container)
             },
         }
     }
 
     fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(match container {
-            TxoutContainer::LockScript(script)
-                => Self::LockScript(LockscriptCommitment::from(&script)),
-            TxoutContainer::TapRoot(container)
-                => Self::TapRoot(TaprootCommitment::from(&container)),
+            TxoutContainer::LockScript(script) => {
+                let cmt: LockscriptCommitment = EmbeddedCommitment::<MSG>::from(script, msg)?;
+                Self::LockScript(cmt)
+            },
+            TxoutContainer::TapRoot(container) => {
+                let cmt: TaprootCommitment = EmbeddedCommitment::<MSG>::from(container, msg)?;
+                Self::TapRoot(cmt)
+            },
         })
     }
 }
+
+impl<T> Verifiable<TxoutCommitment> for T where T: AsSlice { }
+
+impl<T> EmbedCommittable<TxoutCommitment> for T where T: AsSlice { }
