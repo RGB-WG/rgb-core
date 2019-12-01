@@ -9,13 +9,15 @@ readme = "README.md"
 edition = "2018"
 
 [lib]
-name = "lbpbp"
+name = "lnpbp"
 path = "src/lib.rs"
 
 [dependencies]
-bitcoin = { git = "https://github.com/pandoracore/rust-bitcoin.git", branch = "develop" }
-bitcoin_hashes = { git = "https://github.com/pandoracore/bitcoin_hashes.git", branch = "hashnewtype-fix" }
+bitcoin = { git = "https://github.com/pandoracore/rust-bitcoin.git", branch = "hashtypes" }
 
 [dependencies.secp256k1]
 version = "0.15.0"
 features = [ "rand" ]
+
+[dev-dependencies]
+hex = "=0.3.2"

@@ -11,12 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub mod committable;
+pub mod digests;
+pub mod pubkey;
+pub mod lockscript;
+pub mod taproot;
+pub mod txout;
+pub mod tx;
 
-//! Common data types, structures and functions for LNPBPs
-
-#[macro_use]
-pub mod traits;
-pub mod types;
-
-pub use traits::*;
-pub use types::*;
+pub use committable::*;
+pub use digests::*;
+pub use pubkey::*;
+pub use lockscript::*;
+pub use taproot::*;
+pub use txout::*;
+pub use tx::*;

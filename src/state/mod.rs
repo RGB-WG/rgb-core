@@ -10,13 +10,3 @@
 // You should have received a copy of the MIT License
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
-
-
-//! Common data types, structures and functions for LNPBPs
-
-#[macro_use]
-pub mod traits;
-pub mod types;
-
-pub use traits::*;
-pub use types::*;

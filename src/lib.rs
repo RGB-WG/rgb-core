@@ -12,8 +12,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 extern crate bitcoin;
-extern crate bitcoin_hashes as hashes;
+#[cfg(test)]
+extern crate hex;
 
-pub mod commitments;
+#[macro_use]
 pub mod common;
-pub mod vout_locator;
+pub mod cmt;
+//pub mod cvp;
+pub mod state;
+
+pub use common::*;
