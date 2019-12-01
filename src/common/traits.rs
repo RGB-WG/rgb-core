@@ -26,6 +26,15 @@ impl<T> AsSlice for T where T: Eq + Index<RangeFull, Output = [u8]> {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Wrapper<T, Z>(T, PhantomData<Z>);
 
+impl<T, Z> Wrapper<T, Z> {
+    pub fn from_inner(inner: T) -> Self {
+        Wrapper::from(inner)
+    }
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
 impl<T, Z> From<T> for Wrapper<T, Z> {
     #[inline]
     fn from(x: T) -> Self { Self(x, PhantomData::default()) }

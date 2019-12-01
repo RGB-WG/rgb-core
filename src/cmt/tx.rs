@@ -85,6 +85,8 @@ impl<T> EmbedCommittable<TxCommitment> for T where T: AsSlice { }
 
 
 mod test {
+    use std::str::FromStr;
+    use secp256k1::PublicKey;
     use bitcoin::{*, consensus::encode::deserialize};
     use hex::decode as hex_decode;
     use super::*;
@@ -105,7 +107,9 @@ mod test {
         let container = TxContainer {
             tx,
             entropy: 0,
-            txout_container: TxoutContainer::ScriptHash(LockScript::from(Script::new()))
+            txout_container: TxoutContainer::PubkeyHash(PublicKey::from_str(
+                "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
+            ).unwrap())
         };
 
         let msg = &Message("message to commit to");

@@ -105,3 +105,31 @@ impl From<CurveError> for self::Error {
         }
     }
 }
+
+
+mod test {
+    use std::str::FromStr;
+    use secp256k1::PublicKey;
+    use bitcoin::hashes::hex::ToHex;
+    use super::*;
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    struct Message<'a>(&'a str);
+    impl AsSlice for Message<'_> {
+        fn as_slice(&self) -> &[u8] {
+            &self.0.as_bytes()
+        }
+    }
+
+    #[test]
+    fn test_pubkey_commitment() {
+        let pubkey = PublicKey::from_str(
+            "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
+        ).unwrap();
+        let msg = Message("Message to commit to");
+        let commitment: PubkeyCommitment = msg.commit_embed(&pubkey).unwrap();
+        assert_eq!(commitment.tweaked.to_hex(),
+                   "02b483ae49421fd8751b31278c6905eca00a8241a2ee3584bffc85655aa9123c02");
+        assert_eq!(msg.verify(&commitment), true);
+    }
+}
