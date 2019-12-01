@@ -14,11 +14,15 @@
 pub mod committable;
 pub mod digests;
 pub mod pubkey;
+pub mod lockscript;
+pub mod taproot;
 pub mod txout;
 pub mod tx;
 
 pub use committable::*;
 pub use digests::*;
 pub use pubkey::*;
+pub use lockscript::*;
+pub use taproot::*;
 pub use txout::*;
 pub use tx::*;

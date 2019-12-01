@@ -50,14 +50,14 @@ impl Index<RangeFull> for BitcoinTag {
 //               +----> TapScript
 //
 
-pub struct _LockScript(PhantomData<()>);
-pub struct _PubkeyScript(PhantomData<()>);
-pub struct _RedeemScript(PhantomData<()>);
-pub struct _TapScript(PhantomData<()>);
-pub type LockScript = Wrapper<Script, PhantomData<_LockScript>>;
-pub type PubkeyScript = Wrapper<Script, PhantomData<_PubkeyScript>>;
-pub type RedeemScript = Wrapper<Script, PhantomData<_RedeemScript>>;
-pub type TapScript = Wrapper<Script, PhantomData<_TapScript>>;
+pub struct _LockScriptPhantom;
+pub struct _PubkeyScriptPhantom;
+pub struct _RedeemScriptPhantom;
+pub struct _TapScriptPhantom;
+pub type LockScript = Wrapper<Script, PhantomData<_LockScriptPhantom>>;
+pub type PubkeyScript = Wrapper<Script, PhantomData<_PubkeyScriptPhantom>>;
+pub type RedeemScript = Wrapper<Script, PhantomData<_RedeemScriptPhantom>>;
+pub type TapScript = Wrapper<Script, PhantomData<_TapScriptPhantom>>;
 
 pub enum ScriptPubkeyType {
     P2S(Script),
