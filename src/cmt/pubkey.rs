@@ -25,7 +25,6 @@ use bitcoin::hashes::*;
 
 use crate::common::*;
 use super::committable::*;
-use crate::cmt::Error::ECPointAtInfinity;
 
 const TAG: &'static str = "LNPBP-1";
 static INIT: Once = Once::new();
@@ -34,6 +33,7 @@ static mut PREFIX: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
+#[derive(Debug)]
 pub enum Error {
     ECPointAtInfinity
 }
@@ -78,7 +78,7 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
                 .expect("Can't fail since it reads hash value");
             buff.extend(&prefix[..]);
         }
-        buff.extend(&msg[..]);
+        buff.extend(msg.as_slice());
         let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&container.serialize());
         hmac_engine.input(&buff[..]);
         let factor = &Hmac::from_engine(hmac_engine)[..];
@@ -100,7 +100,7 @@ impl<T> EmbedCommittable<PubkeyCommitment> for T where T: AsSlice { }
 impl From<CurveError> for self::Error {
     fn from(error: CurveError) -> Self {
         match error {
-            CurveError::InvalidTweak => ECPointAtInfinity,
+            CurveError::InvalidTweak => self::Error::ECPointAtInfinity,
             _ => panic!("Other types of Secp256k1 errors can't be fired by `add_exp_assign`"),
         }
     }
