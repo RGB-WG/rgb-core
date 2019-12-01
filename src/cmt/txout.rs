@@ -11,21 +11,28 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{TxOut, Script, PublicKey, hashes::sha256};
+use secp256k1::PublicKey;
+use bitcoin::Script;
 
 use crate::common::*;
-use super::{committable::*, LockscriptCommitment, TaprootCommitment, TaprootContainer, pubkey::Error};
+use super::{committable::*, PubkeyCommitment, LockscriptCommitment,
+            TaprootCommitment, TaprootContainer, pubkey::Error};
 
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum TxoutContainer {
-    LockScript(LockScript),
+    PublicKey,
+    PubkeyHash(PublicKey),
+    ScriptHash(LockScript),
     TapRoot(TaprootContainer),
+    OpReturn(PublicKey),
+    OtherScript,
 }
 
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum TxoutCommitment {
+    PublicKey(PubkeyCommitment),
     LockScript(LockscriptCommitment),
     TapRoot(TaprootCommitment),
 }
@@ -50,9 +57,14 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
     #[inline]
     fn get_original_container(&self) -> Self::Container {
         match self {
+            // TODO: Re-implement by analyzing scriptPubkey content
+            Self::PublicKey(cmt) => {
+                let container: PublicKey = EmbeddedCommitment::<MSG>::get_original_container(cmt);
+                TxoutContainer::PubkeyHash(container)
+            },
             Self::LockScript(cmt) => {
                 let container: LockScript = EmbeddedCommitment::<MSG>::get_original_container(cmt);
-                TxoutContainer::LockScript(container)
+                TxoutContainer::ScriptHash(container)
             },
             Self::TapRoot(cmt) => {
                 let container: TaprootContainer = EmbeddedCommitment::<MSG>::get_original_container(cmt);
@@ -63,13 +75,33 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
 
     fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(match container {
-            TxoutContainer::LockScript(script) => {
+            TxoutContainer::PublicKey => {
+                // FIXME: Extract it from the script using LockScript
+                let pubkey: PublicKey = PublicKey::from_slice(&[0])?;
+                let cmt: PubkeyCommitment = EmbeddedCommitment::<MSG>::from(&pubkey, msg)?;
+                Self::PublicKey(cmt)
+            },
+            TxoutContainer::PubkeyHash(pubkey) => {
+                let cmt: PubkeyCommitment = EmbeddedCommitment::<MSG>::from(pubkey, msg)?;
+                Self::PublicKey(cmt)
+            },
+            TxoutContainer::ScriptHash(script) => {
                 let cmt: LockscriptCommitment = EmbeddedCommitment::<MSG>::from(script, msg)?;
                 Self::LockScript(cmt)
             },
             TxoutContainer::TapRoot(container) => {
                 let cmt: TaprootCommitment = EmbeddedCommitment::<MSG>::from(container, msg)?;
                 Self::TapRoot(cmt)
+            },
+            TxoutContainer::OpReturn(pubkey) => {
+                let cmt: PubkeyCommitment = EmbeddedCommitment::<MSG>::from(pubkey, msg)?;
+                Self::PublicKey(cmt)
+            }
+            TxoutContainer::OtherScript => {
+                // FIXME: Extract if from the txout
+                let script = LockScript::from(Script::new());
+                let cmt: LockscriptCommitment = EmbeddedCommitment::<MSG>::from(&script, msg)?;
+                Self::LockScript(cmt)
             },
         })
     }

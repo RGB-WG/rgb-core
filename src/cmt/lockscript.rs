@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{Script, PublicKey, hashes::sha256};
+use bitcoin::Script;
 
 use crate::common::*;
 use super::{committable::*, pubkey::Error};
@@ -46,7 +46,7 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
 
     fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let tweaked = LockScript::from(Script::new());
-        // Parse script
+        // Parse script using LockScript
         // Find all required patterns
         // Extract public keys
         // Tweak each of them

@@ -13,7 +13,7 @@
 
 use std::marker::PhantomData;
 
-use bitcoin::hashes::{Hash, Error, sha256, hash160};
+use bitcoin::hashes::{Hash, Error, sha256};
 use bitcoin::hash_types::*;
 use std::ops::{Index, RangeFull};
 use bitcoin::Script;

@@ -11,8 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::ops::{Index, Range, RangeTo, RangeFrom, RangeFull};
-use crate::AsSlice;
 
 pub trait CommitmentVerify<MSG> where
     MSG: Verifiable<Self>,
@@ -72,11 +70,3 @@ pub trait EmbedCommittable<CMT>: Verifiable<CMT> where
         CMT::from(container, &self)
     }
 }
-
-
-/*
-impl<MSG, CMT> EmbedCommittable<CMT> for MSG where
-    MSG: Eq + EmbedCommittable<CMT> + AsSlice,
-    CMT: Eq + EmbeddedCommitment<MSG>
-{ }
-*/
