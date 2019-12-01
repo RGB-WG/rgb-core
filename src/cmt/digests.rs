@@ -13,15 +13,18 @@
 
 use bitcoin::hashes::Hash;
 use super::committable::*;
-use crate::{AsBytes, Wrapper};
+use crate::{AsSlice, Wrapper};
+use std::marker::PhantomData;
 
-#[allow(type_alias_bounds)]
-type DigestCommitment<HT: Hash> = Wrapper<HT>;
+
+struct _DigestCommitment<HT: Hash>(PhantomData<HT>);
+#[allow(private_in_public, type_alias_bounds)]
+pub type DigestCommitment<HT: Hash> = Wrapper<HT, _DigestCommitment<HT>>;
 
 
 impl<HT, MSG> CommitmentVerify<MSG> for DigestCommitment<HT> where
     HT: Hash,
-    MSG: AsBytes + Committable<Self>,
+    MSG: AsSlice + Committable<Self>,
     Self: StandaloneCommitment<MSG>
 {
     #[inline]

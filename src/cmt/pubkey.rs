@@ -45,7 +45,7 @@ pub struct PubkeyCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for PubkeyCommitment where
-    MSG: EmbedCommittable<PublicKey, Self> + AsBytes
+    MSG: EmbedCommittable<PublicKey, Self> + AsSlice
 {
 
     #[inline]
@@ -55,7 +55,7 @@ impl<MSG> CommitmentVerify<MSG> for PubkeyCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<PublicKey, MSG> for PubkeyCommitment where
-    MSG: EmbedCommittable<PublicKey, Self> + AsBytes,
+    MSG: EmbedCommittable<PublicKey, Self> + AsSlice,
 {
     type Error = CurveError;
 
@@ -92,9 +92,9 @@ impl<MSG> EmbeddedCommitment<PublicKey, MSG> for PubkeyCommitment where
     }
 }
 
-impl<T> Verifiable<PubkeyCommitment> for T where T: AsBytes { }
+impl<T> Verifiable<PubkeyCommitment> for T where T: AsSlice { }
 
-impl<T> EmbedCommittable<PublicKey, PubkeyCommitment> for T where T: AsBytes { }
+impl<T> EmbedCommittable<PublicKey, PubkeyCommitment> for T where T: AsSlice { }
 
 impl From<CurveError> for self::Error {
     fn from(error: CurveError) -> Self {
