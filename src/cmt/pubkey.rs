@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 //! Library for Secp256k1 elliptic curve based collision-resistant commitments, implementing
-//! [LNPBPS-1](https://github.com/LNP-BP/lnpbps/blob/master/lnpbps-0001.md)
+//! [LNPBP-1](https://github.com/LNP-BP/lnpbps/blob/master/lnpbp-0001.md)
 //!
 //! NB: The library works with `secp256k1::PublicKey` and `secp256k1::SecretKey` keys, not
 //! their wrapped bitcoin counterparts `bitcoin::PublickKey` and `bitcoin::PrivateKey`.
@@ -38,7 +38,7 @@ pub enum Error {
     ECPointAtInfinity
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub struct PubkeyCommitment {
     pub tweaked: PublicKey,
     pub original: PublicKey,

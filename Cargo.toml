@@ -13,7 +13,7 @@ name = "lnpbp"
 path = "src/lib.rs"
 
 [dependencies]
-bitcoin = { git = "https://github.com/rust-bitcoin/rust-bitcoin.git", branch = "master" }
+bitcoin = { git = "https://github.com/pandoracore/rust-bitcoin.git", branch = "hashtypes" }
 
 [dependencies.secp256k1]
 version = "0.15.0"

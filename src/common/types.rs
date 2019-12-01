@@ -11,8 +11,16 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::{Hash, Error, sha256};
+use std::marker::PhantomData;
+
+use bitcoin::hashes::{Hash, Error, sha256, hash160};
+use bitcoin::hash_types::*;
 use std::ops::{Index, RangeFull};
+use bitcoin::Script;
+use secp256k1::PublicKey;
+
+use crate::Wrapper;
+
 
 pub struct BitcoinTag(sha256::Hash);
 
@@ -32,4 +40,38 @@ impl BitcoinTag {
 impl Index<RangeFull> for BitcoinTag {
     type Output = [u8];
     fn index(&self, _: RangeFull) -> &[u8] { &self.0[..] }
+}
+
+//
+// PubkeyScript -+====> LockScript <----+
+//               |                      |
+//               +----> RedeemScript ---+
+//               |
+//               +----> TapScript
+//
+
+pub struct _LockScript(PhantomData<()>);
+pub struct _PubkeyScript(PhantomData<()>);
+pub struct _RedeemScript(PhantomData<()>);
+pub struct _TapScript(PhantomData<()>);
+pub type LockScript = Wrapper<Script, PhantomData<_LockScript>>;
+pub type PubkeyScript = Wrapper<Script, PhantomData<_PubkeyScript>>;
+pub type RedeemScript = Wrapper<Script, PhantomData<_RedeemScript>>;
+pub type TapScript = Wrapper<Script, PhantomData<_TapScript>>;
+
+pub enum ScriptPubkeyType {
+    P2S(Script),
+    P2PK(PublicKey),
+    P2PKH(PubkeyHash),
+    P2SH(ScriptHash),
+    P2OR(Box<[u8]>),
+    P2WPKH(WPubkeyHash),
+    P2WSH(WScriptHash),
+    P2TR(PublicKey),
+}
+
+impl From<Script> for ScriptPubkeyType {
+    fn from(script_pubkey: Script) -> Self {
+        Self::P2S(script_pubkey)
+    }
 }

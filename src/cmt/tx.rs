@@ -11,14 +11,16 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod committable;
-pub mod digests;
-pub mod pubkey;
-pub mod txout;
-pub mod tx;
+use bitcoin::{Amount, TxOut};
 
-pub use committable::*;
-pub use digests::*;
-pub use pubkey::*;
-pub use txout::*;
-pub use tx::*;
+use super::txout::TxoutCommitment;
+
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct TxCommitment {
+    pub entropy: u64,
+    pub fee: Amount,
+    pub tweaked: TxoutCommitment,
+    pub original: TxoutCommitment,
+}
+
