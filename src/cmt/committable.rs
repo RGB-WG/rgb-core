@@ -28,14 +28,15 @@ pub trait StandaloneCommitment<MSG>: CommitmentVerify<MSG> where
     fn reveal_verify(&self, msg: &MSG) -> bool { Self::from(msg) == *self }
 }
 
-pub trait EmbeddedCommitment<CONT, MSG>: CommitmentVerify<MSG> where
-    MSG: EmbedCommittable<CONT, Self>,
+pub trait EmbeddedCommitment<MSG>: CommitmentVerify<MSG> where
+    MSG: EmbedCommittable<Self>,
     Self: Sized + Eq
 {
+    type Container;
     type Error;
 
-    fn get_original_container(&self) -> &CONT;
-    fn from(container: &CONT, msg: &MSG) -> Result<Self, Self::Error>;
+    fn get_original_container(&self) -> &Self::Container;
+    fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error>;
 
     fn reveal_verify(&self, msg: &MSG) -> bool {
         match Self::from(self.get_original_container(), msg) {
@@ -60,11 +61,11 @@ pub trait Committable<CMT>: Verifiable<CMT> where
     fn commit(&self) -> CMT { CMT::from(&self) }
 }
 
-pub trait EmbedCommittable<CONT, CMT>: Verifiable<CMT> where
-    CMT: EmbeddedCommitment<CONT, Self>
+pub trait EmbedCommittable<CMT>: Verifiable<CMT> where
+    CMT: EmbeddedCommitment<Self>
 {
     #[inline]
-    fn commit_embed(&self, container: &CONT) -> Result<CMT, CMT::Error> {
+    fn commit_embed(&self, container: &CMT::Container) -> Result<CMT, CMT::Error> {
         CMT::from(container, &self)
     }
 }

@@ -45,26 +45,27 @@ pub struct PubkeyCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for PubkeyCommitment where
-    MSG: EmbedCommittable<PublicKey, Self> + AsSlice
+    MSG: EmbedCommittable<Self> + AsSlice
 {
 
     #[inline]
     fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<PublicKey, MSG>>::reveal_verify(&self, msg)
+        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
 
-impl<MSG> EmbeddedCommitment<PublicKey, MSG> for PubkeyCommitment where
-    MSG: EmbedCommittable<PublicKey, Self> + AsSlice,
+impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
+    MSG: EmbedCommittable<Self> + AsSlice,
 {
+    type Container = PublicKey;
     type Error = CurveError;
 
     #[inline]
-    fn get_original_container(&self) -> &PublicKey {
+    fn get_original_container(&self) -> &Self::Container {
         &self.original
     }
 
-    fn from(container: &PublicKey, msg: &MSG) -> Result<Self, Self::Error> {
+    fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let ec: Secp256k1<All> = Secp256k1::new();
         INIT.call_once(|| unsafe {
             PREFIX = BitcoinTag::tag(TAG)[..].try_into()
@@ -94,7 +95,7 @@ impl<MSG> EmbeddedCommitment<PublicKey, MSG> for PubkeyCommitment where
 
 impl<T> Verifiable<PubkeyCommitment> for T where T: AsSlice { }
 
-impl<T> EmbedCommittable<PublicKey, PubkeyCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<PubkeyCommitment> for T where T: AsSlice { }
 
 impl From<CurveError> for self::Error {
     fn from(error: CurveError) -> Self {

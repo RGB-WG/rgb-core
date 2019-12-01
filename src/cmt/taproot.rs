@@ -31,29 +31,30 @@ pub struct TaprootCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for TaprootCommitment where
-    MSG: EmbedCommittable<TaprootContainer, Self> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsSlice
 {
 
     #[inline]
     fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<TaprootContainer, MSG>>::reveal_verify(&self, msg)
+        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
 
-impl<MSG> EmbeddedCommitment<TaprootContainer, MSG> for TaprootCommitment where
-    MSG: EmbedCommittable<TaprootContainer, Self> + EmbedCommittable<PublicKey, Self> + AsSlice,
+impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
+    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsSlice,
 {
+    type Container = TaprootContainer;
     type Error = Error;
 
     #[inline]
-    fn get_original_container(&self) -> &TaprootContainer {
+    fn get_original_container(&self) -> &Self::Container {
         &TaprootContainer {
             script_root: self.script_root,
             intermediate_key: self.pubkey_commitment.original
         }
     }
 
-    fn from(container: &TaprootContainer, msg: &MSG) -> Result<Self, Self::Error> {
+    fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let cmt = EmbeddedCommitment::from(&container.intermediate_key, msg)?;
         Ok(Self {
             script_root: container.script_root,

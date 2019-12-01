@@ -32,25 +32,26 @@ pub enum TxoutCommitment {
 
 
 impl<MSG> CommitmentVerify<MSG> for TxoutCommitment where
-    MSG: EmbedCommittable<TxoutContainer, Self> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<LockscriptCommitment> + AsSlice
 {
 
     #[inline]
     fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<TxoutContainer, MSG>>::reveal_verify(&self, msg)
+        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
 
-impl<MSG> EmbeddedCommitment<TxoutContainer, MSG> for TxoutCommitment where
-    MSG: EmbedCommittable<TxoutContainer, Self> + AsSlice,
+impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
+    MSG: EmbedCommittable<Self> + EmbedCommittable<LockscriptCommitment> + AsSlice,
 {
+    type Container = TxoutContainer;
     type Error = ();
 
     #[inline]
-    fn get_original_container(&self) -> &TxoutContainer {
+    fn get_original_container(&self) -> &Self::Container {
         &match self {
             Self::LockScript(cmt) => {
-                let container: &LockScript = EmbeddedCommitment::<PublicKey, MSG>::get_original_container(&cmt);
+                let container: &LockScript = EmbedCommittable::<LockscriptCommitment>::get_original_container(&cmt);
                 TxoutContainer::LockScript(*container)
             },
             Self::TapRoot(cmt) => {
@@ -59,7 +60,7 @@ impl<MSG> EmbeddedCommitment<TxoutContainer, MSG> for TxoutCommitment where
         }
     }
 
-    fn from(container: &TxoutContainer, msg: &MSG) -> Result<Self, Self::Error> {
+    fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(match container {
             TxoutContainer::LockScript(script)
                 => Self::LockScript(LockscriptCommitment::from(&script)),

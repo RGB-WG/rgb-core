@@ -24,26 +24,27 @@ pub struct LockscriptCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for LockscriptCommitment where
-    MSG: EmbedCommittable<LockScript, Self> + AsSlice
+    MSG: EmbedCommittable<Self> + AsSlice
 {
 
     #[inline]
     fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<LockScript, MSG>>::reveal_verify(&self, msg)
+        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
 
-impl<MSG> EmbeddedCommitment<LockScript, MSG> for LockscriptCommitment where
-    MSG: EmbedCommittable<LockScript, Self> + AsSlice,
+impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
+    MSG: EmbedCommittable<Self> + AsSlice,
 {
+    type Container = LockScript;
     type Error = ();
 
     #[inline]
-    fn get_original_container(&self) -> &LockScript {
+    fn get_original_container(&self) -> &Self::Container {
         &self.original
     }
 
-    fn from(container: &LockScript, msg: &MSG) -> Result<Self, Self::Error> {
+    fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let tweaked: LockScript;
         // Parse script
         // Find all required patterns

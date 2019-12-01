@@ -34,22 +34,23 @@ pub struct TxCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for TxCommitment where
-    MSG: EmbedCommittable<TxContainer, Self> + AsSlice
+    MSG: EmbedCommittable<Self> + AsSlice
 {
 
     #[inline]
     fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<TxContainer, MSG>>::reveal_verify(&self, msg)
+        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
 
-impl<MSG> EmbeddedCommitment<TxContainer, MSG> for TxCommitment where
-    MSG: EmbedCommittable<TxContainer, Self> + AsSlice,
+impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
+    MSG: EmbedCommittable<Self> + AsSlice,
 {
+    type Container = TxContainer;
     type Error = ();
 
     #[inline]
-    fn get_original_container(&self) -> &TxContainer {
+    fn get_original_container(&self) -> &Self::Container {
         let root = match &self.tweaked {
             TxoutCommitment::LockScript(script) => None,
             TxoutCommitment::TapRoot(cmt) => Ok(cmt.script_root),
@@ -61,7 +62,7 @@ impl<MSG> EmbeddedCommitment<TxContainer, MSG> for TxCommitment where
         }
     }
 
-    fn from(container: &TxContainer, msg: &MSG) -> Result<Self, Self::Error> {
+    fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let tx = &container.tx;
         let entropy = container.entropy;
         let fee = tx.get_fee();
