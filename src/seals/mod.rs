@@ -11,15 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-extern crate bitcoin;
-#[cfg(test)]
-extern crate hex;
+pub mod seal;
+pub mod blockchain;
+pub mod bitcoin;
 
-#[macro_use]
-pub mod common;
-pub mod cmt;
-pub mod seals;
-//pub mod cvp;
-pub mod state;
-
-pub use common::*;
+pub use seal::*;
+pub use blockchain::*;
+pub use self::bitcoin::*;

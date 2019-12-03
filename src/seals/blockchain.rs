@@ -11,15 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-extern crate bitcoin;
-#[cfg(test)]
-extern crate hex;
+use super::seal::*;
 
-#[macro_use]
-pub mod common;
-pub mod cmt;
-pub mod seals;
-//pub mod cvp;
-pub mod state;
+pub trait BlockchainContext: Context {
+    type Id;
+    type Tx;
+    type BlockchainPosition;
 
-pub use common::*;
+    fn get_tx(&self, id: &Self::Id) -> Result<Self::Tx, Self::Error>;
+    fn has_tx(&self, tx: &Self::Tx) -> Result<Self::BlockchainPosition, Self::Error>;
+    fn add_tx(&mut self, tx: Self::Tx) -> Result<Self::BlockchainPosition, Self::Error>;
+}
+
