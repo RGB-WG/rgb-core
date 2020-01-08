@@ -37,7 +37,7 @@ impl<MSG> CommitmentVerify<MSG> for TxCommitment where
 {
 
     #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
+    fn reveal_verify(&self, msg: MSG) -> bool {
         <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
@@ -62,7 +62,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
         }
     }
 
-    fn commit_to(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
         let tx = container.tx.clone();
         let fee = 0; // FIXME: tx.get_fee();
         let entropy = container.entropy;
@@ -72,7 +72,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
         let txout_container = container.txout_container.clone();
         // TODO: Check container agains the actual output
         // TODO: Adjust transaction fee
-        let tweaked: TxoutCommitment = EmbeddedCommitment::<MSG>::commit_to(&txout_container, msg)?;
+        let tweaked: TxoutCommitment = EmbeddedCommitment::<MSG>::commit_to(txout_container.clone(), msg)?;
         Ok(Self {
             entropy, tx, original: txout_container, tweaked
         })
@@ -122,22 +122,23 @@ mod test {
             a18b920a4dfa887d30700")
             .unwrap().as_slice()).unwrap();
 
-        let container = TxContainer {
+        let container1 = TxContainer {
             tx,
             entropy: 0,
             txout_container: TxoutContainer::PubkeyHash(PublicKey::from_str(
                 "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
             ).unwrap())
         };
+        let container2 = container1.clone();
 
-        let msg = &Message("message to commit to");
+        let msg = Message("message to commit to");
 
         // First way
-        let commitment: TxCommitment = msg.commit_embed(&container).unwrap();
+        let commitment: TxCommitment = msg.commit_embed(container1).unwrap();
         assert_eq!(msg.verify(&commitment), true);
 
         // Second way
-        let commitment: TxCommitment = EmbeddedCommitment::<Message>::commit_to(&container, msg).unwrap();
+        let commitment: TxCommitment = EmbeddedCommitment::<Message>::commit_to(container2, msg).unwrap();
         assert_eq!(EmbeddedCommitment::<Message>::reveal_verify(&commitment, msg), true);
     }
 }

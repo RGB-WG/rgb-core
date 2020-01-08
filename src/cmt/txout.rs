@@ -43,7 +43,7 @@ impl<MSG> CommitmentVerify<MSG> for TxoutCommitment where
 {
 
     #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
+    fn reveal_verify(&self, msg: MSG) -> bool {
         <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
@@ -73,12 +73,12 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
         }
     }
 
-    fn commit_to(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
         Ok(match container {
             TxoutContainer::PublicKey => {
                 // FIXME: Extract it from the script using LockScript
                 let pubkey: PublicKey = PublicKey::from_slice(&[0])?;
-                let cmt: PubkeyCommitment = EmbeddedCommitment::<MSG>::commit_to(&pubkey, msg)?;
+                let cmt: PubkeyCommitment = EmbeddedCommitment::<MSG>::commit_to(pubkey, msg)?;
                 Self::PublicKey(cmt)
             },
             TxoutContainer::PubkeyHash(pubkey) => {
@@ -100,7 +100,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
             TxoutContainer::OtherScript => {
                 // FIXME: Extract if from the txout
                 let script = LockScript::from(Script::new());
-                let cmt: LockscriptCommitment = EmbeddedCommitment::<MSG>::commit_to(&script, msg)?;
+                let cmt: LockscriptCommitment = EmbeddedCommitment::<MSG>::commit_to(script, msg)?;
                 Self::LockScript(cmt)
             },
         })

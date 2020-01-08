@@ -28,7 +28,7 @@ impl<MSG> CommitmentVerify<MSG> for LockscriptCommitment where
 {
 
     #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
+    fn reveal_verify(&self, msg: MSG) -> bool {
         <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
@@ -44,7 +44,7 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
         self.original.clone()
     }
 
-    fn commit_to(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
         let tweaked = LockScript::from(Script::new());
         // Parse script using LockScript
         // Find all required patterns
@@ -52,7 +52,7 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
         // Tweak each of them
         // Pack back into the script
         Ok(Self {
-            original: container.clone(), tweaked
+            original: container, tweaked
         })
     }
 }

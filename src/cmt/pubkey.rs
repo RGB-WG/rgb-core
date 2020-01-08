@@ -49,7 +49,7 @@ impl<MSG> CommitmentVerify<MSG> for PubkeyCommitment where
 {
 
     #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
+    fn reveal_verify(&self, msg: MSG) -> bool {
         <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
@@ -65,7 +65,7 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
         self.original
     }
 
-    fn commit_to(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
         let ec: Secp256k1<All> = Secp256k1::new();
         INIT.call_once(|| unsafe {
             PREFIX = BitcoinTag::tag(TAG)[..].try_into()
@@ -88,7 +88,7 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
 
         Ok(PubkeyCommitment {
             tweaked,
-            original: *container
+            original: container
         })
     }
 }
@@ -128,7 +128,7 @@ mod test {
             "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
         ).unwrap();
         let msg = Message("Message to commit to");
-        let commitment: PubkeyCommitment = msg.commit_embed(&pubkey).unwrap();
+        let commitment: PubkeyCommitment = msg.commit_embed(pubkey).unwrap();
         assert_eq!(commitment.tweaked.to_hex(),
                    "02b483ae49421fd8751b31278c6905eca00a8241a2ee3584bffc85655aa9123c02");
         assert_eq!(msg.verify(&commitment), true);
