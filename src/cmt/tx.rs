@@ -84,6 +84,7 @@ impl<T> Verifiable<TxCommitment> for T where T: AsSlice { }
 impl<T> EmbedCommittable<TxCommitment> for T where T: AsSlice { }
 
 
+#[cfg(test)]
 mod test {
     use std::str::FromStr;
     use secp256k1::PublicKey;

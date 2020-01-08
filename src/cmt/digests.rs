@@ -49,6 +49,7 @@ impl<T, HT> Verifiable<DigestCommitment<HT>> for T where HT: Hash, T: AsSlice { 
 impl<T, HT> Committable<DigestCommitment<HT>> for T where HT: Hash, T: AsSlice { }
 
 
+#[cfg(test)]
 mod test {
     use super::*;
     use bitcoin::hashes::{*, hex::ToHex};

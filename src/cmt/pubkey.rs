@@ -107,6 +107,7 @@ impl From<CurveError> for self::Error {
 }
 
 
+#[cfg(test)]
 mod test {
     use std::str::FromStr;
     use bitcoin::hashes::hex::ToHex;

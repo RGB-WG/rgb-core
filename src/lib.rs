@@ -11,7 +11,20 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-extern crate bitcoin;
+#![crate_name = "lnpbp"]
+#![crate_type = "dylib"]
+#![crate_type = "rlib"]
+
+// Coding conventions
+#![deny(non_upper_case_globals)]
+#![deny(non_camel_case_types)]
+#![deny(non_snake_case)]
+#![deny(unused_mut)]
+#![deny(dead_code)]
+#![deny(unused_imports)]
+// TODO: when we will be ready for the release #![deny(missing_docs)]
+
+pub extern crate bitcoin;
 
 #[macro_use]
 pub mod common;
