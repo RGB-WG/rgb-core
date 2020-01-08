@@ -14,11 +14,11 @@
 use std::ops::{Index, Range, RangeTo, RangeFrom, RangeFull};
 use std::marker::PhantomData;
 
-pub trait AsSlice: Eq {
+pub trait AsSlice {
     fn as_slice(&self) -> &[u8];
 }
 
-impl<T> AsSlice for T where T: Eq + Index<RangeFull, Output = [u8]> {
+impl<T> AsSlice for T where T: Index<RangeFull, Output = [u8]> {
     fn as_slice(&self) -> &[u8] { &self[..] }
 }
 
