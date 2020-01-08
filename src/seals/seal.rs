@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub type Message = AsRef<[u8]>;
+pub type Message = dyn AsRef<[u8]>;
 
 pub trait Context {
     type Promice;

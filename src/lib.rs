@@ -12,8 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 extern crate bitcoin;
-#[cfg(test)]
-extern crate hex;
 
 #[macro_use]
 pub mod common;

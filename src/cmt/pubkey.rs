@@ -20,8 +20,8 @@
 use std::sync::Once;
 use std::convert::TryInto;
 
-use secp256k1::{*, Error as CurveError};
 use bitcoin::hashes::*;
+use bitcoin::secp256k1::{*, Error as CurveError};
 
 use crate::common::*;
 use super::committable::*;
@@ -109,8 +109,8 @@ impl From<CurveError> for self::Error {
 
 mod test {
     use std::str::FromStr;
-    use secp256k1::PublicKey;
     use bitcoin::hashes::hex::ToHex;
+    use bitcoin::secp256k1::PublicKey;
     use super::*;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

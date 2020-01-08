@@ -91,6 +91,7 @@ impl SingleUseSeal<Blockchain> for TxoutSeal {
     }
 
     fn verify(&self, msg: &Message, witness: &Transaction, ctx: &Blockchain) -> Result<bool, Error> {
+        /* TODO: Finish implementation
         if !msg.verify(&self.commitment)? {
             return Err(Error::WrongMessageCommitment);
         }
@@ -106,6 +107,7 @@ impl SingleUseSeal<Blockchain> for TxoutSeal {
         if !witness.verify_commitment(msg) {
             return Err(Error::NotCommitted);
         }
+        */
         return Ok(true);
     }
 }

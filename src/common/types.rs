@@ -12,12 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::marker::PhantomData;
+use std::ops::{Index, RangeFull};
 
 use bitcoin::hashes::{Hash, Error, sha256};
 use bitcoin::hash_types::*;
-use std::ops::{Index, RangeFull};
 use bitcoin::Script;
-use secp256k1::PublicKey;
+use bitcoin::secp256k1::PublicKey;
 
 use crate::Wrapper;
 

@@ -11,10 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::marker::PhantomData;
 use bitcoin::hashes::Hash;
 use super::committable::*;
 use crate::{AsSlice, Wrapper};
-use std::marker::PhantomData;
 
 
 #[derive(Clone, Copy, Eq, PartialEq)]

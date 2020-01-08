@@ -11,8 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use secp256k1::PublicKey;
 use bitcoin::hashes::sha256;
+use bitcoin::secp256k1::PublicKey;
 
 use crate::common::*;
 use super::{committable::*, PubkeyCommitment, pubkey::Error};

@@ -11,8 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use secp256k1::{PublicKey, Secp256k1, All};
 use bitcoin::hashes::sha256;
+use bitcoin::secp256k1::{PublicKey, Secp256k1, All};
 
 /*
 pub struct MessageSource {

@@ -39,6 +39,7 @@ pub trait EmbeddedCommitment<MSG>: CommitmentVerify<MSG> where
     fn get_original_container(&self) -> Self::Container;
     fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error>;
 
+    #[inline]
     fn reveal_verify(&self, msg: &MSG) -> bool {
         match Self::from(&self.get_original_container(), msg) {
             Ok(commitment) => commitment == *self,
