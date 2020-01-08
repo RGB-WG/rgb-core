@@ -65,7 +65,7 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
         self.original
     }
 
-    fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let ec: Secp256k1<All> = Secp256k1::new();
         INIT.call_once(|| unsafe {
             PREFIX = BitcoinTag::tag(TAG)[..].try_into()

@@ -38,7 +38,7 @@ impl<HT, MSG> StandaloneCommitment<MSG> for DigestCommitment<HT> where
     MSG: AsSlice + Committable<Self>
 {
     #[inline]
-    fn from(msg: &MSG) -> DigestCommitment<HT> {
+    fn commit_to(msg: &MSG) -> DigestCommitment<HT> {
         From::from(<HT as Hash>::hash(&msg.as_slice()))
     }
 }

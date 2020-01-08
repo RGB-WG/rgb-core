@@ -62,7 +62,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
         }
     }
 
-    fn from(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let tx = container.tx.clone();
         let fee = 0; // FIXME: tx.get_fee();
         let entropy = container.entropy;
@@ -72,7 +72,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
         let txout_container = container.txout_container.clone();
         // TODO: Check container agains the actual output
         // TODO: Adjust transaction fee
-        let tweaked: TxoutCommitment = EmbeddedCommitment::<MSG>::from(&txout_container, msg)?;
+        let tweaked: TxoutCommitment = EmbeddedCommitment::<MSG>::commit_to(&txout_container, msg)?;
         Ok(Self {
             entropy, tx, original: txout_container, tweaked
         })
@@ -137,7 +137,7 @@ mod test {
         assert_eq!(msg.verify(&commitment), true);
 
         // Second way
-        let commitment: TxCommitment = EmbeddedCommitment::<Message>::from(&container, msg).unwrap();
+        let commitment: TxCommitment = EmbeddedCommitment::<Message>::commit_to(&container, msg).unwrap();
         assert_eq!(EmbeddedCommitment::<Message>::reveal_verify(&commitment, msg), true);
     }
 }
