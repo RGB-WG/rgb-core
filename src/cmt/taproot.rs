@@ -55,7 +55,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
     }
 
     fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
-        let cmt = EmbeddedCommitment::commit_to(container.intermediate_key, msg)?;
+        let cmt = PubkeyCommitment::commit_to(container.intermediate_key, msg)?;
         Ok(Self {
             script_root: container.script_root,
             pubkey_commitment: cmt

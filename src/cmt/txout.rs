@@ -78,29 +78,29 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
             TxoutContainer::PublicKey => {
                 // FIXME: Extract it from the script using LockScript
                 let pubkey: PublicKey = PublicKey::from_slice(&[0])?;
-                let cmt: PubkeyCommitment = EmbeddedCommitment::<MSG>::commit_to(pubkey, msg)?;
+                let cmt = PubkeyCommitment::commit_to(pubkey, msg)?;
                 Self::PublicKey(cmt)
             },
             TxoutContainer::PubkeyHash(pubkey) => {
-                let cmt: PubkeyCommitment = EmbeddedCommitment::<MSG>::commit_to(pubkey, msg)?;
+                let cmt = PubkeyCommitment::commit_to(pubkey, msg)?;
                 Self::PublicKey(cmt)
             },
             TxoutContainer::ScriptHash(script) => {
-                let cmt: LockscriptCommitment = EmbeddedCommitment::<MSG>::commit_to(script, msg)?;
+                let cmt = LockscriptCommitment::commit_to(script, msg)?;
                 Self::LockScript(cmt)
             },
             TxoutContainer::TapRoot(container) => {
-                let cmt: TaprootCommitment = EmbeddedCommitment::<MSG>::commit_to(container, msg)?;
+                let cmt = TaprootCommitment::commit_to(container, msg)?;
                 Self::TapRoot(cmt)
             },
             TxoutContainer::OpReturn(pubkey) => {
-                let cmt: PubkeyCommitment = EmbeddedCommitment::<MSG>::commit_to(pubkey, msg)?;
+                let cmt = PubkeyCommitment::commit_to(pubkey, msg)?;
                 Self::PublicKey(cmt)
             }
             TxoutContainer::OtherScript => {
                 // FIXME: Extract if from the txout
                 let script = LockScript::from(Script::new());
-                let cmt: LockscriptCommitment = EmbeddedCommitment::<MSG>::commit_to(script, msg)?;
+                let cmt = LockscriptCommitment::commit_to(script, msg)?;
                 Self::LockScript(cmt)
             },
         })

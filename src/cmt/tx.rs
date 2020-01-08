@@ -138,7 +138,7 @@ mod test {
         assert_eq!(msg.verify(&commitment), true);
 
         // Second way
-        let commitment: TxCommitment = EmbeddedCommitment::<Message>::commit_to(container2, msg).unwrap();
+        let commitment = TxCommitment::commit_to(container2, msg).unwrap();
         assert_eq!(EmbeddedCommitment::<Message>::reveal_verify(&commitment, msg), true);
     }
 }
