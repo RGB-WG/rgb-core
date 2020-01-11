@@ -46,6 +46,7 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
 
     fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
         let tweaked = LockScript::from(Script::new());
+        // TODO: Implement the following:
         // Parse script using LockScript
         // Find all required patterns
         // Extract public keys

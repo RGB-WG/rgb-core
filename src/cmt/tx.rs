@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::Transaction;
+use bitcoin::{Amount, Transaction};
 
 use crate::common::*;
 use super::{*, pubkey::Error};
@@ -20,6 +20,7 @@ use super::{*, pubkey::Error};
 #[derive(Clone, Eq, PartialEq)]
 pub struct TxContainer {
     pub entropy: u32,
+    pub fee: Amount,
     pub tx: Transaction,
     pub txout_container: TxoutContainer,
 }
@@ -27,9 +28,10 @@ pub struct TxContainer {
 #[derive(Clone, Eq, PartialEq)]
 pub struct TxCommitment {
     pub entropy: u32,
+    pub fee: Amount,
     pub tx: Transaction,
-    pub tweaked: TxoutCommitment,
     pub original: TxoutContainer,
+    pub tweaked: TxoutCommitment,
 }
 
 impl<MSG> CommitmentVerify<MSG> for TxCommitment where
@@ -56,6 +58,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
             TxoutCommitment::TapRoot(cmt) => Some(cmt.script_root),
         };
         TxContainer {
+            fee: self.fee,
             entropy: self.entropy,
             tx: self.tx.clone(),
             txout_container: self.original.clone()
@@ -63,18 +66,18 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
     }
 
     fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
-        let tx = container.tx.clone();
-        let fee = 0; // FIXME: tx.get_fee();
+        let tx = container.tx;
+        let fee = container.fee;
         let entropy = container.entropy;
         let nouts = tx.output.len();
-        let vout = (fee + entropy) % (nouts as u32);
+        let vout = (fee.as_sat() + (entropy as u64)) % (nouts as u64);
         let txout = tx.output[vout as usize].clone();
-        let txout_container = container.txout_container.clone();
-        // TODO: Check container agains the actual output
+        let txout_container = container.txout_container;
+        // TODO: Check container against the actual output
         // TODO: Adjust transaction fee
         let tweaked: TxoutCommitment = EmbeddedCommitment::<MSG>::commit_to(txout_container.clone(), msg)?;
         Ok(Self {
-            entropy, tx, original: txout_container, tweaked
+            entropy, fee, tx, original: txout_container, tweaked
         })
     }
 }
@@ -124,6 +127,7 @@ mod test {
 
         let container1 = TxContainer {
             tx,
+            fee: Amount::from_sat(0),
             entropy: 0,
             txout_container: TxoutContainer::PubkeyHash(PublicKey::from_str(
                 "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"

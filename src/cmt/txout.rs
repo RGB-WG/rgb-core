@@ -11,22 +11,27 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::Script;
-use bitcoin::secp256k1::PublicKey;
+use bitcoin::{
+    secp256k1::PublicKey,
+    blockdata::script::Builder
+};
 
 use crate::common::*;
-use super::{committable::*, PubkeyCommitment, LockscriptCommitment,
-            TaprootCommitment, TaprootContainer, pubkey::Error};
+use super::{
+    committable::*,
+    PubkeyCommitment, LockscriptCommitment, TaprootCommitment, TaprootContainer,
+    pubkey::Error
+};
 
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum TxoutContainer {
-    PublicKey,
+    PublicKey(PublicKey),
     PubkeyHash(PublicKey),
     ScriptHash(LockScript),
     TapRoot(TaprootContainer),
     OpReturn(PublicKey),
-    OtherScript,
+    OtherScript(PubkeyScript),
 }
 
 
@@ -35,6 +40,30 @@ pub enum TxoutCommitment {
     PublicKey(PubkeyCommitment),
     LockScript(LockscriptCommitment),
     TapRoot(TaprootCommitment),
+}
+
+
+impl From<TxoutContainer> for PubkeyScript {
+    fn from(container: TxoutContainer) -> Self {
+        let script = match container {
+            TxoutContainer::OtherScript(script) =>
+                script.into_inner(),
+            TxoutContainer::PublicKey(pubkey) =>
+                Builder::gen_p2pk(&bitcoin::PublicKey { compressed: false, key: pubkey }).into_script(),
+            TxoutContainer::PubkeyHash(pubkey) => {
+                let keyhash = bitcoin::PublicKey { compressed: false, key: pubkey }.wpubkey_hash();
+                Builder::gen_v0_p2wpkh(&keyhash).into_script()
+            },
+            TxoutContainer::ScriptHash(script) =>
+                Builder::gen_v0_p2wsh(&script.into_inner().wscript_hash()).into_script(),
+            TxoutContainer::OpReturn(data) => {
+                let keyhash = bitcoin::PublicKey { compressed: false, key: data }.wpubkey_hash();
+                Builder::gen_op_return(&keyhash.to_vec()).into_script()
+            },
+            TxoutContainer::TapRoot(taproot_container) => unimplemented!(),
+        };
+        script.into()
+    }
 }
 
 
@@ -75,9 +104,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
 
     fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
         Ok(match container {
-            TxoutContainer::PublicKey => {
-                // FIXME: Extract it from the script using LockScript
-                let pubkey: PublicKey = PublicKey::from_slice(&[0])?;
+            TxoutContainer::PublicKey(pubkey) => {
                 let cmt = PubkeyCommitment::commit_to(pubkey, msg)?;
                 Self::PublicKey(cmt)
             },
@@ -97,9 +124,9 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
                 let cmt = PubkeyCommitment::commit_to(pubkey, msg)?;
                 Self::PublicKey(cmt)
             }
-            TxoutContainer::OtherScript => {
+            TxoutContainer::OtherScript(script) => {
                 // FIXME: Extract if from the txout
-                let script = LockScript::from(Script::new());
+                let script = LockScript::from_inner(script.into_inner());
                 let cmt = LockscriptCommitment::commit_to(script, msg)?;
                 Self::LockScript(cmt)
             },
