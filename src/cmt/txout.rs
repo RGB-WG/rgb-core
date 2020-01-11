@@ -125,7 +125,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
                 Self::PublicKey(cmt)
             }
             TxoutContainer::OtherScript(script) => {
-                // FIXME: Extract if from the txout
+                // FIXME: Extract it from the txout
                 let script = LockScript::from_inner(script.into_inner());
                 let cmt = LockscriptCommitment::commit_to(script, msg)?;
                 Self::LockScript(cmt)
