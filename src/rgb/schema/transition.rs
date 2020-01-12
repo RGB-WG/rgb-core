@@ -11,14 +11,16 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::collections::HashMap;
 
-pub mod types;
-pub mod field;
-pub mod transition;
-pub mod schema;
+use super::{
+    types::*,
+    field::*,
+};
 
-pub use types::*;
-pub use field::*;
-pub use transition::*;
-pub use schema::*;
-
+pub struct Transition {
+    pub closes: Option<HashMap<usize, Occurences<u32>>>,
+    pub fields: Vec<Field>,
+    pub binds: HashMap<usize, Occurences<u32>>,
+    pub scripts: ScriptRequirements,
+}

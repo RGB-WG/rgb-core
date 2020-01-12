@@ -12,13 +12,19 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-pub mod types;
-pub mod field;
-pub mod transition;
-pub mod schema;
+use super::types::*;
 
-pub use types::*;
-pub use field::*;
-pub use transition::*;
-pub use schema::*;
 
+pub enum FieldFormat {
+    Unsigned { bits: Bits, min: Option<u64>, max: Option<u64> },
+    Integer { bits: Bits, min: Option<i64>, max: Option<i64> },
+    Float { bits: Bits, min: Option<f64>, max: Option<f64> },
+    Enum { values: Vec<u8> },
+    String(u16),
+    Bytes(u16),
+    Digest(u16, DigestAlgorithm),
+    ECPoint(ECPointSerialization),
+    Signature(SignatureAlgorithm),
+}
+
+pub struct Field(pub FieldFormat, pub Occurences<u8>);
