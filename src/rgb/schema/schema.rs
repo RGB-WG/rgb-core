@@ -11,18 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::HashMap;
+use std::{
+    io,
+    collections::HashMap
+};
 
 use bitcoin::hashes::{sha256, sha256t};
 
 use super::{
     types::*,
-    transition::*,
-    super::{
-        ConsensusCommit,
-        serialize
-    }
+    transition::*
 };
+use crate::csv::{ConsensusCommit, serialize, Error};
 
 
 pub struct ValidationError {
@@ -36,7 +36,7 @@ pub struct Schema {
 
 impl Schema {
     pub fn schema_id(&self) -> SchemaId {
-        self.consensus_commit()
+        self.consensus_commit().expect("Schema with commit failures must nor be serialized")
     }
 
     pub fn validate(&self, ts: super::transition::Transition) -> Result<(), ValidationError> {
@@ -45,24 +45,22 @@ impl Schema {
 }
 
 impl serialize::Commitment for Schema {
-    fn commitment_serialize(&self) -> Vec<u8> {
+    fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error> {
         unimplemented!()
-        /*
-        let buf = self.seals.commitment_serialize();
-        buf.extend(self.transitions.commitment_serialize())
-        */
+    }
+
+    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
+        unimplemented!()
     }
 }
 
 impl serialize::Commitment for Transition {
-    fn commitment_serialize(&self) -> Vec<u8> {
+    fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error> {
         unimplemented!()
-        /*
-        let buf = self.closes.commitment_serialize();
-        buf.extend(self.fields.commitment_serialize());
-        buf.extend(self.binds.commitment_serialize());
-        buf.extend(self.scripts.commitment_serialize())
-        */
+    }
+
+    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
+        unimplemented!()
     }
 }
 

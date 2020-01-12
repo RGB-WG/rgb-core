@@ -12,13 +12,16 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
+use std::io::Cursor;
 use bitcoin::hashes::Hash;
 
 use super::serialize;
 
 pub trait ConsensusCommit: serialize::Commitment {
     type CommitmentHash: Hash;
-    fn consensus_commit(&self) -> Self::CommitmentHash {
-        Self::CommitmentHash::hash(&self.commitment_serialize())
+    fn consensus_commit(&self) -> Result<Self::CommitmentHash, serialize::Error> {
+        let mut encoder = Cursor::new(vec![]);
+        self.commitment_serialize(&mut encoder)?;
+        Ok(Self::CommitmentHash::hash(&encoder.into_inner()))
     }
 }
