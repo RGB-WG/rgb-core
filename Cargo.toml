@@ -13,4 +13,9 @@ name = "lnpbp"
 path = "src/lib.rs"
 
 [dependencies]
-bitcoin = "~0.22"
+bitcoin = { git = "https://github.com/pandoracore/rust-bitcoin", branch = "develop", features = [ "use-serde" ] }
+num-integer = "0.1.42"
+hex = { version = "=0.3.2", optional = true }
+
+[dev-dependencies]
+hex = "=0.3.2"

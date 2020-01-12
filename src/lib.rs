@@ -15,22 +15,27 @@
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
 
+#![feature(associated_type_defaults)]
+#![feature(const_fn)]
+
 // Coding conventions
 #![deny(non_upper_case_globals)]
 #![deny(non_camel_case_types)]
 #![deny(non_snake_case)]
 #![deny(unused_mut)]
-#![deny(dead_code)]
 #![deny(unused_imports)]
 // TODO: when we will be ready for the release #![deny(missing_docs)]
 
+#[cfg(any(test, feature = "serde"))] extern crate hex;
+extern crate num_integer;
+#[macro_use]
 pub extern crate bitcoin;
 
 #[macro_use]
 pub mod common;
 pub mod cmt;
 pub mod seals;
+pub mod rgb;
 //pub mod cvp;
-pub mod state;
 
 pub use common::*;

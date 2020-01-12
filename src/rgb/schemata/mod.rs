@@ -1,5 +1,5 @@
 // LNP/BP Rust Library
-// Written in 2019 by
+// Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
 // To the extent possible under law, the author(s) have dedicated all
@@ -11,13 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use super::schema::Schema;
 
-//! Common data types, structures and functions for LNPBPs
+pub mod fungible;
+pub mod collectibles;
 
-#[macro_use]
-pub mod macros;
-pub mod traits;
-pub mod types;
+pub use fungible::Rgb1;
+pub use collectibles::Rgb2;
 
-pub use traits::*;
-pub use types::*;
+pub trait Schemata {
+    fn get_schema() -> &'static Schema;
+}
