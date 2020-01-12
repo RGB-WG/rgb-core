@@ -12,55 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-pub type HashLock = sha256::Hash;
-pub type HashPreimage = sha256::Hash;
+use bitcoin::hashes::{
+    sha256d, Hash,
+    hex::{ToHex, FromHex}
+};
 
+pub mod tagged256;
 
-pub enum ScriptPubkeyType {
-    P2S(Script),
-    P2PK(PublicKey),
-    P2PKH(sha256d::Hash),
-    P2SH(hash160::Hash),
-    P2OR(Box<[u8]>),
-    P2WPKH(sha256d::Hash),
-    P2WSH(hash160::Hash),
-    P2TR(PublicKey),
-}
-
-pub enum DeterministicScript {
-    MultiSig(u8, Vec<PublicKey>),
-    LNToRemote(u8, PublicKey),
-    LNHtlcSuccess(u8, HashLock, PublicKey, PublicKey),
-    LNHtlcTimeout(u8, HashLock, PublicKey, PublicKey),
-}
-
-pub struct ScriptPubkey(Script);
-
-impl ScriptPubkey {
-    fn get_type(&self) -> ScriptPubkeyType {
-
-    }
-}
-
-pub enum ScriptPubkeySuppl {
-    PubkeyHash(PublicKey),
-    ScriptHash(DeterministicScript),
-    Taproot(PublicKey),
-}
-
-pub enum Thing {
-    Pubkey(PublicKey),
-    TaprootPubkey(PublicKey),
-    Script(DeterministicScript, Vec<PublicKey>),
-    Unspendable(PublicKey),
-}
-
-impl Thing {
-    pub fn commit(&mut self, msg: &Message) -> Result<(), Error> { unimplemented!() }
-    pub fn verify(&self, msg: &Message) -> bool { unimplemented!() }
-}
-
-pub struct ThingCommitment {
-    pub thing: Thing,
-    pub commitment: Commitment,
-}
+hash_newtype!(HashLock, sha256d::Hash, 32, doc="Hashed locks in HTLC");
+hash_newtype!(HashPreimage, sha256d::Hash, 32, doc="Pre-images for hashed locks in HTLC");

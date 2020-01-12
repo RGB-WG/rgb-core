@@ -25,14 +25,16 @@
 #![deny(unused_mut)]
 #![deny(unused_imports)]
 // TODO: when we will be ready for the release #![deny(missing_docs)]
+// TODO: when we will be ready for the release #![deny(dead_code)]
 
-#[cfg(any(test, feature = "serde"))] extern crate hex;
+extern crate hex;
 extern crate num_integer;
 #[macro_use]
 pub extern crate bitcoin;
 
 #[macro_use]
 pub mod common;
+pub mod bp;
 pub mod cmt;
 pub mod seals;
 pub mod rgb;
