@@ -21,7 +21,11 @@ use super::{
         Bits::*,
         Occurences::*,
         StateFormat::*,
-        ScriptRequirements::*
+        script::{
+            Scripting,
+            Procedure::*,
+            Extensions::*
+        }
     }
 };
 
@@ -71,7 +75,10 @@ impl Schemata for Rgb2 {
                             ISSUE => OnceOrUpTo(None),
                             PRUNE => NoneOrOnce
                         },
-                        scripts: ScriptsDenied
+                        scripting: Scripting {
+                            validation: Standard("rgb2:genesis"),
+                            extensions: ScriptsDenied
+                        }
                     },
                     // Issuance transition: secondary issue
                     Transition {
@@ -90,7 +97,10 @@ impl Schemata for Rgb2 {
                             BALANCE => Once,
                             PRUNE => NoneOrOnce
                         },
-                        scripts: ScriptsDenied,
+                        scripting: Scripting {
+                            validation: Standard("rgb2:issue"),
+                            extensions: ScriptsDenied
+                        }
                     },
                     // Amount transition: asset transfers
                     Transition {
@@ -101,7 +111,10 @@ impl Schemata for Rgb2 {
                         binds: map!{
                             BALANCE => NoneOrUpTo(None)
                         },
-                        scripts: ScriptsDenied
+                        scripting: Scripting {
+                            validation: Standard("rgb2:transfer"),
+                            extensions: ScriptsDenied
+                        }
                     },
                     // Pruning transition: asset re-issue
                     Transition {
@@ -113,7 +126,10 @@ impl Schemata for Rgb2 {
                             BALANCE => NoneOrUpTo(None),
                             PRUNE => Once
                         },
-                        scripts: ScriptsDenied
+                        scripting: Scripting {
+                            validation: Standard("rgb2:pruning"),
+                            extensions: ScriptsDenied
+                        }
                     }
                 ]
             })));

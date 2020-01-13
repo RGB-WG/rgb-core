@@ -55,9 +55,3 @@ pub enum Occurences<MAX: Integer> {
     OnceOrUpTo(Option<MAX>),
     NoneOrUpTo(Option<MAX>),
 }
-
-pub enum ScriptRequirements {
-    ScriptsDenied,
-    GenesisOnly,
-    Allowed
-}

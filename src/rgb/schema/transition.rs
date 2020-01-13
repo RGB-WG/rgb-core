@@ -16,11 +16,12 @@ use std::collections::HashMap;
 use super::{
     types::*,
     field::*,
+    script::Scripting
 };
 
 pub struct Transition {
     pub closes: Option<HashMap<usize, Occurences<u32>>>,
     pub fields: Vec<Field>,
     pub binds: HashMap<usize, Occurences<u32>>,
-    pub scripts: ScriptRequirements,
+    pub scripting: Scripting,
 }
