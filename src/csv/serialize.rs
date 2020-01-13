@@ -100,6 +100,24 @@ macro_rules! impl_commitment_enum {
     };
 }
 
+impl Commitment for usize {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        if *self > std::u16::MAX as usize {
+            return Err(consensus::Error::OversizedVectorAllocation {
+                requested: *self, max: std::u16::MAX as usize
+            }.into())
+        }
+
+        let size = *self as u16;
+        size.commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        u16::commitment_deserialize(&mut d).map(|val| val as usize)
+    }
+}
+
+
 impl<T> Commitment for T where T: FromConsensus {
     #[inline]
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
@@ -148,15 +166,8 @@ impl<T> Commitment for Option<T> where T: Commitment {
 
 impl<T> Commitment for Vec<T> where T: Commitment {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-        if self.len() > std::u16::MAX as usize {
-            return Err(consensus::Error::OversizedVectorAllocation {
-                requested: self.len(), max: std::u16::MAX as usize
-            }.into())
-        }
-
-        let mut serialized: usize = 0;
-        let len = self.len() as u16;
-        serialized += len.commitment_serialize(&mut e)?;
+        let len = self.len() as usize;
+        let mut serialized = len.commitment_serialize(&mut e)?;
         for item in self {
             serialized += item.commitment_serialize(&mut e)?;
         }
@@ -165,7 +176,7 @@ impl<T> Commitment for Vec<T> where T: Commitment {
     }
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        let len = u16::commitment_deserialize(&mut d)?;
+        let len = usize::commitment_deserialize(&mut d)?;
         let mut data = Vec::<T>::with_capacity(len as usize);
         for _ in 0..len {
             data.push(T::commitment_deserialize(&mut d)?);
@@ -176,8 +187,11 @@ impl<T> Commitment for Vec<T> where T: Commitment {
 
 impl<T> Commitment for HashMap<usize, T> where T: Commitment {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        let len = self.len() as usize;
+        let serialized = len.commitment_serialize(&mut e)?;
+
         let ordered: BTreeMap<_,_> = self.iter().collect();
-        ordered.values().try_fold(0usize, |acc, item| {
+        ordered.values().try_fold(serialized, |acc, item| {
             item.commitment_serialize(&mut e).map(|len| acc + len)
         })
     }
