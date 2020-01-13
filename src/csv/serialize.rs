@@ -24,6 +24,7 @@ pub enum Error {
 }
 
 impl From<consensus::Error> for Error {
+    #[inline]
     fn from(err: consensus::Error) -> Self {
         Error::BitcoinConsensus(err)
     }
@@ -45,9 +46,12 @@ impl FromConsensus for i32 {}
 impl FromConsensus for i64 {}
 
 impl<T> Commitment for T where T: FromConsensus {
+    #[inline]
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(self.consensus_encode(&mut e)?)
     }
+
+    #[inline]
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
         Ok(Self::consensus_decode(d)?)
     }
@@ -72,8 +76,13 @@ impl<T> Commitment for Vec<T> where T: Commitment {
         Ok(serialized)
     }
 
-    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
-        unimplemented!()
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let len = u16::commitment_deserialize(&mut d)?;
+        let mut data = Vec::<T>::with_capacity(len as usize);
+        for _ in 0..len {
+            data.push(T::commitment_deserialize(&mut d)?);
+        }
+        Ok(data)
     }
 }
 
@@ -89,18 +98,24 @@ pub trait Storage: Sized {
 
 
 impl<T> Network for T where T: Commitment {
+    #[inline]
     fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         self.commitment_serialize(&mut e)
     }
+
+    #[inline]
     fn network_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
         Self::commitment_deserialize(d)
     }
 }
 
 impl<T> Storage for T where T: Commitment + Network {
+    #[inline]
     fn storage_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         self.network_serialize(&mut e)
     }
+
+    #[inline]
     fn storage_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
         Self::network_deserialize(d)
     }
