@@ -16,7 +16,7 @@ use std::{io, str};
 use num_traits::{ToPrimitive, FromPrimitive};
 use num_derive::{ToPrimitive, FromPrimitive};
 
-use crate::csv::{serialize, Error};
+use crate::csv::{serialize, Commitment, Error};
 use bitcoin::consensus::deserialize;
 
 #[non_exhaustive]
@@ -26,6 +26,8 @@ pub enum Extensions {
     ScriptsExtend,
     ScriptsReplace,
 }
+
+impl_commitment_enum!(Extensions);
 
 
 #[non_exhaustive]

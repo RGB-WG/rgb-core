@@ -14,7 +14,9 @@
 
 use std::{
     io,
-    collections::{HashMap, BTreeMap}
+    str::Utf8Error,
+    collections::{HashMap, BTreeMap},
+    convert::{From},
 };
 
 use num_traits::{ToPrimitive, FromPrimitive};
@@ -28,6 +30,13 @@ pub enum Error {
     BitcoinConsensus(consensus::Error),
     EnumValueUnknown(u8),
     EnumValueOverflow,
+    Utf8Error(Utf8Error)
+}
+
+impl From<Utf8Error> for Error {
+    fn from(err: Utf8Error) -> Self {
+        Self::Utf8Error(err)
+    }
 }
 
 impl From<consensus::Error> for Error {

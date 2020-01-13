@@ -40,6 +40,8 @@ pub enum Bits {
     Bit256,
 }
 
+impl_commitment_enum!(Bits);
+
 
 #[non_exhaustive]
 #[derive(ToPrimitive, FromPrimitive)]
@@ -51,6 +53,8 @@ pub enum DigestAlgorithm {
     Tagged256,
 }
 
+impl_commitment_enum!(DigestAlgorithm);
+
 
 #[non_exhaustive]
 #[derive(ToPrimitive, FromPrimitive)]
@@ -58,6 +62,8 @@ pub enum SignatureAlgorithm {
     EcdsaDer = 0,
     SchnorrBip,
 }
+
+impl_commitment_enum!(SignatureAlgorithm);
 
 
 #[non_exhaustive]
@@ -68,6 +74,8 @@ pub enum ECPointSerialization {
     SchnorrBip
 }
 
+impl_commitment_enum!(ECPointSerialization);
+
 
 #[non_exhaustive]
 pub enum Occurences<MAX: Integer> {
@@ -76,3 +84,4 @@ pub enum Occurences<MAX: Integer> {
     OnceOrUpTo(Option<MAX>),
     NoneOrUpTo(Option<MAX>),
 }
+
