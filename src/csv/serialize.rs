@@ -52,6 +52,18 @@ pub trait Commitment: Sized {
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error>;
 }
 
+macro_rules! commitment_serialize_list {
+    ( $encoder:ident; $($item:expr),+ ) => {
+        {
+            let mut len = 0usize;
+            $(
+                len += $item.commitment_serialize(&mut $encoder)?;
+            )+
+            len
+        }
+    }
+}
+
 pub trait FromEnumPrimitive: FromPrimitive + ToPrimitive { }
 pub trait FromConsensus: consensus::Encodable + consensus::Decodable { }
 
@@ -99,6 +111,19 @@ impl<T> Commitment for T where T: FromConsensus {
     }
 }
 
+impl<T> Commitment for Option<T> where T: Commitment {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(match self {
+            None => commitment_serialize_list!(e; 0u8),
+            Some(val) => commitment_serialize_list!(e; 1u8, val),
+        })
+    }
+
+    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
+        unimplemented!()
+    }
+}
+
 impl<T> Commitment for Vec<T> where T: Commitment {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         if self.len() > std::u16::MAX as usize {
@@ -135,7 +160,7 @@ impl<T> Commitment for HashMap<usize, T> where T: Commitment {
         })
     }
 
-    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
         unimplemented!()
     }
 }

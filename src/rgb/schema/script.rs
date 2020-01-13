@@ -37,21 +37,21 @@ pub enum Procedure {
 
 impl Commitment for Procedure {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-        let value = match self {
-            Self::Standard(name) => (0u8, &name.as_bytes().to_vec()),
-            Self::Simplicity(code) => (1u8, code),
+        Ok(match self {
+            Self::Standard(name) => commitment_serialize_list!(e; 0u8, name.as_bytes().to_vec()),
+            Self::Simplicity(code) => commitment_serialize_list!(e; 1u8, code),
             _ => panic!("New scripting engines can't appear w/o this library to be aware of")
-        };
-        let mut len = value.0.commitment_serialize(&mut e)?;
-        len += value.1.commitment_serialize(&mut e)?;
-        Ok(len)
+        })
     }
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let value = u8::commitment_deserialize(&mut d)?;
         let bytes = <Vec<u8>>::commitment_deserialize(&mut d)?;
         Ok(match value {
-            0u8 => Self::Standard(str::from_utf8(&bytes)?),
+            0u8 => Self::Standard(match str::from_utf8(&bytes)? {
+                "fungible" => "fungible",
+                _ => Err(Error::ValueOutOfRange)?,
+            }),
             1u8 => Self::Simplicity(bytes.to_vec()),
             _ => panic!("New scripting engines can't appear w/o this library to be aware of")
         })

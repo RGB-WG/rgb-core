@@ -11,8 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
-macro_rules! map(
+macro_rules! map {
     { $($key:expr => $value:expr),+ } => {
         {
             let mut m = ::std::collections::HashMap::new();
@@ -21,5 +20,17 @@ macro_rules! map(
             )+
             m
         }
-     };
-);
+    }
+}
+
+macro_rules! hlist {
+    [ $($value:expr),+ ] => {
+        {
+            let mut m = ::std::vec::Vec::<::std::boxed::Box<dyn ::std::any::Any>>::new();
+            $(
+                m.push(::std::boxed::Box::new($value));
+            )+
+            m
+        }
+    }
+}
