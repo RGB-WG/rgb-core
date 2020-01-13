@@ -16,7 +16,7 @@ use std::{io, str};
 use num_traits::{ToPrimitive, FromPrimitive};
 use num_derive::{ToPrimitive, FromPrimitive};
 
-use crate::csv::{serialize, Commitment, Error};
+use crate::csv::{Commitment, Error};
 
 #[non_exhaustive]
 #[derive(ToPrimitive, FromPrimitive)]
@@ -35,7 +35,7 @@ pub enum Procedure {
     Simplicity(Vec<u8>)
 }
 
-impl serialize::Commitment for Procedure {
+impl Commitment for Procedure {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         let value = match self {
             Self::Standard(name) => (0u8, &name.as_bytes().to_vec()),
@@ -64,7 +64,7 @@ pub struct Scripting {
     pub extensions: Extensions,
 }
 
-impl serialize::Commitment for Scripting {
+impl Commitment for Scripting {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         self.validation.commitment_serialize(&mut e)?;
         self.extensions.commitment_serialize(&mut e)

@@ -30,7 +30,8 @@ pub enum Error {
     BitcoinConsensus(consensus::Error),
     EnumValueUnknown(u8),
     EnumValueOverflow,
-    Utf8Error(Utf8Error)
+    Utf8Error(Utf8Error),
+    ValueOutOfRange,
 }
 
 impl From<Utf8Error> for Error {

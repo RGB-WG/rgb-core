@@ -12,6 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
+use std::{io, convert::TryFrom};
+
 use num_integer::Integer;
 use num_traits::{ToPrimitive, FromPrimitive};
 use num_derive::{ToPrimitive, FromPrimitive};
@@ -85,3 +87,45 @@ pub enum Occurences<MAX: Integer> {
     NoneOrUpTo(Option<MAX>),
 }
 
+macro_rules! impl_ooccurences {
+    ($type:ident) => {
+        impl Commitment for Occurences<$type> {
+            fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+                let value: (u8, u64) = match self {
+                    Self::NoneOrOnce => (0x00u8, 0),
+                    Self::Once => (0x01u8, 0),
+                    Self::NoneOrUpTo(max) => (0xFEu8, max.unwrap_or(std::$type::MAX).into()),
+                    Self::OnceOrUpTo(max) => (0xFFu8, max.unwrap_or(std::$type::MAX).into()),
+                    _ => panic!("New occurence types can't appear w/o this library to be aware of")
+                };
+                let mut len = value.0.commitment_serialize(&mut e)?;
+                len += value.1.commitment_serialize(&mut e)?;
+                Ok(len)
+            }
+
+            fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+                let value = u8::commitment_deserialize(&mut d)?;
+                let max = u64::commitment_deserialize(&mut d)?;
+                let max: Option<$type> = match max {
+                    val if val > 0 && val < ::std::$type::MAX.into() =>
+                        Ok(Some($type::try_from(max).expect("Can't fail"))),
+                    val if val == ::std::$type::MAX.into() =>
+                        Ok(None),
+                    _ => Err(Error::ValueOutOfRange),
+                }?;
+                Ok(match value {
+                    0x00u8 => Self::NoneOrOnce,
+                    0x01u8 => Self::Once,
+                    0xFEu8 => Self::NoneOrUpTo(max),
+                    0xFFu8 => Self::OnceOrUpTo(max),
+                    _ => panic!("New occurence types can't appear w/o this library to be aware of")
+                })
+            }
+        }
+    };
+}
+
+impl_ooccurences!(u8);
+impl_ooccurences!(u16);
+impl_ooccurences!(u32);
+impl_ooccurences!(u64);
