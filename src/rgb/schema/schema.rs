@@ -45,22 +45,16 @@ impl Schema {
 }
 
 impl serialize::Commitment for Schema {
-    fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-        unimplemented!()
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.seals.commitment_serialize(&mut e)?;
+        self.transitions.commitment_serialize(&mut e)
     }
 
-    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
-        unimplemented!()
-    }
-}
-
-impl serialize::Commitment for Transition {
-    fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-        unimplemented!()
-    }
-
-    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
-        unimplemented!()
+    fn commitment_deserialize<D: io::Read>(&mut d: D) -> Result<Self, Error> {
+        Ok(Self {
+            seals: <HashMap<usize, StateFormat>>::commitment_deserialize(&mut d)?,
+            transitions: <Vec<Transition>>::commitment_deserialize(&mut d)?,
+        })
     }
 }
 

@@ -13,16 +13,23 @@
 
 
 use num_integer::Integer;
+use num_traits::{ToPrimitive, FromPrimitive};
+use num_derive::{ToPrimitive, FromPrimitive};
 
 
+#[non_exhaustive]
+#[derive(ToPrimitive, FromPrimitive)]
 pub enum StateFormat {
-    NoState,
+    NoState = 0,
     Amount,
     Data
 }
 
+
+#[non_exhaustive]
+#[derive(ToPrimitive, FromPrimitive)]
 pub enum Bits {
-    Bit8,
+    Bit8 = 0,
     Bit16,
     Bit32,
     Bit64,
@@ -30,25 +37,36 @@ pub enum Bits {
     Bit256,
 }
 
+
+#[non_exhaustive]
+#[derive(ToPrimitive, FromPrimitive)]
 pub enum DigestAlgorithm {
-    Sha256,
+    Sha256 = 0,
     Bitcoin256,
-    Ripmd160,
+    Ripemd160,
     Bitcoin160,
     Tagged256,
 }
 
+
+#[non_exhaustive]
+#[derive(ToPrimitive, FromPrimitive)]
 pub enum SignatureAlgorithm {
-    EcdsaDer,
+    EcdsaDer = 0,
     SchnorrBip,
 }
 
+
+#[non_exhaustive]
+#[derive(ToPrimitive, FromPrimitive)]
 pub enum ECPointSerialization {
-    Uncompressed,
+    Uncompressed = 0,
     Compressed,
     SchnorrBip
 }
 
+
+#[non_exhaustive]
 pub enum Occurences<MAX: Integer> {
     Once,
     NoneOrOnce,

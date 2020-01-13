@@ -15,6 +15,9 @@
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
 
+#![feature(never_type)]
+#![feature(const_generics)]
+#![feature(optin_builtin_traits)]
 #![feature(associated_type_defaults)]
 #![feature(const_fn)]
 
@@ -29,6 +32,8 @@
 
 extern crate hex;
 extern crate num_integer;
+extern crate num_derive;
+extern crate num_traits;
 #[macro_use]
 pub extern crate bitcoin;
 

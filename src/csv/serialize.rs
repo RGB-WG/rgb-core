@@ -12,7 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-use std::io;
+use std::{
+    io,
+    collections::{HashMap, BTreeMap}
+};
+
+use num_traits::{ToPrimitive, FromPrimitive};
 use bitcoin::{
     consensus::encode as consensus,
 };
@@ -20,7 +25,8 @@ use bitcoin::{
 
 #[derive(Debug)]
 pub enum Error {
-    BitcoinConsensus(consensus::Error)
+    BitcoinConsensus(consensus::Error),
+    UnknownEnumValue(u8),
 }
 
 impl From<consensus::Error> for Error {
@@ -35,15 +41,37 @@ pub trait Commitment: Sized {
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error>;
 }
 
+pub trait FromEnumPrimitive: FromPrimitive + ToPrimitive { }
 pub trait FromConsensus: consensus::Encodable + consensus::Decodable { }
-impl FromConsensus for u8 {}
-impl FromConsensus for u16 {}
-impl FromConsensus for u32 {}
-impl FromConsensus for u64 {}
-impl FromConsensus for i8 {}
-impl FromConsensus for i16 {}
-impl FromConsensus for i32 {}
-impl FromConsensus for i64 {}
+
+impl FromConsensus for u8 { }
+impl FromConsensus for u16 { }
+impl FromConsensus for u32 { }
+impl FromConsensus for u64 { }
+impl FromConsensus for i8 { }
+impl FromConsensus for i16 { }
+impl FromConsensus for i32 { }
+impl FromConsensus for i64 { }
+
+macro_rules! impl_commitment_enum {
+    ($type:ident) => {
+        impl Commitment for $type {
+            #[inline]
+            fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+                Ok(self.to_u8().commitment_serialize(e)?)
+            }
+
+            #[inline]
+            fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
+                let value = u8::commitment_deserialize(d)?;
+                match Self::from_u8(value) {
+                    Some(result) => Ok(result),
+                    None => Err(Error::UnknownEnumValue(value)),
+                }
+            }
+        }
+    };
+}
 
 impl<T> Commitment for T where T: FromConsensus {
     #[inline]
@@ -56,7 +84,6 @@ impl<T> Commitment for T where T: FromConsensus {
         Ok(Self::consensus_decode(d)?)
     }
 }
-
 
 impl<T> Commitment for Vec<T> where T: Commitment {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
@@ -83,6 +110,19 @@ impl<T> Commitment for Vec<T> where T: Commitment {
             data.push(T::commitment_deserialize(&mut d)?);
         }
         Ok(data)
+    }
+}
+
+impl<T> Commitment for HashMap<usize, T> where T: Commitment {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        let ordered: BTreeMap<_,_> = self.iter().collect();
+        ordered.values().try_for_each(|item| {
+            item.commitment_serialize(&mut e)
+        })
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        unimplemented!()
     }
 }
 
