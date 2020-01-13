@@ -13,6 +13,7 @@
 
 pub mod data;
 pub mod commit;
+#[macro_use]
 pub mod serialize;
 pub mod multimsg;
 

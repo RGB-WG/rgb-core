@@ -26,7 +26,8 @@ use bitcoin::{
 #[derive(Debug)]
 pub enum Error {
     BitcoinConsensus(consensus::Error),
-    UnknownEnumValue(u8),
+    EnumValueUnknown(u8),
+    EnumValueOverflow,
 }
 
 impl From<consensus::Error> for Error {
@@ -57,16 +58,19 @@ macro_rules! impl_commitment_enum {
     ($type:ident) => {
         impl Commitment for $type {
             #[inline]
-            fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-                Ok(self.to_u8().commitment_serialize(e)?)
+            fn commitment_serialize<E: ::std::io::Write>(&self, e: E) -> Result<usize, $crate::csv::serialize::Error> {
+                match self.to_u8() {
+                    Some(result) => result.commitment_serialize(e),
+                    None => Err($crate::csv::serialize::Error::EnumValueOverflow),
+                }
             }
 
             #[inline]
-            fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
+            fn commitment_deserialize<D: ::std::io::Read>(d: D) -> Result<Self,$crate::csv::serialize::Error> {
                 let value = u8::commitment_deserialize(d)?;
                 match Self::from_u8(value) {
                     Some(result) => Ok(result),
-                    None => Err(Error::UnknownEnumValue(value)),
+                    None => Err($crate::csv::serialize::Error::EnumValueUnknown(value)),
                 }
             }
         }
@@ -116,8 +120,8 @@ impl<T> Commitment for Vec<T> where T: Commitment {
 impl<T> Commitment for HashMap<usize, T> where T: Commitment {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         let ordered: BTreeMap<_,_> = self.iter().collect();
-        ordered.values().try_for_each(|item| {
-            item.commitment_serialize(&mut e)
+        ordered.values().try_fold(0usize, |acc, item| {
+            item.commitment_serialize(&mut e).map(|len| acc + len)
         })
     }
 

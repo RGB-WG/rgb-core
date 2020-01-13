@@ -42,6 +42,7 @@ pub mod common;
 pub mod bp;
 pub mod cmt;
 pub mod seals;
+#[macro_use]
 pub mod csv;
 pub mod rgb;
 

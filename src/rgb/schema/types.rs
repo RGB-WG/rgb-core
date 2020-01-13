@@ -16,6 +16,7 @@ use num_integer::Integer;
 use num_traits::{ToPrimitive, FromPrimitive};
 use num_derive::{ToPrimitive, FromPrimitive};
 
+use crate::csv::serialize::*;
 
 #[non_exhaustive]
 #[derive(ToPrimitive, FromPrimitive)]
@@ -24,6 +25,8 @@ pub enum StateFormat {
     Amount,
     Data
 }
+
+impl_commitment_enum!(StateFormat);
 
 
 #[non_exhaustive]
