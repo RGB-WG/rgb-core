@@ -50,7 +50,7 @@ impl serialize::Commitment for Schema {
         self.transitions.commitment_serialize(&mut e)
     }
 
-    fn commitment_deserialize<D: io::Read>(&mut d: D) -> Result<Self, Error> {
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
         Ok(Self {
             seals: <HashMap<usize, StateFormat>>::commitment_deserialize(&mut d)?,
             transitions: <Vec<Transition>>::commitment_deserialize(&mut d)?,

@@ -17,7 +17,6 @@ use num_traits::{ToPrimitive, FromPrimitive};
 use num_derive::{ToPrimitive, FromPrimitive};
 
 use crate::csv::{serialize, Commitment, Error};
-use bitcoin::consensus::deserialize;
 
 #[non_exhaustive]
 #[derive(ToPrimitive, FromPrimitive)]
@@ -37,9 +36,9 @@ pub enum Procedure {
 }
 
 impl serialize::Commitment for Procedure {
-    fn commitment_serialize<E: io::Write>(&self, &mut e: E) -> Result<usize, Error> {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         let value = match self {
-            Self::Standard(name) => (0u8, name.to_vec()),
+            Self::Standard(name) => (0u8, &name.as_bytes().to_vec()),
             Self::Simplicity(code) => (1u8, code),
             _ => panic!("New scripting engines can't appear w/o this library to be aware of")
         };
@@ -48,12 +47,12 @@ impl serialize::Commitment for Procedure {
         Ok(len)
     }
 
-    fn commitment_deserialize<D: io::Read>(&mut d: D) -> Result<Self, Error> {
-        let value = u8::consensus_deserialize(d)?(&mut d)?;
-        let bytes = deserialize::<Vec<u8>>(&mut d)?;
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let value = u8::commitment_deserialize(&mut d)?;
+        let bytes = <Vec<u8>>::commitment_deserialize(&mut d)?;
         Ok(match value {
             0u8 => Self::Standard(str::from_utf8(&bytes)?),
-            1u8 => Self::Simplicity(bytes),
+            1u8 => Self::Simplicity(bytes.to_vec()),
             _ => panic!("New scripting engines can't appear w/o this library to be aware of")
         })
     }
@@ -71,7 +70,7 @@ impl serialize::Commitment for Scripting {
         self.extensions.commitment_serialize(&mut e)
     }
 
-    fn commitment_deserialize<D: io::Read>(&mut d: D) -> Result<Self, Error> {
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
         Ok(Self{
             validation: <Procedure>::commitment_deserialize(&mut d)?,
             extensions: <Extensions>::commitment_deserialize(&mut d)?,
