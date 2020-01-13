@@ -32,6 +32,7 @@ pub enum Error {
     EnumValueOverflow,
     Utf8Error(Utf8Error),
     ValueOutOfRange,
+    ParseFailed(&'static str)
 }
 
 impl From<Utf8Error> for Error {
@@ -110,6 +111,27 @@ impl<T> Commitment for T where T: FromConsensus {
         Ok(Self::consensus_decode(d)?)
     }
 }
+
+pub fn commitment_serialize<T: Commitment>(data: &T) -> Result<Vec<u8>, Error> {
+    let mut encoder = io::Cursor::new(vec![]);
+    data.commitment_serialize(&mut encoder)?;
+    Ok(encoder.into_inner())
+}
+
+pub fn commitment_deserialize<T: Commitment>(data: &[u8]) -> Result<T, Error> {
+    let mut decoder = io::Cursor::new(data);
+    let rv = T::commitment_deserialize(&mut decoder)?;
+    let consumed = decoder.position() as usize;
+
+    // Fail if data are not consumed entirely.
+    if consumed == data.len() {
+        Ok(rv)
+    } else {
+        Err(Error::ParseFailed("data not consumed entirely when explicitly deserializing"))
+    }
+}
+
+
 
 impl<T> Commitment for Option<T> where T: Commitment {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
@@ -198,4 +220,24 @@ impl<T> Storage for T where T: Commitment + Network {
     fn storage_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
         Self::network_deserialize(d)
     }
+}
+
+#[inline]
+pub fn network_serialize<T: Commitment + Network>(data: &T) -> Result<Vec<u8>, Error> {
+    commitment_serialize(data)
+}
+
+#[inline]
+pub fn network_deserialize<T: Commitment + Network>(data: &[u8]) -> Result<T, Error> {
+    T::commitment_deserialize(data)
+}
+
+#[inline]
+pub fn storage_serialize<T: Commitment + Storage + Network>(data: &T) -> Result<Vec<u8>, Error> {
+    network_serialize(data)
+}
+
+#[inline]
+pub fn storage_deserialize<T: Commitment + Storage + Network>(data: &[u8]) -> Result<T, Error> {
+    T::network_deserialize(data)
 }
