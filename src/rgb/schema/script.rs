@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::{io, str};
+use std::io;
 
 use num_traits::{ToPrimitive, FromPrimitive};
 use num_derive::{ToPrimitive, FromPrimitive};
@@ -30,29 +30,40 @@ impl_commitment_enum!(Extensions);
 
 
 #[non_exhaustive]
+#[derive(ToPrimitive, FromPrimitive)]
+pub enum StandardProcedure {
+    Rgb1Genesis,
+    Rgb1Issue,
+    Rgb1Transfer,
+    Rgb1Prune,
+    Rgb2Genesis,
+    Rgb2Issue,
+    Rgb2Transfer,
+    Rgb2Prune,
+}
+
+impl_commitment_enum!(StandardProcedure);
+
+
+#[non_exhaustive]
 pub enum Procedure {
-    Standard(&'static str),
+    Standard(StandardProcedure),
     Simplicity(Vec<u8>)
 }
 
 impl Commitment for Procedure {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(match self {
-            Self::Standard(name) => commitment_serialize_list!(e; 0u8, name.as_bytes().to_vec()),
+            Self::Standard(proc_id) => commitment_serialize_list!(e; 0u8, proc_id),
             Self::Simplicity(code) => commitment_serialize_list!(e; 1u8, code),
             _ => panic!("New scripting engines can't appear w/o this library to be aware of")
         })
     }
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        let value = u8::commitment_deserialize(&mut d)?;
-        let bytes = <Vec<u8>>::commitment_deserialize(&mut d)?;
-        Ok(match value {
-            0u8 => Self::Standard(match str::from_utf8(&bytes)? {
-                "fungible" => "fungible",
-                _ => Err(Error::ValueOutOfRange)?,
-            }),
-            1u8 => Self::Simplicity(bytes.to_vec()),
+        Ok(match u8::commitment_deserialize(&mut d)? {
+            0u8 => Self::Standard(StandardProcedure::commitment_deserialize(&mut d)?),
+            1u8 => Self::Simplicity(Vec::<u8>::commitment_deserialize(&mut d)?),
             _ => panic!("New scripting engines can't appear w/o this library to be aware of")
         })
     }

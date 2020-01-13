@@ -15,5 +15,6 @@ path = "src/lib.rs"
 [dependencies]
 bitcoin = { git = "https://github.com/pandoracore/rust-bitcoin", branch = "develop", features = [ "use-serde" ] }
 num-integer = "0.1.42"
+num-traits = "0.2.11"
+num-derive = "0.3.0"
 hex = { version = "=0.3.2" }
-

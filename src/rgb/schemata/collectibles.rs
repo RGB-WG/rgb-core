@@ -23,6 +23,7 @@ use super::{
         StateFormat::*,
         script::{
             Scripting,
+            StandardProcedure::*,
             Procedure::*,
             Extensions::*
         }
@@ -76,7 +77,7 @@ impl Schemata for Rgb2 {
                             PRUNE => NoneOrOnce
                         },
                         scripting: Scripting {
-                            validation: Standard("rgb2:genesis"),
+                            validation: Standard(Rgb2Genesis),
                             extensions: ScriptsDenied
                         }
                     },
@@ -98,7 +99,7 @@ impl Schemata for Rgb2 {
                             PRUNE => NoneOrOnce
                         },
                         scripting: Scripting {
-                            validation: Standard("rgb2:issue"),
+                            validation: Standard(Rgb2Issue),
                             extensions: ScriptsDenied
                         }
                     },
@@ -112,7 +113,7 @@ impl Schemata for Rgb2 {
                             BALANCE => NoneOrUpTo(None)
                         },
                         scripting: Scripting {
-                            validation: Standard("rgb2:transfer"),
+                            validation: Standard(Rgb2Transfer),
                             extensions: ScriptsDenied
                         }
                     },
@@ -127,7 +128,7 @@ impl Schemata for Rgb2 {
                             PRUNE => Once
                         },
                         scripting: Scripting {
-                            validation: Standard("rgb2:pruning"),
+                            validation: Standard(Rgb2Prune),
                             extensions: ScriptsDenied
                         }
                     }
