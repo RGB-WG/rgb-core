@@ -11,10 +11,32 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+macro_rules! bytes {
+    [ $($value:expr),+ ] => {
+        &vec![
+        $(
+            $value,
+        )+
+        ][..] as &[u8]
+    }
+}
+
 macro_rules! map {
     { $($key:expr => $value:expr),+ } => {
         {
             let mut m = ::std::collections::HashMap::new();
+            $(
+                m.insert($key, $value);
+            )+
+            m
+        }
+    }
+}
+
+macro_rules! bmap {
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::std::collections::BTreeMap::new();
             $(
                 m.insert($key, $value);
             )+
