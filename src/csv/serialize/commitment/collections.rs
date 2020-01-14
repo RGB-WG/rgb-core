@@ -162,11 +162,11 @@ mod tests {
         assert_eq!(Option::<Transaction>::commitment_deserialize(two_zero_bytes).unwrap(), None);
     }
 
-    #[test]
     /// Test for checking the following rule from LNPBP-5:
     ///
     /// `Option<T>` of any type T, which are set to `Option::Some<T>` value MUST serialize as a
     /// `Vec<T>` structure containing a single item equal to the `Option::unwrap()` value.
+    #[test]
     fn test_option_serialize_some() {
         let o1: Option<u8>    = Some(0);
         let o2: Option<u8>    = Some(13);
@@ -202,5 +202,47 @@ mod tests {
         assert_eq!(Option::<u64>::commitment_deserialize(qword_max).unwrap(), Some(0xFFFFFFFFFFFFFFFF));
         assert_eq!(Option::<usize>::commitment_deserialize(word_13).unwrap(), Some(13));
         assert_eq!(Option::<usize>::commitment_deserialize(qword_max).unwrap(), Some(0xFFFF));
+    }
+
+    /// Test trying deserialization of non-zero and non-single item vector structures, which MUST
+    /// fail with a specific error.
+    #[test]
+    fn test_option_deserialize_vec() {
+        assert!(Option::<u8>::commitment_deserialize(bytes![2u8, 0u8, 0u8, 0u8]).err().is_some());
+        assert!(Option::<u8>::commitment_deserialize(bytes![3u8, 0u8, 0u8, 0u8]).err().is_some());
+        assert!(Option::<u8>::commitment_deserialize(bytes![0xFFu8, 0u8, 0u8, 0u8]).err().is_some());
+    }
+
+    /// Test for checking the following rule from LNPBP-5:
+    ///
+    /// Array of any commitment-serializable type T MUST contain strictly less than `0x10000` items
+    /// and must serialize as 16-bit little-endian value corresponding to the number of items
+    /// followed by a direct serialization of each of the items.
+    #[test]
+    fn test_vec_serialize() {
+        let v1: Vec<u8>    = vec![0, 13, 0xFF];
+        let v2: Vec<u8>    = vec![13];
+        let v3: Vec<u64>   = vec![0, 13, 13, 0x1FF, 0xFFFFFFFFFFFFFFFF];
+        let v4: Vec<u8>    = (0..0x1FFFF).map(|item| (item % 0xFF) as u8).collect();
+
+        let s1 = bytes![3u8, 0u8, 0u8, 13u8, 0xFFu8];
+        let s2 = bytes![1u8, 0u8, 13u8];
+        let s3 = bytes![
+            5u8, 0u8,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            13, 0, 0, 0, 0, 0, 0, 0,
+            13, 0, 0, 0, 0, 0, 0, 0,
+            0xFF, 1, 0, 0, 0, 0, 0, 0,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+        ];
+
+        assert_eq!(commitment_serialize(&v1).unwrap(), s1);
+        assert_eq!(commitment_serialize(&v2).unwrap(), s2);
+        assert_eq!(commitment_serialize(&v3).unwrap(), s3);
+        assert!(commitment_serialize(&v4).err().is_some());
+
+        assert_eq!(Vec::<u8>::commitment_deserialize(s1).unwrap(), v1);
+        assert_eq!(Vec::<u8>::commitment_deserialize(s2).unwrap(), v2);
+        assert_eq!(Vec::<u64>::commitment_deserialize(s3).unwrap(), v3);
     }
 }
