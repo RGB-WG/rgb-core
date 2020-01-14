@@ -37,6 +37,7 @@ pub enum Error {
     EnumValueOverflow,
     Utf8Error(Utf8Error),
     ValueOutOfRange,
+    WrongOptionalEncoding,
     ParseFailed(&'static str)
 }
 
