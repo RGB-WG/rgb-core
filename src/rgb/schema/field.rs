@@ -18,6 +18,8 @@ use super::types::*;
 use crate::csv::serialize::*;
 
 
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
 pub enum FieldFormat {
     Unsigned { bits: Bits, min: Option<u64>, max: Option<u64> },
     Integer { bits: Bits, min: Option<i64>, max: Option<i64> },
@@ -52,6 +54,8 @@ impl Commitment for FieldFormat {
 }
 
 
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
 pub struct Field(pub FieldFormat, pub Occurences<u8>);
 
 impl Commitment for Field {

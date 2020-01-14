@@ -25,10 +25,14 @@ use super::{
 use crate::csv::{ConsensusCommit, serialize, Error};
 
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
 pub struct ValidationError {
 
 }
 
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
 pub struct Schema {
     pub seals: HashMap<usize, StateFormat>,
     pub transitions: Vec<Transition>,

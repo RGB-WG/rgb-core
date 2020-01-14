@@ -30,6 +30,8 @@
 // TODO: when we will be ready for the release #![deny(missing_docs)]
 // TODO: when we will be ready for the release #![deny(dead_code)]
 
+#[macro_use]
+pub extern crate derive_wrapper;
 extern crate hex;
 extern crate num_integer;
 extern crate num_derive;

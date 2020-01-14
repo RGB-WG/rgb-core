@@ -30,7 +30,8 @@ use std::{
 use bitcoin::consensus::encode as consensus;
 
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
+#[display_from(Debug)]
 pub enum Error {
     BitcoinConsensus(consensus::Error),
     EnumValueUnknown(u8),

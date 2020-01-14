@@ -24,6 +24,8 @@ use super::{
 use crate::csv::{serialize::Commitment, Error};
 
 
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
 pub struct Transition {
     pub closes: Option<HashMap<usize, Occurences<u32>>>,
     pub fields: Vec<Field>,

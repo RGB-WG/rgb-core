@@ -21,7 +21,8 @@ use num_derive::{ToPrimitive, FromPrimitive};
 use crate::csv::serialize::*;
 
 #[non_exhaustive]
-#[derive(ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
 pub enum StateFormat {
     NoState = 0,
     Amount,
@@ -32,7 +33,8 @@ impl_commitment_enum!(StateFormat);
 
 
 #[non_exhaustive]
-#[derive(ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
 pub enum Bits {
     Bit8 = 0,
     Bit16,
@@ -46,7 +48,8 @@ impl_commitment_enum!(Bits);
 
 
 #[non_exhaustive]
-#[derive(ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
 pub enum DigestAlgorithm {
     Sha256 = 0,
     Bitcoin256,
@@ -59,7 +62,8 @@ impl_commitment_enum!(DigestAlgorithm);
 
 
 #[non_exhaustive]
-#[derive(ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
 pub enum SignatureAlgorithm {
     EcdsaDer = 0,
     SchnorrBip,
@@ -69,7 +73,8 @@ impl_commitment_enum!(SignatureAlgorithm);
 
 
 #[non_exhaustive]
-#[derive(ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
 pub enum ECPointSerialization {
     Uncompressed = 0,
     Compressed,
@@ -80,14 +85,16 @@ impl_commitment_enum!(ECPointSerialization);
 
 
 #[non_exhaustive]
-pub enum Occurences<MAX: Integer> {
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
+pub enum Occurences<MAX: Integer> where MAX: std::fmt::Debug {
     Once,
     NoneOrOnce,
     OnceOrUpTo(Option<MAX>),
     NoneOrUpTo(Option<MAX>),
 }
 
-macro_rules! impl_ooccurences {
+macro_rules! impl_occurences {
     ($type:ident) => {
         impl Commitment for Occurences<$type> {
             fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
@@ -125,7 +132,7 @@ macro_rules! impl_ooccurences {
     };
 }
 
-impl_ooccurences!(u8);
-impl_ooccurences!(u16);
-impl_ooccurences!(u32);
-impl_ooccurences!(u64);
+impl_occurences!(u8);
+impl_occurences!(u16);
+impl_occurences!(u32);
+impl_occurences!(u64);

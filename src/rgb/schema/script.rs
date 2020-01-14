@@ -19,7 +19,8 @@ use num_derive::{ToPrimitive, FromPrimitive};
 use crate::csv::{Commitment, Error};
 
 #[non_exhaustive]
-#[derive(ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
 pub enum Extensions {
     ScriptsDenied = 0,
     ScriptsExtend,
@@ -30,7 +31,8 @@ impl_commitment_enum!(Extensions);
 
 
 #[non_exhaustive]
-#[derive(ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
 pub enum StandardProcedure {
     Rgb1Genesis,
     Rgb1Issue,
@@ -46,6 +48,8 @@ impl_commitment_enum!(StandardProcedure);
 
 
 #[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
 pub enum Procedure {
     Standard(StandardProcedure),
     Simplicity(Vec<u8>)
@@ -70,6 +74,8 @@ impl Commitment for Procedure {
 }
 
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
 pub struct Scripting {
     pub validation: Procedure,
     pub extensions: Extensions,
