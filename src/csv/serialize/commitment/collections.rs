@@ -142,7 +142,7 @@ mod tests {
 
     /// Test for checking the following rule from LNPBP-5:
     ///
-    /// `Option<T>` of any type T, which are set to `Option::None` value MUST serialize as a two
+    /// `Option<T>` of any type T, which are set to `Option::None` value MUST serialize as two
     /// zero bytes and it MUST be possible to deserialize optional of any type from two zero bytes
     /// which MUST result in `Option::None` value.
     #[test]
@@ -160,5 +160,47 @@ mod tests {
         assert_eq!(Option::<u8>::commitment_deserialize(two_zero_bytes).unwrap(), None);
         assert_eq!(Option::<u64>::commitment_deserialize(two_zero_bytes).unwrap(), None);
         assert_eq!(Option::<Transaction>::commitment_deserialize(two_zero_bytes).unwrap(), None);
+    }
+
+    #[test]
+    /// Test for checking the following rule from LNPBP-5:
+    ///
+    /// `Option<T>` of any type T, which are set to `Option::Some<T>` value MUST serialize as a
+    /// `Vec<T>` structure containing a single item equal to the `Option::unwrap()` value.
+    fn test_option_serialize_some() {
+        let o1: Option<u8>    = Some(0);
+        let o2: Option<u8>    = Some(13);
+        let o3: Option<u8>    = Some(0xFF);
+        let o4: Option<u64>   = Some(13);
+        let o5: Option<u64>   = Some(0x1FF);
+        let o6: Option<u64>   = Some(0xFFFFFFFFFFFFFFFF);
+        let o7: Option<usize> = Some(13);
+        let o8: Option<usize> = Some(0xFFFFFFFFFFFFFFFF);
+
+        let byte_0    = bytes![1u8, 0u8,    0u8];
+        let byte_13   = bytes![1u8, 0u8,   13u8];
+        let byte_255  = bytes![1u8, 0u8, 0xFFu8];
+        let word_13   = bytes![1u8, 0u8,   13u8,    0u8];
+        let qword_13  = bytes![1u8, 0u8,   13u8,    0u8,    0u8,    0u8,    0u8,    0u8,    0u8,    0u8];
+        let qword_256 = bytes![1u8, 0u8, 0xFFu8, 0x01u8,    0u8,    0u8,    0u8,    0u8,    0u8,    0u8];
+        let qword_max = bytes![1u8, 0u8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8];
+
+        assert_eq!(commitment_serialize(&o1).unwrap(), byte_0);
+        assert_eq!(commitment_serialize(&o2).unwrap(), byte_13);
+        assert_eq!(commitment_serialize(&o3).unwrap(), byte_255);
+        assert_eq!(commitment_serialize(&o4).unwrap(), qword_13);
+        assert_eq!(commitment_serialize(&o5).unwrap(), qword_256);
+        assert_eq!(commitment_serialize(&o6).unwrap(), qword_max);
+        assert_eq!(commitment_serialize(&o7).unwrap(), word_13);
+        assert!(commitment_serialize(&o8).err().is_some());
+
+        assert_eq!(Option::<u8>::commitment_deserialize(byte_0).unwrap(), Some(0));
+        assert_eq!(Option::<u8>::commitment_deserialize(byte_13).unwrap(), Some(13));
+        assert_eq!(Option::<u8>::commitment_deserialize(byte_255).unwrap(), Some(0xFF));
+        assert_eq!(Option::<u64>::commitment_deserialize(qword_13).unwrap(), Some(13));
+        assert_eq!(Option::<u64>::commitment_deserialize(qword_256).unwrap(), Some(0x1FF));
+        assert_eq!(Option::<u64>::commitment_deserialize(qword_max).unwrap(), Some(0xFFFFFFFFFFFFFFFF));
+        assert_eq!(Option::<usize>::commitment_deserialize(word_13).unwrap(), Some(13));
+        assert_eq!(Option::<usize>::commitment_deserialize(qword_max).unwrap(), Some(0xFFFF));
     }
 }
