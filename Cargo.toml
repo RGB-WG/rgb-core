@@ -1,10 +1,12 @@
 [package]
 name = "lnpbp"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 license = "MIT"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library implementing LNPBPs specifications & standards"
-keywords = ["bitcoin", "lightning", "blockchain", "layer-2", "cryptography"]
+repository = "https://github.com/lnp-bp/rust-lnpbp"
+homepage = "https://github.com/lnp-bp"
+keywords = ["bitcoin", "lightning", "lnp/bp", "layer-3", "cryptography"]
 readme = "README.md"
 edition = "2018"
 
@@ -14,6 +16,7 @@ path = "src/lib.rs"
 
 [dependencies]
 bitcoin = { git = "https://github.com/pandoracore/rust-bitcoin", branch = "develop", features = [ "use-serde" ] }
+# bitcoin = { version = "0.23.0", features = [ "use-serde" ] }
 derive_wrapper = "0.1.3"
 num-integer = "0.1.42"
 num-traits = "0.2.11"
