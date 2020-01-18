@@ -63,6 +63,6 @@ impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
     }
 }
 
-impl<T> Verifiable<TaprootCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<TaprootCommitment> for T where T: Copy + AsSlice { }
 
-impl<T> EmbedCommittable<TaprootCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<TaprootCommitment> for T where T: Copy + AsSlice { }

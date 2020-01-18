@@ -44,9 +44,9 @@ impl<HT, MSG> StandaloneCommitment<MSG> for DigestCommitment<HT> where
 }
 
 
-impl<T, HT> Verifiable<DigestCommitment<HT>> for T where HT: Hash, T: AsSlice { }
+impl<T, HT> Verifiable<DigestCommitment<HT>> for T where HT: Hash, T: Copy + AsSlice { }
 
-impl<T, HT> Committable<DigestCommitment<HT>> for T where HT: Hash, T: AsSlice { }
+impl<T, HT> Committable<DigestCommitment<HT>> for T where HT: Hash, T: Copy + AsSlice { }
 
 
 #[cfg(test)]

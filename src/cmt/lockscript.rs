@@ -11,13 +11,17 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::Script;
+use bitcoin::{
+    //secp256k1::Error as CurveError,
+    Script
+};
 
 use crate::{
     common::*,
     bp::scripts::*
 };
-use super::{committable::*, pubkey::Error};
+use super::committable::*;
+use crate::cmt::PubkeyCommitment;
 
 
 #[derive(Clone, Eq, PartialEq)]
@@ -40,7 +44,7 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
     MSG: EmbedCommittable<Self> + AsSlice
 {
     type Container = LockScript;
-    type Error = Error;
+    type Error = LockScriptParseError<bitcoin::PublicKey>;
 
     #[inline]
     fn get_original_container(&self) -> Self::Container {
@@ -49,6 +53,10 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
 
     fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
         let tweaked = LockScript::from(Script::new());
+        let tweaked_keys = container
+            .extract_pubkeys()?
+            .into_iter().map(|pubkey| PubkeyCommitment::commit_to(pubkey, msg));
+
         // TODO: Implement the following:
         // Parse script using LockScript
         // Find all required patterns
@@ -61,6 +69,6 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
     }
 }
 
-impl<T> Verifiable<LockscriptCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<LockscriptCommitment> for T where T: Copy + AsSlice { }
 
-impl<T> EmbedCommittable<LockscriptCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<LockscriptCommitment> for T where T: Copy + AsSlice { }

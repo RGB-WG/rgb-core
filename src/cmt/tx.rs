@@ -14,7 +14,7 @@
 use bitcoin::{Amount, Transaction};
 
 use crate::common::*;
-use super::{*, pubkey::Error};
+use super::{*, txout::Error};
 
 
 #[derive(Clone, Eq, PartialEq)]
@@ -82,9 +82,9 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
     }
 }
 
-impl<T> Verifiable<TxCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<TxCommitment> for T where T: Copy + AsSlice { }
 
-impl<T> EmbedCommittable<TxCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<TxCommitment> for T where T: Copy + AsSlice { }
 
 
 #[cfg(test)]

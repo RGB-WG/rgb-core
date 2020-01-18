@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::{
+    secp256k1,
     secp256k1::PublicKey,
     blockdata::script::Builder
 };
@@ -22,7 +23,7 @@ use crate::{
 };
 use super::{
     committable::*,
-    pubkey::Error,
+    pubkey,
     PubkeyCommitment, LockscriptCommitment, TaprootCommitment, TaprootContainer
 };
 
@@ -43,6 +44,32 @@ pub enum TxoutCommitment {
     PublicKey(PubkeyCommitment),
     LockScript(LockscriptCommitment),
     TapRoot(TaprootCommitment),
+}
+
+
+#[derive(Debug)]
+pub enum Error {
+    Pubkey(pubkey::Error),
+    Secp256k1(secp256k1::Error),
+    LockScript(LockScriptParseError<bitcoin::PublicKey>),
+}
+
+impl From<pubkey::Error> for Error {
+    fn from(err: pubkey::Error) -> Self {
+        Self::Pubkey(err)
+    }
+}
+
+impl From<secp256k1::Error> for Error {
+    fn from(err: secp256k1::Error) -> Self {
+        Self::Secp256k1(err)
+    }
+}
+
+impl From<LockScriptParseError<bitcoin::PublicKey>> for Error {
+    fn from(err: LockScriptParseError<bitcoin::PublicKey>) -> Self {
+        Self::LockScript(err)
+    }
 }
 
 
@@ -137,6 +164,6 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
     }
 }
 
-impl<T> Verifiable<TxoutCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<TxoutCommitment> for T where T: Copy + AsSlice { }
 
-impl<T> EmbedCommittable<TxoutCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<TxoutCommitment> for T where T: Copy + AsSlice { }
