@@ -13,7 +13,10 @@
 
 use bitcoin::Script;
 
-use crate::common::*;
+use crate::{
+    common::*,
+    bp::scripts::*
+};
 use super::{committable::*, pubkey::Error};
 
 

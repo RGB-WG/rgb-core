@@ -11,15 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::marker::PhantomData;
 use std::ops::{Index, RangeFull};
 
 use bitcoin::hashes::{Hash, Error, sha256};
-use bitcoin::hash_types::*;
-use bitcoin::blockdata::script::{Builder, Script};
-use bitcoin::secp256k1::PublicKey;
 
-use crate::Wrapper;
 
 
 pub struct BitcoinTag(sha256::Hash);
@@ -40,54 +35,4 @@ impl BitcoinTag {
 impl Index<RangeFull> for BitcoinTag {
     type Output = [u8];
     fn index(&self, _: RangeFull) -> &[u8] { &self.0[..] }
-}
-
-//
-// PubkeyScript -+====> LockScript <----+
-//               |                      |
-//               +----> RedeemScript ---+
-//               |
-//               +----> TapScript
-//
-
-pub struct _LockScriptPhantom;
-pub struct _PubkeyScriptPhantom;
-pub struct _RedeemScriptPhantom;
-pub struct _TapScriptPhantom;
-pub type LockScript = Wrapper<Script, PhantomData<_LockScriptPhantom>>;
-pub type PubkeyScript = Wrapper<Script, PhantomData<_PubkeyScriptPhantom>>;
-pub type RedeemScript = Wrapper<Script, PhantomData<_RedeemScriptPhantom>>;
-pub type TapScript = Wrapper<Script, PhantomData<_TapScriptPhantom>>;
-
-pub enum ScriptPubkeyType {
-    P2S(Script),
-    P2PK(PublicKey),
-    P2PKH(PubkeyHash),
-    P2SH(ScriptHash),
-    P2OR(Vec<u8>),
-    P2WPKH(WPubkeyHash),
-    P2WSH(WScriptHash),
-    P2TR(PublicKey),
-}
-use ScriptPubkeyType::*;
-
-impl From<Script> for ScriptPubkeyType {
-    fn from(script_pubkey: Script) -> Self {
-        Self::P2S(script_pubkey)
-    }
-}
-
-impl From<ScriptPubkeyType> for PubkeyScript {
-    fn from(spkt: ScriptPubkeyType) -> PubkeyScript {
-        PubkeyScript::from_inner(match spkt {
-            P2S(script) => script,
-            P2PK(pubkey) => Builder::gen_p2pk(&bitcoin::PublicKey { compressed: false, key: pubkey }).into_script(),
-            P2PKH(pubkey_hash) => Builder::gen_p2pkh(&pubkey_hash).into_script(),
-            P2SH(script_hash) => Builder::gen_p2sh(&script_hash).into_script(),
-            P2OR(data) => Builder::gen_op_return(&data).into_script(),
-            P2WPKH(wpubkey_hash) => Builder::gen_v0_p2wpkh(&wpubkey_hash).into_script(),
-            P2WSH(wscript_hash) => Builder::gen_v0_p2wsh(&wscript_hash).into_script(),
-            P2TR(pubkey) => unimplemented!(),
-        })
-    }
 }

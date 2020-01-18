@@ -14,13 +14,13 @@
 pub type Message = dyn AsRef<[u8]>;
 
 pub trait Context {
-    type Promice;
+    type Promise;
     type Witness;
     type Error;
 }
 
 pub trait SingleUseSeal<Ctx>: Sized where Ctx: Context {
-    fn define(promice: &Ctx::Promice, ctx: &Ctx) -> Result<Self, Ctx::Error>;
+    fn define(promice: &Ctx::Promise, ctx: &Ctx) -> Result<Self, Ctx::Error>;
     fn close(&mut self, msg: &Message, ctx: &mut Ctx) -> Result<Ctx::Witness, Ctx::Error>;
     fn is_closed(&self, ctx: &Ctx) -> bool;
     fn verify(&self, msg: &Message, witness: &Ctx::Witness, ctx: &Ctx) -> Result<bool, Ctx::Error>;

@@ -16,11 +16,14 @@ use bitcoin::{
     blockdata::script::Builder
 };
 
-use crate::common::*;
+use crate::{
+    common::*,
+    bp::scripts::*,
+};
 use super::{
     committable::*,
-    PubkeyCommitment, LockscriptCommitment, TaprootCommitment, TaprootContainer,
-    pubkey::Error
+    pubkey::Error,
+    PubkeyCommitment, LockscriptCommitment, TaprootCommitment, TaprootContainer
 };
 
 

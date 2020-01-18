@@ -46,7 +46,7 @@ impl Blockchain {
 }
 
 impl Context for Blockchain {
-    type Promice = OutPoint;
+    type Promise = OutPoint;
     type Witness = Transaction;
     type Error = Error;
 }

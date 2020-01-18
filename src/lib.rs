@@ -38,6 +38,7 @@ extern crate num_derive;
 extern crate num_traits;
 #[macro_use]
 pub extern crate bitcoin;
+pub extern crate miniscript;
 
 #[macro_use]
 pub mod common;
