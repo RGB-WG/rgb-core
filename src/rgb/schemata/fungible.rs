@@ -46,8 +46,8 @@ impl Schemata for Rgb1 {
         ONCE.call_once(|| {
             schema = Box::leak(Box::new(Some(Schema {
                 seals: map!{
-                    ISSUE => Amount,
-                    BALANCE => NoState,
+                    ISSUE => NoState,
+                    BALANCE => Amount,
                     PRUNE => NoState
                 },
                 transitions: vec![

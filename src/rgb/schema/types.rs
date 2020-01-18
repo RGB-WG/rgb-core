@@ -25,8 +25,8 @@ use crate::csv::serialize::*;
 #[display_from(Debug)]
 pub enum StateFormat {
     NoState = 0,
-    Amount,
-    Data
+    Amount = 1,
+    Data = 0xFF,
 }
 
 impl_commitment_enum!(StateFormat);
