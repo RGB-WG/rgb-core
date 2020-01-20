@@ -11,4 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub struct Transition();
+
+pub struct SealId(u16);
+
+pub enum Value {
+
+}

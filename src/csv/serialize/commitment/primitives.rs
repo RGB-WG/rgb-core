@@ -12,10 +12,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-use std::io;
+use std::{io, str, ops::Deref};
 
 use num_traits::{ToPrimitive, FromPrimitive};
-use bitcoin::consensus::encode as consensus;
+use bitcoin::{
+    util::uint::{Uint128, Uint256},
+    consensus::encode as consensus
+};
 
 use super::{Commitment, Error};
 
@@ -27,6 +30,8 @@ impl FromConsensus for u8 { }
 impl FromConsensus for u16 { }
 impl FromConsensus for u32 { }
 impl FromConsensus for u64 { }
+impl FromConsensus for Uint128 { }
+impl FromConsensus for Uint256 { }
 impl FromConsensus for i8 { }
 impl FromConsensus for i16 { }
 impl FromConsensus for i32 { }
@@ -59,6 +64,73 @@ impl Commitment for usize {
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
         u16::commitment_deserialize(&mut d).map(|val| val as usize)
+    }
+}
+
+
+impl Commitment for f32 {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        e.write_all(&self.to_le_bytes()).map_err(consensus::Error::Io)?;
+        Ok(4)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let mut buf: [u8; 4] = [0; 4];
+        d.read_exact(&mut buf).map_err(consensus::Error::Io)?;
+        Ok(Self::from_le_bytes(buf))
+    }
+}
+
+
+impl Commitment for f64 {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        e.write_all(&self.to_le_bytes()).map_err(consensus::Error::Io)?;
+        Ok(8)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let mut buf: [u8; 8] = [0; 8];
+        d.read_exact(&mut buf).map_err(consensus::Error::Io)?;
+        Ok(Self::from_le_bytes(buf))
+    }
+}
+
+
+impl Commitment for &[u8] {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        let mut len = self.len();
+        len += len.commitment_serialize(&mut e)?;
+        e.write_all(self).map_err(consensus::Error::Io)?;
+        Ok(len)
+    }
+
+    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
+        panic!("Can't deserialize &[u8] type; use Box<[u8]> instead")
+    }
+}
+
+impl Commitment for Box<[u8]> {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.deref().commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let len = usize::commitment_deserialize(&mut d)?;
+        let mut ret = Vec::with_capacity(len);
+        ret.resize(len, 0);
+        d.read_exact(&mut ret).map_err(consensus::Error::Io)?;
+        Ok(ret.into_boxed_slice())
+    }
+}
+
+
+impl Commitment for &str {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.as_bytes().commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        str::from_utf8(<&[u8]>::commitment_deserialize(&mut d)?).map_err(Error::Utf8Error)
     }
 }
 

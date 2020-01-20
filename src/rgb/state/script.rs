@@ -11,11 +11,4 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
-pub mod schema;
-pub mod schemata;
-pub mod state;
-
-pub use schema::*;
-pub use schemata::*;
-pub use state::*;
+pub type Script = ();

@@ -11,11 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
-pub mod schema;
-pub mod schemata;
+pub mod meta;
 pub mod state;
+pub mod script;
+pub mod transition;
 
-pub use schema::*;
-pub use schemata::*;
+// pub use meta::*;
 pub use state::*;
+pub use script::*;
+pub use transition::*;
