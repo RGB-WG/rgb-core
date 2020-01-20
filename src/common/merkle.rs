@@ -33,6 +33,8 @@ impl encode::Decodable for MerkleNode {
 }
 
 pub fn merklize(data: &[MerkleNode]) -> MerkleNode {
+    // TODO: Commit to the branch depth and use tagged hashes
+
     let len = data.len();
 
     let mut height: usize = 0;

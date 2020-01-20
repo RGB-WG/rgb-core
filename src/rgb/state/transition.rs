@@ -13,9 +13,7 @@
 
 
 use core::marker::PhantomData;
-use std::{
-    io, collections::HashMap
-};
+use std::io;
 
 use bitcoin::hashes::Hash;
 
@@ -34,7 +32,7 @@ use crate::{
 pub struct _MetaPhantom;
 pub struct _StatePhantom;
 pub type Meta = Wrapper<Vec<meta::MetaField>, PhantomData<_MetaPhantom>>;
-pub type State = Wrapper<HashMap<state::SealId, state::Value>, PhantomData<_StatePhantom>>;
+pub type State = Wrapper<Vec<state::BoundState>, PhantomData<_StatePhantom>>;
 
 pub struct Transition {
     pub meta: Meta,
@@ -58,12 +56,17 @@ impl serialize::commitment::Commitment for Meta {
 }
 
 impl serialize::commitment::Commitment for State {
-    fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, serialize::Error> {
-        unimplemented!()
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
+        let mut data: Vec<MerkleNode> = vec![];
+        self.inner_ref().iter().try_for_each(|state| -> Result<(), serialize::Error> {
+            data.push(MerkleNode::hash(&commitment_serialize(state)?));
+            Ok(())
+        })?;
+        merklize(&data[..]).commitment_serialize(&mut e)
     }
 
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, serialize::Error> {
-        unimplemented!()
+        panic!("It is impossible to deserialize from Merkle tree root commitment")
     }
 }
 
