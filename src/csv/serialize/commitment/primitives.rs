@@ -21,6 +21,7 @@ use bitcoin::{
 };
 
 use super::{Commitment, Error};
+use crate::common::MerkleNode;
 
 
 pub trait FromEnumPrimitive: FromPrimitive + ToPrimitive { }
@@ -36,6 +37,7 @@ impl FromConsensus for i8 { }
 impl FromConsensus for i16 { }
 impl FromConsensus for i32 { }
 impl FromConsensus for i64 { }
+impl FromConsensus for MerkleNode { }
 
 impl<T> Commitment for T where T: FromConsensus {
     #[inline]

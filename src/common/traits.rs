@@ -33,6 +33,9 @@ impl<T, Z> Wrapper<T, Z> {
     pub fn into_inner(self) -> T {
         self.0
     }
+    pub fn inner_ref(&self) -> &T {
+        &self.0
+    }
 }
 
 impl<T, Z> From<T> for Wrapper<T, Z> {

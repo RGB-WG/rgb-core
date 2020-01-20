@@ -18,6 +18,8 @@
 pub mod macros;
 pub mod traits;
 pub mod types;
+pub mod merkle;
 
 pub use traits::*;
 pub use types::*;
+pub use merkle::*;
