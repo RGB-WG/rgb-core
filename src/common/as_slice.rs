@@ -12,16 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-//! Common data types, structures and functions for LNPBPs
+use std::ops::{Index, RangeFull};
 
-#[macro_use]
-pub mod macros;
-pub mod as_slice;
-pub mod wrapper;
-pub mod types;
-pub mod merkle;
+pub trait AsSlice {
+    fn as_slice(&self) -> &[u8];
+}
 
-pub use as_slice::*;
-pub use wrapper::*;
-pub use types::*;
-pub use merkle::*;
+impl<T> AsSlice for T where T: Index<RangeFull, Output = [u8]> {
+    fn as_slice(&self) -> &[u8] { &self[..] }
+}

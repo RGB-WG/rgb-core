@@ -11,39 +11,57 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::ops::{Index, Range, RangeTo, RangeFrom, RangeFull};
-use std::marker::PhantomData;
 
-pub trait AsSlice {
-    fn as_slice(&self) -> &[u8];
-}
-
-impl<T> AsSlice for T where T: Index<RangeFull, Output = [u8]> {
-    fn as_slice(&self) -> &[u8] { &self[..] }
-}
+use std::{
+    ops::{Deref, DerefMut, Index, Range, RangeTo, RangeFrom, RangeFull},
+    marker::PhantomData,
+};
 
 
-#[derive(Clone, PartialEq, Eq)]
+// TODO: Do a macro for simple wrapper type creations (automate phantom data generation)
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Wrapper<T, Z>(T, PhantomData<Z>);
 
 impl<T, Z> Wrapper<T, Z> {
+    #[inline]
     pub fn from_inner(inner: T) -> Self {
         Wrapper::from(inner)
     }
+
+    #[inline]
     pub fn into_inner(self) -> T {
         self.0
     }
 }
 
 impl<T, Z> AsMut<T> for Wrapper<T, Z> {
+    #[inline]
     fn as_mut(&mut self) -> &mut T {
         &mut self.0
     }
 }
 
 impl<T, Z> AsRef<T> for Wrapper<T, Z> {
+    #[inline]
     fn as_ref(&self) -> &T {
         &self.0
+    }
+}
+
+impl<T, Z> Deref for Wrapper<T, Z> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T, Z> DerefMut for Wrapper<T, Z> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
