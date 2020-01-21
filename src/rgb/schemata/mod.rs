@@ -19,6 +19,41 @@ pub mod collectibles;
 pub use fungible::Rgb1;
 pub use collectibles::Rgb2;
 
+
+use num_traits::{ToPrimitive};
+use num_derive::{ToPrimitive, FromPrimitive};
+
+
 pub trait Schemata {
     fn get_schema() -> &'static Schema;
+}
+
+
+/// A set of recommended standard networks that can be used with different schemata
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
+pub enum Network {
+    Mainnet = 0,
+    Testnet = 1,
+    Regtest = 2,
+    Signet = 3,
+    Liquid = 4,
+}
+
+impl Network {
+    pub fn all() -> Vec<Network> {
+        use Network::*;
+        vec![ Mainnet, Testnet, Regtest, Signet, Liquid ]
+    }
+
+    pub fn all_u8() -> Vec<u8> {
+        Self::all().into_iter().map(Network::into).collect()
+    }
+}
+
+impl Into<u8> for Network {
+    fn into(self) -> u8 {
+        self.to_u8().expect("There are only 4 pre-defined enum values, so we can't overflow here")
+    }
 }

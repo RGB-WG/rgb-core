@@ -19,7 +19,7 @@ use bitcoin::hashes::Hash;
 
 use super::{
     state,
-    meta,
+    fields,
     script::Script,
 };
 use crate::{
@@ -31,7 +31,7 @@ use crate::{
 
 pub struct _MetaPhantom;
 pub struct _StatePhantom;
-pub type Meta = Wrapper<Vec<meta::MetaField>, PhantomData<_MetaPhantom>>;
+pub type Meta = Wrapper<Vec<fields::MetaField>, PhantomData<_MetaPhantom>>;
 pub type State = Wrapper<Vec<state::BoundState>, PhantomData<_StatePhantom>>;
 
 pub struct Transition {
@@ -43,7 +43,7 @@ pub struct Transition {
 impl serialize::commitment::Commitment for Meta {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
         let mut data: Vec<MerkleNode> = vec![];
-        self.inner_ref().iter().try_for_each(|field| -> Result<(), serialize::Error> {
+        self.as_ref().iter().try_for_each(|field| -> Result<(), serialize::Error> {
             data.push(MerkleNode::hash(&commitment_serialize(field)?));
             Ok(())
         })?;
@@ -58,7 +58,7 @@ impl serialize::commitment::Commitment for Meta {
 impl serialize::commitment::Commitment for State {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
         let mut data: Vec<MerkleNode> = vec![];
-        self.inner_ref().iter().try_for_each(|state| -> Result<(), serialize::Error> {
+        self.as_ref().iter().try_for_each(|state| -> Result<(), serialize::Error> {
             data.push(MerkleNode::hash(&commitment_serialize(state)?));
             Ok(())
         })?;

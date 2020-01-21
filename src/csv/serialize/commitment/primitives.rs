@@ -16,6 +16,7 @@ use std::{io, str, ops::Deref};
 
 use num_traits::{ToPrimitive, FromPrimitive};
 use bitcoin::{
+    hash_types::Txid,
     util::uint::{Uint128, Uint256},
     consensus::encode as consensus
 };
@@ -37,6 +38,7 @@ impl FromConsensus for i8 { }
 impl FromConsensus for i16 { }
 impl FromConsensus for i32 { }
 impl FromConsensus for i64 { }
+impl FromConsensus for Txid { }
 impl FromConsensus for MerkleNode { }
 
 impl<T> Commitment for T where T: FromConsensus {

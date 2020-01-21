@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use super::{
     types::*,
     field::*,
-    script::Scripting
+    script::Scripting,
 };
 
 use crate::csv::{serialize::Commitment, Error};

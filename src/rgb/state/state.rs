@@ -12,11 +12,11 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-use std::{io, ops::Deref};
+use std::{io, ops::Deref, convert::TryFrom};
 
-use bitcoin::util::uint::*;
+use bitcoin::{hash_types::Txid, OutPoint};
 
-use crate::csv::serialize;
+use crate::csv::{serialize, FromConsensus};
 
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -34,11 +34,15 @@ impl serialize::commitment::Commitment for SealId {
 }
 
 
+construct_uint!(Amount, 4);
+impl FromConsensus for Amount { }
+
+
 #[non_exhaustive]
 #[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
 #[display_from(Debug)]
 pub enum Value {
-    Amount(Uint256),
+    Balance(Amount),
     Bytes(Box<[u8]>),
     // TODO: Add other supported bound state types according to the schema
 }
@@ -50,7 +54,7 @@ impl serialize::commitment::Commitment for Value {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
         use Value::*;
         Ok(match self {
-            Amount(v) => TAG_AMOUNT.commitment_serialize(&mut e)? + v.commitment_serialize(&mut e)?,
+            Balance(v) => TAG_AMOUNT.commitment_serialize(&mut e)? + v.commitment_serialize(&mut e)?,
             Bytes(bytes) => {
                 TAG_BYTES.commitment_serialize(&mut e)? + bytes.deref().commitment_serialize(&mut e)?
             },
@@ -61,7 +65,7 @@ impl serialize::commitment::Commitment for Value {
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, serialize::Error> {
         use Value::*;
         Ok(match u8::commitment_deserialize(&mut d)? {
-            TAG_AMOUNT => Amount(Uint256::commitment_deserialize(&mut d)?),
+            TAG_AMOUNT => Balance(Amount::commitment_deserialize(&mut d)?),
             TAG_BYTES => Bytes(Box::from(<&[u8]>::commitment_deserialize(&mut d)?)),
             _ => panic!("Unsupported metafield type; can't do a commitment deserialization of the data"),
         })
@@ -69,19 +73,74 @@ impl serialize::commitment::Commitment for Value {
 }
 
 
+#[non_exhaustive]
+#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[display_from(Debug)]
+pub enum SealError {
+    VoutOverflow
+}
+
+#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[display_from(Debug)]
+pub struct Seal {
+    pub txid: Txid,
+    pub vout: u16,
+
+    block_height: Option<u32>,
+    block_offset: Option<u16>,
+}
+
+impl TryFrom<bitcoin::OutPoint> for Seal {
+    type Error = SealError;
+    fn try_from(outpoint: OutPoint) -> Result<Self, Self::Error> {
+        let vout = outpoint.vout;
+        if vout > std::u16::MAX as u32 {
+            return Err(SealError::VoutOverflow)
+        }
+        Ok(Self {
+            txid: outpoint.txid, vout: outpoint.vout as u16,
+            block_height: None, block_offset: None
+        })
+    }
+}
+
+impl serialize::commitment::Commitment for Seal {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
+        Ok(self.txid.commitment_serialize(&mut e)? +
+            self.vout.commitment_serialize(&mut e)?)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, serialize::Error> {
+        Ok(Self {
+            txid: Txid::commitment_deserialize(&mut d)?,
+            vout: u16::commitment_deserialize(&mut d)?,
+            block_height: None,
+            block_offset: None,
+        })
+    }
+}
+
+
+
+#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[display_from(Debug)]
 pub struct BoundState {
     pub id: SealId,
+    pub seal: Seal,
     pub val: Value,
 }
 
 impl serialize::commitment::Commitment for BoundState {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
-        Ok(self.id.commitment_serialize(&mut e)? + self.val.commitment_serialize(&mut e)?)
+        Ok(self.id.commitment_serialize(&mut e)? +
+            self.seal.commitment_serialize(&mut e)? +
+            self.val.commitment_serialize(&mut e)?)
     }
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, serialize::Error> {
         Ok(Self {
             id: SealId::commitment_deserialize(&mut d)?,
+            seal: Seal::commitment_deserialize(&mut d)?,
             val: Value::commitment_deserialize(&mut d)?
         })
     }

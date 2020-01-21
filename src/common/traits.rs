@@ -33,7 +33,16 @@ impl<T, Z> Wrapper<T, Z> {
     pub fn into_inner(self) -> T {
         self.0
     }
-    pub fn inner_ref(&self) -> &T {
+}
+
+impl<T, Z> AsMut<T> for Wrapper<T, Z> {
+    fn as_mut(&mut self) -> &mut T {
+        &mut self.0
+    }
+}
+
+impl<T, Z> AsRef<T> for Wrapper<T, Z> {
+    fn as_ref(&self) -> &T {
         &self.0
     }
 }
