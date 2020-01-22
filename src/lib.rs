@@ -15,6 +15,7 @@
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
 
+#![feature(concat_idents)]
 #![feature(never_type)]
 #![feature(const_generics)]
 #![feature(optin_builtin_traits)]

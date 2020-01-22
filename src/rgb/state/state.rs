@@ -132,9 +132,11 @@ pub struct BoundState {
 
 impl serialize::commitment::Commitment for BoundState {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
-        Ok(self.id.commitment_serialize(&mut e)? +
+        Ok(
+            self.id.commitment_serialize(&mut e)? +
             self.seal.commitment_serialize(&mut e)? +
-            self.val.commitment_serialize(&mut e)?)
+            self.val.commitment_serialize(&mut e)?
+        )
     }
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, serialize::Error> {

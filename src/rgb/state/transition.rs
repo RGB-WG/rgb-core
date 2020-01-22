@@ -12,7 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-use core::marker::PhantomData;
 use std::io;
 
 use bitcoin::hashes::Hash;
@@ -32,10 +31,9 @@ use crate::{
 };
 
 
-pub struct _MetaPhantom;
-pub struct _StatePhantom;
-pub type Meta = Wrapper<Vec<fields::MetaField>, PhantomData<_MetaPhantom>>;
-pub type State = Wrapper<Vec<state::BoundState>, PhantomData<_StatePhantom>>;
+wrapper!(Meta, _MetaPhantom, Vec<fields::MetaField>, doc="");
+wrapper!(State, _StatePhantom, Vec<state::BoundState>, doc="");
+
 
 impl serialize::commitment::Commitment for Meta {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
@@ -94,8 +92,8 @@ impl serialize::commitment::Commitment for Transition {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
         Ok(
             self.meta.commitment_serialize(&mut e)? +
-                self.state.commitment_serialize(&mut e)? +
-                self.script.commitment_serialize(&mut e)?
+            self.state.commitment_serialize(&mut e)? +
+            self.script.commitment_serialize(&mut e)?
         )
     }
 

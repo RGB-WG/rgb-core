@@ -17,6 +17,7 @@
 #[macro_use]
 pub mod macros;
 pub mod as_slice;
+#[macro_use]
 pub mod wrapper;
 pub mod types;
 pub mod merkle;
