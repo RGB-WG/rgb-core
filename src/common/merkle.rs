@@ -11,27 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::io;
 use bitcoin::{
-    consensus,
     hashes::hex::{ToHex, FromHex},
     hashes::{Hash, HashEngine, sha256, sha256d}
 };
 use crate::csv::Commitment;
 
 hash_newtype!(MerkleNode, sha256d::Hash, 32, doc="A hash of a arbitrary Merkle tree branch or root");
-
-impl consensus::Encodable for MerkleNode {
-    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, consensus::encode::Error> {
-        self.0.consensus_encode(s)
-    }
-}
-
-impl consensus::Decodable for MerkleNode {
-    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, consensus::encode::Error> {
-        Ok(Self::from_inner(<<MerkleNode as Hash>::Inner>::consensus_decode(d)?))
-    }
-}
+impl_hashencode!(MerkleNode);
 
 
 pub fn merklize(prefix: &str, data: &[MerkleNode], depth: u16) -> MerkleNode {
