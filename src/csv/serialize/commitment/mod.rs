@@ -41,7 +41,7 @@ pub enum Error {
     Utf8Error(Utf8Error),
     ValueOutOfRange,
     WrongOptionalEncoding,
-    ParseFailed(&'static str)
+    ParseFailed(&'static str),
 }
 
 impl From<Utf8Error> for Error {

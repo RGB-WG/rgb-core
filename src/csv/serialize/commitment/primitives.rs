@@ -22,7 +22,7 @@ use bitcoin::{
 };
 
 use super::{Commitment, Error};
-use crate::common::MerkleNode;
+use crate::bp::MerkleNode;
 
 
 pub trait FromEnumPrimitive: FromPrimitive + ToPrimitive { }

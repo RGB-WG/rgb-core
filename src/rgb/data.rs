@@ -11,12 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod fields;
-pub mod state;
-pub mod script;
-pub mod transition;
+use crate::csv;
 
-pub use fields::*;
-pub use state::*;
-pub use script::*;
-pub use transition::*;
+// TODO: Convert Amount to a Pedersen commitment format
+construct_uint!(Amount, 4);
+impl csv::serialize::FromConsensus for Amount { }
+
+
+#[non_exhaustive]
+#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[display_from(Debug)]
+pub enum Data {
+    Balance(Amount),
+    Binary(Box<[u8]>),
+    // TODO: Add other supported bound state types according to the schema
+}

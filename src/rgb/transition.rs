@@ -12,25 +12,15 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-pub mod schema;
-pub mod schemata;
+use super::{State, Metadata, Script};
+use crate::csv;
 
-pub mod metadata;
-pub mod data;
-pub mod seal;
-pub mod state;
-pub mod script;
-pub mod transition;
+pub struct Transition {
+    pub meta: Metadata,
+    pub state: State,
+    pub script: Option<Script>,
+}
 
-pub mod serialize;
-pub mod commit;
-
-
-pub use schemata::*;
-
-pub use data::Data;
-pub use state::State;
-pub use metadata::Metadata;
-pub use script::Script;
-pub use seal::Seal;
-pub use transition::Transition;
+impl csv::serialize::CommitmentIdentifiable for Transition {
+    hashed_tag!("rgb:", "transition:1");
+}

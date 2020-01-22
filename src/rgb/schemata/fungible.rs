@@ -18,16 +18,13 @@ use std::{
     collections::HashMap
 };
 
-use bitcoin::{
-    OutPoint,
-    util::uint::Uint256
-};
+use bitcoin::util::uint::Uint256;
 
-use super::{
-    Network,
-    Schemata,
-    super::state,
-    super::schema::{
+use super::{Network, Schemata};
+use crate::rgb::{
+    self,
+    state, data, seal, metadata,
+    schema::{
         *,
         Bits::*,
         Occurences::*,
@@ -45,15 +42,17 @@ use super::{
 #[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
 #[display_from(Debug)]
 pub enum Error {
-    SealError(state::SealError)
+    SealError(seal::Error)
 }
 
-impl From<state::SealError> for Error {
-    fn from(error: state::SealError) -> Self {
+impl From<seal::Error> for Error {
+    fn from(error: seal::Error) -> Self {
         Self::SealError(error)
     }
 }
 
+
+pub type Balances = HashMap<bitcoin::OutPoint, data::Amount>;
 
 /// Schema for fungible assets with possible secondary issuance and history pruning (standard RGB-1)
 pub struct Rgb1();
@@ -68,16 +67,16 @@ impl Rgb1 {
     const BALANCE_SEAL: usize = 1;
     const PRUNE_SEAL: usize = 2;
 
-    fn balances_to_bound_state(balances: HashMap<OutPoint, state::Amount>) -> Result<state::State, Error> {
+    fn balances_to_bound_state(balances: Balances) -> Result<state::State, Error> {
         let seals_count = balances.len();
-        Ok(state::State::from_inner(
+        Ok(rgb::State::from_inner(
             balances.into_iter().try_fold(
-                Vec::<state::PartialState>::with_capacity(seals_count),
-                |mut bound_state, (outpoint, balance)| -> Result<Vec<state::PartialState>, Error> {
-                    bound_state.push(state::PartialState::State(state::BoundState {
-                        id: state::SealId(Self::BALANCE_SEAL as u16),
-                        seal: state::Seal::try_from(outpoint)?,
-                        val: state::state::Value::Balance(balance)
+                Vec::<state::Partial>::with_capacity(seals_count),
+                |mut bound_state, (outpoint, balance)| -> Result<Vec<state::Partial>, Error> {
+                    bound_state.push(state::Partial::State(state::Bound {
+                        id: seal::Type(Self::BALANCE_SEAL as u16),
+                        seal: rgb::Seal::try_from(outpoint)?,
+                        val: rgb::Data::Balance(balance)
                     }));
                     Ok(bound_state)
                 }
@@ -86,45 +85,45 @@ impl Rgb1 {
     }
 
     pub fn issue(network: Network, ticker: &str, name: &str, descr: Option<&str>,
-                 balances: HashMap<OutPoint, state::Amount>, precision: u8,
-                 supply: Option<Uint256>, dust: Option<Uint256>) -> Result<state::Transition, Error> {
+                 balances: Balances, precision: u8,
+                 supply: Option<Uint256>, dust: Option<Uint256>) -> Result<rgb::Transition, Error> {
         // TODO: Add ability to control secondary issuance and pruning
 
         // TODO: Add validation against the schema
         //let schema = Self::get_schema();
         //let ts_schema = &schema.transitions[PRIM_ISSUE_TS];
 
-        let mut meta = state::Meta::from_inner(vec![
-            state::MetaField { id: state::FieldId(0), val: state::fields::Value::Str(String::from(ticker)) },
-            state::MetaField { id: state::FieldId(1), val: state::fields::Value::Str(String::from(name)) },
-            state::MetaField { id: state::FieldId(5), val: state::fields::Value::U8(precision) },
-            state::MetaField { id: state::FieldId(7), val: state::fields::Value::U8(network.into()) },
+        let mut meta = rgb::Metadata::from_inner(vec![
+            metadata::Field { id: metadata::Type(0), val: metadata::Value::Str(String::from(ticker)) },
+            metadata::Field { id: metadata::Type(1), val: metadata::Value::Str(String::from(name)) },
+            metadata::Field { id: metadata::Type(5), val: metadata::Value::U8(precision) },
+            metadata::Field { id: metadata::Type(7), val: metadata::Value::U8(network.into()) },
         ]);
         if let Some(descr) = descr {
             meta.as_mut().push(
-                state::MetaField { id: state::FieldId(2), val: state::fields::Value::Str(String::from(descr)) }
+                metadata::Field { id: metadata::Type(2), val: metadata::Value::Str(String::from(descr)) }
             );
         }
         if let Some(supply) = supply {
             meta.as_mut().push(
-                state::MetaField { id: state::FieldId(3), val: state::fields::Value::U256(supply) }
+                metadata::Field { id: metadata::Type(3), val: metadata::Value::U256(supply) }
             );
         }
         if let Some(dust) = dust {
             meta.as_mut().push(
-                state::MetaField { id: state::FieldId(5), val: state::fields::Value::U256(dust) }
+                metadata::Field { id: metadata::Type(5), val: metadata::Value::U256(dust) }
             );
         }
 
         let state = Self::balances_to_bound_state(balances)?;
 
-        Ok(state::Transition { meta, state, script: None })
+        Ok(rgb::Transition { meta, state, script: None })
     }
 
-    pub fn transfer(balances: HashMap<OutPoint, state::Amount>) -> Result<state::Transition, Error> {
+    pub fn transfer(balances: Balances) -> Result<rgb::Transition, Error> {
         let state = Self::balances_to_bound_state(balances)?;
 
-        Ok(state::Transition { meta: state::Meta::default(), state, script: None })
+        Ok(rgb::Transition { meta: rgb::Metadata::default(), state, script: None })
     }
 }
 
