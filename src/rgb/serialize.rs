@@ -148,7 +148,15 @@ impl csv::serialize::Commitment for rgb::Metadata {
     }
 }
 
-// TODO: Implement network serialization
+impl csv::serialize::Network for rgb::Metadata {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
+        self.as_ref().network_serialize(&mut e)
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
+        Vec::<rgb::metadata::Field>::network_deserialize(&mut d).map(Self::from_inner)
+    }
+}
 
 
 /// ## Seal commitment serialization
@@ -231,7 +239,25 @@ impl csv::serialize::Commitment for rgb::state::Partial {
     }
 }
 
-// TODO: Implement network serialization for rgb::state::Partial
+const TAG_COMMITMENT: u8 = 0x00u8;
+const TAG_STATE: u8 = 0x01u8;
+
+impl csv::serialize::Network for rgb::state::Partial {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
+        Ok(match self {
+            Self::Commitment (cmt) => TAG_COMMITMENT.network_serialize(&mut e)? + cmt.network_serialize(&mut e)?,
+            Self::State(state) => TAG_STATE.network_serialize(&mut e)? + state.network_serialize(&mut e)?,
+        })
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
+        Ok(match u8::network_deserialize(&mut d)? {
+            TAG_COMMITMENT => Self::Commitment(rgb::commit::StateCommitment::network_deserialize(&mut d)?),
+            TAG_STATE => Self::State(rgb::state::Bound::network_deserialize(&mut d)?),
+            _ => Err(csv::serialize::Error::ValueOutOfRange)?,
+        })
+    }
+}
 
 
 impl csv::serialize::Commitment for rgb::state::Bound {
@@ -273,7 +299,15 @@ impl csv::serialize::Commitment for rgb::State {
     }
 }
 
-// TODO: Implement network serialization
+impl csv::serialize::Network for rgb::State {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
+        self.clone().into_inner().network_serialize(&mut e)
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
+        Vec::<rgb::state::Partial>::network_deserialize(&mut d).map(Self::from_inner)
+    }
+}
 
 
 /// ## Script commitment serialization
@@ -314,10 +348,20 @@ impl csv::serialize::Commitment for rgb::Transition {
     }
 }
 
-// TODO: Implement network serialization
-/* Draft:
-Ok(Self {
-    meta: Meta::commitment_deserialize(&mut d)?,
-    state: State::commitment_deserialize(&mut d)?,
-    script: Option::<Script>::commitment_deserialize(&mut d)?
-})*/
+impl csv::serialize::Network for rgb::Transition {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
+        Ok(
+            self.meta.network_serialize(&mut e)? +
+            self.state.network_serialize(&mut e)? +
+            self.script.network_serialize(&mut e)?
+        )
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
+        Ok(Self {
+            meta: rgb::Metadata::network_deserialize(&mut d)?,
+            state: rgb::State::network_deserialize(&mut d)?,
+            script: Option::<rgb::Script>::network_deserialize(&mut d)?
+        })
+    }
+}

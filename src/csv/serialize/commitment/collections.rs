@@ -48,7 +48,7 @@ impl<T> Commitment for Option<T> where T: Commitment {
 
 
 /// In terms of commitment serialization, `Vec` is stored in form of usize-serialized length
-/// (see `Commitemtn` implementation for `usize` type for serialization platform-independent
+/// (see `Commitment` implementation for `usize` type for serialization platform-independent
 /// constant-length serialization rules) followed by a consequently-serialized vec items,
 /// according to their type.
 ///
