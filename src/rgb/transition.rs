@@ -13,14 +13,9 @@
 
 
 use super::{State, Metadata, Script};
-use crate::csv;
 
 pub struct Transition {
     pub meta: Metadata,
     pub state: State,
     pub script: Option<Script>,
-}
-
-impl csv::serialize::CommitmentIdentifiable for Transition {
-    hashed_tag!("rgb:", "transition:1");
 }

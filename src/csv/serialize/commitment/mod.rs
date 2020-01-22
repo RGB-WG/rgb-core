@@ -22,14 +22,11 @@ pub use primitives::*;
 pub use collections::*;
 
 use std::{
-    io,
-    str::Utf8Error,
-    convert::{From},
+    io, str,
+    convert::From,
 };
 
 use bitcoin::consensus::encode as consensus;
-
-use crate::bp::tagged256::*;
 
 
 #[derive(Debug, Display)]
@@ -38,14 +35,14 @@ pub enum Error {
     BitcoinConsensus(consensus::Error),
     EnumValueUnknown(u8),
     EnumValueOverflow,
-    Utf8Error(Utf8Error),
+    Utf8Error(str::Utf8Error),
     ValueOutOfRange,
     WrongOptionalEncoding,
     ParseFailed(&'static str),
 }
 
-impl From<Utf8Error> for Error {
-    fn from(err: Utf8Error) -> Self {
+impl From<str::Utf8Error> for Error {
+    fn from(err: str::Utf8Error) -> Self {
         Self::Utf8Error(err)
     }
 }
@@ -60,14 +57,6 @@ impl From<consensus::Error> for Error {
 pub trait Commitment: Sized {
     fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error>;
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error>;
-}
-
-pub trait CommitmentIdentifiable: Commitment {
-    const TAG: &'static str;
-
-    fn commitment_id(&self) -> Result<TaggedHash, Error> {
-        Ok(tagged256hash(Self::TAG, commitment_serialize(self)?))
-    }
 }
 
 

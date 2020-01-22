@@ -16,7 +16,11 @@ use std::{
     collections::HashMap
 };
 
-use bitcoin::hashes::{sha256, sha256t};
+use bitcoin::hashes::{
+    Hash,
+    sha256t,
+    hex::{ToHex, FromHex}
+};
 
 use super::{
     types::*,
@@ -67,7 +71,7 @@ static MIDSTATE_SHEMAID: [u8; 32] = [
     243, 110, 60, 133, 174, 103, 187, 103, 230, 9, 106
 ];
 
-tagged_hash!(SchemaId, SchemaIdTag, SchemaId, MIDSTATE_SHEMAID);
+tagged_hash!(SchemaId, SchemaIdTag, MIDSTATE_SHEMAID, doc="");
 
 impl ConsensusCommit for Schema {
     type CommitmentHash = SchemaId;
