@@ -42,13 +42,21 @@ impl serialize::commitment::Commitment for Meta {
             data.push(MerkleNode::hash(&commitment_serialize(field)?));
             Ok(())
         })?;
-        merklize(&data[..]).commitment_serialize(&mut e)
+        merklize("RGB:meta:1", &data[..], 0).commitment_serialize(&mut e)
     }
 
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, serialize::Error> {
         panic!("It is impossible to deserialize from Merkle tree root commitment")
     }
 }
+
+/*
+impl State {
+    pub fn state_root_commitment() ->  {
+
+    }
+}*/
+
 
 impl serialize::commitment::Commitment for State {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
@@ -57,7 +65,7 @@ impl serialize::commitment::Commitment for State {
             data.push(MerkleNode::hash(&state.state_commitment()?));
             Ok(())
         })?;
-        merklize(&data[..]).commitment_serialize(&mut e)
+        merklize("RGB:state:1", &data[..], 0).commitment_serialize(&mut e)
     }
 
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, serialize::Error> {
