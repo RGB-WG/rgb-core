@@ -14,9 +14,17 @@
 
 use std::{io, ops::Deref, convert::TryFrom};
 
-use bitcoin::{hash_types::Txid, OutPoint};
+use bitcoin::{
+    hash_types::Txid,
+    hashes::{sha256, sha256t},
+};
 
-use crate::csv::{serialize, FromConsensus};
+use crate::cmt::committable::*;
+use crate::csv::serialize::{
+    self,
+    FromConsensus,
+    commitment_serialize
+};
 
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -92,7 +100,7 @@ pub struct Seal {
 
 impl TryFrom<bitcoin::OutPoint> for Seal {
     type Error = SealError;
-    fn try_from(outpoint: OutPoint) -> Result<Self, Self::Error> {
+    fn try_from(outpoint: bitcoin::OutPoint) -> Result<Self, Self::Error> {
         let vout = outpoint.vout;
         if vout > std::u16::MAX as u32 {
             return Err(SealError::VoutOverflow)
@@ -121,6 +129,30 @@ impl serialize::commitment::Commitment for Seal {
 }
 
 
+/// Midstate for RGB state commitment. Corresponds to "RGB:state:1" tag with
+/// `23fadcc399c645274f9c884ff997f88168d6fe5739593114bb3e3851d3ed3406` hex value
+const MIDSTATE_STATECOMMITMENT: [u8; 32] = [
+    35, 250, 220, 195, 153, 198, 69, 39, 79, 156, 136, 79, 249, 151, 248, 129, 104, 214, 254, 87,
+    57, 89, 49, 20, 187, 62, 56, 81, 211, 237, 52, 6
+];
+
+tagged_hash!(StateCommitment, StateCommitmentTag, StateCommitment, MIDSTATE_STATECOMMITMENT);
+
+#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[display_from(Debug)]
+pub enum PartialState {
+    Commitment(StateCommitment),
+    State(BoundState)
+}
+
+impl PartialState {
+    pub fn state_commitment(&self) -> Result<StateCommitment, serialize::Error> {
+        match self {
+            Self::Commitment(cmt) => Ok(*cmt),
+            Self::State(state) => state.state_commitment(),
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
 #[display_from(Debug)]
@@ -128,6 +160,12 @@ pub struct BoundState {
     pub id: SealId,
     pub seal: Seal,
     pub val: Value,
+}
+
+impl BoundState {
+    pub fn state_commitment(&self) -> Result<StateCommitment, serialize::Error> {
+        Ok(commitment_serialize(self)?.commit())
+    }
 }
 
 impl serialize::commitment::Commitment for BoundState {

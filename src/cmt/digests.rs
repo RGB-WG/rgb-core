@@ -37,9 +37,9 @@ impl<HT, MSG> StandaloneCommitment<MSG> for HT where
 }
 
 
-impl<T, HT> Verifiable<HT> for T where HT: Hash, T: Copy + AsSlice { }
+impl<T, HT> Verifiable<HT> for T where HT: Hash, T: AsSlice { }
 
-impl<T, HT> Committable<HT> for T where HT: Hash, T: Copy + AsSlice { }
+impl<T, HT> Committable<HT> for T where HT: Hash, T: AsSlice { }
 
 
 #[cfg(test)]

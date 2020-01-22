@@ -32,7 +32,7 @@ use crate::{
 
 
 wrapper!(Meta, _MetaPhantom, Vec<fields::MetaField>, doc="");
-wrapper!(State, _StatePhantom, Vec<state::BoundState>, doc="");
+wrapper!(State, _StatePhantom, Vec<state::PartialState>, doc="");
 
 
 impl serialize::commitment::Commitment for Meta {
@@ -54,7 +54,7 @@ impl serialize::commitment::Commitment for State {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
         let mut data: Vec<MerkleNode> = vec![];
         self.as_ref().iter().try_for_each(|state| -> Result<(), serialize::Error> {
-            data.push(MerkleNode::hash(&commitment_serialize(state)?));
+            data.push(MerkleNode::hash(&state.state_commitment()?));
             Ok(())
         })?;
         merklize(&data[..]).commitment_serialize(&mut e)

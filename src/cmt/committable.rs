@@ -49,7 +49,7 @@ pub trait EmbeddedCommitment<MSG>: CommitmentVerify<MSG> where
 }
 
 
-pub trait Verifiable<CMT: CommitmentVerify<Self>>: Copy where
+pub trait Verifiable<CMT: CommitmentVerify<Self>> where
     Self: Sized
 {
     #[inline]

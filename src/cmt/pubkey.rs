@@ -93,9 +93,9 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
     }
 }
 
-impl<T> Verifiable<PubkeyCommitment> for T where T: Copy + AsSlice { }
+impl<T> Verifiable<PubkeyCommitment> for T where T: AsSlice { }
 
-impl<T> EmbedCommittable<PubkeyCommitment> for T where T: Copy + AsSlice { }
+impl<T> EmbedCommittable<PubkeyCommitment> for T where T: AsSlice { }
 
 impl From<CurveError> for self::Error {
     fn from(error: CurveError) -> Self {

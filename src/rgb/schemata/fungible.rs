@@ -40,7 +40,6 @@ use super::{
         }
     }
 };
-use crate::rgb::{SealError, BoundState};
 
 #[non_exhaustive]
 #[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
@@ -50,7 +49,7 @@ pub enum Error {
 }
 
 impl From<state::SealError> for Error {
-    fn from(error: SealError) -> Self {
+    fn from(error: state::SealError) -> Self {
         Self::SealError(error)
     }
 }
@@ -73,13 +72,13 @@ impl Rgb1 {
         let seals_count = balances.len();
         Ok(state::State::from_inner(
             balances.into_iter().try_fold(
-                Vec::<BoundState>::with_capacity(seals_count),
-                |mut bound_state, (outpoint, balance)| -> Result<Vec<BoundState>, Error> {
-                    bound_state.push(state::BoundState {
+                Vec::<state::PartialState>::with_capacity(seals_count),
+                |mut bound_state, (outpoint, balance)| -> Result<Vec<state::PartialState>, Error> {
+                    bound_state.push(state::PartialState::State(state::BoundState {
                         id: state::SealId(Self::BALANCE_SEAL as u16),
                         seal: state::Seal::try_from(outpoint)?,
                         val: state::state::Value::Balance(balance)
-                    });
+                    }));
                     Ok(bound_state)
                 }
             )?

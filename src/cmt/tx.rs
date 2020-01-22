@@ -82,9 +82,9 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
     }
 }
 
-impl<T> Verifiable<TxCommitment> for T where T: Copy + AsSlice { }
+impl<T> Verifiable<TxCommitment> for T where T: AsSlice { }
 
-impl<T> EmbedCommittable<TxCommitment> for T where T: Copy + AsSlice { }
+impl<T> EmbedCommittable<TxCommitment> for T where T: AsSlice { }
 
 
 #[cfg(test)]
