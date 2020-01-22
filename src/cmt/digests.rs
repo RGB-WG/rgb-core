@@ -11,42 +11,35 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::marker::PhantomData;
 use bitcoin::hashes::Hash;
 use super::committable::*;
-use crate::{AsSlice, Wrapper};
+use crate::AsSlice;
 
 
-#[derive(Clone, Copy, Eq, PartialEq)]
-struct _DigestCommitment<HT: Hash>(PhantomData<HT>);
-#[allow(private_in_public, type_alias_bounds)]
-pub type DigestCommitment<HT: Hash> = Wrapper<HT, _DigestCommitment<HT>>;
-
-
-impl<HT, MSG> CommitmentVerify<MSG> for DigestCommitment<HT> where
+impl<HT, MSG> CommitmentVerify<MSG> for HT where
     HT: Hash,
     MSG: AsSlice + Committable<Self>
 {
     #[inline]
     fn reveal_verify(&self, msg: MSG) -> bool {
-        <DigestCommitment<HT> as StandaloneCommitment<MSG>>::reveal_verify(&self, msg)
+        <HT as StandaloneCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
 
-impl<HT, MSG> StandaloneCommitment<MSG> for DigestCommitment<HT> where
+impl<HT, MSG> StandaloneCommitment<MSG> for HT where
     HT: Hash,
     MSG: AsSlice + Committable<Self>
 {
     #[inline]
-    fn commit_to(msg: MSG) -> DigestCommitment<HT> {
+    fn commit_to(msg: MSG) -> HT {
         From::from(<HT as Hash>::hash(&msg.as_slice()))
     }
 }
 
 
-impl<T, HT> Verifiable<DigestCommitment<HT>> for T where HT: Hash, T: Copy + AsSlice { }
+impl<T, HT> Verifiable<HT> for T where HT: Hash, T: Copy + AsSlice { }
 
-impl<T, HT> Committable<DigestCommitment<HT>> for T where HT: Hash, T: Copy + AsSlice { }
+impl<T, HT> Committable<HT> for T where HT: Hash, T: Copy + AsSlice { }
 
 
 #[cfg(test)]
@@ -69,8 +62,8 @@ mod test {
         let digest = sha256::Hash::hash(&msg.as_slice());
         assert_eq!(digest.to_hex(), "868258ba45e46ac4ba141fe0eb6cd6251b4d0ee2c23e69cd99322505324672e4");
 
-        let commitment: DigestCommitment<sha256::Hash> = msg.commit();
-        assert_eq!(digest, commitment.clone().into_inner());
+        let commitment: sha256::Hash = msg.commit();
+        assert_eq!(digest, commitment);
         assert_eq!(msg.verify(&commitment), true);
     }
 }
