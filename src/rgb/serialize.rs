@@ -252,9 +252,9 @@ impl csv::serialize::Commitment for rgb::Transition {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
         use crate::rgb::commit::Identifiable;
         Ok(
-            self.meta.commitment_serialize(&mut e)? +
+            self.meta.commitment()?.commitment_serialize(&mut e)? +
             self.state.commitment()?.commitment_serialize(&mut e)? +
-            self.script.commitment_serialize(&mut e)?
+            self.script.commitment()?.commitment_serialize(&mut e)?
         )
     }
 

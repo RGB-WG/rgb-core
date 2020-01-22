@@ -17,7 +17,7 @@ use std::convert::From;
 use bitcoin::{
     hashes::{
         Hash,
-        sha256d, sha256t,
+        sha256, sha256t,
         hex::{ToHex, FromHex}
     }
 };
@@ -60,17 +60,20 @@ tagged_hash!(MetadataCommitment, MetadataTag, MIDSTATE_METADATA, doc="");
 tagged_hash!(ScriptCommitment, ScriptTag, MIDSTATE_SCRIPT, doc="");
 tagged_hash!(TransitionCommitment, TransitionTag, MIDSTATE_TRANSITION, doc="");
 // TODO: This should be `sha256d::Hash`, but this requires changes to rust-bitcoin
-hash_newtype!(StateRootCommitment, sha256d::Hash, 32, doc="MerkleNode corresponding to the state tree root");
+hash_newtype!(MetadataRootCommitment, sha256::Hash, 32, doc="MerkleNode corresponding to the metadata tree root");
+hash_newtype!(StateRootCommitment, sha256::Hash, 32, doc="MerkleNode corresponding to the state tree root");
 
 impl_hashencode!(StateCommitment);
 impl_hashencode!(StateRootCommitment);
 impl_hashencode!(MetadataCommitment);
+impl_hashencode!(MetadataRootCommitment);
 impl_hashencode!(ScriptCommitment);
 impl_hashencode!(TransitionCommitment);
 
 impl csv::serialize::FromConsensus for StateCommitment { }
 impl csv::serialize::FromConsensus for StateRootCommitment { }
 impl csv::serialize::FromConsensus for MetadataCommitment { }
+impl csv::serialize::FromConsensus for MetadataRootCommitment { }
 impl csv::serialize::FromConsensus for ScriptCommitment { }
 impl csv::serialize::FromConsensus for TransitionCommitment { }
 
@@ -80,11 +83,40 @@ impl From<bp::MerkleNode> for StateRootCommitment {
         Self::from_inner(node.into_inner())
     }
 }
+impl From<bp::MerkleNode> for MetadataRootCommitment {
+    fn from(node: bp::MerkleNode) -> Self {
+        Self::from_inner(node.into_inner())
+    }
+}
 
 
 pub trait Identifiable {
     type HashId: cmt::StandaloneCommitment<Vec<u8>> + Hash;
     fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error>;
+}
+
+
+// TODO: Do this with proc macro to derive commitment from commitment_serialize
+impl Identifiable for rgb::metadata::Field {
+    type HashId = MetadataCommitment;
+    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
+        use crate::cmt::committable::Committable;
+        Ok(csv::serialize::commitment_serialize(self)?.commit())
+    }
+}
+
+impl Identifiable for rgb::Metadata {
+    type HashId = MetadataRootCommitment;
+    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
+        let data = self.as_ref().iter().try_fold(
+            Vec::<bp::MerkleNode>::with_capacity(self.len()),
+            |mut data, field| -> Result<Vec<bp::MerkleNode>, csv::serialize::Error> {
+                data.push(bp::MerkleNode::from_inner(field.commitment()?.into_inner()));
+                Ok(data)
+            }
+        )?;
+        Ok(bp::merklize(HASHTAG_MERKLESTATE, &data[..], 0).into())
+    }
 }
 
 impl Identifiable for rgb::state::Partial {
@@ -97,7 +129,7 @@ impl Identifiable for rgb::state::Partial {
     }
 }
 
-// TODO: Do this with proc macro to derive commitmemnt from commutment_serialize
+// TODO: Do this with proc macro to derive commitment from commitment_serialize
 impl Identifiable for rgb::state::Bound {
     type HashId = StateCommitment;
     fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
@@ -109,13 +141,22 @@ impl Identifiable for rgb::state::Bound {
 impl Identifiable for rgb::State {
     type HashId = StateRootCommitment;
     fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
-        // TODO: Refactor using `try_fold` method
-        let mut data: Vec<bp::MerkleNode> = vec![];
-        self.as_ref().iter().try_for_each(|state| -> Result<(), csv::serialize::Error> {
-            data.push(bp::MerkleNode::from_inner(state.commitment()?.into_inner()));
-            Ok(())
-        })?;
+        let data = self.as_ref().iter().try_fold(
+            Vec::<bp::MerkleNode>::with_capacity(self.len()),
+            |mut data, state| -> Result<Vec<bp::MerkleNode>, csv::serialize::Error> {
+                data.push(bp::MerkleNode::from_inner(state.commitment()?.into_inner()));
+                Ok(data)
+            }
+        )?;
         Ok(bp::merklize(HASHTAG_MERKLESTATE, &data[..], 0).into())
+    }
+}
+
+impl Identifiable for Option<rgb::Script> {
+    type HashId = ScriptCommitment;
+    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
+        use crate::cmt::committable::Committable;
+        Ok(csv::serialize::commitment_serialize(self)?.commit())
     }
 }
 
