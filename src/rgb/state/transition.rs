@@ -37,12 +37,6 @@ pub struct _StatePhantom;
 pub type Meta = Wrapper<Vec<fields::MetaField>, PhantomData<_MetaPhantom>>;
 pub type State = Wrapper<Vec<state::BoundState>, PhantomData<_StatePhantom>>;
 
-pub struct Transition {
-    pub meta: Meta,
-    pub state: State,
-    pub script: Option<Script>,
-}
-
 impl serialize::commitment::Commitment for Meta {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, serialize::Error> {
         let mut data: Vec<MerkleNode> = vec![];
@@ -87,6 +81,13 @@ impl serialize::commitment::Commitment for Script {
             _ => Err(serialize::Error::ParseFailed("We can not deserialize non-empty scripts"))
         }
     }
+}
+
+
+pub struct Transition {
+    pub meta: Meta,
+    pub state: State,
+    pub script: Option<Script>,
 }
 
 impl serialize::commitment::Commitment for Transition {

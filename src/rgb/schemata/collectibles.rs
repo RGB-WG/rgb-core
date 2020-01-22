@@ -30,6 +30,7 @@ use super::{
     }
 };
 
+// TODO: Update the structure according to RGB-1
 
 /// Schema for collectibles (standard RGB-2)
 pub struct Rgb2();

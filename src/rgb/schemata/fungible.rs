@@ -69,8 +69,25 @@ impl Rgb1 {
     const BALANCE_SEAL: usize = 1;
     const PRUNE_SEAL: usize = 2;
 
+    fn balances_to_bound_state(balances: HashMap<OutPoint, state::Amount>) -> Result<state::State, Error> {
+        let seals_count = balances.len();
+        Ok(state::State::from_inner(
+            balances.into_iter().try_fold(
+                Vec::<BoundState>::with_capacity(seals_count),
+                |mut bound_state, (outpoint, balance)| -> Result<Vec<BoundState>, Error> {
+                    bound_state.push(state::BoundState {
+                        id: state::SealId(Self::BALANCE_SEAL as u16),
+                        seal: state::Seal::try_from(outpoint)?,
+                        val: state::state::Value::Balance(balance)
+                    });
+                    Ok(bound_state)
+                }
+            )?
+        ))
+    }
+
     pub fn issue(network: Network, ticker: &str, name: &str, descr: Option<&str>,
-                 assets: HashMap<OutPoint, state::Amount>, precision: u8,
+                 balances: HashMap<OutPoint, state::Amount>, precision: u8,
                  supply: Option<Uint256>, dust: Option<Uint256>) -> Result<state::Transition, Error> {
         // TODO: Add ability to control secondary issuance and pruning
 
@@ -100,22 +117,15 @@ impl Rgb1 {
             );
         }
 
-        let assets_count = assets.len();
-        let state = state::State::from_inner(
-            assets.into_iter().try_fold(
-                Vec::<BoundState>::with_capacity(assets_count),
-                |mut bound_state, (outpoint, balance)| -> Result<Vec<BoundState>, Error> {
-                    bound_state.push(state::BoundState {
-                        id: state::SealId(Self::BALANCE_SEAL as u16),
-                        seal: state::Seal::try_from(outpoint)?,
-                        val: state::state::Value::Balance(balance)
-                    });
-                    Ok(bound_state)
-                }
-            )?
-        );
+        let state = Self::balances_to_bound_state(balances)?;
 
         Ok(state::Transition { meta, state, script: None })
+    }
+
+    pub fn transfer(balances: HashMap<OutPoint, state::Amount>) -> Result<state::Transition, Error> {
+        let state = Self::balances_to_bound_state(balances)?;
+
+        Ok(state::Transition { meta: state::Meta::default(), state, script: None })
     }
 }
 
