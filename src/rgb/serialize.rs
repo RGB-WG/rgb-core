@@ -24,9 +24,14 @@ use bitcoin::{
 use crate::{bp, csv, rgb};
 
 
+const HASHTAG_MERKLESTATE: &'static str = "RGB:state:1";
+const HASHTAG_MERKLEMETA: &'static str = "RGB:metadata:1";
+
+
 /// ## Metadata commitment serializaiton
 
 /// ### Field type
+
 impl csv::serialize::Commitment for rgb::metadata::Type {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
         self.0.commitment_serialize(&mut e)
@@ -36,6 +41,8 @@ impl csv::serialize::Commitment for rgb::metadata::Type {
         Ok(rgb::metadata::Type(u16::commitment_deserialize(&mut d)?))
     }
 }
+
+network_serialize_from_commitment!(rgb::metadata::Type);
 
 /// ### Field value
 
@@ -102,6 +109,8 @@ impl csv::serialize::Commitment for rgb::metadata::Value {
     }
 }
 
+network_serialize_from_commitment!(rgb::metadata::Value);
+
 /// ### Field structure
 
 impl csv::serialize::Commitment for rgb::metadata::Field {
@@ -117,23 +126,29 @@ impl csv::serialize::Commitment for rgb::metadata::Field {
     }
 }
 
+network_serialize_from_commitment!(rgb::metadata::Field);
+
 /// ### Set of metadata fields
 
-// TODO: Refactor this into commitment generation code and separate network serialization routine
 impl csv::serialize::Commitment for rgb::Metadata {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
-        let mut data: Vec<bp::MerkleNode> = vec![];
-        self.as_ref().iter().try_for_each(|field| -> Result<(), csv::serialize::Error> {
-            data.push(bp::MerkleNode::hash(&csv::serialize::commitment_serialize(field)?));
-            Ok(())
-        })?;
-        bp::merklize("RGB:meta:1", &data[..], 0).commitment_serialize(&mut e)
+        use crate::rgb::commit::Identifiable;
+        let data = self.as_ref().iter().try_fold(
+            Vec::<bp::MerkleNode>::with_capacity(self.len()),
+            |mut data, field| -> Result<Vec<bp::MerkleNode>, csv::serialize::Error> {
+                data.push(bp::MerkleNode::from_inner(field.commitment()?.into_inner()));
+                Ok(data)
+            }
+        )?;
+        bp::merklize(HASHTAG_MERKLEMETA, &data[..], 0).commitment_serialize(&mut e)
     }
 
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, csv::serialize::Error> {
         panic!("It is impossible to deserialize from Merkle tree root commitment")
     }
 }
+
+// TODO: Implement network serialization
 
 
 /// ## Seal commitment serialization
@@ -150,6 +165,8 @@ impl csv::serialize::Commitment for rgb::seal::Type {
     }
 }
 
+network_serialize_from_commitment!(rgb::seal::Type);
+
 /// ### Seal pointer
 
 impl csv::serialize::Commitment for rgb::Seal {
@@ -165,6 +182,8 @@ impl csv::serialize::Commitment for rgb::Seal {
         ))
     }
 }
+
+network_serialize_from_commitment!(rgb::Seal);
 
 
 /// ## Data commitment serialization
@@ -194,8 +213,26 @@ impl csv::serialize::Commitment for rgb::data::Data {
     }
 }
 
+network_serialize_from_commitment!(rgb::data::Data);
+
 
 /// ## State commitment serialization
+
+impl csv::serialize::Commitment for rgb::state::Partial {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
+        match self {
+            Self::Commitment(cmt) => cmt.commitment_serialize(&mut e),
+            Self::State(state) => state.commitment_serialize(&mut e),
+        }
+    }
+
+    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, csv::serialize::Error> {
+        panic!("It is impossible to deserialize from partial state commitment")
+    }
+}
+
+// TODO: Implement network serialization for rgb::state::Partial
+
 
 impl csv::serialize::Commitment for rgb::state::Bound {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
@@ -215,16 +252,28 @@ impl csv::serialize::Commitment for rgb::state::Bound {
     }
 }
 
-// TODO: Refactor this into commitment generation code and separate network serialization routine
+network_serialize_from_commitment!(rgb::state::Bound);
+
+
 impl csv::serialize::Commitment for rgb::State {
-    fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, csv::serialize::Error> {
-        unimplemented!()
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
+        use crate::rgb::commit::Identifiable;
+        let data = self.as_ref().iter().try_fold(
+            Vec::<bp::MerkleNode>::with_capacity(self.len()),
+            |mut data, state| -> Result<Vec<bp::MerkleNode>, csv::serialize::Error> {
+                data.push(bp::MerkleNode::from_inner(state.commitment()?.into_inner()));
+                Ok(data)
+            }
+        )?;
+        bp::merklize(HASHTAG_MERKLESTATE, &data[..], 0).commitment_serialize(&mut e)
     }
 
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, csv::serialize::Error> {
         panic!("It is impossible to deserialize from Merkle tree root commitment")
     }
 }
+
+// TODO: Implement network serialization
 
 
 /// ## Script commitment serialization
@@ -245,6 +294,8 @@ impl csv::serialize::Commitment for rgb::Script {
     }
 }
 
+network_serialize_from_commitment!(rgb::Script);
+
 
 /// ## State transition commitment serialization
 
@@ -260,11 +311,13 @@ impl csv::serialize::Commitment for rgb::Transition {
 
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, csv::serialize::Error> {
         panic!("It is impossible to deserialize from transition commitment data")
-        // TODO: Move this code into serialize::network
-        /*Ok(Self {
-            meta: Meta::commitment_deserialize(&mut d)?,
-            state: State::commitment_deserialize(&mut d)?,
-            script: Option::<Script>::commitment_deserialize(&mut d)?
-        })*/
     }
 }
+
+// TODO: Implement network serialization
+/* Draft:
+Ok(Self {
+    meta: Meta::commitment_deserialize(&mut d)?,
+    state: State::commitment_deserialize(&mut d)?,
+    script: Option::<Script>::commitment_deserialize(&mut d)?
+})*/

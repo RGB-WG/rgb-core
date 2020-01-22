@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::io;
-use super::{network::*, commitment::*};
+use super::{network::*, commitment::*, Error};
 
 pub trait Storage: Sized {
     fn storage_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error>;

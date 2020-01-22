@@ -25,8 +25,6 @@ use bitcoin::{
 use crate::{bp, cmt, csv, rgb};
 
 
-const HASHTAG_MERKLESTATE: &'static str = "RGB:state:1";
-
 /// Midstate for RGB state commitment. Corresponds to "RGB:state:1" tag with
 /// `23fadcc399c645274f9c884ff997f88168d6fe5739593114bb3e3851d3ed3406` hex value
 const MIDSTATE_STATE: [u8; 32] = [
@@ -90,33 +88,21 @@ impl From<bp::MerkleNode> for MetadataRootCommitment {
 }
 
 
-pub trait Identifiable {
+pub trait Identifiable: csv::Commitment {
     type HashId: cmt::StandaloneCommitment<Vec<u8>> + Hash;
-    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error>;
-}
-
-
-// TODO: Do this with proc macro to derive commitment from commitment_serialize
-impl Identifiable for rgb::metadata::Field {
-    type HashId = MetadataCommitment;
     fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
-        use crate::cmt::committable::Committable;
+        use cmt::Committable;
         Ok(csv::serialize::commitment_serialize(self)?.commit())
     }
 }
 
+
+impl Identifiable for rgb::metadata::Field {
+    type HashId = MetadataCommitment;
+}
+
 impl Identifiable for rgb::Metadata {
     type HashId = MetadataRootCommitment;
-    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
-        let data = self.as_ref().iter().try_fold(
-            Vec::<bp::MerkleNode>::with_capacity(self.len()),
-            |mut data, field| -> Result<Vec<bp::MerkleNode>, csv::serialize::Error> {
-                data.push(bp::MerkleNode::from_inner(field.commitment()?.into_inner()));
-                Ok(data)
-            }
-        )?;
-        Ok(bp::merklize(HASHTAG_MERKLESTATE, &data[..], 0).into())
-    }
 }
 
 impl Identifiable for rgb::state::Partial {
@@ -129,41 +115,18 @@ impl Identifiable for rgb::state::Partial {
     }
 }
 
-// TODO: Do this with proc macro to derive commitment from commitment_serialize
 impl Identifiable for rgb::state::Bound {
     type HashId = StateCommitment;
-    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
-        use crate::cmt::committable::Committable;
-        Ok(csv::serialize::commitment_serialize(self)?.commit())
-    }
 }
 
 impl Identifiable for rgb::State {
     type HashId = StateRootCommitment;
-    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
-        let data = self.as_ref().iter().try_fold(
-            Vec::<bp::MerkleNode>::with_capacity(self.len()),
-            |mut data, state| -> Result<Vec<bp::MerkleNode>, csv::serialize::Error> {
-                data.push(bp::MerkleNode::from_inner(state.commitment()?.into_inner()));
-                Ok(data)
-            }
-        )?;
-        Ok(bp::merklize(HASHTAG_MERKLESTATE, &data[..], 0).into())
-    }
 }
 
 impl Identifiable for Option<rgb::Script> {
     type HashId = ScriptCommitment;
-    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
-        use crate::cmt::committable::Committable;
-        Ok(csv::serialize::commitment_serialize(self)?.commit())
-    }
 }
 
 impl Identifiable for rgb::Transition {
     type HashId = TransitionCommitment;
-    fn commitment(&self) -> Result<Self::HashId, csv::serialize::Error> {
-        use crate::cmt::committable::Committable;
-        Ok(csv::serialize::commitment_serialize(self)?.commit())
-    }
 }

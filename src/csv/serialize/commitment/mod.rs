@@ -21,38 +21,10 @@ pub use macros::*;
 pub use primitives::*;
 pub use collections::*;
 
-use std::{
-    io, str,
-    convert::From,
-};
+use std::io;
 
-use bitcoin::consensus::encode as consensus;
+use super::Error;
 
-
-#[derive(Debug, Display)]
-#[display_from(Debug)]
-pub enum Error {
-    BitcoinConsensus(consensus::Error),
-    EnumValueUnknown(u8),
-    EnumValueOverflow,
-    Utf8Error(str::Utf8Error),
-    ValueOutOfRange,
-    WrongOptionalEncoding,
-    ParseFailed(&'static str),
-}
-
-impl From<str::Utf8Error> for Error {
-    fn from(err: str::Utf8Error) -> Self {
-        Self::Utf8Error(err)
-    }
-}
-
-impl From<consensus::Error> for Error {
-    #[inline]
-    fn from(err: consensus::Error) -> Self {
-        Error::BitcoinConsensus(err)
-    }
-}
 
 pub trait Commitment: Sized {
     fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error>;
