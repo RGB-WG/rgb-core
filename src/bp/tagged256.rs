@@ -29,3 +29,11 @@ pub fn tagged256hash(tag: &str, msg: Vec<u8>) -> TaggedHash {
     engine.input(&msg[..]);
     sha256::Hash::from_engine(engine).into()
 }
+
+
+#[macro_export]
+macro_rules! hashed_tag {
+    ($prefix:expr, $tag:expr) => {
+        const TAG: &'static str = concat!($prefix, stringify!($tag));
+    };
+}

@@ -22,6 +22,9 @@ use super::{
     fields,
     script::Script,
 };
+#[allow(unused_imports)]
+#[macro_use]
+use crate::bp::tagged256;
 use crate::{
     Wrapper,
     csv::{serialize, commitment_serialize},
@@ -102,4 +105,8 @@ impl serialize::commitment::Commitment for Transition {
             script: Option::<Script>::commitment_deserialize(&mut d)?
         })
     }
+}
+
+impl serialize::commitment::CommitmentIdentifiable for Transition {
+    hashed_tag!("rgb:", "transition:1");
 }

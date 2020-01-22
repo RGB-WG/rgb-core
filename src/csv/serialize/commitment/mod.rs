@@ -29,6 +29,8 @@ use std::{
 
 use bitcoin::consensus::encode as consensus;
 
+use crate::bp::tagged256::*;
+
 
 #[derive(Debug, Display)]
 #[display_from(Debug)]
@@ -59,6 +61,15 @@ pub trait Commitment: Sized {
     fn commitment_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error>;
     fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error>;
 }
+
+pub trait CommitmentIdentifiable: Commitment {
+    const TAG: &'static str;
+
+    fn commitment_id(&self) -> Result<TaggedHash, Error> {
+        Ok(tagged256hash(Self::TAG, commitment_serialize(self)?))
+    }
+}
+
 
 pub fn commitment_serialize<T: Commitment>(data: &T) -> Result<Vec<u8>, Error> {
     let mut encoder = io::Cursor::new(vec![]);

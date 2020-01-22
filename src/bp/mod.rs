@@ -17,6 +17,7 @@ use bitcoin::hashes::{
     hex::{ToHex, FromHex}
 };
 
+#[macro_use]
 pub mod tagged256;
 pub mod scripts;
 

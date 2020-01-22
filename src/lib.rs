@@ -42,6 +42,7 @@ pub extern crate miniscript;
 
 #[macro_use]
 pub mod common;
+#[macro_use]
 pub mod bp;
 pub mod cmt;
 pub mod seals;
