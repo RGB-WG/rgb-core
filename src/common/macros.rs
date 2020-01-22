@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[macro_export]
 macro_rules! bytes {
     [ $($value:expr),+ ] => {
         &vec![
@@ -21,6 +22,7 @@ macro_rules! bytes {
     }
 }
 
+#[macro_export]
 macro_rules! map {
     { $($key:expr => $value:expr),+ } => {
         {
@@ -33,6 +35,7 @@ macro_rules! map {
     }
 }
 
+#[macro_export]
 macro_rules! bmap {
     { $($key:expr => $value:expr),+ } => {
         {
@@ -45,6 +48,7 @@ macro_rules! bmap {
     }
 }
 
+#[macro_export]
 macro_rules! hlist {
     [ $($value:expr),+ ] => {
         {
