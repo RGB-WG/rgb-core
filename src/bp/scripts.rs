@@ -11,7 +11,64 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use core::marker::PhantomData;
+//! # Bitcoin script types
+//!
+//! Bitcoin doesn't make a distinction between Bitcoin script coming from different sources, like
+//! scriptPubkey in transaction output or witness and sigScript in transaction input. There are
+//! many other possible script containers for Bitcoin script: redeem script, witness script,
+//! tapscript. In fact, any "script" of `Script` type can be used for inputs and outputs.
+//! What is a valid script for one will be a valid script for the other; the only req. is formatting
+//! of opcodes & pushes. That would mean that in principle every input script can be used as an
+//! output script, btu not vice versa. But really what makes a "script" is just the fact that it's
+//! formatted correctly.
+//!
+//! While all `Script`s represent the same same type **semantically**, there is a clear distinction
+//! at the **logical** level: Bitcoin script has the property to be committed into some other
+//! Bitcoin script – in a nested structures like in several layers, like *redeemScript* inside of
+//! *sigScript* used for P2SH, or *tapScript* within *witnessScript* coming from *witness* field
+//! for Taproot. These nested layers do distinguish on the information they contain, since some of
+//! them only commit to the hashes of the nested scripts (`ScriptHash`, `WitnessProgramm`) or
+//! public keys (`PubkeyHash`, `WPubkeyHash`), while other contain the full source of the script.
+//!
+//! The present type system represents a solution to the problem: it distinguish different logical
+//! types by introducing `Script` wrapper types. It defines `LockScript` as bottom layer or a script
+//! hierarchy, containing no other script commitments (in form of their hashes). It also defines
+//! types above on it: `PubkeyScript` (for whatever is there in `pubkeyScript` field of a `TxOut`),
+//! `SigScript` (for whatever comes from `sigScript` field of `TxIn`), `RedeemScript` and `TapScript`.
+//! Then, there are conversion functions, which for instance can analyse `PubkeyScript`
+//! and if it is a custom script or P2PK return a `LockScript` type - or otherwise fail with the
+//! error. So with this type system one is always sure which logical information it does contain.
+//!
+//! The following charts represent possible relations between script types:
+//!
+//! ```text
+//! [txout.pubkeyScript]
+//! PubkeyScript --?--(P2PK, custom scripts)--> LockScript <--+-------+---+---------+
+//!                                                           |       |   |         |
+//! [txin.sigScript]                                          |       |   |         |
+//! SigScript --+--?!----------(P2PKH: #=PubkeyHash)----------+       |   |         |
+//!             |                                                     |   |         |
+//!             +--?!--> RedeemScript --+--?!--(P2SH: #=ScriptHash)---+   |         |
+//!                                     |                                 |         |
+//!                      (P2W{SH/PKH}-within-P2SH:)  (#=WPubkeyHash/WitnessProgram) |
+//!                                     |                                 |         |
+//! [?txin.witness]~~~(P2W{SH/PKH}:)~~~~+--?!--> WitnessScript --+--------+      (P2TR:)
+//!                                                              |                  |
+//!                                                              +--?--> TapScript--+
+//!
+//! ```
+//! Legend:
+//! * `[<source>]`: data source
+//! * `[?<source>]`: data source which may be absent
+//! * `--+--`: algorithmic branching (alternative computation options)
+//! * `--?-->`: a conversion exists, but it may fail (returns `Option` or `Result`)
+//! * `--?!-->`: a conversion exists, but it may fail; however one of alternative branches must
+//!              always succeed
+//! * `----->`: a conversion exists which can't fail
+//! * `(<type>:)`: a type of the scripting mechanism
+//! * `-(#<type>)->`: the hash of the value following `->` must match to the value of the `<type>`
+//!
+
 use bitcoin::{
     hash_types::*,
     blockdata::script::*,
@@ -21,22 +78,21 @@ use miniscript::{Miniscript, Terminal::*, MiniscriptKey};
 use crate::Wrapper;
 
 
-//
-// PubkeyScript -+====> LockScript <----+
-//               |                      |
-//               +----> RedeemScript ---+
-//               |
-//               +----> TapScript
-//
+// STYLE: Multiline string literals with `"""` are still not supported for the meta-type macro tokens
+wrapper!(LockScript, _LockScriptPhantom, Script, doc="\
+    The deepest nested version of Bitcoin script containing no hashes of other scripts, including \
+    P2SH redeemScript hashes or witnessProgramm (hash or wintness script), or public keys");
+wrapper!(PubkeyScript, _PubkeyScriptPhantom, Script, doc="\
+    A content of `scriptPubkey` from a transaction output");
+wrapper!(SigScript, _SigScriptPhantom, Script, doc="\
+    A content of `sigScript` from a transaction input");
+wrapper!(WitnessScript, _WitnessScriptPhantom, Script, doc="\
+    A part of the `witness` field from a transaction input according to BIP-141");
+wrapper!(RedeemScript, _RedeemScriptPhantom, Script, doc="\
+    redeemScript part of the witness program or sigScript which is hashed for P2(W)SH output");
+wrapper!(TapScript, _TapScriptPhantom, Script, doc="\
+    Any valid branch of Tapscript (BIP-342)");
 
-pub struct _LockScriptPhantom;
-pub struct _PubkeyScriptPhantom;
-pub struct _RedeemScriptPhantom;
-pub struct _TapScriptPhantom;
-pub type LockScript = Wrapper<Script, PhantomData<_LockScriptPhantom>>;
-pub type PubkeyScript = Wrapper<Script, PhantomData<_PubkeyScriptPhantom>>;
-pub type RedeemScript = Wrapper<Script, PhantomData<_RedeemScriptPhantom>>;
-pub type TapScript = Wrapper<Script, PhantomData<_TapScriptPhantom>>;
 
 #[derive(Debug)]
 pub enum LockScriptParseError<Pk: MiniscriptKey> {
