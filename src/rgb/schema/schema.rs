@@ -16,11 +16,7 @@ use std::{
     collections::HashMap
 };
 
-use bitcoin::hashes::{
-    Hash,
-    sha256t,
-    hex::{ToHex, FromHex}
-};
+use bitcoin::hashes::{Hash, sha256t};
 
 use super::{
     types::*,

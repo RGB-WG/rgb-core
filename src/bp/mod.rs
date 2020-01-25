@@ -13,8 +13,7 @@
 
 
 use bitcoin::hashes::{
-    sha256d, Hash,
-    hex::{ToHex, FromHex}
+    sha256d, Hash
 };
 
 #[macro_use]

@@ -14,13 +14,7 @@
 
 use std::convert::From;
 
-use bitcoin::{
-    hashes::{
-        Hash,
-        sha256, sha256t,
-        hex::{ToHex, FromHex}
-    }
-};
+use bitcoin::hashes::{Hash, sha256, sha256t};
 
 use crate::{bp, cmt, csv, rgb};
 

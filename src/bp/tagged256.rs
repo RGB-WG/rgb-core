@@ -15,8 +15,7 @@
 //! Bitcoin tagged hashes as defined by BIP-Schnorr proposal
 
 use bitcoin::hashes::{
-    sha256, Hash, HashEngine,
-    hex::{ToHex, FromHex}
+    sha256, Hash, HashEngine
 };
 
 hash_newtype!(TaggedHash, sha256::Hash, 32, doc="Tagged hash data according to BIP-Schnorr");

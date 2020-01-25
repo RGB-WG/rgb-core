@@ -185,7 +185,7 @@ pub enum PubkeyScriptSource {
 
 impl From<Script> for PubkeyScriptType {
     fn from(script_pubkey: Script) -> Self {
-        Self::P2S(script_pubkey)
+        Self::P2S(PubkeyScript::from_inner(script_pubkey))
     }
 }
 

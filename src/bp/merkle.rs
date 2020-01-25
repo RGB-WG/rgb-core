@@ -12,7 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::{
-    hashes::hex::{ToHex, FromHex},
     hashes::{Hash, HashEngine, sha256, sha256d}
 };
 use crate::csv::Commitment;
