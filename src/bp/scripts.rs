@@ -14,7 +14,7 @@
 //! # Bitcoin script types
 //!
 //! Bitcoin doesn't make a distinction between Bitcoin script coming from different sources, like
-//! scriptPubkey in transaction output or witness and sigScript in transaction input. There are
+//! *scriptPubKey* in transaction output or witness and *sigScript* in transaction input. There are
 //! many other possible script containers for Bitcoin script: redeem script, witness script,
 //! tapscript. In fact, any "script" of `Script` type can be used for inputs and outputs.
 //! What is a valid script for one will be a valid script for the other; the only req. is formatting
@@ -42,31 +42,37 @@
 //! The following charts represent possible relations between script types:
 //!
 //! ```text
-//! [txout.pubkeyScript]
-//! PubkeyScript --?--(P2PK, custom scripts)--> LockScript <--+-------+---+---------+
-//!                                                           |       |   |         |
-//! [txin.sigScript]                                          |       |   |         |
-//! SigScript --+--?!----------(P2PKH: #=PubkeyHash)----------+       |   |         |
-//!             |                                                     |   |         |
-//!             +--?!--> RedeemScript --+--?!--(P2SH: #=ScriptHash)---+   |         |
-//!                                     |                                 |         |
-//!                      (P2W{SH/PKH}-within-P2SH:)  (#=WPubkeyHash/WitnessProgram) |
-//!                                     |                                 |         |
-//! [?txin.witness]~~~(P2W{SH/PKH}:)~~~~+--?!--> WitnessScript --+--------+      (P2TR:)
-//!                                                              |                  |
-//!                                                              +--?--> TapScript--+
+//!                                                                            LockScript
+//!                                                                _________________________________
+//!                                                                ^      ^  ^    ^                ^
+//!                                                                |      |  |    |                |
+//! [txout.scriptPubKey] <===> PubkeyScript --?--/P2PK & custom/---+      |  |    |                |
+//!                                                                       |  |    |                |
+//! [txin.sigScript] <===> SigScript --+--?!--/P2(W)PKH/--(#=PubkeyHash)--+  |    |                |
+//!                                    |                                     |    |                |
+//!                                    |                           (#=ScriptHash) |                |
+//!                                    |                                     |    |                |
+//!                                    +--?!--> RedeemScript --+--?!------/P2SH/  |                |
+//!                                                            |                  |                |
+//!                                                  /P2WSH-in-P2SH/  /#=V0_WitnessProgram_P2WSH/  |
+//!                                                            |                  |                |
+//!                                                            +--?!--> WitnessScript              |
+//!                                                                       ^^      |                |
+//!                                                                       || /#=V1_WitnessProgram/ |
+//!                                                                       ||      |                |
+//! [?txin.witness] <=====================================================++      +--?---> TapScript
 //!
 //! ```
 //! Legend:
-//! * `[<source>]`: data source
-//! * `[?<source>]`: data source which may be absent
+//! * `[source] <===> `: data source
+//! * `[?source] <===> `: data source which may be absent
 //! * `--+--`: algorithmic branching (alternative computation options)
 //! * `--?-->`: a conversion exists, but it may fail (returns `Option` or `Result`)
 //! * `--?!-->`: a conversion exists, but it may fail; however one of alternative branches must
 //!              always succeed
 //! * `----->`: a conversion exists which can't fail
-//! * `(<type>:)`: a type of the scripting mechanism
-//! * `-(#<type>)->`: the hash of the value following `->` must match to the value of the `<type>`
+//! * `--/format/--`: a format implied by scriptPubKey program
+//! * `--(#=type)--`: the hash of the value following `->` must match to the value of the `<type>`
 //!
 
 use bitcoin::{
@@ -155,9 +161,9 @@ impl LockScript {
 }
 
 
-pub enum ScriptPubkeyType {
-    P2S(Script),
-    P2PK(secp256k1::PublicKey),
+pub enum PubkeyScriptType {
+    P2S(PubkeyScript),
+    P2PK(bitcoin::PublicKey),
     P2PKH(PubkeyHash),
     P2SH(ScriptHash),
     P2OR(Vec<u8>),
@@ -165,20 +171,32 @@ pub enum ScriptPubkeyType {
     P2WSH(WScriptHash),
     P2TR(secp256k1::PublicKey),
 }
-use ScriptPubkeyType::*;
 
-impl From<Script> for ScriptPubkeyType {
+pub enum PubkeyScriptSource {
+    P2S(LockScript),
+    P2PK(bitcoin::PublicKey),
+    P2PKH(bitcoin::PublicKey),
+    P2SH(LockScript),
+    P2OR(Vec<u8>),
+    P2WPKH(LockScript),
+    P2WSH(LockScript),
+    P2TR(bitcoin::PublicKey, TapScript),
+}
+
+impl From<Script> for PubkeyScriptType {
     fn from(script_pubkey: Script) -> Self {
         Self::P2S(script_pubkey)
     }
 }
 
-impl From<ScriptPubkeyType> for PubkeyScript {
-    fn from(spkt: ScriptPubkeyType) -> PubkeyScript {
+impl From<PubkeyScriptType> for PubkeyScript {
+    fn from(spkt: PubkeyScriptType) -> PubkeyScript {
+        use PubkeyScriptType::*;
+
         PubkeyScript::from_inner(match spkt {
-            P2S(script) => script,
+            P2S(script) => script.into_inner(),
             P2PK(pubkey) =>
-                Builder::gen_p2pk(&bitcoin::PublicKey { compressed: false, key: pubkey }).into_script(),
+                Builder::gen_p2pk(&pubkey).into_script(),
             P2PKH(pubkey_hash) => Builder::gen_p2pkh(&pubkey_hash).into_script(),
             P2SH(script_hash) => Builder::gen_p2sh(&script_hash).into_script(),
             P2OR(data) => Builder::gen_op_return(&data).into_script(),
