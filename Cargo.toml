@@ -15,8 +15,8 @@ name = "lnpbp"
 path = "src/lib.rs"
 
 [dependencies]
-bitcoin = { git = "https://github.com/pandoracore/rust-bitcoin", branch = "develop", features = [ "use-serde" ] }
-miniscript = { git = "https://github.com/pandoracore/rust-miniscript", branch = "develop" }
+bitcoin = { git = "https://github.com/lnp-bp/rust-bitcoin", branch = "staging", features = [ "use-serde" ] }
+miniscript = { git = "https://github.com/lnp-bp/rust-miniscript", branch = "staging" }
 # bitcoin = { version = "0.23.0", features = [ "use-serde" ] }
 derive_wrapper = "0.1.3"
 num-integer = "0.1.42"
