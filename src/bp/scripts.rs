@@ -76,7 +76,7 @@
 //!
 
 use bitcoin::{hash_types::*, blockdata::script::*, secp256k1};
-use miniscript::{Miniscript, MiniscriptKey, miniscript::iter::KeyOrHash};
+use miniscript::{Miniscript, MiniscriptKey, miniscript::iter::PubkeyOrHash};
 use crate::Wrapper;
 
 
@@ -111,14 +111,22 @@ impl<Pk: MiniscriptKey> From<miniscript::Error> for LockScriptParseError<Pk> {
 impl LockScript {
     pub fn extract_pubkeys(&self) -> Result<Vec<secp256k1::PublicKey>, LockScriptParseError<bitcoin::PublicKey>> {
         Miniscript::parse(&self.clone().into_inner())?
-            .iter_keys_and_hashes()
+            .iter_pubkeys_and_hashes()
             .try_fold(Vec::<secp256k1::PublicKey>::new(), |mut keys, item| match item {
-                KeyOrHash::HashedPubkey(hash) => Err(LockScriptParseError::PubkeyHash(hash)),
-                KeyOrHash::PlainPubkey(key) => {
+                PubkeyOrHash::HashedPubkey(hash) => Err(LockScriptParseError::PubkeyHash(hash)),
+                PubkeyOrHash::PlainPubkey(key) => {
                     keys.push(key.key);
                     Ok(keys)
                 },
             })
+    }
+
+    pub fn replace_pubkeys(
+        &self, processor: fn(PubkeyOrHash<bitcoin::PublicKey>) -> Option<PubkeyOrHash<bitcoin::PublicKey>>
+    ) -> Result<Self, LockScriptParseError<bitcoin::PublicKey>> {
+        let result = Miniscript::parse(&self.clone().into_inner())?
+            .replace_pubkeys_and_trahashes(processor)?;
+        Ok(LockScript::from_inner(result.encode()))
     }
 }
 
