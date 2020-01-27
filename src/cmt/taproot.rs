@@ -35,8 +35,8 @@ impl<MSG> CommitmentVerify<MSG> for TaprootCommitment where
 {
 
     #[inline]
-    fn reveal_verify(&self, msg: MSG) -> bool {
-        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
+    fn reveal_verify(&self, msg: &MSG) -> bool {
+        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, &msg)
     }
 }
 
@@ -54,7 +54,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
         }
     }
 
-    fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let cmt = PubkeyCommitment::commit_to(container.intermediate_key, msg)?;
         Ok(Self {
             script_root: container.script_root,

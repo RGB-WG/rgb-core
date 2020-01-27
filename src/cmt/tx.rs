@@ -39,7 +39,7 @@ impl<MSG> CommitmentVerify<MSG> for TxCommitment where
 {
 
     #[inline]
-    fn reveal_verify(&self, msg: MSG) -> bool {
+    fn reveal_verify(&self, msg: &MSG) -> bool {
         <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
@@ -65,7 +65,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
         }
     }
 
-    fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let tx = container.tx;
         let fee = container.fee;
         let entropy = container.entropy;
@@ -142,7 +142,7 @@ mod test {
         assert_eq!(msg.verify(&commitment), true);
 
         // Second way
-        let commitment = TxCommitment::commit_to(container2, msg).unwrap();
-        assert_eq!(EmbeddedCommitment::<Message>::reveal_verify(&commitment, msg), true);
+        let commitment = TxCommitment::commit_to(container2, &msg).unwrap();
+        assert_eq!(EmbeddedCommitment::<Message>::reveal_verify(&commitment, &msg), true);
     }
 }

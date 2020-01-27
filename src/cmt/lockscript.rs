@@ -11,16 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{
-    //secp256k1::Error as CurveError,
-    Script
-};
+
+use bitcoin::secp256k1::PublicKey;
 
 use crate::{
     common::*,
     bp::scripts::*
 };
 use super::committable::*;
+use super::pubkey::*;
 
 
 #[derive(Clone, Eq, PartialEq)]
@@ -34,8 +33,8 @@ impl<MSG> CommitmentVerify<MSG> for LockscriptCommitment where
 {
 
     #[inline]
-    fn reveal_verify(&self, msg: MSG) -> bool {
-        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
+    fn reveal_verify(&self, msg: &MSG) -> bool {
+        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, &msg)
     }
 }
 
@@ -50,20 +49,13 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
         self.original.clone()
     }
 
-    fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
-        let tweaked = LockScript::from(Script::new());
-        /*let tweaked_keys = container
-            .extract_pubkeys()?
-            .into_iter().map(|pubkey| PubkeyCommitment::commit_to(pubkey, msg));*/
-
-        // TODO: Implement the following:
-        // Parse script using LockScript
-        // Find all required patterns
-        // Extract public keys
-        // Tweak each of them
-        // Pack back into the script
+    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+        let tweaked = container.clone().replace_pubkeys(|pubkey: PublicKey| {
+            PubkeyCommitment::commit_to(pubkey, msg).ok().map(|c| c.tweaked)
+        })?;
         Ok(Self {
-            original: container, tweaked
+            original: container,
+            tweaked
         })
     }
 }

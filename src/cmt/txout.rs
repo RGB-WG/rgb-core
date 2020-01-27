@@ -102,7 +102,7 @@ impl<MSG> CommitmentVerify<MSG> for TxoutCommitment where
 {
 
     #[inline]
-    fn reveal_verify(&self, msg: MSG) -> bool {
+    fn reveal_verify(&self, msg: &MSG) -> bool {
         <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
     }
 }
@@ -132,7 +132,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
         }
     }
 
-    fn commit_to(container: Self::Container, msg: MSG) -> Result<Self, Self::Error> {
+    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(match container {
             TxoutContainer::PublicKey(pubkey) => {
                 let cmt = PubkeyCommitment::commit_to(pubkey, msg)?;

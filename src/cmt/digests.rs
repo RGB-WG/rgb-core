@@ -21,8 +21,8 @@ impl<HT, MSG> CommitmentVerify<MSG> for HT where
     MSG: AsSlice + Committable<Self>
 {
     #[inline]
-    fn reveal_verify(&self, msg: MSG) -> bool {
-        <HT as StandaloneCommitment<MSG>>::reveal_verify(&self, msg)
+    fn reveal_verify(&self, msg: &MSG) -> bool {
+        <HT as StandaloneCommitment<MSG>>::reveal_verify(&self, &msg)
     }
 }
 
@@ -31,8 +31,8 @@ impl<HT, MSG> StandaloneCommitment<MSG> for HT where
     MSG: AsSlice + Committable<Self>
 {
     #[inline]
-    fn commit_to(msg: MSG) -> HT {
-        From::from(<HT as Hash>::hash(&msg.as_slice()))
+    fn commit_to(msg: &MSG) -> HT {
+        From::from(<HT as Hash>::hash(msg.as_slice()))
     }
 }
 

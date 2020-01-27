@@ -122,10 +122,17 @@ impl LockScript {
     }
 
     pub fn replace_pubkeys(
-        &self, processor: fn(PubkeyOrHash<bitcoin::PublicKey>) -> Option<PubkeyOrHash<bitcoin::PublicKey>>
+        &self, processor: impl Fn(secp256k1::PublicKey) -> Option<secp256k1::PublicKey>
     ) -> Result<Self, LockScriptParseError<bitcoin::PublicKey>> {
         let result = Miniscript::parse(&self.clone().into_inner())?
-            .replace_pubkeys_and_trahashes(processor)?;
+            .replace_pubkeys_and_hashes(&|item: PubkeyOrHash<bitcoin::PublicKey>| {
+                match item {
+                    PubkeyOrHash::PlainPubkey(pubkey) =>
+                        processor(pubkey.key)
+                            .map(|key| PubkeyOrHash::PlainPubkey(bitcoin::PublicKey{compressed: true, key})),
+                    PubkeyOrHash::HashedPubkey(_) => None,
+                }
+            })?;
         Ok(LockScript::from_inner(result.encode()))
     }
 }
