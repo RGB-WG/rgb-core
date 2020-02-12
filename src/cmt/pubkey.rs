@@ -18,7 +18,6 @@
 //! their wrapped bitcoin counterparts `bitcoin::PublickKey` and `bitcoin::PrivateKey`.
 
 use std::sync::Once;
-use std::convert::TryInto;
 
 use bitcoin::hashes::*;
 use bitcoin::secp256k1::{*, Error as CurveError};
@@ -26,7 +25,7 @@ use bitcoin::secp256k1::{*, Error as CurveError};
 use crate::common::*;
 use super::committable::*;
 
-const TAG: &'static str = "LNPBP-1";
+const TAG: &'static str = "LNPBP1";
 static INIT: Once = Once::new();
 static mut PREFIX: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -65,18 +64,20 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
         self.original
     }
 
+    /// According to LNPBP-1 the message supplied here must be already prefixed with 32-byte SHA256
+    /// has of the protocol-specific prefix
     fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let ec: Secp256k1<All> = Secp256k1::new();
+
+        // Unsafe since we use a mutable static
         INIT.call_once(|| unsafe {
-            PREFIX = BitcoinTag::tag(TAG)[..].try_into()
-                .expect("SHA256 length is 32 bytes always");
+            PREFIX = sha256::Hash::hash(TAG.as_bytes()).into_inner()
         });
 
         let mut buff = vec!();
+        // Unsafe since we use a mutable static
         unsafe {
-            let prefix = BitcoinTag::from_slice(&PREFIX)
-                .expect("Can't fail since it reads hash value");
-            buff.extend(&prefix[..]);
+            buff.extend(&PREFIX);
         }
         buff.extend(msg.as_slice());
         let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&container.serialize());
@@ -110,7 +111,6 @@ impl From<CurveError> for self::Error {
 #[cfg(test)]
 mod test {
     use std::str::FromStr;
-    use bitcoin::hashes::hex::ToHex;
     use bitcoin::secp256k1::PublicKey;
     use super::*;
 
@@ -123,14 +123,21 @@ mod test {
     }
 
     #[test]
-    fn test_pubkey_commitment() {
+    // Test according to LNPBP-1 standard
+    fn test_lnpbp1_commitment() {
         let pubkey = PublicKey::from_str(
             "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
         ).unwrap();
-        let msg = Message("Message to commit to");
-        let commitment: PubkeyCommitment = msg.commit_embed(pubkey).unwrap();
-        assert_eq!(commitment.tweaked.to_hex(),
-                   "02b483ae49421fd8751b31278c6905eca00a8241a2ee3584bffc85655aa9123c02");
-        assert_eq!(msg.verify(&commitment), true);
+        let msg = "Message to commit to";
+        let tag = "RGB";
+
+        let prefix = sha256::Hash::hash(tag.as_bytes());
+        let mut prefixed_msg = prefix.to_vec();
+        prefixed_msg.extend(msg.bytes());
+
+        let commitment: PubkeyCommitment = prefixed_msg.clone().commit_embed(pubkey).unwrap();
+        //assert_eq!(commitment.tweaked.to_hex(),
+        //           "02b483ae49421fd8751b31278c6905eca00a8241a2ee3584bffc85655aa9123c02");
+        assert_eq!(prefixed_msg.verify(&commitment), true);
     }
 }

@@ -19,8 +19,6 @@ pub mod macros;
 pub mod as_slice;
 #[macro_use]
 pub mod wrapper;
-pub mod types;
 
 pub use as_slice::*;
 pub use wrapper::*;
-pub use types::*;

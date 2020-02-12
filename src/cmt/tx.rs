@@ -75,7 +75,7 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
         let txout_container = container.txout_container;
         // TODO: Check container against the actual output
         // TODO: Adjust transaction fee
-        let tweaked: TxoutCommitment = EmbeddedCommitment::<MSG>::commit_to(txout_container.clone(), msg)?;
+        let tweaked = TxoutCommitment::commit_to(txout_container.clone(), msg)?;
         Ok(Self {
             entropy, fee, tx, original: txout_container, tweaked
         })
