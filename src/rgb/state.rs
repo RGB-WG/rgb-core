@@ -19,7 +19,7 @@ use crate::{
 };
 
 
-#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
 pub enum Partial {
     Commitment(StateCommitment),
@@ -27,7 +27,7 @@ pub enum Partial {
 }
 
 
-#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
 pub struct Bound {
     pub id: seal::Type,

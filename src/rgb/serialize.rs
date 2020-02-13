@@ -22,6 +22,8 @@ use bitcoin::{
 };
 
 use crate::{bp, csv, rgb};
+use crate::csv::Error;
+use crate::csv::Error::WrongDataSize;
 
 
 const HASHTAG_MERKLESTATE: &'static str = "RGB:state:1";
@@ -214,7 +216,7 @@ impl csv::serialize::Commitment for rgb::data::Data {
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
         use rgb::data::Data::*;
         Ok(match u8::commitment_deserialize(&mut d)? {
-            TAG_AMOUNT => Balance(rgb::data::Amount::commitment_deserialize(&mut d)?),
+            TAG_AMOUNT => Balance(rgb::data::amount::Commitment::commitment_deserialize(&mut d)?),
             TAG_BINARY => Binary(Box::from(<&[u8]>::commitment_deserialize(&mut d)?)),
             _ => Err(csv::serialize::Error::ValueOutOfRange)?,
         })
@@ -222,6 +224,69 @@ impl csv::serialize::Commitment for rgb::data::Data {
 }
 
 network_serialize_from_commitment!(rgb::data::Data);
+
+impl csv::serialize::Commitment for rgb::data::amount::Commitment {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.commitment.commitment_serialize(&mut e)?;
+        self.bulletproof.commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        use rgb::data::amount;
+        use secp256k1zkp::pedersen;
+        Ok(amount::Commitment {
+            commitment: pedersen::Commitment::commitment_deserialize(&mut d)?,
+            bulletproof: pedersen::RangeProof::commitment_deserialize(&mut d)?
+        })
+    }
+}
+
+network_serialize_from_commitment!(rgb::data::amount::Commitment);
+
+
+impl csv::serialize::Commitment for secp256k1zkp::pedersen::Commitment {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.0.as_ref().commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        use secp256k1zkp::constants::PEDERSEN_COMMITMENT_SIZE;
+        let data = Box::<[u8]>::commitment_deserialize(&mut d)?;
+        match data.len() {
+            PEDERSEN_COMMITMENT_SIZE => {
+                let mut ret = [0; PEDERSEN_COMMITMENT_SIZE];
+                ret[..].copy_from_slice(&data);
+                Ok(Self(ret))
+            },
+            _ => Err(WrongDataSize { expected: PEDERSEN_COMMITMENT_SIZE, found: data.len() })
+        }
+    }
+}
+
+network_serialize_from_commitment!(secp256k1zkp::pedersen::Commitment);
+
+
+impl csv::serialize::Commitment for secp256k1zkp::pedersen::RangeProof {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.proof[..self.plen].as_ref().commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        use secp256k1zkp::constants::MAX_PROOF_SIZE;
+        let data = Box::<[u8]>::commitment_deserialize(&mut d)?;
+        match data.len() {
+            len if len < MAX_PROOF_SIZE => {
+                let mut ret = [0; MAX_PROOF_SIZE];
+                ret[..].copy_from_slice(&data);
+                Ok(Self{ proof: ret, plen: len })
+            },
+            _ => Err(WrongDataSize { expected: MAX_PROOF_SIZE, found: data.len() })
+        }
+    }
+}
+
+network_serialize_from_commitment!(secp256k1zkp::pedersen::RangeProof);
+
 
 
 /// ## State commitment serialization

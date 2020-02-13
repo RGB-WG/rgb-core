@@ -26,6 +26,7 @@ use std::{str, convert::From};
 
 #[derive(Debug, Display)]
 #[display_from(Debug)]
+#[non_exhaustive]
 pub enum Error {
     BitcoinConsensus(bitcoin::consensus::encode::Error),
     EnumValueUnknown(u8),
@@ -33,6 +34,7 @@ pub enum Error {
     Utf8Error(str::Utf8Error),
     ValueOutOfRange,
     WrongOptionalEncoding,
+    WrongDataSize { expected: usize, found: usize },
     ParseFailed(&'static str),
 }
 

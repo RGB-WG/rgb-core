@@ -52,7 +52,7 @@ impl From<seal::Error> for Error {
 }
 
 
-pub type Balances = HashMap<bitcoin::OutPoint, data::Amount>;
+pub type Balances = HashMap<bitcoin::OutPoint, data::amount::Commitment>;
 
 /// Schema for fungible assets with possible secondary issuance and history pruning (standard RGB-1)
 pub struct Rgb1();
