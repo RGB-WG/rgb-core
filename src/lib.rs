@@ -33,6 +33,7 @@
 
 #[macro_use]
 pub extern crate derive_wrapper;
+extern crate rand;
 extern crate hex;
 extern crate num_integer;
 extern crate num_derive;
@@ -40,6 +41,7 @@ extern crate num_traits;
 #[macro_use]
 pub extern crate bitcoin;
 pub extern crate miniscript;
+pub extern crate secp256k1zkp;
 
 #[macro_use]
 pub mod common;

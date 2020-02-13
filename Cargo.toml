@@ -17,7 +17,9 @@ path = "src/lib.rs"
 [dependencies]
 bitcoin = { git = "https://github.com/lnp-bp/rust-bitcoin", branch = "staging", features = [ "use-serde" ] }
 miniscript = { git = "https://github.com/lnp-bp/rust-miniscript", branch = "staging" }
+grin_secp256k1zkp = { git = "https://github.com/lnp-bp/rust-secp256k1-zkp", branch = "stable" }
 # bitcoin = { version = "0.23.0", features = [ "use-serde" ] }
+rand = "0.5" # Required by grin_secp256k1zkp
 derive_wrapper = "0.1.3"
 num-integer = "0.1.42"
 num-traits = "0.2.11"

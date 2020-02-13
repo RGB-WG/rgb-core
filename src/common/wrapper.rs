@@ -31,7 +31,7 @@ macro_rules! wrapper {
 }
 
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub struct Wrapper<T, Z>(T, PhantomData<Z>);
 
 impl<T, Z> Wrapper<T, Z> {

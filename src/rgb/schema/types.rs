@@ -112,11 +112,11 @@ macro_rules! impl_occurences {
 
             fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
                 let value = u8::commitment_deserialize(&mut d)?;
-                let max = u64::commitment_deserialize(&mut d)?;
+                let max: u64 = u64::commitment_deserialize(&mut d)?;
                 let max: Option<$type> = match max {
                     val if val > 0 && val < ::std::$type::MAX.into() =>
                         Ok(Some($type::try_from(max).expect("Can't fail"))),
-                    val if val == ::std::$type::MAX.into() =>
+                    val if val == ::std::$type::MAX as u64 =>
                         Ok(None),
                     _ => Err(Error::ValueOutOfRange),
                 }?;

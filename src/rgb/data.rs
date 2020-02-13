@@ -11,11 +11,35 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::csv;
+use secp256k1zkp::*;
+use rand;
 
-// TODO: Convert Amount to a Pedersen commitment format
-construct_uint!(Amount, 4);
-impl csv::serialize::FromConsensus for Amount { }
+// TODO: Convert Amount into a wrapper type later
+//wrapper!(Amount, _AmountPhantom, u64, doc="64-bit data for amounts");
+pub type Amount = u64;
+
+pub struct AmountCommitment {
+    pub commitment: pedersen::Commitment,
+    pub bulletproof: pedersen::RangeProof,
+}
+
+impl From<Amount> for AmountCommitment {
+    fn from(amount: Amount) -> Self {
+        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+        let blinding = secp256k1zkp::key::SecretKey::new(&secp, &mut rand::thread_rng());
+        let value = amount;
+        let commitment = secp.commit(value, blinding.clone())
+            .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
+        let bulletproof = secp.bullet_proof(
+            value, blinding.clone(),
+            blinding.clone(), blinding.clone(),
+            None, None
+        );
+        AmountCommitment {
+            commitment, bulletproof
+        }
+    }
+}
 
 
 #[non_exhaustive]
