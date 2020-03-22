@@ -39,7 +39,7 @@ impl From<BlockHash> for BlockChecksum {
     fn from(block_hash: BlockHash) -> Self {
         let mut xor: u8 = 0;
         for byte in block_hash.to_vec() {
-            xor |= byte;
+            xor ^= byte;
         }
         Self(xor)
     }
@@ -60,7 +60,7 @@ impl From<Txid> for TxChecksum {
     fn from(txid: Txid) -> Self {
         let mut checksum: u64 = 0;
         for (shift, byte) in txid.to_vec()[0..5].iter().enumerate() {
-           checksum |= (*byte as u64) << (shift * 8);
+           checksum ^= (*byte as u64) << (shift * 8);
         }
         Self(checksum)
     }
@@ -85,24 +85,24 @@ impl Descriptor {
         use Error::*;
 
         match *self {
-            OnchainTransaction { block_height, .. }
-            if block_height >= 2 ^ 23 =>
+            OnchainTransaction { block_height, .. } |
+            OnchainTxInput { block_height, .. } |
+            OnchainTxOutput { block_height, .. }
+            if block_height >= 2u32.checked_pow(23).expect("must fit: 23<32") =>
                 Err(BlockHeightOutOfRange),
-            OnchainTxInput { block_height, input_index, .. }
-            if (block_height >= 2 ^ 23) || (input_index >= 2 ^ 15) =>
+            OnchainTxInput { input_index, .. } |
+            OffchainTxInput { input_index, .. }
+            if input_index + 1 >= 2u16.checked_pow(15).expect("must fit: 15<16") =>
                 Err(InputIndexOutOfRange),
-            OnchainTxOutput { block_height, output_index, .. }
-            if (block_height >= 2 ^ 23) || (output_index >= 2 ^ 15) =>
+            OnchainTxOutput { output_index, .. } |
+            OffchainTxOutput { output_index, .. }
+            if output_index + 1 >= 2u16.checked_pow(15).expect("must fit: 15<16") =>
                 Err(OutputIndexOutOfRange),
-            OffchainTransaction { tx_checksum, .. }
-            if tx_checksum.into_u64() >= 2u64 ^ 47 =>
+            OffchainTransaction { tx_checksum, .. } |
+            OffchainTxInput { tx_checksum, .. } |
+            OffchainTxOutput { tx_checksum, .. }
+            if tx_checksum.into_u64() >= 2u64.checked_pow(47).expect("must fit: 47<64") =>
                 Err(ChecksumOutOfRange),
-            OffchainTxInput { tx_checksum, input_index, .. }
-            if (tx_checksum.into_u64() >= 2u64 ^ 47) || (input_index >= 2 ^ 15) =>
-                Err(InputIndexOutOfRange),
-            OffchainTxOutput { tx_checksum, output_index, .. }
-            if (tx_checksum.into_u64() >= 2u64 ^ 47) || (output_index >= 2 ^ 15) =>
-                Err(OutputIndexOutOfRange),
             _ => Ok(())
         }
     }
@@ -117,6 +117,11 @@ impl Descriptor {
 
     pub fn is_offchain(&self) -> bool {
         !self.is_onchain()
+    }
+
+
+    pub fn try_into_u64(self) -> Result<u64, Error> {
+        ShortId::try_from(self).map(ShortId::into_u64)
     }
 }
 
@@ -160,9 +165,9 @@ impl ShortId {
                 return Descriptor::OnchainTransaction { block_height, block_checksum, tx_index }
             }
             if (self.0 & Self::FLAG_INOUT) == 0 {
-                Descriptor::OnchainTxInput { block_height, block_checksum, tx_index, input_index: index }
+                Descriptor::OnchainTxInput { block_height, block_checksum, tx_index, input_index: index - 1 }
             } else {
-                Descriptor::OnchainTxOutput { block_height, block_checksum, tx_index, output_index: index }
+                Descriptor::OnchainTxOutput { block_height, block_checksum, tx_index, output_index: index - 1 }
             }
         } else {
             let tx_checksum = TxChecksum((self.0 & Self::MASK_TXCHECK) >> 16);
@@ -170,11 +175,15 @@ impl ShortId {
                 return Descriptor::OffchainTransaction { tx_checksum }
             }
             if (self.0 & Self::FLAG_INOUT) == 0 {
-                Descriptor::OffchainTxInput { tx_checksum, input_index: index }
+                Descriptor::OffchainTxInput { tx_checksum, input_index: index - 1 }
             } else {
-                Descriptor::OffchainTxOutput { tx_checksum, output_index: index }
+                Descriptor::OffchainTxOutput { tx_checksum, output_index: index - 1 }
             }
         }
+    }
+
+    pub fn into_u64(self) -> u64 {
+        self.into()
     }
 }
 
@@ -212,10 +221,10 @@ impl TryFrom<Descriptor> for ShortId {
             _ => TxChecksum(0),
         };
         let inout_index: u64 = match descriptor {
-            OnchainTxInput { input_index, .. } => input_index,
-            OnchainTxOutput { output_index, .. } => output_index,
-            OffchainTxInput { input_index, .. } => input_index,
-            OffchainTxOutput { output_index, .. } => output_index,
+            OnchainTxInput { input_index, .. } => input_index + 1,
+            OnchainTxOutput { output_index, .. } => output_index + 1,
+            OffchainTxInput { input_index, .. } => input_index + 1,
+            OffchainTxOutput { output_index, .. } => output_index + 1,
             _ => 0,
         } as u64;
 
@@ -227,6 +236,7 @@ impl TryFrom<Descriptor> for ShortId {
         } else {
             short_id |= (block_height << 40) & Self::MASK_BLOCK;
             short_id |= ((block_checksum.into_u64() << 32) & Self::MASK_BLOCKCHECK) as u64;
+            short_id |= (tx_index << 16) & Self::MASK_TXIDX;
         }
 
         match descriptor {
