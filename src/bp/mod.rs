@@ -20,9 +20,11 @@ use bitcoin::hashes::{
 pub mod tagged256;
 pub mod scripts;
 pub mod merkle;
+pub mod short_id;
 
 pub use scripts::*;
 pub use merkle::*;
+pub use short_id::*;
 
 hash_newtype!(HashLock, sha256d::Hash, 32, doc="Hashed locks in HTLC");
 hash_newtype!(HashPreimage, sha256d::Hash, 32, doc="Pre-images for hashed locks in HTLC");
