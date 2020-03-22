@@ -11,7 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::convert::{TryFrom, TryInto};
+use std::{
+    fmt::Debug,
+    convert::{TryFrom, TryInto}
+};
 use bitcoin::{Txid, BlockHash};
 
 
@@ -88,20 +91,20 @@ impl Descriptor {
             OnchainTransaction { block_height, .. } |
             OnchainTxInput { block_height, .. } |
             OnchainTxOutput { block_height, .. }
-            if block_height >= 2u32.checked_pow(23).expect("must fit: 23<32") =>
+            if block_height >= (2u32 << 22) =>
                 Err(BlockHeightOutOfRange),
             OnchainTxInput { input_index, .. } |
             OffchainTxInput { input_index, .. }
-            if input_index + 1 >= 2u16.checked_pow(15).expect("must fit: 15<16") =>
+            if input_index + 1 >= (2u16 << 14) =>
                 Err(InputIndexOutOfRange),
             OnchainTxOutput { output_index, .. } |
             OffchainTxOutput { output_index, .. }
-            if output_index + 1 >= 2u16.checked_pow(15).expect("must fit: 15<16") =>
+            if output_index + 1 >= (2u16 << 14) =>
                 Err(OutputIndexOutOfRange),
             OffchainTransaction { tx_checksum, .. } |
             OffchainTxInput { tx_checksum, .. } |
             OffchainTxOutput { tx_checksum, .. }
-            if tx_checksum.into_u64() >= 2u64.checked_pow(47).expect("must fit: 47<64") =>
+            if tx_checksum.into_u64() >= (2u64 << 46) =>
                 Err(ChecksumOutOfRange),
             _ => Ok(())
         }
@@ -130,13 +133,17 @@ impl Descriptor {
 pub struct ShortId(u64);
 
 impl ShortId {
-    const FLAG_OFFCHAIN: u64    = 0x8000_0000_0000_0000;
-    const MASK_BLOCK: u64       = 0x7FFF_FF00_0000_0000;
-    const MASK_BLOCKCHECK: u64  = 0x0000_00FF_0000_0000;
-    const MASK_TXIDX: u64       = 0x0000_0000_FFFF_0000;
-    const MASK_TXCHECK: u64     = 0x7FFF_FFFF_FFFF_0000;
-    const FLAG_INOUT: u64       = 0x0000_0000_0000_8000;
-    const MASK_INOUT: u64       = 0x0000_0000_0000_7FFF;
+    pub const FLAG_OFFCHAIN: u64    = 0x8000_0000_0000_0000;
+    pub const MASK_BLOCK: u64       = 0x7FFF_FF00_0000_0000;
+    pub const MASK_BLOCKCHECK: u64  = 0x0000_00FF_0000_0000;
+    pub const MASK_TXIDX: u64       = 0x0000_0000_FFFF_0000;
+    pub const MASK_TXCHECK: u64     = 0x7FFF_FFFF_FFFF_0000;
+    pub const FLAG_INOUT: u64       = 0x0000_0000_0000_8000;
+    pub const MASK_INOUT: u64       = 0x0000_0000_0000_7FFF;
+
+    pub const SHIFT_BLOCK: u64 = 40;
+    pub const SHIFT_BLOCKCHECK: u64 = 32;
+    pub const SHIFT_TXIDX: u64 = 16;
 
     pub fn is_onchain(&self) -> bool {
         self.0 & Self::FLAG_OFFCHAIN != Self::FLAG_OFFCHAIN
@@ -147,20 +154,20 @@ impl ShortId {
     }
 
     pub fn get_descriptor(&self) -> Descriptor {
-        let index: u16 = (self.0 & Self::MASK_INOUT).try_into()
-            .expect("Conversion from existing ShortId can't fail because of range errors");
+        #[inline]
+        fn iconv<T>(val: u64) -> T where T: TryFrom<u64>, <T as TryFrom<u64>>::Error: Debug {
+            val.try_into().expect("Conversion from existing ShortId can't fail")
+        }
 
-        return if self.is_onchain() {
-            let block_height: u32 = ((self.0 & Self::MASK_BLOCK) >> 40).try_into()
-                .expect("Conversion from existing ShortId can't fail because of range errors");
+        let index: u16 = iconv(self.0 & Self::MASK_INOUT);
+
+        if self.is_onchain() {
+            let block_height: u32 = iconv((self.0 & Self::MASK_BLOCK) >> Self::SHIFT_BLOCK);
             if (self.0 & (!Self::MASK_BLOCK)) == 0 {
                 return Descriptor::OnchainBlock { height: block_height }
             }
-            let block_checksum = BlockChecksum(((self.0 & Self::MASK_BLOCKCHECK) >> 32).try_into().unwrap())
-                .try_into()
-                .expect("Conversion from existing ShortId can't fail because of range errors");
-            let tx_index: u16 = ((self.0 & Self::MASK_TXIDX) >> 16).try_into()
-                .expect("Conversion from existing ShortId can't fail because of range errors");
+            let block_checksum = BlockChecksum(iconv((self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK));
+            let tx_index: u16 = iconv((self.0 & Self::MASK_TXIDX) >> Self::SHIFT_TXIDX);
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
                 return Descriptor::OnchainTransaction { block_height, block_checksum, tx_index }
             }
@@ -170,7 +177,7 @@ impl ShortId {
                 Descriptor::OnchainTxOutput { block_height, block_checksum, tx_index, output_index: index - 1 }
             }
         } else {
-            let tx_checksum = TxChecksum((self.0 & Self::MASK_TXCHECK) >> 16);
+            let tx_checksum = TxChecksum((self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX);
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
                 return Descriptor::OffchainTransaction { tx_checksum }
             }
@@ -232,15 +239,15 @@ impl TryFrom<Descriptor> for ShortId {
         short_id |= inout_index;
         if descriptor.is_offchain() {
             short_id |= Self::FLAG_OFFCHAIN;
-            short_id |= ((tx_checksum.into_u64() << 16) & Self::MASK_TXCHECK) as u64;
+            short_id |= ((tx_checksum.into_u64() << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK) as u64;
         } else {
             short_id |= (block_height << 40) & Self::MASK_BLOCK;
-            short_id |= ((block_checksum.into_u64() << 32) & Self::MASK_BLOCKCHECK) as u64;
+            short_id |= ((block_checksum.into_u64() << Self::SHIFT_BLOCKCHECK) & Self::MASK_BLOCKCHECK) as u64;
             short_id |= (tx_index << 16) & Self::MASK_TXIDX;
         }
 
         match descriptor {
-            OnchainTxOutput {..} | OffchainTxOutput {..} => short_id |= Self::FLAG_INOUT << 16,
+            OnchainTxOutput {..} | OffchainTxOutput {..} => short_id |= Self::FLAG_INOUT << Self::SHIFT_TXIDX,
             _ => (),
         }
 
