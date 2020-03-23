@@ -73,7 +73,7 @@ impl From<Txid> for TxChecksum {
 #[derive(Copy, Clone, Debug, Display)]
 #[display_from(Debug)]
 pub enum Descriptor {
-    OnchainBlock { height: u32 },
+    OnchainBlock { block_height: u32, block_checksum: BlockChecksum },
     OnchainTransaction { block_height: u32, block_checksum: BlockChecksum, tx_index: u16 },
     OnchainTxInput { block_height: u32, block_checksum: BlockChecksum, tx_index: u16, input_index: u16 },
     OnchainTxOutput { block_height: u32, block_checksum: BlockChecksum, tx_index: u16, output_index: u16 },
@@ -163,10 +163,10 @@ impl ShortId {
 
         if self.is_onchain() {
             let block_height: u32 = iconv((self.0 & Self::MASK_BLOCK) >> Self::SHIFT_BLOCK);
-            if (self.0 & (!Self::MASK_BLOCK)) == 0 {
-                return Descriptor::OnchainBlock { height: block_height }
-            }
             let block_checksum = BlockChecksum(iconv((self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK));
+            if (self.0 & (!Self::MASK_BLOCK)) == 0 {
+                return Descriptor::OnchainBlock { block_height, block_checksum }
+            }
             let tx_index: u16 = iconv((self.0 & Self::MASK_TXIDX) >> Self::SHIFT_TXIDX);
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
                 return Descriptor::OnchainTransaction { block_height, block_checksum, tx_index }
@@ -209,29 +209,36 @@ impl TryFrom<Descriptor> for ShortId {
         descriptor.try_validity()?;
 
         let block_height: u64 = match descriptor {
-            OnchainBlock { height } => height,
-            OnchainTransaction { block_height, .. } => block_height,
-            OnchainTxInput { block_height, .. } => block_height,
-            OnchainTxOutput { block_height, .. } => block_height,
+            OnchainBlock { block_height, .. }
+            | OnchainTransaction { block_height, .. }
+            | OnchainTxInput { block_height, .. }
+            | OnchainTxOutput { block_height, .. } => block_height,
             _ => 0,
         } as u64;
-        let (block_checksum, tx_index) = match descriptor {
-            OnchainTransaction { block_checksum, tx_index, .. } => (block_checksum, tx_index as u64),
-            OnchainTxInput { block_checksum, tx_index, .. } => (block_checksum, tx_index as u64),
-            OnchainTxOutput { block_checksum, tx_index, .. } => (block_checksum, tx_index as u64),
-            _ => (BlockChecksum(0), 0),
-        };
+        let block_checksum = match descriptor {
+            OnchainBlock { block_checksum, .. }
+            | OnchainTransaction { block_checksum, .. }
+            | OnchainTxInput { block_checksum, .. }
+            | OnchainTxOutput { block_checksum, .. } => block_checksum,
+            _ => BlockChecksum(0),
+        }.into_u64();
+        let tx_index = match descriptor {
+            OnchainTransaction { tx_index, .. }
+            | OnchainTxInput { tx_index, .. }
+            | OnchainTxOutput { tx_index, .. } => tx_index,
+            _ => 0,
+        } as u64;
         let tx_checksum = match descriptor {
-            OffchainTransaction { tx_checksum } => tx_checksum,
-            OffchainTxInput { tx_checksum, .. } => tx_checksum,
-            OffchainTxOutput { tx_checksum, .. } => tx_checksum,
+            OffchainTransaction { tx_checksum }
+            | OffchainTxInput { tx_checksum, .. }
+            | OffchainTxOutput { tx_checksum, .. } => tx_checksum,
             _ => TxChecksum(0),
-        };
+        }.into_u64();
         let inout_index: u64 = match descriptor {
-            OnchainTxInput { input_index, .. } => input_index + 1,
-            OnchainTxOutput { output_index, .. } => output_index + 1,
-            OffchainTxInput { input_index, .. } => input_index + 1,
-            OffchainTxOutput { output_index, .. } => output_index + 1,
+            OnchainTxInput { input_index, .. }
+            | OffchainTxInput { input_index, .. } => input_index + 1,
+            OnchainTxOutput { output_index, .. }
+            | OffchainTxOutput { output_index, .. } => output_index + 1,
             _ => 0,
         } as u64;
 
@@ -239,10 +246,10 @@ impl TryFrom<Descriptor> for ShortId {
         short_id |= inout_index;
         if descriptor.is_offchain() {
             short_id |= Self::FLAG_OFFCHAIN;
-            short_id |= ((tx_checksum.into_u64() << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK) as u64;
+            short_id |= (tx_checksum << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK;
         } else {
             short_id |= (block_height << 40) & Self::MASK_BLOCK;
-            short_id |= ((block_checksum.into_u64() << Self::SHIFT_BLOCKCHECK) & Self::MASK_BLOCKCHECK) as u64;
+            short_id |= (block_checksum << Self::SHIFT_BLOCKCHECK) & Self::MASK_BLOCKCHECK;
             short_id |= (tx_index << 16) & Self::MASK_TXIDX;
         }
 
