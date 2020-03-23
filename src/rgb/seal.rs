@@ -33,7 +33,7 @@ pub struct Type(pub u16);
 #[derive(Clone, PartialEq, PartialOrd, Debug, Display, Default)]
 #[display_from(Debug)]
 pub struct Seal {
-    pub txid: Txid,
+    pub txid: Option<Txid>,
     pub vout: u16,
 
     block_height: Option<u32>,
@@ -41,7 +41,7 @@ pub struct Seal {
 }
 
 impl Seal {
-    pub fn from(txid: Txid, vout: u16) -> Self {
+    pub fn from(txid: Option<Txid>, vout: u16) -> Self {
         Self {
             txid, vout,
             block_height: None,
@@ -58,7 +58,7 @@ impl TryFrom<bitcoin::OutPoint> for Seal {
             return Err(Error::VoutOverflow)
         }
         Ok(Self {
-            txid: outpoint.txid, vout: outpoint.vout as u16,
+            txid: Some(outpoint.txid), vout: outpoint.vout as u16,
             block_height: None, block_offset: None
         })
     }
