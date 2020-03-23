@@ -25,6 +25,10 @@ pub enum Error {
     InputIndexOutOfRange,
     OutputIndexOutOfRange,
     ChecksumOutOfRange,
+    DimensionRequired,
+    NoDimensionIsPossible,
+    UpgradeImpossible,
+    DowngradeImpossible
 }
 
 
@@ -82,6 +86,12 @@ pub enum Descriptor {
     OffchainTxOutput { tx_checksum: TxChecksum, output_index: u16 },
 }
 
+#[derive(Copy, Clone, Debug, Display, PartialEq, Eq)]
+#[display_from(Debug)]
+pub enum Dimension {
+    Input, Output
+}
+
 impl Descriptor {
     pub fn try_validity(&self) -> Result<(), Error> {
         use Descriptor::*;
@@ -122,6 +132,49 @@ impl Descriptor {
         !self.is_onchain()
     }
 
+    pub fn upgraded(&self, index: u16, dimension: Option<Dimension>) -> Result<Self, Error> {
+        use Descriptor::*;
+        use Error::*;
+        use Dimension::*;
+
+        match (*self, dimension) {
+            (OnchainBlock { block_height, block_checksum }, None)
+                => Ok(OnchainTransaction { block_height, block_checksum, tx_index: index }),
+            (OnchainTransaction { block_height, block_checksum, tx_index }, Some(dim))
+            if dim == Input
+                => Ok(OnchainTxInput { block_height, block_checksum, tx_index, input_index: index }),
+            (OnchainTransaction { block_height, block_checksum, tx_index }, Some(dim))
+            if dim == Output
+                => Ok(OnchainTxOutput { block_height, block_checksum, tx_index, output_index: index }),
+            (OffchainTransaction { tx_checksum }, Some(dim))
+            if dim == Input
+                => Ok(OffchainTxInput { tx_checksum, input_index: index }),
+            (OffchainTransaction { tx_checksum }, Some(dim))
+            if dim == Output
+                => Ok(OffchainTxOutput { tx_checksum, output_index: index }),
+            (OnchainTransaction {..}, None)
+            | (OffchainTransaction {..}, None)
+                => Err(DimensionRequired),
+            _ => Err(UpgradeImpossible),
+        }
+    }
+
+    pub fn downgraded(&self) -> Result<Self, Error> {
+        use Descriptor::*;
+        use Error::*;
+
+        match *self {
+            OnchainTransaction { block_height, block_checksum, .. }
+                => Ok(OnchainBlock { block_height, block_checksum }),
+            OnchainTxInput { block_height, block_checksum, tx_index, .. }
+            | OnchainTxOutput { block_height, block_checksum, tx_index, .. }
+                => Ok(OnchainTransaction { block_height, block_checksum, tx_index }),
+            OffchainTxInput { tx_checksum, .. }
+            | OffchainTxOutput { tx_checksum, .. }
+                => Ok(OffchainTransaction { tx_checksum }),
+            _ => Err(DowngradeImpossible),
+        }
+    }
 
     pub fn try_into_u64(self) -> Result<u64, Error> {
         ShortId::try_from(self).map(ShortId::into_u64)
