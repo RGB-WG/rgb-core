@@ -22,3 +22,4 @@ pub mod wrapper;
 
 pub use as_slice::*;
 pub use wrapper::*;
+pub use macros::*;
