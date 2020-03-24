@@ -42,6 +42,12 @@ impl BlockChecksum {
     }
 }
 
+impl Default for BlockChecksum {
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
 impl From<BlockHash> for BlockChecksum {
     fn from(block_hash: BlockHash) -> Self {
         let mut xor: u8 = 0;
@@ -60,6 +66,12 @@ pub struct TxChecksum(u64);
 impl TxChecksum {
     pub fn into_u64(self) -> u64 {
         self.0
+    }
+}
+
+impl Default for TxChecksum {
+    fn default() -> Self {
+        Self(0)
     }
 }
 
@@ -90,6 +102,12 @@ pub enum Descriptor {
 #[display_from(Debug)]
 pub enum Dimension {
     Input, Output
+}
+
+impl Default for Descriptor {
+    fn default() -> Self {
+        Descriptor::OnchainBlock { block_height: 0, block_checksum: BlockChecksum::default() }
+    }
 }
 
 impl Descriptor {
