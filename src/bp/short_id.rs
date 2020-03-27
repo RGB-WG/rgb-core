@@ -16,7 +16,7 @@ use std::{
     convert::{TryFrom, TryInto}
 };
 use bitcoin::{Txid, BlockHash};
-
+use crate::common::Wrapper;
 
 #[derive(Copy, Clone, Debug, Display, PartialEq, Eq)]
 #[display_from(Debug)]
@@ -32,21 +32,7 @@ pub enum Error {
 }
 
 
-#[derive(Copy, Clone, Debug, Display, PartialEq, Eq, PartialOrd, Ord)]
-#[display_from(Debug)]
-pub struct BlockChecksum(u8);
-
-impl BlockChecksum {
-    pub fn into_u64(self) -> u64 {
-        self.0 as u64
-    }
-}
-
-impl Default for BlockChecksum {
-    fn default() -> Self {
-        Self(0)
-    }
-}
+wrapper!(BlockChecksum, _BlockChecksumPhantom, u8, doc="Checksum for block id data used by the LNPBP-5");
 
 impl From<BlockHash> for BlockChecksum {
     fn from(block_hash: BlockHash) -> Self {
@@ -54,26 +40,12 @@ impl From<BlockHash> for BlockChecksum {
         for byte in block_hash.to_vec() {
             xor ^= byte;
         }
-        Self(xor)
+        Self::from_inner(xor)
     }
 }
 
 
-#[derive(Copy, Clone, Debug, Display, PartialEq, Eq, PartialOrd, Ord)]
-#[display_from(Debug)]
-pub struct TxChecksum(u64);
-
-impl TxChecksum {
-    pub fn into_u64(self) -> u64 {
-        self.0
-    }
-}
-
-impl Default for TxChecksum {
-    fn default() -> Self {
-        Self(0)
-    }
-}
+wrapper!(TxChecksum, _TxChecksumPhantom, u64, doc="Checksum for transaction id data used by the LNPBP-5");
 
 impl From<Txid> for TxChecksum {
     fn from(txid: Txid) -> Self {
@@ -81,7 +53,7 @@ impl From<Txid> for TxChecksum {
         for (shift, byte) in txid.to_vec()[0..5].iter().enumerate() {
            checksum ^= (*byte as u64) << (shift * 8);
         }
-        Self(checksum)
+        Self::from_inner(checksum)
     }
 }
 
@@ -132,7 +104,7 @@ impl Descriptor {
             OffchainTransaction { tx_checksum, .. } |
             OffchainTxInput { tx_checksum, .. } |
             OffchainTxOutput { tx_checksum, .. }
-            if tx_checksum.into_u64() >= (2u64 << 46) =>
+            if tx_checksum.into_inner() >= (2u64 << 46) =>
                 Err(ChecksumOutOfRange),
             _ => Ok(())
         }
@@ -234,7 +206,7 @@ impl ShortId {
 
         if self.is_onchain() {
             let block_height: u32 = iconv((self.0 & Self::MASK_BLOCK) >> Self::SHIFT_BLOCK);
-            let block_checksum = BlockChecksum(iconv((self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK));
+            let block_checksum = BlockChecksum::from_inner(iconv((self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK));
             if (self.0 & (!Self::MASK_BLOCK)) == 0 {
                 return Descriptor::OnchainBlock { block_height, block_checksum }
             }
@@ -248,7 +220,7 @@ impl ShortId {
                 Descriptor::OnchainTxOutput { block_height, block_checksum, tx_index, output_index: index - 1 }
             }
         } else {
-            let tx_checksum = TxChecksum((self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX);
+            let tx_checksum = TxChecksum::from_inner((self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX);
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
                 return Descriptor::OffchainTransaction { tx_checksum }
             }
@@ -291,8 +263,8 @@ impl TryFrom<Descriptor> for ShortId {
             | OnchainTransaction { block_checksum, .. }
             | OnchainTxInput { block_checksum, .. }
             | OnchainTxOutput { block_checksum, .. } => block_checksum,
-            _ => BlockChecksum(0),
-        }.into_u64();
+            _ => BlockChecksum::default(),
+        }.into_inner() as u64;
         let tx_index = match descriptor {
             OnchainTransaction { tx_index, .. }
             | OnchainTxInput { tx_index, .. }
@@ -303,8 +275,8 @@ impl TryFrom<Descriptor> for ShortId {
             OffchainTransaction { tx_checksum }
             | OffchainTxInput { tx_checksum, .. }
             | OffchainTxOutput { tx_checksum, .. } => tx_checksum,
-            _ => TxChecksum(0),
-        }.into_u64();
+            _ => TxChecksum::default(),
+        }.into_inner();
         let inout_index: u64 = match descriptor {
             OnchainTxInput { input_index, .. }
             | OffchainTxInput { input_index, .. } => input_index + 1,
