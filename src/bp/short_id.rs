@@ -166,6 +166,72 @@ impl Descriptor {
         }
     }
 
+    pub fn get_block_height(&self) -> Option<u32> {
+        use Descriptor::*;
+
+        match self {
+            OnchainBlock { block_height, .. }
+            | OnchainTransaction { block_height, .. }
+            | OnchainTxInput { block_height, .. }
+            | OnchainTxOutput { block_height, .. } => Some(*block_height),
+            _ => None
+        }
+    }
+
+    pub fn get_block_checksum(&self) -> Option<u8> {
+        use Descriptor::*;
+
+        match self {
+            OnchainBlock { block_checksum, .. }
+            | OnchainTransaction { block_checksum, .. }
+            | OnchainTxInput { block_checksum, .. }
+            | OnchainTxOutput { block_checksum, .. } => Some(block_checksum.into_inner()),
+            _ => None
+        }
+    }
+
+    pub fn get_tx_checksum(&self) -> Option<u64> {
+        use Descriptor::*;
+
+        match self {
+            OffchainTransaction { tx_checksum, .. }
+            | OffchainTxInput { tx_checksum, .. }
+            | OffchainTxOutput { tx_checksum, .. } => Some(tx_checksum.into_inner()),
+            _ => None
+        }
+    }
+
+    pub fn get_tx_index(&self) -> Option<u16> {
+        use Descriptor::*;
+
+        match self {
+            OnchainTransaction { tx_index, .. }
+            | OnchainTxInput { tx_index, .. }
+            | OnchainTxOutput { tx_index, .. } => Some(*tx_index),
+            _ => None
+        }
+    }
+
+    pub fn get_input_index(&self) -> Option<u16> {
+        use Descriptor::*;
+
+        match self {
+            OnchainTxInput { input_index, .. }
+            | OffchainTxInput { input_index, .. } => Some(*input_index),
+            _ => None
+        }
+    }
+
+    pub fn get_output_index(&self) -> Option<u16> {
+        use Descriptor::*;
+
+        match self {
+            OnchainTxOutput { output_index, .. }
+            | OffchainTxOutput { output_index, .. } => Some(*output_index),
+            _ => None
+        }
+    }
+
     pub fn try_into_u64(self) -> Result<u64, Error> {
         ShortId::try_from(self).map(ShortId::into_u64)
     }
