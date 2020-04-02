@@ -149,11 +149,11 @@ impl Descriptor {
         }
     }
 
-    pub fn downgraded(&self) -> Result<Self, Error> {
+    pub fn downgraded(self) -> Result<Self, Error> {
         use Descriptor::*;
         use Error::*;
 
-        match *self {
+        match self {
             OnchainTransaction { block_height, block_checksum, .. }
                 => Ok(OnchainBlock { block_height, block_checksum }),
             OnchainTxInput { block_height, block_checksum, tx_index, .. }
