@@ -15,7 +15,7 @@
 
 use std::fmt;
 use std::convert::TryFrom;
-use std::net::{SocketAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 #[cfg(feature="use-tor")]
 use torut::onion::{TorPublicKeyV3, OnionAddressV3};
 
@@ -89,9 +89,12 @@ impl AddressData {
 
     #[cfg(feature="use-tor")]
     pub(self) fn from_tor(addr: OnionAddressV3) -> Self {
+        unimplemented!()
+        /*
         let mut me = Self::default();
         me.ipv6 = addr.get_public_key().as_bytes();
         me
+        */
     }
 }
 
@@ -162,7 +165,7 @@ pub struct Address {
     // Keeping the fields private since they maintain low-level raw data which
     // shouldn't be access from outside of the structure methods.
     format: AddressFormat,
-    data: AddressData,
+    pub(self) data: AddressData,
 }
 
 impl Address {
@@ -178,8 +181,21 @@ impl Address {
 
     #[cfg(feature="use-tor")]
     pub fn try_get_tor(&self) -> Result<OnionAddressV3, ()> {
+        unimplemented!()
+        /*
         if self.format != AddressFormat::IPv4 { return Err(()) }
         Ok(OnionAddressV3::from(&TorPublicKeyV3(unsafe { self.data.tor })))
+        */
+    }
+
+    #[cfg(feature="use-tor")]
+    pub fn is_tor(&self) -> bool {
+        return false;
+    }
+
+    #[cfg(not(feature="use-tor"))]
+    pub fn is_tor(&self) -> bool {
+        self.format == AddressFormat::Tor
     }
 }
 
@@ -194,6 +210,40 @@ impl fmt::Display for Address {
             AddressFormat::Tor => format!("{}", self.try_get_tor().expect("Rust compiler failure")),
         };
         write!(f, "{}", formatted)
+    }
+}
+
+#[cfg(feature="use-tor")]
+impl TryFrom<Address> for IpAddr {
+    type Error = ();
+    #[inline]
+    fn try_from(addr: Address) -> Result<Self, Self::Error> {
+        Ok(match addr.format {
+            AddressFormat::IPv4 => IpAddr::V4(Ipv4Addr::from(unsafe { addr.data.ipv4 })),
+            AddressFormat::IPv6 => IpAddr::V6(Ipv6Addr::from(unsafe { addr.data.ipv6 })),
+            AddressFormat::Tor => Err(())?,
+        })
+    }
+}
+
+#[cfg(not(feature="use-tor"))]
+impl From<Address> for IpAddr {
+    #[inline]
+    fn from(addr: Address) -> Self {
+        match addr.format {
+            AddressFormat::IPv4 => IpAddr::V4(Ipv4Addr::from(unsafe { addr.data.ipv4 })),
+            AddressFormat::IPv6 => IpAddr::V6(Ipv6Addr::from(unsafe { addr.data.ipv6 })),
+        }
+    }
+}
+
+impl From<IpAddr> for Address {
+    #[inline]
+    fn from(value: IpAddr) -> Self {
+        match value {
+            IpAddr::V4(v4) => Address::from(v4),
+            IpAddr::V6(v6) => Address::from(v6),
+        }
     }
 }
 
@@ -222,25 +272,6 @@ impl From<OnionAddressV3> for Address {
             format: AddressFormat::Tor,
             data: AddressData::from_tor(addr)
         }
-    }
-}
-
-// TODO: Implement `PartialEq` and `Eq` for `internet::Socket` when
-//       `internet::Address` will support them
-#[derive(Clone, Copy, Debug, Display)]
-#[display_from(Debug)]
-pub struct Socket {
-    pub transport: Transport,
-    pub address: Address,
-    pub port: u16,
-}
-
-
-// Drafting convertors:
-
-impl From<SocketAddr> for Address {
-    fn from(value: SocketAddr) -> Self {
-        unimplemented!()
     }
 }
 
@@ -274,13 +305,13 @@ impl TryFrom<&[u8]> for Address {
 
 impl From<[u8; 4]> for Address {
     fn from(value: [u8; 4]) -> Self {
-        unimplemented!()
+        Address::from(Ipv4Addr::from(value))
     }
 }
 
 impl From<[u16; 8]> for Address {
     fn from(value: [u16; 8]) -> Self {
-        unimplemented!()
+        Address::from(Ipv6Addr::from(value))
     }
 }
 
@@ -288,6 +319,12 @@ impl From<[u16; 8]> for Address {
 impl From<TorPublicKeyV3> for Address {
     fn from(value: TorPublicKeyV3) -> Self {
         unimplemented!()
+        /*
+        Self {
+            format: AddressFormat::Tor,
+            data: AddressData { tor: value.as_bytes() }
+        }
+        */
     }
 }
 
@@ -298,3 +335,30 @@ impl TryFrom<[u8; 32]> for Address {
         unimplemented!()
     }
 }
+
+
+// TODO: Implement `PartialEq` and `Eq` for `internet::Socket` when
+//       `internet::Address` will support them
+#[derive(Clone, Copy, Debug, Display)]
+#[display_from(Debug)]
+pub struct SocketAddress {
+    pub transport: Transport,
+    pub address: Address,
+    pub port: u16,
+}
+
+#[cfg(feature="use-tor")]
+impl TryFrom<SocketAddress> for std::net::SocketAddr {
+    type Error = ();
+    fn try_from(socket_addr: SocketAddress) -> Result<Self, Self::Error> {
+        Ok(Self::new(IpAddr::try_from(socket_addr.address)?, socket_addr.port))
+    }
+}
+
+#[cfg(not(feature="use-tor"))]
+impl From<SocketAddress> for std::net::SocketAddr {
+    fn from(socket_addr: SocketAddress) -> Self {
+        Self::new(IpAddr::from(socket_addr.address), socket_addr.port)
+    }
+}
+
