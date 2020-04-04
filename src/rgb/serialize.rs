@@ -187,7 +187,7 @@ impl csv::serialize::Commitment for rgb::Seal {
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
         Ok(Self::from(
-            Txid::commitment_deserialize(&mut d)?,
+            Option::<Txid>::commitment_deserialize(&mut d)?,
             u16::commitment_deserialize(&mut d)?
         ))
     }
