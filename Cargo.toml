@@ -25,3 +25,7 @@ num-integer = "0.1.42"
 num-traits = "0.2.11"
 num-derive = "0.3.0"
 hex = { version = "=0.3.2" }
+torut = { version = "0.1.1", optional = true }
+
+[features]
+use-tor = ["torut"]
