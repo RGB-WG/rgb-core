@@ -37,8 +37,12 @@ extern crate rand;
 extern crate num_integer;
 extern crate num_derive;
 extern crate num_traits;
+#[cfg(feature="tokio")]
+extern crate tokio;
 #[macro_use]
 pub extern crate bitcoin;
+#[cfg(feature="lightning")]
+pub extern crate lightning;
 pub extern crate miniscript;
 pub extern crate secp256k1zkp;
 
@@ -46,6 +50,8 @@ pub extern crate secp256k1zkp;
 pub mod common;
 #[macro_use]
 pub mod bp;
+#[cfg(feature="lightning")]
+pub mod lnp;
 pub mod cmt;
 pub mod seals;
 #[macro_use]
