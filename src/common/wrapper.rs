@@ -22,7 +22,7 @@ use std::{
 macro_rules! wrapper {
     ($name:ident, $phantom:ident, $from:ty, $docs:meta) => {
         #[$docs]
-        #[derive(Copy, Clone, PartialEq, Eq, Default, PartialOrd, Ord, Hash)]
+        #[derive(Copy, Clone, PartialEq, Eq, Default, PartialOrd, Ord, Hash, Debug)]
         pub struct $phantom;
 
         #[$docs]
