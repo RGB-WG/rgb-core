@@ -11,33 +11,50 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-///! Abstracting LN peer concept
+//! BOLT-1. Manages state of the remote peer and handles direct communications
+//! with it. Relies on transport layer (BOLT-8-based) protocol.
 
 use lightning::secp256k1;
 
 use super::transport::*;
 
-/// The structure holds the state of communications with particular peer
+
 pub struct Peer {
-    pub node_id: Node,
-    pub connections: Vec<Connection>,
+    pub node: Node,
+    connection: Connection,
+    awaiting_pong: bool,
 }
 
 impl Peer {
-    /// Just registers new peer, without connecting to it. The peer will
-    /// have an empty list of active connections. It is the necessary step
-    /// before creating a connection to the peer.
-    pub fn new(node_id: Node) -> Self {
-        Self {
-            node_id,
-            connections: vec![]
-        }
+    pub async fn new_outbound(node: Node,
+                              private_key: &secp256k1::SecretKey,
+                              ephemeral_private_key: &secp256k1::SecretKey
+    ) -> Result<Self, ConnectionError> {
+        let connection = node.connect(private_key, ephemeral_private_key).await?;
+        Ok(Self {
+            node,
+            connection,
+            awaiting_pong: false,
+        })
     }
 
-    /// Creates a new outbound connection to the peer.
-    pub async fn connect(&mut self,
-                   ephemeral_key: secp256k1::SecretKey
-    ) -> Result<Connection, ConnectionError> {
-        Connection::new(self.node_id, ephemeral_key).await
+    pub async fn send(&self, msg: Message) -> Result<(), ConnectionError> {
+        // TODO: Implement
+        Ok(())
     }
+}
+
+pub struct TLV();
+
+pub struct MessageType(pub u16);
+
+/// Generic LNP message as defined in BOLT-1
+pub struct Message {
+    pub type_id: MessageType,
+    pub payload: Vec<u8>,
+    pub extension: TLV,
+}
+
+pub trait Messageable: From<Message> + Into<Message> {
+
 }

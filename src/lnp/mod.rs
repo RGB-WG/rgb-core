@@ -15,9 +15,7 @@
 ///! Module that systematizes all Lightning network-related APIs from the
 ///! `lightning` library into layered & modular design
 
-mod transport;
 mod peer;
+mod transport;
 
-pub use transport::*;
 pub use peer::*;
-
