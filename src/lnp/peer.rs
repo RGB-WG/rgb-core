@@ -35,9 +35,9 @@ impl Peer {
     }
 
     /// Creates a new outbound connection to the peer.
-    pub fn connect(&mut self,
+    pub async fn connect(&mut self,
                    ephemeral_key: secp256k1::SecretKey
     ) -> Result<Connection, ConnectionError> {
-        Connection::new(self, ephemeral_key)
+        Connection::new(self.node_id, ephemeral_key).await
     }
 }

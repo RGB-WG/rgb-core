@@ -15,6 +15,8 @@
 ///! transport layer
 
 use std::io;
+use std::net::SocketAddr;
+use std::convert::TryInto;
 #[cfg(feature="use-tokio")]
 use tokio::net::TcpStream;
 #[cfg(not(feature="use-tokio"))]
@@ -34,15 +36,15 @@ pub use lightning::ln::{
 }
 */
 
-#[derive(Clone, Copy, Debug, Display, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Display)]
 #[display_from(Debug)]
 pub struct Node {
     pub id: secp256k1::PublicKey,
-    pub address: internet::Address,
+    pub socket_address: internet::SocketAddress,
 }
 
 
-#[derive(Clone, Debug, Display, PartialEq, Eq)]
+#[derive(Debug, Display)]
 #[display_from(Debug)]
 pub enum ConnectionError {
     TorNotYetSupported,
@@ -69,11 +71,16 @@ impl Connection {
                ephemeral_key: secp256k1::SecretKey) -> Result<Self, ConnectionError> {
 
         // TODO: Add support for Tor connections
-        if node.address.is_tor() {
+        if node.socket_address.address.is_tor() {
             Err(ConnectionError::TorNotYetSupported)?
         }
 
-        let socket = TcpStream::connect(node.address.into()).await?;
+        #[cfg(feature="use-tor")]
+        let saddr: SocketAddr = node.socket_address.try_into().unwrap();
+        #[cfg(not(feature="use-tor"))]
+        let saddr: SocketAddr = node.socket_address.into();
+
+        let socket = TcpStream::connect(saddr).await?;
 
         Ok(Self {
             peer_node: node,
