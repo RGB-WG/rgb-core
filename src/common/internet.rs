@@ -188,12 +188,12 @@ impl Address {
         */
     }
 
-    #[cfg(feature="use-tor")]
+    #[cfg(not(feature="use-tor"))]
     pub fn is_tor(&self) -> bool {
         return false;
     }
 
-    #[cfg(not(feature="use-tor"))]
+    #[cfg(feature="use-tor")]
     pub fn is_tor(&self) -> bool {
         self.format == AddressFormat::Tor
     }
