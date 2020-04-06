@@ -17,88 +17,212 @@ use std::fmt;
 use std::convert::TryFrom;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 #[cfg(feature="use-tor")]
-use torut::onion::{TorPublicKeyV3, OnionAddressV3};
+use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
 
-#[derive(Clone, Copy, Debug, Display, PartialEq, Eq)]
-#[display_from(Debug)]
-pub enum AddressFormat {
-    IPv4,
-    IPv6,
-    #[cfg(feature="use-tor")]
-    Tor
-}
 
 /// A universal address covering IPv4, IPv6 and Tor in a single byte sequence
 /// of 32 bytes.
 ///
-/// NB: we are not including 2-byte checksum for Tor addresses, since it
+/// Holds either:
+/// * IPv4-to-IPv6 address
+/// * IPv6 address
+/// * Tor address (only 3rd version is supported)
+///
+/// NB: we are using `TorPublicKeyV3` instead of `OnionAddressV3`, since
+/// `OnionAddressV3` keeps cehcksum and other information wich can be
+/// reconstructed from `TorPublicKeyV3`. The 2-byte checksum in `OnionAddressV3`
 /// is designed for human-readable part that checks that the address was typed
 /// in correctly. In computer-stored digital data it may be deterministically
 /// regenerated and does not add any additional security.
 ///
-/// Holds either:
-/// * IPv4-to-IPv6 address
-/// * IPv6 address
-/// * Tor address
-///
 /// Tor addresses are distinguished by the fact that last 16 bits
 /// must be set to 0
-#[derive(Clone, Copy)]
-pub union AddressData {
-    ipv4: [u8; 4],
-    ipv6: [u16; 8],
-    tor: [u8; 32],
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum InetAddr {
+    IPv4(Ipv4Addr),
+    IPv6(Ipv6Addr),
+    #[cfg(feature="use-tor")]
+    Tor(TorPublicKeyV3),
 }
 
-impl Default for AddressData {
-    fn default() -> Self {
-        Self { tor: [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        ] }
+impl InetAddr {
+    pub fn get_ip6(&self) -> Option<Ipv6Addr> {
+        match self {
+            InetAddr::IPv4(ipv4_addr) => Some(ipv4_addr.to_ipv6_mapped()),
+            InetAddr::IPv6(ipv6_addr) => Some(*ipv6_addr),
+            #[cfg(feature="use-tor")]
+            _ => None,
+        }
+    }
+
+    pub fn from_32bit_encoding(data: [u8; TORV3_PUBLIC_KEY_LENGTH]) -> Option<Self> {
+        match data {
+            d if d[0..28] == [0u8; 28] => {
+                let mut a = [0u8; 4];
+                a.clone_from_slice(&d[28..]);
+                Some(InetAddr::IPv4(Ipv4Addr::from(a)))
+            },
+            d if d[0..24] == [0u8; 16] => {
+                let mut a = [0u8; 16];
+                a.clone_from_slice(&d[16..]);
+                Some(InetAddr::IPv6(Ipv6Addr::from(a)))
+            },
+            #[cfg(feature="use-tor")]
+            d  => TorPublicKeyV3::from_bytes(&d).map(|pk| InetAddr::Tor(pk)).ok(),
+        }
+    }
+
+    pub fn get_32bit_encoding(&self) -> [u8; TORV3_PUBLIC_KEY_LENGTH] {
+        let mut buf = [0u8; 32];
+        match self {
+            InetAddr::IPv4(ipv4_addr) => buf[24..].copy_from_slice(&ipv4_addr.octets()),
+            InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
+            #[cfg(feature="use-tor")]
+            InetAddr::Tor(tor_addr) => buf = tor_addr.to_bytes(),
+        }
+        buf
     }
 }
 
-impl fmt::Debug for AddressData {
+impl fmt::Display for InetAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unsafe {
-            if cfg!(feature="use-tor") {
-                write!(f, "{:X?}", self.tor)
-            } else {
-                write!(f, "{:X?}", self.ipv6)
-            }
+        match self {
+            // TODO:
+            InetAddr::IPv4(addr) => write!(f, "{}", addr),
+            InetAddr::IPv6(addr) => write!(f, "{}", addr),
+            #[cfg(feature="use-tor")]
+            InetAddr::Tor(addr) => write!(f, "{}", addr),
         }
     }
 }
 
-
-// Instead of using `From<..>` we use explicit function names to avoid possible
-// bugs with array length confusion for V4 and V6 addresses
-impl AddressData {
-    pub(self) fn from_ipv4(addr: [u8; 4]) -> Self {
-        let mut me = Self::default();
-        me.ipv4 = addr;
-        me
-    }
-
-    pub(self) fn from_ipv6(addr: [u16; 8]) -> Self {
-        let mut me = Self::default();
-        me.ipv6 = addr;
-        me
-    }
-
-    #[cfg(feature="use-tor")]
-    pub(self) fn from_tor(addr: OnionAddressV3) -> Self {
-        unimplemented!()
-        /*
-        let mut me = Self::default();
-        me.ipv6 = addr.get_public_key().as_bytes();
-        me
-        */
+#[cfg(feature="use-tor")]
+impl TryFrom<InetAddr> for IpAddr {
+    type Error = ();
+    #[inline]
+    fn try_from(addr: InetAddr) -> Result<Self, Self::Error> {
+        Ok(match addr {
+            InetAddr::IPv4(addr) => IpAddr::V4(addr),
+            InetAddr::IPv6(addr) => IpAddr::V6(addr),
+            InetAddr::Tor(addr) => Err(())?,
+        })
     }
 }
 
+#[cfg(not(feature="use-tor"))]
+impl From<InetAddr> for IpAddr {
+    #[inline]
+    fn from(addr: InetAddr) -> Self {
+        match addr {
+            InetAddr::IPv4(addr) => IpAddr::V4(addr),
+            InetAddr::IPv6(addr) => IpAddr::V6(addr),
+        }
+    }
+}
 
+impl From<IpAddr> for InetAddr {
+    #[inline]
+    fn from(value: IpAddr) -> Self {
+        match value {
+            IpAddr::V4(v4) => InetAddr::from(v4),
+            IpAddr::V6(v6) => InetAddr::from(v6),
+        }
+    }
+}
+
+impl From<Ipv4Addr> for InetAddr {
+    fn from(addr: Ipv4Addr) -> Self { InetAddr::IPv4(addr) }
+}
+
+impl From<Ipv6Addr> for InetAddr {
+    fn from(addr: Ipv6Addr) -> Self { InetAddr::IPv6(addr) }
+}
+
+#[cfg(feature="use-tor")]
+impl From<TorPublicKeyV3> for InetAddr {
+    fn from(value: TorPublicKeyV3) -> Self {
+        InetAddr::Tor(value)
+    }
+}
+
+#[cfg(feature="use-tor")]
+impl From<OnionAddressV3> for InetAddr {
+    fn from(addr: OnionAddressV3) -> Self { InetAddr::Tor(addr.get_public_key()) }
+}
+
+impl TryFrom<String> for InetAddr {
+    type Error = ();
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        InetAddr::try_from(value.as_str())
+    }
+}
+
+impl TryFrom<&str> for InetAddr {
+    type Error = ();
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        unimplemented!()
+    }
+}
+
+impl TryFrom<Vec<u8>> for InetAddr {
+    type Error = ();
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        InetAddr::try_from(&value[..])
+    }
+}
+
+impl TryFrom<&[u8]> for InetAddr {
+    type Error = ();
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match value.len() {
+            4 => {
+                let mut buf = [0u8; 4];
+                buf.clone_from_slice(value);
+                Ok(InetAddr::from(buf))
+            },
+            16 => {
+                let mut buf = [0u8; 16];
+                buf.clone_from_slice(value);
+                Ok(InetAddr::from(buf))
+            },
+            #[cfg(feature="use-tor")]
+            32 => {
+                let mut buf = [0u8; 32];
+                buf.clone_from_slice(value);
+                InetAddr::try_from(buf)
+            }
+            _ => Err(())
+        }
+    }
+}
+
+impl From<[u8; 4]> for InetAddr {
+    fn from(value: [u8; 4]) -> Self {
+        InetAddr::from(Ipv4Addr::from(value))
+    }
+}
+
+impl From<[u8; 16]> for InetAddr {
+    fn from(value: [u8; 16]) -> Self {
+        InetAddr::from(Ipv6Addr::from(value))
+    }
+}
+
+impl From<[u16; 8]> for InetAddr {
+    fn from(value: [u16; 8]) -> Self {
+        InetAddr::from(Ipv6Addr::from(value))
+    }
+}
+
+#[cfg(feature="use-tor")]
+impl TryFrom<[u8; TORV3_PUBLIC_KEY_LENGTH]> for InetAddr {
+    type Error = ();
+    fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
+        Self::from_32bit_encoding(value).ok_or(())
+    }
+}
+
+/// Transport protocols that may be part of `TransportAddr`
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Transport {
     /// Normal TCP
@@ -159,206 +283,28 @@ impl fmt::Display for Transport {
 }
 
 
-// TODO: Add `PartialEq`, `Eq` to `internet::Address` type
-#[derive(Clone, Copy, Debug)]
-pub struct Address {
-    // Keeping the fields private since they maintain low-level raw data which
-    // shouldn't be access from outside of the structure methods.
-    format: AddressFormat,
-    pub(self) data: AddressData,
-}
-
-impl Address {
-    pub fn try_get_ip4(&self) -> Result<Ipv4Addr, ()> {
-        if self.format != AddressFormat::IPv4 { return Err(()) }
-        Ok(Ipv4Addr::from(unsafe { self.data.ipv4 }))
-    }
-
-    pub fn try_get_ip6(&self) -> Result<Ipv6Addr, ()> {
-        if self.format != AddressFormat::IPv6 { return Err(()) }
-        Ok(Ipv6Addr::from(unsafe { self.data.ipv6 }))
-    }
-
-    #[cfg(feature="use-tor")]
-    pub fn try_get_tor(&self) -> Result<OnionAddressV3, ()> {
-        unimplemented!()
-        /*
-        if self.format != AddressFormat::IPv4 { return Err(()) }
-        Ok(OnionAddressV3::from(&TorPublicKeyV3(unsafe { self.data.tor })))
-        */
-    }
-
-    #[cfg(not(feature="use-tor"))]
-    pub fn is_tor(&self) -> bool {
-        return false;
-    }
-
-    #[cfg(feature="use-tor")]
-    pub fn is_tor(&self) -> bool {
-        self.format == AddressFormat::Tor
-    }
-}
-
-impl fmt::Display for Address {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let transport = format!("{}://", self.format);
-        let formatted = match self.format {
-            // TODO:
-            AddressFormat::IPv4 => format!("{}", self.try_get_ip4().expect("Rust compiler failure")),
-            AddressFormat::IPv6 => format!("{}", self.try_get_ip6().expect("Rust compiler failure")),
-            #[cfg(feature="use-tor")]
-            AddressFormat::Tor => format!("{}", self.try_get_tor().expect("Rust compiler failure")),
-        };
-        write!(f, "{}", formatted)
-    }
-}
-
-#[cfg(feature="use-tor")]
-impl TryFrom<Address> for IpAddr {
-    type Error = ();
-    #[inline]
-    fn try_from(addr: Address) -> Result<Self, Self::Error> {
-        Ok(match addr.format {
-            AddressFormat::IPv4 => IpAddr::V4(Ipv4Addr::from(unsafe { addr.data.ipv4 })),
-            AddressFormat::IPv6 => IpAddr::V6(Ipv6Addr::from(unsafe { addr.data.ipv6 })),
-            AddressFormat::Tor => Err(())?,
-        })
-    }
-}
-
-#[cfg(not(feature="use-tor"))]
-impl From<Address> for IpAddr {
-    #[inline]
-    fn from(addr: Address) -> Self {
-        match addr.format {
-            AddressFormat::IPv4 => IpAddr::V4(Ipv4Addr::from(unsafe { addr.data.ipv4 })),
-            AddressFormat::IPv6 => IpAddr::V6(Ipv6Addr::from(unsafe { addr.data.ipv6 })),
-        }
-    }
-}
-
-impl From<IpAddr> for Address {
-    #[inline]
-    fn from(value: IpAddr) -> Self {
-        match value {
-            IpAddr::V4(v4) => Address::from(v4),
-            IpAddr::V6(v6) => Address::from(v6),
-        }
-    }
-}
-
-impl From<Ipv4Addr> for Address {
-    fn from(addr: Ipv4Addr) -> Self {
-        Self {
-            format: AddressFormat::IPv4,
-            data: AddressData::from_ipv4(addr.octets())
-        }
-    }
-}
-
-impl From<Ipv6Addr> for Address {
-    fn from(addr: Ipv6Addr) -> Self {
-        Self {
-            format: AddressFormat::IPv6,
-            data: AddressData::from_ipv6(addr.segments())
-        }
-    }
-}
-
-#[cfg(feature="use-tor")]
-impl From<OnionAddressV3> for Address {
-    fn from(addr: OnionAddressV3) -> Self {
-        Self {
-            format: AddressFormat::Tor,
-            data: AddressData::from_tor(addr)
-        }
-    }
-}
-
-impl TryFrom<String> for Address {
-    type Error = ();
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        unimplemented!()
-    }
-}
-
-impl TryFrom<&str> for Address {
-    type Error = ();
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        unimplemented!()
-    }
-}
-
-impl TryFrom<Vec<u8>> for Address {
-    type Error = ();
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        Address::try_from(&value[..])
-    }
-}
-
-impl TryFrom<&[u8]> for Address {
-    type Error = ();
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        unimplemented!()
-    }
-}
-
-impl From<[u8; 4]> for Address {
-    fn from(value: [u8; 4]) -> Self {
-        Address::from(Ipv4Addr::from(value))
-    }
-}
-
-impl From<[u16; 8]> for Address {
-    fn from(value: [u16; 8]) -> Self {
-        Address::from(Ipv6Addr::from(value))
-    }
-}
-
-#[cfg(feature="use-tor")]
-impl From<TorPublicKeyV3> for Address {
-    fn from(value: TorPublicKeyV3) -> Self {
-        unimplemented!()
-        /*
-        Self {
-            format: AddressFormat::Tor,
-            data: AddressData { tor: value.as_bytes() }
-        }
-        */
-    }
-}
-
-#[cfg(feature="use-tor")]
-impl TryFrom<[u8; 32]> for Address {
-    type Error = ();
-    fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
-        unimplemented!()
-    }
-}
-
 
 // TODO: Implement `PartialEq` and `Eq` for `internet::Socket` when
 //       `internet::Address` will support them
 #[derive(Clone, Copy, Debug, Display)]
 #[display_from(Debug)]
-pub struct SocketAddress {
+pub struct InetSocketAddr {
     pub transport: Transport,
-    pub address: Address,
+    pub address: InetAddr,
     pub port: u16,
 }
 
 #[cfg(feature="use-tor")]
-impl TryFrom<SocketAddress> for std::net::SocketAddr {
+impl TryFrom<InetSocketAddr> for std::net::SocketAddr {
     type Error = ();
-    fn try_from(socket_addr: SocketAddress) -> Result<Self, Self::Error> {
+    fn try_from(socket_addr: InetSocketAddr) -> Result<Self, Self::Error> {
         Ok(Self::new(IpAddr::try_from(socket_addr.address)?, socket_addr.port))
     }
 }
 
 #[cfg(not(feature="use-tor"))]
-impl From<SocketAddress> for std::net::SocketAddr {
-    fn from(socket_addr: SocketAddress) -> Self {
+impl From<InetSocketAddr> for std::net::SocketAddr {
+    fn from(socket_addr: InetSocketAddr) -> Self {
         Self::new(IpAddr::from(socket_addr.address), socket_addr.port)
     }
 }
-
