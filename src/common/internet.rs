@@ -75,7 +75,7 @@ impl InetAddr {
                 Some(InetAddr::IPv6(Ipv6Addr::from(a)))
             },
             #[cfg(feature="use-tor")]
-            _  => TorPublicKeyV3::from_bytes(&d).map(InetAddr::Tor).ok(),
+            d  => TorPublicKeyV3::from_bytes(&d).map(InetAddr::Tor).ok(),
             #[cfg(not(feature="use-tor"))]
             _ => None,
         }
@@ -112,14 +112,15 @@ impl fmt::Display for InetAddr {
 }
 
 impl TryFrom<InetAddr> for IpAddr {
-    type Error = ();
+    type Error = String;
     #[inline]
     fn try_from(addr: InetAddr) -> Result<Self, Self::Error> {
         Ok(match addr {
             InetAddr::IPv4(addr) => IpAddr::V4(addr),
             InetAddr::IPv6(addr) => IpAddr::V6(addr),
             #[cfg(feature="use-tor")]
-            InetAddr::Tor(addr) => Err(())?,
+            InetAddr::Tor(addr) =>
+                Err(String::from("IpAddr can't be used to store Tor address"))?,
         })
     }
 }
@@ -155,14 +156,14 @@ impl From<OnionAddressV3> for InetAddr {
 }
 
 impl TryFrom<String> for InetAddr {
-    type Error = ();
+    type Error = String;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         InetAddr::from_str(value.as_str())
     }
 }
 
 impl FromStr for InetAddr {
-    type Err = ();
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match IpAddr::from_str(s) {
             Ok(ip_addr) => Ok(Self::from(ip_addr)),
@@ -170,23 +171,23 @@ impl FromStr for InetAddr {
             Err(_) =>
                 Ok(Self::from(OnionAddressV3::from_str(s)
                     .map(Self::from)
-                    .map_err(|_| ())?)
+                    .map_err(|_| String::from("Wrong onion address string"))?)
                 ),
             #[cfg(not(feature="use-tor"))]
-            Err(_) => Err(()),
+            Err(_) => Err(String::from("Tor addresses are not supported; consider compiling with 'use-tor' feature")),
         }
     }
 }
 
 impl TryFrom<Vec<u8>> for InetAddr {
-    type Error = ();
+    type Error = String;
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         InetAddr::try_from(&value[..])
     }
 }
 
 impl TryFrom<&[u8]> for InetAddr {
-    type Error = ();
+    type Error = String;
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         match value.len() {
             4 => {
@@ -205,7 +206,7 @@ impl TryFrom<&[u8]> for InetAddr {
                 buf.clone_from_slice(value);
                 InetAddr::try_from(buf)
             }
-            _ => Err(())
+            _ => Err(String::from("Unsupported length of the byte string to read `InetAddr` from"))
         }
     }
 }
@@ -230,9 +231,10 @@ impl From<[u16; 8]> for InetAddr {
 
 #[cfg(feature="use-tor")]
 impl TryFrom<[u8; UNIFORM_INETADDR_LEN]> for InetAddr {
-    type Error = ();
+    type Error = String;
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
-        Self::from_uniform_encoding(value).ok_or(())
+        Self::from_uniform_encoding(value)
+            .ok_or(String::from("Wrong `InetAddr` binary encoding"))
     }
 }
 
@@ -270,14 +272,14 @@ impl Default for Transport {
 }
 
 impl FromStr for Transport {
-    type Err = ();
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
             "tcp" => Transport::TCP,
             "udp" => Transport::UDP,
             "mtcp" => Transport::MTCP,
             "quic" => Transport::QUIC,
-            _ => Err(())?
+            _ => Err(String::from("Unknown transport"))?
         })
     }
 }
@@ -326,11 +328,12 @@ impl fmt::Display for InetSocketAddr {
 }
 
 impl FromStr for InetSocketAddr {
-    type Err = ();
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut vals = s.split(':');
-        let em = |_| ();
-        let emi = |_| ();
+        let err_msg = String::from("Wrong format of socket address string; use [<transport>://]<inet_address>[:<port>]");
+        let em = |_| String::from(err_msg.clone());
+        let emi = |_| String::from(err_msg.clone());
         match (vals.next(), vals.next(), vals.next(), vals.next()) {
             (Some(transp), Some(addr), Some(port), None) => Ok(Self {
                 transport: transp.parse().map_err(em)?,
@@ -347,13 +350,13 @@ impl FromStr for InetSocketAddr {
                 address: addr.parse().map_err(em)?,
                 port: 0,
             }),
-            _ => Err(())
+            _ => Err(err_msg)
         }
     }
 }
 
 impl TryFrom<InetSocketAddr> for std::net::SocketAddr {
-    type Error = ();
+    type Error = String;
     fn try_from(socket_addr: InetSocketAddr) -> Result<Self, Self::Error> {
         Ok(Self::new(IpAddr::try_from(socket_addr.address)?, socket_addr.port))
     }
