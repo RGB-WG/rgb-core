@@ -55,25 +55,25 @@ impl InetAddr {
         }
     }
 
-    pub fn from_32bit_encoding(data: [u8; TORV3_PUBLIC_KEY_LENGTH]) -> Option<Self> {
+    pub fn from_uniform_encoding(data: [u8; TORV3_PUBLIC_KEY_LENGTH]) -> Option<Self> {
         match data {
             d if d[0..28] == [0u8; 28] => {
                 let mut a = [0u8; 4];
                 a.clone_from_slice(&d[28..]);
                 Some(InetAddr::IPv4(Ipv4Addr::from(a)))
             },
-            d if d[0..24] == [0u8; 16] => {
+            d if d[0..16] == [0u8; 16] => {
                 let mut a = [0u8; 16];
                 a.clone_from_slice(&d[16..]);
                 Some(InetAddr::IPv6(Ipv6Addr::from(a)))
             },
             #[cfg(feature="use-tor")]
-            d  => TorPublicKeyV3::from_bytes(&d).map(|pk| InetAddr::Tor(pk)).ok(),
+            d  => TorPublicKeyV3::from_bytes(&d).map(InetAddr::Tor).ok(),
         }
     }
 
-    pub fn get_32bit_encoding(&self) -> [u8; TORV3_PUBLIC_KEY_LENGTH] {
-        let mut buf = [0u8; 32];
+    pub fn to_uniform_encoding(&self) -> [u8; TORV3_PUBLIC_KEY_LENGTH] {
+        let mut buf = [0u8; TORV3_PUBLIC_KEY_LENGTH];
         match self {
             InetAddr::IPv4(ipv4_addr) => buf[24..].copy_from_slice(&ipv4_addr.octets()),
             InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
@@ -96,7 +96,6 @@ impl fmt::Display for InetAddr {
     }
 }
 
-#[cfg(feature="use-tor")]
 impl TryFrom<InetAddr> for IpAddr {
     type Error = ();
     #[inline]
@@ -104,19 +103,9 @@ impl TryFrom<InetAddr> for IpAddr {
         Ok(match addr {
             InetAddr::IPv4(addr) => IpAddr::V4(addr),
             InetAddr::IPv6(addr) => IpAddr::V6(addr),
+            #[cfg(feature="use-tor")]
             InetAddr::Tor(addr) => Err(())?,
         })
-    }
-}
-
-#[cfg(not(feature="use-tor"))]
-impl From<InetAddr> for IpAddr {
-    #[inline]
-    fn from(addr: InetAddr) -> Self {
-        match addr {
-            InetAddr::IPv4(addr) => IpAddr::V4(addr),
-            InetAddr::IPv6(addr) => IpAddr::V6(addr),
-        }
     }
 }
 
@@ -218,7 +207,7 @@ impl From<[u16; 8]> for InetAddr {
 impl TryFrom<[u8; TORV3_PUBLIC_KEY_LENGTH]> for InetAddr {
     type Error = ();
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
-        Self::from_32bit_encoding(value).ok_or(())
+        Self::from_uniform_encoding(value).ok_or(())
     }
 }
 
@@ -252,13 +241,11 @@ pub enum Transport {
 impl TryFrom<String> for Transport {
     type Error = ();
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        let mut val = value.to_lowercase();
-        val.push(':');
-        Ok(match &val[..4] {
-            "tcp:" => Transport::TCP,
-            "udp:" => Transport::UDP,
-            "mtcp" => Transport::MTCP,
-            "quic" => Transport::QUIC,
+        Ok(match value.to_lowercase() {
+            v if v.starts_with("tcp:") => Transport::TCP,
+            v if v.starts_with("udp:") => Transport::UDP,
+            v if v.starts_with("mtcp:") => Transport::MTCP,
+            v if v.starts_with("quic:") => Transport::QUIC,
             _ => Err(())?
         })
     }
@@ -294,17 +281,9 @@ pub struct InetSocketAddr {
     pub port: u16,
 }
 
-#[cfg(feature="use-tor")]
 impl TryFrom<InetSocketAddr> for std::net::SocketAddr {
     type Error = ();
     fn try_from(socket_addr: InetSocketAddr) -> Result<Self, Self::Error> {
         Ok(Self::new(IpAddr::try_from(socket_addr.address)?, socket_addr.port))
-    }
-}
-
-#[cfg(not(feature="use-tor"))]
-impl From<InetSocketAddr> for std::net::SocketAddr {
-    fn from(socket_addr: InetSocketAddr) -> Self {
-        Self::new(IpAddr::from(socket_addr.address), socket_addr.port)
     }
 }
