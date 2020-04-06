@@ -14,6 +14,7 @@
 ///! Universal addresses that support IPv4, IPv6 and Tor
 
 use std::fmt;
+use std::str::FromStr;
 use std::convert::TryFrom;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 #[cfg(feature="use-tor")]
@@ -73,7 +74,7 @@ impl InetAddr {
     }
 
     pub fn to_uniform_encoding(&self) -> [u8; TORV3_PUBLIC_KEY_LENGTH] {
-        let mut buf = [0u8; TORV3_PUBLIC_KEY_LENGTH];
+        let mut buf: [u8; TORV3_PUBLIC_KEY_LENGTH] = [0u8; TORV3_PUBLIC_KEY_LENGTH];
         match self {
             InetAddr::IPv4(ipv4_addr) => buf[24..].copy_from_slice(&ipv4_addr.octets()),
             InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
@@ -81,6 +82,12 @@ impl InetAddr {
             InetAddr::Tor(tor_addr) => buf = tor_addr.to_bytes(),
         }
         buf
+    }
+}
+
+impl Default for InetAddr {
+    fn default() -> Self {
+        InetAddr::IPv4(Ipv4Addr::from(0))
     }
 }
 
@@ -142,14 +149,24 @@ impl From<OnionAddressV3> for InetAddr {
 impl TryFrom<String> for InetAddr {
     type Error = ();
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        InetAddr::try_from(value.as_str())
+        InetAddr::from_str(value.as_str())
     }
 }
 
-impl TryFrom<&str> for InetAddr {
-    type Error = ();
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        unimplemented!()
+impl FromStr for InetAddr {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match IpAddr::from_str(s) {
+            Ok(ip_addr) => Ok(Self::from(ip_addr)),
+            #[cfg(feature="use-tor")]
+            Err(_) =>
+                Ok(Self::from(OnionAddressV3::from_str(s)
+                    .map(Self::from)
+                    .map_err(|_| ())?)
+                ),
+            #[cfg(not(feature="use-tor"))]
+            Err(_) => Err(()),
+        }
     }
 }
 
@@ -238,29 +255,28 @@ pub enum Transport {
     */
 }
 
-impl TryFrom<String> for Transport {
-    type Error = ();
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Ok(match value.to_lowercase() {
-            v if v.starts_with("tcp:") => Transport::TCP,
-            v if v.starts_with("udp:") => Transport::UDP,
-            v if v.starts_with("mtcp:") => Transport::MTCP,
-            v if v.starts_with("quic:") => Transport::QUIC,
+impl Default for Transport {
+    fn default() -> Self {
+        Transport::TCP
+    }
+}
+
+impl FromStr for Transport {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
+            "tcp" => Transport::TCP,
+            "udp" => Transport::UDP,
+            "mtcp" => Transport::MTCP,
+            "quic" => Transport::QUIC,
             _ => Err(())?
         })
     }
 }
 
-impl TryFrom<&str> for Transport {
-    type Error = ();
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::try_from(value.to_string())
-    }
-}
-
 impl fmt::Display for Transport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}://", match self {
+        write!(f, "{}", match self {
             Transport::TCP => "tcp",
             Transport::UDP => "udp",
             Transport::MTCP => "mtcp",
@@ -270,15 +286,44 @@ impl fmt::Display for Transport {
 }
 
 
-
-// TODO: Implement `PartialEq` and `Eq` for `internet::Socket` when
-//       `internet::Address` will support them
-#[derive(Clone, Copy, Debug, Display)]
-#[display_from(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct InetSocketAddr {
     pub transport: Transport,
     pub address: InetAddr,
     pub port: u16,
+}
+
+impl fmt::Display for InetSocketAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}://{}:{}", self.transport, self.address, self.port)
+    }
+}
+
+impl FromStr for InetSocketAddr {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut vals = s.split(':');
+        let em = |_| ();
+        let emi = |_| ();
+        match (vals.next(), vals.next(), vals.next(), vals.next()) {
+            (Some(transp), Some(addr), Some(port), None) => Ok(Self {
+                transport: transp.parse().map_err(em)?,
+                address: addr.parse().map_err(em)?,
+                port: port.parse().map_err(emi)?
+            }),
+            (Some(addr), Some(port), None, _) => Ok(Self {
+                transport: Transport::default(),
+                address: addr.parse().map_err(em)?,
+                port: port.parse().map_err(emi)?
+            }),
+            (Some(addr), None, ..) => Ok(Self {
+                transport: Transport::default(),
+                address: addr.parse().map_err(em)?,
+                port: 0,
+            }),
+            _ => Err(())
+        }
+    }
 }
 
 impl TryFrom<InetSocketAddr> for std::net::SocketAddr {
