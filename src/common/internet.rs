@@ -46,6 +46,12 @@ pub enum InetAddr {
     Tor(TorPublicKeyV3),
 }
 
+#[cfg(feature="use-tor")]
+pub const UNIFORM_INETADDR_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
+#[cfg(not(feature="use-tor"))]
+pub const UNIFORM_INETADDR_LEN: usize = 32;
+
+
 impl InetAddr {
     pub fn get_ip6(&self) -> Option<Ipv6Addr> {
         match self {
@@ -56,7 +62,7 @@ impl InetAddr {
         }
     }
 
-    pub fn from_uniform_encoding(data: [u8; TORV3_PUBLIC_KEY_LENGTH]) -> Option<Self> {
+    pub fn from_uniform_encoding(data: [u8; UNIFORM_INETADDR_LEN]) -> Option<Self> {
         match data {
             d if d[0..28] == [0u8; 28] => {
                 let mut a = [0u8; 4];
@@ -69,12 +75,14 @@ impl InetAddr {
                 Some(InetAddr::IPv6(Ipv6Addr::from(a)))
             },
             #[cfg(feature="use-tor")]
-            d  => TorPublicKeyV3::from_bytes(&d).map(InetAddr::Tor).ok(),
+            _  => TorPublicKeyV3::from_bytes(&d).map(InetAddr::Tor).ok(),
+            #[cfg(not(feature="use-tor"))]
+            _ => None,
         }
     }
 
-    pub fn to_uniform_encoding(&self) -> [u8; TORV3_PUBLIC_KEY_LENGTH] {
-        let mut buf: [u8; TORV3_PUBLIC_KEY_LENGTH] = [0u8; TORV3_PUBLIC_KEY_LENGTH];
+    pub fn to_uniform_encoding(&self) -> [u8; UNIFORM_INETADDR_LEN] {
+        let mut buf = [0u8; UNIFORM_INETADDR_LEN];
         match self {
             InetAddr::IPv4(ipv4_addr) => buf[24..].copy_from_slice(&ipv4_addr.octets()),
             InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
@@ -221,7 +229,7 @@ impl From<[u16; 8]> for InetAddr {
 }
 
 #[cfg(feature="use-tor")]
-impl TryFrom<[u8; TORV3_PUBLIC_KEY_LENGTH]> for InetAddr {
+impl TryFrom<[u8; UNIFORM_INETADDR_LEN]> for InetAddr {
     type Error = ();
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
         Self::from_uniform_encoding(value).ok_or(())
@@ -291,6 +299,24 @@ pub struct InetSocketAddr {
     pub transport: Transport,
     pub address: InetAddr,
     pub port: u16,
+}
+
+impl InetSocketAddr {
+    pub fn tcp(address: InetAddr, port: u16) -> Self {
+        Self {
+            transport: Transport::TCP,
+            address,
+            port
+        }
+    }
+
+    pub fn udp(address: InetAddr, port: u16) -> Self {
+        Self {
+            transport: Transport::UDP,
+            address,
+            port
+        }
+    }
 }
 
 impl fmt::Display for InetSocketAddr {
