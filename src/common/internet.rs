@@ -16,7 +16,7 @@
 use std::fmt;
 use std::str::FromStr;
 use std::convert::TryFrom;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 #[cfg(feature="use-tor")]
 use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
 
@@ -431,6 +431,13 @@ impl TryFrom<InetSocketAddr> for std::net::SocketAddr {
     #[inline]
     fn try_from(socket_addr: InetSocketAddr) -> Result<Self, Self::Error> {
         Ok(Self::new(IpAddr::try_from(socket_addr.address)?, socket_addr.port))
+    }
+}
+
+impl From<std::net::SocketAddr> for InetSocketAddr {
+    #[inline]
+    fn from(addr: SocketAddr) -> Self {
+        Self::new(addr.ip().into(), addr.port())
     }
 }
 
