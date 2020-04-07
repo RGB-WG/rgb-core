@@ -76,10 +76,10 @@ impl InetAddr {
 }
 
 #[cfg(feature="use-tor")]
-const INET_ADD_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
+pub const INET_ADDR_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
 #[cfg(not(feature="use-tor"))]
-const INET_ADD_LEN: usize = 32;
-impl UniformAddrEncodable<INET_ADD_LEN> for InetAddr {
+pub const INET_ADDR_LEN: usize = 32;
+impl UniformAddrEncodable<INET_ADDR_LEN> for InetAddr {
     fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
         match data {
             d if d[0..28] == [0u8; 28] => {
@@ -296,7 +296,8 @@ pub enum Transport {
     */
 }
 
-impl UniformAddrEncodable<1> for Transport {
+pub const TRANSPORT_LEN: usize = 1;
+impl UniformAddrEncodable<TRANSPORT_LEN> for Transport {
     #[inline]
     fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
         use Transport::*;
@@ -367,7 +368,7 @@ impl InetSocketAddr {
     pub fn is_tor(&self) -> bool { self.address.is_tor() }
 }
 
-const INET_SOCKET_ADDR_LEN: usize = InetAddr::LEN + 2;
+pub const INET_SOCKET_ADDR_LEN: usize = INET_ADDR_LEN + 2;
 impl UniformAddrEncodable<INET_SOCKET_ADDR_LEN> for InetSocketAddr {
     #[inline]
     fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
@@ -445,7 +446,7 @@ impl InetSocketAddrExt {
     }
 }
 
-const INET_SOCKET_ADDR_EXT_LEN: usize = InetSocketAddr::LEN + Transport::LEN;
+pub const INET_SOCKET_ADDR_EXT_LEN: usize = INET_SOCKET_ADDR_LEN + TRANSPORT_LEN;
 impl UniformAddrEncodable<INET_SOCKET_ADDR_EXT_LEN> for InetSocketAddrExt {
     #[inline]
     fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
