@@ -20,13 +20,13 @@ use super::transport::*;
 
 
 pub struct Peer {
-    pub node: Node,
+    pub node: NodeAddr,
     connection: Connection,
     awaiting_pong: bool,
 }
 
 impl Peer {
-    pub async fn new_outbound(node: Node,
+    pub async fn new_outbound(node: NodeAddr,
                               private_key: &secp256k1::SecretKey,
                               ephemeral_private_key: &secp256k1::SecretKey
     ) -> Result<Self, ConnectionError> {

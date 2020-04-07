@@ -46,12 +46,12 @@ pub const MAX_TRANSPORT_FRAME_SIZE: usize = 65569;
 
 #[derive(Clone, Copy, Debug, Display)]
 #[display_from(Debug)]
-pub struct Node {
+pub struct NodeAddr {
     pub id: secp256k1::PublicKey,
-    pub socket_address: internet::SocketAddress,
+    pub socket_address: internet::InetSocketAddr,
 }
 
-impl Node {
+impl NodeAddr {
     pub async fn connect(&self,
                    private_key: &secp256k1::SecretKey,
                    ephemeral_private_key: &secp256k1::SecretKey
@@ -82,7 +82,7 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub async fn new(node: &Node,
+    pub async fn new(node: &NodeAddr,
                      private_key: &secp256k1::SecretKey,
                      ephemeral_private_key: &secp256k1::SecretKey
     ) -> Result<Self, ConnectionError> {
