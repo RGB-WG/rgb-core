@@ -21,13 +21,6 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
 
 
-pub trait UniformAddrEncodable<const L: usize>: Sized {
-    const LEN: usize = L;
-    fn from_uniform_encoding(data: [u8; L]) -> Option<Self>;
-    fn to_uniform_encoding(&self) -> [u8; L];
-}
-
-
 /// A universal address covering IPv4, IPv6 and Tor in a single byte sequence
 /// of 32 bytes.
 ///
@@ -54,6 +47,11 @@ pub enum InetAddr {
 }
 
 impl InetAddr {
+    #[cfg(feature="use-tor")]
+    pub const UNIFORM_ADDR_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
+    #[cfg(not(feature="use-tor"))]
+    pub const UNIFORM_ADDR_LEN: usize = 32;
+
     #[inline]
     pub fn get_ip6(&self) -> Option<Ipv6Addr> {
         match self {
@@ -73,15 +71,16 @@ impl InetAddr {
     pub fn is_tor(&self) -> bool {
         if let InetAddr::Tor(_) = self { true } else { false }
     }
-}
 
-#[cfg(feature="use-tor")]
-pub const INET_ADDR_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
-#[cfg(not(feature="use-tor"))]
-pub const INET_ADDR_LEN: usize = 32;
-impl UniformAddrEncodable<INET_ADDR_LEN> for InetAddr {
-    fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
-        match data {
+    pub fn from_uniform_encoding(data: &[u8]) -> Option<Self> {
+        if data.len() != Self::UNIFORM_ADDR_LEN {
+            None?
+        }
+
+        let mut slice = [0u8; Self::UNIFORM_ADDR_LEN];
+        slice.clone_from_slice(data);
+
+        match slice {
             d if d[0..28] == [0u8; 28] => {
                 let mut a = [0u8; 4];
                 a.clone_from_slice(&d[28..]);
@@ -99,8 +98,8 @@ impl UniformAddrEncodable<INET_ADDR_LEN> for InetAddr {
         }
     }
 
-    fn to_uniform_encoding(&self) -> [u8; Self::LEN] {
-        let mut buf = [0u8; Self::LEN];
+    pub fn to_uniform_encoding(&self) -> [u8; Self::UNIFORM_ADDR_LEN] {
+        let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
         match self {
             InetAddr::IPv4(ipv4_addr) => buf[24..].copy_from_slice(&ipv4_addr.octets()),
             InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
@@ -258,11 +257,11 @@ impl From<[u16; 8]> for InetAddr {
 }
 
 #[cfg(feature="use-tor")]
-impl TryFrom<[u8; InetAddr::LEN]> for InetAddr {
+impl TryFrom<[u8; InetAddr::UNIFORM_ADDR_LEN]> for InetAddr {
     type Error = String;
     #[inline]
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
-        Self::from_uniform_encoding(value)
+        Self::from_uniform_encoding(&value)
             .ok_or(String::from("Wrong `InetAddr` binary encoding"))
     }
 }
@@ -296,12 +295,11 @@ pub enum Transport {
     */
 }
 
-pub const TRANSPORT_LEN: usize = 1;
-impl UniformAddrEncodable<TRANSPORT_LEN> for Transport {
+impl Transport {
     #[inline]
-    fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
+    pub fn from_uniform_encoding(data: u8) -> Option<Self> {
         use Transport::*;
-        Some(match data[0] {
+        Some(match data {
             a if a == TCP as u8 => TCP,
             a if a == UDP as u8 => UDP,
             a if a == MTCP as u8 => MTCP,
@@ -311,8 +309,8 @@ impl UniformAddrEncodable<TRANSPORT_LEN> for Transport {
     }
 
     #[inline]
-    fn to_uniform_encoding(&self) -> [u8; Self::LEN] {
-        [*self as u8; Self::LEN]
+    pub fn to_uniform_encoding(&self) -> u8 {
+        *self as u8
     }
 }
 
@@ -368,15 +366,20 @@ impl InetSocketAddr {
     pub fn is_tor(&self) -> bool { self.address.is_tor() }
 }
 
-pub const INET_SOCKET_ADDR_LEN: usize = INET_ADDR_LEN + 2;
-impl UniformAddrEncodable<INET_SOCKET_ADDR_LEN> for InetSocketAddr {
+impl InetSocketAddr {
+    pub const UNIFORM_ADDR_LEN: usize = InetAddr::UNIFORM_ADDR_LEN + 2;
+
     #[inline]
-    fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
+    pub fn from_uniform_encoding(data: &[u8]) -> Option<Self> {
+        if data.len() != Self::UNIFORM_ADDR_LEN {
+            None?
+        }
+
         Some(Self {
             address: {
-                let mut buf = [0u8; InetAddr::LEN];
+                let mut buf = [0u8; InetAddr::UNIFORM_ADDR_LEN];
                 buf.clone_from_slice(&data[2..]);
-                InetAddr::from_uniform_encoding(buf)?
+                InetAddr::from_uniform_encoding(&buf)?
             },
             port: {
                 let mut buf = [0u8; 2];
@@ -387,10 +390,10 @@ impl UniformAddrEncodable<INET_SOCKET_ADDR_LEN> for InetSocketAddr {
     }
 
     #[inline]
-    fn to_uniform_encoding(&self) -> [u8; Self::LEN] {
-        let mut buf = [0u8; Self::LEN];
-        buf[0..InetAddr::LEN].copy_from_slice(&self.address.to_uniform_encoding());
-        buf[InetAddr::LEN..].copy_from_slice(&self.port.to_be_bytes());
+    pub fn to_uniform_encoding(&self) -> [u8; Self::UNIFORM_ADDR_LEN] {
+        let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
+        buf[0..InetAddr::UNIFORM_ADDR_LEN].copy_from_slice(&self.address.to_uniform_encoding());
+        buf[InetAddr::UNIFORM_ADDR_LEN..].copy_from_slice(&self.port.to_be_bytes());
         buf
     }
 }
@@ -435,6 +438,8 @@ impl TryFrom<InetSocketAddr> for std::net::SocketAddr {
 pub struct InetSocketAddrExt(pub Transport, pub InetSocketAddr);
 
 impl InetSocketAddrExt {
+    pub const UNIFORM_ADDR_LEN: usize = InetSocketAddr::UNIFORM_ADDR_LEN + 1;
+
     #[inline]
     pub fn tcp(address: InetAddr, port: u16) -> Self {
         Self(Transport::TCP, InetSocketAddr::new(address, port))
@@ -444,26 +449,24 @@ impl InetSocketAddrExt {
     pub fn udp(address: InetAddr, port: u16) -> Self {
         Self(Transport::UDP, InetSocketAddr::new(address, port))
     }
-}
 
-pub const INET_SOCKET_ADDR_EXT_LEN: usize = INET_SOCKET_ADDR_LEN + TRANSPORT_LEN;
-impl UniformAddrEncodable<INET_SOCKET_ADDR_EXT_LEN> for InetSocketAddrExt {
     #[inline]
-    fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
-        let mut buf1 = [0u8; Transport::LEN];
-        let mut buf2 = [0u8; InetSocketAddr::LEN];
-        buf1.copy_from_slice(&data[..Transport::LEN]);
-        buf2.copy_from_slice(&data[Transport::LEN..]);
+    pub fn from_uniform_encoding(data: &[u8]) -> Option<Self> {
+        if data.len() != Self::UNIFORM_ADDR_LEN {
+            None?
+        }
+        let mut buf = [0u8; InetSocketAddr::UNIFORM_ADDR_LEN];
+        buf.copy_from_slice(&data[1..]);
         Some(Self(
-            Transport::from_uniform_encoding(buf1)?,
-            InetSocketAddr::from_uniform_encoding(buf2)?,
+            Transport::from_uniform_encoding(data[0])?,
+            InetSocketAddr::from_uniform_encoding(&buf)?,
         ))
     }
 
     #[inline]
-    fn to_uniform_encoding(&self) -> [u8; Self::LEN] {
-        let mut buf = [0u8; Self::LEN];
-        buf[..1].copy_from_slice(&self.0.to_uniform_encoding());
+    pub fn to_uniform_encoding(&self) -> [u8; Self::UNIFORM_ADDR_LEN] {
+        let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
+        buf[..1].copy_from_slice(&[self.0.to_uniform_encoding()]);
         buf[1..].copy_from_slice(&self.1.to_uniform_encoding());
         buf
     }
