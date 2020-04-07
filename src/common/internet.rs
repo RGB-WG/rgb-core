@@ -21,6 +21,13 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
 
 
+pub trait UniformAddrEncodable<const L: usize>: Sized {
+    const LEN: usize = L;
+    fn from_uniform_encoding(data: [u8; L]) -> Option<Self>;
+    fn to_uniform_encoding(&self) -> [u8; L];
+}
+
+
 /// A universal address covering IPv4, IPv6 and Tor in a single byte sequence
 /// of 32 bytes.
 ///
@@ -46,13 +53,8 @@ pub enum InetAddr {
     Tor(TorPublicKeyV3),
 }
 
-#[cfg(feature="use-tor")]
-pub const UNIFORM_INETADDR_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
-#[cfg(not(feature="use-tor"))]
-pub const UNIFORM_INETADDR_LEN: usize = 32;
-
-
 impl InetAddr {
+    #[inline]
     pub fn get_ip6(&self) -> Option<Ipv6Addr> {
         match self {
             InetAddr::IPv4(ipv4_addr) => Some(ipv4_addr.to_ipv6_mapped()),
@@ -62,7 +64,23 @@ impl InetAddr {
         }
     }
 
-    pub fn from_uniform_encoding(data: [u8; UNIFORM_INETADDR_LEN]) -> Option<Self> {
+    #[cfg(not(feature="use-tor"))]
+    #[inline]
+    pub fn is_tor(&self) -> bool { false }
+
+    #[cfg(feature="use-tor")]
+    #[inline]
+    pub fn is_tor(&self) -> bool {
+        if let InetAddr::Tor(_) = self { true } else { false }
+    }
+}
+
+#[cfg(feature="use-tor")]
+const INET_ADD_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
+#[cfg(not(feature="use-tor"))]
+const INET_ADD_LEN: usize = 32;
+impl UniformAddrEncodable<INET_ADD_LEN> for InetAddr {
+    fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
         match data {
             d if d[0..28] == [0u8; 28] => {
                 let mut a = [0u8; 4];
@@ -81,8 +99,8 @@ impl InetAddr {
         }
     }
 
-    pub fn to_uniform_encoding(&self) -> [u8; UNIFORM_INETADDR_LEN] {
-        let mut buf = [0u8; UNIFORM_INETADDR_LEN];
+    fn to_uniform_encoding(&self) -> [u8; Self::LEN] {
+        let mut buf = [0u8; Self::LEN];
         match self {
             InetAddr::IPv4(ipv4_addr) => buf[24..].copy_from_slice(&ipv4_addr.octets()),
             InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
@@ -94,6 +112,7 @@ impl InetAddr {
 }
 
 impl Default for InetAddr {
+    #[inline]
     fn default() -> Self {
         InetAddr::IPv4(Ipv4Addr::from(0))
     }
@@ -136,15 +155,18 @@ impl From<IpAddr> for InetAddr {
 }
 
 impl From<Ipv4Addr> for InetAddr {
+    #[inline]
     fn from(addr: Ipv4Addr) -> Self { InetAddr::IPv4(addr) }
 }
 
 impl From<Ipv6Addr> for InetAddr {
+    #[inline]
     fn from(addr: Ipv6Addr) -> Self { InetAddr::IPv6(addr) }
 }
 
 #[cfg(feature="use-tor")]
 impl From<TorPublicKeyV3> for InetAddr {
+    #[inline]
     fn from(value: TorPublicKeyV3) -> Self {
         InetAddr::Tor(value)
     }
@@ -152,11 +174,13 @@ impl From<TorPublicKeyV3> for InetAddr {
 
 #[cfg(feature="use-tor")]
 impl From<OnionAddressV3> for InetAddr {
+    #[inline]
     fn from(addr: OnionAddressV3) -> Self { InetAddr::Tor(addr.get_public_key()) }
 }
 
 impl TryFrom<String> for InetAddr {
     type Error = String;
+    #[inline]
     fn try_from(value: String) -> Result<Self, Self::Error> {
         InetAddr::from_str(value.as_str())
     }
@@ -181,6 +205,7 @@ impl FromStr for InetAddr {
 
 impl TryFrom<Vec<u8>> for InetAddr {
     type Error = String;
+    #[inline]
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         InetAddr::try_from(&value[..])
     }
@@ -212,26 +237,30 @@ impl TryFrom<&[u8]> for InetAddr {
 }
 
 impl From<[u8; 4]> for InetAddr {
+    #[inline]
     fn from(value: [u8; 4]) -> Self {
         InetAddr::from(Ipv4Addr::from(value))
     }
 }
 
 impl From<[u8; 16]> for InetAddr {
+    #[inline]
     fn from(value: [u8; 16]) -> Self {
         InetAddr::from(Ipv6Addr::from(value))
     }
 }
 
 impl From<[u16; 8]> for InetAddr {
+    #[inline]
     fn from(value: [u16; 8]) -> Self {
         InetAddr::from(Ipv6Addr::from(value))
     }
 }
 
 #[cfg(feature="use-tor")]
-impl TryFrom<[u8; UNIFORM_INETADDR_LEN]> for InetAddr {
+impl TryFrom<[u8; InetAddr::LEN]> for InetAddr {
     type Error = String;
+    #[inline]
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
         Self::from_uniform_encoding(value)
             .ok_or(String::from("Wrong `InetAddr` binary encoding"))
@@ -240,19 +269,21 @@ impl TryFrom<[u8; UNIFORM_INETADDR_LEN]> for InetAddr {
 
 /// Transport protocols that may be part of `TransportAddr`
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+#[repr(u8)]
 pub enum Transport {
     /// Normal TCP
-    TCP,
+    TCP = 1,
 
     /// Normal UDP
-    UDP,
+    UDP = 2,
 
     /// Multipath TCP version
-    MTCP,
+    MTCP = 3,
 
     /// More efficient UDP version under developent by Google and consortium of
     /// other internet companies
-    QUIC,
+    QUIC = 4,
 
     // There are other rarely used protocols. Do not see any reason to add
     // them to the LNP/BP stack for now, but it may appear in the future,
@@ -265,7 +296,27 @@ pub enum Transport {
     */
 }
 
+impl UniformAddrEncodable<1> for Transport {
+    #[inline]
+    fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
+        use Transport::*;
+        Some(match data[0] {
+            a if a == TCP as u8 => TCP,
+            a if a == UDP as u8 => UDP,
+            a if a == MTCP as u8 => MTCP,
+            a if a == QUIC as u8 => QUIC,
+            _ => None?
+        })
+    }
+
+    #[inline]
+    fn to_uniform_encoding(&self) -> [u8; Self::LEN] {
+        [*self as u8; Self::LEN]
+    }
+}
+
 impl Default for Transport {
+    #[inline]
     fn default() -> Self {
         Transport::TCP
     }
@@ -291,6 +342,7 @@ impl fmt::Display for Transport {
             Transport::UDP => "udp",
             Transport::MTCP => "mtcp",
             Transport::QUIC => "quic",
+            _ => Err(fmt::Error)?
         })
     }
 }
@@ -298,32 +350,54 @@ impl fmt::Display for Transport {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct InetSocketAddr {
-    pub transport: Transport,
     pub address: InetAddr,
     pub port: u16,
 }
 
 impl InetSocketAddr {
-    pub fn tcp(address: InetAddr, port: u16) -> Self {
+    #[inline]
+    pub fn new(address: InetAddr, port: u16) -> Self {
         Self {
-            transport: Transport::TCP,
             address,
             port
         }
     }
 
-    pub fn udp(address: InetAddr, port: u16) -> Self {
-        Self {
-            transport: Transport::UDP,
-            address,
-            port
-        }
+    #[inline]
+    pub fn is_tor(&self) -> bool { self.address.is_tor() }
+}
+
+const INET_SOCKET_ADDR_LEN: usize = InetAddr::LEN + 2;
+impl UniformAddrEncodable<INET_SOCKET_ADDR_LEN> for InetSocketAddr {
+    #[inline]
+    fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
+        Some(Self {
+            address: {
+                let mut buf = [0u8; InetAddr::LEN];
+                buf.clone_from_slice(&data[2..]);
+                InetAddr::from_uniform_encoding(buf)?
+            },
+            port: {
+                let mut buf = [0u8; 2];
+                buf.clone_from_slice(&data[0..2]);
+                u16::from_be_bytes(buf)
+            }
+        })
+    }
+
+    #[inline]
+    fn to_uniform_encoding(&self) -> [u8; Self::LEN] {
+        let mut buf = [0u8; Self::LEN];
+        buf[0..InetAddr::LEN].copy_from_slice(&self.address.to_uniform_encoding());
+        buf[InetAddr::LEN..].copy_from_slice(&self.port.to_be_bytes());
+        buf
     }
 }
 
 impl fmt::Display for InetSocketAddr {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}://{}:{}", self.transport, self.address, self.port)
+        write!(f, "{}:{}", self.address, self.port)
     }
 }
 
@@ -331,22 +405,15 @@ impl FromStr for InetSocketAddr {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut vals = s.split(':');
-        let err_msg = String::from("Wrong format of socket address string; use [<transport>://]<inet_address>[:<port>]");
+        let err_msg = String::from("Wrong format of socket address string; use <inet_address>[:<port>]");
         let em = |_| String::from(err_msg.clone());
         let emi = |_| String::from(err_msg.clone());
-        match (vals.next(), vals.next(), vals.next(), vals.next()) {
-            (Some(transp), Some(addr), Some(port), None) => Ok(Self {
-                transport: transp.parse().map_err(em)?,
+        match (vals.next(), vals.next(), vals.next()) {
+            (Some(addr), Some(port), None) => Ok(Self {
                 address: addr.parse().map_err(em)?,
                 port: port.parse().map_err(emi)?
             }),
-            (Some(addr), Some(port), None, _) => Ok(Self {
-                transport: Transport::default(),
-                address: addr.parse().map_err(em)?,
-                port: port.parse().map_err(emi)?
-            }),
-            (Some(addr), None, ..) => Ok(Self {
-                transport: Transport::default(),
+            (Some(addr), None, _) => Ok(Self {
                 address: addr.parse().map_err(em)?,
                 port: 0,
             }),
@@ -357,7 +424,70 @@ impl FromStr for InetSocketAddr {
 
 impl TryFrom<InetSocketAddr> for std::net::SocketAddr {
     type Error = String;
+    #[inline]
     fn try_from(socket_addr: InetSocketAddr) -> Result<Self, Self::Error> {
         Ok(Self::new(IpAddr::try_from(socket_addr.address)?, socket_addr.port))
+    }
+}
+
+
+pub struct InetSocketAddrExt(pub Transport, pub InetSocketAddr);
+
+impl InetSocketAddrExt {
+    #[inline]
+    pub fn tcp(address: InetAddr, port: u16) -> Self {
+        Self(Transport::TCP, InetSocketAddr::new(address, port))
+    }
+
+    #[inline]
+    pub fn udp(address: InetAddr, port: u16) -> Self {
+        Self(Transport::UDP, InetSocketAddr::new(address, port))
+    }
+}
+
+const INET_SOCKET_ADDR_EXT_LEN: usize = InetSocketAddr::LEN + Transport::LEN;
+impl UniformAddrEncodable<INET_SOCKET_ADDR_EXT_LEN> for InetSocketAddrExt {
+    #[inline]
+    fn from_uniform_encoding(data: [u8; Self::LEN]) -> Option<Self> {
+        let mut buf1 = [0u8; Transport::LEN];
+        let mut buf2 = [0u8; InetSocketAddr::LEN];
+        buf1.copy_from_slice(&data[..Transport::LEN]);
+        buf2.copy_from_slice(&data[Transport::LEN..]);
+        Some(Self(
+            Transport::from_uniform_encoding(buf1)?,
+            InetSocketAddr::from_uniform_encoding(buf2)?,
+        ))
+    }
+
+    #[inline]
+    fn to_uniform_encoding(&self) -> [u8; Self::LEN] {
+        let mut buf = [0u8; Self::LEN];
+        buf[..1].copy_from_slice(&self.0.to_uniform_encoding());
+        buf[1..].copy_from_slice(&self.1.to_uniform_encoding());
+        buf
+    }
+}
+
+impl fmt::Display for InetSocketAddrExt {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}://{}", self.0, self.1)
+    }
+}
+
+impl FromStr for InetSocketAddrExt {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut vals = s.split("://");
+        let err_msg = String::from("Wrong format of extended socket address string; use <transport>://<inet_address>[:<port>]");
+        let em = |_| String::from(err_msg.clone());
+        if let (Some(transport), Some(addr), None) = (vals.next(), vals.next(), vals.next()) {
+            Ok(Self(
+                transport.parse().map_err(em)?,
+                addr.parse().map_err(em)?
+            ))
+        } else {
+            Err(err_msg)
+        }
     }
 }
