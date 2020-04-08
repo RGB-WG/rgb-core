@@ -101,7 +101,7 @@ impl InetAddr {
     pub fn to_uniform_encoding(&self) -> [u8; Self::UNIFORM_ADDR_LEN] {
         let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
         match self {
-            InetAddr::IPv4(ipv4_addr) => buf[24..].copy_from_slice(&ipv4_addr.octets()),
+            InetAddr::IPv4(ipv4_addr) => buf[28..].copy_from_slice(&ipv4_addr.octets()),
             InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
             #[cfg(feature="use-tor")]
             InetAddr::Tor(tor_addr) => buf = tor_addr.to_bytes(),
