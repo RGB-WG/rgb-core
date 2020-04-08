@@ -19,6 +19,6 @@ mod peer;
 mod transport;
 
 pub use peer::*;
-pub use transport::NodeAddr;
+pub use transport::{NodeAddr, ConnectionError};
 
 pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;
