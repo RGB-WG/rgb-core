@@ -30,10 +30,12 @@ tokio = { version = "0.2.16", features = ["tcp"], optional = true }
 # Move on using "0.1.2" once <https://github.com/teawithsand/torut/pull/1> will
 # be merged and the new version of `torut` crate will be published
 torut = { git = "https://github.com/LNP-BP/torut", branch = "fix-torkey", optional = true }
+log = { version = "~0.4", features = ["max_level_trace", "release_max_level_debug"], optional = true }
 
 [features]
 default = []
-all = ["use-tor", "use-lightning", "use-tokio"]
+all = ["use-tor", "use-lightning", "use-tokio", "use-log"]
 use-tor = ["torut/v3"]
 use-lightning = ["lightning"]
 use-tokio = ["use-lightning", "tokio/tcp", "lightning-net-tokio"]
+use-log = ["log"]

@@ -15,6 +15,7 @@
 //! transport layer
 
 use std::io;
+use std::fmt;
 use std::str::FromStr;
 use std::net::SocketAddr;
 use std::convert::TryInto;
@@ -40,18 +41,16 @@ use lightning::secp256k1;
 use lightning::ln::peers::conduit::Conduit as Encryptor;
 use lightning::ln::peers::handshake::PeerHandshake;
 
-use crate::common::internet;
-use super::LIGHTNING_P2P_DEFAULT_PORT;
 use crate::common::internet::InetSocketAddr;
+use super::LIGHTNING_P2P_DEFAULT_PORT;
 
 
 pub const MAX_TRANSPORT_FRAME_SIZE: usize = 65569;
 
-#[derive(Clone, Copy, Debug, Display)]
-#[display_from(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct NodeAddr {
     pub node_id: secp256k1::PublicKey,
-    pub inet_addr: internet::InetSocketAddr,
+    pub inet_addr: InetSocketAddr,
 }
 
 impl NodeAddr {
@@ -60,6 +59,12 @@ impl NodeAddr {
                    ephemeral_private_key: &secp256k1::SecretKey
     ) -> Result<Connection, ConnectionError> {
         Connection::new(self, private_key, ephemeral_private_key).await
+    }
+}
+
+impl fmt::Display for NodeAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}@{}", self.node_id, self.inet_addr)
     }
 }
 
@@ -126,36 +131,68 @@ impl Connection {
             Err(ConnectionError::TorNotYetSupported)?
         }
 
+        #[cfg(feature="use-log")]
+        debug!("Initiating connection protocol with {}", node);
+
         // Opening network connection
         #[cfg(feature="use-tor")]
-        let socker_addr: SocketAddr = node.inet_addr.try_into().unwrap();
+        let socket_addr: SocketAddr = node.inet_addr.try_into().unwrap();
         #[cfg(not(feature="use-tor"))]
-        let socker_addr: SocketAddr = node.inet_addr.into();
-        let mut stream = TcpStream::connect(socker_addr).await?;
+        let socket_addr: SocketAddr = node.inet_addr.into();
 
+        #[cfg(feature="use-log")]
+        trace!("Connecting to {}", socket_addr);
+        let mut stream = TcpStream::connect(socket_addr).await?;
+
+        #[cfg(feature="use-log")]
+        trace!("Starting handshake procedure with {}", node);
         let mut handshake = PeerHandshake::new_outbound(
             private_key, &node.node_id, ephemeral_private_key
         );
 
+        let mut step = 0;
+        let mut input: &[u8] = &[];
         let mut buf = vec![];
         buf.reserve(MAX_TRANSPORT_FRAME_SIZE);
         let result: Result<Encryptor, ConnectionError> = loop {
-            let read_len = stream.read_buf(&mut buf).await?;
-            let input = &buf[0..read_len];
+            #[cfg(feature="use-log")]
+            trace!("Handshake step {}: processing data `{:x?}`", step, input);
+
             let (act, enc) = handshake.process_act(input)
                 .map_err(|msg| ConnectionError::FailedHandshake(msg))?;
+
             if let Some(encryptor) = enc {
                 break Ok(encryptor)
-            } else if let Some(next_act) = act {
-                stream.write_all(&next_act.serialize()).await?;
+            } else if let Some(act) = act {
+                #[cfg(feature="use-log")]
+                trace!("Handshake step {}: sending `{:x?}`", step, act.serialize());
+
+                stream.write_all(&act.serialize()).await?;
             } else {
+                #[cfg(feature="use-log")]
+                error!("`PeerHandshake.process_act` returned non-standard result");
+
                 Err(ConnectionError::FailedHandshake(
                     "PeerHandshake.process_act returned non-standard result"
                         .to_string()
                 ))?
             }
+
+            #[cfg(feature="use-log")]
+            trace!("Handshake step {}: waiting for response`", step);
+
+            let read_len = stream.read_buf(&mut buf).await?;
+            input = &buf[0..read_len];
+
+            #[cfg(feature="use-log")]
+            trace!("Handshake step {}: received data `{:x?}`", step, input);
+
+            step += 1;
         };
         let encryptor = result?;
+
+        #[cfg(feature="use-log")]
+        trace!("Handshake successfully completed");
 
         Ok(Self {
             stream,
