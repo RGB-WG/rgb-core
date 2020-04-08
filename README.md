@@ -3,7 +3,7 @@
 [![TravisCI](https://api.travis-ci.com/LNP-BP/rust-lnpbp.svg?branch=master)](https://api.travis-ci.com/LNP-BP/rust-lnpbp)
 
 This is Rust library implementing LNP/BP specifications <https://github.com/lnp-bp/lnpbps>. It can be used for building
-layer 3 solutions on top of Lightning Netwrk and Bitcoin blockchain. The list of such projects include:
+layer 3 solutions on top of Lightning Network and Bitcoin blockchain. The list of such projects include:
 * [RGB](https://github.com/rgb-org): Different forms of assets and asset-managing smart contracts
 * [Spectrum](https://github.com/rgb-org): Decentralized exchange for Lightning Network
 * [Storm](https://github.com/storm-org): Incentivised trustless storage and messaging
@@ -42,7 +42,7 @@ The library is based on other projects:
 * [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin) and it's dependencies
   * [bitcoin_hashes](https://github.com/rust-bitcoin/bitcoin_hashes)
   * [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)
-  * [rust-secp256k1-zkp](https://github.com/ElementsProject/rust-secp256k1-zkp) for Pedersend commitments and 
+  * [rust-secp256k1-zkp](https://github.com/ElementsProject/rust-secp256k1-zkp) for Pedersen commitments and
     Bulletproofs used in confidential state inside RGB protocols
 * [rust-lightning](https://github.com/rust-bitcoin/rust-lightning)
 
