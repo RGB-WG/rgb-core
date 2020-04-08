@@ -42,11 +42,15 @@ extern crate num_traits;
 extern crate log;
 #[cfg(feature="use-tokio")]
 extern crate tokio;
+#[cfg(feature="use-daemons")]
+#[macro_use]
+extern crate async_trait;
 #[macro_use]
 pub extern crate bitcoin;
 #[cfg(feature="use-lightning")]
 pub extern crate lightning;
 pub extern crate miniscript;
+#[cfg(feature="use-bulletproofs")]
 pub extern crate secp256k1zkp;
 
 #[macro_use]
@@ -56,9 +60,12 @@ pub mod bp;
 #[cfg(feature="use-lightning")]
 pub mod lnp;
 pub mod cmt;
+#[cfg(feature="use-rgb")]
 pub mod seals;
+#[cfg(feature="use-rgb")]
 #[macro_use]
 pub mod csv;
+#[cfg(feature="use-rgb")]
 pub mod rgb;
 
 pub use common::*;

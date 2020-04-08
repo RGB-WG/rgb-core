@@ -20,7 +20,11 @@ pub mod as_slice;
 #[macro_use]
 pub mod wrapper;
 pub mod internet;
+#[cfg(feature="use-daemons")]
+pub mod service;
 
 pub use as_slice::*;
 pub use wrapper::*;
 pub use macros::*;
+#[cfg(feature="use-daemons")]
+pub use service::*;
