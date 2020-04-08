@@ -16,6 +16,8 @@ path = "src/lib.rs"
 
 [dependencies]
 bitcoin = { git = "https://github.com/lnp-bp/rust-bitcoin", branch = "staging", features = [ "use-serde" ] }
+lightning = { git = "https://github.com/lnp-bp/rust-lightning", branch = "staging", optional = true }
+lightning-net-tokio = { git = "https://github.com/lnp-bp/rust-lightning", branch = "staging", optional = true }
 miniscript = { git = "https://github.com/lnp-bp/rust-miniscript", branch = "staging" }
 grin_secp256k1zkp = { git = "https://github.com/lnp-bp/rust-secp256k1-zkp", branch = "stable" }
 # bitcoin = { version = "0.23.0", features = [ "use-serde" ] }
@@ -24,7 +26,14 @@ derive_wrapper = "0.1.3"
 num-integer = "0.1.42"
 num-traits = "0.2.11"
 num-derive = "0.3.0"
+tokio = { version = "0.2.16", features = ["tcp"], optional = true }
 torut = "0.1.2"
+log = { version = "~0.4", features = ["max_level_trace", "release_max_level_debug"], optional = true }
 
 [features]
+default = []
+all = ["use-tor", "use-lightning", "use-tokio", "use-log"]
 use-tor = ["torut/v3"]
+use-lightning = ["lightning"]
+use-tokio = ["use-lightning", "tokio/tcp", "lightning-net-tokio"]
+use-log = ["log"]
