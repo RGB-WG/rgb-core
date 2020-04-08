@@ -378,12 +378,12 @@ impl InetSocketAddr {
         Some(Self {
             address: {
                 let mut buf = [0u8; InetAddr::UNIFORM_ADDR_LEN];
-                buf.clone_from_slice(&data[2..]);
+                buf.clone_from_slice(&data[..InetAddr::UNIFORM_ADDR_LEN]);
                 InetAddr::from_uniform_encoding(&buf)?
             },
             port: {
                 let mut buf = [0u8; 2];
-                buf.clone_from_slice(&data[0..2]);
+                buf.clone_from_slice(&data[InetAddr::UNIFORM_ADDR_LEN..]);
                 u16::from_be_bytes(buf)
             }
         })
@@ -392,7 +392,7 @@ impl InetSocketAddr {
     #[inline]
     pub fn to_uniform_encoding(&self) -> [u8; Self::UNIFORM_ADDR_LEN] {
         let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
-        buf[0..InetAddr::UNIFORM_ADDR_LEN].copy_from_slice(&self.address.to_uniform_encoding());
+        buf[..InetAddr::UNIFORM_ADDR_LEN].copy_from_slice(&self.address.to_uniform_encoding());
         buf[InetAddr::UNIFORM_ADDR_LEN..].copy_from_slice(&self.port.to_be_bytes());
         buf
     }
