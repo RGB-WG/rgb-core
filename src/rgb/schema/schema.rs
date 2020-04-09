@@ -22,20 +22,23 @@ use super::{
     types::*,
     transition::*
 };
+use crate::rgb::metadata;
 use crate::csv::{ConsensusCommit, serialize, Error};
 
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
 #[display_from(Debug)]
-pub struct ValidationError {
-
+pub enum ValidationError {
+    InvalidValue(metadata::Value),
+    MinMaxBoundsOnLargeInt,
+    InvalidFieldOccurences,
 }
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub struct Schema {
     pub seals: HashMap<usize, StateFormat>,
-    pub transitions: Vec<Transition>,
+    pub transitions: HashMap<usize, Transition>,
 }
 
 impl Schema {
@@ -57,7 +60,7 @@ impl serialize::Commitment for Schema {
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
         Ok(Self {
             seals: <HashMap<usize, StateFormat>>::commitment_deserialize(&mut d)?,
-            transitions: <Vec<Transition>>::commitment_deserialize(&mut d)?,
+            transitions: <HashMap<usize, Transition>>::commitment_deserialize(&mut d)?,
         })
     }
 }
