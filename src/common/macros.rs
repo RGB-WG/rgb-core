@@ -24,6 +24,12 @@ macro_rules! bytes {
 
 #[macro_export]
 macro_rules! map {
+    { } =>  {
+        {
+            ::std::collections::HashMap::new()
+        }
+    };
+
     { $($key:expr => $value:expr),+ } => {
         {
             let mut m = ::std::collections::HashMap::new();

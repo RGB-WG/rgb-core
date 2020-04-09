@@ -62,13 +62,21 @@ pub struct Rgb1();
 
 impl Rgb1 {
     const PRIM_ISSUE_TS: usize = 0;
-    const SEC_ISSUE_TS: usize = 0;
-    const TRANSFER_TS: usize = 0;
-    const PRINE_TS: usize = 0;
+    const SEC_ISSUE_TS: usize = 1;
+    const TRANSFER_TS: usize = 2;
+    const PRUNE_TS: usize = 3;
 
     const ISSUE_SEAL: usize = 0;
     const BALANCE_SEAL: usize = 1;
     const PRUNE_SEAL: usize = 2;
+
+    const TICKER_FIELD: usize = 0;
+    const TITLE_FIELD: usize = 1;
+    const DESCRIPTION_FIELD: usize = 2;
+    const TOTAL_SUPPLY_FIELD: usize = 3;
+    const FRACTIONAL_BITS_FIELD: usize = 4;
+    const DUST_LIMIT_FIELD: usize = 5;
+    const NETWORK_FIELD: usize = 6;
 
     fn balances_to_bound_state(balances: Balances) -> Result<state::State, Error> {
         let seals_count = balances.len();
@@ -99,36 +107,37 @@ impl Rgb1 {
         //let ts_schema = &schema.transitions[PRIM_ISSUE_TS];
 
         let mut meta = rgb::Metadata::from_inner(vec![
-            metadata::Field { id: metadata::Type(0), val: metadata::Value::Str(String::from(ticker)) },
-            metadata::Field { id: metadata::Type(1), val: metadata::Value::Str(String::from(name)) },
-            metadata::Field { id: metadata::Type(5), val: metadata::Value::U8(precision) },
-            metadata::Field { id: metadata::Type(7), val: metadata::Value::U32(network.into()) },
+            metadata::Field { id: metadata::Type(Self::TICKER_FIELD as u16), val: metadata::Value::Str(String::from(ticker)) },
+            metadata::Field { id: metadata::Type(Self::TITLE_FIELD as u16), val: metadata::Value::Str(String::from(name)) },
+            metadata::Field { id: metadata::Type(Self::FRACTIONAL_BITS_FIELD as u16), val: metadata::Value::U8(precision) },
+            metadata::Field { id: metadata::Type(Self::NETWORK_FIELD as u16), val: metadata::Value::U32(network.into()) },
         ]);
         if let Some(descr) = descr {
             meta.as_mut().push(
-                metadata::Field { id: metadata::Type(2), val: metadata::Value::Str(String::from(descr)) }
+                metadata::Field { id: metadata::Type(Self::DESCRIPTION_FIELD as u16), val: metadata::Value::Str(String::from(descr)) }
             );
         }
         if let Some(supply) = supply {
+            // TODO: why is this optional?
             meta.as_mut().push(
-                metadata::Field { id: metadata::Type(3), val: metadata::Value::U64(supply) }
+                metadata::Field { id: metadata::Type(Self::TOTAL_SUPPLY_FIELD as u16), val: metadata::Value::U64(supply) }
             );
         }
         if let Some(dust) = dust {
             meta.as_mut().push(
-                metadata::Field { id: metadata::Type(5), val: metadata::Value::U64(dust) }
+                metadata::Field { id: metadata::Type(Self::DUST_LIMIT_FIELD as u16), val: metadata::Value::U64(dust) }
             );
         }
 
         let state = Self::balances_to_bound_state(balances)?;
 
-        Ok(rgb::Transition { meta, state, script: None })
+        Ok(rgb::Transition { id: Self::PRIM_ISSUE_TS, meta, state, script: None })
     }
 
     pub fn transfer(balances: Balances) -> Result<rgb::Transition, Error> {
         let state = Self::balances_to_bound_state(balances)?;
 
-        Ok(rgb::Transition { meta: rgb::Metadata::default(), state, script: None })
+        Ok(rgb::Transition { id: Self::TRANSFER_TS, meta: rgb::Metadata::default(), state, script: None })
     }
 }
 
@@ -144,26 +153,26 @@ impl Schemata for Rgb1 {
                     Self::BALANCE_SEAL => Amount,
                     Self::PRUNE_SEAL => NoState
                 },
-                transitions: vec![
+                transitions: map!{
                     // Genesis state: primary issue
-                    Transition {
+                    Self::PRIM_ISSUE_TS => Transition {
                         closes: None,
-                        fields: vec![
+                        fields: map!{
                             // Ticker
-                            Field(FieldFormat::String(16), Once),
+                            Self::TICKER_FIELD => Field(FieldFormat::String(16), Once),
                             // Title
-                            Field(FieldFormat::String(256), Once),
+                            Self::TITLE_FIELD => Field(FieldFormat::String(256), Once),
                             // Description
-                            Field(FieldFormat::String(1024), NoneOrOnce),
+                            Self::DESCRIPTION_FIELD => Field(FieldFormat::String(1024), NoneOrOnce),
                             // Total supply
-                            Field(FieldFormat::Unsigned { bits: Bit64, min: None, max: None }, NoneOrOnce),
+                            Self::TOTAL_SUPPLY_FIELD => Field(FieldFormat::Unsigned { bits: Bit64, min: None, max: None }, NoneOrOnce),
                             // Fractional bits
-                            Field(FieldFormat::Unsigned { bits: Bit8, min: None, max: None }, Once),
+                            Self::FRACTIONAL_BITS_FIELD => Field(FieldFormat::Unsigned { bits: Bit8, min: None, max: None }, Once),
                             // Dust limit
-                            Field(FieldFormat::Unsigned { bits: Bit64, min: None, max: None }, NoneOrOnce),
+                            Self::DUST_LIMIT_FIELD => Field(FieldFormat::Unsigned { bits: Bit64, min: None, max: None }, NoneOrOnce),
                             // Network
-                            Field(FieldFormat::Unsigned { bits: Bit32, min: None, max: None }, Once),
-                        ],
+                            Self::NETWORK_FIELD => Field(FieldFormat::Unsigned { bits: Bit32, min: None, max: None }, Once)
+                        },
                         binds: map!{
                             Self::BALANCE_SEAL => OnceOrUpTo(None),
                             Self::ISSUE_SEAL => NoneOrOnce,
@@ -175,11 +184,11 @@ impl Schemata for Rgb1 {
                         }
                     },
                     // Issuance transition: secondary issue
-                    Transition {
+                    Self::SEC_ISSUE_TS => Transition {
                         closes: Some(map! {
                             Self::ISSUE_SEAL => Once
                         }),
-                        fields: vec![],
+                        fields: map!{},
                         binds: map!{
                             Self::BALANCE_SEAL => OnceOrUpTo(None),
                             Self::ISSUE_SEAL => NoneOrUpTo(None)
@@ -190,11 +199,11 @@ impl Schemata for Rgb1 {
                         }
                     },
                     // Amount transition: asset transfers
-                    Transition {
+                    Self::TRANSFER_TS => Transition {
                         closes: Some(map!{
                             Self::BALANCE_SEAL => OnceOrUpTo(None)
                         }),
-                        fields: vec![],
+                        fields: map!{},
                         binds: map!{
                             Self::BALANCE_SEAL => NoneOrUpTo(None)
                         },
@@ -204,11 +213,11 @@ impl Schemata for Rgb1 {
                         }
                     },
                     // Pruning transition: asset re-issue
-                    Transition {
+                    Self::PRUNE_TS => Transition {
                         closes: Some(map!{
                             Self::PRUNE_SEAL => NoneOrOnce
                         }),
-                        fields: vec![],
+                        fields: map!{},
                         binds: map!{
                             Self::BALANCE_SEAL => OnceOrUpTo(None),
                             Self::PRUNE_SEAL => Once
@@ -218,7 +227,7 @@ impl Schemata for Rgb1 {
                             extensions: ScriptsDenied
                         }
                     }
-                ]
+                }
             })));
         });
 

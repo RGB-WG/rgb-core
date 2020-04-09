@@ -28,7 +28,7 @@ use crate::csv::{serialize::Commitment, Error};
 #[display_from(Debug)]
 pub struct Transition {
     pub closes: Option<HashMap<usize, Occurences<u32>>>,
-    pub fields: Vec<Field>,
+    pub fields: HashMap<usize, Field>,
     pub binds: HashMap<usize, Occurences<u32>>,
     pub scripting: Scripting,
 }

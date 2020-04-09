@@ -17,6 +17,7 @@ use super::{State, Metadata, Script};
 #[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
 pub struct Transition {
+    pub id: usize,
     pub meta: Metadata,
     pub state: State,
     pub script: Option<Script>,
