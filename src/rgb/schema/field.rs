@@ -91,7 +91,7 @@ pub struct Field(pub FieldFormat, pub Occurences<u8>);
 
 impl Field {
     pub fn validate(&self, field_type: Type, metadata: &Metadata) -> Result<(), ValidationError> {
-        let count: u8 = metadata
+        let count = metadata
             .iter()
             .filter_map(|m| {
                 if m.id == field_type {
@@ -102,15 +102,7 @@ impl Field {
             })
             .try_fold(0, |acc, val| self.0.validate(&val).and_then(|_| Ok(acc + 1)))?;
 
-        match (self.1, count) {
-            (Occurences::Once, 1) => Ok(()),
-            (Occurences::NoneOrOnce, 0..=1 ) => Ok(()),
-            (Occurences::OnceOrUpTo(None), 1 ..= u8::MAX) => Ok(()),
-            (Occurences::OnceOrUpTo(Some(max)), x) if x > 0 && x <= max => Ok(()),
-            (Occurences::NoneOrUpTo(None), 0 ..= u8::MAX) => Ok(()),
-            (Occurences::NoneOrUpTo(Some(max)), x) if x <= max => Ok(()),
-            _ => Err(ValidationError::InvalidFieldOccurences),
-        }
+        self.1.check_count(count).map_err(ValidationError::OccurencesNotMet)
     }
 }
 

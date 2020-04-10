@@ -31,7 +31,8 @@ use crate::csv::{ConsensusCommit, serialize, Error};
 pub enum ValidationError {
     InvalidValue(metadata::Value),
     MinMaxBoundsOnLargeInt,
-    InvalidFieldOccurences,
+
+    OccurencesNotMet(OccurencesError),
 }
 
 #[derive(Clone, Debug, Display)]
