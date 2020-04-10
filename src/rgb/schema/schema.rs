@@ -33,6 +33,8 @@ pub enum ValidationError {
     MinMaxBoundsOnLargeInt,
 
     OccurencesNotMet(OccurencesError),
+
+    InvalidField(metadata::Type, Box<ValidationError>)
 }
 
 #[derive(Clone, Debug, Display)]
