@@ -23,7 +23,6 @@ grin_secp256k1zkp = { git = "https://github.com/lnp-bp/rust-secp256k1-zkp", bran
 # bitcoin = { version = "0.23.0", features = [ "use-serde" ] }
 rand = "0.5" # Required by grin_secp256k1zkp
 derive_wrapper = "0.1.3"
-num-integer = "0.1.42"
 num-traits = "0.2.11"
 num-derive = "0.3.0"
 tokio = { version = "~0.2", features = ["tcp"], optional = true }
