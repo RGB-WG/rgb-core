@@ -19,6 +19,8 @@ use std::convert::TryFrom;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 #[cfg(feature="use-tor")]
 use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
 
 
 /// A universal address covering IPv4, IPv6 and Tor in a single byte sequence
@@ -39,6 +41,7 @@ use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
 /// Tor addresses are distinguished by the fact that last 16 bits
 /// must be set to 0
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub enum InetAddr {
     IPv4(Ipv4Addr),
     IPv6(Ipv6Addr),
