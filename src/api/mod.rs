@@ -19,17 +19,3 @@ pub use encode::*;
 
 
 pub type Multipart = Vec<zmq::Message>;
-pub type CommandId = u16;
-
-pub fn split_cmd_args(multipart: &Multipart) -> Result<(CommandId, &[zmq::Message]), Error> {
-    Ok(multipart.split_first()
-        .ok_or(Error::MalformedRequest)
-        .and_then(|(cmd_data, args)| {
-            if cmd_data.len() != 2 {
-                Err(Error::MalformedCommand)?
-            }
-            let mut buf = [0u8; 2];
-            buf.clone_from_slice(&cmd_data[0..2]);
-            Ok((u16::from_be_bytes(buf), args))
-        })?)
-}

@@ -21,11 +21,10 @@ use bitcoin::secp256k1;
 use crate::csv;
 
 
-#[derive(Debug, Display, From)]
+#[derive(Debug, Display)]
 #[display_from(Debug)]
 pub enum Error {
     /// Transport-level error
-    #[derive_from]
     SocketError(zmq::Error),
 
     // Request-specific errors
@@ -47,6 +46,12 @@ impl std::error::Error for Error {}
 
 impl From<Error> for String {
     fn from(err: Error) -> Self { format!("{}", err) }
+}
+
+impl From<zmq::Error> for Error {
+    fn from(err: zmq::Error) -> Self {
+        Error::SocketError(err)
+    }
 }
 
 impl From<bitcoin::consensus::encode::Error> for Error {
