@@ -31,6 +31,7 @@ futures = "~0.3"
 torut = "0.1.2"
 async-trait = { version = "~0.1", optional = true }
 log = { version = "~0.4", features = ["max_level_trace", "release_max_level_debug"], optional = true }
+zmq = { version = "~0.9", optional = true }
 parse_arg = { version = "0.1.4", optional = true }
 # This strange naming is a workaround for not being able to define required features for a dependency
 # See https://github.com/rust-lang/api-guidelines/issues/180 for the explanation and references.
@@ -45,6 +46,7 @@ use-tor = ["torut/v3"]
 use-tokio = ["use-lightning", "tokio/tcp", "lightning-net-tokio"]
 use-bulletproofs = ["grin_secp256k1zkp"]
 use-rgb = ["use-bulletproofs"]
-use-daemons = ["async-trait"]
+use-api = ["zmq"]
+use-node = ["async-trait", "use-api"]
 use-lightning = ["lightning"]
 serde = ["serde_crate", "torut/serialize"]
