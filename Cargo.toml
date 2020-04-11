@@ -30,11 +30,12 @@ tokio = { version = "0.2.16", features = ["tcp"], optional = true }
 torut = "0.1.2"
 async-trait = { version = "~0.1", optional = true }
 log = { version = "~0.4", features = ["max_level_trace", "release_max_level_debug"], optional = true }
+parse_arg = { version = "0.1.4", optional = true }
 
 [features]
 default = []
 all = ["use-tor", "use-lightning", "use-tokio", "use-log",
-       "use-bulletproofs", "use-rgb", "use-daemons"]
+       "use-bulletproofs", "use-rgb", "use-daemons", "parse_arg"]
 use-log = ["log"]
 use-tor = ["torut/v3"]
 use-tokio = ["use-lightning", "tokio/tcp", "lightning-net-tokio"]

@@ -210,6 +210,21 @@ impl TryFrom<Vec<u8>> for InetAddr {
     }
 }
 
+// Yes, I checked that onion addresses don't need to optimize ownership of input String.
+#[cfg(feature = "parse_arg")]
+impl parse_arg::ParseArgFromStr for InetAddr {
+    fn describe_type<W: std::fmt::Write>(mut writer: W) -> std::fmt::Result {
+        #[cfg(not(feature="use-tor"))]
+        {
+            write!(writer, "IPv4 or IPv6 adress")
+        }
+        #[cfg(feature="use-tor")]
+        {
+            write!(writer, "IPv4, IPv6, or Tor (onion) adress")
+        }
+    }
+}
+
 impl TryFrom<&[u8]> for InetAddr {
     type Error = String;
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
