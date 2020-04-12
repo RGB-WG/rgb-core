@@ -22,6 +22,8 @@ pub mod wrapper;
 pub mod internet;
 #[cfg(feature="use-daemons")]
 pub mod service;
+#[cfg(feature="serde")]
+pub(crate) mod serde;
 
 pub use as_slice::*;
 pub use wrapper::*;
