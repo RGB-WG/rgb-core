@@ -180,13 +180,8 @@ impl From<OnionAddressV3> for InetAddr {
     fn from(addr: OnionAddressV3) -> Self { InetAddr::Tor(addr.get_public_key()) }
 }
 
-impl TryFrom<String> for InetAddr {
-    type Error = String;
-    #[inline]
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        InetAddr::from_str(value.as_str())
-    }
-}
+impl_try_from_stringly_standard!(InetAddr);
+impl_into_stringly_standard!(InetAddr);
 
 impl FromStr for InetAddr {
     type Err = String;

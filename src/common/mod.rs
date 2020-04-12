@@ -16,6 +16,8 @@
 
 #[macro_use]
 pub mod macros;
+#[macro_use]
+pub(crate) mod convert;
 pub mod as_slice;
 #[macro_use]
 pub mod wrapper;

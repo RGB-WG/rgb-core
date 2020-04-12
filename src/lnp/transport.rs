@@ -98,6 +98,8 @@ impl FromStr for NodeAddr {
     }
 }
 
+impl_try_from_stringly_standard!(NodeAddr);
+impl_into_stringly_standard!(NodeAddr);
 
 #[derive(Debug, Display)]
 #[display_from(Debug)]
