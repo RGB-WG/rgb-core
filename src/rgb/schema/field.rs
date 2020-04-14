@@ -125,7 +125,6 @@ impl Commitment for Field {
 #[cfg(test)]
 #[allow(unused_imports)]
 mod test {
-
     use super::super::types::*;
     use super::{Field, FieldFormat};
     use crate::rgb::metadata::{self, Metadata, Type, Value};
