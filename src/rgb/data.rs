@@ -11,11 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+
 pub mod amount {
+    use std::ops::Add;
     use rand;
+
     // We do not import particular modules to keep aware with namespace prefixes that we do not use
     // the standard secp256k1zkp library
     use secp256k1zkp::*;
+    pub use secp256k1zkp::pedersen::Commitment as PedersenCommitment;
 
     // TODO: Convert Amount into a wrapper type later
     //wrapper!(Amount, _AmountPhantom, u64, doc="64-bit data for amounts");
@@ -57,9 +61,36 @@ pub mod amount {
             }
         }
     }
+
+    pub fn zero_pedersen_commitment() -> PedersenCommitment {
+        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+
+        secp
+            .commit_value(0)
+            .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments")
+    }
+
+    impl Add<pedersen::Commitment> for Commitment {
+        type Output = pedersen::Commitment;
+
+        fn add(self, other: pedersen::Commitment) -> Self::Output {
+            let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+
+            secp
+                .commit_sum(vec![self.commitment, other], vec![])
+                .expect("Failed to add Pedersen commitments")
+        }
+    }
+
+    pub fn verify_bullet_proof(commitment: &Commitment) -> Result<pedersen::ProofRange, secp256k1zkp::Error> {
+        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+
+        secp.
+            verify_bullet_proof(commitment.commitment.clone(), commitment.bulletproof.clone(), None)
+    }
 }
 
-pub use amount::Amount;
+pub use amount::{Amount, PedersenCommitment};
 
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Debug, Display)]
@@ -67,5 +98,6 @@ pub use amount::Amount;
 pub enum Data {
     Balance(amount::Commitment),
     Binary(Box<[u8]>),
+    None,
     // TODO: Add other supported bound state types according to the schema
 }
