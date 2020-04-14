@@ -26,6 +26,8 @@ use tokio::net::TcpStream;
 use tokio::io::AsyncWriteExt;
 #[cfg(feature="use-tokio")]
 use tokio::io::AsyncReadExt;
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
 
 #[cfg(not(feature="use-tokio"))]
 use std::net::TcpStream;
@@ -48,6 +50,7 @@ use super::LIGHTNING_P2P_DEFAULT_PORT;
 pub const MAX_TRANSPORT_FRAME_SIZE: usize = 65569;
 
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(try_from = "crate::common::serde::CowHelper", into = "String", crate = "serde_crate"))]
 pub struct NodeAddr {
     pub node_id: secp256k1::PublicKey,
     pub inet_addr: InetSocketAddr,
@@ -98,6 +101,8 @@ impl FromStr for NodeAddr {
     }
 }
 
+impl_try_from_stringly_standard!(NodeAddr);
+impl_into_stringly_standard!(NodeAddr);
 
 #[derive(Debug, Display)]
 #[display_from(Debug)]

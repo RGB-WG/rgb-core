@@ -19,7 +19,8 @@ use std::convert::TryFrom;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 #[cfg(feature="use-tor")]
 use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
-
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
 
 /// A universal address covering IPv4, IPv6 and Tor in a single byte sequence
 /// of 32 bytes.
@@ -39,6 +40,7 @@ use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
 /// Tor addresses are distinguished by the fact that last 16 bits
 /// must be set to 0
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(try_from = "crate::common::serde::CowHelper", into = "String", crate = "serde_crate"))]
 pub enum InetAddr {
     IPv4(Ipv4Addr),
     IPv6(Ipv6Addr),
@@ -177,13 +179,8 @@ impl From<OnionAddressV3> for InetAddr {
     fn from(addr: OnionAddressV3) -> Self { InetAddr::Tor(addr.get_public_key()) }
 }
 
-impl TryFrom<String> for InetAddr {
-    type Error = String;
-    #[inline]
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        InetAddr::from_str(value.as_str())
-    }
-}
+impl_try_from_stringly_standard!(InetAddr);
+impl_into_stringly_standard!(InetAddr);
 
 impl FromStr for InetAddr {
     type Err = String;

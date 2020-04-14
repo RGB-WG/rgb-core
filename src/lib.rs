@@ -52,6 +52,8 @@ pub extern crate lightning;
 pub extern crate miniscript;
 #[cfg(feature="use-bulletproofs")]
 pub extern crate secp256k1zkp;
+#[cfg(feature = "serde")]
+extern crate serde_crate as serde;
 
 #[macro_use]
 pub mod common;
