@@ -238,7 +238,7 @@ impl Descriptor {
 }
 
 
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Display)]
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 pub struct ShortId(u64);
 
