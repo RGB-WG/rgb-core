@@ -64,7 +64,7 @@ impl Schema {
         self.consensus_commit().expect("Schema with commit failures must nor be serialized")
     }
 
-    pub fn begin_validation(&self, ts: &rgb::Transition) -> Result<PartialValidation, ValidationError> {
+    pub fn validate_transition(&self, ts: &rgb::Transition) -> Result<PartialValidation, ValidationError> {
         let transition_schema = self.transitions.get(&ts.id).ok_or(ValidationError::InvalidTransitionId(ts.id))?;
 
         // we only support standard scripting with no extensions at the moment
@@ -117,10 +117,10 @@ impl Schema {
         for (seal_type, occurences) in &transition_schema.binds {
             let count = ts.state
                 .iter()
-                .filter_map(|m| {
+                .filter(|m| {
                     match m {
-                        state::Partial::State(state::Bound { id: seal_type, .. }) => Some(()),
-                        _ => None
+                        state::Partial::State(state::Bound { id: seal_type, .. }) => true,
+                        _ => false,
                     }
                 })
                 .count();
@@ -134,7 +134,10 @@ impl Schema {
             data => Some(data.into_iter().fold(data::amount::zero_pedersen_commitment(), |acc, x| x + acc)),
         };
 
-        Ok(PartialValidation::default())
+        Ok(PartialValidation {
+            closed_seals: transition_schema.closes.clone(),
+            total_output_amount,
+        })
     }
 }
 
@@ -213,6 +216,6 @@ mod test {
         println!("{:#?}", schema);
         println!("{:#?}", transition);
 
-        println!("{:?}", schema.begin_validation(&transition));
+        println!("{:?}", schema.validate_transition(&transition));
     }
 }
