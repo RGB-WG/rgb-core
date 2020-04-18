@@ -72,6 +72,7 @@ network_serialize_from_commitment!(f64);
 network_serialize_from_commitment!(&[u8]);
 network_serialize_from_commitment!(Box<[u8]>);
 network_serialize_from_commitment!(&str);
+network_serialize_from_commitment!(String);
 
 
 /// In terms of network serialization, we interpret `Option` as a zero-length `Vec`
@@ -137,24 +138,16 @@ impl<T> Network for Vec<T> where T: Network {
 /// will result in `Error::OversizedVectorAllocation`.
 impl<K, V> Network for HashMap<K, V> where K: Eq + std::hash::Hash + Clone + Network, V: Network + Clone {
     fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-        let len = self.len() as usize;
-        let serialized = len.network_serialize(&mut e)?;
-        Ok(self
-            .iter()
-            .try_fold(serialized, |acc, (k, v)| -> Result<_, Error> {
-                Ok(acc + (k.clone(), v.clone()).network_serialize(&mut e)?)
-            })?
-        )
+        self.iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect::<Vec<(K, V)>>()
+            .network_serialize(&mut e)
     }
 
     fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        let len = usize::network_deserialize(&mut d)?;
-        let mut data = HashMap::<K, V>::with_capacity(len as usize);
-        for _ in 0..len {
-            let (k, v) = <(K, V)>::network_deserialize(&mut d)?;
-            data.insert(k, v);
-        }
-        Ok(data)
+        Ok(Vec::<(K, V)>::network_deserialize(&mut d)?
+            .into_iter()
+            .collect())
     }
 }
 
