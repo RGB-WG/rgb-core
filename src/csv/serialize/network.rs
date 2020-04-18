@@ -145,6 +145,6 @@ pub fn network_deserialize<T: Network>(data: &[u8]) -> Result<T, Error> {
     if consumed == data.len() {
         Ok(rv)
     } else {
-        Err(Error::ParseFailed("data not consumed entirely when explicitly deserializing"))
+        Err(Error::ParseFailed("data not consumed entirely when explicitly deserialized"))
     }
 }

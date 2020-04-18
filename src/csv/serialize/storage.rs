@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::io;
-use super::{network::*, commitment::*, Error};
+use super::{network::*, Error};
 
 pub trait Storage: Sized {
     fn storage_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error>;
@@ -20,7 +20,7 @@ pub trait Storage: Sized {
 }
 
 
-impl<T> Storage for T where T: Commitment + Network {
+impl<T> Storage for T where T: Network {
     #[inline]
     fn storage_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         self.network_serialize(&mut e)
@@ -33,11 +33,11 @@ impl<T> Storage for T where T: Commitment + Network {
 }
 
 #[inline]
-pub fn storage_serialize<T: Commitment + Storage + Network>(data: &T) -> Result<Vec<u8>, Error> {
+pub fn storage_serialize<T: Storage + Network>(data: &T) -> Result<Vec<u8>, Error> {
     network_serialize(data)
 }
 
 #[inline]
-pub fn storage_deserialize<T: Commitment + Storage + Network>(data: &[u8]) -> Result<T, Error> {
+pub fn storage_deserialize<T: Storage + Network>(data: &[u8]) -> Result<T, Error> {
     T::network_deserialize(data)
 }
