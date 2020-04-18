@@ -32,9 +32,7 @@ use serde::{Serialize, Deserialize};
 #[cfg(not(feature="use-tokio"))]
 use std::net::TcpStream;
 #[cfg(not(feature="use-tokio"))]
-use std::io::AsyncWriteExt;
-#[cfg(not(feature="use-tokio"))]
-use std::io::AsyncReadExt;
+use std::io::{Read, Write};
 
 use lightning::secp256k1;
 
@@ -141,13 +139,18 @@ impl Connection {
 
         // Opening network connection
         #[cfg(feature="use-tor")]
-        let socket_addr: SocketAddr = node.inet_addr.try_into().unwrap();
+        let socket_addr: SocketAddr = node.inet_addr.try_into()
+            .map_err(|_| ConnectionError::TorNotYetSupported)?;
         #[cfg(not(feature="use-tor"))]
-        let socket_addr: SocketAddr = node.inet_addr.into();
+        let socket_addr: SocketAddr = node.inet_addr.try_into()
+            .expect("We are not using tor so conversion of internet addresses must not fail");
 
         #[cfg(feature="use-log")]
         trace!("Connecting to {}", socket_addr);
+        #[cfg(feature="use-tokio")]
         let mut stream = TcpStream::connect(socket_addr).await?;
+        #[cfg(not(feature="use-tokio"))]
+        let mut stream = TcpStream::connect(socket_addr)?;
 
         #[cfg(feature="use-log")]
         trace!("Starting handshake procedure with {}", node);
@@ -155,7 +158,7 @@ impl Connection {
             private_key, &node.node_id, ephemeral_private_key
         );
 
-        let mut step = 0;
+        let mut step: usize = 0;
         let mut input: &[u8] = &[];
         let mut buf = vec![];
         buf.reserve(MAX_TRANSPORT_FRAME_SIZE);
@@ -172,7 +175,10 @@ impl Connection {
                 #[cfg(feature="use-log")]
                 trace!("Handshake step {}: sending `{:x?}`", step, act.serialize());
 
+                #[cfg(feature="use-tokio")]
                 stream.write_all(&act.serialize()).await?;
+                #[cfg(not(feature="use-tokio"))]
+                stream.write_all(&act.serialize())?;
             } else {
                 #[cfg(feature="use-log")]
                 error!("`PeerHandshake.process_act` returned non-standard result");
@@ -186,7 +192,10 @@ impl Connection {
             #[cfg(feature="use-log")]
             trace!("Handshake step {}: waiting for response`", step);
 
+            #[cfg(feature="use-tokio")]
             let read_len = stream.read_buf(&mut buf).await?;
+            #[cfg(not(feature="use-tokio"))]
+            let read_len = stream.read_to_end(&mut buf)?;
             input = &buf[0..read_len];
 
             #[cfg(feature="use-log")]

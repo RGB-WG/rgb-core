@@ -37,6 +37,8 @@ extern crate rand;
 extern crate num_integer;
 extern crate num_derive;
 extern crate num_traits;
+#[cfg(not(feature="use-tokio"))]
+extern crate futures;
 #[cfg(feature="use-log")]
 #[macro_use]
 extern crate log;
