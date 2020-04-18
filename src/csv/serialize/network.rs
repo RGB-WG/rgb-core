@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::io;
+use std::{io, collections::HashMap};
 
 use super::Error;
 
@@ -124,6 +124,54 @@ impl<T> Network for Vec<T> where T: Network {
             data.push(T::network_deserialize(&mut d)?);
         }
         Ok(data)
+    }
+}
+
+
+/// In terms of network serialization, `HashMap` is stored in form of usize-serialized length
+/// (see `Commitment` implementation for `usize` type for serialization platform-independent
+/// constant-length serialization rules) followed by a consequently-serialized kay-value pairs,
+/// according to their type.
+///
+/// An attempt to serialize `HashMap` with more items than can fit in `usize` serialization rules
+/// will result in `Error::OversizedVectorAllocation`.
+impl<K, V> Network for HashMap<K, V> where K: Eq + std::hash::Hash + Clone + Network, V: Network + Clone {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        let len = self.len() as usize;
+        let serialized = len.network_serialize(&mut e)?;
+        Ok(self
+            .iter()
+            .try_fold(serialized, |acc, (k, v)| -> Result<_, Error> {
+                Ok(acc + (k.clone(), v.clone()).network_serialize(&mut e)?)
+            })?
+        )
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let len = usize::network_deserialize(&mut d)?;
+        let mut data = HashMap::<K, V>::with_capacity(len as usize);
+        for _ in 0..len {
+            let (k, v) = <(K, V)>::network_deserialize(&mut d)?;
+            data.insert(k, v);
+        }
+        Ok(data)
+    }
+}
+
+
+/// Binary tuple network serialization
+impl<A, B> Network for (A, B) where A: Network, B: Network {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        let mut serialized = self.0.network_serialize(&mut e)?;
+        serialized += self.1.network_serialize(&mut e)?;
+        Ok(serialized)
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        Ok((
+            A::network_deserialize(&mut d)?,
+            B::network_deserialize(&mut d)?,
+        ))
     }
 }
 

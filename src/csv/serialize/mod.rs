@@ -22,7 +22,7 @@ pub use network::*;
 pub use storage::*;
 
 
-use std::{str, convert::From};
+use std::{str, string, convert::From};
 
 #[derive(Debug, Display)]
 #[display_from(Debug)]
@@ -41,6 +41,12 @@ pub enum Error {
 impl From<str::Utf8Error> for Error {
     fn from(err: str::Utf8Error) -> Self {
         Self::Utf8Error(err)
+    }
+}
+
+impl From<string::FromUtf8Error> for Error {
+    fn from(err: string::FromUtf8Error) -> Self {
+        Self::Utf8Error(err.utf8_error())
     }
 }
 

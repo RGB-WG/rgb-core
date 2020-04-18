@@ -134,7 +134,17 @@ impl Commitment for &str {
     }
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        str::from_utf8(<&[u8]>::commitment_deserialize(&mut d)?).map_err(Error::Utf8Error)
+        str::from_utf8(<&[u8]>::commitment_deserialize(&mut d)?).map_err(Error::from)
+    }
+}
+
+impl Commitment for String {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.as_bytes().commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        String::from_utf8(Vec::<u8>::commitment_deserialize(&mut d)?).map_err(Error::from)
     }
 }
 
