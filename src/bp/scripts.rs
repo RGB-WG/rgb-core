@@ -96,7 +96,8 @@ wrapper!(TapScript, _TapScriptPhantom, Script, doc="\
     Any valid branch of Tapscript (BIP-342)");
 
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
+#[display_from(Debug)]
 pub enum LockScriptParseError<Pk: MiniscriptKey> {
     PubkeyHash(Pk::Hash),
     Miniscript(miniscript::Error)
@@ -138,6 +139,8 @@ impl LockScript {
 }
 
 
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
 pub enum PubkeyScriptType {
     P2S(PubkeyScript),
     P2PK(bitcoin::PublicKey),
@@ -149,6 +152,8 @@ pub enum PubkeyScriptType {
     P2TR(secp256k1::PublicKey),
 }
 
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
 pub enum PubkeyScriptSource {
     P2S(LockScript),
     P2PK(bitcoin::PublicKey),
