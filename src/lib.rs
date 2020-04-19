@@ -37,8 +37,6 @@ extern crate rand;
 extern crate num_integer;
 extern crate num_derive;
 extern crate num_traits;
-#[cfg(not(feature="use-tokio"))]
-extern crate futures;
 #[macro_use]
 pub extern crate bitcoin;
 
@@ -50,9 +48,11 @@ extern crate log;
 // Async IO, IPC & networking
 #[cfg(feature="use-tokio")]
 extern crate tokio;
+#[cfg(not(feature="use-tokio"))]
+extern crate futures;
 
 // Support for node & node clients development (include API helpers)
-#[cfg(feature="use-node")]
+#[cfg(feature="use-daemons")]
 #[macro_use]
 extern crate async_trait;
 #[cfg(feature="use-zmq")]
