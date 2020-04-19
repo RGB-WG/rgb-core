@@ -122,15 +122,19 @@ impl fmt::Debug for Network {
     }
 }
 
+#[derive(Debug, Display)]
+#[display_from(Debug)]
+pub struct ParseError;
+
 impl FromStr for Network {
-    type Err = ();
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_ascii_lowercase();
         bitcoin::Network::from_str(&s).map(Network::from).or_else(|_| {
             let s = s.strip_prefix("magic:").unwrap_or(&s);
             let s = s.strip_prefix("0x").unwrap_or(&s);
-            let magic = u32::from_str_radix(s, 16).map_err(|_| ())?;
+            let magic = u32::from_str_radix(s, 16).map_err(|_| ParseError)?;
             Ok(Network::Other(magic))
         })
     }
