@@ -20,7 +20,8 @@ use std::{
 
 use bitcoin::util::uint::Uint256;
 
-use super::{Network, Schemata};
+use super::Schemata;
+use crate::bp::Network;
 use crate::rgb::{
     self,
     state, data, seal, metadata,
@@ -97,7 +98,7 @@ impl Rgb1 {
             metadata::Field { id: metadata::Type(0), val: metadata::Value::Str(String::from(ticker)) },
             metadata::Field { id: metadata::Type(1), val: metadata::Value::Str(String::from(name)) },
             metadata::Field { id: metadata::Type(5), val: metadata::Value::U8(precision) },
-            metadata::Field { id: metadata::Type(7), val: metadata::Value::U8(network.into()) },
+            metadata::Field { id: metadata::Type(7), val: metadata::Value::U32(network.into()) },
         ]);
         if let Some(descr) = descr {
             meta.as_mut().push(
@@ -157,7 +158,7 @@ impl Schemata for Rgb1 {
                             // Dust limit
                             Field(FieldFormat::Unsigned { bits: Bit256, min: None, max: None }, NoneOrOnce),
                             // Network
-                            Field(FieldFormat::Enum { values: Network::all_u8() }, Once),
+                            Field(FieldFormat::Unsigned { bits: Bit32, min: None, max: None }, Once),
                         ],
                         binds: map!{
                             Self::BALANCE_SEAL => OnceOrUpTo(None),
