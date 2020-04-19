@@ -18,8 +18,6 @@ use std::{
     collections::HashMap
 };
 
-use bitcoin::util::uint::Uint256;
-
 use super::{Network, Schemata};
 use crate::rgb::{
     self,
@@ -86,7 +84,7 @@ impl Rgb1 {
 
     pub fn issue(network: Network, ticker: &str, name: &str, descr: Option<&str>,
                  balances: Balances, precision: u8,
-                 supply: Option<Uint256>, dust: Option<Uint256>) -> Result<rgb::Transition, Error> {
+                 supply: Option<u64>, dust: Option<u64>) -> Result<rgb::Transition, Error> {
         // TODO: Add ability to control secondary issuance and pruning
 
         // TODO: Add validation against the schema
@@ -106,12 +104,12 @@ impl Rgb1 {
         }
         if let Some(supply) = supply {
             meta.as_mut().push(
-                metadata::Field { id: metadata::Type(3), val: metadata::Value::U256(supply) }
+                metadata::Field { id: metadata::Type(3), val: metadata::Value::U64(supply) }
             );
         }
         if let Some(dust) = dust {
             meta.as_mut().push(
-                metadata::Field { id: metadata::Type(5), val: metadata::Value::U256(dust) }
+                metadata::Field { id: metadata::Type(5), val: metadata::Value::U64(dust) }
             );
         }
 
@@ -151,11 +149,11 @@ impl Schemata for Rgb1 {
                             // Description
                             Field(FieldFormat::String(1024), NoneOrOnce),
                             // Total supply
-                            Field(FieldFormat::Unsigned { bits: Bit256, min: None, max: None }, NoneOrOnce),
+                            Field(FieldFormat::Unsigned { bits: Bit64, min: None, max: None }, NoneOrOnce),
                             // Fractional bits
                             Field(FieldFormat::Unsigned { bits: Bit8, min: None, max: None }, Once),
                             // Dust limit
-                            Field(FieldFormat::Unsigned { bits: Bit256, min: None, max: None }, NoneOrOnce),
+                            Field(FieldFormat::Unsigned { bits: Bit64, min: None, max: None }, NoneOrOnce),
                             // Network
                             Field(FieldFormat::Enum { values: Network::all_u8() }, Once),
                         ],
