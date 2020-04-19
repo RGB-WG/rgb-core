@@ -187,12 +187,14 @@ impl Network for bitcoin::PublicKey {
         match marker {
             0x04 => {
                 let mut buf = [0u8; secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE];
-                d.read_exact(&mut buf);
+                buf[0] = marker;
+                d.read_exact(&mut buf[1..]);
                 Ok(Self::from_slice(&buf).map_err(|_| Error::DataIntegrityError)?)
             },
             0x03 | 0x02 => {
                 let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
-                d.read_exact(&mut buf);
+                buf[0] = marker;
+                d.read_exact(&mut buf[1..]);
                 Ok(Self::from_slice(&buf).map_err(|_| Error::DataIntegrityError)?)
             }
             _ => Err(Error::DataIntegrityError),
