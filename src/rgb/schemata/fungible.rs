@@ -177,7 +177,7 @@ impl Schemata for Rgb1 {
                             Self::BALANCE_SEAL => OnceOrUpTo(None),
                             Self::ISSUE_SEAL => NoneOrOnce,
                             Self::PRUNE_SEAL => NoneOrOnce
-                        },
+                        }.into(),
                         scripting: Scripting {
                             validation: Standard(Rgb1Genesis),
                             extensions: ScriptsDenied
@@ -187,12 +187,12 @@ impl Schemata for Rgb1 {
                     Self::SEC_ISSUE_TS => Transition {
                         closes: Some(map! {
                             Self::ISSUE_SEAL => Once
-                        }),
+                        }.into()),
                         fields: map!{},
                         binds: map!{
                             Self::BALANCE_SEAL => OnceOrUpTo(None),
                             Self::ISSUE_SEAL => NoneOrUpTo(None)
-                        },
+                        }.into(),
                         scripting: Scripting {
                             validation: Standard(Rgb1Issue),
                             extensions: ScriptsDenied
@@ -202,11 +202,11 @@ impl Schemata for Rgb1 {
                     Self::TRANSFER_TS => Transition {
                         closes: Some(map!{
                             Self::BALANCE_SEAL => OnceOrUpTo(None)
-                        }),
+                        }.into()),
                         fields: map!{},
                         binds: map!{
                             Self::BALANCE_SEAL => NoneOrUpTo(None)
-                        },
+                        }.into(),
                         scripting: Scripting {
                             validation: Standard(Rgb1Transfer),
                             extensions: ScriptsDenied
@@ -216,12 +216,12 @@ impl Schemata for Rgb1 {
                     Self::PRUNE_TS => Transition {
                         closes: Some(map!{
                             Self::PRUNE_SEAL => NoneOrOnce
-                        }),
+                        }.into()),
                         fields: map!{},
                         binds: map!{
                             Self::BALANCE_SEAL => OnceOrUpTo(None),
                             Self::PRUNE_SEAL => Once
-                        },
+                        }.into(),
                         scripting: Scripting {
                             validation: Standard(Rgb1Prune),
                             extensions: ScriptsDenied

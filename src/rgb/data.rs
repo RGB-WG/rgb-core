@@ -36,6 +36,14 @@ pub mod amount {
     #[display_from(Debug)]
     pub struct Proof(secp256k1zkp::key::SecretKey);
 
+    impl std::ops::Deref for Proof {
+        type Target = secp256k1zkp::key::SecretKey;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
     #[derive(Clone, PartialEq, Debug, Display)]
     #[display_from(Debug)]
     pub struct Confidential {
@@ -59,6 +67,26 @@ pub mod amount {
                 commitment: Commitment { commitment, bulletproof },
                 proof: Proof(blinding)
             }
+        }
+    }
+
+    pub fn commit_last_item(amount: Amount, blinding_factors: Vec<secp256k1zkp::key::SecretKey>) -> Confidential {
+        // TODO: refactor duplicated code
+
+        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+        let blinding = secp.blind_sum(vec![secp256k1zkp::key::ONE_KEY], blinding_factors).unwrap(); // FIXME: that's probably broken, but it works
+
+        let value = amount;
+        let commitment = secp.commit(value, blinding.clone())
+            .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
+        let bulletproof = secp.bullet_proof(
+            value, blinding.clone(),
+            blinding.clone(), blinding.clone(),
+            None, None
+        );
+        Confidential {
+            commitment: Commitment { commitment, bulletproof },
+            proof: Proof(blinding)
         }
     }
 
@@ -87,6 +115,13 @@ pub mod amount {
 
         secp.
             verify_bullet_proof(commitment.commitment.clone(), commitment.bulletproof.clone(), None)
+    }
+
+    pub fn verify_commit_sum(positive: Vec<pedersen::Commitment>, negative: Vec<pedersen::Commitment>) -> bool {
+        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+
+        secp.
+            verify_commit_sum(positive, negative)
     }
 }
 

@@ -19,6 +19,11 @@ use crate::bp::{
     blind::{OutpointReveal, OutpointHash}
 };
 
+#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[display_from(Debug)]
+pub enum Error {
+    VoutOverflow,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Default)]
 #[display_from(Debug)]

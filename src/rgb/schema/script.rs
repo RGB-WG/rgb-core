@@ -16,7 +16,7 @@ use std::io;
 use num_traits::{ToPrimitive, FromPrimitive};
 use num_derive::{ToPrimitive, FromPrimitive};
 
-use super::ValidationError;
+use super::SchemaError;
 use crate::csv::{Commitment, Error};
 use crate::rgb;
 
@@ -49,7 +49,7 @@ pub enum StandardProcedure {
 impl_commitment_enum!(StandardProcedure);
 
 impl StandardProcedure {
-    pub fn validate(&self, _transition_script: Option<&rgb::Script>) -> Result<(), ValidationError> {
+    pub fn validate(&self, _transition_script: Option<&rgb::Script>) -> Result<(), SchemaError> {
         // TODO: validate the script
         Ok(())
     }
