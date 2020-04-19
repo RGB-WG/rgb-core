@@ -25,8 +25,7 @@ use bitcoin::consensus::encode::{
 
 use crate::bp::ShortId;
 #[cfg(feature="use-rgb")]
-use crate::csv;
-use crate::csv::{network_serialize, network_deserialize};
+use crate::csv::{self, network_serialize, network_deserialize};
 use super::{Multipart, Error};
 
 
@@ -37,20 +36,31 @@ pub trait MessageEncode where Self: Sized {
     fn try_from_message(message: Message) -> Result<Self, Self::Error>;
 }
 
-// This is a trick for rust compiler helping to distinguish types implementing
-// mutually-exclusive traits (required until negative trait impls will be there)
-// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
+/// This is a trick for rust compiler helping to distinguish types implementing
+/// mutually-exclusive traits (required until negative trait impls will be there)
+/// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
 mod strategy {
     use core::marker::PhantomData;
+    use std::fmt;
 
     // Defining strategies:
+    /// Strategy used for encoding data structures that support encoding with
+    /// bitcoin consensus rules (`bitcoin::consensus::encode`)
     pub enum BitcoinConsensus { }
+
+    /// Strategy used for encoding data structures that support encoding with
+    /// RGB network serialization rules
     #[cfg(feature="use-rgb")]
     pub enum RGBStrategy { }
-    pub enum Native { }
-    pub trait Other { type Strategy; }
 
-    #[repr(transparent)]
+    /// Strategy used for encoding data structures that can be directly
+    /// represented as `zmq::Message` with `TryFrom<Message>` and
+    /// `Into<Message>` trait implementations
+    pub enum Native { }
+
+    /// Strategy used for custom implementation of data structure encoding
+    pub trait Other { type Strategy: Clone + fmt::Debug + fmt::Display; }
+
     pub struct Holder<T, S>(T, PhantomData<S>);
     impl<T, S> Holder<T, S> {
         pub fn new(val: T) -> Self { Self(val, PhantomData::<S>::default()) }
@@ -137,9 +147,10 @@ pub trait MultipartEncode<T>: TryFrom<Multipart> + Into<Multipart> {
 
 // Primitive type implementations
 // 1. Vector
+// We can't use wrapper; in the current version it does not support generics
 //wrapper!(ReqVec<'a, T: ReqArg<'a>>, PhantomData<&'a Vec<T>>, Vec<T>,
 //         doc="Wrapper around `Vec` supporting `Req` trait");
-#[repr(transparent)]
+#[derive(Clone)]
 pub struct VecEncoding<T: MessageEncode>(Vec<T>);
 
 // repr(transparent) is not yet working for generics, so we have to implement manually
