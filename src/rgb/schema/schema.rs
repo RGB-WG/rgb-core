@@ -22,34 +22,34 @@ use super::{
     types::*,
     transition::*
 };
-use crate::rgb::{self, metadata, seal, data, state};
+use crate::rgb::{self, metadata, seal, data};
 use crate::rgb::schema::script;
 use crate::csv::{ConsensusCommit, serialize, Error};
 
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
-pub enum ValidationError {
+pub enum SchemaError {
     InvalidValue(metadata::Value),
     MinMaxBoundsOnLargeInt,
 
     OccurencesNotMet(OccurencesError),
 
     UnknownField(metadata::Type),
-    InvalidField(metadata::Type, Box<ValidationError>),
+    InvalidField(metadata::Type, Box<SchemaError>),
 
     InvalidTransitionId(usize),
 
-    InvalidBoundSeal(seal::Type, Box<ValidationError>),
+    InvalidBoundSeal(seal::Type, Box<SchemaError>),
     InvalidBoundSealId(seal::Type),
     InvalidBoundSealValue(seal::Type, StateFormat, data::Data),
     InvalidOutputBalanceBulletProof(usize),
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct PartialValidation {
-    pub closed_seals: Option<HashMap<usize, Occurences<u32>>>,
-    pub total_output_amount: Option<data::PedersenCommitment>,
+    pub should_close: Option<SealsSchema>,
+    pub output_commitments: Vec<data::PedersenCommitment>,
 }
 
 #[derive(Clone, Debug, Display)]
@@ -64,8 +64,8 @@ impl Schema {
         self.consensus_commit().expect("Schema with commit failures must nor be serialized")
     }
 
-    pub fn validate_transition(&self, ts: &rgb::Transition) -> Result<PartialValidation, ValidationError> {
-        let transition_schema = self.transitions.get(&ts.id).ok_or(ValidationError::InvalidTransitionId(ts.id))?;
+    pub fn validate_transition(&self, ts: &rgb::Transition) -> Result<PartialValidation, SchemaError> {
+        let transition_schema = self.transitions.get(&ts.id).ok_or(SchemaError::InvalidTransitionId(ts.id))?;
 
         // we only support standard scripting with no extensions at the moment
         match transition_schema.scripting {
@@ -77,66 +77,25 @@ impl Schema {
 
         // find invalid unknown fields
         for metadata::Field { id, .. } in ts.meta.iter() {
-            transition_schema.fields.get(&(id.0 as usize)).ok_or(ValidationError::UnknownField(*id))?;
+            transition_schema.fields.get(&(id.0 as usize)).ok_or(SchemaError::UnknownField(*id))?;
         }
         // check known fields
         for (field_type, field) in &transition_schema.fields {
             field.validate(metadata::Type(*field_type as u16), &ts.meta)?;
         }
 
-        // find invalid created seals
-        let mut output_commitments = Vec::new();
-        for (index, partial) in ts.state.iter().enumerate() {
-            match partial {
-                state::Partial::State(state::Bound{ id, val, .. }) => {
-                    let usize_id = id.0 as usize;
-
-                    // check if it's expected in this transition
-                    transition_schema.binds.get(&usize_id).ok_or(ValidationError::InvalidBoundSealId(*id))?;
-
-                    // match with the provided data type
-                    match (self.seals.get(&usize_id), val) {
-                        (Some(StateFormat::NoState), data::Data::None) => {},
-                        (Some(StateFormat::Amount), data::Data::Balance(commitment)) => {
-                            data::amount::verify_bullet_proof(commitment).map_err(|_| ValidationError::InvalidOutputBalanceBulletProof(index))?;
-
-                            output_commitments.push(commitment.clone());
-                        },
-                        (Some(StateFormat::Data), data::Data::Binary(_data)) => {
-                            unimplemented!(); // TODO
-                        },
-
-                        (None, data) => return Err(ValidationError::InvalidBoundSealId(*id)),
-                        (Some(state_format), data) => return Err(ValidationError::InvalidBoundSealValue(*id, *state_format, data.clone())),
-                    }
-                },
-                state::Partial::Commitment(_) => unimplemented!(), // TODO
-            }
-        }
-        // check created seals
-        for (seal_type, occurences) in &transition_schema.binds {
-            let count = ts.state
-                .iter()
-                .filter(|m| {
-                    match m {
-                        state::Partial::State(state::Bound { id: seal_type, .. }) => true,
-                        _ => false,
-                    }
-                })
-                .count();
-
-            occurences.check_count(count as u32)
-                .map_err(|e| ValidationError::InvalidBoundSeal(seal::Type(*seal_type as u16), Box::new(ValidationError::OccurencesNotMet(e))))?;
-        }
-
-        let total_output_amount = match output_commitments {
-            x if x.is_empty() => None,
-            data => Some(data.into_iter().fold(data::amount::zero_pedersen_commitment(), |acc, x| x + acc)),
-        };
+        let output_commitments = transition_schema
+            .binds
+            .validate(&self.seals, ts.state.iter().collect())?
+            .into_iter()
+            .map(|cmt| cmt.commitment)
+            .collect();
+        println!("output_commitments = {:?}", output_commitments);
+        //let total_output_amount = output_commitments.into_iter().fold(data::amount::zero_pedersen_commitment(), |acc, x| x + acc);
 
         Ok(PartialValidation {
-            closed_seals: transition_schema.closes.clone(),
-            total_output_amount,
+            should_close: transition_schema.closes.clone(),
+            output_commitments,
         })
     }
 }
@@ -190,7 +149,7 @@ mod test {
             fields: map!{
                 FIELD_VAL => Field(FieldFormat::String(10), Occurences::Once)
             },
-            binds: map!{},
+            binds: map!{}.into(),
             scripting: Scripting {
                 validation: Procedure::Standard(StandardProcedure::Rgb1Genesis),
                 extensions: Extensions::ScriptsDenied,

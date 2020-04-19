@@ -15,7 +15,7 @@
 use std::io;
 
 use super::types::*;
-use super::schema::ValidationError;
+use super::schema::SchemaError;
 use crate::rgb::metadata::{Metadata, Type, Value};
 use crate::csv::serialize::*;
 
@@ -35,12 +35,12 @@ pub enum FieldFormat {
 }
 
 impl FieldFormat {
-    pub fn validate(&self, value: &Value) -> Result<(), ValidationError> {
+    pub fn validate(&self, value: &Value) -> Result<(), SchemaError> {
         match (self, value) {
             (Self::Unsigned { bits: Bits::Bit256, min: None, max: None }, Value::U256(_)) => Ok(()),
-            (Self::Unsigned { bits: Bits::Bit256, .. }, Value::U256(_)) => Err(ValidationError::MinMaxBoundsOnLargeInt),
+            (Self::Unsigned { bits: Bits::Bit256, .. }, Value::U256(_)) => Err(SchemaError::MinMaxBoundsOnLargeInt),
             (Self::Unsigned { bits: Bits::Bit128, min: None, max: None }, Value::U128(_)) => Ok(()),
-            (Self::Unsigned { bits: Bits::Bit128, .. }, Value::U128(_)) => Err(ValidationError::MinMaxBoundsOnLargeInt),
+            (Self::Unsigned { bits: Bits::Bit128, .. }, Value::U128(_)) => Err(SchemaError::MinMaxBoundsOnLargeInt),
             (Self::Unsigned { bits: Bits::Bit64, min, max }, Value::U64(val)) if *val >= min.unwrap_or(0) && *val <= max.unwrap_or(u64::MAX) => Ok(()),
             (Self::Unsigned { bits: Bits::Bit32, min, max }, Value::U32(val)) if *val as u64 >= min.unwrap_or(0) && *val as u64 <= max.unwrap_or(u32::MAX as u64) => Ok(()),
             (Self::Unsigned { bits: Bits::Bit16, min, max }, Value::U16(val)) if *val as u64 >= min.unwrap_or(0) && *val as u64 <= max.unwrap_or(u16::MAX as u64) => Ok(()),
@@ -58,7 +58,7 @@ impl FieldFormat {
 
             // TODO: other types when added to metadata::Value
 
-            _ => Err(ValidationError::InvalidValue(value.clone()))
+            _ => Err(SchemaError::InvalidValue(value.clone()))
         }
     }
 }
@@ -90,7 +90,7 @@ impl Commitment for FieldFormat {
 pub struct Field(pub FieldFormat, pub Occurences<u8>);
 
 impl Field {
-    pub fn validate(&self, field_type: Type, metadata: &Metadata) -> Result<(), ValidationError> {
+    pub fn validate(&self, field_type: Type, metadata: &Metadata) -> Result<(), SchemaError> {
         let count = metadata
             .iter()
             .filter_map(|m| {
@@ -101,10 +101,10 @@ impl Field {
                 }
             })
             .try_fold(0, |acc, val| self.0.validate(&val).and_then(|_| Ok(acc + 1)))
-            .map_err(|e| ValidationError::InvalidField(field_type, Box::new(e)))?;
+            .map_err(|e| SchemaError::InvalidField(field_type, Box::new(e)))?;
 
         self.1.check_count(count)
-            .map_err(|e| ValidationError::InvalidField(field_type, Box::new(ValidationError::OccurencesNotMet(e))))
+            .map_err(|e| SchemaError::InvalidField(field_type, Box::new(SchemaError::OccurencesNotMet(e))))
     }
 }
 
