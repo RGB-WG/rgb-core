@@ -16,6 +16,7 @@ use std::{io, str, ops::Deref};
 
 use num_traits::{ToPrimitive, FromPrimitive};
 use bitcoin::{
+    secp256k1,
     hash_types::Txid,
     util::uint::{Uint128, Uint256},
     consensus::encode as consensus
@@ -148,6 +149,39 @@ impl Commitment for String {
     }
 }
 
+impl Commitment for secp256k1::PublicKey {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(e.write(&self.serialize())?)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
+        d.read_exact(&mut buf);
+        Ok(Self::from_slice(&buf).map_err(|_| Error::DataIntegrityError)?)
+    }
+}
+
+impl Commitment for secp256k1::Signature {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(e.write(&self.serialize_compact())?)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
+        d.read_exact(&mut buf);
+        Ok(Self::from_compact(&buf).map_err(|_| Error::DataIntegrityError)?)
+    }
+}
+
+impl Commitment for bitcoin::Network {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(self.magic().commitment_serialize(&mut e)?)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        Ok(Self::from_magic(u32::commitment_deserialize(&mut d)?).ok_or(Error::ValueOutOfRange)?)
+    }
+}
 
 // Tests
 #[cfg(test)]
