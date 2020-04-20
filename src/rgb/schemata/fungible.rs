@@ -12,11 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
+use core::option::NoneError;
 use std::{
     sync::Once,
-    convert::TryFrom,
     collections::HashMap
 };
+use rand::{thread_rng, Rng};
 
 use bitcoin::util::uint::Uint256;
 
@@ -39,15 +40,18 @@ use crate::rgb::{
 };
 
 #[non_exhaustive]
-#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
+#[derive(Debug, Display, From)]
 #[display_from(Debug)]
 pub enum Error {
-    SealError(seal::Error)
+    SealError,
+
+    #[derive_from]
+    SealBlingingError(rand::Error)
 }
 
-impl From<seal::Error> for Error {
-    fn from(error: seal::Error) -> Self {
-        Self::SealError(error)
+impl From<NoneError> for Error {
+    fn from(_: NoneError) -> Self {
+        Self::SealError
     }
 }
 
@@ -73,9 +77,11 @@ impl Rgb1 {
             balances.into_iter().try_fold(
                 Vec::<state::Partial>::with_capacity(seals_count),
                 |mut bound_state, (outpoint, balance)| -> Result<Vec<state::Partial>, Error> {
+                    let mut entropy = [0u64; 1];
+                    thread_rng().try_fill(&mut entropy)?;
                     bound_state.push(state::Partial::State(state::Bound {
                         id: seal::Type(Self::BALANCE_SEAL as u16),
-                        seal: rgb::Seal::try_from(outpoint)?,
+                        seal: rgb::Seal::maybe_from_outpoint(outpoint, entropy[0])?,
                         val: rgb::Data::Balance(balance)
                     }));
                     Ok(bound_state)

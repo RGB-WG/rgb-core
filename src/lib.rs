@@ -21,6 +21,7 @@
 #![feature(optin_builtin_traits)]
 #![feature(associated_type_defaults)]
 #![feature(const_fn)]
+#![feature(try_trait)]
 
 // Coding conventions
 #![deny(non_upper_case_globals)]
