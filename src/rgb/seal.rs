@@ -27,29 +27,32 @@ pub struct Type(pub u16);
 #[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
 #[display_from(Debug)]
 pub enum Seal {
-    /// Seal contained within the commitment transaction
-    Local(u16),
+    /// Seal contained within the witness transaction
+    WitnessTxout(u16),
     /// Seal that is revealed
-    Revealed(OutpointReveal, Option<ShortId>),
+    RevealedTxout(OutpointReveal, Option<ShortId>),
     /// Seal that is not revealed yet
-    Blinded(OutpointHash)
+    BlindedTxout(OutpointHash)
 }
 
 impl Seal {
-    pub fn local(vout: u16) -> Self {
-        Self::Local(vout)
+    pub fn witness(vout: u16) -> Self {
+        Self::WitnessTxout(vout)
     }
     pub fn revealed(txid: Txid, vout: u16, blinding: u64) -> Self {
-        Seal::Revealed(OutpointReveal { blinding, txid, vout, }, None)
+        Seal::RevealedTxout(OutpointReveal { blinding, txid, vout, }, None)
+    }
+    pub fn outpoint_reveal(revealed_outpoint: OutpointReveal, short_id: Option<ShortId>) -> Self {
+        Seal::RevealedTxout(revealed_outpoint, short_id)
     }
     pub fn maybe_from_outpoint(outpoint: bitcoin::OutPoint, blinding: u64) -> Option<Self> {
         let vout = outpoint.vout;
         if vout > std::u16::MAX as u32 {
             return None
         }
-        Some(Seal::Revealed(OutpointReveal { blinding, txid: outpoint.txid, vout: vout as u16 }, None))
+        Some(Seal::RevealedTxout(OutpointReveal { blinding, txid: outpoint.txid, vout: vout as u16 }, None))
     }
     pub fn blinded(hash: OutpointHash) -> Self {
-        Self::Blinded(hash)
+        Seal::BlindedTxout(hash)
     }
 }

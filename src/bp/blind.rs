@@ -13,7 +13,7 @@
 
 
 use bitcoin::Txid;
-use bitcoin::hashes::{Hash, sha256d};
+use bitcoin::hashes::{Hash, HashEngine, sha256d};
 
 
 /// Data required to generate or reveal the information about blinded
@@ -32,5 +32,15 @@ pub struct OutpointReveal {
     pub vout: u16,
 }
 
+impl OutpointReveal {
+    pub fn outpoint_hash(&self) -> OutpointHash {
+        let mut engine = OutpointHash::engine();
+        engine.input(&self.blinding.to_be_bytes()[..]);
+        engine.input(&self.txid[..]);
+        engine.input(&self.vout.to_be_bytes()[..]);
+        OutpointHash::from_engine(engine)
+    }
+}
 
 hash_newtype!(OutpointHash, sha256d::Hash, 32, doc="Blind version of transaction outpoint");
+impl_hashencode!(OutpointHash);
