@@ -15,7 +15,7 @@ name = "lnpbp"
 path = "src/lib.rs"
 
 [dependencies]
-bitcoin = { git = "https://github.com/lnp-bp/rust-bitcoin", branch = "staging", features = [ "use-serde" ] }
+bitcoin = { git = "https://github.com/lnp-bp/rust-bitcoin", branch = "staging" }
 lightning = { git = "https://github.com/lnp-bp/rust-lightning", branch = "staging", optional = true }
 lightning-net-tokio = { git = "https://github.com/lnp-bp/rust-lightning", branch = "staging", optional = true }
 miniscript = { git = "https://github.com/lnp-bp/rust-miniscript", branch = "staging" }
@@ -49,4 +49,4 @@ use-rgb = ["use-bulletproofs", "petgraph"]
 use-api = ["zmq"]
 use-daemons = ["async-trait", "use-api"]
 use-lightning = ["lightning"]
-serde = ["serde_crate", "torut/serialize"]
+serde = ["serde_crate", "torut/serialize", "bitcoin/use-serde", "miniscript/serde"]
