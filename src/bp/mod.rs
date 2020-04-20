@@ -22,6 +22,7 @@ pub mod scripts;
 #[cfg(feature="use-rgb")]
 pub mod merkle;
 pub mod short_id;
+pub mod blind;
 
 pub use scripts::*;
 #[cfg(feature="use-rgb")]
