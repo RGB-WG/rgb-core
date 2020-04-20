@@ -1,4 +1,4 @@
-// Lightning network protocol (LNP) daemon suite
+// LNP/BP Rust Library
 // Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
