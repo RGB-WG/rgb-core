@@ -25,12 +25,27 @@ pub mod amount {
     //wrapper!(Amount, _AmountPhantom, u64, doc="64-bit data for amounts");
     pub type Amount = u64;
 
-    #[derive(Clone, PartialEq, Debug, Display)]
+    #[derive(Clone, Debug, Display)]
     #[display_from(Debug)]
     pub struct Commitment {
         pub commitment: pedersen::Commitment,
         pub bulletproof: pedersen::RangeProof,
     }
+
+    // The normal notion of the equivalence operator is to compare the _value_
+    // behind any data structure. However, here we compare not the value we
+    // are committing to, but the commitment itself. This is different to the
+    // design of the original Bulletproof designers, but is appropriate for the
+    // goals of RGB project and client-side validation paradigm
+    impl PartialEq for Commitment {
+        fn eq(&self, other: &Self) -> bool {
+            let plen = self.bulletproof.plen;
+            self.commitment.0.to_vec() == other.commitment.0.to_vec() &&
+                self.bulletproof.proof[..plen] == other.bulletproof.proof[..plen]
+        }
+    }
+
+    impl Eq for Commitment { }
 
     #[derive(Clone, PartialEq, Debug, Display)]
     #[display_from(Debug)]
