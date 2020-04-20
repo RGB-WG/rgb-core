@@ -25,6 +25,7 @@
 #![feature(arbitrary_enum_discriminant)]
 #![feature(bool_to_option)]
 #![feature(str_strip)]
+#![feature(bindings_after_at)]
 
 // Coding conventions
 #![deny(non_upper_case_globals)]
@@ -38,7 +39,6 @@
 #[macro_use]
 pub extern crate derive_wrapper;
 extern crate rand;
-extern crate num_integer;
 extern crate num_derive;
 extern crate num_traits;
 #[macro_use]

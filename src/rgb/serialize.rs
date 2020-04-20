@@ -476,6 +476,7 @@ impl csv::serialize::Commitment for rgb::Transition {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
         use crate::rgb::commit::Identifiable;
         Ok(
+            self.id.commitment_serialize(&mut e)? +
             self.meta.commitment()?.commitment_serialize(&mut e)? +
             self.state.commitment()?.commitment_serialize(&mut e)? +
             self.script.commitment()?.commitment_serialize(&mut e)?
@@ -490,6 +491,7 @@ impl csv::serialize::Commitment for rgb::Transition {
 impl csv::serialize::Network for rgb::Transition {
     fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
         Ok(
+            self.id.network_serialize(&mut e)? +
             self.meta.network_serialize(&mut e)? +
             self.state.network_serialize(&mut e)? +
             self.script.network_serialize(&mut e)?
@@ -498,6 +500,7 @@ impl csv::serialize::Network for rgb::Transition {
 
     fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
         Ok(Self {
+            id: csv::serialize::Network::network_deserialize(&mut d)?,
             meta: rgb::Metadata::network_deserialize(&mut d)?,
             state: rgb::State::network_deserialize(&mut d)?,
             script: Option::<rgb::Script>::network_deserialize(&mut d)?
