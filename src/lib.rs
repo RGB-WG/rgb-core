@@ -22,6 +22,9 @@
 #![feature(associated_type_defaults)]
 #![feature(const_fn)]
 #![feature(try_trait)]
+#![feature(arbitrary_enum_discriminant)]
+#![feature(bool_to_option)]
+#![feature(str_strip)]
 
 // Coding conventions
 #![deny(non_upper_case_globals)]
