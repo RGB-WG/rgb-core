@@ -500,7 +500,7 @@ mod test {
             transfer_outpoint_1.clone() => transfer_conf_amount_1.commitment.clone()
         };
 
-        let transfer = Rgb1::transfer(transfer_balances).unwrap();
+        let transfer = Rgb1::transfer(transfer_balances, HashMap::new()).unwrap();
         println!("{:#?}", transfer);
 
         let committing_tx = Transaction {

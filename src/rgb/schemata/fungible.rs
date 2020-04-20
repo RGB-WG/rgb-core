@@ -78,23 +78,29 @@ impl Rgb1 {
     const DUST_LIMIT_FIELD: usize = 5;
     const NETWORK_FIELD: usize = 6;
 
-    fn balances_to_bound_state(balances: Balances) -> Result<state::State, Error> {
-        let seals_count = balances.len();
-        Ok(rgb::State::from_inner(
-            balances.into_iter().try_fold(
-                Vec::<state::Partial>::with_capacity(seals_count),
-                |mut bound_state, (outpoint, balance)| -> Result<Vec<state::Partial>, Error> {
-                    let mut entropy = [0u64; 1];
-                    thread_rng().try_fill(&mut entropy)?;
-                    bound_state.push(state::Partial::State(state::Bound {
-                        id: seal::Type(Self::BALANCE_SEAL as u16),
-                        seal: rgb::Seal::maybe_from_outpoint(outpoint, entropy[0])?,
-                        val: rgb::Data::Balance(balance)
-                    }));
-                    Ok(bound_state)
-                }
-            )?
-        ))
+    fn balances_to_bound_state(balances: Balances, change: HashMap<u16, data::amount::Commitment>) -> Result<state::State, Error> {
+        let seals_count = balances.len() + change.len();
+        let mut state: Vec<state::Partial> = balances.into_iter().try_fold(
+            Vec::<state::Partial>::with_capacity(seals_count),
+            |mut bound_state, (outpoint, balance)| -> Result<Vec<state::Partial>, Error> {
+                let mut entropy = [0u64; 1];
+                thread_rng().try_fill(&mut entropy)?;
+                bound_state.push(state::Partial::State(state::Bound {
+                    id: seal::Type(Self::BALANCE_SEAL as u16),
+                    seal: rgb::Seal::maybe_from_outpoint(outpoint, entropy[0])?,
+                    val: rgb::Data::Balance(balance)
+                }));
+                Ok(bound_state)
+            }
+        )?;
+        state.extend(change.into_iter().map(|(vout, amount)| {
+            state::Partial::State(state::Bound {
+                id: seal::Type(Self::BALANCE_SEAL as u16),
+                seal: rgb::Seal::witness(vout),
+                val: rgb::Data::Balance(amount)
+            })
+        }).collect::<Vec<state::Partial>>());
+        Ok(rgb::State::from_inner(state))
     }
 
     pub fn issue(network: Network, ticker: &str, name: &str, descr: Option<&str>,
@@ -129,13 +135,13 @@ impl Rgb1 {
             );
         }
 
-        let state = Self::balances_to_bound_state(balances)?;
+        let state = Self::balances_to_bound_state(balances, HashMap::new())?;
 
         Ok(rgb::Transition { id: Self::PRIM_ISSUE_TS, meta, state, script: None })
     }
 
-    pub fn transfer(balances: Balances) -> Result<rgb::Transition, Error> {
-        let state = Self::balances_to_bound_state(balances)?;
+    pub fn transfer(balances: Balances, change: HashMap<u16, data::amount::Commitment>) -> Result<rgb::Transition, Error> {
+        let state = Self::balances_to_bound_state(balances, change)?;
 
         Ok(rgb::Transition { id: Self::TRANSFER_TS, meta: rgb::Metadata::default(), state, script: None })
     }
