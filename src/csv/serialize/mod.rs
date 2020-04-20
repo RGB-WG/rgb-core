@@ -22,37 +22,38 @@ pub use network::*;
 pub use storage::*;
 
 
-use std::{str, string, convert::From};
+use std::{io, str, string, convert::From};
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, From)]
 #[display_from(Debug)]
 #[non_exhaustive]
 pub enum Error {
-    BitcoinConsensus(bitcoin::consensus::encode::Error),
-    EnumValueUnknown(u8),
-    EnumValueOverflow,
-    Utf8Error(str::Utf8Error),
-    ValueOutOfRange,
-    WrongOptionalEncoding,
-    WrongDataSize { expected: usize, found: usize },
-    ParseFailed(&'static str),
-}
+    #[derive_from]
+    IoError(io::Error),
 
-impl From<str::Utf8Error> for Error {
-    fn from(err: str::Utf8Error) -> Self {
-        Self::Utf8Error(err)
-    }
+    #[derive_from]
+    BitcoinConsensus(bitcoin::consensus::encode::Error),
+
+    EnumValueUnknown(u8),
+
+    EnumValueOverflow,
+
+    #[derive_from]
+    Utf8Error(str::Utf8Error),
+
+    ValueOutOfRange,
+
+    WrongOptionalEncoding,
+
+    WrongDataSize { expected: usize, found: usize },
+
+    ParseFailed(&'static str),
+
+    DataIntegrityError,
 }
 
 impl From<string::FromUtf8Error> for Error {
     fn from(err: string::FromUtf8Error) -> Self {
         Self::Utf8Error(err.utf8_error())
-    }
-}
-
-impl From<bitcoin::consensus::encode::Error> for Error {
-    #[inline]
-    fn from(err: bitcoin::consensus::encode::Error) -> Self {
-        Error::BitcoinConsensus(err)
     }
 }

@@ -25,6 +25,8 @@ pub mod transition;
 pub mod serialize;
 pub mod commit;
 
+mod proof;
+
 
 pub use schemata::*;
 
@@ -34,3 +36,10 @@ pub use metadata::Metadata;
 pub use script::Script;
 pub use seal::Seal;
 pub use transition::Transition;
+
+pub use proof::*;
+
+
+use bitcoin::hashes::{Hash, sha256d};
+
+hash_newtype!(ContractId, sha256d::Hash, 32, doc="Double-sha256 hash of the genesis transition");
