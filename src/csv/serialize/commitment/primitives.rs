@@ -135,8 +135,8 @@ impl Commitment for &str {
         self.as_bytes().commitment_serialize(&mut e)
     }
 
-    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        str::from_utf8(<&[u8]>::commitment_deserialize(&mut d)?).map_err(Error::from)
+    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
+        panic!("Can't deserialize &str type; use String instead")
     }
 }
 

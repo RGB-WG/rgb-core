@@ -104,8 +104,8 @@ impl csv::serialize::Commitment for rgb::metadata::Value {
             TAG_I64 => I64(i64::commitment_deserialize(&mut d)?),
             TAG_F32 => F32(f32::commitment_deserialize(&mut d)?),
             TAG_F64 => F64(f64::commitment_deserialize(&mut d)?),
-            TAG_BYTES => Bytes(Box::from(<&[u8]>::commitment_deserialize(&mut d)?)),
-            TAG_STR => Str(String::from(<&str>::commitment_deserialize(&mut d)?)),
+            TAG_BYTES => Bytes(Box::<[u8]>::commitment_deserialize(&mut d)?),
+            TAG_STR => Str(String::commitment_deserialize(&mut d)?),
             _ => Err(csv::serialize::Error::ValueOutOfRange)?,
         })
     }
@@ -351,7 +351,7 @@ impl csv::serialize::Commitment for secp256k1zkp::pedersen::RangeProof {
         match data.len() {
             len if len < MAX_PROOF_SIZE => {
                 let mut ret = [0; MAX_PROOF_SIZE];
-                ret[..].copy_from_slice(&data);
+                ret[..len].copy_from_slice(&data);
                 Ok(Self{ proof: ret, plen: len })
             },
             _ => Err(WrongDataSize { expected: MAX_PROOF_SIZE, found: data.len() })
