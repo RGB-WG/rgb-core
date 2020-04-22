@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -11,15 +11,3 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::schema::Schema;
-
-pub mod fungible;
-// pub mod collectibles;
-
-pub use fungible::Rgb1;
-// pub use collectibles::Rgb2;
-
-
-pub trait Schemata {
-    fn get_schema() -> &'static Schema;
-}

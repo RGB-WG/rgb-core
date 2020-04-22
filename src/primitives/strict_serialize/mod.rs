@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -10,5 +10,3 @@
 // You should have received a copy of the MIT License
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
-
-pub type Script = ();

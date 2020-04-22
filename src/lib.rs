@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2019 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -25,6 +25,7 @@
 #![feature(bool_to_option)]
 #![feature(str_strip)]
 #![feature(bindings_after_at)]
+#![feature(in_band_lifetimes)]
 
 // Coding conventions
 #![deny(non_upper_case_globals)]
@@ -55,7 +56,7 @@ extern crate tokio;
 extern crate futures;
 
 // Support for node & node clients development (include API helpers)
-#[cfg(feature="daemons")]
+#[cfg(any(feature="daemons",feature="async"))]
 #[macro_use]
 extern crate async_trait;
 #[cfg(feature="zmq")]
@@ -76,21 +77,18 @@ pub extern crate secp256k1zkp;
 extern crate serde_crate as serde;
 
 
+mod primitives;
 #[macro_use]
-pub mod common;
+mod common;
+mod lnpbps;
 #[macro_use]
 pub mod bp;
 #[cfg(feature="lightning")]
 pub mod lnp;
-pub mod cmt;
-#[cfg(feature="rgb")]
-pub mod seals;
-#[cfg(feature="rgb")]
-#[macro_use]
-pub mod csv;
 #[cfg(feature="rgb")]
 pub mod rgb;
-#[cfg(feature="api")]
-pub mod api;
 
+#[cfg(feature="primitives")]
+pub use primitives::*;
 pub use common::*;
+pub use lnpbps::*;

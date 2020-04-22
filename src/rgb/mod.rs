@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -12,35 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-pub mod schema;
-pub mod schemata;
-
-pub mod metadata;
-pub mod data;
-pub mod seal;
-pub mod state;
-pub mod script;
-pub mod transition;
-pub mod history;
-pub mod validation;
-
-pub mod serialize;
-pub mod commit;
-
-mod proof;
-
-
-pub use schemata::*;
-
-pub use data::Data;
-pub use state::State;
-pub use metadata::Metadata;
-pub use script::Script;
-pub use seal::Seal;
-pub use transition::Transition;
-
-pub use proof::*;
-
+pub mod prelude {
+}
 
 use bitcoin::hashes::{Hash, sha256d};
 

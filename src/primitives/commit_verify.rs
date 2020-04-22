@@ -1,5 +1,5 @@
-// LNP/BP Rust Library
-// Written in 2019 by
+// LNP/BP Core Library implementing LNPBP specifications & standards
+// Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
 // To the extent possible under law, the author(s) have dedicated all
@@ -11,7 +11,3 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub struct SplitData<ONCH, OFFCH> {
-    pub onchain: ONCH,
-    pub offchain: OFFCH,
-}
