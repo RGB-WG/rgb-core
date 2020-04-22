@@ -20,18 +20,18 @@ use std::str::FromStr;
 use std::net::SocketAddr;
 use std::convert::TryInto;
 
-#[cfg(feature="use-tokio")]
+#[cfg(feature="tokio")]
 use tokio::net::TcpStream;
-#[cfg(feature="use-tokio")]
+#[cfg(feature="tokio")]
 use tokio::io::AsyncWriteExt;
-#[cfg(feature="use-tokio")]
+#[cfg(feature="tokio")]
 use tokio::io::AsyncReadExt;
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 
-#[cfg(not(feature="use-tokio"))]
+#[cfg(not(feature="tokio"))]
 use std::net::TcpStream;
-#[cfg(not(feature="use-tokio"))]
+#[cfg(not(feature="tokio"))]
 use std::io::{Read, Write};
 
 // We re-export this under more proper name (it's not per-channel encryptor,
@@ -132,25 +132,25 @@ impl Connection {
             Err(ConnectionError::TorNotYetSupported)?
         }
 
-        #[cfg(feature="use-log")]
+        #[cfg(feature="log")]
         debug!("Initiating connection protocol with {}", node);
 
         // Opening network connection
-        #[cfg(feature="use-tor")]
+        #[cfg(feature="tor")]
         let socket_addr: SocketAddr = node.inet_addr.try_into()
             .map_err(|_| ConnectionError::TorNotYetSupported)?;
-        #[cfg(not(feature="use-tor"))]
+        #[cfg(not(feature="tor"))]
         let socket_addr: SocketAddr = node.inet_addr.try_into()
             .expect("We are not using tor so conversion of internet addresses must not fail");
 
-        #[cfg(feature="use-log")]
+        #[cfg(feature="log")]
         trace!("Connecting to {}", socket_addr);
-        #[cfg(feature="use-tokio")]
+        #[cfg(feature="tokio")]
         let mut stream = TcpStream::connect(socket_addr).await?;
-        #[cfg(not(feature="use-tokio"))]
+        #[cfg(not(feature="tokio"))]
         let mut stream = TcpStream::connect(socket_addr)?;
 
-        #[cfg(feature="use-log")]
+        #[cfg(feature="log")]
         trace!("Starting handshake procedure with {}", node);
         let mut handshake = PeerHandshake::new_outbound(
             private_key, &node.node_id, ephemeral_private_key
@@ -161,7 +161,7 @@ impl Connection {
         let mut buf = vec![];
         buf.reserve(MAX_TRANSPORT_FRAME_SIZE);
         let result: Result<Encryptor, ConnectionError> = loop {
-            #[cfg(feature="use-log")]
+            #[cfg(feature="log")]
             trace!("Handshake step {}: processing data `{:x?}`", step, input);
 
             let (act, enc) = handshake.process_act(input)
@@ -170,15 +170,15 @@ impl Connection {
             if let Some(encryptor) = enc {
                 break Ok(encryptor)
             } else if let Some(act) = act {
-                #[cfg(feature="use-log")]
+                #[cfg(feature="log")]
                 trace!("Handshake step {}: sending `{:x?}`", step, act.serialize());
 
-                #[cfg(feature="use-tokio")]
+                #[cfg(feature="tokio")]
                 stream.write_all(&act.serialize()).await?;
-                #[cfg(not(feature="use-tokio"))]
+                #[cfg(not(feature="tokio"))]
                 stream.write_all(&act.serialize())?;
             } else {
-                #[cfg(feature="use-log")]
+                #[cfg(feature="log")]
                 error!("`PeerHandshake.process_act` returned non-standard result");
 
                 Err(ConnectionError::FailedHandshake(
@@ -187,23 +187,23 @@ impl Connection {
                 ))?
             }
 
-            #[cfg(feature="use-log")]
+            #[cfg(feature="log")]
             trace!("Handshake step {}: waiting for response`", step);
 
-            #[cfg(feature="use-tokio")]
+            #[cfg(feature="tokio")]
             let read_len = stream.read_buf(&mut buf).await?;
-            #[cfg(not(feature="use-tokio"))]
+            #[cfg(not(feature="tokio"))]
             let read_len = stream.read_to_end(&mut buf)?;
             input = &buf[0..read_len];
 
-            #[cfg(feature="use-log")]
+            #[cfg(feature="log")]
             trace!("Handshake step {}: received data `{:x?}`", step, input);
 
             step += 1;
         };
         let encryptor = result?;
 
-        #[cfg(feature="use-log")]
+        #[cfg(feature="log")]
         trace!("Handshake successfully completed");
 
         Ok(Self {

@@ -17,7 +17,7 @@ use zmq;
 use bitcoin;
 use bitcoin::secp256k1;
 
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 use crate::csv;
 
 
@@ -55,7 +55,7 @@ impl From<bitcoin::consensus::encode::Error> for Error {
     }
 }
 
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 impl From<csv::serialize::Error> for Error {
     fn from(_: csv::serialize::Error) -> Self {
         Error::MalformedArgument

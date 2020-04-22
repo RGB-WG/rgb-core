@@ -19,14 +19,14 @@ use bitcoin::hashes::{
 #[macro_use]
 pub mod tagged256;
 pub mod scripts;
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 pub mod merkle;
 pub mod short_id;
 pub mod network;
 pub mod blind;
 
 pub use scripts::*;
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 pub use merkle::*;
 pub use short_id::*;
 pub use network::Network;

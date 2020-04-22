@@ -24,7 +24,7 @@ use bitcoin::consensus::encode::{
 };
 
 use crate::bp::ShortId;
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 use crate::csv::{self, network_serialize, network_deserialize};
 use super::{Multipart, Error};
 
@@ -50,7 +50,7 @@ mod strategy {
 
     /// Strategy used for encoding data structures that support encoding with
     /// RGB network serialization rules
-    #[cfg(feature="use-rgb")]
+    #[cfg(feature="rgb")]
     pub enum RGBStrategy { }
 
     /// Strategy used for encoding data structures that can be directly
@@ -82,7 +82,7 @@ impl<T> MessageEncode for strategy::Holder<T, strategy::BitcoinConsensus>
 }
 
 // 1.2. Auto impl for client-validation-serialized types
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 impl<T> MessageEncode for strategy::Holder<T, strategy::RGBStrategy>
     where T: csv::serialize::Network {
     type Error = Error;

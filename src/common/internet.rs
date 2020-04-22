@@ -17,7 +17,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::convert::TryFrom;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-#[cfg(feature="use-tor")]
+#[cfg(feature="tor")]
 use torut::onion::{TorPublicKeyV3, OnionAddressV3, TORV3_PUBLIC_KEY_LENGTH};
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
@@ -44,14 +44,14 @@ use serde::{Serialize, Deserialize};
 pub enum InetAddr {
     IPv4(Ipv4Addr),
     IPv6(Ipv6Addr),
-    #[cfg(feature="use-tor")]
+    #[cfg(feature="tor")]
     Tor(TorPublicKeyV3),
 }
 
 impl InetAddr {
-    #[cfg(feature="use-tor")]
+    #[cfg(feature="tor")]
     pub const UNIFORM_ADDR_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
-    #[cfg(not(feature="use-tor"))]
+    #[cfg(not(feature="tor"))]
     pub const UNIFORM_ADDR_LEN: usize = 32;
 
     #[inline]
@@ -59,16 +59,16 @@ impl InetAddr {
         match self {
             InetAddr::IPv4(ipv4_addr) => Some(ipv4_addr.to_ipv6_mapped()),
             InetAddr::IPv6(ipv6_addr) => Some(*ipv6_addr),
-            #[cfg(feature="use-tor")]
+            #[cfg(feature="tor")]
             _ => None,
         }
     }
 
-    #[cfg(not(feature="use-tor"))]
+    #[cfg(not(feature="tor"))]
     #[inline]
     pub fn is_tor(&self) -> bool { false }
 
-    #[cfg(feature="use-tor")]
+    #[cfg(feature="tor")]
     #[inline]
     pub fn is_tor(&self) -> bool {
         if let InetAddr::Tor(_) = self { true } else { false }
@@ -93,9 +93,9 @@ impl InetAddr {
                 a.clone_from_slice(&d[16..]);
                 Some(InetAddr::IPv6(Ipv6Addr::from(a)))
             },
-            #[cfg(feature="use-tor")]
+            #[cfg(feature="tor")]
             d  => TorPublicKeyV3::from_bytes(&d).map(InetAddr::Tor).ok(),
-            #[cfg(not(feature="use-tor"))]
+            #[cfg(not(feature="tor"))]
             _ => None,
         }
     }
@@ -105,7 +105,7 @@ impl InetAddr {
         match self {
             InetAddr::IPv4(ipv4_addr) => buf[28..].copy_from_slice(&ipv4_addr.octets()),
             InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
-            #[cfg(feature="use-tor")]
+            #[cfg(feature="tor")]
             InetAddr::Tor(tor_addr) => buf = tor_addr.to_bytes(),
         }
         buf
@@ -125,7 +125,7 @@ impl fmt::Display for InetAddr {
             // TODO:
             InetAddr::IPv4(addr) => write!(f, "{}", addr),
             InetAddr::IPv6(addr) => write!(f, "{}", addr),
-            #[cfg(feature="use-tor")]
+            #[cfg(feature="tor")]
             InetAddr::Tor(addr) => write!(f, "{}", addr),
         }
     }
@@ -138,7 +138,7 @@ impl TryFrom<InetAddr> for IpAddr {
         Ok(match addr {
             InetAddr::IPv4(addr) => IpAddr::V4(addr),
             InetAddr::IPv6(addr) => IpAddr::V6(addr),
-            #[cfg(feature="use-tor")]
+            #[cfg(feature="tor")]
             InetAddr::Tor(addr) =>
                 Err(String::from("IpAddr can't be used to store Tor address"))?,
         })
@@ -165,7 +165,7 @@ impl From<Ipv6Addr> for InetAddr {
     fn from(addr: Ipv6Addr) -> Self { InetAddr::IPv6(addr) }
 }
 
-#[cfg(feature="use-tor")]
+#[cfg(feature="tor")]
 impl From<TorPublicKeyV3> for InetAddr {
     #[inline]
     fn from(value: TorPublicKeyV3) -> Self {
@@ -173,7 +173,7 @@ impl From<TorPublicKeyV3> for InetAddr {
     }
 }
 
-#[cfg(feature="use-tor")]
+#[cfg(feature="tor")]
 impl From<OnionAddressV3> for InetAddr {
     #[inline]
     fn from(addr: OnionAddressV3) -> Self { InetAddr::Tor(addr.get_public_key()) }
@@ -187,13 +187,13 @@ impl FromStr for InetAddr {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match IpAddr::from_str(s) {
             Ok(ip_addr) => Ok(Self::from(ip_addr)),
-            #[cfg(feature="use-tor")]
+            #[cfg(feature="tor")]
             Err(_) =>
                 Ok(Self::from(OnionAddressV3::from_str(s)
                     .map(Self::from)
                     .map_err(|_| String::from("Wrong onion address string"))?)
                 ),
-            #[cfg(not(feature="use-tor"))]
+            #[cfg(not(feature="tor"))]
             Err(_) => Err(String::from("Tor addresses are not supported; consider compiling with 'use-tor' feature")),
         }
     }
@@ -211,11 +211,11 @@ impl TryFrom<Vec<u8>> for InetAddr {
 #[cfg(feature = "parse_arg")]
 impl parse_arg::ParseArgFromStr for InetAddr {
     fn describe_type<W: std::fmt::Write>(mut writer: W) -> std::fmt::Result {
-        #[cfg(not(feature="use-tor"))]
+        #[cfg(not(feature="tor"))]
         {
             write!(writer, "IPv4 or IPv6 adress")
         }
-        #[cfg(feature="use-tor")]
+        #[cfg(feature="tor")]
         {
             write!(writer, "IPv4, IPv6, or Tor (onion) adress")
         }
@@ -236,7 +236,7 @@ impl TryFrom<&[u8]> for InetAddr {
                 buf.clone_from_slice(value);
                 Ok(InetAddr::from(buf))
             },
-            #[cfg(feature="use-tor")]
+            #[cfg(feature="tor")]
             32 => {
                 let mut buf = [0u8; 32];
                 buf.clone_from_slice(value);
@@ -268,7 +268,7 @@ impl From<[u16; 8]> for InetAddr {
     }
 }
 
-#[cfg(feature="use-tor")]
+#[cfg(feature="tor")]
 impl TryFrom<[u8; InetAddr::UNIFORM_ADDR_LEN]> for InetAddr {
     type Error = String;
     #[inline]

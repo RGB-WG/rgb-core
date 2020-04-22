@@ -44,30 +44,33 @@ extern crate num_traits;
 pub extern crate bitcoin;
 
 // Logging
-#[cfg(feature="use-log")]
+#[cfg(feature="log")]
 #[macro_use]
 extern crate log;
 
 // Async IO, IPC & networking
-#[cfg(feature="use-tokio")]
+#[cfg(feature="tokio")]
 extern crate tokio;
-#[cfg(not(feature="use-tokio"))]
+#[cfg(not(feature="tokio"))]
 extern crate futures;
 
 // Support for node & node clients development (include API helpers)
-#[cfg(feature="use-daemons")]
+#[cfg(feature="daemons")]
 #[macro_use]
 extern crate async_trait;
-#[cfg(feature="use-zmq")]
+#[cfg(feature="zmq")]
 extern crate zmq;
 
 // Lightning-network related functionality
-#[cfg(feature="use-lightning")]
+#[cfg(feature="lightning")]
 pub extern crate lightning;
+#[cfg(feature="lightning_tokio")]
+pub extern crate lightning_net_tokio;
+
 pub extern crate miniscript;
 
 // Buletproofs support
-#[cfg(feature="use-bulletproofs")]
+#[cfg(feature="bulletproofs")]
 pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
@@ -77,17 +80,17 @@ extern crate serde_crate as serde;
 pub mod common;
 #[macro_use]
 pub mod bp;
-#[cfg(feature="use-lightning")]
+#[cfg(feature="lightning")]
 pub mod lnp;
 pub mod cmt;
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 pub mod seals;
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 #[macro_use]
 pub mod csv;
-#[cfg(feature="use-rgb")]
+#[cfg(feature="rgb")]
 pub mod rgb;
-#[cfg(feature="use-api")]
+#[cfg(feature="api")]
 pub mod api;
 
 pub use common::*;
