@@ -12,18 +12,17 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 mod digests;
-mod pubkey;
-mod taproot;
 mod lockscript;
+mod pubkey;
 mod scriptpubkey;
-mod txout;
+mod taproot;
 mod tx;
-
+mod txout;
 
 pub use digests::*;
-pub use pubkey::*;
-pub use taproot::*;
 pub use lockscript::*;
+pub use pubkey::*;
 pub use scriptpubkey::*;
-pub use txout::*;
+pub use taproot::*;
 pub use tx::*;
+pub use txout::*;

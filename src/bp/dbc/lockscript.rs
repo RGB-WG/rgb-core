@@ -11,15 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
 use bitcoin::secp256k1::PublicKey;
 
+use super::pubkey::PubkeyCommitment;
 use crate::bp::scripts::{LockScript, LockScriptParseError};
-use crate::primitives::commit_verify::{
-    CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
-};
-use super::pubkey::*;
-
+use crate::primitives::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -28,38 +24,27 @@ pub struct LockscriptCommitment {
     pub original: LockScript,
 }
 
-impl<MSG> CommitmentVerify<MSG> for LockscriptCommitment where
-    MSG: EmbedCommittable<Self> + AsRef<[u8]>
-{
-
-    #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, &msg)
-    }
-}
-
-impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
-    MSG: EmbedCommittable<Self> + AsRef<[u8]>
+impl<MSG> EmbedCommitVerify<MSG> for LockscriptCommitment
+where
+    MSG: AsRef<[u8]>,
 {
     type Container = LockScript;
     type Error = LockScriptParseError<bitcoin::PublicKey>;
 
     #[inline]
-    fn get_original_container(&self) -> Self::Container {
+    fn container(&self) -> Self::Container {
         self.original.clone()
     }
 
-    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let tweaked = container.clone().replace_pubkeys(|pubkey: PublicKey| {
-            PubkeyCommitment::commit_to(pubkey, msg).ok().map(|c| c.tweaked)
+            PubkeyCommitment::embed_commit(pubkey, msg)
+                .ok()
+                .map(|c| c.tweaked)
         })?;
         Ok(Self {
             original: container,
-            tweaked
+            tweaked,
         })
     }
 }
-
-impl<T> Verifiable<LockscriptCommitment> for T where T: AsRef<[u8]> { }
-
-impl<T> EmbedCommittable<LockscriptCommitment> for T where T: AsRef<[u8]> { }

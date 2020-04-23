@@ -13,13 +13,10 @@
 
 use bitcoin::{Amount, Transaction, TxOut};
 
-use crate::primitives::commit_verify::{
-    CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
-};
-use crate::bp::PubkeyScript;
 use super::scriptpubkey::Error;
-use super::txout::{TxoutContainer, TxoutCommitment};
-
+use super::txout::{TxoutCommitment, TxoutContainer};
+use crate::bp::PubkeyScript;
+use crate::primitives::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -40,75 +37,57 @@ pub struct TxCommitment {
     pub tweaked: TxoutCommitment,
 }
 
-impl<MSG> CommitmentVerify<MSG> for TxCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<TxoutCommitment> + AsRef<[u8]>
-{
-
-    #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
-    }
-}
-
-impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<TxoutCommitment> + AsRef<[u8]>
+impl<MSG> EmbedCommitVerify<MSG> for TxCommitment
+where
+    MSG: AsRef<[u8]>,
 {
     type Container = TxContainer;
     type Error = Error;
 
     #[inline]
-    fn get_original_container(&self) -> Self::Container {
+    fn container(&self) -> Self::Container {
         TxContainer {
             fee: self.fee,
             entropy: self.entropy,
             tx: self.tx.clone(),
-            txout_container: self.original.clone()
+            txout_container: self.original.clone(),
         }
     }
 
-    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
         let fee = container.fee;
         let entropy = container.entropy;
         let nouts = tx.output.len();
         let vout = (fee.as_sat() + (entropy as u64)) % (nouts as u64);
         let txout_container = container.txout_container;
-        let txout_commitment = TxoutCommitment::commit_to(txout_container.clone(), msg)?;
+        let txout_commitment = TxoutCommitment::embed_commit(txout_container.clone(), msg)?;
 
         let pubkey_script: PubkeyScript = txout_container.clone().script_container.into();
         let txout = TxOut {
             value: txout_commitment.value,
-            script_pubkey: pubkey_script.into_inner()
+            script_pubkey: pubkey_script.into_inner(),
         };
 
         tx.output.insert(vout as usize, txout);
         Ok(Self {
-            entropy, fee, tx, original: txout_container, tweaked: txout_commitment
+            entropy,
+            fee,
+            tx,
+            original: txout_container,
+            tweaked: txout_commitment,
         })
     }
 }
 
-impl<T> Verifiable<TxCommitment> for T where T: AsRef<[u8]> { }
-
-impl<T> EmbedCommittable<TxCommitment> for T where T: AsRef<[u8]> { }
-
-
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-    use secp256k1::PublicKey;
-    use bitcoin::{*, consensus::encode::deserialize};
-    use bitcoin::hashes::hex::FromHex;
     use super::*;
     use crate::bp::dbc::ScriptPubkeyContainer;
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-    struct Message<'a>(&'a str);
-    impl AsRef<[u8]> for Message<'_> {
-        fn as_ref(&self) -> &[u8] {
-            self.0.as_ref()
-        }
-    }
+    use bitcoin::hashes::hex::FromHex;
+    use bitcoin::{consensus::encode::deserialize, *};
+    use secp256k1::PublicKey;
+    use std::str::FromStr;
 
     #[test]
     fn test_ability_to_commit() {
@@ -138,21 +117,19 @@ mod test {
             entropy: 0,
             txout_container: TxoutContainer {
                 value: 0,
-                script_container: ScriptPubkeyContainer::PubkeyHash(PublicKey::from_str(
-                    "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
-                ).unwrap())
-            }
+                script_container: ScriptPubkeyContainer::PubkeyHash(
+                    PublicKey::from_str(
+                        "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
+                    )
+                    .unwrap(),
+                ),
+            },
         };
         let container2 = container1.clone();
 
-        let msg = Message("message to commit to");
+        let msg = "message to commit to";
 
-        // First way
-        let commitment: TxCommitment = msg.commit_embed(container1).unwrap();
-        assert_eq!(msg.verify(&commitment), true);
-
-        // Second way
-        let commitment = TxCommitment::commit_to(container2, &msg).unwrap();
-        assert_eq!(EmbeddedCommitment::<Message>::reveal_verify(&commitment, &msg), true);
+        let commitment = TxCommitment::embed_commit(container1, &msg).unwrap();
+        assert_eq!(commitment.verify(&msg), true);
     }
 }

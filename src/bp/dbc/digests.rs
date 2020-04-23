@@ -11,60 +11,36 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use crate::primitives::commit_verify::CommitVerify;
 use bitcoin::hashes::Hash;
-use crate::primitives::commit_verify::{
-    Committable, Verifiable, CommitmentVerify, StandaloneCommitment
-};
 
-
-impl<HT, MSG> CommitmentVerify<MSG> for HT where
+impl<HT, MSG> CommitVerify<MSG> for HT
+where
     HT: Hash,
-    MSG: AsRef<[u8]> + Committable<Self>
+    MSG: AsRef<[u8]>,
 {
     #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
-        <HT as StandaloneCommitment<MSG>>::reveal_verify(&self, &msg)
-    }
-}
-
-impl<HT, MSG> StandaloneCommitment<MSG> for HT where
-    HT: Hash,
-    MSG: AsRef<[u8]> + Committable<Self>
-{
-    #[inline]
-    fn commit_to(msg: &MSG) -> HT {
+    fn commit(msg: &MSG) -> HT {
         From::from(<HT as Hash>::hash(msg.as_ref()))
     }
 }
 
-
-impl<T, HT> Verifiable<HT> for T where HT: Hash, T: AsRef<[u8]> { }
-
-impl<T, HT> Committable<HT> for T where HT: Hash, T: AsRef<[u8]> { }
-
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use bitcoin::hashes::{*, hex::ToHex};
-
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-    struct Message<'a>(&'a str);
-    impl AsRef<[u8]> for Message<'_> {
-        fn as_ref(&self) -> &[u8] {
-            self.0.as_ref()
-        }
-    }
+    use bitcoin::hashes::{hex::ToHex, *};
 
     #[test]
     fn test_sha256_commitment() {
-        let msg = Message("Message to commit to");
+        let msg = "Message to commit to";
         let digest = sha256::Hash::hash(msg.as_ref());
-        assert_eq!(digest.to_hex(), "868258ba45e46ac4ba141fe0eb6cd6251b4d0ee2c23e69cd99322505324672e4");
+        assert_eq!(
+            digest.to_hex(),
+            "868258ba45e46ac4ba141fe0eb6cd6251b4d0ee2c23e69cd99322505324672e4"
+        );
 
-        let commitment: sha256::Hash = msg.commit();
+        let commitment = sha256::Hash::commit(&msg);
         assert_eq!(digest, commitment);
-        assert_eq!(msg.verify(&commitment), true);
+        assert_eq!(commitment.verify(&msg), true);
     }
 }

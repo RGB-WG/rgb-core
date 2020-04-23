@@ -11,12 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
-use crate::primitives::commit_verify::{
-    CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
-};
-use super::scriptpubkey::{Error, ScriptPubkeyContainer, ScriptPubkeyCommitment};
-
+use super::scriptpubkey::{Error, ScriptPubkeyCommitment, ScriptPubkeyContainer};
+use crate::primitives::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -32,39 +28,28 @@ pub struct TxoutCommitment {
     pub script_commitment: ScriptPubkeyCommitment,
 }
 
-
-impl<MSG> CommitmentVerify<MSG> for TxoutCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<ScriptPubkeyCommitment> + AsRef<[u8]>
-{
-
-    #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, msg)
-    }
-}
-
-impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<ScriptPubkeyCommitment> + AsRef<[u8]>
+impl<MSG> EmbedCommitVerify<MSG> for TxoutCommitment
+where
+    MSG: AsRef<[u8]>,
 {
     type Container = TxoutContainer;
     type Error = Error;
 
     #[inline]
-    fn get_original_container(&self) -> Self::Container {
+    fn container(&self) -> Self::Container {
         TxoutContainer {
             value: self.value,
-            script_container: EmbeddedCommitment::<MSG>::get_original_container(&self.script_commitment)
+            script_container: EmbedCommitVerify::<MSG>::container(&self.script_commitment),
         }
     }
 
-    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(Self {
             value: container.value,
-            script_commitment: ScriptPubkeyCommitment::commit_to(container.script_container, msg)?
+            script_commitment: ScriptPubkeyCommitment::embed_commit(
+                container.script_container,
+                msg,
+            )?,
         })
     }
 }
-
-impl<T> Verifiable<TxoutCommitment> for T where T: AsRef<[u8]> { }
-
-impl<T> EmbedCommittable<TxoutCommitment> for T where T: AsRef<[u8]> { }

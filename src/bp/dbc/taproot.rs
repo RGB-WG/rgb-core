@@ -14,11 +14,8 @@
 use bitcoin::hashes::sha256;
 use bitcoin::secp256k1::PublicKey;
 
-use crate::primitives::commit_verify::{
-    CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
-};
-use super::{PubkeyCommitment, pubkey::Error};
-
+use super::{pubkey::Error, PubkeyCommitment};
+use crate::primitives::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -34,39 +31,26 @@ pub struct TaprootCommitment {
     pub pubkey_commitment: PubkeyCommitment,
 }
 
-impl<MSG> CommitmentVerify<MSG> for TaprootCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsRef<[u8]>
-{
-
-    #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, &msg)
-    }
-}
-
-impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsRef<[u8]>
+impl<MSG> EmbedCommitVerify<MSG> for TaprootCommitment
+where
+    MSG: AsRef<[u8]>,
 {
     type Container = TaprootContainer;
     type Error = Error;
 
     #[inline]
-    fn get_original_container(&self) -> Self::Container {
+    fn container(&self) -> Self::Container {
         TaprootContainer {
             script_root: self.script_root,
-            intermediate_key: self.pubkey_commitment.original
+            intermediate_key: self.pubkey_commitment.original,
         }
     }
 
-    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let cmt = PubkeyCommitment::commit_to(container.intermediate_key, msg)?;
+    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+        let cmt = PubkeyCommitment::embed_commit(container.intermediate_key, msg)?;
         Ok(Self {
             script_root: container.script_root,
-            pubkey_commitment: cmt
+            pubkey_commitment: cmt,
         })
     }
 }
-
-impl<T> Verifiable<TaprootCommitment> for T where T: AsRef<[u8]> { }
-
-impl<T> EmbedCommittable<TaprootCommitment> for T where T: AsRef<[u8]> { }

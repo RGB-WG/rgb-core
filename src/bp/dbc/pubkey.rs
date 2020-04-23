@@ -19,65 +19,51 @@
 
 use std::sync::Once;
 
-use bitcoin::hashes::*;
-use bitcoin::secp256k1::{*, Error as CurveError};
+use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
+use bitcoin::secp256k1::{self, Secp256k1};
 
-use crate::primitives::commit_verify::{
-    CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
-};
+use crate::primitives::commit_verify::EmbedCommitVerify;
 
 const TAG: &'static str = "LNPBP1";
 static INIT: Once = Once::new();
 static mut PREFIX: [u8; 32] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error)]
 #[display_from(Debug)]
 pub enum Error {
-    ECPointAtInfinity
+    ECPointAtInfinity,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
 pub struct PubkeyCommitment {
-    pub tweaked: PublicKey,
-    pub original: PublicKey,
+    pub tweaked: secp256k1::PublicKey,
+    pub original: secp256k1::PublicKey,
 }
 
-impl<MSG> CommitmentVerify<MSG> for PubkeyCommitment where
-    MSG: EmbedCommittable<Self> + AsRef<[u8]>
+impl<MSG> EmbedCommitVerify<MSG> for PubkeyCommitment
+where
+    MSG: AsRef<[u8]>,
 {
+    type Container = secp256k1::PublicKey;
+    type Error = secp256k1::Error;
 
     #[inline]
-    fn reveal_verify(&self, msg: &MSG) -> bool {
-        <Self as EmbeddedCommitment<MSG>>::reveal_verify(&self, &msg)
-    }
-}
-
-impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
-    MSG: EmbedCommittable<Self> + AsRef<[u8]>,
-{
-    type Container = PublicKey;
-    type Error = CurveError;
-
-    #[inline]
-    fn get_original_container(&self) -> Self::Container {
+    fn container(&self) -> Self::Container {
         self.original
     }
 
     /// According to LNPBP-1 the message supplied here must be already prefixed with 32-byte SHA256
     /// has of the protocol-specific prefix
-    fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let ec: Secp256k1<All> = Secp256k1::new();
+    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+        let ec = Secp256k1::<secp256k1::All>::new();
 
         // Unsafe since we use a mutable static
-        INIT.call_once(|| unsafe {
-            PREFIX = sha256::Hash::hash(TAG.as_bytes()).into_inner()
-        });
+        INIT.call_once(|| unsafe { PREFIX = sha256::Hash::hash(TAG.as_bytes()).into_inner() });
 
-        let mut buff = vec!();
+        let mut buff = vec![];
         // Unsafe since we use a mutable static
         unsafe {
             buff.extend(&PREFIX);
@@ -92,40 +78,33 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
 
         Ok(PubkeyCommitment {
             tweaked,
-            original: container
+            original: container,
         })
     }
 }
 
-impl<T> Verifiable<PubkeyCommitment> for T where T: AsRef<[u8]> { }
-
-impl<T> EmbedCommittable<PubkeyCommitment> for T where T: AsRef<[u8]> { }
-
-impl From<CurveError> for self::Error {
-    fn from(error: CurveError) -> Self {
+impl From<secp256k1::Error> for self::Error {
+    fn from(error: secp256k1::Error) -> Self {
         match error {
-            CurveError::InvalidTweak => self::Error::ECPointAtInfinity,
+            secp256k1::Error::InvalidTweak => self::Error::ECPointAtInfinity,
             _ => panic!("Other types of Secp256k1 errors can't be fired by `add_exp_assign`"),
         }
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-    use bitcoin::secp256k1::PublicKey;
     use super::*;
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-    struct Message<'a>(&'a str);
+    use bitcoin::secp256k1::PublicKey;
+    use std::str::FromStr;
 
     #[test]
     // Test according to LNPBP-1 standard
     fn test_lnpbp1_commitment() {
         let pubkey = PublicKey::from_str(
-            "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
-        ).unwrap();
+            "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
+        )
+        .unwrap();
         let msg = "Message to commit to";
         let tag = "RGB";
 
@@ -133,9 +112,9 @@ mod test {
         let mut prefixed_msg = prefix.to_vec();
         prefixed_msg.extend(msg.as_bytes());
 
-        let commitment: PubkeyCommitment = prefixed_msg.clone().commit_embed(pubkey).unwrap();
+        let commitment = PubkeyCommitment::embed_commit(pubkey, &prefixed_msg).unwrap();
         //assert_eq!(commitment.tweaked.to_hex(),
         //           "02b483ae49421fd8751b31278c6905eca00a8241a2ee3584bffc85655aa9123c02");
-        assert_eq!(prefixed_msg.verify(&commitment), true);
+        assert_eq!(commitment.verify(&prefixed_msg), true);
     }
 }
