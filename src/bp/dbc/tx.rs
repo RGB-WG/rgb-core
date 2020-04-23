@@ -50,7 +50,7 @@ where
         let pubkey_script: PubkeyScript = txout_container.clone().script_container.into();
         let txout = TxOut {
             value: txout_container.value,
-            script_pubkey: pubkey_script.into_inner(),
+            script_pubkey: (*pubkey_script).clone(),
         };
 
         tx.output.insert(vout as usize, txout);

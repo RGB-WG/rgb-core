@@ -52,9 +52,6 @@ where
     /// Error type that may be reported during [commit_embed] procedure
     type Error;
 
-    /// Reconstructs the original container from the current commitment data
-    fn container(&self) -> Self::Container;
-
     /// Creates a commitment and embeds it into the provided container returning
     /// `Self` containing both message commitment and all additional data required
     /// to reconstruct the original container
@@ -64,8 +61,8 @@ where
     /// reconstructs the original container with [container] function,
     /// repeats the commitment to the message and check it against the `self`.
     #[inline]
-    fn verify(&self, msg: &MSG) -> bool {
-        match Self::commit_embed(self.container(), msg) {
+    fn verify(&self, container: Self::Container, msg: &MSG) -> bool {
+        match Self::commit_embed(container, msg) {
             Ok(commitment) => commitment == *self,
             Err(_) => false,
         }

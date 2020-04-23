@@ -16,7 +16,6 @@ use std::{
     convert::{TryFrom, TryInto}
 };
 use bitcoin::{Txid, BlockHash};
-use crate::common::Wrapper;
 
 #[derive(Copy, Clone, Debug, Display, PartialEq, Eq)]
 #[display_from(Debug)]
@@ -32,7 +31,8 @@ pub enum Error {
 }
 
 
-wrapper!(BlockChecksum, _BlockChecksumPhantom, u8, doc="Checksum for block id data used by the LNPBP-5");
+wrapper!(BlockChecksum, u8, doc="Checksum for block id data used by the LNPBP-5");
+impl Copy for BlockChecksum { }
 
 impl From<BlockHash> for BlockChecksum {
     fn from(block_hash: BlockHash) -> Self {
@@ -40,12 +40,13 @@ impl From<BlockHash> for BlockChecksum {
         for byte in block_hash.to_vec() {
             xor ^= byte;
         }
-        Self::from_inner(xor)
+        Self::from(xor)
     }
 }
 
 
-wrapper!(TxChecksum, _TxChecksumPhantom, u64, doc="Checksum for transaction id data used by the LNPBP-5");
+wrapper!(TxChecksum, u64, doc="Checksum for transaction id data used by the LNPBP-5");
+impl Copy for TxChecksum { }
 
 impl From<Txid> for TxChecksum {
     fn from(txid: Txid) -> Self {
@@ -53,7 +54,7 @@ impl From<Txid> for TxChecksum {
         for (shift, byte) in txid.to_vec()[0..5].iter().enumerate() {
            checksum ^= (*byte as u64) << (shift * 8);
         }
-        Self::from_inner(checksum)
+        Self::from(checksum)
     }
 }
 
@@ -104,7 +105,7 @@ impl Descriptor {
             OffchainTransaction { tx_checksum, .. } |
             OffchainTxInput { tx_checksum, .. } |
             OffchainTxOutput { tx_checksum, .. }
-            if tx_checksum.into_inner() >= (2u64 << 46) =>
+            if *tx_checksum >= (2u64 << 46) =>
                 Err(ChecksumOutOfRange),
             _ => Ok(())
         }
@@ -185,7 +186,7 @@ impl Descriptor {
             OnchainBlock { block_checksum, .. }
             | OnchainTransaction { block_checksum, .. }
             | OnchainTxInput { block_checksum, .. }
-            | OnchainTxOutput { block_checksum, .. } => Some(block_checksum.into_inner()),
+            | OnchainTxOutput { block_checksum, .. } => Some(**block_checksum),
             _ => None
         }
     }
@@ -196,7 +197,7 @@ impl Descriptor {
         match self {
             OffchainTransaction { tx_checksum, .. }
             | OffchainTxInput { tx_checksum, .. }
-            | OffchainTxOutput { tx_checksum, .. } => Some(tx_checksum.into_inner()),
+            | OffchainTxOutput { tx_checksum, .. } => Some(**tx_checksum),
             _ => None
         }
     }
@@ -273,7 +274,7 @@ impl ShortId {
 
         if self.is_onchain() {
             let block_height: u32 = iconv((self.0 & Self::MASK_BLOCK) >> Self::SHIFT_BLOCK);
-            let block_checksum = BlockChecksum::from_inner(iconv((self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK));
+            let block_checksum = BlockChecksum::from(iconv::<u8>((self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK));
             if (self.0 & (!Self::MASK_BLOCK)) == 0 {
                 return Descriptor::OnchainBlock { block_height, block_checksum }
             }
@@ -287,7 +288,7 @@ impl ShortId {
                 Descriptor::OnchainTxOutput { block_height, block_checksum, tx_index, output_index: index - 1 }
             }
         } else {
-            let tx_checksum = TxChecksum::from_inner((self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX);
+            let tx_checksum = TxChecksum::from((self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX);
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
                 return Descriptor::OffchainTransaction { tx_checksum }
             }
@@ -325,13 +326,13 @@ impl TryFrom<Descriptor> for ShortId {
             | OnchainTxOutput { block_height, .. } => block_height,
             _ => 0,
         } as u64;
-        let block_checksum = match descriptor {
+        let block_checksum = *match descriptor {
             OnchainBlock { block_checksum, .. }
             | OnchainTransaction { block_checksum, .. }
             | OnchainTxInput { block_checksum, .. }
             | OnchainTxOutput { block_checksum, .. } => block_checksum,
             _ => BlockChecksum::default(),
-        }.into_inner() as u64;
+        } as u64;
         let tx_index = match descriptor {
             OnchainTransaction { tx_index, .. }
             | OnchainTxInput { tx_index, .. }
@@ -343,7 +344,7 @@ impl TryFrom<Descriptor> for ShortId {
             | OffchainTxInput { tx_checksum, .. }
             | OffchainTxOutput { tx_checksum, .. } => tx_checksum,
             _ => TxChecksum::default(),
-        }.into_inner();
+        };
         let inout_index: u64 = match descriptor {
             OnchainTxInput { input_index, .. }
             | OffchainTxInput { input_index, .. } => input_index + 1,
@@ -356,7 +357,7 @@ impl TryFrom<Descriptor> for ShortId {
         short_id |= inout_index;
         if descriptor.is_offchain() {
             short_id |= Self::FLAG_OFFCHAIN;
-            short_id |= (tx_checksum << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK;
+            short_id |= (*tx_checksum << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK;
         } else {
             short_id |= (block_height << 40) & Self::MASK_BLOCK;
             short_id |= (block_checksum << Self::SHIFT_BLOCKCHECK) & Self::MASK_BLOCKCHECK;

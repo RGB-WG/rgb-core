@@ -41,7 +41,7 @@ pub enum ScriptPubkeyCommitment {
 impl From<ScriptPubkeyContainer> for PubkeyScript {
     fn from(container: ScriptPubkeyContainer) -> Self {
         let script = match container {
-            ScriptPubkeyContainer::OtherScript(script) => script.into_inner(),
+            ScriptPubkeyContainer::OtherScript(script) => (*script).clone(),
             ScriptPubkeyContainer::PublicKey(pubkey) => Builder::gen_p2pk(&bitcoin::PublicKey {
                 compressed: false,
                 key: pubkey,
@@ -56,7 +56,8 @@ impl From<ScriptPubkeyContainer> for PubkeyScript {
                 Builder::gen_v0_p2wpkh(&keyhash).into_script()
             }
             ScriptPubkeyContainer::ScriptHash(script) => {
-                Builder::gen_v0_p2wsh(&script.into_inner().wscript_hash()).into_script()
+                let script = (*script).clone();
+                Builder::gen_v0_p2wsh(&script.wscript_hash()).into_script()
             }
             ScriptPubkeyContainer::OpReturn(data) => {
                 let keyhash = bitcoin::PublicKey {
@@ -104,7 +105,7 @@ where
             }
             ScriptPubkeyContainer::OtherScript(script) => {
                 // FIXME: Extract it from the txout
-                let script = LockScript::from_inner(script.into_inner());
+                let script = LockScript::from((*script).clone());
                 let cmt = LockscriptCommitment::commit_embed(script, msg)?;
                 ScriptPubkeyCommitment::LockScript(cmt)
             }
