@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-mod digests;
+pub mod digests;
 mod lockscript;
 mod pubkey;
 mod scriptpubkey;
@@ -19,10 +19,9 @@ mod taproot;
 mod tx;
 mod txout;
 
-pub use digests::*;
-pub use lockscript::*;
-pub use pubkey::*;
-pub use scriptpubkey::*;
-pub use taproot::*;
-pub use tx::*;
-pub use txout::*;
+pub use lockscript::LockscriptCommitment;
+pub use pubkey::PubkeyCommitment;
+pub use scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyContainer};
+pub use taproot::{TaprootCommitment, TaprootContainer};
+pub use tx::{TxCommitment, TxContainer};
+pub use txout::{TxoutCommitment, TxoutContainer};

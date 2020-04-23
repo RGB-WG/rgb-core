@@ -17,17 +17,14 @@
 //! NB: The library works with `secp256k1::PublicKey` and `secp256k1::SecretKey` keys, not
 //! their wrapped bitcoin counterparts `bitcoin::PublickKey` and `bitcoin::PrivateKey`.
 
-use std::sync::Once;
-
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::{self, Secp256k1};
 
 use crate::primitives::commit_verify::CommitEmbedVerify;
 
-const TAG: &'static str = "LNPBP1";
-static INIT: Once = Once::new();
-static mut PREFIX: [u8; 32] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+static SHA256_LNPBP1: [u8; 32] = [
+    245, 8, 242, 142, 252, 192, 113, 82, 108, 168, 134, 200, 224, 124, 105, 212, 149, 78, 46, 201,
+    252, 82, 171, 140, 204, 209, 41, 17, 12, 0, 64, 175,
 ];
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error)]
@@ -55,30 +52,20 @@ where
         self.original
     }
 
-    /// According to LNPBP-1 the message supplied here must be already prefixed with 32-byte SHA256
-    /// has of the protocol-specific prefix
-    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    // According to LNPBP-1 the message supplied here must be already prefixed with 32-byte SHA256
+    // hash of the protocol-specific prefix
+    fn commit_embed(pubkey_container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let ec = Secp256k1::<secp256k1::All>::new();
-
-        // Unsafe since we use a mutable static
-        INIT.call_once(|| unsafe { PREFIX = sha256::Hash::hash(TAG.as_bytes()).into_inner() });
-
-        let mut buff = vec![];
-        // Unsafe since we use a mutable static
-        unsafe {
-            buff.extend(&PREFIX);
-        }
-        buff.extend(msg.as_ref());
-        let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&container.serialize());
-        hmac_engine.input(&buff[..]);
+        let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&pubkey_container.serialize());
+        hmac_engine.input(&SHA256_LNPBP1);
+        hmac_engine.input(msg.as_ref());
         let factor = &Hmac::from_engine(hmac_engine)[..];
-        let mut tweaked = container.clone();
-
-        tweaked.add_exp_assign(&ec, factor)?;
+        let mut pubkey_tweaked = pubkey_container.clone();
+        pubkey_tweaked.add_exp_assign(&ec, factor)?;
 
         Ok(PubkeyCommitment {
-            tweaked,
-            original: container,
+            tweaked: pubkey_tweaked,
+            original: pubkey_container,
         })
     }
 }
