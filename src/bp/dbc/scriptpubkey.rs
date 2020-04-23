@@ -11,52 +11,21 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{blockdata::script::Builder, secp256k1, secp256k1::PublicKey};
-
-use super::{pubkey, LockscriptCommitment, PubkeyCommitment, TaprootCommitment, TaprootContainer};
-use crate::bp::scripts::{LockScript, LockScriptParseError, PubkeyScript};
+use super::{LockscriptCommitment, PubkeyCommitment, TaprootCommitment, TaprootContainer};
+use crate::bp::scripts::{LockScript, PubkeyScript};
 use crate::primitives::commit_verify::CommitEmbedVerify;
-
-#[derive(Debug, Display, Error, From)]
-#[display_from(Debug)]
-pub enum Error {
-    //#[derive_from(pubkey::Error)]
-    Pubkey(pubkey::Error),
-
-    //#[derive_from(secp256k1::Error)]
-    Secp256k1(secp256k1::Error),
-
-    //#[derive_from(LockScriptParseError<bitcoin::PublicKey>)]
-    LockScript(LockScriptParseError<bitcoin::PublicKey>),
-}
-
-impl From<pubkey::Error> for Error {
-    fn from(err: pubkey::Error) -> Self {
-        Self::Pubkey(err)
-    }
-}
-
-impl From<secp256k1::Error> for Error {
-    fn from(err: secp256k1::Error) -> Self {
-        Self::Secp256k1(err)
-    }
-}
-
-impl From<LockScriptParseError<bitcoin::PublicKey>> for Error {
-    fn from(err: LockScriptParseError<bitcoin::PublicKey>) -> Self {
-        Self::LockScript(err)
-    }
-}
+use bitcoin::blockdata::script::Builder;
+use bitcoin::secp256k1;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyContainer {
-    PublicKey(PublicKey),
-    PubkeyHash(PublicKey),
+    PublicKey(secp256k1::PublicKey),
+    PubkeyHash(secp256k1::PublicKey),
     ScriptHash(LockScript),
     TapRoot(TaprootContainer),
-    OpReturn(PublicKey),
+    OpReturn(secp256k1::PublicKey),
     OtherScript(PubkeyScript),
 }
 
@@ -109,14 +78,14 @@ where
     MSG: AsRef<[u8]>,
 {
     type Container = ScriptPubkeyContainer;
-    type Error = Error;
+    type Error = super::Error;
 
     #[inline]
     fn container(&self) -> Self::Container {
         match self {
             ScriptPubkeyCommitment::PublicKey(cmt) => {
                 // TODO: Re-implement by analyzing scriptPubkey content
-                let container: PublicKey = CommitEmbedVerify::<MSG>::container(cmt);
+                let container: secp256k1::PublicKey = CommitEmbedVerify::<MSG>::container(cmt);
                 ScriptPubkeyContainer::PubkeyHash(container)
             }
             ScriptPubkeyCommitment::LockScript(cmt) => {

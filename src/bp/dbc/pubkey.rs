@@ -22,16 +22,12 @@ use bitcoin::secp256k1::{self, Secp256k1};
 
 use crate::primitives::commit_verify::CommitEmbedVerify;
 
+/// Single SHA256 hash of "LNPBP1" string according to LNPBP-1 acting as a
+/// prefix to the message in computing tweaking factor
 static SHA256_LNPBP1: [u8; 32] = [
     245, 8, 242, 142, 252, 192, 113, 82, 108, 168, 134, 200, 224, 124, 105, 212, 149, 78, 46, 201,
     252, 82, 171, 140, 204, 209, 41, 17, 12, 0, 64, 175,
 ];
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, Error)]
-#[display_from(Debug)]
-pub enum Error {
-    ECPointAtInfinity,
-}
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -70,20 +66,28 @@ where
     }
 }
 
-impl From<secp256k1::Error> for self::Error {
-    fn from(error: secp256k1::Error) -> Self {
-        match error {
-            secp256k1::Error::InvalidTweak => self::Error::ECPointAtInfinity,
-            _ => panic!("Other types of Secp256k1 errors can't be fired by `add_exp_assign`"),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
+    use bitcoin::hashes::{hex::ToHex, sha256};
     use bitcoin::secp256k1::PublicKey;
     use std::str::FromStr;
+
+    #[test]
+    fn test_lnpbp1_tag() {
+        assert_eq!(
+            sha256::Hash::hash("LNPBP1".as_ref()).into_inner(),
+            SHA256_LNPBP1
+        );
+        assert_ne!(
+            sha256::Hash::hash("LNPBP-1".as_ref()).into_inner(),
+            SHA256_LNPBP1
+        );
+        assert_ne!(
+            sha256::Hash::hash("lnpbp1".as_ref()).into_inner(),
+            SHA256_LNPBP1
+        );
+    }
 
     #[test]
     // Test according to LNPBP-1 standard
@@ -100,8 +104,10 @@ mod test {
         prefixed_msg.extend(msg.as_bytes());
 
         let commitment = PubkeyCommitment::commit_embed(pubkey, &prefixed_msg).unwrap();
-        //assert_eq!(commitment.tweaked.to_hex(),
-        //           "02b483ae49421fd8751b31278c6905eca00a8241a2ee3584bffc85655aa9123c02");
+        assert_eq!(
+            commitment.tweaked.to_hex(),
+            "02533c2a16bca85069a7c54c4e5e0682a24783f2c0a7c47c15e545d37cc4c52d5a"
+        );
         assert_eq!(commitment.verify(&prefixed_msg), true);
     }
 }

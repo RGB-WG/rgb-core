@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 pub mod digests;
+mod error;
 mod lockscript;
 mod pubkey;
 mod scriptpubkey;
@@ -19,6 +20,7 @@ mod taproot;
 mod tx;
 mod txout;
 
+pub use error::Error;
 pub use lockscript::LockscriptCommitment;
 pub use pubkey::PubkeyCommitment;
 pub use scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyContainer};

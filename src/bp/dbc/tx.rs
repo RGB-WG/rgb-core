@@ -13,8 +13,8 @@
 
 use bitcoin::{Amount, Transaction, TxOut};
 
-use super::scriptpubkey::Error;
 use super::txout::{TxoutCommitment, TxoutContainer};
+use super::Error;
 use crate::bp::PubkeyScript;
 use crate::primitives::commit_verify::CommitEmbedVerify;
 

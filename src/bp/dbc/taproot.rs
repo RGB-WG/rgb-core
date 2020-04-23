@@ -14,7 +14,7 @@
 use bitcoin::hashes::sha256;
 use bitcoin::secp256k1::PublicKey;
 
-use super::{pubkey::Error, PubkeyCommitment};
+use super::{Error, PubkeyCommitment};
 use crate::primitives::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]

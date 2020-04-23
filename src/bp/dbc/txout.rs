@@ -11,7 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::scriptpubkey::{Error, ScriptPubkeyCommitment, ScriptPubkeyContainer};
+use super::scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyContainer};
+use super::Error;
 use crate::primitives::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
