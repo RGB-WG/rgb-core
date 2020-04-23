@@ -22,7 +22,7 @@ use std::sync::Once;
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::{self, Secp256k1};
 
-use crate::primitives::commit_verify::EmbedCommitVerify;
+use crate::primitives::commit_verify::CommitEmbedVerify;
 
 const TAG: &'static str = "LNPBP1";
 static INIT: Once = Once::new();
@@ -43,7 +43,7 @@ pub struct PubkeyCommitment {
     pub original: secp256k1::PublicKey,
 }
 
-impl<MSG> EmbedCommitVerify<MSG> for PubkeyCommitment
+impl<MSG> CommitEmbedVerify<MSG> for PubkeyCommitment
 where
     MSG: AsRef<[u8]>,
 {
@@ -57,7 +57,7 @@ where
 
     /// According to LNPBP-1 the message supplied here must be already prefixed with 32-byte SHA256
     /// has of the protocol-specific prefix
-    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let ec = Secp256k1::<secp256k1::All>::new();
 
         // Unsafe since we use a mutable static
@@ -112,7 +112,7 @@ mod test {
         let mut prefixed_msg = prefix.to_vec();
         prefixed_msg.extend(msg.as_bytes());
 
-        let commitment = PubkeyCommitment::embed_commit(pubkey, &prefixed_msg).unwrap();
+        let commitment = PubkeyCommitment::commit_embed(pubkey, &prefixed_msg).unwrap();
         //assert_eq!(commitment.tweaked.to_hex(),
         //           "02b483ae49421fd8751b31278c6905eca00a8241a2ee3584bffc85655aa9123c02");
         assert_eq!(commitment.verify(&prefixed_msg), true);

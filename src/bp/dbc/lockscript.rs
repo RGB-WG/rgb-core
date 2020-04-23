@@ -15,7 +15,7 @@ use bitcoin::secp256k1::PublicKey;
 
 use super::pubkey::PubkeyCommitment;
 use crate::bp::scripts::{LockScript, LockScriptParseError};
-use crate::primitives::commit_verify::EmbedCommitVerify;
+use crate::primitives::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -24,7 +24,7 @@ pub struct LockscriptCommitment {
     pub original: LockScript,
 }
 
-impl<MSG> EmbedCommitVerify<MSG> for LockscriptCommitment
+impl<MSG> CommitEmbedVerify<MSG> for LockscriptCommitment
 where
     MSG: AsRef<[u8]>,
 {
@@ -36,9 +36,9 @@ where
         self.original.clone()
     }
 
-    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let tweaked = container.clone().replace_pubkeys(|pubkey: PublicKey| {
-            PubkeyCommitment::embed_commit(pubkey, msg)
+            PubkeyCommitment::commit_embed(pubkey, msg)
                 .ok()
                 .map(|c| c.tweaked)
         })?;

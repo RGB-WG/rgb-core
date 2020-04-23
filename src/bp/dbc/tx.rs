@@ -16,7 +16,7 @@ use bitcoin::{Amount, Transaction, TxOut};
 use super::scriptpubkey::Error;
 use super::txout::{TxoutCommitment, TxoutContainer};
 use crate::bp::PubkeyScript;
-use crate::primitives::commit_verify::EmbedCommitVerify;
+use crate::primitives::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -37,7 +37,7 @@ pub struct TxCommitment {
     pub tweaked: TxoutCommitment,
 }
 
-impl<MSG> EmbedCommitVerify<MSG> for TxCommitment
+impl<MSG> CommitEmbedVerify<MSG> for TxCommitment
 where
     MSG: AsRef<[u8]>,
 {
@@ -54,14 +54,14 @@ where
         }
     }
 
-    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
         let fee = container.fee;
         let entropy = container.entropy;
         let nouts = tx.output.len();
         let vout = (fee.as_sat() + (entropy as u64)) % (nouts as u64);
         let txout_container = container.txout_container;
-        let txout_commitment = TxoutCommitment::embed_commit(txout_container.clone(), msg)?;
+        let txout_commitment = TxoutCommitment::commit_embed(txout_container.clone(), msg)?;
 
         let pubkey_script: PubkeyScript = txout_container.clone().script_container.into();
         let txout = TxOut {
@@ -129,7 +129,7 @@ mod test {
 
         let msg = "message to commit to";
 
-        let commitment = TxCommitment::embed_commit(container1, &msg).unwrap();
+        let commitment = TxCommitment::commit_embed(container1, &msg).unwrap();
         assert_eq!(commitment.verify(&msg), true);
     }
 }

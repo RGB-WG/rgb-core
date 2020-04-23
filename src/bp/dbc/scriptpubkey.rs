@@ -15,7 +15,7 @@ use bitcoin::{blockdata::script::Builder, secp256k1, secp256k1::PublicKey};
 
 use super::{pubkey, LockscriptCommitment, PubkeyCommitment, TaprootCommitment, TaprootContainer};
 use crate::bp::scripts::{LockScript, LockScriptParseError, PubkeyScript};
-use crate::primitives::commit_verify::EmbedCommitVerify;
+use crate::primitives::commit_verify::CommitEmbedVerify;
 
 #[derive(Debug, Display, Error, From)]
 #[display_from(Debug)]
@@ -104,7 +104,7 @@ impl From<ScriptPubkeyContainer> for PubkeyScript {
     }
 }
 
-impl<MSG> EmbedCommitVerify<MSG> for ScriptPubkeyCommitment
+impl<MSG> CommitEmbedVerify<MSG> for ScriptPubkeyCommitment
 where
     MSG: AsRef<[u8]>,
 {
@@ -116,48 +116,48 @@ where
         match self {
             ScriptPubkeyCommitment::PublicKey(cmt) => {
                 // TODO: Re-implement by analyzing scriptPubkey content
-                let container: PublicKey = EmbedCommitVerify::<MSG>::container(cmt);
+                let container: PublicKey = CommitEmbedVerify::<MSG>::container(cmt);
                 ScriptPubkeyContainer::PubkeyHash(container)
             }
             ScriptPubkeyCommitment::LockScript(cmt) => {
                 // TODO: Re-implement by analyzing scriptPubkey content
-                let container: LockScript = EmbedCommitVerify::<MSG>::container(cmt);
+                let container: LockScript = CommitEmbedVerify::<MSG>::container(cmt);
                 ScriptPubkeyContainer::ScriptHash(container)
             }
             ScriptPubkeyCommitment::TapRoot(cmt) => {
-                let container: TaprootContainer = EmbedCommitVerify::<MSG>::container(cmt);
+                let container: TaprootContainer = CommitEmbedVerify::<MSG>::container(cmt);
                 ScriptPubkeyContainer::TapRoot(container)
             }
             _ => unimplemented!(),
         }
     }
 
-    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(match container {
             ScriptPubkeyContainer::PublicKey(pubkey) => {
-                let cmt = PubkeyCommitment::embed_commit(pubkey, msg)?;
+                let cmt = PubkeyCommitment::commit_embed(pubkey, msg)?;
                 ScriptPubkeyCommitment::PublicKey(cmt)
             }
             ScriptPubkeyContainer::PubkeyHash(pubkey) => {
-                let cmt = PubkeyCommitment::embed_commit(pubkey, msg)?;
+                let cmt = PubkeyCommitment::commit_embed(pubkey, msg)?;
                 ScriptPubkeyCommitment::PublicKey(cmt)
             }
             ScriptPubkeyContainer::ScriptHash(script) => {
-                let cmt = LockscriptCommitment::embed_commit(script, msg)?;
+                let cmt = LockscriptCommitment::commit_embed(script, msg)?;
                 ScriptPubkeyCommitment::LockScript(cmt)
             }
             ScriptPubkeyContainer::TapRoot(container) => {
-                let cmt = TaprootCommitment::embed_commit(container, msg)?;
+                let cmt = TaprootCommitment::commit_embed(container, msg)?;
                 ScriptPubkeyCommitment::TapRoot(cmt)
             }
             ScriptPubkeyContainer::OpReturn(pubkey) => {
-                let cmt = PubkeyCommitment::embed_commit(pubkey, msg)?;
+                let cmt = PubkeyCommitment::commit_embed(pubkey, msg)?;
                 ScriptPubkeyCommitment::PublicKey(cmt)
             }
             ScriptPubkeyContainer::OtherScript(script) => {
                 // FIXME: Extract it from the txout
                 let script = LockScript::from_inner(script.into_inner());
-                let cmt = LockscriptCommitment::embed_commit(script, msg)?;
+                let cmt = LockscriptCommitment::commit_embed(script, msg)?;
                 ScriptPubkeyCommitment::LockScript(cmt)
             }
             _ => unimplemented!(),

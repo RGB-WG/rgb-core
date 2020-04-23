@@ -15,7 +15,7 @@ use bitcoin::hashes::sha256;
 use bitcoin::secp256k1::PublicKey;
 
 use super::{pubkey::Error, PubkeyCommitment};
-use crate::primitives::commit_verify::EmbedCommitVerify;
+use crate::primitives::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -31,7 +31,7 @@ pub struct TaprootCommitment {
     pub pubkey_commitment: PubkeyCommitment,
 }
 
-impl<MSG> EmbedCommitVerify<MSG> for TaprootCommitment
+impl<MSG> CommitEmbedVerify<MSG> for TaprootCommitment
 where
     MSG: AsRef<[u8]>,
 {
@@ -46,8 +46,8 @@ where
         }
     }
 
-    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let cmt = PubkeyCommitment::embed_commit(container.intermediate_key, msg)?;
+    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+        let cmt = PubkeyCommitment::commit_embed(container.intermediate_key, msg)?;
         Ok(Self {
             script_root: container.script_root,
             pubkey_commitment: cmt,

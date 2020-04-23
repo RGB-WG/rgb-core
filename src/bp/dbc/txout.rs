@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use super::scriptpubkey::{Error, ScriptPubkeyCommitment, ScriptPubkeyContainer};
-use crate::primitives::commit_verify::EmbedCommitVerify;
+use crate::primitives::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -28,7 +28,7 @@ pub struct TxoutCommitment {
     pub script_commitment: ScriptPubkeyCommitment,
 }
 
-impl<MSG> EmbedCommitVerify<MSG> for TxoutCommitment
+impl<MSG> CommitEmbedVerify<MSG> for TxoutCommitment
 where
     MSG: AsRef<[u8]>,
 {
@@ -39,14 +39,14 @@ where
     fn container(&self) -> Self::Container {
         TxoutContainer {
             value: self.value,
-            script_container: EmbedCommitVerify::<MSG>::container(&self.script_commitment),
+            script_container: CommitEmbedVerify::<MSG>::container(&self.script_commitment),
         }
     }
 
-    fn embed_commit(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(Self {
             value: container.value,
-            script_commitment: ScriptPubkeyCommitment::embed_commit(
+            script_commitment: ScriptPubkeyCommitment::commit_embed(
                 container.script_container,
                 msg,
             )?,
