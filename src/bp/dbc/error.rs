@@ -22,6 +22,11 @@ pub enum Error {
 
     //#[derive_from(LockScriptParseError<bitcoin::PublicKey>)]
     LockScript(LockScriptParseError<bitcoin::PublicKey>),
+
+    /// Attempt to commit into LockScript has failed: the key that must contain
+    /// the commitment/tweak was not found either in plain nor hash form in
+    /// any of the script branches
+    LockscriptKeyNotFound,
 }
 
 impl From<secp256k1::Error> for Error {

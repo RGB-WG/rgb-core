@@ -86,8 +86,10 @@ wrapper!(
     LockScript,
     Script,
     doc = "\
-    The deepest nested version of Bitcoin script containing no hashes of other scripts, including \
-    P2SH redeemScript hashes or witnessProgramm (hash or wintness script), or public keys",
+    Script which knowledge is required for spending some specific transaction output.
+    This is the deepest nested version of Bitcoin script containing no hashes of other \
+    scripts, including P2SH redeemScript hashes or witnessProgram (hash or witness \
+    script), or public keys",
     derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 
@@ -171,6 +173,27 @@ impl LockScript {
                     })
                 }),
                 PubkeyOrHash::HashedPubkey(_) => None,
+            },
+        )?;
+        Ok(LockScript::from(result.encode()))
+    }
+
+    pub fn replace_pubkeys_and_hashes(
+        &self,
+        key_processor: impl Fn(secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
+        hash_processor: impl Fn(PubkeyHash) -> Option<PubkeyHash>,
+    ) -> Result<Self, LockScriptParseError<bitcoin::PublicKey>> {
+        let result = Miniscript::parse(&*self.clone())?.replace_pubkeys_and_hashes(
+            &|item: PubkeyOrHash<bitcoin::PublicKey>| match item {
+                PubkeyOrHash::PlainPubkey(pubkey) => key_processor(pubkey.key).map(|key| {
+                    PubkeyOrHash::PlainPubkey(bitcoin::PublicKey {
+                        compressed: true,
+                        key,
+                    })
+                }),
+                PubkeyOrHash::HashedPubkey(hash) => {
+                    hash_processor(hash.into()).map(|hash| PubkeyOrHash::HashedPubkey(hash.into()))
+                }
             },
         )?;
         Ok(LockScript::from(result.encode()))

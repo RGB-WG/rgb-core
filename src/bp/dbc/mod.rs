@@ -21,7 +21,7 @@ mod tx;
 mod txout;
 
 pub use error::Error;
-pub use lockscript::LockscriptCommitment;
+pub use lockscript::{LockscriptCommitment, LockscriptContainer};
 pub use pubkey::PubkeyCommitment;
 pub use scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyContainer};
 pub use taproot::{TaprootCommitment, TaprootContainer};

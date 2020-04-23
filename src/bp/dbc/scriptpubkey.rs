@@ -11,8 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{LockscriptCommitment, PubkeyCommitment, TaprootCommitment, TaprootContainer};
-use crate::bp::scripts::{LockScript, PubkeyScript};
+use super::{
+    LockscriptCommitment, LockscriptContainer, PubkeyCommitment, TaprootCommitment,
+    TaprootContainer,
+};
+use crate::bp::scripts::PubkeyScript;
 use crate::primitives::commit_verify::CommitEmbedVerify;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1;
@@ -23,10 +26,10 @@ use bitcoin::secp256k1;
 pub enum ScriptPubkeyContainer {
     PublicKey(secp256k1::PublicKey),
     PubkeyHash(secp256k1::PublicKey),
-    ScriptHash(LockScript),
+    ScriptHash(LockscriptContainer),
     TapRoot(TaprootContainer),
     OpReturn(secp256k1::PublicKey),
-    OtherScript(PubkeyScript),
+    OtherScript(LockscriptContainer),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
@@ -41,7 +44,9 @@ pub enum ScriptPubkeyCommitment {
 impl From<ScriptPubkeyContainer> for PubkeyScript {
     fn from(container: ScriptPubkeyContainer) -> Self {
         let script = match container {
-            ScriptPubkeyContainer::OtherScript(script) => (*script).clone(),
+            ScriptPubkeyContainer::OtherScript(script_continer) => {
+                (*script_continer.script).clone()
+            }
             ScriptPubkeyContainer::PublicKey(pubkey) => Builder::gen_p2pk(&bitcoin::PublicKey {
                 compressed: false,
                 key: pubkey,
@@ -55,8 +60,8 @@ impl From<ScriptPubkeyContainer> for PubkeyScript {
                 .wpubkey_hash();
                 Builder::gen_v0_p2wpkh(&keyhash).into_script()
             }
-            ScriptPubkeyContainer::ScriptHash(script) => {
-                let script = (*script).clone();
+            ScriptPubkeyContainer::ScriptHash(script_container) => {
+                let script = (*script_container.script).clone();
                 Builder::gen_v0_p2wsh(&script.wscript_hash()).into_script()
             }
             ScriptPubkeyContainer::OpReturn(data) => {
@@ -104,8 +109,6 @@ where
                 ScriptPubkeyCommitment::PublicKey(cmt)
             }
             ScriptPubkeyContainer::OtherScript(script) => {
-                // FIXME: Extract it from the txout
-                let script = LockScript::from((*script).clone());
                 let cmt = LockscriptCommitment::commit_embed(script, msg)?;
                 ScriptPubkeyCommitment::LockScript(cmt)
             }

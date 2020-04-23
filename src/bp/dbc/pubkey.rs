@@ -32,7 +32,7 @@ static SHA256_LNPBP1: [u8; 32] = [
 wrapper!(
     PubkeyCommitment,
     secp256k1::PublicKey,
-    doc = "",
+    doc = "Public key committed to some message via LNPBP1-based tweaking procedure",
     derive = [PartialEq, Eq, Hash]
 );
 
@@ -43,8 +43,8 @@ where
     type Container = secp256k1::PublicKey;
     type Error = secp256k1::Error;
 
-    // According to LNPBP-1 the message supplied here must be already prefixed with 32-byte SHA256
-    // hash of the protocol-specific prefix
+    /// NB: According to LNPBP-1 the message supplied here must be already prefixed with 32-byte SHA256
+    /// hash of the protocol-specific prefix
     fn commit_embed(pubkey_container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let ec = Secp256k1::<secp256k1::All>::new();
         let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&pubkey_container.serialize());
