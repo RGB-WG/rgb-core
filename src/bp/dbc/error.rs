@@ -11,17 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::bp::LockScriptParseError;
 use bitcoin::secp256k1;
 
-#[derive(Debug, Display, Error, From)]
+#[derive(PartialEq, Debug, Display, Error, From)]
 #[display_from(Debug)]
 pub enum Error {
     //#[derive_from(secp256k1::Error)]
     Secp256k1(secp256k1::Error),
 
-    //#[derive_from(LockScriptParseError<bitcoin::PublicKey>)]
-    LockScript(LockScriptParseError<bitcoin::PublicKey>),
+    LockscriptParseError,
+
+    LockscriptContainsNoKeysOrHashes,
+
+    LockscriptContainsUnknownHashesOnly,
 
     /// Attempt to commit into LockScript has failed: the key that must contain
     /// the commitment/tweak was not found either in plain nor hash form in
@@ -32,11 +34,5 @@ pub enum Error {
 impl From<secp256k1::Error> for Error {
     fn from(err: secp256k1::Error) -> Self {
         Self::Secp256k1(err)
-    }
-}
-
-impl From<LockScriptParseError<bitcoin::PublicKey>> for Error {
-    fn from(err: LockScriptParseError<bitcoin::PublicKey>) -> Self {
-        Self::LockScript(err)
     }
 }

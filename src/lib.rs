@@ -14,7 +14,6 @@
 #![crate_name = "lnpbp"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
-
 #![feature(concat_idents)]
 #![feature(never_type)]
 #![feature(const_generics)]
@@ -26,8 +25,7 @@
 #![feature(str_strip)]
 #![feature(bindings_after_at)]
 #![feature(in_band_lifetimes)]
-#![recursion_limit="256"]
-
+#![recursion_limit = "256"]
 // Coding conventions
 #![allow(incomplete_features)]
 #![deny(non_upper_case_globals)]
@@ -40,44 +38,43 @@
 
 #[macro_use]
 pub extern crate derive_wrapper;
-extern crate rand;
 extern crate num_derive;
 extern crate num_traits;
+extern crate rand;
 #[macro_use]
 pub extern crate bitcoin;
 
 // Logging
-#[cfg(feature="log")]
+#[cfg(feature = "log")]
 #[macro_use]
 extern crate log;
 
 // Async IO, IPC & networking
-#[cfg(feature="tokio")]
-extern crate tokio;
-#[cfg(not(feature="tokio"))]
+#[cfg(not(feature = "tokio"))]
 extern crate futures;
+#[cfg(feature = "tokio")]
+extern crate tokio;
 
 // Support for node & node clients development (include API helpers)
-#[cfg(any(feature="daemons",feature="async"))]
+#[cfg(any(feature = "daemons", feature = "async"))]
 #[macro_use]
 extern crate async_trait;
-#[cfg(feature="zmq")]
+#[cfg(feature = "zmq")]
 extern crate zmq;
 
 // Lightning-network related functionality
-#[cfg(feature="lightning")]
+#[cfg(feature = "lightning")]
 pub extern crate lightning;
-#[cfg(feature="lightning_tokio")]
+#[cfg(feature = "lightning_tokio")]
 pub extern crate lightning_net_tokio;
 
 pub extern crate miniscript;
 
 // Buletproofs support
-#[cfg(feature="bulletproofs")]
+#[cfg(feature = "bulletproofs")]
 pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
-
 
 mod primitives;
 #[macro_use]
@@ -85,12 +82,11 @@ mod common;
 mod lnpbps;
 #[macro_use]
 pub mod bp;
-#[cfg(feature="lightning")]
+#[cfg(feature = "lightning")]
 pub mod lnp;
-#[cfg(feature="rgb")]
+#[cfg(feature = "rgb")]
 pub mod rgb;
 
-#[cfg(feature="primitives")]
-pub use primitives::*;
 pub use common::*;
 pub use lnpbps::*;
+pub use primitives::*;
