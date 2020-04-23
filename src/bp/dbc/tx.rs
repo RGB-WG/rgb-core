@@ -27,9 +27,12 @@ pub struct TxContainer {
     pub txout_container: TxoutContainer,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
-pub struct TxCommitment(TxoutCommitment);
+wrapper!(
+    TxCommitment,
+    TxoutCommitment,
+    doc = "",
+    derive = [PartialEq, Eq, Hash]
+);
 
 impl<MSG> CommitEmbedVerify<MSG> for TxCommitment
 where

@@ -79,9 +79,7 @@ use bitcoin::{blockdata::script::*, hash_types::*, secp256k1};
 use miniscript::{miniscript::iter::PubkeyOrHash, Miniscript, MiniscriptKey};
 
 macro_rules! impl_script_copy {
-    ($ident:ident) => {
-
-    };
+    ($ident:ident) => {};
 }
 
 wrapper!(
@@ -89,38 +87,44 @@ wrapper!(
     Script,
     doc = "\
     The deepest nested version of Bitcoin script containing no hashes of other scripts, including \
-    P2SH redeemScript hashes or witnessProgramm (hash or wintness script), or public keys"
+    P2SH redeemScript hashes or witnessProgramm (hash or wintness script), or public keys",
+    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 
 wrapper!(
     PubkeyScript,
     Script,
     doc = "\
-    A content of `scriptPubkey` from a transaction output"
+    A content of `scriptPubkey` from a transaction output",
+    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 wrapper!(
     SigScript,
     Script,
     doc = "\
-    A content of `sigScript` from a transaction input"
+    A content of `sigScript` from a transaction input",
+    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 wrapper!(
     WitnessScript,
     Script,
     doc = "\
-    A part of the `witness` field from a transaction input according to BIP-141"
+    A part of the `witness` field from a transaction input according to BIP-141",
+    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 wrapper!(
     RedeemScript,
     Script,
     doc = "\
-    redeemScript part of the witness program or sigScript which is hashed for P2(W)SH output"
+    redeemScript part of the witness program or sigScript which is hashed for P2(W)SH output",
+    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 wrapper!(
     TapScript,
     Script,
     doc = "\
-    Any valid branch of Tapscript (BIP-342)"
+    Any valid branch of Tapscript (BIP-342)",
+    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 
 #[derive(Debug, Display, Error)]

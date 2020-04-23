@@ -22,9 +22,12 @@ pub struct TxoutContainer {
     pub script_container: ScriptPubkeyContainer,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
-pub struct TxoutCommitment(ScriptPubkeyCommitment);
+wrapper!(
+    TxoutCommitment,
+    ScriptPubkeyCommitment,
+    doc = "",
+    derive = [PartialEq, Eq, Hash]
+);
 
 impl<MSG> CommitEmbedVerify<MSG> for TxoutCommitment
 where

@@ -17,7 +17,7 @@ use crate::primitives::commit_verify::CommitEmbedVerify;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1;
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyContainer {
@@ -29,7 +29,7 @@ pub enum ScriptPubkeyContainer {
     OtherScript(PubkeyScript),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyCommitment {

@@ -29,9 +29,12 @@ static SHA256_LNPBP1: [u8; 32] = [
     252, 82, 171, 140, 204, 209, 41, 17, 12, 0, 64, 175,
 ];
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
-pub struct PubkeyCommitment(pub secp256k1::PublicKey);
+wrapper!(
+    PubkeyCommitment,
+    secp256k1::PublicKey,
+    doc = "",
+    derive = [PartialEq, Eq, Hash]
+);
 
 impl<MSG> CommitEmbedVerify<MSG> for PubkeyCommitment
 where

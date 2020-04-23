@@ -17,9 +17,12 @@ use super::pubkey::PubkeyCommitment;
 use crate::bp::scripts::{LockScript, LockScriptParseError};
 use crate::primitives::commit_verify::CommitEmbedVerify;
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
-pub struct LockscriptCommitment(LockScript);
+wrapper!(
+    LockscriptCommitment,
+    LockScript,
+    doc = "",
+    derive = [PartialEq, Eq, Hash]
+);
 
 impl<MSG> CommitEmbedVerify<MSG> for LockscriptCommitment
 where
@@ -32,7 +35,7 @@ where
         let tweaked = container.clone().replace_pubkeys(|pubkey: PublicKey| {
             PubkeyCommitment::commit_embed(pubkey, msg)
                 .ok()
-                .map(|pk| pk.0)
+                .map(|pk| *pk)
         })?;
         Ok(Self(tweaked))
     }

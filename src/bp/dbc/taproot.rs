@@ -17,16 +17,19 @@ use bitcoin::secp256k1;
 use super::{Error, PubkeyCommitment};
 use crate::primitives::commit_verify::CommitEmbedVerify;
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 pub struct TaprootContainer {
     pub script_root: sha256::Hash,
     pub intermediate_key: secp256k1::PublicKey,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
-pub struct TaprootCommitment(PubkeyCommitment);
+wrapper!(
+    TaprootCommitment,
+    PubkeyCommitment,
+    doc = "",
+    derive = [PartialEq, Eq, Hash]
+);
 
 impl<MSG> CommitEmbedVerify<MSG> for TaprootCommitment
 where

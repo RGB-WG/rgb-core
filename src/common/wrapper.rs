@@ -14,9 +14,10 @@
 // TODO: Add generic support to the wrapper
 #[macro_export]
 macro_rules! wrapper {
-    ($name:ident, $from:ty, $docs:meta) => {
+    ($name:ident, $from:ty, $docs:meta, derive=[$( $derive:ident ),+]) => {
         #[$docs]
-        #[derive(Clone, PartialEq, Eq, Default, PartialOrd, Ord, Hash, Debug)]
+        #[derive(Clone, Debug)]
+        $( #[derive($derive)] )+
         pub struct $name($from);
 
         impl ::core::ops::Deref for $name {
@@ -51,6 +52,12 @@ macro_rules! wrapper {
             #[inline]
             fn from(x: &$from) -> Self {
                 Self(x.clone())
+            }
+        }
+
+        impl ::std::fmt::Display for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                writeln!(f, "{}", self.0)
             }
         }
     };
