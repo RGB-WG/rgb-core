@@ -26,8 +26,10 @@
 #![feature(str_strip)]
 #![feature(bindings_after_at)]
 #![feature(in_band_lifetimes)]
+#![recursion_limit="256"]
 
 // Coding conventions
+#![allow(incomplete_features)]
 #![deny(non_upper_case_globals)]
 #![deny(non_camel_case_types)]
 #![deny(non_snake_case)]
