@@ -22,7 +22,6 @@ use std::sync::Once;
 use bitcoin::hashes::*;
 use bitcoin::secp256k1::{*, Error as CurveError};
 
-use crate::common::*;
 use crate::primitives::commit_verify::{
     CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
 };
@@ -48,7 +47,7 @@ pub struct PubkeyCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for PubkeyCommitment where
-    MSG: EmbedCommittable<Self> + AsSlice
+    MSG: EmbedCommittable<Self> + AsRef<[u8]>
 {
 
     #[inline]
@@ -58,7 +57,7 @@ impl<MSG> CommitmentVerify<MSG> for PubkeyCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
-    MSG: EmbedCommittable<Self> + AsSlice,
+    MSG: EmbedCommittable<Self> + AsRef<[u8]>,
 {
     type Container = PublicKey;
     type Error = CurveError;
@@ -83,7 +82,7 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
         unsafe {
             buff.extend(&PREFIX);
         }
-        buff.extend(msg.as_slice());
+        buff.extend(msg.as_ref());
         let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&container.serialize());
         hmac_engine.input(&buff[..]);
         let factor = &Hmac::from_engine(hmac_engine)[..];
@@ -98,9 +97,9 @@ impl<MSG> EmbeddedCommitment<MSG> for PubkeyCommitment where
     }
 }
 
-impl<T> Verifiable<PubkeyCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<PubkeyCommitment> for T where T: AsRef<[u8]> { }
 
-impl<T> EmbedCommittable<PubkeyCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<PubkeyCommitment> for T where T: AsRef<[u8]> { }
 
 impl From<CurveError> for self::Error {
     fn from(error: CurveError) -> Self {
@@ -120,11 +119,6 @@ mod test {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     struct Message<'a>(&'a str);
-    impl AsSlice for Message<'_> {
-        fn as_slice(&self) -> &[u8] {
-            &self.0.as_bytes()
-        }
-    }
 
     #[test]
     // Test according to LNPBP-1 standard
@@ -137,7 +131,7 @@ mod test {
 
         let prefix = sha256::Hash::hash(tag.as_bytes());
         let mut prefixed_msg = prefix.to_vec();
-        prefixed_msg.extend(msg.bytes());
+        prefixed_msg.extend(msg.as_bytes());
 
         let commitment: PubkeyCommitment = prefixed_msg.clone().commit_embed(pubkey).unwrap();
         //assert_eq!(commitment.tweaked.to_hex(),

@@ -13,7 +13,6 @@
 
 use bitcoin::{Amount, Transaction, TxOut};
 
-use crate::common::*;
 use crate::primitives::commit_verify::{
     CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
 };
@@ -42,7 +41,7 @@ pub struct TxCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for TxCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<TxoutCommitment> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<TxoutCommitment> + AsRef<[u8]>
 {
 
     #[inline]
@@ -52,7 +51,7 @@ impl<MSG> CommitmentVerify<MSG> for TxCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<TxoutCommitment> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<TxoutCommitment> + AsRef<[u8]>
 {
     type Container = TxContainer;
     type Error = Error;
@@ -89,9 +88,9 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
     }
 }
 
-impl<T> Verifiable<TxCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<TxCommitment> for T where T: AsRef<[u8]> { }
 
-impl<T> EmbedCommittable<TxCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<TxCommitment> for T where T: AsRef<[u8]> { }
 
 
 #[cfg(test)]
@@ -105,9 +104,9 @@ mod test {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     struct Message<'a>(&'a str);
-    impl AsSlice for Message<'_> {
-        fn as_slice(&self) -> &[u8] {
-            &self.0.as_bytes()
+    impl AsRef<[u8]> for Message<'_> {
+        fn as_ref(&self) -> &[u8] {
+            self.0.as_ref()
         }
     }
 

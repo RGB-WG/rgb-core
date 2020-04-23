@@ -18,7 +18,6 @@
 pub mod macros;
 #[macro_use]
 pub(crate) mod convert;
-pub mod as_slice;
 #[macro_use]
 pub mod wrapper;
 pub mod internet;
@@ -27,7 +26,6 @@ pub mod service;
 #[cfg(feature="serde")]
 pub(crate) mod serde;
 
-pub use as_slice::*;
 pub use wrapper::*;
 pub use macros::*;
 #[cfg(feature="node")]

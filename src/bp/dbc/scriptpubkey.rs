@@ -17,7 +17,6 @@ use bitcoin::{
     blockdata::script::Builder
 };
 
-use crate::common::AsSlice;
 use crate::bp::scripts::{LockScript, PubkeyScript, LockScriptParseError};
 use crate::primitives::commit_verify::{
     CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
@@ -108,7 +107,7 @@ impl From<ScriptPubkeyContainer> for PubkeyScript {
 
 
 impl<MSG> CommitmentVerify<MSG> for ScriptPubkeyCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<LockscriptCommitment> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<LockscriptCommitment> + AsRef<[u8]>
 {
 
     #[inline]
@@ -118,7 +117,7 @@ impl<MSG> CommitmentVerify<MSG> for ScriptPubkeyCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for ScriptPubkeyCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<LockscriptCommitment> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<LockscriptCommitment> + AsRef<[u8]>
 {
     type Container = ScriptPubkeyContainer;
     type Error = Error;
@@ -177,6 +176,6 @@ impl<MSG> EmbeddedCommitment<MSG> for ScriptPubkeyCommitment where
     }
 }
 
-impl<T> Verifiable<ScriptPubkeyCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<ScriptPubkeyCommitment> for T where T: AsRef<[u8]> { }
 
-impl<T> EmbedCommittable<ScriptPubkeyCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<ScriptPubkeyCommitment> for T where T: AsRef<[u8]> { }

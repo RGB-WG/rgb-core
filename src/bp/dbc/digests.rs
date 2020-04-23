@@ -15,12 +15,11 @@ use bitcoin::hashes::Hash;
 use crate::primitives::commit_verify::{
     Committable, Verifiable, CommitmentVerify, StandaloneCommitment
 };
-use crate::common::AsSlice;
 
 
 impl<HT, MSG> CommitmentVerify<MSG> for HT where
     HT: Hash,
-    MSG: AsSlice + Committable<Self>
+    MSG: AsRef<[u8]> + Committable<Self>
 {
     #[inline]
     fn reveal_verify(&self, msg: &MSG) -> bool {
@@ -30,18 +29,18 @@ impl<HT, MSG> CommitmentVerify<MSG> for HT where
 
 impl<HT, MSG> StandaloneCommitment<MSG> for HT where
     HT: Hash,
-    MSG: AsSlice + Committable<Self>
+    MSG: AsRef<[u8]> + Committable<Self>
 {
     #[inline]
     fn commit_to(msg: &MSG) -> HT {
-        From::from(<HT as Hash>::hash(msg.as_slice()))
+        From::from(<HT as Hash>::hash(msg.as_ref()))
     }
 }
 
 
-impl<T, HT> Verifiable<HT> for T where HT: Hash, T: AsSlice { }
+impl<T, HT> Verifiable<HT> for T where HT: Hash, T: AsRef<[u8]> { }
 
-impl<T, HT> Committable<HT> for T where HT: Hash, T: AsSlice { }
+impl<T, HT> Committable<HT> for T where HT: Hash, T: AsRef<[u8]> { }
 
 
 #[cfg(test)]
@@ -52,16 +51,16 @@ mod test {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     struct Message<'a>(&'a str);
-    impl AsSlice for Message<'_> {
-        fn as_slice(&self) -> &[u8] {
-            &self.0.as_bytes()
+    impl AsRef<[u8]> for Message<'_> {
+        fn as_ref(&self) -> &[u8] {
+            self.0.as_ref()
         }
     }
 
     #[test]
     fn test_sha256_commitment() {
         let msg = Message("Message to commit to");
-        let digest = sha256::Hash::hash(&msg.as_slice());
+        let digest = sha256::Hash::hash(msg.as_ref());
         assert_eq!(digest.to_hex(), "868258ba45e46ac4ba141fe0eb6cd6251b4d0ee2c23e69cd99322505324672e4");
 
         let commitment: sha256::Hash = msg.commit();

@@ -14,10 +14,7 @@
 
 use bitcoin::secp256k1::PublicKey;
 
-use crate::{
-    common::*,
-    bp::scripts::*
-};
+use crate::bp::scripts::{LockScript, LockScriptParseError};
 use crate::primitives::commit_verify::{
     CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
 };
@@ -32,7 +29,7 @@ pub struct LockscriptCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for LockscriptCommitment where
-    MSG: EmbedCommittable<Self> + AsSlice
+    MSG: EmbedCommittable<Self> + AsRef<[u8]>
 {
 
     #[inline]
@@ -42,7 +39,7 @@ impl<MSG> CommitmentVerify<MSG> for LockscriptCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
-    MSG: EmbedCommittable<Self> + AsSlice
+    MSG: EmbedCommittable<Self> + AsRef<[u8]>
 {
     type Container = LockScript;
     type Error = LockScriptParseError<bitcoin::PublicKey>;
@@ -63,6 +60,6 @@ impl<MSG> EmbeddedCommitment<MSG> for LockscriptCommitment where
     }
 }
 
-impl<T> Verifiable<LockscriptCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<LockscriptCommitment> for T where T: AsRef<[u8]> { }
 
-impl<T> EmbedCommittable<LockscriptCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<LockscriptCommitment> for T where T: AsRef<[u8]> { }

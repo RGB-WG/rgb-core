@@ -14,7 +14,6 @@
 use bitcoin::hashes::sha256;
 use bitcoin::secp256k1::PublicKey;
 
-use crate::common::*;
 use crate::primitives::commit_verify::{
     CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
 };
@@ -36,7 +35,7 @@ pub struct TaprootCommitment {
 }
 
 impl<MSG> CommitmentVerify<MSG> for TaprootCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsRef<[u8]>
 {
 
     #[inline]
@@ -46,7 +45,7 @@ impl<MSG> CommitmentVerify<MSG> for TaprootCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<PubkeyCommitment> + AsRef<[u8]>
 {
     type Container = TaprootContainer;
     type Error = Error;
@@ -68,6 +67,6 @@ impl<MSG> EmbeddedCommitment<MSG> for TaprootCommitment where
     }
 }
 
-impl<T> Verifiable<TaprootCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<TaprootCommitment> for T where T: AsRef<[u8]> { }
 
-impl<T> EmbedCommittable<TaprootCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<TaprootCommitment> for T where T: AsRef<[u8]> { }

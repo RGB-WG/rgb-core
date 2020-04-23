@@ -12,7 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-use crate::common::AsSlice;
 use crate::primitives::commit_verify::{
     CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
 };
@@ -35,7 +34,7 @@ pub struct TxoutCommitment {
 
 
 impl<MSG> CommitmentVerify<MSG> for TxoutCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<ScriptPubkeyCommitment> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<ScriptPubkeyCommitment> + AsRef<[u8]>
 {
 
     #[inline]
@@ -45,7 +44,7 @@ impl<MSG> CommitmentVerify<MSG> for TxoutCommitment where
 }
 
 impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
-    MSG: EmbedCommittable<Self> + EmbedCommittable<ScriptPubkeyCommitment> + AsSlice
+    MSG: EmbedCommittable<Self> + EmbedCommittable<ScriptPubkeyCommitment> + AsRef<[u8]>
 {
     type Container = TxoutContainer;
     type Error = Error;
@@ -66,6 +65,6 @@ impl<MSG> EmbeddedCommitment<MSG> for TxoutCommitment where
     }
 }
 
-impl<T> Verifiable<TxoutCommitment> for T where T: AsSlice { }
+impl<T> Verifiable<TxoutCommitment> for T where T: AsRef<[u8]> { }
 
-impl<T> EmbedCommittable<TxoutCommitment> for T where T: AsSlice { }
+impl<T> EmbedCommittable<TxoutCommitment> for T where T: AsRef<[u8]> { }
