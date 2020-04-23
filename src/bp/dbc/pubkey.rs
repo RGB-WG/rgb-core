@@ -31,10 +31,7 @@ static SHA256_LNPBP1: [u8; 32] = [
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
-pub struct PubkeyCommitment {
-    pub tweaked: secp256k1::PublicKey,
-    pub original: secp256k1::PublicKey,
-}
+pub struct PubkeyCommitment(pub secp256k1::PublicKey);
 
 impl<MSG> CommitEmbedVerify<MSG> for PubkeyCommitment
 where
@@ -42,11 +39,6 @@ where
 {
     type Container = secp256k1::PublicKey;
     type Error = secp256k1::Error;
-
-    #[inline]
-    fn container(&self) -> Self::Container {
-        self.original
-    }
 
     // According to LNPBP-1 the message supplied here must be already prefixed with 32-byte SHA256
     // hash of the protocol-specific prefix
@@ -59,10 +51,7 @@ where
         let mut pubkey_tweaked = pubkey_container.clone();
         pubkey_tweaked.add_exp_assign(&ec, factor)?;
 
-        Ok(PubkeyCommitment {
-            tweaked: pubkey_tweaked,
-            original: pubkey_container,
-        })
+        Ok(PubkeyCommitment(pubkey_tweaked))
     }
 }
 
@@ -105,9 +94,9 @@ mod test {
 
         let commitment = PubkeyCommitment::commit_embed(pubkey, &prefixed_msg).unwrap();
         assert_eq!(
-            commitment.tweaked.to_hex(),
+            commitment.0.to_hex(),
             "02533c2a16bca85069a7c54c4e5e0682a24783f2c0a7c47c15e545d37cc4c52d5a"
         );
-        assert_eq!(commitment.verify(&prefixed_msg), true);
+        assert_eq!(commitment.verify(pubkey, &prefixed_msg), true);
     }
 }

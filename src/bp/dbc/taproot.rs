@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::hashes::sha256;
-use bitcoin::secp256k1::PublicKey;
+use bitcoin::secp256k1;
 
 use super::{Error, PubkeyCommitment};
 use crate::primitives::commit_verify::CommitEmbedVerify;
@@ -21,15 +21,12 @@ use crate::primitives::commit_verify::CommitEmbedVerify;
 #[display_from(Debug)]
 pub struct TaprootContainer {
     pub script_root: sha256::Hash,
-    pub intermediate_key: PublicKey,
+    pub intermediate_key: secp256k1::PublicKey,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
-pub struct TaprootCommitment {
-    pub script_root: sha256::Hash,
-    pub pubkey_commitment: PubkeyCommitment,
-}
+pub struct TaprootCommitment(PubkeyCommitment);
 
 impl<MSG> CommitEmbedVerify<MSG> for TaprootCommitment
 where
@@ -38,19 +35,8 @@ where
     type Container = TaprootContainer;
     type Error = Error;
 
-    #[inline]
-    fn container(&self) -> Self::Container {
-        TaprootContainer {
-            script_root: self.script_root,
-            intermediate_key: self.pubkey_commitment.original,
-        }
-    }
-
     fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let cmt = PubkeyCommitment::commit_embed(container.intermediate_key, msg)?;
-        Ok(Self {
-            script_root: container.script_root,
-            pubkey_commitment: cmt,
-        })
+        Ok(Self(cmt))
     }
 }

@@ -29,13 +29,7 @@ pub struct TxContainer {
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
-pub struct TxCommitment {
-    pub entropy: u32,
-    pub fee: Amount,
-    pub tx: Transaction,
-    pub original: TxoutContainer,
-    pub tweaked: TxoutCommitment,
-}
+pub struct TxCommitment(TxoutCommitment);
 
 impl<MSG> CommitEmbedVerify<MSG> for TxCommitment
 where
@@ -43,16 +37,6 @@ where
 {
     type Container = TxContainer;
     type Error = Error;
-
-    #[inline]
-    fn container(&self) -> Self::Container {
-        TxContainer {
-            fee: self.fee,
-            entropy: self.entropy,
-            tx: self.tx.clone(),
-            txout_container: self.original.clone(),
-        }
-    }
 
     fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
@@ -65,18 +49,12 @@ where
 
         let pubkey_script: PubkeyScript = txout_container.clone().script_container.into();
         let txout = TxOut {
-            value: txout_commitment.value,
+            value: txout_container.value,
             script_pubkey: pubkey_script.into_inner(),
         };
 
         tx.output.insert(vout as usize, txout);
-        Ok(Self {
-            entropy,
-            fee,
-            tx,
-            original: txout_container,
-            tweaked: txout_commitment,
-        })
+        Ok(Self(txout_commitment))
     }
 }
 
@@ -130,6 +108,6 @@ mod test {
         let msg = "message to commit to";
 
         let commitment = TxCommitment::commit_embed(container1, &msg).unwrap();
-        assert_eq!(commitment.verify(&msg), true);
+        assert_eq!(commitment.verify(container2, &msg), true);
     }
 }

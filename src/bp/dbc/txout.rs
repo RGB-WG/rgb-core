@@ -24,10 +24,7 @@ pub struct TxoutContainer {
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
-pub struct TxoutCommitment {
-    pub value: u64,
-    pub script_commitment: ScriptPubkeyCommitment,
-}
+pub struct TxoutCommitment(ScriptPubkeyCommitment);
 
 impl<MSG> CommitEmbedVerify<MSG> for TxoutCommitment
 where
@@ -36,21 +33,10 @@ where
     type Container = TxoutContainer;
     type Error = Error;
 
-    #[inline]
-    fn container(&self) -> Self::Container {
-        TxoutContainer {
-            value: self.value,
-            script_container: CommitEmbedVerify::<MSG>::container(&self.script_commitment),
-        }
-    }
-
     fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        Ok(Self {
-            value: container.value,
-            script_commitment: ScriptPubkeyCommitment::commit_embed(
-                container.script_container,
-                msg,
-            )?,
-        })
+        Ok(Self(ScriptPubkeyCommitment::commit_embed(
+            container.script_container,
+            msg,
+        )?))
     }
 }

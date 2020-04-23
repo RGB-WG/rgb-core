@@ -80,27 +80,6 @@ where
     type Container = ScriptPubkeyContainer;
     type Error = super::Error;
 
-    #[inline]
-    fn container(&self) -> Self::Container {
-        match self {
-            ScriptPubkeyCommitment::PublicKey(cmt) => {
-                // TODO: Re-implement by analyzing scriptPubkey content
-                let container: secp256k1::PublicKey = CommitEmbedVerify::<MSG>::container(cmt);
-                ScriptPubkeyContainer::PubkeyHash(container)
-            }
-            ScriptPubkeyCommitment::LockScript(cmt) => {
-                // TODO: Re-implement by analyzing scriptPubkey content
-                let container: LockScript = CommitEmbedVerify::<MSG>::container(cmt);
-                ScriptPubkeyContainer::ScriptHash(container)
-            }
-            ScriptPubkeyCommitment::TapRoot(cmt) => {
-                let container: TaprootContainer = CommitEmbedVerify::<MSG>::container(cmt);
-                ScriptPubkeyContainer::TapRoot(container)
-            }
-            _ => unimplemented!(),
-        }
-    }
-
     fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(match container {
             ScriptPubkeyContainer::PublicKey(pubkey) => {

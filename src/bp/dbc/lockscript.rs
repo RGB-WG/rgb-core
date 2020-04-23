@@ -19,10 +19,7 @@ use crate::primitives::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
-pub struct LockscriptCommitment {
-    pub tweaked: LockScript,
-    pub original: LockScript,
-}
+pub struct LockscriptCommitment(LockScript);
 
 impl<MSG> CommitEmbedVerify<MSG> for LockscriptCommitment
 where
@@ -31,20 +28,12 @@ where
     type Container = LockScript;
     type Error = LockScriptParseError<bitcoin::PublicKey>;
 
-    #[inline]
-    fn container(&self) -> Self::Container {
-        self.original.clone()
-    }
-
     fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let tweaked = container.clone().replace_pubkeys(|pubkey: PublicKey| {
             PubkeyCommitment::commit_embed(pubkey, msg)
                 .ok()
-                .map(|c| c.tweaked)
+                .map(|pk| pk.0)
         })?;
-        Ok(Self {
-            original: container,
-            tweaked,
-        })
+        Ok(Self(tweaked))
     }
 }
