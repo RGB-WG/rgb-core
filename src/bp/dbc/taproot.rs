@@ -21,13 +21,15 @@ use crate::primitives::commit_verify::{
 use super::{PubkeyCommitment, pubkey::Error};
 
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
 pub struct TaprootContainer {
     pub script_root: sha256::Hash,
     pub intermediate_key: PublicKey,
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
 pub struct TaprootCommitment {
     pub script_root: sha256::Hash,
     pub pubkey_commitment: PubkeyCommitment,

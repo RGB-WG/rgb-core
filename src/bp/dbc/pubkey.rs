@@ -34,12 +34,14 @@ static mut PREFIX: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
-#[derive(Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, Error)]
+#[display_from(Debug)]
 pub enum Error {
     ECPointAtInfinity
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
 pub struct PubkeyCommitment {
     pub tweaked: PublicKey,
     pub original: PublicKey,

@@ -24,7 +24,8 @@ use crate::primitives::commit_verify::{
 use super::pubkey::*;
 
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
 pub struct LockscriptCommitment {
     pub tweaked: LockScript,
     pub original: LockScript,

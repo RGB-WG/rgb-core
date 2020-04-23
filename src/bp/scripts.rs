@@ -98,7 +98,7 @@ wrapper!(TapScript, _TapScriptPhantom, Script, doc="\
     Any valid branch of Tapscript (BIP-342)");
 
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, Error)]
 #[display_from(Debug)]
 pub enum LockScriptParseError<Pk: MiniscriptKey> {
     PubkeyHash(Pk::Hash),

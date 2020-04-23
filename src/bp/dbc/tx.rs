@@ -11,16 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{Amount, Transaction};
+use bitcoin::{Amount, Transaction, TxOut};
 
 use crate::common::*;
 use crate::primitives::commit_verify::{
     CommitmentVerify, Verifiable, EmbedCommittable, EmbeddedCommitment
 };
-use super::txout::{TxoutContainer, TxoutCommitment, Error};
+use crate::bp::PubkeyScript;
+use super::scriptpubkey::Error;
+use super::txout::{TxoutContainer, TxoutCommitment};
 
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
 pub struct TxContainer {
     pub entropy: u32,
     pub fee: Amount,
@@ -28,7 +31,8 @@ pub struct TxContainer {
     pub txout_container: TxoutContainer,
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
 pub struct TxCommitment {
     pub entropy: u32,
     pub fee: Amount,
@@ -55,11 +59,6 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
 
     #[inline]
     fn get_original_container(&self) -> Self::Container {
-        let root = match &self.tweaked {
-            TxoutCommitment::PublicKey(pubkey) => None,
-            TxoutCommitment::LockScript(script) => None,
-            TxoutCommitment::TapRoot(cmt) => Some(cmt.script_root),
-        };
         TxContainer {
             fee: self.fee,
             entropy: self.entropy,
@@ -69,18 +68,23 @@ impl<MSG> EmbeddedCommitment<MSG> for TxCommitment where
     }
 
     fn commit_to(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let tx = container.tx;
+        let mut tx = container.tx.clone();
         let fee = container.fee;
         let entropy = container.entropy;
         let nouts = tx.output.len();
         let vout = (fee.as_sat() + (entropy as u64)) % (nouts as u64);
-        let txout = tx.output[vout as usize].clone();
         let txout_container = container.txout_container;
-        // TODO: Check container against the actual output
-        // TODO: Adjust transaction fee
-        let tweaked = TxoutCommitment::commit_to(txout_container.clone(), msg)?;
+        let txout_commitment = TxoutCommitment::commit_to(txout_container.clone(), msg)?;
+
+        let pubkey_script: PubkeyScript = txout_container.clone().script_container.into();
+        let txout = TxOut {
+            value: txout_commitment.value,
+            script_pubkey: pubkey_script.into_inner()
+        };
+
+        tx.output.insert(vout as usize, txout);
         Ok(Self {
-            entropy, fee, tx, original: txout_container, tweaked
+            entropy, fee, tx, original: txout_container, tweaked: txout_commitment
         })
     }
 }
@@ -97,6 +101,7 @@ mod test {
     use bitcoin::{*, consensus::encode::deserialize};
     use bitcoin::hashes::hex::FromHex;
     use super::*;
+    use crate::bp::dbc::ScriptPubkeyContainer;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     struct Message<'a>(&'a str);
@@ -132,9 +137,12 @@ mod test {
             tx,
             fee: Amount::from_sat(0),
             entropy: 0,
-            txout_container: TxoutContainer::PubkeyHash(PublicKey::from_str(
-                "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
-            ).unwrap())
+            txout_container: TxoutContainer {
+                value: 0,
+                script_container: ScriptPubkeyContainer::PubkeyHash(PublicKey::from_str(
+                    "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
+                ).unwrap())
+            }
         };
         let container2 = container1.clone();
 

@@ -16,6 +16,7 @@ use bitcoin::{Transaction, OutPoint};
 
 use crate::single_use_seals::{Message, SingleUseSeal, SealMedium, SealStatus};
 use crate::bp::ShortId;
+// use crate::bp::dbc::{TxCommitment, TxContainer};
 use super::tx_graph::{SpendingStatus, TxGraph};
 
 

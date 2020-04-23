@@ -13,15 +13,17 @@
 
 mod digests;
 mod pubkey;
-mod lockscript;
 mod taproot;
+mod lockscript;
+mod scriptpubkey;
 mod txout;
 mod tx;
 
 
 pub use digests::*;
 pub use pubkey::*;
-pub use lockscript::*;
 pub use taproot::*;
+pub use lockscript::*;
+pub use scriptpubkey::*;
 pub use txout::*;
 pub use tx::*;
