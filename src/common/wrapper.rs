@@ -20,6 +20,13 @@ macro_rules! wrapper {
         $( #[derive($derive)] )+
         pub struct $name($from);
 
+        impl ::core::convert::AsRef<$from> for $name {
+            #[inline]
+            fn as_ref(&self) -> &$from {
+                &self.0
+            }
+        }
+
         impl ::core::ops::Deref for $name {
             type Target = $from;
             #[inline]

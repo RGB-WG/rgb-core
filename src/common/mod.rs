@@ -11,7 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
 //! Common data types, structures and functions for LNPBPs
 
 #[macro_use]
@@ -21,12 +20,12 @@ pub(crate) mod convert;
 #[macro_use]
 pub mod wrapper;
 pub mod internet;
-#[cfg(feature="daemons")]
-pub mod service;
-#[cfg(feature="serde")]
+#[cfg(feature = "serde")]
 pub(crate) mod serde;
+#[cfg(feature = "daemons")]
+pub mod service;
 
-pub use wrapper::*;
 pub use macros::*;
-#[cfg(feature="node")]
+#[cfg(feature = "node")]
 pub use service::*;
+pub use wrapper::*;
