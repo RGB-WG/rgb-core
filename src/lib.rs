@@ -76,7 +76,7 @@ pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-mod primitives;
+mod paradigms;
 #[macro_use]
 mod common;
 mod lnpbps;
@@ -89,4 +89,4 @@ pub mod rgb;
 
 pub use common::*;
 pub use lnpbps::*;
-pub use primitives::*;
+pub use paradigms::*;
