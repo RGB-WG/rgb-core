@@ -11,15 +11,20 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyContainer};
-use super::Error;
-use crate::primitives::commit_verify::CommitEmbedVerify;
+use super::{Container, Error, Proof, ScriptPubkeyCommitment, ScriptPubkeyContainer};
+use crate::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
 pub struct TxoutContainer {
     pub value: u64,
     pub script_container: ScriptPubkeyContainer,
+}
+
+impl Container for TxoutContainer {
+    fn to_proof(&self) -> Proof {
+        self.script_container.to_proof()
+    }
 }
 
 wrapper!(

@@ -11,10 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-mod tx_graph;
-mod txout_seal;
-mod txout_witness;
+use crate::bp::dbc::{Proof, TxCommitment};
 
-pub use tx_graph::{SpendingStatus, TxGraph};
-pub use txout_seal::TxoutSeal;
-pub use txout_witness::*;
+pub struct Witness(pub InnerWitness, pub OuterWitness);
+
+pub type InnerWitness = TxCommitment;
+pub type OuterWitness = Proof;

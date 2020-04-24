@@ -28,16 +28,24 @@ use bitcoin::hash_types::PubkeyHash;
 use bitcoin::secp256k1;
 use core::cell::RefCell;
 
-use super::pubkey::PubkeyCommitment;
-use super::Error;
+use super::{Container, Error, Proof, ProofSuppl, PubkeyCommitment};
 use crate::bp::scripts::LockScript;
-use crate::primitives::commit_verify::CommitEmbedVerify;
+use crate::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 pub struct LockscriptContainer {
     pub script: LockScript,
     pub pubkey: secp256k1::PublicKey,
+}
+
+impl Container for LockscriptContainer {
+    fn to_proof(&self) -> Proof {
+        Proof {
+            pubkey: self.pubkey.clone(),
+            suppl: ProofSuppl::RedeemScript(self.script.clone()),
+        }
+    }
 }
 
 wrapper!(

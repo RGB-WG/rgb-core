@@ -39,6 +39,8 @@
 //! and if it is a custom script or P2PK return a `LockScript` type - or otherwise fail with the
 //! error. So with this type system one is always sure which logical information it does contain.
 //!
+//! ## Type derivation
+//!
 //! The following charts represent possible relations between script types:
 //!
 //! ```text
@@ -74,13 +76,21 @@
 //! * `--/format/--`: a format implied by scriptPubKey program
 //! * `--(#=type)--`: the hash of the value following `->` must match to the value of the `<type>`
 //!
+//! ## Type conversion
+//!
+//! ```text
+//! LockScript -+-> (PubkeyScript, RedeemScript) -+-> SigScript
+//!             |                                 +-> WitnessScript
+//!             +-> PubkeyScript
+//!             |
+//!             +-> TapScript
+//!
+//! PubkeyScript -+-?-> LockScript
+//! ```
+//!
 
 use bitcoin::{blockdata::script::*, hash_types::*, secp256k1};
 use miniscript::{miniscript::iter::PubkeyOrHash, Miniscript, MiniscriptKey};
-
-macro_rules! impl_script_copy {
-    ($ident:ident) => {};
-}
 
 wrapper!(
     LockScript,
@@ -100,6 +110,7 @@ wrapper!(
     A content of `scriptPubkey` from a transaction output",
     derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
+
 wrapper!(
     SigScript,
     Script,
@@ -107,20 +118,19 @@ wrapper!(
     A content of `sigScript` from a transaction input",
     derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
+
 wrapper!(
     WitnessScript,
     Script,
     doc = "\
-    A part of the `witness` field from a transaction input according to BIP-141",
+    A content of the `witness` field from a transaction input according to BIP-141",
     derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
-wrapper!(
-    RedeemScript,
-    Script,
-    doc = "\
-    redeemScript part of the witness program or sigScript which is hashed for P2(W)SH output",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+
+/// `redeemScript` as part of the `witness` or `sigScript` structure, which is
+/// hashed for P2(W)SH output",
+pub type RedeemScript = LockScript;
+
 wrapper!(
     TapScript,
     Script,
@@ -128,6 +138,28 @@ wrapper!(
     Any valid branch of Tapscript (BIP-342)",
     derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
+
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
+#[non_exhaustive]
+pub enum Challenge {
+    Signature(bitcoin::PublicKey),
+    Multisig(u32, Vec<bitcoin::PublicKey>),
+    Custom(LockScript),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
+#[non_exhaustive]
+pub enum Encoding {
+    Explicit,
+    Hashed,
+    SegWit,
+    LegacySegWit,
+    Taproot,
+}
+
+pub type ScriptTuple = (PubkeyScript, SigScript, Option<WitnessScript>);
 
 #[derive(Debug, Display, Error)]
 #[display_from(Debug)]
@@ -197,54 +229,5 @@ impl LockScript {
             },
         )?;
         Ok(LockScript::from(result.encode()))
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
-pub enum PubkeyScriptType {
-    P2S(PubkeyScript),
-    P2PK(bitcoin::PublicKey),
-    P2PKH(PubkeyHash),
-    P2SH(ScriptHash),
-    P2OR(Vec<u8>),
-    P2WPKH(WPubkeyHash),
-    P2WSH(WScriptHash),
-    P2TR(secp256k1::PublicKey),
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
-pub enum PubkeyScriptSource {
-    P2S(LockScript),
-    P2PK(bitcoin::PublicKey),
-    P2PKH(bitcoin::PublicKey),
-    P2SH(LockScript),
-    P2OR(Vec<u8>),
-    P2WPKH(LockScript),
-    P2WSH(LockScript),
-    P2TR(bitcoin::PublicKey, TapScript),
-}
-
-impl From<Script> for PubkeyScriptType {
-    fn from(script_pubkey: Script) -> Self {
-        Self::P2S(PubkeyScript::from(script_pubkey))
-    }
-}
-
-impl From<PubkeyScriptType> for PubkeyScript {
-    fn from(spkt: PubkeyScriptType) -> PubkeyScript {
-        use PubkeyScriptType::*;
-
-        PubkeyScript::from(match spkt {
-            P2S(script) => (*script).clone(),
-            P2PK(pubkey) => Builder::gen_p2pk(&pubkey).into_script(),
-            P2PKH(pubkey_hash) => Builder::gen_p2pkh(&pubkey_hash).into_script(),
-            P2SH(script_hash) => Builder::gen_p2sh(&script_hash).into_script(),
-            P2OR(data) => Builder::gen_op_return(&data).into_script(),
-            P2WPKH(wpubkey_hash) => Builder::gen_v0_p2wpkh(&wpubkey_hash).into_script(),
-            P2WSH(wscript_hash) => Builder::gen_v0_p2wsh(&wscript_hash).into_script(),
-            P2TR(pubkey) => unimplemented!(),
-        })
     }
 }

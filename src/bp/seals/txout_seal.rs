@@ -11,37 +11,50 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use bitcoin::OutPoint;
 
-use bitcoin::{Transaction, OutPoint};
-
-use crate::single_use_seals::{Message, SingleUseSeal, SealMedium, SealStatus};
+use super::{SpendingStatus, TxGraph, Witness};
+use crate::bp::dbc::{Container, TxCommitment, TxContainer};
 use crate::bp::ShortId;
-// use crate::bp::dbc::{TxCommitment, TxContainer};
-use super::tx_graph::{SpendingStatus, TxGraph};
+use crate::commit_verify::CommitEmbedVerify;
+use crate::single_use_seals::{Message, SealMedium, SealStatus, SingleUseSeal};
 
-
-// TODO: Fixit
-pub type TxoutWitness = ();
-
-pub struct TxoutSeal<'a> {
+pub struct TxoutSeal<'a, RESOLVER>
+where
+    RESOLVER: TxResolve,
+{
     seal_definition: OutPoint,
-    prototyper: &'a dyn TxPrototype,
+    resolver: &'a RESOLVER,
 }
 
-impl<'a> TxoutSeal<'a> {
-    fn new(seal_definition: OutPoint, prototyper: &'a dyn TxPrototype) -> Self {
-        Self { seal_definition, prototyper }
+impl<'a, RESOLVER> TxoutSeal<'a, RESOLVER>
+where
+    RESOLVER: TxResolve,
+{
+    fn new(seal_definition: OutPoint, resolver: &'a RESOLVER) -> Self {
+        Self {
+            seal_definition,
+            resolver,
+        }
     }
 }
 
-impl SingleUseSeal for TxoutSeal<'_> {
-    type Witness = TxoutWitness;
+impl<'a, RESOLVER> SingleUseSeal for TxoutSeal<'a, RESOLVER>
+where
+    RESOLVER: TxResolve,
+{
+    type Witness = Witness;
     type Definition = OutPoint;
 
+    // TODO: Decide with unfailability of seal closing
     fn close(&self, over: &Message) -> Self::Witness {
-        let (mut tx, txout_index) = self.prototyper.tx_prototype(self.seal_definition);
-        tx.input.get_mut(txout_index as usize);
-        unimplemented!()
+        let container = self
+            .resolver
+            .tx_container(self.seal_definition)
+            .expect("Seal close procedure is cannot fail");
+        let tx_commitment = TxCommitment::commit_embed(container.clone(), &over)
+            .expect("Seal close procedure is cannot fail");
+        Witness(tx_commitment, container.to_proof())
     }
 
     fn verify(&self, msg: &Message, witness: &Self::Witness) -> bool {
@@ -49,14 +62,17 @@ impl SingleUseSeal for TxoutSeal<'_> {
     }
 }
 
-impl<'a, TXGRAPH> SealMedium<'a, TxoutSeal<'a>> for TXGRAPH
+impl<'a, TXGRAPH> SealMedium<'a, TxoutSeal<'a, TXGRAPH>> for TXGRAPH
 where
-    TXGRAPH: TxGraph + TxPrototype,
+    TXGRAPH: TxGraph + TxResolve,
 {
     type PublicationId = ShortId;
     type Error = Error<TXGRAPH::AccessError>;
 
-    fn define_seal(&'a self, seal_definition: &OutPoint) -> Result<TxoutSeal<'a>, Self::Error> {
+    fn define_seal(
+        &'a self,
+        seal_definition: &OutPoint,
+    ) -> Result<TxoutSeal<TXGRAPH>, Self::Error> {
         let outpoint = seal_definition;
         match self.spending_status(outpoint)? {
             SpendingStatus::Unknown => Err(Error::InvalidSealDefinition),
@@ -66,7 +82,7 @@ where
         }
     }
 
-    fn get_seal_status(&self, seal: &TxoutSeal) -> Result<SealStatus, Self::Error> {
+    fn get_seal_status(&self, seal: &TxoutSeal<TXGRAPH>) -> Result<SealStatus, Self::Error> {
         match self.spending_status(&seal.seal_definition)? {
             SpendingStatus::Unknown => Ok(SealStatus::Undefined),
             SpendingStatus::Invalid => Ok(SealStatus::Undefined),
@@ -78,8 +94,9 @@ where
     // TODO: Implement publication-related methods
 }
 
-pub trait TxPrototype {
-    fn tx_prototype(&self, outpoint: OutPoint) -> (Transaction, u16);
+pub trait TxResolve {
+    type Error: std::error::Error;
+    fn tx_container(&self, outpoint: OutPoint) -> Result<TxContainer, Self::Error>;
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, From, Error)]
@@ -88,5 +105,5 @@ pub enum Error<AE: std::error::Error> {
     InvalidSealDefinition,
     SpentTxout,
     #[derive_from(AE)]
-    MediumAccessError(AE)
+    MediumAccessError(AE),
 }

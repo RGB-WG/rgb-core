@@ -14,8 +14,8 @@
 use bitcoin::hashes::sha256;
 use bitcoin::secp256k1;
 
-use super::{Error, PubkeyCommitment};
-use crate::primitives::commit_verify::CommitEmbedVerify;
+use super::{Container, Error, Proof, ProofSuppl, PubkeyCommitment};
+use crate::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
@@ -24,12 +24,21 @@ pub struct TaprootContainer {
     pub intermediate_key: secp256k1::PublicKey,
 }
 
-wrapper!(
-    TaprootCommitment,
-    PubkeyCommitment,
-    doc = "",
-    derive = [PartialEq, Eq, Hash]
-);
+impl Container for TaprootContainer {
+    fn to_proof(&self) -> Proof {
+        Proof {
+            pubkey: self.intermediate_key.clone(),
+            suppl: ProofSuppl::Taproot(self.script_root.clone()),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[display_from(Debug)]
+pub struct TaprootCommitment {
+    pub script_root: sha256::Hash,
+    pub intermediate_ke_commitment: PubkeyCommitment,
+}
 
 impl<MSG> CommitEmbedVerify<MSG> for TaprootCommitment
 where
@@ -40,6 +49,9 @@ where
 
     fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let cmt = PubkeyCommitment::commit_embed(container.intermediate_key, msg)?;
-        Ok(Self(cmt))
+        Ok(Self {
+            script_root: container.script_root,
+            intermediate_ke_commitment: cmt,
+        })
     }
 }

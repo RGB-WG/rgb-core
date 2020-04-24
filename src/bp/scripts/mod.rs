@@ -11,10 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-mod tx_graph;
-mod txout_seal;
-mod txout_witness;
+//mod error;
+pub mod script_pubkey;
+mod types;
 
-pub use tx_graph::{SpendingStatus, TxGraph};
-pub use txout_seal::TxoutSeal;
-pub use txout_witness::*;
+//pub use error::Error;
+pub use types::*;

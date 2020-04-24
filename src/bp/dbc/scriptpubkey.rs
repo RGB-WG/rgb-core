@@ -11,14 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{
-    LockscriptCommitment, LockscriptContainer, PubkeyCommitment, TaprootCommitment,
-    TaprootContainer,
-};
-use crate::bp::scripts::PubkeyScript;
-use crate::primitives::commit_verify::CommitEmbedVerify;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1;
+
+use super::{
+    Container, LockscriptCommitment, LockscriptContainer, Proof, ProofSuppl, PubkeyCommitment,
+    TaprootCommitment, TaprootContainer,
+};
+use crate::bp::PubkeyScript;
+use crate::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
@@ -32,47 +33,110 @@ pub enum ScriptPubkeyContainer {
     OtherScript(LockscriptContainer),
 }
 
+impl Container for ScriptPubkeyContainer {
+    fn to_proof(&self) -> Proof {
+        use ScriptPubkeyContainer::*;
+
+        let mut suppl = ProofSuppl::None;
+        let pubkey = match self {
+            PublicKey(pubkey) => pubkey.clone(),
+            PubkeyHash(pubkey) => pubkey.clone(),
+            ScriptHash(lsc) => {
+                suppl = ProofSuppl::RedeemScript(lsc.script.clone());
+                lsc.pubkey
+            }
+            TapRoot(trc) => {
+                suppl = ProofSuppl::Taproot(trc.script_root);
+                trc.intermediate_key
+            }
+            OpReturn(pubkey) => pubkey.clone(),
+            OtherScript(lsc) => lsc.pubkey,
+            _ => unimplemented!(),
+        };
+        Proof { pubkey, suppl }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyCommitment {
     PublicKey(PubkeyCommitment),
-    LockScript(LockscriptCommitment),
+    PubkeyHash(PubkeyCommitment),
+    ScriptHash(LockscriptCommitment),
     TapRoot(TaprootCommitment),
+    OpReturn(PubkeyCommitment),
+    OtherScript(LockscriptCommitment),
 }
 
 impl From<ScriptPubkeyContainer> for PubkeyScript {
     fn from(container: ScriptPubkeyContainer) -> Self {
+        use ScriptPubkeyContainer::*;
         let script = match container {
-            ScriptPubkeyContainer::OtherScript(script_continer) => {
-                (*script_continer.script).clone()
-            }
-            ScriptPubkeyContainer::PublicKey(pubkey) => Builder::gen_p2pk(&bitcoin::PublicKey {
-                compressed: false,
+            OtherScript(script_continer) => (*script_continer.script).clone(),
+            PublicKey(pubkey) => Builder::gen_p2pk(&bitcoin::PublicKey {
+                compressed: true,
                 key: pubkey,
             })
             .into_script(),
-            ScriptPubkeyContainer::PubkeyHash(pubkey) => {
+            PubkeyHash(pubkey) => {
                 let keyhash = bitcoin::PublicKey {
-                    compressed: false,
+                    compressed: true,
                     key: pubkey,
                 }
                 .wpubkey_hash();
                 Builder::gen_v0_p2wpkh(&keyhash).into_script()
             }
-            ScriptPubkeyContainer::ScriptHash(script_container) => {
+            ScriptHash(script_container) => {
                 let script = (*script_container.script).clone();
                 Builder::gen_v0_p2wsh(&script.wscript_hash()).into_script()
             }
-            ScriptPubkeyContainer::OpReturn(data) => {
+            OpReturn(data) => {
                 let keyhash = bitcoin::PublicKey {
-                    compressed: false,
+                    compressed: true,
                     key: data,
                 }
                 .wpubkey_hash();
                 Builder::gen_op_return(&keyhash.to_vec()).into_script()
             }
-            ScriptPubkeyContainer::TapRoot(taproot_container) => unimplemented!(),
+            TapRoot(taproot_container) => unimplemented!(),
+            _ => unimplemented!(),
+        };
+        script.into()
+    }
+}
+
+impl From<ScriptPubkeyCommitment> for PubkeyScript {
+    fn from(commitment: ScriptPubkeyCommitment) -> Self {
+        use ScriptPubkeyCommitment::*;
+        let script = match commitment {
+            OtherScript(script_commitment) => (*(*script_commitment)).clone(),
+            PublicKey(pubkey) => Builder::gen_p2pk(&bitcoin::PublicKey {
+                compressed: true,
+                key: *pubkey,
+            })
+            .into_script(),
+            PubkeyHash(pubkey) => {
+                let keyhash = bitcoin::PublicKey {
+                    compressed: true,
+                    key: *pubkey,
+                }
+                .wpubkey_hash();
+                Builder::gen_v0_p2wpkh(&keyhash).into_script()
+            }
+            ScriptHash(script_commitment) => {
+                let script = (*script_commitment).clone();
+                Builder::gen_v0_p2wsh(&script.wscript_hash()).into_script()
+            }
+            OpReturn(pubkey) => {
+                let keyhash = bitcoin::PublicKey {
+                    compressed: true,
+                    key: *pubkey,
+                }
+                .wpubkey_hash();
+                Builder::gen_op_return(&keyhash.to_vec()).into_script()
+            }
+            TapRoot(taproot_commitment) => unimplemented!(),
             _ => unimplemented!(),
         };
         script.into()
@@ -98,7 +162,7 @@ where
             }
             ScriptPubkeyContainer::ScriptHash(script) => {
                 let cmt = LockscriptCommitment::commit_embed(script, msg)?;
-                ScriptPubkeyCommitment::LockScript(cmt)
+                ScriptPubkeyCommitment::ScriptHash(cmt)
             }
             ScriptPubkeyContainer::TapRoot(container) => {
                 let cmt = TaprootCommitment::commit_embed(container, msg)?;
@@ -110,7 +174,7 @@ where
             }
             ScriptPubkeyContainer::OtherScript(script) => {
                 let cmt = LockscriptCommitment::commit_embed(script, msg)?;
-                ScriptPubkeyCommitment::LockScript(cmt)
+                ScriptPubkeyCommitment::OtherScript(cmt)
             }
             _ => unimplemented!(),
         })

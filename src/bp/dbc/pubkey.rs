@@ -29,7 +29,8 @@
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::{self, Secp256k1};
 
-use crate::primitives::commit_verify::CommitEmbedVerify;
+use super::{Container, Proof, ProofSuppl};
+use crate::commit_verify::CommitEmbedVerify;
 
 /// Single SHA256 hash of "LNPBP1" string according to LNPBP-1 acting as a
 /// prefix to the message in computing tweaking factor
@@ -37,6 +38,18 @@ static SHA256_LNPBP1: [u8; 32] = [
     245, 8, 242, 142, 252, 192, 113, 82, 108, 168, 134, 200, 224, 124, 105, 212, 149, 78, 46, 201,
     252, 82, 171, 140, 204, 209, 41, 17, 12, 0, 64, 175,
 ];
+
+impl Container for secp256k1::PublicKey {
+    // A proof for the LNPBP-1 public key commitment is the original public key
+    // value, so the commitment container (original public key) just returns a
+    // copy of itself
+    fn to_proof(&self) -> Proof {
+        Proof {
+            pubkey: self.clone(),
+            suppl: ProofSuppl::None,
+        }
+    }
+}
 
 wrapper!(
     PubkeyCommitment,

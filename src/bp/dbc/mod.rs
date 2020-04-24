@@ -19,6 +19,7 @@ mod scriptpubkey;
 mod taproot;
 mod tx;
 mod txout;
+mod types;
 
 pub use error::Error;
 pub use lockscript::{LockscriptCommitment, LockscriptContainer};
@@ -27,3 +28,4 @@ pub use scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyContainer};
 pub use taproot::{TaprootCommitment, TaprootContainer};
 pub use tx::{TxCommitment, TxContainer};
 pub use txout::{TxoutCommitment, TxoutContainer};
+pub use types::{Container, Proof, ProofSuppl};

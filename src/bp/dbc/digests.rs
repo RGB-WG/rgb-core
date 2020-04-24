@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::primitives::commit_verify::CommitVerify;
+use crate::commit_verify::CommitVerify;
 use bitcoin::hashes::Hash;
 
 impl<HT, MSG> CommitVerify<MSG> for HT

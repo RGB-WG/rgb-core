@@ -61,11 +61,5 @@ macro_rules! wrapper {
                 Self(x.clone())
             }
         }
-
-        impl ::std::fmt::Display for $name {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                writeln!(f, "{}", self.0)
-            }
-        }
     };
 }

@@ -13,10 +13,9 @@
 
 use bitcoin::{Amount, Transaction, TxOut};
 
-use super::txout::{TxoutCommitment, TxoutContainer};
-use super::Error;
+use super::{Container, Error, Proof, TxoutCommitment, TxoutContainer};
 use crate::bp::PubkeyScript;
-use crate::primitives::commit_verify::CommitEmbedVerify;
+use crate::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -27,10 +26,16 @@ pub struct TxContainer {
     pub txout_container: TxoutContainer,
 }
 
+impl Container for TxContainer {
+    fn to_proof(&self) -> Proof {
+        self.txout_container.to_proof()
+    }
+}
+
 wrapper!(
     TxCommitment,
-    TxoutCommitment,
-    doc = "",
+    Transaction,
+    doc = "Transaction containing deterministic commitment to a message",
     derive = [PartialEq, Eq, Hash]
 );
 
@@ -50,14 +55,14 @@ where
         let txout_container = container.txout_container;
         let txout_commitment = TxoutCommitment::commit_embed(txout_container.clone(), msg)?;
 
-        let pubkey_script: PubkeyScript = txout_container.clone().script_container.into();
+        let pubkey_script: PubkeyScript = (*txout_commitment).clone().into();
         let txout = TxOut {
             value: txout_container.value,
             script_pubkey: (*pubkey_script).clone(),
         };
 
         tx.output.insert(vout as usize, txout);
-        Ok(Self(txout_commitment))
+        Ok(Self(tx))
     }
 }
 
