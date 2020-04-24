@@ -11,35 +11,53 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{Amount, Transaction, TxOut};
+use bitcoin::{Transaction, TxOut};
 
-use super::{Container, Error, Proof, TxoutCommitment, TxoutContainer};
-use crate::bp::PubkeyScript;
+use super::{Container, Error, Proof, TxoutContainer};
 use crate::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
 pub struct TxContainer {
     pub entropy: u32,
-    pub fee: Amount,
+    pub fee: u64,
     pub tx: Transaction,
     pub txout_container: TxoutContainer,
 }
 
+fn compute_vout(fee: u64, entropy: u32, tx: &mut Transaction) -> &mut TxOut {
+    let nouts = tx.output.len() as u16;
+    let vout = ((fee + (entropy as u64)) % (nouts as u64)) as u16;
+    &mut tx.output[vout as usize]
+}
+
 impl Container for TxContainer {
+    type Supplement = (u32, u64, u64);
+    type Commitment = Transaction;
+
+    fn restore(
+        proof: &Proof,
+        supplement: &Self::Supplement,
+        commitment: &Self::Commitment,
+    ) -> Result<Self, Error> {
+        let entropy = supplement.0;
+        let fee = supplement.1;
+        let mut tx = commitment.clone();
+        let txout = compute_vout(fee, entropy, &mut tx);
+        Ok(Self {
+            entropy,
+            fee,
+            tx: commitment.clone(),
+            txout_container: TxoutContainer::restore(proof, &supplement.2, txout)?,
+        })
+    }
+
     fn to_proof(&self) -> Proof {
         self.txout_container.to_proof()
     }
 }
 
-wrapper!(
-    TxCommitment,
-    Transaction,
-    doc = "Transaction containing deterministic commitment to a message",
-    derive = [PartialEq, Eq, Hash]
-);
-
-impl<MSG> CommitEmbedVerify<MSG> for TxCommitment
+impl<MSG> CommitEmbedVerify<MSG> for Transaction
 where
     MSG: AsRef<[u8]>,
 {
@@ -50,19 +68,12 @@ where
         let mut tx = container.tx.clone();
         let fee = container.fee;
         let entropy = container.entropy;
-        let nouts = tx.output.len();
-        let vout = (fee.as_sat() + (entropy as u64)) % (nouts as u64);
+
         let txout_container = container.txout_container;
-        let txout_commitment = TxoutCommitment::commit_embed(txout_container.clone(), msg)?;
+        let txout_commitment = TxOut::commit_embed(txout_container.clone(), msg)?;
+        *compute_vout(fee, entropy, &mut tx) = txout_commitment;
 
-        let pubkey_script: PubkeyScript = (*txout_commitment).clone().into();
-        let txout = TxOut {
-            value: txout_container.value,
-            script_pubkey: (*pubkey_script).clone(),
-        };
-
-        tx.output.insert(vout as usize, txout);
-        Ok(Self(tx))
+        Ok(tx)
     }
 }
 
@@ -99,7 +110,7 @@ mod test {
 
         let container1 = TxContainer {
             tx,
-            fee: Amount::from_sat(0),
+            fee: 0,
             entropy: 0,
             txout_container: TxoutContainer {
                 value: 0,
@@ -115,7 +126,7 @@ mod test {
 
         let msg = "message to commit to";
 
-        let commitment = TxCommitment::commit_embed(container1, &msg).unwrap();
+        let commitment = Transaction::commit_embed(container1, &msg).unwrap();
         assert_eq!(commitment.verify(container2, &msg), true);
     }
 }

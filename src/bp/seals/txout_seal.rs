@@ -11,10 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::OutPoint;
+use bitcoin::{OutPoint, Transaction};
 
 use super::{SpendingStatus, TxGraph, Witness};
-use crate::bp::dbc::{Container, TxCommitment, TxContainer};
+use crate::bp::dbc::{Container, TxContainer};
 use crate::bp::ShortId;
 use crate::commit_verify::CommitEmbedVerify;
 use crate::single_use_seals::{Message, SealMedium, SealStatus, SingleUseSeal};
@@ -52,7 +52,7 @@ where
             .resolver
             .tx_container(self.seal_definition)
             .expect("Seal close procedure is cannot fail");
-        let tx_commitment = TxCommitment::commit_embed(container.clone(), &over)
+        let tx_commitment = Transaction::commit_embed(container.clone(), &over)
             .expect("Seal close procedure is cannot fail");
         Witness(tx_commitment, container.to_proof())
     }

@@ -40,6 +40,20 @@ pub struct LockscriptContainer {
 }
 
 impl Container for LockscriptContainer {
+    type Supplement = LockScript;
+    type Commitment = ();
+
+    fn restore(
+        proof: &Proof,
+        supplement: &Self::Supplement,
+        _: &Self::Commitment,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            pubkey: proof.pubkey,
+            script: supplement.clone(),
+        })
+    }
+
     fn to_proof(&self) -> Proof {
         Proof {
             pubkey: self.pubkey.clone(),

@@ -11,9 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::bp::dbc::{Proof, TxCommitment};
+use crate::bp::dbc::Proof;
+use bitcoin::Transaction;
 
 pub struct Witness(pub InnerWitness, pub OuterWitness);
 
-pub type InnerWitness = TxCommitment;
+pub type InnerWitness = Transaction;
 pub type OuterWitness = Proof;

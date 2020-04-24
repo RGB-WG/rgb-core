@@ -11,7 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{Container, Error, Proof, ScriptPubkeyCommitment, ScriptPubkeyContainer};
+use bitcoin::TxOut;
+
+use super::{Container, Error, Proof, ScriptPubkeyContainer};
+use crate::bp::scripts::PubkeyScript;
 use crate::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
@@ -22,19 +25,29 @@ pub struct TxoutContainer {
 }
 
 impl Container for TxoutContainer {
+    type Supplement = u64;
+    type Commitment = TxOut;
+
+    fn restore(
+        proof: &Proof,
+        supplement: &Self::Supplement,
+        commitment: &Self::Commitment,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            value: *supplement,
+            script_container: ScriptPubkeyContainer::restore(
+                proof,
+                &None,
+                &commitment.script_pubkey.clone().into(),
+            )?,
+        })
+    }
+
     fn to_proof(&self) -> Proof {
         self.script_container.to_proof()
     }
 }
-
-wrapper!(
-    TxoutCommitment,
-    ScriptPubkeyCommitment,
-    doc = "",
-    derive = [PartialEq, Eq, Hash]
-);
-
-impl<MSG> CommitEmbedVerify<MSG> for TxoutCommitment
+impl<MSG> CommitEmbedVerify<MSG> for TxOut
 where
     MSG: AsRef<[u8]>,
 {
@@ -42,9 +55,9 @@ where
     type Error = Error;
 
     fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        Ok(Self(ScriptPubkeyCommitment::commit_embed(
-            container.script_container,
-            msg,
-        )?))
+        Ok(TxOut {
+            value: container.value,
+            script_pubkey: (*PubkeyScript::commit_embed(container.script_container, msg)?).clone(),
+        })
     }
 }

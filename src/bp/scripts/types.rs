@@ -156,7 +156,6 @@ pub enum Encoding {
     Hashed,
     SegWit,
     LegacySegWit,
-    Taproot,
 }
 
 pub type ScriptTuple = (PubkeyScript, SigScript, Option<WitnessScript>);

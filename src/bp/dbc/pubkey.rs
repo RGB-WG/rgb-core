@@ -30,6 +30,7 @@ use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::{self, Secp256k1};
 
 use super::{Container, Proof, ProofSuppl};
+use crate::bp::dbc::Error;
 use crate::commit_verify::CommitEmbedVerify;
 
 /// Single SHA256 hash of "LNPBP1" string according to LNPBP-1 acting as a
@@ -40,6 +41,13 @@ static SHA256_LNPBP1: [u8; 32] = [
 ];
 
 impl Container for secp256k1::PublicKey {
+    type Supplement = Option<()>;
+    type Commitment = Option<()>;
+
+    fn restore(proof: &Proof, _: &Self::Supplement, _: &Self::Commitment) -> Result<Self, Error> {
+        Ok(proof.pubkey)
+    }
+
     // A proof for the LNPBP-1 public key commitment is the original public key
     // value, so the commitment container (original public key) just returns a
     // copy of itself

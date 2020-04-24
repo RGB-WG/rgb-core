@@ -12,8 +12,10 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 //mod error;
-pub mod script_pubkey;
+mod script_pubkey;
 mod types;
 
 //pub use error::Error;
+pub use script_pubkey::Error;
+pub use script_pubkey::*;
 pub use types::*;

@@ -11,10 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use super::Error;
 use crate::bp::RedeemScript;
 use bitcoin::{hashes::sha256, secp256k1};
 
-pub trait Container {
+pub trait Container: Sized {
+    type Supplement;
+    type Commitment;
+
+    fn restore(
+        proof: &Proof,
+        supplement: &Self::Supplement,
+        commitment: &Self::Commitment,
+    ) -> Result<Self, Error>;
     fn to_proof(&self) -> Proof;
 }
 

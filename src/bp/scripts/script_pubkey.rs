@@ -147,7 +147,7 @@ pub enum ScriptPubkeyTemplate {
     P2TR(secp256k1::PublicKey, TapScript),
 }
 
-#[derive(Clone, Display, Debug, From, Error)]
+#[derive(Clone, PartialEq, Eq, Display, Debug, From, Error)]
 #[display_from(Debug)]
 pub enum Error {
     InvalidKeyData,
@@ -222,5 +222,25 @@ impl From<ScriptPubkeyDescriptor> for PubkeyScript {
             P2TR(pubkey) => unimplemented!(),
             _ => unimplemented!(),
         })
+    }
+}
+
+impl From<ScriptPubkeyDescriptor> for ScriptPubkeyStructure {
+    fn from(descr: ScriptPubkeyDescriptor) -> Self {
+        use ScriptPubkeyDescriptor::*;
+        use ScriptPubkeyStructure as PkStruct;
+        match descr {
+            P2S(script) => PkStruct::Custom((*script).clone()),
+            P2PK(pubkey) => PkStruct::KeyChecksig(pubkey),
+            P2PKH(hash) => PkStruct::KeyHash(hash),
+            P2SH(hash) => PkStruct::ScriptHash(hash),
+            P2OR(data) => PkStruct::OpReturn(data),
+            P2WPKH(hash) => PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into()),
+            P2WSH(hash) => PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into()),
+            P2TR(pubkey) => {
+                PkStruct::Witness(WitnessVersion::V1, pubkey.serialize().to_vec().into())
+            }
+            _ => unimplemented!(),
+        }
     }
 }

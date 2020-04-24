@@ -25,6 +25,20 @@ pub struct TaprootContainer {
 }
 
 impl Container for TaprootContainer {
+    type Supplement = Option<()>;
+    type Commitment = Option<()>;
+
+    fn restore(proof: &Proof, _: &Self::Supplement, _: &Self::Commitment) -> Result<Self, Error> {
+        if let ProofSuppl::Taproot(tapscript_root) = proof.suppl {
+            Ok(Self {
+                script_root: tapscript_root,
+                intermediate_key: proof.pubkey,
+            })
+        } else {
+            Err(Error::InvalidProofSupplement)
+        }
+    }
+
     fn to_proof(&self) -> Proof {
         Proof {
             pubkey: self.intermediate_key.clone(),

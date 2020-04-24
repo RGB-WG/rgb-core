@@ -13,27 +13,73 @@
 
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1;
+use core::convert::TryFrom;
 
 use super::{
     Container, LockscriptCommitment, LockscriptContainer, Proof, ProofSuppl, PubkeyCommitment,
-    TaprootCommitment, TaprootContainer,
+    TaprootContainer,
 };
+use crate::bp::dbc::Error;
+use crate::bp::scripts::ScriptPubkeyDescriptor;
 use crate::bp::PubkeyScript;
 use crate::commit_verify::CommitEmbedVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
+// TODO: Convert in simplier structure with bp::scripts::Encoding
 pub enum ScriptPubkeyContainer {
     PublicKey(secp256k1::PublicKey),
     PubkeyHash(secp256k1::PublicKey),
     ScriptHash(LockscriptContainer),
+    WPubkeyHash(secp256k1::PublicKey),
+    WScriptHash(LockscriptContainer),
+    SHWPubkeyHash(secp256k1::PublicKey),
+    SHWScriptHash(LockscriptContainer),
     TapRoot(TaprootContainer),
     OpReturn(secp256k1::PublicKey),
     OtherScript(LockscriptContainer),
 }
 
 impl Container for ScriptPubkeyContainer {
+    type Supplement = Option<()>;
+    type Commitment = PubkeyScript;
+
+    fn restore(
+        proof: &Proof,
+        _: &Self::Supplement,
+        commitment: &Self::Commitment,
+    ) -> Result<Self, Error> {
+        use ScriptPubkeyContainer as Cont;
+        use ScriptPubkeyDescriptor as Descr;
+        let (lockscript, tapscript_hash) = match &proof.suppl {
+            ProofSuppl::None => (None, None),
+            ProofSuppl::RedeemScript(script) => (Some(script), None),
+            ProofSuppl::Taproot(hash) => (None, Some(hash)),
+            _ => unimplemented!(),
+        };
+        Ok(
+            match ScriptPubkeyDescriptor::try_from(commitment.clone())? {
+                Descr::P2SH(_) | Descr::P2S(_) => Cont::OtherScript(LockscriptContainer {
+                    script: lockscript.ok_or(Error::InvalidProofSupplement)?.clone(),
+                    pubkey: proof.pubkey,
+                }),
+                Descr::P2PK(_) | Descr::P2PKH(_) => Cont::PublicKey(proof.pubkey),
+                Descr::P2OR(_) => Cont::OpReturn(proof.pubkey),
+                Descr::P2WPKH(_) => Cont::WPubkeyHash(proof.pubkey),
+                Descr::P2WSH(_) => Cont::WScriptHash(LockscriptContainer {
+                    script: lockscript.ok_or(Error::InvalidProofSupplement)?.clone(),
+                    pubkey: proof.pubkey,
+                }),
+                Descr::P2TR(_) => Cont::TapRoot(TaprootContainer {
+                    script_root: tapscript_hash.ok_or(Error::InvalidProofSupplement)?.clone(),
+                    intermediate_key: proof.pubkey,
+                }),
+                _ => unimplemented!(),
+            },
+        )
+    }
+
     fn to_proof(&self) -> Proof {
         use ScriptPubkeyContainer::*;
 
@@ -55,18 +101,6 @@ impl Container for ScriptPubkeyContainer {
         };
         Proof { pubkey, suppl }
     }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
-#[non_exhaustive]
-pub enum ScriptPubkeyCommitment {
-    PublicKey(PubkeyCommitment),
-    PubkeyHash(PubkeyCommitment),
-    ScriptHash(LockscriptCommitment),
-    TapRoot(TaprootCommitment),
-    OpReturn(PubkeyCommitment),
-    OtherScript(LockscriptCommitment),
 }
 
 impl From<ScriptPubkeyContainer> for PubkeyScript {
@@ -106,44 +140,7 @@ impl From<ScriptPubkeyContainer> for PubkeyScript {
     }
 }
 
-impl From<ScriptPubkeyCommitment> for PubkeyScript {
-    fn from(commitment: ScriptPubkeyCommitment) -> Self {
-        use ScriptPubkeyCommitment::*;
-        let script = match commitment {
-            OtherScript(script_commitment) => (*(*script_commitment)).clone(),
-            PublicKey(pubkey) => Builder::gen_p2pk(&bitcoin::PublicKey {
-                compressed: true,
-                key: *pubkey,
-            })
-            .into_script(),
-            PubkeyHash(pubkey) => {
-                let keyhash = bitcoin::PublicKey {
-                    compressed: true,
-                    key: *pubkey,
-                }
-                .wpubkey_hash();
-                Builder::gen_v0_p2wpkh(&keyhash).into_script()
-            }
-            ScriptHash(script_commitment) => {
-                let script = (*script_commitment).clone();
-                Builder::gen_v0_p2wsh(&script.wscript_hash()).into_script()
-            }
-            OpReturn(pubkey) => {
-                let keyhash = bitcoin::PublicKey {
-                    compressed: true,
-                    key: *pubkey,
-                }
-                .wpubkey_hash();
-                Builder::gen_op_return(&keyhash.to_vec()).into_script()
-            }
-            TapRoot(taproot_commitment) => unimplemented!(),
-            _ => unimplemented!(),
-        };
-        script.into()
-    }
-}
-
-impl<MSG> CommitEmbedVerify<MSG> for ScriptPubkeyCommitment
+impl<MSG> CommitEmbedVerify<MSG> for PubkeyScript
 where
     MSG: AsRef<[u8]>,
 {
@@ -151,32 +148,61 @@ where
     type Error = super::Error;
 
     fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+        use ScriptPubkeyContainer::*;
         Ok(match container {
-            ScriptPubkeyContainer::PublicKey(pubkey) => {
-                let cmt = PubkeyCommitment::commit_embed(pubkey, msg)?;
-                ScriptPubkeyCommitment::PublicKey(cmt)
+            PublicKey(pubkey) => {
+                let pk = *PubkeyCommitment::commit_embed(pubkey, msg)?;
+                let bpk = bitcoin::PublicKey {
+                    compressed: true,
+                    key: pk,
+                };
+                Builder::gen_p2pk(&bpk).into_script().into()
             }
-            ScriptPubkeyContainer::PubkeyHash(pubkey) => {
-                let cmt = PubkeyCommitment::commit_embed(pubkey, msg)?;
-                ScriptPubkeyCommitment::PublicKey(cmt)
+            PubkeyHash(pubkey) => {
+                let pk = *PubkeyCommitment::commit_embed(pubkey, msg)?;
+                let bpk = bitcoin::PublicKey {
+                    compressed: true,
+                    key: pk,
+                };
+                Builder::gen_p2pkh(&bpk.pubkey_hash()).into_script().into()
             }
-            ScriptPubkeyContainer::ScriptHash(script) => {
-                let cmt = LockscriptCommitment::commit_embed(script, msg)?;
-                ScriptPubkeyCommitment::ScriptHash(cmt)
+            ScriptHash(script) => {
+                let script = (**LockscriptCommitment::commit_embed(script, msg)?).clone();
+                Builder::gen_p2sh(&script.script_hash())
+                    .into_script()
+                    .into()
             }
-            ScriptPubkeyContainer::TapRoot(container) => {
-                let cmt = TaprootCommitment::commit_embed(container, msg)?;
-                ScriptPubkeyCommitment::TapRoot(cmt)
+            WPubkeyHash(pubkey) => {
+                let pk = *PubkeyCommitment::commit_embed(pubkey, msg)?;
+                let bpk = bitcoin::PublicKey {
+                    compressed: true,
+                    key: pk,
+                };
+                Builder::gen_v0_p2wpkh(&bpk.wpubkey_hash())
+                    .into_script()
+                    .into()
             }
-            ScriptPubkeyContainer::OpReturn(pubkey) => {
-                let cmt = PubkeyCommitment::commit_embed(pubkey, msg)?;
-                ScriptPubkeyCommitment::PublicKey(cmt)
+            WScriptHash(script) => {
+                let script = (**LockscriptCommitment::commit_embed(script, msg)?).clone();
+                Builder::gen_v0_p2wsh(&script.wscript_hash())
+                    .into_script()
+                    .into()
             }
-            ScriptPubkeyContainer::OtherScript(script) => {
-                let cmt = LockscriptCommitment::commit_embed(script, msg)?;
-                ScriptPubkeyCommitment::OtherScript(cmt)
+            // TODO: Implement P2SH-P2W* schemes
+            SHWPubkeyHash(pubkey) => unimplemented!(),
+            SHWScriptHash(script) => unimplemented!(),
+            TapRoot(container) => unimplemented!(),
+            OpReturn(pubkey) => {
+                let pubkey = *PubkeyCommitment::commit_embed(pubkey, msg)?;
+                Builder::gen_op_return(&pubkey.serialize().to_vec())
+                    .into_script()
+                    .into()
             }
-            _ => unimplemented!(),
+            OtherScript(script) => {
+                let script = (**LockscriptCommitment::commit_embed(script, msg)?).clone();
+                script.into()
+            }
+            _ => unreachable!(),
         })
     }
 }
