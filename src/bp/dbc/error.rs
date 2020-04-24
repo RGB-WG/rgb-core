@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use crate::bp::LockScriptParseError;
 use bitcoin::secp256k1;
 
 #[derive(PartialEq, Debug, Display, Error, From)]
@@ -34,5 +35,11 @@ pub enum Error {
 impl From<secp256k1::Error> for Error {
     fn from(err: secp256k1::Error) -> Self {
         Self::Secp256k1(err)
+    }
+}
+
+impl From<LockScriptParseError<bitcoin::PublicKey>> for Error {
+    fn from(err: LockScriptParseError<bitcoin::PublicKey>) -> Self {
+        Self::LockscriptParseError
     }
 }
