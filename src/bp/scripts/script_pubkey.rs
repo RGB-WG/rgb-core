@@ -23,42 +23,6 @@ use core::convert::TryFrom;
 
 use super::types::*;
 
-#[repr(u8)]
-pub enum WitnessVersion {
-    V0 = 0,
-    V1 = 1,
-    V2 = 2,
-    V3 = 3,
-    V4 = 4,
-    V5 = 5,
-    V6 = 6,
-    V7 = 7,
-    V8 = 8,
-    V9 = 9,
-    V10 = 10,
-    V11 = 11,
-    V12 = 12,
-    V13 = 13,
-    V14 = 14,
-    V15 = 15,
-    V16 = 16,
-}
-
-wrapper!(
-    WitnessProgram,
-    Vec<u8>,
-    doc = r#"Witness program as defined by BIP-141
-        <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#Witness_program>
-        
-        A scriptPubKey (or redeemScript as defined in BIP16/P2SH) that consists 
-        of a 1-byte push opcode (for 0 to 16) followed by a data push between 2 
-        and 40 bytes gets a new special meaning. The value of the first push is 
-        called the "version byte". The following byte vector pushed is called 
-        the "witness program".
-        "#,
-    derive = [PartialEq, Eq, Default]
-);
-
 /// Enum defining standard and providing all required data for script pubkey
 /// serialization. This enum is not designed for wallets; it covers only
 /// BIPs and Bitcoin Core extra-wallet parts.
