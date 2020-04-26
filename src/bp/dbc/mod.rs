@@ -14,9 +14,9 @@
 pub mod digests;
 mod error;
 mod keyset;
+mod lockscript;
 mod pubkey;
 /*
-mod lockscript;
 mod scriptpubkey;
 mod taproot;
 mod tx;
@@ -25,10 +25,11 @@ mod txout;
 mod types;
 
 pub use error::Error;
+pub use keyset::{KeysetContainer, LNPBP2Commitment};
+pub use lockscript::{LockscriptCommitment, LockscriptContainer};
 pub use pubkey::{LNPBP1Commitment, LNPBP1Container};
 pub use types::{Container, Proof, ScriptInfo};
 /*
-pub use lockscript::{LockscriptCommitment, LockscriptContainer};
 pub use scriptpubkey::ScriptPubkeyContainer;
 pub use taproot::{TaprootCommitment, TaprootContainer};
 pub use tx::TxContainer;

@@ -59,6 +59,7 @@ impl Container for KeysetContainer {
         }
     }
 
+    #[inline]
     fn deconstruct(self) -> (Proof, Self::Supplement) {
         (Proof::from(self.pubkey), self.tag)
     }
@@ -66,6 +67,7 @@ impl Container for KeysetContainer {
     /// Important: this method should not be used. KeysetContainer does not
     /// support proof generation, use more advanced structures like LockScript
     /// container to generate the proof
+    #[inline]
     fn to_proof(&self) -> Proof {
         panic!("KeysetContainer does not support proof generation")
     }
@@ -73,6 +75,7 @@ impl Container for KeysetContainer {
     /// Important: this method should not be used. KeysetContainer does not
     /// support proof generation, use more advanced structures like LockScript
     /// container to generate the proof
+    #[inline]
     fn into_proof(self) -> Proof {
         panic!("KeysetContainer does not support proof generation")
     }

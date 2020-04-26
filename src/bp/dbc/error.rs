@@ -27,9 +27,9 @@ pub enum Error {
 
     LockscriptParseError,
 
-    LockscriptContainsNoKeysOrHashes,
+    LockscriptContainsNoKeys,
 
-    LockscriptContainsUnknownHashesOnly,
+    LockscriptContainsUnknownHashes,
 
     /// Attempt to commit into LockScript has failed: the key that must contain
     /// the commitment/tweak was not found either in plain nor hash form in

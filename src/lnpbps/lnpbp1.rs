@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::{sha256, Hash};
+use bitcoin::hashes::sha256;
 use bitcoin::secp256k1;
 
 use crate::bp::dbc::{self, Container, LNPBP1Commitment, LNPBP1Container, Proof};
@@ -71,7 +71,7 @@ mod test {
     use super::*;
     use crate::bp::test::*;
     use crate::commit_verify::test::*;
-    use bitcoin::hashes::hex::ToHex;
+    use bitcoin::hashes::{hex::ToHex, Hash};
     use bitcoin::secp256k1;
     use std::str::FromStr;
 

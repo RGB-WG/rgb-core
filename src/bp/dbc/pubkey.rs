@@ -68,6 +68,7 @@ impl Container for LNPBP1Container {
         })
     }
 
+    #[inline]
     fn deconstruct(self) -> (Proof, Self::Supplement) {
         (Proof::from(self.pubkey), self.tag)
     }
@@ -75,10 +76,12 @@ impl Container for LNPBP1Container {
     // A proof for the LNPBP-1 public key commitment is the original public key
     // value, so the commitment container (original public key) just returns a
     // copy of itself
+    #[inline]
     fn to_proof(&self) -> Proof {
         Proof::from(self.pubkey.clone())
     }
 
+    #[inline]
     fn into_proof(self) -> Proof {
         Proof::from(self.pubkey)
     }
