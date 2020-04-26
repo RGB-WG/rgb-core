@@ -11,18 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{Transaction, TxOut};
+use bitcoin::{hashes::sha256, Transaction, TxOut};
 
-use super::{Container, Error, Proof, TxoutContainer};
-use crate::commit_verify::CommitEmbedVerify;
+use super::{Container, Error, Proof, TxoutCommitment, TxoutContainer};
+use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
 pub struct TxContainer {
-    pub entropy: u32,
+    pub protocol_factor: u32,
     pub fee: u64,
-    pub tx: Transaction,
     pub txout_container: TxoutContainer,
+    pub tx: Transaction,
 }
 
 fn compute_vout(fee: u64, entropy: u32, tx: &mut Transaction) -> &mut TxOut {
@@ -31,56 +31,85 @@ fn compute_vout(fee: u64, entropy: u32, tx: &mut Transaction) -> &mut TxOut {
     &mut tx.output[vout as usize]
 }
 
-impl Container for TxContainer {
-    type Supplement = (u32, u64, u64);
-    type Commitment = Transaction;
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
+pub struct TxSupplement {
+    pub protocol_factor: u32,
+    pub fee: u64,
+    /// Single SHA256 hash of the protocol-specific tag
+    pub tag: sha256::Hash,
+}
 
-    fn restore(
+impl Container for TxContainer {
+    type Supplement = TxSupplement;
+    type Host = Transaction;
+
+    fn reconstruct(
         proof: &Proof,
         supplement: &Self::Supplement,
-        commitment: &Self::Commitment,
+        host: &Self::Host,
     ) -> Result<Self, Error> {
-        let entropy = supplement.0;
-        let fee = supplement.1;
-        let mut tx = commitment.clone();
-        let txout = compute_vout(fee, entropy, &mut tx);
+        let mut tx = host.clone();
+        let txout = compute_vout(supplement.fee, supplement.protocol_factor, &mut tx);
         Ok(Self {
-            entropy,
-            fee,
-            tx: commitment.clone(),
-            txout_container: TxoutContainer::restore(proof, &supplement.2, txout)?,
+            protocol_factor: supplement.protocol_factor,
+            fee: supplement.fee,
+            txout_container: TxoutContainer::reconstruct(proof, &supplement.tag, txout)?,
+            tx,
         })
+    }
+
+    fn deconstruct(self) -> (Proof, Self::Supplement) {
+        (
+            self.txout_container.clone().into_proof(),
+            TxSupplement {
+                protocol_factor: self.protocol_factor,
+                fee: self.fee,
+                tag: self.txout_container.script_container.tag,
+            },
+        )
     }
 
     fn to_proof(&self) -> Proof {
         self.txout_container.to_proof()
     }
+
+    fn into_proof(self) -> Proof {
+        self.txout_container.into_proof()
+    }
 }
 
-impl<MSG> CommitEmbedVerify<MSG> for Transaction
+wrapper!(
+    TxCommitment,
+    Transaction,
+    doc = "[bitcoin::Transaction] containing LNPBP-3 commitment",
+    derive = [PartialEq, Eq, Hash]
+);
+
+impl<MSG> EmbedCommitVerify<MSG> for TxCommitment
 where
     MSG: AsRef<[u8]>,
 {
     type Container = TxContainer;
     type Error = Error;
 
-    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
         let fee = container.fee;
-        let entropy = container.entropy;
+        let entropy = container.protocol_factor;
 
-        let txout_container = container.txout_container;
-        let txout_commitment = TxOut::commit_embed(txout_container.clone(), msg)?;
-        *compute_vout(fee, entropy, &mut tx) = txout_commitment;
+        let txout_commitment =
+            TxoutCommitment::embed_commit(&container.txout_container.clone(), msg)?;
+        *compute_vout(fee, entropy, &mut tx) = txout_commitment.into_inner();
 
-        Ok(tx)
+        Ok(tx.into())
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bp::dbc::ScriptPubkeyContainer;
+    use crate::bp::dbc::{ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer};
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::{consensus::encode::deserialize, *};
     use secp256k1::PublicKey;
@@ -108,25 +137,27 @@ mod test {
             a18b920a4dfa887d30700")
             .unwrap().as_slice()).unwrap();
 
-        let container1 = TxContainer {
+        let container = TxContainer {
             tx,
             fee: 0,
-            entropy: 0,
+            protocol_factor: 0,
             txout_container: TxoutContainer {
                 value: 0,
-                script_container: ScriptPubkeyContainer::PubkeyHash(
-                    PublicKey::from_str(
+                script_container: ScriptPubkeyContainer {
+                    pubkey: PublicKey::from_str(
                         "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
                     )
                     .unwrap(),
-                ),
+                    script_info: ScriptInfo::None,
+                    scriptpubkey_composition: ScriptPubkeyComposition::PublicKey,
+                    tag: Default::default(),
+                },
             },
         };
-        let container2 = container1.clone();
 
         let msg = "message to commit to";
 
-        let commitment = Transaction::commit_embed(container1, &msg).unwrap();
-        assert_eq!(commitment.verify(container2, &msg), true);
+        let commitment = TxCommitment::embed_commit(&container, &msg).unwrap();
+        assert_eq!(commitment.verify(&container, &msg).unwrap(), true);
     }
 }

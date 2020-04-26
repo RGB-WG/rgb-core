@@ -18,20 +18,16 @@ mod lockscript;
 mod pubkey;
 mod scriptpubkey;
 mod taproot;
-mod txout;
-/*
 mod tx;
-*/
+mod txout;
 mod types;
 
 pub use error::Error;
 pub use keyset::{KeysetContainer, LNPBP2Commitment};
 pub use lockscript::{LockscriptCommitment, LockscriptContainer};
 pub use pubkey::{LNPBP1Commitment, LNPBP1Container};
-pub use scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyContainer};
+pub use scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyComposition, ScriptPubkeyContainer};
 pub use taproot::{TaprootCommitment, TaprootContainer};
-pub use txout::TxoutContainer;
+pub use tx::{TxCommitment, TxContainer};
+pub use txout::{TxoutCommitment, TxoutContainer};
 pub use types::{Container, Proof, ScriptInfo};
-/*
-pub use tx::TxContainer;
-*/
