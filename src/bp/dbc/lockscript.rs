@@ -95,7 +95,7 @@ impl Container for LockscriptContainer {
 wrapper!(
     LockscriptCommitment,
     LockScript,
-    doc = "LockScript contanining public keys which sum is commit to some message according to LNPBP-2",
+    doc = "[LockScript] containing public keys which sum is commit to some message according to LNPBP-2",
     derive = [PartialEq, Eq, Hash]
 );
 

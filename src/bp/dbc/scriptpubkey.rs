@@ -161,7 +161,14 @@ impl Container for ScriptPubkeyContainer {
     }
 }
 
-impl<MSG> EmbedCommitVerify<MSG> for PubkeyScript
+wrapper!(
+    ScriptPubkeyCommitment,
+    PubkeyScript,
+    doc = "[PubkeyScript] containing LNPBP-2 commitment",
+    derive = [PartialEq, Eq, Hash]
+);
+
+impl<MSG> EmbedCommitVerify<MSG> for ScriptPubkeyCommitment
 where
     MSG: AsRef<[u8]>,
 {
@@ -221,6 +228,6 @@ where
                 _ => Err(Error::InvalidProofStructure)?,
             }
         };
-        Ok(script_pubkey)
+        Ok(ScriptPubkeyCommitment::from_inner(script_pubkey))
     }
 }

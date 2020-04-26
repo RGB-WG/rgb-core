@@ -11,11 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::TxOut;
+use bitcoin::{hashes::sha256, TxOut};
 
-use super::{Container, Error, Proof, ScriptPubkeyContainer};
-use crate::bp::scripts::PubkeyScript;
-use crate::commit_verify::CommitEmbedVerify;
+use super::{Container, Error, Proof, ScriptPubkeyCommitment, ScriptPubkeyContainer};
+use crate::bp::PubkeyScript;
+use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
@@ -25,39 +25,61 @@ pub struct TxoutContainer {
 }
 
 impl Container for TxoutContainer {
-    type Supplement = u64;
-    type Commitment = TxOut;
+    /// Out supplement is a protocol-specific tag in its hashed form
+    type Supplement = sha256::Hash;
+    type Host = TxOut;
 
-    fn restore(
+    fn reconstruct(
         proof: &Proof,
         supplement: &Self::Supplement,
-        commitment: &Self::Commitment,
+        host: &Self::Host,
     ) -> Result<Self, Error> {
         Ok(Self {
-            value: *supplement,
-            script_container: ScriptPubkeyContainer::restore(
+            value: host.value,
+            script_container: ScriptPubkeyContainer::reconstruct(
                 proof,
-                &None,
-                &commitment.script_pubkey.clone().into(),
+                supplement,
+                &PubkeyScript::from_inner(host.clone().script_pubkey),
             )?,
         })
+    }
+
+    fn deconstruct(self) -> (Proof, Self::Supplement) {
+        self.script_container.deconstruct()
     }
 
     fn to_proof(&self) -> Proof {
         self.script_container.to_proof()
     }
+
+    fn into_proof(self) -> Proof {
+        self.script_container.into_proof()
+    }
 }
-impl<MSG> CommitEmbedVerify<MSG> for TxOut
+
+wrapper!(
+    TxoutCommitment,
+    TxOut,
+    doc = "[bitcoin::TxOut] containing LNPBP-2 commitment",
+    derive = [PartialEq, Eq, Hash]
+);
+
+impl<MSG> EmbedCommitVerify<MSG> for TxoutCommitment
 where
     MSG: AsRef<[u8]>,
 {
     type Container = TxoutContainer;
     type Error = Error;
 
-    fn commit_embed(container: Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         Ok(TxOut {
             value: container.value,
-            script_pubkey: (*PubkeyScript::commit_embed(container.script_container, msg)?).clone(),
-        })
+            script_pubkey: (**ScriptPubkeyCommitment::embed_commit(
+                &container.script_container,
+                msg,
+            )?)
+            .clone(),
+        }
+        .into())
     }
 }
