@@ -20,6 +20,23 @@ macro_rules! wrapper {
         $( #[derive($derive)] )+
         pub struct $name($from);
 
+        impl $name {
+            /// Returns reference to the inner representation for the wrapper type
+            pub fn as_inner(&self) -> &$from {
+                &self.0
+            }
+
+            /// Clones inner data of the wrapped type and return them
+            pub fn to_inner(&self) -> $from {
+                self.0.clone()
+            }
+
+            /// Unwraps the wrapper returning the inner type
+            pub fn into_inner(self) -> $from {
+                self.0
+            }
+        }
+
         impl ::core::convert::AsRef<$from> for $name {
             #[inline]
             fn as_ref(&self) -> &$from {
