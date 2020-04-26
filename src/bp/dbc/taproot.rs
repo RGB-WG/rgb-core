@@ -78,7 +78,7 @@ impl Container for TaprootContainer {
 #[display_from(Debug)]
 pub struct TaprootCommitment {
     pub script_root: sha256::Hash,
-    pub intermediate_ke_commitment: LNPBP1Commitment,
+    pub intermediate_key_commitment: LNPBP1Commitment,
 }
 
 impl<MSG> EmbedCommitVerify<MSG> for TaprootCommitment
@@ -98,7 +98,7 @@ where
         )?;
         Ok(Self {
             script_root: container.script_root,
-            intermediate_ke_commitment: cmt,
+            intermediate_key_commitment: cmt,
         })
     }
 }
