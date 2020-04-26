@@ -100,14 +100,14 @@ pub enum ScriptPubkeyTemplate {
     P2S(PubkeyScript),
     P2PK(bitcoin::PublicKey),
     P2PKH(bitcoin::PublicKey),
-    P2SH(RedeemScript),
+    P2SH(LockScript),
     P2OR(Vec<Vec<u8>>),
     #[allow(non_camel_case_types)]
     P2SH_P2WPKH(bitcoin::PublicKey),
     #[allow(non_camel_case_types)]
-    P2SH_P2WSH(RedeemScript),
+    P2SH_P2WSH(LockScript),
     P2WPKH(bitcoin::PublicKey),
-    P2WSH(RedeemScript),
+    P2WSH(LockScript),
     P2TR(secp256k1::PublicKey, TapScript),
 }
 

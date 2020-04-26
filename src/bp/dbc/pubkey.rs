@@ -28,13 +28,12 @@
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::{self, Secp256k1};
 
-use super::{Container, Proof};
-use crate::bp::dbc::Error;
+use super::{Container, Error, Proof};
 use crate::commit_verify::EmbedCommitVerify;
 
 /// Single SHA256 hash of "LNPBP1" string according to LNPBP-1 acting as a
 /// prefix to the message in computing tweaking factor
-static SHA256_LNPBP1: [u8; 32] = [
+pub(super) static SHA256_LNPBP1: [u8; 32] = [
     245, 8, 242, 142, 252, 192, 113, 82, 108, 168, 134, 200, 224, 124, 105, 212, 149, 78, 46, 201,
     252, 82, 171, 140, 204, 209, 41, 17, 12, 0, 64, 175,
 ];
@@ -53,8 +52,9 @@ pub struct LNPBP1Container {
 }
 
 impl Container for LNPBP1Container {
+    /// Out supplement is a protocol-specific tag in its hashed form
     type Supplement = sha256::Hash;
-    // Our proof contains the host, so we don't need host here
+    /// Our proof contains the host, so we don't need host here
     type Host = Option<()>;
 
     fn reconstruct(
@@ -100,24 +100,30 @@ where
 
     /// Function implements commitment procedure according to LNPBP-1.
     ///
-    /// LNPBP-1 Specification extract:
-    /// ------------------------------
+    /// ## LNPBP-1 Specification extract:
     ///
-    /// For a given message `msg` and original public key `P` the **commit procedure** is defined as follows:
+    /// For a given message `msg` and original public key `P` the **commit
+    /// procedure** is defined as follows:
     ///
-    /// 1. Construct a byte string `lnbp1_msg`, composed of the original message prefixed with a single SHA256 hash of `LNPBP1`
+    /// 1. Construct a byte string `lnbp1_msg`, composed of the original message
+    ///    prefixed with a single SHA256 hash of `LNPBP1`
     ///    string and a single SHA256 hash of protocol-specific tag:
     ///    `lnbp1_msg = SHA256("LNPBP1") || SHA256(<protocol-specific-tag>) || msg`
-    /// 2. Compute HMAC-SHA256 of the `lnbp1_msg` and `P`, named **tweaking factor**: `f = HMAC_SHA256(s, P)`
-    /// 3. Make sure that the tweaking factor is less than order `p` of Zp prime number set used in Secp256k1 curve; otherwise
-    ///    fail the protocol.
-    /// 3. Multiply the tweaking factor on Secp256k1 generator point `G`: `F = G * f` ignoring the possible overflow of the
-    ///    resulting elliptic curve point `F` over the order `n` of `G`. Check that the result not equal to the
-    ///    point-at-infinity; otherwise fail the protocol, indicating the reason of failure, such that the protocol may be run
-    ///    with another initial public key `P'` value.
-    /// 4. Add two elliptic curve points, the original public key `P` and tweaking-factor based point `F`, obtaining the
-    ///    resulting tweaked public key `T`: `T = P + F`. Check that the result not equal to the point-at-infinity; otherwise
-    ///    fail the protocol, indicating the reason of failure, such that the protocol may be run with another initial
+    /// 2. Compute HMAC-SHA256 of the `lnbp1_msg` and `P`, named **tweaking
+    ///    factor**: `f = HMAC_SHA256(s, P)`
+    /// 3. Make sure that the tweaking factor is less than order `p` of Zp prime
+    ///    number set used in Secp256k1 curve; otherwise fail the protocol.
+    /// 3. Multiply the tweaking factor on Secp256k1 generator point
+    ///    `G`: `F = G * f` ignoring the possible overflow of the resulting
+    ///    elliptic curve point `F` over the order `n` of `G`. Check that the
+    ///    result not equal to the point-at-infinity; otherwise fail the
+    ///    protocol, indicating the reason of failure, such that the protocol
+    ///    may be run with another initial public key `P'` value.
+    /// 4. Add two elliptic curve points, the original public key `P` and
+    ///    tweaking-factor based point `F`, obtaining the resulting tweaked
+    ///    public key `T`: `T = P + F`. Check that the result not equal to the
+    ///    point-at-infinity; otherwise fail the protocol, indicating the reason
+    ///    of failure, such that the protocol may be run with another initial
     ///    public key `P'` value.
     ///
     /// The final formula for the commitment is:

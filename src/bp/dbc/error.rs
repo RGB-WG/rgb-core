@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::bp::{scripts::Error as ScriptPubkeyError, LockScriptParseError};
+use crate::bp::{scripts::Error as ScriptPubkeyError, PubkeyParseError};
 use bitcoin::secp256k1;
 
 #[derive(PartialEq, Debug, Display, Error, From)]
@@ -20,7 +20,7 @@ pub enum Error {
     //#[derive_from(secp256k1::Error)]
     Secp256k1(secp256k1::Error),
 
-    InvalidProofSupplement,
+    InvalidProofStructure,
 
     #[derive_from(ScriptPubkeyError)]
     InvalidScriptPubkey(ScriptPubkeyError),
@@ -43,8 +43,8 @@ impl From<secp256k1::Error> for Error {
     }
 }
 
-impl From<LockScriptParseError<bitcoin::PublicKey>> for Error {
-    fn from(err: LockScriptParseError<bitcoin::PublicKey>) -> Self {
+impl From<PubkeyParseError> for Error {
+    fn from(err: PubkeyParseError) -> Self {
         Self::LockscriptParseError
     }
 }

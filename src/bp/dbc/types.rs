@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use super::Error;
-use crate::bp::RedeemScript;
+use crate::bp::LockScript;
 use bitcoin::{hashes::sha256, secp256k1};
 
 pub trait Container: Sized {
@@ -52,6 +52,6 @@ impl From<secp256k1::PublicKey> for Proof {
 #[non_exhaustive]
 pub enum ScriptInfo {
     None,
-    RedeemScript(RedeemScript),
+    LockScript(LockScript),
     Taproot(sha256::Hash),
 }

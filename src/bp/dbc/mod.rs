@@ -13,6 +13,7 @@
 
 pub mod digests;
 mod error;
+mod keyset;
 mod pubkey;
 /*
 mod lockscript;

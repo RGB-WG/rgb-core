@@ -537,7 +537,7 @@ impl GenerateScripts for LockScript {
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script =
-                    RedeemScript::from(self.gen_script_pubkey(Strategy::WitnessV0).to_inner());
+                    LockScript::from(self.gen_script_pubkey(Strategy::WitnessV0).to_inner());
                 Builder::gen_p2sh(&redeem_script.script_hash())
                     .into_script()
                     .into()
@@ -561,7 +561,7 @@ impl GenerateScripts for LockScript {
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script =
-                    RedeemScript::from(self.gen_script_pubkey(Strategy::WitnessV0).to_inner());
+                    LockScript::from(self.gen_script_pubkey(Strategy::WitnessV0).to_inner());
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -618,7 +618,7 @@ impl GenerateScripts for bitcoin::PublicKey {
             Strategy::WitnessScriptHash => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
                 let redeem_script =
-                    RedeemScript::from(self.gen_script_pubkey(Strategy::WitnessV0).into_inner());
+                    LockScript::from(self.gen_script_pubkey(Strategy::WitnessV0).into_inner());
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()

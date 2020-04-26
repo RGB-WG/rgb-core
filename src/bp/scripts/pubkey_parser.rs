@@ -15,30 +15,34 @@ use super::LockScript;
 use bitcoin::{secp256k1, PubkeyHash};
 use miniscript::miniscript::iter::PubkeyOrHash;
 use miniscript::{Miniscript, MiniscriptKey};
+use std::collections::HashSet;
+use std::iter::FromIterator;
 
 #[derive(Debug, Display, Error)]
 #[display_from(Debug)]
-pub enum LockScriptParseError<Pk: MiniscriptKey> {
-    PubkeyHash(Pk::Hash),
+pub enum PubkeyParseError {
+    PubkeyHash(<bitcoin::PublicKey as MiniscriptKey>::Hash),
     Miniscript(miniscript::Error),
 }
 
-impl<Pk: MiniscriptKey> From<miniscript::Error> for LockScriptParseError<Pk> {
+impl From<miniscript::Error> for PubkeyParseError {
     fn from(miniscript_error: miniscript::Error) -> Self {
         Self::Miniscript(miniscript_error)
     }
 }
 
 impl LockScript {
-    pub fn extract_pubkeys(
-        &self,
-    ) -> Result<Vec<secp256k1::PublicKey>, LockScriptParseError<bitcoin::PublicKey>> {
+    pub fn extract_pubkeyset(&self) -> Result<HashSet<secp256k1::PublicKey>, PubkeyParseError> {
+        Ok(HashSet::from_iter(self.extract_pubkeys()?))
+    }
+
+    pub fn extract_pubkeys(&self) -> Result<Vec<secp256k1::PublicKey>, PubkeyParseError> {
         Miniscript::parse(&*self.clone())?
             .iter_pubkeys_and_hashes()
             .try_fold(
                 Vec::<secp256k1::PublicKey>::new(),
                 |mut keys, item| match item {
-                    PubkeyOrHash::HashedPubkey(hash) => Err(LockScriptParseError::PubkeyHash(hash)),
+                    PubkeyOrHash::HashedPubkey(hash) => Err(PubkeyParseError::PubkeyHash(hash)),
                     PubkeyOrHash::PlainPubkey(key) => {
                         keys.push(key.key);
                         Ok(keys)
@@ -50,7 +54,7 @@ impl LockScript {
     pub fn replace_pubkeys(
         &self,
         processor: impl Fn(secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
-    ) -> Result<Self, LockScriptParseError<bitcoin::PublicKey>> {
+    ) -> Result<Self, PubkeyParseError> {
         let result = Miniscript::parse(&*self.clone())?.replace_pubkeys_and_hashes(
             &|item: PubkeyOrHash<bitcoin::PublicKey>| match item {
                 PubkeyOrHash::PlainPubkey(pubkey) => processor(pubkey.key).map(|key| {
@@ -69,7 +73,7 @@ impl LockScript {
         &self,
         key_processor: impl Fn(secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
         hash_processor: impl Fn(PubkeyHash) -> Option<PubkeyHash>,
-    ) -> Result<Self, LockScriptParseError<bitcoin::PublicKey>> {
+    ) -> Result<Self, PubkeyParseError> {
         let result = Miniscript::parse(&*self.clone())?.replace_pubkeys_and_hashes(
             &|item: PubkeyOrHash<bitcoin::PublicKey>| match item {
                 PubkeyOrHash::PlainPubkey(pubkey) => key_processor(pubkey.key).map(|key| {
