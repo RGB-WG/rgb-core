@@ -171,8 +171,8 @@ mod test {
     }
 
     macro_rules! policy_str {
-    ($($arg:tt)*) => (miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap())
-}
+        ($($arg:tt)*) => (miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap())
+    }
 
     fn pubkeys(n: usize) -> Vec<bitcoin::PublicKey> {
         let mut ret = Vec::with_capacity(n);

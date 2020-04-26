@@ -17,27 +17,40 @@ use bitcoin::{hashes::sha256, secp256k1};
 
 pub trait Container: Sized {
     type Supplement;
-    type Commitment;
+    type Host;
 
-    fn restore(
+    fn reconstruct(
         proof: &Proof,
         supplement: &Self::Supplement,
-        commitment: &Self::Commitment,
+        host: &Self::Host,
     ) -> Result<Self, Error>;
+
+    fn deconstruct(self) -> (Proof, Self::Supplement);
+
     fn to_proof(&self) -> Proof;
+    fn into_proof(self) -> Proof;
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 pub struct Proof {
     pub pubkey: secp256k1::PublicKey,
-    pub suppl: ProofSuppl,
+    pub script_info: ScriptInfo,
+}
+
+impl From<secp256k1::PublicKey> for Proof {
+    fn from(pubkey: secp256k1::PublicKey) -> Self {
+        Self {
+            pubkey,
+            script_info: ScriptInfo::None,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
-pub enum ProofSuppl {
+pub enum ScriptInfo {
     None,
     RedeemScript(RedeemScript),
     Taproot(sha256::Hash),

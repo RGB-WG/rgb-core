@@ -13,19 +13,23 @@
 
 pub mod digests;
 mod error;
-mod lockscript;
 mod pubkey;
+/*
+mod lockscript;
 mod scriptpubkey;
 mod taproot;
 mod tx;
 mod txout;
+*/
 mod types;
 
 pub use error::Error;
+pub use pubkey::{LNPBP1Commitment, LNPBP1Container};
+pub use types::{Container, Proof, ScriptInfo};
+/*
 pub use lockscript::{LockscriptCommitment, LockscriptContainer};
-pub use pubkey::PubkeyCommitment;
 pub use scriptpubkey::ScriptPubkeyContainer;
 pub use taproot::{TaprootCommitment, TaprootContainer};
 pub use tx::TxContainer;
 pub use txout::TxoutContainer;
-pub use types::{Container, Proof, ProofSuppl};
+*/

@@ -20,7 +20,7 @@ pub mod network;
 pub mod scripts;
 pub mod short_id;
 //mod seals;
-//pub mod dbc;
+pub mod dbc;
 
 pub use scripts::*;
 pub use short_id::*;
@@ -34,3 +34,33 @@ hash_newtype!(
     32,
     doc = "Pre-images for hashed locks in HTLC"
 );
+
+#[cfg(test)]
+pub mod test {
+    use bitcoin::secp256k1;
+
+    pub fn gen_secp_pubkeys(n: usize) -> Vec<secp256k1::PublicKey> {
+        let mut ret = Vec::with_capacity(n);
+        let secp = secp256k1::Secp256k1::new();
+        let mut sk = [0; 32];
+
+        for i in 1..n + 1 {
+            sk[0] = i as u8;
+            sk[1] = (i >> 8) as u8;
+            sk[2] = (i >> 16) as u8;
+
+            ret.push(secp256k1::PublicKey::from_secret_key(
+                &secp,
+                &secp256k1::SecretKey::from_slice(&sk[..]).unwrap(),
+            ));
+        }
+        ret
+    }
+
+    pub fn gen_bitcoin_pubkeys(n: usize, compressed: bool) -> Vec<bitcoin::PublicKey> {
+        gen_secp_pubkeys(n)
+            .into_iter()
+            .map(|key| bitcoin::PublicKey { key, compressed })
+            .collect()
+    }
+}

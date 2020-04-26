@@ -11,5 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! Modules implementing convenient interfaces covering specific LNPBP standards.
+//! Check [LNP/BP Standards page](https://github.com/LNP-BP/LNPBPs) for details.
 
+pub mod lnpbp1;
 pub mod lnpbp4;

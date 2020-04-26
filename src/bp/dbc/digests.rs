@@ -27,20 +27,41 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use bitcoin::hashes::{hex::ToHex, *};
+    use crate::commit_verify::test::*;
+    use bitcoin::hashes::*;
 
     #[test]
     fn test_sha256_commitment() {
-        let msg = "Message to commit to";
-        let digest = sha256::Hash::hash(msg.as_ref());
-        assert_eq!(
-            digest.to_hex(),
-            "868258ba45e46ac4ba141fe0eb6cd6251b4d0ee2c23e69cd99322505324672e4"
-        );
+        commit_verify_suite::<Vec<u8>, sha256::Hash>(gen_messages());
+    }
 
-        let commitment = sha256::Hash::commit(&msg);
-        assert_eq!(digest, commitment);
-        assert_eq!(commitment.verify(&msg), true);
+    #[test]
+    fn test_sha256d_commitment() {
+        commit_verify_suite::<Vec<u8>, sha256d::Hash>(gen_messages());
+    }
+
+    #[test]
+    fn test_ripemd160_commitment() {
+        commit_verify_suite::<Vec<u8>, ripemd160::Hash>(gen_messages());
+    }
+
+    #[test]
+    fn test_hash160_commitment() {
+        commit_verify_suite::<Vec<u8>, hash160::Hash>(gen_messages());
+    }
+
+    #[test]
+    fn test_sha1_commitment() {
+        commit_verify_suite::<Vec<u8>, sha1::Hash>(gen_messages());
+    }
+
+    #[test]
+    fn test_sha512_commitment() {
+        commit_verify_suite::<Vec<u8>, sha512::Hash>(gen_messages());
+    }
+
+    #[test]
+    fn test_siphash24_commitment() {
+        commit_verify_suite::<Vec<u8>, siphash24::Hash>(gen_messages());
     }
 }

@@ -11,6 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use super::LockScript;
+use bitcoin::{secp256k1, PubkeyHash};
+use miniscript::miniscript::iter::PubkeyOrHash;
+use miniscript::{Miniscript, MiniscriptKey};
+
 #[derive(Debug, Display, Error)]
 #[display_from(Debug)]
 pub enum LockScriptParseError<Pk: MiniscriptKey> {
