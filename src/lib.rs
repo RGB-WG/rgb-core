@@ -80,8 +80,8 @@ mod paradigms;
 #[macro_use]
 mod common;
 mod lnpbps;
-//#[macro_use]
-//pub mod bp;
+#[macro_use]
+pub mod bp;
 #[cfg(feature = "lightning")]
 pub mod lnp;
 #[cfg(feature = "rgb")]

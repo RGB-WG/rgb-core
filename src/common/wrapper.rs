@@ -21,6 +21,10 @@ macro_rules! wrapper {
         pub struct $name($from);
 
         impl $name {
+            pub fn from_inner(inner: $from) -> Self {
+                Self(inner)
+            }
+
             /// Returns reference to the inner representation for the wrapper type
             pub fn as_inner(&self) -> &$from {
                 &self.0
