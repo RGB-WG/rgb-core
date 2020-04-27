@@ -20,7 +20,6 @@
 /// `AsRef<[u8]>`).
 pub trait CommitVerify<MSG>
 where
-    MSG: AsRef<[u8]>,
     Self: Eq + Sized,
 {
     /// Creates a commitment to a byte representation of a given message
@@ -31,6 +30,27 @@ where
     #[inline]
     fn verify(&self, msg: &MSG) -> bool {
         Self::commit(msg) == *self
+    }
+}
+
+/// Trait for a failable version of commit-verify scheme. A message for the
+/// commitment may be any structure that can be represented as a byte array
+/// (i.e. implements `AsRef<[u8]>`).
+pub trait TryCommitVerify<MSG>
+where
+    Self: Eq + Sized,
+{
+    /// Error type that may be reported during [commit] and [verify] procedures
+    type Error: std::error::Error;
+
+    /// Tries to create commitment to a byte representation of a given message
+    fn try_commit(msg: &MSG) -> Result<Self, Self::Error>;
+
+    /// Tries to verify commitment against the message; default implementation just
+    /// repeats the commitment to the message and check it against the `self`.
+    #[inline]
+    fn try_verify(&self, msg: &MSG) -> Result<bool, Self::Error> {
+        Ok(Self::try_commit(msg)? == *self)
     }
 }
 
@@ -53,7 +73,6 @@ where
 /// [crate::dbc] module implementations
 pub trait EmbedCommitVerify<MSG>
 where
-    MSG: AsRef<[u8]>,
     Self: Sized + Eq,
 {
     /// External container type that will be used to host commitment to a message
