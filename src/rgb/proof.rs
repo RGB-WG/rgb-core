@@ -1,5 +1,5 @@
 // LNP/BP Rust Library
-// Written in 202 by
+// Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
 // To the extent possible under law, the author(s) have dedicated all
@@ -11,16 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
-use bitcoin::Txid;
 use bitcoin::hashes::sha256d;
+use bitcoin::Txid;
 
-use super::{ContractId, data::amount, Seal, Transition};
-
+use super::{data::amount, ContractId, Seal, Transition};
 
 ///! Structures required for full validation of a given state transfer
 
-/// Part of the LNPBP-5 multimessage commitment
+/// Part of the LNPBP-4 multimessage commitment
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
 pub enum CommitmentProofItem {
@@ -39,7 +37,7 @@ pub type CommitmentProof = Vec<CommitmentProofItem>;
 #[display_from(Debug)]
 pub struct MultimessageReveal {
     pub transition: Transition,
-    pub commitment_proof: CommitmentProof
+    pub commitment_proof: CommitmentProof,
 }
 
 /// Proves source of the state data.
