@@ -48,6 +48,22 @@ pub struct ScriptPubkeyContainer {
     pub tag: sha256::Hash,
 }
 
+impl ScriptPubkeyContainer {
+    pub fn construct(
+        protocol_tag: &sha256::Hash,
+        pubkey: secp256k1::PublicKey,
+        script_info: ScriptInfo,
+        scriptpubkey_composition: ScriptPubkeyComposition,
+    ) -> Self {
+        Self {
+            pubkey,
+            script_info,
+            scriptpubkey_composition,
+            tag: protocol_tag.clone(),
+        }
+    }
+}
+
 impl Container for ScriptPubkeyContainer {
     /// Out supplement is a protocol-specific tag in its hashed form
     type Supplement = sha256::Hash;

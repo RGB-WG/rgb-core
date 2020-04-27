@@ -11,10 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+mod error;
 mod tx_graph;
 mod txout_seal;
 mod txout_witness;
 
+pub use error::Error;
 pub use tx_graph::{SpendingStatus, TxGraph};
-pub use txout_seal::TxoutSeal;
+pub use txout_seal::{TxResolve, TxoutSeal};
 pub use txout_witness::*;

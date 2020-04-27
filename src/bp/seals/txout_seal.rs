@@ -13,10 +13,10 @@
 
 use bitcoin::{OutPoint, Transaction};
 
-use super::{SpendingStatus, TxGraph, Witness};
-use crate::bp::dbc::{Container, TxContainer};
+use super::{Error, SpendingStatus, TxGraph, Witness};
+use crate::bp::dbc::{Container, TxCommitment, TxContainer, TxSupplement};
 use crate::bp::ShortId;
-use crate::commit_verify::CommitEmbedVerify;
+use crate::commit_verify::EmbedCommitVerify;
 use crate::single_use_seals::{Message, SealMedium, SealStatus, SingleUseSeal};
 
 pub struct TxoutSeal<'a, RESOLVER>
@@ -45,20 +45,32 @@ where
 {
     type Witness = Witness;
     type Definition = OutPoint;
+    type Error = Error;
 
-    // TODO: Decide with unfailability of seal closing
-    fn close(&self, over: &Message) -> Self::Witness {
+    fn close(&self, over: &Message) -> Result<Self::Witness, Self::Error> {
         let container = self
             .resolver
             .tx_container(self.seal_definition)
-            .expect("Seal close procedure is cannot fail");
-        let tx_commitment = Transaction::commit_embed(container.clone(), &over)
-            .expect("Seal close procedure is cannot fail");
-        Witness(tx_commitment, container.to_proof())
+            .map_err(|_| Error::ResolverError)?;
+        let tx_commitment = TxCommitment::embed_commit(&container, &over)?;
+        Ok(Witness(tx_commitment, container.to_proof()))
     }
 
-    fn verify(&self, msg: &Message, witness: &Self::Witness) -> bool {
-        unimplemented!()
+    fn verify(&self, msg: &Message, witness: &Self::Witness) -> Result<bool, Self::Error> {
+        let (host, supplement) = self
+            .resolver
+            .tx_and_data(self.seal_definition)
+            .map_err(|_| Error::ResolverError)?;
+        let found_seals = host
+            .input
+            .iter()
+            .filter(|txin| txin.previous_output == self.seal_definition);
+        if found_seals.count() != 1 {
+            Err(Error::ResolverLying)?
+        }
+        let container = TxContainer::reconstruct(&witness.1, &supplement, &host)?;
+        let commitment = TxCommitment::from_inner(host);
+        Ok(commitment.verify(&container, &msg)?)
     }
 }
 
@@ -67,14 +79,17 @@ where
     TXGRAPH: TxGraph + TxResolve,
 {
     type PublicationId = ShortId;
-    type Error = Error<TXGRAPH::AccessError>;
+    type Error = Error;
 
     fn define_seal(
         &'a self,
         seal_definition: &OutPoint,
     ) -> Result<TxoutSeal<TXGRAPH>, Self::Error> {
         let outpoint = seal_definition;
-        match self.spending_status(outpoint)? {
+        match self
+            .spending_status(outpoint)
+            .map_err(|_| Error::MediumAccessError)?
+        {
             SpendingStatus::Unknown => Err(Error::InvalidSealDefinition),
             SpendingStatus::Invalid => Err(Error::InvalidSealDefinition),
             SpendingStatus::Unspent => Ok(TxoutSeal::new(outpoint.clone(), self)),
@@ -83,7 +98,10 @@ where
     }
 
     fn get_seal_status(&self, seal: &TxoutSeal<TXGRAPH>) -> Result<SealStatus, Self::Error> {
-        match self.spending_status(&seal.seal_definition)? {
+        match self
+            .spending_status(&seal.seal_definition)
+            .map_err(|_| Error::MediumAccessError)?
+        {
             SpendingStatus::Unknown => Ok(SealStatus::Undefined),
             SpendingStatus::Invalid => Ok(SealStatus::Undefined),
             SpendingStatus::Unspent => Ok(SealStatus::Undefined),
@@ -97,13 +115,5 @@ where
 pub trait TxResolve {
     type Error: std::error::Error;
     fn tx_container(&self, outpoint: OutPoint) -> Result<TxContainer, Self::Error>;
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, From, Error)]
-#[display_from(Debug)]
-pub enum Error<AE: std::error::Error> {
-    InvalidSealDefinition,
-    SpentTxout,
-    #[derive_from(AE)]
-    MediumAccessError(AE),
+    fn tx_and_data(&self, outpoint: OutPoint) -> Result<(Transaction, TxSupplement), Self::Error>;
 }

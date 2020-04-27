@@ -28,6 +28,6 @@ pub use lockscript::{LockscriptCommitment, LockscriptContainer};
 pub use pubkey::{LNPBP1Commitment, LNPBP1Container};
 pub use scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyComposition, ScriptPubkeyContainer};
 pub use taproot::{TaprootCommitment, TaprootContainer};
-pub use tx::{TxCommitment, TxContainer};
+pub use tx::{compute_lnpbp3_vout, TxCommitment, TxContainer, TxSupplement};
 pub use txout::{TxoutCommitment, TxoutContainer};
 pub use types::{Container, Proof, ScriptInfo};

@@ -11,9 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{hashes::sha256, TxOut};
+use bitcoin::{hashes::sha256, secp256k1, TxOut};
 
-use super::{Container, Error, Proof, ScriptPubkeyCommitment, ScriptPubkeyContainer};
+use super::{
+    Container, Error, Proof, ScriptInfo, ScriptPubkeyCommitment, ScriptPubkeyComposition,
+    ScriptPubkeyContainer,
+};
 use crate::bp::PubkeyScript;
 use crate::commit_verify::EmbedCommitVerify;
 
@@ -22,6 +25,26 @@ use crate::commit_verify::EmbedCommitVerify;
 pub struct TxoutContainer {
     pub value: u64,
     pub script_container: ScriptPubkeyContainer,
+}
+
+impl TxoutContainer {
+    pub fn construct(
+        protocol_tag: &sha256::Hash,
+        value: u64,
+        pubkey: secp256k1::PublicKey,
+        script_info: ScriptInfo,
+        scriptpubkey_composition: ScriptPubkeyComposition,
+    ) -> Self {
+        Self {
+            value,
+            script_container: ScriptPubkeyContainer::construct(
+                protocol_tag,
+                pubkey,
+                script_info,
+                scriptpubkey_composition,
+            ),
+        }
+    }
 }
 
 impl Container for TxoutContainer {

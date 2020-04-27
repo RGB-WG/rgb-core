@@ -11,9 +11,22 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::bp::dbc::{Proof, TxCommitment};
+use crate::bp::dbc;
 
-pub struct Witness(pub InnerWitness, pub OuterWitness);
+#[derive(Clone, PartialEq, Debug, Display, From, Error)]
+#[display_from(Debug)]
+pub enum Error {
+    InvalidSealDefinition,
+    SpentTxout,
+    #[derive_from]
+    MediumAccessError,
+    CommitmentError(dbc::Error),
+    ResolverError,
+    ResolverLying,
+}
 
-pub type InnerWitness = TxCommitment;
-pub type OuterWitness = Proof;
+impl From<dbc::Error> for Error {
+    fn from(err: dbc::Error) -> Self {
+        Self::CommitmentError(err)
+    }
+}

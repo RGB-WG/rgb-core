@@ -16,16 +16,16 @@ use bitcoin::hashes::{sha256d, Hash};
 #[macro_use]
 pub mod tagged256;
 pub mod blind;
+pub mod dbc;
 pub mod network;
 pub mod scripts;
+mod seals;
 pub mod short_id;
-//mod seals;
-pub mod dbc;
 
-pub use scripts::*;
-pub use short_id::*;
-//pub use seals::*;
 pub use network::Network;
+pub use scripts::*;
+pub use seals::*;
+pub use short_id::*;
 
 hash_newtype!(HashLock, sha256d::Hash, 32, doc = "Hashed locks in HTLC");
 hash_newtype!(

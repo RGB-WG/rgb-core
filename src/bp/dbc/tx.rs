@@ -11,9 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{hashes::sha256, Transaction, TxOut};
+use bitcoin::{hashes::sha256, secp256k1, Transaction, TxOut};
 
-use super::{Container, Error, Proof, TxoutCommitment, TxoutContainer};
+use super::{
+    Container, Error, Proof, ScriptInfo, ScriptPubkeyComposition, TxoutCommitment, TxoutContainer,
+};
 use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
@@ -25,10 +27,19 @@ pub struct TxContainer {
     pub tx: Transaction,
 }
 
-fn compute_vout(fee: u64, entropy: u32, tx: &mut Transaction) -> &mut TxOut {
+pub fn compute_lnpbp3_vout(tx: &Transaction, supplement: &TxSupplement) -> usize {
+    compute_vout(supplement.fee, supplement.protocol_factor, tx)
+}
+
+fn compute_vout(fee: u64, entropy: u32, tx: &Transaction) -> usize {
     let nouts = tx.output.len() as u16;
     let vout = ((fee + (entropy as u64)) % (nouts as u64)) as u16;
-    &mut tx.output[vout as usize]
+    vout as usize
+}
+
+fn get_mut_txout(fee: u64, entropy: u32, tx: &mut Transaction) -> &mut TxOut {
+    let tx2 = tx.clone();
+    &mut tx.output[compute_vout(fee, entropy, &tx2)]
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
@@ -40,6 +51,32 @@ pub struct TxSupplement {
     pub tag: sha256::Hash,
 }
 
+impl TxContainer {
+    pub fn construct(
+        protocol_factor: u32,
+        protocol_tag: &sha256::Hash,
+        fee: u64,
+        tx: Transaction,
+        pubkey: secp256k1::PublicKey,
+        script_info: ScriptInfo,
+        scriptpubkey_composition: ScriptPubkeyComposition,
+    ) -> Self {
+        let txout = &tx.output[compute_vout(fee, protocol_factor, &tx)];
+        Self {
+            tx: tx.clone(),
+            fee,
+            protocol_factor,
+            txout_container: TxoutContainer::construct(
+                protocol_tag,
+                txout.value,
+                pubkey,
+                script_info,
+                scriptpubkey_composition,
+            ),
+        }
+    }
+}
+
 impl Container for TxContainer {
     type Supplement = TxSupplement;
     type Host = Transaction;
@@ -49,13 +86,12 @@ impl Container for TxContainer {
         supplement: &Self::Supplement,
         host: &Self::Host,
     ) -> Result<Self, Error> {
-        let mut tx = host.clone();
-        let txout = compute_vout(supplement.fee, supplement.protocol_factor, &mut tx);
+        let txout = &host.output[compute_vout(supplement.fee, supplement.protocol_factor, host)];
         Ok(Self {
             protocol_factor: supplement.protocol_factor,
             fee: supplement.fee,
             txout_container: TxoutContainer::reconstruct(proof, &supplement.tag, txout)?,
-            tx,
+            tx: host.clone(),
         })
     }
 
@@ -100,7 +136,7 @@ where
 
         let txout_commitment =
             TxoutCommitment::embed_commit(&container.txout_container.clone(), msg)?;
-        *compute_vout(fee, entropy, &mut tx) = txout_commitment.into_inner();
+        *get_mut_txout(fee, entropy, &mut tx) = txout_commitment.into_inner();
 
         Ok(tx.into())
     }
@@ -110,9 +146,8 @@ where
 mod test {
     use super::*;
     use crate::bp::dbc::{ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer};
+    use bitcoin::consensus::encode::deserialize;
     use bitcoin::hashes::hex::FromHex;
-    use bitcoin::{consensus::encode::deserialize, *};
-    use secp256k1::PublicKey;
     use std::str::FromStr;
 
     #[test]
@@ -144,7 +179,7 @@ mod test {
             txout_container: TxoutContainer {
                 value: 0,
                 script_container: ScriptPubkeyContainer {
-                    pubkey: PublicKey::from_str(
+                    pubkey: secp256k1::PublicKey::from_str(
                         "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
                     )
                     .unwrap(),
