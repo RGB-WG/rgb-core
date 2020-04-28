@@ -543,7 +543,6 @@ impl GenerateScripts for LockScript {
                     .into()
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
-            _ => unreachable!(),
         }
     }
 
@@ -582,7 +581,6 @@ impl GenerateScripts for LockScript {
                 Some(Witness::from_inner(vec![witness_script.to_bytes()]))
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
-            _ => unreachable!(),
         }
     }
 }
@@ -603,7 +601,6 @@ impl GenerateScripts for bitcoin::PublicKey {
                     .into()
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
-            _ => unreachable!(),
         }
     }
     fn gen_sig_script(&self, strategy: Strategy) -> SigScript {
@@ -638,7 +635,6 @@ impl GenerateScripts for bitcoin::PublicKey {
                 Some(Witness::from_inner(vec![self.to_bytes()]))
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
-            _ => unreachable!(),
         }
     }
 }

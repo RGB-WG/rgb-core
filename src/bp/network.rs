@@ -51,7 +51,7 @@ impl Network {
 
     pub fn as_magic(&self) -> MagicNumber {
         use std::mem;
-        let mut m = 0u64;
+        let m;
         unsafe {
             m = mem::transmute::<Self, u64>(self.clone());
         }
@@ -103,7 +103,6 @@ impl fmt::Display for Network {
             Network::Testnet => writeln!(f, "testnet"),
             Network::Regtest => writeln!(f, "regtest"),
             Network::Signet => writeln!(f, "signet"),
-            _ => Err(fmt::Error),
         }
     }
 }
@@ -115,7 +114,6 @@ impl fmt::Debug for Network {
             Network::Mainnet | Network::Testnet | Network::Regtest | Network::Signet => {
                 writeln!(f, "{} (magic:{:x?})", self, self.as_magic())
             }
-            _ => Err(fmt::Error),
         }
     }
 }

@@ -16,7 +16,6 @@
 
 use super::transport::*;
 
-
 pub struct Peer {
     pub node: NodeAddr,
     connection: Connection,
@@ -24,9 +23,10 @@ pub struct Peer {
 }
 
 impl Peer {
-    pub async fn new_outbound(node: NodeAddr,
-                              private_key: &secp256k1::SecretKey,
-                              ephemeral_private_key: &secp256k1::SecretKey
+    pub async fn new_outbound(
+        node: NodeAddr,
+        private_key: &secp256k1::SecretKey,
+        ephemeral_private_key: &secp256k1::SecretKey,
     ) -> Result<Self, ConnectionError> {
         let connection = node.connect(private_key, ephemeral_private_key).await?;
         Ok(Self {
@@ -36,7 +36,7 @@ impl Peer {
         })
     }
 
-    pub async fn send(&self, msg: Message) -> Result<(), ConnectionError> {
+    pub async fn send(&self, _msg: Message) -> Result<(), ConnectionError> {
         // TODO: Implement
         Ok(())
     }
@@ -53,6 +53,4 @@ pub struct Message {
     pub extension: TLV,
 }
 
-pub trait Messageable: From<Message> + Into<Message> {
-
-}
+pub trait Messageable: From<Message> + Into<Message> {}

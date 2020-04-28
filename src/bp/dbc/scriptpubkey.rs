@@ -77,11 +77,10 @@ impl Container for ScriptPubkeyContainer {
         use ScriptPubkeyComposition as Comp;
         use ScriptPubkeyDescriptor as Descr;
 
-        let (lockscript, tapscript_hash) = match &proof.script_info {
+        let (lockscript, _) = match &proof.script_info {
             ScriptInfo::None => (None, None),
             ScriptInfo::LockScript(script) => (Some(script), None),
             ScriptInfo::Taproot(hash) => (None, Some(hash)),
-            _ => unimplemented!(),
         };
 
         let mut proof = proof.clone();
@@ -114,7 +113,6 @@ impl Container for ScriptPubkeyContainer {
             Descr::P2WPKH(_) => Comp::WPubkeyHash,
             Descr::P2WSH(_) => Comp::WScriptHash,
             Descr::P2TR(_) => Comp::TapRoot,
-            _ => unreachable!(),
         };
         let proof = proof;
 
@@ -141,7 +139,6 @@ impl Container for ScriptPubkeyContainer {
                     Err(Error::InvalidProofStructure)?
                 }
             }
-            _ => unreachable!(),
         }
 
         Ok(Self {
@@ -214,7 +211,7 @@ where
             if container.scriptpubkey_composition != TapRoot {
                 Err(Error::InvalidProofStructure)?
             }
-            let taproot = TaprootCommitment::embed_commit(
+            let _taproot = TaprootCommitment::embed_commit(
                 &TaprootContainer {
                     script_root: taproot_hash,
                     intermediate_key: container.pubkey,

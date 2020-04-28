@@ -44,7 +44,7 @@ impl From<secp256k1::Error> for Error {
 }
 
 impl From<PubkeyParseError> for Error {
-    fn from(err: PubkeyParseError) -> Self {
+    fn from(_: PubkeyParseError) -> Self {
         Self::LockscriptParseError
     }
 }

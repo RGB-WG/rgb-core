@@ -161,7 +161,7 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescriptor {
                     })
                     .collect(),
             ),
-            s => P2S(script_pubkey),
+            _ => P2S(script_pubkey),
         })
     }
 }
@@ -183,8 +183,7 @@ impl From<ScriptPubkeyDescriptor> for PubkeyScript {
             }
             P2WPKH(wpubkey_hash) => Builder::gen_v0_p2wpkh(&wpubkey_hash).into_script(),
             P2WSH(wscript_hash) => Builder::gen_v0_p2wsh(&wscript_hash).into_script(),
-            P2TR(pubkey) => unimplemented!(),
-            _ => unimplemented!(),
+            P2TR(_) => unimplemented!(),
         })
     }
 }
@@ -204,7 +203,6 @@ impl From<ScriptPubkeyDescriptor> for ScriptPubkeyStructure {
             P2TR(pubkey) => {
                 PkStruct::Witness(WitnessVersion::V1, pubkey.serialize().to_vec().into())
             }
-            _ => unimplemented!(),
         }
     }
 }

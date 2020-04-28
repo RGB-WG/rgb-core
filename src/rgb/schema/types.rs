@@ -125,7 +125,6 @@ impl<I: UnsignedInteger> Occurences<I> {
             Occurences::OnceOrUpTo(Some(max)) => Occurences::OnceOrUpTo(Some(max.as_u64())),
             Occurences::NoneOrUpTo(None) => Occurences::NoneOrUpTo(None),
             Occurences::NoneOrUpTo(Some(max)) => Occurences::NoneOrUpTo(Some(max.as_u64())),
-            _ => panic!("Unknown occurence variant"),
         }
     }
 
@@ -156,7 +155,6 @@ macro_rules! impl_occurences {
                     Self::Once => (0x01u8, 0),
                     Self::NoneOrUpTo(max) => (0xFEu8, max.unwrap_or(std::$type::MAX).into()),
                     Self::OnceOrUpTo(max) => (0xFFu8, max.unwrap_or(std::$type::MAX).into()),
-                    _ => panic!("New occurence types can't appear w/o this library to be aware of"),
                 };
                 let mut len = value.0.strict_encode(&mut e)?;
                 len += value.1.strict_encode(&mut e)?;

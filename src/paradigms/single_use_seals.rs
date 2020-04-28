@@ -166,7 +166,7 @@ where
     /// error.
     fn publish_witness(
         &mut self,
-        witness: &SEAL::Witness,
+        _witness: &SEAL::Witness,
     ) -> Result<Self::PublicationId, SealMediumError<Self::Error>> {
         Err(SealMediumError::PublicationIdNotSupported)
     }
@@ -177,7 +177,7 @@ where
     /// error.
     fn get_witness_publication_id(
         &self,
-        witness: &SEAL::Witness,
+        _witness: &SEAL::Witness,
     ) -> Result<Option<Self::PublicationId>, SealMediumError<Self::Error>> {
         Err(SealMediumError::PublicationIdNotSupported)
     }
@@ -187,7 +187,7 @@ where
     /// [SealMediumError::PublicationIdNotSupported] error.
     fn validate_publication_id(
         &self,
-        publication_id: &Self::PublicationId,
+        _publication_id: &Self::PublicationId,
     ) -> Result<bool, SealMediumError<Self::Error>> {
         Err(SealMediumError::PublicationIdNotSupported)
     }
@@ -222,7 +222,7 @@ where
     /// error.
     async fn publish_witness(
         &mut self,
-        witness: &SEAL::Witness,
+        _witness: &SEAL::Witness,
     ) -> Result<Self::PublicationId, SealMediumError<Self::Error>>
     where
         SEAL: 'async_trait,
@@ -236,7 +236,7 @@ where
     /// error.
     async fn get_witness_publication_id(
         &self,
-        witness: &SEAL::Witness,
+        _witness: &SEAL::Witness,
     ) -> Result<Option<Self::PublicationId>, SealMediumError<Self::Error>>
     where
         SEAL: 'async_trait,
@@ -249,7 +249,7 @@ where
     /// [SealMediumError::PublicationIdNotSupported] error.
     async fn validate_publication_id(
         &self,
-        publication_id: &Self::PublicationId,
+        _publication_id: &Self::PublicationId,
     ) -> Result<bool, SealMediumError<Self::Error>>
     where
         SEAL: 'async_trait,
