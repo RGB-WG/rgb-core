@@ -492,7 +492,8 @@ mod compositional_types {
 
 #[cfg(test)]
 mod test {
-    //use super::*;
+    use super::*;
+    use crate::bytes;
 
     fn gen_strings() -> Vec<&'static str> {
         vec![
@@ -507,7 +508,6 @@ mod test {
         ]
     }
 
-    /*
     #[test]
     fn test_serialize_deserialize() {
         gen_strings().into_iter().for_each(|s| {
@@ -518,15 +518,12 @@ mod test {
     }
 
     #[test]
+    #[should_panic(expected = "DataNotEntirelyConsumed")]
     fn test_consumation() {
         gen_strings().into_iter().for_each(|s| {
             let mut r = strict_serialize(&s).unwrap();
             r.extend_from_slice("data".as_ref());
-            let p: Result<String, _> = strict_deserialize(&r);
-            if let DumbError::DataNotConsumedEntirelyError = p.unwrap_err() {
-            } else {
-                assert!(false)
-            }
+            let _: String = strict_deserialize(&r).unwrap();
         })
     }
 
@@ -538,5 +535,168 @@ mod test {
             assert!(p.is_err());
         })
     }
-     */
+
+    /// Checking that byte serialization and deserialization works correctly for the most common
+    /// marginal and middle-probability cases
+    #[test]
+    fn test_u8_serialize() {
+        let zero: u8 = 0;
+        let one: u8 = 1;
+        let thirteen: u8 = 13;
+        let confusing: u8 = 0xEF;
+        let nearly_full: u8 = 0xFE;
+        let full: u8 = 0xFF;
+
+        let byte_0 = bytes![0u8];
+        let byte_1 = bytes![1u8];
+        let byte_13 = bytes![13u8];
+        let byte_ef = bytes![0xEFu8];
+        let byte_fe = bytes![0xFEu8];
+        let byte_ff = bytes![0xFFu8];
+
+        assert_eq!(strict_serialize(&zero).unwrap(), byte_0);
+        assert_eq!(strict_serialize(&one).unwrap(), byte_1);
+        assert_eq!(strict_serialize(&thirteen).unwrap(), byte_13);
+        assert_eq!(strict_serialize(&confusing).unwrap(), byte_ef);
+        assert_eq!(strict_serialize(&nearly_full).unwrap(), byte_fe);
+        assert_eq!(strict_serialize(&full).unwrap(), byte_ff);
+
+        assert_eq!(u8::strict_deserialize(byte_0).unwrap(), zero);
+        assert_eq!(u8::strict_deserialize(byte_1).unwrap(), one);
+        assert_eq!(u8::strict_deserialize(byte_13).unwrap(), thirteen);
+        assert_eq!(u8::strict_deserialize(byte_ef).unwrap(), confusing);
+        assert_eq!(u8::strict_deserialize(byte_fe).unwrap(), nearly_full);
+        assert_eq!(u8::strict_deserialize(byte_ff).unwrap(), full);
+    }
+
+    /// Test for checking the following rule from LNPBP-5:
+    ///
+    /// `Option<T>` of any type T, which are set to `Option::None` value MUST serialize as two
+    /// zero bytes and it MUST be possible to deserialize optional of any type from two zero bytes
+    /// which MUST result in `Option::None` value.
+    #[test]
+    fn test_option_serialize_none() {
+        let o1: Option<u8> = None;
+        let o2: Option<u64> = None;
+
+        let two_zero_bytes = &vec![0u8][..];
+
+        assert_eq!(strict_serialize(&o1).unwrap(), two_zero_bytes);
+        assert_eq!(strict_serialize(&o2).unwrap(), two_zero_bytes);
+
+        assert_eq!(
+            Option::<u8>::strict_deserialize(two_zero_bytes).unwrap(),
+            None
+        );
+        assert_eq!(
+            Option::<u64>::strict_deserialize(two_zero_bytes).unwrap(),
+            None
+        );
+    }
+
+    /// Test for checking the following rule from LNPBP-5:
+    ///
+    /// `Option<T>` of any type T, which are set to `Option::Some<T>` value MUST serialize as a
+    /// `Vec<T>` structure containing a single item equal to the `Option::unwrap()` value.
+    #[test]
+    fn test_option_serialize_some() {
+        let o1: Option<u8> = Some(0);
+        let o2: Option<u8> = Some(13);
+        let o3: Option<u8> = Some(0xFF);
+        let o4: Option<u64> = Some(13);
+        let o5: Option<u64> = Some(0x1FF);
+        let o6: Option<u64> = Some(0xFFFFFFFFFFFFFFFF);
+        let o7: Option<usize> = Some(13);
+        let o8: Option<usize> = Some(0xFFFFFFFFFFFFFFFF);
+
+        let byte_0 = bytes![1u8, 0u8];
+        let byte_13 = bytes![1u8, 13u8];
+        let byte_255 = bytes![1u8, 0xFFu8];
+        let word_13 = bytes![1u8, 13u8, 0u8];
+        let qword_13 = bytes![1u8, 13u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
+        let qword_256 = bytes![1u8, 0xFFu8, 0x01u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
+        let qword_max = bytes![1u8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8];
+
+        assert_eq!(strict_serialize(&o1).unwrap(), byte_0);
+        assert_eq!(strict_serialize(&o2).unwrap(), byte_13);
+        assert_eq!(strict_serialize(&o3).unwrap(), byte_255);
+        assert_eq!(strict_serialize(&o4).unwrap(), qword_13);
+        assert_eq!(strict_serialize(&o5).unwrap(), qword_256);
+        assert_eq!(strict_serialize(&o6).unwrap(), qword_max);
+        assert_eq!(strict_serialize(&o7).unwrap(), word_13);
+        assert!(strict_serialize(&o8).err().is_some());
+
+        assert_eq!(Option::<u8>::strict_deserialize(byte_0).unwrap(), Some(0));
+        assert_eq!(Option::<u8>::strict_deserialize(byte_13).unwrap(), Some(13));
+        assert_eq!(
+            Option::<u8>::strict_deserialize(byte_255).unwrap(),
+            Some(0xFF)
+        );
+        assert_eq!(
+            Option::<u64>::strict_deserialize(qword_13).unwrap(),
+            Some(13)
+        );
+        assert_eq!(
+            Option::<u64>::strict_deserialize(qword_256).unwrap(),
+            Some(0x1FF)
+        );
+        assert_eq!(
+            Option::<u64>::strict_deserialize(qword_max).unwrap(),
+            Some(0xFFFFFFFFFFFFFFFF)
+        );
+        assert_eq!(
+            Option::<usize>::strict_deserialize(word_13).unwrap(),
+            Some(13)
+        );
+        assert_eq!(
+            Option::<usize>::strict_deserialize(qword_max).unwrap(),
+            Some(0xFFFF)
+        );
+    }
+
+    /// Test trying deserialization of non-zero and non-single item vector structures, which MUST
+    /// fail with a specific error.
+    #[test]
+    fn test_option_deserialize_vec() {
+        assert!(Option::<u8>::strict_deserialize(bytes![2u8, 0u8, 0u8, 0u8])
+            .err()
+            .is_some());
+        assert!(Option::<u8>::strict_deserialize(bytes![3u8, 0u8, 0u8, 0u8])
+            .err()
+            .is_some());
+        assert!(
+            Option::<u8>::strict_deserialize(bytes![0xFFu8, 0u8, 0u8, 0u8])
+                .err()
+                .is_some()
+        );
+    }
+
+    /// Test for checking the following rule from LNPBP-5:
+    ///
+    /// Array of any commitment-serializable type T MUST contain strictly less than `0x10000` items
+    /// and must serialize as 16-bit little-endian value corresponding to the number of items
+    /// followed by a direct serialization of each of the items.
+    #[test]
+    fn test_vec_serialize() {
+        let v1: Vec<u8> = vec![0, 13, 0xFF];
+        let v2: Vec<u8> = vec![13];
+        let v3: Vec<u64> = vec![0, 13, 13, 0x1FF, 0xFFFFFFFFFFFFFFFF];
+        let v4: Vec<u8> = (0..0x1FFFF).map(|item| (item % 0xFF) as u8).collect();
+
+        let s1 = bytes![3u8, 0u8, 0u8, 13u8, 0xFFu8];
+        let s2 = bytes![1u8, 0u8, 13u8];
+        let s3 = bytes![
+            5u8, 0u8, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0,
+            0xFF, 1, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+        ];
+
+        assert_eq!(strict_serialize(&v1).unwrap(), s1);
+        assert_eq!(strict_serialize(&v2).unwrap(), s2);
+        assert_eq!(strict_serialize(&v3).unwrap(), s3);
+        assert!(strict_serialize(&v4).err().is_some());
+
+        assert_eq!(Vec::<u8>::strict_deserialize(s1).unwrap(), v1);
+        assert_eq!(Vec::<u8>::strict_deserialize(s2).unwrap(), v2);
+        assert_eq!(Vec::<u64>::strict_deserialize(s3).unwrap(), v3);
+    }
 }

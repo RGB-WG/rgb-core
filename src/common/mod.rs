@@ -14,7 +14,7 @@
 //! Common data types, structures and functions for LNPBPs
 
 #[macro_use]
-pub mod macros;
+mod macros;
 #[macro_use]
 pub(crate) mod convert;
 #[macro_use]
@@ -25,7 +25,6 @@ pub(crate) mod serde;
 #[cfg(feature = "daemons")]
 pub mod service;
 
-pub use macros::*;
 #[cfg(feature = "node")]
 pub use service::*;
 pub use wrapper::*;
