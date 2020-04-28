@@ -30,7 +30,7 @@ impl StrictDecode for secp256k1::PublicKey {
     type Error = Error;
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
-        d.read_exact(&mut buf);
+        d.read_exact(&mut buf)?;
         Ok(Self::from_slice(&buf)
             .map_err(|_| Error::DataIntegrityError("invalid public key data".to_string()))?)
     }
@@ -47,7 +47,7 @@ impl StrictDecode for secp256k1::Signature {
     type Error = Error;
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
-        d.read_exact(&mut buf);
+        d.read_exact(&mut buf)?;
         Ok(Self::from_compact(&buf).map_err(|_| {
             Error::DataIntegrityError("Invalid secp256k1 signature data".to_string())
         })?)

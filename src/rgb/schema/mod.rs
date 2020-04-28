@@ -11,9 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
 pub mod types;
-pub mod field;
+/*pub mod field;
 pub mod transition;
 pub mod script;
 pub mod schema;
@@ -22,4 +21,4 @@ pub use types::*;
 pub use field::*;
 pub use transition::*;
 pub use schema::*;
-
+*/

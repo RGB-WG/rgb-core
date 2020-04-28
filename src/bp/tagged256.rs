@@ -14,11 +14,14 @@
 //! # Tagged256
 //! Bitcoin tagged hashes as defined by BIP-Schnorr proposal
 
-use bitcoin::hashes::{
-    sha256, Hash, HashEngine
-};
+use bitcoin::hashes::{sha256, Hash, HashEngine};
 
-hash_newtype!(TaggedHash, sha256::Hash, 32, doc="Tagged hash data according to BIP-Schnorr");
+hash_newtype!(
+    TaggedHash,
+    sha256::Hash,
+    32,
+    doc = "Tagged hash data according to BIP-Schnorr"
+);
 
 pub fn tagged256hash(tag: &str, msg: Vec<u8>) -> TaggedHash {
     let mut engine = sha256::Hash::engine();
@@ -29,10 +32,9 @@ pub fn tagged256hash(tag: &str, msg: Vec<u8>) -> TaggedHash {
     sha256::Hash::from_engine(engine).into()
 }
 
-
 #[macro_export]
 macro_rules! hashed_tag {
     ($prefix:expr, $tag:expr) => {
-        const TAG: &'static str = concat!($prefix, stringify!($tag));
+        const TAG: &'static str = concat!($prefix, $tag);
     };
 }

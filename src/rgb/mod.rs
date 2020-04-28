@@ -11,10 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub mod schema;
 
-pub mod prelude {
-}
+pub mod prelude {}
 
-use bitcoin::hashes::{Hash, sha256d};
+use bitcoin::hashes::{sha256d, Hash};
 
-hash_newtype!(ContractId, sha256d::Hash, 32, doc="Double-sha256 hash of the genesis transition");
+hash_newtype!(
+    ContractId,
+    sha256d::Hash,
+    32,
+    doc = "Double-sha256 hash of the genesis transition"
+);

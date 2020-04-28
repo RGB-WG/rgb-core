@@ -11,27 +11,29 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
+use std::{convert::TryFrom, io};
 
-use std::{io, convert::TryFrom};
+use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
 
-use num_traits::{ToPrimitive, FromPrimitive};
-use num_derive::{ToPrimitive, FromPrimitive};
-
-use crate::csv::serialize::*;
-
-pub trait UnsignedInteger: Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Into<u64> + std::fmt::Debug {
+pub trait UnsignedInteger:
+    Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Into<u64> + std::fmt::Debug
+{
     fn as_u64(self) -> u64 {
         self.into()
     }
 }
 
-impl UnsignedInteger for u8 { }
-impl UnsignedInteger for u16 { }
-impl UnsignedInteger for u32 { }
-impl UnsignedInteger for u64 { }
+impl UnsignedInteger for u8 {}
+impl UnsignedInteger for u16 {}
+impl UnsignedInteger for u32 {}
+impl UnsignedInteger for u64 {}
 
 #[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
 #[display_from(Debug)]
 pub enum StateFormat {
     NoState = 0,
@@ -41,9 +43,10 @@ pub enum StateFormat {
 
 impl_commitment_enum!(StateFormat);
 
-
 #[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
 #[display_from(Debug)]
 pub enum Bits {
     Bit8 = 0,
@@ -56,9 +59,10 @@ pub enum Bits {
 
 impl_commitment_enum!(Bits);
 
-
 #[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
 #[display_from(Debug)]
 pub enum DigestAlgorithm {
     Sha256 = 0,
@@ -70,9 +74,10 @@ pub enum DigestAlgorithm {
 
 impl_commitment_enum!(DigestAlgorithm);
 
-
 #[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
 #[display_from(Debug)]
 pub enum SignatureAlgorithm {
     EcdsaDer = 0,
@@ -81,18 +86,18 @@ pub enum SignatureAlgorithm {
 
 impl_commitment_enum!(SignatureAlgorithm);
 
-
 #[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
 #[display_from(Debug)]
 pub enum ECPointSerialization {
     Uncompressed = 0,
     Compressed,
-    SchnorrBip
+    SchnorrBip,
 }
 
 impl_commitment_enum!(ECPointSerialization);
-
 
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -108,7 +113,7 @@ pub enum Occurences<I: UnsignedInteger> {
 #[display_from(Debug)]
 pub struct OccurencesError {
     pub expected: Occurences<u64>,
-    pub found: u64
+    pub found: u64,
 }
 
 impl<I: UnsignedInteger> Occurences<I> {
@@ -132,43 +137,56 @@ impl<I: UnsignedInteger> Occurences<I> {
             Occurences::OnceOrUpTo(Some(max)) if count.as_u64() > 0 && count <= *max => Ok(()),
             Occurences::NoneOrUpTo(None) => Ok(()),
             Occurences::NoneOrUpTo(Some(max)) if count <= *max => Ok(()),
-            _ => Err(OccurencesError { expected: self.clone().translate_u64(), found: count.as_u64() }),
+            _ => Err(OccurencesError {
+                expected: self.clone().translate_u64(),
+                found: count.as_u64(),
+            }),
         }
     }
 }
 
 macro_rules! impl_occurences {
     ($type:ident) => {
-        impl Commitment for Occurences<$type> {
-            fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        impl StrictEncode for Occurences<$type> {
+            type Error = Error;
+
+            fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
                 let value: (u8, u64) = match self {
                     Self::NoneOrOnce => (0x00u8, 0),
                     Self::Once => (0x01u8, 0),
                     Self::NoneOrUpTo(max) => (0xFEu8, max.unwrap_or(std::$type::MAX).into()),
                     Self::OnceOrUpTo(max) => (0xFFu8, max.unwrap_or(std::$type::MAX).into()),
-                    _ => panic!("New occurence types can't appear w/o this library to be aware of")
+                    _ => panic!("New occurence types can't appear w/o this library to be aware of"),
                 };
-                let mut len = value.0.commitment_serialize(&mut e)?;
-                len += value.1.commitment_serialize(&mut e)?;
+                let mut len = value.0.strict_encode(&mut e)?;
+                len += value.1.strict_encode(&mut e)?;
                 Ok(len)
             }
+        }
 
-            fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-                let value = u8::commitment_deserialize(&mut d)?;
-                let max: u64 = u64::commitment_deserialize(&mut d)?;
+        impl StrictDecode for Occurences<$type> {
+            type Error = Error;
+
+            fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+                let value = u8::strict_decode(&mut d)?;
+                let max: u64 = u64::strict_decode(&mut d)?;
                 let max: Option<$type> = match max {
-                    val if val > 0 && val < ::std::$type::MAX.into() =>
-                        Ok(Some($type::try_from(max).expect("Can't fail"))),
-                    val if val == ::std::$type::MAX as u64 =>
-                        Ok(None),
-                    _ => Err(Error::ValueOutOfRange),
+                    val if val > 0 && val < ::std::$type::MAX.into() => {
+                        Ok(Some($type::try_from(max).expect("Can't fail")))
+                    }
+                    val if val == ::std::$type::MAX as u64 => Ok(None),
+                    invalid => Err(Error::ValueOutOfRange(
+                        stringify!($type).to_string(),
+                        0..(::std::$type::MAX as u64),
+                        invalid,
+                    )),
                 }?;
                 Ok(match value {
                     0x00u8 => Self::NoneOrOnce,
                     0x01u8 => Self::Once,
                     0xFEu8 => Self::NoneOrUpTo(max),
                     0xFFu8 => Self::OnceOrUpTo(max),
-                    _ => panic!("New occurence types can't appear w/o this library to be aware of")
+                    _ => panic!("New occurence types can't appear w/o this library to be aware of"),
                 })
             }
         }

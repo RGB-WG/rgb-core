@@ -110,6 +110,17 @@ pub enum Error {
     /// or non-1 length Vec will result in `Error::WrongOptionalEncoding`.
     WrongOptionalEncoding(u8),
 
+    /// Enums are encoded as a `u8`-based values; the provided enum has
+    /// underlying primitive type that does not fit into `u8` value
+    EnumValueOverflow(String),
+
+    /// An unsupported value for enum encountered during decode operation
+    EnumValueNotKnown(String, u8),
+
+    /// Found a value during decoding operation that does not fits into
+    /// the supported range
+    ValueOutOfRange(String, std::ops::Range<u64>, u64),
+
     /// Returned by the convenience method [strict_decode] if not all
     /// provided data were consumed during decoding process
     DataNotEntirelyConsumed,
@@ -137,6 +148,24 @@ impl Display for Error {
                 equal to either 0 (no value) or 1",
                 significator
             ),
+            EnumValueOverflow(enum_name) => write!(
+                f,
+                "Enums are encoded as a `u8`-based values; the provided enum {} \
+                has underlying primitive type that does not fit into `u8` value",
+                enum_name
+            ),
+            EnumValueNotKnown(enum_name, value) => write!(
+                f,
+                "An unsupported value {} for enum {} encountered during decode \
+                operation",
+                value, enum_name
+            ),
+            ValueOutOfRange(data_type, range, value) => write!(
+                f,
+                "Decoding resulted in value {} for type {} that exceeds the \
+                supported range {:#?}",
+                value, data_type, range
+            ),
             DataNotEntirelyConsumed => write!(
                 f,
                 "Data were not consumed entirely during strict decoding procedure"
@@ -157,6 +186,41 @@ macro_rules! strict_encode_list {
             len
         }
     }
+}
+
+#[macro_export]
+macro_rules! impl_commitment_enum {
+    ($type:ident) => {
+        impl StrictEncode for $type {
+            type Error = Error;
+
+            #[inline]
+            fn strict_encode<E: ::std::io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+                match self.to_u8() {
+                    Some(result) => result.strict_encode(e),
+                    None => Err($crate::strict_encoding::Error::EnumValueOverflow(
+                        stringify!($type).to_string(),
+                    )),
+                }
+            }
+        }
+
+        impl StrictDecode for $type {
+            type Error = Error;
+
+            #[inline]
+            fn strict_decode<D: ::std::io::Read>(d: D) -> Result<Self, Self::Error> {
+                let value = u8::strict_decode(d)?;
+                match Self::from_u8(value) {
+                    Some(result) => Ok(result),
+                    None => Err($crate::strict_encoding::Error::EnumValueNotKnown(
+                        stringify!($type).to_string(),
+                        value,
+                    )),
+                }
+            }
+        }
+    };
 }
 
 mod bitcoin_based {
