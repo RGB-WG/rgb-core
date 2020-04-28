@@ -27,4 +27,5 @@
 pub mod client_side_validation;
 pub mod commit_verify;
 pub mod single_use_seals;
+#[macro_use]
 pub mod strict_encoding;

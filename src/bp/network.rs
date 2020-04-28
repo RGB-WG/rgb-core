@@ -11,9 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
-use std::{fmt, str::FromStr, convert::TryFrom};
 use bitcoin::hashes::core::fmt::Formatter;
+use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub type MagicNumber = u32;
 
@@ -27,30 +26,30 @@ pub enum Network {
     Testnet = 0x0709110B,
     Regtest = 0xDAB5BFFA,
     Signet = 0xA553C67E,
-    Other(MagicNumber)
+    Other(MagicNumber),
 }
 
 impl Network {
     pub fn all_known() -> Vec<Network> {
         use Network::*;
-        vec![ Mainnet, Testnet, Regtest, Signet ]
+        vec![Mainnet, Testnet, Regtest, Signet]
     }
 
     pub fn all_magic() -> Vec<MagicNumber> {
-        Self::all_known().iter().map(Network::get_magic).collect()
+        Self::all_known().iter().map(Network::as_magic).collect()
     }
 
     pub fn from_magic(magic: MagicNumber) -> Self {
         match magic {
-            m if m == Network::Mainnet.get_magic() => Network::Mainnet,
-            m if m == Network::Testnet.get_magic() => Network::Testnet,
-            m if m == Network::Regtest.get_magic() => Network::Regtest,
-            m if m == Network::Signet.get_magic() => Network::Signet,
+            m if m == Network::Mainnet.as_magic() => Network::Mainnet,
+            m if m == Network::Testnet.as_magic() => Network::Testnet,
+            m if m == Network::Regtest.as_magic() => Network::Regtest,
+            m if m == Network::Signet.as_magic() => Network::Signet,
             m => Network::Other(m),
         }
     }
 
-    pub fn get_magic(&self) -> MagicNumber {
+    pub fn as_magic(&self) -> MagicNumber {
         use std::mem;
         let mut m = 0u64;
         unsafe {
@@ -68,7 +67,7 @@ impl From<MagicNumber> for Network {
 
 impl From<Network> for MagicNumber {
     fn from(network: Network) -> Self {
-        network.get_magic()
+        network.as_magic()
     }
 }
 
@@ -91,7 +90,7 @@ impl TryFrom<Network> for bitcoin::Network {
             Network::Testnet => bitcoin::Network::Testnet,
             Network::Regtest => bitcoin::Network::Regtest,
             Network::Signet => bitcoin::Network::Signet,
-            _ => Err(())?
+            _ => Err(())?,
         })
     }
 }
@@ -113,10 +112,9 @@ impl fmt::Debug for Network {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Network::Other(magic) => writeln!(f, "magic:{:x?}", magic),
-            Network::Mainnet
-            | Network::Testnet
-            | Network::Regtest
-            | Network::Signet => writeln!(f, "{} (magic:{:x?})", self, self.get_magic()),
+            Network::Mainnet | Network::Testnet | Network::Regtest | Network::Signet => {
+                writeln!(f, "{} (magic:{:x?})", self, self.as_magic())
+            }
             _ => Err(fmt::Error),
         }
     }
@@ -131,11 +129,13 @@ impl FromStr for Network {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_ascii_lowercase();
-        bitcoin::Network::from_str(&s).map(Network::from).or_else(|_| {
-            let s = s.strip_prefix("magic:").unwrap_or(&s);
-            let s = s.strip_prefix("0x").unwrap_or(&s);
-            let magic = u32::from_str_radix(s, 16).map_err(|_| ParseError)?;
-            Ok(Network::Other(magic))
-        })
+        bitcoin::Network::from_str(&s)
+            .map(Network::from)
+            .or_else(|_| {
+                let s = s.strip_prefix("magic:").unwrap_or(&s);
+                let s = s.strip_prefix("0x").unwrap_or(&s);
+                let magic = u32::from_str_radix(s, 16).map_err(|_| ParseError)?;
+                Ok(Network::Other(magic))
+            })
     }
 }

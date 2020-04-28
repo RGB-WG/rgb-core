@@ -113,6 +113,9 @@ pub enum Error {
     /// Returned by the convenience method [strict_decode] if not all
     /// provided data were consumed during decoding process
     DataNotEntirelyConsumed,
+
+    /// Convenience type never for data structures using StrictDecode
+    DataIntegrityError(String),
 }
 
 impl Display for Error {
@@ -138,6 +141,7 @@ impl Display for Error {
                 f,
                 "Data were not consumed entirely during strict decoding procedure"
             ),
+            DataIntegrityError(str) => write!(f, "Data integrity error: {}", str),
         }
     }
 }
