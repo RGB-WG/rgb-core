@@ -22,7 +22,7 @@ pub enum Error {
 
     InvalidProofStructure,
 
-    #[derive_from(ScriptPubkeyError)]
+    #[derive_from]
     InvalidScriptPubkey(ScriptPubkeyError),
 
     LockscriptParseError,

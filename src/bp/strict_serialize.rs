@@ -11,21 +11,5 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::bp::dbc;
-
-#[derive(Clone, PartialEq, Debug, Display, From, Error)]
-#[display_from(Debug)]
-pub enum Error {
-    InvalidSealDefinition,
-    SpentTxout,
-    MediumAccessError,
-    CommitmentError(dbc::Error),
-    ResolverError,
-    ResolverLying,
-}
-
-impl From<dbc::Error> for Error {
-    fn from(err: dbc::Error) -> Self {
-        Self::CommitmentError(err)
-    }
-}
+//use crate::strict_encoding::{StrictDeserialize, StrictSerialize};
+//use std::io;

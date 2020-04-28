@@ -21,6 +21,7 @@ pub mod network;
 pub mod scripts;
 mod seals;
 pub mod short_id;
+mod strict_serialize;
 
 pub use network::Network;
 pub use scripts::*;
