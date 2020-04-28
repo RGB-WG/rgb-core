@@ -152,7 +152,8 @@ pub(crate) mod test {
     }
 
     pub(crate) fn gen_pubkeys_and_hashes(n: usize) -> (Vec<PublicKey>, Vec<PubkeyHash>) {
-        let pk_compr = gen_bitcoin_pubkeys(n / 2, true);
+        let pks /*pk_compr*/ = gen_bitcoin_pubkeys(n, true);
+        /*
         let pk_uncompr = gen_bitcoin_pubkeys(n / 2, true);
         let pks: Vec<PublicKey> = pk_compr
             .into_iter()
@@ -160,6 +161,7 @@ pub(crate) mod test {
             .map(|(a, b)| vec![a, b])
             .flatten()
             .collect();
+         */
         let pkhs = pks.iter().map(PublicKey::pubkey_hash).collect();
         (pks, pkhs)
     }
@@ -180,18 +182,18 @@ pub(crate) mod test {
 
     pub(crate) fn single_key_suite(proc: fn(LockScript, secp256k1::PublicKey) -> ()) {
         let (keys, _) = gen_pubkeys_and_hashes(6);
-        proc(ms_str!("c:pk({})", keys[1]), keys[1].key);
-        proc(ms_str!("c:pk({})", keys[2]), keys[2].key);
-        proc(ms_str!("c:pk({})", keys[3]), keys[3].key);
-        proc(ms_str!("c:pk({})", keys[4]), keys[4].key);
+        proc(ms_str!("c:pk_k({})", keys[1]), keys[1].key);
+        proc(ms_str!("c:pk_k({})", keys[2]), keys[2].key);
+        proc(ms_str!("c:pk_k({})", keys[3]), keys[3].key);
+        proc(ms_str!("c:pk_k({})", keys[0]), keys[0].key);
     }
 
     pub(crate) fn single_unmatched_key_suite(proc: fn(LockScript, secp256k1::PublicKey) -> ()) {
         let (keys, _) = gen_pubkeys_and_hashes(6);
-        proc(ms_str!("c:pk({})", keys[1]), keys[0].key);
-        proc(ms_str!("c:pk({})", keys[2]), keys[3].key);
-        proc(ms_str!("c:pk({})", keys[3]), keys[4].key);
-        proc(ms_str!("c:pk({})", keys[4]), keys[1].key);
+        proc(ms_str!("c:pk_k({})", keys[1]), keys[0].key);
+        proc(ms_str!("c:pk_k({})", keys[2]), keys[3].key);
+        proc(ms_str!("c:pk_k({})", keys[3]), keys[4].key);
+        proc(ms_str!("c:pk_k({})", keys[4]), keys[1].key);
     }
 
     pub(crate) fn single_keyhash_suite(proc: fn(LockScript, PubkeyHash) -> ()) {
@@ -199,7 +201,7 @@ pub(crate) mod test {
         proc(ms_str!("c:pk_h({})", hashes[1]), hashes[1]);
         proc(ms_str!("c:pk_h({})", hashes[2]), hashes[2]);
         proc(ms_str!("c:pk_h({})", hashes[3]), hashes[3]);
-        proc(ms_str!("c:pk_h({})", hashes[4]), hashes[4]);
+        proc(ms_str!("c:pk_h({})", hashes[0]), hashes[0]);
     }
 
     pub(crate) fn single_unmatched_keyhash_suite(proc: fn(LockScript, PubkeyHash) -> ()) {
@@ -261,7 +263,10 @@ pub(crate) mod test {
                 keys[3],
                 keys[4]
             ),
-            keys[..5].iter().map(|pk| pk.key).collect(),
+            vec![keys[3], keys[4], keys[0], keys[1], keys[2]]
+                .iter()
+                .map(|pk| pk.key)
+                .collect(),
         );
         proc(
             policy_str!(
@@ -272,7 +277,7 @@ pub(crate) mod test {
                 keys[3],
                 keys[4]
             ),
-            vec![keys[0], keys[1], keys[3], keys[3], keys[4]]
+            vec![keys[3], keys[4], keys[0], keys[1], keys[3]]
                 .iter()
                 .map(|pk| pk.key)
                 .collect(),
@@ -294,7 +299,7 @@ pub(crate) mod test {
     fn test_script_parse_single_key() {
         single_key_suite(|lockscript, pubkey| {
             let extract = lockscript.extract_pubkeys().unwrap();
-            assert_eq!(extract, vec![pubkey]);
+            assert_eq!(extract[0], pubkey);
             assert_eq!(
                 lockscript.extract_pubkey_hash_set().unwrap(),
                 (HashSet::from_iter(vec![pubkey]), HashSet::new())
@@ -309,7 +314,11 @@ pub(crate) mod test {
     #[test]
     fn test_script_parse_singlehash() {
         single_keyhash_suite(|lockscript, hash| {
-            assert_eq!(lockscript.extract_pubkeyset().unwrap(), HashSet::new());
+            if let Err(PubkeyParseError::PubkeyHash(found_hash)) = lockscript.extract_pubkeyset() {
+                assert_eq!(hash, found_hash.into())
+            } else {
+                panic!("extract_pubkeyset must return error")
+            }
             assert_eq!(
                 lockscript.extract_pubkey_hash_set().unwrap(),
                 (HashSet::new(), HashSet::from_iter(vec![hash]))
@@ -335,7 +344,7 @@ pub(crate) mod test {
 
     #[test]
     fn test_script_parse_complex_unmatched_keys() {
-        complex_keys_suite(|lockscript, keys| {
+        complex_unmatched_keys_suite(|lockscript, keys| {
             let extract = lockscript.extract_pubkeys().unwrap();
             assert_ne!(extract.len(), 0);
             assert_ne!(extract, keys);

@@ -144,10 +144,11 @@ where
         .pubkey_hash();
 
         let (keys, hashes) = container.script.extract_pubkey_hash_set()?;
-        keys.get(&container.pubkey)
-            .ok_or(Error::LockscriptKeyNotFound)?;
+        if keys.is_empty() && hashes.is_empty() {
+            Err(Error::LockscriptContainsNoKeys)?;
+        }
 
-        let key_hashes: HashSet<PubkeyHash> = keys
+        let mut key_hashes: HashSet<PubkeyHash> = keys
             .iter()
             .map(|pk| {
                 bitcoin::PublicKey {
@@ -157,10 +158,18 @@ where
                 .pubkey_hash()
             })
             .collect();
-        hashes
+        key_hashes.insert(original_hash);
+
+        if hashes.is_empty() {
+            keys.get(&container.pubkey)
+                .ok_or(Error::LockscriptKeyNotFound)?;
+        } else if hashes
             .into_iter()
             .find(|hash| !key_hashes.contains(hash))
-            .ok_or(Error::LockscriptContainsUnknownHashes)?;
+            .is_some()
+        {
+            Err(Error::LockscriptContainsUnknownHashes)?;
+        }
 
         let tweaked_pubkey = LNPBP2Commitment::embed_commit(
             &KeysetContainer {
@@ -293,10 +302,10 @@ mod test {
         let mut uncompressed = keys[5];
         uncompressed.compressed = false;
         let ms = vec![
-            ms_str!("c:pk({})", keys[1]),
-            ms_str!("c:pk({})", keys[2]),
-            ms_str!("c:pk({})", keys[3]),
-            ms_str!("c:pk({})", keys[4]),
+            ms_str!("c:pk_k({})", keys[1]),
+            ms_str!("c:pk_k({})", keys[2]),
+            ms_str!("c:pk_k({})", keys[3]),
+            ms_str!("c:pk_k({})", keys[4]),
             //ms_str!("c:pk({})", uncompressed),
         ];
 
@@ -358,11 +367,11 @@ mod test {
         let mut uncompressed = keys[5];
         uncompressed.compressed = false;
         let ms = vec![
-            ms_str!("c:pk({})", keys[0]),
-            ms_str!("c:pk({})", keys[1]),
-            ms_str!("c:pk({})", keys[2]),
-            ms_str!("c:pk({})", keys[3]),
-            //ms_str!("c:pk({})", uncompressed),
+            ms_str!("c:pk_k({})", keys[0]),
+            ms_str!("c:pk_k({})", keys[1]),
+            ms_str!("c:pk_k({})", keys[2]),
+            ms_str!("c:pk_k({})", keys[3]),
+            //ms_str!("c:pk_k({})", uncompressed),
         ];
 
         ms.into_iter()
