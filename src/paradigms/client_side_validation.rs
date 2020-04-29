@@ -11,6 +11,42 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use super::commit_verify::{self, CommitVerify};
+use super::strict_encoding;
+
+pub trait ConsensusCommit: Sized {
+    type Commitment: commit_verify::CommitVerify<Vec<u8>> + bitcoin::hashes::Hash;
+    fn consensus_commit(&self) -> Self::Commitment;
+    fn consensus_verify(&self, commitment: &Self::Commitment) -> bool;
+}
+
+/// Marker trait for automatic implementation of [ConsensusCommit] from
+/// [StrictEncoding] procedure
+pub trait ConsensusCommitFromStrictEncoding: strict_encoding::StrictEncode {
+    type Commitment: commit_verify::CommitVerify<Vec<u8>> + bitcoin::hashes::Hash;
+}
+
+impl<T> ConsensusCommit for T
+where
+    T: ConsensusCommitFromStrictEncoding,
+{
+    type Commitment = T::Commitment;
+
+    fn consensus_commit(&self) -> Self::Commitment {
+        Self::Commitment::commit(&strict_encoding::strict_encode(self).expect(
+            "Strict encoding must not fail for types implementing \
+            ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
+        ))
+    }
+
+    fn consensus_verify(&self, commitment: &Self::Commitment) -> bool {
+        commitment.verify(&strict_encoding::strict_encode(self).expect(
+            "Strict encoding must not fail for types implementing \
+            ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
+        ))
+    }
+}
+
 /*
 /// This simple trait MUST be used by all parties implementing client-side
 /// validation paradigm. The core concept of this paradigm is that a client

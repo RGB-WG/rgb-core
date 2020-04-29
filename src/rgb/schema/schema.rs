@@ -17,6 +17,7 @@ use std::{collections::BTreeMap, io};
 use super::{
     scripting, FieldFormat, FieldId, SealTypeId, StateFormat, Transition, TransitionTypeId,
 };
+use crate::client_side_validation::{self, ConsensusCommit};
 
 static MIDSTATE_SHEMAID: [u8; 32] = [
     25, 205, 224, 91, 171, 217, 131, 31, 140, 104, 5, 155, 127, 82, 14, 81, 58, 245, 79, 165, 114,
@@ -40,10 +41,20 @@ pub struct Schema {
     pub script_extensions: scripting::Extensions,
 }
 
+impl Schema {
+    #[inline]
+    pub fn schema_id(&self) -> SchemaId {
+        self.consensus_commit()
+    }
+}
+
+impl client_side_validation::ConsensusCommitFromStrictEncoding for Schema {
+    type Commitment = SchemaId;
+}
+
 mod strict_encoding {
     use super::*;
-    use crate::paradigms::strict_encoding::Error;
-    use crate::strict_encoding::{StrictDecode, StrictEncode};
+    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl StrictEncode for Schema {
         type Error = Error;
