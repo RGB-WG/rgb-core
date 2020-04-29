@@ -11,18 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//mod error;
-mod field;
-mod types;
-/*pub mod transition;
-pub mod script;
-pub mod schema;
-*/
+use super::OccurencesError;
 
-//pub use error::Error;
-pub use field::*;
-pub use types::*;
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
+pub enum Error {
+    MinMaxBoundsOnLargeInt,
+    OccurencesNotMet(OccurencesError),
+    /*
+    UnknownField(transition::metadata::Type),
+    InvalidField(transition::metadata::Type, Box<SchemaError>),
 
-/*pub use transition::*;
-pub use schema::*;
-*/
+    InvalidTransitionId(usize),
+
+    InvalidOutputBalanceBulletProof(usize),
+     */
+}

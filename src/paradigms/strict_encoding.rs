@@ -121,6 +121,9 @@ pub enum Error {
     /// the supported range
     ValueOutOfRange(String, std::ops::Range<u64>, u64),
 
+    /// A repeated value found during set collection deserialization
+    RepeatedValue(String),
+
     /// Returned by the convenience method [strict_decode] if not all
     /// provided data were consumed during decoding process
     DataNotEntirelyConsumed,
@@ -166,6 +169,11 @@ impl Display for Error {
                 supported range {:#?}",
                 value, data_type, range
             ),
+            RepeatedValue(value) => write!(
+                f,
+                "A repeated value {} found during set collection deserialization",
+                value
+            ),
             DataNotEntirelyConsumed => write!(
                 f,
                 "Data were not consumed entirely during strict decoding procedure"
@@ -189,8 +197,8 @@ macro_rules! strict_encode_list {
 }
 
 #[macro_export]
-macro_rules! impl_commitment_enum {
-    ($type:ident) => {
+macro_rules! impl_enum_strict_encoding {
+    ($type:ty) => {
         impl StrictEncode for $type {
             type Error = Error;
 
@@ -397,7 +405,9 @@ mod byte_strings {
 
 mod compositional_types {
     use super::{Error, StrictDecode, StrictEncode};
-    use std::collections::{BTreeMap, HashMap};
+    use std::collections::{BTreeMap, HashMap, HashSet};
+    use std::fmt::Debug;
+    use std::hash::Hash;
     use std::io;
 
     /// In terms of strict encoding, `Option` (optional values) are  
@@ -443,9 +453,6 @@ mod compositional_types {
     /// type for encoding platform-independent constant-length
     /// encoding rules) followed by a consequently-encoded vec items,
     /// according to their type.
-    ///
-    /// An attempt to encode `Vec` with more items than can fit in `usize`
-    /// encoding rules will result in `Error::ExceedMaxItems`.
     impl<T> StrictEncode for Vec<T>
     where
         T: StrictEncode,
@@ -462,6 +469,14 @@ mod compositional_types {
         }
     }
 
+    /// In terms of strict encoding, `Vec` is stored in form of
+    /// usize-encoded length (see `StrictEncode` implementation for `usize`
+    /// type for encoding platform-independent constant-length
+    /// encoding rules) followed by a consequently-encoded vec items,
+    /// according to their type.
+    ///
+    /// An attempt to encode `Vec` with more items than can fit in `usize`
+    /// encoding rules will result in `Error::ExceedMaxItems`.
     impl<T> StrictDecode for Vec<T>
     where
         T: StrictDecode,
@@ -473,6 +488,49 @@ mod compositional_types {
             let mut data = Vec::<T>::with_capacity(len as usize);
             for _ in 0..len {
                 data.push(T::strict_decode(&mut d)?);
+            }
+            Ok(data)
+        }
+    }
+
+    /// Strict encoding for a unique value collection represented by a rust
+    /// `HashSet` type is performed in the same way as `Vec` encoding.
+    impl<T> StrictEncode for HashSet<T>
+    where
+        T: StrictEncode + Eq + Hash + Debug,
+        T::Error: From<Error>,
+    {
+        type Error = T::Error;
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            let len = self.len() as usize;
+            let mut encoded = len.strict_encode(&mut e)?;
+            for item in self {
+                encoded += item.strict_encode(&mut e)?;
+            }
+            Ok(encoded)
+        }
+    }
+
+    /// Strict decoding of a unique value collection represented by a rust
+    /// `HashSet` type is performed alike `Vec` decoding with the only
+    /// exception: if the repeated value met a [Error::RepeatedValue] is
+    /// returned.
+    impl<T> StrictDecode for HashSet<T>
+    where
+        T: StrictDecode + Eq + Hash + Debug,
+        T::Error: From<Error>,
+    {
+        type Error = T::Error;
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let len = usize::strict_decode(&mut d)?;
+            let mut data = HashSet::<T>::with_capacity(len as usize);
+            for _ in 0..len {
+                let val = T::strict_decode(&mut d)?;
+                if data.contains(&val) {
+                    Err(Error::RepeatedValue(format!("{:?}", val)))?;
+                } else {
+                    data.insert(val);
+                }
             }
             Ok(data)
         }
@@ -501,6 +559,16 @@ mod compositional_types {
         }
     }
 
+    /// LNP/BP library uses `HashMap<usize, T: StrictEncode>`s to encode
+    /// ordered lists, where the position of the list item must be fixed, since
+    /// the item is referenced from elsewhere by its index. Thus, the library
+    /// does not supports and recommends not to support strict encoding
+    /// of any other `HashMap` variants.
+    ///
+    /// Strict encoding of the `HashMap<usize, T>` type is performed by
+    /// converting into a fixed-order `Vec<T>` and serializing it according to
+    /// the `Vec` strict encoding rules. This operation is internally
+    /// performed via conversion into `BTreeMap<usize, T: StrictEncode>`.
     impl<T> StrictDecode for HashMap<usize, T>
     where
         T: StrictDecode + Clone,
@@ -541,6 +609,15 @@ mod compositional_types {
         }
     }
 
+    /// LNP/BP library uses `BTreeMap<usize, T: StrictEncode>`s to encode
+    /// ordered lists, where the position of the list item must be fixed, since
+    /// the item is referenced from elsewhere by its index. Thus, the library
+    /// does not supports and recommends not to support strict encoding
+    /// of any other `BTreeMap` variants.
+    ///
+    /// Strict encoding of the `BTreeMap<usize, T>` type is performed
+    /// by converting into a fixed-order `Vec<T>` and serializing it according
+    /// to the `Vec` strict encoding rules.
     impl<T> StrictDecode for BTreeMap<usize, T>
     where
         T: StrictDecode,

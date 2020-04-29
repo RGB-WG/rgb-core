@@ -11,18 +11,4 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//mod error;
-mod field;
-mod types;
-/*pub mod transition;
-pub mod script;
-pub mod schema;
-*/
-
-//pub use error::Error;
-pub use field::*;
-pub use types::*;
-
-/*pub use transition::*;
-pub use schema::*;
-*/
+pub mod metadata;
