@@ -11,6 +11,25 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
+pub enum SchemaError {
+    InvalidValue(metadata::Value),
+    MinMaxBoundsOnLargeInt,
+
+    OccurencesNotMet(OccurencesError),
+
+    UnknownField(metadata::Type),
+    InvalidField(metadata::Type, Box<SchemaError>),
+
+    InvalidTransitionId(usize),
+
+    InvalidBoundSeal(seal::Type, Box<SchemaError>),
+    InvalidBoundSealId(seal::Type),
+    InvalidBoundSealValue(seal::Type, StateFormat, data::Data),
+    InvalidOutputBalanceBulletProof(usize),
+}
+
 impl FieldFormat {
     pub fn validate(&self, value: &Value) -> Result<(), SchemaError> {
         match (self, value) {
@@ -452,4 +471,67 @@ impl SealsSchema {
 
         Ok(output_commitments)
     }
+}
+
+impl Schema {
+    pub fn schema_id(&self) -> SchemaId {
+        self.consensus_commit()
+            .expect("Schema with commit failures must nor be serialized")
+    }
+
+    pub fn validate_transition(
+        &self,
+        ts: &rgb::Transition,
+    ) -> Result<PartialValidation, SchemaError> {
+        let transition_schema = self
+            .transitions
+            .get(&ts.id)
+            .ok_or(SchemaError::InvalidTransitionId(ts.id))?;
+
+        // we only support standard scripting with no extensions at the moment
+        match transition_schema.scripting {
+            script::Scripting {
+                validation: script::Procedure::Standard(procedure),
+                extensions: script::Extensions::ScriptsDenied,
+            } => procedure.validate(ts.script.as_ref())?,
+            _ => panic!(format!(
+                "Unimplemented validation of: {:?}",
+                transition_schema.scripting
+            )),
+        }
+
+        // TODO: unsafe casting that will be removed if we switch to maps indexed by u16s
+
+        // find invalid unknown fields
+        for metadata::Field { id, .. } in ts.meta.iter() {
+            transition_schema
+                .fields
+                .get(&(id.0 as usize))
+                .ok_or(SchemaError::UnknownField(*id))?;
+        }
+        // check known fields
+        for (field_type, field) in &transition_schema.fields {
+            field.validate(metadata::Type(*field_type as u16), &ts.meta)?;
+        }
+
+        let output_commitments = transition_schema
+            .binds
+            .validate(&self.seals, ts.state.iter().collect())?
+            .into_iter()
+            .map(|cmt| cmt.commitment)
+            .collect();
+        println!("output_commitments = {:?}", output_commitments);
+        //let total_output_amount = output_commitments.into_iter().fold(data::amount::zero_pedersen_commitment(), |acc, x| x + acc);
+
+        Ok(PartialValidation {
+            should_close: transition_schema.closes.clone(),
+            output_commitments,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PartialValidation {
+    pub should_close: Option<SealsSchema>,
+    pub output_commitments: Vec<data::PedersenCommitment>,
 }

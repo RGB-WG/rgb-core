@@ -11,180 +11,102 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::{collections::HashMap, io};
-
 use bitcoin::hashes::{sha256t, Hash};
+use std::{collections::BTreeMap, io};
 
-use super::{transition::*, types::*};
-use crate::csv::{serialize, ConsensusCommit, Error};
-use crate::rgb::schema::script;
-use crate::rgb::{self, data, metadata, seal};
-
-#[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
-pub enum SchemaError {
-    InvalidValue(metadata::Value),
-    MinMaxBoundsOnLargeInt,
-
-    OccurencesNotMet(OccurencesError),
-
-    UnknownField(metadata::Type),
-    InvalidField(metadata::Type, Box<SchemaError>),
-
-    InvalidTransitionId(usize),
-
-    InvalidBoundSeal(seal::Type, Box<SchemaError>),
-    InvalidBoundSealId(seal::Type),
-    InvalidBoundSealValue(seal::Type, StateFormat, data::Data),
-    InvalidOutputBalanceBulletProof(usize),
-}
-
-#[derive(Clone, Debug)]
-pub struct PartialValidation {
-    pub should_close: Option<SealsSchema>,
-    pub output_commitments: Vec<data::PedersenCommitment>,
-}
-
-#[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
-pub struct Schema {
-    pub seals: HashMap<usize, StateFormat>,
-    pub transitions: HashMap<usize, Transition>,
-}
-
-impl Schema {
-    pub fn schema_id(&self) -> SchemaId {
-        self.consensus_commit()
-            .expect("Schema with commit failures must nor be serialized")
-    }
-
-    pub fn validate_transition(
-        &self,
-        ts: &rgb::Transition,
-    ) -> Result<PartialValidation, SchemaError> {
-        let transition_schema = self
-            .transitions
-            .get(&ts.id)
-            .ok_or(SchemaError::InvalidTransitionId(ts.id))?;
-
-        // we only support standard scripting with no extensions at the moment
-        match transition_schema.scripting {
-            script::Scripting {
-                validation: script::Procedure::Standard(procedure),
-                extensions: script::Extensions::ScriptsDenied,
-            } => procedure.validate(ts.script.as_ref())?,
-            _ => panic!(format!(
-                "Unimplemented validation of: {:?}",
-                transition_schema.scripting
-            )),
-        }
-
-        // TODO: unsafe casting that will be removed if we switch to maps indexed by u16s
-
-        // find invalid unknown fields
-        for metadata::Field { id, .. } in ts.meta.iter() {
-            transition_schema
-                .fields
-                .get(&(id.0 as usize))
-                .ok_or(SchemaError::UnknownField(*id))?;
-        }
-        // check known fields
-        for (field_type, field) in &transition_schema.fields {
-            field.validate(metadata::Type(*field_type as u16), &ts.meta)?;
-        }
-
-        let output_commitments = transition_schema
-            .binds
-            .validate(&self.seals, ts.state.iter().collect())?
-            .into_iter()
-            .map(|cmt| cmt.commitment)
-            .collect();
-        println!("output_commitments = {:?}", output_commitments);
-        //let total_output_amount = output_commitments.into_iter().fold(data::amount::zero_pedersen_commitment(), |acc, x| x + acc);
-
-        Ok(PartialValidation {
-            should_close: transition_schema.closes.clone(),
-            output_commitments,
-        })
-    }
-}
-
-impl serialize::Commitment for Schema {
-    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-        self.seals.commitment_serialize(&mut e)?;
-        self.transitions.commitment_serialize(&mut e)
-    }
-
-    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        Ok(Self {
-            seals: <HashMap<usize, StateFormat>>::commitment_deserialize(&mut d)?,
-            transitions: <HashMap<usize, Transition>>::commitment_deserialize(&mut d)?,
-        })
-    }
-}
-
-network_serialize_from_commitment!(Schema);
+use super::{
+    scripting, FieldFormat, FieldId, SealTypeId, StateFormat, Transition, TransitionTypeId,
+};
 
 static MIDSTATE_SHEMAID: [u8; 32] = [
     25, 205, 224, 91, 171, 217, 131, 31, 140, 104, 5, 155, 127, 82, 14, 81, 58, 245, 79, 165, 114,
     243, 110, 60, 133, 174, 103, 187, 103, 230, 9, 106,
 ];
 
-tagged_hash!(SchemaId, SchemaIdTag, MIDSTATE_SHEMAID, doc = "");
+tagged_hash!(
+    SchemaId,
+    SchemaIdTag,
+    MIDSTATE_SHEMAID,
+    doc = "Commitment-based schema identifier used for committing to the schema type"
+);
 
-impl ConsensusCommit for Schema {
-    type CommitmentHash = SchemaId;
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
+pub struct Schema {
+    pub field_types: BTreeMap<FieldId, FieldFormat>,
+    pub seal_types: BTreeMap<SealTypeId, StateFormat>,
+    pub transitions: BTreeMap<TransitionTypeId, Transition>,
+    pub script_library: Vec<u8>,
+    pub script_extensions: scripting::Extensions,
+}
+
+mod strict_encoding {
+    use super::*;
+    use crate::paradigms::strict_encoding::Error;
+    use crate::strict_encoding::{StrictDecode, StrictEncode};
+
+    impl StrictEncode for Schema {
+        type Error = Error;
+
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            Ok(strict_encode_list!(e;
+                self.field_types,
+                self.seal_types,
+                self.transitions,
+                self.script_library,
+                self.script_extensions
+            ))
+        }
+    }
+
+    impl StrictDecode for Schema {
+        type Error = Error;
+
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            Ok(Self {
+                field_types: BTreeMap::strict_decode(&mut d)?,
+                seal_types: BTreeMap::strict_decode(&mut d)?,
+                transitions: BTreeMap::strict_decode(&mut d)?,
+                script_library: Vec::strict_decode(&mut d)?,
+                script_extensions: scripting::Extensions::strict_decode(&mut d)?,
+            })
+        }
+    }
 }
 
 #[cfg(test)]
 #[allow(unused_imports)]
 mod test {
-    use crate::rgb;
-    use crate::rgb::metadata;
-    use crate::rgb::schema::script::*;
-    use crate::rgb::schema::types::*;
-    use crate::rgb::schema::*;
-    use crate::rgb::schema::*;
-    use crate::rgb::script::*;
-    use crate::rgb::state::State;
+    use super::{super::Occurences, *};
+    use scripting::Scripting;
 
     #[test]
     fn schema_test() {
         const TRANSITION_VAL: usize = 0;
         const FIELD_VAL: usize = 5;
+        const SEAL_VAL: usize = 1;
 
         let schema_transition = Transition {
-            closes: None,
-            fields: map! {
-                FIELD_VAL => Field(FieldFormat::String(10), Occurences::Once)
+            closes: bmap! {}.into(),
+            defines: bmap! { SEAL_VAL => Occurences::Once }.into(),
+            metadata: bmap! {
+                FIELD_VAL => Occurences::Once,
             },
-            binds: map! {}.into(),
             scripting: Scripting {
-                validation: Procedure::Standard(StandardProcedure::Rgb1Genesis),
-                extensions: Extensions::ScriptsDenied,
+                validation: scripting::Procedure::NoValidation,
+                extensions: scripting::Extensions::ScriptsDenied,
             },
         };
         let schema = Schema {
-            seals: map! {},
-            transitions: map! {
+            field_types: bmap! { FIELD_VAL => FieldFormat::String(10) },
+            seal_types: bmap! { SEAL_VAL => StateFormat::Empty },
+            transitions: bmap! {
                 TRANSITION_VAL => schema_transition
             },
-        };
-
-        let meta = metadata::Metadata::from_inner(vec![metadata::Field {
-            id: metadata::Type(FIELD_VAL as u16),
-            val: metadata::Value::Str("test".into()),
-        }]);
-        let transition = rgb::Transition {
-            id: 0,
-            meta,
-            state: State::from_inner(vec![]),
-            script: None,
+            script_library: vec![],
+            script_extensions: scripting::Extensions::ScriptsDenied,
         };
 
         println!("{:#?}", schema);
-        println!("{:#?}", transition);
-
-        println!("{:?}", schema.validate_transition(&transition));
     }
 }

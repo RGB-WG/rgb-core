@@ -107,8 +107,7 @@ pub struct OccurencesError {
 #[display_from(Debug)]
 pub enum StateFormat {
     Empty = 0,
-    Amount = 1,
-    Bytes = 0xFF,
+    PedersenAndBulletproof = 1,
 }
 
 #[derive(

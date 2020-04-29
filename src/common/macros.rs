@@ -43,6 +43,12 @@ macro_rules! map {
 
 #[macro_export]
 macro_rules! bmap {
+    { } =>  {
+        {
+            ::std::collections::BTreeMap::new()
+        }
+    };
+
     { $($key:expr => $value:expr),+ } => {
         {
             let mut m = ::std::collections::BTreeMap::new();
