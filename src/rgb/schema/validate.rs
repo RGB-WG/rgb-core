@@ -380,3 +380,10 @@ mod test {
         field.validate(Type(0), &metadata).unwrap()
     }
 }
+
+impl StandardProcedure {
+    pub fn validate(&self, _transition_script: Option<&rgb::Script>) -> Result<(), SchemaError> {
+        // TODO: validate the script
+        Ok(())
+    }
+}

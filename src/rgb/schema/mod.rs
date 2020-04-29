@@ -13,9 +13,9 @@
 
 //mod error;
 mod field;
+pub mod script;
 mod types;
 /*pub mod transition;
-pub mod script;
 pub mod schema;
 */
 

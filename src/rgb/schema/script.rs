@@ -13,75 +13,8 @@
 
 use std::io;
 
-use num_traits::{ToPrimitive, FromPrimitive};
-use num_derive::{ToPrimitive, FromPrimitive};
-
-use super::SchemaError;
-use crate::csv::{Commitment, Error};
-use crate::rgb;
-
-#[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
-#[display_from(Debug)]
-pub enum Extensions {
-    ScriptsDenied = 0,
-    ScriptsExtend,
-    ScriptsReplace,
-}
-
-impl_commitment_enum!(Extensions);
-
-
-#[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
-#[display_from(Debug)]
-pub enum StandardProcedure {
-    Rgb1Genesis,
-    Rgb1Issue,
-    Rgb1Transfer,
-    Rgb1Prune,
-    Rgb2Genesis,
-    Rgb2Issue,
-    Rgb2Transfer,
-    Rgb2Prune,
-}
-
-impl_commitment_enum!(StandardProcedure);
-
-impl StandardProcedure {
-    pub fn validate(&self, _transition_script: Option<&rgb::Script>) -> Result<(), SchemaError> {
-        // TODO: validate the script
-        Ok(())
-    }
-}
-
-
-#[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display_from(Debug)]
-pub enum Procedure {
-    Standard(StandardProcedure),
-    Simplicity(Vec<u8>)
-}
-
-impl Commitment for Procedure {
-    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-        Ok(match self {
-            Self::Standard(proc_id) => commitment_serialize_list!(e; 0u8, proc_id),
-            Self::Simplicity(code) => commitment_serialize_list!(e; 1u8, code),
-            _ => panic!("New scripting engines can't appear w/o this library to be aware of")
-        })
-    }
-
-    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        Ok(match u8::commitment_deserialize(&mut d)? {
-            0u8 => Self::Standard(StandardProcedure::commitment_deserialize(&mut d)?),
-            1u8 => Self::Simplicity(Vec::<u8>::commitment_deserialize(&mut d)?),
-            _ => panic!("New scripting engines can't appear w/o this library to be aware of")
-        })
-    }
-}
-
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display_from(Debug)]
@@ -90,16 +23,88 @@ pub struct Scripting {
     pub extensions: Extensions,
 }
 
-impl Commitment for Scripting {
-    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-        self.validation.commitment_serialize(&mut e)?;
-        self.extensions.commitment_serialize(&mut e)
+#[non_exhaustive]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
+#[display_from(Debug)]
+#[repr(u8)]
+pub enum Extensions {
+    ScriptsDenied = 0,
+    ScriptsExtend,
+    ScriptsReplace,
+}
+
+#[non_exhaustive]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
+#[display_from(Debug)]
+#[repr(u8)]
+pub enum StandardProcedure {
+    Rgb1Issue = 0x01,
+    Rgb1Transfer = 0x02,
+    Rgb1Prune = 0x03,
+    Rgb2Issue = 0x11,
+    Rgb2Transfer = 0x12,
+    Rgb2Prune = 0x13,
+}
+
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
+pub enum Procedure {
+    Standard(StandardProcedure),
+    Simplicity(Vec<u8>),
+}
+
+mod strict_encoding {
+    use super::*;
+    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+
+    impl_enum_strict_encoding!(Extensions);
+    impl_enum_strict_encoding!(StandardProcedure);
+
+    impl StrictEncode for Scripting {
+        type Error = Error;
+
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            self.validation.strict_encode(&mut e)?;
+            self.extensions.strict_encode(&mut e)
+        }
     }
 
-    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        Ok(Self{
-            validation: <Procedure>::commitment_deserialize(&mut d)?,
-            extensions: <Extensions>::commitment_deserialize(&mut d)?,
-        })
+    impl StrictDecode for Scripting {
+        type Error = Error;
+
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            Ok(Self {
+                validation: <Procedure>::strict_decode(&mut d)?,
+                extensions: <Extensions>::strict_decode(&mut d)?,
+            })
+        }
+    }
+
+    impl StrictEncode for Procedure {
+        type Error = Error;
+
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            Ok(match self {
+                Self::Standard(proc_id) => strict_encode_list!(e; 0u8, proc_id),
+                Self::Simplicity(code) => strict_encode_list!(e; 1u8, code),
+            })
+        }
+    }
+
+    impl StrictDecode for Procedure {
+        type Error = Error;
+
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            Ok(match u8::strict_decode(&mut d)? {
+                0u8 => Self::Standard(StandardProcedure::strict_decode(&mut d)?),
+                1u8 => Self::Simplicity(Vec::<u8>::strict_decode(&mut d)?),
+                x => Err(Error::EnumValueNotKnown("script::Procedure".to_string(), x))?,
+            })
+        }
     }
 }
