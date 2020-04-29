@@ -42,12 +42,7 @@ pub enum Extensions {
 #[display_from(Debug)]
 #[repr(u8)]
 pub enum StandardProcedure {
-    Rgb1Issue = 0x01,
-    Rgb1Transfer = 0x02,
-    Rgb1Prune = 0x03,
-    Rgb2Issue = 0x11,
-    Rgb2Transfer = 0x12,
-    Rgb2Prune = 0x13,
+    ConfidentialAmount = 1,
 }
 
 #[non_exhaustive]

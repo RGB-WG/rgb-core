@@ -13,14 +13,17 @@
 
 //mod error;
 mod field;
-pub mod script;
+mod script;
+mod transition;
 mod types;
-/*pub mod transition;
+/*
 pub mod schema;
 */
 
 //pub use error::Error;
 pub use field::*;
+pub use script::*;
+pub use transition::*;
 pub use types::*;
 
 /*pub use transition::*;

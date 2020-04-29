@@ -11,110 +11,50 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
+use std::collections::BTreeMap;
 use std::io;
-use std::collections::HashMap;
 
-use super::{
-    types::*,
-    field::*,
-    schema::SchemaError,
-    script::Scripting,
-};
-use crate::rgb::{data, state, seal};
-use crate::csv::{serialize::Commitment, Error};
-use crate::common::wrapper::Wrapper;
+use super::{Occurences, Scripting};
+
+pub type SealTypeId = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
+pub type FieldTypeId = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
+pub type MetadataStructure = BTreeMap<FieldTypeId, Occurences<u16>>;
+pub type SealsStructure = BTreeMap<SealTypeId, Occurences<u16>>;
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub struct Transition {
-    pub closes: Option<SealsSchema>,
-    pub fields: HashMap<usize, Field>,
-    pub binds: SealsSchema,
+    pub metadata: MetadataStructure,
+    pub closes: SealsStructure,
+    pub defines: SealsStructure,
     pub scripting: Scripting,
 }
 
-impl Commitment for Transition {
-    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-        self.closes.commitment_serialize(&mut e)?;
-        self.fields.commitment_serialize(&mut e)?;
-        self.binds.commitment_serialize(&mut e)?;
-        self.scripting.commitment_serialize(&mut e)
-    }
+mod strict_encoding {
+    use super::*;
+    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
 
-    fn commitment_deserialize<D: io::Read>(d: D) -> Result<Self, Error> {
-        unimplemented!()
-        /*
-        let closes = commitment_deserialize::<Option<HashMap<usize, Occurences<u32>>>>(&mut d)?;
-        let fields: Vec<Field> = commitment_deserialize(&mut d)?;
-        let binds = commitment_deserialize::<HashMap<usize, Occurences<u32>>>(&mut d)?;
-        let scripting: Scripting = commitment_deserialize(&mut d)?;
-        Ok(Self { closes, fields, binds, scripting })
-        */
-    }
-}
+    impl StrictEncode for Transition {
+        type Error = Error;
 
-wrapper!(SealsSchema, _SealsSchemaPhantom, HashMap<usize, Occurences<u32>>, doc="");
-
-impl Commitment for SealsSchema {
-    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-        self.as_ref().commitment_serialize(&mut e)
-    }
-
-    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        let data: HashMap<usize, Occurences<u32>> = Commitment::commitment_deserialize(&mut d)?;
-        Ok(data.into())
-    }
-}
-
-impl SealsSchema {
-    pub fn validate(&self, seals: &HashMap<usize, StateFormat>, state: Vec<&state::Partial>) -> Result<Vec<data::amount::Commitment>, SchemaError> {
-        let mut output_commitments = Vec::new();
-
-        // find invalid created seals
-        for (index, partial) in state.iter().enumerate() {
-            match partial {
-                state::Partial::State(state::Bound{ id, val, .. }) => {
-                    let usize_id = id.0 as usize;
-
-                    // check if it's expected in this transition
-                    self.get(&usize_id).ok_or(SchemaError::InvalidBoundSealId(*id))?;
-
-                    // match with the provided data type
-                    match (seals.get(&usize_id), val) {
-                        (Some(StateFormat::NoState), data::Data::None) => {},
-                        (Some(StateFormat::Amount), data::Data::Balance(commitment)) => {
-                            data::amount::verify_bullet_proof(commitment).map_err(|_| SchemaError::InvalidOutputBalanceBulletProof(index))?;
-
-                            output_commitments.push(commitment.clone());
-                        },
-                        (Some(StateFormat::Data), data::Data::Binary(_data)) => {
-                            unimplemented!(); // TODO
-                        },
-
-                        (None, data) => return Err(SchemaError::InvalidBoundSealId(*id)),
-                        (Some(state_format), data) => return Err(SchemaError::InvalidBoundSealValue(*id, *state_format, data.clone())),
-                    }
-                },
-                state::Partial::Commitment(_) => unimplemented!(), // TODO
-            }
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            self.metadata.strict_encode(&mut e)?;
+            self.closes.strict_encode(&mut e)?;
+            self.defines.strict_encode(&mut e)?;
+            self.scripting.strict_encode(&mut e)
         }
-        // check created seals
-        for (seal_type, occurences) in self.iter() {
-            let count = state
-                .iter()
-                .filter(|m| {
-                    match m {
-                        state::Partial::State(state::Bound { id: seal_type, .. }) => true,
-                        _ => false,
-                    }
-                })
-                .count();
+    }
 
-            occurences.check_count(count as u32)
-                .map_err(|e| SchemaError::InvalidBoundSeal(seal::Type(*seal_type as u16), Box::new(SchemaError::OccurencesNotMet(e))))?;
+    impl StrictDecode for Transition {
+        type Error = Error;
+
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            Ok(Self {
+                metadata: MetadataStructure::strict_decode(&mut d)?,
+                closes: SealsStructure::strict_decode(&mut d)?,
+                defines: SealsStructure::strict_decode(&mut d)?,
+                scripting: Scripting::strict_decode(&mut d)?,
+            })
         }
-
-        Ok(output_commitments)
     }
 }

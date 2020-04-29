@@ -387,3 +387,69 @@ impl StandardProcedure {
         Ok(())
     }
 }
+
+impl SealsSchema {
+    pub fn validate(
+        &self,
+        seals: &HashMap<usize, StateFormat>,
+        state: Vec<&state::Partial>,
+    ) -> Result<Vec<data::amount::Commitment>, SchemaError> {
+        let mut output_commitments = Vec::new();
+
+        // find invalid created seals
+        for (index, partial) in state.iter().enumerate() {
+            match partial {
+                state::Partial::State(state::Bound { id, val, .. }) => {
+                    let usize_id = id.0 as usize;
+
+                    // check if it's expected in this transition
+                    self.get(&usize_id)
+                        .ok_or(SchemaError::InvalidBoundSealId(*id))?;
+
+                    // match with the provided data type
+                    match (seals.get(&usize_id), val) {
+                        (Some(StateFormat::NoState), data::Data::None) => {}
+                        (Some(StateFormat::Amount), data::Data::Balance(commitment)) => {
+                            data::amount::verify_bullet_proof(commitment)
+                                .map_err(|_| SchemaError::InvalidOutputBalanceBulletProof(index))?;
+
+                            output_commitments.push(commitment.clone());
+                        }
+                        (Some(StateFormat::Data), data::Data::Binary(_data)) => {
+                            unimplemented!(); // TODO
+                        }
+
+                        (None, data) => return Err(SchemaError::InvalidBoundSealId(*id)),
+                        (Some(state_format), data) => {
+                            return Err(SchemaError::InvalidBoundSealValue(
+                                *id,
+                                *state_format,
+                                data.clone(),
+                            ))
+                        }
+                    }
+                }
+                state::Partial::Commitment(_) => unimplemented!(), // TODO
+            }
+        }
+        // check created seals
+        for (seal_type, occurences) in self.iter() {
+            let count = state
+                .iter()
+                .filter(|m| match m {
+                    state::Partial::State(state::Bound { id: seal_type, .. }) => true,
+                    _ => false,
+                })
+                .count();
+
+            occurences.check_count(count as u32).map_err(|e| {
+                SchemaError::InvalidBoundSeal(
+                    seal::Type(*seal_type as u16),
+                    Box::new(SchemaError::OccurencesNotMet(e)),
+                )
+            })?;
+        }
+
+        Ok(output_commitments)
+    }
+}
