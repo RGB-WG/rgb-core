@@ -11,21 +11,28 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Debug, Display)]
+#[display_from(Debug)]
+pub enum Data {
+    Balance(amount::Commitment),
+    Binary(Box<[u8]>),
+    None,
+    // TODO: Add other supported bound state types according to the schema
+}
 
 use super::commit::StateCommitment;
 use crate::{
     common::Wrapper,
-    rgb::{seal, data}
+    rgb::{data, seal},
 };
-
 
 #[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
 pub enum Partial {
     Commitment(StateCommitment),
-    State(Bound)
+    State(Bound),
 }
-
 
 #[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
@@ -35,4 +42,9 @@ pub struct Bound {
     pub val: data::Data,
 }
 
-wrapper!(State, _StatePhantom, Vec<Partial>, doc="Set of partial state data");
+wrapper!(
+    State,
+    _StatePhantom,
+    Vec<Partial>,
+    doc = "Set of partial state data"
+);
