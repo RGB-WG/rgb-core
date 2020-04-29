@@ -11,16 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//mod error;
 mod field;
 mod schema;
 pub mod scripting;
 mod transition;
 mod types;
 
-//pub use error::Error;
-pub use field::*;
-pub use schema::*;
+pub use field::{FieldFormat, FieldId};
+pub use schema::{Schema, SchemaId};
 pub use scripting::Scripting;
-pub use transition::*;
-pub use types::*;
+pub use transition::{SealTypeId, Transition, TransitionTypeId};
+
+pub(self) use types::*;

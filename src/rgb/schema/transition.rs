@@ -14,10 +14,9 @@
 use std::collections::BTreeMap;
 use std::io;
 
-use super::{Occurences, Scripting};
+use super::{FieldId, Occurences, Scripting};
 
 pub type SealTypeId = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type FieldId = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type TransitionTypeId = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type MetadataStructure = BTreeMap<FieldId, Occurences<u16>>;
 pub type SealsStructure = BTreeMap<SealTypeId, Occurences<u16>>;

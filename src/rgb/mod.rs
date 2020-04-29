@@ -12,8 +12,14 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 pub mod schema;
+pub mod transition;
 
-pub mod prelude {}
+pub mod prelude {
+    pub use super::schema::Schema;
+    //pub use super::transition::Transition;
+}
+
+pub use prelude::*;
 
 use bitcoin::hashes::{sha256d, Hash};
 

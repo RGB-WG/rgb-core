@@ -13,14 +13,53 @@
 
 use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
 use crate::strict_encoding::{Error, StrictDecode, StrictEncode, WithBitcoinEncoding};
+use bitcoin::hashes::{ripemd160, sha256, Hash};
 use bitcoin::{secp256k1, Txid};
 use std::io;
 
 impl WithBitcoinEncoding for Txid {}
 impl WithBitcoinEncoding for OutpointHash {}
 
+impl StrictEncode for sha256::Hash {
+    type Error = Error;
+
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        self.into_inner().to_vec().strict_encode(e)
+    }
+}
+
+impl StrictDecode for sha256::Hash {
+    type Error = Error;
+
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        Ok(Self::from_slice(&Vec::<u8>::strict_decode(d)?)
+            .map_err(|_| Error::DataIntegrityError("Wrong SHA256 hash data size".to_string()))?)
+    }
+}
+
+impl StrictEncode for ripemd160::Hash {
+    type Error = Error;
+
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        self.into_inner().to_vec().strict_encode(e)
+    }
+}
+
+impl StrictDecode for ripemd160::Hash {
+    type Error = Error;
+
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        Ok(
+            Self::from_slice(&Vec::<u8>::strict_decode(d)?).map_err(|_| {
+                Error::DataIntegrityError("Wrong RIPEMD-160 hash data size".to_string())
+            })?,
+        )
+    }
+}
+
 impl StrictEncode for secp256k1::PublicKey {
     type Error = Error;
+
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.serialize())?)
     }
