@@ -16,9 +16,10 @@ pub mod schema;
 pub mod vm;
 
 pub mod prelude {
-    pub use super::schema::Schema;
-    pub use super::schema::SimplicityScript;
-    //pub use super::transition::Transition;
+    pub use super::*;
+    pub use contract::Genesis;
+    pub use schema::Schema;
+    pub use schema::SimplicityScript;
 }
 
 pub use prelude::*;
