@@ -15,6 +15,9 @@ use crate::bp::blind::{OutpointHash, OutpointReveal};
 
 pub type Confidential = OutpointHash;
 
+/// Convenience type name useful for defning new seals
+pub type SealDefinition = Revealed;
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display)]
 #[display_from(Debug)]
 pub enum Revealed {

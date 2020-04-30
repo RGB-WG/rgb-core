@@ -19,17 +19,17 @@ use super::{
 };
 use crate::client_side_validation::{self, ConsensusCommit};
 
-static MIDSTATE_SHEMAID: [u8; 32] = [
+pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
+
+static MIDSTATE_SHEMA_ID: [u8; 32] = [
     25, 205, 224, 91, 171, 217, 131, 31, 140, 104, 5, 155, 127, 82, 14, 81, 58, 245, 79, 165, 114,
     243, 110, 60, 133, 174, 103, 187, 103, 230, 9, 106,
 ];
 
-pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
-
 tagged_hash!(
     SchemaId,
     SchemaIdTag,
-    MIDSTATE_SHEMAID,
+    MIDSTATE_SHEMA_ID,
     doc = "Commitment-based schema identifier used for committing to the schema type"
 );
 

@@ -18,8 +18,9 @@ use super::transport::*;
 
 pub struct Peer {
     pub node: NodeAddr,
+    #[allow(dead_code)]
     connection: Connection,
-    awaiting_pong: bool,
+    _awaiting_pong: bool,
 }
 
 impl Peer {
@@ -31,8 +32,8 @@ impl Peer {
         let connection = node.connect(private_key, ephemeral_private_key).await?;
         Ok(Self {
             node,
-            connection,
-            awaiting_pong: false,
+            connection: connection,
+            _awaiting_pong: false,
         })
     }
 

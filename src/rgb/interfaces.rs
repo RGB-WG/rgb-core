@@ -11,12 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{Anchor, Genesis, Transition};
+//! Module defines interfaces for external data providers used by RGB
 
-pub struct Consignment {
-    pub genesis: Genesis,
-    pub transitions: Vec<Transition>,
-    pub anchors: Vec<Anchor>,
-}
+pub trait TxResolver {}
 
-impl Consignment {}
+pub trait TxConductor {}
+
+pub trait Coordinator {}

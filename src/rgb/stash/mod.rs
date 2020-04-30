@@ -11,6 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use super::interfaces::{Coordinator, TxConductor, TxResolver};
+use super::{Anchor, Consignment, Contract, ContractId, Genesis, SealDefinition, Transition};
+use crate::lnpbp4::MultimsgCommitment;
+use bitcoin::Transaction;
+use std::collections::HashSet;
+
 /// Top-level structure used by client wallets to manage all known RGB smart
 /// contracts and related data
 pub struct Stash {
@@ -30,22 +36,30 @@ impl Stash {
     /// When we have received data from other peer (which usually relate to our
     /// newly owned state, like assets) we do `merge` with the [Consignment], and
     /// it gets into the known data.
-    pub fn merge(&mut self, consignment: Consignment) {}
+    pub fn merge(&mut self, _consignment: Consignment) {
+        unimplemented!()
+    }
 
     /// Now, when we need to send over to somebody else an update (like we have
     /// transferred him some state, for instance an asset) for each transfer we
     /// ask [Stash] to create a new [Consignment] for the given set of seals
     /// under some specific [Genesis] (contract creation genesis)
-    pub fn consign(&self, seals: Vec<SealDefinition>, under: Genesis) -> Consignment {}
+    pub fn consign(&self, _seals: Vec<SealDefinition>, _under: Genesis) -> Consignment {
+        unimplemented!()
+    }
 
     /// If we need to forget about the state which is not owned by us anymore
     /// (we have done the transfer and would like to prune this specific info
     /// we call this function
-    pub fn forget(&mut self, consignment: Consigment) {}
+    pub fn forget(&mut self, _consignment: Consignment) {
+        unimplemented!()
+    }
 
     /// Clears all data that are not related to the contract state owned by
     /// us in this moment — under all known contracts
-    pub fn prune(&mut self) {}
+    pub fn prune(&mut self) {
+        unimplemented!()
+    }
 
     /// When we need to organize a transfer of some state we use this function.
     /// The difference with [consign] is that this function *creates new
@@ -82,60 +96,38 @@ impl Stash {
     ///    that will hold only information that is related to the state you'd
     ///    like to send to some other party; serialize it and send it over
     ///    the wire protocol.
-    pub fn transit(&self, seals: Vec<SealDefinition>) -> CoordinatedTransition {}
-    pub fn apply(&mut self, update: CoordinatedUpdate, resolver: &TxResolver) -> Consignment {}
+    pub fn transit(&self, _seals: Vec<SealDefinition>) -> CoordinatedTransition {
+        unimplemented!()
+    }
+    pub fn apply(
+        &mut self,
+        _update: CoordinatedUpdate,
+        _resolver: &impl TxResolver,
+    ) -> Consignment {
+        unimplemented!()
+    }
 }
 
 pub struct CoordinatedTransition {
-    pub transitions: HashSet<ContractId, Transition<Revealed>>,
-    pub multi_commits: HashSet<SealDefinition, MultiCommit>,
+    pub transitions: HashSet<ContractId, Transition>,
+    pub multi_commits: HashSet<SealDefinition, MultimsgCommitment>,
 }
 
 impl CoordinatedTransition {
-    pub fn coordinate(&mut self, coordinator: &Coordinator) {}
-    pub fn finalize(self, resolver: &TxResolver, conductor: &TxConductor) -> CoordinatedUpdate {}
+    pub fn coordinate(&mut self, _coordinator: &impl Coordinator) {
+        unimplemented!()
+    }
+    pub fn finalize(
+        self,
+        _resolver: &impl TxResolver,
+        _conductor: &impl TxConductor,
+    ) -> CoordinatedUpdate {
+        unimplemented!()
+    }
 }
 
 pub struct CoordinatedUpdate {
-    pub transitions: Vec<Transition<Disclosed>>,
+    pub transitions: Vec<Transition>,
     pub anchor: Anchor,
     pub inner_witness: Transaction,
-}
-
-/// The structure for a specific contract. Contract always have a part of the
-/// information that is fully known (we use term *revealed*), i.e. the
-/// information related to the state you have issued and the transfers you have
-/// created, and partially-known (*partial*), like the one behind zero knowledge
-/// proofs, merkle trees and blinded seals; this is an information you received
-/// with *consignments* from other parties or that have resulted from the
-/// [Stash::forget] and [Stash::prune] operations on your previously-owned
-/// (but now transferred) state. To efficiently operate with privacy management
-/// the revealed and partial state transitions are kept separate. We re-use
-/// the same Transition data structures for both, but use generic polymorphism
-/// with associated types to clearly distinguish transitions with partial and
-/// revealed data underneath.
-pub struct Contract {
-    pub genesis: Genesis,
-    pub revealed: Vec<Transition<Revealed>>,
-    pub partial: Vec<Transition<Partial>>,
-}
-
-pub trait Revealable {
-    type Amount: Homomorphic;
-    type State: StateVisibility;
-    type Seal: SealVisibility;
-}
-
-pub struct Revealed;
-impl Revealable for Disclosed {
-    type Amount = RevealedAmount;
-    type State = RevealedState;
-    type Seal = RevealedSeal;
-}
-
-pub struct Partial;
-impl Revealable for Partial {
-    type Amount = Amount;
-    type State = State;
-    type Seal = Seal;
 }

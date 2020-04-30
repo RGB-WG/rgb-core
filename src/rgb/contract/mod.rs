@@ -13,10 +13,13 @@
 
 pub mod amount;
 mod assignments;
+mod contract;
 pub mod data;
 pub mod nodes;
 pub mod seal;
 
 pub use amount::Amount;
 pub use assignments::{Assignment, AssignmentsVariant};
+pub use contract::{Contract, ContractId};
 pub use nodes::{Genesis, Transition};
+pub use seal::SealDefinition;
