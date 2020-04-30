@@ -15,7 +15,7 @@ use bitcoin::hashes::{sha256t, Hash};
 use std::{collections::BTreeMap, io};
 
 use super::{
-    scripting, FieldFormat, FieldId, SealTypeId, StateFormat, Transition, TransitionTypeId,
+    script, AssignmentsType, FieldFormat, FieldType, SimplicityScript, StateFormat, Transition,
 };
 use crate::client_side_validation::{self, ConsensusCommit};
 
@@ -23,6 +23,8 @@ static MIDSTATE_SHEMAID: [u8; 32] = [
     25, 205, 224, 91, 171, 217, 131, 31, 140, 104, 5, 155, 127, 82, 14, 81, 58, 245, 79, 165, 114,
     243, 110, 60, 133, 174, 103, 187, 103, 230, 9, 106,
 ];
+
+pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 
 tagged_hash!(
     SchemaId,
@@ -34,11 +36,11 @@ tagged_hash!(
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub struct Schema {
-    pub field_types: BTreeMap<FieldId, FieldFormat>,
-    pub seal_types: BTreeMap<SealTypeId, StateFormat>,
-    pub transitions: BTreeMap<TransitionTypeId, Transition>,
-    pub script_library: Vec<u8>,
-    pub script_extensions: scripting::Extensions,
+    pub field_types: BTreeMap<FieldType, FieldFormat>,
+    pub seal_types: BTreeMap<AssignmentsType, StateFormat>,
+    pub transitions: BTreeMap<TransitionType, Transition>,
+    pub script_library: SimplicityScript,
+    pub script_extensions: script::Extensions,
 }
 
 impl Schema {
@@ -79,7 +81,7 @@ mod strict_encoding {
                 seal_types: BTreeMap::strict_decode(&mut d)?,
                 transitions: BTreeMap::strict_decode(&mut d)?,
                 script_library: Vec::strict_decode(&mut d)?,
-                script_extensions: scripting::Extensions::strict_decode(&mut d)?,
+                script_extensions: script::Extensions::strict_decode(&mut d)?,
             })
         }
     }
@@ -89,7 +91,7 @@ mod strict_encoding {
 #[allow(unused_imports)]
 mod test {
     use super::{super::Occurences, *};
-    use scripting::Scripting;
+    use script::Scripting;
 
     #[test]
     fn schema_test() {
@@ -104,8 +106,8 @@ mod test {
                 FIELD_VAL => Occurences::Once,
             },
             scripting: Scripting {
-                validation: scripting::Procedure::NoValidation,
-                extensions: scripting::Extensions::ScriptsDenied,
+                validation: script::Procedure::NoValidation,
+                extensions: script::Extensions::ScriptsDenied,
             },
         };
         let schema = Schema {
@@ -115,7 +117,7 @@ mod test {
                 TRANSITION_VAL => schema_transition
             },
             script_library: vec![],
-            script_extensions: scripting::Extensions::ScriptsDenied,
+            script_extensions: script::Extensions::ScriptsDenied,
         };
 
         println!("{:#?}", schema);

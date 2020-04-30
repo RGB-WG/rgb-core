@@ -14,12 +14,11 @@
 use std::collections::BTreeMap;
 use std::io;
 
-use super::{FieldId, Occurences, Scripting};
+use super::{FieldType, Occurences, Scripting};
 
-pub type SealTypeId = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type TransitionTypeId = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type MetadataStructure = BTreeMap<FieldId, Occurences<u16>>;
-pub type SealsStructure = BTreeMap<SealTypeId, Occurences<u16>>;
+pub type AssignmentsType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
+pub type MetadataStructure = BTreeMap<FieldType, Occurences<u16>>;
+pub type SealsStructure = BTreeMap<AssignmentsType, Occurences<u16>>;
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]

@@ -11,4 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub type Script = ();
+pub mod amount;
+mod assignments;
+pub mod data;
+pub mod nodes;
+pub mod seal;
+
+pub use amount::Amount;
+pub use assignments::{Assignment, AssignmentsVariant};
+pub use nodes::{Genesis, Transition};

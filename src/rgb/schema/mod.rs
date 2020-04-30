@@ -13,13 +13,13 @@
 
 mod field;
 mod schema;
-pub mod scripting;
+pub mod script;
 mod transition;
 mod types;
 
-pub use field::{FieldFormat, FieldId};
-pub use schema::{Schema, SchemaId};
-pub use scripting::Scripting;
-pub use transition::{SealTypeId, Transition, TransitionTypeId};
+pub use field::{FieldFormat, FieldType};
+pub use schema::{Schema, SchemaId, TransitionType};
+pub use script::{Scripting, SimplicityScript};
+pub use transition::{AssignmentsType, Transition};
 
 pub(self) use types::*;

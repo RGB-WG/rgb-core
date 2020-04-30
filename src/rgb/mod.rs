@@ -11,11 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub mod contract;
 pub mod schema;
-pub mod transition;
+pub mod vm;
 
 pub mod prelude {
     pub use super::schema::Schema;
+    pub use super::schema::SimplicityScript;
     //pub use super::transition::Transition;
 }
 

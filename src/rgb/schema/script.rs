@@ -16,6 +16,10 @@ use std::io;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 
+/// For now, Simplicity script is not implemented, so we use a byte array as a
+/// placeholder for script data
+pub type SimplicityScript = Vec<u8>;
+
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display_from(Debug)]
 pub struct Scripting {
@@ -51,7 +55,7 @@ pub enum StandardProcedure {
 pub enum Procedure {
     NoValidation,
     Standard(StandardProcedure),
-    Simplicity(Vec<u8>),
+    Simplicity(SimplicityScript),
 }
 
 mod strict_encoding {

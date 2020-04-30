@@ -11,19 +11,17 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
+use bitcoin::hashes::{sha256d, Hash, HashEngine};
 use bitcoin::Txid;
-use bitcoin::hashes::{Hash, HashEngine, sha256d};
-
 
 /// Data required to generate or reveal the information about blinded
 /// transaction outpoint
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Debug, Display, Default)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Default)]
 #[display_from(Debug)]
 pub struct OutpointReveal {
     /// Blinding factor preventing rainbow table bruteforce attack based on
     /// the existing blockchain txid set
-    pub blinding: u64,
+    pub blinding: u32,
 
     /// Txid that should be blinded
     pub txid: Txid,
@@ -42,5 +40,10 @@ impl OutpointReveal {
     }
 }
 
-hash_newtype!(OutpointHash, sha256d::Hash, 32, doc="Blind version of transaction outpoint");
+hash_newtype!(
+    OutpointHash,
+    sha256d::Hash,
+    32,
+    doc = "Blind version of transaction outpoint"
+);
 impl_hashencode!(OutpointHash);

@@ -13,7 +13,7 @@
 
 use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
 use crate::strict_encoding::{Error, StrictDecode, StrictEncode, WithBitcoinEncoding};
-use bitcoin::hashes::{ripemd160, sha256, Hash};
+use bitcoin::hashes::{hash160, sha256, Hash};
 use bitcoin::{secp256k1, Txid};
 use std::io;
 
@@ -37,7 +37,7 @@ impl StrictDecode for sha256::Hash {
     }
 }
 
-impl StrictEncode for ripemd160::Hash {
+impl StrictEncode for hash160::Hash {
     type Error = Error;
 
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
@@ -45,7 +45,7 @@ impl StrictEncode for ripemd160::Hash {
     }
 }
 
-impl StrictDecode for ripemd160::Hash {
+impl StrictDecode for hash160::Hash {
     type Error = Error;
 
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
@@ -134,7 +134,7 @@ impl StrictDecode for OutpointReveal {
 
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         Ok(Self {
-            blinding: u64::strict_decode(&mut d)?,
+            blinding: u32::strict_decode(&mut d)?,
             txid: Txid::strict_decode(&mut d)?,
             vout: u16::strict_decode(&mut d)?,
         })

@@ -119,7 +119,7 @@ pub enum Error {
 
     /// Found a value during decoding operation that does not fits into
     /// the supported range
-    ValueOutOfRange(String, std::ops::Range<u64>, u64),
+    ValueOutOfRange(String, core::ops::Range<u64>, u64),
 
     /// A repeated value found during set collection deserialization
     RepeatedValue(String),
@@ -405,7 +405,7 @@ mod byte_strings {
 
 mod compositional_types {
     use super::{Error, StrictDecode, StrictEncode};
-    use std::collections::{BTreeMap, HashMap, HashSet};
+    use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
     use std::fmt::Debug;
     use std::hash::Hash;
     use std::io;
@@ -536,6 +536,49 @@ mod compositional_types {
         }
     }
 
+    /// Strict encoding for a unique value collection represented by a rust
+    /// `BTreeSet` type is performed in the same way as `Vec` encoding.
+    impl<T> StrictEncode for BTreeSet<T>
+    where
+        T: StrictEncode + Eq + Debug,
+        T::Error: From<Error>,
+    {
+        type Error = T::Error;
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            let len = self.len() as usize;
+            let mut encoded = len.strict_encode(&mut e)?;
+            for item in self {
+                encoded += item.strict_encode(&mut e)?;
+            }
+            Ok(encoded)
+        }
+    }
+
+    /// Strict decoding of a unique value collection represented by a rust
+    /// `BTreeSet` type is performed alike `Vec` decoding with the only
+    /// exception: if the repeated value met a [Error::RepeatedValue] is
+    /// returned.
+    impl<T> StrictDecode for BTreeSet<T>
+    where
+        T: StrictDecode + Eq + Ord + Debug,
+        T::Error: From<Error>,
+    {
+        type Error = T::Error;
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let len = usize::strict_decode(&mut d)?;
+            let mut data = BTreeSet::<T>::new();
+            for _ in 0..len {
+                let val = T::strict_decode(&mut d)?;
+                if data.contains(&val) {
+                    Err(Error::RepeatedValue(format!("{:?}", val)))?;
+                } else {
+                    data.insert(val);
+                }
+            }
+            Ok(data)
+        }
+    }
+
     /// LNP/BP library uses `HashMap<usize, T: StrictEncode>`s to encode
     /// ordered lists, where the position of the list item must be fixed, since
     /// the item is referenced from elsewhere by its index. Thus, the library
@@ -593,18 +636,22 @@ mod compositional_types {
     /// Strict encoding of the `BTreeMap<usize, T>` type is performed
     /// by converting into a fixed-order `Vec<T>` and serializing it according
     /// to the `Vec` strict encoding rules.
-    impl<T> StrictEncode for BTreeMap<usize, T>
+    impl<K, V> StrictEncode for BTreeMap<K, V>
     where
-        T: StrictEncode,
-        T::Error: From<Error>,
+        K: StrictEncode + Ord + Clone,
+        V: StrictEncode + Clone,
+        K::Error: From<Error>,
+        V::Error: From<Error> + From<K::Error>,
     {
-        type Error = T::Error;
+        type Error = V::Error;
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             let len = self.len() as usize;
             let encoded = len.strict_encode(&mut e)?;
 
-            self.values().try_fold(encoded, |acc, item| {
-                item.strict_encode(&mut e).map(|len| acc + len)
+            self.iter().try_fold(encoded, |mut acc, (key, value)| {
+                acc += key.strict_encode(&mut e)?;
+                acc += value.strict_encode(&mut e)?;
+                Ok(acc)
             })
         }
     }
@@ -618,17 +665,19 @@ mod compositional_types {
     /// Strict encoding of the `BTreeMap<usize, T>` type is performed
     /// by converting into a fixed-order `Vec<T>` and serializing it according
     /// to the `Vec` strict encoding rules.
-    impl<T> StrictDecode for BTreeMap<usize, T>
+    impl<K, V> StrictDecode for BTreeMap<K, V>
     where
-        T: StrictDecode,
-        T::Error: From<Error>,
+        K: StrictDecode + Ord + Clone,
+        V: StrictDecode + Clone,
+        K::Error: From<Error>,
+        V::Error: From<Error> + From<K::Error>,
     {
-        type Error = T::Error;
+        type Error = V::Error;
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let len = usize::strict_decode(&mut d)?;
-            let mut map = BTreeMap::<usize, T>::new();
-            for index in 0..len {
-                map.insert(index, T::strict_decode(&mut d)?);
+            let mut map = BTreeMap::<K, V>::new();
+            for _ in 0..len {
+                map.insert(K::strict_decode(&mut d)?, V::strict_decode(&mut d)?);
             }
             Ok(map)
         }

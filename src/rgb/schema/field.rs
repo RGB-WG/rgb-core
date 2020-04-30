@@ -16,7 +16,7 @@ use std::io;
 use super::{elliptic_curve, Bits, DigestAlgorithm, EllipticCurve};
 use std::collections::HashSet;
 
-pub type FieldId = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
+pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]

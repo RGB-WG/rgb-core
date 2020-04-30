@@ -11,24 +11,73 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::ops::Add;
+use core::cmp::Ordering;
+use core::ops::Add;
 
-// We do not import particular modules to keep aware with namespace prefixes that we do not use
-// the standard secp256k1zkp library
+// We do not import particular modules to keep aware with namespace prefixes
+// that we do not use the standard secp256k1zkp library
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::*;
 
-use crate::commit_verify::EmbedCommitVerify;
+use crate::commit_verify::CommitVerify;
 
-// TODO: Convert Amount into a wrapper type later
-//wrapper!(Amount, u64, doc="64-bit data for amounts");
 pub type Amount = u64;
+
+/// Proof for Pedersen commitment: a blinding key
+pub type BlindingFactor = secp256k1zkp::key::SecretKey;
+
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[display_from(Debug)]
+pub struct Revealed {
+    pub amount: Amount,
+    pub blinding: BlindingFactor,
+}
+
+impl PartialOrd for Revealed {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match self.amount.partial_cmp(&other.amount) {
+            None => None,
+            Some(Ordering::Equal) => self.blinding.0.partial_cmp(&other.blinding.0),
+            other => other,
+        }
+    }
+}
+
+impl Ord for Revealed {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.amount.cmp(&other.amount) {
+            Ordering::Equal => self.blinding.0.cmp(&other.blinding.0),
+            other => other,
+        }
+    }
+}
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
-pub struct AmountCommitment {
+pub struct Confidential {
     pub commitment: pedersen::Commitment,
     pub bulletproof: pedersen::RangeProof,
+}
+
+impl PartialOrd for Confidential {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (&self.commitment.0).partial_cmp(&other.commitment.0[..]) {
+            None => None,
+            Some(Ordering::Equal) => self.bulletproof.proof[0..self.bulletproof.plen]
+                .partial_cmp(&other.bulletproof.proof[0..other.bulletproof.plen]),
+            other => other,
+        }
+    }
+}
+
+impl Ord for Confidential {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.commitment.0.cmp(&other.commitment.0) {
+            Ordering::Equal => self.bulletproof.proof[0..self.bulletproof.plen]
+                .cmp(&other.bulletproof.proof[0..other.bulletproof.plen]),
+            other => other,
+        }
+    }
 }
 
 // The normal notion of the equivalence operator is to compare the _value_
@@ -36,7 +85,7 @@ pub struct AmountCommitment {
 // are committing to, but the commitment itself. This is different to the
 // design of the original Bulletproof designers, but is appropriate for the
 // goals of RGB project and client-side validation paradigm
-impl PartialEq for AmountCommitment {
+impl PartialEq for Confidential {
     fn eq(&self, other: &Self) -> bool {
         let plen = self.bulletproof.plen;
         self.commitment.0.to_vec() == other.commitment.0.to_vec()
@@ -44,81 +93,34 @@ impl PartialEq for AmountCommitment {
     }
 }
 
-impl Eq for AmountCommitment {}
+impl CommitVerify<Revealed> for Confidential {
+    fn commit(revealed: &Revealed) -> Self {
+        let blinding = revealed.blinding.clone();
+        let value = revealed.amount;
 
-/// Proof for Pedersen commitment: a blinding key
-pub type BlindingFactor = secp256k1zkp::key::SecretKey;
-
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
-pub enum ConfidentialAmount {
-    Partial(AmountCommitment),
-    Revealed(AmountCommitment, BlindingFactor),
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
-#[display_from(Debug)]
-pub enum Error {
-    #[derive_from(secp256k1zkp::Error)]
-    ZkpLibraryError,
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-#[display_from(Debug)]
-pub enum BlindingContainer {
-    BlindingFactor(BlindingFactor),
-    BlindingSet(Vec<BlindingFactor>),
-}
-
-// TODO: Refactor EmbedCommitVerify so that Container type will not be an
-//       associated type but rather a generic parameter
-impl EmbedCommitVerify<Amount> for ConfidentialAmount {
-    type Container = BlindingContainer;
-    type Error = Error;
-
-    fn embed_commit(container: &Self::Container, amount: &Amount) -> Result<Self, Self::Error> {
-        match container {
-            BlindingContainer::BlindingFactor(blinding) => {
-                let blinding = blinding.clone();
-                let value = *amount;
-
-                // TODO: Initialize only once and keep reference
-                let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-                let commitment = secp.commit(value, blinding.clone())?;
-                let bulletproof = secp.bullet_proof(
-                    value,
-                    blinding.clone(),
-                    blinding.clone(),
-                    blinding.clone(),
-                    None,
-                    None,
-                );
-                Ok(ConfidentialAmount::Revealed(
-                    AmountCommitment {
-                        commitment,
-                        bulletproof,
-                    },
-                    blinding,
-                ))
-            }
-            BlindingContainer::BlindingSet(blinding_factors) => {
-                let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-                let factors = blinding_factors.clone();
-                let blinding = secp.blind_sum(vec![secp256k1zkp::key::ONE_KEY], factors)?;
-                Self::embed_commit(&BlindingContainer::BlindingFactor(blinding), amount)
-            }
+        // TODO: Initialize only once and keep reference
+        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+        let commitment = secp
+            .commit(value, blinding.clone())
+            .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
+        let bulletproof = secp.bullet_proof(
+            value,
+            blinding.clone(),
+            blinding.clone(),
+            blinding.clone(),
+            None,
+            None,
+        );
+        Confidential {
+            commitment,
+            bulletproof,
         }
     }
 }
 
-impl ConfidentialAmount {
-    pub fn zero_pedersen_commitment() -> Result<pedersen::Commitment, Error> {
-        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-        Ok(secp.commit_value(0)?)
-    }
-}
+impl Eq for Confidential {}
 
-impl Add<pedersen::Commitment> for AmountCommitment {
+impl Add<pedersen::Commitment> for Confidential {
     type Output = pedersen::Commitment;
 
     fn add(self, other: pedersen::Commitment) -> Self::Output {
@@ -129,7 +131,14 @@ impl Add<pedersen::Commitment> for AmountCommitment {
     }
 }
 
-impl AmountCommitment {
+impl Confidential {
+    pub fn zero_pedersen_commitment() -> pedersen::Commitment {
+        // TODO: Initialize only once and keep reference
+        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+        secp.commit_value(0)
+            .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments")
+    }
+
     pub fn verify_bullet_proof(&self) -> Result<pedersen::ProofRange, secp256k1zkp::Error> {
         let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
 
@@ -154,7 +163,7 @@ mod strict_encoding {
     mod zkp {
         use super::*;
 
-        impl StrictEncode for secp256k1zkp::key::SecretKey {
+        impl StrictEncode for BlindingFactor {
             type Error = Error;
 
             fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
@@ -162,7 +171,7 @@ mod strict_encoding {
             }
         }
 
-        impl StrictDecode for secp256k1zkp::key::SecretKey {
+        impl StrictDecode for BlindingFactor {
             type Error = Error;
 
             fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
@@ -235,7 +244,7 @@ mod strict_encoding {
         }
     }
 
-    impl StrictEncode for AmountCommitment {
+    impl StrictEncode for Confidential {
         type Error = Error;
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
@@ -243,7 +252,7 @@ mod strict_encoding {
         }
     }
 
-    impl StrictDecode for AmountCommitment {
+    impl StrictDecode for Confidential {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
@@ -254,37 +263,21 @@ mod strict_encoding {
         }
     }
 
-    impl StrictEncode for ConfidentialAmount {
+    impl StrictEncode for Revealed {
         type Error = Error;
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
-            Ok(match self {
-                ConfidentialAmount::Partial(amount_commitment) => {
-                    strict_encode_list!(e; 0u8, amount_commitment)
-                }
-                ConfidentialAmount::Revealed(amount_commitment, blinding_factor) => {
-                    strict_encode_list!(e; 1u8, amount_commitment, blinding_factor)
-                }
-            })
+            Ok(strict_encode_list!(e; self.amount, self.blinding))
         }
     }
 
-    impl StrictDecode for ConfidentialAmount {
+    impl StrictDecode for Revealed {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-            let format = u8::strict_decode(&mut d)?;
-            let amount_commitment = AmountCommitment::strict_decode(&mut d)?;
-            Ok(match format {
-                0u8 => ConfidentialAmount::Partial(amount_commitment),
-                1u8 => ConfidentialAmount::Revealed(
-                    amount_commitment,
-                    BlindingFactor::strict_decode(&mut d)?,
-                ),
-                invalid => Err(Error::EnumValueNotKnown(
-                    "ConfidentialAmount".to_string(),
-                    invalid,
-                ))?,
+            Ok(Self {
+                amount: Amount::strict_decode(&mut d)?,
+                blinding: BlindingFactor::strict_decode(&mut d)?,
             })
         }
     }
