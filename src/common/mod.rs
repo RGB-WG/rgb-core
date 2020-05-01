@@ -13,6 +13,7 @@
 
 //! Common data types, structures and functions for LNPBPs
 
+pub mod strategy;
 #[macro_use]
 mod macros;
 #[macro_use]

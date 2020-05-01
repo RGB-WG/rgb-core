@@ -148,13 +148,13 @@ pub struct Transition {
 
 impl Genesis {
     #[inline]
-    pub fn contract_id(&self) -> ContractId {
+    pub fn contract_id(self) -> ContractId {
         self.consensus_commit()
     }
 }
 
 impl CommitEncode for Genesis {
-    fn commit_encode(&self) -> Vec<u8> {
+    fn commit_encode(self) -> Vec<u8> {
         unimplemented!()
     }
 }

@@ -15,22 +15,42 @@ use super::commit_verify::{self, CommitVerify};
 use super::strict_encoding;
 
 pub trait CommitEncode {
-    fn commit_encode(&self) -> Vec<u8>;
+    fn commit_encode(self) -> Vec<u8>;
 }
 
-/// Marker trait for automatic implementation of [ConsensusCommit] from
-/// [StrictEncoding] procedure
-pub trait CommitEncodeFromStrict: strict_encoding::StrictEncode {}
+pub trait CommitEncodeStrategy {
+    type Strategy;
+}
 
-impl<T> CommitEncode for T
-where
-    T: CommitEncodeFromStrict + strict_encoding::StrictEncode,
-{
-    fn commit_encode(&self) -> Vec<u8> {
-        strict_encoding::strict_encode(self).expect(
-            "Strict encoding must not fail for types implementing \
-            ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
-        )
+/// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
+pub mod commit_strategy {
+    use super::*;
+    use crate::strategy;
+
+    // Defining strategies:
+    pub struct UsingStrict;
+    pub struct Merklization;
+
+    impl<T> CommitEncode for strategy::Holder<T, UsingStrict>
+    where
+        T: strict_encoding::StrictEncode,
+    {
+        fn commit_encode(self) -> Vec<u8> {
+            strict_encoding::strict_encode(&self.into_inner()).expect(
+                "Strict encoding must not fail for types implementing \
+                      ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
+            )
+        }
+    }
+
+    impl<T> CommitEncode for T
+    where
+        T: CommitEncodeStrategy,
+        strategy::Holder<T, <T as CommitEncodeStrategy>::Strategy>: CommitEncode,
+    {
+        fn commit_encode(self) -> Vec<u8> {
+            strategy::Holder::new(self).commit_encode()
+        }
     }
 }
 
@@ -42,12 +62,12 @@ pub trait ConsensusCommit: Sized + CommitEncode {
     type Commitment: commit_verify::CommitVerify<Vec<u8>> + bitcoin::hashes::Hash;
 
     #[inline]
-    fn consensus_commit(&self) -> Self::Commitment {
+    fn consensus_commit(self) -> Self::Commitment {
         Self::Commitment::commit(&self.commit_encode())
     }
 
     #[inline]
-    fn consensus_verify(&self, commitment: &Self::Commitment) -> bool {
+    fn consensus_verify(self, commitment: &Self::Commitment) -> bool {
         commitment.verify(&self.commit_encode())
     }
 }
