@@ -12,6 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use crate::bp::blind::{OutpointHash, OutpointReveal};
+use bitcoin::OutPoint;
+use core::convert::TryFrom;
 
 pub type Confidential = OutpointHash;
 
@@ -25,6 +27,21 @@ pub enum Revealed {
     TxOutpoint(OutpointReveal),
     /// Seal contained within the witness transaction
     WitnessVout { vout: u16, blinding: u32 },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display, Error)]
+#[display_from(Debug)]
+pub struct WitnessVoutError;
+
+impl TryFrom<Revealed> for OutPoint {
+    type Error = WitnessVoutError;
+
+    fn try_from(value: Revealed) -> Result<Self, Self::Error> {
+        match value {
+            Revealed::TxOutpoint(reveal) => Ok(reveal.into()),
+            Revealed::WitnessVout { .. } => Err(WitnessVoutError),
+        }
+    }
 }
 
 mod strict_encoding {

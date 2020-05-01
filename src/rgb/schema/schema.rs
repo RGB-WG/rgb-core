@@ -18,7 +18,7 @@ use super::{
     script, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateFormat,
     TransitionSchema,
 };
-use crate::client_side_validation::{self, ConsensusCommit};
+use crate::client_side_validation::{CommitEncodeFromStrict, ConsensusCommit};
 
 pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -53,9 +53,10 @@ impl Schema {
     }
 }
 
-impl client_side_validation::ConsensusCommitFromStrictEncoding for Schema {
+impl ConsensusCommit for Schema {
     type Commitment = SchemaId;
 }
+impl CommitEncodeFromStrict for Schema {}
 
 mod strict_encoding {
     use super::*;

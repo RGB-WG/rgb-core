@@ -12,15 +12,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::hashes::core::fmt::Formatter;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub type MagicNumber = u32;
 
 /// A set of recommended standard networks. Differs from bitcoin::Network in
 /// ability to support non-standard and non-predefined networks
-#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 #[repr(u32)]
 pub enum Network {

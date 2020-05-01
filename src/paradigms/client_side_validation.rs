@@ -14,36 +14,41 @@
 use super::commit_verify::{self, CommitVerify};
 use super::strict_encoding;
 
-pub trait ConsensusCommit: Sized {
-    type Commitment: commit_verify::CommitVerify<Vec<u8>> + bitcoin::hashes::Hash;
-    fn consensus_commit(&self) -> Self::Commitment;
-    fn consensus_verify(&self, commitment: &Self::Commitment) -> bool;
+pub trait CommitEncode {
+    fn commit_encode(&self) -> Vec<u8>;
 }
 
 /// Marker trait for automatic implementation of [ConsensusCommit] from
 /// [StrictEncoding] procedure
-pub trait ConsensusCommitFromStrictEncoding: strict_encoding::StrictEncode {
-    type Commitment: commit_verify::CommitVerify<Vec<u8>> + bitcoin::hashes::Hash;
+pub trait CommitEncodeFromStrict: strict_encoding::StrictEncode {}
+
+impl<T> CommitEncode for T
+where
+    T: CommitEncodeFromStrict + strict_encoding::StrictEncode,
+{
+    fn commit_encode(&self) -> Vec<u8> {
+        strict_encoding::strict_encode(self).expect(
+            "Strict encoding must not fail for types implementing \
+            ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
+        )
+    }
 }
 
-impl<T> ConsensusCommit for T
-where
-    T: ConsensusCommitFromStrictEncoding,
-{
-    type Commitment = T::Commitment;
+pub trait Conceal {
+    fn conceal(&self) -> Self;
+}
 
+pub trait ConsensusCommit: Sized + CommitEncode {
+    type Commitment: commit_verify::CommitVerify<Vec<u8>> + bitcoin::hashes::Hash;
+
+    #[inline]
     fn consensus_commit(&self) -> Self::Commitment {
-        Self::Commitment::commit(&strict_encoding::strict_encode(self).expect(
-            "Strict encoding must not fail for types implementing \
-            ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
-        ))
+        Self::Commitment::commit(&self.commit_encode())
     }
 
+    #[inline]
     fn consensus_verify(&self, commitment: &Self::Commitment) -> bool {
-        commitment.verify(&strict_encoding::strict_encode(self).expect(
-            "Strict encoding must not fail for types implementing \
-            ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
-        ))
+        commitment.verify(&self.commit_encode())
     }
 }
 

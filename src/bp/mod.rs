@@ -23,7 +23,7 @@ mod seals;
 pub mod short_id;
 mod strict_encoding;
 
-pub use network::Network;
+pub use network::{MagicNumber, Network};
 pub use scripts::*;
 pub use seals::*;
 pub use short_id::*;
