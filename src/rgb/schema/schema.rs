@@ -14,11 +14,10 @@
 use bitcoin::hashes::{sha256t, Hash};
 use std::{collections::BTreeMap, io};
 
-use super::{
-    script, AssignmentsType, FieldFormat, FieldType, SimplicityScript, StateFormat, Transition,
-};
+use super::{script, AssignmentsType, DataFormat, SimplicityScript, StateFormat, Transition};
 use crate::client_side_validation::{self, ConsensusCommit};
 
+pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 
 static MIDSTATE_SHEMA_ID: [u8; 32] = [
@@ -36,7 +35,7 @@ tagged_hash!(
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub struct Schema {
-    pub field_types: BTreeMap<FieldType, FieldFormat>,
+    pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateFormat>,
     pub transitions: BTreeMap<TransitionType, Transition>,
     pub script_library: SimplicityScript,

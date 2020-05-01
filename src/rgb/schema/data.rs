@@ -12,15 +12,50 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use super::{elliptic_curve, Bits, DigestAlgorithm, EllipticCurve};
+use num_derive::{FromPrimitive, ToPrimitive};
 use std::collections::BTreeSet;
 use std::io;
 
-pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
+#[non_exhaustive]
+#[repr(u8)]
+#[display_from(Debug)]
+pub enum StateType {
+    Empty = 0,
+    Homomorphic = 1,
+    Hashed = 2,
+}
+
+#[derive(Clone, Debug, Display)]
+#[non_exhaustive]
+#[display_from(Debug)]
+pub enum StateFormat {
+    Empty,
+    Homomorphic(HomomorphicFormat),
+    Hashed(DataFormat),
+}
+
+#[derive(Clone, Debug, Display, ToPrimitive, FromPrimitive)]
+#[display_from(Debug)]
+#[non_exhaustive]
+#[repr(u8)]
+/// Today we support only a single format of confidential data, because of the
+/// limitations of the underlying secp256k1-zkp library: it works only with
+/// u64 numbers. Nevertheless, homomorphic commitments can be created to
+/// everything that has up to 256 bits and commutative arithmetics, so in the
+/// future we plan to support more types. We reserve this possibility by
+/// internally encoding [ConfidentialFormat] with the same type specification
+/// details as used for [DateFormat]
+pub enum HomomorphicFormat {
+    Amount,
+}
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
-pub enum FieldFormat {
+pub enum DataFormat {
     Unsigned(Bits, u128, u128),
     Integer(Bits, i128, i128),
     Float(Bits, f64, f64),
@@ -40,7 +75,39 @@ mod strict_encoding {
     use num_derive::{FromPrimitive, ToPrimitive};
     use num_traits::{Bounded, FromPrimitive, ToPrimitive};
 
-    #[derive(FromPrimitive, ToPrimitive)]
+    impl_enum_strict_encoding!(StateType);
+
+    impl StrictEncode for StateFormat {
+        type Error = Error;
+
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            Ok(match self {
+                StateFormat::Empty => StateType::Empty.strict_encode(e)?,
+                StateFormat::Homomorphic(data) => {
+                    strict_encode_list!(e; StateType::Homomorphic, data)
+                }
+                StateFormat::Hashed(data) => strict_encode_list!(e; StateType::Hashed, data),
+            })
+        }
+    }
+
+    impl StrictDecode for StateFormat {
+        type Error = Error;
+
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let format = StateType::strict_decode(&mut d)?;
+            Ok(match format {
+                StateType::Empty => StateFormat::Empty,
+                StateType::Homomorphic => {
+                    StateFormat::Homomorphic(HomomorphicFormat::strict_decode(d)?)
+                }
+                StateType::Hashed => StateFormat::Hashed(DataFormat::strict_decode(d)?),
+            })
+        }
+    }
+
+    #[derive(Debug, Display, FromPrimitive, ToPrimitive)]
+    #[display_from(Debug)]
     #[repr(u8)]
     enum EncodingTag {
         Unsigned = 0,
@@ -55,7 +122,65 @@ mod strict_encoding {
     }
     impl_enum_strict_encoding!(EncodingTag);
 
-    impl StrictEncode for FieldFormat {
+    impl StrictEncode for HomomorphicFormat {
+        type Error = Error;
+
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            match self {
+                // Today we support only a single format of confidential data,
+                // but tomorrow there might be more
+                HomomorphicFormat::Amount => {
+                    DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128).strict_encode(e)
+                }
+            }
+        }
+    }
+
+    impl StrictDecode for HomomorphicFormat {
+        type Error = Error;
+
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let format = EncodingTag::strict_decode(&mut d)?;
+            match format {
+                EncodingTag::Unsigned => {
+                    let bits = Bits::strict_decode(&mut d)?;
+                    let (min, max) = match bits {
+                        Bits::Bit64 => {
+                            let mut min = [0u8; 8];
+                            let mut max = [0u8; 8];
+                            d.read_exact(&mut min)?;
+                            d.read_exact(&mut max)?;
+                            (
+                                u64::from_le_bytes(min) as u128,
+                                u64::from_le_bytes(max) as u128,
+                            )
+                        }
+                        invalid_bits => Err(Error::UnsupportedDataStructure(format!(
+                            "confidential amounts can be only of u64 type; \
+                             {} bit unsigned integers are not yet supported",
+                            invalid_bits
+                        )))?,
+                    };
+                    if min != 0 || max != core::u64::MAX as u128 {
+                        Err(Error::UnsupportedDataStructure(format!(
+                            "confidential amounts can be only of u64 type; \
+                             allowed values should cover full u64 value range, \
+                             however {}..{} were met",
+                            min, max
+                        )))?
+                    }
+                    Ok(HomomorphicFormat::Amount)
+                }
+                invalid_tag => Err(Error::UnsupportedDataStructure(format!(
+                    "confidential amounts can be only of u64 type; \
+                     {} type of the data is not yet supported",
+                    invalid_tag
+                ))),
+            }
+        }
+    }
+
+    impl StrictEncode for DataFormat {
         type Error = Error;
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
@@ -113,7 +238,7 @@ mod strict_encoding {
             }
 
             Ok(match self {
-                FieldFormat::Unsigned(bits, min, max) => {
+                DataFormat::Unsigned(bits, min, max) => {
                     let allowed_bounds = match bits {
                         Bits::Bit8 => (core::u8::MIN as u128)..=(core::u8::MAX as u128),
                         Bits::Bit16 => (core::u16::MIN as u128)..=(core::u16::MAX as u128),
@@ -130,7 +255,7 @@ mod strict_encoding {
                     len + ::core::mem::size_of_val(&min) * 2
                 }
 
-                FieldFormat::Integer(bits, min, max) => {
+                DataFormat::Integer(bits, min, max) => {
                     let allowed_bounds = match bits {
                         Bits::Bit8 => (core::i8::MIN as i128)..=(core::i8::MAX as i128),
                         Bits::Bit16 => (core::i16::MIN as i128)..=(core::i16::MAX as i128),
@@ -147,7 +272,7 @@ mod strict_encoding {
                     len + ::core::mem::size_of_val(&min) * 2
                 }
 
-                FieldFormat::Float(bits, min, max) => {
+                DataFormat::Float(bits, min, max) => {
                     let allowed_bounds = match bits {
                         Bits::Bit32 => (core::f32::MIN as f64)..=(core::f32::MAX as f64),
                         Bits::Bit64 => core::f64::MIN..=core::f64::MAX,
@@ -168,23 +293,21 @@ mod strict_encoding {
                     len + ::core::mem::size_of_val(&min) * 2
                 }
 
-                FieldFormat::Enum(values) => strict_encode_list!(e; EncodingTag::Enum, values),
-                FieldFormat::String(size) => strict_encode_list!(e; EncodingTag::String, size),
-                FieldFormat::Bytes(size) => strict_encode_list!(e; EncodingTag::Bytes, size),
-                FieldFormat::Digest(bits, algo) => {
+                DataFormat::Enum(values) => strict_encode_list!(e; EncodingTag::Enum, values),
+                DataFormat::String(size) => strict_encode_list!(e; EncodingTag::String, size),
+                DataFormat::Bytes(size) => strict_encode_list!(e; EncodingTag::Bytes, size),
+                DataFormat::Digest(bits, algo) => {
                     strict_encode_list!(e; EncodingTag::Digest, bits, algo)
                 }
-                FieldFormat::PublicKey(curve, ser) => {
+                DataFormat::PublicKey(curve, ser) => {
                     strict_encode_list!(e; EncodingTag::PublicKey, curve, ser)
                 }
-                FieldFormat::Signature(algo) => {
-                    strict_encode_list!(e; EncodingTag::Signature, algo)
-                }
+                DataFormat::Signature(algo) => strict_encode_list!(e; EncodingTag::Signature, algo),
             })
         }
     }
 
-    impl StrictDecode for FieldFormat {
+    impl StrictDecode for DataFormat {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
@@ -241,7 +364,7 @@ mod strict_encoding {
                             (u128::from_le_bytes(min), u128::from_le_bytes(max))
                         }
                     };
-                    FieldFormat::Unsigned(bits, min, max)
+                    DataFormat::Unsigned(bits, min, max)
                 }
                 EncodingTag::Integer => {
                     let bits = Bits::strict_decode(&mut d)?;
@@ -294,7 +417,7 @@ mod strict_encoding {
                             (i128::from_le_bytes(min), i128::from_le_bytes(max))
                         }
                     };
-                    FieldFormat::Integer(bits, min, max)
+                    DataFormat::Integer(bits, min, max)
                 }
                 EncodingTag::Float => {
                     let bits = Bits::strict_decode(&mut d)?;
@@ -320,20 +443,20 @@ mod strict_encoding {
                             "Unsupported float field bit size".to_string(),
                         ))?,
                     };
-                    FieldFormat::Float(bits, min, max)
+                    DataFormat::Float(bits, min, max)
                 }
-                EncodingTag::Enum => FieldFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?),
-                EncodingTag::String => FieldFormat::String(u16::strict_decode(&mut d)?),
-                EncodingTag::Bytes => FieldFormat::Bytes(u16::strict_decode(&mut d)?),
-                EncodingTag::Digest => FieldFormat::Digest(
+                EncodingTag::Enum => DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?),
+                EncodingTag::String => DataFormat::String(u16::strict_decode(&mut d)?),
+                EncodingTag::Bytes => DataFormat::Bytes(u16::strict_decode(&mut d)?),
+                EncodingTag::Digest => DataFormat::Digest(
                     u16::strict_decode(&mut d)?,
                     DigestAlgorithm::strict_decode(&mut d)?,
                 ),
-                EncodingTag::PublicKey => FieldFormat::PublicKey(
+                EncodingTag::PublicKey => DataFormat::PublicKey(
                     EllipticCurve::strict_decode(&mut d)?,
                     elliptic_curve::PointSerialization::strict_decode(&mut d)?,
                 ),
-                EncodingTag::Signature => FieldFormat::Signature(
+                EncodingTag::Signature => DataFormat::Signature(
                     elliptic_curve::SignatureAlgorithm::strict_decode(&mut d)?,
                 ),
             })

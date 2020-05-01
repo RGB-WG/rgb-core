@@ -102,17 +102,6 @@ pub struct OccurencesError {
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
-#[non_exhaustive]
-#[repr(u8)]
-#[display_from(Debug)]
-pub enum StateFormat {
-    Empty = 0,
-    PedersenAndBulletproof = 1,
-}
-
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
-)]
 #[display_from(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
@@ -197,7 +186,6 @@ mod strict_encoding {
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl_enum_strict_encoding!(DigestAlgorithm);
-    impl_enum_strict_encoding!(StateFormat);
     impl_enum_strict_encoding!(Bits);
     impl_enum_strict_encoding!(EllipticCurve);
     impl_enum_strict_encoding!(elliptic_curve::SignatureAlgorithm);

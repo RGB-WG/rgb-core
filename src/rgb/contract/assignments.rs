@@ -11,13 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{amount, data, seal};
+use super::{super::schema, amount, data, seal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 use std::collections::BTreeSet;
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
+    Empty,
     Homomorphic(BTreeSet<Assignment<HomomorphStrategy>>),
     Hashed(BTreeSet<Assignment<HashStrategy>>),
 }
@@ -71,8 +72,13 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(match self {
-                AssignmentsVariant::Homomorphic(tree) => strict_encode_list!(e; 0u8, tree),
-                AssignmentsVariant::Hashed(tree) => strict_encode_list!(e; 1u8, tree),
+                AssignmentsVariant::Empty => schema::StateType::Empty.strict_encode(e)?,
+                AssignmentsVariant::Homomorphic(tree) => {
+                    strict_encode_list!(e; schema::StateType::Homomorphic, tree)
+                }
+                AssignmentsVariant::Hashed(tree) => {
+                    strict_encode_list!(e; schema::StateType::Hashed, tree)
+                }
             })
         }
     }
@@ -81,14 +87,15 @@ mod strict_encoding {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-            let format = u8::strict_decode(&mut d)?;
+            let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
-                0u8 => AssignmentsVariant::Homomorphic(BTreeSet::strict_decode(d)?),
-                1u8 => AssignmentsVariant::Hashed(BTreeSet::strict_decode(d)?),
-                invalid => Err(Error::EnumValueNotKnown(
-                    "AssignmentsVariant".to_string(),
-                    invalid,
-                ))?,
+                schema::StateType::Empty => AssignmentsVariant::Empty,
+                schema::StateType::Homomorphic => {
+                    AssignmentsVariant::Homomorphic(BTreeSet::strict_decode(d)?)
+                }
+                schema::StateType::Hashed => {
+                    AssignmentsVariant::Hashed(BTreeSet::strict_decode(d)?)
+                }
             })
         }
     }

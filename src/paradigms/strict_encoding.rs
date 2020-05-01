@@ -118,6 +118,11 @@ pub enum Error {
     /// An unsupported value for enum encountered during decode operation
     EnumValueNotKnown(String, u8),
 
+    /// The data are correct, however their structure indicate that they were
+    /// created with the future software version which has functional absent in
+    /// the current implementation
+    UnsupportedDataStructure(String),
+
     /// Found a value during decoding operation that does not fits into
     /// the supported range
     ValueOutOfRange(String, Range<u64>, u64),
@@ -163,6 +168,14 @@ impl Display for Error {
                 "An unsupported value {} for enum {} encountered during decode \
                 operation",
                 value, enum_name
+            ),
+            UnsupportedDataStructure(details) => write!(
+                f,
+                "The data are correct, however their structure indicate that \
+                 they were created with the future software version which has  \
+                 functional absent in the current implementation. Here is more \
+                 details: {}",
+                details
             ),
             ValueOutOfRange(data_type, range, value) => write!(
                 f,
