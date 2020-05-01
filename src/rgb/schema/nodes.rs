@@ -22,7 +22,15 @@ pub type SealsStructure = BTreeMap<AssignmentsType, Occurences<u16>>;
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
-pub struct Transition {
+pub struct GenesisSchema {
+    pub metadata: MetadataStructure,
+    pub defines: SealsStructure,
+    pub scripting: Scripting,
+}
+
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
+pub struct TransitionSchema {
     pub metadata: MetadataStructure,
     pub closes: SealsStructure,
     pub defines: SealsStructure,
@@ -33,7 +41,29 @@ mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
 
-    impl StrictEncode for Transition {
+    impl StrictEncode for GenesisSchema {
+        type Error = Error;
+
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            self.metadata.strict_encode(&mut e)?;
+            self.defines.strict_encode(&mut e)?;
+            self.scripting.strict_encode(&mut e)
+        }
+    }
+
+    impl StrictDecode for GenesisSchema {
+        type Error = Error;
+
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            Ok(Self {
+                metadata: MetadataStructure::strict_decode(&mut d)?,
+                defines: SealsStructure::strict_decode(&mut d)?,
+                scripting: Scripting::strict_decode(&mut d)?,
+            })
+        }
+    }
+
+    impl StrictEncode for TransitionSchema {
         type Error = Error;
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
@@ -44,7 +74,7 @@ mod strict_encoding {
         }
     }
 
-    impl StrictDecode for Transition {
+    impl StrictDecode for TransitionSchema {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {

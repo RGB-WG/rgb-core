@@ -12,15 +12,15 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 mod data;
+mod nodes;
 mod schema;
 pub mod script;
-mod transition;
 mod types;
 
 pub use data::{DataFormat, HomomorphicFormat, StateFormat, StateType};
+pub use nodes::{AssignmentsType, GenesisSchema, TransitionSchema};
 pub use schema::{FieldType, Schema, SchemaId, TransitionType};
 pub use script::{Scripting, SimplicityScript};
-pub use transition::{AssignmentsType, Transition};
 pub use types::{
     elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurencesError,
 };

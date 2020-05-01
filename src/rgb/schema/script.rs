@@ -47,6 +47,7 @@ pub enum Extensions {
 #[repr(u8)]
 pub enum StandardProcedure {
     ConfidentialAmount = 1,
+    IssueControl = 2,
 }
 
 #[non_exhaustive]

@@ -14,7 +14,10 @@
 use bitcoin::hashes::{sha256t, Hash};
 use std::{collections::BTreeMap, io};
 
-use super::{script, AssignmentsType, DataFormat, SimplicityScript, StateFormat, Transition};
+use super::{
+    script, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateFormat,
+    TransitionSchema,
+};
 use crate::client_side_validation::{self, ConsensusCommit};
 
 pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -37,7 +40,8 @@ tagged_hash!(
 pub struct Schema {
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateFormat>,
-    pub transitions: BTreeMap<TransitionType, Transition>,
+    pub genesis: GenesisSchema,
+    pub transitions: BTreeMap<TransitionType, TransitionSchema>,
     pub script_library: SimplicityScript,
     pub script_extensions: script::Extensions,
 }
@@ -64,6 +68,7 @@ mod strict_encoding {
             Ok(strict_encode_list!(e;
                 self.field_types,
                 self.assignment_types,
+                self.genesis,
                 self.transitions,
                 self.script_library,
                 self.script_extensions
@@ -78,6 +83,7 @@ mod strict_encoding {
             Ok(Self {
                 field_types: BTreeMap::strict_decode(&mut d)?,
                 assignment_types: BTreeMap::strict_decode(&mut d)?,
+                genesis: GenesisSchema::strict_decode(&mut d)?,
                 transitions: BTreeMap::strict_decode(&mut d)?,
                 script_library: Vec::strict_decode(&mut d)?,
                 script_extensions: script::Extensions::strict_decode(&mut d)?,
@@ -98,7 +104,7 @@ mod test {
         const FIELD_VAL: usize = 5;
         const SEAL_VAL: usize = 1;
 
-        let schema_transition = Transition {
+        let schema_transition = TransitionSchema {
             closes: bmap! {}.into(),
             defines: bmap! { SEAL_VAL => Occurences::Once }.into(),
             metadata: bmap! {
