@@ -25,6 +25,7 @@
 #![feature(str_strip)]
 #![feature(bindings_after_at)]
 #![feature(in_band_lifetimes)]
+#![feature(rustc_private)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![allow(incomplete_features)]

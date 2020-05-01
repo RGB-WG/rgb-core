@@ -14,6 +14,7 @@
 use super::{Genesis, Transition};
 use bitcoin::hashes::{sha256t, Hash};
 
+// TODO: Check the data
 static MIDSTATE_CONTRACT_ID: [u8; 32] = [
     25, 205, 224, 91, 171, 217, 131, 31, 140, 104, 5, 155, 127, 82, 14, 81, 58, 245, 79, 165, 114,
     243, 110, 60, 133, 174, 103, 187, 103, 230, 9, 106,

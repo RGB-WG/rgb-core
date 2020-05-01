@@ -18,7 +18,7 @@ use std::collections::BTreeSet;
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
-    Empty,
+    Void(BTreeSet<Assignment<VoidStrategy>>),
     Homomorphic(BTreeSet<Assignment<HomomorphStrategy>>),
     Hashed(BTreeSet<Assignment<HashStrategy>>),
 }
@@ -26,6 +26,13 @@ pub enum AssignmentsVariant {
 pub trait StateTypes: core::fmt::Debug {
     type Confidential: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord;
     type Revealed: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord;
+}
+
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+pub struct VoidStrategy;
+impl StateTypes for VoidStrategy {
+    type Confidential = data::Void;
+    type Revealed = data::Void;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -72,7 +79,9 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(match self {
-                AssignmentsVariant::Empty => schema::StateType::Empty.strict_encode(e)?,
+                AssignmentsVariant::Void(tree) => {
+                    strict_encode_list!(e; schema::StateType::Void, tree)
+                }
                 AssignmentsVariant::Homomorphic(tree) => {
                     strict_encode_list!(e; schema::StateType::Homomorphic, tree)
                 }
@@ -89,7 +98,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
-                schema::StateType::Empty => AssignmentsVariant::Empty,
+                schema::StateType::Void => AssignmentsVariant::Void(BTreeSet::strict_decode(d)?),
                 schema::StateType::Homomorphic => {
                     AssignmentsVariant::Homomorphic(BTreeSet::strict_decode(d)?)
                 }

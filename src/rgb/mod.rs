@@ -11,21 +11,24 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod anchor;
-pub mod consignment;
-pub mod contract;
-pub mod interfaces;
+mod anchor;
+mod consignment;
+mod contract;
+mod interfaces;
 pub mod schema;
-pub mod stash;
+mod stash;
 pub mod vm;
 
 pub mod prelude {
     pub use super::*;
     pub use anchor::Anchor;
     pub use consignment::Consignment;
-    pub use contract::{Amount, Contract, ContractId, Genesis, SealDefinition, Transition};
-    pub use schema::Schema;
-    pub use schema::SimplicityScript;
+    pub use contract::{
+        amount, data, seal, Amount, Assignment, AssignmentsVariant, Contract, ContractId, Genesis,
+        Node, SealDefinition, Transition,
+    };
+    pub use schema::script;
+    pub use schema::{Schema, SimplicityScript};
     pub use stash::{CoordinatedTransition, CoordinatedUpdate, Stash};
 }
 

@@ -12,17 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 #[macro_export]
-macro_rules! bytes {
-    [ $($value:expr),+ ] => {
-        &vec![
-        $(
-            $value,
-        )+
-        ][..] as &[u8]
-    }
-}
-
-#[macro_export]
 macro_rules! map {
     { } =>  {
         {
@@ -33,6 +22,25 @@ macro_rules! map {
     { $($key:expr => $value:expr),+ } => {
         {
             let mut m = ::std::collections::HashMap::new();
+            $(
+                m.insert($key, $value);
+            )+
+            m
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! set {
+    { } =>  {
+        {
+            ::std::collections::HashSet::new()
+        }
+    };
+
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::std::collections::HashSet::new();
             $(
                 m.insert($key, $value);
             )+
@@ -61,12 +69,37 @@ macro_rules! bmap {
 }
 
 #[macro_export]
-macro_rules! hlist {
-    [ $($value:expr),+ ] => {
+macro_rules! bset {
+    { } =>  {
         {
-            let mut m = ::std::vec::Vec::<::std::boxed::Box<dyn ::std::any::Any>>::new();
+            ::std::collections::BTreeSet::new()
+        }
+    };
+
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::std::collections::BTreeSet::new();
             $(
-                m.push(::std::boxed::Box::new($value));
+                m.insert($key, $value);
+            )+
+            m
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! list {
+    { } =>  {
+        {
+            ::std::collections::LinkedList::new()
+        }
+    };
+
+    { $($value:expr)=>+ } => {
+        {
+            let mut m = ::std::collections::LinkedList::new();
+            $(
+                m.push_back($value);
             )+
             m
         }

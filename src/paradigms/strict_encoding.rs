@@ -851,13 +851,13 @@ mod test {
     /// fail with a specific error.
     #[test]
     fn test_option_decode_vec() {
-        assert!(Option::<u8>::strict_decode(bytes![2u8, 0u8, 0u8, 0u8])
+        assert!(Option::<u8>::strict_decode(&[2u8, 0u8, 0u8, 0u8])
             .err()
             .is_some());
-        assert!(Option::<u8>::strict_decode(bytes![3u8, 0u8, 0u8, 0u8])
+        assert!(Option::<u8>::strict_decode(&[3u8, 0u8, 0u8, 0u8])
             .err()
             .is_some());
-        assert!(Option::<u8>::strict_decode(bytes![0xFFu8, 0u8, 0u8, 0u8])
+        assert!(Option::<u8>::strict_decode(&[0xFFu8, 0u8, 0u8, 0u8])
             .err()
             .is_some());
     }
@@ -874,11 +874,11 @@ mod test {
         let v3: Vec<u64> = vec![0, 13, 13, 0x1FF, 0xFFFFFFFFFFFFFFFF];
         let v4: Vec<u8> = (0..0x1FFFF).map(|item| (item % 0xFF) as u8).collect();
 
-        let s1 = bytes![3u8, 0u8, 0u8, 13u8, 0xFFu8];
-        let s2 = bytes![1u8, 0u8, 13u8];
-        let s3 = bytes![
+        let s1 = [3u8, 0u8, 0u8, 13u8, 0xFFu8];
+        let s2 = [1u8, 0u8, 13u8];
+        let s3 = [
             5u8, 0u8, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0,
-            0xFF, 1, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+            0xFF, 1, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ];
 
         assert_eq!(strict_encode(&v1).unwrap(), s1);

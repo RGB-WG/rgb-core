@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::hashes::{sha256d, Hash, HashEngine};
-use bitcoin::Txid;
+use bitcoin::{OutPoint, Txid};
 
 /// Data required to generate or reveal the information about blinded
 /// transaction outpoint
@@ -28,6 +28,12 @@ pub struct OutpointReveal {
 
     /// Tx output number that should be blinded
     pub vout: u16,
+}
+
+impl From<OutpointReveal> for OutPoint {
+    fn from(reveal: OutpointReveal) -> Self {
+        OutPoint::new(reveal.txid, reveal.vout as u32)
+    }
 }
 
 impl OutpointReveal {

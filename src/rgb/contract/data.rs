@@ -16,6 +16,10 @@ use bitcoin::hashes::{hash160, sha256};
 use bitcoin::secp256k1;
 use core::cmp::Ordering;
 
+/// Struct using for storing Void (i.e. absent) state
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Void;
+
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
@@ -98,6 +102,20 @@ mod strict_encoding {
     use num_derive::{FromPrimitive, ToPrimitive};
     use num_traits::{FromPrimitive, ToPrimitive};
     use std::io;
+
+    impl StrictEncode for Void {
+        type Error = Error;
+        fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, Self::Error> {
+            Ok(0)
+        }
+    }
+
+    impl StrictDecode for Void {
+        type Error = Error;
+        fn strict_decode<D: io::Read>(_: D) -> Result<Self, Self::Error> {
+            Ok(Void)
+        }
+    }
 
     #[derive(FromPrimitive, ToPrimitive)]
     #[repr(u8)]

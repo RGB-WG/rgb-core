@@ -23,7 +23,7 @@ use std::io;
 #[repr(u8)]
 #[display_from(Debug)]
 pub enum StateType {
-    Empty = 0,
+    Void = 0,
     Homomorphic = 1,
     Hashed = 2,
 }
@@ -32,7 +32,7 @@ pub enum StateType {
 #[non_exhaustive]
 #[display_from(Debug)]
 pub enum StateFormat {
-    Empty,
+    Void,
     Homomorphic(HomomorphicFormat),
     Hashed(DataFormat),
 }
@@ -62,9 +62,61 @@ pub enum DataFormat {
     Enum(BTreeSet<u8>),
     String(u16),
     Bytes(u16),
-    Digest(u16, DigestAlgorithm),
+    Digest(DigestAlgorithm),
     PublicKey(EllipticCurve, elliptic_curve::PointSerialization),
     Signature(elliptic_curve::SignatureAlgorithm),
+}
+
+// Convenience methods
+impl DataFormat {
+    #[inline]
+    pub fn u8() -> Self {
+        Self::Unsigned(Bits::Bit8, 0, core::u8::MAX as u128)
+    }
+    #[inline]
+    pub fn u16() -> Self {
+        Self::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128)
+    }
+    #[inline]
+    pub fn u32() -> Self {
+        Self::Unsigned(Bits::Bit32, 0, core::u32::MAX as u128)
+    }
+    #[inline]
+    pub fn u64() -> Self {
+        Self::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
+    }
+    #[inline]
+    pub fn u128() -> Self {
+        Self::Unsigned(Bits::Bit128, 0, core::u128::MAX)
+    }
+    #[inline]
+    pub fn i8() -> Self {
+        Self::Integer(Bits::Bit8, 0, core::i8::MAX as i128)
+    }
+    #[inline]
+    pub fn i16() -> Self {
+        Self::Integer(Bits::Bit16, 0, core::i16::MAX as i128)
+    }
+    #[inline]
+    pub fn i32() -> Self {
+        Self::Integer(Bits::Bit32, 0, core::i32::MAX as i128)
+    }
+    #[inline]
+    pub fn i64() -> Self {
+        Self::Integer(Bits::Bit64, 0, core::i64::MAX as i128)
+    }
+    #[inline]
+    pub fn i128() -> Self {
+        Self::Integer(Bits::Bit128, 0, core::i128::MAX)
+    }
+    #[inline]
+    pub fn f32() -> Self {
+        Self::Float(Bits::Bit32, 0.0, core::f32::MAX as f64)
+    }
+    #[inline]
+    pub fn f64() -> Self {
+        Self::Float(Bits::Bit64, 0.0, core::f64::MAX)
+    }
 }
 
 mod strict_encoding {
@@ -82,7 +134,7 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(match self {
-                StateFormat::Empty => StateType::Empty.strict_encode(e)?,
+                StateFormat::Void => StateType::Void.strict_encode(e)?,
                 StateFormat::Homomorphic(data) => {
                     strict_encode_list!(e; StateType::Homomorphic, data)
                 }
@@ -97,7 +149,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let format = StateType::strict_decode(&mut d)?;
             Ok(match format {
-                StateType::Empty => StateFormat::Empty,
+                StateType::Void => StateFormat::Void,
                 StateType::Homomorphic => {
                     StateFormat::Homomorphic(HomomorphicFormat::strict_decode(d)?)
                 }
@@ -296,9 +348,7 @@ mod strict_encoding {
                 DataFormat::Enum(values) => strict_encode_list!(e; EncodingTag::Enum, values),
                 DataFormat::String(size) => strict_encode_list!(e; EncodingTag::String, size),
                 DataFormat::Bytes(size) => strict_encode_list!(e; EncodingTag::Bytes, size),
-                DataFormat::Digest(bits, algo) => {
-                    strict_encode_list!(e; EncodingTag::Digest, bits, algo)
-                }
+                DataFormat::Digest(algo) => strict_encode_list!(e; EncodingTag::Digest, algo),
                 DataFormat::PublicKey(curve, ser) => {
                     strict_encode_list!(e; EncodingTag::PublicKey, curve, ser)
                 }
@@ -448,10 +498,7 @@ mod strict_encoding {
                 EncodingTag::Enum => DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?),
                 EncodingTag::String => DataFormat::String(u16::strict_decode(&mut d)?),
                 EncodingTag::Bytes => DataFormat::Bytes(u16::strict_decode(&mut d)?),
-                EncodingTag::Digest => DataFormat::Digest(
-                    u16::strict_decode(&mut d)?,
-                    DigestAlgorithm::strict_decode(&mut d)?,
-                ),
+                EncodingTag::Digest => DataFormat::Digest(DigestAlgorithm::strict_decode(&mut d)?),
                 EncodingTag::PublicKey => DataFormat::PublicKey(
                     EllipticCurve::strict_decode(&mut d)?,
                     elliptic_curve::PointSerialization::strict_decode(&mut d)?,

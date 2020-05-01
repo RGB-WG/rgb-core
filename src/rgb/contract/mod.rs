@@ -21,5 +21,5 @@ pub mod seal;
 pub use amount::Amount;
 pub use assignments::{Assignment, AssignmentsVariant};
 pub use contract::{Contract, ContractId};
-pub use nodes::{Genesis, Transition};
+pub use nodes::{Genesis, Node, Transition};
 pub use seal::SealDefinition;
