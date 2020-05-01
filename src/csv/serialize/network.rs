@@ -14,6 +14,7 @@
 use std::{io, collections::HashMap};
 
 use super::Error;
+use crate::bp;
 
 pub trait Network: Sized {
     fn network_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error>;
@@ -73,6 +74,7 @@ network_serialize_from_commitment!(&[u8]);
 network_serialize_from_commitment!(Box<[u8]>);
 network_serialize_from_commitment!(&str);
 network_serialize_from_commitment!(String);
+network_serialize_from_commitment!(bp::ShortId);
 
 
 /// In terms of network serialization, we interpret `Option` as a zero-length `Vec`

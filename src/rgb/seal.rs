@@ -12,17 +12,11 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-use std::convert::TryFrom;
-
 use bitcoin::hash_types::Txid;
-
-
-#[non_exhaustive]
-#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
-#[display_from(Debug)]
-pub enum Error {
-    VoutOverflow
-}
+use crate::bp::{
+    short_id::ShortId,
+    blind::{OutpointReveal, OutpointHash}
+};
 
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Default)]
@@ -30,36 +24,35 @@ pub enum Error {
 pub struct Type(pub u16);
 
 
-#[derive(Clone, PartialEq, PartialOrd, Debug, Display, Default)]
+#[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
 #[display_from(Debug)]
-pub struct Seal {
-    pub txid: Option<Txid>,
-    pub vout: u16,
-
-    block_height: Option<u32>,
-    block_offset: Option<u16>,
+pub enum Seal {
+    /// Seal contained within the witness transaction
+    WitnessTxout(u16),
+    /// Seal that is revealed
+    RevealedTxout(OutpointReveal, Option<ShortId>),
+    /// Seal that is not revealed yet
+    BlindedTxout(OutpointHash)
 }
 
 impl Seal {
-    pub fn from(txid: Option<Txid>, vout: u16) -> Self {
-        Self {
-            txid, vout,
-            block_height: None,
-            block_offset: None
-        }
+    pub fn witness(vout: u16) -> Self {
+        Self::WitnessTxout(vout)
     }
-}
-
-impl TryFrom<bitcoin::OutPoint> for Seal {
-    type Error = Error;
-    fn try_from(outpoint: bitcoin::OutPoint) -> Result<Self, Self::Error> {
+    pub fn revealed(txid: Txid, vout: u16, blinding: u64) -> Self {
+        Seal::RevealedTxout(OutpointReveal { blinding, txid, vout, }, None)
+    }
+    pub fn outpoint_reveal(revealed_outpoint: OutpointReveal, short_id: Option<ShortId>) -> Self {
+        Seal::RevealedTxout(revealed_outpoint, short_id)
+    }
+    pub fn maybe_from_outpoint(outpoint: bitcoin::OutPoint, blinding: u64) -> Option<Self> {
         let vout = outpoint.vout;
         if vout > std::u16::MAX as u32 {
-            return Err(Error::VoutOverflow)
+            return None
         }
-        Ok(Self {
-            txid: Some(outpoint.txid), vout: outpoint.vout as u16,
-            block_height: None, block_offset: None
-        })
+        Some(Seal::RevealedTxout(OutpointReveal { blinding, txid: outpoint.txid, vout: vout as u16 }, None))
+    }
+    pub fn blinded(hash: OutpointHash) -> Self {
+        Seal::BlindedTxout(hash)
     }
 }
