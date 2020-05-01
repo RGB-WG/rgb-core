@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use core::ops::Range;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
@@ -119,7 +120,7 @@ pub enum Error {
 
     /// Found a value during decoding operation that does not fits into
     /// the supported range
-    ValueOutOfRange(String, core::ops::Range<u64>, u64),
+    ValueOutOfRange(String, Range<u64>, u64),
 
     /// A repeated value found during set collection deserialization
     RepeatedValue(String),
