@@ -50,11 +50,6 @@ where
         + From<<STATE::Confidential as StrictDecode>::Error>
         + From<<STATE::Revealed as StrictEncode>::Error>
         + From<<STATE::Revealed as StrictDecode>::Error>,
-    /*
-    <STATE::Confidential as StrictEncode>::Error: From<EncodingError>,
-    <STATE::Confidential as StrictDecode>::Error: From<EncodingError>,
-    <STATE::Revealed as StrictEncode>::Error: From<EncodingError>,
-    <STATE::Revealed as StrictDecode>::Error: From<EncodingError>,*/
 {
     Confidential {
         seal_definition: seal::Confidential,

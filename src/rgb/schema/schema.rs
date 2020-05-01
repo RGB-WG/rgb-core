@@ -37,7 +37,7 @@ tagged_hash!(
 #[display_from(Debug)]
 pub struct Schema {
     pub field_types: BTreeMap<FieldType, FieldFormat>,
-    pub seal_types: BTreeMap<AssignmentsType, StateFormat>,
+    pub assignment_types: BTreeMap<AssignmentsType, StateFormat>,
     pub transitions: BTreeMap<TransitionType, Transition>,
     pub script_library: SimplicityScript,
     pub script_extensions: script::Extensions,
@@ -64,7 +64,7 @@ mod strict_encoding {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(strict_encode_list!(e;
                 self.field_types,
-                self.seal_types,
+                self.assignment_types,
                 self.transitions,
                 self.script_library,
                 self.script_extensions
@@ -78,7 +78,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             Ok(Self {
                 field_types: BTreeMap::strict_decode(&mut d)?,
-                seal_types: BTreeMap::strict_decode(&mut d)?,
+                assignment_types: BTreeMap::strict_decode(&mut d)?,
                 transitions: BTreeMap::strict_decode(&mut d)?,
                 script_library: Vec::strict_decode(&mut d)?,
                 script_extensions: script::Extensions::strict_decode(&mut d)?,
@@ -112,7 +112,7 @@ mod test {
         };
         let schema = Schema {
             field_types: bmap! { FIELD_VAL => FieldFormat::String(10) },
-            seal_types: bmap! { SEAL_VAL => StateFormat::Empty },
+            assignment_types: bmap! { SEAL_VAL => StateFormat::Empty },
             transitions: bmap! {
                 TRANSITION_VAL => schema_transition
             },

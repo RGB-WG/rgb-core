@@ -21,5 +21,6 @@ pub use field::{FieldFormat, FieldType};
 pub use schema::{Schema, SchemaId, TransitionType};
 pub use script::{Scripting, SimplicityScript};
 pub use transition::{AssignmentsType, Transition};
-
-pub(self) use types::*;
+pub use types::{
+    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurencesError, StateFormat,
+};
