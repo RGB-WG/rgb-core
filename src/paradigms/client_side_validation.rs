@@ -13,12 +13,14 @@
 
 use super::commit_verify::{self, CommitVerify};
 use super::strict_encoding;
+use bitcoin::hashes::{sha256, sha256d, Hash, HashEngine};
+use std::io;
 
 pub trait CommitEncode {
-    fn commit_encode(self) -> Vec<u8>;
+    fn commit_encode<E: io::Write>(self, e: E) -> usize;
 }
 
-pub trait CommitEncodeStrategy {
+pub trait CommitEncodeWithStrategy {
     type Strategy;
 }
 
@@ -26,36 +28,125 @@ pub trait CommitEncodeStrategy {
 pub mod commit_strategy {
     use super::*;
     use crate::strategy;
+    use bitcoin::hashes::Hash;
 
     // Defining strategies:
     pub struct UsingStrict;
+    pub struct UsingConceal;
     pub struct Merklization;
 
     impl<T> CommitEncode for strategy::Holder<T, UsingStrict>
     where
         T: strict_encoding::StrictEncode,
     {
-        fn commit_encode(self) -> Vec<u8> {
-            strict_encoding::strict_encode(&self.into_inner()).expect(
+        fn commit_encode<E: io::Write>(self, e: E) -> usize {
+            self.into_inner().strict_encode(e).expect(
                 "Strict encoding must not fail for types implementing \
                       ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
             )
         }
     }
 
+    impl<T> CommitEncode for strategy::Holder<T, UsingConceal>
+    where
+        T: Conceal,
+        <T as Conceal>::Confidential: CommitEncode,
+    {
+        fn commit_encode<E: io::Write>(self, e: E) -> usize {
+            self.into_inner().conceal().commit_encode(e)
+        }
+    }
+
+    impl<T> CommitEncode for strategy::Holder<T, Merklization>
+    where
+        T: IntoIterator,
+        <T as IntoIterator>::Item: CommitEncode,
+    {
+        fn commit_encode<E: io::Write>(self, e: E) -> usize {
+            merklize(
+                "",
+                &self
+                    .into_inner()
+                    .into_iter()
+                    .map(|item| {
+                        let mut encoder = io::Cursor::new(vec![]);
+                        item.commit_encode(&mut encoder);
+                        MerkleNode::hash(&encoder.into_inner())
+                    })
+                    .collect::<Vec<MerkleNode>>(),
+                0,
+            )
+            .commit_encode(e)
+        }
+    }
+
+    impl<K, V> CommitEncode for (K, V)
+    where
+        K: CommitEncode,
+        V: CommitEncode,
+    {
+        fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
+            self.0.commit_encode(&mut e) + self.1.commit_encode(&mut e)
+        }
+    }
+
     impl<T> CommitEncode for T
     where
-        T: CommitEncodeStrategy,
-        strategy::Holder<T, <T as CommitEncodeStrategy>::Strategy>: CommitEncode,
+        T: CommitEncodeWithStrategy,
+        strategy::Holder<T, <T as CommitEncodeWithStrategy>::Strategy>: CommitEncode,
     {
-        fn commit_encode(self) -> Vec<u8> {
-            strategy::Holder::new(self).commit_encode()
+        fn commit_encode<E: io::Write>(self, e: E) -> usize {
+            strategy::Holder::new(self).commit_encode(e)
         }
+    }
+
+    impl CommitEncodeWithStrategy for usize {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for u8 {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for u16 {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for u32 {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for u64 {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for i8 {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for i16 {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for i32 {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for i64 {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for String {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for &str {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for &[u8] {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for Vec<u8> {
+        type Strategy = UsingStrict;
+    }
+    impl CommitEncodeWithStrategy for MerkleNode {
+        type Strategy = UsingStrict;
     }
 }
 
 pub trait Conceal {
-    fn conceal(&self) -> Self;
+    type Confidential;
+    fn conceal(&self) -> Self::Confidential;
 }
 
 pub trait ConsensusCommit: Sized + CommitEncode {
@@ -63,13 +154,106 @@ pub trait ConsensusCommit: Sized + CommitEncode {
 
     #[inline]
     fn consensus_commit(self) -> Self::Commitment {
-        Self::Commitment::commit(&self.commit_encode())
+        let mut encoder = io::Cursor::new(vec![]);
+        self.commit_encode(&mut encoder);
+        Self::Commitment::commit(&encoder.into_inner())
     }
 
     #[inline]
     fn consensus_verify(self, commitment: &Self::Commitment) -> bool {
-        commitment.verify(&self.commit_encode())
+        let mut encoder = io::Cursor::new(vec![]);
+        self.commit_encode(&mut encoder);
+        commitment.verify(&encoder.into_inner())
     }
+}
+
+#[macro_export]
+macro_rules! commit_encode_list {
+    ( $encoder:ident; $($item:expr),+ ) => {
+        {
+            let mut len = 0usize;
+            $(
+                len += $item.commit_encode(&mut $encoder);
+            )+
+            len
+        }
+    }
+}
+
+hash_newtype!(
+    MerkleNode,
+    sha256d::Hash,
+    32,
+    doc = "A hash of a arbitrary Merkle tree branch or root"
+);
+impl_hashencode!(MerkleNode);
+
+mod strict_encode {
+    use super::*;
+    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+
+    impl StrictEncode for MerkleNode {
+        type Error = Error;
+
+        #[inline]
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            self.into_inner().to_vec().strict_encode(e)
+        }
+    }
+
+    impl StrictDecode for MerkleNode {
+        type Error = Error;
+
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(
+                Self::from_slice(&Vec::<u8>::strict_decode(d)?).map_err(|_| {
+                    Error::DataIntegrityError("Wrong merkle node hash data size".to_string())
+                })?,
+            )
+        }
+    }
+}
+
+pub fn merklize(prefix: &str, data: &[MerkleNode], depth: u16) -> MerkleNode {
+    let len = data.len();
+
+    let mut height: usize = 0;
+    while ((len + (1 << height) - 1) >> height) > 1 {
+        height += 1;
+    }
+
+    let mut engine = MerkleNode::engine();
+    let tag = format!("{}:merkle:{}", prefix, depth);
+    let tag_hash = sha256::Hash::hash(tag.as_bytes());
+    engine.input(&tag_hash[..]);
+    engine.input(&tag_hash[..]);
+    match len {
+        0 => {
+            0u8.commit_encode(&mut engine);
+            0u8.commit_encode(&mut engine);
+        }
+        1 => {
+            data.first()
+                .expect("We know that we have one element")
+                .commit_encode(&mut engine);
+            0u8.commit_encode(&mut engine);
+        }
+        2 => {
+            data.first()
+                .expect("We know that we have at least two elements")
+                .commit_encode(&mut engine);
+            data.last()
+                .expect("We know that we have at least two elements")
+                .commit_encode(&mut engine);
+        }
+        _ => {
+            let div = len / 2;
+            merklize(prefix, &data[0..div], depth + 1).commit_encode(&mut engine);
+            merklize(prefix, &data[div..], depth + 1).commit_encode(&mut engine);
+        }
+    }
+    MerkleNode::from_engine(engine)
 }
 
 /*

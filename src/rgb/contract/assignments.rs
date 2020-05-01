@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use super::{super::schema, amount, data, seal};
+use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 use std::collections::BTreeSet;
 
@@ -23,9 +24,13 @@ pub enum AssignmentsVariant {
     Hashed(BTreeSet<Assignment<HashStrategy>>),
 }
 
+impl CommitEncodeWithStrategy for AssignmentsVariant {
+    type Strategy = commit_strategy::UsingStrict;
+}
+
 pub trait StateTypes: core::fmt::Debug {
-    type Confidential: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord;
-    type Revealed: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord;
+    type Confidential: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord + Clone;
+    type Revealed: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord + Conceal + Clone;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -67,6 +72,48 @@ where
         seal_definition: seal::Revealed,
         assigned_state: STATE::Revealed,
     },
+}
+
+impl<STATE> Conceal for Assignment<STATE>
+where
+    STATE: StateTypes,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+    type Confidential = Assignment<STATE>;
+
+    fn conceal(&self) -> Self {
+        match self {
+            Assignment::Confidential {
+                seal_definition,
+                assigned_state,
+            } => Assignment::Confidential {
+                seal_definition: *seal_definition,
+                assigned_state: assigned_state.clone(),
+            },
+            Assignment::Revealed {
+                seal_definition,
+                assigned_state,
+            } => Self::Confidential {
+                seal_definition: seal_definition.conceal(),
+                assigned_state: assigned_state.conceal().into(),
+            },
+        }
+    }
+}
+
+impl<STATE> CommitEncodeWithStrategy for Assignment<STATE>
+where
+    STATE: StateTypes,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+    type Strategy = commit_strategy::UsingConceal;
 }
 
 mod strict_encoding {

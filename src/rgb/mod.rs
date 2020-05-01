@@ -33,12 +33,3 @@ pub mod prelude {
 }
 
 pub use prelude::*;
-
-use bitcoin::hashes::{sha256d, Hash};
-
-hash_newtype!(
-    ContractId,
-    sha256d::Hash,
-    32,
-    doc = "Double-sha256 hash of the genesis transition"
-);

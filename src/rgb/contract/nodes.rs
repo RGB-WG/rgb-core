@@ -13,12 +13,25 @@
 
 use super::{data, AssignmentsVariant, SealDefinition};
 use crate::bp;
-use crate::client_side_validation::{CommitEncode, ConsensusCommit};
+use crate::client_side_validation::{
+    commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
+};
 use crate::rgb::{schema, Assignment, ContractId, Schema, SimplicityScript};
 use std::collections::{BTreeMap, BTreeSet};
+use std::io;
 
 pub type Metadata = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
+impl CommitEncodeWithStrategy for Metadata {
+    type Strategy = commit_strategy::Merklization;
+}
+impl CommitEncodeWithStrategy for BTreeSet<data::Revealed> {
+    type Strategy = commit_strategy::Merklization;
+}
+
 pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
+impl CommitEncodeWithStrategy for Assignments {
+    type Strategy = commit_strategy::Merklization;
+}
 
 macro_rules! field_extract {
     ($self:ident, $field:ident, $name:ident) => {
@@ -154,8 +167,8 @@ impl Genesis {
 }
 
 impl CommitEncode for Genesis {
-    fn commit_encode(self) -> Vec<u8> {
-        unimplemented!()
+    fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
+        commit_encode_list!(e; self.schema, self.network.as_magic(), self.metadata, self.assignments, self.script)
     }
 }
 

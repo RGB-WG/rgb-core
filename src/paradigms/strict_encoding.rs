@@ -58,14 +58,15 @@ pub trait StrictDecode: Sized {
 /// [StrictEncode] into a byte vector. To support this method a
 /// type must implement `From<strict_encode::Error>` for an error type
 /// provided as the associated type [StrictDecode::Error].
-pub fn strict_encode<T>(data: &T) -> Result<Vec<u8>, T::Error>
+pub fn strict_encode<T>(data: &T) -> Vec<u8>
 where
     T: StrictEncode,
     T::Error: std::error::Error + From<Error>,
 {
     let mut encoder = io::Cursor::new(vec![]);
-    data.strict_encode(&mut encoder)?;
-    Ok(encoder.into_inner())
+    data.strict_encode(&mut encoder)
+        .expect("In-memory strict ancode should not fail");
+    encoder.into_inner()
 }
 
 /// Convenience method for strict decoding of data structures implementing

@@ -12,7 +12,9 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use crate::bp::blind::{OutpointHash, OutpointReveal};
-use bitcoin::OutPoint;
+use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
+
+use bitcoin::{OutPoint, Txid};
 use core::convert::TryFrom;
 
 pub type Confidential = OutpointHash;
@@ -27,6 +29,25 @@ pub enum Revealed {
     TxOutpoint(OutpointReveal),
     /// Seal contained within the witness transaction
     WitnessVout { vout: u16, blinding: u32 },
+}
+
+impl Conceal for Revealed {
+    type Confidential = Confidential;
+
+    fn conceal(&self) -> Confidential {
+        match self.clone() {
+            Revealed::TxOutpoint(outpoint) => outpoint.conceal(),
+            Revealed::WitnessVout { vout, blinding } => OutpointReveal {
+                blinding,
+                txid: Txid::default(),
+                vout,
+            }
+            .conceal(),
+        }
+    }
+}
+impl CommitEncodeWithStrategy for Revealed {
+    type Strategy = commit_strategy::UsingConceal;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display, Error)]

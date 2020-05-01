@@ -19,6 +19,7 @@ use core::ops::Add;
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::*;
 
+use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::commit_verify::CommitVerify;
 
 pub type Amount = u64;
@@ -31,6 +32,17 @@ pub type BlindingFactor = secp256k1zkp::key::SecretKey;
 pub struct Revealed {
     pub amount: Amount,
     pub blinding: BlindingFactor,
+}
+
+impl Conceal for Revealed {
+    type Confidential = Confidential;
+
+    fn conceal(&self) -> Confidential {
+        Confidential::commit(self)
+    }
+}
+impl CommitEncodeWithStrategy for Revealed {
+    type Strategy = commit_strategy::UsingConceal;
 }
 
 impl PartialOrd for Revealed {

@@ -14,6 +14,9 @@
 use bitcoin::hashes::{sha256d, Hash, HashEngine};
 use bitcoin::{OutPoint, Txid};
 
+use crate::client_side_validation::Conceal;
+use crate::commit_verify::CommitVerify;
+
 /// Data required to generate or reveal the information about blinded
 /// transaction outpoint
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Default)]
@@ -31,18 +34,35 @@ pub struct OutpointReveal {
 }
 
 impl From<OutpointReveal> for OutPoint {
+    #[inline]
     fn from(reveal: OutpointReveal) -> Self {
         OutPoint::new(reveal.txid, reveal.vout as u32)
     }
 }
 
-impl OutpointReveal {
-    pub fn outpoint_hash(&self) -> OutpointHash {
+impl Conceal for OutpointReveal {
+    type Confidential = OutpointHash;
+
+    #[inline]
+    fn conceal(&self) -> Self::Confidential {
+        self.outpoint_hash()
+    }
+}
+
+impl CommitVerify<OutpointReveal> for OutpointHash {
+    fn commit(reveal: &OutpointReveal) -> Self {
         let mut engine = OutpointHash::engine();
-        engine.input(&self.blinding.to_be_bytes()[..]);
-        engine.input(&self.txid[..]);
-        engine.input(&self.vout.to_be_bytes()[..]);
+        engine.input(&reveal.blinding.to_be_bytes()[..]);
+        engine.input(&reveal.txid[..]);
+        engine.input(&reveal.vout.to_be_bytes()[..]);
         OutpointHash::from_engine(engine)
+    }
+}
+
+impl OutpointReveal {
+    #[inline]
+    pub fn outpoint_hash(&self) -> OutpointHash {
+        OutpointHash::commit(self)
     }
 }
 

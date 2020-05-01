@@ -11,14 +11,26 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::paradigms::strict_encoding::strict_encode;
-use bitcoin::hashes::{hash160, sha256};
+use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
+use crate::strict_encoding::strict_encode;
+use bitcoin::hashes::{hash160, sha256, Hash};
 use bitcoin::secp256k1;
 use core::cmp::Ordering;
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Void;
+
+impl Conceal for Void {
+    type Confidential = Void;
+
+    fn conceal(&self) -> Self::Confidential {
+        self.clone()
+    }
+}
+impl CommitEncodeWithStrategy for Void {
+    type Strategy = commit_strategy::UsingConceal;
+}
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
@@ -50,10 +62,21 @@ pub enum Revealed {
     Secp256k1Signature(secp256k1::Signature),
 }
 
+impl Conceal for Revealed {
+    type Confidential = Confidential;
+
+    fn conceal(&self) -> Self::Confidential {
+        Confidential::hash(&strict_encode(self))
+    }
+}
+impl CommitEncodeWithStrategy for Revealed {
+    type Strategy = commit_strategy::UsingConceal;
+}
+
 impl PartialEq for Revealed {
     fn eq(&self, other: &Self) -> bool {
-        let some = strict_encode(self).unwrap_or(vec![]);
-        let other = strict_encode(other).unwrap_or(vec![]);
+        let some = strict_encode(self);
+        let other = strict_encode(other);
         some.eq(&other)
     }
 }
@@ -62,8 +85,8 @@ impl Eq for Revealed {}
 
 impl PartialOrd for Revealed {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let some = strict_encode(self).unwrap_or(vec![]);
-        let other = strict_encode(other).unwrap_or(vec![]);
+        let some = strict_encode(self);
+        let other = strict_encode(other);
         some.partial_cmp(&other)
     }
 }
@@ -71,8 +94,8 @@ impl PartialOrd for Revealed {
 impl Ord for Revealed {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or_else(|| {
-            let some = strict_encode(self).unwrap_or(vec![]);
-            let other = strict_encode(other).unwrap_or(vec![]);
+            let some = strict_encode(self);
+            let other = strict_encode(other);
             some.cmp(&other)
         })
     }
@@ -94,6 +117,10 @@ impl Ord for Revealed {
 /// is much better than 32 bytes, especially for low-profile original state data
 /// (like numbers).
 pub type Confidential = hash160::Hash;
+
+impl CommitEncodeWithStrategy for Confidential {
+    type Strategy = commit_strategy::UsingStrict;
+}
 
 // TODO: Automate this with #derive macros
 mod strict_encoding {

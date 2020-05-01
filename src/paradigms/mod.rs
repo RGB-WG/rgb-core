@@ -24,6 +24,7 @@
 //! standartizing typical workflow processes in a form of interfaces that
 //! will be nearly impossible to use in the wrong form.
 
+#[macro_use]
 pub mod client_side_validation;
 pub mod commit_verify;
 pub mod single_use_seals;

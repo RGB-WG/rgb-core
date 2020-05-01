@@ -18,7 +18,7 @@ use super::{
     script, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateFormat,
     TransitionSchema,
 };
-use crate::client_side_validation::{commit_strategy, CommitEncodeStrategy, ConsensusCommit};
+use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 
 pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -56,7 +56,7 @@ impl Schema {
 impl ConsensusCommit for Schema {
     type Commitment = SchemaId;
 }
-impl CommitEncodeStrategy for Schema {
+impl CommitEncodeWithStrategy for Schema {
     type Strategy = commit_strategy::UsingStrict;
 }
 
