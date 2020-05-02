@@ -80,40 +80,40 @@ pub trait Node {
             })
     }
 
-    fn u8(&self, field_type: schema::FieldType) -> Option<FieldData<u8>> {
+    fn u8(&self, field_type: schema::FieldType) -> FieldData<u8> {
         field_extract!(self, field_type, U8)
     }
-    fn u16(&self, field_type: schema::FieldType) -> Option<FieldData<u16>> {
+    fn u16(&self, field_type: schema::FieldType) -> FieldData<u16> {
         field_extract!(self, field_type, U16)
     }
-    fn u32(&self, field_type: schema::FieldType) -> Option<FieldData<u32>> {
+    fn u32(&self, field_type: schema::FieldType) -> FieldData<u32> {
         field_extract!(self, field_type, U32)
     }
-    fn u64(&self, field_type: schema::FieldType) -> Option<FieldData<u64>> {
+    fn u64(&self, field_type: schema::FieldType) -> FieldData<u64> {
         field_extract!(self, field_type, U64)
     }
-    fn i8(&self, field_type: schema::FieldType) -> Option<FieldData<i8>> {
+    fn i8(&self, field_type: schema::FieldType) -> FieldData<i8> {
         field_extract!(self, field_type, I8)
     }
-    fn i16(&self, field_type: schema::FieldType) -> Option<FieldData<i16>> {
+    fn i16(&self, field_type: schema::FieldType) -> FieldData<i16> {
         field_extract!(self, field_type, I16)
     }
-    fn i32(&self, field_type: schema::FieldType) -> Option<FieldData<i32>> {
+    fn i32(&self, field_type: schema::FieldType) -> FieldData<i32> {
         field_extract!(self, field_type, I32)
     }
-    fn i64(&self, field_type: schema::FieldType) -> Option<FieldData<i64>> {
+    fn i64(&self, field_type: schema::FieldType) -> FieldData<i64> {
         field_extract!(self, field_type, I64)
     }
-    fn f32(&self, field_type: schema::FieldType) -> Option<FieldData<f32>> {
+    fn f32(&self, field_type: schema::FieldType) -> FieldData<f32> {
         field_extract!(self, field_type, F32)
     }
-    fn f64(&self, field_type: schema::FieldType) -> Option<FieldData<f64>> {
+    fn f64(&self, field_type: schema::FieldType) -> FieldData<f64> {
         field_extract!(self, field_type, F64)
     }
-    fn bytes(&self, field_type: schema::FieldType) -> Option<FieldData<Vec<u8>>> {
+    fn bytes(&self, field_type: schema::FieldType) -> FieldData<Vec<u8>> {
         field_extract!(self, field_type, Bytes)
     }
-    fn string(&self, field_type: schema::FieldType) -> Option<FieldData<String>> {
+    fn string(&self, field_type: schema::FieldType) -> FieldData<String> {
         field_extract!(self, field_type, String)
     }
 }

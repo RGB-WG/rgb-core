@@ -15,7 +15,7 @@
 
 use core::fmt::Debug;
 use core::hash::Hash;
-use core::ops::Deref;
+use core::ops::Try;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::data;
@@ -34,25 +34,29 @@ impl CommitEncodeWithStrategy for BTreeSet<data::Revealed> {
 
 macro_rules! field_extract {
     ($self:ident, $field:ident, $name:ident) => {
-        $self.metadata().get(&$field).and_then(|set| {
-            let res: Vec<_> = set
-                .into_iter()
-                .filter_map(|data| match data {
-                    data::Revealed::$name(val) => Some(val),
-                    _ => None,
-                })
-                .cloned()
-                .collect();
-            if res.is_empty() {
-                None
-            } else if res.len() == 1 {
-                Some(FieldData::Item(
-                    res.first().expect("Rust core library is broken").clone(),
-                ))
-            } else {
-                Some(FieldData::Set(res))
-            }
-        })
+        $self
+            .metadata()
+            .get(&$field)
+            .and_then(|set| {
+                let res: Vec<_> = set
+                    .into_iter()
+                    .filter_map(|data| match data {
+                        data::Revealed::$name(val) => Some(val),
+                        _ => None,
+                    })
+                    .cloned()
+                    .collect();
+                if res.is_empty() {
+                    None
+                } else if res.len() == 1 {
+                    Some(FieldData::Item(
+                        res.first().expect("Rust core library is broken").clone(),
+                    ))
+                } else {
+                    Some(FieldData::Set(res))
+                }
+            })
+            .unwrap_or(FieldData::None)
     };
 }
 
@@ -60,35 +64,45 @@ macro_rules! field_extract {
 #[display_from(Debug)]
 pub enum FieldData<T>
 where
-    T: Clone + Debug + PartialEq,
+    T: Clone + Debug + PartialEq + Default,
 {
+    None,
     Item(T),
     Set(Vec<T>),
 }
 
-impl<T> Deref for FieldData<T>
+impl<T> Try for FieldData<T>
 where
-    T: Clone + Debug + Hash + PartialEq,
+    T: Clone + Debug + Hash + PartialEq + Default,
 {
-    type Target = T;
+    type Ok = T;
+    type Error = ();
 
-    fn deref(&self) -> &Self::Target {
+    fn into_result(self) -> Result<Self::Ok, Self::Error> {
         match self {
-            FieldData::Item(item) => item,
-            FieldData::Set(set) => set
-                .first()
-                .expect("FieldResult contains set with no data; internal error"),
+            FieldData::None => Err(()),
+            FieldData::Item(item) => Ok(item),
+            FieldData::Set(set) => Ok(set.first().cloned().unwrap_or_default()),
         }
+    }
+
+    fn from_error(_: Self::Error) -> Self {
+        Self::None
+    }
+
+    fn from_ok(v: Self::Ok) -> Self {
+        Self::Item(v)
     }
 }
 
 impl<T> FieldData<T>
 where
-    T: Clone + Debug + Hash + PartialEq,
+    T: Clone + Debug + Hash + PartialEq + Default,
 {
     #[inline]
     pub fn into_vec(self) -> Vec<T> {
         match self {
+            FieldData::None => vec![],
             FieldData::Item(item) => vec![item],
             FieldData::Set(set) => set,
         }
@@ -97,6 +111,7 @@ where
     #[inline]
     pub fn to_vec(&self) -> Vec<T> {
         match self {
+            FieldData::None => vec![],
             FieldData::Item(item) => vec![item.clone()],
             FieldData::Set(set) => set.clone(),
         }
