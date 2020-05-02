@@ -13,6 +13,7 @@
 
 use core::cmp::Ordering;
 use core::ops::Add;
+use rand::{Rng, RngCore};
 
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
@@ -32,6 +33,17 @@ pub type BlindingFactor = secp256k1zkp::key::SecretKey;
 pub struct Revealed {
     pub amount: Amount,
     pub blinding: BlindingFactor,
+}
+
+impl Revealed {
+    pub fn with_amount<R: Rng + RngCore>(amount: Amount, rng: &mut R) -> Self {
+        // TODO: Use single shared instance
+        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
+        Self {
+            amount,
+            blinding: BlindingFactor::new(&secp, rng),
+        }
+    }
 }
 
 impl Conceal for Revealed {

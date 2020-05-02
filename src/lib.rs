@@ -41,7 +41,8 @@
 pub extern crate derive_wrapper;
 extern crate num_derive;
 extern crate num_traits;
-extern crate rand;
+// We need to export this specific version which is supported by secp256k1zkp
+pub extern crate rand;
 #[macro_use]
 pub extern crate bitcoin;
 
