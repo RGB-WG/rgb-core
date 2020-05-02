@@ -12,53 +12,26 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
-use crate::strict_encoding::{Error, StrictDecode, StrictEncode, WithBitcoinEncoding};
-use bitcoin::hashes::{hash160, sha256, Hash};
+use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
+use bitcoin::hashes::{hash160, sha256, sha256d};
 use bitcoin::{secp256k1, util::bip32, Txid};
 use std::io;
 
-impl WithBitcoinEncoding for Txid {}
-impl WithBitcoinEncoding for OutpointHash {}
-
-impl StrictEncode for sha256::Hash {
-    type Error = Error;
-
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
-        self.into_inner().to_vec().strict_encode(e)
-    }
+impl strict_encoding::Strategy for Txid {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for OutpointHash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 
-impl StrictDecode for sha256::Hash {
-    type Error = Error;
-
-    #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-        Ok(Self::from_slice(&Vec::<u8>::strict_decode(d)?)
-            .map_err(|_| Error::DataIntegrityError("Wrong SHA256 hash data size".to_string()))?)
-    }
+impl strict_encoding::Strategy for sha256::Hash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
-
-impl StrictEncode for hash160::Hash {
-    type Error = Error;
-
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
-        self.into_inner().to_vec().strict_encode(e)
-    }
+impl strict_encoding::Strategy for sha256d::Hash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
-
-impl StrictDecode for hash160::Hash {
-    type Error = Error;
-
-    #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-        Ok(
-            Self::from_slice(&Vec::<u8>::strict_decode(d)?).map_err(|_| {
-                Error::DataIntegrityError("Wrong RIPEMD-160 hash data size".to_string())
-            })?,
-        )
-    }
+impl strict_encoding::Strategy for hash160::Hash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 
 impl StrictEncode for secp256k1::PublicKey {

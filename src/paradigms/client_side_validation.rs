@@ -33,6 +33,7 @@ pub mod commit_strategy {
     // Defining strategies:
     pub struct UsingStrict;
     pub struct UsingConceal;
+    pub struct FixedBytes;
     pub struct Merklization;
 
     impl<T> CommitEncode for strategy::Holder<T, UsingStrict>

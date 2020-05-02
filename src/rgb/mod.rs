@@ -25,10 +25,10 @@ pub mod prelude {
     pub use consignment::Consignment;
     pub use contract::{
         amount, data, seal, Amount, Assignment, AssignmentsVariant, Contract, ContractId, Genesis,
-        Node, SealDefinition, Transition,
+        Node, SealDefinition, Transition, TransitionId,
     };
     pub use schema::script;
-    pub use schema::{Schema, SimplicityScript};
+    pub use schema::{Schema, SchemaId, SimplicityScript};
     pub use stash::{CoordinatedTransition, CoordinatedUpdate, Stash};
 }
 

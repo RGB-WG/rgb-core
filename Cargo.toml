@@ -31,8 +31,9 @@ lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "stagin
 lightning-net-tokio = { git = "https://github.com/LNP-BP/rust-lightning", branch = "staging", optional = true }
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "staging" }
 grin_secp256k1zkp = { git = "https://github.com/LNP-BP/rust-secp256k1-zkp", branch = "stable", optional = true }
-rand = "~0.5" # Required by grin_secp256k1zkp
-derive_wrapper = { git = "https://github.com/LNP-BP/derive-wrapper", branch = "stable" }
+rand = "~0.7.3" # Required by grin_secp256k1zkp
+derive_wrapper = "~0.1.6"
+#derive_wrapper = { git = "https://github.com/LNP-BP/derive-wrapper", branch = "stable" }
 num-traits = "~0.2.11"
 num-derive = "~0.3.0"
 tokio = { version = "~0.2.18", features = ["tcp"], optional = true }

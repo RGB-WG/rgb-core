@@ -48,8 +48,8 @@ pub struct Schema {
 
 impl Schema {
     #[inline]
-    pub fn schema_id(self) -> SchemaId {
-        self.consensus_commit()
+    pub fn schema_id(&self) -> SchemaId {
+        self.clone().consensus_commit()
     }
 }
 
@@ -63,6 +63,28 @@ impl CommitEncodeWithStrategy for Schema {
 mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+
+    impl StrictEncode for SchemaId {
+        type Error = Error;
+
+        #[inline]
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            self.into_inner().to_vec().strict_encode(e)
+        }
+    }
+
+    impl StrictDecode for SchemaId {
+        type Error = Error;
+
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(
+                Self::from_slice(&Vec::<u8>::strict_decode(d)?).map_err(|_| {
+                    Error::DataIntegrityError("Wrong RIPEMD-160 hash data size".to_string())
+                })?,
+            )
+        }
+    }
 
     impl StrictEncode for Schema {
         type Error = Error;

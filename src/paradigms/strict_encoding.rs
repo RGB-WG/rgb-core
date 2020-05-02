@@ -246,14 +246,102 @@ macro_rules! impl_enum_strict_encoding {
     };
 }
 
-mod bitcoin_based {
+/// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
+pub mod strategies {
     use super::{Error, StrictDecode, StrictEncode};
+    use crate::strategy;
     use std::io;
 
-    /// Marker trait for encoding as it is done in bitcoin consensus
-    pub trait WithBitcoinEncoding:
-        bitcoin::consensus::Encodable + bitcoin::consensus::Decodable
+    // Defining strategies:
+    pub struct HashFixedBytes;
+    pub struct BitcoinConsensus;
+
+    pub trait Strategy {
+        type Strategy;
+    }
+
+    impl<T> StrictEncode for T
+    where
+        T: Strategy + Clone,
+        strategy::Holder<T, <T as Strategy>::Strategy>: StrictEncode,
     {
+        type Error = <strategy::Holder<T, T::Strategy> as StrictEncode>::Error;
+
+        #[inline]
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            strategy::Holder::new(self.clone()).strict_encode(e)
+        }
+    }
+
+    impl<T> StrictDecode for T
+    where
+        T: Strategy,
+        strategy::Holder<T, <T as Strategy>::Strategy>: StrictDecode,
+    {
+        type Error = <strategy::Holder<T, T::Strategy> as StrictDecode>::Error;
+
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(strategy::Holder::strict_decode(d)?.into_inner())
+        }
+    }
+
+    impl<T> StrictEncode for strategy::Holder<T, HashFixedBytes>
+    where
+        T: bitcoin::hashes::Hash,
+    {
+        type Error = Error;
+
+        #[inline]
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            e.write_all(&self.as_inner()[..])?;
+            Ok(T::LEN)
+        }
+    }
+
+    impl<T> StrictDecode for strategy::Holder<T, HashFixedBytes>
+    where
+        T: bitcoin::hashes::Hash,
+    {
+        type Error = Error;
+
+        #[inline]
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let mut buf = vec![0u8; T::LEN];
+            d.read_exact(&mut buf)?;
+            Ok(Self::new(T::from_slice(&buf)?))
+        }
+    }
+
+    impl<T> StrictEncode for strategy::Holder<T, BitcoinConsensus>
+    where
+        T: bitcoin::consensus::Encodable,
+    {
+        type Error = Error;
+
+        #[inline]
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            self.as_inner().consensus_encode(e).map_err(Error::from)
+        }
+    }
+
+    impl<T> StrictDecode for strategy::Holder<T, BitcoinConsensus>
+    where
+        T: bitcoin::consensus::Decodable,
+    {
+        type Error = Error;
+
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(Self::new(T::consensus_decode(d).map_err(Error::from)?))
+        }
+    }
+
+    impl From<bitcoin::hashes::Error> for Error {
+        #[inline]
+        fn from(_: bitcoin::hashes::Error) -> Self {
+            Error::DataIntegrityError("Incorrect hash length".to_string())
+        }
     }
 
     impl From<bitcoin::consensus::encode::Error> for Error {
@@ -266,49 +354,45 @@ mod bitcoin_based {
             })
         }
     }
-
-    impl<T> StrictEncode for T
-    where
-        T: WithBitcoinEncoding,
-    {
-        type Error = Error;
-
-        #[inline]
-        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
-            self.consensus_encode(e).map_err(Error::from)
-        }
-    }
-
-    impl<T> StrictDecode for T
-    where
-        T: WithBitcoinEncoding,
-    {
-        type Error = Error;
-
-        #[inline]
-        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-            Self::consensus_decode(d).map_err(Error::from)
-        }
-    }
 }
-pub use bitcoin_based::WithBitcoinEncoding;
+pub use strategies::Strategy;
 
 /// Taking implementation of little-endian integer encoding
 mod number_little_endian {
-    use super::{Error, StrictDecode, StrictEncode, WithBitcoinEncoding};
+    use super::{strategies, Error, Strategy, StrictDecode, StrictEncode};
     use bitcoin::util::uint::{Uint128, Uint256};
     use std::io;
 
-    impl WithBitcoinEncoding for u8 {}
-    impl WithBitcoinEncoding for u16 {}
-    impl WithBitcoinEncoding for u32 {}
-    impl WithBitcoinEncoding for u64 {}
-    impl WithBitcoinEncoding for Uint128 {}
-    impl WithBitcoinEncoding for Uint256 {}
-    impl WithBitcoinEncoding for i8 {}
-    impl WithBitcoinEncoding for i16 {}
-    impl WithBitcoinEncoding for i32 {}
-    impl WithBitcoinEncoding for i64 {}
+    impl Strategy for u8 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for u16 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for u32 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for u64 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for Uint128 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for Uint256 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for i8 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for i16 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for i32 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
+    impl Strategy for i64 {
+        type Strategy = strategies::BitcoinConsensus;
+    }
 
     impl StrictEncode for usize {
         type Error = Error;
@@ -702,7 +786,6 @@ mod compositional_types {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bytes;
 
     fn gen_strings() -> Vec<&'static str> {
         vec![
@@ -756,12 +839,12 @@ mod test {
         let nearly_full: u8 = 0xFE;
         let full: u8 = 0xFF;
 
-        let byte_0 = bytes![0u8];
-        let byte_1 = bytes![1u8];
-        let byte_13 = bytes![13u8];
-        let byte_ef = bytes![0xEFu8];
-        let byte_fe = bytes![0xFEu8];
-        let byte_ff = bytes![0xFFu8];
+        let byte_0 = [0u8];
+        let byte_1 = [1u8];
+        let byte_13 = [13u8];
+        let byte_ef = [0xEFu8];
+        let byte_fe = [0xFEu8];
+        let byte_ff = [0xFFu8];
 
         assert_eq!(strict_encode(&zero).unwrap(), byte_0);
         assert_eq!(strict_encode(&one).unwrap(), byte_1);

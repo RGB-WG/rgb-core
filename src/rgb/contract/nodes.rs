@@ -13,12 +13,9 @@
 
 use super::{data, AssignmentsVariant, SealDefinition};
 use crate::bp;
-use crate::client_side_validation::{
-    commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
-};
-use crate::rgb::{schema, Assignment, ContractId, Schema, SimplicityScript};
+use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
+use crate::rgb::{schema, Assignment, ContractId, SchemaId, SimplicityScript, TransitionId};
 use std::collections::{BTreeMap, BTreeSet};
-use std::io;
 
 pub type Metadata = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 impl CommitEncodeWithStrategy for Metadata {
@@ -143,8 +140,8 @@ pub trait Node {
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub struct Genesis {
-    pub schema: Schema,
-    pub network: bp::Network,
+    schema_id: SchemaId,
+    network: bp::Network,
     metadata: Metadata,
     assignments: Assignments,
     script: SimplicityScript,
@@ -153,7 +150,7 @@ pub struct Genesis {
 #[derive(Clone, Debug, Display, Default)]
 #[display_from(Debug)]
 pub struct Transition {
-    pub type_id: schema::TransitionType,
+    type_id: schema::TransitionType,
     metadata: Metadata,
     assignments: Assignments,
     script: SimplicityScript,
@@ -161,19 +158,32 @@ pub struct Transition {
 
 impl Genesis {
     #[inline]
-    pub fn contract_id(self) -> ContractId {
-        self.consensus_commit()
+    pub fn contract_id(&self) -> ContractId {
+        self.clone().consensus_commit()
     }
 }
 
-impl CommitEncode for Genesis {
-    fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
-        commit_encode_list!(e; self.schema, self.network.as_magic(), self.metadata, self.assignments, self.script)
-    }
+impl CommitEncodeWithStrategy for Genesis {
+    type Strategy = commit_strategy::UsingStrict;
 }
 
 impl ConsensusCommit for Genesis {
     type Commitment = ContractId;
+}
+
+impl Transition {
+    #[inline]
+    pub fn transition_id(&self) -> TransitionId {
+        self.clone().consensus_commit()
+    }
+}
+
+impl CommitEncodeWithStrategy for Transition {
+    type Strategy = commit_strategy::UsingStrict;
+}
+
+impl ConsensusCommit for Transition {
+    type Commitment = TransitionId;
 }
 
 impl Node for Genesis {
@@ -208,19 +218,31 @@ impl Node for Transition {
 
 impl Genesis {
     pub fn with(
-        schema: Schema,
+        schema_id: SchemaId,
         network: bp::Network,
         metadata: Metadata,
         assignments: Assignments,
         script: SimplicityScript,
     ) -> Self {
         Self {
-            schema,
+            schema_id,
             network,
             metadata,
             assignments,
             script,
         }
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub fn schema_id(&self) -> SchemaId {
+        self.schema_id
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub fn network(&self) -> bp::Network {
+        self.network
     }
 }
 
@@ -238,6 +260,12 @@ impl Transition {
             script,
         }
     }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub fn type_id(&self) -> schema::TransitionType {
+        self.type_id
+    }
 }
 
 mod strict_encoding {
@@ -250,7 +278,7 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(strict_encode_list!(e;
-                    self.schema,
+                    self.schema_id,
                     self.network,
                     self.metadata,
                     self.assignments,
@@ -263,7 +291,7 @@ mod strict_encoding {
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             Ok(Self {
-                schema: Schema::strict_decode(&mut d)?,
+                schema_id: SchemaId::strict_decode(&mut d)?,
                 network: bp::Network::strict_decode(&mut d)?,
                 metadata: Metadata::strict_decode(&mut d)?,
                 assignments: Assignments::strict_decode(&mut d)?,

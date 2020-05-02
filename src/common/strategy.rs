@@ -19,10 +19,18 @@ use core::marker::PhantomData;
 
 pub struct Holder<T, S>(T, PhantomData<S>);
 impl<T, S> Holder<T, S> {
+    #[inline]
     pub fn new(val: T) -> Self {
         Self(val, PhantomData::<S>::default())
     }
+
+    #[inline]
     pub fn into_inner(self) -> T {
         self.0
+    }
+
+    #[inline]
+    pub fn as_inner(&self) -> &T {
+        &self.0
     }
 }

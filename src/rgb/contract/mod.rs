@@ -20,6 +20,6 @@ pub mod seal;
 
 pub use amount::Amount;
 pub use assignments::{Assignment, AssignmentsVariant};
-pub use contract::{Contract, ContractId};
+pub use contract::{Contract, ContractId, TransitionId};
 pub use nodes::{Genesis, Node, Transition};
 pub use seal::SealDefinition;
