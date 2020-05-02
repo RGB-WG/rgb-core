@@ -16,6 +16,7 @@
 use core::fmt::Debug;
 use core::hash::Hash;
 use core::ops::Try;
+use core::option::NoneError;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::data;
@@ -49,26 +50,64 @@ macro_rules! field_extract {
                 if res.is_empty() {
                     None
                 } else if res.len() == 1 {
-                    Some(FieldData::Item(
+                    Some(FieldData::one(
                         res.first().expect("Rust core library is broken").clone(),
                     ))
                 } else {
-                    Some(FieldData::Set(res))
+                    Some(FieldData::many(res))
                 }
             })
-            .unwrap_or(FieldData::None)
+            .unwrap_or(FieldData::empty())
     };
 }
 
-#[derive(Clone, PartialEq, Hash, Debug, Display)]
+#[derive(Clone, PartialEq, Hash, Debug, Display, Default)]
 #[display_from(Debug)]
-pub enum FieldData<T>
+pub struct FieldData<T>
 where
     T: Clone + Debug + PartialEq + Default,
 {
-    None,
-    Item(T),
-    Set(Vec<T>),
+    data: Vec<T>,
+    next: usize,
+}
+
+impl<T> FieldData<T>
+where
+    T: Clone + Debug + PartialEq + Default,
+{
+    pub fn empty() -> Self {
+        Self {
+            data: vec![],
+            ..Self::default()
+        }
+    }
+
+    pub fn one(item: T) -> Self {
+        Self {
+            data: vec![item],
+            ..Self::default()
+        }
+    }
+
+    pub fn many(set: impl IntoIterator<Item = T>) -> Self {
+        Self {
+            data: set.into_iter().collect(),
+            ..Self::default()
+        }
+    }
+}
+
+impl<T> Iterator for FieldData<T>
+where
+    T: Clone + Debug + PartialEq + Default,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = self.data.get(self.next);
+        self.next += 1;
+        item.cloned()
+    }
 }
 
 impl<T> Try for FieldData<T>
@@ -76,22 +115,18 @@ where
     T: Clone + Debug + Hash + PartialEq + Default,
 {
     type Ok = T;
-    type Error = ();
+    type Error = NoneError;
 
     fn into_result(self) -> Result<Self::Ok, Self::Error> {
-        match self {
-            FieldData::None => Err(()),
-            FieldData::Item(item) => Ok(item),
-            FieldData::Set(set) => Ok(set.first().cloned().unwrap_or_default()),
-        }
+        Ok(self.data.first()?.clone())
     }
 
     fn from_error(_: Self::Error) -> Self {
-        Self::None
+        Self::empty()
     }
 
     fn from_ok(v: Self::Ok) -> Self {
-        Self::Item(v)
+        Self::one(v)
     }
 }
 
@@ -100,20 +135,17 @@ where
     T: Clone + Debug + Hash + PartialEq + Default,
 {
     #[inline]
+    pub fn as_vec(&self) -> &Vec<T> {
+        &self.data
+    }
+
+    #[inline]
     pub fn into_vec(self) -> Vec<T> {
-        match self {
-            FieldData::None => vec![],
-            FieldData::Item(item) => vec![item],
-            FieldData::Set(set) => set,
-        }
+        self.data
     }
 
     #[inline]
     pub fn to_vec(&self) -> Vec<T> {
-        match self {
-            FieldData::None => vec![],
-            FieldData::Item(item) => vec![item.clone()],
-            FieldData::Set(set) => set.clone(),
-        }
+        self.data.clone()
     }
 }
