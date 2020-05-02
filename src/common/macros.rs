@@ -76,11 +76,11 @@ macro_rules! bset {
         }
     };
 
-    { $($key:expr => $value:expr),+ } => {
+    { $($value:expr),+ } => {
         {
             let mut m = ::std::collections::BTreeSet::new();
             $(
-                m.insert($key, $value);
+                m.insert($value);
             )+
             m
         }
