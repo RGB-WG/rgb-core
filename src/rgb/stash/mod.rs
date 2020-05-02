@@ -71,7 +71,7 @@ impl Stash {
     /// 2. Use [Coordinator] (wallet-provided instance via trait interface)
     ///    to coordinate different contracts which are related to the given
     ///    set of seals (see [CoordinatedTransition] implementation below.
-    /// 3. When you are happy with the new state assignmnets (i.e. new set of
+    /// 3. When you are happy with the new state assignments (i.e. new set of
     ///    seals that will hold the state) call [CoordinatedTransition::finalize].
     ///    This will generate required bitcoin transaction(s) that will close
     ///    given set of seals and commit to a newly defined seals. For building

@@ -50,6 +50,7 @@ impl Network {
     }
 
     pub fn as_magic(&self) -> MagicNumber {
+        // FIXME: Something is going wrong here
         use std::mem;
         let m;
         unsafe {
