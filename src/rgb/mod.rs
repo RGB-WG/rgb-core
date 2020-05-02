@@ -24,8 +24,8 @@ pub mod prelude {
     pub use anchor::Anchor;
     pub use consignment::Consignment;
     pub use contract::{
-        amount, data, seal, Amount, Assignment, AssignmentsVariant, Contract, ContractId, Genesis,
-        Node, SealDefinition, Transition, TransitionId,
+        amount, data, seal, Amount, Assignment, AssignmentsVariant, Contract, ContractId,
+        FieldData, Genesis, Metadata, Node, SealDefinition, Transition, TransitionId,
     };
     pub use schema::script;
     pub use schema::{Schema, SchemaId, SimplicityScript};

@@ -11,37 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::collections::BTreeMap;
+
 use super::{data, AssignmentsVariant, SealDefinition};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
-use crate::rgb::{schema, Assignment, ContractId, SchemaId, SimplicityScript, TransitionId};
-use std::collections::{BTreeMap, BTreeSet};
-
-pub type Metadata = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
-impl CommitEncodeWithStrategy for Metadata {
-    type Strategy = commit_strategy::Merklization;
-}
-impl CommitEncodeWithStrategy for BTreeSet<data::Revealed> {
-    type Strategy = commit_strategy::Merklization;
-}
+use crate::rgb::{
+    schema, Assignment, ContractId, FieldData, Metadata, SchemaId, SimplicityScript, TransitionId,
+};
 
 pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
 impl CommitEncodeWithStrategy for Assignments {
     type Strategy = commit_strategy::Merklization;
-}
-
-macro_rules! field_extract {
-    ($self:ident, $field:ident, $name:ident) => {
-        $self.metadata().get(&$field).map(|set| {
-            set.into_iter()
-                .filter_map(|data| match data {
-                    data::Revealed::$name(val) => Some(val),
-                    _ => None,
-                })
-                .cloned()
-                .collect()
-        })
-    };
 }
 
 pub trait Node {
@@ -99,40 +80,40 @@ pub trait Node {
             })
     }
 
-    fn u8(&self, field_type: schema::FieldType) -> Option<Vec<u8>> {
+    fn u8(&self, field_type: schema::FieldType) -> Option<FieldData<u8>> {
         field_extract!(self, field_type, U8)
     }
-    fn u16(&self, field_type: schema::FieldType) -> Option<Vec<u16>> {
+    fn u16(&self, field_type: schema::FieldType) -> Option<FieldData<u16>> {
         field_extract!(self, field_type, U16)
     }
-    fn u32(&self, field_type: schema::FieldType) -> Option<Vec<u32>> {
+    fn u32(&self, field_type: schema::FieldType) -> Option<FieldData<u32>> {
         field_extract!(self, field_type, U32)
     }
-    fn u64(&self, field_type: schema::FieldType) -> Option<Vec<u64>> {
+    fn u64(&self, field_type: schema::FieldType) -> Option<FieldData<u64>> {
         field_extract!(self, field_type, U64)
     }
-    fn i8(&self, field_type: schema::FieldType) -> Option<Vec<i8>> {
+    fn i8(&self, field_type: schema::FieldType) -> Option<FieldData<i8>> {
         field_extract!(self, field_type, I8)
     }
-    fn i16(&self, field_type: schema::FieldType) -> Option<Vec<i16>> {
+    fn i16(&self, field_type: schema::FieldType) -> Option<FieldData<i16>> {
         field_extract!(self, field_type, I16)
     }
-    fn i32(&self, field_type: schema::FieldType) -> Option<Vec<i32>> {
+    fn i32(&self, field_type: schema::FieldType) -> Option<FieldData<i32>> {
         field_extract!(self, field_type, I32)
     }
-    fn i64(&self, field_type: schema::FieldType) -> Option<Vec<i64>> {
+    fn i64(&self, field_type: schema::FieldType) -> Option<FieldData<i64>> {
         field_extract!(self, field_type, I64)
     }
-    fn f32(&self, field_type: schema::FieldType) -> Option<Vec<f32>> {
+    fn f32(&self, field_type: schema::FieldType) -> Option<FieldData<f32>> {
         field_extract!(self, field_type, F32)
     }
-    fn f64(&self, field_type: schema::FieldType) -> Option<Vec<f64>> {
+    fn f64(&self, field_type: schema::FieldType) -> Option<FieldData<f64>> {
         field_extract!(self, field_type, F64)
     }
-    fn bytes(&self, field_type: schema::FieldType) -> Option<Vec<Vec<u8>>> {
+    fn bytes(&self, field_type: schema::FieldType) -> Option<FieldData<Vec<u8>>> {
         field_extract!(self, field_type, Bytes)
     }
-    fn string(&self, field_type: schema::FieldType) -> Option<Vec<String>> {
+    fn string(&self, field_type: schema::FieldType) -> Option<FieldData<String>> {
         field_extract!(self, field_type, String)
     }
 }
