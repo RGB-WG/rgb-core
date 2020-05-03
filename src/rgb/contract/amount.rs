@@ -20,6 +20,7 @@ use rand::{Rng, RngCore};
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::*;
 
+use super::data;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::commit_verify::CommitVerify;
 
@@ -182,6 +183,7 @@ impl Confidential {
 mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use data::strict_encoding::EncodingTag;
     use std::io;
 
     mod zkp {
@@ -291,7 +293,7 @@ mod strict_encoding {
         type Error = Error;
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
-            Ok(strict_encode_list!(e; self.amount, self.blinding))
+            Ok(strict_encode_list!(e; EncodingTag::U64, self.amount, self.blinding))
         }
     }
 
@@ -299,9 +301,15 @@ mod strict_encoding {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-            Ok(Self {
-                amount: Amount::strict_decode(&mut d)?,
-                blinding: BlindingFactor::strict_decode(&mut d)?,
+            let format = EncodingTag::strict_decode(&mut d)?;
+            Ok(match format {
+                EncodingTag::U64 => Self {
+                    amount: Amount::strict_decode(&mut d)?,
+                    blinding: BlindingFactor::strict_decode(&mut d)?,
+                },
+                _ => Err(Error::UnsupportedDataStructure(
+                    "We support only homomorphic commitments to U64 data".to_string(),
+                ))?,
             })
         }
     }

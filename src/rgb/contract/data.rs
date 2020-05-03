@@ -123,30 +123,16 @@ impl CommitEncodeWithStrategy for Confidential {
 }
 
 // TODO: Automate this with #derive macros
-mod strict_encoding {
+pub(super) mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
     use num_derive::{FromPrimitive, ToPrimitive};
     use num_traits::{FromPrimitive, ToPrimitive};
     use std::io;
 
-    impl StrictEncode for Void {
-        type Error = Error;
-        fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, Self::Error> {
-            Ok(0)
-        }
-    }
-
-    impl StrictDecode for Void {
-        type Error = Error;
-        fn strict_decode<D: io::Read>(_: D) -> Result<Self, Self::Error> {
-            Ok(Void)
-        }
-    }
-
     #[derive(FromPrimitive, ToPrimitive)]
     #[repr(u8)]
-    enum EncodingTag {
+    pub(in super::super) enum EncodingTag {
         U8 = 0b_0000_0000_u8,
         U16 = 0b_0000_0001_u8,
         U32 = 0b_0000_0010_u8,
@@ -167,6 +153,20 @@ mod strict_encoding {
         Secp256k1Signature = 0b_1000_0010_u8,
     }
     impl_enum_strict_encoding!(EncodingTag);
+
+    impl StrictEncode for Void {
+        type Error = Error;
+        fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, Self::Error> {
+            Ok(0)
+        }
+    }
+
+    impl StrictDecode for Void {
+        type Error = Error;
+        fn strict_decode<D: io::Read>(_: D) -> Result<Self, Self::Error> {
+            Ok(Void)
+        }
+    }
 
     impl StrictEncode for Revealed {
         type Error = Error;

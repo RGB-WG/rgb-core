@@ -21,12 +21,15 @@ use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode}
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
     Void(BTreeSet<Assignment<VoidStrategy>>),
-    Homomorphic(BTreeSet<Assignment<HomomorphStrategy>>),
+    Homomorphic(u64, BTreeSet<Assignment<HomomorphStrategy>>),
     Hashed(BTreeSet<Assignment<HashStrategy>>),
 }
 
 impl AssignmentsVariant {
-    pub fn zero_balanced(allocations: Vec<(SealDefinition, Amount)>) -> Self {
+    pub fn zero_balanced(
+        allocations: Vec<(SealDefinition, Amount)>,
+        homomorphic_factor: u64,
+    ) -> Self {
         let secp = secp256k1zkp::Secp256k1::with_caps(secp256k1zkp::ContextFlag::Commit);
         let mut rng = rand::thread_rng();
         let mut blinding_factors = vec![];
@@ -63,7 +66,7 @@ impl AssignmentsVariant {
             })
             .collect();
 
-        Self::Homomorphic(set)
+        Self::Homomorphic(homomorphic_factor, set)
     }
 }
 
@@ -162,6 +165,7 @@ where
 mod strict_encoding {
     use super::*;
     use crate::strict_encoding::Error;
+    use data::strict_encoding::EncodingTag;
     use std::io;
 
     impl StrictEncode for AssignmentsVariant {
@@ -172,8 +176,8 @@ mod strict_encoding {
                 AssignmentsVariant::Void(tree) => {
                     strict_encode_list!(e; schema::StateType::Void, tree)
                 }
-                AssignmentsVariant::Homomorphic(tree) => {
-                    strict_encode_list!(e; schema::StateType::Homomorphic, tree)
+                AssignmentsVariant::Homomorphic(homomorphic_factor, tree) => {
+                    strict_encode_list!(e; EncodingTag::U64, homomorphic_factor, schema::StateType::Homomorphic, tree)
                 }
                 AssignmentsVariant::Hashed(tree) => {
                     strict_encode_list!(e; schema::StateType::Hashed, tree)
@@ -189,9 +193,15 @@ mod strict_encoding {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
                 schema::StateType::Void => AssignmentsVariant::Void(BTreeSet::strict_decode(d)?),
-                schema::StateType::Homomorphic => {
-                    AssignmentsVariant::Homomorphic(BTreeSet::strict_decode(d)?)
-                }
+                schema::StateType::Homomorphic => match EncodingTag::strict_decode(&mut d)? {
+                    EncodingTag::U64 => AssignmentsVariant::Homomorphic(
+                        u64::strict_decode(&mut d)?,
+                        BTreeSet::strict_decode(&mut d)?,
+                    ),
+                    _ => Err(Error::UnsupportedDataStructure(
+                        "We support only homomorphic commitments to U64 data".to_string(),
+                    ))?,
+                },
                 schema::StateType::Hashed => {
                     AssignmentsVariant::Hashed(BTreeSet::strict_decode(d)?)
                 }
