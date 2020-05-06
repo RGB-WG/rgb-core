@@ -16,6 +16,7 @@ use super::{Anchor, Genesis, Transition};
 pub struct Consignment {
     pub genesis: Genesis,
     pub transitions: Vec<Transition>,
+    pub endpoints: Vec<Transition>,
     pub anchors: Vec<Anchor>,
 }
 
