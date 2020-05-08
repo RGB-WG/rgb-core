@@ -179,21 +179,95 @@ network_serialize_from_commitment!(rgb::seal::Type);
 
 /// ### Seal pointer
 
+const TAG_SEAL_VOUT: u8 = 0x00u8;
+const TAG_SEAL_HASH: u8 = 0x80u8;
+
 impl csv::serialize::Commitment for rgb::Seal {
     fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
-        Ok(self.txid.commitment_serialize(&mut e)? +
-            self.vout.commitment_serialize(&mut e)?)
+        match self {
+            rgb::Seal::WitnessTxout(vout) => Ok(
+                TAG_SEAL_VOUT.commitment_serialize(&mut e)? +
+                vout.commitment_serialize(&mut e)?
+            ),
+            rgb::Seal::BlindedTxout(hash) => Ok(
+                TAG_SEAL_HASH.commitment_serialize(&mut e)? +
+                hash.commitment_serialize(&mut e)?
+            ),
+            rgb::Seal::RevealedTxout(reveal_data, _) => Ok(
+                TAG_SEAL_HASH.commitment_serialize(&mut e)? +
+                reveal_data.outpoint_hash().commitment_serialize(&mut e)?
+            ),
+        }
     }
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
-        Ok(Self::from(
-            Option::<Txid>::commitment_deserialize(&mut d)?,
-            u16::commitment_deserialize(&mut d)?
-        ))
+        Ok(match u8::commitment_deserialize(&mut d)? {
+            TAG_SEAL_VOUT => rgb::Seal::witness(u16::commitment_deserialize(&mut d)?),
+            TAG_SEAL_HASH => rgb::Seal::blinded(bp::blind::OutpointHash::commitment_deserialize(&mut d)?),
+            _ => Err(csv::serialize::Error::ValueOutOfRange)?
+        })
     }
 }
 
-network_serialize_from_commitment!(rgb::Seal);
+const TAG_SEAL_WITNESS: u8 = 0x00u8;
+const TAG_SEAL_BLINDED: u8 = 0x01u8;
+const TAG_SEAL_REVEALED: u8 = 0x02u8;
+
+impl csv::serialize::Network for rgb::Seal {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
+        match self {
+            rgb::Seal::WitnessTxout(vout) => Ok(
+                TAG_SEAL_WITNESS.network_serialize(&mut e)? +
+                vout.network_serialize(&mut e)?
+            ),
+            rgb::Seal::BlindedTxout(hash) => Ok(
+                TAG_SEAL_BLINDED.network_serialize(&mut e)? +
+                hash.network_serialize(&mut e)?
+            ),
+            rgb::Seal::RevealedTxout(reveal_data, short_id) => Ok(
+                TAG_SEAL_REVEALED.network_serialize(&mut e)? +
+                reveal_data.network_serialize(&mut e)? +
+                short_id.network_serialize(&mut e)?
+            ),
+        }
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
+        Ok(match u8::network_deserialize(&mut d)? {
+            TAG_SEAL_WITNESS => rgb::Seal::witness(
+                u16::network_deserialize(&mut d)?
+            ),
+            TAG_SEAL_BLINDED => rgb::Seal::blinded(
+                bp::blind::OutpointHash::network_deserialize(&mut d)?
+            ),
+            TAG_SEAL_REVEALED => rgb::Seal::outpoint_reveal(
+                bp::blind::OutpointReveal::network_deserialize(&mut d)?,
+                Option::<bp::ShortId>::network_deserialize(&mut d)?
+            ),
+            _ => Err(csv::serialize::Error::ValueOutOfRange)?,
+        })
+    }
+}
+
+/// ### Seal revealed outpoint
+
+impl csv::serialize::Network for bp::blind::OutpointReveal {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, csv::serialize::Error> {
+        Ok(
+            self.blinding.network_serialize(&mut e)? +
+            self.txid.network_serialize(&mut e)? +
+            self.vout.network_serialize(&mut e)?
+        )
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, csv::serialize::Error> {
+        Ok(Self {
+            blinding: u64::network_deserialize(&mut d)?,
+            txid: Txid::network_deserialize(&mut d)?,
+            vout: u16::network_deserialize(&mut d)?
+        })
+    }
+}
 
 
 /// ## Data commitment serialization
