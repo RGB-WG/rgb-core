@@ -22,7 +22,7 @@ use bitcoin::{
 };
 
 use super::{Commitment, Error};
-use crate::bp::MerkleNode;
+use crate::bp::{ShortId, MerkleNode, blind::OutpointHash};
 
 
 pub trait FromEnumPrimitive: FromPrimitive + ToPrimitive { }
@@ -40,6 +40,7 @@ impl FromConsensus for i32 { }
 impl FromConsensus for i64 { }
 impl FromConsensus for Txid { }
 impl FromConsensus for MerkleNode { }
+impl FromConsensus for OutpointHash { }
 
 impl<T> Commitment for T where T: FromConsensus {
     #[inline]
@@ -145,6 +146,16 @@ impl Commitment for String {
 
     fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
         String::from_utf8(Vec::<u8>::commitment_deserialize(&mut d)?).map_err(Error::from)
+    }
+}
+
+impl Commitment for ShortId {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.into_u64().commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        Ok(Self::from(u64::commitment_deserialize(&mut d)?))
     }
 }
 

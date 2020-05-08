@@ -24,6 +24,7 @@
 #![feature(arbitrary_enum_discriminant)]
 #![feature(bool_to_option)]
 #![feature(str_strip)]
+#![feature(try_trait)]
 
 // Coding conventions
 #![deny(non_upper_case_globals)]
