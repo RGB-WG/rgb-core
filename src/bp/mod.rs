@@ -22,12 +22,14 @@ pub mod scripts;
 #[cfg(feature="use-rgb")]
 pub mod merkle;
 pub mod short_id;
+pub mod network;
 pub mod blind;
 
 pub use scripts::*;
 #[cfg(feature="use-rgb")]
 pub use merkle::*;
 pub use short_id::*;
+pub use network::Network;
 
 hash_newtype!(HashLock, sha256d::Hash, 32, doc="Hashed locks in HTLC");
 hash_newtype!(HashPreimage, sha256d::Hash, 32, doc="Pre-images for hashed locks in HTLC");

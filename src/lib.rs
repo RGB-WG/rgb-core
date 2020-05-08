@@ -21,6 +21,9 @@
 #![feature(optin_builtin_traits)]
 #![feature(associated_type_defaults)]
 #![feature(const_fn)]
+#![feature(arbitrary_enum_discriminant)]
+#![feature(bool_to_option)]
+#![feature(str_strip)]
 #![feature(try_trait)]
 
 // Coding conventions
