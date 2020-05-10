@@ -34,7 +34,7 @@ impl Peer {
         let connection = node.connect(private_key, ephemeral_private_key).await?;
         Ok(Self {
             node,
-            connection: connection,
+            connection,
             _awaiting_pong: false,
         })
     }

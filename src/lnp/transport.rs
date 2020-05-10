@@ -27,7 +27,7 @@ use tokio::io::AsyncReadExt;
 #[cfg(feature = "tokio")]
 use tokio::io::AsyncWriteExt;
 #[cfg(feature = "tokio")]
-use tokio::net::TcpStream;
+use tokio::net::{tcp, TcpStream};
 
 #[cfg(not(feature = "tokio"))]
 use std::io::{Read, Write};
@@ -36,9 +36,7 @@ use std::net::TcpStream;
 
 use bitcoin::secp256k1;
 
-// We re-export this under more proper name (it's not per-channel encryptor,
-// it is per-connection transport-level encryptor)
-use lightning::ln::peers::conduit::Conduit as Encryptor;
+use lightning::ln::peers::conduit::{Conduit as Transcoder, Decryptor, Encryptor};
 use lightning::ln::peers::handshake::PeerHandshake;
 
 use super::LIGHTNING_P2P_DEFAULT_PORT;
@@ -127,7 +125,21 @@ pub struct Connection {
     pub stream: TcpStream,
     pub outbound: bool,
     #[allow(dead_code)]
-    encryptor: Encryptor,
+    transcoder: Transcoder,
+}
+
+#[cfg(feature = "tokio")]
+pub struct ConnectionInput {
+    pub istream: tcp::OwnedReadHalf,
+    pub outbound: bool,
+    pub decryptor: Decryptor,
+}
+
+#[cfg(feature = "tokio")]
+pub struct ConnectionOutput {
+    pub ostream: tcp::OwnedWriteHalf,
+    pub outbound: bool,
+    pub encryptor: Encryptor,
 }
 
 impl Connection {
@@ -172,7 +184,7 @@ impl Connection {
         let mut input: &[u8] = &[];
         let mut buf = vec![];
         buf.reserve(MAX_TRANSPORT_FRAME_SIZE);
-        let result: Result<Encryptor, ConnectionError> = loop {
+        let result: Result<Transcoder, ConnectionError> = loop {
             #[cfg(feature = "log")]
             trace!("Handshake step {}: processing data `{:x?}`", step, input);
 
@@ -221,7 +233,25 @@ impl Connection {
         Ok(Self {
             stream,
             outbound: true,
-            encryptor,
+            transcoder: encryptor,
         })
+    }
+
+    #[cfg(feature = "tokio")]
+    pub fn split(self) -> (ConnectionInput, ConnectionOutput) {
+        let (istream, ostream) = self.stream.into_split();
+        let (encryptor, decryptor) = self.transcoder.split();
+        (
+            ConnectionInput {
+                istream,
+                outbound: self.outbound,
+                decryptor,
+            },
+            ConnectionOutput {
+                ostream,
+                outbound: self.outbound,
+                encryptor,
+            },
+        )
     }
 }
