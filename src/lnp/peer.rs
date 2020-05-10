@@ -15,14 +15,31 @@
 //! with it. Relies on transport layer (BOLT-8-based) protocol.
 
 use bitcoin::secp256k1;
+use std::sync::Arc;
+#[cfg(not(feature = "tokio"))]
+use std::sync::Mutex;
+#[cfg(feature = "tokio")]
+use tokio::sync::Mutex;
 
-use super::transport::*;
+use super::transport::{Connection, ConnectionError, ConnectionInput, ConnectionOutput, NodeAddr};
 
 pub struct Peer {
     pub node: NodeAddr,
     #[allow(dead_code)]
     connection: Connection,
-    _awaiting_pong: bool,
+    awaiting_pong: bool,
+}
+
+pub struct PeerInput {
+    pub node: NodeAddr,
+    pub connection: ConnectionInput,
+    awaiting_pong: Arc<Mutex<bool>>,
+}
+
+pub struct PeerOutput {
+    pub node: NodeAddr,
+    pub connection: ConnectionOutput,
+    awaiting_pong: Arc<Mutex<bool>>,
 }
 
 impl Peer {
@@ -35,13 +52,30 @@ impl Peer {
         Ok(Self {
             node,
             connection,
-            _awaiting_pong: false,
+            awaiting_pong: false,
         })
     }
 
     pub async fn send(&self, _msg: Message) -> Result<(), ConnectionError> {
         // TODO: Implement
         Ok(())
+    }
+
+    pub fn split(self) -> (PeerInput, PeerOutput) {
+        let (input, output) = self.connection.split();
+        let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
+        (
+            PeerInput {
+                node: self.node.clone(),
+                connection: input,
+                awaiting_pong: awaiting_pong.clone(),
+            },
+            PeerOutput {
+                node: self.node,
+                connection: output,
+                awaiting_pong,
+            },
+        )
     }
 }
 
