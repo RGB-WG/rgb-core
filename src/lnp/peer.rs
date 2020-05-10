@@ -14,6 +14,8 @@
 //! BOLT-1. Manages state of the remote peer and handles direct communications
 //! with it. Relies on transport layer (BOLT-8-based) protocol.
 
+use bitcoin::secp256k1;
+
 use super::transport::*;
 
 pub struct Peer {

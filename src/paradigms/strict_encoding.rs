@@ -58,15 +58,14 @@ pub trait StrictDecode: Sized {
 /// [StrictEncode] into a byte vector. To support this method a
 /// type must implement `From<strict_encode::Error>` for an error type
 /// provided as the associated type [StrictDecode::Error].
-pub fn strict_encode<T>(data: &T) -> Vec<u8>
+pub fn strict_encode<T>(data: &T) -> Result<Vec<u8>, T::Error>
 where
     T: StrictEncode,
     T::Error: std::error::Error + From<Error>,
 {
     let mut encoder = io::Cursor::new(vec![]);
-    data.strict_encode(&mut encoder)
-        .expect("In-memory strict ancode should not fail");
-    encoder.into_inner()
+    data.strict_encode(&mut encoder)?;
+    Ok(encoder.into_inner())
 }
 
 /// Convenience method for strict decoding of data structures implementing
@@ -839,12 +838,12 @@ mod test {
         let nearly_full: u8 = 0xFE;
         let full: u8 = 0xFF;
 
-        let byte_0 = [0u8];
-        let byte_1 = [1u8];
-        let byte_13 = [13u8];
-        let byte_ef = [0xEFu8];
-        let byte_fe = [0xFEu8];
-        let byte_ff = [0xFFu8];
+        let byte_0 = &[0u8][..];
+        let byte_1 = &[1u8][..];
+        let byte_13 = &[13u8][..];
+        let byte_ef = &[0xEFu8][..];
+        let byte_fe = &[0xFEu8][..];
+        let byte_ff = &[0xFFu8][..];
 
         assert_eq!(strict_encode(&zero).unwrap(), byte_0);
         assert_eq!(strict_encode(&one).unwrap(), byte_1);
@@ -895,13 +894,15 @@ mod test {
         let o7: Option<usize> = Some(13);
         let o8: Option<usize> = Some(0xFFFFFFFFFFFFFFFF);
 
-        let byte_0 = bytes![1u8, 0u8];
-        let byte_13 = bytes![1u8, 13u8];
-        let byte_255 = bytes![1u8, 0xFFu8];
-        let word_13 = bytes![1u8, 13u8, 0u8];
-        let qword_13 = bytes![1u8, 13u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
-        let qword_256 = bytes![1u8, 0xFFu8, 0x01u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
-        let qword_max = bytes![1u8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8];
+        let byte_0 = &[1u8, 0u8][..];
+        let byte_13 = &[1u8, 13u8][..];
+        let byte_255 = &[1u8, 0xFFu8][..];
+        let word_13 = &[1u8, 13u8, 0u8][..];
+        let qword_13 = &[1u8, 13u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8][..];
+        let qword_256 = &[1u8, 0xFFu8, 0x01u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8][..];
+        let qword_max = &[
+            1u8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8,
+        ][..];
 
         assert_eq!(strict_encode(&o1).unwrap(), byte_0);
         assert_eq!(strict_encode(&o2).unwrap(), byte_13);
@@ -935,13 +936,13 @@ mod test {
     /// fail with a specific error.
     #[test]
     fn test_option_decode_vec() {
-        assert!(Option::<u8>::strict_decode(&[2u8, 0u8, 0u8, 0u8])
+        assert!(Option::<u8>::strict_decode(&[2u8, 0u8, 0u8, 0u8][..])
             .err()
             .is_some());
-        assert!(Option::<u8>::strict_decode(&[3u8, 0u8, 0u8, 0u8])
+        assert!(Option::<u8>::strict_decode(&[3u8, 0u8, 0u8, 0u8][..])
             .err()
             .is_some());
-        assert!(Option::<u8>::strict_decode(&[0xFFu8, 0u8, 0u8, 0u8])
+        assert!(Option::<u8>::strict_decode(&[0xFFu8, 0u8, 0u8, 0u8][..])
             .err()
             .is_some());
     }
@@ -958,12 +959,12 @@ mod test {
         let v3: Vec<u64> = vec![0, 13, 13, 0x1FF, 0xFFFFFFFFFFFFFFFF];
         let v4: Vec<u8> = (0..0x1FFFF).map(|item| (item % 0xFF) as u8).collect();
 
-        let s1 = [3u8, 0u8, 0u8, 13u8, 0xFFu8];
-        let s2 = [1u8, 0u8, 13u8];
-        let s3 = [
+        let s1 = &[3u8, 0u8, 0u8, 13u8, 0xFFu8][..];
+        let s2 = &[1u8, 0u8, 13u8][..];
+        let s3 = &[
             5u8, 0u8, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0,
             0xFF, 1, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        ];
+        ][..];
 
         assert_eq!(strict_encode(&v1).unwrap(), s1);
         assert_eq!(strict_encode(&v2).unwrap(), s2);

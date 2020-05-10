@@ -66,7 +66,9 @@ impl Conceal for Revealed {
     type Confidential = Confidential;
 
     fn conceal(&self) -> Self::Confidential {
-        Confidential::hash(&strict_encode(self))
+        Confidential::hash(
+            &strict_encode(self).expect("Encoding of predefined data types must not fail"),
+        )
     }
 }
 impl CommitEncodeWithStrategy for Revealed {
@@ -75,8 +77,8 @@ impl CommitEncodeWithStrategy for Revealed {
 
 impl PartialEq for Revealed {
     fn eq(&self, other: &Self) -> bool {
-        let some = strict_encode(self);
-        let other = strict_encode(other);
+        let some = strict_encode(self).expect("Encoding of predefined data types must not fail");
+        let other = strict_encode(other).expect("Encoding of predefined data types must not fail");
         some.eq(&other)
     }
 }
@@ -85,8 +87,8 @@ impl Eq for Revealed {}
 
 impl PartialOrd for Revealed {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let some = strict_encode(self);
-        let other = strict_encode(other);
+        let some = strict_encode(self).expect("Encoding of predefined data types must not fail");
+        let other = strict_encode(other).expect("Encoding of predefined data types must not fail");
         some.partial_cmp(&other)
     }
 }
@@ -94,8 +96,10 @@ impl PartialOrd for Revealed {
 impl Ord for Revealed {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or_else(|| {
-            let some = strict_encode(self);
-            let other = strict_encode(other);
+            let some =
+                strict_encode(self).expect("Encoding of predefined data types must not fail");
+            let other =
+                strict_encode(other).expect("Encoding of predefined data types must not fail");
             some.cmp(&other)
         })
     }

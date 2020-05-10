@@ -23,6 +23,7 @@ use bitcoin::consensus::encode::{
 
 use super::{Error, Multipart};
 use crate::bp::ShortId;
+use crate::strategy::Holder;
 #[cfg(feature = "use-rgb")]
 use crate::csv::{self, network_deserialize, network_serialize};
 
@@ -40,7 +41,6 @@ where
 /// mutually-exclusive traits (required until negative trait impls will be there)
 /// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
 mod strategy {
-    use core::marker::PhantomData;
     use std::fmt;
 
     // Defining strategies:
@@ -65,7 +65,7 @@ mod strategy {
 }
 
 // 1.1. Auto impl for bitcoin-serialized types
-impl<T> MessageEncode for strategy::Holder<T, strategy::BitcoinConsensus>
+impl<T> MessageEncode for Holder<T, strategy::BitcoinConsensus>
 where
     T: bitcoin::consensus::encode::Encodable + bitcoin::consensus::encode::Decodable,
 {
@@ -80,7 +80,7 @@ where
 
 // 1.2. Auto impl for client-validation-serialized types
 #[cfg(feature = "use-rgb")]
-impl<T> MessageEncode for strategy::Holder<T, strategy::RGBStrategy>
+impl<T> MessageEncode for Holder<T, strategy::RGBStrategy>
 where
     T: csv::serialize::Network,
 {
@@ -94,7 +94,7 @@ where
 }
 
 // 1.3. Auto impl for types defining own Message serialization rules with TryFrom/Into
-impl<T> MessageEncode for strategy::Holder<T, strategy::Native>
+impl<T> MessageEncode for Holder<T, strategy::Native>
 where
     T: TryFrom<Message, Error = Error> + Into<Message>,
 {
@@ -111,14 +111,14 @@ where
 impl<T> MessageEncode for T
 where
     T: strategy::Other,
-    strategy::Holder<T, <T as strategy::Other>::Strategy>: MessageEncode,
+    Holder<T, <T as strategy::Other>::Strategy>: MessageEncode,
 {
-    type Error = <strategy::Holder<T, <T as strategy::Other>::Strategy> as MessageEncode>::Error;
+    type Error = <Holder<T, <T as strategy::Other>::Strategy> as MessageEncode>::Error;
     fn into_message(self) -> Message {
-        strategy::Holder::new(self).into_message()
+        Holder::new(self).into_message()
     }
     fn try_from_message(message: Message) -> Result<Self, Self::Error> {
-        Ok(strategy::Holder::try_from_message(message)?.into_inner())
+        Ok(Holder::try_from_message(message)?.into_inner())
     }
 }
 
