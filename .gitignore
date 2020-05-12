@@ -12,3 +12,5 @@ Cargo.lock
 .idea
 
 *.swp
+
+/dep_test

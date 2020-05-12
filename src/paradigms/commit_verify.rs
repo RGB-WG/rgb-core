@@ -55,7 +55,7 @@ where
 }
 
 /// Trait for *embed-commit-verify scheme*, where some data structure (named
-/// *container*) may commit to existing *message* (procucing *commitment* data
+/// *container*) may commit to existing *message* (producing *commitment* data
 /// structure) in such way that the original message can't be restored from the
 /// commitment, however the fact of the commitment may be deterministically
 /// checked when the message is *revealed* against the original container.
