@@ -11,16 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-///! Module that systematizes all Lightning network-related APIs from the
-///! `lightning` library into layered & modular design
-mod peer;
-pub mod presentation;
-mod session;
-pub mod transport;
+use crate::AsAny;
 
-pub use peer::*;
-pub use session::{ConnectionError, NodeAddr};
+pub type TypeId = u64;
 
-pub use lightning::ln::LN_MAX_MSG_LEN as LNP_MSG_MAX_LEN;
+pub trait Message: AsAny {
+    fn type_id() -> TypeId
+    where
+        Self: Sized;
+}
 
-pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;
+pub struct BaseMessage<T> {
+    pub type_id: TypeId,
+    pub payload: T,
+    // pub unknown_tlvs: TlvStream,
+}

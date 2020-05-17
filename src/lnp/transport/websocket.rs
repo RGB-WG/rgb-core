@@ -10,17 +10,3 @@
 // You should have received a copy of the MIT License
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
-
-///! Module that systematizes all Lightning network-related APIs from the
-///! `lightning` library into layered & modular design
-mod peer;
-pub mod presentation;
-mod session;
-pub mod transport;
-
-pub use peer::*;
-pub use session::{ConnectionError, NodeAddr};
-
-pub use lightning::ln::LN_MAX_MSG_LEN as LNP_MSG_MAX_LEN;
-
-pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;

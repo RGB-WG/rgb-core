@@ -21,7 +21,8 @@ use std::sync::Mutex;
 #[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
-use super::transport::{Connection, ConnectionError, ConnectionInput, ConnectionOutput, NodeAddr};
+use super::presentation::Message;
+use super::session::{Connection, ConnectionError, ConnectionInput, ConnectionOutput, NodeAddr};
 
 pub struct Peer {
     pub node: NodeAddr,
@@ -56,7 +57,7 @@ impl Peer {
         })
     }
 
-    pub async fn send(&self, _msg: Message) -> Result<(), ConnectionError> {
+    pub async fn send(&self, _msg: &dyn Message) -> Result<(), ConnectionError> {
         // TODO: Implement
         Ok(())
     }
@@ -78,16 +79,3 @@ impl Peer {
         )
     }
 }
-
-pub struct TLV();
-
-pub struct MessageType(pub u16);
-
-/// Generic LNP message as defined in BOLT-1
-pub struct Message {
-    pub type_id: MessageType,
-    pub payload: Vec<u8>,
-    pub extension: TLV,
-}
-
-pub trait Messageable: From<Message> + Into<Message> {}

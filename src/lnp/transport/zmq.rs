@@ -11,16 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-///! Module that systematizes all Lightning network-related APIs from the
-///! `lightning` library into layered & modular design
-mod peer;
-pub mod presentation;
-mod session;
-pub mod transport;
+use super::{Error, Message};
+use core::convert::TryFrom;
 
-pub use peer::*;
-pub use session::{ConnectionError, NodeAddr};
+impl Message {
+    pub fn read_zmq(socket: zmq::Socket) -> Result<Self, Error> {
+        Self::try_from(socker.recv_multipart(0)?.into_iter().flatten())
+    }
+}
 
-pub use lightning::ln::LN_MAX_MSG_LEN as LNP_MSG_MAX_LEN;
+impl TryFrom<Vec<u8>> for Message {
+    type Error = Error;
 
-pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;
+    /// Converting binary data into LN message according to
+    /// and LNPBP-19
+    fn try_from(data: Vec<u8>) -> Result<Self, Self::Error> {}
+}
