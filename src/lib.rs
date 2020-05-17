@@ -90,7 +90,7 @@ pub mod lnp;
 #[cfg(feature = "rgb")]
 pub mod rgb;
 #[cfg(feature = "zmq")]
-pub mod api;
+pub mod rpc;
 
 pub use common::*;
 pub use lnpbps::*;
