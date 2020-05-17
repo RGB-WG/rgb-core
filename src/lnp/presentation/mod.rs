@@ -19,3 +19,10 @@ pub mod tlv;
 pub use encoding::{Decode, Encode, Unmarshall, UnmarshallFn};
 pub use error::Error;
 pub use message::Message;
+
+use crate::Wrapper;
+
+pub trait EvenOdd: Wrapper {
+    fn is_odd(&self) -> bool;
+    fn is_even(&self) -> bool;
+}

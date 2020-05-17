@@ -19,15 +19,15 @@ mod macros;
 #[macro_use]
 pub(crate) mod convert;
 #[macro_use]
-pub mod wrapper;
+mod wrapper;
 mod as_any;
 pub mod internet;
 #[cfg(feature = "serde")]
 pub(crate) mod serde;
 #[cfg(feature = "daemons")]
-pub mod service;
+mod service;
 
 pub use as_any::AsAny;
 #[cfg(feature = "node")]
-pub use service::*;
-pub use wrapper::*;
+pub use service::{Service, TryService};
+pub use wrapper::Wrapper;

@@ -17,6 +17,7 @@ use super::{
     Container, Error, Proof, ScriptInfo, ScriptPubkeyComposition, TxoutCommitment, TxoutContainer,
 };
 use crate::commit_verify::EmbedCommitVerify;
+use crate::Wrapper;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]

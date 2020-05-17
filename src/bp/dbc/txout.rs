@@ -19,6 +19,7 @@ use super::{
 };
 use crate::bp::PubkeyScript;
 use crate::commit_verify::EmbedCommitVerify;
+use crate::Wrapper;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]

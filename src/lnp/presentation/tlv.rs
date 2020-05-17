@@ -12,18 +12,19 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::any::Any;
-use std::collections::{btree_map, BTreeMap};
+use std::collections::BTreeMap;
 use std::io;
 use std::sync::Arc;
 
 use lightning::util::ser::{BigSize, Readable};
 
-use super::{Error, Unmarshall, UnmarshallFn};
+use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
 use crate::lnp::LNP_MSG_MAX_LEN;
+use crate::Wrapper;
 use lightning::ln::msgs::DecodeError;
 
 wrapper!(
-    TypeId,
+    Type,
     u64,
     doc = "TLV type field value",
     derive = [Copy, PartialEq, Eq, PartialOrd, Ord, Hash]
@@ -35,41 +36,41 @@ wrapper!(
     derive = [PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 
-impl TypeId {
+impl EvenOdd for Type {
     #[inline]
-    pub fn is_even(&self) -> bool {
-        self.0 % 2 == 0
+    fn is_odd(&self) -> bool {
+        !self.is_even()
     }
 
     #[inline]
-    pub fn is_odd(&self) -> bool {
-        !self.is_even()
+    fn is_even(&self) -> bool {
+        self.as_inner() % 2 == 0
     }
 }
 
 #[derive(Debug, Display, Default)]
 #[display_from(Debug)]
-pub struct Stream(BTreeMap<TypeId, Arc<dyn Any>>);
+pub struct Stream(BTreeMap<Type, Arc<dyn Any>>);
 
 impl Stream {
+    #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn get<T: Any>(&self, type_id: &TypeId) -> Option<&T> {
+    #[inline]
+    pub fn get<T: Any>(&self, type_id: &Type) -> Option<&T> {
         self.0.get(type_id).and_then(|v| v.downcast_ref::<T>())
     }
 
-    pub fn insert(&mut self, type_id: TypeId, value: Arc<dyn Any>) -> bool {
-        self.0.insert(type_id, value).is_none()
+    #[inline]
+    pub fn insert<T: Any>(&mut self, type_id: Type, value: T) -> bool {
+        self.0.insert(type_id, Arc::new(value)).is_none()
     }
 
-    pub fn contains_key(&self, type_id: &TypeId) -> bool {
+    #[inline]
+    pub fn contains_key(&self, type_id: &Type) -> bool {
         self.0.contains_key(type_id)
-    }
-
-    pub fn entry(&mut self, type_id: TypeId) -> btree_map::Entry<TypeId, Arc<dyn Any>> {
-        self.0.entry(type_id)
     }
 }
 
@@ -77,7 +78,7 @@ pub struct Unmarshaller<R>
 where
     R: io::Read,
 {
-    known_types: BTreeMap<TypeId, UnmarshallFn<R, Error>>,
+    known_types: BTreeMap<Type, UnmarshallFn<R, Error>>,
     raw_parser: UnmarshallFn<R, Error>,
 }
 
@@ -89,9 +90,9 @@ where
 
     fn unmarshall(&self, mut reader: R) -> Result<Stream, Self::Error> {
         let mut tlv = Stream::new();
-        let mut prev_type_id = TypeId(0);
+        let mut prev_type_id = Type(0);
         loop {
-            match BigSize::read(&mut reader).map(|big_size| TypeId(big_size.0)) {
+            match BigSize::read(&mut reader).map(|big_size| Type(big_size.0)) {
                 // if zero bytes remain before parsing a type
                 // MUST stop parsing the tlv_stream
                 Err(DecodeError::ShortRead) => break Ok(tlv),

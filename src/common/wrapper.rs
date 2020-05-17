@@ -11,7 +11,27 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub trait Wrapper {
+    type Inner: Clone;
+
+    /// Instantiates wrapper type with the inner data
+    fn from_inner(inner: Self::Inner) -> Self;
+
+    /// Returns reference to the inner representation for the wrapper type
+    fn as_inner(&self) -> &Self::Inner;
+
+    /// Clones inner data of the wrapped type and return them
+    #[inline]
+    fn to_inner(&self) -> Self::Inner {
+        self.as_inner().clone()
+    }
+
+    /// Unwraps the wrapper returning the inner type
+    fn into_inner(self) -> Self::Inner;
+}
+
 // TODO: Add generic support to the wrapper
+// TODO: Convert to derive macro
 #[macro_export]
 macro_rules! wrapper {
     ($name:ident, $from:ty, $docs:meta, derive=[$( $derive:ident ),+]) => {
@@ -20,23 +40,21 @@ macro_rules! wrapper {
         $( #[derive($derive)] )+
         pub struct $name($from);
 
-        impl $name {
-            pub fn from_inner(inner: $from) -> Self {
+        impl crate::common::Wrapper for $name {
+            type Inner = $from;
+
+            #[inline]
+            fn from_inner(inner: $from) -> Self {
                 Self(inner)
             }
 
-            /// Returns reference to the inner representation for the wrapper type
-            pub fn as_inner(&self) -> &$from {
+            #[inline]
+            fn as_inner(&self) -> &$from {
                 &self.0
             }
 
-            /// Clones inner data of the wrapped type and return them
-            pub fn to_inner(&self) -> $from {
-                self.0.clone()
-            }
-
-            /// Unwraps the wrapper returning the inner type
-            pub fn into_inner(self) -> $from {
+            #[inline]
+            fn into_inner(self) -> $from {
                 self.0
             }
         }
@@ -45,6 +63,27 @@ macro_rules! wrapper {
             #[inline]
             fn as_ref(&self) -> &$from {
                 &self.0
+            }
+        }
+
+        impl ::core::convert::AsMut<$from> for $name {
+            #[inline]
+            fn as_mut(&mut self) -> &mut $from {
+                &mut self.0
+            }
+        }
+
+        impl ::core::borrow::Borrow<$from> for $name {
+            #[inline]
+            fn borrow(&self) -> &$from {
+                &self.0
+            }
+        }
+
+        impl ::core::borrow::BorrowMut<$from> for $name {
+            #[inline]
+            fn borrow_mut(&mut self) -> &mut $from {
+                &mut self.0
             }
         }
 

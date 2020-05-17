@@ -95,6 +95,8 @@ use bitcoin::{
 };
 use core::convert::TryFrom;
 
+use crate::Wrapper;
+
 wrapper!(
     LockScript,
     Script,

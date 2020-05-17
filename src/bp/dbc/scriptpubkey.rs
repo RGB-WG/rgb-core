@@ -21,6 +21,7 @@ use super::{
 };
 use crate::bp::{GenerateScripts, LockScript, PubkeyScript, ScriptPubkeyDescriptor, Strategy};
 use crate::commit_verify::EmbedCommitVerify;
+use crate::Wrapper;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
