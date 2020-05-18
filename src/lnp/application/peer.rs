@@ -21,8 +21,10 @@ use std::sync::Mutex;
 #[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
-use super::presentation::Message;
-use super::session::{Connection, ConnectionError, ConnectionInput, ConnectionOutput, NodeAddr};
+use crate::lnp::presentation::Message;
+use crate::lnp::session::{
+    Connection, ConnectionError, ConnectionInput, ConnectionOutput, NodeAddr,
+};
 
 pub struct Peer {
     pub node: NodeAddr,
