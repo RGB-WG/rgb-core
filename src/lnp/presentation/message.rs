@@ -18,10 +18,11 @@ use std::io;
 use std::sync::Arc;
 
 use super::tlv;
-use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
-use crate::common::AsAny;
+use super::{Encode, Error, EvenOdd, Unmarshall, UnmarshallFn};
+use crate::common::{AsAny, Wrapper};
 use crate::lnp::presentation::tlv::Stream;
-use crate::strict_encoding::StrictDecode;
+use crate::strict_encoding::{StrictDecode, StrictEncode};
+use std::io::Write;
 
 wrapper!(
     Type,
@@ -80,6 +81,20 @@ impl Message for RawMessage {
 
     fn get_tlvs(&self) -> Stream {
         Stream::new()
+    }
+}
+
+impl Encode for RawMessage {
+    type Error = Error;
+
+    fn encode(&self, mut e: &mut impl Write) -> Result<usize, Self::Error> {
+        let mut len = 0usize;
+        self.type_id
+            .to_inner()
+            .strict_encode(&mut e)
+            .map_err(|_| Error::Io)?;
+        len += e.write(&self.payload)?;
+        Ok(len)
     }
 }
 
