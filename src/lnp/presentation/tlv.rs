@@ -16,10 +16,9 @@ use std::collections::BTreeMap;
 use std::io;
 use std::sync::Arc;
 
-use lightning::util::ser::{BigSize, Readable, Writeable};
+use lightning::util::ser::{BigSize, Readable};
 
-use super::{Encode, Error, EvenOdd, Unmarshall, UnmarshallFn};
-use crate::common::Wrapper;
+use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
 use crate::lnp::LNP_MSG_MAX_LEN;
 use lightning::ln::msgs::DecodeError;
 
@@ -61,28 +60,6 @@ impl Stream {
     #[inline]
     pub fn contains_key(&self, type_id: &Type) -> bool {
         self.0.contains_key(type_id)
-    }
-}
-
-impl<E> Encode<E> for Stream
-where
-    E: io::Write + 'static,
-{
-    type Error = Error;
-
-    fn encode(&self, mut e: E) -> Result<usize, Self::Error> {
-        self.0.iter().try_fold(0usize, |mut len, (type_id, item)| {
-            let buf: Vec<u8> = vec![];
-            let mut tmp = io::Cursor::new(buf);
-            BigSize(type_id.to_inner()).write(&mut tmp)?;
-            len += tmp.position() as usize;
-            BigSize(type_id.to_inner()).write(&mut e)?;
-            len += item
-                .downcast_ref::<Arc<dyn Encode<E, Error = Self::Error>>>()
-                .ok_or(Error::NoEncoder)?
-                .encode(e)?;
-            Ok(len)
-        })
     }
 }
 
