@@ -15,6 +15,9 @@
 
 use std::any::Any;
 
+// TODO: We can't do a default implementation with current rust compiler
+//       limitations, but we can do a derive macro for an automatic
+//       implementation of the trait, which is trivial
 pub trait AsAny {
     fn as_any(&self) -> &dyn Any;
 }

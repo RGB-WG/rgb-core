@@ -16,8 +16,10 @@ use lightning::ln::msgs::DecodeError;
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
 #[display_from(Debug)]
 pub enum Error {
+    #[derive_from(std::io::Error)]
     Io,
     NoData,
+    NoEncoder,
     UnknownProtocolVersion,
     InvalidValue,
     MessageEvenType,

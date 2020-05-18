@@ -21,8 +21,21 @@ pub use error::Error;
 pub use message::Message;
 
 use crate::Wrapper;
+use core::ops::Rem;
 
-pub trait EvenOdd: Wrapper {
-    fn is_odd(&self) -> bool;
-    fn is_even(&self) -> bool;
+pub trait EvenOdd
+where
+    Self: Wrapper,
+    Self::Inner: Rem + From<u8>,
+    <Self::Inner as Rem>::Output: Eq + From<u8>,
+{
+    #[inline]
+    fn is_odd(&self) -> bool {
+        !self.is_even()
+    }
+
+    #[inline]
+    fn is_even(&self) -> bool {
+        self.to_inner() % 2.into() == 0.into()
+    }
 }

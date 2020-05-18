@@ -15,13 +15,21 @@ use core::any::Any;
 use std::io;
 use std::sync::Arc;
 
-pub trait Encode {
-    fn encode<E: io::Write>(&self, e: E) -> usize;
+pub trait Encode<E>
+where
+    E: io::Write,
+{
+    type Error: std::error::Error;
+    fn encode(&self, e: E) -> Result<usize, Self::Error>;
 }
 
-pub trait Decode: Sized {
+pub trait Decode<D>
+where
+    Self: Sized,
+    D: io::Read,
+{
     type Error: std::error::Error;
-    fn decode<D: io::Read>(d: D) -> Result<Self, Self::Error>;
+    fn decode(d: D) -> Result<Self, Self::Error>;
 }
 
 pub trait Unmarshall<R, T>

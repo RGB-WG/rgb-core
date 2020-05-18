@@ -20,7 +20,6 @@ use lightning::util::ser::{BigSize, Readable};
 
 use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
 use crate::lnp::LNP_MSG_MAX_LEN;
-use crate::Wrapper;
 use lightning::ln::msgs::DecodeError;
 
 wrapper!(
@@ -36,17 +35,7 @@ wrapper!(
     derive = [PartialEq, Eq, PartialOrd, Ord, Hash]
 );
 
-impl EvenOdd for Type {
-    #[inline]
-    fn is_odd(&self) -> bool {
-        !self.is_even()
-    }
-
-    #[inline]
-    fn is_even(&self) -> bool {
-        self.as_inner() % 2 == 0
-    }
-}
+impl EvenOdd for Type {}
 
 #[derive(Debug, Display, Default)]
 #[display_from(Debug)]
