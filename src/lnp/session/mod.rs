@@ -17,6 +17,7 @@
 mod connection;
 mod node_addr;
 mod node_locator;
+mod transcoders;
 
 pub use connection::{Connection, ConnectionError, ConnectionInput, ConnectionOutput};
 pub use node_addr::NodeAddr;
