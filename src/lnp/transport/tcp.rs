@@ -11,18 +11,32 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{Error, Read, Write};
 use core::borrow::Borrow;
 
-impl Read for zmq::Socket {
+/*
+#[cfg(feature = "tokio")]
+use tokio::io::AsyncReadExt;
+#[cfg(feature = "tokio")]
+use tokio::io::AsyncWriteExt;
+#[cfg(feature = "tokio")]
+use tokio::net::TcpStream;
+ */
+
+use std::io::{Read as IoRead, Write as IoWrite};
+
+use super::{Error, Read, Write};
+
+impl Read for dyn AsRef<::std::net::TcpStream> {
     fn read(&mut self) -> Result<Vec<u8>, Error> {
-        Ok(self.recv_bytes(0)?)
+        let mut buf: Vec<u8> = vec![];
+        self.as_ref().read_to_end(&mut buf)?;
+        Ok(buf)
     }
 }
 
-impl Write for zmq::Socket {
+impl Write for dyn AsRef<::std::net::TcpStream> {
     fn write(&mut self, data: impl Borrow<[u8]>) -> Result<usize, Error> {
-        self.send(data.borrow(), 0)?;
+        self.as_ref().write_all(data.borrow())?;
         Ok(data.borrow().len())
     }
 }

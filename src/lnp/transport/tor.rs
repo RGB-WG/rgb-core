@@ -10,10 +10,3 @@
 // You should have received a copy of the MIT License
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
-
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
-#[display_from(Debug)]
-pub enum Error {
-    #[derive_from(zmq::Error, std::io::Error)]
-    SocketError,
-}

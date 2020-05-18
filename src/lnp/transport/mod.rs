@@ -12,9 +12,31 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 mod error;
-pub mod ln;
+pub mod tcp;
 pub mod websocket;
-//pub mod zmq;
+pub mod zmq;
 
 //pub(self) use super::Message;
 pub use error::Error;
+
+use core::borrow::Borrow;
+
+pub trait Read {
+    fn read(&mut self) -> Result<Vec<u8>, Error>;
+}
+
+pub trait Write {
+    fn write(&mut self, data: impl Borrow<[u8]>) -> Result<usize, Error>;
+}
+
+#[cfg(feature = "tokio")]
+#[async_trait]
+pub trait AsyncRead {
+    async fn read(&mut self) -> Result<Vec<u8>, Error>;
+}
+
+#[cfg(feature = "tokio")]
+#[async_trait]
+pub trait AsyncWrite {
+    async fn write(&mut self, data: impl Borrow<[u8]>) -> Result<usize, Error>;
+}
