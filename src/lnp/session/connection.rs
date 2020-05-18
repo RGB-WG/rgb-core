@@ -169,7 +169,7 @@ impl Connection {
     #[cfg(feature = "tokio")]
     pub fn split(self) -> (ConnectionInput, ConnectionOutput) {
         let (istream, ostream) = self.stream.into_split();
-        let (encryptor, decryptor) = self.transcoder.split();
+        let (encryptor, decryptor) = self.transcoder.split_raw();
         (
             ConnectionInput {
                 istream,

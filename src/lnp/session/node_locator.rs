@@ -20,29 +20,8 @@ use url::Url;
 use bitcoin::secp256k1;
 
 use super::NodeAddr;
-use crate::common::internet::InetSocketAddr;
-use crate::internet::InetAddr;
-
-/// API type for node-to-node communications used by ZeroMQ
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
-#[repr(u8)]
-pub enum ZmqType {
-    /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ sockets.
-    /// Each node can send unordered set of messages and does not wait for a
-    /// response.
-    P2p = 0,
-
-    /// Remote procedure call communications done with REQ/REP pair of ZMQ
-    /// sockets. Two roles: client and server; client sends requests and awaits
-    /// for client responses.
-    Rpc = 1,
-
-    /// Subscription API done with SUB/PUB pair of ZMQ sockets. Two roles:
-    /// publisher (server) and subscriber (client); subscriber awaits for
-    /// messages from publisher and does not communicates back.
-    Sub = 2,
-}
+use crate::internet::{InetAddr, InetSocketAddr};
+use crate::lnp::transport::zmq::ApiType as ZmqType;
 
 /// Universal Node Locator (from LNPBP-19)
 /// NB: DNS addressing is not used since it is considered insecure in terms of

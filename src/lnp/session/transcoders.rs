@@ -43,7 +43,7 @@ pub struct DecryptionError;
 
 impl Encrypt for Encryptor {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
-        unimplemented!()
+        self.encrypt_buf(buffer.borrow())
     }
 }
 
@@ -51,13 +51,27 @@ impl Decrypt for Decryptor {
     type Error = DecryptionError;
 
     fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error> {
-        unimplemented!()
+        match self.decrypt_buf(buffer.borrow()) {
+            (Some(data), _) => Ok(data),
+            (None, _) => Err(DecryptionError),
+        }
     }
 }
 
 impl Encrypt for Transcoder {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
-        unimplemented!()
+        self.encrypt_buf(buffer.borrow())
+    }
+}
+
+impl Decrypt for Transcoder {
+    type Error = DecryptionError;
+
+    fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error> {
+        match self.decrypt_buf(buffer.borrow()) {
+            (Some(data), _) => Ok(data),
+            (None, _) => Err(DecryptionError),
+        }
     }
 }
 
@@ -66,19 +80,11 @@ impl Transcode for Transcoder {
     type Decryptor = Decryptor;
 
     fn join(encryptor: Self::Encryptor, decryptor: Self::Decryptor) -> Self {
-        unimplemented!()
+        Self::join_raw(encryptor, decryptor)
     }
 
     fn split(self) -> (Self::Encryptor, Self::Decryptor) {
-        unimplemented!()
-    }
-}
-
-impl Decrypt for Transcoder {
-    type Error = DecryptionError;
-
-    fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error> {
-        unimplemented!()
+        self.split_raw()
     }
 }
 
