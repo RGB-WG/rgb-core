@@ -98,6 +98,25 @@ impl Encode for RawMessage {
     }
 }
 
+pub trait EncodeRaw
+where
+    RawMessage: From<Self>,
+    Self: Sized + Clone,
+{
+}
+
+impl<T> Encode for T
+where
+    T: EncodeRaw,
+    RawMessage: From<T>,
+{
+    type Error = Error;
+
+    fn encode(&self, e: &mut impl Write) -> Result<usize, Self::Error> {
+        RawMessage::from(self.clone()).encode(e)
+    }
+}
+
 pub struct Unmarshaller<R>
 where
     R: io::Read,
