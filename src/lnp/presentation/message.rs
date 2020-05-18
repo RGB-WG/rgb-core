@@ -18,10 +18,10 @@ use std::io;
 use std::sync::Arc;
 
 use super::tlv;
-use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
-use crate::common::AsAny;
+use super::{Encode, Error, EvenOdd, Unmarshall, UnmarshallFn};
+use crate::common::{AsAny, Wrapper};
 use crate::lnp::presentation::tlv::Stream;
-use crate::strict_encoding::StrictDecode;
+use crate::strict_encoding::{StrictDecode, StrictEncode};
 
 wrapper!(
     Type,
@@ -35,6 +35,23 @@ impl EvenOdd for Type {}
 #[derive(Debug, Display, Default)]
 #[display_from(Debug)]
 pub struct Payload(Vec<Arc<dyn Any>>);
+
+impl<E> Encode<E> for Payload
+where
+    E: io::Write + 'static,
+{
+    type Error = Error;
+
+    fn encode(&self, e: E) -> Result<usize, Self::Error> {
+        self.0.into_iter().try_fold(0usize, |mut len, item| {
+            let rec = item
+                .downcast_ref::<Arc<dyn Encode<E, Error = Self::Error>>>()
+                .ok_or(Error::NoEncoder)?;
+            len += rec.encode(e)?;
+            Ok(len)
+        })
+    }
+}
 
 pub trait Message: AsAny {
     fn get_type(&self) -> Type;
@@ -81,6 +98,25 @@ impl Message for RawMessage {
 
     fn get_tlvs(&self) -> Stream {
         Stream::new()
+    }
+}
+
+impl<T, E> Encode<E> for T
+where
+    T: Message,
+    E: io::Write + 'static,
+{
+    type Error = Error;
+
+    fn encode(&self, mut e: E) -> Result<usize, Self::Error> {
+        let mut len = self
+            .get_type()
+            .as_inner()
+            .strict_encode(&mut e)
+            .map_err(|_| Error::Io)?;
+        len += self.get_payload().encode(&mut e)?;
+        len += self.get_tlvs().encode(e)?;
+        Ok(len)
     }
 }
 
