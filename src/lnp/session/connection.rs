@@ -23,7 +23,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{tcp, TcpStream};
 
 #[cfg(not(feature = "tokio"))]
-use std::io::{Read, Write};
+use std::io::{Read as IoRead, Write as IoWrite};
 #[cfg(not(feature = "tokio"))]
 use std::net::TcpStream;
 
@@ -34,6 +34,7 @@ use lightning::ln::peers::handshake::PeerHandshake;
 
 use super::NodeAddr;
 use super::MAX_TRANSPORT_FRAME_SIZE;
+//use crate::lnp::transport::{Read, Write};
 
 #[derive(Debug, Display)]
 #[display_from(Debug)]

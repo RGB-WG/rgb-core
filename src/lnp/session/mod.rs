@@ -16,8 +16,10 @@
 
 mod connection;
 mod node_addr;
+mod node_locator;
 
 pub use connection::{Connection, ConnectionError, ConnectionInput, ConnectionOutput};
 pub use node_addr::NodeAddr;
+pub use node_locator::NodeLocator;
 
 pub const MAX_TRANSPORT_FRAME_SIZE: usize = 65569;

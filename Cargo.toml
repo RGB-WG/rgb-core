@@ -44,6 +44,7 @@ log = { version = "~0.4.8", features = ["max_level_trace", "release_max_level_de
 zmq = { version = "~0.9.2", optional = true }
 parse_arg = { version = "~0.1.4", optional = true }
 petgraph = { version = "~0.5.0", optional = true }
+url = { version = "~2.1.1", optional = true }
 # This strange naming is a workaround for not being able to define required features for a dependency
 # See https://github.com/rust-lang/api-guidelines/issues/180 for the explanation and references.
 serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
