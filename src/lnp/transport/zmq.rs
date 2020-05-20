@@ -16,6 +16,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use super::{Bidirect, Error, Input, Output, Read, Write};
+use crate::Bipolar;
 
 /// API type for node-to-node communications used by ZeroMQ
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
@@ -114,12 +115,17 @@ impl Output for Connection {
 impl Bidirect for Connection {
     type Input = InputStream;
     type Output = OutputStream;
+}
 
-    fn split(self) -> (Self::Input, Self::Output) {
+impl Bipolar for Connection {
+    type Left = <Self as Bidirect>::Input;
+    type Right = <Self as Bidirect>::Output;
+
+    fn split(self) -> (Self::Left, Self::Right) {
         (self.input, self.output)
     }
 
-    fn join(input: Self::Input, output: Self::Output) -> Self {
+    fn join(input: Self::Left, output: Self::Right) -> Self {
         Self { input, output }
     }
 }

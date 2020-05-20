@@ -45,6 +45,8 @@ extern crate num_traits;
 pub extern crate rand;
 #[macro_use]
 pub extern crate bitcoin;
+#[cfg(feature = "url")]
+extern crate url;
 
 // Logging
 #[cfg(feature = "log")]

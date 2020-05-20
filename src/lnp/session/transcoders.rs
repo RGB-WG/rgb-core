@@ -16,6 +16,8 @@ use std::borrow::Borrow;
 use lightning::ln::peers::conduit::{Conduit as Transcoder, Decryptor, Encryptor};
 //use lightning::ln::peers::handshake::PeerHandshake;
 
+use crate::Bipolar;
+
 pub trait Encrypt {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8>;
 }
@@ -26,15 +28,9 @@ pub trait Decrypt {
     fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error>;
 }
 
-pub trait Transcode {
+pub trait Transcode: Bipolar {
     type Encryptor: Encrypt;
     type Decryptor: Decrypt;
-
-    /// Creates conduit by joining encrypting and decrypting parts
-    fn join(encryptor: Self::Encryptor, decryptor: Self::Decryptor) -> Self;
-
-    /// Splits conduit into an encrypting and decrypting parts
-    fn split(self) -> (Self::Encryptor, Self::Decryptor);
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
@@ -78,12 +74,19 @@ impl Decrypt for Transcoder {
 impl Transcode for Transcoder {
     type Encryptor = Encryptor;
     type Decryptor = Decryptor;
+}
 
-    fn join(encryptor: Self::Encryptor, decryptor: Self::Decryptor) -> Self {
+impl Bipolar for Transcoder {
+    type Left = <Self as Transcode>::Encryptor;
+    type Right = <Self as Transcode>::Decryptor;
+
+    /// Creates conduit by joining encrypting and decrypting parts
+    fn join(encryptor: Self::Left, decryptor: Self::Right) -> Self {
         Self::join_raw(encryptor, decryptor)
     }
 
-    fn split(self) -> (Self::Encryptor, Self::Decryptor) {
+    /// Splits conduit into an encrypting and decrypting parts
+    fn split(self) -> (Self::Left, Self::Right) {
         self.split_raw()
     }
 }
@@ -108,12 +111,17 @@ impl Decrypt for NoEncryption {
 impl Transcode for NoEncryption {
     type Encryptor = Self;
     type Decryptor = Self;
+}
 
-    fn join(encryptor: Self::Encryptor, decryptor: Self::Decryptor) -> Self {
+impl Bipolar for NoEncryption {
+    type Left = <Self as Transcode>::Encryptor;
+    type Right = <Self as Transcode>::Decryptor;
+
+    fn join(encryptor: Self::Left, decryptor: Self::Right) -> Self {
         encryptor as NoEncryption
     }
 
-    fn split(self) -> (Self::Encryptor, Self::Decryptor) {
+    fn split(self) -> (Self::Left, Self::Right) {
         (self.clone(), self)
     }
 }

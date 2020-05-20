@@ -15,12 +15,17 @@
 //! transport layer
 
 mod connection;
+mod local_node;
 mod node_addr;
 mod node_locator;
+mod session;
 mod transcoders;
 
 pub use connection::{Connection, ConnectionError, ConnectionInput, ConnectionOutput};
+pub use local_node::LocalNode;
 pub use node_addr::NodeAddr;
 pub use node_locator::NodeLocator;
+pub use session::{Inbound, Outbound, Session, SessionTrait};
+pub use transcoders::{Decrypt, DecryptionError, Encrypt, NoEncryption, Transcode};
 
 pub const MAX_TRANSPORT_FRAME_SIZE: usize = 65569;
