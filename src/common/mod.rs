@@ -30,6 +30,6 @@ mod service;
 
 pub use as_any::AsAny;
 pub use bipolar::Bipolar;
-#[cfg(feature = "node")]
+#[cfg(feature = "daemons")]
 pub use service::{Service, TryService};
 pub use wrapper::Wrapper;

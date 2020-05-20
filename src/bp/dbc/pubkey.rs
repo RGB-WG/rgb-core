@@ -180,6 +180,7 @@ mod test {
     use super::*;
     use crate::bp::test::*;
     use crate::commit_verify::test::*;
+    use crate::Wrapper;
     use bitcoin::hashes::{hex::ToHex, sha256};
     use bitcoin::secp256k1;
     use std::str::FromStr;
