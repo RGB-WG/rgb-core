@@ -28,9 +28,10 @@ where
     fn decode(d: &mut impl io::Read) -> Result<Self, Self::Error>;
 }
 
-pub trait Unmarshall<T> {
+pub trait Unmarshall {
+    type Data;
     type Error: std::error::Error;
-    fn unmarshall(&self, reader: &mut impl io::Read) -> Result<T, Self::Error>;
+    fn unmarshall(&self, reader: &mut impl io::Read) -> Result<Self::Data, Self::Error>;
 }
 
 pub type UnmarshallFn<E: ::std::error::Error> =

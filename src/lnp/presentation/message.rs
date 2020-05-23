@@ -13,6 +13,7 @@
 
 use core::any::Any;
 use core::convert::TryInto;
+use core::marker::PhantomData;
 use std::collections::BTreeMap;
 use std::io;
 use std::sync::Arc;
@@ -117,31 +118,51 @@ where
     }
 }
 
-pub struct Unmarshaller {
-    known_types: BTreeMap<Type, UnmarshallFn<Error>>,
+pub trait TypedEnum {
+    fn from_type(type_id: Type, data: &dyn Any) -> Self;
+    fn get_type(&self) -> Type;
 }
 
-impl Unmarshall<Arc<dyn Any>> for Unmarshaller {
+pub struct Unmarshaller<T>
+where
+    T: TypedEnum,
+{
+    known_types: BTreeMap<Type, UnmarshallFn<Error>>,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> Unmarshall for Unmarshaller<T>
+where
+    T: TypedEnum,
+{
+    type Data = Arc<T>;
     type Error = Error;
 
-    fn unmarshall(&self, mut reader: &mut impl io::Read) -> Result<Arc<dyn Any>, Self::Error> {
+    fn unmarshall(&self, mut reader: &mut impl io::Read) -> Result<Self::Data, Self::Error> {
         let type_id = Type(u16::strict_decode(&mut reader).map_err(|_| Error::NoData)?);
         match self.known_types.get(&type_id) {
             None if type_id.is_even() => Err(Error::MessageEvenType),
             None => {
                 let mut payload = Vec::new();
                 reader.read_to_end(&mut payload)?;
-                Ok(Arc::new(RawMessage { type_id, payload }))
+                Ok(Arc::new(T::from_type(
+                    type_id,
+                    &RawMessage { type_id, payload },
+                )))
             }
-            Some(parser) => parser(&mut reader),
+            Some(parser) => parser(&mut reader).map(|data| Arc::new(T::from_type(type_id, &*data))),
         }
     }
 }
 
-impl Unmarshaller {
+impl<T> Unmarshaller<T>
+where
+    T: TypedEnum,
+{
     pub fn new() -> Self {
         Self {
             known_types: BTreeMap::new(),
+            _phantom: PhantomData,
         }
     }
 }

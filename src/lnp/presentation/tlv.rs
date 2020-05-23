@@ -68,7 +68,8 @@ pub struct Unmarshaller {
     raw_parser: UnmarshallFn<Error>,
 }
 
-impl Unmarshall<Stream> for Unmarshaller {
+impl Unmarshall for Unmarshaller {
+    type Data = Stream;
     type Error = Error;
 
     fn unmarshall(&self, mut reader: &mut impl io::Read) -> Result<Stream, Self::Error> {
