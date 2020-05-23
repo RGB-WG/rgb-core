@@ -117,20 +117,14 @@ where
     }
 }
 
-pub struct Unmarshaller<R>
-where
-    R: io::Read,
-{
-    known_types: BTreeMap<Type, UnmarshallFn<R, Error>>,
+pub struct Unmarshaller {
+    known_types: BTreeMap<Type, UnmarshallFn<Error>>,
 }
 
-impl<R> Unmarshall<R, Arc<dyn Any>> for Unmarshaller<R>
-where
-    R: io::Read,
-{
+impl Unmarshall<Arc<dyn Any>> for Unmarshaller {
     type Error = Error;
 
-    fn unmarshall(&self, mut reader: R) -> Result<Arc<dyn Any>, Self::Error> {
+    fn unmarshall(&self, mut reader: &mut impl io::Read) -> Result<Arc<dyn Any>, Self::Error> {
         let type_id = Type(u16::strict_decode(&mut reader).map_err(|_| Error::NoData)?);
         match self.known_types.get(&type_id) {
             None if type_id.is_even() => Err(Error::MessageEvenType),
@@ -144,10 +138,7 @@ where
     }
 }
 
-impl<R> Unmarshaller<R>
-where
-    R: io::Read,
-{
+impl Unmarshaller {
     pub fn new() -> Self {
         Self {
             known_types: BTreeMap::new(),

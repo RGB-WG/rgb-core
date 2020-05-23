@@ -63,21 +63,15 @@ impl Stream {
     }
 }
 
-pub struct Unmarshaller<R>
-where
-    R: io::Read,
-{
-    known_types: BTreeMap<Type, UnmarshallFn<R, Error>>,
-    raw_parser: UnmarshallFn<R, Error>,
+pub struct Unmarshaller {
+    known_types: BTreeMap<Type, UnmarshallFn<Error>>,
+    raw_parser: UnmarshallFn<Error>,
 }
 
-impl<R> Unmarshall<R, Stream> for Unmarshaller<R>
-where
-    R: io::Read,
-{
+impl Unmarshall<Stream> for Unmarshaller {
     type Error = Error;
 
-    fn unmarshall(&self, mut reader: R) -> Result<Stream, Self::Error> {
+    fn unmarshall(&self, mut reader: &mut impl io::Read) -> Result<Stream, Self::Error> {
         let mut tlv = Stream::new();
         let mut prev_type_id = Type(0);
         loop {
@@ -139,10 +133,7 @@ where
     }
 }
 
-impl<R> Unmarshaller<R>
-where
-    R: io::Read,
-{
+impl Unmarshaller {
     pub fn new() -> Self {
         Self {
             known_types: BTreeMap::new(),
@@ -150,7 +141,7 @@ where
         }
     }
 
-    fn raw_parser(mut reader: &mut R) -> Result<Arc<dyn Any>, Error> {
+    fn raw_parser(mut reader: &mut dyn io::Read) -> Result<Arc<dyn Any>, Error> {
         let len = BigSize::read(&mut reader)?.0 as usize;
 
         // if length exceeds the number of bytes remaining in the message
