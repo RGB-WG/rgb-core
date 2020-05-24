@@ -176,9 +176,9 @@ impl TryFrom<Url> for NodeLocator {
                     .to_ascii_lowercase()
                     .as_str()
                 {
-                    "p2p" => Ok(ZmqType::P2p),
-                    "rpc" => Ok(ZmqType::Rpc),
-                    "sub" => Ok(ZmqType::Sub),
+                    "p2p" => Ok(ZmqType::PeerConnecting),
+                    "rpc" => Ok(ZmqType::Client),
+                    "sub" => Ok(ZmqType::Subscribe),
                     unknown => Err(UrlError::InvalidZmqType(unknown.to_string())),
                 }?;
                 Ok(match (ip, pubkey) {

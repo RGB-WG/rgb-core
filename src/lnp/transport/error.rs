@@ -16,4 +16,5 @@
 pub enum Error {
     #[derive_from(zmq::Error, std::io::Error)]
     SocketError,
+    RequiresLocalSocket,
 }

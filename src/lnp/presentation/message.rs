@@ -159,9 +159,9 @@ impl<T> Unmarshaller<T>
 where
     T: TypedEnum,
 {
-    pub fn new() -> Self {
+    pub fn new(known_types: BTreeMap<u16, UnmarshallFn<Error>>) -> Self {
         Self {
-            known_types: BTreeMap::new(),
+            known_types: known_types.into_iter().map(|(t, f)| (Type(t), f)).collect(),
             _phantom: PhantomData,
         }
     }

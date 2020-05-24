@@ -11,8 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::net::SocketAddr;
+
 use super::{Decrypt, Encrypt, NodeLocator, Transcode};
-use crate::lnp::transport::{Bidirect, Error, Input, Output};
+use crate::lnp::session::NoEncryption;
+use crate::lnp::transport::zmq::{ApiType as ZmqType, Connection, SocketLocator};
+use crate::lnp::transport::{self, Bidirect, Error, Input, Output};
 use crate::{AsAny, Bipolar};
 
 pub trait SessionTrait: Bipolar + AsAny {}
@@ -51,6 +55,25 @@ where
 {
     pub fn new(node_locator: NodeLocator) -> Result<Self, Error> {
         unimplemented!()
+    }
+}
+
+impl Session<NoEncryption, transport::zmq::Connection> {
+    pub fn new_zmq_unencrypted(
+        zmq_type: ZmqType,
+        context: &mut zmq::Context,
+        remote: SocketAddr,
+        local: Option<SocketAddr>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            transcoder: NoEncryption,
+            stream: Connection::new(
+                zmq_type,
+                context,
+                SocketLocator::Tcp(remote),
+                local.map(SocketLocator::Tcp),
+            )?,
+        })
     }
 }
 
