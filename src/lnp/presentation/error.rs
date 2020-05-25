@@ -24,6 +24,8 @@ pub enum Error {
     UnknownProtocolVersion,
     #[derive_from(strict_encoding::Error)]
     EncodingError,
+    #[derive_from(UnknownTypeError)]
+    UnknownDataType,
     InvalidValue,
     MessageEvenType,
     BadLengthDescriptor,
@@ -45,3 +47,7 @@ impl From<DecodeError> for Error {
         }
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
+#[display_from(Debug)]
+pub struct UnknownTypeError;

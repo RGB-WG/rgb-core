@@ -17,7 +17,7 @@ pub mod message;
 pub mod tlv;
 
 pub use encoding::{Decode, Encode, Unmarshall, UnmarshallFn};
-pub use error::Error;
+pub use error::{Error, UnknownTypeError};
 pub use message::Message;
 
 use crate::Wrapper;

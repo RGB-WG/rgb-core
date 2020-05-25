@@ -19,11 +19,10 @@ use std::io;
 use std::sync::Arc;
 
 use super::tlv;
-use super::{Encode, Error, EvenOdd, Unmarshall, UnmarshallFn};
+use super::{Encode, Error, EvenOdd, UnknownTypeError, Unmarshall, UnmarshallFn};
 use crate::common::{AsAny, Wrapper};
 use crate::lnp::presentation::tlv::Stream;
 use crate::strict_encoding::{StrictDecode, StrictEncode};
-use std::io::Write;
 
 wrapper!(
     Type,
@@ -92,7 +91,7 @@ impl Message for RawMessage {
 impl Encode for RawMessage {
     type Error = Error;
 
-    fn encode(&self, mut e: &mut impl Write) -> Result<usize, Self::Error> {
+    fn encode(&self, mut e: &mut impl io::Write) -> Result<usize, Self::Error> {
         let mut len = 0usize;
         self.type_id
             .to_inner()
@@ -117,13 +116,16 @@ where
 {
     type Error = Error;
 
-    fn encode(&self, e: &mut impl Write) -> Result<usize, Self::Error> {
+    fn encode(&self, e: &mut impl io::Write) -> Result<usize, Self::Error> {
         RawMessage::from(self.clone()).encode(e)
     }
 }
 
-pub trait TypedEnum {
-    fn from_type(type_id: Type, data: &dyn Any) -> Self;
+pub trait TypedEnum
+where
+    Self: Sized,
+{
+    fn try_from_type(type_id: Type, data: &dyn Any) -> Result<Self, UnknownTypeError>;
     fn get_type(&self) -> Type;
 }
 
@@ -149,12 +151,13 @@ where
             None => {
                 let mut payload = Vec::new();
                 reader.read_to_end(&mut payload)?;
-                Ok(Arc::new(T::from_type(
+                Ok(Arc::new(T::try_from_type(
                     type_id,
                     &RawMessage { type_id, payload },
-                )))
+                )?))
             }
-            Some(parser) => parser(&mut reader).map(|data| Arc::new(T::from_type(type_id, &*data))),
+            Some(parser) => parser(&mut reader)
+                .and_then(|data| Ok(Arc::new(T::try_from_type(type_id, &*data)?))),
         }
     }
 }
