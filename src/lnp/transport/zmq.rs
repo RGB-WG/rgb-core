@@ -12,9 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::borrow::Borrow;
+use core::convert::TryFrom;
 use core::fmt::{self, Display, Formatter};
+use core::str::FromStr;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use url::Url;
 
 use super::{Bidirect, Error, Input, Output, Read, Write};
 use crate::Bipolar;
@@ -76,6 +79,55 @@ impl Display for SocketLocator {
             }
         }
         Ok(())
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
+#[display_from(Debug)]
+pub enum UrlError {
+    UnknownScheme(String),
+    HostRequired,
+    PortRequired,
+    UnexpectedAuthority,
+    #[derive_from(url::ParseError)]
+    MalformedUrl,
+    #[derive_from(std::net::AddrParseError)]
+    MalformedIp,
+}
+
+impl FromStr for SocketLocator {
+    type Err = UrlError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let url: Url = s.parse()?;
+        Self::try_from(url)
+    }
+}
+
+impl TryFrom<Url> for SocketLocator {
+    type Error = UrlError;
+
+    fn try_from(url: Url) -> Result<Self, Self::Error> {
+        match url.scheme() {
+            "tcp" => Ok(SocketLocator::Tcp(SocketAddr::new(
+                url.host()
+                    .ok_or(UrlError::HostRequired)?
+                    .to_string()
+                    .parse()?,
+                url.port().ok_or(UrlError::PortRequired)?,
+            ))),
+            "inproc" => Ok(SocketLocator::Inproc(
+                url.host().ok_or(UrlError::HostRequired)?.to_string(),
+            )),
+            "ipc" => {
+                if url.has_authority() {
+                    Err(UrlError::UnexpectedAuthority)
+                } else {
+                    Ok(SocketLocator::Posix(PathBuf::from(url.path())))
+                }
+            }
+            unknown => Err(UrlError::UnknownScheme(unknown.to_string())),
+        }
     }
 }
 

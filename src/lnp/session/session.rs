@@ -62,17 +62,12 @@ impl Session<NoEncryption, transport::zmq::Connection> {
     pub fn new_zmq_unencrypted(
         zmq_type: ZmqType,
         context: &mut zmq::Context,
-        remote: SocketAddr,
-        local: Option<SocketAddr>,
+        remote: SocketLocator,
+        local: Option<SocketLocator>,
     ) -> Result<Self, Error> {
         Ok(Self {
             transcoder: NoEncryption,
-            stream: Connection::new(
-                zmq_type,
-                context,
-                SocketLocator::Tcp(remote),
-                local.map(SocketLocator::Tcp),
-            )?,
+            stream: Connection::new(zmq_type, context, remote, local)?,
         })
     }
 }
