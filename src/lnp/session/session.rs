@@ -11,8 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::net::SocketAddr;
-
 use super::{Decrypt, Encrypt, NodeLocator, Transcode};
 use crate::lnp::session::NoEncryption;
 use crate::lnp::transport::zmq::{ApiType as ZmqType, Connection, SocketLocator};

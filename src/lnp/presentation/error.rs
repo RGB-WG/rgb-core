@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use crate::strict_encoding;
 use lightning::ln::msgs::DecodeError;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -21,6 +22,8 @@ pub enum Error {
     NoData,
     NoEncoder,
     UnknownProtocolVersion,
+    #[derive_from(strict_encoding::Error)]
+    EncodingError,
     InvalidValue,
     MessageEvenType,
     BadLengthDescriptor,
