@@ -16,6 +16,7 @@ use core::fmt::{Debug, Display, Formatter};
 use core::str::FromStr;
 use std::net::{AddrParseError, IpAddr};
 use std::path::PathBuf;
+#[cfg(feature = "url")]
 use url::Url;
 
 use bitcoin::secp256k1;
