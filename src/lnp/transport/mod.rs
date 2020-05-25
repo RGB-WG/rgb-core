@@ -14,6 +14,7 @@
 mod error;
 mod io;
 pub mod tcp;
+pub mod tor;
 pub mod websocket;
 pub mod zmq;
 

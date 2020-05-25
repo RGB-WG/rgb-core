@@ -11,10 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use core::convert::TryFrom;
+use core::convert::{TryFrom, TryInto};
+use core::fmt::{Debug, Display, Formatter};
+use core::str::FromStr;
 use std::net::{AddrParseError, IpAddr};
 use std::path::PathBuf;
-use std::str::FromStr;
 use url::Url;
 
 use bitcoin::secp256k1;
@@ -129,6 +130,7 @@ impl TryFrom<NodeLocator> for NodeAddr {
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
 #[display_from(Debug)]
 pub enum UrlError {
+    MalformedUrl,
     UnknownScheme(String),
     HostRequired,
     InvalidPubkey,
@@ -204,8 +206,104 @@ impl TryFrom<Url> for NodeLocator {
 }
 
 #[cfg(feature = "url")]
-impl From<NodeLocator> for Url {
-    fn from(locator: NodeLocator) -> Self {
-        unimplemented!()
+impl From<&NodeLocator> for Url {
+    fn from(locator: &NodeLocator) -> Self {
+        match locator {
+            NodeLocator::Native(pubkey, inet, port) => {
+                let mut url = Url::parse(&format!("lnp://{}@{}", pubkey, inet))
+                    .expect("Internal URL construction error");
+                url.set_port(port.clone());
+                url
+            }
+            NodeLocator::Udp(pubkey, ip, port) => {
+                let mut url = Url::parse(&format!("lnp-udp://{}@{}", pubkey, ip))
+                    .expect("Internal URL construction error");
+                url.set_port(port.clone());
+                url
+            }
+            #[cfg(feature = "zmq")]
+            NodeLocator::Ipc(path, zmq_type) => {
+                Url::parse(&format!("lnp:{}?api={}", path.to_str().unwrap(), zmq_type))
+                    .expect("Internal URL construction error")
+            }
+            #[cfg(feature = "zmq")]
+            NodeLocator::Inproc(name, _, zmq_type) => {
+                Url::parse(&format!("lnp:?api={}#{}", zmq_type, name))
+                    .expect("Internal URL construction error")
+            }
+            #[cfg(feature = "zmq")]
+            NodeLocator::ZmqEncrypted(pubkey, zmq_type, ip, port) => {
+                let mut url = Url::parse(&format!("lnp-zmq://{}@{}/?api={}", pubkey, ip, zmq_type))
+                    .expect("Internal URL construction error");
+                url.set_port(port.clone());
+                url
+            }
+            #[cfg(feature = "zmq")]
+            NodeLocator::ZmqUnencrypted(zmq_type, ip, port) => {
+                let mut url = Url::parse(&format!("lnp-zmq://{}/?api={}", ip, zmq_type))
+                    .expect("Internal URL construction error");
+                url.set_port(port.clone());
+                url
+            }
+            #[cfg(feature = "websocket")]
+            NodeLocator::Websocket(pubkey, ip, port) => {
+                let mut url = Url::parse(&format!("lnp-ws://{}@{}", pubkey, ip))
+                    .expect("Internal URL construction error");
+                url.set_port(port.clone());
+                url
+            }
+        }
     }
 }
+
+#[cfg(feature = "url")]
+impl Debug for NodeLocator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[cfg(feature = "url")]
+impl Display for NodeLocator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        write!(f, "{}", Url::from(self))
+    }
+}
+
+#[cfg(feature = "url")]
+impl FromStr for NodeLocator {
+    type Err = UrlError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Url::from_str(s)
+            .map_err(|_| UrlError::MalformedUrl)?
+            .try_into()
+    }
+}
+
+impl PartialEq for NodeLocator {
+    fn eq(&self, other: &Self) -> bool {
+        use NodeLocator::*;
+        match (self, other) {
+            (Native(a1, a2, a3), Native(b1, b2, b3)) => a1 == b1 && a2 == b2 && a3 == b3,
+            (Udp(a1, a2, a3), Udp(b1, b2, b3)) => a1 == b1 && a2 == b2 && a3 == b3,
+            #[cfg(feature = "websocket")]
+            (Websocket(a1, a2, a3), Websocket(b1, b2, b3)) => a1 == b1 && a2 == b2 && a3 == b3,
+            #[cfg(feature = "zmq")]
+            (Ipc(a1, a2), Ipc(b1, b2)) => a1 == b1 && a2 == b2,
+            #[cfg(feature = "zmq")]
+            (Inproc(a1, _, a2), Inproc(b1, _, b2)) => a1 == b1 && a2 == b2,
+            #[cfg(feature = "zmq")]
+            (ZmqUnencrypted(a1, a2, a3), ZmqUnencrypted(b1, b2, b3)) => {
+                a1 == b1 && a2 == b2 && a3 == b3
+            }
+            #[cfg(feature = "zmq")]
+            (ZmqEncrypted(a1, a2, a3, a4), ZmqEncrypted(b1, b2, b3, b4)) => {
+                a1 == b1 && a2 == b2 && a3 == b3 && a4 == b4
+            }
+            (_, _) => false,
+        }
+    }
+}
+
+impl Eq for NodeLocator {}

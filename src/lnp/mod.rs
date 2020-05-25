@@ -21,8 +21,9 @@ pub mod transport;
 
 pub use presentation::{message, Message};
 pub use session::{
-    ConnectionError, Inbound, NoEncryption, NodeAddr, Outbound, Session, SessionTrait,
+    ConnectionError, Inbound, NoEncryption, NodeAddr, NodeLocator, Outbound, Session, SessionTrait,
 };
+pub use transport::{tcp, tor, websocket, zmq};
 
 pub use lightning::ln::LN_MAX_MSG_LEN as LNP_MSG_MAX_LEN;
 
