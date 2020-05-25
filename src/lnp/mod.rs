@@ -20,7 +20,9 @@ mod session;
 pub mod transport;
 
 pub use presentation::{message, Message};
-pub use session::{ConnectionError, NodeAddr};
+pub use session::{
+    ConnectionError, Inbound, NoEncryption, NodeAddr, Outbound, Session, SessionTrait,
+};
 
 pub use lightning::ln::LN_MAX_MSG_LEN as LNP_MSG_MAX_LEN;
 
