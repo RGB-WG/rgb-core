@@ -18,12 +18,12 @@ use crate::Bipolar;
 
 pub trait Input {
     type Reader: Read;
-    fn reader(&self) -> &Self::Reader;
+    fn reader(&mut self) -> &mut Self::Reader;
 }
 
 pub trait Output {
     type Writer: Write;
-    fn writer(&self) -> &Self::Writer;
+    fn writer(&mut self) -> &mut Self::Writer;
 }
 
 pub trait Bidirect: Input + Output + Bipolar {

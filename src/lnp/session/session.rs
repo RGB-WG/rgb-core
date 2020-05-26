@@ -11,10 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use core::borrow::Borrow;
+
 use super::{Decrypt, Encrypt, NodeLocator, Transcode};
 use crate::lnp::session::NoEncryption;
 use crate::lnp::transport::zmq::{ApiType as ZmqType, Connection, SocketLocator};
-use crate::lnp::transport::{self, Bidirect, Error, Input, Output};
+use crate::lnp::transport::{self, Bidirect, Error, Input, Output, Read, Write};
 use crate::{AsAny, Bipolar};
 
 pub trait SessionTrait: Bipolar + AsAny {}
@@ -88,5 +90,22 @@ where
 
     fn split(self) -> (Self::Left, Self::Right) {
         unimplemented!()
+    }
+}
+
+impl<T, S> Session<T, S>
+where
+    T: Transcode,
+    S: Bidirect,
+    Error: From<T::Error>,
+{
+    pub fn read_raw_message(&mut self) -> Result<Vec<u8>, Error> {
+        let reader = self.stream.reader();
+        Ok(self.transcoder.decrypt(reader.read()?)?)
+    }
+
+    pub fn write_raw_message(&mut self, raw: impl Borrow<[u8]>) -> Result<usize, Error> {
+        let writer = self.stream.writer();
+        Ok(writer.write(self.transcoder.encrypt(raw))?)
     }
 }

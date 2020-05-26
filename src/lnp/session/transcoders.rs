@@ -28,7 +28,7 @@ pub trait Decrypt {
     fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error>;
 }
 
-pub trait Transcode: Bipolar {
+pub trait Transcode: Bipolar + Encrypt + Decrypt {
     type Encryptor: Encrypt;
     type Decryptor: Decrypt;
 }

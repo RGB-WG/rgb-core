@@ -99,6 +99,7 @@ pub enum UrlError {
 impl FromStr for SocketLocator {
     type Err = UrlError;
 
+    #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url: Url = s.parse()?;
         Self::try_from(url)
@@ -191,6 +192,7 @@ impl Connection {
 }
 
 impl InputStream {
+    #[inline]
     fn from_zmq_socket(api_type: ApiType, socket: zmq::Socket) -> Self {
         Self {
             api_type,
@@ -200,6 +202,7 @@ impl InputStream {
 }
 
 impl OutputStream {
+    #[inline]
     fn from_zmq_socket(api_type: ApiType, socket: zmq::Socket) -> Self {
         Self {
             api_type,
@@ -211,31 +214,35 @@ impl OutputStream {
 impl Input for InputStream {
     type Reader = zmq::Socket;
 
-    fn reader(&self) -> &Self::Reader {
-        &self.input
+    #[inline]
+    fn reader(&mut self) -> &mut Self::Reader {
+        &mut self.input
     }
 }
 
 impl Output for InputStream {
     type Writer = zmq::Socket;
 
-    fn writer(&self) -> &Self::Writer {
-        &self.input
+    #[inline]
+    fn writer(&mut self) -> &mut Self::Writer {
+        &mut self.input
     }
 }
 
 impl Output for OutputStream {
     type Writer = zmq::Socket;
 
-    fn writer(&self) -> &Self::Writer {
-        &self.output
+    #[inline]
+    fn writer(&mut self) -> &mut Self::Writer {
+        &mut self.output
     }
 }
 
 impl Input for Connection {
     type Reader = zmq::Socket;
 
-    fn reader(&self) -> &Self::Reader {
+    #[inline]
+    fn reader(&mut self) -> &mut Self::Reader {
         self.input.reader()
     }
 }
@@ -243,10 +250,10 @@ impl Input for Connection {
 impl Output for Connection {
     type Writer = zmq::Socket;
 
-    fn writer(&self) -> &Self::Writer {
+    fn writer(&mut self) -> &mut Self::Writer {
         match self.output {
-            None => &self.input.writer(),
-            Some(ref output) => &output.writer(),
+            None => self.input.writer(),
+            Some(ref mut output) => output.writer(),
         }
     }
 }
@@ -296,12 +303,14 @@ impl Bipolar for Connection {
 }
 
 impl Read for zmq::Socket {
+    #[inline]
     fn read(&mut self) -> Result<Vec<u8>, Error> {
         Ok(self.recv_bytes(0)?)
     }
 }
 
 impl Write for zmq::Socket {
+    #[inline]
     fn write(&mut self, data: impl Borrow<[u8]>) -> Result<usize, Error> {
         self.send(data.borrow(), 0)?;
         Ok(data.borrow().len())
