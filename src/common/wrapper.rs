@@ -18,6 +18,7 @@ use std::{
     marker::PhantomData,
 };
 
+// TODO: Add generic support to the wrapper
 #[macro_export]
 macro_rules! wrapper {
     ($name:ident, $phantom:ident, $from:ty, $docs:meta) => {
