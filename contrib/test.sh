@@ -15,7 +15,12 @@ then
 fi
 
 # Test without any features first
-cargo test --verbose
+# TODO: This is not working b/c of bitcoin_hashes macro problem.
+#       Uncomment once the problem will be fixed
+# cargo test --verbose --all-features
+
+# Test using all features
+cargo test --verbose --all-features
 
 # Test each feature
 for feature in ${FEATURES}
