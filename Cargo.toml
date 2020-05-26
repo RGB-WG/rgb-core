@@ -55,7 +55,7 @@ miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "stag
 [features]
 default = []
 all = ["tor", "lightning", "tokio", "log", "url",
-       "bulletproofs", "rgb", "daemons", "parse_arg", "serde"]
+       "bulletproofs", "rgb", "daemons", "parse_arg", "serde", "keygen"]
 async = ["async-trait"]
 rgb = ["bulletproofs", "petgraph"]
 tor = ["torut/v3", "torut/v2"]
@@ -64,3 +64,4 @@ bulletproofs = ["grin_secp256k1zkp"]
 api = ["zmq"]
 daemons = ["async", "api"]
 serde = ["serde_crate", "torut/serialize", "bitcoin/use-serde", "miniscript/serde"]
+keygen = ["bitcoin/rand"]
