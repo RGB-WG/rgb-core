@@ -12,12 +12,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::any::Any;
+use core::borrow::Borrow;
 use std::io;
 use std::sync::Arc;
 
 pub trait Encode {
     type Error: std::error::Error;
-    fn encode(&self, e: &mut impl io::Write) -> Result<usize, Self::Error>;
+    fn encode(&self) -> Result<Vec<u8>, Self::Error>;
 }
 
 pub trait Decode
@@ -25,13 +26,13 @@ where
     Self: Sized,
 {
     type Error: std::error::Error;
-    fn decode(d: &mut impl io::Read) -> Result<Self, Self::Error>;
+    fn decode(data: &dyn Borrow<[u8]>) -> Result<Self, Self::Error>;
 }
 
 pub trait Unmarshall {
     type Data;
     type Error: std::error::Error;
-    fn unmarshall(&self, reader: &mut impl io::Read) -> Result<Self::Data, Self::Error>;
+    fn unmarshall(&self, data: &dyn Borrow<[u8]>) -> Result<Self::Data, Self::Error>;
 }
 
 pub type UnmarshallFn<E: ::std::error::Error> =

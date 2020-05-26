@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::any::Any;
+use core::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::io;
 use std::sync::Arc;
@@ -72,7 +73,8 @@ impl Unmarshall for Unmarshaller {
     type Data = Stream;
     type Error = Error;
 
-    fn unmarshall(&self, mut reader: &mut impl io::Read) -> Result<Stream, Self::Error> {
+    fn unmarshall(&self, data: &dyn Borrow<[u8]>) -> Result<Stream, Self::Error> {
+        let mut reader = io::Cursor::new(data.borrow());
         let mut tlv = Stream::new();
         let mut prev_type_id = Type(0);
         loop {

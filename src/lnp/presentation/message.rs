@@ -12,10 +12,11 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::any::Any;
+use core::borrow::Borrow;
 use core::convert::TryInto;
 use core::marker::PhantomData;
 use std::collections::BTreeMap;
-use std::io;
+use std::io::{self, Read, Write};
 use std::sync::Arc;
 
 use super::tlv;
@@ -91,14 +92,14 @@ impl Message for RawMessage {
 impl Encode for RawMessage {
     type Error = Error;
 
-    fn encode(&self, mut e: &mut impl io::Write) -> Result<usize, Self::Error> {
-        let mut len = 0usize;
+    fn encode(&self) -> Result<Vec<u8>, Self::Error> {
+        let mut e = io::Cursor::new(vec![]);
         self.type_id
             .to_inner()
             .strict_encode(&mut e)
             .map_err(|_| Error::Io)?;
-        len += e.write(&self.payload)?;
-        Ok(len)
+        e.write(&self.payload)?;
+        Ok(e.into_inner())
     }
 }
 
@@ -116,8 +117,8 @@ where
 {
     type Error = Error;
 
-    fn encode(&self, e: &mut impl io::Write) -> Result<usize, Self::Error> {
-        RawMessage::from(self.clone()).encode(e)
+    fn encode(&self) -> Result<Vec<u8>, Self::Error> {
+        RawMessage::from(self.clone()).encode()
     }
 }
 
@@ -159,7 +160,8 @@ where
     type Data = Arc<T>;
     type Error = Error;
 
-    fn unmarshall(&self, mut reader: &mut impl io::Read) -> Result<Self::Data, Self::Error> {
+    fn unmarshall(&self, data: &dyn Borrow<[u8]>) -> Result<Self::Data, Self::Error> {
+        let mut reader = io::Cursor::new(data.borrow());
         let type_id = Type(u16::strict_decode(&mut reader).map_err(|_| Error::NoData)?);
         match self.known_types.get(&type_id) {
             None if type_id.is_even() => Err(Error::MessageEvenType),
