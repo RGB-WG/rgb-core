@@ -177,7 +177,7 @@ mod strict_encoding {
                     strict_encode_list!(e; schema::StateType::Void, tree)
                 }
                 AssignmentsVariant::Homomorphic(homomorphic_factor, tree) => {
-                    strict_encode_list!(e; EncodingTag::U64, homomorphic_factor, schema::StateType::Homomorphic, tree)
+                    strict_encode_list!(e; schema::StateType::Homomorphic, EncodingTag::U64, homomorphic_factor, tree)
                 }
                 AssignmentsVariant::Hashed(tree) => {
                     strict_encode_list!(e; schema::StateType::Hashed, tree)

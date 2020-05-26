@@ -746,9 +746,9 @@ mod compositional_types {
             let len = self.len() as usize;
             let encoded = len.strict_encode(&mut e)?;
 
-            self.iter().try_fold(encoded, |mut acc, (key, value)| {
+            self.iter().try_fold(encoded, |mut acc, (key, val)| {
                 acc += key.strict_encode(&mut e)?;
-                acc += value.strict_encode(&mut e)?;
+                acc += val.strict_encode(&mut e)?;
                 Ok(acc)
             })
         }
@@ -775,7 +775,9 @@ mod compositional_types {
             let len = usize::strict_decode(&mut d)?;
             let mut map = BTreeMap::<K, V>::new();
             for _ in 0..len {
-                map.insert(K::strict_decode(&mut d)?, V::strict_decode(&mut d)?);
+                let key = K::strict_decode(&mut d)?;
+                let val = V::strict_decode(&mut d)?;
+                map.insert(key, val);
             }
             Ok(map)
         }
