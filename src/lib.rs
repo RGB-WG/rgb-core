@@ -26,6 +26,7 @@
 #![feature(bindings_after_at)]
 #![feature(in_band_lifetimes)]
 #![feature(rustc_private)]
+#![feature(try_trait)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![allow(incomplete_features)]
