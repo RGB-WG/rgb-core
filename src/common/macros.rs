@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -12,18 +12,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 #[macro_export]
-macro_rules! bytes {
-    [ $($value:expr),+ ] => {
-        &vec![
-        $(
-            $value,
-        )+
-        ][..] as &[u8]
-    }
-}
-
-#[macro_export]
 macro_rules! map {
+    { } =>  {
+        {
+            ::std::collections::HashMap::new()
+        }
+    };
+
     { $($key:expr => $value:expr),+ } => {
         {
             let mut m = ::std::collections::HashMap::new();
@@ -36,7 +31,32 @@ macro_rules! map {
 }
 
 #[macro_export]
+macro_rules! set {
+    { } =>  {
+        {
+            ::std::collections::HashSet::new()
+        }
+    };
+
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::std::collections::HashSet::new();
+            $(
+                m.insert($key, $value);
+            )+
+            m
+        }
+    }
+}
+
+#[macro_export]
 macro_rules! bmap {
+    { } =>  {
+        {
+            ::std::collections::BTreeMap::new()
+        }
+    };
+
     { $($key:expr => $value:expr),+ } => {
         {
             let mut m = ::std::collections::BTreeMap::new();
@@ -49,12 +69,37 @@ macro_rules! bmap {
 }
 
 #[macro_export]
-macro_rules! hlist {
-    [ $($value:expr),+ ] => {
+macro_rules! bset {
+    { } =>  {
         {
-            let mut m = ::std::vec::Vec::<::std::boxed::Box<dyn ::std::any::Any>>::new();
+            ::std::collections::BTreeSet::new()
+        }
+    };
+
+    { $($value:expr),+ } => {
+        {
+            let mut m = ::std::collections::BTreeSet::new();
             $(
-                m.push(::std::boxed::Box::new($value));
+                m.insert($value);
+            )+
+            m
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! list {
+    { } =>  {
+        {
+            ::std::collections::LinkedList::new()
+        }
+    };
+
+    { $($value:expr)=>+ } => {
+        {
+            let mut m = ::std::collections::LinkedList::new();
+            $(
+                m.push_back($value);
             )+
             m
         }

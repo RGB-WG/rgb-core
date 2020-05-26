@@ -1,4 +1,4 @@
-# Contributing to LNP/BP Rust Library
+# Contributing to LNP/BP Core Library
 
 The LNP/BP project operates an open contributor model where anyone is
 welcome to contribute towards development in the form of peer review, documentation,

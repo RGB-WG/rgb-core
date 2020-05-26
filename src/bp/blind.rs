@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 202 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -11,19 +11,20 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use bitcoin::hashes::{sha256d, Hash, HashEngine};
+use bitcoin::{OutPoint, Txid};
 
-use bitcoin::Txid;
-use bitcoin::hashes::{Hash, HashEngine, sha256d};
-
+use crate::client_side_validation::Conceal;
+use crate::commit_verify::CommitVerify;
 
 /// Data required to generate or reveal the information about blinded
 /// transaction outpoint
-#[derive(Clone, PartialEq, PartialOrd, Debug, Display, Default)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Default)]
 #[display_from(Debug)]
 pub struct OutpointReveal {
     /// Blinding factor preventing rainbow table bruteforce attack based on
     /// the existing blockchain txid set
-    pub blinding: u64,
+    pub blinding: u32,
 
     /// Txid that should be blinded
     pub txid: Txid,
@@ -32,15 +33,43 @@ pub struct OutpointReveal {
     pub vout: u16,
 }
 
-impl OutpointReveal {
-    pub fn outpoint_hash(&self) -> OutpointHash {
+impl From<OutpointReveal> for OutPoint {
+    #[inline]
+    fn from(reveal: OutpointReveal) -> Self {
+        OutPoint::new(reveal.txid, reveal.vout as u32)
+    }
+}
+
+impl Conceal for OutpointReveal {
+    type Confidential = OutpointHash;
+
+    #[inline]
+    fn conceal(&self) -> Self::Confidential {
+        self.outpoint_hash()
+    }
+}
+
+impl CommitVerify<OutpointReveal> for OutpointHash {
+    fn commit(reveal: &OutpointReveal) -> Self {
         let mut engine = OutpointHash::engine();
-        engine.input(&self.blinding.to_be_bytes()[..]);
-        engine.input(&self.txid[..]);
-        engine.input(&self.vout.to_be_bytes()[..]);
+        engine.input(&reveal.blinding.to_be_bytes()[..]);
+        engine.input(&reveal.txid[..]);
+        engine.input(&reveal.vout.to_be_bytes()[..]);
         OutpointHash::from_engine(engine)
     }
 }
 
-hash_newtype!(OutpointHash, sha256d::Hash, 32, doc="Blind version of transaction outpoint");
+impl OutpointReveal {
+    #[inline]
+    pub fn outpoint_hash(&self) -> OutpointHash {
+        OutpointHash::commit(self)
+    }
+}
+
+hash_newtype!(
+    OutpointHash,
+    sha256d::Hash,
+    32,
+    doc = "Blind version of transaction outpoint"
+);
 impl_hashencode!(OutpointHash);

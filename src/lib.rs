@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2019 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -14,7 +14,6 @@
 #![crate_name = "lnpbp"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
-
 #![feature(concat_idents)]
 #![feature(never_type)]
 #![feature(const_generics)]
@@ -24,9 +23,13 @@
 #![feature(arbitrary_enum_discriminant)]
 #![feature(bool_to_option)]
 #![feature(str_strip)]
+#![feature(bindings_after_at)]
+#![feature(in_band_lifetimes)]
+#![feature(rustc_private)]
 #![feature(try_trait)]
-
+#![recursion_limit = "256"]
 // Coding conventions
+#![allow(incomplete_features)]
 #![deny(non_upper_case_globals)]
 #![deny(non_camel_case_types)]
 #![deny(non_snake_case)]
@@ -37,58 +40,61 @@
 
 #[macro_use]
 pub extern crate derive_wrapper;
-extern crate rand;
-extern crate num_integer;
 extern crate num_derive;
 extern crate num_traits;
+// We need to export this specific version which is supported by secp256k1zkp
+pub extern crate rand;
 #[macro_use]
 pub extern crate bitcoin;
+#[cfg(feature = "url")]
+extern crate url;
 
 // Logging
-#[cfg(feature="use-log")]
+#[cfg(feature = "log")]
 #[macro_use]
 extern crate log;
 
 // Async IO, IPC & networking
-#[cfg(feature="use-tokio")]
-extern crate tokio;
-#[cfg(not(feature="use-tokio"))]
+#[cfg(not(feature = "tokio"))]
 extern crate futures;
+#[cfg(feature = "tokio")]
+extern crate tokio;
 
 // Support for node & node clients development (include API helpers)
-#[cfg(feature="use-daemons")]
+#[cfg(any(feature = "daemons", feature = "async"))]
 #[macro_use]
 extern crate async_trait;
-#[cfg(feature="use-zmq")]
+#[cfg(feature = "zmq")]
 extern crate zmq;
 
 // Lightning-network related functionality
-#[cfg(feature="use-lightning")]
+#[cfg(feature = "lightning")]
 pub extern crate lightning;
+#[cfg(feature = "lightning_tokio")]
+pub extern crate lightning_net_tokio;
+
 pub extern crate miniscript;
 
 // Buletproofs support
-#[cfg(feature="use-bulletproofs")]
+#[cfg(feature = "bulletproofs")]
 pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-
 #[macro_use]
-pub mod common;
+mod paradigms;
+#[macro_use]
+mod common;
+mod lnpbps;
 #[macro_use]
 pub mod bp;
-#[cfg(feature="use-lightning")]
+#[cfg(feature = "lightning")]
 pub mod lnp;
-pub mod cmt;
-#[cfg(feature="use-rgb")]
-pub mod seals;
-#[cfg(feature="use-rgb")]
-#[macro_use]
-pub mod csv;
-#[cfg(feature="use-rgb")]
+#[cfg(feature = "rgb")]
 pub mod rgb;
-#[cfg(feature="use-api")]
-pub mod api;
+#[cfg(feature = "zmq")]
+pub mod rpc;
 
 pub use common::*;
+pub use lnpbps::*;
+pub use paradigms::*;

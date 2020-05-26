@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -11,35 +11,25 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
+mod anchor;
+mod consignment;
+mod contract;
+mod interfaces;
 pub mod schema;
-pub mod schemata;
+mod stash;
+pub mod vm;
 
-pub mod metadata;
-pub mod data;
-pub mod seal;
-pub mod state;
-pub mod script;
-pub mod transition;
+pub mod prelude {
+    pub use super::*;
+    pub use anchor::Anchor;
+    pub use consignment::Consignment;
+    pub use contract::{
+        amount, data, seal, Amount, Assignment, AssignmentsVariant, Contract, ContractId,
+        FieldData, Genesis, Metadata, Node, SealDefinition, Transition, TransitionId,
+    };
+    pub use schema::script;
+    pub use schema::{Schema, SchemaId, SimplicityScript};
+    pub use stash::{CoordinatedTransition, CoordinatedUpdate, Stash};
+}
 
-pub mod serialize;
-pub mod commit;
-
-mod proof;
-
-
-pub use schemata::*;
-
-pub use data::Data;
-pub use state::State;
-pub use metadata::Metadata;
-pub use script::Script;
-pub use seal::Seal;
-pub use transition::Transition;
-
-pub use proof::*;
-
-
-use bitcoin::hashes::{Hash, sha256d};
-
-hash_newtype!(ContractId, sha256d::Hash, 32, doc="Double-sha256 hash of the genesis transition");
+pub use prelude::*;

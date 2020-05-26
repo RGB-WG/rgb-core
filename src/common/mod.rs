@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2019 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -11,24 +11,25 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
 //! Common data types, structures and functions for LNPBPs
 
+pub mod strategy;
 #[macro_use]
-pub mod macros;
+mod macros;
 #[macro_use]
 pub(crate) mod convert;
-pub mod as_slice;
 #[macro_use]
-pub mod wrapper;
+mod wrapper;
+mod as_any;
+mod bipolar;
 pub mod internet;
-#[cfg(feature="use-daemons")]
-pub mod service;
-#[cfg(feature="serde")]
+#[cfg(feature = "serde")]
 pub(crate) mod serde;
+#[cfg(feature = "daemons")]
+mod service;
 
-pub use as_slice::*;
-pub use wrapper::*;
-pub use macros::*;
-#[cfg(feature="use-node")]
-pub use service::*;
+pub use as_any::AsAny;
+pub use bipolar::Bipolar;
+#[cfg(feature = "daemons")]
+pub use service::{Service, TryService};
+pub use wrapper::Wrapper;

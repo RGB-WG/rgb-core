@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2019 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -11,126 +11,115 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+pub trait Wrapper {
+    type Inner: Clone;
 
-use core::borrow::{Borrow, BorrowMut};
-use std::{
-    ops::{Deref, DerefMut, Index, Range, RangeTo, RangeFrom, RangeFull},
-    marker::PhantomData,
-};
+    /// Instantiates wrapper type with the inner data
+    fn from_inner(inner: Self::Inner) -> Self;
+
+    /// Returns reference to the inner representation for the wrapper type
+    fn as_inner(&self) -> &Self::Inner;
+
+    /// Clones inner data of the wrapped type and return them
+    #[inline]
+    fn to_inner(&self) -> Self::Inner {
+        self.as_inner().clone()
+    }
+
+    /// Unwraps the wrapper returning the inner type
+    fn into_inner(self) -> Self::Inner;
+}
 
 // TODO: Add generic support to the wrapper
+// TODO: Convert to derive macro
 #[macro_export]
 macro_rules! wrapper {
-    ($name:ident, $phantom:ident, $from:ty, $docs:meta) => {
+    ($name:ident, $from:ty, $docs:meta, derive=[$( $derive:ident ),+]) => {
         #[$docs]
-        #[derive(Copy, Clone, PartialEq, Eq, Default, PartialOrd, Ord, Hash, Debug)]
-        pub struct $phantom;
+        #[derive(Clone, Debug)]
+        $( #[derive($derive)] )+
+        pub struct $name($from);
 
-        #[$docs]
-        pub type $name = Wrapper<$from, ::std::marker::PhantomData::<$phantom>>;
+        impl crate::common::Wrapper for $name {
+            type Inner = $from;
 
-        impl crate::common::Wrapped for $name { }
+            #[inline]
+            fn from_inner(inner: $from) -> Self {
+                Self(inner)
+            }
+
+            #[inline]
+            fn as_inner(&self) -> &$from {
+                &self.0
+            }
+
+            #[inline]
+            fn into_inner(self) -> $from {
+                self.0
+            }
+        }
+
+        impl ::core::convert::AsRef<$from> for $name {
+            #[inline]
+            fn as_ref(&self) -> &$from {
+                &self.0
+            }
+        }
+
+        impl ::core::convert::AsMut<$from> for $name {
+            #[inline]
+            fn as_mut(&mut self) -> &mut $from {
+                &mut self.0
+            }
+        }
+
+        impl ::core::borrow::Borrow<$from> for $name {
+            #[inline]
+            fn borrow(&self) -> &$from {
+                &self.0
+            }
+        }
+
+        impl ::core::borrow::BorrowMut<$from> for $name {
+            #[inline]
+            fn borrow_mut(&mut self) -> &mut $from {
+                &mut self.0
+            }
+        }
+
+        impl ::core::ops::Deref for $name {
+            type Target = $from;
+            #[inline]
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl ::core::ops::DerefMut for $name {
+            #[inline]
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+
+        impl ::std::convert::From<$from> for $name
+        where
+            Self: ::core::clone::Clone,
+        {
+            #[inline]
+            fn from(x: $from) -> Self {
+                Self(x)
+            }
+        }
+
+        impl ::std::convert::From<&$from> for $name
+        where
+            Self: ::core::clone::Clone,
+        {
+            #[inline]
+            fn from(x: &$from) -> Self {
+                Self(x.clone())
+            }
+        }
     };
-}
-
-
-// Wrapper marker trait
-pub trait Wrapped { }
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct Wrapper<T, Z>(T, PhantomData<Z>);
-
-impl<T, Z> Wrapper<T, Z> {
-    #[inline]
-    pub fn from_inner(inner: T) -> Self {
-        Self::from(inner)
-    }
-
-    #[inline]
-    pub fn into_inner(self) -> T {
-        self.0
-    }
-}
-
-impl<T, Z> Borrow<T> for Wrapper<T, Z> {
-    fn borrow(&self) -> &T {
-        &self.0
-    }
-}
-
-impl<T, Z> BorrowMut<T> for Wrapper<T, Z> {
-    fn borrow_mut(&mut self) -> &mut T {
-        &mut self.0
-    }
-}
-
-impl<T, Z> AsMut<T> for Wrapper<T, Z> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut T {
-        &mut self.0
-    }
-}
-
-impl<T, Z> AsRef<T> for Wrapper<T, Z> {
-    #[inline]
-    fn as_ref(&self) -> &T {
-        &self.0
-    }
-}
-
-impl<T, Z> Deref for Wrapper<T, Z> {
-    type Target = T;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T, Z> DerefMut for Wrapper<T, Z> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<T, Z> From<T> for Wrapper<T, Z> {
-    #[inline]
-    fn from(x: T) -> Self { Self(x, PhantomData::default()) }
-}
-
-impl<T, U, Z> Index<Range<usize>> for Wrapper<T, Z> where T: Index<Range<usize>, Output=[U]> {
-    type Output = [U];
-
-    #[inline]
-    fn index(&self, index: Range<usize>) -> &[U] {
-        &self.0[index]
-    }
-}
-
-impl<T, U, Z> Index<RangeTo<usize>> for Wrapper<T, Z> where T: Index<RangeTo<usize>, Output=[U]> {
-    type Output = [U];
-
-    #[inline]
-    fn index(&self, index: RangeTo<usize>) -> &[U] {
-        &self.0[index]
-    }
-}
-
-impl<T, U, Z> Index<RangeFrom<usize>> for Wrapper<T, Z> where T: Index<RangeFrom<usize>, Output=[U]> {
-    type Output = [U];
-
-    #[inline]
-    fn index(&self, index: RangeFrom<usize>) -> &[U] {
-        &self.0[index]
-    }
-}
-
-impl<T, U, Z> Index<RangeFull> for Wrapper<T, Z> where T: Index<RangeFull, Output=[U]> {
-    type Output = [U];
-
-    #[inline]
-    fn index(&self, _: RangeFull) -> &[U] {
-        &self.0[..]
-    }
 }

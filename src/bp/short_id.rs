@@ -1,4 +1,4 @@
-// LNP/BP Rust Library
+// LNP/BP Core Library implementing LNPBP specifications & standards
 // Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
@@ -11,12 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use bitcoin::{BlockHash, Txid};
 use std::{
+    convert::{TryFrom, TryInto},
     fmt::Debug,
-    convert::{TryFrom, TryInto}
 };
-use bitcoin::{Txid, BlockHash};
-use crate::common::Wrapper;
 
 #[derive(Copy, Clone, Debug, Display, PartialEq, Eq)]
 #[display_from(Debug)]
@@ -28,11 +27,16 @@ pub enum Error {
     DimensionRequired,
     NoDimensionIsPossible,
     UpgradeImpossible,
-    DowngradeImpossible
+    DowngradeImpossible,
 }
 
-
-wrapper!(BlockChecksum, _BlockChecksumPhantom, u8, doc="Checksum for block id data used by the LNPBP-5");
+wrapper!(
+    BlockChecksum,
+    u8,
+    doc = "Checksum for block id data used by the LNPBP-5",
+    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
+);
+impl Copy for BlockChecksum {}
 
 impl From<BlockHash> for BlockChecksum {
     fn from(block_hash: BlockHash) -> Self {
@@ -40,45 +44,78 @@ impl From<BlockHash> for BlockChecksum {
         for byte in block_hash.to_vec() {
             xor ^= byte;
         }
-        Self::from_inner(xor)
+        Self::from(xor)
     }
 }
 
-
-wrapper!(TxChecksum, _TxChecksumPhantom, u64, doc="Checksum for transaction id data used by the LNPBP-5");
+wrapper!(
+    TxChecksum,
+    u64,
+    doc = "Checksum for transaction id data used by the LNPBP-5",
+    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
+);
+impl Copy for TxChecksum {}
 
 impl From<Txid> for TxChecksum {
     fn from(txid: Txid) -> Self {
         let mut checksum: u64 = 0;
         for (shift, byte) in txid.to_vec()[0..5].iter().enumerate() {
-           checksum ^= (*byte as u64) << (shift * 8);
+            checksum ^= (*byte as u64) << (shift * 8);
         }
-        Self::from_inner(checksum)
+        Self::from(checksum)
     }
 }
-
 
 #[derive(Copy, Clone, Debug, Display)]
 #[display_from(Debug)]
 pub enum Descriptor {
-    OnchainBlock { block_height: u32, block_checksum: BlockChecksum },
-    OnchainTransaction { block_height: u32, block_checksum: BlockChecksum, tx_index: u16 },
-    OnchainTxInput { block_height: u32, block_checksum: BlockChecksum, tx_index: u16, input_index: u16 },
-    OnchainTxOutput { block_height: u32, block_checksum: BlockChecksum, tx_index: u16, output_index: u16 },
-    OffchainTransaction { tx_checksum: TxChecksum },
-    OffchainTxInput { tx_checksum: TxChecksum, input_index: u16 },
-    OffchainTxOutput { tx_checksum: TxChecksum, output_index: u16 },
+    OnchainBlock {
+        block_height: u32,
+        block_checksum: BlockChecksum,
+    },
+    OnchainTransaction {
+        block_height: u32,
+        block_checksum: BlockChecksum,
+        tx_index: u16,
+    },
+    OnchainTxInput {
+        block_height: u32,
+        block_checksum: BlockChecksum,
+        tx_index: u16,
+        input_index: u16,
+    },
+    OnchainTxOutput {
+        block_height: u32,
+        block_checksum: BlockChecksum,
+        tx_index: u16,
+        output_index: u16,
+    },
+    OffchainTransaction {
+        tx_checksum: TxChecksum,
+    },
+    OffchainTxInput {
+        tx_checksum: TxChecksum,
+        input_index: u16,
+    },
+    OffchainTxOutput {
+        tx_checksum: TxChecksum,
+        output_index: u16,
+    },
 }
 
 #[derive(Copy, Clone, Debug, Display, PartialEq, Eq)]
 #[display_from(Debug)]
 pub enum Dimension {
-    Input, Output
+    Input,
+    Output,
 }
 
 impl Default for Descriptor {
     fn default() -> Self {
-        Descriptor::OnchainBlock { block_height: 0, block_checksum: BlockChecksum::default() }
+        Descriptor::OnchainBlock {
+            block_height: 0,
+            block_checksum: BlockChecksum::default(),
+        }
     }
 }
 
@@ -88,32 +125,41 @@ impl Descriptor {
         use Error::*;
 
         match *self {
-            OnchainTransaction { block_height, .. } |
-            OnchainTxInput { block_height, .. } |
-            OnchainTxOutput { block_height, .. }
-            if block_height >= (2u32 << 22) =>
-                Err(BlockHeightOutOfRange),
-            OnchainTxInput { input_index, .. } |
-            OffchainTxInput { input_index, .. }
-            if input_index + 1 >= (2u16 << 14) =>
-                Err(InputIndexOutOfRange),
-            OnchainTxOutput { output_index, .. } |
-            OffchainTxOutput { output_index, .. }
-            if output_index + 1 >= (2u16 << 14) =>
-                Err(OutputIndexOutOfRange),
-            OffchainTransaction { tx_checksum, .. } |
-            OffchainTxInput { tx_checksum, .. } |
-            OffchainTxOutput { tx_checksum, .. }
-            if tx_checksum.into_inner() >= (2u64 << 46) =>
-                Err(ChecksumOutOfRange),
-            _ => Ok(())
+            OnchainTransaction { block_height, .. }
+            | OnchainTxInput { block_height, .. }
+            | OnchainTxOutput { block_height, .. }
+                if block_height >= (2u32 << 22) =>
+            {
+                Err(BlockHeightOutOfRange)
+            }
+            OnchainTxInput { input_index, .. } | OffchainTxInput { input_index, .. }
+                if input_index + 1 >= (2u16 << 14) =>
+            {
+                Err(InputIndexOutOfRange)
+            }
+            OnchainTxOutput { output_index, .. } | OffchainTxOutput { output_index, .. }
+                if output_index + 1 >= (2u16 << 14) =>
+            {
+                Err(OutputIndexOutOfRange)
+            }
+            OffchainTransaction { tx_checksum, .. }
+            | OffchainTxInput { tx_checksum, .. }
+            | OffchainTxOutput { tx_checksum, .. }
+                if *tx_checksum >= (2u64 << 46) =>
+            {
+                Err(ChecksumOutOfRange)
+            }
+            _ => Ok(()),
         }
     }
 
     pub fn is_onchain(&self) -> bool {
         use Descriptor::*;
         match self {
-            OnchainBlock {..} | OnchainTransaction {..} | OnchainTxInput {..} | OnchainTxOutput {..} => true,
+            OnchainBlock { .. }
+            | OnchainTransaction { .. }
+            | OnchainTxInput { .. }
+            | OnchainTxOutput { .. } => true,
             _ => false,
         }
     }
@@ -124,27 +170,62 @@ impl Descriptor {
 
     pub fn upgraded(&self, index: u16, dimension: Option<Dimension>) -> Result<Self, Error> {
         use Descriptor::*;
-        use Error::*;
         use Dimension::*;
+        use Error::*;
 
         match (*self, dimension) {
-            (OnchainBlock { block_height, block_checksum }, None)
-                => Ok(OnchainTransaction { block_height, block_checksum, tx_index: index }),
-            (OnchainTransaction { block_height, block_checksum, tx_index }, Some(dim))
-            if dim == Input
-                => Ok(OnchainTxInput { block_height, block_checksum, tx_index, input_index: index }),
-            (OnchainTransaction { block_height, block_checksum, tx_index }, Some(dim))
-            if dim == Output
-                => Ok(OnchainTxOutput { block_height, block_checksum, tx_index, output_index: index }),
-            (OffchainTransaction { tx_checksum }, Some(dim))
-            if dim == Input
-                => Ok(OffchainTxInput { tx_checksum, input_index: index }),
-            (OffchainTransaction { tx_checksum }, Some(dim))
-            if dim == Output
-                => Ok(OffchainTxOutput { tx_checksum, output_index: index }),
-            (OnchainTransaction {..}, None)
-            | (OffchainTransaction {..}, None)
-                => Err(DimensionRequired),
+            (
+                OnchainBlock {
+                    block_height,
+                    block_checksum,
+                },
+                None,
+            ) => Ok(OnchainTransaction {
+                block_height,
+                block_checksum,
+                tx_index: index,
+            }),
+            (
+                OnchainTransaction {
+                    block_height,
+                    block_checksum,
+                    tx_index,
+                },
+                Some(dim),
+            ) if dim == Input => Ok(OnchainTxInput {
+                block_height,
+                block_checksum,
+                tx_index,
+                input_index: index,
+            }),
+            (
+                OnchainTransaction {
+                    block_height,
+                    block_checksum,
+                    tx_index,
+                },
+                Some(dim),
+            ) if dim == Output => Ok(OnchainTxOutput {
+                block_height,
+                block_checksum,
+                tx_index,
+                output_index: index,
+            }),
+            (OffchainTransaction { tx_checksum }, Some(dim)) if dim == Input => {
+                Ok(OffchainTxInput {
+                    tx_checksum,
+                    input_index: index,
+                })
+            }
+            (OffchainTransaction { tx_checksum }, Some(dim)) if dim == Output => {
+                Ok(OffchainTxOutput {
+                    tx_checksum,
+                    output_index: index,
+                })
+            }
+            (OnchainTransaction { .. }, None) | (OffchainTransaction { .. }, None) => {
+                Err(DimensionRequired)
+            }
             _ => Err(UpgradeImpossible),
         }
     }
@@ -154,14 +235,33 @@ impl Descriptor {
         use Error::*;
 
         match self {
-            OnchainTransaction { block_height, block_checksum, .. }
-                => Ok(OnchainBlock { block_height, block_checksum }),
-            OnchainTxInput { block_height, block_checksum, tx_index, .. }
-            | OnchainTxOutput { block_height, block_checksum, tx_index, .. }
-                => Ok(OnchainTransaction { block_height, block_checksum, tx_index }),
-            OffchainTxInput { tx_checksum, .. }
-            | OffchainTxOutput { tx_checksum, .. }
-                => Ok(OffchainTransaction { tx_checksum }),
+            OnchainTransaction {
+                block_height,
+                block_checksum,
+                ..
+            } => Ok(OnchainBlock {
+                block_height,
+                block_checksum,
+            }),
+            OnchainTxInput {
+                block_height,
+                block_checksum,
+                tx_index,
+                ..
+            }
+            | OnchainTxOutput {
+                block_height,
+                block_checksum,
+                tx_index,
+                ..
+            } => Ok(OnchainTransaction {
+                block_height,
+                block_checksum,
+                tx_index,
+            }),
+            OffchainTxInput { tx_checksum, .. } | OffchainTxOutput { tx_checksum, .. } => {
+                Ok(OffchainTransaction { tx_checksum })
+            }
             _ => Err(DowngradeImpossible),
         }
     }
@@ -174,7 +274,7 @@ impl Descriptor {
             | OnchainTransaction { block_height, .. }
             | OnchainTxInput { block_height, .. }
             | OnchainTxOutput { block_height, .. } => Some(*block_height),
-            _ => None
+            _ => None,
         }
     }
 
@@ -185,8 +285,8 @@ impl Descriptor {
             OnchainBlock { block_checksum, .. }
             | OnchainTransaction { block_checksum, .. }
             | OnchainTxInput { block_checksum, .. }
-            | OnchainTxOutput { block_checksum, .. } => Some(block_checksum.into_inner()),
-            _ => None
+            | OnchainTxOutput { block_checksum, .. } => Some(**block_checksum),
+            _ => None,
         }
     }
 
@@ -196,8 +296,8 @@ impl Descriptor {
         match self {
             OffchainTransaction { tx_checksum, .. }
             | OffchainTxInput { tx_checksum, .. }
-            | OffchainTxOutput { tx_checksum, .. } => Some(tx_checksum.into_inner()),
-            _ => None
+            | OffchainTxOutput { tx_checksum, .. } => Some(**tx_checksum),
+            _ => None,
         }
     }
 
@@ -208,7 +308,7 @@ impl Descriptor {
             OnchainTransaction { tx_index, .. }
             | OnchainTxInput { tx_index, .. }
             | OnchainTxOutput { tx_index, .. } => Some(*tx_index),
-            _ => None
+            _ => None,
         }
     }
 
@@ -216,9 +316,10 @@ impl Descriptor {
         use Descriptor::*;
 
         match self {
-            OnchainTxInput { input_index, .. }
-            | OffchainTxInput { input_index, .. } => Some(*input_index),
-            _ => None
+            OnchainTxInput { input_index, .. } | OffchainTxInput { input_index, .. } => {
+                Some(*input_index)
+            }
+            _ => None,
         }
     }
 
@@ -226,9 +327,10 @@ impl Descriptor {
         use Descriptor::*;
 
         match self {
-            OnchainTxOutput { output_index, .. }
-            | OffchainTxOutput { output_index, .. } => Some(*output_index),
-            _ => None
+            OnchainTxOutput { output_index, .. } | OffchainTxOutput { output_index, .. } => {
+                Some(*output_index)
+            }
+            _ => None,
         }
     }
 
@@ -237,19 +339,18 @@ impl Descriptor {
     }
 }
 
-
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Display)]
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]
 pub struct ShortId(u64);
 
 impl ShortId {
-    pub const FLAG_OFFCHAIN: u64    = 0x8000_0000_0000_0000;
-    pub const MASK_BLOCK: u64       = 0x7FFF_FF00_0000_0000;
-    pub const MASK_BLOCKCHECK: u64  = 0x0000_00FF_0000_0000;
-    pub const MASK_TXIDX: u64       = 0x0000_0000_FFFF_0000;
-    pub const MASK_TXCHECK: u64     = 0x7FFF_FFFF_FFFF_0000;
-    pub const FLAG_INOUT: u64       = 0x0000_0000_0000_8000;
-    pub const MASK_INOUT: u64       = 0x0000_0000_0000_7FFF;
+    pub const FLAG_OFFCHAIN: u64 = 0x8000_0000_0000_0000;
+    pub const MASK_BLOCK: u64 = 0x7FFF_FF00_0000_0000;
+    pub const MASK_BLOCKCHECK: u64 = 0x0000_00FF_0000_0000;
+    pub const MASK_TXIDX: u64 = 0x0000_0000_FFFF_0000;
+    pub const MASK_TXCHECK: u64 = 0x7FFF_FFFF_FFFF_0000;
+    pub const FLAG_INOUT: u64 = 0x0000_0000_0000_8000;
+    pub const MASK_INOUT: u64 = 0x0000_0000_0000_7FFF;
 
     pub const SHIFT_BLOCK: u64 = 40;
     pub const SHIFT_BLOCKCHECK: u64 = 32;
@@ -265,36 +366,66 @@ impl ShortId {
 
     pub fn get_descriptor(&self) -> Descriptor {
         #[inline]
-        fn iconv<T>(val: u64) -> T where T: TryFrom<u64>, <T as TryFrom<u64>>::Error: Debug {
-            val.try_into().expect("Conversion from existing ShortId can't fail")
+        fn iconv<T>(val: u64) -> T
+        where
+            T: TryFrom<u64>,
+            <T as TryFrom<u64>>::Error: Debug,
+        {
+            val.try_into()
+                .expect("Conversion from existing ShortId can't fail")
         }
 
         let index: u16 = iconv(self.0 & Self::MASK_INOUT);
 
         if self.is_onchain() {
             let block_height: u32 = iconv((self.0 & Self::MASK_BLOCK) >> Self::SHIFT_BLOCK);
-            let block_checksum = BlockChecksum::from_inner(iconv((self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK));
+            let block_checksum = BlockChecksum::from(iconv::<u8>(
+                (self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK,
+            ));
             if (self.0 & (!Self::MASK_BLOCK)) == 0 {
-                return Descriptor::OnchainBlock { block_height, block_checksum }
+                return Descriptor::OnchainBlock {
+                    block_height,
+                    block_checksum,
+                };
             }
             let tx_index: u16 = iconv((self.0 & Self::MASK_TXIDX) >> Self::SHIFT_TXIDX);
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
-                return Descriptor::OnchainTransaction { block_height, block_checksum, tx_index }
+                return Descriptor::OnchainTransaction {
+                    block_height,
+                    block_checksum,
+                    tx_index,
+                };
             }
             if (self.0 & Self::FLAG_INOUT) == 0 {
-                Descriptor::OnchainTxInput { block_height, block_checksum, tx_index, input_index: index - 1 }
+                Descriptor::OnchainTxInput {
+                    block_height,
+                    block_checksum,
+                    tx_index,
+                    input_index: index - 1,
+                }
             } else {
-                Descriptor::OnchainTxOutput { block_height, block_checksum, tx_index, output_index: index - 1 }
+                Descriptor::OnchainTxOutput {
+                    block_height,
+                    block_checksum,
+                    tx_index,
+                    output_index: index - 1,
+                }
             }
         } else {
-            let tx_checksum = TxChecksum::from_inner((self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX);
+            let tx_checksum = TxChecksum::from((self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX);
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
-                return Descriptor::OffchainTransaction { tx_checksum }
+                return Descriptor::OffchainTransaction { tx_checksum };
             }
             if (self.0 & Self::FLAG_INOUT) == 0 {
-                Descriptor::OffchainTxInput { tx_checksum, input_index: index - 1 }
+                Descriptor::OffchainTxInput {
+                    tx_checksum,
+                    input_index: index - 1,
+                }
             } else {
-                Descriptor::OffchainTxOutput { tx_checksum, output_index: index - 1 }
+                Descriptor::OffchainTxOutput {
+                    tx_checksum,
+                    output_index: index - 1,
+                }
             }
         }
     }
@@ -325,13 +456,13 @@ impl TryFrom<Descriptor> for ShortId {
             | OnchainTxOutput { block_height, .. } => block_height,
             _ => 0,
         } as u64;
-        let block_checksum = match descriptor {
+        let block_checksum = *match descriptor {
             OnchainBlock { block_checksum, .. }
             | OnchainTransaction { block_checksum, .. }
             | OnchainTxInput { block_checksum, .. }
             | OnchainTxOutput { block_checksum, .. } => block_checksum,
             _ => BlockChecksum::default(),
-        }.into_inner() as u64;
+        } as u64;
         let tx_index = match descriptor {
             OnchainTransaction { tx_index, .. }
             | OnchainTxInput { tx_index, .. }
@@ -343,12 +474,14 @@ impl TryFrom<Descriptor> for ShortId {
             | OffchainTxInput { tx_checksum, .. }
             | OffchainTxOutput { tx_checksum, .. } => tx_checksum,
             _ => TxChecksum::default(),
-        }.into_inner();
+        };
         let inout_index: u64 = match descriptor {
-            OnchainTxInput { input_index, .. }
-            | OffchainTxInput { input_index, .. } => input_index + 1,
-            OnchainTxOutput { output_index, .. }
-            | OffchainTxOutput { output_index, .. } => output_index + 1,
+            OnchainTxInput { input_index, .. } | OffchainTxInput { input_index, .. } => {
+                input_index + 1
+            }
+            OnchainTxOutput { output_index, .. } | OffchainTxOutput { output_index, .. } => {
+                output_index + 1
+            }
             _ => 0,
         } as u64;
 
@@ -356,7 +489,7 @@ impl TryFrom<Descriptor> for ShortId {
         short_id |= inout_index;
         if descriptor.is_offchain() {
             short_id |= Self::FLAG_OFFCHAIN;
-            short_id |= (tx_checksum << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK;
+            short_id |= (*tx_checksum << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK;
         } else {
             short_id |= (block_height << 40) & Self::MASK_BLOCK;
             short_id |= (block_checksum << Self::SHIFT_BLOCKCHECK) & Self::MASK_BLOCKCHECK;
@@ -364,7 +497,9 @@ impl TryFrom<Descriptor> for ShortId {
         }
 
         match descriptor {
-            OnchainTxOutput {..} | OffchainTxOutput {..} => short_id |= Self::FLAG_INOUT << Self::SHIFT_TXIDX,
+            OnchainTxOutput { .. } | OffchainTxOutput { .. } => {
+                short_id |= Self::FLAG_INOUT << Self::SHIFT_TXIDX
+            }
             _ => (),
         }
 
