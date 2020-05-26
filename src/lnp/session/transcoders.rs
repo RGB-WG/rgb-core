@@ -117,7 +117,7 @@ impl Bipolar for NoEncryption {
     type Left = <Self as Transcode>::Encryptor;
     type Right = <Self as Transcode>::Decryptor;
 
-    fn join(encryptor: Self::Left, decryptor: Self::Right) -> Self {
+    fn join(encryptor: Self::Left, _decryptor: Self::Right) -> Self {
         encryptor as NoEncryption
     }
 

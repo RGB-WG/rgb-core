@@ -209,17 +209,18 @@ impl TryFrom<Url> for NodeLocator {
 #[cfg(feature = "url")]
 impl From<&NodeLocator> for Url {
     fn from(locator: &NodeLocator) -> Self {
+        const ERR: &'static str = "URL construction incosistency for NodeLocator";
         match locator {
             NodeLocator::Native(pubkey, inet, port) => {
                 let mut url = Url::parse(&format!("lnp://{}@{}", pubkey, inet))
                     .expect("Internal URL construction error");
-                url.set_port(port.clone());
+                url.set_port(port.clone()).expect(ERR);
                 url
             }
             NodeLocator::Udp(pubkey, ip, port) => {
                 let mut url = Url::parse(&format!("lnp-udp://{}@{}", pubkey, ip))
                     .expect("Internal URL construction error");
-                url.set_port(port.clone());
+                url.set_port(port.clone()).expect(ERR);
                 url
             }
             #[cfg(feature = "zmq")]
@@ -236,21 +237,21 @@ impl From<&NodeLocator> for Url {
             NodeLocator::ZmqEncrypted(pubkey, zmq_type, ip, port) => {
                 let mut url = Url::parse(&format!("lnp-zmq://{}@{}/?api={}", pubkey, ip, zmq_type))
                     .expect("Internal URL construction error");
-                url.set_port(port.clone());
+                url.set_port(port.clone()).expect(ERR);
                 url
             }
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqUnencrypted(zmq_type, ip, port) => {
                 let mut url = Url::parse(&format!("lnp-zmq://{}/?api={}", ip, zmq_type))
                     .expect("Internal URL construction error");
-                url.set_port(port.clone());
+                url.set_port(port.clone()).expect(ERR);
                 url
             }
             #[cfg(feature = "websocket")]
             NodeLocator::Websocket(pubkey, ip, port) => {
                 let mut url = Url::parse(&format!("lnp-ws://{}@{}", pubkey, ip))
                     .expect("Internal URL construction error");
-                url.set_port(port.clone());
+                url.set_port(port.clone()).expect(ERR);
                 url
             }
         }

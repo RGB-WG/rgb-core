@@ -53,7 +53,7 @@ where
     T: Transcode,
     S: Bidirect,
 {
-    pub fn new(node_locator: NodeLocator) -> Result<Self, Error> {
+    pub fn new(_node_locator: NodeLocator) -> Result<Self, Error> {
         unimplemented!()
     }
 }
@@ -84,7 +84,7 @@ where
     type Left = Inbound<T::Left, S::Left>;
     type Right = Outbound<T::Right, S::Right>;
 
-    fn join(left: Self::Left, right: Self::Right) -> Self {
+    fn join(_left: Self::Left, _right: Self::Right) -> Self {
         unimplemented!()
     }
 
@@ -99,12 +99,12 @@ where
     S: Bidirect,
     Error: From<T::Error>,
 {
-    pub fn read_raw_message(&mut self) -> Result<Vec<u8>, Error> {
+    pub fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
         let reader = self.stream.reader();
         Ok(self.transcoder.decrypt(reader.read()?)?)
     }
 
-    pub fn write_raw_message(&mut self, raw: impl Borrow<[u8]>) -> Result<usize, Error> {
+    pub fn send_raw_message(&mut self, raw: impl Borrow<[u8]>) -> Result<usize, Error> {
         let writer = self.stream.writer();
         Ok(writer.write(self.transcoder.encrypt(raw))?)
     }

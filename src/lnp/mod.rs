@@ -19,7 +19,8 @@ pub mod presentation;
 mod session;
 pub mod transport;
 
-pub use presentation::{message, Message};
+pub use presentation::message::{Type, TypedEnum, Unmarshaller};
+pub use presentation::{tlv, Message, UnknownTypeError, Unmarshall, UnmarshallFn};
 pub use session::{
     ConnectionError, Inbound, NoEncryption, NodeAddr, NodeLocator, Outbound, Session, SessionTrait,
 };

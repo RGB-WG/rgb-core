@@ -123,10 +123,25 @@ where
 
 pub trait TypedEnum
 where
-    Self: Sized,
+    Self: Sized + Clone,
 {
     fn try_from_type(type_id: Type, data: &dyn Any) -> Result<Self, UnknownTypeError>;
     fn get_type(&self) -> Type;
+    fn get_payload(&self) -> Vec<u8>;
+}
+
+impl<T> EncodeRaw for T where T: TypedEnum {}
+
+impl<T> From<T> for RawMessage
+where
+    T: TypedEnum,
+{
+    fn from(msg: T) -> Self {
+        RawMessage {
+            type_id: msg.get_type(),
+            payload: msg.get_payload(),
+        }
+    }
 }
 
 pub struct Unmarshaller<T>
