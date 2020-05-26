@@ -13,6 +13,8 @@
 
 use super::{Anchor, Genesis, Transition};
 
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
 pub struct Consignment {
     pub genesis: Genesis,
     pub transitions: Vec<Transition>,

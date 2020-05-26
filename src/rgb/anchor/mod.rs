@@ -11,4 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
 pub struct Anchor {}
