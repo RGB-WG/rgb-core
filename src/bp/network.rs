@@ -99,11 +99,11 @@ impl TryFrom<Network> for bitcoin::Network {
 impl fmt::Display for Network {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Network::Other(magic) => writeln!(f, "magic:{:x?}", magic),
-            Network::Mainnet => writeln!(f, "mainnet"),
-            Network::Testnet => writeln!(f, "testnet"),
-            Network::Regtest => writeln!(f, "regtest"),
-            Network::Signet => writeln!(f, "signet"),
+            Network::Other(magic) => write!(f, "magic:{:x?}", magic),
+            Network::Mainnet => write!(f, "mainnet"),
+            Network::Testnet => write!(f, "testnet"),
+            Network::Regtest => write!(f, "regtest"),
+            Network::Signet => write!(f, "signet"),
         }
     }
 }
@@ -111,9 +111,9 @@ impl fmt::Display for Network {
 impl fmt::Debug for Network {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Network::Other(magic) => writeln!(f, "magic:{:x?}", magic),
+            Network::Other(magic) => write!(f, "magic:{:x?}", magic),
             Network::Mainnet | Network::Testnet | Network::Regtest | Network::Signet => {
-                writeln!(f, "{} (magic:{:x?})", self, self.as_magic())
+                write!(f, "{} (magic:{:x?})", self, self.as_magic())
             }
         }
     }

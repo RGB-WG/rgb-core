@@ -47,7 +47,7 @@ pub enum NodeLocator {
     /// connection without encryption. Relies on ZMQ IPC sockets internally;
     /// specific socket pair for ZMQ is provided via query parameter
     /// # URL Schema
-    /// lnp:<file-path>?api=<p2p|rpc|sub>
+    /// lnp-zmq:<file-path>?api=<p2p|rpc|sub>
     #[cfg(feature = "zmq")]
     Ipc(PathBuf, ZmqType),
 
@@ -56,7 +56,7 @@ pub enum NodeLocator {
     /// Relies on ZMQ IPC sockets internally; specific socket pair for ZMQ is
     /// provided via query parameter
     /// # URL Schema
-    /// lnp:?api=<p2p|rpc|sub>#<id>
+    /// lnp-zmq:?api=<p2p|rpc|sub>#<id>
     #[cfg(feature = "zmq")]
     Inproc(String, zmq::Context, ZmqType),
 
@@ -224,13 +224,15 @@ impl From<&NodeLocator> for Url {
                 url
             }
             #[cfg(feature = "zmq")]
-            NodeLocator::Ipc(path, zmq_type) => {
-                Url::parse(&format!("lnp:{}?api={}", path.to_str().unwrap(), zmq_type))
-                    .expect("Internal URL construction error")
-            }
+            NodeLocator::Ipc(path, zmq_type) => Url::parse(&format!(
+                "lnp-zmq:{}?api={}",
+                path.to_str().unwrap(),
+                zmq_type
+            ))
+            .expect("Internal URL construction error"),
             #[cfg(feature = "zmq")]
             NodeLocator::Inproc(name, _, zmq_type) => {
-                Url::parse(&format!("lnp:?api={}#{}", zmq_type, name))
+                Url::parse(&format!("lnp-zmq:?api={}#{}", zmq_type, name))
                     .expect("Internal URL construction error")
             }
             #[cfg(feature = "zmq")]
