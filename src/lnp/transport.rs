@@ -34,8 +34,6 @@ use std::net::TcpStream;
 #[cfg(not(feature="use-tokio"))]
 use std::io::{Read, Write};
 
-use lightning::secp256k1;
-
 // We re-export this under more proper name (it's not per-channel encryptor,
 // it is per-connection transport-level encryptor)
 use lightning::ln::peers::conduit::Conduit as Encryptor;

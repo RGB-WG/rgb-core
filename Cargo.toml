@@ -36,6 +36,7 @@ parse_arg = { version = "0.1.4", optional = true }
 # This strange naming is a workaround for not being able to define required features for a dependency
 # See https://github.com/rust-lang/api-guidelines/issues/180 for the explanation and references.
 serde_crate = { package = "serde", version = "1.0.106", features = ["derive"], optional = true }
+secp256k1 = { version = "0.17.2", optional = true }
 
 [features]
 default = []
@@ -48,5 +49,5 @@ use-bulletproofs = ["grin_secp256k1zkp"]
 use-rgb = ["use-bulletproofs"]
 use-api = ["zmq"]
 use-daemons = ["async-trait", "use-api"]
-use-lightning = ["lightning"]
+use-lightning = ["lightning", "secp256k1"]
 serde = ["serde_crate", "torut/serialize"]

@@ -12,8 +12,10 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::{io, collections::HashMap};
+use bitcoin::{secp256k1, util::bip32};
 
 use super::Error;
+use crate::bp;
 
 pub trait Network: Sized {
     fn network_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error>;
@@ -73,6 +75,10 @@ network_serialize_from_commitment!(&[u8]);
 network_serialize_from_commitment!(Box<[u8]>);
 network_serialize_from_commitment!(&str);
 network_serialize_from_commitment!(String);
+network_serialize_from_commitment!(secp256k1::PublicKey);
+network_serialize_from_commitment!(secp256k1::Signature);
+network_serialize_from_commitment!(bitcoin::Network);
+network_serialize_from_commitment!(bp::ShortId);
 
 
 /// In terms of network serialization, we interpret `Option` as a zero-length `Vec`
@@ -165,6 +171,118 @@ impl<A, B> Network for (A, B) where A: Network, B: Network {
             A::network_deserialize(&mut d)?,
             B::network_deserialize(&mut d)?,
         ))
+    }
+}
+
+
+impl Network for bitcoin::PublicKey {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(if self.compressed {
+            e.write(&self.key.serialize())?
+        } else {
+            e.write(&self.key.serialize_uncompressed())?
+        })
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let marker = u8::network_deserialize(&mut d)?;
+        match marker {
+            0x04 => {
+                let mut buf = [0u8; secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE];
+                buf[0] = marker;
+                d.read_exact(&mut buf[1..]);
+                Ok(Self::from_slice(&buf).map_err(|_| Error::DataIntegrityError)?)
+            },
+            0x03 | 0x02 => {
+                let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
+                buf[0] = marker;
+                d.read_exact(&mut buf[1..]);
+                Ok(Self::from_slice(&buf).map_err(|_| Error::DataIntegrityError)?)
+            }
+            _ => Err(Error::DataIntegrityError),
+        }
+    }
+}
+
+impl Network for bip32::ChildNumber {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        let (t, index) = match self {
+            bip32::ChildNumber::Normal { index } => (0u8, index),
+            bip32::ChildNumber::Hardened { index } => (1u8, index),
+        };
+        Ok(
+            t.network_serialize(&mut e)? +
+            index.network_serialize(&mut e)?
+        )
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let t = u8::network_deserialize(&mut d)?;
+        let index = u32::network_deserialize(&mut d)?;
+        Ok(match t {
+            0 => bip32::ChildNumber::Normal { index },
+            1 => bip32::ChildNumber::Hardened { index },
+            x => Err(Error::EnumValueUnknown(x))?,
+        })
+    }
+}
+
+impl Network for bip32::DerivationPath {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        let buf: Vec<bip32::ChildNumber> = self.into_iter().map(bip32::ChildNumber::clone).collect();
+        Ok(buf.network_serialize(&mut e)?)
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        Ok(Self::from(Vec::<bip32::ChildNumber>::network_deserialize(&mut d)?))
+    }
+}
+
+impl Network for bip32::ChainCode {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(e.write(self.as_bytes())?)
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let mut buf = [0u8; 32];
+        d.read_exact(&mut buf);
+        Ok(Self::from(&buf[..]))
+    }
+}
+
+impl Network for bip32::Fingerprint {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(e.write(self.as_bytes())?)
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let mut buf = [0u8; 4];
+        d.read_exact(&mut buf);
+        Ok(Self::from(&buf[..]))
+    }
+}
+
+impl Network for bip32::ExtendedPubKey {
+    fn network_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(
+            self.network.network_serialize(&mut e)? +
+            self.depth.network_serialize(&mut e)? +
+            self.parent_fingerprint.network_serialize(&mut e)? +
+            self.child_number.network_serialize(&mut e)? +
+            self.public_key.network_serialize(&mut e)? +
+            self.chain_code.network_serialize(&mut e)?
+        )
+    }
+
+    fn network_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        Ok(Self {
+            network: bitcoin::Network::network_deserialize(&mut d)?,
+            depth: u8::network_deserialize(&mut d)?,
+            parent_fingerprint: bip32::Fingerprint::network_deserialize(&mut d)?,
+            child_number: bip32::ChildNumber::network_deserialize(&mut d)?,
+            public_key: bitcoin::PublicKey::network_deserialize(&mut d)?,
+            chain_code: bip32::ChainCode::network_deserialize(&mut d)?,
+        })
     }
 }
 

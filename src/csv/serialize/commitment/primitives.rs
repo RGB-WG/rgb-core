@@ -16,13 +16,14 @@ use std::{io, str, ops::Deref};
 
 use num_traits::{ToPrimitive, FromPrimitive};
 use bitcoin::{
+    secp256k1,
     hash_types::Txid,
     util::uint::{Uint128, Uint256},
     consensus::encode as consensus
 };
 
 use super::{Commitment, Error};
-use crate::bp::MerkleNode;
+use crate::bp::{ShortId, MerkleNode, blind::OutpointHash};
 
 
 pub trait FromEnumPrimitive: FromPrimitive + ToPrimitive { }
@@ -40,6 +41,7 @@ impl FromConsensus for i32 { }
 impl FromConsensus for i64 { }
 impl FromConsensus for Txid { }
 impl FromConsensus for MerkleNode { }
+impl FromConsensus for OutpointHash { }
 
 impl<T> Commitment for T where T: FromConsensus {
     #[inline]
@@ -148,6 +150,49 @@ impl Commitment for String {
     }
 }
 
+impl Commitment for secp256k1::PublicKey {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(e.write(&self.serialize())?)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
+        d.read_exact(&mut buf);
+        Ok(Self::from_slice(&buf).map_err(|_| Error::DataIntegrityError)?)
+    }
+}
+
+impl Commitment for secp256k1::Signature {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(e.write(&self.serialize_compact())?)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
+        d.read_exact(&mut buf);
+        Ok(Self::from_compact(&buf).map_err(|_| Error::DataIntegrityError)?)
+    }
+}
+
+impl Commitment for bitcoin::Network {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(self.magic().commitment_serialize(&mut e)?)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        Ok(Self::from_magic(u32::commitment_deserialize(&mut d)?).ok_or(Error::ValueOutOfRange)?)
+    }
+}
+
+impl Commitment for ShortId {
+    fn commitment_serialize<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        self.into_u64().commitment_serialize(&mut e)
+    }
+
+    fn commitment_deserialize<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        Ok(Self::from(u64::commitment_deserialize(&mut d)?))
+    }
+}
 
 // Tests
 #[cfg(test)]

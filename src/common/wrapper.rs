@@ -28,9 +28,14 @@ macro_rules! wrapper {
 
         #[$docs]
         pub type $name = Wrapper<$from, ::std::marker::PhantomData::<$phantom>>;
+
+        impl crate::common::Wrapped for $name { }
     };
 }
 
+
+// Wrapper marker trait
+pub trait Wrapped { }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub struct Wrapper<T, Z>(T, PhantomData<Z>);
