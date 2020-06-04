@@ -207,6 +207,15 @@ macro_rules! strict_encode_list {
             )+
             len
         }
+    };
+
+    ( $encoder:ident; $len:ident; $($item:expr),+ ) => {
+        {
+            $(
+                $len += $item.strict_encode(&mut $encoder)?;
+            )+
+            $len
+        }
     }
 }
 
