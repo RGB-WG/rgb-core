@@ -56,7 +56,7 @@ impl AssignmentsVariant {
             .map(|(seal_hash, amount)| {
                 let blinding = amount::BlindingFactor::new(&secp, &mut rng);
                 blinding_factors.push(blinding.clone());
-                (seal_hash, amount::Revealed { amount, blinding }.conceal())
+                (seal_hash, amount::Revealed { amount, blinding })
             })
             .collect();
 
@@ -80,12 +80,10 @@ impl AssignmentsVariant {
             .chain(
                 list_theirs
                     .into_iter()
-                    .map(
-                        |(seal_definition, assigned_state)| Assignment::Confidential {
-                            seal_definition,
-                            assigned_state,
-                        },
-                    ),
+                    .map(|(seal_definition, assigned_state)| Assignment::Partial {
+                        seal_definition,
+                        assigned_state,
+                    }),
             )
             .collect();
 
@@ -141,6 +139,10 @@ where
         seal_definition: seal::Revealed,
         assigned_state: STATE::Revealed,
     },
+    Partial {
+        seal_definition: seal::Confidential,
+        assigned_state: STATE::Revealed,
+    },
 }
 
 impl<STATE> Conceal for Assignment<STATE>
@@ -168,6 +170,13 @@ where
                 assigned_state,
             } => Self::Confidential {
                 seal_definition: seal_definition.conceal(),
+                assigned_state: assigned_state.conceal().into(),
+            },
+            Assignment::Partial {
+                seal_definition,
+                assigned_state,
+            } => Self::Confidential {
+                seal_definition: *seal_definition,
                 assigned_state: assigned_state.conceal().into(),
             },
         }
@@ -252,6 +261,10 @@ mod strict_encoding {
                     seal_definition,
                     assigned_state,
                 } => strict_encode_list!(e; 1u8, seal_definition, assigned_state),
+                Assignment::Partial {
+                    seal_definition,
+                    assigned_state,
+                } => strict_encode_list!(e; 2u8, seal_definition, assigned_state),
             })
         }
     }
@@ -275,6 +288,10 @@ mod strict_encoding {
                 },
                 1u8 => Assignment::Revealed {
                     seal_definition: seal::Revealed::strict_decode(&mut d)?,
+                    assigned_state: STATE::Revealed::strict_decode(&mut d)?,
+                },
+                2u8 => Assignment::Partial {
+                    seal_definition: seal::Confidential::strict_decode(&mut d)?,
                     assigned_state: STATE::Revealed::strict_decode(&mut d)?,
                 },
                 invalid => Err(Error::EnumValueNotKnown("Assignment".to_string(), invalid))?,
