@@ -19,7 +19,7 @@ use core::convert::TryFrom;
 
 pub type Confidential = OutpointHash;
 
-/// Convenience type name useful for defning new seals
+/// Convenience type name useful for defining new seals
 pub type SealDefinition = Revealed;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display)]

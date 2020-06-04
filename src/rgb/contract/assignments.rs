@@ -17,6 +17,7 @@ use super::{
     super::{schema, zkp},
     amount, data, seal, Amount, SealDefinition,
 };
+use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
@@ -29,15 +30,19 @@ pub enum AssignmentsVariant {
 }
 
 impl AssignmentsVariant {
+    /// Returns `None` if `allocations_ours` list is empty, since it is
+    /// impossible to zero-balance using `allocations_theirs` amounts which
+    /// will not store the blinding factor
     pub fn zero_balanced(
-        allocations: Vec<(SealDefinition, Amount)>,
+        allocations_ours: Vec<(SealDefinition, Amount)>,
+        allocations_theirs: Vec<(OutpointHash, Amount)>,
         homomorphic_factor: u64,
-    ) -> Self {
+    ) -> Option<Self> {
         let secp = secp256k1zkp::Secp256k1::with_caps(secp256k1zkp::ContextFlag::Commit);
         let mut rng = rand::thread_rng();
         let mut blinding_factors = vec![];
 
-        let mut list: Vec<_> = allocations
+        let mut list_ours: Vec<_> = allocations_ours
             .into_iter()
             .map(|(seal, amount)| {
                 let blinding = amount::BlindingFactor::new(&secp, &mut rng);
@@ -46,24 +51,45 @@ impl AssignmentsVariant {
             })
             .collect();
 
+        let list_theirs: Vec<_> = allocations_theirs
+            .into_iter()
+            .map(|(seal_hash, amount)| {
+                let blinding = amount::BlindingFactor::new(&secp, &mut rng);
+                blinding_factors.push(blinding.clone());
+                (seal_hash, amount::Revealed { amount, blinding }.conceal())
+            })
+            .collect();
+
         let blinding_correction = zkp::blinding_correction(blinding_factors);
-        if let Some(item) = list.last_mut() {
+        if let Some(item) = list_ours.last_mut() {
             let blinding = &mut item.1.blinding;
             blinding.add_assign(&secp, &blinding_correction).expect(
                 "You won lottery and will live forever: the probability \
                     of this event is less than a life of the universe",
             );
+        } else {
+            return None;
         }
 
-        let set = list
+        let set = list_ours
             .into_iter()
-            .map(|item| Assignment::Revealed {
-                seal_definition: item.0,
-                assigned_state: item.1,
+            .map(|(seal_definition, assigned_state)| Assignment::Revealed {
+                seal_definition,
+                assigned_state,
             })
+            .chain(
+                list_theirs
+                    .into_iter()
+                    .map(
+                        |(seal_definition, assigned_state)| Assignment::Confidential {
+                            seal_definition,
+                            assigned_state,
+                        },
+                    ),
+            )
             .collect();
 
-        Self::Homomorphic(homomorphic_factor, set)
+        Some(Self::Homomorphic(homomorphic_factor, set))
     }
 }
 
