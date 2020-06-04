@@ -14,7 +14,7 @@
 use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 use bitcoin::hashes::{hash160, sha256, sha256d};
-use bitcoin::{secp256k1, util::bip32, Txid};
+use bitcoin::{secp256k1, util::bip32, OutPoint, Txid};
 use std::io;
 
 impl strict_encoding::Strategy for Txid {
@@ -177,6 +177,27 @@ impl StrictDecode for ShortId {
     #[inline]
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
         Ok(Self::from(u64::strict_decode(d)?))
+    }
+}
+
+impl StrictEncode for OutPoint {
+    type Error = Error;
+
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        Ok(strict_encode_list!(e; self.txid, self.vout))
+    }
+}
+
+impl StrictDecode for OutPoint {
+    type Error = Error;
+
+    #[inline]
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        Ok(Self {
+            txid: Txid::strict_decode(&mut d)?,
+            vout: u32::strict_decode(&mut d)?,
+        })
     }
 }
 
