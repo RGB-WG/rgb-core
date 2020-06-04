@@ -18,6 +18,7 @@ mod interfaces;
 pub mod schema;
 mod stash;
 pub mod vm;
+pub mod zkp;
 
 pub mod prelude {
     pub use super::*;
@@ -30,6 +31,7 @@ pub mod prelude {
     pub use schema::script;
     pub use schema::{Schema, SchemaId, SimplicityScript};
     pub use stash::{CoordinatedTransition, CoordinatedUpdate, Stash};
+    pub use zkp;
 }
 
 pub use prelude::*;

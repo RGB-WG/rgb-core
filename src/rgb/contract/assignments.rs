@@ -13,7 +13,10 @@
 
 use std::collections::BTreeSet;
 
-use super::{super::schema, amount, data, seal, Amount, SealDefinition};
+use super::{
+    super::{schema, zkp},
+    amount, data, seal, Amount, SealDefinition,
+};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
@@ -43,13 +46,7 @@ impl AssignmentsVariant {
             })
             .collect();
 
-        let mut blinding_correction = secp
-            .blind_sum(vec![secp256k1zkp::key::ZERO_KEY], blinding_factors)
-            .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
-        blinding_correction.neg_assign(&secp).expect(
-            "You won lottery and will live forever: the probability \
-                    of this event is less than a life of the universe",
-        );
+        let blinding_correction = zkp::blinding_correction(blinding_factors);
         if let Some(item) = list.last_mut() {
             let blinding = &mut item.1.blinding;
             blinding.add_assign(&secp, &blinding_correction).expect(
