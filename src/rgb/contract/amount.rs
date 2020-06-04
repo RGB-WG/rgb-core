@@ -314,3 +314,132 @@ mod strict_encoding {
         }
     }
 }
+
+#[cfg(feature = "serde")]
+mod serde_impl {
+    use super::*;
+    use core::fmt::{self, Formatter};
+    use serde::de::{self, Deserializer, MapAccess, SeqAccess, Visitor};
+    use serde::ser::{SerializeStruct, Serializer};
+    use serde::{Deserialize, Serialize};
+
+    impl Serialize for Revealed {
+        fn serialize<S>(
+            &self,
+            serializer: S,
+        ) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+        where
+            S: Serializer,
+        {
+            let mut state = serializer.serialize_struct("amount::Revealed", 2)?;
+            state.serialize_field("amount", &self.amount)?;
+            state.serialize_field("blinding", &self.blinding.0)?;
+            state.end()
+        }
+    }
+
+    impl Deserialize<'de> for Revealed {
+        fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            #[derive(Deserialize)]
+            #[serde(field_identifier, rename_all = "lowercase")]
+            enum Field {
+                Amount,
+                Blinding,
+            };
+
+            impl<'de> Deserialize<'de> for Field {
+                fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    struct FieldVisitor;
+
+                    impl<'de> Visitor<'de> for FieldVisitor {
+                        type Value = Field;
+
+                        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                            formatter.write_str("`amount` or `blinding`")
+                        }
+
+                        fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                        where
+                            E: de::Error,
+                        {
+                            match value {
+                                "amount" => Ok(Field::Amount),
+                                "blinding" => Ok(Field::Blinding),
+                                _ => Err(de::Error::unknown_field(value, FIELDS)),
+                            }
+                        }
+                    }
+
+                    deserializer.deserialize_identifier(FieldVisitor)
+                }
+            }
+
+            struct RevealedVisitor;
+            impl<'de> Visitor<'de> for RevealedVisitor {
+                type Value = Revealed;
+
+                fn expecting(&self, formatter: &mut Formatter<'a>) -> fmt::Result {
+                    formatter.write_str("struct Revealed")
+                }
+
+                fn visit_seq<A>(
+                    self,
+                    mut seq: A,
+                ) -> Result<Self::Value, <A as SeqAccess<'de>>::Error>
+                where
+                    A: SeqAccess<'de>,
+                {
+                    Ok(Revealed {
+                        amount: seq
+                            .next_element()?
+                            .ok_or_else(|| de::Error::invalid_length(0, &self))?,
+                        blinding: seq
+                            .next_element()?
+                            .ok_or_else(|| de::Error::invalid_length(0, &self))?,
+                    })
+                }
+
+                fn visit_map<A>(
+                    self,
+                    mut map: A,
+                ) -> Result<Self::Value, <A as MapAccess<'de>>::Error>
+                where
+                    A: MapAccess<'de>,
+                {
+                    let mut amount = None;
+                    let mut blinding = None;
+                    while let Some(key) = map.next_key()? {
+                        match key {
+                            Field::Amount => {
+                                if amount.is_some() {
+                                    return Err(de::Error::duplicate_field("amount"));
+                                }
+                                amount = Some(map.next_value()?);
+                            }
+                            Field::Blinding => {
+                                if blinding.is_some() {
+                                    return Err(de::Error::duplicate_field("blinding"));
+                                }
+                                blinding = Some(map.next_value()?);
+                            }
+                        }
+                    }
+                    let amount = amount.ok_or_else(|| de::Error::missing_field("amount"))?;
+                    let blinding = secp256k1zkp::key::SecretKey(
+                        blinding.ok_or_else(|| de::Error::missing_field("blinding"))?,
+                    );
+                    Ok(Revealed { amount, blinding })
+                }
+            }
+
+            const FIELDS: &'static [&'static str] = &["amount", "blinding"];
+            deserializer.deserialize_struct("amount::Revealed", FIELDS, RevealedVisitor)
+        }
+    }
+}
