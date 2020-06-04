@@ -57,3 +57,56 @@ pub struct Contract {
     pub revealed: Vec<Transition>,
     pub partial: Vec<Transition>,
 }
+
+mod strict_encoding {
+    use std::io;
+
+    use super::*;
+    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+
+    // TODO: Use derive macros and generalized `tagged_hash!` in the future
+    impl StrictEncode for ContractId {
+        type Error = Error;
+
+        #[inline]
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            self.into_inner().to_vec().strict_encode(e)
+        }
+    }
+
+    impl StrictDecode for ContractId {
+        type Error = Error;
+
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(
+                Self::from_slice(&Vec::<u8>::strict_decode(d)?).map_err(|_| {
+                    Error::DataIntegrityError("Wrong SHA-256 hash data size".to_string())
+                })?,
+            )
+        }
+    }
+
+    // TODO: Use derive macros and generalized `tagged_hash!` in the future
+    impl StrictEncode for TransitionId {
+        type Error = Error;
+
+        #[inline]
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            self.into_inner().to_vec().strict_encode(e)
+        }
+    }
+
+    impl StrictDecode for TransitionId {
+        type Error = Error;
+
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(
+                Self::from_slice(&Vec::<u8>::strict_decode(d)?).map_err(|_| {
+                    Error::DataIntegrityError("Wrong SHA-256 hash data size".to_string())
+                })?,
+            )
+        }
+    }
+}

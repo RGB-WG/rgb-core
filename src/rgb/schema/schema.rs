@@ -64,6 +64,7 @@ mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
 
+    // TODO: Use derive macros and generalized `tagged_hash!` in the future
     impl StrictEncode for SchemaId {
         type Error = Error;
 
@@ -80,7 +81,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
             Ok(
                 Self::from_slice(&Vec::<u8>::strict_decode(d)?).map_err(|_| {
-                    Error::DataIntegrityError("Wrong RIPEMD-160 hash data size".to_string())
+                    Error::DataIntegrityError("Wrong SHA-256 hash data size".to_string())
                 })?,
             )
         }
