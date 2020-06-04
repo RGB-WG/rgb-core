@@ -13,10 +13,7 @@
 
 use std::collections::BTreeSet;
 
-use super::{
-    super::{schema, zkp},
-    amount, data, seal, Amount, SealDefinition,
-};
+use super::{super::schema, amount, data, seal, Amount, SealDefinition};
 use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
@@ -25,22 +22,28 @@ use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode}
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
     Void(BTreeSet<Assignment<VoidStrategy>>),
-    Homomorphic(u64, BTreeSet<Assignment<HomomorphStrategy>>),
+    Homomorphic(BTreeSet<Assignment<HomomorphStrategy>>),
     Hashed(BTreeSet<Assignment<HashStrategy>>),
 }
 
 impl AssignmentsVariant {
-    /// Returns `None` if `allocations_ours` list is empty, since it is
-    /// impossible to zero-balance using `allocations_theirs` amounts which
-    /// will not store the blinding factor
+    /// Returns `None` if bot `allocations_ours` and `allocations_theirs` vecs
+    /// are empty
     pub fn zero_balanced(
+        mut inputs: Vec<amount::Revealed>,
         allocations_ours: Vec<(SealDefinition, Amount)>,
         allocations_theirs: Vec<(OutpointHash, Amount)>,
-        homomorphic_factor: u64,
     ) -> Option<Self> {
         let secp = secp256k1zkp::Secp256k1::with_caps(secp256k1zkp::ContextFlag::Commit);
         let mut rng = rand::thread_rng();
         let mut blinding_factors = vec![];
+
+        if inputs.is_empty() {
+            inputs = vec![amount::Revealed {
+                amount: 0,
+                blinding: secp256k1zkp::key::ZERO_KEY,
+            }];
+        }
 
         let mut list_ours: Vec<_> = allocations_ours
             .into_iter()
@@ -51,7 +54,7 @@ impl AssignmentsVariant {
             })
             .collect();
 
-        let list_theirs: Vec<_> = allocations_theirs
+        let mut list_theirs: Vec<_> = allocations_theirs
             .into_iter()
             .map(|(seal_hash, amount)| {
                 let blinding = amount::BlindingFactor::new(&secp, &mut rng);
@@ -60,12 +63,25 @@ impl AssignmentsVariant {
             })
             .collect();
 
-        let blinding_correction = zkp::blinding_correction(blinding_factors);
+        let blinding_inputs = inputs.iter().map(|inp| inp.blinding.clone()).collect();
+        let mut blinding_correction = secp
+            .blind_sum(blinding_inputs, blinding_factors)
+            .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
+        blinding_correction.neg_assign(&secp).expect(
+            "You won lottery and will live forever: the probability \
+                    of this event is less than a life of the universe",
+        );
         if let Some(item) = list_ours.last_mut() {
             let blinding = &mut item.1.blinding;
             blinding.add_assign(&secp, &blinding_correction).expect(
                 "You won lottery and will live forever: the probability \
-                    of this event is less than a life of the universe",
+                    of this event is less than a lifetime of the universe",
+            );
+        } else if let Some(item) = list_theirs.last_mut() {
+            let blinding = &mut item.1.blinding;
+            blinding.add_assign(&secp, &blinding_correction).expect(
+                "You won lottery and will live forever: the probability \
+                    of this event is less than a lifetime of the universe",
             );
         } else {
             return None;
@@ -87,7 +103,7 @@ impl AssignmentsVariant {
             )
             .collect();
 
-        Some(Self::Homomorphic(homomorphic_factor, set))
+        Some(Self::Homomorphic(set))
     }
 }
 
@@ -208,8 +224,8 @@ mod strict_encoding {
                 AssignmentsVariant::Void(tree) => {
                     strict_encode_list!(e; schema::StateType::Void, tree)
                 }
-                AssignmentsVariant::Homomorphic(homomorphic_factor, tree) => {
-                    strict_encode_list!(e; schema::StateType::Homomorphic, EncodingTag::U64, homomorphic_factor, tree)
+                AssignmentsVariant::Homomorphic(tree) => {
+                    strict_encode_list!(e; schema::StateType::Homomorphic, EncodingTag::U64, tree)
                 }
                 AssignmentsVariant::Hashed(tree) => {
                     strict_encode_list!(e; schema::StateType::Hashed, tree)
@@ -226,10 +242,9 @@ mod strict_encoding {
             Ok(match format {
                 schema::StateType::Void => AssignmentsVariant::Void(BTreeSet::strict_decode(d)?),
                 schema::StateType::Homomorphic => match EncodingTag::strict_decode(&mut d)? {
-                    EncodingTag::U64 => AssignmentsVariant::Homomorphic(
-                        u64::strict_decode(&mut d)?,
-                        BTreeSet::strict_decode(&mut d)?,
-                    ),
+                    EncodingTag::U64 => {
+                        AssignmentsVariant::Homomorphic(BTreeSet::strict_decode(&mut d)?)
+                    }
                     _ => Err(Error::UnsupportedDataStructure(
                         "We support only homomorphic commitments to U64 data".to_string(),
                     ))?,

@@ -57,7 +57,7 @@ pub trait Node {
                     })
                     .cloned()
                     .collect(),
-                AssignmentsVariant::Homomorphic(_, set) => set
+                AssignmentsVariant::Homomorphic(set) => set
                     .iter()
                     .filter_map(|assign| match assign {
                         Assignment::Revealed {
