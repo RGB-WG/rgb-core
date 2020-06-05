@@ -42,7 +42,7 @@ macro_rules! impl_try_from_stringly_standard {
         use std::rc::Rc;
         use std::sync::Arc;
 
-        impl_try_from_stringly!{ $type,
+        impl_try_from_stringly! { $type,
             &str,
             String,
             Box<str>,
@@ -57,9 +57,9 @@ macro_rules! impl_try_from_stringly_standard {
 
         }
 
-        #[cfg(feature="serde")]
+        #[cfg(feature = "serde")]
         impl_try_from_stringly!($type, crate::common::serde::CowHelper<'_>);
-    }
+    };
 }
 
 /// Impls From<T> for Stringly where String: Into<Stringly>, T: Display
@@ -87,5 +87,5 @@ macro_rules! impl_into_stringly_standard {
             Arc<str>,
             Arc<String>,
         }
-    }
+    };
 }

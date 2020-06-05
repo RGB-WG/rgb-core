@@ -11,15 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
 use zmq;
 
 use bitcoin;
 use bitcoin::secp256k1;
 
-#[cfg(feature="use-rgb")]
+#[cfg(feature = "use-rgb")]
 use crate::csv;
-
 
 #[derive(Debug, Display, From)]
 #[display_from(Debug)]
@@ -40,13 +38,15 @@ pub enum Error {
 
     // General API errors that may happen with both requests and replies
     MalformedArgument,
-    WrongNumberOfArguments
+    WrongNumberOfArguments,
 }
 
 impl std::error::Error for Error {}
 
 impl From<Error> for String {
-    fn from(err: Error) -> Self { format!("{}", err) }
+    fn from(err: Error) -> Self {
+        format!("{}", err)
+    }
 }
 
 impl From<bitcoin::consensus::encode::Error> for Error {
@@ -55,7 +55,7 @@ impl From<bitcoin::consensus::encode::Error> for Error {
     }
 }
 
-#[cfg(feature="use-rgb")]
+#[cfg(feature = "use-rgb")]
 impl From<csv::serialize::Error> for Error {
     fn from(_: csv::serialize::Error) -> Self {
         Error::MalformedArgument

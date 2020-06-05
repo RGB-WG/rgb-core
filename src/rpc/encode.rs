@@ -23,9 +23,9 @@ use bitcoin::consensus::encode::{
 
 use super::{Error, Multipart};
 use crate::bp::ShortId;
-use crate::strategy::Holder;
 #[cfg(feature = "use-rgb")]
 use crate::csv::{self, network_deserialize, network_serialize};
+use crate::strategy::Holder;
 
 // 1. Encoding messages
 pub trait MessageEncode

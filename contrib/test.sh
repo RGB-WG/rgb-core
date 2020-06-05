@@ -14,19 +14,18 @@ then
     alias cargo="cargo +$TOOLCHAIN"
 fi
 
-# Test without any features first
-# TODO: This is not working b/c of bitcoin_hashes macro problem.
-#       Uncomment once the problem will be fixed
-# cargo test --verbose --all-features
+# Check that we can build w/o features
+cargo check --verbose --all-targets
+cargo check --verbose --no-default-features --all-targets
 
-# Test using all features
-cargo test --verbose --all-features --all-targets
-
-# Test each feature
+# Check that we can build with each feature
 for feature in ${FEATURES}
 do
     cargo check --verbose --features="$feature" --all-targets
 done
+
+# Test all features
+cargo test --verbose --all-features --all-targets
 
 # Fuzz if told to
 if [ "$DO_FUZZ" = true ]
@@ -54,3 +53,6 @@ then
     cd ..
     rm -rf dep_test
 fi
+
+# Check formatting
+cargo fmt --all -- --check

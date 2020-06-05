@@ -11,18 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-mod error;
 mod encode;
+mod error;
 
-pub use error::*;
 pub use encode::*;
-
+pub use error::*;
 
 pub type Multipart = Vec<zmq::Message>;
 pub type CommandId = u16;
 
 pub fn split_cmd_args(multipart: &Multipart) -> Result<(CommandId, &[zmq::Message]), Error> {
-    Ok(multipart.split_first()
+    Ok(multipart
+        .split_first()
         .ok_or(Error::MalformedRequest)
         .and_then(|(cmd_data, args)| {
             if cmd_data.len() != 2 {

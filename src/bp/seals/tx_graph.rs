@@ -11,15 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-
-use bitcoin::{Txid, Transaction, OutPoint};
-
+use bitcoin::{OutPoint, Transaction, Txid};
 
 pub enum SpendingStatus {
     Unknown,
     Invalid,
     Unspent,
-    Spent(Option<u32>)
+    Spent(Option<u32>),
 }
 
 pub trait TxGraph {
