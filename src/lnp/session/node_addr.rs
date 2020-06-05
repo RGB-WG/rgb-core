@@ -17,11 +17,6 @@ use std::str::FromStr;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(not(feature = "tokio"))]
-use std::io::{Read, Write};
-#[cfg(not(feature = "tokio"))]
-use std::net::TcpStream;
-
 use bitcoin::secp256k1;
 
 use super::{Connection, ConnectionError};

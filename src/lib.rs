@@ -46,11 +46,14 @@ extern crate num_traits;
 pub extern crate rand;
 #[macro_use]
 pub extern crate bitcoin;
+#[macro_use]
+pub extern crate bitcoin_hashes;
 #[cfg(feature = "url")]
 extern crate url;
 
 // Logging
 #[cfg(feature = "log")]
+#[allow(unused_imports)] // We need this since under some feature combinations log macros are not required
 #[macro_use]
 extern crate log;
 
@@ -90,11 +93,11 @@ mod common;
 mod lnpbps;
 #[macro_use]
 pub mod bp;
-#[cfg(feature = "lightning")]
+#[cfg(feature = "lnp")]
 pub mod lnp;
 #[cfg(feature = "rgb")]
 pub mod rgb;
-#[cfg(feature = "zmq")]
+#[cfg(feature = "api")]
 pub mod rpc;
 
 pub use common::*;

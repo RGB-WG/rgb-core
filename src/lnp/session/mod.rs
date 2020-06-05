@@ -21,7 +21,9 @@ mod node_locator;
 mod session;
 mod transcoders;
 
-pub use connection::{Connection, ConnectionError, ConnectionInput, ConnectionOutput};
+pub use connection::{Connection, ConnectionError};
+#[cfg(feature = "tokio")]
+pub use connection::{ConnectionInput, ConnectionOutput};
 pub use local_node::LocalNode;
 pub use node_addr::NodeAddr;
 pub use node_locator::NodeLocator;

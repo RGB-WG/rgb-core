@@ -12,11 +12,14 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::borrow::Borrow;
+#[cfg(feature = "url")]
 use core::convert::TryFrom;
 use core::fmt::{self, Display, Formatter};
+#[cfg(feature = "url")]
 use core::str::FromStr;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+#[cfg(feature = "url")]
 use url::Url;
 
 use super::{Bidirect, Error, Input, Output, Read, Write};
@@ -90,12 +93,13 @@ pub enum UrlError {
     HostRequired,
     PortRequired,
     UnexpectedAuthority,
-    #[derive_from(url::ParseError)]
+    #[cfg_attr(feature = "url", derive_from(url::ParseError))]
     MalformedUrl,
     #[derive_from(std::net::AddrParseError)]
     MalformedIp,
 }
 
+#[cfg(feature = "url")]
 impl FromStr for SocketLocator {
     type Err = UrlError;
 
@@ -106,6 +110,7 @@ impl FromStr for SocketLocator {
     }
 }
 
+#[cfg(feature = "url")]
 impl TryFrom<Url> for SocketLocator {
     type Error = UrlError;
 

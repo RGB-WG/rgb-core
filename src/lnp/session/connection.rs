@@ -29,7 +29,9 @@ use std::net::TcpStream;
 
 use bitcoin::secp256k1;
 
-use lightning::ln::peers::conduit::{Conduit as Transcoder, Decryptor, Encryptor};
+use lightning::ln::peers::conduit::Conduit as Transcoder;
+#[cfg(feature = "tokio")]
+use lightning::ln::peers::conduit::{Decryptor, Encryptor};
 use lightning::ln::peers::handshake::PeerHandshake;
 
 use super::NodeAddr;

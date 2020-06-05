@@ -11,8 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use core::convert::{TryFrom, TryInto};
-use core::fmt::{Debug, Display, Formatter};
+use core::convert::TryFrom;
+#[cfg(feature = "url")]
+use core::convert::TryInto;
+use core::fmt::Debug;
+#[cfg(feature = "url")]
+use core::fmt::{Display, Formatter};
+#[cfg(feature = "url")]
 use core::str::FromStr;
 use std::net::{AddrParseError, IpAddr};
 use std::path::PathBuf;

@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-FEATURES="tor lightning tokio log url bulletproofs rgb daemons parse_arg serde keygen"
+FEATURES="rgb lnp daemons keygen tor tokio log url bulletproofs serde lnp,websockets,url,tokio,async"
 
 if [ "$DO_COV" = true ]
 then
@@ -25,7 +25,7 @@ cargo test --verbose --all-features --all-targets
 # Test each feature
 for feature in ${FEATURES}
 do
-    cargo test --verbose --features="$feature" --all-targets
+    cargo check --verbose --features="$feature" --all-targets
 done
 
 # Fuzz if told to
@@ -50,7 +50,7 @@ then
     cargo new dep_test
     cd dep_test
     printf 'lnpbp = { path = "..", features = ["all"] }\n\n[workspace]' >> Cargo.toml
-    cargo test --verbose
+    cargo build --verbose
     cd ..
     rm -rf dep_test
 fi

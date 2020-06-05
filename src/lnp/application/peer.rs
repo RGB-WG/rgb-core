@@ -15,16 +15,15 @@
 //! with it. Relies on transport layer (BOLT-8-based) protocol.
 
 use bitcoin::secp256k1;
+#[cfg(feature = "tokio")]
 use std::sync::Arc;
-#[cfg(not(feature = "tokio"))]
-use std::sync::Mutex;
 #[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
 use crate::lnp::presentation::Message;
-use crate::lnp::session::{
-    Connection, ConnectionError, ConnectionInput, ConnectionOutput, NodeAddr,
-};
+use crate::lnp::session::{Connection, ConnectionError, NodeAddr};
+#[cfg(feature = "tokio")]
+use crate::lnp::session::{ConnectionInput, ConnectionOutput};
 
 pub struct Peer {
     pub node: NodeAddr,
@@ -33,12 +32,14 @@ pub struct Peer {
     awaiting_pong: bool,
 }
 
+#[cfg(feature = "tokio")]
 pub struct PeerInput {
     pub node: NodeAddr,
     pub connection: ConnectionInput,
     awaiting_pong: Arc<Mutex<bool>>,
 }
 
+#[cfg(feature = "tokio")]
 pub struct PeerOutput {
     pub node: NodeAddr,
     pub connection: ConnectionOutput,
@@ -64,6 +65,7 @@ impl Peer {
         Ok(())
     }
 
+    #[cfg(feature = "tokio")]
     pub fn split(self) -> (PeerInput, PeerOutput) {
         let (input, output) = self.connection.split();
         let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
