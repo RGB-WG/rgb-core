@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-FEATURES=""
+FEATURES="tor lightning tokio log url bulletproofs rgb daemons parse_arg serde keygen"
 
 if [ "$DO_COV" = true ]
 then
@@ -20,12 +20,12 @@ fi
 # cargo test --verbose --all-features
 
 # Test using all features
-cargo test --verbose --all-features
+cargo test --verbose --all-features --all-targets
 
 # Test each feature
 for feature in ${FEATURES}
 do
-    cargo test --verbose --features="$feature"
+    cargo test --verbose --features="$feature" --all-targets
 done
 
 # Fuzz if told to
@@ -33,7 +33,7 @@ if [ "$DO_FUZZ" = true ]
 then
     (
         cd fuzz
-        cargo test --verbose
+        cargo test --verbose --all-targets
         ./travis-fuzz.sh
     )
 fi
@@ -41,7 +41,7 @@ fi
 # Bench if told to
 if [ "$DO_BENCH" = true ]
 then
-    cargo bench --features unstable
+    cargo bench --features unstable --all-targets
 fi
 
 # Use as dependency if told to

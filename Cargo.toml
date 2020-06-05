@@ -69,5 +69,5 @@ serde = ["serde_crate", "serde_derive", "torut/serialize", "bitcoin/use-serde", 
 keygen = ["bitcoin/rand"]
 
 [workspace]
-members = ["derive"]
-default-members = ["derive"]
+members = ["derive", "."]
+default-members = ["derive", "."]
