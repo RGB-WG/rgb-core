@@ -14,11 +14,21 @@
 
 use std::{io, convert::TryFrom};
 
-use num_integer::Integer;
 use num_traits::{ToPrimitive, FromPrimitive};
 use num_derive::{ToPrimitive, FromPrimitive};
 
 use crate::csv::serialize::*;
+
+pub trait UnsignedInteger: Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Into<u64> + std::fmt::Debug {
+    fn as_u64(self) -> u64 {
+        self.into()
+    }
+}
+
+impl UnsignedInteger for u8 { }
+impl UnsignedInteger for u16 { }
+impl UnsignedInteger for u32 { }
+impl UnsignedInteger for u64 { }
 
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
@@ -87,11 +97,44 @@ impl_commitment_enum!(ECPointSerialization);
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display_from(Debug)]
-pub enum Occurences<MAX: Integer> where MAX: std::fmt::Debug {
+pub enum Occurences<I: UnsignedInteger> {
     Once,
     NoneOrOnce,
-    OnceOrUpTo(Option<MAX>),
-    NoneOrUpTo(Option<MAX>),
+    OnceOrUpTo(Option<I>),
+    NoneOrUpTo(Option<I>),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
+pub struct OccurencesError {
+    pub expected: Occurences<u64>,
+    pub found: u64
+}
+
+impl<I: UnsignedInteger> Occurences<I> {
+    pub fn translate_u64(self) -> Occurences<u64> {
+        match self {
+            Occurences::Once => Occurences::Once,
+            Occurences::NoneOrOnce => Occurences::NoneOrOnce,
+            Occurences::OnceOrUpTo(None) => Occurences::OnceOrUpTo(None),
+            Occurences::OnceOrUpTo(Some(max)) => Occurences::OnceOrUpTo(Some(max.as_u64())),
+            Occurences::NoneOrUpTo(None) => Occurences::NoneOrUpTo(None),
+            Occurences::NoneOrUpTo(Some(max)) => Occurences::NoneOrUpTo(Some(max.as_u64())),
+            _ => panic!("Unknown occurence variant"),
+        }
+    }
+
+    pub fn check_count(&self, count: I) -> Result<(), OccurencesError> {
+        match self {
+            Occurences::Once if count.as_u64() == 1 => Ok(()),
+            Occurences::NoneOrOnce if count.as_u64() <= 1 => Ok(()),
+            Occurences::OnceOrUpTo(None) if count.as_u64() > 0 => Ok(()),
+            Occurences::OnceOrUpTo(Some(max)) if count.as_u64() > 0 && count <= *max => Ok(()),
+            Occurences::NoneOrUpTo(None) => Ok(()),
+            Occurences::NoneOrUpTo(Some(max)) if count <= *max => Ok(()),
+            _ => Err(OccurencesError { expected: self.clone().translate_u64(), found: count.as_u64() }),
+        }
+    }
 }
 
 macro_rules! impl_occurences {
@@ -136,3 +179,104 @@ impl_occurences!(u8);
 impl_occurences!(u16);
 impl_occurences!(u32);
 impl_occurences!(u64);
+
+#[cfg(test)]
+mod test {
+    use super::Occurences;
+
+    #[test]
+    fn test_once_check_count() {
+        let occurence: Occurences<u32> = Occurences::Once;
+        occurence.check_count(1).unwrap();
+    }
+    #[test]
+    #[should_panic(expected = "OccurencesError { expected: Once, found: 0 }")]
+    fn test_once_check_count_fail_zero() {
+        let occurence: Occurences<u32> = Occurences::Once;
+        occurence.check_count(0).unwrap();
+    }
+    #[test]
+    #[should_panic(expected = "OccurencesError { expected: Once, found: 2 }")]
+    fn test_once_check_count_fail_two() {
+        let occurence: Occurences<u32> = Occurences::Once;
+        occurence.check_count(2).unwrap();
+    }
+
+    #[test]
+    fn test_none_or_once_check_count() {
+        let occurence: Occurences<u32> = Occurences::NoneOrOnce;
+        occurence.check_count(1).unwrap();
+    }
+    #[test]
+    fn test_none_or_once_check_count_zero() {
+        let occurence: Occurences<u32> = Occurences::NoneOrOnce;
+        occurence.check_count(0).unwrap();
+    }
+    #[test]
+    #[should_panic(expected = "OccurencesError { expected: NoneOrOnce, found: 2 }")]
+    fn test_none_or_once_check_count_fail_two() {
+        let occurence: Occurences<u32> = Occurences::NoneOrOnce;
+        occurence.check_count(2).unwrap();
+    }
+
+    #[test]
+    fn test_once_or_up_to_none() {
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(None);
+        occurence.check_count(1).unwrap();
+    }
+    #[test]
+    fn test_once_or_up_to_none_large() {
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(None);
+        occurence.check_count(u32::MAX).unwrap();
+    }
+    #[test]
+    #[should_panic(expected = "OccurencesError { expected: OnceOrUpTo(None), found: 0 }")]
+    fn test_once_or_up_to_none_fail_zero() {
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(None);
+        occurence.check_count(0).unwrap();
+    }
+    #[test]
+    fn test_once_or_up_to_42() {
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
+        occurence.check_count(42).unwrap();
+    }
+    #[test]
+    #[should_panic(expected = "OccurencesError { expected: OnceOrUpTo(Some(42)), found: 43 }")]
+    fn test_once_or_up_to_42_large() {
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
+        occurence.check_count(43).unwrap();
+    }
+    #[test]
+    #[should_panic(expected = "OccurencesError { expected: OnceOrUpTo(Some(42)), found: 0 }")]
+    fn test_once_or_up_to_42_fail_zero() {
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
+        occurence.check_count(0).unwrap();
+    }
+
+    #[test]
+    fn test_none_or_up_to_none_zero() {
+        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(None);
+        occurence.check_count(0).unwrap();
+    }
+    #[test]
+    fn test_none_or_up_to_none_large() {
+        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(None);
+        occurence.check_count(u32::MAX).unwrap();
+    }
+    #[test]
+    fn test_none_or_up_to_42_zero() {
+        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
+        occurence.check_count(0).unwrap();
+    }
+    #[test]
+    fn test_none_or_up_to_42() {
+        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
+        occurence.check_count(42).unwrap();
+    }
+    #[test]
+    #[should_panic(expected = "OccurencesError { expected: NoneOrUpTo(Some(42)), found: 43 }")]
+    fn test_none_or_up_to_42_large() {
+        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
+        occurence.check_count(43).unwrap();
+    }
+}

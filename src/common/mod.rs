@@ -30,5 +30,5 @@ pub(crate) mod serde;
 pub use as_slice::*;
 pub use wrapper::*;
 pub use macros::*;
-#[cfg(feature="use-daemons")]
+#[cfg(feature="use-node")]
 pub use service::*;

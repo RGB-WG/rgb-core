@@ -21,9 +21,11 @@
 #![feature(optin_builtin_traits)]
 #![feature(associated_type_defaults)]
 #![feature(const_fn)]
+#![feature(try_trait)]
 #![feature(arbitrary_enum_discriminant)]
 #![feature(bool_to_option)]
 #![feature(str_strip)]
+#![feature(bindings_after_at)]
 
 // Coding conventions
 #![deny(non_upper_case_globals)]
@@ -37,28 +39,40 @@
 #[macro_use]
 pub extern crate derive_wrapper;
 extern crate rand;
-extern crate num_integer;
 extern crate num_derive;
 extern crate num_traits;
-#[cfg(not(feature="use-tokio"))]
-extern crate futures;
+#[macro_use]
+pub extern crate bitcoin;
+
+// Logging
 #[cfg(feature="use-log")]
 #[macro_use]
 extern crate log;
+
+// Async IO, IPC & networking
 #[cfg(feature="use-tokio")]
 extern crate tokio;
+#[cfg(not(feature="use-tokio"))]
+extern crate futures;
+
+// Support for node & node clients development (include API helpers)
 #[cfg(feature="use-daemons")]
 #[macro_use]
 extern crate async_trait;
-#[macro_use]
-pub extern crate bitcoin;
+#[cfg(feature="use-zmq")]
+extern crate zmq;
+
+// Lightning-network related functionality
 #[cfg(feature="use-lightning")]
 pub extern crate lightning;
 pub extern crate miniscript;
+
+// Buletproofs support
 #[cfg(feature="use-bulletproofs")]
 pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
+
 
 #[macro_use]
 pub mod common;
@@ -74,5 +88,7 @@ pub mod seals;
 pub mod csv;
 #[cfg(feature="use-rgb")]
 pub mod rgb;
+#[cfg(feature="use-api")]
+pub mod api;
 
 pub use common::*;

@@ -12,54 +12,73 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 
-use std::convert::TryFrom;
-
+use bitcoin::OutPoint;
 use bitcoin::hash_types::Txid;
+use crate::bp::{
+    short_id::ShortId,
+    blind::{OutpointReveal, OutpointHash}
+};
 
-
-#[non_exhaustive]
 #[derive(Clone, PartialEq, PartialOrd, Debug, Display)]
 #[display_from(Debug)]
 pub enum Error {
-    VoutOverflow
+    VoutOverflow,
 }
-
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Default)]
 #[display_from(Debug)]
 pub struct Type(pub u16);
 
 
-#[derive(Clone, PartialEq, PartialOrd, Debug, Display, Default)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Debug, Display)]
 #[display_from(Debug)]
-pub struct Seal {
-    pub txid: Option<Txid>,
-    pub vout: u16,
-
-    block_height: Option<u32>,
-    block_offset: Option<u16>,
+pub enum Seal {
+    /// Seal contained within the witness transaction
+    WitnessTxout(u16),
+    /// Seal that is revealed
+    RevealedTxout(OutpointReveal, Option<ShortId>),
+    /// Seal that is not revealed yet
+    BlindedTxout(OutpointHash)
 }
 
 impl Seal {
-    pub fn from(txid: Option<Txid>, vout: u16) -> Self {
-        Self {
-            txid, vout,
-            block_height: None,
-            block_offset: None
-        }
+    pub fn witness(vout: u16) -> Self {
+        Self::WitnessTxout(vout)
     }
-}
-
-impl TryFrom<bitcoin::OutPoint> for Seal {
-    type Error = Error;
-    fn try_from(outpoint: bitcoin::OutPoint) -> Result<Self, Self::Error> {
+    pub fn revealed(txid: Txid, vout: u16, blinding: u64) -> Self {
+        Seal::RevealedTxout(OutpointReveal { blinding, txid, vout, }, None)
+    }
+    pub fn outpoint_reveal(revealed_outpoint: OutpointReveal, short_id: Option<ShortId>) -> Self {
+        Seal::RevealedTxout(revealed_outpoint, short_id)
+    }
+    pub fn maybe_from_outpoint(outpoint: bitcoin::OutPoint, blinding: u64) -> Option<Self> {
         let vout = outpoint.vout;
         if vout > std::u16::MAX as u32 {
-            return Err(Error::VoutOverflow)
+            return None
         }
-        Ok(Self {
-            txid: Some(outpoint.txid), vout: outpoint.vout as u16,
-            block_height: None, block_offset: None
-        })
+        Some(Seal::RevealedTxout(OutpointReveal { blinding, txid: outpoint.txid, vout: vout as u16 }, None))
+    }
+    pub fn blinded(hash: OutpointHash) -> Self {
+        Seal::BlindedTxout(hash)
+    }
+
+    pub fn maybe_as_outpoint(&self, revealed_outpoint: Option<OutPoint>, creating_txid: Option<Txid>, blinding_key: Option<u64>) -> Option<OutPoint> {
+        match self {
+            Seal::WitnessTxout(vout) if creating_txid.is_some() => Some(OutPoint { txid: creating_txid.unwrap(), vout: *vout as u32 }),
+            Seal::RevealedTxout(revealed, _) => Some(OutPoint { txid: revealed.txid, vout: revealed.vout as u32 }),
+            Seal::BlindedTxout(hash) if revealed_outpoint.is_some() && blinding_key.is_some() => {
+                match Seal::maybe_from_outpoint(revealed_outpoint.unwrap(), blinding_key.unwrap()) {
+                    Some(Seal::RevealedTxout(revealed, _)) if revealed.outpoint_hash() == *hash => Some(OutPoint { txid: revealed.txid, vout: revealed.vout as u32 }),
+                    _ => None
+                }
+            },
+            _ => None
+        }
+    }
+
+    pub fn compare_to_outpoint(&self, outpoint: &OutPoint, creating_txid: Option<Txid>, blinding_key: Option<u64>) -> bool {
+        self
+            .maybe_as_outpoint(Some(outpoint.clone()), creating_txid, blinding_key)
+            .map_or(false, |out| out == *outpoint)
     }
 }

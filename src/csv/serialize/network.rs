@@ -15,6 +15,7 @@ use std::{io, collections::HashMap};
 use bitcoin::{secp256k1, util::bip32};
 
 use super::Error;
+use crate::bp;
 
 pub trait Network: Sized {
     fn network_serialize<E: io::Write>(&self, e: E) -> Result<usize, Error>;
@@ -77,6 +78,7 @@ network_serialize_from_commitment!(String);
 network_serialize_from_commitment!(secp256k1::PublicKey);
 network_serialize_from_commitment!(secp256k1::Signature);
 network_serialize_from_commitment!(bitcoin::Network);
+network_serialize_from_commitment!(bp::ShortId);
 
 
 /// In terms of network serialization, we interpret `Option` as a zero-length `Vec`

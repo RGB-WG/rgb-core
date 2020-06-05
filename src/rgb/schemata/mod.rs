@@ -14,10 +14,10 @@
 use super::schema::Schema;
 
 pub mod fungible;
-pub mod collectibles;
+// pub mod collectibles;
 
 pub use fungible::Rgb1;
-pub use collectibles::Rgb2;
+// pub use collectibles::Rgb2;
 
 
 pub trait Schemata {
