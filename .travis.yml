@@ -20,7 +20,7 @@ addons:
 matrix:
   include:
     - rust: nightly
-      env: DO_COV=true AS_DEPENDENCY=true
+      env: DO_COV=true AS_DEPENDENCY=true DO_LINT=true
 
 script:
   - ./contrib/test.sh

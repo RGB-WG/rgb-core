@@ -54,5 +54,11 @@ then
     rm -rf dep_test
 fi
 
-# Check formatting
-cargo fmt --all -- --check
+# Lint if told to
+if [ "$DO_LINT" = true ]
+then
+    (
+        rustup component add rustfmt
+        cargo fmt --all -- --check
+    )
+fi
