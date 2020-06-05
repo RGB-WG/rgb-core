@@ -1,6 +1,7 @@
 # LNP/BP Core Library
 
 [![TravisCI](https://api.travis-ci.com/LNP-BP/rust-lnpbp.svg?branch=master)](https://api.travis-ci.com/LNP-BP/rust-lnpbp)
+[![codecov](https://codecov.io/gh/LNP-BP/rust-lnpbp/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/rust-lnpbp)
 
 This is Rust library implementing LNP/BP specifications 
 <https://github.com/LNP-BP/LNPBPs>. It can be used to simplify development of
