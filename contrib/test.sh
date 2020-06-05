@@ -49,6 +49,8 @@ if [ -n "$AS_DEPENDENCY" ]
 then
     cargo new dep_test
     cd dep_test
-    echo 'lnpbp = { path = "..", features = ["all"] }' >> Cargo.toml
+    printf 'lnpbp = { path = "..", features = ["all"] }\n\n[workspace]' >> Cargo.toml
     cargo test --verbose
+    cd ..
+    rm -rf dep_test
 fi

@@ -49,6 +49,7 @@ url = { version = "~2.1.1", optional = true }
 # This strange naming is a workaround for not being able to define required features for a dependency
 # See https://github.com/rust-lang/api-guidelines/issues/180 for the explanation and references.
 serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
+serde_derive = { version = "~1.0.111", optional = true }
 
 [dev-dependencies]
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "staging", features = ["compiler"] }
@@ -64,7 +65,7 @@ lightning_tokio = ["lightning", "lightning-net-tokio"]
 bulletproofs = ["grin_secp256k1zkp"]
 api = ["zmq"]
 daemons = ["async", "api"]
-serde = ["serde_crate", "torut/serialize", "bitcoin/use-serde", "miniscript/serde"]
+serde = ["serde_crate", "serde_derive", "torut/serialize", "bitcoin/use-serde", "miniscript/serde"]
 keygen = ["bitcoin/rand"]
 
 [workspace]

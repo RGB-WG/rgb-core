@@ -343,8 +343,6 @@ mod serde_impl {
         where
             D: Deserializer<'de>,
         {
-            #[derive(Deserialize)]
-            #[serde(field_identifier, rename_all = "lowercase")]
             enum Field {
                 Amount,
                 Blinding,
