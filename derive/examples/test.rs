@@ -15,7 +15,7 @@ struct Me(u8);
 #[derive(StrictEncode)]
 #[strict_error(Error)]
 struct One {
-    a: [u8; 32],
+    a: Vec<u8>,
 }
 
 #[derive(StrictEncode)]
@@ -26,7 +26,7 @@ struct Heap(Box<[u8]>);
 #[strict_error(Error)]
 struct You {
     //    a: (),
-    b: [u8; 16],
+    b: Vec<u8>,
 }
 
 #[derive(StrictEncode)]
