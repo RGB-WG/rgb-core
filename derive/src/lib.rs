@@ -35,6 +35,14 @@ pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
         .into()
 }
 
+#[proc_macro_derive(StrictDecode, attributes(strict_decode))]
+pub fn derive_strict_decode(input: TokenStream) -> TokenStream {
+    let derive_input = parse_macro_input!(input as DeriveInput);
+    strict_decode_inner(derive_input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
 fn strict_encode_inner(input: DeriveInput) -> Result<TokenStream2> {
     match input.data {
         Data::Struct(ref data) => strict_encode_inner_struct(&input, data),
@@ -46,6 +54,21 @@ fn strict_encode_inner(input: DeriveInput) -> Result<TokenStream2> {
         Data::Union(_) => Err(Error::new_spanned(
             &input,
             "Deriving StrictEncode is not supported in unions",
+        )),
+    }
+}
+
+fn strict_decode_inner(input: DeriveInput) -> Result<TokenStream2> {
+    match input.data {
+        Data::Struct(ref data) => strict_decode_inner_struct(&input, data),
+        Data::Enum(ref data) => Err(Error::new_spanned(
+            &input,
+            "Deriving StrictDecode is not supported in enums yet",
+        )),
+        //strict_encode_inner_enum(&input, &data),
+        Data::Union(_) => Err(Error::new_spanned(
+            &input,
+            "Deriving StrictDecode is not supported in unions",
         )),
     }
 }
@@ -101,6 +124,65 @@ fn strict_encode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
             #[inline]
             fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Error> {
                 #inner
+            }
+        }
+    })
+}
+
+fn strict_decode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let ident_name = &input.ident;
+
+    let error_type_def = get_strict_error(input, data)?;
+
+    let inner = match data.fields {
+        Fields::Named(ref fields) => {
+            let recurse: Vec<TokenStream2> = fields
+                .named
+                .iter()
+                .map(|f| {
+                    let name = &f.ident;
+                    quote_spanned! { f.span() =>
+                        #name: lnpbp::strict_encoding::StrictDecode::strict_decode(&mut d)?,
+                    }
+                })
+                .collect();
+            quote! {
+                Self {
+                    #( #recurse )*
+                }
+            }
+        }
+        Fields::Unnamed(ref fields) => {
+            let recurse: Vec<TokenStream2> = fields
+                .unnamed
+                .iter()
+                .map(|f| {
+                    quote_spanned! { f.span() =>
+                        lnpbp::strict_encoding::StrictDecode::strict_decode(&mut d)?,
+                    }
+                })
+                .collect();
+            quote! {
+                Self (
+                    #( #recurse )*
+                )
+            }
+        }
+        Fields::Unit => {
+            // Nothing to do here
+            quote! { Self() }
+        }
+    };
+
+    Ok(quote! {
+        #[allow(unused_qualifications)]
+        impl #impl_generics lnpbp::strict_encoding::StrictDecode for #ident_name #ty_generics #where_clause {
+            #error_type_def
+
+            #[inline]
+            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, Self::Error> {
+                Ok(#inner)
             }
         }
     })
