@@ -16,3 +16,7 @@ proc-macro = true
 [dependencies]
 quote = "0.6"
 syn = "0.15"
+
+[dev-dependencies]
+lnpbp = { path = ".." }
+derive_wrapper = "~0.1"

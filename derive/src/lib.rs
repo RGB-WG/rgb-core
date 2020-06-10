@@ -17,7 +17,6 @@ struct Details<'a> {
     struct_name: &'a Ident,
     field_name: TokenStream2,
     field_type: &'a Type,
-    std: Path,
 }
 
 impl<'a> Details<'a> {
@@ -31,7 +30,6 @@ impl<'a> Details<'a> {
             struct_name,
             field_name,
             field_type: &field.ty,
-            std: std(),
         }
     }
 }
@@ -47,7 +45,11 @@ pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
 fn strict_encode_inner(input: DeriveInput) -> Result<TokenStream2> {
     match input.data {
         Data::Struct(_) => strict_encode_inner_struct(&input),
-        Data::Enum(ref _data) => unimplemented!(), //strict_encode_inner_enum(&input, &data),
+        Data::Enum(ref _data) => Err(Error::new_spanned(
+            &input,
+            "Deriving StrictEncode is not supported in enums yet",
+        )),
+        //strict_encode_inner_enum(&input, &data),
         Data::Union(_) => Err(Error::new_spanned(
             &input,
             "Deriving StrictEncode is not supported in unions",
@@ -68,18 +70,17 @@ fn strict_encode_inner_struct(input: &DeriveInput) -> Result<TokenStream2> {
     let Details {
         struct_name,
         field_name,
-        std,
         ..
     } = Details::from_input(&input.ident, field);
 
     Ok(quote! {
         #[allow(unused_qualifications)]
-        impl #impl_generics lnpbp::strict_encode::StrictEncode for #struct_name #ty_generics #where_clause {
+        impl #impl_generics lnpbp::strict_encoding::StrictEncode for #struct_name #ty_generics #where_clause {
             type Error = #strict_error;
 
             #[inline]
-            fn strict_encode<E: #std::io::Write>(&self, mut e: E) -> Result<usize, Error> {
-                unimplemented()
+            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Error> {
+                unimplemented!()
             }
         }
     })
@@ -102,17 +103,14 @@ fn get_meta_value(
         if mv.multiple() {
             return Err(Error::new_spanned(
                 attr,
-                format!(
-                    "derive_wrapper: {} doesn't nested attributes",
-                    attribute_name
-                ),
+                format!("lnpbp_derive: {} doesn't nested attributes", attribute_name),
             ));
         }
         if mv.found {
             if let Some(trait_name) = mv.name.get(0) {
                 traits_found.push(trait_name.clone());
             } else {
-                return Err(Error::new_spanned(attr, format!("derive_wrapper: when using the {} attribute on the struct you must specify the trait you want to use to implement {}", attribute_name, trait_name)));
+                return Err(Error::new_spanned(attr, format!("lnpbp_derive: when using the {} attribute on the struct you must specify the trait you want to use to implement {}", attribute_name, trait_name)));
             }
         }
     }
@@ -285,13 +283,13 @@ fn find_meta_value(attr: &Attribute, name: &str, example: &str) -> Result<MetaVa
 fn parse_outer_attributes<'a>(attrs: &[Attribute], fields: &'a Fields) -> Result<Vec<&'a Field>> {
     let mut res = Vec::with_capacity(attrs.len());
     for attr in attrs {
-        let mv = find_meta_value(attr, "wrap", "#[wrap]")?;
+        let mv = find_meta_value(attr, "strict_error", "#[strict_error(Error)]")?;
         if mv.found {
             if let Some(index) = mv.get_first_index() {
                 if let Some(field) = fields.iter().nth(index as usize) {
                     res.push(field);
                 } else {
-                    return Err(Error::new_spanned(&fields, format!("derive_wrapper: there's no field no. {} in the struct or it's not a tuple", index)));
+                    return Err(Error::new_spanned(&fields, format!("lnpbp_derive: there's no field no. {} in the struct or it's not a tuple", index)));
                 }
             } else if let Some(lit_name) = mv.get_first_name() {
                 let mut found = false;
@@ -307,11 +305,11 @@ fn parse_outer_attributes<'a>(attrs: &[Attribute], fields: &'a Fields) -> Result
                 if !found {
                     return Err(Error::new_spanned(
                         &fields,
-                        format!("derive_wrapper: field {} doesn't exist", lit_name),
+                        format!("lnpbp_derive: field {} doesn't exist", lit_name),
                     ));
                 }
             } else {
-                return Err(Error::new_spanned(&fields, "derive_wrapper: when using the wrap attribute on the struct you must specify the field name"));
+                return Err(Error::new_spanned(&fields, "lnpbp_derive: when using the wrap attribute on the struct you must specify the field name"));
             }
         }
     }
@@ -327,23 +325,15 @@ fn parse_field_attributes(fields: &Fields) -> Result<Vec<&Field>> {
                 if let Some(ref ident) = field.ident {
                     if let Some(lit) = mv.get_first_name() {
                         if ident != &lit {
-                            return Err(Error::new_spanned(&field, format!("derive_wrapper: The provided field name doesn't match the field name it's above: `{} != {}`", lit, ident)));
+                            return Err(Error::new_spanned(&field, format!("lnpbp_derive: The provided field name doesn't match the field name it's above: `{} != {}`", lit, ident)));
                         }
                     }
                     res.push(field)
                 } else {
-                    return Err(Error::new_spanned(&field, "derive_wrapper doesn't yet support attributes on unnamed fields (Please file an issue)"));
+                    return Err(Error::new_spanned(&field, "lnpbp_derive doesn't yet support attributes on unnamed fields (Please file an issue)"));
                 }
             }
         }
     }
     Ok(res)
-}
-
-#[inline(always)]
-fn std() -> Path {
-    #[cfg(feature = "std")]
-    return parse_quote!(::std);
-    #[cfg(not(feature = "std"))]
-    return parse_quote!(::core);
 }
