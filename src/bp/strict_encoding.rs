@@ -14,13 +14,16 @@
 use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 use bitcoin::hashes::{hash160, sha256, sha256d};
-use bitcoin::{secp256k1, util::bip32, OutPoint, Txid};
+use bitcoin::{secp256k1, util::bip32, OutPoint, Txid, XpubIdentifier};
 use std::io;
 
 impl strict_encoding::Strategy for Txid {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 impl strict_encoding::Strategy for OutpointHash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for XpubIdentifier {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 

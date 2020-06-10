@@ -2,7 +2,6 @@
 
 #[macro_use]
 extern crate lnpbp_derive;
-#[macro_use]
 extern crate lnpbp;
 
 use ::core::marker::PhantomData;
@@ -30,7 +29,6 @@ struct You {
 }
 
 #[derive(StrictEncode, StrictDecode)]
-#[strict_error(Error)]
 struct Other {
     //    a: (),
     b: u8,

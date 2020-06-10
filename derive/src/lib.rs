@@ -122,7 +122,7 @@ fn strict_encode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
             #error_type_def
 
             #[inline]
-            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
                 #inner
             }
         }
