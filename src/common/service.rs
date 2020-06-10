@@ -36,3 +36,9 @@ pub trait TryService: Sized {
 
     async fn try_run_loop(self) -> Result<!, Self::ErrorType>;
 }
+
+pub trait Exec {
+    type Runtime: Sized;
+    type Error: ::std::error::Error;
+    fn exec(&self, runtime: &mut Self::Runtime) -> Result<(), Self::Error>;
+}

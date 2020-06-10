@@ -26,7 +26,7 @@ pub mod internet;
 #[cfg(feature = "serde")]
 pub(crate) mod serde;
 #[cfg(feature = "daemons")]
-mod service;
+pub mod service;
 
 pub use as_any::AsAny;
 pub use bipolar::Bipolar;
