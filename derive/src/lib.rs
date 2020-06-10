@@ -1,3 +1,16 @@
+// LNP/BP Core Library implementing LNPBP specifications & standards
+// Written in 2020 by
+//     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
+//
+// To the extent possible under law, the author(s) have dedicated all
+// copyright and related and neighboring rights to this software to
+// the public domain worldwide. This software is distributed without
+// any warranty.
+//
+// You should have received a copy of the MIT License
+// along with this software.
+// If not, see <https://opensource.org/licenses/MIT>.
+
 #![recursion_limit = "256"]
 #![cfg_attr(test, deny(warnings))]
 #![allow(unused)]
@@ -41,45 +54,7 @@ fn strict_encode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let mut strict_error: Option<Ident> = None;
-    let example = "#[strict_error(ErrorType)]";
-    input.attrs.iter().try_for_each(|attr| -> Result<()> {
-        if attr.path.is_ident("strict_error") {
-            match attr.parse_meta() {
-                Ok(meta) => {
-                    match meta {
-                        Meta::Path(path) => return Err(Error::new(attr.span(), format!("`strict_error` attribute must has form of `{}`", example))),
-                        Meta::List(list) => {
-                            match list.nested.len() {
-                                0 => return Err(Error::new(attr.span(), format!("`strict_error` must be followed by a error type identifier, like `{}`", example))),
-                                1 => match list.nested.first().expect("Stdlib collection object is broken") {
-                                    NestedMeta::Meta(meta) => match meta {
-                                        Meta::Path(path) =>  strict_error = path.get_ident().cloned(),
-                                        _ => return Err(Error::new(attr.span(), format!("`strict_error` must contain only a single error type identifier, like `{}`", example))),
-                                    },
-                                    NestedMeta::Lit(lit) => return Err(Error::new(attr.span(), format!("`strict_error` must contain type identifier, not literal. Example: `{}`", example))),
-                                },
-                                _ => return Err(Error::new(attr.span(), format!("`strict_error` must contain only a single type identifier, like `{}`", example)))
-                            }
-                        },
-                        Meta::NameValue(name_val) => {},
-                    }
-                }
-                Err(e) => {
-                    return Err(Error::new(
-                        e.span(),
-                        format!("{}. Try: `strict_encode(Error)`", e),
-                    ))
-                }
-            }
-        }
-        Ok(())
-    })?;
-
-    let error_type_def = match strict_error {
-        Some(ident) => quote! { type Error = #ident; },
-        None => quote! {},
-    };
+    let error_type_def = get_strict_error(input, data)?;
 
     let recurse = match data.fields {
         Fields::Named(ref fields) => fields
@@ -128,5 +103,55 @@ fn strict_encode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
                 #inner
             }
         }
+    })
+}
+
+fn get_strict_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream2> {
+    macro_rules! return_err {
+        ($attr:ident, $msg:tt) => {
+            return Err(Error::new(
+                $attr.span(),
+                format!(
+                    "Attribute macro canonical form `#[strict_error(ErrorType)]` violation: {}",
+                    $msg
+                ),
+            ));
+        };
+    }
+
+    let mut strict_error: Option<Ident> = None;
+    input.attrs.iter().try_for_each(|attr| -> Result<()> {
+        if attr.path.is_ident("strict_error") {
+            match attr.parse_meta() {
+                Ok(meta) => match meta {
+                    Meta::Path(path) => return_err!(attr, "unexpected path argument"),
+                    Meta::List(list) => match list.nested.len() {
+                        0 => return_err!(attr, "unexpected absence of argument"),
+                        1 => match list
+                            .nested
+                            .first()
+                            .expect("Stdlib collection object is broken")
+                        {
+                            NestedMeta::Meta(meta) => match meta {
+                                Meta::Path(path) => strict_error = path.get_ident().cloned(),
+                                _ => return_err!(attr, "unexpected multiple type identifiers"),
+                            },
+                            NestedMeta::Lit(lit) => {
+                                return_err!(attr, "unexpected literal for type identifier is met")
+                            }
+                        },
+                        _ => return_err!(attr, "unexpected multiple type identifiers"),
+                    },
+                    Meta::NameValue(name_val) => {}
+                },
+                Err(e) => return_err!(attr, "wrong format"),
+            }
+        }
+        Ok(())
+    })?;
+
+    Ok(match strict_error {
+        Some(ident) => quote! { type Error = #ident; },
+        None => quote! {},
     })
 }
