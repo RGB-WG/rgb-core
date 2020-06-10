@@ -10,7 +10,9 @@ keywords = ["bitcoin", "lightning", "lnp-bp", "layer-3", "cryptography"]
 readme = "README.md"
 edition = "2018"
 
-[dependencies]
-
 [lib]
 proc-macro = true
+
+[dependencies]
+quote = "0.6"
+syn = "0.15"
