@@ -11,8 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 ///! Universal addresses that support IPv4, IPv6 and Tor
 use std::fmt;

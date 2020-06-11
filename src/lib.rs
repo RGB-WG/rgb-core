@@ -82,9 +82,8 @@ pub extern crate miniscript;
 #[cfg(feature = "bulletproofs")]
 pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
+#[macro_use]
 extern crate serde_crate as serde;
-#[cfg(feature = "serde")]
-extern crate serde_derive;
 
 #[macro_use]
 mod paradigms;

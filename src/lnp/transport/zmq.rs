@@ -63,6 +63,11 @@ impl ApiType {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub enum SocketLocator {
     Inproc(String),
     Posix(PathBuf),
