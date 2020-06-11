@@ -66,7 +66,7 @@ impl ApiType {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", tag = "type")
 )]
 pub enum SocketLocator {
     Inproc(String),
