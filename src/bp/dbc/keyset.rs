@@ -14,11 +14,12 @@
 //! # LNPBP-2 related
 
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
-use bitcoin::secp256k1::{self, Secp256k1};
+use bitcoin::secp256k1;
 use std::collections::HashSet;
 
 use super::{pubkey::SHA256_LNPBP1, Container, Error, Proof, ScriptInfo};
 use crate::commit_verify::EmbedCommitVerify;
+use crate::SECP256K1;
 
 /// Container for LNPBP-1 commitments. In order to be constructed, commitment
 /// requires an original public key and a protocol-specific tag, which
@@ -100,8 +101,6 @@ where
     // #[consensus_critical]
     // #[standard_critical("LNPBP-1")]
     fn embed_commit(keyset_container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let ec = Secp256k1::<secp256k1::All>::new();
-
         // ! [CONSENSUS-CRITICAL]:
         // ! [STANDARD-CRITICAL]: We commit to the sum of all public keys,
         //                        not a single pubkey
@@ -140,7 +139,7 @@ where
         let factor = &Hmac::from_engine(hmac_engine)[..];
         // Applying tweaking factor to public key
         let mut tweaked_pubkey = keyset_container.pubkey.clone();
-        tweaked_pubkey.add_exp_assign(&ec, factor)?;
+        tweaked_pubkey.add_exp_assign(&SECP256K1, factor)?;
 
         // Returning tweaked public key
         Ok(LNPBP2Commitment(tweaked_pubkey))

@@ -221,6 +221,7 @@ mod test {
 
     use super::super::Error;
     use super::*;
+    use crate::SECP256K1;
 
     macro_rules! ms_str {
         ($($arg:tt)*) => (Miniscript::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap())
@@ -232,7 +233,6 @@ mod test {
 
     fn pubkeys(n: usize) -> Vec<bitcoin::PublicKey> {
         let mut ret = Vec::with_capacity(n);
-        let secp = secp256k1::Secp256k1::new();
         let mut sk = [0; 32];
         for i in 1..n + 1 {
             sk[0] = i as u8;
@@ -241,7 +241,7 @@ mod test {
 
             let pk = bitcoin::PublicKey {
                 key: secp256k1::PublicKey::from_secret_key(
-                    &secp,
+                    &SECP256K1,
                     &secp256k1::SecretKey::from_slice(&sk[..]).expect("secret key"),
                 ),
                 compressed: true,

@@ -26,6 +26,7 @@ path = "src/lib.rs"
 # not introduce risk of breaking the consensus and even security updates must
 # be done manualy after through testing
 [dependencies]
+lazy_static = "~1.4.0"
 lnpbp_derive = { path = "derive" }
 bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "staging" }
 bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", branch = "staging" }

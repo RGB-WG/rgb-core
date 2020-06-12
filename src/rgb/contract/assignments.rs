@@ -18,6 +18,12 @@ use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
+use secp256k1zkp::Secp256k1 as Secp256k1zkp;
+lazy_static! {
+    /// Secp256k1zpk context object
+    static ref SECP256K1_ZKP: Secp256k1zkp = Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
+}
+
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
@@ -34,7 +40,6 @@ impl AssignmentsVariant {
         allocations_ours: Vec<(SealDefinition, Amount)>,
         allocations_theirs: Vec<(OutpointHash, Amount)>,
     ) -> Option<Self> {
-        let secp = secp256k1zkp::Secp256k1::with_caps(secp256k1zkp::ContextFlag::Commit);
         let mut rng = rand::thread_rng();
         let mut blinding_factors = vec![];
 
@@ -48,7 +53,7 @@ impl AssignmentsVariant {
         let mut list_ours: Vec<_> = allocations_ours
             .into_iter()
             .map(|(seal, amount)| {
-                let blinding = amount::BlindingFactor::new(&secp, &mut rng);
+                let blinding = amount::BlindingFactor::new(&SECP256K1_ZKP, &mut rng);
                 blinding_factors.push(blinding.clone());
                 (seal, amount::Revealed { amount, blinding })
             })
@@ -57,32 +62,36 @@ impl AssignmentsVariant {
         let mut list_theirs: Vec<_> = allocations_theirs
             .into_iter()
             .map(|(seal_hash, amount)| {
-                let blinding = amount::BlindingFactor::new(&secp, &mut rng);
+                let blinding = amount::BlindingFactor::new(&SECP256K1_ZKP, &mut rng);
                 blinding_factors.push(blinding.clone());
                 (seal_hash, amount::Revealed { amount, blinding })
             })
             .collect();
 
         let blinding_inputs = inputs.iter().map(|inp| inp.blinding.clone()).collect();
-        let mut blinding_correction = secp
+        let mut blinding_correction = SECP256K1_ZKP
             .blind_sum(blinding_inputs, blinding_factors)
             .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
-        blinding_correction.neg_assign(&secp).expect(
+        blinding_correction.neg_assign(&SECP256K1_ZKP).expect(
             "You won lottery and will live forever: the probability \
                     of this event is less than a life of the universe",
         );
         if let Some(item) = list_ours.last_mut() {
             let blinding = &mut item.1.blinding;
-            blinding.add_assign(&secp, &blinding_correction).expect(
-                "You won lottery and will live forever: the probability \
+            blinding
+                .add_assign(&SECP256K1_ZKP, &blinding_correction)
+                .expect(
+                    "You won lottery and will live forever: the probability \
                     of this event is less than a lifetime of the universe",
-            );
+                );
         } else if let Some(item) = list_theirs.last_mut() {
             let blinding = &mut item.1.blinding;
-            blinding.add_assign(&secp, &blinding_correction).expect(
-                "You won lottery and will live forever: the probability \
+            blinding
+                .add_assign(&SECP256K1_ZKP, &blinding_correction)
+                .expect(
+                    "You won lottery and will live forever: the probability \
                     of this event is less than a lifetime of the universe",
-            );
+                );
         } else {
             return None;
         }

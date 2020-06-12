@@ -39,6 +39,8 @@
 // TODO: when we will be ready for the release #![deny(dead_code)]
 
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 pub extern crate derive_wrapper;
 extern crate num_derive;
 extern crate num_traits;
@@ -102,3 +104,8 @@ pub mod rpc;
 pub use common::*;
 pub use lnpbps::*;
 pub use paradigms::*;
+
+lazy_static! {
+    /// Global Secp256k1 context object
+    pub static ref SECP256K1: bitcoin::secp256k1::Secp256k1<bitcoin::secp256k1::All> = bitcoin::secp256k1::Secp256k1::new();
+}

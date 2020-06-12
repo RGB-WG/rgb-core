@@ -26,10 +26,11 @@
 //! their wrapped bitcoin counterparts `bitcoin::PublickKey` and `bitcoin::PrivateKey`.
 
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
-use bitcoin::secp256k1::{self, Secp256k1};
+use bitcoin::secp256k1;
 
 use super::{Container, Error, Proof};
 use crate::commit_verify::EmbedCommitVerify;
+use crate::SECP256K1;
 
 /// Single SHA256 hash of "LNPBP1" string according to LNPBP-1 acting as a
 /// prefix to the message in computing tweaking factor
@@ -138,8 +139,6 @@ where
     // #[consensus_critical]
     // #[standard_critical("LNPBP-1")]
     fn embed_commit(pubkey_container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let ec = Secp256k1::<secp256k1::All>::new();
-
         // ! [CONSENSUS-CRITICAL]:
         // ! [STANDARD-CRITICAL]: HMAC engine is based on sha256 hash
         let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&pubkey_container.pubkey.serialize());
@@ -168,7 +167,7 @@ where
         let factor = &Hmac::from_engine(hmac_engine)[..];
         // Applying tweaking factor to public key
         let mut tweaked_pubkey = pubkey_container.pubkey.clone();
-        tweaked_pubkey.add_exp_assign(&ec, factor)?;
+        tweaked_pubkey.add_exp_assign(&SECP256K1, factor)?;
 
         // Returning tweaked public key
         Ok(LNPBP1Commitment(tweaked_pubkey))

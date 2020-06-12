@@ -11,16 +11,17 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::secp256k1::{self, All, Secp256k1};
+use bitcoin::secp256k1;
 #[cfg(feature = "keygen")]
 use rand::thread_rng;
+
+use crate::SECP256K1;
 
 //use super::{NodeAddr, NodeLocator, Session, SessionTrait};
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]
 pub struct LocalNode {
-    secp: Secp256k1<All>,
     private_key: secp256k1::SecretKey,
     ephemeral_private_key: secp256k1::SecretKey,
 }
@@ -28,12 +29,10 @@ pub struct LocalNode {
 impl LocalNode {
     #[cfg(feature = "keygen")]
     pub fn new() -> Self {
-        let secp = Secp256k1::new();
         let mut rng = thread_rng();
         let private_key = secp256k1::SecretKey::new(&mut rng);
         let ephemeral_private_key = secp256k1::SecretKey::new(&mut rng);
         Self {
-            secp,
             private_key,
             ephemeral_private_key,
         }
@@ -41,14 +40,13 @@ impl LocalNode {
 
     pub fn from_keys(node_key: secp256k1::SecretKey, ephemeral_key: secp256k1::SecretKey) -> Self {
         Self {
-            secp: Secp256k1::new(),
             private_key: node_key,
             ephemeral_private_key: ephemeral_key,
         }
     }
 
     pub fn node_id(&self) -> secp256k1::PublicKey {
-        secp256k1::PublicKey::from_secret_key(&self.secp, &self.private_key)
+        secp256k1::PublicKey::from_secret_key(&SECP256K1, &self.private_key)
     }
 }
 
