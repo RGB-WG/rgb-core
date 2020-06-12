@@ -98,8 +98,6 @@ pub mod bp;
 pub mod lnp;
 #[cfg(feature = "rgb")]
 pub mod rgb;
-#[cfg(feature = "api")]
-pub mod rpc;
 
 pub use common::*;
 pub use lnpbps::*;
