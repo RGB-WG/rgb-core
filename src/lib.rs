@@ -30,6 +30,7 @@
 #![recursion_limit = "256"]
 // Coding conventions
 #![allow(incomplete_features)]
+#![allow(type_alias_bounds)]
 #![deny(non_upper_case_globals)]
 #![deny(non_camel_case_types)]
 #![deny(non_snake_case)]
@@ -95,6 +96,7 @@ mod lnpbps;
 #[macro_use]
 pub mod bp;
 #[cfg(feature = "lnp")]
+#[allow(dead_code, unused_variables)] // TODO: Remove attribute once LNP mod will be finalized
 pub mod lnp;
 #[cfg(feature = "rgb")]
 pub mod rgb;

@@ -179,7 +179,7 @@ pub(crate) mod test {
         MSG: AsRef<[u8]> + Eq,
         CMT: CommitVerify<MSG> + Eq + Hash + Debug,
     {
-        let commitments = messages.iter().fold(
+        messages.iter().fold(
             HashSet::<CMT>::with_capacity(messages.len()),
             |mut acc, msg| {
                 let commitment = CMT::commit(msg);
@@ -219,7 +219,7 @@ pub(crate) mod test {
         MSG: AsRef<[u8]> + Eq,
         CMT: EmbedCommitVerify<MSG> + Eq + Hash + Debug,
     {
-        let commitments = messages.iter().fold(
+        messages.iter().fold(
             HashSet::<CMT>::with_capacity(messages.len()),
             |mut acc, msg| {
                 let commitment = CMT::embed_commit(container, msg).unwrap();

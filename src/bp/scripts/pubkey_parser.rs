@@ -152,16 +152,7 @@ pub(crate) mod test {
     }
 
     pub(crate) fn gen_pubkeys_and_hashes(n: usize) -> (Vec<PublicKey>, Vec<PubkeyHash>) {
-        let pks /*pk_compr*/ = gen_bitcoin_pubkeys(n, true);
-        /*
-        let pk_uncompr = gen_bitcoin_pubkeys(n / 2, true);
-        let pks: Vec<PublicKey> = pk_compr
-            .into_iter()
-            .zip(pk_uncompr)
-            .map(|(a, b)| vec![a, b])
-            .flatten()
-            .collect();
-         */
+        let pks = gen_bitcoin_pubkeys(n, true);
         let pkhs = pks.iter().map(PublicKey::pubkey_hash).collect();
         (pks, pkhs)
     }
@@ -213,7 +204,7 @@ pub(crate) mod test {
     }
 
     pub(crate) fn complex_keys_suite(proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> ()) {
-        let (keys, hashes) = gen_pubkeys_and_hashes(6);
+        let (keys, _) = gen_pubkeys_and_hashes(6);
         proc(
             policy_str!("thresh(2,pk({}),pk({}))", keys[0], keys[1]),
             keys[..2].iter().map(|pk| pk.key).collect(),
@@ -234,7 +225,7 @@ pub(crate) mod test {
     pub(crate) fn complex_unmatched_keys_suite(
         proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> (),
     ) {
-        let (keys, hashes) = gen_pubkeys_and_hashes(10);
+        let (keys, _) = gen_pubkeys_and_hashes(10);
         proc(
             policy_str!("thresh(2,pk({}),pk({}))", keys[0], keys[1]),
             keys[2..].iter().map(|pk| pk.key).collect(),
@@ -253,7 +244,7 @@ pub(crate) mod test {
     }
 
     pub(crate) fn complex_suite(proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> ()) {
-        let (keys, hashes) = gen_pubkeys_and_hashes(10);
+        let (keys, _) = gen_pubkeys_and_hashes(10);
         proc(
             policy_str!(
                 "or(thresh(3,pk({}),pk({}),pk({})),and(thresh(2,pk({}),pk({})),older(10000)))",

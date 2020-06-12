@@ -263,7 +263,7 @@ mod test {
     #[test]
     fn test_no_keys_and_hashes() {
         let tag = sha256::Hash::hash(b"TEST_TAG");
-        let (keys, key_hashes, dummy_hashes) = gen_test_data();
+        let (keys, _, dummy_hashes) = gen_test_data();
         let sha_hash = sha256::Hash::hash(&"(nearly)random string".as_bytes());
 
         let ms = vec![
@@ -296,8 +296,7 @@ mod test {
     #[test]
     fn test_unknown_key() {
         let tag = sha256::Hash::hash(b"TEST_TAG");
-        let (keys, key_hashes, dummy_hashes) = gen_test_data();
-        let sha_hash = sha256::Hash::hash(&"(nearly)random string".as_bytes());
+        let (keys, _, _) = gen_test_data();
 
         let mut uncompressed = keys[5];
         uncompressed.compressed = false;
@@ -330,8 +329,7 @@ mod test {
     #[test]
     fn test_unknown_hash() {
         let tag = sha256::Hash::hash(b"TEST_TAG");
-        let (keys, key_hashes, dummy_hashes) = gen_test_data();
-        let sha_hash = sha256::Hash::hash(&"(nearly)random string".as_bytes());
+        let (keys, _, _) = gen_test_data();
 
         let ms = vec![
             ms_str!("c:pk_h({})", keys[1].pubkey_hash()),
@@ -361,8 +359,7 @@ mod test {
     #[test]
     fn test_known_key() {
         let tag = sha256::Hash::hash(b"TEST_TAG");
-        let (keys, key_hashes, dummy_hashes) = gen_test_data();
-        let sha_hash = sha256::Hash::hash(&"(nearly)random string".as_bytes());
+        let (keys, _, _) = gen_test_data();
 
         let mut uncompressed = keys[5];
         uncompressed.compressed = false;
@@ -393,8 +390,7 @@ mod test {
     #[test]
     fn test_known_hash() {
         let tag = sha256::Hash::hash(b"TEST_TAG");
-        let (keys, key_hashes, dummy_hashes) = gen_test_data();
-        let sha_hash = sha256::Hash::hash(&"(nearly)random string".as_bytes());
+        let (keys, _, _) = gen_test_data();
 
         let ms = vec![
             ms_str!("c:pk_h({})", keys[0].pubkey_hash()),
@@ -422,8 +418,7 @@ mod test {
     #[test]
     fn test_multisig() {
         let tag = sha256::Hash::hash(b"TEST_TAG");
-        let (keys, key_hashes, dummy_hashes) = gen_test_data();
-        let sha_hash = sha256::Hash::hash(&"(nearly)random string".as_bytes());
+        let (keys, _, _) = gen_test_data();
 
         let ms: Vec<Miniscript<bitcoin::PublicKey>> = vec![
             policy_str!("thresh(2,pk({}),pk({}))", keys[0], keys[1],),
@@ -442,8 +437,7 @@ mod test {
 
         ms.into_iter()
             .map(|ms: Miniscript<bitcoin::PublicKey>| LockScript::from(ms.encode()))
-            .enumerate()
-            .for_each(|(idx, ls)| {
+            .for_each(|ls| {
                 let container = LockscriptContainer {
                     script: ls,
                     pubkey: keys[1].key,
@@ -459,8 +453,7 @@ mod test {
     #[test]
     fn test_complex_scripts_unique_key() {
         let tag = sha256::Hash::hash(b"TEST_TAG");
-        let (keys, key_hashes, dummy_hashes) = gen_test_data();
-        let sha_hash = sha256::Hash::hash(&"(nearly)random string".as_bytes());
+        let (keys, _, _) = gen_test_data();
 
         let ms = policy_str!(
             "or(thresh(3,pk({}),pk({}),pk({})),and(thresh(2,pk({}),pk({})),older(10000)))",

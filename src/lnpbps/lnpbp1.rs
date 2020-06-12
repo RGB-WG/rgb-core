@@ -86,7 +86,6 @@ mod test {
             let (proof, commitment) = {
                 let mut prefixed_msg = tag.to_vec();
                 prefixed_msg.extend(msg);
-                let msgs = vec![prefixed_msg];
 
                 let pubkey = gen_secp_pubkeys(1).first().unwrap().clone();
                 let commitment = lnpbp1_commit(&pubkey, &tag, msg).unwrap();
