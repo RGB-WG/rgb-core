@@ -11,48 +11,40 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#![crate_name = "lnpbp"]
-#![crate_type = "dylib"]
-#![crate_type = "rlib"]
-#![feature(concat_idents)]
-#![feature(never_type)]
-#![feature(const_generics)]
-#![feature(optin_builtin_traits)]
-#![feature(associated_type_defaults)]
-#![feature(const_fn)]
-#![feature(arbitrary_enum_discriminant)]
-#![feature(bool_to_option)]
-#![feature(str_strip)]
-#![feature(bindings_after_at)]
-#![feature(in_band_lifetimes)]
-#![feature(rustc_private)]
-#![feature(try_trait)]
+#![feature(
+    never_type,
+    associated_type_defaults,
+    arbitrary_enum_discriminant,
+    bool_to_option,
+    in_band_lifetimes,
+    try_trait
+)]
 #![recursion_limit = "256"]
 // Coding conventions
-#![allow(incomplete_features)]
-#![allow(type_alias_bounds)]
-#![deny(non_upper_case_globals)]
-#![deny(non_camel_case_types)]
-#![deny(non_snake_case)]
-#![deny(unused_mut)]
-#![deny(unused_imports)]
+#![allow(incomplete_features, type_alias_bounds)]
+#![deny(
+    non_upper_case_globals,
+    non_camel_case_types,
+    non_snake_case,
+    unused_mut,
+    unused_imports
+)]
 // TODO: when we will be ready for the release #![deny(missing_docs)]
 // TODO: when we will be ready for the release #![deny(dead_code)]
 
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
-pub extern crate derive_wrapper;
-extern crate num_derive;
-extern crate num_traits;
-// We need to export this specific version which is supported by secp256k1zkp
-pub extern crate rand;
+extern crate derive_wrapper;
+
+// Support for node & node clients development (include API helpers)
+#[cfg(any(feature = "daemons", feature = "async"))]
 #[macro_use]
-pub extern crate bitcoin;
+extern crate async_trait;
+
+#[cfg(feature = "serde")]
 #[macro_use]
-pub extern crate bitcoin_hashes;
-#[cfg(feature = "url")]
-extern crate url;
+extern crate serde_crate as serde;
 
 // Logging
 #[cfg(feature = "log")]
@@ -60,33 +52,14 @@ extern crate url;
 #[macro_use]
 extern crate log;
 
-// Async IO, IPC & networking
-#[cfg(not(feature = "tokio"))]
-extern crate futures;
-#[cfg(feature = "tokio")]
-extern crate tokio;
-
-// Support for node & node clients development (include API helpers)
-#[cfg(any(feature = "daemons", feature = "async"))]
+// Bitcoin-specific imports. We make them public while we use custom versions
+// of the libs so downstream dependencies can use them directly from this lib
+// TODO: Remove re-exporting of bitcoin crates on release
 #[macro_use]
-extern crate async_trait;
-#[cfg(feature = "zmq")]
-extern crate zmq;
-
-// Lightning-network related functionality
-#[cfg(feature = "lightning")]
-pub extern crate lightning;
-#[cfg(feature = "lightning_tokio")]
-pub extern crate lightning_net_tokio;
-
+pub extern crate bitcoin;
+#[macro_use]
+pub extern crate bitcoin_hashes;
 pub extern crate miniscript;
-
-// Buletproofs support
-#[cfg(feature = "bulletproofs")]
-pub extern crate secp256k1zkp;
-#[cfg(feature = "serde")]
-#[macro_use]
-extern crate serde_crate as serde;
 
 #[macro_use]
 mod paradigms;

@@ -13,6 +13,7 @@ edition = "2018"
 [lib]
 name = "lnpbp"
 path = "src/lib.rs"
+crate-type = ["dylib", "rlib", "staticlib"]
 
 # Dependencies version policy
 # ---------------------------
