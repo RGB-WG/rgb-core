@@ -33,6 +33,8 @@
 // TODO: when we will be ready for the release #![deny(dead_code)]
 
 #[macro_use]
+extern crate amplify;
+#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate derive_wrapper;

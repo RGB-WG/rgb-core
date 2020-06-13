@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Wrapper;
 use bitcoin::{hashes::sha256, secp256k1, TxOut};
 
 use super::{
@@ -19,7 +20,6 @@ use super::{
 };
 use crate::bp::PubkeyScript;
 use crate::commit_verify::EmbedCommitVerify;
-use crate::Wrapper;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display_from(Debug)]

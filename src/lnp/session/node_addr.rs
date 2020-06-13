@@ -25,7 +25,7 @@ use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(
-        try_from = "crate::common::serde::CowHelper",
+        try_from = "amplify::CowHelper",
         into = "String",
         crate = "serde_crate"
     )

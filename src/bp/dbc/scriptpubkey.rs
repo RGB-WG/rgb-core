@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Wrapper;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::{hashes::sha256, secp256k1};
 use core::convert::TryFrom;
@@ -21,7 +22,6 @@ use super::{
 };
 use crate::bp::{GenerateScripts, LockScript, PubkeyScript, ScriptPubkeyDescriptor, Strategy};
 use crate::commit_verify::EmbedCommitVerify;
-use crate::Wrapper;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display_from(Debug)]

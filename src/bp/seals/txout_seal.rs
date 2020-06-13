@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Wrapper;
 use bitcoin::{OutPoint, Transaction};
 
 use super::{Error, SpendingStatus, TxGraph, Witness};
@@ -18,7 +19,6 @@ use crate::bp::dbc::{Container, TxCommitment, TxContainer, TxSupplement};
 use crate::bp::ShortId;
 use crate::commit_verify::EmbedCommitVerify;
 use crate::single_use_seals::{Message, SealMedium, SealStatus, SingleUseSeal};
-use crate::Wrapper;
 
 pub struct TxoutSeal<'a, RESOLVER>
 where

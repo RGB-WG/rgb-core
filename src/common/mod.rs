@@ -13,23 +13,13 @@
 
 //! Common data types, structures and functions for LNPBPs
 
-pub mod strategy;
 #[macro_use]
 mod macros;
-#[macro_use]
-pub(crate) mod convert;
-#[macro_use]
-mod wrapper;
-mod as_any;
 mod bipolar;
 pub mod internet;
-#[cfg(feature = "serde")]
-pub(crate) mod serde;
 #[cfg(feature = "daemons")]
 pub mod service;
 
-pub use as_any::AsAny;
 pub use bipolar::Bipolar;
 #[cfg(feature = "daemons")]
 pub use service::{Service, TryService};
-pub use wrapper::Wrapper;

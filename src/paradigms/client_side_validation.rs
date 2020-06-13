@@ -27,7 +27,6 @@ pub trait CommitEncodeWithStrategy {
 /// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
 pub mod commit_strategy {
     use super::*;
-    use crate::strategy;
     use bitcoin::hashes::Hash;
 
     // Defining strategies:
@@ -36,7 +35,7 @@ pub mod commit_strategy {
     pub struct FixedBytes;
     pub struct Merklization;
 
-    impl<T> CommitEncode for strategy::Holder<T, UsingStrict>
+    impl<T> CommitEncode for amplify::Holder<T, UsingStrict>
     where
         T: strict_encoding::StrictEncode,
     {
@@ -48,7 +47,7 @@ pub mod commit_strategy {
         }
     }
 
-    impl<T> CommitEncode for strategy::Holder<T, UsingConceal>
+    impl<T> CommitEncode for amplify::Holder<T, UsingConceal>
     where
         T: Conceal,
         <T as Conceal>::Confidential: CommitEncode,
@@ -58,7 +57,7 @@ pub mod commit_strategy {
         }
     }
 
-    impl<T> CommitEncode for strategy::Holder<T, Merklization>
+    impl<T> CommitEncode for amplify::Holder<T, Merklization>
     where
         T: IntoIterator,
         <T as IntoIterator>::Item: CommitEncode,
@@ -94,10 +93,10 @@ pub mod commit_strategy {
     impl<T> CommitEncode for T
     where
         T: CommitEncodeWithStrategy,
-        strategy::Holder<T, <T as CommitEncodeWithStrategy>::Strategy>: CommitEncode,
+        amplify::Holder<T, <T as CommitEncodeWithStrategy>::Strategy>: CommitEncode,
     {
         fn commit_encode<E: io::Write>(self, e: E) -> usize {
-            strategy::Holder::new(self).commit_encode(e)
+            amplify::Holder::new(self).commit_encode(e)
         }
     }
 

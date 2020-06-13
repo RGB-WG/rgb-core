@@ -257,7 +257,6 @@ macro_rules! impl_enum_strict_encoding {
 /// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
 pub mod strategies {
     use super::{Error, StrictDecode, StrictEncode};
-    use crate::strategy;
     use std::io;
 
     // Defining strategies:
@@ -271,30 +270,30 @@ pub mod strategies {
     impl<T> StrictEncode for T
     where
         T: Strategy + Clone,
-        strategy::Holder<T, <T as Strategy>::Strategy>: StrictEncode,
+        amplify::Holder<T, <T as Strategy>::Strategy>: StrictEncode,
     {
-        type Error = <strategy::Holder<T, T::Strategy> as StrictEncode>::Error;
+        type Error = <amplify::Holder<T, T::Strategy> as StrictEncode>::Error;
 
         #[inline]
         fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
-            strategy::Holder::new(self.clone()).strict_encode(e)
+            amplify::Holder::new(self.clone()).strict_encode(e)
         }
     }
 
     impl<T> StrictDecode for T
     where
         T: Strategy,
-        strategy::Holder<T, <T as Strategy>::Strategy>: StrictDecode,
+        amplify::Holder<T, <T as Strategy>::Strategy>: StrictDecode,
     {
-        type Error = <strategy::Holder<T, T::Strategy> as StrictDecode>::Error;
+        type Error = <amplify::Holder<T, T::Strategy> as StrictDecode>::Error;
 
         #[inline]
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-            Ok(strategy::Holder::strict_decode(d)?.into_inner())
+            Ok(amplify::Holder::strict_decode(d)?.into_inner())
         }
     }
 
-    impl<T> StrictEncode for strategy::Holder<T, HashFixedBytes>
+    impl<T> StrictEncode for amplify::Holder<T, HashFixedBytes>
     where
         T: bitcoin::hashes::Hash,
     {
@@ -307,7 +306,7 @@ pub mod strategies {
         }
     }
 
-    impl<T> StrictDecode for strategy::Holder<T, HashFixedBytes>
+    impl<T> StrictDecode for amplify::Holder<T, HashFixedBytes>
     where
         T: bitcoin::hashes::Hash,
     {
@@ -321,7 +320,7 @@ pub mod strategies {
         }
     }
 
-    impl<T> StrictEncode for strategy::Holder<T, BitcoinConsensus>
+    impl<T> StrictEncode for amplify::Holder<T, BitcoinConsensus>
     where
         T: bitcoin::consensus::Encodable,
     {
@@ -333,7 +332,7 @@ pub mod strategies {
         }
     }
 
-    impl<T> StrictDecode for strategy::Holder<T, BitcoinConsensus>
+    impl<T> StrictDecode for amplify::Holder<T, BitcoinConsensus>
     where
         T: bitcoin::consensus::Decodable,
     {

@@ -89,13 +89,12 @@
 //! ```
 //!
 
+use amplify::Wrapper;
 use bitcoin::{
     blockdata::{opcodes, opcodes::All, script::*},
     secp256k1, ScriptHash, WPubkeyHash, WScriptHash,
 };
 use core::convert::TryFrom;
-
-use crate::Wrapper;
 
 wrapper!(
     LockScript,

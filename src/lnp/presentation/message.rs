@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::{AsAny, Wrapper};
 use core::any::Any;
 use core::borrow::Borrow;
 use core::convert::TryInto;
@@ -21,7 +22,6 @@ use std::sync::Arc;
 
 use super::tlv;
 use super::{Encode, Error, EvenOdd, UnknownTypeError, Unmarshall, UnmarshallFn};
-use crate::common::{AsAny, Wrapper};
 use crate::lnp::presentation::tlv::Stream;
 use crate::strict_encoding::{StrictDecode, StrictEncode};
 

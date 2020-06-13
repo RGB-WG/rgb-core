@@ -11,13 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::AsAny;
 use core::borrow::Borrow;
 
 use super::{Decrypt, Encrypt, NodeLocator, Transcode};
 use crate::lnp::session::NoEncryption;
 use crate::lnp::transport::zmq::{ApiType as ZmqType, Connection, SocketLocator};
 use crate::lnp::transport::{self, Bidirect, Error, Input, Output, Read, Write};
-use crate::{AsAny, Bipolar};
+use crate::Bipolar;
 
 pub trait SessionTrait: Bipolar + AsAny {}
 

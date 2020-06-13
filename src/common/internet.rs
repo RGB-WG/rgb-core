@@ -41,7 +41,7 @@ use torut::onion::{OnionAddressV3, TorPublicKeyV3, TORV3_PUBLIC_KEY_LENGTH};
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(
-        try_from = "crate::common::serde::CowHelper",
+        try_from = "amplify::CowHelper",
         into = "String",
         crate = "serde_crate"
     )
