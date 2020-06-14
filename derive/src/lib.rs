@@ -16,10 +16,13 @@
 #![allow(unused)]
 
 #[macro_use]
+extern crate amplify;
+#[macro_use]
 extern crate quote;
 #[macro_use]
 extern crate syn;
 
+use amplify::proc_macro;
 use syn::export::{Span, ToTokens, TokenStream, TokenStream2};
 use syn::spanned::Spanned;
 use syn::{
@@ -201,38 +204,15 @@ fn get_strict_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStrea
         };
     }
 
+    let name = "strict_error";
+    let example = "#[strict_error(ErrorType)]";
     let mut strict_error: Option<Ident> = None;
-    input.attrs.iter().try_for_each(|attr| -> Result<()> {
-        if attr.path.is_ident("strict_error") {
-            match attr.parse_meta() {
-                Ok(meta) => match meta {
-                    Meta::Path(path) => return_err!(attr, "unexpected path argument"),
-                    Meta::List(list) => match list.nested.len() {
-                        0 => return_err!(attr, "unexpected absence of argument"),
-                        1 => match list
-                            .nested
-                            .first()
-                            .expect("Stdlib collection object is broken")
-                        {
-                            NestedMeta::Meta(meta) => match meta {
-                                Meta::Path(path) => strict_error = path.get_ident().cloned(),
-                                _ => return_err!(attr, "unexpected multiple type identifiers"),
-                            },
-                            NestedMeta::Lit(lit) => {
-                                return_err!(attr, "unexpected literal for type identifier is met")
-                            }
-                        },
-                        _ => return_err!(attr, "unexpected multiple type identifiers"),
-                    },
-                    Meta::NameValue(name_val) => {
-                        return_err!(attr, "parenthesises must be used instead of equal sign")
-                    }
-                },
-                Err(e) => return_err!(attr, "wrong format"),
-            }
-        }
-        Ok(())
-    })?;
+
+    let list = match proc_macro::attr_list(input, name, example)? {
+        Some(x) => x,
+        None => return Ok(quote! {}),
+    };
+    let strict_error = proc_macro::attr_nested_one_arg(list.into_iter(), name, example)?;
 
     Ok(match strict_error {
         Some(ident) => quote! { type Error = #ident; },
