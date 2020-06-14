@@ -58,7 +58,7 @@ serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], 
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "staging", features = ["compiler"] }
 
 [features]
-default = []
+default = ["tor", "lnp", "tokio", "log", "url"]
 all = ["tor", "lnp", "tokio", "log", "url", "parse_arg",
        "rgb", "daemons", "serde", "keygen", "websockets"]
 lnp = ["lightning", "zmq"]

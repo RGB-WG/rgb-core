@@ -13,8 +13,6 @@
 
 //! Common data types, structures and functions for LNPBPs
 
-#[macro_use]
-mod macros;
 mod bipolar;
 pub mod internet;
 #[cfg(feature = "daemons")]

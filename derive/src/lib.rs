@@ -277,7 +277,9 @@ fn get_strict_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStrea
                         },
                         _ => return_err!(attr, "unexpected multiple type identifiers"),
                     },
-                    Meta::NameValue(name_val) => {}
+                    Meta::NameValue(name_val) => {
+                        return_err!(attr, "parenthesises must be used instead of equal sign")
+                    }
                 },
                 Err(e) => return_err!(attr, "wrong format"),
             }
