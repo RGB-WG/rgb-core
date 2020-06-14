@@ -61,7 +61,7 @@ miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "stag
 default = ["tor", "lnp", "tokio", "log", "url"]
 all = ["tor", "lnp", "tokio", "log", "url", "parse_arg",
        "rgb", "daemons", "serde", "keygen", "websockets"]
-lnp = ["lightning", "zmq"]
+lnp = ["lightning", "async", "zmq"]
 async = ["async-trait"]
 rgb = ["bulletproofs", "petgraph"]
 tor = ["torut/v3", "torut/v2"]

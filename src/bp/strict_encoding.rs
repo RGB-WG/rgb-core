@@ -14,6 +14,7 @@
 use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 use bitcoin::hashes::{hash160, sha256, sha256d};
+use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{secp256k1, util::bip32, OutPoint, Txid, XpubIdentifier};
 use std::io;
 
@@ -35,6 +36,10 @@ impl strict_encoding::Strategy for sha256d::Hash {
 }
 impl strict_encoding::Strategy for hash160::Hash {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+
+impl strict_encoding::Strategy for PartiallySignedTransaction {
+    type Strategy = strict_encoding::strategies::BitcoinConsensus;
 }
 
 impl StrictEncode for secp256k1::PublicKey {
