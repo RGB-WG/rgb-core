@@ -12,7 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 mod error;
-mod io;
+mod file;
+mod remote_addr;
 pub mod tcp;
 pub mod tor;
 pub mod websocket;
@@ -21,5 +22,6 @@ pub mod zmq;
 //pub(self) use super::Message;
 pub use error::Error;
 #[cfg(feature = "tokio")]
-pub use io::{AsyncRead, AsyncWrite};
-pub use io::{Bidirect, Input, Output, Read, Write};
+pub use file::{AsyncRead, AsyncWrite};
+pub use file::{Bidirect, Input, Output, Read, Write};
+pub use remote_addr::RemoteAddr;
