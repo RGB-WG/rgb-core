@@ -14,6 +14,7 @@
 //! Common data types, structures and functions for LNPBPs
 
 mod bipolar;
+pub mod data_format;
 pub mod internet;
 #[cfg(feature = "daemons")]
 pub mod service;

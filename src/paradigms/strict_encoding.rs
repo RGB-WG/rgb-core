@@ -222,8 +222,8 @@ macro_rules! strict_encode_list {
 #[macro_export]
 macro_rules! impl_enum_strict_encoding {
     ($type:ty) => {
-        impl StrictEncode for $type {
-            type Error = Error;
+        impl $crate::strict_encoding::StrictEncode for $type {
+            type Error = $crate::strict_encoding::Error;
 
             #[inline]
             fn strict_encode<E: ::std::io::Write>(&self, e: E) -> Result<usize, Self::Error> {
@@ -236,8 +236,8 @@ macro_rules! impl_enum_strict_encoding {
             }
         }
 
-        impl StrictDecode for $type {
-            type Error = Error;
+        impl $crate::strict_encoding::StrictDecode for $type {
+            type Error = $crate::strict_encoding::Error;
 
             #[inline]
             fn strict_decode<D: ::std::io::Read>(d: D) -> Result<Self, Self::Error> {

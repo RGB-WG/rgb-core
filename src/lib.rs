@@ -17,7 +17,8 @@
     arbitrary_enum_discriminant,
     bool_to_option,
     in_band_lifetimes,
-    try_trait
+    try_trait,
+    pattern
 )]
 #![recursion_limit = "256"]
 // Coding conventions
@@ -38,6 +39,8 @@ extern crate amplify;
 extern crate lazy_static;
 #[macro_use]
 extern crate derive_wrapper;
+#[macro_use]
+extern crate num_derive;
 
 // Support for node & node clients development (include API helpers)
 #[cfg(any(feature = "daemons", feature = "async"))]

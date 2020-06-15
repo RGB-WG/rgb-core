@@ -26,5 +26,5 @@ fn main() {
     use lnpbp::lnp::{Type, TypedEnum};
 
     let _ = Reply::Success().get_type();
-    Reply::try_from_type(Type::try_from(0x0003).unwrap(), &Vec::<u8>::new());
+    Reply::try_from_type(Type::try_from(0x0003).unwrap(), &Vec::<u8>::new()).unwrap();
 }
