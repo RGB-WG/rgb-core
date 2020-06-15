@@ -20,7 +20,7 @@ use ::core::str::FromStr;
 
 use num_traits::{FromPrimitive, ToPrimitive};
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, ToPrimitive, FromPrimitive)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, ToPrimitive, FromPrimitive)]
 pub enum DataFormat {
     Yaml,
     Json,

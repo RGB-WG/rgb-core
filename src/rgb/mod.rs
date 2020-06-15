@@ -17,6 +17,7 @@ mod contract;
 mod interfaces;
 pub mod schema;
 mod stash;
+mod util;
 pub mod vm;
 
 pub mod prelude {
@@ -30,6 +31,7 @@ pub mod prelude {
     pub use schema::script;
     pub use schema::{Schema, SchemaId, SimplicityScript};
     pub use stash::{CoordinatedTransition, CoordinatedUpdate, Stash};
+    pub use util::bech32;
 }
 
 pub use prelude::*;
