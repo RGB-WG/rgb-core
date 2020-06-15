@@ -238,6 +238,12 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
                 } else {
                     unmarshall_fn.push(unmarshall_empty);
 
+                    from_type.push(quote_spanned! { v.span() =>
+                        Self::#type_const => {
+                            Self::#type_name()
+                        }
+                    });
+
                     get_payload.push(quote_spanned! { v.span() =>
                         Self::#type_name() => vec![],
                     });
@@ -249,6 +255,12 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
             }
             Fields::Unit => {
                 unmarshall_fn.push(unmarshall_empty);
+
+                from_type.push(quote_spanned! { v.span() =>
+                    Self::#type_const => {
+                        Self::#type_name
+                    }
+                });
 
                 get_payload.push(quote_spanned! { v.span() =>
                     Self::#type_name => vec![],
@@ -316,8 +328,8 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
     } })
 }
 
-// Strict Encode/Decode Derive
-// ==============
+// Strict Encode/Decode Derives
+// ============================
 
 #[proc_macro_derive(StrictEncode, attributes(strict_error))]
 pub fn derive_strict_encode(input: TokenStream) -> TokenStream {

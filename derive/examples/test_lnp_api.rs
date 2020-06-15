@@ -22,6 +22,9 @@ pub enum Reply {
 }
 
 fn main() {
-    use lnpbp::lnp::TypedEnum;
+    use core::convert::TryFrom;
+    use lnpbp::lnp::{Type, TypedEnum};
+
     let _ = Reply::Success().get_type();
+    Reply::try_from_type(Type::try_from(0x0003).unwrap(), &Vec::<u8>::new());
 }
