@@ -29,7 +29,7 @@ crate-type = ["dylib", "rlib", "staticlib"]
 [dependencies]
 amplify = { version = "~0.1.6", features = ["serde", "std"] }
 lazy_static = "~1.4.0"
-lnpbp_derive = { path = "derive" }
+bech32 = "~0.7.2"
 bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "staging" }
 bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", branch = "staging" }
 lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "staging", optional = true }

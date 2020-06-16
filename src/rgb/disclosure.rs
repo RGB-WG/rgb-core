@@ -11,17 +11,22 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//use ::bech32;
+use std::io;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
+use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+
+#[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
-pub enum Type {
-    Schema,
-    Genesis,
-    Transition,
-    Anchor,
-    Consignment,
-    Invoice,
+pub struct Disclosure {}
+
+impl StrictEncode for Disclosure {
+    fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, strict_encoding::Error> {
+        unimplemented!()
+    }
 }
 
-//pub fn detect_type() -> Result<Type, *> {}
+impl StrictDecode for Disclosure {
+    fn strict_decode<D: io::Read>(_: D) -> Result<Self, strict_encoding::Error> {
+        unimplemented!()
+    }
+}

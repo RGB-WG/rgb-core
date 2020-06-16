@@ -1,0 +1,87 @@
+// LNP/BP Core Library implementing LNPBP specifications & standards
+// Written in 2020 by
+//     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
+//
+// To the extent possible under law, the author(s) have dedicated all
+// copyright and related and neighboring rights to this software to
+// the public domain worldwide. This software is distributed without
+// any warranty.
+//
+// You should have received a copy of the MIT License
+// along with this software.
+// If not, see <https://opensource.org/licenses/MIT>.
+
+use ::bech32::{self, FromBase32, ToBase32};
+use ::core::fmt::{Display, Formatter};
+use ::core::str::{pattern::Pattern, FromStr};
+
+use crate::rgb::{Anchor, ContractId, Disclosure, Genesis, Schema, Transition};
+use crate::strict_encoding::{self, strict_decode, strict_encode};
+
+#[derive(Clone, Debug)]
+pub enum Bech32 {
+    ContractId(ContractId),
+    Schema(Schema),
+    Genesis(Genesis),
+    Transition(Transition),
+    Anchor(Anchor),
+    Disclosure(Disclosure),
+    Other(String, Vec<u8>),
+}
+
+impl Bech32 {
+    pub const HRP: &'static str = "rgb";
+    pub const HRP_ID: &'static str = "rgb:id";
+    pub const HRP_SCHEMA: &'static str = "rgb:schema";
+    pub const HRP_GENESIS: &'static str = "rgb:genesis";
+    pub const HRP_TRANSITION: &'static str = "rgb:transition";
+    pub const HRP_ANCHOR: &'static str = "rgb:anchor";
+    pub const HRP_DISCLOSURE: &'static str = "rgb:disclose";
+}
+
+#[derive(Debug, Display, From, Error)]
+#[display_from(Debug)]
+pub enum Error {
+    WrongHrp(String),
+    #[derive_from]
+    Bech32Error(::bech32::Error),
+    #[derive_from]
+    WrongData(strict_encoding::Error),
+}
+
+impl FromStr for Bech32 {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (hrp, data) = bech32::decode(&s)?;
+        let data = Vec::<u8>::from_base32(&data)?;
+
+        Ok(match hrp {
+            x if x == Self::HRP_ID => Self::ContractId(strict_decode(&data)?),
+            x if x == Self::HRP_SCHEMA => Self::Schema(strict_decode(&data)?),
+            x if x == Self::HRP_GENESIS => Self::Genesis(strict_decode(&data)?),
+            x if x == Self::HRP_TRANSITION => Self::Transition(strict_decode(&data)?),
+            x if x == Self::HRP_ANCHOR => Self::Anchor(strict_decode(&data)?),
+            x if x == Self::HRP_DISCLOSURE => Self::Disclosure(strict_decode(&data)?),
+            other if Self::HRP.is_prefix_of(&other) => Self::Other(other, data),
+            other => Err(Error::WrongHrp(other))?,
+        })
+    }
+}
+
+impl Display for Bech32 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        let (hrp, data) = match self {
+            Bech32::ContractId(obj) => (Self::HRP_ID, strict_encode(obj)),
+            Bech32::Schema(obj) => (Self::HRP_SCHEMA, strict_encode(obj)),
+            Bech32::Genesis(obj) => (Self::HRP_GENESIS, strict_encode(obj)),
+            Bech32::Transition(obj) => (Self::HRP_TRANSITION, strict_encode(obj)),
+            Bech32::Anchor(obj) => (Self::HRP_ANCHOR, strict_encode(obj)),
+            Bech32::Disclosure(obj) => (Self::HRP_DISCLOSURE, strict_encode(obj)),
+            Bech32::Other(hrp, obj) => (hrp.as_ref(), Ok(obj.clone())),
+        };
+        let data = data.map_err(|_| ::core::fmt::Error)?;
+        let b = ::bech32::encode(hrp, data.to_base32()).map_err(|_| ::core::fmt::Error)?;
+        b.fmt(f)
+    }
+}
