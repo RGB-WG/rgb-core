@@ -43,10 +43,14 @@ impl Bech32 {
 #[display_from(Debug)]
 pub enum Error {
     WrongHrp(String),
+
     #[derive_from]
     Bech32Error(::bech32::Error),
+
     #[derive_from]
     WrongData(strict_encoding::Error),
+
+    WrongType,
 }
 
 impl FromStr for Bech32 {
@@ -72,16 +76,122 @@ impl FromStr for Bech32 {
 impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
-            Bech32::ContractId(obj) => (Self::HRP_ID, strict_encode(obj)),
-            Bech32::Schema(obj) => (Self::HRP_SCHEMA, strict_encode(obj)),
-            Bech32::Genesis(obj) => (Self::HRP_GENESIS, strict_encode(obj)),
-            Bech32::Transition(obj) => (Self::HRP_TRANSITION, strict_encode(obj)),
-            Bech32::Anchor(obj) => (Self::HRP_ANCHOR, strict_encode(obj)),
-            Bech32::Disclosure(obj) => (Self::HRP_DISCLOSURE, strict_encode(obj)),
-            Bech32::Other(hrp, obj) => (hrp.as_ref(), Ok(obj.clone())),
+            Self::ContractId(obj) => (Self::HRP_ID, strict_encode(obj)),
+            Self::Schema(obj) => (Self::HRP_SCHEMA, strict_encode(obj)),
+            Self::Genesis(obj) => (Self::HRP_GENESIS, strict_encode(obj)),
+            Self::Transition(obj) => (Self::HRP_TRANSITION, strict_encode(obj)),
+            Self::Anchor(obj) => (Self::HRP_ANCHOR, strict_encode(obj)),
+            Self::Disclosure(obj) => (Self::HRP_DISCLOSURE, strict_encode(obj)),
+            Self::Other(hrp, obj) => (hrp.as_ref(), Ok(obj.clone())),
         };
         let data = data.map_err(|_| ::core::fmt::Error)?;
         let b = ::bech32::encode(hrp, data.to_base32()).map_err(|_| ::core::fmt::Error)?;
         b.fmt(f)
+    }
+}
+
+impl FromStr for ContractId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::ContractId(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl FromStr for Schema {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::Schema(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl FromStr for Genesis {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::Genesis(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl FromStr for Transition {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::Transition(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl FromStr for Anchor {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::Anchor(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl FromStr for Disclosure {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::Disclosure(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+// TODO: Enable after removal of the default `Display` implementation for
+//       hash-derived types
+/*
+impl Display for ContractId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::ContractId(self.clone()).fmt(f)
+    }
+}
+ */
+
+impl Display for Schema {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::Schema(self.clone()).fmt(f)
+    }
+}
+
+impl Display for Genesis {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::Genesis(self.clone()).fmt(f)
+    }
+}
+
+impl Display for Transition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::Transition(self.clone()).fmt(f)
+    }
+}
+
+impl Display for Anchor {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::Anchor(self.clone()).fmt(f)
+    }
+}
+
+impl Display for Disclosure {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::Disclosure(self.clone()).fmt(f)
     }
 }

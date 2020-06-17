@@ -15,8 +15,7 @@ use std::io;
 
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
-#[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
+#[derive(Clone, Debug)]
 pub struct Anchor {}
 
 impl StrictEncode for Anchor {

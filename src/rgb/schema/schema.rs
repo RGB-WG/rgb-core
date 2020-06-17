@@ -35,8 +35,7 @@ tagged_hash!(
     doc = "Commitment-based schema identifier used for committing to the schema type"
 );
 
-#[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
+#[derive(Clone, Debug)]
 pub struct Schema {
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateFormat>,

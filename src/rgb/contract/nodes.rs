@@ -118,8 +118,7 @@ pub trait Node {
     }
 }
 
-#[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
+#[derive(Clone, Debug)]
 pub struct Genesis {
     schema_id: SchemaId,
     network: bp::Network,
@@ -132,8 +131,7 @@ pub struct Genesis {
     script: SimplicityScript,
 }
 
-#[derive(Clone, Debug, Display, Default)]
-#[display_from(Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Transition {
     type_id: schema::TransitionType,
     metadata: Metadata,
