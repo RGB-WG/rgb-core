@@ -15,6 +15,8 @@ use ::bech32::{self, FromBase32, ToBase32};
 use ::core::fmt::{Display, Formatter};
 use ::core::str::{pattern::Pattern, FromStr};
 
+use bitcoin_hashes::hex::FromHex;
+
 use crate::rgb::{Anchor, ContractId, Disclosure, Genesis, Schema, Transition};
 use crate::strict_encoding::{self, strict_decode, strict_encode};
 
@@ -51,6 +53,11 @@ pub enum Error {
     WrongData(strict_encoding::Error),
 
     WrongType,
+
+    // TODO: Remove once the default `Display` implementation for
+    //       hash-derived types is removed
+    #[derive_from(::bitcoin_hashes::hex::Error)]
+    HexError,
 }
 
 impl FromStr for Bech32 {
@@ -90,14 +97,13 @@ impl Display for Bech32 {
     }
 }
 
+// TODO: Switch to bech32 encoding once the default `Display` implementation for
+//       hash-derived types will be removed
 impl FromStr for ContractId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::ContractId(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
+        Ok(Self::from_hex(s)?)
     }
 }
 
