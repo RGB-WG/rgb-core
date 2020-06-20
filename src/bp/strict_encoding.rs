@@ -11,12 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
-use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
+use std::io;
+
 use bitcoin::hashes::{hash160, sha256, sha256d};
 use bitcoin::util::psbt::PartiallySignedTransaction;
-use bitcoin::{secp256k1, util::bip32, OutPoint, Txid, XpubIdentifier};
-use std::io;
+use bitcoin::{secp256k1, util::bip32, OutPoint, Script, Txid, XpubIdentifier};
+
+use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
+use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 
 impl strict_encoding::Strategy for Txid {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
@@ -40,6 +42,24 @@ impl strict_encoding::Strategy for hash160::Hash {
 
 impl strict_encoding::Strategy for PartiallySignedTransaction {
     type Strategy = strict_encoding::strategies::BitcoinConsensus;
+}
+
+impl StrictEncode for Script {
+    type Error = Error;
+
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        Ok(self.to_bytes().strict_encode(e)?)
+    }
+}
+
+impl StrictDecode for Script {
+    type Error = Error;
+
+    #[inline]
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        Ok(Self::from(Vec::<u8>::strict_decode(d)?))
+    }
 }
 
 impl StrictEncode for secp256k1::PublicKey {

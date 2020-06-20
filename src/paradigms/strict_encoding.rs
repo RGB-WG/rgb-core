@@ -257,11 +257,13 @@ macro_rules! impl_enum_strict_encoding {
 /// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
 pub mod strategies {
     use super::{Error, StrictDecode, StrictEncode};
+    use amplify::Wrapper;
     use std::io;
 
     // Defining strategies:
     pub struct HashFixedBytes;
     pub struct BitcoinConsensus;
+    pub struct Wrapped;
 
     pub trait Strategy {
         type Strategy;
@@ -290,6 +292,32 @@ pub mod strategies {
         #[inline]
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
             Ok(amplify::Holder::strict_decode(d)?.into_inner())
+        }
+    }
+
+    impl<T> StrictEncode for amplify::Holder<T, Wrapped>
+    where
+        T: Wrapper,
+        T::Inner: StrictEncode,
+    {
+        type Error = <T::Inner as StrictEncode>::Error;
+
+        #[inline]
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            Ok(self.as_inner().to_inner().strict_encode(e)?)
+        }
+    }
+
+    impl<T> StrictDecode for amplify::Holder<T, Wrapped>
+    where
+        T: Wrapper,
+        T::Inner: StrictDecode,
+    {
+        type Error = <T::Inner as StrictDecode>::Error;
+
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(Self::new(T::from_inner(T::Inner::strict_decode(d)?)))
         }
     }
 

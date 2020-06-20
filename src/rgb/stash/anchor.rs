@@ -144,7 +144,7 @@ impl Anchor {
                 .clone()
                 .commitments
                 .into_iter()
-                .map(|(_, h)| h.into_inner().to_vec())
+                .map(|item| item.commitment.into_inner().to_vec())
                 .flatten()
                 .collect();
             let mm_digest = sha256::Hash::commit(&mm_buffer);
@@ -163,13 +163,16 @@ impl Anchor {
 }
 
 impl StrictEncode for Anchor {
-    fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, strict_encoding::Error> {
-        unimplemented!()
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
+        Ok(strict_encode_list!(e; self.commitment, self.proof))
     }
 }
 
 impl StrictDecode for Anchor {
-    fn strict_decode<D: io::Read>(_: D) -> Result<Self, strict_encoding::Error> {
-        unimplemented!()
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
+        Ok(Self {
+            commitment: MultimsgCommitment::strict_decode(&mut d)?,
+            proof: Proof::strict_decode(&mut d)?,
+        })
     }
 }

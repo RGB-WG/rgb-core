@@ -12,9 +12,11 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::VecDeque;
+use std::io;
 
 use crate::bp;
 use crate::rgb::{Anchor, Genesis, Node, SealDefinition, Transition};
+use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
@@ -98,5 +100,17 @@ impl Consignment {
         // Check that all nodes and anchors are verified
 
         result
+    }
+}
+
+impl StrictEncode for Consignment {
+    fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, strict_encoding::Error> {
+        unimplemented!()
+    }
+}
+
+impl StrictDecode for Consignment {
+    fn strict_decode<D: io::Read>(_: D) -> Result<Self, strict_encoding::Error> {
+        unimplemented!()
     }
 }

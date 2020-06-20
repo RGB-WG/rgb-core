@@ -13,21 +13,39 @@
 
 use rand::Rng;
 use std::collections::BTreeMap;
+use std::io;
 
 use bitcoin::hashes::{sha256, Hash, HashEngine};
 use bitcoin::util::uint::Uint256;
 
 use crate::commit_verify::CommitVerify;
+use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 /// Source data for creation of multi-message commitments according to LNPBP-4 procedure
 pub type MultiMsg = BTreeMap<sha256::Hash, sha256::Hash>;
 pub type Lnpbp4Hash = sha256::Hash;
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
+pub struct MultimsgCommitmentItem {
+    pub protocol: Option<sha256::Hash>,
+    pub commitment: Lnpbp4Hash,
+}
+
+impl MultimsgCommitmentItem {
+    pub fn new(protocol: Option<sha256::Hash>, commitment: Lnpbp4Hash) -> Self {
+        Self {
+            protocol,
+            commitment,
+        }
+    }
+}
+
 /// Multimessage commitment data according to LNPBP-4 specification
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display_from(Debug)]
 pub struct MultimsgCommitment {
-    pub commitments: Vec<(Option<sha256::Hash>, Lnpbp4Hash)>,
+    pub commitments: Vec<MultimsgCommitmentItem>,
     pub entropy: Option<u64>,
 }
 
@@ -73,10 +91,13 @@ impl CommitVerify<MultiMsg> for MultimsgCommitment {
                     let mut engine = sha256::Hash::engine();
                     engine.input(&i.to_le_bytes());
                     engine.input(&entropy_digest[..]);
-                    commitments.push((None, sha256::Hash::from_engine(engine)))
+                    commitments.push(MultimsgCommitmentItem::new(
+                        None,
+                        sha256::Hash::from_engine(engine),
+                    ))
                 }
                 Some((contract_id, commitment)) => {
-                    commitments.push((Some(*contract_id), *commitment))
+                    commitments.push(MultimsgCommitmentItem::new(Some(*contract_id), *commitment))
                 }
             }
         }
@@ -84,5 +105,35 @@ impl CommitVerify<MultiMsg> for MultimsgCommitment {
             commitments,
             entropy: Some(entropy),
         }
+    }
+}
+
+impl StrictEncode for MultimsgCommitmentItem {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
+        Ok(strict_encode_list!(e; self.protocol, self.commitment))
+    }
+}
+
+impl StrictDecode for MultimsgCommitmentItem {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
+        Ok(Self {
+            protocol: Option::<sha256::Hash>::strict_decode(&mut d)?,
+            commitment: Lnpbp4Hash::strict_decode(&mut d)?,
+        })
+    }
+}
+
+impl StrictEncode for MultimsgCommitment {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
+        Ok(strict_encode_list!(e; self.commitments, self.entropy))
+    }
+}
+
+impl StrictDecode for MultimsgCommitment {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
+        Ok(Self {
+            commitments: Vec::<MultimsgCommitmentItem>::strict_decode(&mut d)?,
+            entropy: Option::<u64>::strict_decode(&mut d)?,
+        })
     }
 }

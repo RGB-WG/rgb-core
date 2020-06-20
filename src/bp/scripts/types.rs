@@ -96,6 +96,8 @@ use bitcoin::{
 };
 use core::convert::TryFrom;
 
+use crate::strict_encoding;
+
 wrapper!(
     LockScript,
     Script,
@@ -106,6 +108,10 @@ wrapper!(
     script), or public keys",
     derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
 );
+
+impl strict_encoding::Strategy for LockScript {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
 
 wrapper!(
     PubkeyScript,
