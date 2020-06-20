@@ -11,15 +11,23 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{Anchor, Genesis, Transition};
+use super::{FieldType, OccurencesError};
+use crate::rgb::contract::data;
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
-pub struct Consignment {
-    pub genesis: Genesis,
-    pub transitions: Vec<Transition>,
-    pub endpoints: Vec<Transition>,
-    pub anchors: Vec<Anchor>,
-}
+pub enum Error {
+    InvalidValue(data::Revealed),
+    MinMaxBoundsOnLargeInt,
 
-impl Consignment {}
+    OccurencesNotMet(OccurencesError),
+
+    UnknownField(FieldType),
+    InvalidField(FieldType, Box<Error>),
+
+    InvalidTransitionId(usize),
+    //InvalidBoundSeal(seal::Type, Box<Error>),
+    //InvalidBoundSealId(seal::Type),
+    //InvalidBoundSealValue(seal::Type, StateFormat, data::Revealed),
+    //InvalidOutputBalanceBulletProof(usize),
+}

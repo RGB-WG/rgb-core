@@ -11,21 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::io;
+mod anchor;
+mod consignment;
+mod disclosure;
+mod stash;
 
-use crate::strict_encoding::{self, StrictDecode, StrictEncode};
-
-#[derive(Clone, Debug)]
-pub struct Anchor {}
-
-impl StrictEncode for Anchor {
-    fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, strict_encoding::Error> {
-        unimplemented!()
-    }
-}
-
-impl StrictDecode for Anchor {
-    fn strict_decode<D: io::Read>(_: D) -> Result<Self, strict_encoding::Error> {
-        unimplemented!()
-    }
-}
+pub use anchor::Anchor;
+pub use consignment::Consignment;
+pub use disclosure::Disclosure;
+pub use stash::Stash;

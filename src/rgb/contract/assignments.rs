@@ -114,6 +114,38 @@ impl AssignmentsVariant {
 
         Some(Self::Homomorphic(set))
     }
+
+    pub fn known_seals(&self) -> Vec<&SealDefinition> {
+        match self {
+            AssignmentsVariant::Void(s) => s
+                .into_iter()
+                .filter_map(|a| match a {
+                    Assignment::Revealed {
+                        seal_definition, ..
+                    } => Some(seal_definition),
+                    _ => None,
+                })
+                .collect(),
+            AssignmentsVariant::Homomorphic(s) => s
+                .into_iter()
+                .filter_map(|a| match a {
+                    Assignment::Revealed {
+                        seal_definition, ..
+                    } => Some(seal_definition),
+                    _ => None,
+                })
+                .collect(),
+            AssignmentsVariant::Hashed(s) => s
+                .into_iter()
+                .filter_map(|a| match a {
+                    Assignment::Revealed {
+                        seal_definition, ..
+                    } => Some(seal_definition),
+                    _ => None,
+                })
+                .collect(),
+        }
+    }
 }
 
 impl CommitEncodeWithStrategy for AssignmentsVariant {

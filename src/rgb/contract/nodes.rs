@@ -40,6 +40,14 @@ pub trait Node {
         self.assignments().keys().cloned().collect()
     }
 
+    #[inline]
+    fn assignments_by_type(&self, t: schema::AssignmentsType) -> Vec<&AssignmentsVariant> {
+        self.assignments()
+            .into_iter()
+            .filter_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
+            .collect()
+    }
+
     fn defined_seals(
         &self,
         assignments_type: schema::AssignmentsType,

@@ -19,4 +19,4 @@ mod txout_witness;
 pub use error::Error;
 pub use tx_graph::{SpendingStatus, TxGraph};
 pub use txout_seal::{TxResolve, TxoutSeal};
-pub use txout_witness::*;
+pub use txout_witness::{InnerWitness, OuterWitness, Witness};

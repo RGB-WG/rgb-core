@@ -11,12 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::interfaces::{Coordinator, TxConductor, TxResolver};
-use super::{Anchor, Consignment, Contract, ContractId, Genesis, SealDefinition, Transition};
-use crate::lnpbp4::MultimsgCommitment;
-use bitcoin::Transaction;
-use std::collections::HashSet;
+//use bitcoin::Transaction;
+//use std::collections::HashSet;
 
+//use super::{Anchor, Consignment, Contract, ContractId, Genesis, SealDefinition, Transition};
+//use crate::lnpbp4::MultimsgCommitment;
+
+pub struct Stash {}
+
+/*
 /// Top-level structure used by client wallets to manage all known RGB smart
 /// contracts and related data
 pub struct Stash {
@@ -131,3 +134,4 @@ pub struct CoordinatedUpdate {
     pub anchor: Anchor,
     pub inner_witness: Transaction,
 }
+ */

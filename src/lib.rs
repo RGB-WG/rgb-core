@@ -53,7 +53,8 @@ extern crate serde_crate as serde;
 
 // Logging
 #[cfg(feature = "log")]
-#[allow(unused_imports)] // We need this since under some feature combinations log macros are not required
+// We need this since under some feature combinations log macros are not required
+#[allow(unused_imports)]
 #[macro_use]
 extern crate log;
 

@@ -18,7 +18,7 @@ use bitcoin::secp256k1;
 use crate::bp::dbc::{self, Container, LNPBP1Commitment, LNPBP1Container, Proof};
 use crate::commit_verify::EmbedCommitVerify;
 
-/// Auxillary structure that can be used for keeping LNPBP-1 commitment-related
+/// Auxiliary structure that can be used for keeping LNPBP-1 commitment-related
 /// information
 #[derive(Clone, PartialEq, Eq, Debug, Display, Hash)]
 #[display_from(Debug)]

@@ -11,25 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
-pub enum SchemaError {
-    InvalidValue(metadata::Value),
-    MinMaxBoundsOnLargeInt,
-
-    OccurencesNotMet(OccurencesError),
-
-    UnknownField(metadata::Type),
-    InvalidField(metadata::Type, Box<SchemaError>),
-
-    InvalidTransitionId(usize),
-
-    InvalidBoundSeal(seal::Type, Box<SchemaError>),
-    InvalidBoundSealId(seal::Type),
-    InvalidBoundSealValue(seal::Type, StateFormat, data::Data),
-    InvalidOutputBalanceBulletProof(usize),
-}
-
 impl FieldFormat {
     pub fn validate(&self, value: &Value) -> Result<(), SchemaError> {
         match (self, value) {
