@@ -143,6 +143,7 @@ pub struct Genesis {
 pub struct Transition {
     type_id: schema::TransitionType,
     metadata: Metadata,
+    ancestors: Vec<TransitionId>,
     assignments: Assignments,
     script: SimplicityScript,
 }
@@ -241,12 +242,14 @@ impl Transition {
     pub fn with(
         type_id: schema::TransitionType,
         metadata: Metadata,
+        ancestors: Vec<TransitionId>,
         assignments: Assignments,
         script: SimplicityScript,
     ) -> Self {
         Self {
             type_id,
             metadata,
+            ancestors,
             assignments,
             script,
         }
@@ -298,6 +301,7 @@ mod strict_encoding {
             Ok(strict_encode_list!(e;
                     self.type_id,
                     self.metadata,
+                    self.ancestors,
                     self.assignments,
                     self.script))
         }
@@ -310,6 +314,7 @@ mod strict_encoding {
             Ok(Self {
                 type_id: schema::TransitionType::strict_decode(&mut d)?,
                 metadata: Metadata::strict_decode(&mut d)?,
+                ancestors: Vec::<TransitionId>::strict_decode(&mut d)?,
                 assignments: Assignments::strict_decode(&mut d)?,
                 script: SimplicityScript::strict_decode(&mut d)?,
             })
