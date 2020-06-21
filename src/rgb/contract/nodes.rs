@@ -13,7 +13,7 @@
 
 use std::collections::BTreeMap;
 
-use super::{data, AssignmentsVariant, SealDefinition};
+use super::{data, AssignmentsVariant, AutoConceal, SealDefinition};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::rgb::{
@@ -28,6 +28,7 @@ impl CommitEncodeWithStrategy for Assignments {
 pub trait Node {
     fn metadata(&self) -> &Metadata;
     fn assignments(&self) -> &Assignments;
+    fn assignments_mut(&mut self) -> &mut Assignments;
     fn script(&self) -> &SimplicityScript;
 
     #[inline]
@@ -126,6 +127,16 @@ pub trait Node {
     }
 }
 
+impl AutoConceal for dyn Node {
+    fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize {
+        let mut count = 0;
+        for (_, assignment) in self.assignments_mut() {
+            count += assignment.conceal_except(seals);
+        }
+        count
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Genesis {
     schema_id: SchemaId,
@@ -188,6 +199,10 @@ impl Node for Genesis {
         &self.assignments
     }
     #[inline]
+    fn assignments_mut(&mut self) -> &mut Assignments {
+        &mut self.assignments
+    }
+    #[inline]
     fn script(&self) -> &SimplicityScript {
         &self.script
     }
@@ -201,6 +216,10 @@ impl Node for Transition {
     #[inline]
     fn assignments(&self) -> &Assignments {
         &self.assignments
+    }
+    #[inline]
+    fn assignments_mut(&mut self) -> &mut Assignments {
+        &mut self.assignments
     }
     #[inline]
     fn script(&self) -> &SimplicityScript {

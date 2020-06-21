@@ -13,12 +13,13 @@
 
 use std::collections::BTreeSet;
 
-use super::{super::schema, amount, data, seal, Amount, SealDefinition};
+use super::{super::schema, amount, data, seal, Amount, AutoConceal, SealDefinition};
 use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
+
 lazy_static! {
     /// Secp256k1zpk context object
     static ref SECP256K1_ZKP: Secp256k1zkp = Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
@@ -105,10 +106,12 @@ impl AssignmentsVariant {
             .chain(
                 list_theirs
                     .into_iter()
-                    .map(|(seal_definition, assigned_state)| Assignment::Partial {
-                        seal_definition,
-                        assigned_state,
-                    }),
+                    .map(
+                        |(seal_definition, assigned_state)| Assignment::ConfidentialSeal {
+                            seal_definition,
+                            assigned_state,
+                        },
+                    ),
             )
             .collect();
 
@@ -145,6 +148,17 @@ impl AssignmentsVariant {
                 })
                 .collect(),
         }
+    }
+}
+
+impl AutoConceal for AssignmentsVariant {
+    fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize {
+        match self {
+            AssignmentsVariant::Void(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::Homomorphic(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::Hashed(data) => data as &mut dyn AutoConceal,
+        }
+        .conceal_except(seals)
     }
 }
 
@@ -196,14 +210,19 @@ where
         seal_definition: seal::Revealed,
         assigned_state: STATE::Revealed,
     },
-    Partial {
+    ConfidentialSeal {
         seal_definition: seal::Confidential,
         assigned_state: STATE::Revealed,
+    },
+    ConfidentialAmount {
+        seal_definition: seal::Revealed,
+        assigned_state: STATE::Confidential,
     },
 }
 
 impl<STATE> Conceal for Assignment<STATE>
 where
+    Self: Clone,
     STATE: StateTypes,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
     EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
@@ -215,27 +234,62 @@ where
 
     fn conceal(&self) -> Self {
         match self {
-            Assignment::Confidential {
-                seal_definition,
-                assigned_state,
-            } => Assignment::Confidential {
-                seal_definition: *seal_definition,
-                assigned_state: assigned_state.clone(),
-            },
+            Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => self.clone(),
             Assignment::Revealed {
                 seal_definition,
                 assigned_state,
-            } => Self::Confidential {
-                seal_definition: seal_definition.conceal(),
+            } => Self::ConfidentialAmount {
+                seal_definition: seal_definition.clone(),
                 assigned_state: assigned_state.conceal().into(),
             },
-            Assignment::Partial {
+            Assignment::ConfidentialSeal {
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
-                seal_definition: *seal_definition,
+                seal_definition: seal_definition.clone(),
                 assigned_state: assigned_state.conceal().into(),
             },
+        }
+    }
+}
+
+impl<STATE> AutoConceal for Assignment<STATE>
+where
+    STATE: StateTypes,
+    STATE::Revealed: Conceal,
+    <STATE as StateTypes>::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+    fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize {
+        match self {
+            Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => 0,
+            Assignment::ConfidentialSeal {
+                seal_definition,
+                assigned_state,
+            } => {
+                *self = Assignment::<STATE>::Confidential {
+                    assigned_state: assigned_state.conceal().into(),
+                    seal_definition: seal_definition.clone(),
+                };
+                1
+            }
+            Assignment::Revealed {
+                seal_definition,
+                assigned_state,
+            } => {
+                if seals.contains(seal_definition) {
+                    0
+                } else {
+                    *self = Assignment::<STATE>::ConfidentialAmount {
+                        assigned_state: assigned_state.conceal().into(),
+                        seal_definition: seal_definition.clone(),
+                    };
+                    1
+                }
+            }
         }
     }
 }
@@ -317,10 +371,14 @@ mod strict_encoding {
                     seal_definition,
                     assigned_state,
                 } => strict_encode_list!(e; 1u8, seal_definition, assigned_state),
-                Assignment::Partial {
+                Assignment::ConfidentialSeal {
                     seal_definition,
                     assigned_state,
                 } => strict_encode_list!(e; 2u8, seal_definition, assigned_state),
+                Assignment::ConfidentialAmount {
+                    seal_definition,
+                    assigned_state,
+                } => strict_encode_list!(e; 3u8, seal_definition, assigned_state),
             })
         }
     }
@@ -346,9 +404,13 @@ mod strict_encoding {
                     seal_definition: seal::Revealed::strict_decode(&mut d)?,
                     assigned_state: STATE::Revealed::strict_decode(&mut d)?,
                 },
-                2u8 => Assignment::Partial {
+                2u8 => Assignment::ConfidentialSeal {
                     seal_definition: seal::Confidential::strict_decode(&mut d)?,
                     assigned_state: STATE::Revealed::strict_decode(&mut d)?,
+                },
+                3u8 => Assignment::ConfidentialAmount {
+                    seal_definition: seal::Revealed::strict_decode(&mut d)?,
+                    assigned_state: STATE::Confidential::strict_decode(&mut d)?,
                 },
                 invalid => Err(Error::EnumValueNotKnown("Assignment".to_string(), invalid))?,
             })

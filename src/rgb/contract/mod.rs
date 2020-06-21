@@ -17,11 +17,13 @@ mod contract;
 pub mod data;
 #[macro_use]
 mod field;
+mod conceal;
 pub mod nodes;
 pub mod seal;
 
 pub use amount::Amount;
 pub use assignments::{Assignment, AssignmentsVariant};
+pub use conceal::AutoConceal;
 pub use contract::{Contract, ContractId, TransitionId};
 pub use field::{FieldData, Metadata};
 pub use nodes::{Genesis, Node, Transition};
