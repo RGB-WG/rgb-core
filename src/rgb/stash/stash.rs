@@ -14,10 +14,23 @@
 //use bitcoin::Transaction;
 //use std::collections::HashSet;
 
-//use super::{Anchor, Consignment, Contract, ContractId, Genesis, SealDefinition, Transition};
-//use crate::lnpbp4::MultimsgCommitment;
+use crate::rgb::{Anchor, Consignment, ContractId, Node, SealDefinition, Transition};
 
-pub struct Stash {}
+#[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
+#[display_from(Debug)]
+pub enum Error {}
+
+pub trait Stash {
+    fn consign(
+        &self,
+        contract_id: ContractId,
+        transition: Transition,
+        anchor: Anchor,
+        endpoints: Vec<SealDefinition>,
+    ) -> Result<Consignment, Error>;
+
+    fn merge(&mut self, consignment: Consignment) -> Result<Vec<Box<dyn Node>>, Error>;
+}
 
 /*
 /// Top-level structure used by client wallets to manage all known RGB smart

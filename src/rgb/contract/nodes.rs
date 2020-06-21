@@ -127,7 +127,7 @@ pub trait Node {
     }
 }
 
-impl AutoConceal for dyn Node {
+impl AutoConceal for &mut dyn Node {
     fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize {
         let mut count = 0;
         for (_, assignment) in self.assignments_mut() {
@@ -275,9 +275,13 @@ impl Transition {
     }
 
     #[inline]
-    #[allow(dead_code)]
     pub fn type_id(&self) -> schema::TransitionType {
         self.type_id
+    }
+
+    #[inline]
+    pub fn ancestors(&self) -> &Vec<TransitionId> {
+        &self.ancestors
     }
 }
 
