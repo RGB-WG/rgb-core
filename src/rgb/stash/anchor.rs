@@ -24,6 +24,7 @@ use crate::bp::dbc::{
     Container, Proof, ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer, TxCommitment,
     TxContainer, TxoutContainer,
 };
+use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::commit_verify::{CommitVerify, EmbedCommitVerify};
 use crate::lnpbp4::MultimsgCommitment;
 use crate::rgb::{ContractId, TransitionId};
@@ -178,6 +179,19 @@ impl Anchor {
 
         Ok(anchors)
     }
+
+    #[inline]
+    pub fn anchor_id(&self) -> AnchorId {
+        self.clone().consensus_commit()
+    }
+}
+
+impl CommitEncodeWithStrategy for Anchor {
+    type Strategy = commit_strategy::UsingStrict;
+}
+
+impl ConsensusCommit for Anchor {
+    type Commitment = AnchorId;
 }
 
 impl StrictEncode for Anchor {
