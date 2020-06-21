@@ -16,7 +16,7 @@ mod consignment;
 mod disclosure;
 mod stash;
 
-pub use anchor::Anchor;
+pub use anchor::{Anchor, AnchorId};
 pub use consignment::Consignment;
 pub use disclosure::Disclosure;
 pub use stash::Stash;

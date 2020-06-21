@@ -25,7 +25,7 @@ pub mod prelude {
         ContractId, FieldData, Genesis, Metadata, Node, SealDefinition, Transition, TransitionId,
     };
     pub use schema::{script, Schema, SchemaId, SimplicityScript};
-    pub use stash::{Anchor, Consignment, Disclosure, Stash};
+    pub use stash::{Anchor, AnchorId, Consignment, Disclosure, Stash};
 }
 
 pub use prelude::*;

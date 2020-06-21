@@ -18,7 +18,7 @@ use amplify::Wrapper;
 use bitcoin::secp256k1;
 use bitcoin::util::psbt::{raw::Key, PartiallySignedTransaction as Psbt};
 use bitcoin::util::uint::Uint256;
-use bitcoin_hashes::{sha256, Hash};
+use bitcoin_hashes::{sha256, sha256t, Hash, HashEngine};
 
 use crate::bp::dbc::{
     Container, Proof, ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer, TxCommitment,
@@ -35,6 +35,17 @@ lazy_static! {
     static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash = sha256::Hash::hash(b"LNPBP4");
 }
 
+// TODO: Standardize all type-id creating after the same method
+lazy_static! {
+    static ref MIDSTATE_ANCHOR_ID: [u8; 32] = {
+        let hash = sha256::Hash::hash(b"rgb:anchor");
+        let mut engine = sha256::Hash::engine();
+        engine.input(&hash[..]);
+        engine.input(&hash[..]);
+        engine.midstate().0
+    };
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
 #[display_from(Debug)]
 pub enum Error {
@@ -44,6 +55,13 @@ pub enum Error {
     #[derive_from]
     WrongPubkeyData(secp256k1::Error),
 }
+
+tagged_hash!(
+    AnchorId,
+    AnchorIdTag,
+    MIDSTATE_ANCHOR_ID,
+    doc = "Unique anchor identifier equivalent to the anchor commitment hash"
+);
 
 #[derive(Clone, Debug)]
 pub struct Anchor {
