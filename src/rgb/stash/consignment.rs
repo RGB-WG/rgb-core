@@ -15,14 +15,14 @@ use std::collections::VecDeque;
 use std::io;
 
 use crate::bp;
-use crate::rgb::{Anchor, Genesis, Node, SealDefinition, Transition};
+use crate::rgb::{Anchor, Genesis, Node, Transition};
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub struct Consignment {
     pub genesis: Genesis,
-    pub endpoints: Vec<SealDefinition>,
+    pub endpoints: Vec<bp::blind::OutpointHash>,
     pub data: Vec<(Anchor, Transition)>,
 }
 

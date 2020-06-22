@@ -72,9 +72,9 @@ pub struct Anchor {
 
 impl Anchor {
     pub fn commit(
-        transitions: HashMap<ContractId, TransitionId>,
+        transitions: BTreeMap<ContractId, TransitionId>,
         psbt: &mut Psbt,
-    ) -> Result<Vec<Self>, Error> {
+    ) -> Result<(Vec<Self>, HashMap<ContractId, usize>), Error> {
         let tx = &mut psbt.global.unsigned_tx;
         let num_outs = tx.output.len() as u64;
 
@@ -114,6 +114,7 @@ impl Anchor {
         );
 
         let mut anchors: Vec<Anchor> = vec![];
+        let mut contract_anchor_map = HashMap::<ContractId, usize>::new();
         for (vout, multimsg) in per_output_sources {
             let mm_commitment = MultimsgCommitment::commit(&multimsg);
             let psbt_out = psbt
@@ -171,13 +172,17 @@ impl Anchor {
 
             *tx = commitment.into_inner().clone();
 
+            multimsg.iter().for_each(|(id, _)| {
+                let contract_id = ContractId::from_inner(id.into_inner());
+                contract_anchor_map.insert(contract_id, anchors.len());
+            });
             anchors.push(Anchor {
                 commitment: mm_commitment,
                 proof: container.into_proof(),
             });
         }
 
-        Ok(anchors)
+        Ok((anchors, contract_anchor_map))
     }
 
     #[inline]
