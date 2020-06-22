@@ -13,6 +13,7 @@
 
 use bitcoin::hashes::{sha256d, Hash, HashEngine};
 use bitcoin::{OutPoint, Txid};
+use rand::{thread_rng, RngCore};
 
 use crate::client_side_validation::Conceal;
 use crate::commit_verify::CommitVerify;
@@ -37,6 +38,22 @@ impl From<OutpointReveal> for OutPoint {
     #[inline]
     fn from(reveal: OutpointReveal) -> Self {
         OutPoint::new(reveal.txid, reveal.vout as u32)
+    }
+}
+
+impl From<OutPoint> for OutpointReveal {
+    fn from(outpoint: OutPoint) -> Self {
+        Self {
+            blinding: thread_rng().next_u32(),
+            txid: outpoint.txid,
+            vout: outpoint.vout as u16,
+        }
+    }
+}
+
+impl From<OutPoint> for OutpointHash {
+    fn from(outpoint: OutPoint) -> Self {
+        OutpointReveal::from(outpoint).conceal()
     }
 }
 
