@@ -41,6 +41,48 @@ impl Bech32 {
     pub const HRP_DISCLOSURE: &'static str = "rgb:disclose";
 }
 
+pub trait ToBech32 {
+    fn to_bech32(&self) -> Bech32;
+}
+
+impl ToBech32 for seal::Confidential {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::Outpoint(self.clone())
+    }
+}
+
+impl ToBech32 for ContractId {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::ContractId(self.clone())
+    }
+}
+
+impl ToBech32 for Schema {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::Schema(self.clone())
+    }
+}
+impl ToBech32 for Genesis {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::Genesis(self.clone())
+    }
+}
+impl ToBech32 for Transition {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::Transition(self.clone())
+    }
+}
+impl ToBech32 for Anchor {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::Anchor(self.clone())
+    }
+}
+impl ToBech32 for Disclosure {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::Disclosure(self.clone())
+    }
+}
+
 #[derive(Debug, Display, From, Error)]
 #[display_from(Debug)]
 pub enum Error {
