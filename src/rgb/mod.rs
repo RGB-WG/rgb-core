@@ -18,6 +18,7 @@ mod stash;
 pub mod vm;
 
 pub mod prelude {
+    pub use super::bech32::Bech32;
     use super::*;
     pub use super::{bech32, schema, vm};
     pub use contract::{

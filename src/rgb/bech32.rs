@@ -15,13 +15,12 @@ use ::bech32::{self, FromBase32, ToBase32};
 use ::core::fmt::{Display, Formatter};
 use ::core::str::{pattern::Pattern, FromStr};
 
-use bitcoin_hashes::hex::FromHex;
-
-use crate::rgb::{Anchor, ContractId, Disclosure, Genesis, Schema, Transition};
+use crate::rgb::{seal, Anchor, ContractId, Disclosure, Genesis, Schema, Transition};
 use crate::strict_encoding::{self, strict_decode, strict_encode};
 
 #[derive(Clone, Debug)]
 pub enum Bech32 {
+    Outpoint(seal::Confidential),
     ContractId(ContractId),
     Schema(Schema),
     Genesis(Genesis),
@@ -33,6 +32,7 @@ pub enum Bech32 {
 
 impl Bech32 {
     pub const HRP: &'static str = "rgb";
+    pub const HRP_OUTPOINT: &'static str = "rgb";
     pub const HRP_ID: &'static str = "rgb:id";
     pub const HRP_SCHEMA: &'static str = "rgb:schema";
     pub const HRP_GENESIS: &'static str = "rgb:genesis";
@@ -68,6 +68,7 @@ impl FromStr for Bech32 {
         let data = Vec::<u8>::from_base32(&data)?;
 
         Ok(match hrp {
+            x if x == Self::HRP_OUTPOINT => Self::Outpoint(strict_decode(&data)?),
             x if x == Self::HRP_ID => Self::ContractId(strict_decode(&data)?),
             x if x == Self::HRP_SCHEMA => Self::Schema(strict_decode(&data)?),
             x if x == Self::HRP_GENESIS => Self::Genesis(strict_decode(&data)?),
@@ -83,6 +84,7 @@ impl FromStr for Bech32 {
 impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
+            Self::Outpoint(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)),
             Self::ContractId(obj) => (Self::HRP_ID, strict_encode(obj)),
             Self::Schema(obj) => (Self::HRP_SCHEMA, strict_encode(obj)),
             Self::Genesis(obj) => (Self::HRP_GENESIS, strict_encode(obj)),
@@ -97,13 +99,25 @@ impl Display for Bech32 {
     }
 }
 
-// TODO: Switch to bech32 encoding once the default `Display` implementation for
-//       hash-derived types will be removed
+impl FromStr for seal::Confidential {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::Outpoint(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
 impl FromStr for ContractId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::from_hex(s)?)
+        match Bech32::from_str(s)? {
+            Bech32::ContractId(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
     }
 }
 
@@ -165,6 +179,12 @@ impl FromStr for Disclosure {
 // TODO: Enable after removal of the default `Display` implementation for
 //       hash-derived types
 /*
+impl Display for seal::Confidential {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::Outpoint(self.clone()).fmt(f)
+    }
+}
+
 impl Display for ContractId {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         Bech32::ContractId(self.clone()).fmt(f)
