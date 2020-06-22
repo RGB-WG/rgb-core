@@ -14,13 +14,13 @@
 use core::cmp::Ord;
 use std::collections::BTreeSet;
 
-use super::SealDefinition;
+use super::seal;
 
 pub trait AutoConceal {
     fn conceal_all(&mut self) -> usize {
         self.conceal_except(&vec![])
     }
-    fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize;
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize;
 }
 
 // TODO: Do an auto implementation for Vec and other collection types
@@ -29,7 +29,7 @@ impl<T> AutoConceal for BTreeSet<T>
 where
     T: AutoConceal + Ord + Clone,
 {
-    fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize {
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         let mut count = 0;
         let mut new_self = BTreeSet::<T>::new();
         for item in self.iter() {

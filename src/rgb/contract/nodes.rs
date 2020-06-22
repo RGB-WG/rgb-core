@@ -17,7 +17,8 @@ use super::{data, AssignmentsVariant, AutoConceal, SealDefinition};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::rgb::{
-    schema, Assignment, ContractId, FieldData, Metadata, SchemaId, SimplicityScript, TransitionId,
+    schema, seal, Assignment, ContractId, FieldData, Metadata, SchemaId, SimplicityScript,
+    TransitionId,
 };
 
 pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
@@ -128,7 +129,7 @@ pub trait Node {
 }
 
 impl AutoConceal for &mut dyn Node {
-    fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize {
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         let mut count = 0;
         for (_, assignment) in self.assignments_mut() {
             count += assignment.conceal_except(seals);

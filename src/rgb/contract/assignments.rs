@@ -152,7 +152,7 @@ impl AssignmentsVariant {
 }
 
 impl AutoConceal for AssignmentsVariant {
-    fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize {
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
             AssignmentsVariant::Void(data) => data as &mut dyn AutoConceal,
             AssignmentsVariant::Homomorphic(data) => data as &mut dyn AutoConceal,
@@ -263,24 +263,28 @@ where
         + From<<STATE::Revealed as StrictEncode>::Error>
         + From<<STATE::Revealed as StrictDecode>::Error>,
 {
-    fn conceal_except(&mut self, seals: &Vec<SealDefinition>) -> usize {
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
             Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => 0,
             Assignment::ConfidentialSeal {
                 seal_definition,
                 assigned_state,
             } => {
-                *self = Assignment::<STATE>::Confidential {
-                    assigned_state: assigned_state.conceal().into(),
-                    seal_definition: seal_definition.clone(),
-                };
-                1
+                if seals.contains(&seal_definition) {
+                    0
+                } else {
+                    *self = Assignment::<STATE>::Confidential {
+                        assigned_state: assigned_state.conceal().into(),
+                        seal_definition: seal_definition.clone(),
+                    };
+                    1
+                }
             }
             Assignment::Revealed {
                 seal_definition,
                 assigned_state,
             } => {
-                if seals.contains(seal_definition) {
+                if seals.contains(&seal_definition.conceal()) {
                     0
                 } else {
                     *self = Assignment::<STATE>::ConfidentialAmount {
