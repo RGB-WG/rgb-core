@@ -15,7 +15,7 @@ use ::bech32::{self, FromBase32, ToBase32};
 use ::core::fmt::{Display, Formatter};
 use ::core::str::{pattern::Pattern, FromStr};
 
-use crate::rgb::{seal, Anchor, ContractId, Disclosure, Genesis, Schema, Transition};
+use crate::rgb::{seal, Anchor, ContractId, Disclosure, Genesis, Schema, SchemaId, Transition};
 use crate::strict_encoding::{self, strict_decode, strict_encode};
 
 #[derive(Clone, Debug)]
@@ -23,6 +23,7 @@ pub enum Bech32 {
     Outpoint(seal::Confidential),
     ContractId(ContractId),
     Schema(Schema),
+    SchemaId(SchemaId),
     Genesis(Genesis),
     Transition(Transition),
     Anchor(Anchor),
@@ -35,6 +36,7 @@ impl Bech32 {
     pub const HRP_OUTPOINT: &'static str = "rgb";
     pub const HRP_ID: &'static str = "rgb:id";
     pub const HRP_SCHEMA: &'static str = "rgb:schema";
+    pub const HRP_SCHEMA_ID: &'static str = "rgb:schema-id";
     pub const HRP_GENESIS: &'static str = "rgb:genesis";
     pub const HRP_TRANSITION: &'static str = "rgb:transition";
     pub const HRP_ANCHOR: &'static str = "rgb:anchor";
@@ -43,6 +45,9 @@ impl Bech32 {
 
 pub trait ToBech32 {
     fn to_bech32(&self) -> Bech32;
+    fn to_bech32_string(&self) -> String {
+        self.to_bech32().to_string()
+    }
 }
 
 impl ToBech32 for seal::Confidential {
@@ -62,21 +67,30 @@ impl ToBech32 for Schema {
         Bech32::Schema(self.clone())
     }
 }
+
+impl ToBech32 for SchemaId {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::SchemaId(self.clone())
+    }
+}
 impl ToBech32 for Genesis {
     fn to_bech32(&self) -> Bech32 {
         Bech32::Genesis(self.clone())
     }
 }
+
 impl ToBech32 for Transition {
     fn to_bech32(&self) -> Bech32 {
         Bech32::Transition(self.clone())
     }
 }
+
 impl ToBech32 for Anchor {
     fn to_bech32(&self) -> Bech32 {
         Bech32::Anchor(self.clone())
     }
 }
+
 impl ToBech32 for Disclosure {
     fn to_bech32(&self) -> Bech32 {
         Bech32::Disclosure(self.clone())
@@ -113,6 +127,7 @@ impl FromStr for Bech32 {
             x if x == Self::HRP_OUTPOINT => Self::Outpoint(strict_decode(&data)?),
             x if x == Self::HRP_ID => Self::ContractId(strict_decode(&data)?),
             x if x == Self::HRP_SCHEMA => Self::Schema(strict_decode(&data)?),
+            x if x == Self::HRP_SCHEMA_ID => Self::SchemaId(strict_decode(&data)?),
             x if x == Self::HRP_GENESIS => Self::Genesis(strict_decode(&data)?),
             x if x == Self::HRP_TRANSITION => Self::Transition(strict_decode(&data)?),
             x if x == Self::HRP_ANCHOR => Self::Anchor(strict_decode(&data)?),
@@ -129,6 +144,7 @@ impl Display for Bech32 {
             Self::Outpoint(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)),
             Self::ContractId(obj) => (Self::HRP_ID, strict_encode(obj)),
             Self::Schema(obj) => (Self::HRP_SCHEMA, strict_encode(obj)),
+            Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_encode(obj)),
             Self::Genesis(obj) => (Self::HRP_GENESIS, strict_encode(obj)),
             Self::Transition(obj) => (Self::HRP_TRANSITION, strict_encode(obj)),
             Self::Anchor(obj) => (Self::HRP_ANCHOR, strict_encode(obj)),
@@ -158,6 +174,17 @@ impl FromStr for ContractId {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match Bech32::from_str(s)? {
             Bech32::ContractId(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl FromStr for SchemaId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::SchemaId(obj) => Ok(obj),
             _ => Err(Error::WrongType),
         }
     }
@@ -230,6 +257,12 @@ impl Display for seal::Confidential {
 impl Display for ContractId {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         Bech32::ContractId(self.clone()).fmt(f)
+    }
+}
+
+impl Display for SchemaId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::SchemaId(self.clone()).fmt(f)
     }
 }
  */
