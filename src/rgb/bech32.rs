@@ -33,7 +33,7 @@ pub enum Bech32 {
 
 impl Bech32 {
     pub const HRP: &'static str = "rgb";
-    pub const HRP_OUTPOINT: &'static str = "rgb";
+    pub const HRP_OUTPOINT: &'static str = "outpoint";
     pub const HRP_ID: &'static str = "rgb:id";
     pub const HRP_SCHEMA: &'static str = "rgb:schema";
     pub const HRP_SCHEMA_ID: &'static str = "rgb:schema-id";
