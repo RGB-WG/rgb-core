@@ -818,6 +818,38 @@ mod compositional_types {
             Ok(map)
         }
     }
+
+    /// Two-component tuples are encoded as they were fields in the parent
+    /// data structure
+    impl<K, V> StrictEncode for (K, V)
+    where
+        K: StrictEncode + Clone,
+        V: StrictEncode + Clone,
+        K::Error: From<Error>,
+        V::Error: From<Error> + From<K::Error>,
+    {
+        type Error = V::Error;
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            Ok(self.0.strict_encode(&mut e)? + self.1.strict_encode(&mut e)?)
+        }
+    }
+
+    /// Two-component tuples are decoded as they were fields in the parent
+    /// data structure
+    impl<K, V> StrictDecode for (K, V)
+    where
+        K: StrictDecode + Clone,
+        V: StrictDecode + Clone,
+        K::Error: From<Error>,
+        V::Error: From<Error> + From<K::Error>,
+    {
+        type Error = V::Error;
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let a = K::strict_decode(&mut d)?;
+            let b = V::strict_decode(&mut d)?;
+            Ok((a, b))
+        }
+    }
 }
 
 #[cfg(test)]

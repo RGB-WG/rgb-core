@@ -104,13 +104,17 @@ impl Consignment {
 }
 
 impl StrictEncode for Consignment {
-    fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, strict_encoding::Error> {
-        unimplemented!()
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
+        Ok(strict_encode_list!(e; self.genesis, self.endpoints, self.data))
     }
 }
 
 impl StrictDecode for Consignment {
-    fn strict_decode<D: io::Read>(_: D) -> Result<Self, strict_encoding::Error> {
-        unimplemented!()
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
+        Ok(Self {
+            genesis: Genesis::strict_decode(&mut d)?,
+            endpoints: Vec::<bp::blind::OutpointHash>::strict_decode(&mut d)?,
+            data: Vec::<(Anchor, Transition)>::strict_decode(&mut d)?,
+        })
     }
 }
