@@ -29,9 +29,9 @@ Potentially, with LNP/BP Core library you can simplify the development of
   architectures
 
 To learn more about the technologies enabled by the library please check:
-* [RGB Technology Guide](https://github.com/LNP-BP/FAQ/blob/master/RGB%20Technology%20Guide%2C%20part%20I.pdf)
-* [Networking with LNP](https://github.com/LNP-BP/FAQ/blob/master/LNP%20Networking%20%26%20RGB%20Integration.pdf)
-* [LNP/BP Nodes Initiative](https://github.com/LNP-BP/devcalls/blob/master/LNP-BP%20Nodes%20Initiative.pdf)
+* [RGB Technology Guide](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/RGB%20Technology%20Guide%2C%20part%20I.pdf)
+* [Networking with LNP](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP%20Networking%20%26%20RGB%20Integration_final.pdf)
+* [LNP/BP Nodes Initiative](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP-BP%20Nodes%20Initiative.pdf)
 
 The development of the library projects is supported by LNP/BP Standards 
 Association.
