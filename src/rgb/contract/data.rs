@@ -11,11 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
-use crate::strict_encoding::strict_encode;
+use amplify::AsAny;
+use core::any::Any;
+use core::cmp::Ordering;
+
 use bitcoin::hashes::{hash160, sha256, sha256d, sha512, Hash};
 use bitcoin::secp256k1;
-use core::cmp::Ordering;
+
+use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
+use crate::strict_encoding::strict_encode;
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -30,6 +34,12 @@ impl Conceal for Void {
 }
 impl CommitEncodeWithStrategy for Void {
     type Strategy = commit_strategy::UsingConceal;
+}
+
+impl AsAny for Void {
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
+    }
 }
 
 #[derive(Clone, Debug, Display)]
@@ -84,6 +94,12 @@ impl CommitEncodeWithStrategy for Revealed {
     type Strategy = commit_strategy::UsingConceal;
 }
 
+impl AsAny for Revealed {
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
+    }
+}
+
 impl PartialEq for Revealed {
     fn eq(&self, other: &Self) -> bool {
         let some = strict_encode(self).expect("Encoding of predefined data types must not fail");
@@ -114,22 +130,31 @@ impl Ord for Revealed {
     }
 }
 
-/// Confidential representation of data
-///
-/// # Security analysis
-///
-/// While RIPEMD-160 collision security is not perfect and a
-/// [known attack exists](https://eprint.iacr.org/2004/199.pdf)
-/// for our purposes it still works well. First, we use SHA-256 followed by
-/// RIPEMD-160 (known as bitcoin hash 160 function), and even if a collision for
-/// a resulting RIPEMD-160 hash would be known, to fake the commitment we still
-/// and present verifier with some alternative data we have to find a SHA-256
-/// collision for RIPEMD-160 preimage with meaningful SHA-256 preimage, which
-/// requires us to break SHA-256 collision resistance. Second, when we transfer
-/// the confidential state data, they will occupy space, and 20 bytes of hash
-/// is much better than 32 bytes, especially for low-profile original state data
-/// (like numbers).
-pub type Confidential = hash160::Hash;
+// # Security analysis
+//
+// While RIPEMD-160 collision security is not perfect and a
+// [known attack exists](https://eprint.iacr.org/2004/199.pdf)
+// for our purposes it still works well. First, we use SHA-256 followed by
+// RIPEMD-160 (known as bitcoin hash 160 function), and even if a collision for
+// a resulting RIPEMD-160 hash would be known, to fake the commitment we still
+// and present verifier with some alternative data we have to find a SHA-256
+// collision for RIPEMD-160 preimage with meaningful SHA-256 preimage, which
+// requires us to break SHA-256 collision resistance. Second, when we transfer
+// the confidential state data, they will occupy space, and 20 bytes of hash
+// is much better than 32 bytes, especially for low-profile original state data
+// (like numbers).
+hash_newtype!(
+    Confidential,
+    hash160::Hash,
+    20,
+    doc = "Confidential representation of data"
+);
+
+impl AsAny for Confidential {
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
+    }
+}
 
 impl CommitEncodeWithStrategy for Confidential {
     type Strategy = commit_strategy::UsingStrict;
@@ -138,10 +163,14 @@ impl CommitEncodeWithStrategy for Confidential {
 // TODO: Automate this with #derive macros
 pub(super) mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use crate::strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
     use num_derive::{FromPrimitive, ToPrimitive};
     use num_traits::{FromPrimitive, ToPrimitive};
     use std::io;
+
+    impl Strategy for Confidential {
+        type Strategy = strategies::HashFixedBytes;
+    }
 
     #[derive(FromPrimitive, ToPrimitive)]
     #[repr(u8)]

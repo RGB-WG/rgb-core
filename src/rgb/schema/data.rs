@@ -529,8 +529,14 @@ mod strict_encoding {
 }
 
 mod _validation {
+    use amplify::AsAny;
+    use core::any::Any;
+
     use super::*;
-    use crate::rgb::{data, validation, Assignment, StateTypes};
+    use crate::rgb::{
+        data, validation, Assignment, HashStrategy, HomomorphStrategy, NodeId, StateTypes,
+        VoidStrategy,
+    };
     use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
     fn range_check<T, U>(
@@ -562,60 +568,60 @@ mod _validation {
     }
 
     impl DataFormat {
-        pub fn validate(&self, field_id: usize, data: &data::Revealed) -> validation::Status {
+        pub fn validate(&self, item_id: usize, data: &data::Revealed) -> validation::Status {
             let mut status = validation::Status::new();
             match (self, data) {
                 (Self::Unsigned(Bits::Bit8, min, max), data::Revealed::U8(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Unsigned(Bits::Bit16, min, max), data::Revealed::U16(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Unsigned(Bits::Bit32, min, max), data::Revealed::U32(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Unsigned(Bits::Bit64, min, max), data::Revealed::U64(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Unsigned(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits(field_id, *bits));
+                    status.add_failure(validation::Failure::SchemaMismatchedBits(item_id, *bits));
                 }
 
                 (Self::Integer(Bits::Bit8, min, max), data::Revealed::I8(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Integer(Bits::Bit16, min, max), data::Revealed::I16(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Integer(Bits::Bit32, min, max), data::Revealed::I32(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Integer(Bits::Bit64, min, max), data::Revealed::I64(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Integer(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits(field_id, *bits));
+                    status.add_failure(validation::Failure::SchemaMismatchedBits(item_id, *bits));
                 }
 
                 (Self::Float(Bits::Bit32, min, max), data::Revealed::F32(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Float(Bits::Bit64, min, max), data::Revealed::F64(val)) => {
-                    range_check(field_id, true, *val, *min, *max, &mut status)
+                    range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Float(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits(field_id, *bits));
+                    status.add_failure(validation::Failure::SchemaMismatchedBits(item_id, *bits));
                 }
 
                 (Self::Enum(value_set), data::Revealed::U8(val)) => {
                     if !value_set.contains(val) {
                         status
-                            .add_failure(validation::Failure::SchemaWrongEnumValue(field_id, *val));
+                            .add_failure(validation::Failure::SchemaWrongEnumValue(item_id, *val));
                     }
                 }
                 (Self::Enum(_), _) => {
                     status.add_failure(validation::Failure::SchemaMismatchedBits(
-                        field_id,
+                        item_id,
                         Bits::Bit8,
                     ));
                 }
@@ -623,7 +629,7 @@ mod _validation {
                 (Self::String(len), data::Revealed::String(val)) => {
                     if val.len() > *len as usize {
                         status.add_failure(validation::Failure::SchemaWrongDataLength(
-                            field_id,
+                            item_id,
                             *len,
                             val.len(),
                         ));
@@ -632,7 +638,7 @@ mod _validation {
                 (Self::Bytes(len), data::Revealed::Bytes(val)) => {
                     if val.len() > *len as usize {
                         status.add_failure(validation::Failure::SchemaWrongDataLength(
-                            field_id,
+                            item_id,
                             *len,
                             val.len(),
                         ));
@@ -662,7 +668,7 @@ mod _validation {
                 ) => {}
 
                 _ => {
-                    status.add_failure(validation::Failure::SchemaMismatchedDataType(field_id));
+                    status.add_failure(validation::Failure::SchemaMismatchedDataType(item_id));
                 }
             }
             status
@@ -670,7 +676,12 @@ mod _validation {
     }
 
     impl StateFormat {
-        pub fn validate<STATE>(&self, _data: &Assignment<STATE>) -> validation::Status
+        pub fn validate<STATE>(
+            &self,
+            node_id: &NodeId,
+            assignment_id: usize,
+            data: &Assignment<STATE>,
+        ) -> validation::Status
         where
             STATE: StateTypes,
             EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
@@ -678,7 +689,92 @@ mod _validation {
                 + From<<STATE::Revealed as StrictEncode>::Error>
                 + From<<STATE::Revealed as StrictDecode>::Error>,
         {
-            unimplemented!()
+            let mut status = validation::Status::new();
+            match data {
+                Assignment::Confidential { assigned_state, .. }
+                | Assignment::ConfidentialAmount { assigned_state, .. } => {
+                    let a: &dyn Any = assigned_state.as_any();
+                    match self {
+                        StateFormat::Void => {
+                            if a.downcast_ref::<<VoidStrategy as StateTypes>::Confidential>()
+                                .is_none()
+                            {
+                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                    assignment_id,
+                                ));
+                            }
+                        }
+                        StateFormat::Homomorphic(_) => {
+                            if a.downcast_ref::<<HomomorphStrategy as StateTypes>::Confidential>()
+                                .is_none()
+                            {
+                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                    assignment_id,
+                                ));
+                            }
+                            // TODO: When other homomorphic formats will be added,
+                            //       add information to the status like with
+                            //       hashed data below
+                        }
+                        StateFormat::Hashed(_) => match a
+                            .downcast_ref::<<HashStrategy as StateTypes>::Confidential>()
+                        {
+                            None => {
+                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                    assignment_id,
+                                ));
+                            }
+                            Some(_) => {
+                                status.add_info(
+                                    validation::Info::UncheckableConfidentialStateData(
+                                        node_id.clone(),
+                                        assignment_id,
+                                    ),
+                                );
+                            }
+                        },
+                    }
+                }
+                Assignment::Revealed { assigned_state, .. }
+                | Assignment::ConfidentialSeal { assigned_state, .. } => {
+                    let a: &dyn Any = assigned_state.as_any();
+                    match self {
+                        StateFormat::Void => {
+                            if a.downcast_ref::<<VoidStrategy as StateTypes>::Revealed>()
+                                .is_none()
+                            {
+                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                    assignment_id,
+                                ));
+                            }
+                        }
+                        StateFormat::Homomorphic(_format) => {
+                            if a.downcast_ref::<<HomomorphStrategy as StateTypes>::Revealed>()
+                                .is_none()
+                            {
+                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                    assignment_id,
+                                ));
+                            }
+                            // TODO: When other homomorphic formats will be added,
+                            //       add type check like with hashed data below
+                        }
+                        StateFormat::Hashed(format) => match a
+                            .downcast_ref::<<HashStrategy as StateTypes>::Revealed>()
+                        {
+                            None => {
+                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                    assignment_id,
+                                ));
+                            }
+                            Some(data) => {
+                                status += format.validate(assignment_id, data);
+                            }
+                        },
+                    }
+                }
+            }
+            status
         }
     }
 }

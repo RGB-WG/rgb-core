@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::AsAny;
 use std::collections::BTreeSet;
 
 use super::{super::schema, amount, data, seal, Amount, AutoConceal, SealDefinition};
@@ -175,8 +176,15 @@ impl CommitEncodeWithStrategy for AssignmentsVariant {
 }
 
 pub trait StateTypes: core::fmt::Debug {
-    type Confidential: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord + Clone;
-    type Revealed: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord + Conceal + Clone;
+    type Confidential: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord + Clone + AsAny;
+    type Revealed: StrictEncode
+        + StrictDecode
+        + core::fmt::Debug
+        + Eq
+        + Ord
+        + Conceal
+        + Clone
+        + AsAny;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]

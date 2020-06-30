@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::AsAny;
+use core::any::Any;
 use core::cmp::Ordering;
 use core::ops::Add;
 use rand::{Rng, RngCore};
@@ -58,6 +60,13 @@ impl CommitEncodeWithStrategy for Revealed {
     type Strategy = commit_strategy::UsingConceal;
 }
 
+// TODO: Add AsAny derive to amplify_derive crate
+impl AsAny for Revealed {
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
+    }
+}
+
 impl PartialOrd for Revealed {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.amount.partial_cmp(&other.amount) {
@@ -82,6 +91,12 @@ impl Ord for Revealed {
 pub struct Confidential {
     pub commitment: pedersen::Commitment,
     pub bulletproof: pedersen::RangeProof,
+}
+
+impl AsAny for Confidential {
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
+    }
 }
 
 impl PartialOrd for Confidential {

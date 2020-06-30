@@ -251,11 +251,11 @@ mod _validation {
                 match assignments.get(assignment_id) {
                     None => {},
                     Some(AssignmentsVariant::Void(set)) =>
-                        set.into_iter().for_each(|data| status += assignment.validate(data)),
+                        set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
                     Some(AssignmentsVariant::Homomorphic(set)) =>
-                        set.into_iter().for_each(|data| status += assignment.validate(data)),
+                        set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
                     Some(AssignmentsVariant::Hashed(set)) =>
-                        set.into_iter().for_each(|data| status += assignment.validate(data)),
+                        set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
                 };
             });
 

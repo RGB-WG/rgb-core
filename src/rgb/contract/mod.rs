@@ -22,7 +22,9 @@ pub mod nodes;
 pub mod seal;
 
 pub use amount::Amount;
-pub use assignments::{Assignment, AssignmentsVariant, StateTypes};
+pub use assignments::{
+    Assignment, AssignmentsVariant, HashStrategy, HomomorphStrategy, StateTypes, VoidStrategy,
+};
 pub use conceal::AutoConceal;
 pub use contract::{Contract, ContractId, TransitionId};
 pub use field::{FieldData, Metadata};

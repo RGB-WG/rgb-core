@@ -79,6 +79,16 @@ impl Status {
         self
     }
 
+    pub fn add_warning(&mut self, warning: Warning) -> &Self {
+        self.warnings.push(warning);
+        self
+    }
+
+    pub fn add_info(&mut self, info: Info) -> &Self {
+        self.info.push(info);
+        self
+    }
+
     pub fn is_valid(&self) -> bool {
         return self.failures.is_empty();
     }
@@ -115,6 +125,7 @@ pub enum Failure {
     SchemaWrongEnumValue(usize, u8),
     SchemaWrongDataLength(usize, u16, usize),
     SchemaMismatchedDataType(usize),
+    SchemaMismatchedStateType(usize),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
@@ -123,4 +134,6 @@ pub enum Warning {}
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 #[display_from(Debug)]
-pub enum Info {}
+pub enum Info {
+    UncheckableConfidentialStateData(NodeId, usize),
+}
