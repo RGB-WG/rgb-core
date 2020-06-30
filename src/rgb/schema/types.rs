@@ -89,7 +89,10 @@ pub enum Bits {
     Bit16 = 2,
     Bit32 = 4,
     Bit64 = 8,
-    Bit128 = 16,
+    // TODO: Add support later once bitcoin library will start supporting
+    //       consensus-encoding of the native rust `u128` type
+    //Bit128 = 16,
+    //Bit256 = 32,
 }
 
 impl Bits {
@@ -99,7 +102,7 @@ impl Bits {
             Bits::Bit16 => std::u16::MAX as u128,
             Bits::Bit32 => std::u32::MAX as u128,
             Bits::Bit64 => std::u64::MAX as u128,
-            Bits::Bit128 => std::u128::MAX as u128,
+            //Bits::Bit128 => std::u128::MAX as u128,
         }
     }
 
@@ -164,12 +167,16 @@ pub struct OccurencesError {
 #[repr(u8)]
 #[non_exhaustive]
 pub enum DigestAlgorithm {
-    Ripemd160 = 0b_0000_1000_u8,
+    // Single-path RIPEMD-160 is not secure and should not be used; see
+    // <https://eprint.iacr.org/2004/199.pdf>
+    //Ripemd160 = 0b_0000_1000_u8,
     Sha256 = 0b_0001_0001_u8,
     Sha512 = 0b_0001_0010_u8,
     Bitcoin160 = 0b_0100_1000_u8,
     Bitcoin256 = 0b_0101_0001_u8,
-    Tagged256 = 0b_1100_0000_u8,
+    // Each tagged hash is a type on it's own, so the following umbrella type
+    // was removed; a plain sha256 type must be used instead
+    //Tagged256 = 0b_1100_0000_u8,
 }
 
 pub mod elliptic_curve {
@@ -195,6 +202,7 @@ pub mod elliptic_curve {
     pub enum SignatureAlgorithm {
         Ecdsa = 0,
         Schnorr,
+        Ed25519,
     }
 
     #[derive(

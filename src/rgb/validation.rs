@@ -14,7 +14,7 @@
 use core::iter::FromIterator;
 use core::ops::{AddAssign, Try};
 
-use super::{schema, NodeId};
+use super::{schema, NodeId, SchemaId};
 
 #[derive(Clone, Debug, Display, Default)]
 #[display_from(Debug)]
@@ -87,6 +87,8 @@ impl Status {
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 #[display_from(Debug)]
 pub enum Failure {
+    SchemaUnknown(SchemaId),
+
     SchemaUnknownTransitionType(NodeId, schema::TransitionType),
 
     /// If the second parameter is `None` it means that error occurred during
@@ -102,6 +104,17 @@ pub enum Failure {
     ),
 
     SchemaDeniedScriptExtension(NodeId),
+
+    // TODO: Replace with named values: this will reduce confusion for developers
+    //       usize -> type_id; schema::Bits -> expected_bits
+    SchemaMetaValueTooSmall(usize),
+    SchemaMetaValueTooLarge(usize),
+    SchemaStateValueTooSmall(usize),
+    SchemaStateValueTooLarge(usize),
+    SchemaMismatchedBits(usize, schema::Bits),
+    SchemaWrongEnumValue(usize, u8),
+    SchemaWrongDataLength(usize, u16, usize),
+    SchemaMismatchedDataType(usize),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]

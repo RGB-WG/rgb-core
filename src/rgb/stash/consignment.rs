@@ -15,7 +15,7 @@ use std::collections::VecDeque;
 use std::io;
 
 use crate::bp;
-use crate::rgb::{validation, Anchor, Genesis, Node, Transition};
+use crate::rgb::{validation, Anchor, Genesis, Node, Schema, Transition};
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 #[derive(Clone, Debug, Display)]
@@ -41,15 +41,22 @@ pub trait TxResolver {
 }
 
 impl Consignment {
-    pub fn validate(&self, _resolver: &mut impl TxResolver) -> validation::Status {
-        let status = validation::Status::default();
+    pub fn validate(&self, schema: &Schema, _resolver: &mut impl TxResolver) -> validation::Status {
+        let mut status = validation::Status::default();
         let mut nodes_queue: VecDeque<&dyn Node> = VecDeque::new();
+
+        let schema_id = self.genesis.schema_id();
+        if schema.schema_id() != schema_id {
+            status.add_failure(validation::Failure::SchemaUnknown(schema_id));
+            return status;
+        }
 
         nodes_queue.push_back(&self.genesis);
 
         // Take the next node from the buffer of nodes containing all inputs
         while let Some(node) = nodes_queue.pop_front() {
             // Verify node against the schema
+            status += schema.validate(node);
 
             node.assignment_types().iter().for_each(|at| {
                 node.assignments_by_type(*at).into_iter().for_each(|a| {

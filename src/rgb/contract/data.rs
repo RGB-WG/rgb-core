@@ -13,7 +13,7 @@
 
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::strict_encode;
-use bitcoin::hashes::{hash160, sha256, Hash};
+use bitcoin::hashes::{hash160, sha256, sha256d, sha512, Hash};
 use bitcoin::secp256k1;
 use core::cmp::Ordering;
 
@@ -54,12 +54,21 @@ pub enum Revealed {
     F64(f64),
     Bytes(Vec<u8>),
     String(String),
+
     /// Single-path RIPEMD-160 is not secure and should not be used; see
     /// <https://eprint.iacr.org/2004/199.pdf>
-    Hash160(hash160::Hash),
     Sha256(sha256::Hash),
+    Sha512(sha512::Hash),
+    Bitcoin160(hash160::Hash),
+    Bitcoin256(sha256d::Hash),
+
     Secp256k1Pubkey(secp256k1::PublicKey),
-    Secp256k1Signature(secp256k1::Signature),
+    Ed25519Pubkey(ed25519_dalek::PublicKey),
+
+    Secp256k1ECDSASignature(secp256k1::Signature),
+    Ed25519Signature(ed25519_dalek::Signature),
+    // TODO: Add support for Schnorr's signatures once they will be implemented
+    //       in rust-secp256k1
 }
 
 impl Conceal for Revealed {
@@ -149,12 +158,20 @@ pub(super) mod strict_encoding {
         // I128 = 0b_0000_1100_u8,
         F32 = 0b_0001_0010_u8,
         F64 = 0b_0001_0011_u8,
+
         Bytes = 0b_0010_0000_u8,
         String = 0b_0010_0001_u8,
-        Ripemd160 = 0b_0100_0000_u8,
-        Sha256 = 0b_0100_1000_u8,
+
+        Sha256 = 0b_0100_0000_u8,
+        Sha512 = 0b_0100_0001_u8,
+        Bitcoin160 = 0b_0100_1000_u8,
+        Bitcoin256 = 0b_0100_1001_u8,
+
         Secp256k1Pubkey = 0b_1000_0001_u8,
         Secp256k1Signature = 0b_1000_0010_u8,
+
+        Ed25519Pubkey = 0b_1000_1001_u8,
+        Ed25519Signature = 0b_1000_1010_u8,
     }
     impl_enum_strict_encoding!(EncodingTag);
 
@@ -191,14 +208,18 @@ pub(super) mod strict_encoding {
                 Revealed::F64(val) => strict_encode_list!(e; EncodingTag::F64, val),
                 Revealed::Bytes(val) => strict_encode_list!(e; EncodingTag::Bytes, val),
                 Revealed::String(val) => strict_encode_list!(e; EncodingTag::String, val),
-                Revealed::Hash160(val) => strict_encode_list!(e; EncodingTag::Ripemd160, val),
                 Revealed::Sha256(val) => strict_encode_list!(e; EncodingTag::Sha256, val),
+                Revealed::Sha512(val) => strict_encode_list!(e; EncodingTag::Sha512, val),
+                Revealed::Bitcoin160(val) => strict_encode_list!(e; EncodingTag::Bitcoin160, val),
+                Revealed::Bitcoin256(val) => strict_encode_list!(e; EncodingTag::Bitcoin256, val),
                 Revealed::Secp256k1Pubkey(val) => {
                     strict_encode_list!(e; EncodingTag::Secp256k1Pubkey, val)
                 }
-                Revealed::Secp256k1Signature(val) => {
+                Revealed::Secp256k1ECDSASignature(val) => {
                     strict_encode_list!(e; EncodingTag::Secp256k1Signature, val)
                 }
+                Revealed::Ed25519Pubkey(_) => unimplemented!(),
+                Revealed::Ed25519Signature(_) => unimplemented!(),
             })
         }
     }
@@ -223,14 +244,22 @@ pub(super) mod strict_encoding {
                 EncodingTag::F64 => Revealed::F64(f64::strict_decode(&mut d)?),
                 EncodingTag::Bytes => Revealed::Bytes(Vec::strict_decode(&mut d)?),
                 EncodingTag::String => Revealed::String(String::strict_decode(&mut d)?),
-                EncodingTag::Ripemd160 => Revealed::Hash160(hash160::Hash::strict_decode(&mut d)?),
+                EncodingTag::Bitcoin160 => {
+                    Revealed::Bitcoin160(hash160::Hash::strict_decode(&mut d)?)
+                }
+                EncodingTag::Bitcoin256 => {
+                    Revealed::Bitcoin256(sha256d::Hash::strict_decode(&mut d)?)
+                }
                 EncodingTag::Sha256 => Revealed::Sha256(sha256::Hash::strict_decode(&mut d)?),
+                EncodingTag::Sha512 => Revealed::Sha512(sha512::Hash::strict_decode(&mut d)?),
                 EncodingTag::Secp256k1Pubkey => {
                     Revealed::Secp256k1Pubkey(secp256k1::PublicKey::strict_decode(&mut d)?)
                 }
                 EncodingTag::Secp256k1Signature => {
-                    Revealed::Secp256k1Signature(secp256k1::Signature::strict_decode(&mut d)?)
+                    Revealed::Secp256k1ECDSASignature(secp256k1::Signature::strict_decode(&mut d)?)
                 }
+                EncodingTag::Ed25519Pubkey => unimplemented!(),
+                EncodingTag::Ed25519Signature => unimplemented!(),
             })
         }
     }

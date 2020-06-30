@@ -73,46 +73,61 @@ impl DataFormat {
     pub fn u8() -> Self {
         Self::Unsigned(Bits::Bit8, 0, core::u8::MAX as u128)
     }
+
     #[inline]
     pub fn u16() -> Self {
         Self::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128)
     }
+
     #[inline]
     pub fn u32() -> Self {
         Self::Unsigned(Bits::Bit32, 0, core::u32::MAX as u128)
     }
+
     #[inline]
     pub fn u64() -> Self {
         Self::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
     }
-    #[inline]
-    pub fn u128() -> Self {
-        Self::Unsigned(Bits::Bit128, 0, core::u128::MAX)
-    }
+
+    // TODO: Add support later once bitcoin library will start supporting
+    //       consensus-encoding of the native rust `u128` type
+    //#[inline]
+    //pub fn u128() -> Self {
+    //    Self::Unsigned(Bits::Bit128, 0, core::u128::MAX)
+    // }
+
     #[inline]
     pub fn i8() -> Self {
         Self::Integer(Bits::Bit8, 0, core::i8::MAX as i128)
     }
+
     #[inline]
     pub fn i16() -> Self {
         Self::Integer(Bits::Bit16, 0, core::i16::MAX as i128)
     }
+
     #[inline]
     pub fn i32() -> Self {
         Self::Integer(Bits::Bit32, 0, core::i32::MAX as i128)
     }
+
     #[inline]
     pub fn i64() -> Self {
         Self::Integer(Bits::Bit64, 0, core::i64::MAX as i128)
     }
-    #[inline]
-    pub fn i128() -> Self {
-        Self::Integer(Bits::Bit128, 0, core::i128::MAX)
-    }
+
+    // TODO: Add support later once bitcoin library will start supporting
+    //       consensus-encoding of the native rust `u128` type
+    //#[inline]
+    //pub fn i128() -> Self {
+    //    Self::Integer(Bits::Bit128, 0, core::i128::MAX)
+    //}
+
     #[inline]
     pub fn f32() -> Self {
         Self::Float(Bits::Bit32, 0.0, core::f32::MAX as f64)
     }
+
     #[inline]
     pub fn f64() -> Self {
         Self::Float(Bits::Bit64, 0.0, core::f64::MAX)
@@ -296,7 +311,7 @@ mod strict_encoding {
                         Bits::Bit16 => (core::u16::MIN as u128)..=(core::u16::MAX as u128),
                         Bits::Bit32 => (core::u32::MIN as u128)..=(core::u32::MAX as u128),
                         Bits::Bit64 => (core::u64::MIN as u128)..=(core::u64::MAX as u128),
-                        Bits::Bit128 => core::u128::MIN..=core::u128::MAX,
+                        //Bits::Bit128 => core::u128::MIN..=core::u128::MAX,
                     };
                     let (min, max) = get_bounds(min..max, allowed_bounds, true)?;
                     let (min, max) = (min.to_le_bytes().to_vec(), max.to_le_bytes().to_vec());
@@ -313,7 +328,7 @@ mod strict_encoding {
                         Bits::Bit16 => (core::i16::MIN as i128)..=(core::i16::MAX as i128),
                         Bits::Bit32 => (core::i32::MIN as i128)..=(core::i32::MAX as i128),
                         Bits::Bit64 => (core::i64::MIN as i128)..=(core::i64::MAX as i128),
-                        Bits::Bit128 => core::i128::MIN..=core::i128::MAX,
+                        //Bits::Bit128 => core::i128::MIN..=core::i128::MAX,
                     };
                     let (min, max) = get_bounds(min..max, allowed_bounds, true)?;
                     let (min, max) = (min.to_le_bytes().to_vec(), max.to_le_bytes().to_vec());
@@ -405,14 +420,15 @@ mod strict_encoding {
                                 u64::from_le_bytes(min) as u128,
                                 u64::from_le_bytes(max) as u128,
                             )
-                        }
-                        Bits::Bit128 => {
-                            let mut min = [0u8; 16];
-                            let mut max = [0u8; 16];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (u128::from_le_bytes(min), u128::from_le_bytes(max))
-                        }
+                        } /*
+                          Bits::Bit128 => {
+                              let mut min = [0u8; 16];
+                              let mut max = [0u8; 16];
+                              d.read_exact(&mut min)?;
+                              d.read_exact(&mut max)?;
+                              (u128::from_le_bytes(min), u128::from_le_bytes(max))
+                          }
+                           */
                     };
                     DataFormat::Unsigned(bits, min, max)
                 }
@@ -458,14 +474,15 @@ mod strict_encoding {
                                 i64::from_le_bytes(min) as i128,
                                 i64::from_le_bytes(max) as i128,
                             )
-                        }
-                        Bits::Bit128 => {
-                            let mut min = [0u8; 16];
-                            let mut max = [0u8; 16];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (i128::from_le_bytes(min), i128::from_le_bytes(max))
-                        }
+                        } /*
+                          Bits::Bit128 => {
+                              let mut min = [0u8; 16];
+                              let mut max = [0u8; 16];
+                              d.read_exact(&mut min)?;
+                              d.read_exact(&mut max)?;
+                              (i128::from_le_bytes(min), i128::from_le_bytes(max))
+                          }
+                           */
                     };
                     DataFormat::Integer(bits, min, max)
                 }
@@ -516,9 +533,139 @@ mod _validation {
     use crate::rgb::{data, validation, Assignment, StateTypes};
     use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
+    fn range_check<T, U>(
+        type_id: usize,
+        is_meta: bool,
+        val: T,
+        min: U,
+        max: U,
+        status: &mut validation::Status,
+    ) where
+        T: Copy,
+        U: From<T>,
+        U: PartialOrd,
+    {
+        if U::from(val) < min {
+            status.add_failure(if is_meta {
+                validation::Failure::SchemaMetaValueTooSmall(type_id)
+            } else {
+                validation::Failure::SchemaStateValueTooSmall(type_id)
+            });
+        }
+        if U::from(val) > max {
+            status.add_failure(if is_meta {
+                validation::Failure::SchemaMetaValueTooLarge(type_id)
+            } else {
+                validation::Failure::SchemaStateValueTooLarge(type_id)
+            });
+        }
+    }
+
     impl DataFormat {
-        pub fn validate(&self, _data: &data::Revealed) -> validation::Status {
-            unimplemented!()
+        pub fn validate(&self, field_id: usize, data: &data::Revealed) -> validation::Status {
+            let mut status = validation::Status::new();
+            match (self, data) {
+                (Self::Unsigned(Bits::Bit8, min, max), data::Revealed::U8(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Unsigned(Bits::Bit16, min, max), data::Revealed::U16(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Unsigned(Bits::Bit32, min, max), data::Revealed::U32(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Unsigned(Bits::Bit64, min, max), data::Revealed::U64(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Unsigned(bits, _, _), _) => {
+                    status.add_failure(validation::Failure::SchemaMismatchedBits(field_id, *bits));
+                }
+
+                (Self::Integer(Bits::Bit8, min, max), data::Revealed::I8(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Integer(Bits::Bit16, min, max), data::Revealed::I16(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Integer(Bits::Bit32, min, max), data::Revealed::I32(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Integer(Bits::Bit64, min, max), data::Revealed::I64(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Integer(bits, _, _), _) => {
+                    status.add_failure(validation::Failure::SchemaMismatchedBits(field_id, *bits));
+                }
+
+                (Self::Float(Bits::Bit32, min, max), data::Revealed::F32(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Float(Bits::Bit64, min, max), data::Revealed::F64(val)) => {
+                    range_check(field_id, true, *val, *min, *max, &mut status)
+                }
+                (Self::Float(bits, _, _), _) => {
+                    status.add_failure(validation::Failure::SchemaMismatchedBits(field_id, *bits));
+                }
+
+                (Self::Enum(value_set), data::Revealed::U8(val)) => {
+                    if !value_set.contains(val) {
+                        status
+                            .add_failure(validation::Failure::SchemaWrongEnumValue(field_id, *val));
+                    }
+                }
+                (Self::Enum(_), _) => {
+                    status.add_failure(validation::Failure::SchemaMismatchedBits(
+                        field_id,
+                        Bits::Bit8,
+                    ));
+                }
+
+                (Self::String(len), data::Revealed::String(val)) => {
+                    if val.len() > *len as usize {
+                        status.add_failure(validation::Failure::SchemaWrongDataLength(
+                            field_id,
+                            *len,
+                            val.len(),
+                        ));
+                    }
+                }
+                (Self::Bytes(len), data::Revealed::Bytes(val)) => {
+                    if val.len() > *len as usize {
+                        status.add_failure(validation::Failure::SchemaWrongDataLength(
+                            field_id,
+                            *len,
+                            val.len(),
+                        ));
+                    }
+                }
+
+                (Self::Digest(DigestAlgorithm::Sha256), data::Revealed::Sha256(_)) => {}
+                (Self::Digest(DigestAlgorithm::Sha512), data::Revealed::Sha512(_)) => {}
+                (Self::Digest(DigestAlgorithm::Bitcoin160), data::Revealed::Bitcoin160(_)) => {}
+                (Self::Digest(DigestAlgorithm::Bitcoin256), data::Revealed::Bitcoin256(_)) => {}
+
+                (
+                    Self::PublicKey(EllipticCurve::Secp256k1, _),
+                    data::Revealed::Secp256k1Pubkey(_),
+                ) => {}
+                (
+                    Self::PublicKey(EllipticCurve::Curve25519, _),
+                    data::Revealed::Ed25519Pubkey(_),
+                ) => {}
+                (
+                    Self::Signature(elliptic_curve::SignatureAlgorithm::Ecdsa),
+                    data::Revealed::Secp256k1ECDSASignature(_),
+                ) => {}
+                (
+                    Self::Signature(elliptic_curve::SignatureAlgorithm::Ed25519),
+                    data::Revealed::Ed25519Signature(_),
+                ) => {}
+
+                _ => {
+                    status.add_failure(validation::Failure::SchemaMismatchedDataType(field_id));
+                }
+            }
+            status
         }
     }
 

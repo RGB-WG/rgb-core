@@ -12,14 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 mod data;
-mod error;
 mod nodes;
 mod schema;
 pub mod script;
 mod types;
 
 pub use data::{DataFormat, HomomorphicFormat, StateFormat, StateType};
-pub use error::Error;
 pub use nodes::{
     AssignmentsType, GenesisSchema, MetadataStructure, SealsStructure, TransitionSchema,
 };

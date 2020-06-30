@@ -130,7 +130,7 @@ mod _validation {
     use crate::rgb::{Assignments, Metadata, Node, NodeId, SimplicityScript};
 
     impl Schema {
-        pub fn validate(&self, node: &impl Node) -> validation::Status {
+        pub fn validate(&self, node: &dyn Node) -> validation::Status {
             let node_id = node.node_id();
             let type_id = node.type_id();
 
@@ -202,7 +202,7 @@ mod _validation {
                 let field = self.field_types.get(field_id)
                     .expect("If the field were absent, the schema would not be able to pass the internal validation and we would not reach this point");
                 for data in set {
-                    status += field.validate(&data);
+                    status += field.validate(*field_id, &data);
                 }
             });
 
