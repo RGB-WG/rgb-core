@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use bitcoin::hashes::{sha256, Hash};
 use std::collections::BTreeMap;
 
 use super::{data, AssignmentsVariant, AutoConceal, SealDefinition};
@@ -26,7 +27,15 @@ impl CommitEncodeWithStrategy for Assignments {
     type Strategy = commit_strategy::Merklization;
 }
 
+pub type NodeId = sha256::Hash;
+
 pub trait Node {
+    fn node_id(&self) -> NodeId;
+
+    /// Returns `Some([schema::TransitionType])` for Transitions or None for
+    /// Genesis node
+    fn type_id(&self) -> Option<schema::TransitionType>;
+
     fn metadata(&self) -> &Metadata;
     fn assignments(&self) -> &Assignments;
     fn assignments_mut(&mut self) -> &mut Assignments;
@@ -192,6 +201,14 @@ impl ConsensusCommit for Transition {
 
 impl Node for Genesis {
     #[inline]
+    fn node_id(&self) -> NodeId {
+        NodeId::from_inner(self.contract_id().into_inner())
+    }
+    #[inline]
+    fn type_id(&self) -> Option<schema::TransitionType> {
+        None
+    }
+    #[inline]
     fn metadata(&self) -> &Metadata {
         &self.metadata
     }
@@ -210,6 +227,14 @@ impl Node for Genesis {
 }
 
 impl Node for Transition {
+    #[inline]
+    fn node_id(&self) -> NodeId {
+        NodeId::from_inner(self.transition_id().into_inner())
+    }
+    #[inline]
+    fn type_id(&self) -> Option<schema::TransitionType> {
+        Some(self.type_id)
+    }
     #[inline]
     fn metadata(&self) -> &Metadata {
         &self.metadata
@@ -273,11 +298,6 @@ impl Transition {
             assignments,
             script,
         }
-    }
-
-    #[inline]
-    pub fn type_id(&self) -> schema::TransitionType {
-        self.type_id
     }
 
     #[inline]

@@ -20,7 +20,9 @@ mod types;
 
 pub use data::{DataFormat, HomomorphicFormat, StateFormat, StateType};
 pub use error::Error;
-pub use nodes::{AssignmentsType, GenesisSchema, TransitionSchema};
+pub use nodes::{
+    AssignmentsType, GenesisSchema, MetadataStructure, SealsStructure, TransitionSchema,
+};
 pub use schema::{FieldType, Schema, SchemaId, TransitionType};
 pub use script::{Scripting, SimplicityScript};
 pub use types::{

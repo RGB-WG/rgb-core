@@ -15,7 +15,7 @@ use std::collections::VecDeque;
 use std::io;
 
 use crate::bp;
-use crate::rgb::{Anchor, Genesis, Node, Transition};
+use crate::rgb::{validation, Anchor, Genesis, Node, Transition};
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 #[derive(Clone, Debug, Display)]
@@ -25,27 +25,6 @@ pub struct Consignment {
     pub endpoints: Vec<bp::blind::OutpointHash>,
     pub data: Vec<(Anchor, Transition)>,
 }
-
-#[derive(Clone, Debug, Display, Default)]
-#[display_from(Debug)]
-pub struct ValidationResult {
-    pub errors: Vec<ValidationError>,
-    pub warnings: Vec<ValidationWarning>,
-}
-
-impl ValidationResult {
-    pub fn is_valid(&self) -> bool {
-        return self.errors.is_empty();
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-#[display_from(Debug)]
-pub enum ValidationError {}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-#[display_from(Debug)]
-pub enum ValidationWarning {}
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
 #[display_from(Debug)]
@@ -62,8 +41,8 @@ pub trait TxResolver {
 }
 
 impl Consignment {
-    pub fn validate(&self, _resolver: &mut impl TxResolver) -> ValidationResult {
-        let result = ValidationResult::default();
+    pub fn validate(&self, _resolver: &mut impl TxResolver) -> validation::Status {
+        let status = validation::Status::default();
         let mut nodes_queue: VecDeque<&dyn Node> = VecDeque::new();
 
         nodes_queue.push_back(&self.genesis);
@@ -99,7 +78,7 @@ impl Consignment {
 
         // Check that all nodes and anchors are verified
 
-        result
+        status
     }
 }
 

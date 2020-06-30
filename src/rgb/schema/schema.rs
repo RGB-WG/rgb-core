@@ -11,8 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::collections::BTreeMap;
+use std::io;
+
 use bitcoin::hashes::{sha256t, Hash};
-use std::{collections::BTreeMap, io};
 
 use super::{
     script, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateFormat,
@@ -62,6 +64,7 @@ impl CommitEncodeWithStrategy for Schema {
 mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use bitcoin::hashes::Hash;
 
     // TODO: Use derive macros and generalized `tagged_hash!` in the future
     impl StrictEncode for SchemaId {
@@ -113,6 +116,170 @@ mod strict_encoding {
                 script_library: Vec::strict_decode(&mut d)?,
                 script_extensions: script::Extensions::strict_decode(&mut d)?,
             })
+        }
+    }
+}
+
+mod _validation {
+    use super::*;
+
+    use std::collections::BTreeSet;
+
+    use crate::rgb::schema::{MetadataStructure, Scripting, SealsStructure};
+    use crate::rgb::{validation, AssignmentsVariant};
+    use crate::rgb::{Assignments, Metadata, Node, NodeId, SimplicityScript};
+
+    impl Schema {
+        pub fn validate(&self, node: &impl Node) -> validation::Status {
+            let node_id = node.node_id();
+            let type_id = node.type_id();
+
+            let (metadata_structure, assignments_structure, script_structure) = match node.type_id()
+            {
+                None => (
+                    &self.genesis.metadata,
+                    &self.genesis.defines,
+                    &self.genesis.scripting,
+                ),
+                Some(type_id) => {
+                    let transition_type = match self.transitions.get(&type_id) {
+                        None => {
+                            return validation::Status::with_failure(
+                                validation::Failure::SchemaUnknownTransitionType(node_id, type_id),
+                            )
+                        }
+                        Some(transition_type) => transition_type,
+                    };
+
+                    (
+                        &transition_type.metadata,
+                        &transition_type.defines,
+                        &transition_type.scripting,
+                    )
+                }
+            };
+
+            let mut status =
+                self.validate_meta(node_id, type_id, node.metadata(), metadata_structure);
+            status += self.validate_assignments(
+                node_id,
+                type_id,
+                node.assignments(),
+                assignments_structure,
+            );
+            status += self.validate_scripts(node_id, node.script(), script_structure);
+            status
+        }
+
+        // TODO: Improve this and the next function by putting shared parts
+        //       into a separate fn
+        fn validate_meta(
+            &self,
+            node_id: NodeId,
+            type_id: Option<TransitionType>,
+            metadata: &Metadata,
+            metadata_structure: &MetadataStructure,
+        ) -> validation::Status {
+            let mut status = metadata
+                .keys()
+                .collect::<BTreeSet<_>>()
+                .difference(&metadata_structure.keys().collect())
+                .map(|field_id| {
+                    validation::Failure::SchemaUnknownFieldType(node_id, type_id, **field_id)
+                })
+                .collect();
+
+            metadata_structure.into_iter().for_each(|(field_id, occ)| {
+                let set = metadata.get(field_id).cloned().unwrap_or(bset!());
+                match (set.len(), occ.min_value() as usize, occ.max_value() as usize) {
+                    (0, 0, _) => {}
+                    (0, min, _) if min > 0 => {}
+                    (len, min, _) if len < min => {}
+                    (len, _, max) if len > max => {}
+                    _ => {}
+                };
+
+                let field = self.field_types.get(field_id)
+                    .expect("If the field were absent, the schema would not be able to pass the internal validation and we would not reach this point");
+                for data in set {
+                    status += field.validate(&data);
+                }
+            });
+
+            status
+        }
+
+        fn validate_assignments(
+            &self,
+            node_id: NodeId,
+            type_id: Option<TransitionType>,
+            assignments: &Assignments,
+            assignments_structure: &SealsStructure,
+        ) -> validation::Status {
+            let mut status = assignments
+                .keys()
+                .collect::<BTreeSet<_>>()
+                .difference(&assignments_structure.keys().collect())
+                .map(|assignment_id| {
+                    validation::Failure::SchemaUnknownAssignmentType(
+                        node_id,
+                        type_id,
+                        **assignment_id,
+                    )
+                })
+                .collect();
+
+            assignments_structure.into_iter().for_each(|(assignment_id, occ)| {
+                let len = match assignments.get(assignment_id) {
+                    None => 0,
+                    Some(AssignmentsVariant::Void(set)) => set.len(),
+                    Some(AssignmentsVariant::Homomorphic(set)) => set.len(),
+                    Some(AssignmentsVariant::Hashed(set)) => set.len(),
+                };
+
+                match (len, occ.min_value() as usize, occ.max_value() as usize) {
+                    (0, 0, _) => {}
+                    (0, min, _) if min > 0 => {}
+                    (len, min, _) if len < min => {}
+                    (len, _, max) if len > max => {}
+                    _ => {}
+                };
+
+                let assignment = self.assignment_types.get(assignment_id)
+                    .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point");
+
+                match assignments.get(assignment_id) {
+                    None => {},
+                    Some(AssignmentsVariant::Void(set)) =>
+                        set.into_iter().for_each(|data| status += assignment.validate(data)),
+                    Some(AssignmentsVariant::Homomorphic(set)) =>
+                        set.into_iter().for_each(|data| status += assignment.validate(data)),
+                    Some(AssignmentsVariant::Hashed(set)) =>
+                        set.into_iter().for_each(|data| status += assignment.validate(data)),
+                };
+            });
+
+            status
+        }
+
+        fn validate_scripts(
+            &self,
+            node_id: NodeId,
+            script: &SimplicityScript,
+            _script_structure: &Scripting,
+        ) -> validation::Status {
+            let mut status = validation::Status::default();
+
+            if self.script_extensions == script::Extensions::ScriptsDenied {
+                if script.len() > 0 {
+                    status.add_failure(validation::Failure::SchemaDeniedScriptExtension(node_id));
+                }
+            }
+
+            // TODO: Add other types of script checks when Simplicity scripting
+            //       will be ready
+
+            status
         }
     }
 }

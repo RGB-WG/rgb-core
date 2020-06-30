@@ -149,6 +149,14 @@ impl AssignmentsVariant {
                 .collect(),
         }
     }
+
+    pub fn len(&self) -> usize {
+        match self {
+            AssignmentsVariant::Void(set) => set.len(),
+            AssignmentsVariant::Homomorphic(set) => set.len(),
+            AssignmentsVariant::Hashed(set) => set.len(),
+        }
+    }
 }
 
 impl AutoConceal for AssignmentsVariant {

@@ -22,9 +22,9 @@ pub mod nodes;
 pub mod seal;
 
 pub use amount::Amount;
-pub use assignments::{Assignment, AssignmentsVariant};
+pub use assignments::{Assignment, AssignmentsVariant, StateTypes};
 pub use conceal::AutoConceal;
 pub use contract::{Contract, ContractId, TransitionId};
 pub use field::{FieldData, Metadata};
-pub use nodes::{Genesis, Node, Transition};
+pub use nodes::{Assignments, Genesis, Node, NodeId, Transition};
 pub use seal::SealDefinition;

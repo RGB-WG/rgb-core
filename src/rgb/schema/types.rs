@@ -18,15 +18,47 @@ use std::{convert::TryFrom, io};
 pub trait UnsignedInteger:
     Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Into<u64> + std::fmt::Debug
 {
+    const MAX: Self;
+
     fn as_u64(self) -> u64 {
         self.into()
     }
+
+    fn bits() -> Bits;
 }
 
-impl UnsignedInteger for u8 {}
-impl UnsignedInteger for u16 {}
-impl UnsignedInteger for u32 {}
-impl UnsignedInteger for u64 {}
+impl UnsignedInteger for u8 {
+    const MAX: Self = std::u8::MAX;
+
+    #[inline]
+    fn bits() -> Bits {
+        Bits::Bit8
+    }
+}
+impl UnsignedInteger for u16 {
+    const MAX: Self = std::u16::MAX;
+
+    #[inline]
+    fn bits() -> Bits {
+        Bits::Bit16
+    }
+}
+impl UnsignedInteger for u32 {
+    const MAX: Self = std::u32::MAX;
+
+    #[inline]
+    fn bits() -> Bits {
+        Bits::Bit32
+    }
+}
+impl UnsignedInteger for u64 {
+    const MAX: Self = std::u64::MAX;
+
+    #[inline]
+    fn bits() -> Bits {
+        Bits::Bit64
+    }
+}
 
 pub trait Number: Clone + Copy + PartialEq + PartialOrd + std::fmt::Debug {}
 
@@ -61,7 +93,7 @@ pub enum Bits {
 }
 
 impl Bits {
-    pub fn max_valu(&self) -> u128 {
+    pub fn max_value(&self) -> u128 {
         match *self {
             Bits::Bit8 => std::u8::MAX as u128,
             Bits::Bit16 => std::u16::MAX as u128,
@@ -85,11 +117,37 @@ impl Bits {
 #[display_from(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
-pub enum Occurences<I: UnsignedInteger> {
+pub enum Occurences<I>
+where
+    I: UnsignedInteger,
+{
     Once,
     NoneOrOnce,
     OnceOrUpTo(Option<I>),
     NoneOrUpTo(Option<I>),
+}
+
+impl<I> Occurences<I>
+where
+    I: UnsignedInteger + From<u8>,
+{
+    pub fn min_value(&self) -> I {
+        match self {
+            Occurences::Once => I::from(1u8),
+            Occurences::NoneOrOnce => I::from(0u8),
+            Occurences::OnceOrUpTo(_) => I::from(1u8),
+            Occurences::NoneOrUpTo(_) => I::from(0u8),
+        }
+    }
+
+    pub fn max_value(&self) -> I {
+        match self {
+            Occurences::Once => I::from(1u8),
+            Occurences::NoneOrOnce => I::from(1u8),
+            Occurences::OnceOrUpTo(None) | Occurences::NoneOrUpTo(None) => I::MAX,
+            Occurences::OnceOrUpTo(Some(max)) | Occurences::NoneOrUpTo(Some(max)) => *max,
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]

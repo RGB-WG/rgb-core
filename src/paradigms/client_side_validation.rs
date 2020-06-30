@@ -11,10 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::commit_verify::{self, CommitVerify};
-use super::strict_encoding;
 use bitcoin::hashes::{sha256, sha256d, Hash, HashEngine};
 use std::io;
+
+use super::commit_verify::{self, CommitVerify};
+use super::strict_encoding;
 
 pub trait CommitEncode {
     fn commit_encode<E: io::Write>(self, e: E) -> usize;

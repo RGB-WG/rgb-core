@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use super::{FieldType, OccurencesError};
-use crate::rgb::contract::data;
+use crate::rgb::data;
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
@@ -24,10 +24,12 @@ pub enum Error {
 
     UnknownField(FieldType),
     InvalidField(FieldType, Box<Error>),
-
+    /*
     InvalidTransitionId(usize),
-    //InvalidBoundSeal(seal::Type, Box<Error>),
-    //InvalidBoundSealId(seal::Type),
-    //InvalidBoundSealValue(seal::Type, StateFormat, data::Revealed),
-    //InvalidOutputBalanceBulletProof(usize),
+    InvalidBoundSeal(seal::Type, Box<Error>),
+    InvalidBoundSealId(seal::Type),
+    InvalidBoundSealValue(seal::Type, StateFormat, data::Revealed),
+    InvalidOutputBalanceBulletProof(usize),
+
+     */
 }

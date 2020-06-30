@@ -254,7 +254,7 @@ mod strict_encoding {
                     Bound::Excluded(bound) | Bound::Included(bound) if !allowed.contains(bound) => {
                         Err(Error::DataIntegrityError(format!(
                             "Lower bound {:?} of the allowed range for \
-                                 FieldFormat is outside of the possible values \
+                                 DataFormat is outside of the possible values \
                                  of used number type",
                             bound,
                         )))?
@@ -262,7 +262,7 @@ mod strict_encoding {
                     Bound::Included(bound) => *bound,
                     Bound::Excluded(_) if !exclusive => Err(Error::DataIntegrityError(
                         "Excluded upper bound for the allowed range in \
-                         FieldFormat does not make sense for float type"
+                         DataFormat does not make sense for float type"
                             .to_string(),
                     ))?,
                     Bound::Excluded(bound) => *bound + T::from(1),
@@ -272,7 +272,7 @@ mod strict_encoding {
                     Bound::Excluded(bound) | Bound::Included(bound) if !allowed.contains(bound) => {
                         Err(Error::DataIntegrityError(format!(
                             "Upper bound {:?} of the allowed range for \
-                                 FieldFormat is outside of the possible values \
+                                 DataFormat is outside of the possible values \
                                  of used number type",
                             bound,
                         )))?
@@ -280,7 +280,7 @@ mod strict_encoding {
                     Bound::Included(bound) => *bound,
                     Bound::Excluded(_) if !exclusive => Err(Error::DataIntegrityError(
                         "Excluded upper bound for the allowed range in \
-                         FieldFormat does not make sense for float type"
+                         DataFormat does not make sense for float type"
                             .to_string(),
                     ))?,
                     Bound::Excluded(bound) => *bound - T::from(1),
@@ -507,6 +507,31 @@ mod strict_encoding {
                     elliptic_curve::SignatureAlgorithm::strict_decode(&mut d)?,
                 ),
             })
+        }
+    }
+}
+
+mod _validation {
+    use super::*;
+    use crate::rgb::{data, validation, Assignment, StateTypes};
+    use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
+
+    impl DataFormat {
+        pub fn validate(&self, _data: &data::Revealed) -> validation::Status {
+            unimplemented!()
+        }
+    }
+
+    impl StateFormat {
+        pub fn validate<STATE>(&self, _data: &Assignment<STATE>) -> validation::Status
+        where
+            STATE: StateTypes,
+            EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+                + From<<STATE::Confidential as StrictDecode>::Error>
+                + From<<STATE::Revealed as StrictEncode>::Error>
+                + From<<STATE::Revealed as StrictDecode>::Error>,
+        {
+            unimplemented!()
         }
     }
 }
