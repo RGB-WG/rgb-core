@@ -27,7 +27,7 @@ use crate::bp::dbc::{
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::commit_verify::{CommitVerify, EmbedCommitVerify};
 use crate::lnpbp4::MultimsgCommitment;
-use crate::rgb::{ContractId, TransitionId};
+use crate::rgb::{ContractId, NodeId};
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 pub const PSBT_FEE_KEY: &[u8] = b"\x03rgb\x01";
@@ -72,7 +72,7 @@ pub struct Anchor {
 
 impl Anchor {
     pub fn commit(
-        transitions: BTreeMap<ContractId, TransitionId>,
+        transitions: BTreeMap<ContractId, NodeId>,
         psbt: &mut Psbt,
     ) -> Result<(Vec<Self>, HashMap<ContractId, usize>), Error> {
         let tx = &mut psbt.global.unsigned_tx;

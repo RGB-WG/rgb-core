@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::AsAny;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::{super::schema, amount, data, seal, Amount, AutoConceal, SealDefinition};
 use crate::bp::blind::OutpointHash;
@@ -24,6 +24,11 @@ use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 lazy_static! {
     /// Secp256k1zpk context object
     static ref SECP256K1_ZKP: Secp256k1zkp = Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
+}
+
+pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
+impl CommitEncodeWithStrategy for Assignments {
+    type Strategy = commit_strategy::Merklization;
 }
 
 #[derive(Clone, Debug, Display)]

@@ -11,23 +11,38 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::{sha256, Hash};
-use std::collections::BTreeMap;
+use bitcoin::hashes::{sha256t, Hash};
 
-use super::{data, AssignmentsVariant, AutoConceal, SealDefinition};
+use super::{data, Assignments, AssignmentsVariant, AutoConceal, SealDefinition};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
-use crate::rgb::{
-    schema, seal, Assignment, ContractId, FieldData, Metadata, SchemaId, SimplicityScript,
-    TransitionId,
-};
+use crate::rgb::{schema, seal, Assignment, FieldData, Metadata, SchemaId, SimplicityScript};
 
-pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
-impl CommitEncodeWithStrategy for Assignments {
-    type Strategy = commit_strategy::Merklization;
+// TODO: Check the data
+static MIDSTATE_NODE_ID: [u8; 32] = [
+    25, 205, 224, 91, 171, 217, 131, 31, 140, 104, 5, 155, 127, 82, 14, 81, 58, 245, 79, 165, 114,
+    243, 110, 60, 133, 174, 103, 187, 103, 230, 9, 106,
+];
+
+tagged_hash!(
+    NodeId,
+    NodeIdTag,
+    MIDSTATE_NODE_ID,
+    doc = "Unique node (genesis and state transition) identifier equivalent to the commitment hash"
+);
+
+tagged_hash!(
+    ContractId,
+    ContractIdTag,
+    MIDSTATE_NODE_ID,
+    doc = "Unique contract identifier equivalent to the contract genesis commitment hash"
+);
+
+impl From<NodeId> for ContractId {
+    fn from(node_id: NodeId) -> Self {
+        ContractId::from_inner(node_id.into_inner())
+    }
 }
-
-pub type NodeId = sha256::Hash;
 
 pub trait Node {
     fn node_id(&self) -> NodeId;
@@ -36,6 +51,7 @@ pub trait Node {
     /// Genesis node
     fn type_id(&self) -> Option<schema::TransitionType>;
 
+    fn ancestors(&self) -> &Vec<NodeId>;
     fn metadata(&self) -> &Metadata;
     fn assignments(&self) -> &Assignments;
     fn assignments_mut(&mut self) -> &mut Assignments;
@@ -164,16 +180,9 @@ pub struct Genesis {
 pub struct Transition {
     type_id: schema::TransitionType,
     metadata: Metadata,
-    ancestors: Vec<TransitionId>,
+    ancestors: Vec<NodeId>,
     assignments: Assignments,
     script: SimplicityScript,
-}
-
-impl Genesis {
-    #[inline]
-    pub fn contract_id(&self) -> ContractId {
-        self.clone().consensus_commit()
-    }
 }
 
 impl CommitEncodeWithStrategy for Genesis {
@@ -181,14 +190,7 @@ impl CommitEncodeWithStrategy for Genesis {
 }
 
 impl ConsensusCommit for Genesis {
-    type Commitment = ContractId;
-}
-
-impl Transition {
-    #[inline]
-    pub fn transition_id(&self) -> TransitionId {
-        self.clone().consensus_commit()
-    }
+    type Commitment = NodeId;
 }
 
 impl CommitEncodeWithStrategy for Transition {
@@ -196,30 +198,44 @@ impl CommitEncodeWithStrategy for Transition {
 }
 
 impl ConsensusCommit for Transition {
-    type Commitment = TransitionId;
+    type Commitment = NodeId;
 }
 
 impl Node for Genesis {
     #[inline]
+
     fn node_id(&self) -> NodeId {
-        NodeId::from_inner(self.contract_id().into_inner())
+        self.clone().consensus_commit()
     }
+
     #[inline]
     fn type_id(&self) -> Option<schema::TransitionType> {
         None
     }
+
+    #[inline]
+    fn ancestors(&self) -> &Vec<NodeId> {
+        lazy_static! {
+            static ref ANCESTORS: Vec<NodeId> = vec![];
+        }
+        &ANCESTORS
+    }
+
     #[inline]
     fn metadata(&self) -> &Metadata {
         &self.metadata
     }
+
     #[inline]
     fn assignments(&self) -> &Assignments {
         &self.assignments
     }
+
     #[inline]
     fn assignments_mut(&mut self) -> &mut Assignments {
         &mut self.assignments
     }
+
     #[inline]
     fn script(&self) -> &SimplicityScript {
         &self.script
@@ -229,24 +245,34 @@ impl Node for Genesis {
 impl Node for Transition {
     #[inline]
     fn node_id(&self) -> NodeId {
-        NodeId::from_inner(self.transition_id().into_inner())
+        self.clone().consensus_commit()
     }
+
     #[inline]
     fn type_id(&self) -> Option<schema::TransitionType> {
         Some(self.type_id)
     }
+
+    #[inline]
+    fn ancestors(&self) -> &Vec<NodeId> {
+        &self.ancestors
+    }
+
     #[inline]
     fn metadata(&self) -> &Metadata {
         &self.metadata
     }
+
     #[inline]
     fn assignments(&self) -> &Assignments {
         &self.assignments
     }
+
     #[inline]
     fn assignments_mut(&mut self) -> &mut Assignments {
         &mut self.assignments
     }
+
     #[inline]
     fn script(&self) -> &SimplicityScript {
         &self.script
@@ -271,6 +297,11 @@ impl Genesis {
     }
 
     #[inline]
+    pub fn contract_id(&self) -> ContractId {
+        ContractId::from(self.node_id())
+    }
+
+    #[inline]
     #[allow(dead_code)]
     pub fn schema_id(&self) -> SchemaId {
         self.schema_id
@@ -287,7 +318,7 @@ impl Transition {
     pub fn with(
         type_id: schema::TransitionType,
         metadata: Metadata,
-        ancestors: Vec<TransitionId>,
+        ancestors: Vec<NodeId>,
         assignments: Assignments,
         script: SimplicityScript,
     ) -> Self {
@@ -299,17 +330,20 @@ impl Transition {
             script,
         }
     }
-
-    #[inline]
-    pub fn ancestors(&self) -> &Vec<TransitionId> {
-        &self.ancestors
-    }
 }
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use crate::strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
     use std::io;
+
+    impl Strategy for NodeId {
+        type Strategy = strategies::HashFixedBytes;
+    }
+
+    impl Strategy for ContractId {
+        type Strategy = strategies::HashFixedBytes;
+    }
 
     impl StrictEncode for Genesis {
         type Error = Error;
@@ -358,7 +392,7 @@ mod strict_encoding {
             Ok(Self {
                 type_id: schema::TransitionType::strict_decode(&mut d)?,
                 metadata: Metadata::strict_decode(&mut d)?,
-                ancestors: Vec::<TransitionId>::strict_decode(&mut d)?,
+                ancestors: Vec::<NodeId>::strict_decode(&mut d)?,
                 assignments: Assignments::strict_decode(&mut d)?,
                 script: SimplicityScript::strict_decode(&mut d)?,
             })
