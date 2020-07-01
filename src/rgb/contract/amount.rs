@@ -22,7 +22,7 @@ use rand::{Rng, RngCore};
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::*;
 
-use super::data;
+use super::{data, ConfidentialState, RevealedState};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::commit_verify::CommitVerify;
 
@@ -48,6 +48,8 @@ impl Revealed {
         }
     }
 }
+
+impl RevealedState for Revealed {}
 
 impl Conceal for Revealed {
     type Confidential = Confidential;
@@ -92,6 +94,8 @@ pub struct Confidential {
     pub commitment: pedersen::Commitment,
     pub bulletproof: pedersen::RangeProof,
 }
+
+impl ConfidentialState for Confidential {}
 
 impl AsAny for Confidential {
     fn as_any(&self) -> &dyn Any {

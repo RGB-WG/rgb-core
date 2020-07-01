@@ -22,8 +22,8 @@ pub mod seal;
 
 pub use amount::Amount;
 pub use assignments::{
-    Assignment, Assignments, AssignmentsVariant, HashStrategy, HomomorphStrategy, StateTypes,
-    VoidStrategy,
+    Assignment, Assignments, AssignmentsVariant, ConfidentialState, HashStrategy,
+    HomomorphStrategy, RevealedState, StateTypes, VoidStrategy,
 };
 pub use conceal::AutoConceal;
 pub use field::{FieldData, Metadata};

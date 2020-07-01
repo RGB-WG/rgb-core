@@ -18,12 +18,17 @@ use core::cmp::Ordering;
 use bitcoin::hashes::{hash160, sha256, sha256d, sha512, Hash};
 use bitcoin::secp256k1;
 
+use super::{ConfidentialState, RevealedState};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::strict_encode;
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Void;
+
+impl ConfidentialState for Void {}
+
+impl RevealedState for Void {}
 
 impl Conceal for Void {
     type Confidential = Void;
@@ -80,6 +85,8 @@ pub enum Revealed {
     // TODO: Add support for Schnorr's signatures once they will be implemented
     //       in rust-secp256k1
 }
+
+impl RevealedState for Revealed {}
 
 impl Conceal for Revealed {
     type Confidential = Confidential;
@@ -149,6 +156,8 @@ hash_newtype!(
     20,
     doc = "Confidential representation of data"
 );
+
+impl ConfidentialState for Confidential {}
 
 impl AsAny for Confidential {
     fn as_any(&self) -> &dyn Any {

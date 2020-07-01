@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::AsAny;
+use core::fmt::Debug;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{super::schema, amount, data, seal, Amount, AutoConceal, SealDefinition};
@@ -124,34 +125,80 @@ impl AssignmentsVariant {
         Some(Self::Homomorphic(set))
     }
 
-    pub fn known_seals(&self) -> Vec<&SealDefinition> {
+    pub fn known_seals(&self) -> Vec<&seal::Revealed> {
         match self {
             AssignmentsVariant::Void(s) => s
                 .into_iter()
-                .filter_map(|a| match a {
-                    Assignment::Revealed {
-                        seal_definition, ..
-                    } => Some(seal_definition),
-                    _ => None,
-                })
+                .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
             AssignmentsVariant::Homomorphic(s) => s
                 .into_iter()
-                .filter_map(|a| match a {
-                    Assignment::Revealed {
-                        seal_definition, ..
-                    } => Some(seal_definition),
-                    _ => None,
-                })
+                .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
             AssignmentsVariant::Hashed(s) => s
                 .into_iter()
-                .filter_map(|a| match a {
-                    Assignment::Revealed {
-                        seal_definition, ..
-                    } => Some(seal_definition),
-                    _ => None,
-                })
+                .filter_map(Assignment::<_>::seal_definition)
+                .collect(),
+        }
+    }
+
+    pub fn all_seals(&self) -> Vec<seal::Confidential> {
+        match self {
+            AssignmentsVariant::Void(s) => s
+                .into_iter()
+                .map(Assignment::<_>::seal_definition_confidential)
+                .collect(),
+            AssignmentsVariant::Homomorphic(s) => s
+                .into_iter()
+                .map(Assignment::<_>::seal_definition_confidential)
+                .collect(),
+            AssignmentsVariant::Hashed(s) => s
+                .into_iter()
+                .map(Assignment::<_>::seal_definition_confidential)
+                .collect(),
+        }
+    }
+
+    pub fn known_state_homomorphic(&self) -> Vec<&amount::Revealed> {
+        match self {
+            AssignmentsVariant::Void(_) => vec![],
+            AssignmentsVariant::Homomorphic(s) => s
+                .into_iter()
+                .filter_map(Assignment::<_>::assigned_state)
+                .collect(),
+            AssignmentsVariant::Hashed(_) => vec![],
+        }
+    }
+
+    pub fn known_state_data(&self) -> Vec<&data::Revealed> {
+        match self {
+            AssignmentsVariant::Void(_) => vec![],
+            AssignmentsVariant::Homomorphic(_) => vec![],
+            AssignmentsVariant::Hashed(s) => s
+                .into_iter()
+                .filter_map(Assignment::<_>::assigned_state)
+                .collect(),
+        }
+    }
+
+    pub fn all_state_pedersen(&self) -> Vec<amount::Confidential> {
+        match self {
+            AssignmentsVariant::Void(_) => vec![],
+            AssignmentsVariant::Homomorphic(s) => s
+                .into_iter()
+                .map(Assignment::<_>::assigned_state_confidential)
+                .collect(),
+            AssignmentsVariant::Hashed(_) => vec![],
+        }
+    }
+
+    pub fn all_state_hashed(&self) -> Vec<data::Confidential> {
+        match self {
+            AssignmentsVariant::Void(_) => vec![],
+            AssignmentsVariant::Homomorphic(_) => vec![],
+            AssignmentsVariant::Hashed(s) => s
+                .into_iter()
+                .map(Assignment::<_>::assigned_state_confidential)
                 .collect(),
         }
     }
@@ -180,16 +227,24 @@ impl CommitEncodeWithStrategy for AssignmentsVariant {
     type Strategy = commit_strategy::UsingStrict;
 }
 
-pub trait StateTypes: core::fmt::Debug {
-    type Confidential: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord + Clone + AsAny;
-    type Revealed: StrictEncode
-        + StrictDecode
-        + core::fmt::Debug
-        + Eq
-        + Ord
-        + Conceal
-        + Clone
-        + AsAny;
+pub trait ConfidentialState:
+    StrictEncode<Error = EncodingError> + StrictDecode<Error = EncodingError> + Debug + Clone + AsAny
+{
+}
+
+pub trait RevealedState:
+    StrictEncode<Error = EncodingError>
+    + StrictDecode<Error = EncodingError>
+    + Debug
+    + Conceal
+    + Clone
+    + AsAny
+{
+}
+
+pub trait StateTypes: Debug {
+    type Confidential: ConfidentialState;
+    type Revealed: RevealedState;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -218,6 +273,7 @@ impl StateTypes for HashStrategy {
 pub enum Assignment<STATE>
 where
     STATE: StateTypes,
+    //    STATE: StateTypes<Confidential = <<STATE as StateTypes>::Revealed as Conceal>::Confidential>,
     EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
         + From<<STATE::Confidential as StrictDecode>::Error>
         + From<<STATE::Revealed as StrictEncode>::Error>
@@ -239,6 +295,64 @@ where
         seal_definition: seal::Revealed,
         assigned_state: STATE::Confidential,
     },
+}
+
+impl<STATE> Assignment<STATE>
+where
+    STATE: StateTypes,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+    pub fn seal_definition_confidential(&self) -> seal::Confidential {
+        match self {
+            Assignment::Revealed {
+                seal_definition, ..
+            }
+            | Assignment::ConfidentialAmount {
+                seal_definition, ..
+            } => seal_definition.conceal(),
+            Assignment::Confidential {
+                seal_definition, ..
+            }
+            | Assignment::ConfidentialSeal {
+                seal_definition, ..
+            } => *seal_definition,
+        }
+    }
+
+    pub fn seal_definition(&self) -> Option<&seal::Revealed> {
+        match self {
+            Assignment::Revealed {
+                seal_definition, ..
+            }
+            | Assignment::ConfidentialAmount {
+                seal_definition, ..
+            } => Some(seal_definition),
+            Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => None,
+        }
+    }
+
+    pub fn assigned_state_confidential(&self) -> STATE::Confidential {
+        match self {
+            Assignment::Revealed { assigned_state, .. }
+            | Assignment::ConfidentialSeal { assigned_state, .. } => {
+                assigned_state.conceal().into()
+            }
+            Assignment::Confidential { assigned_state, .. }
+            | Assignment::ConfidentialAmount { assigned_state, .. } => assigned_state.clone(),
+        }
+    }
+
+    pub fn assigned_state(&self) -> Option<&STATE::Revealed> {
+        match self {
+            Assignment::Revealed { assigned_state, .. }
+            | Assignment::ConfidentialSeal { assigned_state, .. } => Some(assigned_state),
+            Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => None,
+        }
+    }
 }
 
 impl<STATE> Conceal for Assignment<STATE>
