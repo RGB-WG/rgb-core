@@ -36,8 +36,8 @@ impl CommitEncodeWithStrategy for Assignments {
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
     Void(BTreeSet<Assignment<VoidStrategy>>),
-    Homomorphic(BTreeSet<Assignment<HomomorphStrategy>>),
-    Hashed(BTreeSet<Assignment<HashStrategy>>),
+    PedersenBased(BTreeSet<Assignment<PedersenStrategy>>),
+    HashBased(BTreeSet<Assignment<HashStrategy>>),
 }
 
 impl AssignmentsVariant {
@@ -122,7 +122,7 @@ impl AssignmentsVariant {
             )
             .collect();
 
-        Some(Self::Homomorphic(set))
+        Some(Self::PedersenBased(set))
     }
 
     pub fn known_seals(&self) -> Vec<&seal::Revealed> {
@@ -131,11 +131,11 @@ impl AssignmentsVariant {
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
-            AssignmentsVariant::Homomorphic(s) => s
+            AssignmentsVariant::PedersenBased(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
-            AssignmentsVariant::Hashed(s) => s
+            AssignmentsVariant::HashBased(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
@@ -148,11 +148,11 @@ impl AssignmentsVariant {
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
-            AssignmentsVariant::Homomorphic(s) => s
+            AssignmentsVariant::PedersenBased(s) => s
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
-            AssignmentsVariant::Hashed(s) => s
+            AssignmentsVariant::HashBased(s) => s
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
@@ -162,19 +162,19 @@ impl AssignmentsVariant {
     pub fn known_state_homomorphic(&self) -> Vec<&amount::Revealed> {
         match self {
             AssignmentsVariant::Void(_) => vec![],
-            AssignmentsVariant::Homomorphic(s) => s
+            AssignmentsVariant::PedersenBased(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::assigned_state)
                 .collect(),
-            AssignmentsVariant::Hashed(_) => vec![],
+            AssignmentsVariant::HashBased(_) => vec![],
         }
     }
 
     pub fn known_state_data(&self) -> Vec<&data::Revealed> {
         match self {
             AssignmentsVariant::Void(_) => vec![],
-            AssignmentsVariant::Homomorphic(_) => vec![],
-            AssignmentsVariant::Hashed(s) => s
+            AssignmentsVariant::PedersenBased(_) => vec![],
+            AssignmentsVariant::HashBased(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::assigned_state)
                 .collect(),
@@ -184,19 +184,19 @@ impl AssignmentsVariant {
     pub fn all_state_pedersen(&self) -> Vec<amount::Confidential> {
         match self {
             AssignmentsVariant::Void(_) => vec![],
-            AssignmentsVariant::Homomorphic(s) => s
+            AssignmentsVariant::PedersenBased(s) => s
                 .into_iter()
                 .map(Assignment::<_>::assigned_state_confidential)
                 .collect(),
-            AssignmentsVariant::Hashed(_) => vec![],
+            AssignmentsVariant::HashBased(_) => vec![],
         }
     }
 
     pub fn all_state_hashed(&self) -> Vec<data::Confidential> {
         match self {
             AssignmentsVariant::Void(_) => vec![],
-            AssignmentsVariant::Homomorphic(_) => vec![],
-            AssignmentsVariant::Hashed(s) => s
+            AssignmentsVariant::PedersenBased(_) => vec![],
+            AssignmentsVariant::HashBased(s) => s
                 .into_iter()
                 .map(Assignment::<_>::assigned_state_confidential)
                 .collect(),
@@ -206,8 +206,8 @@ impl AssignmentsVariant {
     pub fn len(&self) -> usize {
         match self {
             AssignmentsVariant::Void(set) => set.len(),
-            AssignmentsVariant::Homomorphic(set) => set.len(),
-            AssignmentsVariant::Hashed(set) => set.len(),
+            AssignmentsVariant::PedersenBased(set) => set.len(),
+            AssignmentsVariant::HashBased(set) => set.len(),
         }
     }
 }
@@ -216,8 +216,8 @@ impl AutoConceal for AssignmentsVariant {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
             AssignmentsVariant::Void(data) => data as &mut dyn AutoConceal,
-            AssignmentsVariant::Homomorphic(data) => data as &mut dyn AutoConceal,
-            AssignmentsVariant::Hashed(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::PedersenBased(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::HashBased(data) => data as &mut dyn AutoConceal,
         }
         .conceal_except(seals)
     }
@@ -255,8 +255,8 @@ impl StateTypes for VoidStrategy {
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
-pub struct HomomorphStrategy;
-impl StateTypes for HomomorphStrategy {
+pub struct PedersenStrategy;
+impl StateTypes for PedersenStrategy {
     type Confidential = amount::Confidential;
     type Revealed = amount::Revealed;
 }
@@ -458,10 +458,10 @@ mod strict_encoding {
                 AssignmentsVariant::Void(tree) => {
                     strict_encode_list!(e; schema::StateType::Void, tree)
                 }
-                AssignmentsVariant::Homomorphic(tree) => {
+                AssignmentsVariant::PedersenBased(tree) => {
                     strict_encode_list!(e; schema::StateType::Homomorphic, EncodingTag::U64, tree)
                 }
-                AssignmentsVariant::Hashed(tree) => {
+                AssignmentsVariant::HashBased(tree) => {
                     strict_encode_list!(e; schema::StateType::Hashed, tree)
                 }
             })
@@ -477,14 +477,14 @@ mod strict_encoding {
                 schema::StateType::Void => AssignmentsVariant::Void(BTreeSet::strict_decode(d)?),
                 schema::StateType::Homomorphic => match EncodingTag::strict_decode(&mut d)? {
                     EncodingTag::U64 => {
-                        AssignmentsVariant::Homomorphic(BTreeSet::strict_decode(&mut d)?)
+                        AssignmentsVariant::PedersenBased(BTreeSet::strict_decode(&mut d)?)
                     }
                     _ => Err(Error::UnsupportedDataStructure(
                         "We support only homomorphic commitments to U64 data".to_string(),
                     ))?,
                 },
                 schema::StateType::Hashed => {
-                    AssignmentsVariant::Hashed(BTreeSet::strict_decode(d)?)
+                    AssignmentsVariant::HashBased(BTreeSet::strict_decode(d)?)
                 }
             })
         }

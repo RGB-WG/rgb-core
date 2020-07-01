@@ -24,9 +24,8 @@ pub mod prelude {
     pub use super::{bech32, schema, vm};
     pub use contract::{
         amount, data, seal, Amount, Assignment, Assignments, AssignmentsVariant, AutoConceal,
-        ConfidentialState, ContractId, FieldData, Genesis, HashStrategy, HomomorphStrategy,
-        Metadata, Node, NodeId, RevealedState, SealDefinition, StateTypes, Transition,
-        VoidStrategy,
+        ConfidentialState, ContractId, FieldData, Genesis, HashStrategy, Metadata, Node, NodeId,
+        PedersenStrategy, RevealedState, SealDefinition, StateTypes, Transition, VoidStrategy,
     };
     pub use schema::{script, Schema, SchemaId, SimplicityScript};
     pub use stash::{

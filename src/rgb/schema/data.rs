@@ -534,7 +534,7 @@ mod _validation {
 
     use super::*;
     use crate::rgb::{
-        data, validation, Assignment, HashStrategy, HomomorphStrategy, NodeId, StateTypes,
+        data, validation, Assignment, HashStrategy, NodeId, PedersenStrategy, StateTypes,
         VoidStrategy,
     };
     use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
@@ -705,7 +705,7 @@ mod _validation {
                             }
                         }
                         StateFormat::Homomorphic(_) => {
-                            if a.downcast_ref::<<HomomorphStrategy as StateTypes>::Confidential>()
+                            if a.downcast_ref::<<PedersenStrategy as StateTypes>::Confidential>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -749,7 +749,7 @@ mod _validation {
                             }
                         }
                         StateFormat::Homomorphic(_format) => {
-                            if a.downcast_ref::<<HomomorphStrategy as StateTypes>::Revealed>()
+                            if a.downcast_ref::<<PedersenStrategy as StateTypes>::Revealed>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
