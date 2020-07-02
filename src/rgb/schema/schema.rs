@@ -233,8 +233,8 @@ mod _validation {
                 let len = match assignments.get(assignment_id) {
                     None => 0,
                     Some(AssignmentsVariant::Declarative(set)) => set.len(),
-                    Some(AssignmentsVariant::PedersenBased(set)) => set.len(),
-                    Some(AssignmentsVariant::HashBased(set)) => set.len(),
+                    Some(AssignmentsVariant::Field(set)) => set.len(),
+                    Some(AssignmentsVariant::Data(set)) => set.len(),
                 };
 
                 match (len, occ.min_value() as usize, occ.max_value() as usize) {
@@ -252,9 +252,9 @@ mod _validation {
                     None => {},
                     Some(AssignmentsVariant::Declarative(set)) =>
                         set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
-                    Some(AssignmentsVariant::PedersenBased(set)) =>
+                    Some(AssignmentsVariant::Field(set)) =>
                         set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
-                    Some(AssignmentsVariant::HashBased(set)) =>
+                    Some(AssignmentsVariant::Data(set)) =>
                         set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
                 };
             });

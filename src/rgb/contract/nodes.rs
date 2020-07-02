@@ -92,7 +92,7 @@ pub trait Node {
                     })
                     .cloned()
                     .collect(),
-                AssignmentsVariant::PedersenBased(set) => set
+                AssignmentsVariant::Field(set) => set
                     .iter()
                     .filter_map(|assign| match assign {
                         Assignment::Revealed {
@@ -102,7 +102,7 @@ pub trait Node {
                     })
                     .cloned()
                     .collect(),
-                AssignmentsVariant::HashBased(set) => set
+                AssignmentsVariant::Data(set) => set
                     .iter()
                     .filter_map(|assign| match assign {
                         Assignment::Revealed {

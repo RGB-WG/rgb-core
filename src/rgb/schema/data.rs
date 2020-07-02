@@ -534,8 +534,8 @@ mod _validation {
 
     use super::*;
     use crate::rgb::{
-        data, validation, Assignment, HashStrategy, NodeId, PedersenStrategy, StateTypes,
-        VoidStrategy,
+        data, validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy,
+        StateTypes,
     };
     use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
@@ -696,7 +696,7 @@ mod _validation {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
                         StateFormat::Void => {
-                            if a.downcast_ref::<<VoidStrategy as StateTypes>::Confidential>()
+                            if a.downcast_ref::<<DeclarativeStrategy as StateTypes>::Confidential>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -740,7 +740,7 @@ mod _validation {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
                         StateFormat::Void => {
-                            if a.downcast_ref::<<VoidStrategy as StateTypes>::Revealed>()
+                            if a.downcast_ref::<<DeclarativeStrategy as StateTypes>::Revealed>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
