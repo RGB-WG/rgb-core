@@ -14,36 +14,61 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::io;
 
+use bitcoin::Txid;
+
 use crate::bp;
 use crate::rgb::{validation, Anchor, Genesis, Node, NodeId, Schema, Transition};
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
+pub type ConsignmentEndpoints = Vec<(NodeId, bp::blind::OutpointHash)>;
+pub type ConsignmentData = Vec<(Anchor, Transition)>;
+
+pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
+
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub struct Consignment {
+    version: u16,
     pub genesis: Genesis,
-    pub endpoints: Vec<(NodeId, bp::blind::OutpointHash)>,
-    pub data: Vec<(Anchor, Transition)>,
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
-#[display_from(Debug)]
-pub enum TxResolverError {}
-
-pub trait TxResolver {
-    fn tx_by_id(&mut self, txid: &bitcoin::Txid) -> Result<Option<Transition>, TxResolverError>;
-    fn tx_by_ubid(&mut self, ubid: &bp::ShortId) -> Result<Option<Transition>, TxResolverError>;
-    fn spending_tx(
-        &mut self,
-        outpoint: &bitcoin::OutPoint,
-    ) -> Result<Option<Transition>, TxResolverError>;
-    fn tx_fee(&mut self, txid: &bitcoin::Txid) -> Result<Option<bitcoin::Amount>, TxResolverError>;
+    pub endpoints: ConsignmentEndpoints,
+    pub data: ConsignmentData,
 }
 
 impl Consignment {
-    pub fn validate(&self, schema: &Schema, _resolver: &mut impl TxResolver) -> validation::Status {
+    pub fn with(
+        genesis: Genesis,
+        endpoints: ConsignmentEndpoints,
+        data: ConsignmentData,
+    ) -> Consignment {
+        Self {
+            version: RGB_CONSIGNMENT_VERSION,
+            genesis,
+            endpoints,
+            data,
+        }
+    }
+
+    #[inline]
+    pub fn txids(&self) -> BTreeSet<Txid> {
+        self.data.iter().map(|(anchor, _)| anchor.txid).collect()
+    }
+
+    #[inline]
+    pub fn node_ids(&self) -> BTreeSet<NodeId> {
+        let mut set: BTreeSet<NodeId> = self.data.iter().map(|(_, node)| node.node_id()).collect();
+        set.insert(self.genesis.node_id());
+        set
+    }
+
+    pub fn validate(
+        &self,
+        schema: &Schema,
+        resolver: validation::TxResolver,
+    ) -> validation::Status {
         let mut status = validation::Status::default();
 
+        let genesis_id = self.genesis.node_id();
+        let contract_id = self.genesis.contract_id();
         let schema_id = self.genesis.schema_id();
         if schema.schema_id() != schema_id {
             status.add_failure(validation::Failure::SchemaUnknown(schema_id));
@@ -52,8 +77,11 @@ impl Consignment {
 
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
-        for (_, transition) in &self.data {
-            node_index.insert(transition.node_id(), transition);
+        let mut anchor_index = BTreeMap::<NodeId, &Anchor>::new();
+        for (anchor, transition) in &self.data {
+            let node_id = transition.node_id();
+            node_index.insert(node_id, transition);
+            anchor_index.insert(node_id, anchor);
         }
 
         // Collect all endpoint transitions
@@ -99,11 +127,11 @@ impl Consignment {
         // Validate genesis
         status += schema.validate(&self.genesis, &vec![]);
         for node in end_transitions {
-            let mut nodes_queue: VecDeque<&dyn Node> = VecDeque::new();
+            let mut queue: VecDeque<&dyn Node> = VecDeque::new();
 
-            nodes_queue.push_back(node);
+            queue.push_back(node);
 
-            while let Some(transition) = nodes_queue.pop_front() {
+            while let Some(transition) = queue.pop_front() {
                 let node_id = node.node_id();
 
                 let ancestors: Vec<&dyn Node> = node
@@ -121,18 +149,49 @@ impl Consignment {
                 status += schema.validate(transition, &ancestors);
                 validation_index.insert(node_id);
 
-                // Check that transition is committed into the anchor
-                // Check that the anchor is committed into a transaction spending
-                //   all of the transition inputs
+                if let Some(anchor) = anchor_index.get(&node_id).cloned() {
+                    // Check that transition is committed into the anchor
+                    if !anchor.validate(&contract_id, &node_id) {
+                        status.add_failure(validation::Failure::TransitionNotInAnchor(
+                            node_id,
+                            anchor.anchor_id(),
+                        ));
+                    }
 
-                nodes_queue.extend(ancestors);
+                    // Check that the anchor is committed into a transaction spending
+                    //   all of the transition inputs
+                    match resolver(&anchor.txid) {
+                        Err(_) => {
+                            status.unresolved_txids.push(anchor.txid);
+                        }
+                        Ok(None) => {
+                            status.add_failure(validation::Failure::WitnessTransactionMissed(
+                                anchor.txid,
+                            ));
+                        }
+                        Ok(Some((tx, fee))) => {
+                            if !anchor.verify(&contract_id, tx, fee) {
+                                status.add_failure(validation::Failure::WitnessNoCommitment(
+                                    node_id,
+                                    anchor.anchor_id(),
+                                    anchor.txid,
+                                ));
+                            }
+                        }
+                    }
+                } else if node_id != genesis_id {
+                    status.add_failure(validation::Failure::TransitionNotAnchored(node_id));
+                }
+
+                queue.extend(ancestors);
             }
         }
 
         // Generate warning if some of the transitions within the consignment
         // were excessive (i.e. not part of validation_index)
-
-        // Check that all nodes and anchors are verified
+        for node_id in validation_index.difference(&self.node_ids()) {
+            status.add_warning(validation::Warning::ExcessiveTransition(*node_id));
+        }
 
         status
     }
@@ -140,16 +199,17 @@ impl Consignment {
 
 impl StrictEncode for Consignment {
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.genesis, self.endpoints, self.data))
+        Ok(strict_encode_list!(e; self.version, self.genesis, self.endpoints, self.data))
     }
 }
 
 impl StrictDecode for Consignment {
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
         Ok(Self {
+            version: u16::strict_decode(&mut d)?,
             genesis: Genesis::strict_decode(&mut d)?,
-            endpoints: Vec::<(NodeId, bp::blind::OutpointHash)>::strict_decode(&mut d)?,
-            data: Vec::<(Anchor, Transition)>::strict_decode(&mut d)?,
+            endpoints: ConsignmentEndpoints::strict_decode(&mut d)?,
+            data: ConsignmentData::strict_decode(&mut d)?,
         })
     }
 }

@@ -14,12 +14,30 @@
 use core::iter::FromIterator;
 use core::ops::{AddAssign, Try};
 
+use bitcoin::{Transaction, Txid};
+
 use super::schema::OccurrencesError;
-use super::{schema, seal, NodeId, SchemaId};
+use super::{schema, seal, AnchorId, NodeId, SchemaId};
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display_from(Debug)]
+pub struct TxResolverError;
+
+pub type TxResolver = fn(&Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
+#[repr(u8)]
+pub enum Validity {
+    Valid,
+    UnresolvedTransactions,
+    Invalid,
+}
 
 #[derive(Clone, Debug, Display, Default)]
 #[display_from(Debug)]
 pub struct Status {
+    pub unresolved_txids: Vec<Txid>,
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
     pub info: Vec<Info>,
@@ -27,6 +45,7 @@ pub struct Status {
 
 impl AddAssign for Status {
     fn add_assign(&mut self, rhs: Self) {
+        self.unresolved_txids.extend(rhs.unresolved_txids);
         self.failures.extend(rhs.failures);
         self.warnings.extend(rhs.warnings);
         self.info.extend(rhs.info);
@@ -43,6 +62,7 @@ impl Try for Status {
 
     fn from_error(v: Self::Error) -> Self {
         Status {
+            unresolved_txids: vec![],
             failures: vec![v],
             warnings: vec![],
             info: vec![],
@@ -90,8 +110,14 @@ impl Status {
         self
     }
 
-    pub fn is_valid(&self) -> bool {
-        return self.failures.is_empty();
+    pub fn validity(&self) -> Validity {
+        if !self.failures.is_empty() {
+            Validity::Invalid
+        } else if !self.unresolved_txids.is_empty() {
+            Validity::UnresolvedTransactions
+        } else {
+            Validity::Valid
+        }
     }
 }
 
@@ -125,6 +151,11 @@ pub enum Failure {
     SchemaSealsOccurencesError(NodeId, schema::AssignmentsType, OccurrencesError),
 
     TransitionAbsent(NodeId),
+    TransitionNotAnchored(NodeId),
+    TransitionNotInAnchor(NodeId, AnchorId),
+
+    WitnessTransactionMissed(Txid),
+    WitnessNoCommitment(NodeId, AnchorId, Txid),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
@@ -134,6 +165,7 @@ pub enum Warning {
     EndpointDuplication(NodeId, seal::Confidential),
     EndpointTransitionSealNotFound(NodeId, seal::Confidential),
     AncestorsHeterogenousAssignments(NodeId, schema::AssignmentsType),
+    ExcessiveTransition(NodeId),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]

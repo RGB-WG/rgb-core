@@ -18,11 +18,12 @@ use amplify::Wrapper;
 use bitcoin::secp256k1;
 use bitcoin::util::psbt::{raw::Key, PartiallySignedTransaction as Psbt};
 use bitcoin::util::uint::Uint256;
+use bitcoin::{Transaction, Txid};
 use bitcoin_hashes::{sha256, sha256t, Hash, HashEngine};
 
 use crate::bp::dbc::{
-    Container, Proof, ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer, TxCommitment,
-    TxContainer, TxoutContainer,
+    self, Container, Proof, ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer,
+    TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::commit_verify::{CommitVerify, EmbedCommitVerify};
@@ -66,6 +67,7 @@ tagged_hash!(
 
 #[derive(Clone, Debug)]
 pub struct Anchor {
+    pub txid: Txid,
     pub commitment: MultimsgCommitment,
     pub proof: Proof,
 }
@@ -177,12 +179,64 @@ impl Anchor {
                 contract_anchor_map.insert(contract_id, anchors.len());
             });
             anchors.push(Anchor {
+                txid: tx.txid(),
                 commitment: mm_commitment,
                 proof: container.into_proof(),
             });
         }
 
         Ok((anchors, contract_anchor_map))
+    }
+
+    pub fn validate(&self, contract_id: &ContractId, node_id: &NodeId) -> bool {
+        let id = Uint256::from_be_bytes(contract_id.into_inner());
+        let len = Uint256::from_u64(self.commitment.commitments.len() as u64).unwrap();
+        let pos = (id % len).low_u64() as usize;
+        self.commitment
+            .commitments
+            .get(pos)
+            .expect("Index modulo length can't exceed array length")
+            .commitment
+            == sha256::Hash::from_inner(node_id.into_inner())
+    }
+
+    pub fn verify(&self, contract_id: &ContractId, tx: Transaction, fee: u64) -> bool {
+        let id = Uint256::from_be_bytes(contract_id.into_inner());
+        let protocol_factor = id % Uint256::from_u64(tx.output.len() as u64).unwrap();
+        let protocol_factor = protocol_factor.low_u64() as u32;
+
+        // TODO: Refactor multimessage commitments
+        let mm_buffer: Vec<u8> = self
+            .commitment
+            .clone()
+            .commitments
+            .into_iter()
+            .map(|item| item.commitment.into_inner().to_vec())
+            .flatten()
+            .collect();
+        let mm_digest = sha256::Hash::commit(&mm_buffer);
+
+        let supplement = TxSupplement {
+            protocol_factor,
+            fee,
+            tag: *LNPBP4_TAG,
+        };
+
+        self.verify_internal(tx, supplement, mm_digest)
+            .map_err(|_| -> Result<bool, dbc::Error> { Ok(false) })
+            .unwrap()
+    }
+
+    fn verify_internal(
+        &self,
+        tx: Transaction,
+        supplement: TxSupplement,
+        value: sha256::Hash,
+    ) -> Result<bool, dbc::Error> {
+        // TODO: Refactor using bp::seals
+        let container = TxContainer::reconstruct(&self.proof, &supplement, &tx)?;
+        let commitment = TxCommitment::from(tx);
+        commitment.verify(&container, &value)
     }
 
     #[inline]
@@ -201,13 +255,14 @@ impl ConsensusCommit for Anchor {
 
 impl StrictEncode for Anchor {
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.commitment, self.proof))
+        Ok(strict_encode_list!(e; self.txid, self.commitment, self.proof))
     }
 }
 
 impl StrictDecode for Anchor {
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
         Ok(Self {
+            txid: Txid::strict_decode(&mut d)?,
             commitment: MultimsgCommitment::strict_decode(&mut d)?,
             proof: Proof::strict_decode(&mut d)?,
         })

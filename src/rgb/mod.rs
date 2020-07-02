@@ -32,6 +32,7 @@ pub mod prelude {
     pub use stash::{
         Anchor, AnchorId, Consignment, Disclosure, Stash, PSBT_FEE_KEY, PSBT_PUBKEY_KEY,
     };
+    pub use validation::Validity;
 }
 
 pub use prelude::*;
