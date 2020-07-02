@@ -56,7 +56,6 @@ pub type AssignmentAbi = BTreeMap<AssignmentAction, Procedure>;
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display_from(Debug)]
 pub enum Procedure {
-    NoValidation,
     Standard(StandardProcedure),
     Simplicity { offset: u32 },
 }
@@ -88,8 +87,7 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
             Ok(match self {
-                Self::NoValidation => strict_encode_list!(e; 0u8),
-                Self::Simplicity { offset } => strict_encode_list!(e; 1u8, offset),
+                Self::Simplicity { offset } => strict_encode_list!(e; 0u8, offset),
                 Self::Standard(proc_id) => strict_encode_list!(e; 0xFFu8, proc_id),
             })
         }
@@ -100,8 +98,7 @@ mod strict_encoding {
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             Ok(match u8::strict_decode(&mut d)? {
-                0u8 => Self::NoValidation,
-                1u8 => Self::Simplicity {
+                0u8 => Self::Simplicity {
                     offset: u32::strict_decode(&mut d)?,
                 },
                 0xFFu8 => Self::Standard(StandardProcedure::strict_decode(&mut d)?),

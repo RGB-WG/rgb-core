@@ -156,6 +156,9 @@ pub enum Failure {
 
     WitnessTransactionMissed(Txid),
     WitnessNoCommitment(NodeId, AnchorId, Txid),
+
+    SimplicityIsNotSupportedYet,
+    ScriptFailure(u8),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]

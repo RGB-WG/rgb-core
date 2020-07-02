@@ -17,6 +17,7 @@ pub mod script;
 mod state;
 mod types;
 
+pub(self) use super::vm;
 pub use nodes::{
     AssignmentsType, GenesisSchema, MetadataStructure, SealsStructure, TransitionSchema,
 };

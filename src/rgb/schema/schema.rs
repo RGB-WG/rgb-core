@@ -16,7 +16,9 @@ use std::io;
 
 use bitcoin::hashes::{sha256t, Hash};
 
-use super::{AssignmentsType, DataFormat, GenesisSchema, StateSchema, TransitionSchema};
+use super::{
+    vm, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateSchema, TransitionSchema,
+};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 
 pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -46,6 +48,12 @@ impl Schema {
     #[inline]
     pub fn schema_id(&self) -> SchemaId {
         self.clone().consensus_commit()
+    }
+
+    // TODO: Change with the adoption of Simplicity
+    #[inline]
+    pub fn scripts(&self) -> SimplicityScript {
+        vec![]
     }
 }
 
@@ -128,9 +136,10 @@ mod _validation {
     use core::convert::TryFrom;
     use std::collections::BTreeSet;
 
-    use crate::rgb::schema::{MetadataStructure, SealsStructure};
+    use crate::rgb::schema::{script, MetadataStructure, SealsStructure};
     use crate::rgb::{
-        validation, Ancestors, Assignments, AssignmentsVariant, Metadata, Node, NodeId,
+        validation, Ancestors, AssignmentAction, Assignments, AssignmentsVariant, Metadata, Node,
+        NodeId, VirtualMachine,
     };
 
     impl Schema {
@@ -174,7 +183,11 @@ mod _validation {
             status += self.validate_meta(node_id, node.metadata(), metadata_structure);
             status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
             status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
-            //status += self.validate_scripts(node_id, node.script(), script_structure);
+            status += self.validate_state_evolution(
+                &ancestor_assignments,
+                node.assignments(),
+                node.metadata(),
+            );
             status
         }
 
@@ -315,61 +328,67 @@ mod _validation {
             status
         }
 
-        /*
-        fn validate_scripts(
+        fn validate_state_evolution(
             &self,
-            node_id: NodeId,
-            script: &SimplicityScript,
-            _script_structure: &AssignmentAbi,
+            previous_state: &Assignments,
+            current_state: &Assignments,
+            current_meta: &Metadata,
         ) -> validation::Status {
-            let mut status = validation::Status::new();
-
-            if self.script_extensions == script::Extensions::ScriptsDenied {
-                if script.len() > 0 {
-                    status.add_failure(validation::Failure::SchemaDeniedScriptExtension(node_id));
-                }
-            }
-
-                // TODO: Add other types of script checks when Simplicity scripting
-                //       will be ready
-
-                status
-            }
-         */
-
-        /*
-        fn validate_state(
-            &self,
-            node_id: NodeId,
-            previous_state: Assignments,
-            current_state: Assignments,
-            previous_meta: Metadata,
-            current_meta: Metadata,
-            code: SimplicityScript,
-            procedure: u32,
-        ) -> validation::Status {
-            let assignment_types: BTreeSet<AssignmentsType> =
+            let assignment_types: BTreeSet<&AssignmentsType> =
                 previous_state.keys().chain(current_state.keys()).collect();
 
             let mut status = validation::Status::new();
             for assignment_type in assignment_types {
-                let mut vm = VirtualMachine::new();
-                vm.push_stack(previous_state.get(&assignment_type).cloned());
-                vm.push_stack(current_state.get(&assignment_type).cloned());
-                vm.push_stack(previous_meta.clone());
-                vm.push_stack(current_meta.clone());
-                match vm.execute(code.clone(), offset) {
-                    Err(_) => {}
-                    Ok => match vm.pop_stack() {
-                        None => {}
-                        Some(value) => {}
-                    },
+                let abi = &self
+                    .assignment_types
+                    .get(&assignment_type)
+                    .expect("We already passed assignment type validation, so can be sure that the type exists")
+                    .abi;
+
+                // If the procedure is not defined, it means no validation should be performed
+                if let Some(procedure) = abi.get(&AssignmentAction::Validate) {
+                    match procedure {
+                        script::Procedure::Standard(proc) => {
+                            let mut vm = vm::Embedded::with(
+                                previous_state.get(&assignment_type).cloned(),
+                                current_state.get(&assignment_type).cloned(),
+                                current_meta.clone(),
+                            );
+                            vm.execute(*proc);
+                            match vm.pop_stack().and_then(|x| x.downcast_ref::<u8>().cloned()) {
+                                None => panic!("LNP/BP core code is hacked: standard procedure must always return 8-bit value"),
+                                Some(0) => {
+                                    // Nothing to do here: 0 signifies successful script execution
+                                },
+                                Some(n) => {
+                                    status.add_failure(validation::Failure::ScriptFailure(n));
+                                }
+                            }
+                        }
+                        script::Procedure::Simplicity { .. } => {
+                            status.add_failure(validation::Failure::SimplicityIsNotSupportedYet);
+                            /* Draft of how this could look like:
+
+                            let mut vm = VirtualMachine::new();
+                            vm.push_stack(previous_state.get(&assignment_type).cloned());
+                            vm.push_stack(current_state.get(&assignment_type).cloned());
+                            vm.push_stack(previous_meta.clone());
+                            vm.push_stack(current_meta.clone());
+                            match vm.execute(code.clone(), offset) {
+                                Err(_) => {}
+                                Ok => match vm.pop_stack() {
+                                    None => {}
+                                    Some(value) => {}
+                                },
+                            }
+                             */
+                        }
+                    }
                 }
             }
 
             status
         }
-         */
     }
 
     fn extract_ancestor_assignments(
