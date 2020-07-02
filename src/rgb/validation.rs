@@ -14,7 +14,8 @@
 use core::iter::FromIterator;
 use core::ops::{AddAssign, Try};
 
-use super::{schema, NodeId, SchemaId};
+use super::schema::OccurrencesError;
+use super::{schema, seal, NodeId, SchemaId};
 
 #[derive(Clone, Debug, Display, Default)]
 #[display_from(Debug)]
@@ -101,17 +102,9 @@ pub enum Failure {
 
     SchemaUnknownTransitionType(NodeId, schema::TransitionType),
 
-    /// If the second parameter is `None` it means that error occurred during
-    /// validation of a Genesis node
-    SchemaUnknownFieldType(NodeId, Option<schema::TransitionType>, schema::FieldType),
+    SchemaUnknownFieldType(NodeId, schema::FieldType),
 
-    /// If the second parameter is `None` it means that error occurred during
-    /// validation of a Genesis node
-    SchemaUnknownAssignmentType(
-        NodeId,
-        Option<schema::TransitionType>,
-        schema::AssignmentsType,
-    ),
+    SchemaUnknownAssignmentType(NodeId, schema::AssignmentsType),
 
     SchemaDeniedScriptExtension(NodeId),
 
@@ -126,11 +119,22 @@ pub enum Failure {
     SchemaWrongDataLength(usize, u16, usize),
     SchemaMismatchedDataType(usize),
     SchemaMismatchedStateType(usize),
+
+    SchemaMetaOccurencesError(NodeId, schema::FieldType, OccurrencesError),
+    SchemaAncestorsOccurencesError(NodeId, schema::AssignmentsType, OccurrencesError),
+    SchemaSealsOccurencesError(NodeId, schema::AssignmentsType, OccurrencesError),
+
+    TransitionAbsent(NodeId),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 #[display_from(Debug)]
-pub enum Warning {}
+pub enum Warning {
+    EndpointTransitionNotFound(NodeId),
+    EndpointDuplication(NodeId, seal::Confidential),
+    EndpointTransitionSealNotFound(NodeId, seal::Confidential),
+    AncestorsHeterogenousAssignments(NodeId, schema::AssignmentsType),
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 #[display_from(Debug)]

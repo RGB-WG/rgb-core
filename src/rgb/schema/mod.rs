@@ -24,5 +24,5 @@ pub use nodes::{
 pub use schema::{FieldType, Schema, SchemaId, TransitionType};
 pub use script::{Scripting, SimplicityScript};
 pub use types::{
-    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurencesError,
+    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurrencesError,
 };

@@ -130,81 +130,126 @@ mod _validation {
     use crate::rgb::{Assignments, Metadata, Node, NodeId, SimplicityScript};
 
     impl Schema {
-        pub fn validate(&self, node: &dyn Node) -> validation::Status {
+        pub fn validate(&self, node: &dyn Node, ancestors: &Vec<&dyn Node>) -> validation::Status {
             let node_id = node.node_id();
             let type_id = node.type_id();
 
-            let (metadata_structure, assignments_structure, script_structure) = match node.type_id()
-            {
-                None => (
-                    &self.genesis.metadata,
-                    &self.genesis.defines,
-                    &self.genesis.scripting,
-                ),
-                Some(type_id) => {
-                    let transition_type = match self.transitions.get(&type_id) {
-                        None => {
-                            return validation::Status::with_failure(
-                                validation::Failure::SchemaUnknownTransitionType(node_id, type_id),
-                            )
-                        }
-                        Some(transition_type) => transition_type,
-                    };
+            let empty_seals_structure = SealsStructure::default();
+            let (metadata_structure, ancestors_structure, assignments_structure, script_structure) =
+                match type_id {
+                    None => (
+                        &self.genesis.metadata,
+                        &empty_seals_structure,
+                        &self.genesis.defines,
+                        &self.genesis.scripting,
+                    ),
+                    Some(type_id) => {
+                        let transition_type = match self.transitions.get(&type_id) {
+                            None => {
+                                return validation::Status::with_failure(
+                                    validation::Failure::SchemaUnknownTransitionType(
+                                        node_id, type_id,
+                                    ),
+                                )
+                            }
+                            Some(transition_type) => transition_type,
+                        };
 
-                    (
-                        &transition_type.metadata,
-                        &transition_type.defines,
-                        &transition_type.scripting,
-                    )
-                }
-            };
+                        (
+                            &transition_type.metadata,
+                            &transition_type.closes,
+                            &transition_type.defines,
+                            &transition_type.scripting,
+                        )
+                    }
+                };
 
-            let mut status =
-                self.validate_meta(node_id, type_id, node.metadata(), metadata_structure);
-            status += self.validate_assignments(
-                node_id,
-                type_id,
-                node.assignments(),
-                assignments_structure,
-            );
+            let mut status = validation::Status::new();
+            let ancestor_assignments =
+                extract_ancestor_assignments(node_id, ancestors, &mut status);
+            status += self.validate_meta(node_id, node.metadata(), metadata_structure);
+            status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
+            status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
             status += self.validate_scripts(node_id, node.script(), script_structure);
             status
         }
 
-        // TODO: Improve this and the next function by putting shared parts
-        //       into a separate fn
         fn validate_meta(
             &self,
             node_id: NodeId,
-            type_id: Option<TransitionType>,
             metadata: &Metadata,
             metadata_structure: &MetadataStructure,
         ) -> validation::Status {
-            let mut status = metadata
+            let mut status = validation::Status::new();
+
+            metadata
                 .keys()
                 .collect::<BTreeSet<_>>()
                 .difference(&metadata_structure.keys().collect())
-                .map(|field_id| {
-                    validation::Failure::SchemaUnknownFieldType(node_id, type_id, **field_id)
-                })
-                .collect();
+                .for_each(|field_id| {
+                    status.add_failure(validation::Failure::SchemaUnknownFieldType(
+                        node_id, **field_id,
+                    ));
+                });
 
-            metadata_structure.into_iter().for_each(|(field_id, occ)| {
-                let set = metadata.get(field_id).cloned().unwrap_or(bset!());
-                match (set.len(), occ.min_value() as usize, occ.max_value() as usize) {
-                    (0, 0, _) => {}
-                    (0, min, _) if min > 0 => {}
-                    (len, min, _) if len < min => {}
-                    (len, _, max) if len > max => {}
-                    _ => {}
-                };
+            for (field_type_id, occ) in metadata_structure {
+                let set = metadata.get(field_type_id).cloned().unwrap_or(bset!());
 
-                let field = self.field_types.get(field_id)
+                // Checking number of field occurrences
+                if let Err(err) = occ.check(set.len() as u128) {
+                    status.add_failure(validation::Failure::SchemaMetaOccurencesError(
+                        node_id,
+                        *field_type_id,
+                        err,
+                    ));
+                }
+
+                let field = self.field_types.get(field_type_id)
                     .expect("If the field were absent, the schema would not be able to pass the internal validation and we would not reach this point");
                 for data in set {
-                    status += field.validate(*field_id, &data);
+                    status += field.validate(*field_type_id, &data);
                 }
-            });
+            }
+
+            status
+        }
+
+        fn validate_ancestors(
+            &self,
+            node_id: NodeId,
+            assignments: &Assignments,
+            assignments_structure: &SealsStructure,
+        ) -> validation::Status {
+            let mut status = validation::Status::new();
+
+            assignments
+                .keys()
+                .collect::<BTreeSet<_>>()
+                .difference(&assignments_structure.keys().collect())
+                .for_each(|assignment_type_id| {
+                    status.add_failure(validation::Failure::SchemaUnknownAssignmentType(
+                        node_id,
+                        **assignment_type_id,
+                    ));
+                });
+
+            for (assignment_type_id, occ) in assignments_structure {
+                let len = assignments
+                    .get(assignment_type_id)
+                    .map(AssignmentsVariant::len)
+                    .unwrap_or(0);
+
+                // Checking number of ancestor's assignment occurrences
+                if let Err(err) = occ.check(len as u128) {
+                    status.add_failure(validation::Failure::SchemaAncestorsOccurencesError(
+                        node_id,
+                        *assignment_type_id,
+                        err,
+                    ));
+                }
+
+                // TODO: Validate state evolution with VM
+            }
 
             status
         }
@@ -212,52 +257,55 @@ mod _validation {
         fn validate_assignments(
             &self,
             node_id: NodeId,
-            type_id: Option<TransitionType>,
             assignments: &Assignments,
             assignments_structure: &SealsStructure,
         ) -> validation::Status {
-            let mut status = assignments
+            let mut status = validation::Status::new();
+
+            assignments
                 .keys()
                 .collect::<BTreeSet<_>>()
                 .difference(&assignments_structure.keys().collect())
-                .map(|assignment_id| {
-                    validation::Failure::SchemaUnknownAssignmentType(
+                .for_each(|assignment_type_id| {
+                    status.add_failure(validation::Failure::SchemaUnknownAssignmentType(
                         node_id,
-                        type_id,
-                        **assignment_id,
-                    )
-                })
-                .collect();
+                        **assignment_type_id,
+                    ));
+                });
 
-            assignments_structure.into_iter().for_each(|(assignment_id, occ)| {
-                let len = match assignments.get(assignment_id) {
-                    None => 0,
-                    Some(AssignmentsVariant::Declarative(set)) => set.len(),
-                    Some(AssignmentsVariant::Field(set)) => set.len(),
-                    Some(AssignmentsVariant::Data(set)) => set.len(),
-                };
+            for (assignment_type_id, occ) in assignments_structure {
+                let len = assignments
+                    .get(assignment_type_id)
+                    .map(AssignmentsVariant::len)
+                    .unwrap_or(0);
 
-                match (len, occ.min_value() as usize, occ.max_value() as usize) {
-                    (0, 0, _) => {}
-                    (0, min, _) if min > 0 => {}
-                    (len, min, _) if len < min => {}
-                    (len, _, max) if len > max => {}
-                    _ => {}
-                };
+                // Checking number of assignment occurrences
+                if let Err(err) = occ.check(len as u128) {
+                    status.add_failure(validation::Failure::SchemaSealsOccurencesError(
+                        node_id,
+                        *assignment_type_id,
+                        err,
+                    ));
+                }
 
-                let assignment = self.assignment_types.get(assignment_id)
+                let assignment = self.assignment_types.get(assignment_type_id)
                     .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point");
 
-                match assignments.get(assignment_id) {
-                    None => {},
-                    Some(AssignmentsVariant::Declarative(set)) =>
-                        set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
-                    Some(AssignmentsVariant::Field(set)) =>
-                        set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
-                    Some(AssignmentsVariant::Data(set)) =>
-                        set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
+                match assignments.get(assignment_type_id) {
+                    None => {}
+                    Some(AssignmentsVariant::Declarative(set)) => {
+                        set.into_iter().for_each(|data| {
+                            status += assignment.validate(&node_id, *assignment_type_id, data)
+                        })
+                    }
+                    Some(AssignmentsVariant::Field(set)) => set.into_iter().for_each(|data| {
+                        status += assignment.validate(&node_id, *assignment_type_id, data)
+                    }),
+                    Some(AssignmentsVariant::Data(set)) => set.into_iter().for_each(|data| {
+                        status += assignment.validate(&node_id, *assignment_type_id, data)
+                    }),
                 };
-            });
+            }
 
             status
         }
@@ -268,7 +316,7 @@ mod _validation {
             script: &SimplicityScript,
             _script_structure: &Scripting,
         ) -> validation::Status {
-            let mut status = validation::Status::default();
+            let mut status = validation::Status::new();
 
             if self.script_extensions == script::Extensions::ScriptsDenied {
                 if script.len() > 0 {
@@ -281,5 +329,74 @@ mod _validation {
 
             status
         }
+    }
+
+    fn extract_ancestor_assignments(
+        node_id: NodeId,
+        ancestors: &Vec<&dyn Node>,
+        status: &mut validation::Status,
+    ) -> Assignments {
+        let mut ancestors_assignments = Assignments::new();
+        for ancestor in ancestors {
+            for (type_id, variant) in ancestor.assignments() {
+                match variant {
+                    AssignmentsVariant::Declarative(set) => {
+                        match ancestors_assignments
+                            .entry(*type_id)
+                            .or_insert(AssignmentsVariant::Declarative(bset! {}))
+                            .declarative_mut()
+                        {
+                            Some(base) => {
+                                base.extend(set.clone());
+                            }
+                            None => {
+                                status.add_warning(
+                                    validation::Warning::AncestorsHeterogenousAssignments(
+                                        node_id, *type_id,
+                                    ),
+                                );
+                            }
+                        };
+                    }
+                    AssignmentsVariant::Field(set) => {
+                        match ancestors_assignments
+                            .entry(*type_id)
+                            .or_insert(AssignmentsVariant::Field(bset! {}))
+                            .field_mut()
+                        {
+                            Some(base) => {
+                                base.extend(set.clone());
+                            }
+                            None => {
+                                status.add_warning(
+                                    validation::Warning::AncestorsHeterogenousAssignments(
+                                        node_id, *type_id,
+                                    ),
+                                );
+                            }
+                        };
+                    }
+                    AssignmentsVariant::Data(set) => {
+                        match ancestors_assignments
+                            .entry(*type_id)
+                            .or_insert(AssignmentsVariant::Data(bset! {}))
+                            .data_mut()
+                        {
+                            Some(base) => {
+                                base.extend(set.clone());
+                            }
+                            None => {
+                                status.add_warning(
+                                    validation::Warning::AncestorsHeterogenousAssignments(
+                                        node_id, *type_id,
+                                    ),
+                                );
+                            }
+                        };
+                    }
+                };
+            }
+        }
+        ancestors_assignments
     }
 }

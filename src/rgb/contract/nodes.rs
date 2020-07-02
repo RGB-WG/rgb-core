@@ -13,10 +13,10 @@
 
 use bitcoin::hashes::{sha256t, Hash};
 
-use super::{data, Assignments, AssignmentsVariant, AutoConceal, SealDefinition};
+use super::{data, Assignments, AssignmentsVariant, AutoConceal};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
-use crate::rgb::{schema, seal, Assignment, FieldData, Metadata, SchemaId, SimplicityScript};
+use crate::rgb::{schema, seal, FieldData, Metadata, SchemaId, SimplicityScript};
 
 // TODO: Check the data
 static MIDSTATE_NODE_ID: [u8; 32] = [
@@ -75,44 +75,18 @@ pub trait Node {
             .collect()
     }
 
-    fn defined_seals(
-        &self,
-        assignments_type: schema::AssignmentsType,
-    ) -> Option<Vec<SealDefinition>> {
+    fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
         self.assignments()
-            .get(&assignments_type)
-            .map(|item| match item {
-                AssignmentsVariant::Declarative(set) => set
-                    .iter()
-                    .filter_map(|assign| match assign {
-                        Assignment::Revealed {
-                            seal_definition, ..
-                        } => Some(seal_definition),
-                        _ => None,
-                    })
-                    .cloned()
-                    .collect(),
-                AssignmentsVariant::Field(set) => set
-                    .iter()
-                    .filter_map(|assign| match assign {
-                        Assignment::Revealed {
-                            seal_definition, ..
-                        } => Some(seal_definition),
-                        _ => None,
-                    })
-                    .cloned()
-                    .collect(),
-                AssignmentsVariant::Data(set) => set
-                    .iter()
-                    .filter_map(|assign| match assign {
-                        Assignment::Revealed {
-                            seal_definition, ..
-                        } => Some(seal_definition),
-                        _ => None,
-                    })
-                    .cloned()
-                    .collect(),
-            })
+            .into_iter()
+            .flat_map(|(_, assignment)| assignment.all_seals())
+            .collect()
+    }
+
+    fn known_seal_definitions(&self) -> Vec<&seal::Revealed> {
+        self.assignments()
+            .into_iter()
+            .flat_map(|(_, assignment)| assignment.known_seals())
+            .collect()
     }
 
     fn u8(&self, field_type: schema::FieldType) -> FieldData<u8> {
