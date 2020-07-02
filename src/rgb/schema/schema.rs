@@ -232,7 +232,7 @@ mod _validation {
             assignments_structure.into_iter().for_each(|(assignment_id, occ)| {
                 let len = match assignments.get(assignment_id) {
                     None => 0,
-                    Some(AssignmentsVariant::Void(set)) => set.len(),
+                    Some(AssignmentsVariant::Declarative(set)) => set.len(),
                     Some(AssignmentsVariant::PedersenBased(set)) => set.len(),
                     Some(AssignmentsVariant::HashBased(set)) => set.len(),
                 };
@@ -250,7 +250,7 @@ mod _validation {
 
                 match assignments.get(assignment_id) {
                     None => {},
-                    Some(AssignmentsVariant::Void(set)) =>
+                    Some(AssignmentsVariant::Declarative(set)) =>
                         set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),
                     Some(AssignmentsVariant::PedersenBased(set)) =>
                         set.into_iter().for_each(|data| status += assignment.validate(&node_id, *assignment_id, data)),

@@ -82,7 +82,7 @@ pub trait Node {
         self.assignments()
             .get(&assignments_type)
             .map(|item| match item {
-                AssignmentsVariant::Void(set) => set
+                AssignmentsVariant::Declarative(set) => set
                     .iter()
                     .filter_map(|assign| match assign {
                         Assignment::Revealed {

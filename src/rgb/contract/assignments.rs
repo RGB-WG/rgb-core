@@ -35,7 +35,7 @@ impl CommitEncodeWithStrategy for Assignments {
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
-    Void(BTreeSet<Assignment<VoidStrategy>>),
+    Declarative(BTreeSet<Assignment<VoidStrategy>>),
     PedersenBased(BTreeSet<Assignment<PedersenStrategy>>),
     HashBased(BTreeSet<Assignment<HashStrategy>>),
 }
@@ -125,9 +125,30 @@ impl AssignmentsVariant {
         Some(Self::PedersenBased(set))
     }
 
+    pub fn is_declarative(&self) -> bool {
+        match self {
+            AssignmentsVariant::Declarative(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_hash_based(&self) -> bool {
+        match self {
+            AssignmentsVariant::HashBased(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_pederse_based(&self) -> bool {
+        match self {
+            AssignmentsVariant::PedersenBased(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn known_seals(&self) -> Vec<&seal::Revealed> {
         match self {
-            AssignmentsVariant::Void(s) => s
+            AssignmentsVariant::Declarative(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
@@ -144,7 +165,7 @@ impl AssignmentsVariant {
 
     pub fn all_seals(&self) -> Vec<seal::Confidential> {
         match self {
-            AssignmentsVariant::Void(s) => s
+            AssignmentsVariant::Declarative(s) => s
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
@@ -161,7 +182,7 @@ impl AssignmentsVariant {
 
     pub fn known_state_homomorphic(&self) -> Vec<&amount::Revealed> {
         match self {
-            AssignmentsVariant::Void(_) => vec![],
+            AssignmentsVariant::Declarative(_) => vec![],
             AssignmentsVariant::PedersenBased(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::assigned_state)
@@ -172,7 +193,7 @@ impl AssignmentsVariant {
 
     pub fn known_state_data(&self) -> Vec<&data::Revealed> {
         match self {
-            AssignmentsVariant::Void(_) => vec![],
+            AssignmentsVariant::Declarative(_) => vec![],
             AssignmentsVariant::PedersenBased(_) => vec![],
             AssignmentsVariant::HashBased(s) => s
                 .into_iter()
@@ -183,7 +204,7 @@ impl AssignmentsVariant {
 
     pub fn all_state_pedersen(&self) -> Vec<amount::Confidential> {
         match self {
-            AssignmentsVariant::Void(_) => vec![],
+            AssignmentsVariant::Declarative(_) => vec![],
             AssignmentsVariant::PedersenBased(s) => s
                 .into_iter()
                 .map(Assignment::<_>::assigned_state_confidential)
@@ -194,7 +215,7 @@ impl AssignmentsVariant {
 
     pub fn all_state_hashed(&self) -> Vec<data::Confidential> {
         match self {
-            AssignmentsVariant::Void(_) => vec![],
+            AssignmentsVariant::Declarative(_) => vec![],
             AssignmentsVariant::PedersenBased(_) => vec![],
             AssignmentsVariant::HashBased(s) => s
                 .into_iter()
@@ -205,7 +226,7 @@ impl AssignmentsVariant {
 
     pub fn len(&self) -> usize {
         match self {
-            AssignmentsVariant::Void(set) => set.len(),
+            AssignmentsVariant::Declarative(set) => set.len(),
             AssignmentsVariant::PedersenBased(set) => set.len(),
             AssignmentsVariant::HashBased(set) => set.len(),
         }
@@ -215,7 +236,7 @@ impl AssignmentsVariant {
 impl AutoConceal for AssignmentsVariant {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
-            AssignmentsVariant::Void(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::Declarative(data) => data as &mut dyn AutoConceal,
             AssignmentsVariant::PedersenBased(data) => data as &mut dyn AutoConceal,
             AssignmentsVariant::HashBased(data) => data as &mut dyn AutoConceal,
         }
@@ -455,7 +476,7 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(match self {
-                AssignmentsVariant::Void(tree) => {
+                AssignmentsVariant::Declarative(tree) => {
                     strict_encode_list!(e; schema::StateType::Void, tree)
                 }
                 AssignmentsVariant::PedersenBased(tree) => {
@@ -474,7 +495,9 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
-                schema::StateType::Void => AssignmentsVariant::Void(BTreeSet::strict_decode(d)?),
+                schema::StateType::Void => {
+                    AssignmentsVariant::Declarative(BTreeSet::strict_decode(d)?)
+                }
                 schema::StateType::Homomorphic => match EncodingTag::strict_decode(&mut d)? {
                     EncodingTag::U64 => {
                         AssignmentsVariant::PedersenBased(BTreeSet::strict_decode(&mut d)?)
