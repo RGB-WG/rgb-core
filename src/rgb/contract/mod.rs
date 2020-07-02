@@ -22,7 +22,7 @@ pub mod seal;
 
 pub use amount::Amount;
 pub use assignments::{
-    Assignment, Assignments, AssignmentsVariant, ConfidentialState, DeclarativeStrategy,
+    Ancestors, Assignment, Assignments, AssignmentsVariant, ConfidentialState, DeclarativeStrategy,
     HashStrategy, PedersenStrategy, RevealedState, StateTypes,
 };
 pub use conceal::AutoConceal;

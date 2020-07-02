@@ -13,7 +13,7 @@
 
 use bitcoin::hashes::{sha256t, Hash};
 
-use super::{data, Assignments, AssignmentsVariant, AutoConceal};
+use super::{data, Ancestors, Assignments, AssignmentsVariant, AutoConceal};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::rgb::{schema, seal, FieldData, Metadata, SchemaId, SimplicityScript};
@@ -51,7 +51,7 @@ pub trait Node {
     /// Genesis node
     fn type_id(&self) -> Option<schema::TransitionType>;
 
-    fn ancestors(&self) -> &Vec<NodeId>;
+    fn ancestors(&self) -> &Ancestors;
     fn metadata(&self) -> &Metadata;
     fn assignments(&self) -> &Assignments;
     fn assignments_mut(&mut self) -> &mut Assignments;
@@ -154,7 +154,7 @@ pub struct Genesis {
 pub struct Transition {
     type_id: schema::TransitionType,
     metadata: Metadata,
-    ancestors: Vec<NodeId>,
+    ancestors: Ancestors,
     assignments: Assignments,
     script: SimplicityScript,
 }
@@ -188,9 +188,9 @@ impl Node for Genesis {
     }
 
     #[inline]
-    fn ancestors(&self) -> &Vec<NodeId> {
+    fn ancestors(&self) -> &Ancestors {
         lazy_static! {
-            static ref ANCESTORS: Vec<NodeId> = vec![];
+            static ref ANCESTORS: Ancestors = Ancestors::new();
         }
         &ANCESTORS
     }
@@ -228,7 +228,7 @@ impl Node for Transition {
     }
 
     #[inline]
-    fn ancestors(&self) -> &Vec<NodeId> {
+    fn ancestors(&self) -> &Ancestors {
         &self.ancestors
     }
 
@@ -292,7 +292,7 @@ impl Transition {
     pub fn with(
         type_id: schema::TransitionType,
         metadata: Metadata,
-        ancestors: Vec<NodeId>,
+        ancestors: Ancestors,
         assignments: Assignments,
         script: SimplicityScript,
     ) -> Self {
@@ -366,7 +366,7 @@ mod strict_encoding {
             Ok(Self {
                 type_id: schema::TransitionType::strict_decode(&mut d)?,
                 metadata: Metadata::strict_decode(&mut d)?,
-                ancestors: Vec::<NodeId>::strict_decode(&mut d)?,
+                ancestors: Ancestors::strict_decode(&mut d)?,
                 assignments: Assignments::strict_decode(&mut d)?,
                 script: SimplicityScript::strict_decode(&mut d)?,
             })

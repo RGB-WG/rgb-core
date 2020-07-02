@@ -125,7 +125,7 @@ impl Consignment {
 
         let mut validation_index = BTreeSet::<NodeId>::new();
         // Validate genesis
-        status += schema.validate(&self.genesis, &vec![]);
+        status += schema.validate(&node_index, &self.genesis, &bmap![]);
         for node in end_transitions {
             let mut queue: VecDeque<&dyn Node> = VecDeque::new();
 
@@ -134,19 +134,8 @@ impl Consignment {
             while let Some(transition) = queue.pop_front() {
                 let node_id = node.node_id();
 
-                let ancestors: Vec<&dyn Node> = node
-                    .ancestors()
-                    .into_iter()
-                    .filter_map(|id| {
-                        node_index.get(id).cloned().or_else(|| {
-                            status.add_failure(validation::Failure::TransitionAbsent(*id));
-                            None
-                        })
-                    })
-                    .collect();
-
                 // Verify node against the schema
-                status += schema.validate(transition, &ancestors);
+                status += schema.validate(&node_index, transition, &node.ancestors());
                 validation_index.insert(node_id);
 
                 if let Some(anchor) = anchor_index.get(&node_id).cloned() {
@@ -183,6 +172,16 @@ impl Consignment {
                     status.add_failure(validation::Failure::TransitionNotAnchored(node_id));
                 }
 
+                let ancestors: Vec<&dyn Node> = node
+                    .ancestors()
+                    .into_iter()
+                    .filter_map(|(id, _)| {
+                        node_index.get(id).cloned().or_else(|| {
+                            status.add_failure(validation::Failure::TransitionAbsent(*id));
+                            None
+                        })
+                    })
+                    .collect();
                 queue.extend(ancestors);
             }
         }

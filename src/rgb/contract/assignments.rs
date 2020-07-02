@@ -15,7 +15,7 @@ use amplify::AsAny;
 use core::fmt::Debug;
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::{super::schema, amount, data, seal, Amount, AutoConceal, SealDefinition};
+use super::{super::schema, amount, data, seal, Amount, AutoConceal, NodeId, SealDefinition};
 use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
@@ -28,7 +28,14 @@ lazy_static! {
 }
 
 pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
+
 impl CommitEncodeWithStrategy for Assignments {
+    type Strategy = commit_strategy::Merklization;
+}
+
+pub type Ancestors = BTreeMap<NodeId, BTreeMap<schema::AssignmentsType, Vec<u16>>>;
+
+impl CommitEncodeWithStrategy for Ancestors {
     type Strategy = commit_strategy::Merklization;
 }
 

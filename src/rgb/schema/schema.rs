@@ -123,14 +123,22 @@ mod strict_encoding {
 mod _validation {
     use super::*;
 
+    use core::convert::TryFrom;
     use std::collections::BTreeSet;
 
     use crate::rgb::schema::{MetadataStructure, Scripting, SealsStructure};
-    use crate::rgb::{validation, AssignmentsVariant};
-    use crate::rgb::{Assignments, Metadata, Node, NodeId, SimplicityScript};
+    use crate::rgb::{
+        validation, Ancestors, Assignments, AssignmentsVariant, Metadata, Node, NodeId,
+        SimplicityScript,
+    };
 
     impl Schema {
-        pub fn validate(&self, node: &dyn Node, ancestors: &Vec<&dyn Node>) -> validation::Status {
+        pub fn validate(
+            &self,
+            nodes: &BTreeMap<NodeId, &dyn Node>,
+            node: &dyn Node,
+            ancestors: &Ancestors,
+        ) -> validation::Status {
             let node_id = node.node_id();
             let type_id = node.type_id();
 
@@ -166,7 +174,7 @@ mod _validation {
 
             let mut status = validation::Status::new();
             let ancestor_assignments =
-                extract_ancestor_assignments(node_id, ancestors, &mut status);
+                extract_ancestor_assignments(nodes, node_id, ancestors, &mut status);
             status += self.validate_meta(node_id, node.metadata(), metadata_structure);
             status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
             status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
@@ -332,69 +340,96 @@ mod _validation {
     }
 
     fn extract_ancestor_assignments(
+        nodes: &BTreeMap<NodeId, &dyn Node>,
         node_id: NodeId,
-        ancestors: &Vec<&dyn Node>,
+        ancestors: &Ancestors,
         status: &mut validation::Status,
     ) -> Assignments {
         let mut ancestors_assignments = Assignments::new();
-        for ancestor in ancestors {
-            for (type_id, variant) in ancestor.assignments() {
-                match variant {
-                    AssignmentsVariant::Declarative(set) => {
-                        match ancestors_assignments
-                            .entry(*type_id)
-                            .or_insert(AssignmentsVariant::Declarative(bset! {}))
-                            .declarative_mut()
-                        {
-                            Some(base) => {
-                                base.extend(set.clone());
-                            }
-                            None => {
-                                status.add_warning(
-                                    validation::Warning::AncestorsHeterogenousAssignments(
-                                        node_id, *type_id,
-                                    ),
-                                );
-                            }
-                        };
-                    }
-                    AssignmentsVariant::Field(set) => {
-                        match ancestors_assignments
-                            .entry(*type_id)
-                            .or_insert(AssignmentsVariant::Field(bset! {}))
-                            .field_mut()
-                        {
-                            Some(base) => {
-                                base.extend(set.clone());
-                            }
-                            None => {
-                                status.add_warning(
-                                    validation::Warning::AncestorsHeterogenousAssignments(
-                                        node_id, *type_id,
-                                    ),
-                                );
-                            }
-                        };
-                    }
-                    AssignmentsVariant::Data(set) => {
-                        match ancestors_assignments
-                            .entry(*type_id)
-                            .or_insert(AssignmentsVariant::Data(bset! {}))
-                            .data_mut()
-                        {
-                            Some(base) => {
-                                base.extend(set.clone());
-                            }
-                            None => {
-                                status.add_warning(
-                                    validation::Warning::AncestorsHeterogenousAssignments(
-                                        node_id, *type_id,
-                                    ),
-                                );
-                            }
-                        };
-                    }
-                };
+        for (id, details) in ancestors {
+            let node = match nodes.get(id) {
+                None => {
+                    status.add_failure(validation::Failure::TransitionAbsent(*id));
+                    continue;
+                }
+                Some(node) => node,
+            };
+
+            for (type_id, assignment_indexes) in details {
+                let variants: Vec<&AssignmentsVariant> = node
+                    .assignments_by_type(*type_id)
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(index, v)| {
+                        if assignment_indexes.contains(&u16::try_from(index).expect(
+                            "All collection sizes in RGB are 160bit integers; \
+                                so this can only fail if RGB consensus code is broken",
+                        )) {
+                            Some(v)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                for variant in variants {
+                    match variant {
+                        AssignmentsVariant::Declarative(set) => {
+                            match ancestors_assignments
+                                .entry(*type_id)
+                                .or_insert(AssignmentsVariant::Declarative(bset! {}))
+                                .declarative_mut()
+                            {
+                                Some(base) => {
+                                    base.extend(set.clone());
+                                }
+                                None => {
+                                    status.add_warning(
+                                        validation::Warning::AncestorsHeterogenousAssignments(
+                                            node_id, *type_id,
+                                        ),
+                                    );
+                                }
+                            };
+                        }
+                        AssignmentsVariant::Field(set) => {
+                            match ancestors_assignments
+                                .entry(*type_id)
+                                .or_insert(AssignmentsVariant::Field(bset! {}))
+                                .field_mut()
+                            {
+                                Some(base) => {
+                                    base.extend(set.clone());
+                                }
+                                None => {
+                                    status.add_warning(
+                                        validation::Warning::AncestorsHeterogenousAssignments(
+                                            node_id, *type_id,
+                                        ),
+                                    );
+                                }
+                            };
+                        }
+                        AssignmentsVariant::Data(set) => {
+                            match ancestors_assignments
+                                .entry(*type_id)
+                                .or_insert(AssignmentsVariant::Data(bset! {}))
+                                .data_mut()
+                            {
+                                Some(base) => {
+                                    base.extend(set.clone());
+                                }
+                                None => {
+                                    status.add_warning(
+                                        validation::Warning::AncestorsHeterogenousAssignments(
+                                            node_id, *type_id,
+                                        ),
+                                    );
+                                }
+                            };
+                        }
+                    };
+                }
             }
         }
         ancestors_assignments

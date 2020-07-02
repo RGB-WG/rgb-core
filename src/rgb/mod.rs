@@ -23,10 +23,10 @@ pub mod prelude {
     use super::*;
     pub use super::{bech32, schema, vm};
     pub use contract::{
-        amount, data, seal, Amount, Assignment, Assignments, AssignmentsVariant, AutoConceal,
-        ConfidentialState, ContractId, DeclarativeStrategy, FieldData, Genesis, HashStrategy,
-        Metadata, Node, NodeId, PedersenStrategy, RevealedState, SealDefinition, StateTypes,
-        Transition,
+        amount, data, seal, Amount, Ancestors, Assignment, Assignments, AssignmentsVariant,
+        AutoConceal, ConfidentialState, ContractId, DeclarativeStrategy, FieldData, Genesis,
+        HashStrategy, Metadata, Node, NodeId, PedersenStrategy, RevealedState, SealDefinition,
+        StateTypes, Transition,
     };
     pub use schema::{script, Schema, SchemaId, SimplicityScript};
     pub use stash::{
