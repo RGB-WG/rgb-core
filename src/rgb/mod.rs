@@ -28,7 +28,10 @@ pub mod prelude {
         HashStrategy, Metadata, Node, NodeId, PedersenStrategy, RevealedState, SealDefinition,
         StateTypes, Transition,
     };
-    pub use schema::{script, Schema, SchemaId, SimplicityScript};
+    pub use schema::{
+        script, AssignmentAbi, AssignmentAction, GenesisAbi, GenesisAction, Schema, SchemaId,
+        SimplicityScript, TransitionAbi, TransitionAction,
+    };
     pub use stash::{
         Anchor, AnchorId, Consignment, Disclosure, Stash, PSBT_FEE_KEY, PSBT_PUBKEY_KEY,
     };

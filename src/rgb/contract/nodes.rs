@@ -142,10 +142,6 @@ pub struct Genesis {
     schema_id: SchemaId,
     network: bp::Network,
     metadata: Metadata,
-    // Since genesis relies on the same data structure as Transition, it uses
-    // `homorphic_factor` value for homomorphic state data; which does not make
-    // any sense in the case of the Genesis. The value of the factor thus MAY
-    // be ignored during the verification
     assignments: Assignments,
     script: SimplicityScript,
 }

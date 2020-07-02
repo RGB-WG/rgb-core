@@ -16,10 +16,7 @@ use std::io;
 
 use bitcoin::hashes::{sha256t, Hash};
 
-use super::{
-    script, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateFormat,
-    TransitionSchema,
-};
+use super::{AssignmentsType, DataFormat, GenesisSchema, StateSchema, TransitionSchema};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 
 pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -40,11 +37,9 @@ tagged_hash!(
 #[derive(Clone, Debug)]
 pub struct Schema {
     pub field_types: BTreeMap<FieldType, DataFormat>,
-    pub assignment_types: BTreeMap<AssignmentsType, StateFormat>,
+    pub assignment_types: BTreeMap<AssignmentsType, StateSchema>,
     pub genesis: GenesisSchema,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
-    pub script_library: SimplicityScript,
-    pub script_extensions: script::Extensions,
 }
 
 impl Schema {
@@ -98,8 +93,8 @@ mod strict_encoding {
                 self.assignment_types,
                 self.genesis,
                 self.transitions,
-                self.script_library,
-                self.script_extensions
+                // We keep this parameter for future script extended info (like ABI)
+                Vec::<u8>::new()
             ))
         }
     }
@@ -108,14 +103,21 @@ mod strict_encoding {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-            Ok(Self {
+            let me = Self {
                 field_types: BTreeMap::strict_decode(&mut d)?,
                 assignment_types: BTreeMap::strict_decode(&mut d)?,
                 genesis: GenesisSchema::strict_decode(&mut d)?,
                 transitions: BTreeMap::strict_decode(&mut d)?,
-                script_library: Vec::strict_decode(&mut d)?,
-                script_extensions: script::Extensions::strict_decode(&mut d)?,
-            })
+            };
+            // We keep this parameter for future script extended info (like ABI)
+            let script = Vec::<u8>::strict_decode(&mut d)?;
+            if !script.is_empty() {
+                Err(Error::UnsupportedDataStructure(
+                    "Scripting information is not yet supported".to_string(),
+                ))
+            } else {
+                Ok(me)
+            }
         }
     }
 }
@@ -126,10 +128,9 @@ mod _validation {
     use core::convert::TryFrom;
     use std::collections::BTreeSet;
 
-    use crate::rgb::schema::{MetadataStructure, Scripting, SealsStructure};
+    use crate::rgb::schema::{MetadataStructure, SealsStructure};
     use crate::rgb::{
         validation, Ancestors, Assignments, AssignmentsVariant, Metadata, Node, NodeId,
-        SimplicityScript,
     };
 
     impl Schema {
@@ -143,34 +144,29 @@ mod _validation {
             let type_id = node.type_id();
 
             let empty_seals_structure = SealsStructure::default();
-            let (metadata_structure, ancestors_structure, assignments_structure, script_structure) =
-                match type_id {
-                    None => (
-                        &self.genesis.metadata,
-                        &empty_seals_structure,
-                        &self.genesis.defines,
-                        &self.genesis.scripting,
-                    ),
-                    Some(type_id) => {
-                        let transition_type = match self.transitions.get(&type_id) {
-                            None => {
-                                return validation::Status::with_failure(
-                                    validation::Failure::SchemaUnknownTransitionType(
-                                        node_id, type_id,
-                                    ),
-                                )
-                            }
-                            Some(transition_type) => transition_type,
-                        };
+            let (metadata_structure, ancestors_structure, assignments_structure) = match type_id {
+                None => (
+                    &self.genesis.metadata,
+                    &empty_seals_structure,
+                    &self.genesis.defines,
+                ),
+                Some(type_id) => {
+                    let transition_type = match self.transitions.get(&type_id) {
+                        None => {
+                            return validation::Status::with_failure(
+                                validation::Failure::SchemaUnknownTransitionType(node_id, type_id),
+                            )
+                        }
+                        Some(transition_type) => transition_type,
+                    };
 
-                        (
-                            &transition_type.metadata,
-                            &transition_type.closes,
-                            &transition_type.defines,
-                            &transition_type.scripting,
-                        )
-                    }
-                };
+                    (
+                        &transition_type.metadata,
+                        &transition_type.closes,
+                        &transition_type.defines,
+                    )
+                }
+            };
 
             let mut status = validation::Status::new();
             let ancestor_assignments =
@@ -178,7 +174,7 @@ mod _validation {
             status += self.validate_meta(node_id, node.metadata(), metadata_structure);
             status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
             status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
-            status += self.validate_scripts(node_id, node.script(), script_structure);
+            //status += self.validate_scripts(node_id, node.script(), script_structure);
             status
         }
 
@@ -255,8 +251,6 @@ mod _validation {
                         err,
                     ));
                 }
-
-                // TODO: Validate state evolution with VM
             }
 
             status
@@ -296,8 +290,11 @@ mod _validation {
                     ));
                 }
 
-                let assignment = self.assignment_types.get(assignment_type_id)
-                    .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point");
+                let assignment = &self
+                    .assignment_types
+                    .get(assignment_type_id)
+                    .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point")
+                    .format;
 
                 match assignments.get(assignment_type_id) {
                     None => {}
@@ -318,11 +315,12 @@ mod _validation {
             status
         }
 
+        /*
         fn validate_scripts(
             &self,
             node_id: NodeId,
             script: &SimplicityScript,
-            _script_structure: &Scripting,
+            _script_structure: &AssignmentAbi,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
@@ -332,11 +330,46 @@ mod _validation {
                 }
             }
 
-            // TODO: Add other types of script checks when Simplicity scripting
-            //       will be ready
+                // TODO: Add other types of script checks when Simplicity scripting
+                //       will be ready
+
+                status
+            }
+         */
+
+        /*
+        fn validate_state(
+            &self,
+            node_id: NodeId,
+            previous_state: Assignments,
+            current_state: Assignments,
+            previous_meta: Metadata,
+            current_meta: Metadata,
+            code: SimplicityScript,
+            procedure: u32,
+        ) -> validation::Status {
+            let assignment_types: BTreeSet<AssignmentsType> =
+                previous_state.keys().chain(current_state.keys()).collect();
+
+            let mut status = validation::Status::new();
+            for assignment_type in assignment_types {
+                let mut vm = VirtualMachine::new();
+                vm.push_stack(previous_state.get(&assignment_type).cloned());
+                vm.push_stack(current_state.get(&assignment_type).cloned());
+                vm.push_stack(previous_meta.clone());
+                vm.push_stack(current_meta.clone());
+                match vm.execute(code.clone(), offset) {
+                    Err(_) => {}
+                    Ok => match vm.pop_stack() {
+                        None => {}
+                        Some(value) => {}
+                    },
+                }
+            }
 
             status
         }
+         */
     }
 
     fn extract_ancestor_assignments(

@@ -14,7 +14,7 @@
 use std::collections::BTreeMap;
 use std::io;
 
-use super::{FieldType, Occurences, Scripting};
+use super::{FieldType, GenesisAbi, Occurences, TransitionAbi};
 
 pub type AssignmentsType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type MetadataStructure = BTreeMap<FieldType, Occurences<u16>>;
@@ -25,7 +25,7 @@ pub type SealsStructure = BTreeMap<AssignmentsType, Occurences<u16>>;
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
     pub defines: SealsStructure,
-    pub scripting: Scripting,
+    pub abi: GenesisAbi,
 }
 
 #[derive(Clone, Debug, Display)]
@@ -34,7 +34,7 @@ pub struct TransitionSchema {
     pub metadata: MetadataStructure,
     pub closes: SealsStructure,
     pub defines: SealsStructure,
-    pub scripting: Scripting,
+    pub abi: TransitionAbi,
 }
 
 mod strict_encoding {
@@ -47,7 +47,9 @@ mod strict_encoding {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
             self.metadata.strict_encode(&mut e)?;
             self.defines.strict_encode(&mut e)?;
-            self.scripting.strict_encode(&mut e)
+            self.abi.strict_encode(&mut e)?;
+            // We keep this parameter for future script extended info (like ABI)
+            Vec::<u8>::new().strict_encode(&mut e)
         }
     }
 
@@ -55,11 +57,20 @@ mod strict_encoding {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            Ok(Self {
+            let me = Self {
                 metadata: MetadataStructure::strict_decode(&mut d)?,
                 defines: SealsStructure::strict_decode(&mut d)?,
-                scripting: Scripting::strict_decode(&mut d)?,
-            })
+                abi: GenesisAbi::strict_decode(&mut d)?,
+            };
+            // We keep this parameter for future script extended info (like ABI)
+            let script = Vec::<u8>::strict_decode(&mut d)?;
+            if !script.is_empty() {
+                Err(Error::UnsupportedDataStructure(
+                    "Scripting information is not yet supported".to_string(),
+                ))
+            } else {
+                Ok(me)
+            }
         }
     }
 
@@ -70,7 +81,9 @@ mod strict_encoding {
             self.metadata.strict_encode(&mut e)?;
             self.closes.strict_encode(&mut e)?;
             self.defines.strict_encode(&mut e)?;
-            self.scripting.strict_encode(&mut e)
+            self.abi.strict_encode(&mut e)?;
+            // We keep this parameter for future script extended info (like ABI)
+            Vec::<u8>::new().strict_encode(&mut e)
         }
     }
 
@@ -78,12 +91,21 @@ mod strict_encoding {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            Ok(Self {
+            let me = Self {
                 metadata: MetadataStructure::strict_decode(&mut d)?,
                 closes: SealsStructure::strict_decode(&mut d)?,
                 defines: SealsStructure::strict_decode(&mut d)?,
-                scripting: Scripting::strict_decode(&mut d)?,
-            })
+                abi: TransitionAbi::strict_decode(&mut d)?,
+            };
+            // We keep this parameter for future script extended info (like ABI)
+            let script = Vec::<u8>::strict_decode(&mut d)?;
+            if !script.is_empty() {
+                Err(Error::UnsupportedDataStructure(
+                    "Scripting information is not yet supported".to_string(),
+                ))
+            } else {
+                Ok(me)
+            }
         }
     }
 }

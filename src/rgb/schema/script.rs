@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::collections::BTreeMap;
 use std::io;
 
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -20,11 +21,21 @@ use num_traits::{FromPrimitive, ToPrimitive};
 /// placeholder for script data
 pub type SimplicityScript = Vec<u8>;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[non_exhaustive]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
 #[display_from(Debug)]
-pub struct Scripting {
-    pub validation: Procedure,
-    pub extensions: Extensions,
+pub enum GenesisAction {}
+
+#[non_exhaustive]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
+#[display_from(Debug)]
+#[repr(u8)]
+pub enum TransitionAction {
+    GenerateBlank = 0,
 }
 
 #[non_exhaustive]
@@ -33,10 +44,21 @@ pub struct Scripting {
 )]
 #[display_from(Debug)]
 #[repr(u8)]
-pub enum Extensions {
-    ScriptsDenied = 0,
-    ScriptsExtend,
-    ScriptsReplace,
+pub enum AssignmentAction {
+    Validate = 0,
+}
+
+pub type GenesisAbi = BTreeMap<GenesisAction, Procedure>;
+pub type TransitionAbi = BTreeMap<TransitionAction, Procedure>;
+pub type AssignmentAbi = BTreeMap<AssignmentAction, Procedure>;
+
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display_from(Debug)]
+pub enum Procedure {
+    NoValidation,
+    Standard(StandardProcedure),
+    Simplicity { offset: u32 },
 }
 
 #[non_exhaustive]
@@ -48,43 +70,18 @@ pub enum Extensions {
 pub enum StandardProcedure {
     ConfidentialAmount = 1,
     IssueControl = 2,
-}
-
-#[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display_from(Debug)]
-pub enum Procedure {
-    NoValidation,
-    Standard(StandardProcedure),
-    Simplicity(SimplicityScript),
+    Prunning = 3,
 }
 
 mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
 
-    impl_enum_strict_encoding!(Extensions);
+    impl_enum_strict_encoding!(GenesisAction);
+    impl_enum_strict_encoding!(TransitionAction);
+    impl_enum_strict_encoding!(AssignmentAction);
+
     impl_enum_strict_encoding!(StandardProcedure);
-
-    impl StrictEncode for Scripting {
-        type Error = Error;
-
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            self.validation.strict_encode(&mut e)?;
-            self.extensions.strict_encode(&mut e)
-        }
-    }
-
-    impl StrictDecode for Scripting {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            Ok(Self {
-                validation: <Procedure>::strict_decode(&mut d)?,
-                extensions: <Extensions>::strict_decode(&mut d)?,
-            })
-        }
-    }
 
     impl StrictEncode for Procedure {
         type Error = Error;
@@ -92,7 +89,7 @@ mod strict_encoding {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
             Ok(match self {
                 Self::NoValidation => strict_encode_list!(e; 0u8),
-                Self::Simplicity(code) => strict_encode_list!(e; 1u8, code),
+                Self::Simplicity { offset } => strict_encode_list!(e; 1u8, offset),
                 Self::Standard(proc_id) => strict_encode_list!(e; 0xFFu8, proc_id),
             })
         }
@@ -104,7 +101,9 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             Ok(match u8::strict_decode(&mut d)? {
                 0u8 => Self::NoValidation,
-                1u8 => Self::Simplicity(Vec::<u8>::strict_decode(&mut d)?),
+                1u8 => Self::Simplicity {
+                    offset: u32::strict_decode(&mut d)?,
+                },
                 0xFFu8 => Self::Standard(StandardProcedure::strict_decode(&mut d)?),
                 x => Err(Error::EnumValueNotKnown("script::Procedure".to_string(), x))?,
             })

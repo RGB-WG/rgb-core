@@ -11,10 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::{elliptic_curve, Bits, DigestAlgorithm, EllipticCurve};
-use num_derive::{FromPrimitive, ToPrimitive};
 use std::collections::BTreeSet;
 use std::io;
+
+use num_derive::{FromPrimitive, ToPrimitive};
+
+use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
+
+#[derive(Clone, Debug, Display)]
+#[display_from(Debug)]
+pub struct StateSchema {
+    pub format: StateFormat,
+    pub abi: script::AssignmentAbi,
+}
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
@@ -141,6 +150,25 @@ mod strict_encoding {
     use core::ops::{Add, Bound, RangeBounds, RangeInclusive, Sub};
     use num_derive::{FromPrimitive, ToPrimitive};
     use num_traits::{Bounded, FromPrimitive, ToPrimitive};
+
+    impl StrictEncode for StateSchema {
+        type Error = Error;
+
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            Ok(strict_encode_list!(e; self.format, self.abi))
+        }
+    }
+
+    impl StrictDecode for StateSchema {
+        type Error = Error;
+
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            Ok(Self {
+                format: StateFormat::strict_decode(&mut d)?,
+                abi: script::AssignmentAbi::strict_decode(&mut d)?,
+            })
+        }
+    }
 
     impl_enum_strict_encoding!(StateType);
 
