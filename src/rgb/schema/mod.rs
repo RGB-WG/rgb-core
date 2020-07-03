@@ -30,3 +30,6 @@ pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema,
 pub use types::{
     elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurrencesError,
 };
+
+#[cfg(test)]
+pub(crate) use schema::test;

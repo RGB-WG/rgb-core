@@ -54,6 +54,9 @@ impl CommitVerify<MultiMsg> for MultimsgCommitment {
         const SORT_LIMIT: usize = 2 << 16;
 
         let mut n = multimsg.len();
+        if n < 3 {
+            n = 3;
+        }
         let ordered = loop {
             let mut ordered = BTreeMap::<usize, (sha256::Hash, sha256::Hash)>::new();
             // TODO: Modify arithmetics in LNPBP-4 spec

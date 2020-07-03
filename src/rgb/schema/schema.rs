@@ -147,7 +147,6 @@ mod _validation {
             &self,
             nodes: &BTreeMap<NodeId, &dyn Node>,
             node: &dyn Node,
-            ancestors: &Ancestors,
         ) -> validation::Status {
             let node_id = node.node_id();
             let type_id = node.type_id();
@@ -179,7 +178,7 @@ mod _validation {
 
             let mut status = validation::Status::new();
             let ancestor_assignments =
-                extract_ancestor_assignments(nodes, node_id, ancestors, &mut status);
+                extract_ancestor_assignments(nodes, node_id, node.ancestors(), &mut status);
             status += self.validate_meta(node_id, node.metadata(), metadata_structure);
             status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
             status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
@@ -491,12 +490,12 @@ mod _validation {
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use super::*;
     use crate::rgb::schema::*;
     use crate::strict_encoding::*;
 
-    fn schema() -> Schema {
+    pub(crate) fn schema() -> Schema {
         const FIELD_TICKER: usize = 0;
         const FIELD_NAME: usize = 1;
         const FIELD_DESCRIPTION: usize = 2;

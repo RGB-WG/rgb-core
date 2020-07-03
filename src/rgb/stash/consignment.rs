@@ -100,6 +100,7 @@ impl Consignment {
             node_index.insert(node_id, transition);
             anchor_index.insert(node_id, anchor);
         }
+        node_index.insert(genesis_id, &self.genesis);
 
         // Collect all endpoint transitions
         let mut end_transitions = Vec::<&dyn Node>::new();
@@ -140,23 +141,26 @@ impl Consignment {
             }
         }
 
-        // [VALIDATION]: Validate genesis
-        status += schema.validate(&node_index, &self.genesis, &bmap![]);
-
         // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
         //               up to genesis
         let mut validation_index = BTreeSet::<NodeId>::new();
+        // [VALIDATION]: Validate genesis
+        status += schema.validate(&node_index, &self.genesis);
+        validation_index.insert(genesis_id);
+
         for node in end_transitions {
             let mut queue: VecDeque<&dyn Node> = VecDeque::new();
 
             queue.push_back(node);
 
-            while let Some(transition) = queue.pop_front() {
+            while let Some(node) = queue.pop_front() {
                 let node_id = node.node_id();
 
                 // [VALIDATION]: Verify node against the schema
-                status += schema.validate(&node_index, transition, &node.ancestors());
-                validation_index.insert(node_id);
+                if !validation_index.contains(&node_id) {
+                    status += schema.validate(&node_index, node);
+                    validation_index.insert(node_id);
+                }
 
                 if let Some(anchor) = anchor_index.get(&node_id).cloned() {
                     // [VALIDATION]: Check that transition is committed into the anchor
@@ -312,5 +316,59 @@ impl StrictDecode for Consignment {
             endpoints: ConsignmentEndpoints::strict_decode(&mut d)?,
             data: ConsignmentData::strict_decode(&mut d)?,
         })
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+    use crate::rgb::schema::test::schema;
+
+    pub(crate) fn consignment() -> Consignment {
+        let data: Vec<u8> = vec![
+            0, 0, 32, 0, 175, 68, 251, 129, 83, 146, 46, 224, 148, 121, 32, 207, 66, 190, 97, 28,
+            158, 179, 119, 79, 148, 59, 221, 61, 93, 232, 235, 15, 159, 58, 147, 188, 11, 17, 9, 7,
+            7, 0, 0, 0, 1, 0, 33, 5, 0, 67, 79, 86, 73, 68, 1, 0, 1, 0, 33, 11, 0, 67, 111, 118,
+            105, 100, 32, 116, 111, 107, 101, 110, 3, 0, 1, 0, 3, 100, 0, 0, 0, 0, 0, 0, 0, 4, 0,
+            1, 0, 3, 100, 0, 0, 0, 0, 0, 0, 0, 5, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 0,
+            0, 0, 8, 0, 1, 0, 2, 57, 105, 255, 94, 2, 0, 1, 0, 1, 3, 1, 0, 1, 0, 34, 165, 223, 89,
+            157, 212, 161, 60, 169, 160, 45, 95, 60, 60, 68, 97, 224, 93, 246, 23, 246, 171, 184,
+            6, 93, 50, 60, 5, 35, 58, 96, 198, 241, 6, 30, 226, 0, 0, 3, 100, 0, 0, 0, 0, 0, 0, 0,
+            32, 0, 156, 221, 61, 60, 184, 6, 7, 109, 36, 84, 174, 189, 113, 99, 171, 166, 182, 228,
+            131, 107, 42, 200, 35, 93, 1, 228, 182, 203, 46, 175, 183, 56, 2, 0, 0, 0, 0, 0, 0, 1,
+            0, 83, 131, 189, 122, 77, 36, 240, 65, 255, 85, 56, 74, 138, 140, 96, 130, 24, 252,
+            212, 163, 226, 175, 124, 104, 208, 155, 197, 147, 42, 30, 108, 147, 14, 210, 180, 166,
+            126, 169, 208, 75, 25, 232, 25, 3, 234, 26, 9, 49, 37, 73, 61, 65, 164, 111, 223, 38,
+            234, 11, 233, 112, 180, 119, 128, 227, 1, 0, 97, 164, 66, 156, 189, 79, 2, 211, 4, 166,
+            134, 47, 17, 48, 48, 201, 24, 174, 152, 214, 1, 12, 240, 50, 17, 226, 182, 59, 77, 57,
+            24, 211, 1, 0, 0, 209, 14, 87, 70, 119, 82, 48, 77, 43, 181, 31, 113, 154, 17, 233, 63,
+            110, 55, 185, 129, 42, 110, 97, 198, 154, 9, 114, 100, 213, 55, 186, 167, 1, 107, 165,
+            166, 43, 121, 222, 245, 39, 3, 158, 255, 31, 84, 122, 29, 95, 146, 223, 162, 186, 122,
+            246, 172, 151, 26, 75, 208, 59, 164, 167, 52, 176, 49, 86, 162, 86, 184, 173, 58, 30,
+            249, 0, 1, 0, 0, 0, 1, 0, 120, 175, 150, 24, 51, 142, 132, 88, 48, 225, 228, 68, 149,
+            108, 209, 219, 142, 99, 150, 68, 220, 167, 203, 146, 245, 204, 45, 172, 226, 43, 133,
+            124, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 3, 1, 0, 2, 14, 210, 180, 166, 126, 169,
+            208, 75, 25, 232, 25, 3, 234, 26, 9, 49, 37, 73, 61, 65, 164, 111, 223, 38, 234, 11,
+            233, 112, 180, 119, 128, 227, 3, 100, 0, 0, 0, 0, 0, 0, 0, 32, 0, 219, 99, 194, 167,
+            245, 137, 224, 79, 24, 146, 231, 158, 84, 190, 247, 219, 211, 11, 89, 112, 106, 222,
+            186, 44, 141, 77, 67, 98, 189, 4, 120, 0, 0, 0,
+        ];
+
+        Consignment::strict_decode(&data[..]).unwrap()
+    }
+
+    fn tx_resolver(
+        txid: &Txid,
+    ) -> Result<Option<(bitcoin::Transaction, u64)>, validation::TxResolverError> {
+        eprintln!("Validating txid {}", txid);
+        Err(validation::TxResolverError)
+    }
+
+    #[test]
+    fn test_consignment_validation() {
+        let consignment = consignment();
+        let schema = schema();
+        let status = consignment.validate(&schema, tx_resolver);
+        println!("{}", status);
     }
 }

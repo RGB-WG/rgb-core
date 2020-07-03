@@ -19,7 +19,7 @@ pub trait VirtualMachine {
     fn stack(&mut self) -> &mut Vec<Box<dyn Any>>;
 
     fn push_stack(&mut self, data: Box<dyn Any>) -> bool {
-        if self.stack().len() == RGB_VM_STACK_SIZE_LIMIT as usize {
+        if self.stack().len() >= RGB_VM_STACK_SIZE_LIMIT as usize {
             false
         } else {
             self.stack().push(data);

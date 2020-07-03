@@ -11,7 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::AsAny;
 use core::any::Any;
 
 use super::VirtualMachine;
@@ -37,7 +36,7 @@ const TRANSITION_PRUNE: u16 = 2;
 
 macro_rules! push_stack {
     ($self:ident, $ident:literal) => {
-        $self.push_stack(Box::new($ident.as_any()));
+        $self.push_stack(Box::new($ident));
     };
 }
 
@@ -71,6 +70,7 @@ impl Embedded {
                 match self.previous_state {
                     None => {
                         // TODO: We are at genesis, must check issue metadata
+                        push_stack!(self, 0u8);
                     }
                     Some(ref variant) => {
                         if let AssignmentsVariant::DiscreteFiniteField(_) = variant {
@@ -95,8 +95,10 @@ impl Embedded {
                                 prev.into_iter().map(|c| c.commitment).collect(),
                             ) {
                                 push_stack!(self, 0u8);
+                                return;
                             } else {
                                 push_stack!(self, 3u8);
+                                return;
                             }
                         }
                         push_stack!(self, 4u8);
@@ -107,7 +109,10 @@ impl Embedded {
                 push_stack!(self, 0u8);
                 // TODO: Implement issue validation
             }
-            StandardProcedure::Prunning => unimplemented!(),
+            StandardProcedure::Prunning => {
+                push_stack!(self, 0u8);
+                // TODO: Implement prunning validation
+            }
         }
     }
 }
