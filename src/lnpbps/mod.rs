@@ -14,6 +14,7 @@
 //! Modules implementing convenient interfaces covering specific LNPBP standards.
 //! Check [LNP/BP Standards page](https://github.com/LNP-BP/LNPBPs) for details.
 
+pub mod elgamal;
 pub mod lnpbp1;
 pub mod lnpbp2;
 pub mod lnpbp3;
