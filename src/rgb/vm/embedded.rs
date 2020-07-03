@@ -104,6 +104,7 @@ impl Embedded {
                 }
             }
             StandardProcedure::IssueControl => {
+                push_stack!(self, 0u8);
                 // TODO: Implement issue validation
             }
             StandardProcedure::Prunning => unimplemented!(),
