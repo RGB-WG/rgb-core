@@ -20,7 +20,7 @@ pub type AssignmentsType = usize; // Here we can use usize since encoding/decodi
 pub type MetadataStructure = BTreeMap<FieldType, Occurences<u16>>;
 pub type SealsStructure = BTreeMap<AssignmentsType, Occurences<u16>>;
 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
@@ -28,7 +28,7 @@ pub struct GenesisSchema {
     pub abi: GenesisAbi,
 }
 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,

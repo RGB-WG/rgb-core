@@ -18,7 +18,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 
 use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
 pub struct StateSchema {
     pub format: StateFormat,
@@ -37,7 +37,7 @@ pub enum StateType {
     CustomData = 2,
 }
 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display)]
 #[non_exhaustive]
 #[display_from(Debug)]
 pub enum StateFormat {
@@ -46,7 +46,7 @@ pub enum StateFormat {
     CustomData(DataFormat),
 }
 
-#[derive(Clone, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(Clone, PartialEq, Debug, Display, ToPrimitive, FromPrimitive)]
 #[display_from(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
@@ -61,7 +61,7 @@ pub enum DiscreteFiniteFieldFormat {
     Unsigned64bit,
 }
 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display)]
 #[display_from(Debug)]
 #[non_exhaustive]
 pub enum DataFormat {
@@ -262,9 +262,11 @@ mod strict_encoding {
                     if min != 0 || max != core::u64::MAX as u128 {
                         Err(Error::UnsupportedDataStructure(format!(
                             "confidential amounts can be only of u64 type; \
-                             allowed values should cover full u64 value range, \
-                             however {}..{} were met",
-                            min, max
+                             allowed values should cover full u64 value range \
+                             0..{}, however {}..{} was met",
+                            core::u64::MAX,
+                            min,
+                            max
                         )))?
                     }
                     Ok(DiscreteFiniteFieldFormat::Unsigned64bit)
@@ -360,7 +362,7 @@ mod strict_encoding {
                                     "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
                                     (core::u8::MIN as u128)..(core::u8::MAX as u128), *max as u128))?;
                             let (min, max) =
-                                get_bounds(min..max, core::u8::MIN..=core::u8::MAX, true)?;
+                                get_bounds(min..=max, core::u8::MIN..=core::u8::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit16 => {
@@ -373,7 +375,7 @@ mod strict_encoding {
                                         "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
                                         (core::u16::MIN as u128)..(core::u16::MAX as u128), *max as u128))?;
                             let (min, max) =
-                                get_bounds(min..max, core::u16::MIN..=core::u16::MAX, true)?;
+                                get_bounds(min..=max, core::u16::MIN..=core::u16::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit32 => {
@@ -386,7 +388,7 @@ mod strict_encoding {
                                         "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
                                         (core::u32::MIN as u128)..(core::u32::MAX as u128), *max as u128))?;
                             let (min, max) =
-                                get_bounds(min..max, core::u32::MIN..=core::u32::MAX, true)?;
+                                get_bounds(min..=max, core::u32::MIN..=core::u32::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit64 => {
@@ -399,7 +401,7 @@ mod strict_encoding {
                                         "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
                                         (core::u64::MIN as u128)..(core::u64::MAX as u128), *max as u128))?;
                             let (min, max) =
-                                get_bounds(min..max, core::u64::MIN..=core::u64::MAX, true)?;
+                                get_bounds(min..=max, core::u64::MIN..=core::u64::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                     }
@@ -420,7 +422,7 @@ mod strict_encoding {
                                     "Maximum value for Integer data type are outside of bit dimension".to_string(),
                                     (core::i8::MIN as u128)..(core::i8::MAX as u128), *max as u128))?;
                             let (min, max) =
-                                get_bounds(min..max, core::i8::MIN..=core::i8::MAX, true)?;
+                                get_bounds(min..=max, core::i8::MIN..=core::i8::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit16 => {
@@ -433,7 +435,7 @@ mod strict_encoding {
                                     "Maximum value for Integer data type are outside of bit dimension".to_string(),
                                     (core::i16::MIN as u128)..(core::i16::MAX as u128), *max as u128))?;
                             let (min, max) =
-                                get_bounds(min..max, core::i16::MIN..=core::i16::MAX, true)?;
+                                get_bounds(min..=max, core::i16::MIN..=core::i16::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit32 => {
@@ -446,7 +448,7 @@ mod strict_encoding {
                                     "Maximum value for Integer data type are outside of bit dimension".to_string(),
                                     (core::i32::MIN as u128)..(core::i32::MAX as u128), *max as u128))?;
                             let (min, max) =
-                                get_bounds(min..max, core::i32::MIN..=core::i32::MAX, true)?;
+                                get_bounds(min..=max, core::i32::MIN..=core::i32::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit64 => {
@@ -459,7 +461,7 @@ mod strict_encoding {
                                     "Maximum value for Integer data type are outside of bit dimension".to_string(),
                                     (core::i64::MIN as u128)..(core::i64::MAX as u128), *max as u128))?;
                             let (min, max) =
-                                get_bounds(min..max, core::i64::MIN..=core::i64::MAX, true)?;
+                                get_bounds(min..=max, core::i64::MIN..=core::i64::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                     }
@@ -474,12 +476,12 @@ mod strict_encoding {
                             let min = *min as f32;
                             let max = *max as f32;
                             let (min, max) =
-                                get_bounds(min..max, core::f32::MIN..=core::f32::MAX, true)?;
+                                get_bounds(min..=max, core::f32::MIN..=core::f32::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit64 => {
                             let (min, max) =
-                                get_bounds(min..max, core::f64::MIN..=core::f64::MAX, true)?;
+                                get_bounds(min..=max, core::f64::MIN..=core::f64::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                         unsupported_bits => Err(Error::ValueOutOfRange(

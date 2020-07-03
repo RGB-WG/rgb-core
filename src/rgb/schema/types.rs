@@ -282,14 +282,15 @@ mod strict_encoding {
             impl StrictDecode for Occurences<$type> {
                 type Error = Error;
 
+                #[allow(unused_comparisons)]
                 fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
                     let value = u8::strict_decode(&mut d)?;
                     let max: u64 = u64::strict_decode(&mut d)?;
                     let max: Option<$type> = match max {
-                        val if val > 0 && val < ::std::$type::MAX.into() => {
+                        val if val >= 0 && val < ::std::$type::MAX.into() => {
                             Ok(Some($type::try_from(max).expect("Can't fail")))
                         }
-                        val if val == ::std::$type::MAX as u64 => Ok(None),
+                        val if val as u128 == ::std::$type::MAX as u128 => Ok(None),
                         invalid => Err(Error::ValueOutOfRange(
                             stringify!($type).to_string(),
                             0..(::std::$type::MAX as u128),
@@ -302,7 +303,7 @@ mod strict_encoding {
                         0xFEu8 => Self::NoneOrUpTo(max),
                         0xFFu8 => Self::OnceOrUpTo(max),
                         _ => panic!(
-                            "New occurence types can't appear w/o this library to be aware of"
+                            "New occurrence types can't appear w/o this library to be aware of"
                         ),
                     })
                 }
@@ -326,13 +327,13 @@ mod test {
         occurence.check(1u32).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurencesError { expected: Once, found: 0 }")]
+    #[should_panic(expected = "OccurrencesError { min: 1, max: 1, found: 0 }")]
     fn test_once_check_count_fail_zero() {
         let occurence: Occurences<u32> = Occurences::Once;
         occurence.check(0u32).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurencesError { expected: Once, found: 2 }")]
+    #[should_panic(expected = "OccurrencesError { min: 1, max: 1, found: 2 }")]
     fn test_once_check_count_fail_two() {
         let occurence: Occurences<u32> = Occurences::Once;
         occurence.check(2u32).unwrap();
@@ -349,7 +350,7 @@ mod test {
         occurence.check(0u32).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurencesError { expected: NoneOrOnce, found: 2 }")]
+    #[should_panic(expected = "OccurrencesError { min: 0, max: 1, found: 2 }")]
     fn test_none_or_once_check_count_fail_two() {
         let occurence: Occurences<u32> = Occurences::NoneOrOnce;
         occurence.check(2u32).unwrap();
@@ -366,7 +367,7 @@ mod test {
         occurence.check(u32::MAX).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { expected: OnceOrUpTo(None), found: 0 }")]
+    #[should_panic(expected = "OccurrencesError { min: 1, max: 4294967295, found: 0 }")]
     fn test_once_or_up_to_none_fail_zero() {
         let occurence: Occurences<u32> = Occurences::OnceOrUpTo(None);
         occurence.check(0u32).unwrap();
@@ -377,13 +378,13 @@ mod test {
         occurence.check(42u32).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { expected: OnceOrUpTo(Some(42)), found: 43 }")]
+    #[should_panic(expected = "OccurrencesError { min: 1, max: 42, found: 43 }")]
     fn test_once_or_up_to_42_large() {
         let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
         occurence.check(43u32).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { expected: OnceOrUpTo(Some(42)), found: 0 }")]
+    #[should_panic(expected = "OccurrencesError { min: 1, max: 42, found: 0 }")]
     fn test_once_or_up_to_42_fail_zero() {
         let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
         occurence.check(0u32).unwrap();
@@ -410,7 +411,7 @@ mod test {
         occurence.check(42u32).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurencesError { expected: NoneOrUpTo(Some(42)), found: 43 }")]
+    #[should_panic(expected = "OccurrencesError { min: 0, max: 42, found: 43 }")]
     fn test_none_or_up_to_42_large() {
         let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
         occurence.check(43u32).unwrap();

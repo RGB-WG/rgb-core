@@ -36,7 +36,7 @@ tagged_hash!(
     doc = "Commitment-based schema identifier used for committing to the schema type"
 );
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Schema {
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateSchema>,
@@ -487,5 +487,155 @@ mod _validation {
             }
         }
         ancestors_assignments
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::rgb::schema::*;
+    use crate::strict_encoding::*;
+
+    fn schema() -> Schema {
+        const FIELD_TICKER: usize = 0;
+        const FIELD_NAME: usize = 1;
+        const FIELD_DESCRIPTION: usize = 2;
+        const FIELD_TOTAL_SUPPLY: usize = 3;
+        const FIELD_ISSUED_SUPPLY: usize = 4;
+        const FIELD_DUST_LIMIT: usize = 5;
+        const FIELD_PRECISION: usize = 6;
+        const FIELD_PRUNE_PROOF: usize = 7;
+        const FIELD_TIMESTAMP: usize = 8;
+
+        const ASSIGNMENT_ISSUE: usize = 0;
+        const ASSIGNMENT_ASSETS: usize = 1;
+        const ASSIGNMENT_PRUNE: usize = 2;
+
+        const TRANSITION_ISSUE: usize = 0;
+        const TRANSITION_TRANSFER: usize = 1;
+        const TRANSITION_PRUNE: usize = 2;
+
+        Schema {
+            field_types: bmap! {
+                FIELD_TICKER => DataFormat::String(16),
+                FIELD_NAME => DataFormat::String(256),
+                FIELD_DESCRIPTION => DataFormat::String(1024),
+                FIELD_TOTAL_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
+                FIELD_PRECISION => DataFormat::Unsigned(Bits::Bit64, 0, 18u128),
+                FIELD_ISSUED_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
+                FIELD_DUST_LIMIT => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
+                FIELD_PRUNE_PROOF => DataFormat::Bytes(core::u16::MAX),
+                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
+            },
+            assignment_types: bmap! {
+                ASSIGNMENT_ISSUE => StateSchema {
+                    format: StateFormat::Declarative,
+                    abi: bmap! {
+                        AssignmentAction::Validate => script::Procedure::Standard(script::StandardProcedure::IssueControl)
+                    }
+                },
+                ASSIGNMENT_ASSETS => StateSchema {
+                    format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
+                    abi: bmap! {
+                        AssignmentAction::Validate => script::Procedure::Standard(script::StandardProcedure::ConfidentialAmount)
+                    }
+                },
+                ASSIGNMENT_PRUNE => StateSchema {
+                    format: StateFormat::Declarative,
+                    abi: bmap! {
+                        AssignmentAction::Validate => script::Procedure::Standard(script::StandardProcedure::Prunning)
+                    }
+                }
+            },
+            genesis: GenesisSchema {
+                metadata: bmap! {
+                    FIELD_TICKER => Occurences::Once,
+                    FIELD_NAME => Occurences::Once,
+                    FIELD_DESCRIPTION => Occurences::NoneOrOnce,
+                    FIELD_TOTAL_SUPPLY => Occurences::Once,
+                    FIELD_ISSUED_SUPPLY => Occurences::Once,
+                    FIELD_DUST_LIMIT => Occurences::NoneOrOnce,
+                    FIELD_PRECISION => Occurences::Once,
+                    FIELD_TIMESTAMP => Occurences::Once
+                },
+                defines: bmap! {
+                    ASSIGNMENT_ISSUE => Occurences::NoneOrOnce,
+                    ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None),
+                    ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None)
+                },
+                abi: bmap! {},
+            },
+            transitions: bmap! {
+                TRANSITION_ISSUE => TransitionSchema {
+                    metadata: bmap! {
+                        FIELD_ISSUED_SUPPLY => Occurences::Once
+                    },
+                    closes: bmap! {
+                        ASSIGNMENT_ISSUE => Occurences::Once
+                    },
+                    defines: bmap! {
+                        ASSIGNMENT_ISSUE => Occurences::NoneOrOnce,
+                        ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                    },
+                abi: bmap! {}
+                },
+                TRANSITION_TRANSFER => TransitionSchema {
+                    metadata: bmap! {},
+                    closes: bmap! {
+                        ASSIGNMENT_ASSETS => Occurences::OnceOrUpTo(None)
+                    },
+                    defines: bmap! {
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                    },
+                    abi: bmap! {}
+                },
+                TRANSITION_PRUNE => TransitionSchema {
+                    metadata: bmap! {
+                        FIELD_PRUNE_PROOF => Occurences::NoneOrUpTo(None)
+                    },
+                    closes: bmap! {
+                        ASSIGNMENT_PRUNE => Occurences::OnceOrUpTo(None),
+                        ASSIGNMENT_ASSETS => Occurences::OnceOrUpTo(None)
+                    },
+                    defines: bmap! {
+                        ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                    },
+                    abi: bmap! {}
+                }
+            },
+        }
+    }
+
+    #[test]
+    fn test_rgb20_encoding_decoding() {
+        let schema = schema();
+        let encoded = strict_encode(&schema).unwrap();
+        let encoded_standard: Vec<u8> = vec![
+            9, 0, 0, 0, 4, 16, 0, 1, 0, 4, 0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0,
+            255, 255, 255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255,
+            255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255,
+            255, 255, 255, 255, 6, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0, 0, 7, 0,
+            5, 255, 255, 8, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
+            255, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255,
+            255, 255, 255, 255, 255, 255, 1, 0, 0, 255, 1, 2, 0, 0, 1, 0, 0, 255, 3, 8, 0, 0, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 6, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255,
+            255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+            254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            0, 0, 0, 1, 0, 1, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 7, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0,
+            255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0,
+            254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0,
+        ];
+        assert_eq!(encoded, encoded_standard);
+
+        let decoded = Schema::strict_decode(&encoded[..]).unwrap();
+        assert_eq!(decoded, schema);
     }
 }
