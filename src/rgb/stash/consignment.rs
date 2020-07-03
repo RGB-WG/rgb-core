@@ -11,110 +11,277 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::io;
 
+use bitcoin::Txid;
+
 use crate::bp;
-use crate::rgb::{Anchor, Genesis, Node, Transition};
+use crate::rgb::{seal, validation, Anchor, Genesis, Node, NodeId, Schema, Transition};
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+
+pub type ConsignmentEndpoints = Vec<(NodeId, bp::blind::OutpointHash)>;
+pub type ConsignmentData = Vec<(Anchor, Transition)>;
+
+pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
 
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub struct Consignment {
+    version: u16,
     pub genesis: Genesis,
-    pub endpoints: Vec<bp::blind::OutpointHash>,
-    pub data: Vec<(Anchor, Transition)>,
-}
-
-#[derive(Clone, Debug, Display, Default)]
-#[display_from(Debug)]
-pub struct ValidationResult {
-    pub errors: Vec<ValidationError>,
-    pub warnings: Vec<ValidationWarning>,
-}
-
-impl ValidationResult {
-    pub fn is_valid(&self) -> bool {
-        return self.errors.is_empty();
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-#[display_from(Debug)]
-pub enum ValidationError {}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-#[display_from(Debug)]
-pub enum ValidationWarning {}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
-#[display_from(Debug)]
-pub enum TxResolverError {}
-
-pub trait TxResolver {
-    fn tx_by_id(&mut self, txid: &bitcoin::Txid) -> Result<Option<Transition>, TxResolverError>;
-    fn tx_by_ubid(&mut self, ubid: &bp::ShortId) -> Result<Option<Transition>, TxResolverError>;
-    fn spending_tx(
-        &mut self,
-        outpoint: &bitcoin::OutPoint,
-    ) -> Result<Option<Transition>, TxResolverError>;
-    fn tx_fee(&mut self, txid: &bitcoin::Txid) -> Result<Option<bitcoin::Amount>, TxResolverError>;
+    pub endpoints: ConsignmentEndpoints,
+    pub data: ConsignmentData,
 }
 
 impl Consignment {
-    pub fn validate(&self, _resolver: &mut impl TxResolver) -> ValidationResult {
-        let result = ValidationResult::default();
-        let mut nodes_queue: VecDeque<&dyn Node> = VecDeque::new();
+    pub fn with(
+        genesis: Genesis,
+        endpoints: ConsignmentEndpoints,
+        data: ConsignmentData,
+    ) -> Consignment {
+        Self {
+            version: RGB_CONSIGNMENT_VERSION,
+            genesis,
+            endpoints,
+            data,
+        }
+    }
 
-        nodes_queue.push_back(&self.genesis);
+    #[inline]
+    pub fn txids(&self) -> BTreeSet<Txid> {
+        self.data.iter().map(|(anchor, _)| anchor.txid).collect()
+    }
 
-        // Take the next node from the buffer of nodes containing all inputs
-        while let Some(node) = nodes_queue.pop_front() {
-            // Verify node against the schema
+    #[inline]
+    pub fn node_ids(&self) -> BTreeSet<NodeId> {
+        let mut set: BTreeSet<NodeId> = self.data.iter().map(|(_, node)| node.node_id()).collect();
+        set.insert(self.genesis.node_id());
+        set
+    }
 
-            node.assignment_types().iter().for_each(|at| {
-                node.assignments_by_type(*at).into_iter().for_each(|a| {
-                    a.known_seals().into_iter().for_each(|_seal| {
-                        // Get the seal-spending tx
+    // TODO: Refactor into multiple subroutines
+    // TODO: Move part of logic into single-use-seals and bitcoin seals
+    pub fn validate(
+        &self,
+        schema: &Schema,
+        resolver: validation::TxResolver,
+    ) -> validation::Status {
+        let mut status = validation::Status::default();
 
-                        // Get the anchor
-
-                        // Get the child transition
-
-                        // Extract new state and cache it for the verification
-
-                        // Verify the fact of anchor/tx commitment (if not;
-                        // save the verification fact for later)
-
-                        // Add this node as an input for the next transition
-
-                        // If the transition has its all inputs covered
-                        // add it to the buffer. Completeness can be determined
-                        // using index of all seals
-                    });
-                });
-                // Verify state evolution consistency with the script
-            });
+        let genesis_id = self.genesis.node_id();
+        let contract_id = self.genesis.contract_id();
+        let schema_id = self.genesis.schema_id();
+        if schema.schema_id() != schema_id {
+            status.add_failure(validation::Failure::SchemaUnknown(schema_id));
+            return status;
         }
 
-        // Check that all nodes and anchors are verified
+        // Create indexes
+        let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
+        let mut anchor_index = BTreeMap::<NodeId, &Anchor>::new();
+        for (anchor, transition) in &self.data {
+            let node_id = transition.node_id();
+            node_index.insert(node_id, transition);
+            anchor_index.insert(node_id, anchor);
+        }
 
-        result
+        // Collect all endpoint transitions
+        let mut end_transitions = Vec::<&dyn Node>::new();
+        for (node_id, outpoint_hash) in &self.endpoints {
+            match node_index.get(node_id) {
+                Some(node) => {
+                    if node.all_seal_definitions().contains(&outpoint_hash) {
+                        if end_transitions
+                            .iter()
+                            .filter(|n| n.node_id() == *node_id)
+                            .collect::<Vec<_>>()
+                            .len()
+                            > 0
+                        {
+                            status.add_warning(validation::Warning::EndpointDuplication(
+                                *node_id,
+                                *outpoint_hash,
+                            ));
+                        } else {
+                            end_transitions.push(*node);
+                        }
+                    } else {
+                        // We generate just a warning here because it's up to a user
+                        // to decide whether to accept consignment with wrong
+                        // endpoint list
+                        status.add_warning(validation::Warning::EndpointTransitionSealNotFound(
+                            *node_id,
+                            *outpoint_hash,
+                        ));
+                    }
+                }
+                None => {
+                    // We generate just a warning here because it's up to a user
+                    // to decide whether to accept consignment with wrong
+                    // endpoint list
+                    status.add_warning(validation::Warning::EndpointTransitionNotFound(*node_id));
+                }
+            }
+        }
+
+        let mut validation_index = BTreeSet::<NodeId>::new();
+        // Validate genesis
+        status += schema.validate(&node_index, &self.genesis, &bmap![]);
+        for node in end_transitions {
+            let mut queue: VecDeque<&dyn Node> = VecDeque::new();
+
+            queue.push_back(node);
+
+            while let Some(transition) = queue.pop_front() {
+                let node_id = node.node_id();
+
+                // Verify node against the schema
+                status += schema.validate(&node_index, transition, &node.ancestors());
+                validation_index.insert(node_id);
+
+                if let Some(anchor) = anchor_index.get(&node_id).cloned() {
+                    // Check that transition is committed into the anchor
+                    if !anchor.validate(&contract_id, &node_id) {
+                        status.add_failure(validation::Failure::TransitionNotInAnchor(
+                            node_id,
+                            anchor.anchor_id(),
+                        ));
+                    }
+
+                    // Check that the anchor is committed into a transaction spending
+                    // all of the transition inputs
+                    match resolver(&anchor.txid) {
+                        Err(_) => {
+                            status.unresolved_txids.push(anchor.txid);
+                        }
+                        Ok(None) => {
+                            status.add_failure(validation::Failure::WitnessTransactionMissed(
+                                anchor.txid,
+                            ));
+                        }
+                        Ok(Some((tx, fee))) => {
+                            // Checking anchor deterministic bitcoin commitment
+                            if !anchor.verify(&contract_id, &tx, fee) {
+                                status.add_failure(validation::Failure::WitnessNoCommitment(
+                                    node_id,
+                                    anchor.anchor_id(),
+                                    anchor.txid,
+                                ));
+                            }
+
+                            // Checking that bitcoin transaction closes the seals
+                            // defined by transition ancestors
+                            for (id, assignments) in node.ancestors() {
+                                match node_index.get(id).cloned() {
+                                    None => {
+                                        status.add_failure(validation::Failure::TransitionAbsent(
+                                            *id,
+                                        ));
+                                    }
+                                    Some(ancestor_node) => {
+                                        for (assignment_type, indexes) in assignments {
+                                            match ancestor_node
+                                                .assignments_by_type(*assignment_type)
+                                            {
+                                                None => {
+                                                    status.add_failure(
+                                                        validation::Failure::TransitionAncestorWrongSealType {
+                                                            node_id,
+                                                            ancestor_id: *id,
+                                                            assignment_type: *assignment_type,
+                                                        }
+                                                    );
+                                                }
+                                                Some(variant) => {
+                                                    for index in indexes {
+                                                        match (variant.seal(*index), anchor_index.get(id).cloned()) {
+                                                            (None, _) => {
+                                                                status.add_failure(
+                                                                    validation::Failure::TransitionAncestorWrongSeal {
+                                                                        node_id,
+                                                                        ancestor_id: *id,
+                                                                        assignment_type: *assignment_type,
+                                                                        seal_index: *index
+                                                                    }
+                                                                );
+                                                                None
+                                                            }
+                                                            (Some(seal::Revealed::TxOutpoint(outpoint)), None) => {
+                                                                // We are at genesis, so the outpoint must contain tx
+                                                                Some(bitcoin::OutPoint::from(outpoint.clone()))
+                                                            }
+                                                            (Some(_), None) => {
+                                                                // This can't happen, since if we have a node in the index
+                                                                // and the node is not genesis, we always have an anchor
+                                                                unreachable!()
+                                                            }
+                                                            (Some(seal), Some(anchor)) => {
+                                                                Some(bitcoin::OutPoint::from(seal.outpoint_reveal(anchor.txid)))
+                                                            }
+                                                        }.map(|outpoint| {
+                                                            if tx.input.iter().find(|txin| txin.previous_output == outpoint).is_none() {
+                                                                status.add_failure(
+                                                                    validation::Failure::TransitionAncestorIsNotTxInput {
+                                                                        node_id,
+                                                                        ancestor_id: *id,
+                                                                        assignment_type: *assignment_type,
+                                                                        seal_index: *index,
+                                                                        outpoint
+                                                                    }
+                                                                );
+                                                            }
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if node_id != genesis_id {
+                    status.add_failure(validation::Failure::TransitionNotAnchored(node_id));
+                }
+
+                let ancestors: Vec<&dyn Node> = node
+                    .ancestors()
+                    .into_iter()
+                    .filter_map(|(id, _)| {
+                        node_index.get(id).cloned().or_else(|| {
+                            status.add_failure(validation::Failure::TransitionAbsent(*id));
+                            None
+                        })
+                    })
+                    .collect();
+                queue.extend(ancestors);
+            }
+        }
+
+        // Generate warning if some of the transitions within the consignment
+        // were excessive (i.e. not part of validation_index)
+        for node_id in validation_index.difference(&self.node_ids()) {
+            status.add_warning(validation::Warning::ExcessiveTransition(*node_id));
+        }
+
+        status
     }
 }
 
 impl StrictEncode for Consignment {
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.genesis, self.endpoints, self.data))
+        Ok(strict_encode_list!(e; self.version, self.genesis, self.endpoints, self.data))
     }
 }
 
 impl StrictDecode for Consignment {
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
         Ok(Self {
+            version: u16::strict_decode(&mut d)?,
             genesis: Genesis::strict_decode(&mut d)?,
-            endpoints: Vec::<bp::blind::OutpointHash>::strict_decode(&mut d)?,
-            data: Vec::<(Anchor, Transition)>::strict_decode(&mut d)?,
+            endpoints: ConsignmentEndpoints::strict_decode(&mut d)?,
+            data: ConsignmentData::strict_decode(&mut d)?,
         })
     }
 }

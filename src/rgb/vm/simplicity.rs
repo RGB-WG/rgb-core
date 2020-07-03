@@ -11,10 +11,17 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-mod embedded;
-mod simplicity;
-mod vm;
+use core::any::Any;
 
-pub use embedded::Embedded;
-pub use simplicity::Simplicity;
-pub use vm::VirtualMachine;
+use super::VirtualMachine;
+
+#[derive(Debug)]
+pub struct Simplicity {
+    stack: Vec<Box<dyn Any>>,
+}
+
+impl VirtualMachine for Simplicity {
+    fn stack(&mut self) -> &mut Vec<Box<dyn Any>> {
+        &mut self.stack
+    }
+}

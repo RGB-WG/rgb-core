@@ -11,9 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::BTreeSet;
+use amplify::AsAny;
+use core::fmt::Debug;
+use std::collections::{BTreeMap, BTreeSet};
 
-use super::{super::schema, amount, data, seal, Amount, AutoConceal, SealDefinition};
+use super::{super::schema, amount, data, seal, Amount, AutoConceal, NodeId, SealDefinition};
 use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
@@ -25,12 +27,24 @@ lazy_static! {
     static ref SECP256K1_ZKP: Secp256k1zkp = Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
 }
 
+pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
+
+impl CommitEncodeWithStrategy for Assignments {
+    type Strategy = commit_strategy::Merklization;
+}
+
+pub type Ancestors = BTreeMap<NodeId, BTreeMap<schema::AssignmentsType, Vec<u16>>>;
+
+impl CommitEncodeWithStrategy for Ancestors {
+    type Strategy = commit_strategy::Merklization;
+}
+
 #[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
-    Void(BTreeSet<Assignment<VoidStrategy>>),
-    Homomorphic(BTreeSet<Assignment<HomomorphStrategy>>),
-    Hashed(BTreeSet<Assignment<HashStrategy>>),
+    Declarative(BTreeSet<Assignment<DeclarativeStrategy>>),
+    DiscreteFiniteField(BTreeSet<Assignment<PedersenStrategy>>),
+    CustomData(BTreeSet<Assignment<HashStrategy>>),
 }
 
 impl AssignmentsVariant {
@@ -115,38 +129,184 @@ impl AssignmentsVariant {
             )
             .collect();
 
-        Some(Self::Homomorphic(set))
+        Some(Self::DiscreteFiniteField(set))
     }
 
-    pub fn known_seals(&self) -> Vec<&SealDefinition> {
+    #[inline]
+    pub fn is_declarative(&self) -> bool {
         match self {
-            AssignmentsVariant::Void(s) => s
+            AssignmentsVariant::Declarative(_) => true,
+            _ => false,
+        }
+    }
+
+    #[inline]
+    pub fn is_field(&self) -> bool {
+        match self {
+            AssignmentsVariant::DiscreteFiniteField(_) => true,
+            _ => false,
+        }
+    }
+
+    #[inline]
+    pub fn is_data(&self) -> bool {
+        match self {
+            AssignmentsVariant::CustomData(_) => true,
+            _ => false,
+        }
+    }
+
+    #[inline]
+    pub fn declarative(&self) -> Option<&BTreeSet<Assignment<DeclarativeStrategy>>> {
+        match self {
+            AssignmentsVariant::Declarative(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn declarative_mut(&mut self) -> Option<&mut BTreeSet<Assignment<DeclarativeStrategy>>> {
+        match self {
+            AssignmentsVariant::Declarative(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn field(&self) -> Option<&BTreeSet<Assignment<PedersenStrategy>>> {
+        match self {
+            AssignmentsVariant::DiscreteFiniteField(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn field_mut(&mut self) -> Option<&mut BTreeSet<Assignment<PedersenStrategy>>> {
+        match self {
+            AssignmentsVariant::DiscreteFiniteField(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn data(&self) -> Option<&BTreeSet<Assignment<HashStrategy>>> {
+        match self {
+            AssignmentsVariant::CustomData(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn data_mut(&mut self) -> Option<&mut BTreeSet<Assignment<HashStrategy>>> {
+        match self {
+            AssignmentsVariant::CustomData(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    pub fn seal(&self, index: u16) -> Option<&seal::Revealed> {
+        match self {
+            AssignmentsVariant::Declarative(set) => set
                 .into_iter()
-                .filter_map(|a| match a {
-                    Assignment::Revealed {
-                        seal_definition, ..
-                    } => Some(seal_definition),
-                    _ => None,
-                })
-                .collect(),
-            AssignmentsVariant::Homomorphic(s) => s
+                .collect::<Vec<_>>()
+                .get(index as usize)
+                .and_then(|a| a.seal_definition()),
+            AssignmentsVariant::DiscreteFiniteField(set) => set
                 .into_iter()
-                .filter_map(|a| match a {
-                    Assignment::Revealed {
-                        seal_definition, ..
-                    } => Some(seal_definition),
-                    _ => None,
-                })
-                .collect(),
-            AssignmentsVariant::Hashed(s) => s
+                .collect::<Vec<_>>()
+                .get(index as usize)
+                .and_then(|a| a.seal_definition()),
+            AssignmentsVariant::CustomData(set) => set
                 .into_iter()
-                .filter_map(|a| match a {
-                    Assignment::Revealed {
-                        seal_definition, ..
-                    } => Some(seal_definition),
-                    _ => None,
-                })
+                .collect::<Vec<_>>()
+                .get(index as usize)
+                .and_then(|a| a.seal_definition()),
+        }
+    }
+
+    pub fn known_seals(&self) -> Vec<&seal::Revealed> {
+        match self {
+            AssignmentsVariant::Declarative(s) => s
+                .into_iter()
+                .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
+            AssignmentsVariant::DiscreteFiniteField(s) => s
+                .into_iter()
+                .filter_map(Assignment::<_>::seal_definition)
+                .collect(),
+            AssignmentsVariant::CustomData(s) => s
+                .into_iter()
+                .filter_map(Assignment::<_>::seal_definition)
+                .collect(),
+        }
+    }
+
+    pub fn all_seals(&self) -> Vec<seal::Confidential> {
+        match self {
+            AssignmentsVariant::Declarative(s) => s
+                .into_iter()
+                .map(Assignment::<_>::seal_definition_confidential)
+                .collect(),
+            AssignmentsVariant::DiscreteFiniteField(s) => s
+                .into_iter()
+                .map(Assignment::<_>::seal_definition_confidential)
+                .collect(),
+            AssignmentsVariant::CustomData(s) => s
+                .into_iter()
+                .map(Assignment::<_>::seal_definition_confidential)
+                .collect(),
+        }
+    }
+
+    pub fn known_state_homomorphic(&self) -> Vec<&amount::Revealed> {
+        match self {
+            AssignmentsVariant::Declarative(_) => vec![],
+            AssignmentsVariant::DiscreteFiniteField(s) => s
+                .into_iter()
+                .filter_map(Assignment::<_>::assigned_state)
+                .collect(),
+            AssignmentsVariant::CustomData(_) => vec![],
+        }
+    }
+
+    pub fn known_state_data(&self) -> Vec<&data::Revealed> {
+        match self {
+            AssignmentsVariant::Declarative(_) => vec![],
+            AssignmentsVariant::DiscreteFiniteField(_) => vec![],
+            AssignmentsVariant::CustomData(s) => s
+                .into_iter()
+                .filter_map(Assignment::<_>::assigned_state)
+                .collect(),
+        }
+    }
+
+    pub fn all_state_pedersen(&self) -> Vec<amount::Confidential> {
+        match self {
+            AssignmentsVariant::Declarative(_) => vec![],
+            AssignmentsVariant::DiscreteFiniteField(s) => s
+                .into_iter()
+                .map(Assignment::<_>::assigned_state_confidential)
+                .collect(),
+            AssignmentsVariant::CustomData(_) => vec![],
+        }
+    }
+
+    pub fn all_state_hashed(&self) -> Vec<data::Confidential> {
+        match self {
+            AssignmentsVariant::Declarative(_) => vec![],
+            AssignmentsVariant::DiscreteFiniteField(_) => vec![],
+            AssignmentsVariant::CustomData(s) => s
+                .into_iter()
+                .map(Assignment::<_>::assigned_state_confidential)
+                .collect(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            AssignmentsVariant::Declarative(set) => set.len(),
+            AssignmentsVariant::DiscreteFiniteField(set) => set.len(),
+            AssignmentsVariant::CustomData(set) => set.len(),
         }
     }
 }
@@ -154,9 +314,9 @@ impl AssignmentsVariant {
 impl AutoConceal for AssignmentsVariant {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
-            AssignmentsVariant::Void(data) => data as &mut dyn AutoConceal,
-            AssignmentsVariant::Homomorphic(data) => data as &mut dyn AutoConceal,
-            AssignmentsVariant::Hashed(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::Declarative(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::DiscreteFiniteField(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::CustomData(data) => data as &mut dyn AutoConceal,
         }
         .conceal_except(seals)
     }
@@ -166,21 +326,36 @@ impl CommitEncodeWithStrategy for AssignmentsVariant {
     type Strategy = commit_strategy::UsingStrict;
 }
 
-pub trait StateTypes: core::fmt::Debug {
-    type Confidential: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord + Clone;
-    type Revealed: StrictEncode + StrictDecode + core::fmt::Debug + Eq + Ord + Conceal + Clone;
+pub trait ConfidentialState:
+    StrictEncode<Error = EncodingError> + StrictDecode<Error = EncodingError> + Debug + Clone + AsAny
+{
+}
+
+pub trait RevealedState:
+    StrictEncode<Error = EncodingError>
+    + StrictDecode<Error = EncodingError>
+    + Debug
+    + Conceal
+    + Clone
+    + AsAny
+{
+}
+
+pub trait StateTypes: Debug {
+    type Confidential: ConfidentialState;
+    type Revealed: RevealedState;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
-pub struct VoidStrategy;
-impl StateTypes for VoidStrategy {
+pub struct DeclarativeStrategy;
+impl StateTypes for DeclarativeStrategy {
     type Confidential = data::Void;
     type Revealed = data::Void;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
-pub struct HomomorphStrategy;
-impl StateTypes for HomomorphStrategy {
+pub struct PedersenStrategy;
+impl StateTypes for PedersenStrategy {
     type Confidential = amount::Confidential;
     type Revealed = amount::Revealed;
 }
@@ -197,6 +372,7 @@ impl StateTypes for HashStrategy {
 pub enum Assignment<STATE>
 where
     STATE: StateTypes,
+    //    STATE: StateTypes<Confidential = <<STATE as StateTypes>::Revealed as Conceal>::Confidential>,
     EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
         + From<<STATE::Confidential as StrictDecode>::Error>
         + From<<STATE::Revealed as StrictEncode>::Error>
@@ -218,6 +394,64 @@ where
         seal_definition: seal::Revealed,
         assigned_state: STATE::Confidential,
     },
+}
+
+impl<STATE> Assignment<STATE>
+where
+    STATE: StateTypes,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+    pub fn seal_definition_confidential(&self) -> seal::Confidential {
+        match self {
+            Assignment::Revealed {
+                seal_definition, ..
+            }
+            | Assignment::ConfidentialAmount {
+                seal_definition, ..
+            } => seal_definition.conceal(),
+            Assignment::Confidential {
+                seal_definition, ..
+            }
+            | Assignment::ConfidentialSeal {
+                seal_definition, ..
+            } => *seal_definition,
+        }
+    }
+
+    pub fn seal_definition(&self) -> Option<&seal::Revealed> {
+        match self {
+            Assignment::Revealed {
+                seal_definition, ..
+            }
+            | Assignment::ConfidentialAmount {
+                seal_definition, ..
+            } => Some(seal_definition),
+            Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => None,
+        }
+    }
+
+    pub fn assigned_state_confidential(&self) -> STATE::Confidential {
+        match self {
+            Assignment::Revealed { assigned_state, .. }
+            | Assignment::ConfidentialSeal { assigned_state, .. } => {
+                assigned_state.conceal().into()
+            }
+            Assignment::Confidential { assigned_state, .. }
+            | Assignment::ConfidentialAmount { assigned_state, .. } => assigned_state.clone(),
+        }
+    }
+
+    pub fn assigned_state(&self) -> Option<&STATE::Revealed> {
+        match self {
+            Assignment::Revealed { assigned_state, .. }
+            | Assignment::ConfidentialSeal { assigned_state, .. } => Some(assigned_state),
+            Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => None,
+        }
+    }
 }
 
 impl<STATE> Conceal for Assignment<STATE>
@@ -320,14 +554,14 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(match self {
-                AssignmentsVariant::Void(tree) => {
-                    strict_encode_list!(e; schema::StateType::Void, tree)
+                AssignmentsVariant::Declarative(tree) => {
+                    strict_encode_list!(e; schema::StateType::Declarative, tree)
                 }
-                AssignmentsVariant::Homomorphic(tree) => {
-                    strict_encode_list!(e; schema::StateType::Homomorphic, EncodingTag::U64, tree)
+                AssignmentsVariant::DiscreteFiniteField(tree) => {
+                    strict_encode_list!(e; schema::StateType::DiscreteFiniteField, EncodingTag::U64, tree)
                 }
-                AssignmentsVariant::Hashed(tree) => {
-                    strict_encode_list!(e; schema::StateType::Hashed, tree)
+                AssignmentsVariant::CustomData(tree) => {
+                    strict_encode_list!(e; schema::StateType::CustomData, tree)
                 }
             })
         }
@@ -339,17 +573,20 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
-                schema::StateType::Void => AssignmentsVariant::Void(BTreeSet::strict_decode(d)?),
-                schema::StateType::Homomorphic => match EncodingTag::strict_decode(&mut d)? {
+                schema::StateType::Declarative => {
+                    AssignmentsVariant::Declarative(BTreeSet::strict_decode(d)?)
+                }
+                schema::StateType::DiscreteFiniteField => match EncodingTag::strict_decode(&mut d)?
+                {
                     EncodingTag::U64 => {
-                        AssignmentsVariant::Homomorphic(BTreeSet::strict_decode(&mut d)?)
+                        AssignmentsVariant::DiscreteFiniteField(BTreeSet::strict_decode(&mut d)?)
                     }
                     _ => Err(Error::UnsupportedDataStructure(
                         "We support only homomorphic commitments to U64 data".to_string(),
                     ))?,
                 },
-                schema::StateType::Hashed => {
-                    AssignmentsVariant::Hashed(BTreeSet::strict_decode(d)?)
+                schema::StateType::CustomData => {
+                    AssignmentsVariant::CustomData(BTreeSet::strict_decode(d)?)
                 }
             })
         }

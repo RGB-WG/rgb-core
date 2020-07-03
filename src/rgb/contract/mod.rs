@@ -13,7 +13,6 @@
 
 pub mod amount;
 mod assignments;
-mod contract;
 pub mod data;
 #[macro_use]
 mod field;
@@ -22,9 +21,11 @@ pub mod nodes;
 pub mod seal;
 
 pub use amount::Amount;
-pub use assignments::{Assignment, AssignmentsVariant};
+pub use assignments::{
+    Ancestors, Assignment, Assignments, AssignmentsVariant, ConfidentialState, DeclarativeStrategy,
+    HashStrategy, PedersenStrategy, RevealedState, StateTypes,
+};
 pub use conceal::AutoConceal;
-pub use contract::{Contract, ContractId, TransitionId};
 pub use field::{FieldData, Metadata};
-pub use nodes::{Genesis, Node, Transition};
+pub use nodes::{ContractId, Genesis, Node, NodeId, Transition};
 pub use seal::SealDefinition;

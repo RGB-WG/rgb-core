@@ -62,17 +62,11 @@ pub trait Message: AsAny {
     fn get_tlvs(&self) -> tlv::Stream;
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, AsAny)]
 #[display_from(Debug)]
 pub struct RawMessage {
     pub type_id: Type,
     pub payload: Vec<u8>,
-}
-
-impl AsAny for RawMessage {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl Message for RawMessage {

@@ -15,6 +15,7 @@ pub mod bech32;
 mod contract;
 pub mod schema;
 mod stash;
+pub mod validation;
 pub mod vm;
 
 pub mod prelude {
@@ -22,13 +23,21 @@ pub mod prelude {
     use super::*;
     pub use super::{bech32, schema, vm};
     pub use contract::{
-        amount, data, seal, Amount, Assignment, AssignmentsVariant, AutoConceal, Contract,
-        ContractId, FieldData, Genesis, Metadata, Node, SealDefinition, Transition, TransitionId,
+        amount, data, seal, Amount, Ancestors, Assignment, Assignments, AssignmentsVariant,
+        AutoConceal, ConfidentialState, ContractId, DeclarativeStrategy, FieldData, Genesis,
+        HashStrategy, Metadata, Node, NodeId, PedersenStrategy, RevealedState, SealDefinition,
+        StateTypes, Transition,
     };
-    pub use schema::{script, Schema, SchemaId, SimplicityScript};
+    pub use schema::{
+        script, AssignmentAbi, AssignmentAction, GenesisAbi, GenesisAction, Schema, SchemaId,
+        SimplicityScript, TransitionAbi, TransitionAction,
+    };
     pub use stash::{
-        Anchor, AnchorId, Consignment, Disclosure, Stash, PSBT_FEE_KEY, PSBT_PUBKEY_KEY,
+        Anchor, AnchorId, Consignment, ConsignmentData, ConsignmentEndpoints, Disclosure, Stash,
+        PSBT_FEE_KEY, PSBT_PUBKEY_KEY,
     };
+    pub use validation::Validity;
+    pub use vm::VirtualMachine;
 }
 
 pub use prelude::*;

@@ -11,18 +11,22 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-mod data;
-mod error;
 mod nodes;
 mod schema;
 pub mod script;
+mod state;
 mod types;
 
-pub use data::{DataFormat, HomomorphicFormat, StateFormat, StateType};
-pub use error::Error;
-pub use nodes::{AssignmentsType, GenesisSchema, TransitionSchema};
+pub(self) use super::vm;
+pub use nodes::{
+    AssignmentsType, GenesisSchema, MetadataStructure, SealsStructure, TransitionSchema,
+};
 pub use schema::{FieldType, Schema, SchemaId, TransitionType};
-pub use script::{Scripting, SimplicityScript};
+pub use script::{
+    AssignmentAbi, AssignmentAction, GenesisAbi, GenesisAction, SimplicityScript, TransitionAbi,
+    TransitionAction,
+};
+pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
 pub use types::{
-    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurencesError,
+    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurrencesError,
 };

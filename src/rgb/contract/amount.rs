@@ -20,7 +20,7 @@ use rand::{Rng, RngCore};
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::*;
 
-use super::data;
+use super::{data, ConfidentialState, RevealedState};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::commit_verify::CommitVerify;
 
@@ -29,7 +29,7 @@ pub type Amount = u64;
 /// Proof for Pedersen commitment: a blinding key
 pub type BlindingFactor = secp256k1zkp::key::SecretKey;
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, AsAny)]
 #[display_from(Debug)]
 pub struct Revealed {
     pub amount: Amount,
@@ -46,6 +46,8 @@ impl Revealed {
         }
     }
 }
+
+impl RevealedState for Revealed {}
 
 impl Conceal for Revealed {
     type Confidential = Confidential;
@@ -77,12 +79,14 @@ impl Ord for Revealed {
     }
 }
 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, Debug, Display, AsAny)]
 #[display_from(Debug)]
 pub struct Confidential {
     pub commitment: pedersen::Commitment,
     pub bulletproof: pedersen::RangeProof,
 }
+
+impl ConfidentialState for Confidential {}
 
 impl PartialOrd for Confidential {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
