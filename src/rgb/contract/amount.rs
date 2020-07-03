@@ -20,7 +20,7 @@ use rand::{Rng, RngCore};
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::*;
 
-use super::{data, ConfidentialState, RevealedState};
+use super::{data, ConfidentialState, RevealedState, SECP256K1_ZKP};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::commit_verify::CommitVerify;
 
@@ -39,10 +39,9 @@ pub struct Revealed {
 impl Revealed {
     pub fn with_amount<R: Rng + RngCore>(amount: Amount, rng: &mut R) -> Self {
         // TODO: Use single shared instance
-        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
         Self {
             amount,
-            blinding: BlindingFactor::new(&secp, rng),
+            blinding: BlindingFactor::new(&SECP256K1_ZKP, rng),
         }
     }
 }
@@ -127,12 +126,10 @@ impl CommitVerify<Revealed> for Confidential {
         let blinding = revealed.blinding.clone();
         let value = revealed.amount;
 
-        // TODO: Initialize only once and keep reference
-        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-        let commitment = secp
+        let commitment = SECP256K1_ZKP
             .commit(value, blinding.clone())
             .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
-        let bulletproof = secp.bullet_proof(
+        let bulletproof = SECP256K1_ZKP.bullet_proof(
             value,
             blinding.clone(),
             blinding.clone(),
@@ -153,34 +150,28 @@ impl Add<pedersen::Commitment> for Confidential {
     type Output = pedersen::Commitment;
 
     fn add(self, other: pedersen::Commitment) -> Self::Output {
-        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-
-        secp.commit_sum(vec![self.commitment, other], vec![])
+        SECP256K1_ZKP
+            .commit_sum(vec![self.commitment, other], vec![])
             .expect("Failed to add Pedersen commitments")
     }
 }
 
 impl Confidential {
     pub fn zero_pedersen_commitment() -> pedersen::Commitment {
-        // TODO: Initialize only once and keep reference
-        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-        secp.commit_value(0)
+        SECP256K1_ZKP
+            .commit_value(0)
             .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments")
     }
 
     pub fn verify_bullet_proof(&self) -> Result<pedersen::ProofRange, secp256k1zkp::Error> {
-        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-
-        secp.verify_bullet_proof(self.commitment.clone(), self.bulletproof.clone(), None)
+        SECP256K1_ZKP.verify_bullet_proof(self.commitment.clone(), self.bulletproof.clone(), None)
     }
 
     pub fn verify_commit_sum(
         positive: Vec<pedersen::Commitment>,
         negative: Vec<pedersen::Commitment>,
     ) -> bool {
-        let secp = secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-
-        secp.verify_commit_sum(positive, negative)
+        SECP256K1_ZKP.verify_commit_sum(positive, negative)
     }
 }
 

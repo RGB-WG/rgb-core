@@ -29,3 +29,9 @@ pub use conceal::AutoConceal;
 pub use field::{FieldData, Metadata};
 pub use nodes::{ContractId, Genesis, Node, NodeId, Transition};
 pub use seal::SealDefinition;
+
+use secp256k1zkp::Secp256k1 as Secp256k1zkp;
+lazy_static! {
+    /// Secp256k1zpk context object
+    pub(crate) static ref SECP256K1_ZKP: Secp256k1zkp = Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
+}

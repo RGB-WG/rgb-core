@@ -16,18 +16,14 @@ use core::fmt::Debug;
 use core::option::NoneError;
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::{super::schema, amount, data, seal, Amount, AutoConceal, NodeId, SealDefinition};
+use super::{
+    super::schema, amount, data, seal, Amount, AutoConceal, NodeId, SealDefinition, SECP256K1_ZKP,
+};
 use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
 use bitcoin_hashes::core::cmp::Ordering;
-use secp256k1zkp::Secp256k1 as Secp256k1zkp;
-
-lazy_static! {
-    /// Secp256k1zpk context object
-    static ref SECP256K1_ZKP: Secp256k1zkp = Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
-}
 
 pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
 
@@ -91,7 +87,7 @@ impl AssignmentsVariant {
             .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
         blinding_correction.neg_assign(&SECP256K1_ZKP).expect(
             "You won lottery and will live forever: the probability \
-                    of this event is less than a life of the universe",
+             of this event is less than a life of the universe",
         );
         if let Some(item) = list_ours.last_mut() {
             let blinding = &mut item.1.blinding;
