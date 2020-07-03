@@ -629,16 +629,21 @@ mod compositional_types {
 
     /// Strict encoding for a unique value collection represented by a rust
     /// `HashSet` type is performed in the same way as `Vec` encoding.
+    /// NB: Array members must are ordered with the sort operation, so type
+    /// `T` must implement `Ord` trait in such a way that it produces
+    /// deterministically-sorted result
     impl<T> StrictEncode for HashSet<T>
     where
-        T: StrictEncode + Eq + Hash + Debug,
+        T: StrictEncode + Eq + Ord + Hash + Debug,
         T::Error: From<Error>,
     {
         type Error = T::Error;
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             let len = self.len() as usize;
             let mut encoded = len.strict_encode(&mut e)?;
-            for item in self {
+            let mut vec: Vec<&T> = self.iter().collect();
+            vec.sort();
+            for item in vec {
                 encoded += item.strict_encode(&mut e)?;
             }
             Ok(encoded)
@@ -651,7 +656,7 @@ mod compositional_types {
     /// returned.
     impl<T> StrictDecode for HashSet<T>
     where
-        T: StrictDecode + Eq + Hash + Debug,
+        T: StrictDecode + Eq + Ord + Hash + Debug,
         T::Error: From<Error>,
     {
         type Error = T::Error;
@@ -672,16 +677,21 @@ mod compositional_types {
 
     /// Strict encoding for a unique value collection represented by a rust
     /// `BTreeSet` type is performed in the same way as `Vec` encoding.
+    /// NB: Array members must are ordered with the sort operation, so type
+    /// `T` must implement `Ord` trait in such a way that it produces
+    /// deterministically-sorted result
     impl<T> StrictEncode for BTreeSet<T>
     where
-        T: StrictEncode + Eq + Debug,
+        T: StrictEncode + Eq + Ord + Debug,
         T::Error: From<Error>,
     {
         type Error = T::Error;
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             let len = self.len() as usize;
             let mut encoded = len.strict_encode(&mut e)?;
-            for item in self {
+            let mut vec: Vec<&T> = self.iter().collect();
+            vec.sort();
+            for item in vec {
                 encoded += item.strict_encode(&mut e)?;
             }
             Ok(encoded)
