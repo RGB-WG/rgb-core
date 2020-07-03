@@ -62,16 +62,31 @@ impl Consignment {
 
     // TODO: Refactor into multiple subroutines
     // TODO: Move part of logic into single-use-seals and bitcoin seals
+    /// Validation procedure takes a schema object, resolver function
+    /// returning transaction and its fee for a given transaction id, and
+    /// returns a validation object listing all detected falires, warnings and
+    /// additional information.
+    ///
+    /// When a failure detected, it not stopped; the failure is is logged into
+    /// the status object, but the validation continues for the rest of the
+    /// consignment data. This can help it debugging and detecting all problems
+    /// with the consignment.
     pub fn validate(
         &self,
         schema: &Schema,
         resolver: validation::TxResolver,
     ) -> validation::Status {
+        // We use validation status object to store all detected failures and
+        // warnings
         let mut status = validation::Status::default();
 
+        // Frequently used computation-heavy data
         let genesis_id = self.genesis.node_id();
         let contract_id = self.genesis.contract_id();
         let schema_id = self.genesis.schema_id();
+
+        // [VALIDATION]: Making sure that we were supplied with the schema
+        //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != schema_id {
             status.add_failure(validation::Failure::SchemaUnknown(schema_id));
             return status;
@@ -125,9 +140,12 @@ impl Consignment {
             }
         }
 
-        let mut validation_index = BTreeSet::<NodeId>::new();
-        // Validate genesis
+        // [VALIDATION]: Validate genesis
         status += schema.validate(&node_index, &self.genesis, &bmap![]);
+
+        // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
+        //               up to genesis
+        let mut validation_index = BTreeSet::<NodeId>::new();
         for node in end_transitions {
             let mut queue: VecDeque<&dyn Node> = VecDeque::new();
 
@@ -136,12 +154,12 @@ impl Consignment {
             while let Some(transition) = queue.pop_front() {
                 let node_id = node.node_id();
 
-                // Verify node against the schema
+                // [VALIDATION]: Verify node against the schema
                 status += schema.validate(&node_index, transition, &node.ancestors());
                 validation_index.insert(node_id);
 
                 if let Some(anchor) = anchor_index.get(&node_id).cloned() {
-                    // Check that transition is committed into the anchor
+                    // [VALIDATION]: Check that transition is committed into the anchor
                     if !anchor.validate(&contract_id, &node_id) {
                         status.add_failure(validation::Failure::TransitionNotInAnchor(
                             node_id,
@@ -161,7 +179,7 @@ impl Consignment {
                             ));
                         }
                         Ok(Some((witness_tx, fee))) => {
-                            // Checking anchor deterministic bitcoin commitment
+                            // [VALIDATION]: Checking anchor deterministic bitcoin commitment
                             if !anchor.verify(&contract_id, &witness_tx, fee) {
                                 status.add_failure(validation::Failure::WitnessNoCommitment(
                                     node_id,
