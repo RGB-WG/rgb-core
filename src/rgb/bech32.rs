@@ -33,14 +33,14 @@ pub enum Bech32 {
 
 impl Bech32 {
     pub const HRP: &'static str = "rgb";
-    pub const HRP_OUTPOINT: &'static str = "outpoint";
-    pub const HRP_ID: &'static str = "rgb:id";
-    pub const HRP_SCHEMA: &'static str = "rgb:schema";
-    pub const HRP_SCHEMA_ID: &'static str = "rgb:schema-id";
-    pub const HRP_GENESIS: &'static str = "rgb:genesis";
-    pub const HRP_TRANSITION: &'static str = "rgb:transition";
-    pub const HRP_ANCHOR: &'static str = "rgb:anchor";
-    pub const HRP_DISCLOSURE: &'static str = "rgb:disclose";
+    pub const HRP_OUTPOINT: &'static str = "txo";
+    pub const HRP_ID: &'static str = "rgb";
+    pub const HRP_SCHEMA: &'static str = "schema_data";
+    pub const HRP_SCHEMA_ID: &'static str = "schema";
+    pub const HRP_GENESIS: &'static str = "genesis";
+    pub const HRP_TRANSITION: &'static str = "rgb_ts";
+    pub const HRP_ANCHOR: &'static str = "rgb_anc";
+    pub const HRP_DISCLOSURE: &'static str = "rgb_disclosure";
 }
 
 pub trait ToBech32 {
