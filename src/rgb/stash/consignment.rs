@@ -160,9 +160,9 @@ impl Consignment {
                                 anchor.txid,
                             ));
                         }
-                        Ok(Some((tx, fee))) => {
+                        Ok(Some((witness_tx, fee))) => {
                             // Checking anchor deterministic bitcoin commitment
-                            if !anchor.verify(&contract_id, &tx, fee) {
+                            if !anchor.verify(&contract_id, &witness_tx, fee) {
                                 status.add_failure(validation::Failure::WitnessNoCommitment(
                                     node_id,
                                     anchor.anchor_id(),
@@ -196,7 +196,7 @@ impl Consignment {
                                                 Some(variant) => {
                                                     for index in indexes {
                                                         match (variant.seal(*index), anchor_index.get(id).cloned()) {
-                                                            (None, _) => {
+                                                            (Err(_), _) => {
                                                                 status.add_failure(
                                                                     validation::Failure::TransitionAncestorWrongSeal {
                                                                         node_id,
@@ -207,22 +207,33 @@ impl Consignment {
                                                                 );
                                                                 None
                                                             }
-                                                            (Some(seal::Revealed::TxOutpoint(outpoint)), None) => {
+                                                            (Ok(None), _) => {
+                                                                status.add_failure(
+                                                                    validation::Failure::TransitionAncestorConfidentialSeal {
+                                                                        node_id,
+                                                                        ancestor_id: *id,
+                                                                        assignment_type: *assignment_type,
+                                                                        seal_index: *index
+                                                                    }
+                                                                );
+                                                                None
+                                                            }
+                                                            (Ok(Some(seal::Revealed::TxOutpoint(outpoint))), None) => {
                                                                 // We are at genesis, so the outpoint must contain tx
                                                                 Some(bitcoin::OutPoint::from(outpoint.clone()))
                                                             }
-                                                            (Some(_), None) => {
+                                                            (Ok(Some(_)), None) => {
                                                                 // This can't happen, since if we have a node in the index
                                                                 // and the node is not genesis, we always have an anchor
                                                                 unreachable!()
                                                             }
-                                                            (Some(seal), Some(anchor)) => {
+                                                            (Ok(Some(seal)), Some(anchor)) => {
                                                                 Some(bitcoin::OutPoint::from(seal.outpoint_reveal(anchor.txid)))
                                                             }
                                                         }.map(|outpoint| {
-                                                            if tx.input.iter().find(|txin| txin.previous_output == outpoint).is_none() {
+                                                            if witness_tx.input.iter().find(|txin| txin.previous_output == outpoint).is_none() {
                                                                 status.add_failure(
-                                                                    validation::Failure::TransitionAncestorIsNotTxInput {
+                                                                    validation::Failure::TransitionAncestorIsNotWitnessInput {
                                                                         node_id,
                                                                         ancestor_id: *id,
                                                                         assignment_type: *assignment_type,

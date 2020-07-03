@@ -563,6 +563,7 @@ mod _validation {
     use core::any::Any;
 
     use super::*;
+    use crate::client_side_validation::Conceal;
     use crate::rgb::{
         data, validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy,
         StateTypes,
@@ -714,6 +715,8 @@ mod _validation {
         ) -> validation::Status
         where
             STATE: StateTypes,
+            STATE::Confidential: PartialEq + Eq,
+            STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
             EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
                 + From<<STATE::Confidential as StrictDecode>::Error>
                 + From<<STATE::Revealed as StrictEncode>::Error>

@@ -164,7 +164,13 @@ pub enum Failure {
         assignment_type: schema::AssignmentsType,
         seal_index: u16,
     },
-    TransitionAncestorIsNotTxInput {
+    TransitionAncestorConfidentialSeal {
+        node_id: NodeId,
+        ancestor_id: NodeId,
+        assignment_type: schema::AssignmentsType,
+        seal_index: u16,
+    },
+    TransitionAncestorIsNotWitnessInput {
         node_id: NodeId,
         ancestor_id: NodeId,
         assignment_type: schema::AssignmentsType,

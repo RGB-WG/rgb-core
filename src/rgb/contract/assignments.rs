@@ -13,6 +13,7 @@
 
 use amplify::AsAny;
 use core::fmt::Debug;
+use core::option::NoneError;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{super::schema, amount, data, seal, Amount, AutoConceal, NodeId, SealDefinition};
@@ -20,6 +21,7 @@ use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
 
+use bitcoin_hashes::core::cmp::Ordering;
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 
 lazy_static! {
@@ -204,24 +206,27 @@ impl AssignmentsVariant {
         }
     }
 
-    pub fn seal(&self, index: u16) -> Option<&seal::Revealed> {
-        match self {
-            AssignmentsVariant::Declarative(set) => set
-                .into_iter()
-                .collect::<Vec<_>>()
-                .get(index as usize)
-                .and_then(|a| a.seal_definition()),
-            AssignmentsVariant::DiscreteFiniteField(set) => set
-                .into_iter()
-                .collect::<Vec<_>>()
-                .get(index as usize)
-                .and_then(|a| a.seal_definition()),
-            AssignmentsVariant::CustomData(set) => set
-                .into_iter()
-                .collect::<Vec<_>>()
-                .get(index as usize)
-                .and_then(|a| a.seal_definition()),
-        }
+    pub fn seal(&self, index: u16) -> Result<Option<&seal::Revealed>, NoneError> {
+        // NB: Seal indexes are part of the consensus commitment, so we have to use
+        // deterministic ordering of the seals. This is currently done by using
+        // `sort` vector method and `Ord` implementation for the `Assignment` type
+        Ok(match self {
+            AssignmentsVariant::Declarative(set) => {
+                let mut vec = set.into_iter().collect::<Vec<_>>();
+                vec.sort();
+                vec.get(index as usize)?.seal_definition()
+            }
+            AssignmentsVariant::DiscreteFiniteField(set) => {
+                let mut vec = set.into_iter().collect::<Vec<_>>();
+                vec.sort();
+                vec.get(index as usize)?.seal_definition()
+            }
+            AssignmentsVariant::CustomData(set) => {
+                let mut vec = set.into_iter().collect::<Vec<_>>();
+                vec.sort();
+                vec.get(index as usize)?.seal_definition()
+            }
+        })
     }
 
     pub fn known_seals(&self) -> Vec<&seal::Revealed> {
@@ -367,12 +372,15 @@ impl StateTypes for HashStrategy {
     type Revealed = data::Revealed;
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[derive(Clone, Debug, Display)]
 #[display_from(Debug)]
 pub enum Assignment<STATE>
 where
     STATE: StateTypes,
-    //    STATE: StateTypes<Confidential = <<STATE as StateTypes>::Revealed as Conceal>::Confidential>,
+    // Deterministic ordering requires Eq operation, so the confidential
+    // state must have it
+    STATE::Confidential: PartialEq + Eq,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
     EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
         + From<<STATE::Confidential as StrictDecode>::Error>
         + From<<STATE::Revealed as StrictEncode>::Error>
@@ -396,9 +404,74 @@ where
     },
 }
 
+// Consensus-critical!
+// Assignment indexes are part of the transition ancestor's commitment, so
+// here we use deterministic ordering based on hash values of the concealed
+// seal data contained within the assignment
+impl<STATE> PartialOrd for Assignment<STATE>
+where
+    STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.seal_definition_confidential()
+            .partial_cmp(&other.seal_definition_confidential())
+    }
+}
+
+impl<STATE> Ord for Assignment<STATE>
+where
+    STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.seal_definition_confidential()
+            .cmp(&other.seal_definition_confidential())
+    }
+}
+
+impl<STATE> PartialEq for Assignment<STATE>
+where
+    STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.seal_definition_confidential() == other.seal_definition_confidential()
+            && self.assigned_state_confidential() == other.assigned_state_confidential()
+    }
+}
+
+impl<STATE> Eq for Assignment<STATE>
+where
+    STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
+        + From<<STATE::Confidential as StrictDecode>::Error>
+        + From<<STATE::Revealed as StrictEncode>::Error>
+        + From<<STATE::Revealed as StrictDecode>::Error>,
+{
+}
+
 impl<STATE> Assignment<STATE>
 where
     STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
     EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
         + From<<STATE::Confidential as StrictDecode>::Error>
@@ -458,6 +531,7 @@ impl<STATE> Conceal for Assignment<STATE>
 where
     Self: Clone,
     STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
     EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
         + From<<STATE::Confidential as StrictDecode>::Error>
@@ -491,6 +565,7 @@ impl<STATE> AutoConceal for Assignment<STATE>
 where
     STATE: StateTypes,
     STATE::Revealed: Conceal,
+    STATE::Confidential: PartialEq + Eq,
     <STATE as StateTypes>::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
     EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
         + From<<STATE::Confidential as StrictDecode>::Error>
@@ -535,6 +610,8 @@ where
 impl<STATE> CommitEncodeWithStrategy for Assignment<STATE>
 where
     STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
+    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
     EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
         + From<<STATE::Confidential as StrictDecode>::Error>
         + From<<STATE::Revealed as StrictEncode>::Error>
@@ -595,6 +672,8 @@ mod strict_encoding {
     impl<STATE> StrictEncode for Assignment<STATE>
     where
         STATE: StateTypes,
+        STATE::Confidential: PartialEq + Eq,
+        STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
         EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
             + From<<STATE::Confidential as StrictDecode>::Error>
             + From<<STATE::Revealed as StrictEncode>::Error>
@@ -627,6 +706,8 @@ mod strict_encoding {
     impl<STATE> StrictDecode for Assignment<STATE>
     where
         STATE: StateTypes,
+        STATE::Confidential: PartialEq + Eq,
+        STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
         EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
             + From<<STATE::Confidential as StrictDecode>::Error>
             + From<<STATE::Revealed as StrictEncode>::Error>
