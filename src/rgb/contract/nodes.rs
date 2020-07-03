@@ -16,6 +16,7 @@ use bitcoin::hashes::{sha256t, Hash};
 use super::{data, Ancestors, Assignments, AssignmentsVariant, AutoConceal};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
+use crate::rgb::schema::AssignmentsType;
 use crate::rgb::{schema, seal, FieldData, Metadata, SchemaId, SimplicityScript};
 
 // TODO: Check the data
@@ -86,6 +87,16 @@ pub trait Node {
         self.assignments()
             .into_iter()
             .flat_map(|(_, assignment)| assignment.known_seals())
+            .collect()
+    }
+
+    fn known_seal_definitions_by_type(
+        &self,
+        assignment_type: AssignmentsType,
+    ) -> Vec<&seal::Revealed> {
+        self.assignments_by_type(assignment_type)
+            .into_iter()
+            .flat_map(|assignment| assignment.known_seals())
             .collect()
     }
 

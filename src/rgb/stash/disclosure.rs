@@ -11,6 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! Disclosure is the way to make certain confidential information about the
+//! stash public.
+
+// TODO: Implement disclosures
+
 use std::io;
 
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
