@@ -73,7 +73,7 @@ impl Embedded {
                         // TODO: We are at genesis, must check issue metadata
                     }
                     Some(ref variant) => {
-                        if let AssignmentsVariant::Field(_) = variant {
+                        if let AssignmentsVariant::DiscreteFiniteField(_) = variant {
                             let prev = variant.all_state_pedersen();
                             let curr = self.current_state.as_ref().unwrap().all_state_pedersen();
 

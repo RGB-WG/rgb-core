@@ -32,18 +32,18 @@ pub struct StateSchema {
 #[repr(u8)]
 #[display_from(Debug)]
 pub enum StateType {
-    Void = 0,
-    Homomorphic = 1,
-    Hashed = 2,
+    Declarative = 0,
+    DiscreteFiniteField = 1,
+    CustomData = 2,
 }
 
 #[derive(Clone, Debug, Display)]
 #[non_exhaustive]
 #[display_from(Debug)]
 pub enum StateFormat {
-    Void,
-    Homomorphic(HomomorphicFormat),
-    Hashed(DataFormat),
+    Declarative,
+    DiscreteFiniteField(DiscreteFiniteFieldFormat),
+    CustomData(DataFormat),
 }
 
 #[derive(Clone, Debug, Display, ToPrimitive, FromPrimitive)]
@@ -57,8 +57,8 @@ pub enum StateFormat {
 /// future we plan to support more types. We reserve this possibility by
 /// internally encoding [ConfidentialFormat] with the same type specification
 /// details as used for [DateFormat]
-pub enum HomomorphicFormat {
-    Amount,
+pub enum DiscreteFiniteFieldFormat {
+    Unsigned64bit,
 }
 
 #[derive(Clone, Debug, Display)]
@@ -177,11 +177,13 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(match self {
-                StateFormat::Void => StateType::Void.strict_encode(e)?,
-                StateFormat::Homomorphic(data) => {
-                    strict_encode_list!(e; StateType::Homomorphic, data)
+                StateFormat::Declarative => StateType::Declarative.strict_encode(e)?,
+                StateFormat::DiscreteFiniteField(data) => {
+                    strict_encode_list!(e; StateType::DiscreteFiniteField, data)
                 }
-                StateFormat::Hashed(data) => strict_encode_list!(e; StateType::Hashed, data),
+                StateFormat::CustomData(data) => {
+                    strict_encode_list!(e; StateType::CustomData, data)
+                }
             })
         }
     }
@@ -192,11 +194,11 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let format = StateType::strict_decode(&mut d)?;
             Ok(match format {
-                StateType::Void => StateFormat::Void,
-                StateType::Homomorphic => {
-                    StateFormat::Homomorphic(HomomorphicFormat::strict_decode(d)?)
+                StateType::Declarative => StateFormat::Declarative,
+                StateType::DiscreteFiniteField => {
+                    StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::strict_decode(d)?)
                 }
-                StateType::Hashed => StateFormat::Hashed(DataFormat::strict_decode(d)?),
+                StateType::CustomData => StateFormat::CustomData(DataFormat::strict_decode(d)?),
             })
         }
     }
@@ -217,21 +219,21 @@ mod strict_encoding {
     }
     impl_enum_strict_encoding!(EncodingTag);
 
-    impl StrictEncode for HomomorphicFormat {
+    impl StrictEncode for DiscreteFiniteFieldFormat {
         type Error = Error;
 
         fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
             match self {
                 // Today we support only a single format of confidential data,
                 // but tomorrow there might be more
-                HomomorphicFormat::Amount => {
+                DiscreteFiniteFieldFormat::Unsigned64bit => {
                     DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128).strict_encode(e)
                 }
             }
         }
     }
 
-    impl StrictDecode for HomomorphicFormat {
+    impl StrictDecode for DiscreteFiniteFieldFormat {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
@@ -264,7 +266,7 @@ mod strict_encoding {
                             min, max
                         )))?
                     }
-                    Ok(HomomorphicFormat::Amount)
+                    Ok(DiscreteFiniteFieldFormat::Unsigned64bit)
                 }
                 invalid_tag => Err(Error::UnsupportedDataStructure(format!(
                     "confidential amounts can be only of u64 type; \
@@ -723,7 +725,7 @@ mod _validation {
                 | Assignment::ConfidentialAmount { assigned_state, .. } => {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
-                        StateFormat::Void => {
+                        StateFormat::Declarative => {
                             if a.downcast_ref::<<DeclarativeStrategy as StateTypes>::Confidential>()
                                 .is_none()
                             {
@@ -732,7 +734,7 @@ mod _validation {
                                 ));
                             }
                         }
-                        StateFormat::Homomorphic(_) => {
+                        StateFormat::DiscreteFiniteField(_) => {
                             if a.downcast_ref::<<PedersenStrategy as StateTypes>::Confidential>()
                                 .is_none()
                             {
@@ -744,30 +746,32 @@ mod _validation {
                             //       add information to the status like with
                             //       hashed data below
                         }
-                        StateFormat::Hashed(_) => match a
-                            .downcast_ref::<<HashStrategy as StateTypes>::Confidential>()
-                        {
-                            None => {
-                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                    assignment_id,
-                                ));
+                        StateFormat::CustomData(_) => {
+                            match a.downcast_ref::<<HashStrategy as StateTypes>::Confidential>() {
+                                None => {
+                                    status.add_failure(
+                                        validation::Failure::SchemaMismatchedStateType(
+                                            assignment_id,
+                                        ),
+                                    );
+                                }
+                                Some(_) => {
+                                    status.add_info(
+                                        validation::Info::UncheckableConfidentialStateData(
+                                            node_id.clone(),
+                                            assignment_id,
+                                        ),
+                                    );
+                                }
                             }
-                            Some(_) => {
-                                status.add_info(
-                                    validation::Info::UncheckableConfidentialStateData(
-                                        node_id.clone(),
-                                        assignment_id,
-                                    ),
-                                );
-                            }
-                        },
+                        }
                     }
                 }
                 Assignment::Revealed { assigned_state, .. }
                 | Assignment::ConfidentialSeal { assigned_state, .. } => {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
-                        StateFormat::Void => {
+                        StateFormat::Declarative => {
                             if a.downcast_ref::<<DeclarativeStrategy as StateTypes>::Revealed>()
                                 .is_none()
                             {
@@ -776,7 +780,7 @@ mod _validation {
                                 ));
                             }
                         }
-                        StateFormat::Homomorphic(_format) => {
+                        StateFormat::DiscreteFiniteField(_format) => {
                             if a.downcast_ref::<<PedersenStrategy as StateTypes>::Revealed>()
                                 .is_none()
                             {
@@ -787,18 +791,20 @@ mod _validation {
                             // TODO: When other homomorphic formats will be added,
                             //       add type check like with hashed data below
                         }
-                        StateFormat::Hashed(format) => match a
-                            .downcast_ref::<<HashStrategy as StateTypes>::Revealed>()
-                        {
-                            None => {
-                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                    assignment_id,
-                                ));
+                        StateFormat::CustomData(format) => {
+                            match a.downcast_ref::<<HashStrategy as StateTypes>::Revealed>() {
+                                None => {
+                                    status.add_failure(
+                                        validation::Failure::SchemaMismatchedStateType(
+                                            assignment_id,
+                                        ),
+                                    );
+                                }
+                                Some(data) => {
+                                    status += format.validate(assignment_id, data);
+                                }
                             }
-                            Some(data) => {
-                                status += format.validate(assignment_id, data);
-                            }
-                        },
+                        }
                     }
                 }
             }

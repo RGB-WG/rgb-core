@@ -26,7 +26,7 @@ pub use script::{
     AssignmentAbi, AssignmentAction, GenesisAbi, GenesisAction, SimplicityScript, TransitionAbi,
     TransitionAction,
 };
-pub use state::{DataFormat, HomomorphicFormat, StateFormat, StateSchema, StateType};
+pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
 pub use types::{
     elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurrencesError,
 };

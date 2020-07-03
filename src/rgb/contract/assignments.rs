@@ -43,8 +43,8 @@ impl CommitEncodeWithStrategy for Ancestors {
 #[display_from(Debug)]
 pub enum AssignmentsVariant {
     Declarative(BTreeSet<Assignment<DeclarativeStrategy>>),
-    Field(BTreeSet<Assignment<PedersenStrategy>>),
-    Data(BTreeSet<Assignment<HashStrategy>>),
+    DiscreteFiniteField(BTreeSet<Assignment<PedersenStrategy>>),
+    CustomData(BTreeSet<Assignment<HashStrategy>>),
 }
 
 impl AssignmentsVariant {
@@ -129,7 +129,7 @@ impl AssignmentsVariant {
             )
             .collect();
 
-        Some(Self::Field(set))
+        Some(Self::DiscreteFiniteField(set))
     }
 
     #[inline]
@@ -143,7 +143,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn is_field(&self) -> bool {
         match self {
-            AssignmentsVariant::Field(_) => true,
+            AssignmentsVariant::DiscreteFiniteField(_) => true,
             _ => false,
         }
     }
@@ -151,7 +151,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn is_data(&self) -> bool {
         match self {
-            AssignmentsVariant::Data(_) => true,
+            AssignmentsVariant::CustomData(_) => true,
             _ => false,
         }
     }
@@ -175,7 +175,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn field(&self) -> Option<&BTreeSet<Assignment<PedersenStrategy>>> {
         match self {
-            AssignmentsVariant::Field(set) => Some(set),
+            AssignmentsVariant::DiscreteFiniteField(set) => Some(set),
             _ => None,
         }
     }
@@ -183,7 +183,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn field_mut(&mut self) -> Option<&mut BTreeSet<Assignment<PedersenStrategy>>> {
         match self {
-            AssignmentsVariant::Field(set) => Some(set),
+            AssignmentsVariant::DiscreteFiniteField(set) => Some(set),
             _ => None,
         }
     }
@@ -191,7 +191,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn data(&self) -> Option<&BTreeSet<Assignment<HashStrategy>>> {
         match self {
-            AssignmentsVariant::Data(set) => Some(set),
+            AssignmentsVariant::CustomData(set) => Some(set),
             _ => None,
         }
     }
@@ -199,7 +199,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn data_mut(&mut self) -> Option<&mut BTreeSet<Assignment<HashStrategy>>> {
         match self {
-            AssignmentsVariant::Data(set) => Some(set),
+            AssignmentsVariant::CustomData(set) => Some(set),
             _ => None,
         }
     }
@@ -210,11 +210,11 @@ impl AssignmentsVariant {
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
-            AssignmentsVariant::Field(s) => s
+            AssignmentsVariant::DiscreteFiniteField(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
-            AssignmentsVariant::Data(s) => s
+            AssignmentsVariant::CustomData(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
@@ -227,11 +227,11 @@ impl AssignmentsVariant {
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
-            AssignmentsVariant::Field(s) => s
+            AssignmentsVariant::DiscreteFiniteField(s) => s
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
-            AssignmentsVariant::Data(s) => s
+            AssignmentsVariant::CustomData(s) => s
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
@@ -241,19 +241,19 @@ impl AssignmentsVariant {
     pub fn known_state_homomorphic(&self) -> Vec<&amount::Revealed> {
         match self {
             AssignmentsVariant::Declarative(_) => vec![],
-            AssignmentsVariant::Field(s) => s
+            AssignmentsVariant::DiscreteFiniteField(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::assigned_state)
                 .collect(),
-            AssignmentsVariant::Data(_) => vec![],
+            AssignmentsVariant::CustomData(_) => vec![],
         }
     }
 
     pub fn known_state_data(&self) -> Vec<&data::Revealed> {
         match self {
             AssignmentsVariant::Declarative(_) => vec![],
-            AssignmentsVariant::Field(_) => vec![],
-            AssignmentsVariant::Data(s) => s
+            AssignmentsVariant::DiscreteFiniteField(_) => vec![],
+            AssignmentsVariant::CustomData(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::assigned_state)
                 .collect(),
@@ -263,19 +263,19 @@ impl AssignmentsVariant {
     pub fn all_state_pedersen(&self) -> Vec<amount::Confidential> {
         match self {
             AssignmentsVariant::Declarative(_) => vec![],
-            AssignmentsVariant::Field(s) => s
+            AssignmentsVariant::DiscreteFiniteField(s) => s
                 .into_iter()
                 .map(Assignment::<_>::assigned_state_confidential)
                 .collect(),
-            AssignmentsVariant::Data(_) => vec![],
+            AssignmentsVariant::CustomData(_) => vec![],
         }
     }
 
     pub fn all_state_hashed(&self) -> Vec<data::Confidential> {
         match self {
             AssignmentsVariant::Declarative(_) => vec![],
-            AssignmentsVariant::Field(_) => vec![],
-            AssignmentsVariant::Data(s) => s
+            AssignmentsVariant::DiscreteFiniteField(_) => vec![],
+            AssignmentsVariant::CustomData(s) => s
                 .into_iter()
                 .map(Assignment::<_>::assigned_state_confidential)
                 .collect(),
@@ -285,8 +285,8 @@ impl AssignmentsVariant {
     pub fn len(&self) -> usize {
         match self {
             AssignmentsVariant::Declarative(set) => set.len(),
-            AssignmentsVariant::Field(set) => set.len(),
-            AssignmentsVariant::Data(set) => set.len(),
+            AssignmentsVariant::DiscreteFiniteField(set) => set.len(),
+            AssignmentsVariant::CustomData(set) => set.len(),
         }
     }
 }
@@ -295,8 +295,8 @@ impl AutoConceal for AssignmentsVariant {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
             AssignmentsVariant::Declarative(data) => data as &mut dyn AutoConceal,
-            AssignmentsVariant::Field(data) => data as &mut dyn AutoConceal,
-            AssignmentsVariant::Data(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::DiscreteFiniteField(data) => data as &mut dyn AutoConceal,
+            AssignmentsVariant::CustomData(data) => data as &mut dyn AutoConceal,
         }
         .conceal_except(seals)
     }
@@ -535,13 +535,13 @@ mod strict_encoding {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(match self {
                 AssignmentsVariant::Declarative(tree) => {
-                    strict_encode_list!(e; schema::StateType::Void, tree)
+                    strict_encode_list!(e; schema::StateType::Declarative, tree)
                 }
-                AssignmentsVariant::Field(tree) => {
-                    strict_encode_list!(e; schema::StateType::Homomorphic, EncodingTag::U64, tree)
+                AssignmentsVariant::DiscreteFiniteField(tree) => {
+                    strict_encode_list!(e; schema::StateType::DiscreteFiniteField, EncodingTag::U64, tree)
                 }
-                AssignmentsVariant::Data(tree) => {
-                    strict_encode_list!(e; schema::StateType::Hashed, tree)
+                AssignmentsVariant::CustomData(tree) => {
+                    strict_encode_list!(e; schema::StateType::CustomData, tree)
                 }
             })
         }
@@ -553,16 +553,21 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
-                schema::StateType::Void => {
+                schema::StateType::Declarative => {
                     AssignmentsVariant::Declarative(BTreeSet::strict_decode(d)?)
                 }
-                schema::StateType::Homomorphic => match EncodingTag::strict_decode(&mut d)? {
-                    EncodingTag::U64 => AssignmentsVariant::Field(BTreeSet::strict_decode(&mut d)?),
+                schema::StateType::DiscreteFiniteField => match EncodingTag::strict_decode(&mut d)?
+                {
+                    EncodingTag::U64 => {
+                        AssignmentsVariant::DiscreteFiniteField(BTreeSet::strict_decode(&mut d)?)
+                    }
                     _ => Err(Error::UnsupportedDataStructure(
                         "We support only homomorphic commitments to U64 data".to_string(),
                     ))?,
                 },
-                schema::StateType::Hashed => AssignmentsVariant::Data(BTreeSet::strict_decode(d)?),
+                schema::StateType::CustomData => {
+                    AssignmentsVariant::CustomData(BTreeSet::strict_decode(d)?)
+                }
             })
         }
     }

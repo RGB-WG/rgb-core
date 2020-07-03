@@ -316,10 +316,12 @@ mod _validation {
                             status += assignment.validate(&node_id, *assignment_type_id, data)
                         })
                     }
-                    Some(AssignmentsVariant::Field(set)) => set.into_iter().for_each(|data| {
-                        status += assignment.validate(&node_id, *assignment_type_id, data)
-                    }),
-                    Some(AssignmentsVariant::Data(set)) => set.into_iter().for_each(|data| {
+                    Some(AssignmentsVariant::DiscreteFiniteField(set)) => {
+                        set.into_iter().for_each(|data| {
+                            status += assignment.validate(&node_id, *assignment_type_id, data)
+                        })
+                    }
+                    Some(AssignmentsVariant::CustomData(set)) => set.into_iter().for_each(|data| {
                         status += assignment.validate(&node_id, *assignment_type_id, data)
                     }),
                 };
@@ -444,10 +446,10 @@ mod _validation {
                                 }
                             };
                         }
-                        AssignmentsVariant::Field(set) => {
+                        AssignmentsVariant::DiscreteFiniteField(set) => {
                             match ancestors_assignments
                                 .entry(*type_id)
-                                .or_insert(AssignmentsVariant::Field(bset! {}))
+                                .or_insert(AssignmentsVariant::DiscreteFiniteField(bset! {}))
                                 .field_mut()
                             {
                                 Some(base) => {
@@ -462,10 +464,10 @@ mod _validation {
                                 }
                             };
                         }
-                        AssignmentsVariant::Data(set) => {
+                        AssignmentsVariant::CustomData(set) => {
                             match ancestors_assignments
                                 .entry(*type_id)
-                                .or_insert(AssignmentsVariant::Data(bset! {}))
+                                .or_insert(AssignmentsVariant::CustomData(bset! {}))
                                 .data_mut()
                             {
                                 Some(base) => {
