@@ -125,7 +125,7 @@ pub enum Error {
 
     /// Found a value during decoding operation that does not fits into
     /// the supported range
-    ValueOutOfRange(String, Range<u64>, u64),
+    ValueOutOfRange(String, Range<u128>, u128),
 
     /// A repeated value found during set collection deserialization
     RepeatedValue(String),

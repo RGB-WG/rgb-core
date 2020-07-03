@@ -170,7 +170,7 @@ impl StrictDecode for bitcoin::Network {
         Ok(Self::from_magic(magic).ok_or(Error::ValueOutOfRange(
             "bitcoin::Network".to_string(),
             0..0,
-            magic as u64,
+            magic as u128,
         ))?)
     }
 }

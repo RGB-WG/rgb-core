@@ -146,6 +146,7 @@ impl DataFormat {
 mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use core::convert::TryFrom;
     use core::fmt::Debug;
     use core::ops::{Add, Bound, RangeBounds, RangeInclusive, Sub};
     use num_derive::{FromPrimitive, ToPrimitive};
@@ -293,7 +294,8 @@ mod strict_encoding {
                     + Debug
                     + Add<Output = T>
                     + Sub<Output = T>
-                    + From<u8>,
+                    + TryFrom<u8>
+                    + Default,
             {
                 let min = match provided.start_bound() {
                     Bound::Excluded(bound) | Bound::Included(bound) if !allowed.contains(bound) => {
@@ -310,7 +312,7 @@ mod strict_encoding {
                          DataFormat does not make sense for float type"
                             .to_string(),
                     ))?,
-                    Bound::Excluded(bound) => *bound + T::from(1),
+                    Bound::Excluded(bound) => *bound + T::try_from(1).unwrap_or_default(),
                     Bound::Unbounded => *allowed.start(),
                 };
                 let max = match provided.end_bound() {
@@ -328,66 +330,167 @@ mod strict_encoding {
                          DataFormat does not make sense for float type"
                             .to_string(),
                     ))?,
-                    Bound::Excluded(bound) => *bound - T::from(1),
+                    Bound::Excluded(bound) => *bound - T::try_from(1).unwrap_or_default(),
                     Bound::Unbounded => *allowed.end(),
                 };
                 Ok((min, max))
             }
 
+            macro_rules! write_min_max {
+                ($min:ident, $max:ident, $e:ident, $len:ident) => {
+                    let (min, max) = ($min.to_le_bytes().to_vec(), $max.to_le_bytes().to_vec());
+                    $e.write_all(&min)?;
+                    $e.write_all(&max)?;
+                    $len += ::core::mem::size_of_val(&min) * 2
+                };
+            }
+
             Ok(match self {
                 DataFormat::Unsigned(bits, min, max) => {
-                    let allowed_bounds = match bits {
-                        Bits::Bit8 => (core::u8::MIN as u128)..=(core::u8::MAX as u128),
-                        Bits::Bit16 => (core::u16::MIN as u128)..=(core::u16::MAX as u128),
-                        Bits::Bit32 => (core::u32::MIN as u128)..=(core::u32::MAX as u128),
-                        Bits::Bit64 => (core::u64::MIN as u128)..=(core::u64::MAX as u128),
-                        //Bits::Bit128 => core::u128::MIN..=core::u128::MAX,
-                    };
-                    let (min, max) = get_bounds(min..max, allowed_bounds, true)?;
-                    let (min, max) = (min.to_le_bytes().to_vec(), max.to_le_bytes().to_vec());
-                    let len = (EncodingTag::Unsigned).strict_encode(&mut e)?
-                        + bits.strict_encode(&mut e)?;
-                    e.write_all(&min)?;
-                    e.write_all(&max)?;
-                    len + ::core::mem::size_of_val(&min) * 2
+                    let mut len = (EncodingTag::Unsigned).strict_encode(&mut e)?;
+                    len += bits.strict_encode(&mut e)?;
+                    match bits {
+                        Bits::Bit8 => {
+                            let min = u8::try_from(*min)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Minimum value for Unsigned data type are outside of bit dimension".to_string(), 
+                                    (core::u8::MIN as u128)..(core::u8::MAX as u128), *min as u128))?;
+                            let max = u8::try_from(*max)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
+                                    (core::u8::MIN as u128)..(core::u8::MAX as u128), *max as u128))?;
+                            let (min, max) =
+                                get_bounds(min..max, core::u8::MIN..=core::u8::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                        Bits::Bit16 => {
+                            let min = u16::try_from(*min)
+                                    .map_err(|_| Error::ValueOutOfRange(
+                                        "Minimum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        (core::u16::MIN as u128)..(core::u16::MAX as u128), *min as u128))?;
+                            let max = u16::try_from(*max)
+                                    .map_err(|_| Error::ValueOutOfRange(
+                                        "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        (core::u16::MIN as u128)..(core::u16::MAX as u128), *max as u128))?;
+                            let (min, max) =
+                                get_bounds(min..max, core::u16::MIN..=core::u16::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                        Bits::Bit32 => {
+                            let min = u32::try_from(*min)
+                                    .map_err(|_| Error::ValueOutOfRange(
+                                        "Minimum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        (core::u32::MIN as u128)..(core::u32::MAX as u128), *min as u128))?;
+                            let max = u32::try_from(*max)
+                                    .map_err(|_| Error::ValueOutOfRange(
+                                        "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        (core::u32::MIN as u128)..(core::u32::MAX as u128), *max as u128))?;
+                            let (min, max) =
+                                get_bounds(min..max, core::u32::MIN..=core::u32::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                        Bits::Bit64 => {
+                            let min = u64::try_from(*min)
+                                    .map_err(|_| Error::ValueOutOfRange(
+                                        "Minimum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        (core::u64::MIN as u128)..(core::u64::MAX as u128), *min as u128))?;
+                            let max = u64::try_from(*max)
+                                    .map_err(|_| Error::ValueOutOfRange(
+                                        "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        (core::u64::MIN as u128)..(core::u64::MAX as u128), *max as u128))?;
+                            let (min, max) =
+                                get_bounds(min..max, core::u64::MIN..=core::u64::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                    }
+                    len
                 }
 
                 DataFormat::Integer(bits, min, max) => {
-                    let allowed_bounds = match bits {
-                        Bits::Bit8 => (core::i8::MIN as i128)..=(core::i8::MAX as i128),
-                        Bits::Bit16 => (core::i16::MIN as i128)..=(core::i16::MAX as i128),
-                        Bits::Bit32 => (core::i32::MIN as i128)..=(core::i32::MAX as i128),
-                        Bits::Bit64 => (core::i64::MIN as i128)..=(core::i64::MAX as i128),
-                        //Bits::Bit128 => core::i128::MIN..=core::i128::MAX,
-                    };
-                    let (min, max) = get_bounds(min..max, allowed_bounds, true)?;
-                    let (min, max) = (min.to_le_bytes().to_vec(), max.to_le_bytes().to_vec());
-                    let len = (EncodingTag::Integer).strict_encode(&mut e)?
-                        + bits.strict_encode(&mut e)?;
-                    e.write_all(&min)?;
-                    e.write_all(&max)?;
-                    len + ::core::mem::size_of_val(&min) * 2
+                    let mut len = (EncodingTag::Integer).strict_encode(&mut e)?;
+                    len += bits.strict_encode(&mut e)?;
+                    match bits {
+                        Bits::Bit8 => {
+                            let min = i8::try_from(*min)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Minimum value for Integer data type are outside of bit dimension".to_string(),
+                                    (core::i8::MIN as u128)..(core::i8::MAX as u128), *min as u128))?;
+                            let max = i8::try_from(*max)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Maximum value for Integer data type are outside of bit dimension".to_string(),
+                                    (core::i8::MIN as u128)..(core::i8::MAX as u128), *max as u128))?;
+                            let (min, max) =
+                                get_bounds(min..max, core::i8::MIN..=core::i8::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                        Bits::Bit16 => {
+                            let min = i16::try_from(*min)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Minimum value for Integer data type are outside of bit dimension".to_string(),
+                                    (core::i16::MIN as u128)..(core::i16::MAX as u128), *min as u128))?;
+                            let max = i16::try_from(*max)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Maximum value for Integer data type are outside of bit dimension".to_string(),
+                                    (core::i16::MIN as u128)..(core::i16::MAX as u128), *max as u128))?;
+                            let (min, max) =
+                                get_bounds(min..max, core::i16::MIN..=core::i16::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                        Bits::Bit32 => {
+                            let min = i32::try_from(*min)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Minimum value for Integer data type are outside of bit dimension".to_string(),
+                                    (core::i32::MIN as u128)..(core::i32::MAX as u128), *min as u128))?;
+                            let max = i32::try_from(*max)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Maximum value for Integer data type are outside of bit dimension".to_string(),
+                                    (core::i32::MIN as u128)..(core::i32::MAX as u128), *max as u128))?;
+                            let (min, max) =
+                                get_bounds(min..max, core::i32::MIN..=core::i32::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                        Bits::Bit64 => {
+                            let min = i64::try_from(*min)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Minimum value for Integer data type are outside of bit dimension".to_string(),
+                                    (core::i64::MIN as u128)..(core::i64::MAX as u128), *min as u128))?;
+                            let max = i64::try_from(*max)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Maximum value for Integer data type are outside of bit dimension".to_string(),
+                                    (core::i64::MIN as u128)..(core::i64::MAX as u128), *max as u128))?;
+                            let (min, max) =
+                                get_bounds(min..max, core::i64::MIN..=core::i64::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                    }
+                    len
                 }
 
                 DataFormat::Float(bits, min, max) => {
-                    let allowed_bounds = match bits {
-                        Bits::Bit32 => (core::f32::MIN as f64)..=(core::f32::MAX as f64),
-                        Bits::Bit64 => core::f64::MIN..=core::f64::MAX,
+                    let mut len = (EncodingTag::Float).strict_encode(&mut e)?;
+                    len += bits.strict_encode(&mut e)?;
+                    match bits {
+                        Bits::Bit32 => {
+                            let min = *min as f32;
+                            let max = *max as f32;
+                            let (min, max) =
+                                get_bounds(min..max, core::f32::MIN..=core::f32::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                        Bits::Bit64 => {
+                            let (min, max) =
+                                get_bounds(min..max, core::f64::MIN..=core::f64::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
                         unsupported_bits => Err(Error::ValueOutOfRange(
                             "The provided number of bits for the floating number \
                              is not supported by the platform"
                                 .to_string(),
                             32..64,
-                            unsupported_bits.to_u64().unwrap(),
+                            unsupported_bits.to_u64().unwrap() as u128,
                         ))?,
-                    };
-                    let (min, max) = get_bounds(min..max, allowed_bounds, false)?;
-                    let (min, max) = (min.to_le_bytes().to_vec(), max.to_le_bytes().to_vec());
-                    let len =
-                        (EncodingTag::Float).strict_encode(&mut e)? + bits.strict_encode(&mut e)?;
-                    e.write_all(&min)?;
-                    e.write_all(&max)?;
-                    len + ::core::mem::size_of_val(&min) * 2
+                    }
+                    len
                 }
 
                 DataFormat::Enum(values) => strict_encode_list!(e; EncodingTag::Enum, values),

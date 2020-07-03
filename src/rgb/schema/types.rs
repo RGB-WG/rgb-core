@@ -292,8 +292,8 @@ mod strict_encoding {
                         val if val == ::std::$type::MAX as u64 => Ok(None),
                         invalid => Err(Error::ValueOutOfRange(
                             stringify!($type).to_string(),
-                            0..(::std::$type::MAX as u64),
-                            invalid,
+                            0..(::std::$type::MAX as u128),
+                            invalid as u128,
                         )),
                     }?;
                     Ok(match value {
