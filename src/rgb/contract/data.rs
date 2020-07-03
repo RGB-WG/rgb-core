@@ -23,7 +23,7 @@ use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, C
 use crate::strict_encoding::strict_encode;
 
 /// Struct using for storing Void (i.e. absent) state
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, AsAny)]
 pub struct Void;
 
 impl ConfidentialState for Void {}
@@ -41,13 +41,7 @@ impl CommitEncodeWithStrategy for Void {
     type Strategy = commit_strategy::UsingConceal;
 }
 
-impl AsAny for Void {
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
-    }
-}
-
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, Debug, Display, AsAny)]
 #[display_from(Debug)]
 #[non_exhaustive]
 pub enum Revealed {
@@ -99,12 +93,6 @@ impl Conceal for Revealed {
 }
 impl CommitEncodeWithStrategy for Revealed {
     type Strategy = commit_strategy::UsingConceal;
-}
-
-impl AsAny for Revealed {
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
-    }
 }
 
 impl PartialEq for Revealed {
