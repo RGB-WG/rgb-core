@@ -204,6 +204,26 @@ impl AssignmentsVariant {
         }
     }
 
+    pub fn seal(&self, index: u16) -> Option<&seal::Revealed> {
+        match self {
+            AssignmentsVariant::Declarative(set) => set
+                .into_iter()
+                .collect::<Vec<_>>()
+                .get(index as usize)
+                .and_then(|a| a.seal_definition()),
+            AssignmentsVariant::DiscreteFiniteField(set) => set
+                .into_iter()
+                .collect::<Vec<_>>()
+                .get(index as usize)
+                .and_then(|a| a.seal_definition()),
+            AssignmentsVariant::CustomData(set) => set
+                .into_iter()
+                .collect::<Vec<_>>()
+                .get(index as usize)
+                .and_then(|a| a.seal_definition()),
+        }
+    }
+
     pub fn known_seals(&self) -> Vec<&seal::Revealed> {
         match self {
             AssignmentsVariant::Declarative(s) => s

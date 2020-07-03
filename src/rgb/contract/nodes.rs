@@ -69,11 +69,10 @@ pub trait Node {
     }
 
     #[inline]
-    fn assignments_by_type(&self, t: schema::AssignmentsType) -> Vec<&AssignmentsVariant> {
+    fn assignments_by_type(&self, t: schema::AssignmentsType) -> Option<&AssignmentsVariant> {
         self.assignments()
             .into_iter()
-            .filter_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
-            .collect()
+            .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
     }
 
     fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
@@ -95,9 +94,8 @@ pub trait Node {
         assignment_type: AssignmentsType,
     ) -> Vec<&seal::Revealed> {
         self.assignments_by_type(assignment_type)
-            .into_iter()
-            .flat_map(|assignment| assignment.known_seals())
-            .collect()
+            .map(AssignmentsVariant::known_seals)
+            .unwrap_or(vec![])
     }
 
     fn u8(&self, field_type: schema::FieldType) -> FieldData<u8> {

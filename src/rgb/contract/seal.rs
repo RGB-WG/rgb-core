@@ -31,6 +31,19 @@ pub enum Revealed {
     WitnessVout { vout: u16, blinding: u32 },
 }
 
+impl Revealed {
+    pub fn outpoint_reveal(&self, txid: Txid) -> OutpointReveal {
+        match self.clone() {
+            Revealed::TxOutpoint(op) => op,
+            Revealed::WitnessVout { vout, blinding } => OutpointReveal {
+                blinding,
+                txid,
+                vout,
+            },
+        }
+    }
+}
+
 impl Conceal for Revealed {
     type Confidential = Confidential;
 

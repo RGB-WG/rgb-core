@@ -200,7 +200,7 @@ impl Anchor {
             == sha256::Hash::from_inner(node_id.into_inner())
     }
 
-    pub fn verify(&self, contract_id: &ContractId, tx: Transaction, fee: u64) -> bool {
+    pub fn verify(&self, contract_id: &ContractId, tx: &Transaction, fee: u64) -> bool {
         let id = Uint256::from_be_bytes(contract_id.into_inner());
         let protocol_factor = id % Uint256::from_u64(tx.output.len() as u64).unwrap();
         let protocol_factor = protocol_factor.low_u64() as u32;
@@ -229,7 +229,7 @@ impl Anchor {
 
     fn verify_internal(
         &self,
-        tx: Transaction,
+        tx: &Transaction,
         supplement: TxSupplement,
         value: sha256::Hash,
     ) -> Result<bool, dbc::Error> {

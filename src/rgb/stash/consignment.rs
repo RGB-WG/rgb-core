@@ -17,7 +17,7 @@ use std::io;
 use bitcoin::Txid;
 
 use crate::bp;
-use crate::rgb::{validation, Anchor, Genesis, Node, NodeId, Schema, Transition};
+use crate::rgb::{seal, validation, Anchor, Genesis, Node, NodeId, Schema, Transition};
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 pub type ConsignmentEndpoints = Vec<(NodeId, bp::blind::OutpointHash)>;
@@ -60,6 +60,8 @@ impl Consignment {
         set
     }
 
+    // TODO: Refactor into multiple subroutines
+    // TODO: Move part of logic into single-use-seals and bitcoin seals
     pub fn validate(
         &self,
         schema: &Schema,
@@ -148,7 +150,7 @@ impl Consignment {
                     }
 
                     // Check that the anchor is committed into a transaction spending
-                    //   all of the transition inputs
+                    // all of the transition inputs
                     match resolver(&anchor.txid) {
                         Err(_) => {
                             status.unresolved_txids.push(anchor.txid);
@@ -159,12 +161,83 @@ impl Consignment {
                             ));
                         }
                         Ok(Some((tx, fee))) => {
-                            if !anchor.verify(&contract_id, tx, fee) {
+                            // Checking anchor deterministic bitcoin commitment
+                            if !anchor.verify(&contract_id, &tx, fee) {
                                 status.add_failure(validation::Failure::WitnessNoCommitment(
                                     node_id,
                                     anchor.anchor_id(),
                                     anchor.txid,
                                 ));
+                            }
+
+                            // Checking that bitcoin transaction closes the seals
+                            // defined by transition ancestors
+                            for (id, assignments) in node.ancestors() {
+                                match node_index.get(id).cloned() {
+                                    None => {
+                                        status.add_failure(validation::Failure::TransitionAbsent(
+                                            *id,
+                                        ));
+                                    }
+                                    Some(ancestor_node) => {
+                                        for (assignment_type, indexes) in assignments {
+                                            match ancestor_node
+                                                .assignments_by_type(*assignment_type)
+                                            {
+                                                None => {
+                                                    status.add_failure(
+                                                        validation::Failure::TransitionAncestorWrongSealType {
+                                                            node_id,
+                                                            ancestor_id: *id,
+                                                            assignment_type: *assignment_type,
+                                                        }
+                                                    );
+                                                }
+                                                Some(variant) => {
+                                                    for index in indexes {
+                                                        match (variant.seal(*index), anchor_index.get(id).cloned()) {
+                                                            (None, _) => {
+                                                                status.add_failure(
+                                                                    validation::Failure::TransitionAncestorWrongSeal {
+                                                                        node_id,
+                                                                        ancestor_id: *id,
+                                                                        assignment_type: *assignment_type,
+                                                                        seal_index: *index
+                                                                    }
+                                                                );
+                                                                None
+                                                            }
+                                                            (Some(seal::Revealed::TxOutpoint(outpoint)), None) => {
+                                                                // We are at genesis, so the outpoint must contain tx
+                                                                Some(bitcoin::OutPoint::from(outpoint.clone()))
+                                                            }
+                                                            (Some(_), None) => {
+                                                                // This can't happen, since if we have a node in the index
+                                                                // and the node is not genesis, we always have an anchor
+                                                                unreachable!()
+                                                            }
+                                                            (Some(seal), Some(anchor)) => {
+                                                                Some(bitcoin::OutPoint::from(seal.outpoint_reveal(anchor.txid)))
+                                                            }
+                                                        }.map(|outpoint| {
+                                                            if tx.input.iter().find(|txin| txin.previous_output == outpoint).is_none() {
+                                                                status.add_failure(
+                                                                    validation::Failure::TransitionAncestorIsNotTxInput {
+                                                                        node_id,
+                                                                        ancestor_id: *id,
+                                                                        assignment_type: *assignment_type,
+                                                                        seal_index: *index,
+                                                                        outpoint
+                                                                    }
+                                                                );
+                                                            }
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

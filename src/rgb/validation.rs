@@ -153,6 +153,24 @@ pub enum Failure {
     TransitionAbsent(NodeId),
     TransitionNotAnchored(NodeId),
     TransitionNotInAnchor(NodeId, AnchorId),
+    TransitionAncestorWrongSealType {
+        node_id: NodeId,
+        ancestor_id: NodeId,
+        assignment_type: schema::AssignmentsType,
+    },
+    TransitionAncestorWrongSeal {
+        node_id: NodeId,
+        ancestor_id: NodeId,
+        assignment_type: schema::AssignmentsType,
+        seal_index: u16,
+    },
+    TransitionAncestorIsNotTxInput {
+        node_id: NodeId,
+        ancestor_id: NodeId,
+        assignment_type: schema::AssignmentsType,
+        seal_index: u16,
+        outpoint: bitcoin::OutPoint,
+    },
 
     WitnessTransactionMissed(Txid),
     WitnessNoCommitment(NodeId, AnchorId, Txid),
