@@ -46,114 +46,53 @@ pub enum AssignmentsVariant {
 }
 
 impl AssignmentsVariant {
-    // TODO: change return type from Option to Result
-    /// Returns
-    /// -------
-    ///
-    /// * `None` in case
-    ///   - if any of secp256k1 operations were unsuccessful (negligible
-    ///     probability)
-    ///   - if both `allocations_ours` and `allocations_theirs` vecs are empty
-    ///   - if the verification of the operation failed
-    /// * `Some(AssignmentsVariant)` in all other cases
     pub fn zero_balanced(
-        mut inputs: Vec<amount::Revealed>,
+        inputs: Vec<amount::Revealed>,
         allocations_ours: Vec<(SealDefinition, Amount)>,
         allocations_theirs: Vec<(OutpointHash, Amount)>,
-    ) -> Option<Self> {
+    ) -> Self {
+        // Generate random blinding factors
         let mut rng = rand::thread_rng();
-        let mut blinding_factors = vec![];
-
-        // Input vector should not be zero
-        if inputs.is_empty() {
-            inputs = vec![amount::Revealed {
-                amount: 0,
-                blinding: secp256k1zkp::key::ZERO_KEY,
-            }];
+        let count = allocations_theirs.len() + allocations_ours.len();
+        let mut blinding_factors = Vec::<_>::with_capacity(count);
+        for _ in 0..count {
+            blinding_factors.push(amount::BlindingFactor::new(&SECP256K1_ZKP, &mut rng));
         }
 
-        let mut list_ours: Vec<_> = allocations_ours
-            .into_iter()
-            .map(|(seal, amount)| {
-                let blinding = amount::BlindingFactor::new(&SECP256K1_ZKP, &mut rng);
-                blinding_factors.push(blinding.clone());
-                (seal, amount::Revealed { amount, blinding })
-            })
-            .collect();
-
-        let mut list_theirs: Vec<_> = allocations_theirs
-            .into_iter()
-            .map(|(seal_hash, amount)| {
-                let blinding = amount::BlindingFactor::new(&SECP256K1_ZKP, &mut rng);
-                blinding_factors.push(blinding.clone());
-                (seal_hash, amount::Revealed { amount, blinding })
-            })
-            .collect();
-
-        // We need all blinding factors (for both outputs and inputs, if they
-        // are present) to sum into 0. Originally we have randomly-generated
-        // blindings, so they will not sum to 0. Here, we compute their sum
-        // and then correct one of existing blinding factors on that sum; which
-        // naturally gives us 0 summed-factors:
-        // ∑[i=0..n](b_i) = d => ∑[i=0..n-1](b_i) + b_n - d = 0
+        // We need the last factor to be equal to the sum
+        let any_factor = blinding_factors.pop();
         let blinding_inputs: Vec<_> = inputs.iter().map(|inp| inp.blinding.clone()).collect();
-        let mut blinding_correction = SECP256K1_ZKP
+        let blinding_correction = SECP256K1_ZKP
             .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
-            .ok()?;
-        // To subtract, we need first negate, and than add
-        blinding_correction.neg_assign(&SECP256K1_ZKP).ok()?;
-        trace!("Out input blinding factors are {:?}\nOur output blinding factors are {:?}\nTheir sum is {:?}", blinding_inputs, blinding_factors, blinding_correction);
-        if let Some(item) = list_ours.last_mut() {
-            let blinding = &mut item.1.blinding;
-            trace!("Adjusting blinding factor {:?}", blinding);
-            blinding
-                .add_assign(&SECP256K1_ZKP, &blinding_correction)
-                .ok()?;
-            trace!("Result of the adjustment: {:?}", blinding);
-        } else if let Some(item) = list_theirs.last_mut() {
-            let blinding = &mut item.1.blinding;
-            trace!("Adjusting blinding factor {:?}", blinding);
-            blinding
-                .add_assign(&SECP256K1_ZKP, &blinding_correction)
-                .ok()?;
-            trace!("Result of the adjustment: {:?}", blinding);
-        } else {
-            return None;
+            .expect("SECP256K1_ZKP failure has negligible probability");
+        if any_factor.is_some() {
+            blinding_factors.push(blinding_correction.clone());
         }
 
         // Composing assignment
-        let set: BTreeSet<Assignment<PedersenStrategy>> = list_ours
+        let mut set: BTreeSet<Assignment<_>> = allocations_ours
             .into_iter()
-            .map(|(seal_definition, assigned_state)| Assignment::Revealed {
+            .map(|(seal_definition, amount)| Assignment::Revealed {
                 seal_definition,
-                assigned_state,
+                assigned_state: amount::Revealed {
+                    amount,
+                    blinding: blinding_factors.pop().unwrap(), // factors are counted, so it's safe to unwrap here
+                },
             })
-            .chain(
-                list_theirs
-                    .into_iter()
-                    .map(
-                        |(seal_definition, assigned_state)| Assignment::ConfidentialSeal {
-                            seal_definition,
-                            assigned_state,
-                        },
-                    ),
-            )
             .collect();
+        set.extend(
+            allocations_theirs
+                .into_iter()
+                .map(|(seal_definition, amount)| Assignment::ConfidentialSeal {
+                    seal_definition,
+                    assigned_state: amount::Revealed {
+                        amount,
+                        blinding: blinding_factors.pop().unwrap(), // factors are counted, so it's safe to unwrap here
+                    },
+                }),
+        );
 
-        // Double-checking that we did everything correct:
-        if !amount::Confidential::verify_commit_sum(
-            inputs.iter().map(|a| a.conceal().commitment).collect(),
-            set.iter()
-                .map(|a| a.assigned_state_confidential().commitment)
-                .collect(),
-        ) {
-            // We have failed the verification! Should not happen, but just in
-            // case, we are not returning the result and indicating that
-            // something wrong has happened
-            return None;
-        }
-
-        Some(Self::DiscreteFiniteField(set))
+        Self::DiscreteFiniteField(set)
     }
 
     #[inline]
