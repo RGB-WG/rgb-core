@@ -23,10 +23,11 @@ use super::data;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy};
 use crate::rgb::schema;
 
-pub type Metadata = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
+wrapper!(Metadata, BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>, doc="Transition & genesis metadata fields", derive=[Default, PartialEq]);
 impl CommitEncodeWithStrategy for Metadata {
     type Strategy = commit_strategy::Merklization;
 }
+
 impl CommitEncodeWithStrategy for BTreeSet<data::Revealed> {
     type Strategy = commit_strategy::Merklization;
 }
@@ -36,7 +37,6 @@ impl CommitEncodeWithStrategy for BTreeSet<data::Revealed> {
 macro_rules! field_extract {
     ($self:ident, $field:ident, $name:ident) => {
         $self
-            .metadata()
             .get(&$field)
             .and_then(|set| {
                 let res: Vec<_> = set
@@ -59,6 +59,45 @@ macro_rules! field_extract {
             })
             .unwrap_or(FieldData::empty())
     };
+}
+
+impl Metadata {
+    pub fn u8(&self, field_type: schema::FieldType) -> FieldData<u8> {
+        field_extract!(self, field_type, U8)
+    }
+    pub fn u16(&self, field_type: schema::FieldType) -> FieldData<u16> {
+        field_extract!(self, field_type, U16)
+    }
+    pub fn u32(&self, field_type: schema::FieldType) -> FieldData<u32> {
+        field_extract!(self, field_type, U32)
+    }
+    pub fn u64(&self, field_type: schema::FieldType) -> FieldData<u64> {
+        field_extract!(self, field_type, U64)
+    }
+    pub fn i8(&self, field_type: schema::FieldType) -> FieldData<i8> {
+        field_extract!(self, field_type, I8)
+    }
+    pub fn i16(&self, field_type: schema::FieldType) -> FieldData<i16> {
+        field_extract!(self, field_type, I16)
+    }
+    pub fn i32(&self, field_type: schema::FieldType) -> FieldData<i32> {
+        field_extract!(self, field_type, I32)
+    }
+    pub fn i64(&self, field_type: schema::FieldType) -> FieldData<i64> {
+        field_extract!(self, field_type, I64)
+    }
+    pub fn f32(&self, field_type: schema::FieldType) -> FieldData<f32> {
+        field_extract!(self, field_type, F32)
+    }
+    pub fn f64(&self, field_type: schema::FieldType) -> FieldData<f64> {
+        field_extract!(self, field_type, F64)
+    }
+    pub fn bytes(&self, field_type: schema::FieldType) -> FieldData<Vec<u8>> {
+        field_extract!(self, field_type, Bytes)
+    }
+    pub fn string(&self, field_type: schema::FieldType) -> FieldData<String> {
+        field_extract!(self, field_type, String)
+    }
 }
 
 #[derive(Clone, PartialEq, Hash, Debug, Display, Default)]
@@ -147,5 +186,26 @@ where
     #[inline]
     pub fn to_vec(&self) -> Vec<T> {
         self.data.clone()
+    }
+}
+
+mod strict_encoding {
+    use super::*;
+    use crate::strict_encoding::{StrictDecode, StrictEncode};
+    use amplify::Wrapper;
+    use std::io;
+
+    impl StrictEncode for Metadata {
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            self.to_inner().strict_encode(e)
+        }
+    }
+
+    impl StrictDecode for Metadata {
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(Self::from_inner(<Self as Wrapper>::Inner::strict_decode(
+                d,
+            )?))
+        }
     }
 }

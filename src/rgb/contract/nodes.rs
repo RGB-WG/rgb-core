@@ -13,11 +13,11 @@
 
 use bitcoin::hashes::{sha256t, Hash};
 
-use super::{data, Ancestors, Assignments, AssignmentsVariant, AutoConceal};
+use super::{Ancestors, Assignments, AssignmentsVariant, AutoConceal};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::rgb::schema::AssignmentsType;
-use crate::rgb::{schema, seal, FieldData, Metadata, SchemaId, SimplicityScript};
+use crate::rgb::{schema, seal, Metadata, SchemaId, SimplicityScript};
 
 // TODO: Check the data
 static MIDSTATE_NODE_ID: [u8; 32] = [
@@ -96,43 +96,6 @@ pub trait Node {
         self.assignments_by_type(assignment_type)
             .map(AssignmentsVariant::known_seals)
             .unwrap_or(vec![])
-    }
-
-    fn u8(&self, field_type: schema::FieldType) -> FieldData<u8> {
-        field_extract!(self, field_type, U8)
-    }
-    fn u16(&self, field_type: schema::FieldType) -> FieldData<u16> {
-        field_extract!(self, field_type, U16)
-    }
-    fn u32(&self, field_type: schema::FieldType) -> FieldData<u32> {
-        field_extract!(self, field_type, U32)
-    }
-    fn u64(&self, field_type: schema::FieldType) -> FieldData<u64> {
-        field_extract!(self, field_type, U64)
-    }
-    fn i8(&self, field_type: schema::FieldType) -> FieldData<i8> {
-        field_extract!(self, field_type, I8)
-    }
-    fn i16(&self, field_type: schema::FieldType) -> FieldData<i16> {
-        field_extract!(self, field_type, I16)
-    }
-    fn i32(&self, field_type: schema::FieldType) -> FieldData<i32> {
-        field_extract!(self, field_type, I32)
-    }
-    fn i64(&self, field_type: schema::FieldType) -> FieldData<i64> {
-        field_extract!(self, field_type, I64)
-    }
-    fn f32(&self, field_type: schema::FieldType) -> FieldData<f32> {
-        field_extract!(self, field_type, F32)
-    }
-    fn f64(&self, field_type: schema::FieldType) -> FieldData<f64> {
-        field_extract!(self, field_type, F64)
-    }
-    fn bytes(&self, field_type: schema::FieldType) -> FieldData<Vec<u8>> {
-        field_extract!(self, field_type, Bytes)
-    }
-    fn string(&self, field_type: schema::FieldType) -> FieldData<String> {
-        field_extract!(self, field_type, String)
     }
 }
 
