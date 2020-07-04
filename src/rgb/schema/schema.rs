@@ -145,7 +145,7 @@ mod _validation {
     impl Schema {
         pub fn validate(
             &self,
-            nodes: &BTreeMap<NodeId, &dyn Node>,
+            all_nodes: &BTreeMap<NodeId, &dyn Node>,
             node: &dyn Node,
         ) -> validation::Status {
             let node_id = node.node_id();
@@ -178,11 +178,13 @@ mod _validation {
 
             let mut status = validation::Status::new();
             let ancestor_assignments =
-                extract_ancestor_assignments(nodes, node_id, node.ancestors(), &mut status);
+                extract_ancestor_assignments(all_nodes, node_id, node.ancestors(), &mut status);
             status += self.validate_meta(node_id, node.metadata(), metadata_structure);
             status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
             status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
             status += self.validate_state_evolution(
+                node_id,
+                node.type_id(),
                 &ancestor_assignments,
                 node.assignments(),
                 node.metadata(),
@@ -331,6 +333,8 @@ mod _validation {
 
         fn validate_state_evolution(
             &self,
+            node_id: NodeId,
+            transition_type: Option<TransitionType>,
             previous_state: &Assignments,
             current_state: &Assignments,
             current_meta: &Metadata,
@@ -351,6 +355,7 @@ mod _validation {
                     match procedure {
                         script::Procedure::Standard(proc) => {
                             let mut vm = vm::Embedded::with(
+                                transition_type,
                                 previous_state.get(&assignment_type).cloned(),
                                 current_state.get(&assignment_type).cloned(),
                                 current_meta.clone(),
@@ -362,7 +367,7 @@ mod _validation {
                                     // Nothing to do here: 0 signifies successful script execution
                                 },
                                 Some(n) => {
-                                    status.add_failure(validation::Failure::ScriptFailure(n));
+                                    status.add_failure(validation::Failure::ScriptFailure(node_id, n));
                                 }
                             }
                         }

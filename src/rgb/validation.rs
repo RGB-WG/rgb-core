@@ -182,7 +182,7 @@ pub enum Failure {
     WitnessNoCommitment(NodeId, AnchorId, Txid),
 
     SimplicityIsNotSupportedYet,
-    ScriptFailure(u8),
+    ScriptFailure(NodeId, u8),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]

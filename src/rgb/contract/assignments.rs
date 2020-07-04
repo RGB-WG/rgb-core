@@ -46,8 +46,16 @@ pub enum AssignmentsVariant {
 }
 
 impl AssignmentsVariant {
-    /// Returns `None` if bot `allocations_ours` and `allocations_theirs` vecs
-    /// are empty
+    // TODO: change return type from Option to Result
+    /// Returns
+    /// -------
+    ///
+    /// * `None` in case
+    ///   - if any of secp256k1 operations were unsuccessful (negligible
+    ///     probability)
+    ///   - if both `allocations_ours` and `allocations_theirs` vecs are empty
+    ///   - if the verification of the operation failed
+    /// * `Some(AssignmentsVariant)` in all other cases
     pub fn zero_balanced(
         mut inputs: Vec<amount::Revealed>,
         allocations_ours: Vec<(SealDefinition, Amount)>,
@@ -56,6 +64,7 @@ impl AssignmentsVariant {
         let mut rng = rand::thread_rng();
         let mut blinding_factors = vec![];
 
+        // Input vector should not be zero
         if inputs.is_empty() {
             inputs = vec![amount::Revealed {
                 amount: 0,
@@ -81,35 +90,39 @@ impl AssignmentsVariant {
             })
             .collect();
 
-        let blinding_inputs = inputs.iter().map(|inp| inp.blinding.clone()).collect();
+        // We need all blinding factors (for both outputs and inputs, if they
+        // are present) to sum into 0. Originally we have randomly-generated
+        // blindings, so they will not sum to 0. Here, we compute their sum
+        // and then correct one of existing blinding factors on that sum; which
+        // naturally gives us 0 summed-factors:
+        // ∑[i=0..n](b_i) = d => ∑[i=0..n-1](b_i) + b_n - d = 0
+        let blinding_inputs: Vec<_> = inputs.iter().map(|inp| inp.blinding.clone()).collect();
         let mut blinding_correction = SECP256K1_ZKP
-            .blind_sum(blinding_inputs, blinding_factors)
-            .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
-        blinding_correction.neg_assign(&SECP256K1_ZKP).expect(
-            "You won lottery and will live forever: the probability \
-             of this event is less than a life of the universe",
-        );
+            .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
+            .ok()?;
+        // To subtract, we need first negate, and than add
+        blinding_correction.neg_assign(&SECP256K1_ZKP).ok()?;
+        trace!("Out input blinding factors are {:?}\nOur output blinding factors are {:?}\nTheir sum is {:?}", blinding_inputs, blinding_factors, blinding_correction);
         if let Some(item) = list_ours.last_mut() {
             let blinding = &mut item.1.blinding;
+            trace!("Adjusting blinding factor {:?}", blinding);
             blinding
                 .add_assign(&SECP256K1_ZKP, &blinding_correction)
-                .expect(
-                    "You won lottery and will live forever: the probability \
-                    of this event is less than a lifetime of the universe",
-                );
+                .ok()?;
+            trace!("Result of the adjustment: {:?}", blinding);
         } else if let Some(item) = list_theirs.last_mut() {
             let blinding = &mut item.1.blinding;
+            trace!("Adjusting blinding factor {:?}", blinding);
             blinding
                 .add_assign(&SECP256K1_ZKP, &blinding_correction)
-                .expect(
-                    "You won lottery and will live forever: the probability \
-                    of this event is less than a lifetime of the universe",
-                );
+                .ok()?;
+            trace!("Result of the adjustment: {:?}", blinding);
         } else {
             return None;
         }
 
-        let set = list_ours
+        // Composing assignment
+        let set: BTreeSet<Assignment<PedersenStrategy>> = list_ours
             .into_iter()
             .map(|(seal_definition, assigned_state)| Assignment::Revealed {
                 seal_definition,
@@ -126,6 +139,19 @@ impl AssignmentsVariant {
                     ),
             )
             .collect();
+
+        // Double-checking that we did everything correct:
+        if !amount::Confidential::verify_commit_sum(
+            inputs.iter().map(|a| a.conceal().commitment).collect(),
+            set.iter()
+                .map(|a| a.assigned_state_confidential().commitment)
+                .collect(),
+        ) {
+            // We have failed the verification! Should not happen, but just in
+            // case, we are not returning the result and indicating that
+            // something wrong has happened
+            return None;
+        }
 
         Some(Self::DiscreteFiniteField(set))
     }

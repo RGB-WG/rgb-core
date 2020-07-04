@@ -14,25 +14,25 @@
 use core::any::Any;
 
 use super::VirtualMachine;
-use crate::rgb::{amount, script::StandardProcedure, AssignmentsVariant, Metadata};
+use crate::rgb::{amount, schema, script::StandardProcedure, AssignmentsVariant, Metadata};
 
 // Data are taken according to RGB-20 (LNPBP-20) standard
 #[allow(unused)]
-const META_TOTAL_SUPPLY: u16 = 3;
+const META_TOTAL_SUPPLY: usize = 3;
 #[allow(unused)]
-const META_ISSUED_SUPPLY: u16 = 4;
+const META_ISSUED_SUPPLY: usize = 4;
 #[allow(unused)]
-const SEAL_ISSUE: u16 = 0;
+const SEAL_ISSUE: usize = 0;
 #[allow(unused)]
-const SEAL_ASSETS: u16 = 1;
+const SEAL_ASSETS: usize = 1;
 #[allow(unused)]
-const SEAL_PRUNE: u16 = 2;
+const SEAL_PRUNE: usize = 2;
 #[allow(unused)]
-const TRANSITION_ISSUE: u16 = 0;
+const TRANSITION_ISSUE: usize = 0;
 #[allow(unused)]
-const TRANSITION_TRANSFER: u16 = 1;
+const TRANSITION_TRANSFER: usize = 1;
 #[allow(unused)]
-const TRANSITION_PRUNE: u16 = 2;
+const TRANSITION_PRUNE: usize = 2;
 
 macro_rules! push_stack {
     ($self:ident, $ident:literal) => {
@@ -42,6 +42,7 @@ macro_rules! push_stack {
 
 #[derive(Debug)]
 pub struct Embedded {
+    transition_type: Option<schema::TransitionType>,
     previous_state: Option<AssignmentsVariant>,
     current_state: Option<AssignmentsVariant>,
     current_meta: Metadata,
@@ -51,11 +52,13 @@ pub struct Embedded {
 
 impl Embedded {
     pub fn with(
+        transition_type: Option<schema::TransitionType>,
         previous_state: Option<AssignmentsVariant>,
         current_state: Option<AssignmentsVariant>,
         current_meta: Metadata,
     ) -> Self {
         Self {
+            transition_type,
             previous_state,
             current_state,
             current_meta,
@@ -69,8 +72,16 @@ impl Embedded {
             StandardProcedure::ConfidentialAmount => {
                 match self.previous_state {
                     None => {
-                        // TODO: We are at genesis, must check issue metadata
-                        push_stack!(self, 0u8);
+                        if self.transition_type == None
+                            || self.transition_type == Some(TRANSITION_ISSUE)
+                        {
+                            // TODO: We are at genesis or issue transition, must check issue metadata
+                            push_stack!(self, 0u8);
+                        } else {
+                            // Other types of transitions are required to have
+                            // a previous state
+                            push_stack!(self, 5u8);
+                        }
                     }
                     Some(ref variant) => {
                         if let AssignmentsVariant::DiscreteFiniteField(_) = variant {
