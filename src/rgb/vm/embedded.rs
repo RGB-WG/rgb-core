@@ -14,6 +14,7 @@
 use core::any::Any;
 
 use super::VirtualMachine;
+use crate::client_side_validation::Conceal;
 use crate::rgb::{amount, schema, script::StandardProcedure, AssignmentsVariant, Metadata};
 
 // Data are taken according to RGB-20 (LNPBP-20) standard
@@ -75,8 +76,50 @@ impl Embedded {
                         if self.transition_type == None
                             || self.transition_type == Some(TRANSITION_ISSUE)
                         {
-                            // TODO: We are at genesis or issue transition, must check issue metadata
-                            push_stack!(self, 0u8);
+                            // We are at genesis or issue transition, must check
+                            // issue metadata
+
+                            // Collect outputs
+                            let outputs = if let Some(ref state) = self.current_state {
+                                state.all_state_pedersen()
+                            } else {
+                                push_stack!(self, 6u8);
+                                return;
+                            };
+
+                            // Check their bulletproofs
+                            for c in &outputs {
+                                if c.verify_bullet_proof().is_err() {
+                                    push_stack!(self, 2u8);
+                                    return;
+                                }
+                            }
+
+                            // Get issued supply data
+                            let supply = match self.current_meta.u64(META_ISSUED_SUPPLY).next() {
+                                Some(supply) => supply,
+                                _ => {
+                                    push_stack!(self, 7u8);
+                                    return;
+                                }
+                            };
+
+                            // Check zero knowledge correspondence
+                            if amount::Confidential::verify_commit_sum(
+                                outputs.into_iter().map(|c| c.commitment).collect(),
+                                vec![
+                                    amount::Revealed {
+                                        amount: supply,
+                                        blinding: secp256k1zkp::key::ZERO_KEY,
+                                    }
+                                    .conceal()
+                                    .commitment,
+                                ],
+                            ) {
+                                push_stack!(self, 0u8);
+                            } else {
+                                push_stack!(self, 3u8);
+                            }
                         } else {
                             // Other types of transitions are required to have
                             // a previous state
@@ -118,11 +161,11 @@ impl Embedded {
             }
             StandardProcedure::IssueControl => {
                 push_stack!(self, 0u8);
-                // TODO: Implement issue validation
+                // TODO: Implement secondary issue validation (trivial)
             }
             StandardProcedure::Prunning => {
                 push_stack!(self, 0u8);
-                // TODO: Implement prunning validation
+                // TODO: Implement prunning validation (currently none)
             }
         }
     }

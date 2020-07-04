@@ -27,7 +27,7 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # not introduce risk of breaking the consensus and even security updates must
 # be done manualy after through testing
 [dependencies]
-amplify = { version = "~0.1.7", features = ["serde", "std"] }
+amplify = { version = "~0.1.8", features = ["serde", "std"] }
 amplify_derive = "~0.1.2"
 lazy_static = "~1.4.0"
 bech32 = "~0.7.2"
