@@ -54,23 +54,23 @@ impl CommitVerify<MultiMsg> for MultimsgCommitment {
         const SORT_LIMIT: usize = 2 << 16;
 
         let mut n = multimsg.len();
-        if n < 3 {
-            n = 3;
-        }
+        // We use some minimum number of items, to increase privacy
+        n = n.max(3);
         let ordered = loop {
             let mut ordered = BTreeMap::<usize, (sha256::Hash, sha256::Hash)>::new();
             // TODO: Modify arithmetics in LNPBP-4 spec
-            if multimsg.into_iter().all(|(hash, digest)| {
-                let rem = Uint256::from_be_bytes(hash.into_inner())
+            if multimsg.into_iter().all(|(protocol, digest)| {
+                let rem = Uint256::from_be_bytes(protocol.into_inner())
                     % Uint256::from_u64(n as u64).expect("Bitcoin U256 struct is broken");
                 ordered
-                    .insert(rem.low_u64() as usize, (hash.clone(), digest.clone()))
+                    .insert(rem.low_u64() as usize, (protocol.clone(), digest.clone()))
                     .is_none()
             }) {
                 break ordered;
             }
             n += 1;
             if n > SORT_LIMIT {
+                // TODO: Convert this in a error returned by the function
                 panic!(
                     "Memory allocation limit exceeded while trying to sort multi-message commitment"
                 );
@@ -87,8 +87,8 @@ impl CommitVerify<MultiMsg> for MultimsgCommitment {
             sha256::Hash::from_engine(engine)
         };
 
-        let mut commitments = vec![];
-        for i in 1..=n {
+        let mut commitments = Vec::<_>::with_capacity(n);
+        for i in 0..n {
             match ordered.get(&i) {
                 None => {
                     let mut engine = sha256::Hash::engine();
@@ -104,6 +104,7 @@ impl CommitVerify<MultiMsg> for MultimsgCommitment {
                 }
             }
         }
+
         Self {
             commitments,
             entropy: Some(entropy),

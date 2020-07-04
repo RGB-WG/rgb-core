@@ -103,13 +103,13 @@ impl Anchor {
         // type
         let per_output_sources = transitions.into_iter().fold(
             HashMap::<usize, BTreeMap<sha256::Hash, sha256::Hash>>::new(),
-            |mut data, (contract_id, t)| {
+            |mut data, (contract_id, node_id)| {
                 let id = Uint256::from_be_bytes(contract_id.into_inner());
                 let vout = id % Uint256::from_u64(num_outs).unwrap();
                 let vout = vout.low_u64() as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
                     sha256::Hash::from_inner(contract_id.into_inner()),
-                    sha256::Hash::from_inner(t.into_inner()),
+                    sha256::Hash::from_inner(node_id.into_inner()),
                 );
                 data
             },
@@ -119,6 +119,7 @@ impl Anchor {
         let mut contract_anchor_map = HashMap::<ContractId, usize>::new();
         for (vout, multimsg) in per_output_sources {
             let mm_commitment = MultimsgCommitment::commit(&multimsg);
+
             let psbt_out = psbt
                 .outputs
                 .get(vout)
