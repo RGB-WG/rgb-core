@@ -36,7 +36,7 @@ pub mod prelude {
         Anchor, AnchorId, Consignment, ConsignmentData, ConsignmentEndpoints, Disclosure, Stash,
         PSBT_FEE_KEY, PSBT_PUBKEY_KEY,
     };
-    pub use validation::Validity;
+    pub use validation::{Validator, Validity};
     pub use vm::VirtualMachine;
 }
 
