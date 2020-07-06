@@ -59,18 +59,19 @@ impl AssignmentsVariant {
             blinding_factors.push(amount::BlindingFactor::new(&SECP256K1_ZKP, &mut rng));
         }
 
-        // We need the last factor to be equal to the sum
-        let blinding_inputs: Vec<_> = inputs.iter().map(|inp| inp.blinding.clone()).collect();
-        if !blinding_inputs.is_empty() {
-            blinding_factors.pop();
-
-            let blinding_correction = SECP256K1_ZKP
-                .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
-                .expect("SECP256K1_ZKP failure has negligible probability");
-            blinding_factors.push(blinding_correction.clone());
+        // We need the last factor to be equal to the difference
+        let mut blinding_inputs: Vec<_> = inputs.iter().map(|inp| inp.blinding.clone()).collect();
+        if blinding_inputs.is_empty() {
+            blinding_inputs.push(secp256k1zkp::key::ONE_KEY);
         }
 
-        // Composing assignment
+        // remove one output blinding factor and replace it with the correction factor
+        blinding_factors.pop();
+        let blinding_correction = SECP256K1_ZKP
+            .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
+            .expect("SECP256K1_ZKP failure has negligible probability");
+        blinding_factors.push(blinding_correction);
+
         let mut set: BTreeSet<Assignment<_>> = allocations_ours
             .into_iter()
             .map(|(seal_definition, amount)| Assignment::Revealed {
