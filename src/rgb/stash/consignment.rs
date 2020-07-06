@@ -60,10 +60,10 @@ impl Consignment {
         set
     }
 
-    pub fn validate(
+    pub fn validate<R: validation::TxResolver>(
         &self,
         schema: &Schema,
-        resolver: validation::TxResolver,
+        resolver: R,
     ) -> validation::Status {
         Validator::validate(schema, self, resolver)
     }
@@ -90,6 +90,7 @@ impl StrictDecode for Consignment {
 pub(crate) mod test {
     use super::*;
     use crate::rgb::schema::test::schema;
+    use crate::rgb::validation::TxResolver;
 
     pub(crate) fn consignment() -> Consignment {
         let data: Vec<u8> = vec![
@@ -124,18 +125,23 @@ pub(crate) mod test {
         Consignment::strict_decode(&data[..]).unwrap()
     }
 
-    fn tx_resolver(
-        txid: &Txid,
-    ) -> Result<Option<(bitcoin::Transaction, u64)>, validation::TxResolverError> {
-        eprintln!("Validating txid {}", txid);
-        Err(validation::TxResolverError)
+    struct TestResolver;
+
+    impl TxResolver for TestResolver {
+        fn resolve(
+            &self,
+            txid: &Txid,
+        ) -> Result<Option<(bitcoin::Transaction, u64)>, validation::TxResolverError> {
+            eprintln!("Validating txid {}", txid);
+            Err(validation::TxResolverError)
+        }
     }
 
     #[test]
     fn test_consignment_validation() {
         let consignment = consignment();
         let schema = schema();
-        let status = consignment.validate(&schema, tx_resolver);
+        let status = consignment.validate(&schema, TestResolver);
         println!("{}", status);
     }
 }

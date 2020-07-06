@@ -27,7 +27,9 @@ use crate::rgb::AssignmentsVariant;
 #[display_from(Debug)]
 pub struct TxResolverError;
 
-pub type TxResolver = fn(&Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
+pub trait TxResolver {
+    fn resolve(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display_from(Debug)]
@@ -205,7 +207,7 @@ pub enum Info {
     UncheckableConfidentialStateData(NodeId, usize),
 }
 
-pub struct Validator<'validator> {
+pub struct Validator<'validator, R: TxResolver> {
     consignment: &'validator Consignment,
 
     status: Status,
@@ -218,11 +220,11 @@ pub struct Validator<'validator> {
     end_transitions: Vec<&'validator dyn Node>,
     validation_index: BTreeSet<NodeId>,
 
-    resolver: TxResolver,
+    resolver: R,
 }
 
-impl<'validator> Validator<'validator> {
-    fn init(consignment: &'validator Consignment, resolver: TxResolver) -> Self {
+impl<'validator, R: TxResolver> Validator<'validator, R> {
+    fn init(consignment: &'validator Consignment, resolver: R) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
@@ -307,11 +309,7 @@ impl<'validator> Validator<'validator> {
     /// the status object, but the validation continues for the rest of the
     /// consignment data. This can help it debugging and detecting all problems
     /// with the consignment.
-    pub fn validate(
-        schema: &Schema,
-        consignment: &'validator Consignment,
-        resolver: TxResolver,
-    ) -> Status {
+    pub fn validate(schema: &Schema, consignment: &'validator Consignment, resolver: R) -> Status {
         let mut validator = Validator::init(consignment, resolver);
 
         validator.validate_root(schema);
@@ -440,7 +438,7 @@ impl<'validator> Validator<'validator> {
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.
-        match (self.resolver)(&txid) {
+        match self.resolver.resolve(&txid) {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't
                 // check. Reporting this incident and continuing further.
