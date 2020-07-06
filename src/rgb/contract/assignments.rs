@@ -60,12 +60,13 @@ impl AssignmentsVariant {
         }
 
         // We need the last factor to be equal to the sum
-        let any_factor = blinding_factors.pop();
         let blinding_inputs: Vec<_> = inputs.iter().map(|inp| inp.blinding.clone()).collect();
-        let blinding_correction = SECP256K1_ZKP
-            .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
-            .expect("SECP256K1_ZKP failure has negligible probability");
-        if any_factor.is_some() {
+        if !blinding_inputs.is_empty() {
+            blinding_factors.pop();
+
+            let blinding_correction = SECP256K1_ZKP
+                .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
+                .expect("SECP256K1_ZKP failure has negligible probability");
             blinding_factors.push(blinding_correction.clone());
         }
 
