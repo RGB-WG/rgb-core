@@ -247,7 +247,7 @@ impl StrictDecode for OutpointReveal {
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         Ok(Self {
-            blinding: u32::strict_decode(&mut d)?,
+            blinding: u64::strict_decode(&mut d)?,
             txid: Txid::strict_decode(&mut d)?,
             vout: u16::strict_decode(&mut d)?,
         })

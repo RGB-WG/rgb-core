@@ -25,7 +25,7 @@ use crate::commit_verify::CommitVerify;
 pub struct OutpointReveal {
     /// Blinding factor preventing rainbow table bruteforce attack based on
     /// the existing blockchain txid set
-    pub blinding: u32,
+    pub blinding: u64,
 
     /// Txid that should be blinded
     pub txid: Txid,
@@ -44,7 +44,7 @@ impl From<OutpointReveal> for OutPoint {
 impl From<OutPoint> for OutpointReveal {
     fn from(outpoint: OutPoint) -> Self {
         Self {
-            blinding: thread_rng().next_u32(),
+            blinding: thread_rng().next_u64(),
             txid: outpoint.txid,
             vout: outpoint.vout as u16,
         }
