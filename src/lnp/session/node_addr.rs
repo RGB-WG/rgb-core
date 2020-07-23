@@ -20,7 +20,7 @@ use super::{Connection, ConnectionError};
 use crate::internet::InetSocketAddr;
 use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
