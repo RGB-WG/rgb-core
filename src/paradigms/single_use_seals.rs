@@ -137,7 +137,7 @@ pub trait SingleUseSeal {
 /// version of the SealMedium [AsyncSealMedium], which requires use of
 /// `async` feature of this crate.
 ///
-/// All these operations are medium-specific; for the same sinle-use-seal type
+/// All these operations are medium-specific; for the same single-use-seal type
 /// they may differ when are applied to different proof of publication mediums.
 ///
 /// To read more on proof-of-publication please check

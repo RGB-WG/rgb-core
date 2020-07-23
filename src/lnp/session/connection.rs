@@ -91,6 +91,7 @@ impl Connection {
         #[cfg(feature = "tor")]
         let socket_addr: SocketAddr = node
             .inet_addr
+            .clone()
             .try_into()
             .map_err(|_| ConnectionError::TorNotYetSupported)?;
         #[cfg(not(feature = "tor"))]

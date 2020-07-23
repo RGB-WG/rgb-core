@@ -29,7 +29,7 @@ pub trait TryService: Sized {
             Err(err) => format!("{} run loop has failed with error {}", service_name, err),
             Ok(_) => format!("{} has failed without reporting a error", service_name),
         };
-        #[cfg(fature = "log")]
+        #[cfg(feature = "log")]
         error!("{}", message);
         panic!("{}", message);
     }

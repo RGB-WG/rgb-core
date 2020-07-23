@@ -22,7 +22,7 @@
 //! output script, btu not vice versa. But really what makes a "script" is just the fact that it's
 //! formatted correctly.
 //!
-//! While all `Script`s represent the same same type **semantically**, there is a clear distinction
+//! While all `Script`s represent the same type **semantically**, there is a clear distinction
 //! at the **logical** level: Bitcoin script has the property to be committed into some other
 //! Bitcoin script – in a nested structures like in several layers, like *redeemScript* inside of
 //! *sigScript* used for P2SH, or *tapScript* within *witnessScript* coming from *witness* field
@@ -31,7 +31,7 @@
 //! public keys (`PubkeyHash`, `WPubkeyHash`), while other contain the full source of the script.
 //!
 //! The present type system represents a solution to the problem: it distinguish different logical
-//! types by introducing `Script` wrapper types. It defines `LockScript` as bottom layer or a script
+//! types by introducing `Script` wrapper types. It defines `LockScript` as bottom layer of a script
 //! hierarchy, containing no other script commitments (in form of their hashes). It also defines
 //! types above on it: `PubkeyScript` (for whatever is there in `pubkeyScript` field of a `TxOut`),
 //! `SigScript` (for whatever comes from `sigScript` field of `TxIn`), `RedeemScript` and `TapScript`.
@@ -461,7 +461,7 @@ impl ScriptSet {
         self.witness_script != None
     }
 
-    /// Detects whether the structure is either P2SH-P2WPKH or P2SH-P2WPSH
+    /// Detects whether the structure is either P2SH-P2WPKH or P2SH-P2WSH
     pub fn is_witness_sh(&self) -> bool {
         return self.sig_script.as_inner().len() > 0 && self.has_witness();
     }

@@ -17,7 +17,7 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::str::FromStr;
 #[cfg(feature = "tor")]
-use torut::onion::{OnionAddressV3, TorPublicKeyV3, TORV3_PUBLIC_KEY_LENGTH};
+use torut::onion::{OnionAddressV2, OnionAddressV3, TorPublicKeyV3, TORV3_PUBLIC_KEY_LENGTH};
 
 /// A universal address covering IPv4, IPv6 and Tor in a single byte sequence
 /// of 32 bytes.
@@ -25,18 +25,21 @@ use torut::onion::{OnionAddressV3, TorPublicKeyV3, TORV3_PUBLIC_KEY_LENGTH};
 /// Holds either:
 /// * IPv4-to-IPv6 address
 /// * IPv6 address
-/// * Tor address (only 3rd version is supported)
+/// * Tor address (V2 and V3)
 ///
 /// NB: we are using `TorPublicKeyV3` instead of `OnionAddressV3`, since
-/// `OnionAddressV3` keeps cehcksum and other information which can be
+/// `OnionAddressV3` keeps checksum and other information which can be
 /// reconstructed from `TorPublicKeyV3`. The 2-byte checksum in `OnionAddressV3`
 /// is designed for human-readable part that checks that the address was typed
 /// in correctly. In computer-stored digital data it may be deterministically
 /// regenerated and does not add any additional security.
 ///
+/// For Version2 Tor support only `OnionAddressV2` handling is supported.
+/// `OnionAddressV2` can only be constructed from an address string.
+///
 /// Tor addresses are distinguished by the fact that last 16 bits
 /// must be set to 0
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -51,14 +54,15 @@ pub enum InetAddr {
     IPv6(Ipv6Addr),
     #[cfg(feature = "tor")]
     Tor(TorPublicKeyV3),
+    #[cfg(feature = "tor")]
+    TorV2(OnionAddressV2),
 }
 
 impl InetAddr {
     #[cfg(feature = "tor")]
-    pub const UNIFORM_ADDR_LEN: usize = TORV3_PUBLIC_KEY_LENGTH;
+    pub const UNIFORM_ADDR_LEN: usize = TORV3_PUBLIC_KEY_LENGTH; //32usize
     #[cfg(not(feature = "tor"))]
     pub const UNIFORM_ADDR_LEN: usize = 32;
-
     #[inline]
     pub fn get_ip6(&self) -> Option<Ipv6Addr> {
         match self {
@@ -78,10 +82,10 @@ impl InetAddr {
     #[cfg(feature = "tor")]
     #[inline]
     pub fn is_tor(&self) -> bool {
-        if let InetAddr::Tor(_) = self {
-            true
-        } else {
-            false
+        match self {
+            InetAddr::Tor(_) => true,
+            InetAddr::TorV2(_) => true,
+            _ => false,
         }
     }
 
@@ -117,7 +121,10 @@ impl InetAddr {
             InetAddr::IPv4(ipv4_addr) => buf[28..].copy_from_slice(&ipv4_addr.octets()),
             InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
             #[cfg(feature = "tor")]
-            InetAddr::Tor(tor_addr) => buf = tor_addr.to_bytes(),
+            InetAddr::Tor(tor_pubkey) => buf = tor_pubkey.to_bytes(),
+            InetAddr::TorV2(onion_addr) => {
+                buf[22..].copy_from_slice(onion_addr.get_raw_bytes().as_ref())
+            }
         }
         buf
     }
@@ -138,6 +145,7 @@ impl fmt::Display for InetAddr {
             InetAddr::IPv6(addr) => write!(f, "{}", addr),
             #[cfg(feature = "tor")]
             InetAddr::Tor(addr) => write!(f, "{}", addr),
+            InetAddr::TorV2(addr) => write!(f, "{}", addr),
         }
     }
 }
@@ -150,7 +158,10 @@ impl TryFrom<InetAddr> for IpAddr {
             InetAddr::IPv4(addr) => IpAddr::V4(addr),
             InetAddr::IPv6(addr) => IpAddr::V6(addr),
             #[cfg(feature = "tor")]
-            InetAddr::Tor(_) => Err(String::from("IpAddr can't be used to store Tor address"))?,
+            InetAddr::Tor(_) => Err(String::from("IpAddr can't be used to store Tor v3 address"))?,
+            InetAddr::TorV2(_) => {
+                Err(String::from("IpAddr can't be used to store Tor v2 address"))?
+            }
         })
     }
 }
@@ -195,23 +206,35 @@ impl From<OnionAddressV3> for InetAddr {
     }
 }
 
+#[cfg(feature = "tor")]
+impl From<OnionAddressV2> for InetAddr {
+    #[inline]
+    fn from(addr: OnionAddressV2) -> Self {
+        InetAddr::TorV2(addr)
+    }
+}
+
 impl_try_from_stringly_standard!(InetAddr);
 impl_into_stringly_standard!(InetAddr);
 
 impl FromStr for InetAddr {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match IpAddr::from_str(s) {
-            Ok(ip_addr) => Ok(Self::from(ip_addr)),
+        match (
+            IpAddr::from_str(s),
+            OnionAddressV3::from_str(s),
+            OnionAddressV2::from_str(s),
+        ) {
+            (Ok(ip_addr), _, _) => Ok(Self::from(ip_addr)),
             #[cfg(feature = "tor")]
-            Err(_) => Ok(Self::from(
-                OnionAddressV3::from_str(s)
-                    .map(Self::from)
-                    .map_err(|_| String::from("Wrong onion address string"))?,
-            )),
+            (_, Ok(onionv3), _) => Ok(Self::from(onionv3)),
+            #[cfg(feature = "tor")]
+            (_, _, Ok(onionv2)) => Ok(Self::from(onionv2)),
+            #[cfg(feature = "tor")]
+            _ => Err(String::from("Wrong onion address")),
             #[cfg(not(feature = "tor"))]
-            Err(_) => Err(String::from(
-                "Tor addresses are not supported; consider compiling with 'use-tor' feature",
+            _ => Err(String::from(
+                "Tor addresses are not supported; consider compiling with 'tor' feature",
             )),
         }
     }
@@ -379,7 +402,7 @@ impl fmt::Display for Transport {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct InetSocketAddr {
     pub address: InetAddr,
     pub port: u16,
