@@ -31,7 +31,7 @@ pub struct OutpointReveal {
     pub txid: Txid,
 
     /// Tx output number that should be blinded
-    pub vout: u16,
+    pub vout: u32,
 }
 
 impl From<OutpointReveal> for OutPoint {
@@ -46,7 +46,7 @@ impl From<OutPoint> for OutpointReveal {
         Self {
             blinding: thread_rng().next_u64(),
             txid: outpoint.txid,
-            vout: outpoint.vout as u16,
+            vout: outpoint.vout as u32,
         }
     }
 }

@@ -249,7 +249,7 @@ impl StrictDecode for OutpointReveal {
         Ok(Self {
             blinding: u64::strict_decode(&mut d)?,
             txid: Txid::strict_decode(&mut d)?,
-            vout: u16::strict_decode(&mut d)?,
+            vout: u32::strict_decode(&mut d)?,
         })
     }
 }

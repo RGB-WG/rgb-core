@@ -28,7 +28,7 @@ pub enum Revealed {
     /// Seal that is revealed
     TxOutpoint(OutpointReveal),
     /// Seal contained within the witness transaction
-    WitnessVout { vout: u16, blinding: u64 },
+    WitnessVout { vout: u32, blinding: u64 },
 }
 
 impl Revealed {
@@ -104,7 +104,7 @@ mod strict_encoding {
             Ok(match format {
                 0u8 => Revealed::TxOutpoint(OutpointReveal::strict_decode(d)?),
                 1u8 => Revealed::WitnessVout {
-                    vout: u16::strict_decode(&mut d)?,
+                    vout: u32::strict_decode(&mut d)?,
                     blinding: u64::strict_decode(&mut d)?,
                 },
                 invalid => Err(Error::EnumValueNotKnown(
