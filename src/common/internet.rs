@@ -28,7 +28,7 @@ use torut::onion::{OnionAddressV3, TorPublicKeyV3, TORV3_PUBLIC_KEY_LENGTH};
 /// * Tor address (only 3rd version is supported)
 ///
 /// NB: we are using `TorPublicKeyV3` instead of `OnionAddressV3`, since
-/// `OnionAddressV3` keeps cehcksum and other information wich can be
+/// `OnionAddressV3` keeps cehcksum and other information which can be
 /// reconstructed from `TorPublicKeyV3`. The 2-byte checksum in `OnionAddressV3`
 /// is designed for human-readable part that checks that the address was typed
 /// in correctly. In computer-stored digital data it may be deterministically
