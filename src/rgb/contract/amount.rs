@@ -89,7 +89,7 @@ impl ConfidentialState for Confidential {}
 
 impl PartialOrd for Confidential {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match (&self.commitment.0).partial_cmp(&other.commitment.0[..]) {
+        match (&self.commitment.0).partial_cmp(&other.commitment.0) {
             None => None,
             Some(Ordering::Equal) => self.bulletproof.proof[0..self.bulletproof.plen]
                 .partial_cmp(&other.bulletproof.proof[0..other.bulletproof.plen]),
