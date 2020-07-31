@@ -225,6 +225,9 @@ impl FromStr for InetAddr {
             OnionAddressV3::from_str(s),
             OnionAddressV2::from_str(s),
         ) {
+            (Ok(_), Ok(_), _) | (Ok(_), _, Ok(_)) | (_, Ok(_), Ok(_)) => {
+                Err(format!("Confusing result of parsing {}", s))
+            }
             (Ok(ip_addr), _, _) => Ok(Self::from(ip_addr)),
             #[cfg(feature = "tor")]
             (_, Ok(onionv3), _) => Ok(Self::from(onionv3)),
