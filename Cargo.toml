@@ -57,6 +57,7 @@ serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], 
 
 [dev-dependencies]
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "staging", features = ["compiler"] }
+bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "staging", features = ["rand"] }
 
 [features]
 default = ["tor", "lnp", "tokio", "log", "url"]
