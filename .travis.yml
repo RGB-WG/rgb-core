@@ -19,7 +19,7 @@ addons:
 matrix:
   include:
     - rust: nightly
-      env: DO_COV=true AS_DEPENDENCY=true DO_LINT=true
+      env: DO_COV=true AS_DEPENDENCY=true # DO_LINT=true - excluding linting until https://github.com/rust-lang/rust/issues/74812 will be fixed
 
 script:
   - ./contrib/test.sh
