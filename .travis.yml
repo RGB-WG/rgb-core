@@ -7,35 +7,12 @@ addons:
       - binutils-dev
       - libunwind8-dev
       - libzmq3-dev
-      # Codecov dependencies:
-      - libcurl4-openssl-dev
-      - libelf-dev
-      - libbfd-dev
-      - libdw-dev
-      - cmake
-      - gcc
-      - libiberty-dev
 
 
 matrix:
   include:
     - rust: nightly
-      env: DO_COV=true AS_DEPENDENCY=true # DO_LINT=true - excluding linting until https://github.com/rust-lang/rust/issues/74812 will be fixed
+      env: AS_DEPENDENCY=true DO_LINT=true
 
 script:
   - ./contrib/test.sh
-
-after_success: |
-  wget https://github.com/SimonKagstrom/kcov/archive/v38.tar.gz &&
-  tar xzf v38.tar.gz &&
-  cd kcov-38 &&
-  mkdir build &&
-  cd build &&
-  cmake .. &&
-  make &&
-  make install DESTDIR=../../kcov-build &&
-  cd ../.. &&
-  rm -rf kcov-38 &&
-  for file in target/debug/deps/lnpbp[-_a-Z]*[^\.dSYM]; do [ -x "${file}" ] || continue; mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
-  bash <(curl -s https://codecov.io/bash) &&
-  echo "Uploaded code coverage"
