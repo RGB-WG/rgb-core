@@ -15,7 +15,6 @@
     never_type,
     associated_type_defaults,
     arbitrary_enum_discriminant,
-    bool_to_option,
     in_band_lifetimes,
     try_trait,
     pattern

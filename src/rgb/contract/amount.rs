@@ -587,7 +587,7 @@ mod test {
 
         Ok(revealed)
     }
-    
+
     #[test]
     fn test_amount() {
         test_encode!(AMOUNT);
