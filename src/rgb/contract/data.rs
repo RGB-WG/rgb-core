@@ -292,13 +292,11 @@ pub(super) mod strict_encoding {
 }
 
 #[cfg(test)]
-#[macro_use]
 mod test {
 
-    use super::Revealed;
-    use crate::paradigms::client_side_validation::{CommitEncode, Conceal};
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
-    use std::fmt::Debug;
+    use super::super::test_helpers::*;
+    use super::*;
+    use crate::paradigms::strict_encoding::StrictDecode;
 
     // Hard coded test vectors
     static U_8: [u8; 2] = [0x0, 0x8];
@@ -427,101 +425,10 @@ mod test {
         0x92, 0x84, 0x7a, 0x29, 0xf6,
     ];
 
-    // Test suite function to test against the vectors
-    fn test_suite<T: StrictEncode + StrictDecode + PartialEq + Debug>(
-        object: &T,
-        test_vec: &[u8],
-        test_size: usize,
-    ) -> Result<T, Error> {
-        let mut encoded_object: Vec<u8> = vec![];
-        let write_1 = object.strict_encode(&mut encoded_object).unwrap();
-        let decoded_object = T::strict_decode(&encoded_object[..]).unwrap();
-        assert_eq!(write_1, test_size);
-        assert_eq!(decoded_object, *object);
-        encoded_object.clear();
-        let write_2 = decoded_object.strict_encode(&mut encoded_object).unwrap();
-        assert_eq!(encoded_object, test_vec);
-        assert_eq!(write_2, test_size);
-        Ok(decoded_object)
-    }
-
-    // Macro to run test_suite
-    macro_rules! test {
-        ($($x:ident),*) => (
-            {
-                $(
-                    let object = Revealed::strict_decode(&$x[..]).unwrap();
-                    assert!(test_suite(&object, &$x[..], $x.to_vec().len()).is_ok());
-                )*
-            }
-        );
-    }
-
-    // Macro to run test suite with garbage vector
-    // Should produce "EnumValueNotKnown" error
-    macro_rules! test_garbage {
-        ($($x:ident),*) => (
-            {
-                $(
-                    let mut cp = $x.clone();
-                    cp[0] = 0x36 as u8;
-                    Revealed::strict_decode(&cp[..]).unwrap();
-                )*
-            }
-        );
-    }
-
-    fn test_confidential(data: &[u8], commitment: &[u8]) -> Result<Revealed, Error> {
-        // Create the Revealed Structure from data bytes
-        let revealed = Revealed::strict_decode(data).unwrap();
-
-        // Conceal the Revealed structure into Confidential
-        let confidential = revealed.conceal();
-
-        // Strict_encode Confidential data
-        let mut confidential_encoded = [0u8; 20];
-        confidential
-            .strict_encode(&mut confidential_encoded[..])
-            .unwrap();
-
-        // strict_encode Revealed data
-        let mut revealed_encoded: Vec<u8> = vec![];
-        revealed.strict_encode(&mut revealed_encoded).unwrap();
-
-        // Assert encoded Confidential matches precomputed vector
-        assert_eq!(commitment, confidential_encoded);
-
-        // Assert encoded Confidential and Revealed are not equal
-        assert_ne!(confidential_encoded.to_vec(), revealed_encoded);
-
-        // commit_encode Revealed structure
-        let mut commit_encoded_revealed = vec![];
-        revealed.clone().commit_encode(&mut commit_encoded_revealed);
-
-        // Assert commit_encode and encoded Confidential matches
-        assert_eq!(commit_encoded_revealed, confidential_encoded);
-
-        // Assert commit_encode and precomputed Confidential matches
-        assert_eq!(commit_encoded_revealed, commitment);
-
-        Ok(revealed)
-    }
-
-    // Macro to test confidential encoding with garbage vector
-    macro_rules! test_conf {
-        ($(($revealed:ident, $conf:ident)),*) => (
-            {
-                $(
-                    assert!(test_confidential(&$revealed[..], &$conf[..]).is_ok());
-                )*
-            }
-        );
-    }
-
     // Normal encode/decode testing
     #[test]
     fn test_encoding() {
-        test!(
+        test_encode!(
             U_8,
             U_16,
             U_32,
@@ -570,27 +477,27 @@ mod test {
     }
 
     #[test]
-    fn test_conf() {
+    fn test_conf1() {
         test_conf!(
-            (U_8, U8_CONCEALED),
-            (U_16, U16_CONCEALED),
-            (U_32, U32_CONCEALED),
-            (U_64, U64_CONCEALED),
-            (I_8, I8_CONCEALED),
-            (I_16, I16_CONCEALED),
-            (I_32, I32_CONCEALED),
-            (I_64, I64_CONCEALED),
-            (F_32, F32_CONCEALED),
-            (F_64, F64_CONCEALED),
-            (F_64, F64_CONCEALED),
-            (BYTES, BYTES_CONCEALED),
-            (STRING, STRING_CONCEALED),
-            (BITCOIN160, BITCOIN160_CONCEALED),
-            (BITCOIN256, BITCOIN256_CONCEALED),
-            (SHA256, SHA256_CONCEALED),
-            (SHA512, SHA512_CONCEALED),
-            (PK_BYTES_02, PK_BYTES_02_CONCEALED),
-            (SIG_BYTES, SIG_BYTES_CONCEALED)
+            (U_8, U8_CONCEALED, Revealed),
+            (U_16, U16_CONCEALED, Revealed),
+            (U_32, U32_CONCEALED, Revealed),
+            (U_64, U64_CONCEALED, Revealed),
+            (I_8, I8_CONCEALED, Revealed),
+            (I_16, I16_CONCEALED, Revealed),
+            (I_32, I32_CONCEALED, Revealed),
+            (I_64, I64_CONCEALED, Revealed),
+            (F_32, F32_CONCEALED, Revealed),
+            (F_64, F64_CONCEALED, Revealed),
+            (F_64, F64_CONCEALED, Revealed),
+            (BYTES, BYTES_CONCEALED, Revealed),
+            (STRING, STRING_CONCEALED, Revealed),
+            (BITCOIN160, BITCOIN160_CONCEALED, Revealed),
+            (BITCOIN256, BITCOIN256_CONCEALED, Revealed),
+            (SHA256, SHA256_CONCEALED, Revealed),
+            (SHA512, SHA512_CONCEALED, Revealed),
+            (PK_BYTES_02, PK_BYTES_02_CONCEALED, Revealed),
+            (SIG_BYTES, SIG_BYTES_CONCEALED, Revealed)
         );
     }
 }
