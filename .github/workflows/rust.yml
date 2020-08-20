@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  lint:
+  codecov:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -20,7 +20,8 @@ jobs:
           override: true
       - name: Dependencies
         run: sudo apt-get install -y libzmq3-dev libpcre3-dev libpq-dev libssl-dev
-      - uses: actions-rs/cargo@v1
+      - name: Build
+        uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all-features --no-fail-fast
@@ -28,4 +29,11 @@ jobs:
           CARGO_INCREMENTAL: '0'
           RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
           RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
-      - uses: actions-rs/grcov@v0.1.5
+      - id: coverage
+        name: Generate coverage
+        uses: actions-rs/grcov@v0.1.5
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ${{ steps.coverage.outputs.report }}
+          directory: ./coverage/reports/
