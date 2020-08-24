@@ -443,9 +443,9 @@ mod serde_impl {
 
 #[cfg(test)]
 mod test {
-    use crate::strict_encoding::StrictDecode;
-    use super::*;
     use super::super::test_helpers::*;
+    use super::*;
+    use crate::strict_encoding::StrictDecode;
 
     static AMOUNT: [u8; 43] = [
         0x3, 0x41, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0xa6, 0x2b, 0x27, 0xae, 0x5a, 0xf,
