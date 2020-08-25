@@ -39,10 +39,10 @@ pub mod test_helpers {
 
     // Macro to run test_suite
     macro_rules! test_encode {
-        ($($x:ident),*) => (
+        ($(($x:ident, $ty:ty)),*) => (
             {
                 $(
-                    let object = Revealed::strict_decode(&$x[..]).unwrap();
+                    let object = <$ty>::strict_decode(&$x[..]).unwrap();
                     assert!(test_suite(&object, &$x[..], $x.to_vec().len()).is_ok());
                 )*
             }
@@ -52,12 +52,12 @@ pub mod test_helpers {
     // Macro to run test suite with garbage vector
     // Should produce "EnumValueNotKnown" error
     macro_rules! test_garbage {
-        ($($x:ident),*) => (
+        ($(($x:ident, $ty:ty)),*) => (
             {
                 $(
                     let mut cp = $x.clone();
                     cp[0] = 0x36 as u8;
-                    Revealed::strict_decode(&cp[..]).unwrap();
+                    <$ty>::strict_decode(&cp[..]).unwrap();
                 )*
             }
         );
