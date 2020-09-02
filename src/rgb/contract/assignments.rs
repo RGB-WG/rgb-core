@@ -53,8 +53,10 @@ impl AssignmentsVariant {
     ) -> Self {
         // Generate random blinding factors
         let mut rng = rand::thread_rng();
-        let count = allocations_theirs.len() + allocations_ours.len();
-        let mut blinding_factors = Vec::<_>::with_capacity(count);
+        // We will compute the last blinding factors from all others so they
+        // sum up to 0, so we need to generate only n - 1 random factors
+        let count = allocations_theirs.len() + allocations_ours.len() - 1;
+        let mut blinding_factors = Vec::<_>::with_capacity(count + 1);
         for _ in 0..count {
             blinding_factors.push(amount::BlindingFactor::new(&SECP256K1_ZKP, &mut rng));
         }
@@ -66,19 +68,21 @@ impl AssignmentsVariant {
         }
 
         // remove one output blinding factor and replace it with the correction factor
-        blinding_factors.pop();
         let blinding_correction = SECP256K1_ZKP
             .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
             .expect("SECP256K1_ZKP failure has negligible probability");
         blinding_factors.push(blinding_correction);
 
+        let mut blinding_iter = blinding_factors.into_iter();
         let mut set: BTreeSet<Assignment<_>> = allocations_ours
             .into_iter()
             .map(|(seal_definition, amount)| Assignment::Revealed {
                 seal_definition,
                 assigned_state: amount::Revealed {
                     amount,
-                    blinding: blinding_factors.pop().unwrap(), // factors are counted, so it's safe to unwrap here
+                    blinding: blinding_iter
+                        .next()
+                        .expect("Internal inconsistency in `AssignmentsVariant::zero_balanced`"),
                 },
             })
             .collect();
@@ -89,7 +93,9 @@ impl AssignmentsVariant {
                     seal_definition,
                     assigned_state: amount::Revealed {
                         amount,
-                        blinding: blinding_factors.pop().unwrap(), // factors are counted, so it's safe to unwrap here
+                        blinding: blinding_iter.next().expect(
+                            "Internal inconsistency in `AssignmentsVariant::zero_balanced`",
+                        ),
                     },
                 }),
         );
