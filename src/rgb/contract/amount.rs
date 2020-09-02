@@ -578,11 +578,11 @@ mod test {
 
         let commitments: Vec<secp256k1zkp::pedersen::Commitment> = amounts
             .into_iter()
-            .zip(blinding_factors.into_iter())
+            .zip(blinding_factors.iter())
             .map(|(amount, blinding_factor)| {
                 Revealed {
                     amount,
-                    blinding: blinding_factor,
+                    blinding: blinding_factor.clone(),
                 }
                 .conceal()
                 .commitment
@@ -592,6 +592,31 @@ mod test {
         assert!(Confidential::verify_commit_sum(
             commitments[..positive.len()].to_vec(),
             commitments[positive.len()..].to_vec()
+        ));
+
+        // Create Revealed amounts with wrong positive values
+        let wrong_positive = [1u64, 5u64, 3u64, 4u64, 5u64];
+        let mut amounts = wrong_positive.to_vec();
+        amounts.extend(negative.iter());
+
+        // Create commitments with wrong positive values
+        let wrong_commitments: Vec<secp256k1zkp::pedersen::Commitment> = amounts
+            .into_iter()
+            .zip(blinding_factors.iter())
+            .map(|(amount, blinding_factor)| {
+                Revealed {
+                    amount,
+                    blinding: blinding_factor.clone(),
+                }
+                .conceal()
+                .commitment
+            })
+            .collect();
+
+        // Ensure commit sum verification fails for wrong positive values
+        assert!(!Confidential::verify_commit_sum(
+            wrong_commitments[..positive.len()].to_vec(),
+            wrong_commitments[positive.len()..].to_vec()
         ));
     }
 
