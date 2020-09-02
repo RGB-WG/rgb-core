@@ -578,24 +578,21 @@ mod test {
 
         let commitments: Vec<secp256k1zkp::pedersen::Commitment> = amounts
             .into_iter()
-            .map(|amount| {
+            .zip(blinding_factors.into_iter())
+            .map(|(amount, blinding_factor)| {
                 Revealed {
                     amount,
-                    blinding: blinding_factors.pop().unwrap(),
+                    blinding: blinding_factor,
                 }
                 .conceal()
                 .commitment
             })
             .collect();
 
-        // Test still fails
-        assert_eq!(
-            Confidential::verify_commit_sum(
-                commitments[..positive.len()].to_vec(),
-                commitments[positive.len()..].to_vec()
-            ),
-            false
-        );
+        assert!(Confidential::verify_commit_sum(
+            commitments[..positive.len()].to_vec(),
+            commitments[positive.len()..].to_vec()
+        ));
     }
 
     #[test]
