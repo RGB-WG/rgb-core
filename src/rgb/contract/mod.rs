@@ -18,9 +18,13 @@ pub mod test_helpers {
     use crate::paradigms::client_side_validation::{CommitEncode, Conceal};
     use crate::paradigms::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::fmt::Debug;
+    use std::{
+        fs::File,
+        io::{BufWriter, Write},
+    };
 
     // Test suite function to test against the vectors
-    pub fn test_suite<T: StrictEncode + StrictDecode + PartialEq + Debug>(
+    pub(crate) fn test_suite<T: StrictEncode + StrictDecode + PartialEq + Debug>(
         object: &T,
         test_vec: &[u8],
         test_size: usize,
@@ -63,7 +67,7 @@ pub mod test_helpers {
         );
     }
 
-    pub fn test_confidential<T>(data: &[u8], commitment: &[u8]) -> Result<T, Error>
+    pub(crate) fn test_confidential<T>(data: &[u8], commitment: &[u8]) -> Result<T, Error>
     where
         T: Conceal + StrictDecode + StrictEncode + Clone + CommitEncode,
         <T as Conceal>::Confidential: StrictDecode + StrictEncode + Eq,
@@ -115,13 +119,28 @@ pub mod test_helpers {
     }
 
     // Helper function to print decoded object in console
-    pub fn print_bytes<T: StrictEncode + StrictDecode>(object: &T) {
+    pub(crate) fn print_bytes<T: StrictEncode + StrictDecode>(object: &T) {
         let mut buf = vec![];
         object.strict_encode(&mut buf).unwrap();
         println!("{:#x?}", buf);
     }
 
-    pub fn encode_decode<T: StrictEncode + StrictDecode>(object: &T) -> Result<(T, usize), Error> {
+    // Helper function to print encoded bytes to a file
+    // Used for large objects that doesn't fit in console output
+    pub(crate) fn print_to_file<T: StrictEncode + StrictDecode>(
+        object: &T,
+    ) -> Result<usize, Box<dyn std::error::Error>> {
+        let write_file = File::create("./enocded.txt").unwrap();
+        let mut writer = BufWriter::new(&write_file);
+
+        let mut buf = vec![];
+        let written = object.strict_encode(&mut buf).unwrap();
+
+        writeln!(&mut writer, "{:#x?}", buf)?;
+        Ok(written)
+    }
+
+    pub(crate) fn encode_decode<T: StrictEncode + StrictDecode>(object: &T) -> Result<(T, usize), Error> {
         let mut encoded_object: Vec<u8> = vec![];
         let written = object.strict_encode(&mut encoded_object).unwrap();
         let decoded_object = T::strict_decode(&encoded_object[..]).unwrap();
