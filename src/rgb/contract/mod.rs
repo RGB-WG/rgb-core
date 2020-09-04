@@ -140,7 +140,9 @@ pub mod test_helpers {
         Ok(written)
     }
 
-    pub(crate) fn encode_decode<T: StrictEncode + StrictDecode>(object: &T) -> Result<(T, usize), Error> {
+    pub(crate) fn encode_decode<T: StrictEncode + StrictDecode>(
+        object: &T,
+    ) -> Result<(T, usize), Error> {
         let mut encoded_object: Vec<u8> = vec![];
         let written = object.strict_encode(&mut encoded_object).unwrap();
         let decoded_object = T::strict_decode(&encoded_object[..]).unwrap();
