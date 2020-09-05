@@ -11,12 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use super::LockScript;
-use bitcoin::{secp256k1, PubkeyHash};
-use miniscript::miniscript::iter::PubkeyOrHash;
-use miniscript::{Miniscript, MiniscriptKey};
 use std::collections::HashSet;
 use std::iter::FromIterator;
+
+use bitcoin::{hashes::hash160, secp256k1, PubkeyHash};
+use miniscript::miniscript::iter::PkPkh;
+use miniscript::{Miniscript, MiniscriptKey, Segwitv0};
+
+use super::LockScript;
 
 /// Errors that may happen during LockScript parsing process
 #[derive(Debug, Display, Error)]
@@ -57,14 +59,14 @@ impl LockScript {
     pub fn extract_pubkeys_and_hashes(
         &self,
     ) -> Result<(Vec<secp256k1::PublicKey>, Vec<PubkeyHash>), PubkeyParseError> {
-        Miniscript::parse(&*self.clone())?
-            .iter_pubkeys_and_hashes()
+        Miniscript::<_, Segwitv0>::parse(&*self.clone())?
+            .iter_pk_pkh()
             .try_fold(
                 (Vec::<secp256k1::PublicKey>::new(), Vec::<PubkeyHash>::new()),
                 |(mut keys, mut hashes), item| {
                     match item {
-                        PubkeyOrHash::HashedPubkey(hash) => hashes.push(hash.into()),
-                        PubkeyOrHash::PlainPubkey(key) => keys.push(key.key),
+                        PkPkh::HashedPubkey(hash) => hashes.push(hash.into()),
+                        PkPkh::PlainPubkey(key) => keys.push(key.key),
                     }
                     Ok((keys, hashes))
                 },
@@ -75,13 +77,13 @@ impl LockScript {
     /// If the key present multiple times in the script it returns all
     /// occurrences.
     pub fn extract_pubkeys(&self) -> Result<Vec<secp256k1::PublicKey>, PubkeyParseError> {
-        Miniscript::parse(&*self.clone())?
-            .iter_pubkeys_and_hashes()
+        Miniscript::<_, Segwitv0>::parse(&*self.clone())?
+            .iter_pk_pkh()
             .try_fold(
                 Vec::<secp256k1::PublicKey>::new(),
                 |mut keys, item| match item {
-                    PubkeyOrHash::HashedPubkey(hash) => Err(PubkeyParseError::PubkeyHash(hash)),
-                    PubkeyOrHash::PlainPubkey(key) => {
+                    PkPkh::HashedPubkey(hash) => Err(PubkeyParseError::PubkeyHash(hash)),
+                    PkPkh::PlainPubkey(key) => {
                         keys.push(key.key);
                         Ok(keys)
                     }
@@ -93,18 +95,18 @@ impl LockScript {
     /// public key hashes.
     pub fn replace_pubkeys(
         &self,
-        processor: impl Fn(secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
+        processor: impl Fn(&secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
     ) -> Result<Self, PubkeyParseError> {
-        let result = Miniscript::parse(&*self.clone())?.replace_pubkeys_and_hashes(
-            &|item: PubkeyOrHash<bitcoin::PublicKey>| match item {
-                PubkeyOrHash::PlainPubkey(pubkey) => processor(pubkey.key).map(|key| {
-                    PubkeyOrHash::PlainPubkey(bitcoin::PublicKey {
+        let result = Miniscript::<_, Segwitv0>::parse(&*self.clone())?.translate_pk(
+            &mut |pk| {
+                Ok(processor(&pk.key)
+                    .map(|key| bitcoin::PublicKey {
                         compressed: true,
                         key,
                     })
-                }),
-                PubkeyOrHash::HashedPubkey(_) => None,
+                    .unwrap_or(pk.clone()))
             },
+            &mut |hash| Err(PubkeyParseError::PubkeyHash(hash.clone())),
         )?;
         Ok(LockScript::from(result.encode()))
     }
@@ -113,22 +115,22 @@ impl LockScript {
     /// functions.
     pub fn replace_pubkeys_and_hashes(
         &self,
-        key_processor: impl Fn(secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
-        hash_processor: impl Fn(PubkeyHash) -> Option<PubkeyHash>,
+        key_processor: impl Fn(&secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
+        hash_processor: impl Fn(&hash160::Hash) -> Option<hash160::Hash>,
     ) -> Result<Self, PubkeyParseError> {
-        let result = Miniscript::parse(&*self.clone())?.replace_pubkeys_and_hashes(
-            &|item: PubkeyOrHash<bitcoin::PublicKey>| match item {
-                PubkeyOrHash::PlainPubkey(pubkey) => key_processor(pubkey.key).map(|key| {
-                    PubkeyOrHash::PlainPubkey(bitcoin::PublicKey {
-                        compressed: true,
-                        key,
-                    })
-                }),
-                PubkeyOrHash::HashedPubkey(hash) => {
-                    hash_processor(hash.into()).map(|hash| PubkeyOrHash::HashedPubkey(hash.into()))
-                }
-            },
-        )?;
+        let result = Miniscript::<_, Segwitv0>::parse(&*self.clone())?
+            .translate_pk(
+                &mut |pk| -> Result<_, PubkeyParseError> {
+                    Ok(key_processor(&pk.key)
+                        .map(|key| bitcoin::PublicKey {
+                            compressed: true,
+                            key,
+                        })
+                        .unwrap_or(pk.clone()))
+                },
+                &mut |hash| Ok(hash_processor(hash).unwrap_or(hash.clone())),
+            )
+            .expect("Miniscript translation must not fail unless miniscript library is broken");
         Ok(LockScript::from(result.encode()))
     }
 }
@@ -139,16 +141,17 @@ pub(crate) mod test {
     use crate::bp::test::*;
     use bitcoin::hashes::{hash160, sha256, Hash};
     use bitcoin::{PubkeyHash, PublicKey};
+    use miniscript::Segwitv0;
     use std::collections::HashSet;
     use std::iter::FromIterator;
     use std::str::FromStr;
 
     macro_rules! ms_str {
-        ($($arg:tt)*) => (LockScript::from(Miniscript::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap().encode()))
+        ($($arg:tt)*) => (LockScript::from(Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str(&format!($($arg)*)).unwrap().encode()))
     }
 
     macro_rules! policy_str {
-        ($($arg:tt)*) => (LockScript::from(miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap().compile().unwrap().encode()))
+        ($($arg:tt)*) => (LockScript::from(miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap().compile::<Segwitv0>().unwrap().encode()))
     }
 
     pub(crate) fn gen_pubkeys_and_hashes(n: usize) -> (Vec<PublicKey>, Vec<PubkeyHash>) {

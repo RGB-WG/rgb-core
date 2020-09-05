@@ -157,39 +157,6 @@ impl Display for Bech32 {
     }
 }
 
-impl FromStr for seal::Confidential {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::Outpoint(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
-    }
-}
-
-impl FromStr for ContractId {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::ContractId(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
-    }
-}
-
-impl FromStr for SchemaId {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::SchemaId(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
-    }
-}
-
 impl FromStr for Schema {
     type Err = Error;
 

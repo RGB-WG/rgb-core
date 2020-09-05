@@ -82,12 +82,12 @@ impl Bipolar for Transcoder {
 
     /// Creates conduit by joining encrypting and decrypting parts
     fn join(encryptor: Self::Left, decryptor: Self::Right) -> Self {
-        Self::join_raw(encryptor, decryptor)
+        Self::join_buf(encryptor, decryptor)
     }
 
     /// Splits conduit into an encrypting and decrypting parts
     fn split(self) -> (Self::Left, Self::Right) {
-        self.split_raw()
+        self.split_buf()
     }
 }
 

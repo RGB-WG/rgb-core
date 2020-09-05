@@ -14,7 +14,7 @@
 use std::collections::BTreeMap;
 use std::io;
 
-use bitcoin::hashes::{sha256t, Hash};
+use bitcoin::hashes::sha256t;
 
 use super::{
     vm, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateSchema, TransitionSchema,

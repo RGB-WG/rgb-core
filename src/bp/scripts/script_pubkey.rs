@@ -172,17 +172,17 @@ impl From<ScriptPubkeyDescriptor> for PubkeyScript {
 
         PubkeyScript::from(match spkt {
             P2S(script) => (*script).clone(),
-            P2PK(pubkey) => Builder::gen_p2pk(&pubkey).into_script(),
-            P2PKH(pubkey_hash) => Builder::gen_p2pkh(&pubkey_hash).into_script(),
-            P2SH(script_hash) => Builder::gen_p2sh(&script_hash).into_script(),
+            P2PK(pubkey) => Script::with_pk(&pubkey),
+            P2PKH(pubkey_hash) => Script::with_pkh(&pubkey_hash),
+            P2SH(script_hash) => Script::with_sh(&script_hash),
             P2OR(data) => {
                 if data.len() > 1 {
                     panic!("Underlying rust bitcoin library does not support multiple data in OP_RETURN")
                 }
-                Builder::gen_op_return(&data[0]).into_script()
+                Script::with_op_return(&data[0])
             }
-            P2WPKH(wpubkey_hash) => Builder::gen_v0_p2wpkh(&wpubkey_hash).into_script(),
-            P2WSH(wscript_hash) => Builder::gen_v0_p2wsh(&wscript_hash).into_script(),
+            P2WPKH(wpubkey_hash) => Script::with_v0_wpkh(&wpubkey_hash),
+            P2WSH(wscript_hash) => Script::with_v0_wsh(&wscript_hash),
             P2TR(_) => unimplemented!(),
         })
     }

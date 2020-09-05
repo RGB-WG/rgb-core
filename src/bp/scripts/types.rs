@@ -519,41 +519,37 @@ impl ScriptSet {
 /// Script set generation from public key or a given [LockScript] (with
 /// [TapScript] support planned for the future).
 pub trait GenerateScripts {
-    fn gen_scripts(&self, strategy: Strategy) -> ScriptSet {
+    fn to_scripts(&self, strategy: Strategy) -> ScriptSet {
         ScriptSet {
-            pubkey_script: self.gen_script_pubkey(strategy),
-            sig_script: self.gen_sig_script(strategy),
-            witness_script: self.gen_witness(strategy),
+            pubkey_script: self.to_script_pubkey(strategy),
+            sig_script: self.to_sig_script(strategy),
+            witness_script: self.to_witness(strategy),
         }
     }
-    fn gen_script_pubkey(&self, strategy: Strategy) -> PubkeyScript;
-    fn gen_sig_script(&self, strategy: Strategy) -> SigScript;
-    fn gen_witness(&self, strategy: Strategy) -> Option<Witness>;
+    fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript;
+    fn to_sig_script(&self, strategy: Strategy) -> SigScript;
+    fn to_witness(&self, strategy: Strategy) -> Option<Witness>;
 }
 
 impl GenerateScripts for LockScript {
-    fn gen_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
+    fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
         match strategy {
             Strategy::Exposed => self.as_inner().into(),
-            Strategy::LegacyHashed => Builder::gen_p2sh(&self.script_hash()).into_script().into(),
-            Strategy::WitnessV0 => Builder::gen_v0_p2wsh(&self.wscript_hash())
-                .into_script()
-                .into(),
+            Strategy::LegacyHashed => Script::with_sh(&self.script_hash()).into(),
+            Strategy::WitnessV0 => Script::with_v0_wsh(&self.wscript_hash()).into(),
             Strategy::WitnessScriptHash => {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script =
-                    LockScript::from(self.gen_script_pubkey(Strategy::WitnessV0).to_inner());
-                Builder::gen_p2sh(&redeem_script.script_hash())
-                    .into_script()
-                    .into()
+                    LockScript::from(self.to_script_pubkey(Strategy::WitnessV0).to_inner());
+                Script::with_sh(&redeem_script.script_hash()).into()
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
         }
     }
 
-    fn gen_sig_script(&self, strategy: Strategy) -> SigScript {
+    fn to_sig_script(&self, strategy: Strategy) -> SigScript {
         match strategy {
             // sigScript must contain just a plain signatures, which will be
             // added later
@@ -567,7 +563,7 @@ impl GenerateScripts for LockScript {
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script =
-                    LockScript::from(self.gen_script_pubkey(Strategy::WitnessV0).to_inner());
+                    LockScript::from(self.to_script_pubkey(Strategy::WitnessV0).to_inner());
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -580,7 +576,7 @@ impl GenerateScripts for LockScript {
         }
     }
 
-    fn gen_witness(&self, strategy: Strategy) -> Option<Witness> {
+    fn to_witness(&self, strategy: Strategy) -> Option<Witness> {
         match strategy {
             Strategy::Exposed | Strategy::LegacyHashed => None,
             Strategy::WitnessV0 | Strategy::WitnessScriptHash => {
@@ -593,24 +589,20 @@ impl GenerateScripts for LockScript {
 }
 
 impl GenerateScripts for bitcoin::PublicKey {
-    fn gen_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
+    fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
         match strategy {
-            Strategy::Exposed => Builder::gen_p2pk(self).into_script().into(),
-            Strategy::LegacyHashed => Builder::gen_p2pkh(&self.pubkey_hash()).into_script().into(),
-            Strategy::WitnessV0 => Builder::gen_v0_p2wpkh(&self.wpubkey_hash())
-                .into_script()
-                .into(),
+            Strategy::Exposed => Script::with_pk(self).into(),
+            Strategy::LegacyHashed => Script::with_pkh(&self.pubkey_hash()).into(),
+            Strategy::WitnessV0 => Script::with_v0_wpkh(&self.wpubkey_hash()).into(),
             Strategy::WitnessScriptHash => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
-                let redeem_script = self.gen_script_pubkey(Strategy::WitnessV0);
-                Builder::gen_p2sh(&redeem_script.script_hash())
-                    .into_script()
-                    .into()
+                let redeem_script = self.to_script_pubkey(Strategy::WitnessV0);
+                Script::with_sh(&redeem_script.script_hash()).into()
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
         }
     }
-    fn gen_sig_script(&self, strategy: Strategy) -> SigScript {
+    fn to_sig_script(&self, strategy: Strategy) -> SigScript {
         match strategy {
             // sigScript must contain just a plain signatures, which will be
             // added later
@@ -622,7 +614,7 @@ impl GenerateScripts for bitcoin::PublicKey {
             Strategy::WitnessScriptHash => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
                 let redeem_script =
-                    LockScript::from(self.gen_script_pubkey(Strategy::WitnessV0).into_inner());
+                    LockScript::from(self.to_script_pubkey(Strategy::WitnessV0).into_inner());
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -635,7 +627,7 @@ impl GenerateScripts for bitcoin::PublicKey {
         }
     }
 
-    fn gen_witness(&self, strategy: Strategy) -> Option<Witness> {
+    fn to_witness(&self, strategy: Strategy) -> Option<Witness> {
         match strategy {
             Strategy::Exposed | Strategy::LegacyHashed => None,
             Strategy::WitnessV0 | Strategy::WitnessScriptHash => {
@@ -648,27 +640,27 @@ impl GenerateScripts for bitcoin::PublicKey {
 
 impl GenerateScripts for secp256k1::PublicKey {
     #[inline]
-    fn gen_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
+    fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),
         }
-        .gen_script_pubkey(strategy)
+        .to_script_pubkey(strategy)
     }
     #[inline]
-    fn gen_sig_script(&self, strategy: Strategy) -> SigScript {
+    fn to_sig_script(&self, strategy: Strategy) -> SigScript {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),
         }
-        .gen_sig_script(strategy)
+        .to_sig_script(strategy)
     }
     #[inline]
-    fn gen_witness(&self, strategy: Strategy) -> Option<Witness> {
+    fn to_witness(&self, strategy: Strategy) -> Option<Witness> {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),
         }
-        .gen_witness(strategy)
+        .to_witness(strategy)
     }
 }

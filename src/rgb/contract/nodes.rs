@@ -39,12 +39,6 @@ tagged_hash!(
     doc = "Unique contract identifier equivalent to the contract genesis commitment hash"
 );
 
-impl From<NodeId> for ContractId {
-    fn from(node_id: NodeId) -> Self {
-        ContractId::from_inner(node_id.into_inner())
-    }
-}
-
 pub trait Node {
     fn node_id(&self) -> NodeId;
 
@@ -240,7 +234,7 @@ impl Genesis {
 
     #[inline]
     pub fn contract_id(&self) -> ContractId {
-        ContractId::from(self.node_id())
+        ContractId::from_inner(self.node_id().into_inner())
     }
 
     #[inline]

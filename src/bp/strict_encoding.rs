@@ -412,7 +412,7 @@ mod test {
         let mainnet_bytes = &[0xF9u8, 0xBEu8, 0xB4u8, 0xD9u8][..];
         let testnet_bytes = &[0x0Bu8, 0x11u8, 0x09u8, 0x07u8][..];
         let regtest_bytes = &[0xFAu8, 0xBFu8, 0xB5u8, 0xDAu8][..];
-        let signet_bytes = &[0x7Eu8, 0xC6u8, 0x53u8, 0xA5u8][..];
+        let signet_bytes = &[0x0Au8, 0x03u8, 0xCFu8, 0x40u8][..];
         //let random_bytes = &[0xA1u8, 0xA2u8, 0xA3u8, 0xA4u8][..];
 
         let mainnet = Network::strict_decode(mainnet_bytes).unwrap();

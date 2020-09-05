@@ -32,11 +32,11 @@ amplify_derive = "~0.1.2"
 lazy_static = "~1.4.0"
 bech32 = "~0.7.2"
 ed25519-dalek = "~1.0.0-pre.3"
-bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "staging" }
-bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", branch = "staging" }
-lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "staging", optional = true }
-lightning-net-tokio = { git = "https://github.com/LNP-BP/rust-lightning", branch = "staging", optional = true }
-miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "staging" }
+bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", tag = "lnpbp-v0.1.0-beta-4" }
+bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
+lightning = { git = "https://github.com/LNP-BP/rust-lightning", tag = "lnpbp-v0.1.0-beta-4", optional = true }
+lightning-net-tokio = { git = "https://github.com/LNP-BP/rust-lightning", tag = "lnpbp-v0.1.0-beta-4", optional = true }
+miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", tag = "lnpbp-v0.1.0-beta-4" }
 grin_secp256k1zkp = { git = "https://github.com/LNP-BP/rust-secp256k1-zkp", branch = "stable", optional = true }
 rand = "~0.5" # Required by grin_secp256k1zkp
 derive_wrapper = "~0.1.6"
@@ -56,8 +56,8 @@ url = { version = "~2.1.1", optional = true }
 serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
 
 [dev-dependencies]
-miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "staging", features = ["compiler"] }
-bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "staging", features = ["rand"] }
+miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", tag = "lnpbp-v0.1.0-beta-4", features = ["compiler"] }
+bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", tag = "lnpbp-v0.1.0-beta-4", features = ["rand"] }
 
 [features]
 default = ["tor", "lnp", "tokio", "log", "url"]

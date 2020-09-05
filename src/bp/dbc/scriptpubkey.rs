@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::Wrapper;
-use bitcoin::blockdata::script::Builder;
+use bitcoin::blockdata::script::Script;
 use bitcoin::{hashes::sha256, secp256k1};
 use core::convert::TryFrom;
 
@@ -87,17 +87,17 @@ impl Container for ScriptPubkeyContainer {
         let mut proof = proof.clone();
         let composition = match ScriptPubkeyDescriptor::try_from(host.clone())? {
             Descr::P2SH(script_hash) => {
-                let script = Builder::gen_p2sh(&script_hash).into_script();
+                let script = Script::with_sh(&script_hash);
                 if let Some(lockscript) = lockscript {
-                    if *lockscript.gen_script_pubkey(Strategy::LegacyHashed) == script {
+                    if *lockscript.to_script_pubkey(Strategy::LegacyHashed) == script {
                         Comp::ScriptHash
-                    } else if *lockscript.gen_script_pubkey(Strategy::WitnessScriptHash) == script {
+                    } else if *lockscript.to_script_pubkey(Strategy::WitnessScriptHash) == script {
                         Comp::SHWScriptHash
                     } else {
                         Err(Error::InvalidProofStructure)?
                     }
                 } else {
-                    if *proof.pubkey.gen_script_pubkey(Strategy::WitnessScriptHash) == script {
+                    if *proof.pubkey.to_script_pubkey(Strategy::WitnessScriptHash) == script {
                         Comp::SHWPubkeyHash
                     } else {
                         Err(Error::InvalidProofStructure)?
@@ -202,10 +202,10 @@ where
             )?
             .into_inner();
             match container.scriptpubkey_composition {
-                PlainScript => lockscript.gen_script_pubkey(Strategy::Exposed),
-                ScriptHash => lockscript.gen_script_pubkey(Strategy::LegacyHashed),
-                WScriptHash => lockscript.gen_script_pubkey(Strategy::WitnessV0),
-                SHWScriptHash => lockscript.gen_script_pubkey(Strategy::WitnessScriptHash),
+                PlainScript => lockscript.to_script_pubkey(Strategy::Exposed),
+                ScriptHash => lockscript.to_script_pubkey(Strategy::LegacyHashed),
+                WScriptHash => lockscript.to_script_pubkey(Strategy::WitnessV0),
+                SHWScriptHash => lockscript.to_script_pubkey(Strategy::WitnessScriptHash),
                 _ => Err(Error::InvalidProofStructure)?,
             }
         } else if let ScriptInfo::Taproot(taproot_hash) = container.script_info {
@@ -232,13 +232,11 @@ where
                 msg,
             )?;
             match container.scriptpubkey_composition {
-                PublicKey => pubkey.gen_script_pubkey(Strategy::Exposed),
-                PubkeyHash => pubkey.gen_script_pubkey(Strategy::LegacyHashed),
-                WPubkeyHash => pubkey.gen_script_pubkey(Strategy::WitnessV0),
-                SHWScriptHash => pubkey.gen_script_pubkey(Strategy::WitnessScriptHash),
-                OpReturn => Builder::gen_op_return(&pubkey.serialize().to_vec())
-                    .into_script()
-                    .into(),
+                PublicKey => pubkey.to_script_pubkey(Strategy::Exposed),
+                PubkeyHash => pubkey.to_script_pubkey(Strategy::LegacyHashed),
+                WPubkeyHash => pubkey.to_script_pubkey(Strategy::WitnessV0),
+                SHWScriptHash => pubkey.to_script_pubkey(Strategy::WitnessScriptHash),
+                OpReturn => Script::with_op_return(&pubkey.serialize().to_vec()).into(),
                 _ => Err(Error::InvalidProofStructure)?,
             }
         };
