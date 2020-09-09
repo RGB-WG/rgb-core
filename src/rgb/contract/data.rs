@@ -293,8 +293,7 @@ pub(super) mod strict_encoding {
 
 #[cfg(test)]
 mod test {
-
-    use super::super::test_helpers::*;
+    use super::super::testutils::*;
     use super::*;
     use crate::paradigms::strict_encoding::StrictDecode;
 
