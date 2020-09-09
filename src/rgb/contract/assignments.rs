@@ -711,8 +711,7 @@ mod strict_encoding {
 
 #[cfg(test)]
 mod test {
-
-    use super::super::test_helpers::*;
+    use super::super::testutils::*;
     use super::*;
     use crate::bp::blind::OutpointReveal;
     use crate::paradigms::client_side_validation::Conceal;
@@ -1039,83 +1038,168 @@ mod test {
     }
 
     #[test]
+    #[allow(arithmetic_overflow)]
     fn test_zero_balance() {
         let mut rng = thread_rng();
 
         // test equal inputs and outputs
-        // 4 values equally distributed among ours and theirs allocations
-        // * One zero value case
-        // * All zero value case
-        // * One u64::MAX value case
-        // * All u64::MAX value case
-        // * One zero value + One u64::MAX value case
-        let amounts = vec![
+        let single_amounts = vec![
+            [0u64],
+            [1u64],
+            [u16::MAX as u64],
+            [u32::MAX as u64],
+            [u64::MAX - 1u64],
+            [u64::MAX],
+        ];
+        let double_amounts = vec![
+            [(u32::MAX - 1) as u64, (u32::MAX - 1) as u64],
+            [u32::MAX as u64, u32::MAX as u64],
+        ];
+        let multiple_amounts = vec![
+            [0u64, 0u64, 0u64, 0u64],
+            [0u64, 1u64, 0u64, 1u64],
             [1u64, 2u64, 3u64, u64::MAX],
             [10u64, 20u64, 30u64, 40u64],
             [0u64, 197642u64, u64::MAX, 476543u64],
-            [0u64, 0u64, 0u64, 0u64],
             [u64::MAX, u64::MAX, u64::MAX, u64::MAX],
         ];
 
-        for vec in amounts.iter() {
-            assert!(compute_zero_balance(vec, vec, 2));
+        for vec in single_amounts.iter() {
+            assert!(compute_zero_balance(vec, vec, 0));
+            assert!(compute_zero_balance(vec, vec, 1));
+            assert!(compute_zero_balance(vec, vec, vec.len() / 2));
+            assert!(compute_zero_balance(vec, vec, vec.len() / 2 + 1));
+        }
+
+        for vec in double_amounts.iter() {
+            assert!(compute_zero_balance(vec, vec, 0));
+            assert!(compute_zero_balance(vec, vec, 1));
+            assert!(compute_zero_balance(vec, vec, vec.len() / 2));
+            assert!(compute_zero_balance(vec, vec, vec.len() / 2 + 1));
+        }
+
+        for vec in multiple_amounts.iter() {
+            assert!(compute_zero_balance(vec, vec, 0));
+            assert!(compute_zero_balance(vec, vec, 1));
+            assert!(compute_zero_balance(vec, vec, vec.len() / 2));
+            assert!(compute_zero_balance(vec, vec, vec.len() / 2 + 1));
         }
 
         // Test when ours is empty
-        assert!(compute_zero_balance(&amounts[1], &amounts[1], 0));
+        assert!(compute_zero_balance(
+            &multiple_amounts[2],
+            &multiple_amounts[2],
+            0
+        ));
 
         // Test when theirs is empty
         assert!(compute_zero_balance(
-            &amounts[1],
-            &amounts[1],
-            amounts[1].len()
+            &multiple_amounts[4],
+            &multiple_amounts[4],
+            multiple_amounts[4].len()
         ));
-
-        // Test random inputs and outputs
-        // Randomly distributed between ours and theirs allocation
-        for _ in 0..10 {
-            // Randomly generate number of amounts between 1 to 20
-            let length = rng.gen_range(1, 20);
-
-            // Randomly fill the amount vector
-            let mut amounts = vec![0; length];
-            for _ in 0..length {
-                // keep the amount value low for faster testing
-                amounts.push(rng.gen_range::<u64>(0, 10));
-            }
-
-            // Create an output amount vector such that
-            // input.sum() = output.sum(), but
-            // input.count() != output.count()
-            // We do this by generating an empty output vector
-            // of random size. Then randomly add 1 to random positions
-            // until the sum of the vector matches with the input sum
-            // This also creates 0 value allocations probabilistically
-
-            let input_sum: u64 = amounts.iter().sum();
-            let mut output_amounts = vec![0u64; rng.gen_range(1, 20)];
-            let output_length = output_amounts.len();
-            for _ in 0..input_sum {
-                output_amounts[rng.gen_range(0, output_length)] += 1u64;
-            }
-
-            // Check if test passes
-            assert!(compute_zero_balance(
-                &amounts[..],
-                &output_amounts[..],
-                rng.gen_range(0, output_length)
-            ));
-        }
 
         // Test when input.sum() != output.sum()
         // When they only differ by 1
         // When they differ by u64::MAX
-        assert!(!compute_zero_balance(&amounts[1], &amounts[2], 2));
+        assert!(!compute_zero_balance(
+            &multiple_amounts[1],
+            &multiple_amounts[2],
+            2
+        ));
+        assert!(!compute_zero_balance(
+            &multiple_amounts[2],
+            &multiple_amounts[3],
+            2
+        ));
+        assert!(!compute_zero_balance(
+            &multiple_amounts[3],
+            &multiple_amounts[4],
+            2
+        ));
+        assert!(!compute_zero_balance(
+            &multiple_amounts[4],
+            &multiple_amounts[5],
+            2
+        ));
         assert!(!compute_zero_balance(&[1, 2, 3, 4], &[1, 2, 3, 5], 2));
         assert!(!compute_zero_balance(
             &[1, 2, 3, 0],
             &[1, 2, 3, u64::MAX],
             2
+        ));
+
+        // Test random inputs and outputs
+        // Randomly distributed between ours and theirs allocation
+        for _ in 0..5 {
+            // Randomly generate number of amounts between 1 to 20
+            let input_length = rng.gen_range(1, 20);
+
+            // Randomly fill the amount vector
+            let mut input_amounts = vec![0; input_length];
+            for index in 0..input_length {
+                // keep the amount value low for faster testing
+                input_amounts[index] = rng.gen_range::<u64>(100_000, 100_000_000_000);
+            }
+            let input_sum: u64 = input_amounts.iter().sum();
+
+            // Create an output amount vector such that
+            // input.sum() = output.sum(), but
+            // input.count() != output.count()
+
+            let mut output_amounts = vec![0u64; rng.gen_range(1, 20)];
+            let output_length = output_amounts.len();
+
+            // Add random values to output amounts until the last element
+            for index in 0..output_length - 1 {
+                output_amounts[index] = rng.gen_range::<u64>(100_000, 100_000_000_000);
+            }
+            let output_sum: u64 = output_amounts.iter().sum();
+
+            // Balance input and output amount vector based on their sums
+            if output_sum > input_sum {
+                input_amounts[input_length - 1] += output_sum - input_sum;
+            } else {
+                output_amounts[output_length - 1] += input_sum - output_sum;
+            }
+
+            // Check if test passes
+            assert!(compute_zero_balance(
+                &input_amounts[..],
+                &output_amounts[..],
+                rng.gen_range(0, output_length)
+            ));
+
+            //Check non-equivalent amounts do not verify
+            assert!(!compute_zero_balance(
+                &input_amounts[..(input_length - 1)],
+                &output_amounts[..(output_length - 1)],
+                rng.gen_range(0, output_length)
+            ));
+        }
+
+        // Test Overflow conditions
+        assert!(compute_zero_balance(&[u64::MAX + 1], &[0], 1));
+        assert!(compute_zero_balance(
+            &[u64::MAX + u64::MAX],
+            &[u64::MAX - 1],
+            1
+        ));
+        assert!(compute_zero_balance(
+            &[(u32::MAX * u32::MAX - 1) as u64],
+            &[0],
+            1
+        ));
+        assert!(compute_zero_balance(
+            &[(u32::MAX * u32::MAX) as u64],
+            &[1],
+            1
+        ));
+
+        assert!(compute_zero_balance(
+            &[(u64::MAX * u64::MAX + 1) as u64],
+            &[2],
+            1
         ));
     }
 
