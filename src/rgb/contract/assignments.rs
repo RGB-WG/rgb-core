@@ -724,7 +724,6 @@ mod test {
     };
     use rand::{thread_rng, Rng};
     use secp256k1zkp::{key::SecretKey, pedersen::Commitment, Secp256k1};
-    use std::num::Wrapping;
 
     // Hard coded test vectors of Assignment Variants
     // Each Variant contains 4 types of Assignments
@@ -1039,7 +1038,26 @@ mod test {
     }
 
     #[test]
-    #[allow(arithmetic_overflow)]
+    fn test_zero_balance_nonoverflow() {
+        assert!(compute_zero_balance(&[u64::MAX, 1], &[1, u64::MAX], 1));
+        assert!(compute_zero_balance(
+            &[u64::MAX, u64::MAX],
+            &[u64::MAX, u64::MAX],
+            1
+        ));
+        assert!(compute_zero_balance(
+            &[u32::MAX as u64, u32::MAX as u64],
+            &[u32::MAX as u64 + u32::MAX as u64],
+            1
+        ));
+        assert!(compute_zero_balance(
+            &[u32::MAX as u64, u32::MAX as u64, u64::MAX],
+            &[u64::MAX, (u32::MAX as u64) * 2],
+            1
+        ));
+    }
+
+    #[test]
     fn test_zero_balance() {
         let mut rng = thread_rng();
 
@@ -1158,7 +1176,9 @@ mod test {
             let output_sum: u64 = output_amounts.iter().sum();
 
             // Balance input and output amount vector based on their sums
-            if output_sum > input_sum {
+            if input_sum == output_sum {
+                continue;
+            } else if output_sum > input_sum {
                 input_amounts[input_length - 1] += output_sum - input_sum;
             } else {
                 output_amounts[output_length - 1] += input_sum - output_sum;
@@ -1171,37 +1191,21 @@ mod test {
                 rng.gen_range(0, output_length)
             ));
 
-            //Check non-equivalent amounts do not verify
-            assert!(!compute_zero_balance(
-                &input_amounts[..(input_length - 1)],
-                &output_amounts[..(output_length - 1)],
-                rng.gen_range(0, output_length)
-            ));
+            // Check non-equivalent amounts do not verify
+            if input_length > 1 {
+                assert!(!compute_zero_balance(
+                    &input_amounts[..(input_length - 1)],
+                    &output_amounts,
+                    rng.gen_range(0, output_length)
+                ));
+            } else if output_length > 1 {
+                assert!(!compute_zero_balance(
+                    &input_amounts,
+                    &output_amounts[..(output_length - 1)],
+                    rng.gen_range(0, output_length)
+                ));
+            }
         }
-
-        // Test Overflow conditions
-        assert!(compute_zero_balance(&[u64::MAX + 1], &[0], 1));
-        assert!(compute_zero_balance(
-            &[Wrapping::<u64>(u64::MAX + u64::MAX).0],
-            &[Wrapping::<u64>(u64::MAX - 1).0],
-            1
-        ));
-        assert!(compute_zero_balance(
-            &[Wrapping::<u64>((u32::MAX * u32::MAX - 1) as u64).0],
-            &[0u64],
-            1
-        ));
-        assert!(compute_zero_balance(
-            &[Wrapping::<u64>((u32::MAX * u32::MAX) as u64).0],
-            &[1u64],
-            1
-        ));
-
-        assert!(compute_zero_balance(
-            &[Wrapping::<u64>((u64::MAX * u64::MAX + 1) as u64).0],
-            &[2u64],
-            1
-        ));
     }
 
     #[test]
