@@ -443,7 +443,7 @@ mod serde_impl {
 
 #[cfg(test)]
 mod test {
-    use super::super::test_helpers::*;
+    use super::super::testutils::*;
     use super::*;
     use crate::strict_encoding::{StrictDecode, StrictEncode};
 
