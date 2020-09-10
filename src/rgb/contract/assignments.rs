@@ -724,6 +724,7 @@ mod test {
     };
     use rand::{thread_rng, Rng};
     use secp256k1zkp::{key::SecretKey, pedersen::Commitment, Secp256k1};
+    use std::num::Wrapping;
 
     // Hard coded test vectors of Assignment Variants
     // Each Variant contains 4 types of Assignments
@@ -1181,24 +1182,24 @@ mod test {
         // Test Overflow conditions
         assert!(compute_zero_balance(&[u64::MAX + 1], &[0], 1));
         assert!(compute_zero_balance(
-            &[u64::MAX + u64::MAX],
-            &[u64::MAX - 1],
+            &[Wrapping::<u64>(u64::MAX + u64::MAX).0],
+            &[Wrapping::<u64>(u64::MAX - 1).0],
             1
         ));
         assert!(compute_zero_balance(
-            &[(u32::MAX * u32::MAX - 1) as u64],
-            &[0],
+            &[Wrapping::<u64>((u32::MAX * u32::MAX - 1) as u64).0],
+            &[0u64],
             1
         ));
         assert!(compute_zero_balance(
-            &[(u32::MAX * u32::MAX) as u64],
-            &[1],
+            &[Wrapping::<u64>((u32::MAX * u32::MAX) as u64).0],
+            &[1u64],
             1
         ));
 
         assert!(compute_zero_balance(
-            &[(u64::MAX * u64::MAX + 1) as u64],
-            &[2],
+            &[Wrapping::<u64>((u64::MAX * u64::MAX + 1) as u64).0],
+            &[2u64],
             1
         ));
     }
