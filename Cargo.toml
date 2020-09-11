@@ -37,7 +37,9 @@ bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpb
 lightning = { git = "https://github.com/LNP-BP/rust-lightning", tag = "lnpbp-v0.1.0-beta-4", optional = true }
 lightning-net-tokio = { git = "https://github.com/LNP-BP/rust-lightning", tag = "lnpbp-v0.1.0-beta-4", optional = true }
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", tag = "lnpbp-v0.1.0-beta-4" }
-grin_secp256k1zkp = { git = "https://github.com/LNP-BP/rust-secp256k1-zkp", branch = "stable", optional = true }
+# We are of no control of what's happening in Grin and would like to prevent
+# updates w/o checking them manually
+grin_secp256k1zkp = { version = "=0.7.9", optional = true }
 rand = "~0.5" # Required by grin_secp256k1zkp
 derive_wrapper = "~0.1.6"
 #derive_wrapper = { git = "https://github.com/LNP-BP/derive-wrapper", branch = "stable" }
