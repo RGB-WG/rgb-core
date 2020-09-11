@@ -13,12 +13,12 @@
 
 use core::cmp::Ordering;
 use core::ops::Add;
-use rand::{Rng, RngCore};
 
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
 pub use secp256k1zkp::pedersen;
-use secp256k1zkp::*;
+use secp256k1zkp::rand::{Rng, RngCore};
+use secp256k1zkp::ContextFlag;
 
 use super::{data, ConfidentialState, RevealedState, SECP256K1_ZKP};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
@@ -555,7 +555,7 @@ mod test {
         let negative = [7u64, 8u64];
 
         // Generate random blinding factors
-        let mut rng = rand::thread_rng();
+        let mut rng = secp256k1zkp::rand::thread_rng();
         // We do not need the last one since it is auto-generated to zero-balance the rest
         let count = positive.len() + negative.len() - 1;
         let mut blinding_factors = Vec::<_>::with_capacity(count + 1);

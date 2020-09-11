@@ -12,8 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::hashes::{sha256d, Hash, HashEngine};
+use bitcoin::secp256k1::rand::{thread_rng, RngCore};
 use bitcoin::{OutPoint, Txid};
-use rand::{thread_rng, RngCore};
 
 use crate::client_side_validation::Conceal;
 use crate::commit_verify::CommitVerify;

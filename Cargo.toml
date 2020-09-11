@@ -31,7 +31,7 @@ amplify = { version = "~0.1.8", features = ["serde", "std"] }
 amplify_derive = "~0.1.2"
 lazy_static = "~1.4.0"
 bech32 = "~0.7.2"
-ed25519-dalek = "~1.0.0-pre.3"
+ed25519-dalek = { version = "~1.0.0", optional = true }
 bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", tag = "lnpbp-v0.1.0-beta-4" }
 bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
 lightning = { git = "https://github.com/LNP-BP/rust-lightning", tag = "lnpbp-v0.1.0-beta-4", optional = true }
@@ -40,9 +40,7 @@ miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", tag = "lnpbp-v
 # We are of no control of what's happening in Grin and would like to prevent
 # updates w/o checking them manually
 grin_secp256k1zkp = { version = "=0.7.9", optional = true }
-rand = "~0.5" # Required by grin_secp256k1zkp
 derive_wrapper = "~0.1.6"
-#derive_wrapper = { git = "https://github.com/LNP-BP/derive-wrapper", branch = "stable" }
 num-traits = "~0.2.11"
 num-derive = "~0.3.0"
 tokio = { version = "~0.2.18", features = ["tcp", "sync"], optional = true }
@@ -68,7 +66,7 @@ all = ["tor", "lnp", "tokio", "log", "url", "parse_arg",
 lnp = ["lightning", "async", "zmq"]
 async = ["async-trait"]
 rgb = ["bulletproofs"]
-tor = ["torut/v3", "torut/v2"]
+tor = ["torut/v3", "torut/v2", "ed25519-dalek"]
 lightning_tokio = ["lightning", "lightning-net-tokio"]
 bulletproofs = ["grin_secp256k1zkp"]
 api = ["zmq"]

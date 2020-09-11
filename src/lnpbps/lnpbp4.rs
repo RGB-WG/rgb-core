@@ -11,11 +11,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use rand::Rng;
 use std::collections::BTreeMap;
 use std::io;
 
 use bitcoin::hashes::{sha256, Hash, HashEngine};
+use bitcoin::secp256k1::rand::{thread_rng, Rng};
 use bitcoin::util::uint::Uint256;
 
 use crate::commit_verify::CommitVerify;
@@ -78,7 +78,7 @@ impl CommitVerify<MultiMsg> for MultimsgCommitment {
         };
 
         let entropy = {
-            let mut rng = rand::thread_rng();
+            let mut rng = thread_rng();
             rng.gen::<u64>()
         };
         let entropy_digest = {

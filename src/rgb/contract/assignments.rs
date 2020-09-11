@@ -52,7 +52,7 @@ impl AssignmentsVariant {
         allocations_theirs: Vec<(OutpointHash, Amount)>,
     ) -> Self {
         // Generate random blinding factors
-        let mut rng = rand::thread_rng();
+        let mut rng = bitcoin::secp256k1::rand::thread_rng();
         // We will compute the last blinding factors from all others so they
         // sum up to 0, so we need to generate only n - 1 random factors
         let count = allocations_theirs.len() + allocations_ours.len() - 1;
@@ -722,7 +722,7 @@ mod test {
         hex::{FromHex, ToHex},
         sha256,
     };
-    use rand::{thread_rng, Rng};
+    use secp256k1zkp::rand::{thread_rng, Rng};
     use secp256k1zkp::{key::SecretKey, pedersen::Commitment, Secp256k1};
 
     // Hard coded test vectors of Assignment Variants

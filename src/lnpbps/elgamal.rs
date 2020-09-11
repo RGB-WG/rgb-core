@@ -135,7 +135,7 @@ pub fn decrypt_elgamal(
 #[cfg(test)]
 mod test {
     use super::*;
-    use rand::{thread_rng, RngCore};
+    use secp256k1::rand::{thread_rng, RngCore};
 
     fn run_test_text(msg1: &str) {
         let source = msg1.as_bytes();

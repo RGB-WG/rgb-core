@@ -13,7 +13,7 @@
 
 use bitcoin::secp256k1;
 #[cfg(feature = "keygen")]
-use rand::thread_rng;
+use bitcoin::secp256k1::rand::thread_rng;
 
 use crate::SECP256K1;
 
