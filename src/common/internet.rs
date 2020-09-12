@@ -140,7 +140,6 @@ impl Default for InetAddr {
 impl fmt::Display for InetAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            // TODO:
             InetAddr::IPv4(addr) => write!(f, "{}", addr),
             InetAddr::IPv6(addr) => write!(f, "{}", addr),
             #[cfg(feature = "tor")]

@@ -112,13 +112,13 @@ pub fn decrypt_elgamal(
     // Decrypt message chunk by chunk
     let mut acc = vec![];
     while encrypted.len() > 0 {
-        // TODO: Do a proper negation once rust-secp256k1 will have a neg fn
-        //       <https://github.com/rust-bitcoin/rust-secp256k1/pull/220>
         // Here we automatically negate the key extracted from the message:
-        // it is created with 0x2 first byte and restored with 0x3 byte
-        let chunk33 = [&[3u8], &encrypted[..32]].concat();
-        let pubkey = secp256k1::PublicKey::from_slice(&chunk33)
+        // it is created with 0x2 first byte and restored with 0x2 byte, then
+        // negated
+        let chunk33 = [&[2u8], &encrypted[..32]].concat();
+        let mut pubkey = secp256k1::PublicKey::from_slice(&chunk33)
             .map_err(|_| Error::InvalidEncryptedMessage)?;
+        pubkey.negate_assign(&SECP256K1);
         let unencrypted = pubkey.combine(&encryption_key)?;
         // Remove random tail from the data
         let chunk30 = &unencrypted.serialize()[1..31];
