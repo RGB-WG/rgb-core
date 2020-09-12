@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::Wrapper;
-use bitcoin::hashes::sha256;
+use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 
 use crate::bp::dbc::{self, Container, LNPBP1Commitment, LNPBP1Container, Proof};
@@ -32,6 +32,9 @@ pub struct Commitment {
 
     /// Used protocol-specific tag
     pub protocol_tag: sha256::Hash,
+
+    /// Tweaking factor
+    pub tweaking_factor: Hmac<sha256::Hash>,
 }
 
 /// Convenience LNPBP-1 commitment function
@@ -40,17 +43,21 @@ pub fn lnpbp1_commit(
     protocol_tag: &sha256::Hash,
     message: &[u8],
 ) -> Result<Commitment, secp256k1::Error> {
-    let commitment = LNPBP1Commitment::embed_commit(
-        &LNPBP1Container {
-            pubkey: pubkey.clone(),
-            tag: protocol_tag.clone(),
-        },
-        &message,
-    )?;
+    let mut container = LNPBP1Container {
+        pubkey: pubkey.clone(),
+        tag: protocol_tag.clone(),
+        tweaking_factor: None,
+    };
+
+    let commitment = LNPBP1Commitment::embed_commit(&mut container, &message)?;
+
     Ok(Commitment {
         original_pubkey: pubkey.clone(),
         tweaked_pubkey: *commitment.clone(),
         protocol_tag: protocol_tag.clone(),
+        tweaking_factor: container
+            .tweaking_factor
+            .expect("Tweaking factor must be filled after `commit_embed` procedure"),
     })
 }
 

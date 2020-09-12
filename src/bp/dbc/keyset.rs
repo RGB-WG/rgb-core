@@ -34,6 +34,8 @@ pub struct KeysetContainer {
     pub keyset: HashSet<secp256k1::PublicKey>,
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
+    /// Tweaking factor stored after [KeysetContainer::commit_verify] procedure
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 impl Container for KeysetContainer {
@@ -54,6 +56,7 @@ impl Container for KeysetContainer {
                 pubkey: proof.pubkey,
                 keyset: script.extract_pubkeyset()?,
                 tag: supplement.clone(),
+                tweaking_factor: None,
             })
         } else {
             Err(Error::InvalidProofStructure)
@@ -100,7 +103,10 @@ where
     /// according to LNPBP-2.
     // #[consensus_critical]
     // #[standard_critical("LNPBP-1")]
-    fn embed_commit(keyset_container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(
+        keyset_container: &mut Self::Container,
+        msg: &MSG,
+    ) -> Result<Self, Self::Error> {
         // ! [CONSENSUS-CRITICAL]:
         // ! [STANDARD-CRITICAL]: We commit to the sum of all public keys,
         //                        not a single pubkey
@@ -135,9 +141,12 @@ where
         //                        properly prefixed
         hmac_engine.input(msg.as_ref());
 
-        // Producing tweaking factor
-        let factor = &Hmac::from_engine(hmac_engine)[..];
+        // Producing and storing tweaking factor in container
+        let hmac = Hmac::from_engine(hmac_engine);
+        keyset_container.tweaking_factor = Some(hmac);
+
         // Applying tweaking factor to public key
+        let factor = &hmac[..];
         let mut tweaked_pubkey = keyset_container.pubkey.clone();
         tweaked_pubkey.add_exp_assign(&SECP256K1, factor)?;
 
@@ -163,13 +172,21 @@ mod test {
         let tag = sha256::Hash::hash(b"TEST_TAG2");
         let msg = "test message";
         gen_secp_pubkeys(9).into_iter().for_each(|pubkey| {
-            let lnpbp1_commitment =
-                LNPBP1Commitment::embed_commit(&LNPBP1Container { pubkey, tag }, &msg).unwrap();
+            let lnpbp1_commitment = LNPBP1Commitment::embed_commit(
+                &mut LNPBP1Container {
+                    pubkey,
+                    tag,
+                    tweaking_factor: None,
+                },
+                &msg,
+            )
+            .unwrap();
             let lnpbp2_commitment = LNPBP2Commitment::embed_commit(
-                &KeysetContainer {
+                &mut KeysetContainer {
                     pubkey,
                     keyset: HashSet::new(),
                     tag,
+                    tweaking_factor: None,
                 },
                 &msg,
             )
@@ -192,10 +209,11 @@ mod test {
         (1..9).into_iter().for_each(|n_keys| {
             embed_commit_verify_suite::<Vec<u8>, LNPBP2Commitment>(
                 gen_messages(),
-                &KeysetContainer {
+                &mut KeysetContainer {
                     pubkey,
                     keyset: HashSet::from_iter(gen_secp_pubkeys(n_keys)),
                     tag,
+                    tweaking_factor: None,
                 },
             );
         });
@@ -215,10 +233,11 @@ mod test {
         .unwrap()]);
 
         let commitment = LNPBP2Commitment::embed_commit(
-            &KeysetContainer {
+            &mut KeysetContainer {
                 pubkey,
                 keyset,
                 tag,
+                tweaking_factor: None,
             },
             &msg,
         )

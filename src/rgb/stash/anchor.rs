@@ -148,7 +148,7 @@ impl Anchor {
                 ScriptPubkeyComposition::WPubkeyHash
             };
 
-            let container = TxContainer {
+            let mut container = TxContainer {
                 tx: tx.clone(),
                 fee,
                 protocol_factor: vout as u32,
@@ -159,8 +159,11 @@ impl Anchor {
                         script_info,
                         scriptpubkey_composition,
                         tag: *LNPBP4_TAG,
+                        tweaking_factor: None,
                     },
+                    tweaking_factor: None,
                 },
+                tweaking_factor: None,
             };
 
             let mm_buffer: Vec<u8> = mm_commitment
@@ -171,9 +174,10 @@ impl Anchor {
                 .flatten()
                 .collect();
             let mm_digest = sha256::Hash::commit(&mm_buffer);
-            let commitment = TxCommitment::embed_commit(&container, &mm_digest).unwrap();
+            let commitment = TxCommitment::embed_commit(&mut container, &mm_digest).unwrap();
 
             *tx = commitment.into_inner().clone();
+            // TODO: Save tweaking factor from container into PSBT key
 
             multimsg.iter().for_each(|(id, _)| {
                 let contract_id = ContractId::from_inner(id.into_inner());

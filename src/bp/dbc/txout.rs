@@ -12,7 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::Wrapper;
-use bitcoin::{hashes::sha256, secp256k1, TxOut};
+use bitcoin::hashes::{sha256, Hmac};
+use bitcoin::{secp256k1, TxOut};
 
 use super::{
     Container, Error, Proof, ScriptInfo, ScriptPubkeyCommitment, ScriptPubkeyComposition,
@@ -26,6 +27,8 @@ use crate::commit_verify::EmbedCommitVerify;
 pub struct TxoutContainer {
     pub value: u64,
     pub script_container: ScriptPubkeyContainer,
+    /// Tweaking factor stored after [TxoutContainer::commit_verify] procedure
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 impl TxoutContainer {
@@ -44,6 +47,7 @@ impl TxoutContainer {
                 script_info,
                 scriptpubkey_composition,
             ),
+            tweaking_factor: None,
         }
     }
 }
@@ -65,6 +69,7 @@ impl Container for TxoutContainer {
                 supplement,
                 &PubkeyScript::from_inner(host.clone().script_pubkey),
             )?,
+            tweaking_factor: None,
         })
     }
 
@@ -95,15 +100,18 @@ where
     type Container = TxoutContainer;
     type Error = Error;
 
-    fn embed_commit(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        Ok(TxOut {
+    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+        let commitment = TxOut {
             value: container.value,
             script_pubkey: (**ScriptPubkeyCommitment::embed_commit(
-                &container.script_container,
+                &mut container.script_container,
                 msg,
             )?)
             .clone(),
-        }
-        .into())
+        };
+
+        container.tweaking_factor = container.script_container.tweaking_factor;
+
+        Ok(commitment.into())
     }
 }

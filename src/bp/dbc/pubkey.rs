@@ -50,6 +50,8 @@ pub struct LNPBP1Container {
     pub pubkey: secp256k1::PublicKey,
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
+    /// Tweaking factor stored after [LNPBP1Container::commit_verify] procedure
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 impl Container for LNPBP1Container {
@@ -66,6 +68,7 @@ impl Container for LNPBP1Container {
         Ok(Self {
             pubkey: proof.pubkey,
             tag: supplement.clone(),
+            tweaking_factor: None,
         })
     }
 
@@ -138,7 +141,10 @@ where
 
     // #[consensus_critical]
     // #[standard_critical("LNPBP-1")]
-    fn embed_commit(pubkey_container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(
+        pubkey_container: &mut Self::Container,
+        msg: &MSG,
+    ) -> Result<Self, Self::Error> {
         // ! [CONSENSUS-CRITICAL]:
         // ! [STANDARD-CRITICAL]: HMAC engine is based on sha256 hash
         let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&pubkey_container.pubkey.serialize());
@@ -163,9 +169,12 @@ where
         //                        properly prefixed
         hmac_engine.input(msg.as_ref());
 
-        // Producing tweaking factor
-        let factor = &Hmac::from_engine(hmac_engine)[..];
+        // Producing and storing tweaking factor in container
+        let hmac = Hmac::from_engine(hmac_engine);
+        pubkey_container.tweaking_factor = Some(hmac);
+
         // Applying tweaking factor to public key
+        let factor = &hmac[..];
         let mut tweaked_pubkey = pubkey_container.pubkey.clone();
         tweaked_pubkey.add_exp_assign(&SECP256K1, factor)?;
 
@@ -222,7 +231,11 @@ mod test {
         gen_secp_pubkeys(9).into_iter().for_each(|pubkey| {
             embed_commit_verify_suite::<Vec<u8>, LNPBP1Commitment>(
                 gen_messages(),
-                &LNPBP1Container { pubkey, tag },
+                &mut LNPBP1Container {
+                    pubkey,
+                    tag,
+                    tweaking_factor: None,
+                },
             );
         });
     }
@@ -235,8 +248,15 @@ mod test {
             "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
         )
         .unwrap();
-        let commitment =
-            LNPBP1Commitment::embed_commit(&LNPBP1Container { pubkey, tag }, &msg).unwrap();
+        let commitment = LNPBP1Commitment::embed_commit(
+            &mut LNPBP1Container {
+                pubkey,
+                tag,
+                tweaking_factor: None,
+            },
+            &msg,
+        )
+        .unwrap();
         assert_eq!(
             commitment.as_inner().to_hex(),
             "0278565af0da38a7754d3d4551a09bf80cf98841dbec7330db53023af5503acf8d"

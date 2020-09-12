@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::sha256;
+use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 
 use super::{Container, Error, LNPBP1Commitment, Proof, ScriptInfo};
@@ -25,6 +25,8 @@ pub struct TaprootContainer {
     pub intermediate_key: secp256k1::PublicKey,
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
+    /// Tweaking factor stored after [TaprootContainer::commit_verify] procedure
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 impl Container for TaprootContainer {
@@ -43,6 +45,7 @@ impl Container for TaprootContainer {
                 script_root: tapscript_root.clone(),
                 intermediate_key: proof.pubkey,
                 tag: supplement.clone(),
+                tweaking_factor: None,
             })
         } else {
             Err(Error::InvalidProofStructure)
@@ -88,14 +91,17 @@ where
     type Container = TaprootContainer;
     type Error = Error;
 
-    fn embed_commit(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
-        let cmt = LNPBP1Commitment::embed_commit(
-            &LNPBP1Container {
-                pubkey: container.intermediate_key.clone(),
-                tag: container.tag.clone(),
-            },
-            msg,
-        )?;
+    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+        let mut pubkey_container = LNPBP1Container {
+            pubkey: container.intermediate_key.clone(),
+            tag: container.tag.clone(),
+            tweaking_factor: None,
+        };
+
+        let cmt = LNPBP1Commitment::embed_commit(&mut pubkey_container, msg)?;
+
+        container.tweaking_factor = pubkey_container.tweaking_factor;
+
         Ok(Self {
             script_root: container.script_root,
             intermediate_key_commitment: cmt,

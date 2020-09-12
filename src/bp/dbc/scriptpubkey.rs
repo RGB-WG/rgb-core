@@ -13,7 +13,8 @@
 
 use amplify::Wrapper;
 use bitcoin::blockdata::script::Script;
-use bitcoin::{hashes::sha256, secp256k1};
+use bitcoin::hashes::{sha256, Hmac};
+use bitcoin::secp256k1;
 use core::convert::TryFrom;
 
 use super::{
@@ -47,6 +48,8 @@ pub struct ScriptPubkeyContainer {
     pub scriptpubkey_composition: ScriptPubkeyComposition,
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
+    /// Tweaking factor stored after [ScriptPubkeyContainer::commit_verify] procedure
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 impl ScriptPubkeyContainer {
@@ -61,6 +64,7 @@ impl ScriptPubkeyContainer {
             script_info,
             scriptpubkey_composition,
             tag: protocol_tag.clone(),
+            tweaking_factor: None,
         }
     }
 }
@@ -147,6 +151,7 @@ impl Container for ScriptPubkeyContainer {
             script_info: proof.script_info,
             scriptpubkey_composition: composition,
             tag: supplement.clone(),
+            tweaking_factor: None,
         })
     }
 
@@ -189,18 +194,18 @@ where
     type Container = ScriptPubkeyContainer;
     type Error = super::Error;
 
-    fn embed_commit(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         use ScriptPubkeyComposition::*;
         let script_pubkey = if let ScriptInfo::LockScript(ref lockscript) = container.script_info {
-            let lockscript = LockscriptCommitment::embed_commit(
-                &LockscriptContainer {
-                    script: lockscript.clone(),
-                    pubkey: container.pubkey,
-                    tag: container.tag,
-                },
-                msg,
-            )?
-            .into_inner();
+            let mut lockscript_container = LockscriptContainer {
+                script: lockscript.clone(),
+                pubkey: container.pubkey,
+                tag: container.tag,
+                tweaking_factor: None,
+            };
+            let lockscript =
+                LockscriptCommitment::embed_commit(&mut lockscript_container, msg)?.into_inner();
+            container.tweaking_factor = lockscript_container.tweaking_factor;
             match container.scriptpubkey_composition {
                 PlainScript => lockscript.to_script_pubkey(Strategy::Exposed),
                 ScriptHash => lockscript.to_script_pubkey(Strategy::LegacyHashed),
@@ -212,25 +217,25 @@ where
             if container.scriptpubkey_composition != TapRoot {
                 Err(Error::InvalidProofStructure)?
             }
-            let _taproot = TaprootCommitment::embed_commit(
-                &TaprootContainer {
-                    script_root: taproot_hash,
-                    intermediate_key: container.pubkey,
-                    tag: container.tag,
-                },
-                msg,
-            )?;
+            let mut taproot_container = TaprootContainer {
+                script_root: taproot_hash,
+                intermediate_key: container.pubkey,
+                tag: container.tag,
+                tweaking_factor: None,
+            };
+            let _taproot = TaprootCommitment::embed_commit(&mut taproot_container, msg)?;
+            container.tweaking_factor = taproot_container.tweaking_factor;
             // TODO: Finalize taproot commitments once taproot will be finalized
-            // We don't know yet how to form scripPubkey from Taproot data
+            //       We don't know yet how to form scripPubkey from Taproot data
             unimplemented!()
         } else {
-            let pubkey = *LNPBP1Commitment::embed_commit(
-                &LNPBP1Container {
-                    pubkey: container.pubkey,
-                    tag: container.tag,
-                },
-                msg,
-            )?;
+            let mut pubkey_container = LNPBP1Container {
+                pubkey: container.pubkey,
+                tag: container.tag,
+                tweaking_factor: None,
+            };
+            let pubkey = *LNPBP1Commitment::embed_commit(&mut pubkey_container, msg)?;
+            container.tweaking_factor = pubkey_container.tweaking_factor;
             match container.scriptpubkey_composition {
                 PublicKey => pubkey.to_script_pubkey(Strategy::Exposed),
                 PubkeyHash => pubkey.to_script_pubkey(Strategy::LegacyHashed),

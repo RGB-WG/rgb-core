@@ -76,14 +76,14 @@ where
     Self: Sized + Eq,
 {
     /// External container type that will be used to host commitment to a message
-    type Container;
+    type Container: Clone;
     /// Error type that may be reported during [commit_embed] procedure
     type Error: std::error::Error;
 
     /// Creates a commitment and embeds it into the provided container returning
     /// `Self` containing both message commitment and all additional data required
     /// to reconstruct the original container
-    fn embed_commit(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error>;
+    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error>;
 
     /// Verifies commitment against the message; default implementation just
     /// reconstructs the original container with [container] function,
@@ -100,7 +100,8 @@ where
     ///   correspond to the commitment
     #[inline]
     fn verify(&self, container: &Self::Container, msg: &MSG) -> Result<bool, Self::Error> {
-        Ok(match Self::embed_commit(container, msg) {
+        let mut container = container.clone();
+        Ok(match Self::embed_commit(&mut container, msg) {
             Ok(commitment) => commitment == *self,
             Err(_) => false,
         })
@@ -138,7 +139,7 @@ pub(crate) mod test {
         type Container = DummyVec;
         type Error = Error;
 
-        fn embed_commit(container: &Self::Container, msg: &T) -> Result<Self, Self::Error> {
+        fn embed_commit(container: &mut Self::Container, msg: &T) -> Result<Self, Self::Error> {
             let mut result = container.0.clone();
             result.extend(msg.as_ref());
             Ok(DummyVec(result))
@@ -214,7 +215,7 @@ pub(crate) mod test {
 
     pub(crate) fn embed_commit_verify_suite<MSG, CMT>(
         messages: Vec<MSG>,
-        container: &CMT::Container,
+        container: &mut CMT::Container,
     ) where
         MSG: AsRef<[u8]> + Eq,
         CMT: EmbedCommitVerify<MSG> + Eq + Hash + Debug,
@@ -259,6 +260,6 @@ pub(crate) mod test {
 
     #[test]
     fn test_embed_commit() {
-        embed_commit_verify_suite::<Vec<u8>, DummyVec>(gen_messages(), &DummyVec(vec![]));
+        embed_commit_verify_suite::<Vec<u8>, DummyVec>(gen_messages(), &mut DummyVec(vec![]));
     }
 }

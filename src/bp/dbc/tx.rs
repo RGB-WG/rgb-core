@@ -12,7 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::Wrapper;
-use bitcoin::{hashes::sha256, secp256k1, Transaction, TxOut};
+use bitcoin::hashes::{sha256, Hmac};
+use bitcoin::{secp256k1, Transaction, TxOut};
 
 use super::{
     Container, Error, Proof, ScriptInfo, ScriptPubkeyComposition, TxoutCommitment, TxoutContainer,
@@ -26,6 +27,8 @@ pub struct TxContainer {
     pub fee: u64,
     pub txout_container: TxoutContainer,
     pub tx: Transaction,
+    /// Tweaking factor stored after [TxContainer::commit_verify] procedure
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 pub fn compute_lnpbp3_vout(tx: &Transaction, supplement: &TxSupplement) -> usize {
@@ -74,6 +77,7 @@ impl TxContainer {
                 script_info,
                 scriptpubkey_composition,
             ),
+            tweaking_factor: None,
         }
     }
 }
@@ -93,6 +97,7 @@ impl Container for TxContainer {
             fee: supplement.fee,
             txout_container: TxoutContainer::reconstruct(proof, &supplement.tag, txout)?,
             tx: host.clone(),
+            tweaking_factor: None,
         })
     }
 
@@ -130,14 +135,16 @@ where
     type Container = TxContainer;
     type Error = Error;
 
-    fn embed_commit(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
         let fee = container.fee;
         let entropy = container.protocol_factor;
 
         let txout_commitment =
-            TxoutCommitment::embed_commit(&container.txout_container.clone(), msg)?;
+            TxoutCommitment::embed_commit(&mut container.txout_container.clone(), msg)?;
         *get_mut_txout(fee, entropy, &mut tx) = txout_commitment.into_inner();
+
+        container.tweaking_factor = container.txout_container.tweaking_factor;
 
         Ok(tx.into())
     }
@@ -173,7 +180,7 @@ mod test {
             a18b920a4dfa887d30700")
             .unwrap().as_slice()).unwrap();
 
-        let container = TxContainer {
+        let mut container = TxContainer {
             tx,
             fee: 0,
             protocol_factor: 0,
@@ -187,13 +194,16 @@ mod test {
                     script_info: ScriptInfo::None,
                     scriptpubkey_composition: ScriptPubkeyComposition::PublicKey,
                     tag: Default::default(),
+                    tweaking_factor: None,
                 },
+                tweaking_factor: None,
             },
+            tweaking_factor: None,
         };
 
         let msg = "message to commit to";
 
-        let commitment = TxCommitment::embed_commit(&container, &msg).unwrap();
+        let commitment = TxCommitment::embed_commit(&mut container, &msg).unwrap();
         assert_eq!(commitment.verify(&container, &msg).unwrap(), true);
     }
 }

@@ -23,7 +23,7 @@
 //! private key modifications (tweaks) inside all the existing types of Bitcoin
 //! transaction output and arbitrary complex Bitcoin scripts.
 
-use bitcoin::hashes::{hash160, sha256};
+use bitcoin::hashes::{hash160, sha256, Hmac};
 use bitcoin::secp256k1;
 use bitcoin::PubkeyHash;
 use core::cell::RefCell;
@@ -41,6 +41,8 @@ pub struct LockscriptContainer {
     pub pubkey: secp256k1::PublicKey,
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
+    /// Tweaking factor stored after [LockscriptContainer::commit_verify] procedure
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 impl Container for LockscriptContainer {
@@ -59,6 +61,7 @@ impl Container for LockscriptContainer {
                 pubkey: proof.pubkey,
                 script: script.clone(),
                 tag: supplement.clone(),
+                tweaking_factor: None,
             })
         } else {
             Err(Error::InvalidProofStructure)
@@ -137,7 +140,7 @@ where
     /// <https://github.com/LNP-BP/rust-miniscript/commit/a5ba1219feb8b5a289c8f12176d632635eb8a959>
     // #[consensus_critical]
     // #[standard_critical("LNPBP-1")]
-    fn embed_commit(container: &Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
         let original_hash = bitcoin::PublicKey {
             compressed: true,
             key: container.pubkey,
@@ -172,14 +175,17 @@ where
             Err(Error::LockscriptContainsUnknownHashes)?;
         }
 
-        let tweaked_pubkey = LNPBP2Commitment::embed_commit(
-            &KeysetContainer {
-                pubkey: container.pubkey,
-                keyset: keys,
-                tag: container.tag,
-            },
-            msg,
-        )?;
+        let mut keyset_container = KeysetContainer {
+            pubkey: container.pubkey,
+            keyset: keys,
+            tag: container.tag,
+            tweaking_factor: None,
+        };
+
+        let tweaked_pubkey = LNPBP2Commitment::embed_commit(&mut keyset_container, msg)?;
+
+        container.tweaking_factor = keyset_container.tweaking_factor;
+
         let tweaked_hash = bitcoin::PublicKey {
             key: *tweaked_pubkey,
             compressed: true,
@@ -281,10 +287,11 @@ mod test {
             .for_each(|ls| {
                 assert_eq!(
                     LockscriptCommitment::embed_commit(
-                        &LockscriptContainer {
+                        &mut LockscriptContainer {
                             script: ls,
                             pubkey: keys[0].key,
-                            tag
+                            tag,
+                            tweaking_factor: None
                         },
                         &"Test message"
                     )
@@ -314,10 +321,11 @@ mod test {
             .for_each(|ls| {
                 assert_eq!(
                     LockscriptCommitment::embed_commit(
-                        &LockscriptContainer {
+                        &mut LockscriptContainer {
                             script: ls,
                             pubkey: keys[0].key,
-                            tag
+                            tag,
+                            tweaking_factor: None
                         },
                         &"Test message"
                     )
@@ -344,10 +352,11 @@ mod test {
             .for_each(|ls| {
                 assert_eq!(
                     LockscriptCommitment::embed_commit(
-                        &LockscriptContainer {
+                        &mut LockscriptContainer {
                             script: ls,
                             pubkey: keys[0].key,
-                            tag
+                            tag,
+                            tweaking_factor: None
                         },
                         &"Test message"
                     )
@@ -380,10 +389,11 @@ mod test {
                     script: ls,
                     pubkey: keys[idx].key,
                     tag,
+                    tweaking_factor: None,
                 };
                 let msg = "Test message";
                 let commitment =
-                    LockscriptCommitment::embed_commit(&container.clone(), &msg).unwrap();
+                    LockscriptCommitment::embed_commit(&mut container.clone(), &msg).unwrap();
                 assert!(commitment.verify(&container, &msg).unwrap());
             });
     }
@@ -408,10 +418,11 @@ mod test {
                     script: ls,
                     pubkey: keys[idx].key,
                     tag,
+                    tweaking_factor: None,
                 };
                 let msg = "Test message";
                 let commitment =
-                    LockscriptCommitment::embed_commit(&container.clone(), &msg).unwrap();
+                    LockscriptCommitment::embed_commit(&mut container.clone(), &msg).unwrap();
                 assert!(commitment.verify(&container, &msg).unwrap())
             });
     }
@@ -443,10 +454,11 @@ mod test {
                     script: ls,
                     pubkey: keys[1].key,
                     tag,
+                    tweaking_factor: None,
                 };
                 let msg = "Test message";
                 let commitment =
-                    LockscriptCommitment::embed_commit(&container.clone(), &msg).unwrap();
+                    LockscriptCommitment::embed_commit(&mut container.clone(), &msg).unwrap();
                 assert!(commitment.verify(&container, &msg).unwrap())
             });
     }
@@ -471,9 +483,10 @@ mod test {
             script: LockScript::from(ms.encode()),
             pubkey: keys[1].key,
             tag,
+            tweaking_factor: None,
         };
         let msg = "Test message";
-        let commitment = LockscriptCommitment::embed_commit(&container.clone(), &msg).unwrap();
+        let commitment = LockscriptCommitment::embed_commit(&mut container.clone(), &msg).unwrap();
         assert!(commitment.verify(&container, &msg).unwrap())
     }
 }

@@ -49,11 +49,11 @@ where
     type Error = Error;
 
     fn close(&self, over: &Message) -> Result<Self::Witness, Self::Error> {
-        let container = self
+        let mut container = self
             .resolver
             .tx_container(self.seal_definition)
             .map_err(|_| Error::ResolverError)?;
-        let tx_commitment = TxCommitment::embed_commit(&container, &over)?;
+        let tx_commitment = TxCommitment::embed_commit(&mut container, &over)?;
         Ok(Witness(tx_commitment, container.to_proof()))
     }
 
