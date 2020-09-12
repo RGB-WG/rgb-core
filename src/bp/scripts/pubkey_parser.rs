@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+// In the future this mod will probably become part of Miniscript library
+
 use std::collections::HashSet;
 use std::iter::FromIterator;
 

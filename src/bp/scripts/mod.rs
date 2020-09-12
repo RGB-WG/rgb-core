@@ -17,7 +17,7 @@ mod script_pubkey;
 mod types;
 
 //pub use error::Error;
-pub use pubkey_parser::*;
+pub use pubkey_parser::PubkeyParseError;
 pub use script_pubkey::Error;
 pub use script_pubkey::*;
 pub use types::*;

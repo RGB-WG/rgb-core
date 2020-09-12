@@ -16,10 +16,10 @@
 //! Bitcoin doesn't make a distinction between Bitcoin script coming from different sources, like
 //! *scriptPubKey* in transaction output or witness and *sigScript* in transaction input. There are
 //! many other possible script containers for Bitcoin script: redeem script, witness script,
-//! tapscript. In fact, any "script" of `Script` type can be used for inputs and outputs.
+//! tapscript. In fact, any "script" of [bitcoin::Script] type can be used for inputs and outputs.
 //! What is a valid script for one will be a valid script for the other; the only req. is formatting
 //! of opcodes & pushes. That would mean that in principle every input script can be used as an
-//! output script, btu not vice versa. But really what makes a "script" is just the fact that it's
+//! output script, but not vice versa. But really what makes a "script" is just the fact that it's
 //! formatted correctly.
 //!
 //! While all `Script`s represent the same type **semantically**, there is a clear distinction
@@ -27,16 +27,16 @@
 //! Bitcoin script – in a nested structures like in several layers, like *redeemScript* inside of
 //! *sigScript* used for P2SH, or *tapScript* within *witnessScript* coming from *witness* field
 //! for Taproot. These nested layers do distinguish on the information they contain, since some of
-//! them only commit to the hashes of the nested scripts (`ScriptHash`, `WitnessProgramm`) or
+//! them only commit to the hashes of the nested scripts (`ScriptHash`, `WitnessProgram`) or
 //! public keys (`PubkeyHash`, `WPubkeyHash`), while other contain the full source of the script.
 //!
 //! The present type system represents a solution to the problem: it distinguish different logical
-//! types by introducing `Script` wrapper types. It defines `LockScript` as bottom layer of a script
+//! types by introducing `Script` wrapper types. It defines [LockScript] as bottom layer of a script
 //! hierarchy, containing no other script commitments (in form of their hashes). It also defines
-//! types above on it: `PubkeyScript` (for whatever is there in `pubkeyScript` field of a `TxOut`),
-//! `SigScript` (for whatever comes from `sigScript` field of `TxIn`), `RedeemScript` and `TapScript`.
-//! Then, there are conversion functions, which for instance can analyse `PubkeyScript`
-//! and if it is a custom script or P2PK return a `LockScript` type - or otherwise fail with the
+//! types above on it: [PubkeyScript] (for whatever is there in `scriptPubkey` field of a `TxOut`),
+//! [SigScript] (for whatever comes from `sigScript` field of `TxIn`), [RedeemScript] and [TapScript].
+//! Then, there are conversion functions, which for instance, can analyse [PubkeyScript]
+//! and if it is a custom script or P2PK return a [LockScript] type - or otherwise fail with the
 //! error. So with this type system one is always sure which logical information it does contain.
 //!
 //! ## Type derivation
@@ -69,7 +69,7 @@
 //! * `[source] <===> `: data source
 //! * `[?source] <===> `: data source which may be absent
 //! * `--+--`: algorithmic branching (alternative computation options)
-//! * `--?-->`: a conversion exists, but it may fail (returns `Option` or `Result`)
+//! * `--?-->`: a conversion exists, but it may fail (returns [Option] or [Result])
 //! * `--?!-->`: a conversion exists, but it may fail; however one of alternative branches must
 //!              always succeed
 //! * `----->`: a conversion exists which can't fail
@@ -79,13 +79,13 @@
 //! ## Type conversion
 //!
 //! ```text
-//! LockScript -+-> (PubkeyScript, RedeemScript) -+-> SigScript
-//!             |                                 +-> WitnessScript
+//! LockScript -+-> (PubkeyScript + RedeemScript) -+-> SigScript
+//!             |                                  +-> WitnessScript
 //!             +-> PubkeyScript
 //!             |
 //!             +-> TapScript
 //!
-//! PubkeyScript -+-?-> LockScript
+//! PubkeyScript --?--> LockScript
 //! ```
 //!
 
@@ -190,7 +190,7 @@ wrapper!(
 );
 
 /// Version of the WitnessProgram: first byte of `scriptPubkey` in
-/// transaciton output for transactions starting with opcodes ranging from 0
+/// transaction output for transactions starting with opcodes ranging from 0
 /// to 16 (inclusive).
 ///
 /// Structure helps to limit possible version of the witness according to the
