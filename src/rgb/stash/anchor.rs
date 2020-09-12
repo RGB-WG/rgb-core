@@ -26,8 +26,8 @@ use crate::bp::dbc::{
     TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
-use crate::commit_verify::{CommitVerify, EmbedCommitVerify};
-use crate::lnpbp4::MultimsgCommitment;
+use crate::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
+use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
 use crate::rgb::{ContractId, NodeId};
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
@@ -56,6 +56,8 @@ pub enum Error {
     NoFeeInformation,
     #[derive_from]
     WrongPubkeyData(secp256k1::Error),
+    #[derive_from(TooManyMessagesError)]
+    TooManyContracts,
 }
 
 tagged_hash!(
@@ -118,7 +120,7 @@ impl Anchor {
         let mut anchors: Vec<Anchor> = vec![];
         let mut contract_anchor_map = HashMap::<ContractId, usize>::new();
         for (vout, multimsg) in per_output_sources {
-            let mm_commitment = MultimsgCommitment::commit(&multimsg);
+            let mm_commitment = MultimsgCommitment::try_commit(&multimsg)?;
 
             let psbt_out = psbt
                 .outputs
