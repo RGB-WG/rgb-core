@@ -50,13 +50,7 @@ impl Network {
     }
 
     pub fn as_magic(&self) -> MagicNumber {
-        // FIXME: Something is going wrong here
-        use std::mem;
-        let m;
-        unsafe {
-            m = mem::transmute::<Self, u64>(self.clone());
-        }
-        m as u32
+        u32::from(*self)
     }
 }
 
