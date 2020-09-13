@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::{sha256t, Hash};
+use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{Ancestors, Assignments, AssignmentsVariant, AutoConceal};
 use crate::bp;
@@ -19,11 +19,15 @@ use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, C
 use crate::rgb::schema::AssignmentsType;
 use crate::rgb::{schema, seal, Metadata, SchemaId, SimplicityScript};
 
-// TODO: Check the data
-static MIDSTATE_NODE_ID: [u8; 32] = [
-    25, 205, 224, 91, 171, 217, 131, 31, 140, 104, 5, 155, 127, 82, 14, 81, 58, 245, 79, 165, 114,
-    243, 110, 60, 133, 174, 103, 187, 103, 230, 9, 106,
-];
+lazy_static! {
+    static ref MIDSTATE_NODE_ID: [u8; 32] = {
+        let hash = sha256::Hash::hash(b"rgb:node");
+        let mut engine = sha256::Hash::engine();
+        engine.input(&hash[..]);
+        engine.input(&hash[..]);
+        engine.midstate().0
+    };
+}
 
 tagged_hash!(
     NodeId,

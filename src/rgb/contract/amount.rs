@@ -38,7 +38,6 @@ pub struct Revealed {
 
 impl Revealed {
     pub fn with_amount<R: Rng + RngCore>(amount: Amount, rng: &mut R) -> Self {
-        // TODO: Use single shared instance
         Self {
             amount,
             blinding: BlindingFactor::new(&SECP256K1_ZKP, rng),

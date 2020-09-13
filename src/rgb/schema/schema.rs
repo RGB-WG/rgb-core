@@ -14,7 +14,7 @@
 use std::collections::BTreeMap;
 use std::io;
 
-use bitcoin::hashes::sha256t;
+use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{
     vm, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateSchema, TransitionSchema,
@@ -24,10 +24,15 @@ use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, C
 pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
 
-static MIDSTATE_SHEMA_ID: [u8; 32] = [
-    25, 205, 224, 91, 171, 217, 131, 31, 140, 104, 5, 155, 127, 82, 14, 81, 58, 245, 79, 165, 114,
-    243, 110, 60, 133, 174, 103, 187, 103, 230, 9, 106,
-];
+lazy_static! {
+    static ref MIDSTATE_SHEMA_ID: [u8; 32] = {
+        let hash = sha256::Hash::hash(b"rgb:schema");
+        let mut engine = sha256::Hash::engine();
+        engine.input(&hash[..]);
+        engine.input(&hash[..]);
+        engine.midstate().0
+    };
+}
 
 tagged_hash!(
     SchemaId,

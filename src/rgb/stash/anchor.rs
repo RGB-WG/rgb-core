@@ -37,7 +37,6 @@ lazy_static! {
     static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash = sha256::Hash::hash(b"LNPBP4");
 }
 
-// TODO: Standardize all type-id creating after the same method
 lazy_static! {
     static ref MIDSTATE_ANCHOR_ID: [u8; 32] = {
         let hash = sha256::Hash::hash(b"rgb:anchor");
