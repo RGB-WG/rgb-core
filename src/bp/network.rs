@@ -16,16 +16,21 @@ use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub type MagicNumber = u32;
 
+const BITCOIN_MAINNET: u32 = 0xD9B4BEF9;
+const BITCOIN_TESTNET: u32 = 0x0709110B;
+const BITCOIN_REGTEST: u32 = 0xDAB5BFFA;
+const BITCOIN_SIGNET: u32 = 0xA553C67E;
+
 /// A set of recommended standard networks. Differs from bitcoin::Network in
 /// ability to support non-standard and non-predefined networks
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 #[repr(u32)]
 pub enum Network {
-    Mainnet = 0xD9B4BEF9,
-    Testnet = 0x0709110B,
-    Regtest = 0xDAB5BFFA,
-    Signet = 0xA553C67E,
+    Mainnet = BITCOIN_MAINNET,
+    Testnet = BITCOIN_TESTNET,
+    Regtest = BITCOIN_REGTEST,
+    Signet = BITCOIN_SIGNET,
     Other(MagicNumber),
 }
 
@@ -50,13 +55,13 @@ impl Network {
     }
 
     pub fn as_magic(&self) -> MagicNumber {
-        // FIXME: Something is going wrong here
-        use std::mem;
-        let m;
-        unsafe {
-            m = mem::transmute::<Self, u64>(self.clone());
+        match self {
+            Network::Mainnet => BITCOIN_MAINNET,
+            Network::Testnet => BITCOIN_TESTNET,
+            Network::Regtest => BITCOIN_REGTEST,
+            Network::Signet => BITCOIN_SIGNET,
+            Network::Other(n) => *n,
         }
-        m as u32
     }
 }
 

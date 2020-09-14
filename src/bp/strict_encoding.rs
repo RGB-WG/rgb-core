@@ -379,8 +379,7 @@ impl StrictDecode for bip32::ExtendedPubKey {
 mod test {
     use super::*;
     use crate::bp::{short_id::Descriptor, BlockChecksum, TxChecksum};
-    use bitcoin::{hashes::hex::FromHex, secp256k1::Message, BlockHash, Network};
-    //use rand::{thread_rng, RngCore};
+    use bitcoin::{hashes::hex::FromHex, secp256k1::Message, BlockHash};
     use std::{convert::TryFrom, fmt::Debug, str::FromStr};
 
     fn encode_decode<T: StrictEncode + StrictDecode>(object: &T) -> Result<(T, usize), Error> {
@@ -413,23 +412,37 @@ mod test {
         let testnet_bytes = &[0x0Bu8, 0x11u8, 0x09u8, 0x07u8][..];
         let regtest_bytes = &[0xFAu8, 0xBFu8, 0xB5u8, 0xDAu8][..];
         let signet_bytes = &[0x0Au8, 0x03u8, 0xCFu8, 0x40u8][..];
+        let random_bytes = &[0xA1u8, 0xA2u8, 0xA3u8, 0xA4u8][..];
 
-        let mainnet = Network::strict_decode(mainnet_bytes).unwrap();
-        let testnet = Network::strict_decode(testnet_bytes).unwrap();
-        let regtest = Network::strict_decode(regtest_bytes).unwrap();
-        let signet = Network::strict_decode(signet_bytes).unwrap();
+        let mainnet = bitcoin::Network::strict_decode(mainnet_bytes).unwrap();
+        let testnet = bitcoin::Network::strict_decode(testnet_bytes).unwrap();
+        let regtest = bitcoin::Network::strict_decode(regtest_bytes).unwrap();
+        let signet = bitcoin::Network::strict_decode(signet_bytes).unwrap();
+
+        let bp_mainnet = Network::strict_decode(mainnet_bytes).unwrap();
+        let bp_testnet = Network::strict_decode(testnet_bytes).unwrap();
+        let bp_regtest = Network::strict_decode(regtest_bytes).unwrap();
+        let bp_signet = Network::strict_decode(signet_bytes).unwrap();
+        let bp_other = Network::strict_decode(random_bytes).unwrap();
 
         assert!(test_suite(&mainnet, &mainnet_bytes, 4).is_ok());
         assert!(test_suite(&testnet, &testnet_bytes, 4).is_ok());
         assert!(test_suite(&regtest, &regtest_bytes, 4).is_ok());
         assert!(test_suite(&signet, &signet_bytes, 4).is_ok());
+
+        assert!(test_suite(&bp_mainnet, &mainnet_bytes, 4).is_ok());
+        assert!(test_suite(&bp_testnet, &testnet_bytes, 4).is_ok());
+        assert!(test_suite(&bp_regtest, &regtest_bytes, 4).is_ok());
+        assert!(test_suite(&bp_signet, &signet_bytes, 4).is_ok());
+        assert!(test_suite(&bp_other, &random_bytes, 4).is_ok());
     }
 
     #[test]
     #[should_panic]
     fn test_encoding_network_failure() {
+        // Bitcoin Network structure do not support "Other" networks
         let random_bytes = &[0xA1u8, 0xA2u8, 0xA3u8, 0xA4u8][..];
-        Network::strict_decode(random_bytes).unwrap();
+        bitcoin::Network::strict_decode(random_bytes).unwrap();
     }
 
     #[test]
