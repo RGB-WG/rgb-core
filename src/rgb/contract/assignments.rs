@@ -956,11 +956,11 @@ mod test {
         AssignmentsVariant::strict_decode(&bytes[..]).unwrap();
     }
 
-    fn compute_zero_balance(
+    fn zero_balance(
         input_amounts: &[u64],
         output_amounts: &[u64],
         partition: usize,
-    ) -> bool {
+    ) -> (Vec<Commitment>, Vec<Commitment>) {
         let mut rng = thread_rng();
 
         // Create revealed amount from input amounts
@@ -1033,24 +1033,32 @@ mod test {
             .map(|revealed| revealed.conceal().commitment)
             .collect();
 
-        // Check sum verification and return the result
+        (inputs, outputs)
+    }
+
+    fn zero_balance_verify(
+        input_amounts: &[u64],
+        output_amounts: &[u64],
+        partition: usize,
+    ) -> bool {
+        let (inputs, outputs) = zero_balance(input_amounts, output_amounts, partition);
         amount::Confidential::verify_commit_sum(inputs, outputs)
     }
 
     #[test]
     fn test_zero_balance_nonoverflow() {
-        assert!(compute_zero_balance(&[u64::MAX, 1], &[1, u64::MAX], 1));
-        assert!(compute_zero_balance(
+        assert!(zero_balance_verify(&[u64::MAX, 1], &[1, u64::MAX], 1));
+        assert!(zero_balance_verify(
             &[u64::MAX, u64::MAX],
             &[u64::MAX, u64::MAX],
             1
         ));
-        assert!(compute_zero_balance(
+        assert!(zero_balance_verify(
             &[u32::MAX as u64, u32::MAX as u64],
             &[u32::MAX as u64 + u32::MAX as u64],
             1
         ));
-        assert!(compute_zero_balance(
+        assert!(zero_balance_verify(
             &[u32::MAX as u64, u32::MAX as u64, u64::MAX],
             &[u64::MAX, (u32::MAX as u64) * 2],
             1
@@ -1058,9 +1066,7 @@ mod test {
     }
 
     #[test]
-    fn test_zero_balance() {
-        let mut rng = thread_rng();
-
+    fn test_zero_balance_single() {
         // test equal inputs and outputs
         let single_amounts = vec![
             [0u64],
@@ -1070,10 +1076,32 @@ mod test {
             [u64::MAX - 1u64],
             [u64::MAX],
         ];
+
+        for vec in single_amounts.iter() {
+            assert!(zero_balance_verify(vec, vec, 0));
+            assert!(zero_balance_verify(vec, vec, 1));
+            assert!(zero_balance_verify(vec, vec, vec.len() / 2));
+            assert!(zero_balance_verify(vec, vec, vec.len() / 2 + 1));
+        }
+    }
+
+    #[test]
+    fn test_zero_balance_double() {
         let double_amounts = vec![
             [(u32::MAX - 1) as u64, (u32::MAX - 1) as u64],
             [u32::MAX as u64, u32::MAX as u64],
         ];
+
+        for vec in double_amounts.iter() {
+            assert!(zero_balance_verify(vec, vec, 0));
+            assert!(zero_balance_verify(vec, vec, 1));
+            assert!(zero_balance_verify(vec, vec, vec.len() / 2));
+            assert!(zero_balance_verify(vec, vec, vec.len() / 2 + 1));
+        }
+    }
+
+    #[test]
+    fn test_zero_balance_multiple() {
         let multiple_amounts = vec![
             [0u64, 0u64, 0u64, 0u64],
             [0u64, 1u64, 0u64, 1u64],
@@ -1083,70 +1111,60 @@ mod test {
             [u64::MAX, u64::MAX, u64::MAX, u64::MAX],
         ];
 
-        for vec in single_amounts.iter() {
-            assert!(compute_zero_balance(vec, vec, 0));
-            assert!(compute_zero_balance(vec, vec, 1));
-            assert!(compute_zero_balance(vec, vec, vec.len() / 2));
-            assert!(compute_zero_balance(vec, vec, vec.len() / 2 + 1));
-        }
-
-        for vec in double_amounts.iter() {
-            assert!(compute_zero_balance(vec, vec, 0));
-            assert!(compute_zero_balance(vec, vec, 1));
-            assert!(compute_zero_balance(vec, vec, vec.len() / 2));
-            assert!(compute_zero_balance(vec, vec, vec.len() / 2 + 1));
-        }
-
         for vec in multiple_amounts.iter() {
-            assert!(compute_zero_balance(vec, vec, 0));
-            assert!(compute_zero_balance(vec, vec, 1));
-            assert!(compute_zero_balance(vec, vec, vec.len() / 2));
-            assert!(compute_zero_balance(vec, vec, vec.len() / 2 + 1));
+            assert!(zero_balance_verify(vec, vec, 0));
+            assert!(zero_balance_verify(vec, vec, 1));
+            assert!(zero_balance_verify(vec, vec, vec.len() / 2));
+            assert!(zero_balance_verify(vec, vec, vec.len() / 2 + 1));
         }
 
         // Test when ours is empty
-        assert!(compute_zero_balance(
+        assert!(zero_balance_verify(
             &multiple_amounts[2],
             &multiple_amounts[2],
             0
         ));
 
         // Test when theirs is empty
-        assert!(compute_zero_balance(
+        assert!(zero_balance_verify(
             &multiple_amounts[4],
             &multiple_amounts[4],
             multiple_amounts[4].len()
         ));
+    }
 
+    #[test]
+    fn test_zero_balance_negative() {
         // Test when input.sum() != output.sum()
         // When they only differ by 1
         // When they differ by u64::MAX
-        assert!(!compute_zero_balance(
-            &multiple_amounts[1],
-            &multiple_amounts[2],
+        assert!(!zero_balance_verify(
+            &[0u64, 1u64, 0u64, 1u64],
+            &[1u64, 2u64, 3u64, u64::MAX],
             2
         ));
-        assert!(!compute_zero_balance(
-            &multiple_amounts[2],
-            &multiple_amounts[3],
+        assert!(!zero_balance_verify(
+            &[1u64, 2u64, 3u64, u64::MAX],
+            &[10u64, 20u64, 30u64, 40u64],
             2
         ));
-        assert!(!compute_zero_balance(
-            &multiple_amounts[3],
-            &multiple_amounts[4],
+        assert!(!zero_balance_verify(
+            &[10u64, 20u64, 30u64, 40u64],
+            &[0u64, 197642u64, u64::MAX, 476543u64],
             2
         ));
-        assert!(!compute_zero_balance(
-            &multiple_amounts[4],
-            &multiple_amounts[5],
+        assert!(!zero_balance_verify(
+            &[0u64, 197642u64, u64::MAX, 476543u64],
+            &[u64::MAX, u64::MAX, u64::MAX, u64::MAX],
             2
         ));
-        assert!(!compute_zero_balance(&[1, 2, 3, 4], &[1, 2, 3, 5], 2));
-        assert!(!compute_zero_balance(
-            &[1, 2, 3, 0],
-            &[1, 2, 3, u64::MAX],
-            2
-        ));
+        assert!(!zero_balance_verify(&[1, 2, 3, 4], &[1, 2, 3, 5], 2));
+        assert!(!zero_balance_verify(&[1, 2, 3, 0], &[1, 2, 3, u64::MAX], 2));
+    }
+
+    #[test]
+    fn test_zero_balance_random() {
+        let mut rng = thread_rng();
 
         // Test random inputs and outputs
         // Randomly distributed between ours and theirs allocation
@@ -1184,26 +1202,34 @@ mod test {
                 output_amounts[output_length - 1] += input_sum - output_sum;
             }
 
-            // Check if test passes
-            assert!(compute_zero_balance(
+            let (inputs, outputs) = zero_balance(
                 &input_amounts[..],
                 &output_amounts[..],
-                rng.gen_range(0, output_length)
+                rng.gen_range(0, output_length),
+            );
+            // Check if test passes
+            assert!(amount::Confidential::verify_commit_sum(
+                inputs.clone(),
+                outputs.clone()
             ));
 
             // Check non-equivalent amounts do not verify
             if input_length > 1 {
-                assert!(!compute_zero_balance(
-                    &input_amounts[..(input_length - 1)],
-                    &output_amounts,
-                    rng.gen_range(0, output_length)
-                ));
+                assert_eq!(
+                    amount::Confidential::verify_commit_sum(
+                        inputs[..(input_length - 1)].to_vec(),
+                        outputs
+                    ),
+                    false
+                );
             } else if output_length > 1 {
-                assert!(!compute_zero_balance(
-                    &input_amounts,
-                    &output_amounts[..(output_length - 1)],
-                    rng.gen_range(0, output_length)
-                ));
+                assert_eq!(
+                    amount::Confidential::verify_commit_sum(
+                        inputs,
+                        outputs[..(output_length - 1)].to_vec()
+                    ),
+                    false
+                );
             }
         }
     }
