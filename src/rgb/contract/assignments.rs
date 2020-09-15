@@ -714,6 +714,7 @@ mod test {
     use super::super::testutils::*;
     use super::*;
     use crate::bp::blind::OutpointReveal;
+    use crate::paradigms::client_side_validation::CommitEncode;
     use crate::paradigms::client_side_validation::Conceal;
     use crate::rgb::contract::seal::Revealed;
     use crate::rgb::data;
@@ -875,6 +876,12 @@ mod test {
         0xb9, 0x36, 0x8e, 0xaf, 0xd3, 0x36, 0xd, 0x65, 0x25, 0x89, 0x52, 0xf4, 0xd9, 0x57, 0x5e,
         0xac, 0x1b, 0x1f, 0x18, 0xee, 0x18, 0x51, 0x29, 0x71, 0x82, 0x93, 0xb6, 0xd7, 0x62, 0x2b,
         0x1e, 0xdd, 0x1f, 0x20, 0x1, 0x0, 0x0, 0x0,
+    ];
+
+    static COMMITENCODE_ASSIGNMENTS: [u8; 34] = [
+        0x20, 0x0, 0xdd, 0x2, 0xfd, 0x4c, 0xd3, 0x51, 0xa9, 0x83, 0x1d, 0x3c, 0xc2, 0xbe, 0xb0,
+        0x22, 0xa2, 0xda, 0x88, 0x31, 0xa8, 0xb9, 0x7d, 0x7e, 0xe5, 0xb3, 0xe, 0x70, 0x24, 0xa2,
+        0xea, 0xc7, 0xb5, 0xdd,
     ];
 
     // Real data used for creation of above variants
@@ -1631,5 +1638,23 @@ mod test {
         assert_eq!(declarative_type.len(), 4);
         assert_eq!(pedersan_type.len(), 4);
         assert_eq!(hash_type.len(), 4);
+    }
+
+    #[test]
+    fn test_commitencode_assignments() {
+        let declarative_type = AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+
+        let mut assignments = BTreeMap::new() as Assignments;
+
+        assignments.insert(1 as schema::AssignmentsType, declarative_type);
+        assignments.insert(2 as schema::AssignmentsType, pedersan_type);
+        assignments.insert(3 as schema::AssignmentsType, hash_type);
+
+        let mut buf = vec![];
+        assignments.commit_encode(&mut buf);
+
+        assert_eq!(buf, COMMITENCODE_ASSIGNMENTS);
     }
 }
