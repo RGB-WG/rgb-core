@@ -143,6 +143,12 @@ pub mod commit_strategy {
     impl CommitEncodeWithStrategy for MerkleNode {
         type Strategy = UsingStrict;
     }
+    impl<T> CommitEncodeWithStrategy for &T
+    where
+        T: CommitEncodeWithStrategy,
+    {
+        type Strategy = T::Strategy;
+    }
 }
 
 pub trait Conceal {
@@ -216,13 +222,9 @@ mod strict_encode {
     }
 }
 
+/// Merklization procedure that uses tagged hashes with depth commitments
 pub fn merklize(prefix: &str, data: &[MerkleNode], depth: u16) -> MerkleNode {
     let len = data.len();
-
-    let mut height: usize = 0;
-    while ((len + (1 << height) - 1) >> height) > 1 {
-        height += 1;
-    }
 
     let mut engine = MerkleNode::engine();
     let tag = format!("{}:merkle:{}", prefix, depth);

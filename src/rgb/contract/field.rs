@@ -23,7 +23,24 @@ use super::data;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy};
 use crate::rgb::schema;
 
-wrapper!(Metadata, BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>, doc="Transition & genesis metadata fields", derive=[Default, PartialEq]);
+type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
+
+wrapper!(
+    Metadata,
+    MetadataInner,
+    doc = "Transition & genesis metadata fields",
+    derive = [Default, PartialEq]
+);
+
+impl IntoIterator for Metadata {
+    type Item = <MetadataInner as IntoIterator>::Item;
+    type IntoIter = <MetadataInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl CommitEncodeWithStrategy for Metadata {
     type Strategy = commit_strategy::Merklization;
 }
@@ -32,7 +49,8 @@ impl CommitEncodeWithStrategy for BTreeSet<data::Revealed> {
     type Strategy = commit_strategy::Merklization;
 }
 
-// The data below are not part of the commitments!
+// The data below are not part of the commitments! They are just helper iterator
+// structs returned by convenience methods for metadata fields
 
 macro_rules! field_extract {
     ($self:ident, $field:ident, $name:ident) => {
