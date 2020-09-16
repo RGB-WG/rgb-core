@@ -36,6 +36,10 @@ tagged_hash!(
     doc = "Unique node (genesis and state transition) identifier equivalent to the commitment hash"
 );
 
+impl CommitEncodeWithStrategy for NodeId {
+    type Strategy = commit_strategy::UsingStrict;
+}
+
 tagged_hash!(
     ContractId,
     ContractIdTag,

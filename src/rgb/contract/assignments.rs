@@ -27,15 +27,7 @@ use bitcoin_hashes::core::cmp::Ordering;
 
 pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
 
-impl CommitEncodeWithStrategy for Assignments {
-    type Strategy = commit_strategy::Merklization;
-}
-
 pub type Ancestors = BTreeMap<NodeId, BTreeMap<schema::AssignmentsType, Vec<u16>>>;
-
-impl CommitEncodeWithStrategy for Ancestors {
-    type Strategy = commit_strategy::Merklization;
-}
 
 #[derive(Clone, Debug, Display, PartialEq)]
 #[display_from(Debug)]
@@ -1703,8 +1695,12 @@ mod test {
     fn test_ancestors2() {
         let ancestor = Ancestors::strict_decode(&ANCESTOR[..]).unwrap();
 
-        //let mut buf = vec![];
+        let mut buf = vec![];
 
-        //ancestor.commit_encode(&mut buf);
+        let node_id = NodeId::default();
+
+        node_id.commit_encode(&mut buf);
+
+        ancestor.commit_encode(&mut buf);
     }
 }

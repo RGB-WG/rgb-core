@@ -29,6 +29,7 @@ pub trait CommitEncodeWithStrategy {
 pub mod commit_strategy {
     use super::*;
     use bitcoin::hashes::Hash;
+    use std::collections::BTreeMap;
 
     // Defining strategies:
     pub struct UsingStrict;
@@ -140,8 +141,20 @@ pub mod commit_strategy {
     impl CommitEncodeWithStrategy for Vec<u8> {
         type Strategy = UsingStrict;
     }
+    impl CommitEncodeWithStrategy for Vec<u16> {
+        type Strategy = Merklization;
+    }
+    impl CommitEncodeWithStrategy for Vec<u32> {
+        type Strategy = Merklization;
+    }
+    impl CommitEncodeWithStrategy for Vec<u64> {
+        type Strategy = Merklization;
+    }
     impl CommitEncodeWithStrategy for MerkleNode {
         type Strategy = UsingStrict;
+    }
+    impl<K, V> CommitEncodeWithStrategy for BTreeMap<K, V> {
+        type Strategy = Merklization;
     }
     impl<T> CommitEncodeWithStrategy for &T
     where
