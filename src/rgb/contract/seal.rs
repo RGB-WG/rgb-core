@@ -59,8 +59,13 @@ impl Conceal for Revealed {
         }
     }
 }
+
 impl CommitEncodeWithStrategy for Revealed {
     type Strategy = commit_strategy::UsingConceal;
+}
+
+impl CommitEncodeWithStrategy for Confidential {
+    type Strategy = commit_strategy::UsingStrict;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display, Error)]
