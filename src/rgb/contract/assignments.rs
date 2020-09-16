@@ -884,6 +884,14 @@ mod test {
         0xea, 0xc7, 0xb5, 0xdd,
     ];
 
+    static ANCESTOR: [u8; 78] = [
+        0x1, 0x0, 0xf5, 0x7e, 0xd2, 0x7e, 0xe4, 0x19, 0x90, 0x72, 0xc5, 0xff, 0x3b, 0x77, 0x4f,
+        0xeb, 0xc9, 0x4d, 0x26, 0xd3, 0xe4, 0xa5, 0x55, 0x9d, 0x13, 0x3d, 0xe4, 0x75, 0xa, 0x94,
+        0x8d, 0xf5, 0xe, 0x6, 0x3, 0x0, 0x1, 0x0, 0x5, 0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x4, 0x0,
+        0x5, 0x0, 0x2, 0x0, 0x5, 0x0, 0xa, 0x0, 0x14, 0x0, 0x1e, 0x0, 0x28, 0x0, 0x32, 0x0, 0x3,
+        0x0, 0x5, 0x0, 0x64, 0x0, 0xc8, 0x0, 0x2c, 0x1, 0x90, 0x1, 0xf4, 0x1,
+    ];
+
     // Real data used for creation of above variants
     // Used in tests to ensure operations of AssignmentVariants gives deterministic results
 
@@ -1656,5 +1664,47 @@ mod test {
         assignments.commit_encode(&mut buf);
 
         assert_eq!(buf, COMMITENCODE_ASSIGNMENTS);
+    }
+
+    #[test]
+    fn create_ancestors() {
+        use bitcoin_hashes::hex::FromHex;
+        use bitcoin_hashes::Hash;
+
+        let x = NodeId::from_inner(
+            bitcoin_hashes::sha256::Hash::from_hex(
+                "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06",
+            )
+            .unwrap()
+            .into_inner(),
+        );
+
+        println!("{}", x);
+
+        let vec1 = vec![1u16, 2, 3, 4, 5];
+        let vec2 = vec![10u16, 20, 30, 40, 50];
+        let vec3 = vec![100u16, 200, 300, 400, 500];
+
+        let mut map = BTreeMap::new();
+
+        map.insert(1 as schema::AssignmentsType, vec1);
+        map.insert(2 as schema::AssignmentsType, vec2);
+        map.insert(3 as schema::AssignmentsType, vec3);
+
+        let mut ancestors = BTreeMap::new() as Ancestors;
+        ancestors.insert(x, map);
+
+        println!("{:?}", ancestors);
+
+        print_bytes(&ancestors);
+    }
+
+    #[test]
+    fn test_ancestors2() {
+        let ancestor = Ancestors::strict_decode(&ANCESTOR[..]).unwrap();
+
+        //let mut buf = vec![];
+
+        //ancestor.commit_encode(&mut buf);
     }
 }
