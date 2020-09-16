@@ -128,6 +128,7 @@ mod test {
     use crate::strict_encoding::{StrictDecode, StrictEncode};
     //use bitcoin::secp256k1::rand::{thread_rng};
     use bitcoin_hashes::hex::FromHex;
+    use crate::paradigms::client_side_validation::{CommitEncode};
 
     // Hard coded TxOutpoint variant of a Revealed Seal
     // Constructed with following data
@@ -256,5 +257,19 @@ mod test {
         assert_eq!(outpoint_from_txoutpoint.blinding, blinding);
         assert_eq!(outpoint_from_witnessvout.txid, txid);
         assert_eq!(outpoint_from_txoutpoint.vout, vout);
+    }
+
+    #[test]
+    fn test_commitencode_seal() {
+        let revealed_txoutpoint = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revelaed_wtinessvout = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+
+        let mut commit1 = vec![];
+        revealed_txoutpoint.commit_encode(&mut commit1);
+        assert_eq!(commit1, CONCEALED_TXOUTPOINT);
+
+        let mut commit2 = vec![];
+        revelaed_wtinessvout.commit_encode(&mut commit2);
+        assert_eq!(commit2, CONCEALED_WITNESSVOUT);
     }
 }
