@@ -708,6 +708,7 @@ mod test {
     use crate::bp::blind::OutpointReveal;
     use crate::paradigms::client_side_validation::CommitEncode;
     use crate::paradigms::client_side_validation::Conceal;
+    use crate::paradigms::client_side_validation::{merklize, MerkleNode};
     use crate::rgb::contract::seal::Revealed;
     use crate::rgb::data;
     use bitcoin::blockdata::transaction::OutPoint;
@@ -715,6 +716,8 @@ mod test {
         hex::{FromHex, ToHex},
         sha256,
     };
+    use bitcoin_hashes::{Hash, HashEngine};
+    use secp256k1zkp::rand::RngCore;
     use secp256k1zkp::rand::{thread_rng, Rng};
     use secp256k1zkp::{key::SecretKey, pedersen::Commitment, Secp256k1};
 
@@ -1658,49 +1661,188 @@ mod test {
         assert_eq!(buf, COMMITENCODE_ASSIGNMENTS);
     }
 
+    // This doesn't use the merkelize() function
+    // And constructs the flow by hand for a single element
+    // merkelization process
     #[test]
-    fn create_ancestors() {
-        use bitcoin_hashes::hex::FromHex;
-        use bitcoin_hashes::Hash;
+    fn test_ancestor_encoding_simple() {
+        // Create the simplest possible ancestor structure
+        // Ancestor = Map<1, Map<2, [0u16]>>
+        let mut assignment = BTreeMap::new();
+        let data = 0u16;
+        let ty = 2 as schema::AssignmentsType;
+        assignment.insert(ty, vec![data]);
 
-        let x = NodeId::from_inner(
-            bitcoin_hashes::sha256::Hash::from_hex(
-                "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06",
-            )
-            .unwrap()
-            .into_inner(),
-        );
+        let nodeid = NodeId::default();
+        let mut ancestor = BTreeMap::new() as Ancestors;
+        ancestor.insert(nodeid, assignment);
 
-        println!("{}", x);
+        let mut original_commit = vec![];
+        ancestor.commit_encode(&mut original_commit); // Merkelizes the structure into buf
 
-        let vec1 = vec![1u16, 2, 3, 4, 5];
-        let vec2 = vec![10u16, 20, 30, 40, 50];
-        let vec3 = vec![100u16, 200, 300, 400, 500];
+        // Do the full merklization process by hand
 
-        let mut map = BTreeMap::new();
+        // create merklenode m0 from 0u16
+        let mut encoder0 = std::io::Cursor::new(vec![]);
+        data.strict_encode(&mut encoder0).unwrap();
+        let m0 = MerkleNode::hash(&encoder0.into_inner());
 
-        map.insert(1 as schema::AssignmentsType, vec1);
-        map.insert(2 as schema::AssignmentsType, vec2);
-        map.insert(3 as schema::AssignmentsType, vec3);
+        // create merkle root mr0 from m0
+        let mr0 = merkle_single(m0);
 
-        let mut ancestors = BTreeMap::new() as Ancestors;
-        ancestors.insert(x, map);
+        // create merklenode m1 from hash(type, mr0)
+        let mut encoder1 = std::io::Cursor::new(vec![]);
+        ty.commit_encode(&mut encoder1);
+        mr0.commit_encode(&mut encoder1);
+        let m1 = MerkleNode::hash(&encoder1.into_inner());
 
-        println!("{:?}", ancestors);
+        // Create merkleroot mr1 from merklenode m1
+        let mr1 = merkle_single(m1);
 
-        print_bytes(&ancestors);
+        // Create merklenode m2 from hash(nodeid, mr1)
+        let mut encoder2 = std::io::Cursor::new(vec![]);
+        nodeid.commit_encode(&mut encoder2);
+        mr1.commit_encode(&mut encoder2);
+        let m2 = MerkleNode::hash(&encoder2.into_inner());
+
+        // Create merkleroot mr2 from merklenode m2
+        let mr2 = merkle_single(m2);
+
+        // Encode mr2 into buf
+        // This should match with original commit_encode of ancestor structure
+        let mut handmade_commit = vec![];
+        mr2.commit_encode(&mut handmade_commit);
+
+        assert_eq!(original_commit, handmade_commit);
     }
 
+    // Helper to create merkleroot from single merklenode
+    fn merkle_single(m: MerkleNode) -> MerkleNode {
+        let mut engine2 = MerkleNode::engine();
+        let tag = format!("{}:merkle:{}", "", 0);
+        let tag_hash = sha256::Hash::hash(tag.as_bytes());
+        engine2.input(&tag_hash[..]);
+        engine2.input(&tag_hash[..]);
+        m.commit_encode(&mut engine2);
+        0u8.commit_encode(&mut engine2);
+        MerkleNode::from_engine(engine2)
+    }
+
+    // This uses merkelize() function handle multiple values
     #[test]
-    fn test_ancestors2() {
-        let ancestor = Ancestors::strict_decode(&ANCESTOR[..]).unwrap();
+    fn test_ancestor_encoding_complex() {
+        // Create three random vector as assignment variants
+        let mut vec1 = vec![];
+        let mut rng = thread_rng();
+        for i in 0..6 {
+            vec1.insert(i, rng.next_u64() as u16);
+        }
 
-        let mut buf = vec![];
+        let mut vec2 = vec![];
+        let mut rng = thread_rng();
+        for i in 0..17 {
+            vec2.insert(i, rng.next_u64() as u16);
+        }
 
+        let mut vec3 = vec![];
+        let mut rng = thread_rng();
+        for i in 0..11 {
+            vec3.insert(i, rng.next_u64() as u16);
+        }
+
+        // Create 3 assignment type
+        let type1 = 1 as schema::AssignmentsType;
+        let type2 = 2 as schema::AssignmentsType;
+        let type3 = 3 as schema::AssignmentsType;
+
+        // Create 1 NodeID
         let node_id = NodeId::default();
 
-        node_id.commit_encode(&mut buf);
+        // Construct assignments
+        let mut assignments = BTreeMap::new();
+        assignments.insert(type1, vec1.clone());
+        assignments.insert(type2, vec2.clone());
+        assignments.insert(type3, vec3.clone());
 
-        ancestor.commit_encode(&mut buf);
+        // Construct ancestor
+        let mut ancestor = BTreeMap::new();
+        ancestor.insert(node_id, assignments);
+
+        // get the commit encoding
+        let mut original_commit = vec![];
+        ancestor.commit_encode(&mut original_commit);
+
+        // Merkelize by hand
+        // General flow is as below
+        // Make merlklenodes from vector element
+        // merkelize the nodes, calculate root
+        // take hash(type, merkleroot) as the new merklenode
+
+        // Do that for type1 and vec1
+        let m0: Vec<MerkleNode> = vec1
+            .iter()
+            .map(|item| {
+                let mut encoder = std::io::Cursor::new(vec![]);
+                item.commit_encode(&mut encoder);
+                MerkleNode::hash(&encoder.into_inner())
+            })
+            .collect();
+
+        let mr0 = merklize("", &m0[..], 0);
+
+        let mut encoder = std::io::Cursor::new(vec![]);
+        type1.commit_encode(&mut encoder);
+        mr0.commit_encode(&mut encoder);
+        let first_node = MerkleNode::hash(&encoder.into_inner());
+
+        // Do that for type2 and vec2
+        let m1: Vec<MerkleNode> = vec2
+            .iter()
+            .map(|item| {
+                let mut encoder = std::io::Cursor::new(vec![]);
+                item.commit_encode(&mut encoder);
+                MerkleNode::hash(&encoder.into_inner())
+            })
+            .collect();
+        let mr1 = merklize("", &m1[..], 0);
+
+        let mut encoder = std::io::Cursor::new(vec![]);
+        type2.commit_encode(&mut encoder);
+        mr1.commit_encode(&mut encoder);
+        let second_node = MerkleNode::hash(&encoder.into_inner());
+
+        // Do that for type3 and vec3
+        let m2: Vec<MerkleNode> = vec3
+            .iter()
+            .map(|item| {
+                let mut encoder = std::io::Cursor::new(vec![]);
+                item.commit_encode(&mut encoder);
+                MerkleNode::hash(&encoder.into_inner())
+            })
+            .collect();
+        let mr2 = merklize("", &m2[..], 0);
+
+        let mut encoder = std::io::Cursor::new(vec![]);
+        type3.commit_encode(&mut encoder);
+        mr2.commit_encode(&mut encoder);
+        let third_node = MerkleNode::hash(&encoder.into_inner());
+
+        // merkelize the above three nodes
+        let middle_node = merklize("", &[first_node, second_node, third_node], 0);
+
+        // create a final node as hash(nodeID, middle_node)
+        let mut encoder = std::io::Cursor::new(vec![]);
+        node_id.commit_encode(&mut encoder);
+        middle_node.commit_encode(&mut encoder);
+        let final_node = MerkleNode::hash(&encoder.into_inner());
+
+        // Merkelize the final node
+        // This shoould match with commit encoding
+        let result = merklize("", &[final_node], 0);
+        let mut calculated_commit = vec![];
+        result.commit_encode(&mut calculated_commit);
+
+        // Check matches
+        assert_eq!(original_commit, calculated_commit);
     }
 }
