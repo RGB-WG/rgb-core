@@ -29,10 +29,11 @@ use std::net::TcpStream;
 
 use bitcoin::secp256k1;
 
-use lightning::ln::peers::conduit::Conduit as Transcoder;
 #[cfg(feature = "tokio")]
-use lightning::ln::peers::conduit::{Decryptor, Encryptor};
+use lightning::ln::peers::encryption::{Decryptor, Encryptor};
+use lightning::ln::peers::handshake::CompletedHandshakeInfo as Transcoder;
 use lightning::ln::peers::handshake::PeerHandshake;
+use lightning::ln::peers::transport::IPeerHandshake;
 
 use super::NodeAddr;
 use super::MAX_TRANSPORT_FRAME_SIZE;
@@ -128,12 +129,12 @@ impl Connection {
                 break Ok(encryptor);
             } else if let Some(act) = act {
                 #[cfg(feature = "log")]
-                trace!("Handshake step {}: sending `{:x?}`", step, act.serialize());
+                trace!("Handshake step {}: sending `{:x?}`", step, act);
 
                 #[cfg(feature = "tokio")]
-                stream.write_all(&act.serialize()).await?;
+                stream.write_all(&act).await?;
                 #[cfg(not(feature = "tokio"))]
-                stream.write_all(&act.serialize())?;
+                stream.write_all(&act)?;
             } else {
                 #[cfg(feature = "log")]
                 error!("`PeerHandshake.process_act` returned non-standard result");
@@ -172,17 +173,16 @@ impl Connection {
     #[cfg(feature = "tokio")]
     pub fn split(self) -> (ConnectionInput, ConnectionOutput) {
         let (istream, ostream) = self.stream.into_split();
-        let (encryptor, decryptor) = self.transcoder.split_buf();
         (
             ConnectionInput {
                 istream,
                 outbound: self.outbound,
-                decryptor,
+                decryptor: self.transcoder.decryptor,
             },
             ConnectionOutput {
                 ostream,
                 outbound: self.outbound,
-                encryptor,
+                encryptor: self.transcoder.encryptor,
             },
         )
     }

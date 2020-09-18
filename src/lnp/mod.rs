@@ -27,6 +27,6 @@ pub use session::{
 };
 pub use transport::{tcp, tor, websocket, zmq};
 
-pub use lightning::ln::LN_MAX_MSG_LEN as LNP_MSG_MAX_LEN;
+pub use lightning::ln::peers::encryption::LN_MAX_MSG_LEN as LNP_MSG_MAX_LEN;
 
 pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;

@@ -13,7 +13,8 @@
 
 use std::borrow::Borrow;
 
-use lightning::ln::peers::conduit::{Conduit as Transcoder, Decryptor, Encryptor};
+use lightning::ln::peers::encryption::{Decryptor, Encryptor};
+use lightning::ln::peers::handshake::CompletedHandshakeInfo as Transcoder;
 //use lightning::ln::peers::handshake::PeerHandshake;
 
 use crate::Bipolar;
@@ -47,16 +48,16 @@ impl Decrypt for Decryptor {
     type Error = DecryptionError;
 
     fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error> {
-        match self.decrypt_buf(buffer.borrow()) {
-            (Some(data), _) => Ok(data),
-            (None, _) => Err(DecryptionError),
+        match self.decrypt_next(buffer.borrow()) {
+            Ok((Some(data), _)) => Ok(data),
+            _ => Err(DecryptionError),
         }
     }
 }
 
 impl Encrypt for Transcoder {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
-        self.encrypt_buf(buffer.borrow())
+        self.encryptor.encrypt_buf(buffer.borrow())
     }
 }
 
@@ -64,9 +65,9 @@ impl Decrypt for Transcoder {
     type Error = DecryptionError;
 
     fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error> {
-        match self.decrypt_buf(buffer.borrow()) {
-            (Some(data), _) => Ok(data),
-            (None, _) => Err(DecryptionError),
+        match self.decryptor.decrypt_next(buffer.borrow()) {
+            Ok((Some(data), _)) => Ok(data),
+            _ => Err(DecryptionError),
         }
     }
 }
@@ -82,12 +83,17 @@ impl Bipolar for Transcoder {
 
     /// Creates conduit by joining encrypting and decrypting parts
     fn join(encryptor: Self::Left, decryptor: Self::Right) -> Self {
-        Self::join_buf(encryptor, decryptor)
+        // TODO: (new) figure out what to do with `their_node_id` field
+        Self {
+            decryptor,
+            encryptor,
+            their_node_id: bitcoin::secp256k1::PublicKey::from_slice(&[0u8; 33]).unwrap(),
+        }
     }
 
     /// Splits conduit into an encrypting and decrypting parts
     fn split(self) -> (Self::Left, Self::Right) {
-        self.split_buf()
+        (self.encryptor, self.decryptor)
     }
 }
 

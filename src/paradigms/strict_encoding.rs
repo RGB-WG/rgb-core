@@ -111,6 +111,7 @@ pub enum Error {
     /// or non-1 length Vec will result in `Error::WrongOptionalEncoding`.
     WrongOptionalEncoding(u8),
 
+    // TODO: (new) replace all `String` in errors with `&'static str`
     /// Enums are encoded as a `u8`-based values; the provided enum has
     /// underlying primitive type that does not fit into `u8` value
     EnumValueOverflow(String),

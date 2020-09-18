@@ -85,8 +85,8 @@ checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 
 [[package]]
 name = "bitcoin"
-version = "0.23.0"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?tag=lnpbp-v0.1.0-beta-4#088f70d19fb8d4969f9926b125cebd4790f6afd6"
+version = "0.25.0"
+source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=develop#26bcf0ebeabbc7ee36dd39aef693fcc3c9d114f9"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -540,7 +540,7 @@ checksum = "f2f96b10ec2560088a8e76961b00d47107b3a625fecb76dedb29ee7ccbf98235"
 [[package]]
 name = "lightning"
 version = "0.0.11"
-source = "git+https://github.com/LNP-BP/rust-lightning?tag=lnpbp-v0.1.0-beta-4#0646987480e6fc18d42a40ea065d3c9c3c9d04e9"
+source = "git+https://github.com/LNP-BP/rust-lightning?branch=develop#4682a0045eddb87403e156dc24f30fb143db70a0"
 dependencies = [
  "bitcoin",
 ]
@@ -548,7 +548,7 @@ dependencies = [
 [[package]]
 name = "lightning-net-tokio"
 version = "0.0.4"
-source = "git+https://github.com/LNP-BP/rust-lightning?tag=lnpbp-v0.1.0-beta-4#0646987480e6fc18d42a40ea065d3c9c3c9d04e9"
+source = "git+https://github.com/LNP-BP/rust-lightning?branch=develop#4682a0045eddb87403e156dc24f30fb143db70a0"
 dependencies = [
  "bitcoin",
  "lightning",
@@ -557,7 +557,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp"
-version = "0.1.0-beta.4"
+version = "0.1.0"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -586,7 +586,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.1.0-beta.4"
+version = "0.1.0"
 dependencies = [
  "amplify",
  "derive_wrapper",
@@ -630,7 +630,7 @@ dependencies = [
 [[package]]
 name = "miniscript"
 version = "1.0.0"
-source = "git+https://github.com/LNP-BP/rust-miniscript?tag=lnpbp-v0.1.0-beta-4#83d2dcfeefd6768e00bb4fed3709932aaf454693"
+source = "git+https://github.com/LNP-BP/rust-miniscript?branch=develop#07f37be581f7ea5cc6a8bc915980a5ef2e002108"
 dependencies = [
  "bitcoin",
  "serde",

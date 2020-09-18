@@ -151,9 +151,9 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescriptor {
             s if s.is_witness_program() => Err(Error::UnsupportedWitnessVersion)?,
             s if s.is_op_return() => P2OR(
                 Script::from(p[1..].to_vec())
-                    .iter(false)
+                    .instructions()
                     .map(|instr| {
-                        if let Instruction::PushBytes(data) = instr {
+                        if let Ok(Instruction::PushBytes(data)) = instr {
                             data.to_vec()
                         } else {
                             panic!("Rust bitcoin library broken in script parsing functionality")
@@ -172,17 +172,17 @@ impl From<ScriptPubkeyDescriptor> for PubkeyScript {
 
         PubkeyScript::from(match spkt {
             P2S(script) => (*script).clone(),
-            P2PK(pubkey) => Script::with_pk(&pubkey),
-            P2PKH(pubkey_hash) => Script::with_pkh(&pubkey_hash),
-            P2SH(script_hash) => Script::with_sh(&script_hash),
+            P2PK(pubkey) => Script::new_p2pk(&pubkey),
+            P2PKH(pubkey_hash) => Script::new_p2pkh(&pubkey_hash),
+            P2SH(script_hash) => Script::new_p2sh(&script_hash),
             P2OR(data) => {
                 if data.len() > 1 {
                     panic!("Underlying rust bitcoin library does not support multiple data in OP_RETURN")
                 }
-                Script::with_op_return(&data[0])
+                Script::new_op_return(&data[0])
             }
-            P2WPKH(wpubkey_hash) => Script::with_v0_wpkh(&wpubkey_hash),
-            P2WSH(wscript_hash) => Script::with_v0_wsh(&wscript_hash),
+            P2WPKH(wpubkey_hash) => Script::new_v0_wpkh(&wpubkey_hash),
+            P2WSH(wscript_hash) => Script::new_v0_wsh(&wscript_hash),
             P2TR(_) => unimplemented!(),
         })
     }

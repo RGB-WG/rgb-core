@@ -91,7 +91,7 @@ impl Container for ScriptPubkeyContainer {
         let mut proof = proof.clone();
         let composition = match ScriptPubkeyDescriptor::try_from(host.clone())? {
             Descr::P2SH(script_hash) => {
-                let script = Script::with_sh(&script_hash);
+                let script = Script::new_p2sh(&script_hash);
                 if let Some(lockscript) = lockscript {
                     if *lockscript.to_script_pubkey(Strategy::LegacyHashed) == script {
                         Comp::ScriptHash
@@ -241,7 +241,7 @@ where
                 PubkeyHash => pubkey.to_script_pubkey(Strategy::LegacyHashed),
                 WPubkeyHash => pubkey.to_script_pubkey(Strategy::WitnessV0),
                 SHWScriptHash => pubkey.to_script_pubkey(Strategy::WitnessScriptHash),
-                OpReturn => Script::with_op_return(&pubkey.serialize().to_vec()).into(),
+                OpReturn => Script::new_op_return(&pubkey.serialize().to_vec()).into(),
                 _ => Err(Error::InvalidProofStructure)?,
             }
         };

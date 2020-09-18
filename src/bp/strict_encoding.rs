@@ -350,12 +350,7 @@ impl StrictEncode for bip32::ExtendedPubKey {
     type Error = Error;
 
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
-        Ok(strict_encode_list!(e; self.network,
-            self.depth,
-            self.parent_fingerprint,
-            self.child_number,
-            self.public_key,
-            self.chain_code))
+        Ok(e.write(&self.encode())?)
     }
 }
 
@@ -364,14 +359,11 @@ impl StrictDecode for bip32::ExtendedPubKey {
 
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-        Ok(Self {
-            network: bitcoin::Network::strict_decode(&mut d)?,
-            depth: u8::strict_decode(&mut d)?,
-            parent_fingerprint: bip32::Fingerprint::strict_decode(&mut d)?,
-            child_number: bip32::ChildNumber::strict_decode(&mut d)?,
-            public_key: bitcoin::PublicKey::strict_decode(&mut d)?,
-            chain_code: bip32::ChainCode::strict_decode(&mut d)?,
-        })
+        let mut buf = [0u8; 78];
+        d.read_exact(&mut buf)?;
+        Ok(bip32::ExtendedPubKey::decode(&buf).map_err(|_| {
+            Error::DataIntegrityError("Extended pubkey integrity is broken".to_string())
+        })?)
     }
 }
 
@@ -694,29 +686,26 @@ mod test {
 
     #[test]
     fn test_encoding_extendedpubkey() {
-        static EXT_PUBKEY1: [u8; 79] = [
-            0xf9, 0xbe, 0xb4, 0xd9, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x39,
-            0xa3, 0x60, 0x13, 0x30, 0x15, 0x97, 0xda, 0xef, 0x41, 0xfb, 0xe5, 0x93, 0xa0, 0x2c,
-            0xc5, 0x13, 0xd0, 0xb5, 0x55, 0x27, 0xec, 0x2d, 0xf1, 0x5, 0xe, 0x2e, 0x8f, 0xf4, 0x9c,
-            0x85, 0xc2, 0x87, 0x3d, 0xff, 0x81, 0xc0, 0x2f, 0x52, 0x56, 0x23, 0xfd, 0x1f, 0xe5,
-            0x16, 0x7e, 0xac, 0x3a, 0x55, 0xa0, 0x49, 0xde, 0x3d, 0x31, 0x4b, 0xb4, 0x2e, 0xe2,
-            0x27, 0xff, 0xed, 0x37, 0xd5, 0x8,
+        static EXT_PUBKEY1: [u8; 78] = [
+            4, 136, 178, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 135, 61, 255, 129, 192, 47, 82, 86, 35,
+            253, 31, 229, 22, 126, 172, 58, 85, 160, 73, 222, 61, 49, 75, 180, 46, 226, 39, 255,
+            237, 55, 213, 8, 3, 57, 163, 96, 19, 48, 21, 151, 218, 239, 65, 251, 229, 147, 160, 44,
+            197, 19, 208, 181, 85, 39, 236, 45, 241, 5, 14, 46, 143, 244, 156, 133, 194,
         ];
 
-        static EXT_PUBKEY2: [u8; 79] = [
-            0xf9, 0xbe, 0xb4, 0xd9, 0x3, 0xbe, 0xf5, 0xa2, 0xf9, 0x1, 0x2, 0x0, 0x0, 0x0, 0x3,
-            0x57, 0xbf, 0xe1, 0xe3, 0x41, 0xd0, 0x1c, 0x69, 0xfe, 0x56, 0x54, 0x30, 0x99, 0x56,
-            0xcb, 0xea, 0x51, 0x68, 0x22, 0xfb, 0xa8, 0xa6, 0x1, 0x74, 0x3a, 0x1, 0x2a, 0x78, 0x96,
-            0xee, 0x8d, 0xc2, 0x4, 0x46, 0x6b, 0x9c, 0xc8, 0xe1, 0x61, 0xe9, 0x66, 0x40, 0x9c,
-            0xa5, 0x29, 0x86, 0xc5, 0x84, 0xf0, 0x7e, 0x9d, 0xc8, 0x1f, 0x73, 0x5d, 0xb6, 0x83,
-            0xc3, 0xff, 0x6e, 0xc7, 0xb1, 0x50, 0x3f,
+        static EXT_PUBKEY2: [u8; 78] = [
+            4, 136, 178, 30, 3, 190, 245, 162, 249, 128, 0, 0, 2, 4, 70, 107, 156, 200, 225, 97,
+            233, 102, 64, 156, 165, 41, 134, 197, 132, 240, 126, 157, 200, 31, 115, 93, 182, 131,
+            195, 255, 110, 199, 177, 80, 63, 3, 87, 191, 225, 227, 65, 208, 28, 105, 254, 86, 84,
+            48, 153, 86, 203, 234, 81, 104, 34, 251, 168, 166, 1, 116, 58, 1, 42, 120, 150, 238,
+            141, 194,
         ];
 
         let ext_pubkey1 = bip32::ExtendedPubKey::from_str("xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8").unwrap();
-        assert!(test_suite(&ext_pubkey1, &EXT_PUBKEY1, 79).is_ok());
+        assert!(test_suite(&ext_pubkey1, &EXT_PUBKEY1, 78).is_ok());
 
         let ext_pubkey2 = bip32::ExtendedPubKey::from_str("xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5").unwrap();
-        assert!(test_suite(&ext_pubkey2, &EXT_PUBKEY2, 79).is_ok());
+        assert!(test_suite(&ext_pubkey2, &EXT_PUBKEY2, 78).is_ok());
     }
 
     #[test]

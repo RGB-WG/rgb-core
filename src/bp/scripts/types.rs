@@ -426,7 +426,11 @@ impl Strategy {
             p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(WitnessV0),
             p if p.is_witness_program() => {
                 const ERR: &'static str = "bitcoin::Script::is_witness_program is broken";
-                match WitnessVersion::try_from(p.iter(true).next().expect(ERR)).expect(ERR) {
+                match WitnessVersion::try_from(
+                    p.instructions_minimal().next().expect(ERR).expect(ERR),
+                )
+                .expect(ERR)
+                {
                     WitnessVersion::V0 => unreachable!(),
                     WitnessVersion::V1 => Ok(WitnessV1Taproot),
                     ver => Err(StrategyError::UnsupportedWitnessVersion(ver)),
@@ -484,9 +488,9 @@ impl ScriptSet {
                 self.witness_script = Some(
                     self.sig_script
                         .as_inner()
-                        .iter(false)
+                        .instructions_minimal()
                         .filter_map(|instr| {
-                            if let Instruction::PushBytes(bytes) = instr {
+                            if let Ok(Instruction::PushBytes(bytes)) = instr {
                                 Some(bytes.to_vec())
                             } else {
                                 None
@@ -535,15 +539,15 @@ impl GenerateScripts for LockScript {
     fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
         match strategy {
             Strategy::Exposed => self.as_inner().into(),
-            Strategy::LegacyHashed => Script::with_sh(&self.script_hash()).into(),
-            Strategy::WitnessV0 => Script::with_v0_wsh(&self.wscript_hash()).into(),
+            Strategy::LegacyHashed => Script::new_p2sh(&self.script_hash()).into(),
+            Strategy::WitnessV0 => Script::new_v0_wsh(&self.wscript_hash()).into(),
             Strategy::WitnessScriptHash => {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script =
                     LockScript::from(self.to_script_pubkey(Strategy::WitnessV0).to_inner());
-                Script::with_sh(&redeem_script.script_hash()).into()
+                Script::new_p2sh(&redeem_script.script_hash()).into()
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
         }
@@ -591,13 +595,19 @@ impl GenerateScripts for LockScript {
 impl GenerateScripts for bitcoin::PublicKey {
     fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
         match strategy {
-            Strategy::Exposed => Script::with_pk(self).into(),
-            Strategy::LegacyHashed => Script::with_pkh(&self.pubkey_hash()).into(),
-            Strategy::WitnessV0 => Script::with_v0_wpkh(&self.wpubkey_hash()).into(),
+            Strategy::Exposed => Script::new_p2pk(self).into(),
+            Strategy::LegacyHashed => Script::new_p2pkh(&self.pubkey_hash()).into(),
+            // TODO: (new) Detect uncompressed public key and return error
+            Strategy::WitnessV0 => Script::new_v0_wpkh(
+                &self
+                    .wpubkey_hash()
+                    .expect("Uncompressed public key used in witness script"),
+            )
+            .into(),
             Strategy::WitnessScriptHash => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
                 let redeem_script = self.to_script_pubkey(Strategy::WitnessV0);
-                Script::with_sh(&redeem_script.script_hash()).into()
+                Script::new_p2sh(&redeem_script.script_hash()).into()
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
         }
