@@ -16,7 +16,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8df15c6930e7ac71c24eb7f2d39b811585527b8573106f61ff588b4a19a675dd"
 dependencies = [
  "serde",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -26,7 +26,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5bc9944a570e026608db21b39f5ca8d39bf9e5d4b7d4f13e64e64bbb4c2229f0"
 dependencies = [
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -47,7 +47,7 @@ checksum = "687c230d85c0a52504709705fc8a53e4a692b83a2184f03dae73e38e1e93a783"
 dependencies = [
  "proc-macro2 1.0.21",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -158,9 +158,9 @@ checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
 
 [[package]]
 name = "cc"
-version = "1.0.59"
+version = "1.0.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66120af515773fb005778dc07c261bd201ec8ce50bd6e7144c927753fe013381"
+checksum = "ef611cc68ff783f18535d77ddd080185275713d852c4f5cbb6122c462a7a825c"
 
 [[package]]
 name = "cfg-if"
@@ -203,7 +203,7 @@ dependencies = [
  "digest 0.9.0",
  "rand_core 0.5.1",
  "subtle 2.3.0",
- "zeroize 1.1.0",
+ "zeroize 1.1.1",
 ]
 
 [[package]]
@@ -268,7 +268,7 @@ dependencies = [
  "rand 0.7.3",
  "serde",
  "sha2 0.9.1",
- "zeroize 1.1.0",
+ "zeroize 1.1.1",
 ]
 
 [[package]]
@@ -383,7 +383,7 @@ dependencies = [
  "proc-macro-hack",
  "proc-macro2 1.0.21",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -557,7 +557,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp"
-version = "0.1.0-beta.3"
+version = "0.1.0-beta.4"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -586,13 +586,13 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.1.0-beta.3"
+version = "0.1.0-beta.4"
 dependencies = [
  "amplify",
  "derive_wrapper",
  "lnpbp",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -692,7 +692,7 @@ checksum = "6f09b9841adb6b5e1f89ef7087ea636e0fd94b2851f887c1e3eb5d5f8228fab3"
 dependencies = [
  "proc-macro2 1.0.21",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -784,7 +784,7 @@ checksum = "2c0e815c3ee9a031fdf5af21c10aa17c573c9c6a566328d99e3936c34e36461f"
 dependencies = [
  "proc-macro2 1.0.21",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -1119,7 +1119,7 @@ checksum = "f630a6370fd8e457873b4bd2ffdae75408bc291ba72be773772a4c2a065d9ae8"
 dependencies = [
  "proc-macro2 1.0.21",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -1214,9 +1214,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.40"
+version = "1.0.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "963f7d3cc59b59b9325165add223142bbf1df27655d07789f109896d353d8350"
+checksum = "6690e3e9f692504b941dc6c3b188fd28df054f7fb8469ab40680df52fdcc842b"
 dependencies = [
  "proc-macro2 1.0.21",
  "quote 1.0.7",
@@ -1243,7 +1243,7 @@ checksum = "b834f2d66f734cb897113e34aaff2f1ab4719ca946f9a7358dba8f8064148701"
 dependencies = [
  "proc-macro2 1.0.21",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
  "unicode-xid 0.2.1",
 ]
 
@@ -1287,7 +1287,7 @@ checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
 dependencies = [
  "proc-macro2 1.0.21",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -1438,11 +1438,11 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cbac2ed2ba24cc90f5e06485ac8c7c1e5449fe8911aef4d8877218af021a5b8"
+checksum = "05f33972566adbd2d3588b0491eb94b98b43695c4ef897903470ede4f3f5a28a"
 dependencies = [
- "zeroize_derive 1.0.0",
+ "zeroize_derive 1.0.1",
 ]
 
 [[package]]
@@ -1459,13 +1459,13 @@ dependencies = [
 
 [[package]]
 name = "zeroize_derive"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de251eec69fc7c1bc3923403d18ececb929380e016afe103da75f396704f8ca2"
+checksum = "c3f369ddb18862aba61aa49bf31e74d29f0f162dec753063200e1dc084345d16"
 dependencies = [
  "proc-macro2 1.0.21",
  "quote 1.0.7",
- "syn 1.0.40",
+ "syn 1.0.41",
  "synstructure 0.12.4",
 ]
 

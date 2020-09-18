@@ -127,8 +127,8 @@ mod test {
     use super::*;
     use crate::strict_encoding::{StrictDecode, StrictEncode};
     //use bitcoin::secp256k1::rand::{thread_rng};
+    use crate::paradigms::client_side_validation::CommitEncode;
     use bitcoin_hashes::hex::FromHex;
-    use crate::paradigms::client_side_validation::{CommitEncode};
 
     // Hard coded TxOutpoint variant of a Revealed Seal
     // Constructed with following data
