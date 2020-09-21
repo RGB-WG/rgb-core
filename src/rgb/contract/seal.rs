@@ -129,6 +129,8 @@ mod test {
     //use bitcoin::secp256k1::rand::{thread_rng};
     use crate::paradigms::client_side_validation::CommitEncode;
     use bitcoin_hashes::hex::FromHex;
+    use secp256k1zkp::rand::thread_rng;
+    use secp256k1zkp::rand::RngCore;
 
     // Hard coded TxOutpoint variant of a Revealed Seal
     // Constructed with following data
@@ -271,5 +273,42 @@ mod test {
         let mut commit2 = vec![];
         revelaed_wtinessvout.commit_encode(&mut commit2);
         assert_eq!(commit2, CONCEALED_WITNESSVOUT);
+    }
+
+    #[test]
+    fn test_commitencoding_seals() {
+        let mut rng = thread_rng();
+        let txid = bitcoin::Txid::from_hex(
+            "201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e",
+        )
+        .unwrap();
+        let vout = rng.next_u32();
+        let revealed_txout = Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(txid, vout)));
+
+        let revealed_witness = Revealed::WitnessVout {
+            vout: vout,
+            blinding: rng.next_u64(),
+        };
+
+        let mut txout_orig = vec![];
+        revealed_txout.clone().commit_encode(&mut txout_orig);
+
+        let mut witness_orig = vec![];
+        revealed_witness.clone().commit_encode(&mut witness_orig);
+
+        let mut txout_new = vec![];
+        revealed_txout
+            .conceal()
+            .strict_encode(&mut txout_new)
+            .unwrap();
+
+        let mut witness_new = vec![];
+        revealed_witness
+            .conceal()
+            .strict_encode(&mut witness_new)
+            .unwrap();
+
+        assert_eq!(txout_orig, txout_new);
+        assert_eq!(witness_orig, witness_new);
     }
 }

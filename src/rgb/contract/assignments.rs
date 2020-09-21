@@ -873,19 +873,13 @@ mod test {
         0x1e, 0xdd, 0x1f, 0x20, 0x1, 0x0, 0x0, 0x0,
     ];
 
-    static COMMITENCODE_ASSIGNMENTS: [u8; 34] = [
-        0x20, 0x0, 0xdd, 0x2, 0xfd, 0x4c, 0xd3, 0x51, 0xa9, 0x83, 0x1d, 0x3c, 0xc2, 0xbe, 0xb0,
-        0x22, 0xa2, 0xda, 0x88, 0x31, 0xa8, 0xb9, 0x7d, 0x7e, 0xe5, 0xb3, 0xe, 0x70, 0x24, 0xa2,
-        0xea, 0xc7, 0xb5, 0xdd,
-    ];
-
-    /* static ANCESTOR: [u8; 78] = [
+    static ANCESTOR: [u8; 78] = [
         0x1, 0x0, 0xf5, 0x7e, 0xd2, 0x7e, 0xe4, 0x19, 0x90, 0x72, 0xc5, 0xff, 0x3b, 0x77, 0x4f,
         0xeb, 0xc9, 0x4d, 0x26, 0xd3, 0xe4, 0xa5, 0x55, 0x9d, 0x13, 0x3d, 0xe4, 0x75, 0xa, 0x94,
         0x8d, 0xf5, 0xe, 0x6, 0x3, 0x0, 0x1, 0x0, 0x5, 0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x4, 0x0,
         0x5, 0x0, 0x2, 0x0, 0x5, 0x0, 0xa, 0x0, 0x14, 0x0, 0x1e, 0x0, 0x28, 0x0, 0x32, 0x0, 0x3,
         0x0, 0x5, 0x0, 0x64, 0x0, 0xc8, 0x0, 0x2c, 0x1, 0x90, 0x1, 0xf4, 0x1,
-    ]; */
+    ];
 
     // Real data used for creation of above variants
     // Used in tests to ensure operations of AssignmentVariants gives deterministic results
@@ -1644,21 +1638,14 @@ mod test {
     }
 
     #[test]
-    fn test_commitencode_assignments() {
-        let declarative_type = AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+    fn test_encoding_ancestor() {
+        test_encode!((ANCESTOR, Ancestors));
+    }
 
-        let mut assignments = BTreeMap::new() as Assignments;
-
-        assignments.insert(1 as schema::AssignmentsType, declarative_type);
-        assignments.insert(2 as schema::AssignmentsType, pedersan_type);
-        assignments.insert(3 as schema::AssignmentsType, hash_type);
-
-        let mut buf = vec![];
-        assignments.commit_encode(&mut buf);
-
-        assert_eq!(buf, COMMITENCODE_ASSIGNMENTS);
+    #[test]
+    #[should_panic(expected = "UnexpectedEof")]
+    fn test_garbage_ancestor() {
+        test_garbage!((ANCESTOR, Ancestors));
     }
 
     // This doesn't use the merkelize() function
@@ -1692,8 +1679,8 @@ mod test {
 
         // create merklenode m1 from hash(type, mr0)
         let mut encoder1 = std::io::Cursor::new(vec![]);
-        ty.commit_encode(&mut encoder1);
-        mr0.commit_encode(&mut encoder1);
+        ty.strict_encode(&mut encoder1).unwrap();
+        mr0.strict_encode(&mut encoder1).unwrap();
         let m1 = MerkleNode::hash(&encoder1.into_inner());
 
         // Create merkleroot mr1 from merklenode m1
@@ -1701,8 +1688,8 @@ mod test {
 
         // Create merklenode m2 from hash(nodeid, mr1)
         let mut encoder2 = std::io::Cursor::new(vec![]);
-        nodeid.commit_encode(&mut encoder2);
-        mr1.commit_encode(&mut encoder2);
+        nodeid.strict_encode(&mut encoder2).unwrap();
+        mr1.strict_encode(&mut encoder2).unwrap();
         let m2 = MerkleNode::hash(&encoder2.into_inner());
 
         // Create merkleroot mr2 from merklenode m2
@@ -1711,7 +1698,7 @@ mod test {
         // Encode mr2 into buf
         // This should match with original commit_encode of ancestor structure
         let mut handmade_commit = vec![];
-        mr2.commit_encode(&mut handmade_commit);
+        mr2.strict_encode(&mut handmade_commit).unwrap();
 
         assert_eq!(original_commit, handmade_commit);
     }
@@ -1723,8 +1710,8 @@ mod test {
         let tag_hash = sha256::Hash::hash(tag.as_bytes());
         engine2.input(&tag_hash[..]);
         engine2.input(&tag_hash[..]);
-        m.commit_encode(&mut engine2);
-        0u8.commit_encode(&mut engine2);
+        m.strict_encode(&mut engine2).unwrap();
+        0u8.strict_encode(&mut engine2).unwrap();
         MerkleNode::from_engine(engine2)
     }
 
@@ -1783,7 +1770,7 @@ mod test {
             .iter()
             .map(|item| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                item.commit_encode(&mut encoder);
+                item.strict_encode(&mut encoder).unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
@@ -1791,8 +1778,8 @@ mod test {
         let mr0 = merklize("", &m0[..], 0);
 
         let mut encoder = std::io::Cursor::new(vec![]);
-        type1.commit_encode(&mut encoder);
-        mr0.commit_encode(&mut encoder);
+        type1.strict_encode(&mut encoder).unwrap();
+        mr0.strict_encode(&mut encoder).unwrap();
         let first_node = MerkleNode::hash(&encoder.into_inner());
 
         // Do that for type2 and vec2
@@ -1800,15 +1787,15 @@ mod test {
             .iter()
             .map(|item| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                item.commit_encode(&mut encoder);
+                item.strict_encode(&mut encoder).unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
         let mr1 = merklize("", &m1[..], 0);
 
         let mut encoder = std::io::Cursor::new(vec![]);
-        type2.commit_encode(&mut encoder);
-        mr1.commit_encode(&mut encoder);
+        type2.strict_encode(&mut encoder).unwrap();
+        mr1.strict_encode(&mut encoder).unwrap();
         let second_node = MerkleNode::hash(&encoder.into_inner());
 
         // Do that for type3 and vec3
@@ -1816,15 +1803,15 @@ mod test {
             .iter()
             .map(|item| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                item.commit_encode(&mut encoder);
+                item.strict_encode(&mut encoder).unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
         let mr2 = merklize("", &m2[..], 0);
 
         let mut encoder = std::io::Cursor::new(vec![]);
-        type3.commit_encode(&mut encoder);
-        mr2.commit_encode(&mut encoder);
+        type3.strict_encode(&mut encoder).unwrap();
+        mr2.strict_encode(&mut encoder).unwrap();
         let third_node = MerkleNode::hash(&encoder.into_inner());
 
         // merkelize the above three nodes
@@ -1832,17 +1819,208 @@ mod test {
 
         // create a final node as hash(nodeID, middle_node)
         let mut encoder = std::io::Cursor::new(vec![]);
-        node_id.commit_encode(&mut encoder);
-        middle_node.commit_encode(&mut encoder);
+        node_id.strict_encode(&mut encoder).unwrap();
+        middle_node.strict_encode(&mut encoder).unwrap();
         let final_node = MerkleNode::hash(&encoder.into_inner());
 
         // Merkelize the final node
         // This shoould match with commit encoding
         let result = merklize("", &[final_node], 0);
         let mut calculated_commit = vec![];
-        result.commit_encode(&mut calculated_commit);
+        result.strict_encode(&mut calculated_commit).unwrap();
 
         // Check matches
         assert_eq!(original_commit, calculated_commit);
+    }
+
+    #[test]
+    fn test_commitencode_assignments() {
+        //Create Declerative variant
+
+        let mut rng = thread_rng();
+
+        let txid_vec: Vec<bitcoin::Txid> = TXID_VEC
+            .iter()
+            .map(|txid| bitcoin::Txid::from_hex(txid).unwrap())
+            .collect();
+
+        let assignment_1 = Assignment::<DeclarativeStrategy>::Revealed {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[0],
+                1,
+            ))),
+            assigned_state: data::Void,
+        };
+
+        let assignment_2 = Assignment::<DeclarativeStrategy>::ConfidentialAmount {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[1],
+                2,
+            ))),
+            assigned_state: data::Void,
+        };
+
+        let assignment_3 = Assignment::<DeclarativeStrategy>::ConfidentialSeal {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[2],
+                3,
+            )))
+            .conceal(),
+            assigned_state: data::Void,
+        };
+
+        let assignment_4 = Assignment::<DeclarativeStrategy>::Confidential {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[3],
+                4,
+            )))
+            .conceal(),
+            assigned_state: data::Void,
+        };
+
+        let mut set = BTreeSet::new();
+
+        set.insert(assignment_1);
+        set.insert(assignment_2);
+        set.insert(assignment_3);
+        set.insert(assignment_4);
+
+        let declarative_variant = AssignmentsVariant::Declarative(set);
+
+        // Create Pedersan Variant
+
+        let txid_vec: Vec<bitcoin::Txid> = TXID_VEC
+            .iter()
+            .map(|txid| bitcoin::Txid::from_hex(txid).unwrap())
+            .collect();
+
+        let assignment_1 = Assignment::<PedersenStrategy>::Revealed {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[0],
+                1,
+            ))),
+            assigned_state: amount::Revealed::with_amount(10u64, &mut rng),
+        };
+
+        let assignment_2 = Assignment::<PedersenStrategy>::ConfidentialAmount {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[1],
+                1,
+            ))),
+            assigned_state: amount::Revealed::with_amount(20u64, &mut rng).conceal(),
+        };
+
+        let assignment_3 = Assignment::<PedersenStrategy>::ConfidentialSeal {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[2],
+                1,
+            )))
+            .conceal(),
+            assigned_state: amount::Revealed::with_amount(30u64, &mut rng),
+        };
+
+        let assignment_4 = Assignment::<PedersenStrategy>::Confidential {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[3],
+                1,
+            )))
+            .conceal(),
+            assigned_state: amount::Revealed::with_amount(10u64, &mut rng).conceal(),
+        };
+
+        let mut set = BTreeSet::new();
+
+        set.insert(assignment_1);
+        set.insert(assignment_2);
+        set.insert(assignment_3);
+        set.insert(assignment_4);
+
+        let pedersen_variant = AssignmentsVariant::DiscreteFiniteField(set);
+
+        // Create Hash variant
+        let txid_vec: Vec<bitcoin::Txid> = TXID_VEC
+            .iter()
+            .map(|txid| bitcoin::Txid::from_hex(txid).unwrap())
+            .collect();
+
+        let state_data_vec: Vec<data::Revealed> = STATE_DATA
+            .iter()
+            .map(|data| data::Revealed::Sha256(sha256::Hash::from_hex(data).unwrap()))
+            .collect();
+
+        let assignment_1 = Assignment::<HashStrategy>::Revealed {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[0],
+                1,
+            ))),
+            assigned_state: state_data_vec[0].clone(),
+        };
+
+        let assignment_2 = Assignment::<HashStrategy>::ConfidentialAmount {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[1],
+                1,
+            ))),
+            assigned_state: state_data_vec[1].clone().conceal(),
+        };
+
+        let assignment_3 = Assignment::<HashStrategy>::ConfidentialSeal {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[2],
+                1,
+            )))
+            .conceal(),
+            assigned_state: state_data_vec[2].clone(),
+        };
+
+        let assignment_4 = Assignment::<HashStrategy>::Confidential {
+            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
+                txid_vec[3],
+                1,
+            )))
+            .conceal(),
+            assigned_state: state_data_vec[3].clone().conceal(),
+        };
+
+        let mut set = BTreeSet::new();
+
+        set.insert(assignment_1);
+        set.insert(assignment_2);
+        set.insert(assignment_3);
+        set.insert(assignment_4);
+
+        let hash_variant = AssignmentsVariant::CustomData(set);
+
+        // Create assignemnts
+
+        let type1 = 1 as schema::AssignmentsType;
+        let type2 = 2 as schema::AssignmentsType;
+        let type3 = 3 as schema::AssignmentsType;
+        let mut assignments = BTreeMap::new();
+        assignments.insert(type1, declarative_variant);
+        assignments.insert(type2, pedersen_variant);
+        assignments.insert(type3, hash_variant);
+
+        let mut original_encoding = vec![];
+        assignments.clone().commit_encode(&mut original_encoding);
+
+        // Hand calculate the commit encoding procedure
+
+        let merkle_nodes: Vec<MerkleNode> = assignments
+            .iter()
+            .map(|item| {
+                let mut encoder = std::io::Cursor::new(vec![]);
+                item.0.strict_encode(&mut encoder).unwrap();
+                item.1.clone().strict_encode(&mut encoder).unwrap();
+                MerkleNode::hash(&encoder.into_inner())
+            })
+            .collect();
+
+        let final_node = merklize("", &merkle_nodes[..], 0);
+
+        let mut computed_encoding = vec![];
+        final_node.strict_encode(&mut computed_encoding).unwrap();
+
+        assert_eq!(original_encoding, computed_encoding);
     }
 }
