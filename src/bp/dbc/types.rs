@@ -60,8 +60,6 @@ pub enum ScriptInfo {
 pub(super) mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
-    use num_derive::{FromPrimitive, ToPrimitive};
-    use num_traits::{FromPrimitive, ToPrimitive};
     use std::io;
 
     #[derive(FromPrimitive, ToPrimitive)]

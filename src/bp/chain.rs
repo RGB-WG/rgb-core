@@ -33,6 +33,9 @@ hash_newtype!(
            normal, non-reverse order",
     false
 );
+impl strict_encoding::Strategy for AssetId {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
 
 // TODO: (new) Move constants to rust-bitcoin
 /// Magic number used in P2P networking protocol by bitcoin mainnet
@@ -75,12 +78,12 @@ pub(self) const GENESIS_HASH_LIQUIDV1: &[u8] = &[
 lazy_static! {
     /// Bitcoin mainnet chain parameters
     static ref CHAIN_PARAMS_MAINNET: ChainParams = ChainParams {
-        name: "bitcoin",
+        name: "bitcoin".to_string(),
         p2p_magic: P2P_MAGIC_MAINNET,
         genesis_hash: BlockHash::from_slice(GENESIS_HASH_MAINNET)
             .expect("Bitcoin genesis hash contains invalid binary data"),
-        bip70_name: "main",
-        bip173_prefix: "bc",
+        bip70_name: "main".to_string(),
+        bip173_prefix: "bc".to_string(),
         p2p_port: 8333,
         rpc_port: 8332,
         ln_height: 504500,
@@ -89,9 +92,9 @@ lazy_static! {
         format: ChainFormat::Bitcoin,
         dust_limit: 546,
         native_asset: AssetParams {
-            ticker: "BTC",
-            unit_of_accounting: "Bitcoin",
-            indivisible_unit: "satoshi",
+            ticker: "BTC".to_string(),
+            unit_of_accounting: "Bitcoin".to_string(),
+            indivisible_unit: "satoshi".to_string(),
             divisibility: 100_000_000,
             asset_id: AssetId::from_slice(GENESIS_HASH_MAINNET)
                 .expect("Bitcoin genesis hash contains invalid binary data"),
@@ -103,12 +106,12 @@ lazy_static! {
 
     /// Bitcoin testnet chain parameters
     static ref CHAIN_PARAMS_TESTNET: ChainParams = ChainParams {
-        name: "testnet",
+        name: "testnet".to_string(),
         p2p_magic: P2P_MAGIC_TESTNET,
         genesis_hash: BlockHash::from_slice(GENESIS_HASH_TESTNET)
             .expect("Bitcoin testnet genesis hash contains invalid binary data"),
-        bip70_name: "test",
-        bip173_prefix: "tb",
+        bip70_name: "test".to_string(),
+        bip173_prefix: "tb".to_string(),
         p2p_port: 18333,
         rpc_port: 18332,
         ln_height: 1,
@@ -117,9 +120,9 @@ lazy_static! {
         format: ChainFormat::Bitcoin,
         dust_limit: 546,
         native_asset: AssetParams {
-            ticker: "BTC",
-            unit_of_accounting: "Bitcoin",
-            indivisible_unit: "satoshi",
+            ticker: "tBTC".to_string(),
+            unit_of_accounting: "Test Bitcoin".to_string(),
+            indivisible_unit: "Test satoshi".to_string(),
             divisibility: 100_000_000,
             asset_id: AssetId::from_slice(GENESIS_HASH_TESTNET)
                 .expect("Bitcoin testnet genesis hash contains invalid binary data"),
@@ -131,12 +134,12 @@ lazy_static! {
 
     /// Bitcoin regtest chain parameters
     static ref CHAIN_PARAMS_REGTEST: ChainParams = ChainParams {
-        name: "regtest",
+        name: "regtest".to_string(),
         p2p_magic: P2P_MAGIC_REGTEST,
         genesis_hash: BlockHash::from_slice(GENESIS_HASH_REGTEST)
             .expect("Bitcoin regtest genesis hash contains invalid binary data"),
-        bip70_name: "regtest",
-        bip173_prefix: "tb",
+        bip70_name: "regtest".to_string(),
+        bip173_prefix: "tb".to_string(),
         p2p_port: 28333,
         rpc_port: 28332,
         ln_height: 1,
@@ -144,9 +147,9 @@ lazy_static! {
         format: ChainFormat::Bitcoin,
         dust_limit: 546,
         native_asset: AssetParams {
-            ticker: "BTC",
-            unit_of_accounting: "Bitcoin",
-            indivisible_unit: "satoshi",
+            ticker: "tBTC".to_string(),
+            unit_of_accounting: "Test Bitcoin".to_string(),
+            indivisible_unit: "Test satoshi".to_string(),
             divisibility: 100_000_000,
             asset_id: AssetId::from_slice(GENESIS_HASH_REGTEST)
                 .expect("Bitcoin regtest genesis hash contains invalid binary data"),
@@ -158,12 +161,12 @@ lazy_static! {
 
     /// Bitcoin signet chain parameters
     static ref CHAIN_PARAMS_SIGNET: ChainParams = ChainParams {
-        name: "signet",
+        name: "signet".to_string(),
         p2p_magic: P2P_MAGIC_SIGNET,
         genesis_hash: BlockHash::from_slice(GENESIS_HASH_SIGNET)
             .expect("Bitcoin signet genesis hash contains invalid binary data"),
-        bip70_name: "signet",
-        bip173_prefix: "tb",
+        bip70_name: "signet".to_string(),
+        bip173_prefix: "tb".to_string(),
         p2p_port: 38333,
         rpc_port: 38332,
         ln_height: 1,
@@ -171,9 +174,9 @@ lazy_static! {
         format: ChainFormat::Bitcoin,
         dust_limit: 546,
         native_asset: AssetParams {
-            ticker: "BTC",
-            unit_of_accounting: "Bitcoin",
-            indivisible_unit: "satoshi",
+            ticker: "sBTC".to_string(),
+            unit_of_accounting: "Signet Bitcoin".to_string(),
+            indivisible_unit: "Signet satoshi".to_string(),
             divisibility: 100_000_000,
             asset_id: AssetId::from_slice(GENESIS_HASH_SIGNET)
                 .expect("Bitcoin signet genesis hash contains invalid binary data"),
@@ -185,12 +188,12 @@ lazy_static! {
 
     /// Liquid V1 chain parameters
     static ref CHAIN_PARAMS_LIQUIDV1: ChainParams = ChainParams {
-        name: "liquidv1",
+        name: "liquidv1".to_string(),
         p2p_magic: P2P_MAGIC_LIQUIDV1,
         genesis_hash: BlockHash::from_slice(GENESIS_HASH_LIQUIDV1)
             .expect("Liquid V1 genesis hash contains invalid binary data"),
-        bip70_name: "liquidv1",
-        bip173_prefix: "ex",
+        bip70_name: "liquidv1".to_string(),
+        bip173_prefix: "ex".to_string(),
         p2p_port: 7042,
         rpc_port: 7041,
         ln_height: 1,
@@ -198,9 +201,9 @@ lazy_static! {
         format: ChainFormat::Elements,
         dust_limit: 546,
         native_asset: AssetParams {
-            ticker: "LBTC",
-            unit_of_accounting: "Liquid Bitcoin",
-            indivisible_unit: "satoshi",
+            ticker: "LBTC".to_string(),
+            unit_of_accounting: "Liquid Bitcoin".to_string(),
+            indivisible_unit: "Liquid satoshi".to_string(),
             divisibility: 100_000_000,
             asset_id: AssetId::from_slice(GENESIS_HASH_LIQUIDV1)
                 .expect("Liquid V1 genesis hash contains invalid binary data"),
@@ -214,7 +217,9 @@ lazy_static! {
 /// Enum identifying format for transaction & block structure in a given chain.
 /// Right now only two structures are supported: Bitcoin format and
 /// Elements format, extended with confidential transaction-specific structures.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash, FromPrimitive, ToPrimitive,
+)]
 #[display_from(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
@@ -224,9 +229,12 @@ pub enum ChainFormat {
     /// Confidential transactions format
     Elements = 1,
 }
+impl_enum_strict_encoding!(ChainFormat);
 
 /// Layers on which a given asset can operate
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash, FromPrimitive, ToPrimitive,
+)]
 #[display_from(Debug)]
 #[repr(u8)]
 pub enum AssetLayer {
@@ -239,8 +247,11 @@ pub enum AssetLayer {
     /// RGB), but also can be used on top of payment/state channels
     Layer2and3,
 }
+impl_enum_strict_encoding!(AssetLayer);
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash, FromPrimitive, ToPrimitive,
+)]
 #[display_from(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
@@ -254,23 +265,24 @@ pub enum AssetSystem {
     /// RGB confidential assets
     RgbAssets,
 }
+impl_enum_strict_encoding!(AssetSystem);
 
 /// Parametes for a given asset, which are shared between different types of
 /// Layer 1, 2 and 3 assets.
-#[derive(Clone, Copy, PartialOrd, Ord, Debug, Display, Hash)]
+#[derive(Clone, PartialOrd, Ord, Debug, Display, Hash)]
 #[display_from(Debug)]
 pub struct AssetParams {
     /// Short asset name, or ticker, like BTC for bitcoin. Case-sensitive with
     /// default use of uppercase.
-    pub ticker: &'static str,
+    pub ticker: String,
 
     /// Full name for a given asset as a unit of accounting, for instance
     /// "Bitcoin". Also case-sensitive.
-    pub unit_of_accounting: &'static str,
+    pub unit_of_accounting: String,
 
     /// Full name for the smallest indivisible unit, like "satoshi" for
     /// Bitcoin network
-    pub indivisible_unit: &'static str,
+    pub indivisible_unit: String,
 
     /// Number of smallest indivisible units inside the unit of accounting
     pub divisibility: u64,
@@ -296,32 +308,64 @@ impl PartialEq for AssetParams {
 
 impl Eq for AssetParams {}
 
+impl StrictEncode for AssetParams {
+    type Error = strict_encoding::Error;
+
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        Ok(strict_encode_list!(e;
+            self.ticker,
+            self.unit_of_accounting,
+            self.indivisible_unit,
+            self.divisibility,
+            self.asset_id,
+            self.asset_system
+        ))
+    }
+}
+
+impl StrictDecode for AssetParams {
+    type Error = strict_encoding::Error;
+
+    #[inline]
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        Ok(strict_decode_self!(d;
+            ticker,
+            unit_of_accounting,
+            indivisible_unit,
+            divisibility,
+            asset_id,
+            asset_system
+        ))
+    }
+}
+
 /// Full set of parameters which uniquely define given blockchain,
 /// corresponding P2P network and RPC interface of fully validating nodes
-#[derive(Clone, Copy, PartialOrd, Ord, Debug, Display, Hash)]
+#[derive(Clone, PartialOrd, Ord, Debug, Display, Hash)]
 #[display_from(Debug)]
 pub struct ChainParams {
+    /// Hash of the genesis block, uniquely defining chain
+    pub genesis_hash: BlockHash,
+
     /// Blockchain name, including version:
     /// - mainnet for Bitcoin mainnet
     /// - testnet3 for Bitcoin testnet version 3
     /// - regtest for Bitcoin regtest networks
     /// - signet for Bitcoin signet and private signet networks
     /// - liquidv1 for Liquid network v1
-    pub name: &'static str,
+    pub name: String,
 
     /// Magic number used as prefix in P2P network API
     pub p2p_magic: P2pMagic,
 
-    /// Hash of the genesis block, uniquely defining chain
-    pub genesis_hash: BlockHash,
-
     /// Network name according to BIP 70, which may be different from
     /// [ChainParams::name]. Not widely used these days, but we still have to
     /// account for standard.
-    pub bip70_name: &'static str,
+    pub bip70_name: String,
 
     /// HRP bech32 address prefix as defined in BIP 173
-    pub bip173_prefix: &'static str,
+    pub bip173_prefix: String,
 
     /// Default port for P2P network
     pub p2p_port: u16,
@@ -362,9 +406,57 @@ impl PartialEq for ChainParams {
 
 impl Eq for ChainParams {}
 
+impl StrictEncode for ChainParams {
+    type Error = strict_encoding::Error;
+
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        Ok(strict_encode_list!(e;
+            self.genesis_hash,
+            self.name,
+            self.p2p_magic,
+            self.bip70_name,
+            self.bip173_prefix,
+            self.p2p_port,
+            self.rpc_port,
+            self.ln_height,
+            self.rgb_height,
+            self.format,
+            self.dust_limit,
+            self.native_asset,
+            self.is_testnet,
+            self.is_pow
+        ))
+    }
+}
+
+impl StrictDecode for ChainParams {
+    type Error = strict_encoding::Error;
+
+    #[inline]
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        Ok(strict_decode_self!(d;
+            genesis_hash,
+            name,
+            p2p_magic,
+            bip70_name,
+            bip173_prefix,
+            p2p_port,
+            rpc_port,
+            ln_height,
+            rgb_height,
+            format,
+            dust_limit,
+            native_asset,
+            is_testnet,
+            is_pow
+        ))
+    }
+}
+
 /// A set of recommended standard networks. Differs from bitcoin::Network in
 /// ability to support non-standard and non-predefined networks
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 #[non_exhaustive]
 #[repr(u32)]
 pub enum Chains {
@@ -397,21 +489,21 @@ impl Chains {
     /// Returns chain parameters [ChainParams] for a given chain id
     pub fn chain_params(&self) -> ChainParams {
         match self {
-            Chains::Mainnet => *CHAIN_PARAMS_MAINNET,
-            Chains::Testnet3 => *CHAIN_PARAMS_TESTNET,
+            Chains::Mainnet => CHAIN_PARAMS_MAINNET.clone(),
+            Chains::Testnet3 => CHAIN_PARAMS_TESTNET.clone(),
             Chains::Regtest(hash) => {
-                let mut regtest = *CHAIN_PARAMS_REGTEST;
+                let mut regtest = CHAIN_PARAMS_REGTEST.clone();
                 regtest.genesis_hash = *hash;
                 regtest
             }
-            Chains::Signet => *CHAIN_PARAMS_SIGNET,
+            Chains::Signet => CHAIN_PARAMS_SIGNET.clone(),
             Chains::SignetCustom(hash) => {
-                let mut signet = *CHAIN_PARAMS_SIGNET;
+                let mut signet = CHAIN_PARAMS_SIGNET.clone();
                 signet.genesis_hash = *hash;
                 signet
             }
-            Chains::LiquidV1 => *CHAIN_PARAMS_LIQUIDV1,
-            Chains::Other(params) => *params,
+            Chains::LiquidV1 => CHAIN_PARAMS_LIQUIDV1.clone(),
+            Chains::Other(params) => params.clone(),
         }
     }
 

@@ -253,8 +253,8 @@ impl Genesis {
 
     #[inline]
     #[allow(dead_code)]
-    pub fn network(&self) -> bp::Chains {
-        self.network
+    pub fn network(&self) -> &bp::Chains {
+        &self.network
     }
 }
 

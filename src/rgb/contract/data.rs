@@ -161,8 +161,6 @@ impl CommitEncodeWithStrategy for Confidential {
 pub(super) mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
-    use num_derive::{FromPrimitive, ToPrimitive};
-    use num_traits::{FromPrimitive, ToPrimitive};
     use std::io;
 
     impl Strategy for Confidential {
