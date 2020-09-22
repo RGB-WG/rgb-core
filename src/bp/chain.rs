@@ -900,19 +900,94 @@ mod test {
         bitcoin::Network::try_from(P2pNetworkId::Other(0xA1A2A3A4)).unwrap();
     }
 
-    /*
-    let bp_mainnet = Chains::strict_decode(GENESIS_HASH_MAINNET).unwrap();
-    let bp_testnet = Chains::strict_decode(GENESIS_HASH_TESTNET).unwrap();
-    let bp_regtest = Chains::strict_decode(GENESIS_HASH_REGTEST).unwrap();
-    let bp_signet = Chains::strict_decode(GENESIS_HASH_SIGNET).unwrap();
-    let bp_liquidv1 = Chains::strict_decode(GENESIS_HASH_LIQUIDV1).unwrap();
+    #[test]
+    fn test_chain_genesis_hashes() {
+        assert_eq!(
+            GENESIS_HASH_MAINNET,
+            &[
+                0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72, 0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63,
+                0xf7, 0x4f, 0x93, 0x1e, 0x83, 0x65, 0xe1, 0x5a, 0x08, 0x9c, 0x68, 0xd6, 0x19, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ]
+        );
 
-    assert!(test_suite(&bp_mainnet, &GENESIS_HASH_MAINNET, 32).is_ok());
-    assert!(test_suite(&bp_testnet, &GENESIS_HASH_TESTNET, 32).is_ok());
-    assert!(test_suite(&bp_regtest, &GENESIS_HASH_REGTEST, 32).is_ok());
-    assert!(test_suite(&bp_signet, &GENESIS_HASH_SIGNET, 32).is_ok());
-    assert!(test_suite(&bp_liquidv1, &GENESIS_HASH_LIQUIDV1, 32).is_ok());
-     */
+        assert_eq!(
+            GENESIS_HASH_TESTNET,
+            &[
+                0x43, 0x49, 0x7f, 0xd7, 0xf8, 0x26, 0x95, 0x71, 0x08, 0xf4, 0xa3, 0x0f, 0xd9, 0xce,
+                0xc3, 0xae, 0xba, 0x79, 0x97, 0x20, 0x84, 0xe9, 0x0e, 0xad, 0x01, 0xea, 0x33, 0x09,
+                0x00, 0x00, 0x00, 0x00,
+            ]
+        );
+
+        assert_eq!(
+            GENESIS_HASH_REGTEST,
+            &[
+                0x06, 0x22, 0x6e, 0x46, 0x11, 0x1a, 0x0b, 0x59, 0xca, 0xaf, 0x12, 0x60, 0x43, 0xeb,
+                0x5b, 0xbf, 0x28, 0xc3, 0x4f, 0x3a, 0x5e, 0x33, 0x2a, 0x1f, 0xc7, 0xb2, 0xb7, 0x3c,
+                0xf1, 0x88, 0x91, 0x0f,
+            ]
+        );
+
+        assert_eq!(
+            GENESIS_HASH_SIGNET,
+            &[
+                0xf6, 0x1e, 0xee, 0x3b, 0x63, 0xa3, 0x80, 0xa4, 0x77, 0xa0, 0x63, 0xaf, 0x32, 0xb2,
+                0xbb, 0xc9, 0x7c, 0x9f, 0xf9, 0xf0, 0x1f, 0x2c, 0x42, 0x25, 0xe9, 0x73, 0x98, 0x81,
+                0x08, 0x00, 0x00, 0x00,
+            ]
+        );
+
+        assert_eq!(
+            GENESIS_HASH_LIQUIDV1,
+            &[
+                0x14, 0x66, 0x27, 0x58, 0x36, 0x22, 0x0d, 0xb2, 0x94, 0x4c, 0xa0, 0x59, 0xa3, 0xa1,
+                0x0e, 0xf6, 0xfd, 0x2e, 0xa6, 0x84, 0xb0, 0x68, 0x8d, 0x2c, 0x37, 0x92, 0x96, 0x88,
+                0x8a, 0x20, 0x60, 0x03,
+            ]
+        );
+
+        let random_hash = BlockHash::hash(b"random string");
+
+        assert_eq!(&Chains::Mainnet.as_genesis_hash()[..], GENESIS_HASH_MAINNET);
+        assert_eq!(
+            &Chains::Testnet3.as_genesis_hash()[..],
+            GENESIS_HASH_TESTNET
+        );
+        assert_eq!(
+            &Chains::Regtest(BlockHash::from_slice(GENESIS_HASH_REGTEST).unwrap())
+                .as_genesis_hash()[..],
+            GENESIS_HASH_REGTEST
+        );
+        assert_eq!(
+            &Chains::Regtest(random_hash).as_genesis_hash()[..],
+            &random_hash[..]
+        );
+        assert_eq!(&Chains::Signet.as_genesis_hash()[..], GENESIS_HASH_SIGNET);
+        assert_eq!(
+            &Chains::SignetCustom(BlockHash::from_slice(GENESIS_HASH_SIGNET).unwrap())
+                .as_genesis_hash()[..],
+            GENESIS_HASH_SIGNET
+        );
+        assert_eq!(
+            &Chains::SignetCustom(random_hash).as_genesis_hash()[..],
+            &random_hash[..]
+        );
+        assert_eq!(
+            &Chains::LiquidV1.as_genesis_hash()[..],
+            GENESIS_HASH_LIQUIDV1
+        );
+        assert_eq!(
+            &Chains::Other(Chains::Mainnet.chain_params()).as_genesis_hash()[..],
+            GENESIS_HASH_MAINNET
+        );
+        let mut chain_params = Chains::Mainnet.chain_params();
+        chain_params.genesis_hash = random_hash;
+        assert_eq!(
+            &Chains::Other(chain_params).as_genesis_hash()[..],
+            &random_hash[..]
+        );
+    }
 
     // TODO: (new) add more tests
 }
