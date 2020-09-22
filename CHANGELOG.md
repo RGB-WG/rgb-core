@@ -1,5 +1,33 @@
 # Change Log
 
+## v0.1.0-beta.4
+
+### Breaking changes:
+- Updated upstream crates (bitcoin, bitcoin_hashes, secp256k1, grin_secp256k1zpk, miniscript, lightning) with many PRs merged
+- EmbedCommitVerify now can mutate container data (used for returning tweaking factors)
+- Upgrading `rand` version to the most recent one (blocked previously by grin_secp256k1zpk dependency)
+- Changied txout seals to use u32 vouts instead of u16
+- Changed txout blinding factor to be u64 instead of u32
+
+### Other changes:
+- Test coverage >50% (zero-knowledge functionality & RGB contracts structures)
+- Returning tweaking factors
+- Minimal support for Tor V2 addresses; improved internet address parsing
+
+
+## v0.1.0-beta.3
+
+### Breaking changes
+
+- Single-use-seals blinding factor changed from 32-bit to 64-bit of entropy
+- Transaction output indexes in single-use-seal definitions are now 32-bit, as in Bitcoin Core / rust-bitcoin (previously were 16-bit)
+
+### New features
+
+- Initial Tor V2 address support
+- Test cases for BP mod strict encoding
+
+
 ## v0.1.0-beta.2
 
 ### Features overview
