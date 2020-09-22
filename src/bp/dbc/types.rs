@@ -62,7 +62,7 @@ pub(super) mod strict_encoding {
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::io;
 
-    #[derive(FromPrimitive, ToPrimitive)]
+    #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, FromPrimitive, ToPrimitive, Debug)]
     #[repr(u8)]
     pub(in super::super) enum EncodingTag {
         None = 0,
@@ -106,6 +106,20 @@ pub(super) mod strict_encoding {
                 pubkey: secp256k1::PublicKey::strict_decode(&mut d)?,
                 script_info: ScriptInfo::strict_decode(&mut d)?,
             })
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test]
+        fn test_encoding_tag_exhaustive() {
+            test_enum_u8_exhaustive!(EncodingTag;
+                EncodingTag::None => 0,
+                EncodingTag::LockScript => 1,
+                EncodingTag::Taproot => 2
+            );
         }
     }
 }

@@ -167,7 +167,7 @@ pub(super) mod strict_encoding {
         type Strategy = strategies::HashFixedBytes;
     }
 
-    #[derive(FromPrimitive, ToPrimitive)]
+    #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, FromPrimitive, ToPrimitive, Debug)]
     #[repr(u8)]
     pub(in super::super) enum EncodingTag {
         U8 = 0b_0000_0000_u8,
@@ -285,6 +285,41 @@ pub(super) mod strict_encoding {
                 EncodingTag::Ed25519Pubkey => unimplemented!(),
                 EncodingTag::Ed25519Signature => unimplemented!(),
             })
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test]
+        fn test_enum_encodingtag_exhaustive() {
+            test_enum_u8_exhaustive!(EncodingTag;
+                EncodingTag::U8 => 0b_0000_0000_u8,
+                EncodingTag::U16 => 0b_0000_0001_u8,
+                EncodingTag::U32 => 0b_0000_0010_u8,
+                EncodingTag::U64 => 0b_0000_0011_u8,
+                EncodingTag::I8 => 0b_0000_1000_u8,
+                EncodingTag::I16 => 0b_0000_1001_u8,
+                EncodingTag::I32 => 0b_0000_1010_u8,
+                EncodingTag::I64 => 0b_0000_1011_u8,
+                EncodingTag::F32 => 0b_0001_0010_u8,
+                EncodingTag::F64 => 0b_0001_0011_u8,
+
+                EncodingTag::Bytes => 0b_0010_0000_u8,
+                EncodingTag::String => 0b_0010_0001_u8,
+
+                EncodingTag::Sha256 => 0b_0100_0000_u8,
+                EncodingTag::Sha512 => 0b_0100_0001_u8,
+                EncodingTag::Bitcoin160 => 0b_0100_1000_u8,
+                EncodingTag::Bitcoin256 => 0b_0100_1001_u8,
+
+                EncodingTag::Secp256k1Pubkey => 0b_1000_0001_u8,
+                EncodingTag::Secp256k1Signature => 0b_1000_0010_u8,
+
+                EncodingTag::Ed25519Pubkey => 0b_1000_1001_u8,
+                EncodingTag::Ed25519Signature => 0b_1000_1010_u8
+            );
         }
     }
 }

@@ -918,6 +918,36 @@ pub mod test {
 
     use super::*;
 
+    // TODO: (new) Move into derive macro
+    macro_rules! test_enum_u8_exhaustive {
+        ($enum:ident; $( $item:path => $val:expr ),+) => { {
+            use ::num_traits::{FromPrimitive, ToPrimitive};
+
+            $( assert_eq!($item.to_u8().unwrap(), $val); )+
+            $( assert_eq!($enum::from_u8($val).unwrap(), $item); )+
+            let mut set = ::std::collections::HashSet::new();
+            $( set.insert($val); )+
+            for x in 0..=u8::MAX {
+                if !set.contains(&x) {
+                    assert_eq!($enum::from_u8(x), None);
+                    let decoded: Result<$enum, _> = $crate::strict_encoding::strict_decode(&[x]);
+                    assert_eq!(decoded.unwrap_err(), $crate::strict_encoding::Error::EnumValueNotKnown(stringify!($enum).to_string(), x));
+                }
+            }
+            let mut all = ::std::collections::BTreeSet::new();
+            $( all.insert($item); )+
+            for (idx, a) in all.iter().enumerate() {
+                assert_eq!(a, a);
+                for b in all.iter().skip(idx + 1) {
+                    assert_ne!(a, b);
+                    assert!(a < b);
+                }
+            }
+            $( assert_eq!($crate::strict_encoding::strict_encode(&$item).unwrap(), &[$val]); )+
+            $( assert_eq!($item, $crate::strict_encoding::strict_decode(&[$val]).unwrap()); )+
+        } };
+    }
+
     // Macro to run test_suite
     #[macro_export]
     macro_rules! test_encode {

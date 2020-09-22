@@ -848,8 +848,6 @@ impl FromStr for Chains {
 
 #[cfg(test)]
 mod test {
-    use num_traits::{FromPrimitive, ToPrimitive};
-
     use super::*;
     use crate::strict_encoding::test::test_suite;
 
@@ -1002,34 +1000,6 @@ mod test {
     #[should_panic = "NoneError"]
     fn test_p2p_network_id_other() {
         bitcoin::Network::try_from(P2pNetworkId::Other(0xA1A2A3A4)).unwrap();
-    }
-
-    // TODO: (new) Move into derive macro
-    macro_rules! test_enum_u8_exhaustive {
-        ($enum:ident; $( $item:path => $val:expr ),+) => {
-            $( assert_eq!($item.to_u8().unwrap(), $val); )+
-            $( assert_eq!($enum::from_u8($val).unwrap(), $item); )+
-            let mut set = ::std::collections::HashSet::new();
-            $( set.insert($val); )+
-            for x in 0..=u8::MAX {
-                if !set.contains(&x) {
-                    assert_eq!($enum::from_u8(x), None);
-                    let decoded: Result<$enum, _> = strict_decode(&[x]);
-                    assert_eq!(decoded.unwrap_err(), $crate::strict_encoding::Error::EnumValueNotKnown(stringify!($enum).to_string(), x));
-                }
-            }
-            let mut all = ::std::collections::BTreeSet::new();
-            $( all.insert($item); )+
-            for (idx, a) in all.iter().enumerate() {
-                assert_eq!(a, a);
-                for b in all.iter().skip(idx + 1) {
-                    assert_ne!(a, b);
-                    assert!(a < b);
-                }
-            }
-            $( assert_eq!(strict_encode(&$item).unwrap(), &[$val]); )+
-            $( assert_eq!($item, strict_decode(&[$val]).unwrap()); )+
-        };
     }
 
     #[test]
