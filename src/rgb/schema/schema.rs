@@ -107,7 +107,7 @@ mod strict_encoding {
             let script = Vec::<u8>::strict_decode(&mut d)?;
             if !script.is_empty() {
                 Err(Error::UnsupportedDataStructure(
-                    "Scripting information is not yet supported".to_string(),
+                    "Scripting information is not yet supported",
                 ))
             } else {
                 Ok(me)

@@ -253,29 +253,24 @@ mod strict_encoding {
                                 u64::from_le_bytes(max) as u128,
                             )
                         }
-                        invalid_bits => Err(Error::UnsupportedDataStructure(format!(
+                        _ => Err(Error::UnsupportedDataStructure(
                             "confidential amounts can be only of u64 type; \
-                             {} bit unsigned integers are not yet supported",
-                            invalid_bits
-                        )))?,
+                             unsigned integers with different bit coin are not \
+                             yet supported",
+                        ))?,
                     };
                     if min != 0 || max != core::u64::MAX as u128 {
-                        Err(Error::UnsupportedDataStructure(format!(
+                        Err(Error::UnsupportedDataStructure(
                             "confidential amounts can be only of u64 type; \
-                             allowed values should cover full u64 value range \
-                             0..{}, however {}..{} was met",
-                            core::u64::MAX,
-                            min,
-                            max
-                        )))?
+                             allowed values should cover full u64 value range",
+                        ))?
                     }
                     Ok(DiscreteFiniteFieldFormat::Unsigned64bit)
                 }
-                invalid_tag => Err(Error::UnsupportedDataStructure(format!(
+                _ => Err(Error::UnsupportedDataStructure(
                     "confidential amounts can be only of u64 type; \
-                     {} type of the data is not yet supported",
-                    invalid_tag
-                ))),
+                     other types of the data is not yet supported",
+                )),
             }
         }
     }
@@ -355,11 +350,11 @@ mod strict_encoding {
                         Bits::Bit8 => {
                             let min = u8::try_from(*min)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Unsigned data type are outside of bit dimension".to_string(), 
+                                    "Minimum value for Unsigned data type are outside of bit dimension",
                                     (core::u8::MIN as u128)..(core::u8::MAX as u128), *min as u128))?;
                             let max = u8::try_from(*max)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
+                                    "Maximum value for Unsigned data type are outside of bit dimension",
                                     (core::u8::MIN as u128)..(core::u8::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::u8::MIN..=core::u8::MAX, true)?;
@@ -368,11 +363,11 @@ mod strict_encoding {
                         Bits::Bit16 => {
                             let min = u16::try_from(*min)
                                     .map_err(|_| Error::ValueOutOfRange(
-                                        "Minimum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        "Minimum value for Unsigned data type are outside of bit dimension",
                                         (core::u16::MIN as u128)..(core::u16::MAX as u128), *min as u128))?;
                             let max = u16::try_from(*max)
                                     .map_err(|_| Error::ValueOutOfRange(
-                                        "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        "Maximum value for Unsigned data type are outside of bit dimension",
                                         (core::u16::MIN as u128)..(core::u16::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::u16::MIN..=core::u16::MAX, true)?;
@@ -381,11 +376,11 @@ mod strict_encoding {
                         Bits::Bit32 => {
                             let min = u32::try_from(*min)
                                     .map_err(|_| Error::ValueOutOfRange(
-                                        "Minimum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        "Minimum value for Unsigned data type are outside of bit dimension",
                                         (core::u32::MIN as u128)..(core::u32::MAX as u128), *min as u128))?;
                             let max = u32::try_from(*max)
                                     .map_err(|_| Error::ValueOutOfRange(
-                                        "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        "Maximum value for Unsigned data type are outside of bit dimension",
                                         (core::u32::MIN as u128)..(core::u32::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::u32::MIN..=core::u32::MAX, true)?;
@@ -394,11 +389,11 @@ mod strict_encoding {
                         Bits::Bit64 => {
                             let min = u64::try_from(*min)
                                     .map_err(|_| Error::ValueOutOfRange(
-                                        "Minimum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        "Minimum value for Unsigned data type are outside of bit dimension",
                                         (core::u64::MIN as u128)..(core::u64::MAX as u128), *min as u128))?;
                             let max = u64::try_from(*max)
                                     .map_err(|_| Error::ValueOutOfRange(
-                                        "Maximum value for Unsigned data type are outside of bit dimension".to_string(),
+                                        "Maximum value for Unsigned data type are outside of bit dimension",
                                         (core::u64::MIN as u128)..(core::u64::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::u64::MIN..=core::u64::MAX, true)?;
@@ -415,11 +410,11 @@ mod strict_encoding {
                         Bits::Bit8 => {
                             let min = i8::try_from(*min)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Integer data type are outside of bit dimension".to_string(),
+                                    "Minimum value for Integer data type are outside of bit dimension",
                                     (core::i8::MIN as u128)..(core::i8::MAX as u128), *min as u128))?;
                             let max = i8::try_from(*max)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Integer data type are outside of bit dimension".to_string(),
+                                    "Maximum value for Integer data type are outside of bit dimension",
                                     (core::i8::MIN as u128)..(core::i8::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::i8::MIN..=core::i8::MAX, true)?;
@@ -428,11 +423,11 @@ mod strict_encoding {
                         Bits::Bit16 => {
                             let min = i16::try_from(*min)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Integer data type are outside of bit dimension".to_string(),
+                                    "Minimum value for Integer data type are outside of bit dimension",
                                     (core::i16::MIN as u128)..(core::i16::MAX as u128), *min as u128))?;
                             let max = i16::try_from(*max)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Integer data type are outside of bit dimension".to_string(),
+                                    "Maximum value for Integer data type are outside of bit dimension",
                                     (core::i16::MIN as u128)..(core::i16::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::i16::MIN..=core::i16::MAX, true)?;
@@ -441,11 +436,11 @@ mod strict_encoding {
                         Bits::Bit32 => {
                             let min = i32::try_from(*min)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Integer data type are outside of bit dimension".to_string(),
+                                    "Minimum value for Integer data type are outside of bit dimension",
                                     (core::i32::MIN as u128)..(core::i32::MAX as u128), *min as u128))?;
                             let max = i32::try_from(*max)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Integer data type are outside of bit dimension".to_string(),
+                                    "Maximum value for Integer data type are outside of bit dimension",
                                     (core::i32::MIN as u128)..(core::i32::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::i32::MIN..=core::i32::MAX, true)?;
@@ -454,11 +449,11 @@ mod strict_encoding {
                         Bits::Bit64 => {
                             let min = i64::try_from(*min)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Integer data type are outside of bit dimension".to_string(),
+                                    "Minimum value for Integer data type are outside of bit dimension",
                                     (core::i64::MIN as u128)..(core::i64::MAX as u128), *min as u128))?;
                             let max = i64::try_from(*max)
                                 .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Integer data type are outside of bit dimension".to_string(),
+                                    "Maximum value for Integer data type are outside of bit dimension",
                                     (core::i64::MIN as u128)..(core::i64::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::i64::MIN..=core::i64::MAX, true)?;
@@ -486,8 +481,7 @@ mod strict_encoding {
                         }
                         unsupported_bits => Err(Error::ValueOutOfRange(
                             "The provided number of bits for the floating number \
-                             is not supported by the platform"
-                                .to_string(),
+                             is not supported by the platform",
                             32..64,
                             unsupported_bits.to_u64().unwrap() as u128,
                         ))?,

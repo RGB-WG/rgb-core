@@ -306,7 +306,7 @@ mod strict_encoding {
                     blinding: BlindingFactor::strict_decode(&mut d)?,
                 },
                 _ => Err(Error::UnsupportedDataStructure(
-                    "We support only homomorphic commitments to U64 data".to_string(),
+                    "We support only homomorphic commitments to U64 data",
                 ))?,
             })
         }

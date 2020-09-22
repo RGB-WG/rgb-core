@@ -168,7 +168,7 @@ impl StrictDecode for bitcoin::Network {
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let magic = u32::strict_decode(&mut d)?;
         Ok(Self::from_magic(magic).ok_or(Error::ValueOutOfRange(
-            "bitcoin::Network".to_string(),
+            "bitcoin::Network",
             0..0,
             magic as u128,
         ))?)

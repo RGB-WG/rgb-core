@@ -122,11 +122,11 @@ pub enum Error {
     /// The data are correct, however their structure indicate that they were
     /// created with the future software version which has functional absent in
     /// the current implementation
-    UnsupportedDataStructure(String),
+    UnsupportedDataStructure(&'static str),
 
     /// Found a value during decoding operation that does not fits into
     /// the supported range
-    ValueOutOfRange(String, Range<u128>, u128),
+    ValueOutOfRange(&'static str, Range<u128>, u128),
 
     /// A repeated value found during set collection deserialization
     RepeatedValue(String),
