@@ -393,7 +393,6 @@ pub(crate) mod test {
         let testnet_bytes = &[0x0Bu8, 0x11u8, 0x09u8, 0x07u8][..];
         let regtest_bytes = &[0xFAu8, 0xBFu8, 0xB5u8, 0xDAu8][..];
         let signet_bytes = &[0x0Au8, 0x03u8, 0xCFu8, 0x40u8][..];
-        let random_bytes = &[0xA1u8, 0xA2u8, 0xA3u8, 0xA4u8][..];
 
         let mainnet = bitcoin::Network::strict_decode(mainnet_bytes).unwrap();
         let testnet = bitcoin::Network::strict_decode(testnet_bytes).unwrap();

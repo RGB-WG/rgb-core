@@ -139,6 +139,12 @@ pub enum Error {
     DataIntegrityError(String),
 }
 
+impl From<Error> for fmt::Error {
+    fn from(_: Error) -> Self {
+        fmt::Error
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Error::*;

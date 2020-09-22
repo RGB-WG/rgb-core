@@ -13,11 +13,13 @@
 
 use std::{convert::TryFrom, fmt, io, str::FromStr};
 
-use bitcoin::hashes::hex::{self, FromHex};
+use bitcoin::hashes::hex::{self, FromHex, ToHex};
 use bitcoin::hashes::{sha256d, Hash};
 use bitcoin::BlockHash;
 
-use crate::paradigms::strict_encoding::{self, StrictDecode, StrictEncode};
+use crate::paradigms::strict_encoding::{
+    self, strict_decode, strict_encode, StrictDecode, StrictEncode,
+};
 
 /// P2P network magic number: prefix identifying network on which node operates
 pub type P2pMagic = u32;
@@ -551,7 +553,7 @@ impl StrictDecode for Chains {
 
     #[inline]
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-        // TODO: (new) Fix `impl StrictDecode for Chains` with deencoding of all chain parameters
+        // TODO: (new) Fix `impl StrictDecode for Chains` with decoding of all chain parameters
         Self::from_genesis_hash(&BlockHash::strict_decode(d)?).ok_or(
             strict_encoding::Error::UnsupportedDataStructure("unknown genesis block hash"),
         )
@@ -603,9 +605,7 @@ impl TryFrom<Chains> for bitcoin::Network {
 impl fmt::Display for Chains {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            // TODO: (new) Replace with following once `StrictEncode` will be impl for `ChainParams`
-            //Chains::Other(params) => write!(f, "other:{:x?}", strict_encode(params).to_hex()),
-            Chains::Other(_) => write!(f, "other"),
+            Chains::Other(params) => write!(f, "other:{:x?}", strict_encode(params)?.to_hex()),
             Chains::Mainnet => write!(f, "mainnet"),
             Chains::Testnet3 => write!(f, "testnet"),
             Chains::Regtest(hash) if &hash[..] == GENESIS_HASH_REGTEST => write!(f, "regtest"),
@@ -661,11 +661,9 @@ impl FromStr for Chains {
                 } else if let Some(hex) =
                     s.strip_prefix("other:").and_then(|s| s.strip_prefix("0x"))
                 {
-                    // TODO: (new) Replace with following once `StrictEncode` will be impl for `ChainParams`
-                    //Ok(Chains::Other(strict_decode(
-                    //    &Vec::from_hex(hex).map_err(ParseError::ChainParamsEncoding)?,
-                    //)?))
-                    Err(ParseError::WrongNetworkName)
+                    Ok(Chains::Other(strict_decode(
+                        &Vec::from_hex(hex).map_err(|_| ParseError::ChainParamsEncoding)?,
+                    )?))
                 } else {
                     Err(ParseError::WrongNetworkName)
                 }
