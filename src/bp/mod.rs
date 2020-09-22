@@ -23,7 +23,7 @@ mod seals;
 pub mod short_id;
 mod strict_encoding;
 
-pub use chain::{Chains, P2pMagic};
+pub use chain::{Chains, P2pNetworkId};
 pub use scripts::*;
 pub use seals::*;
 pub use short_id::*;
