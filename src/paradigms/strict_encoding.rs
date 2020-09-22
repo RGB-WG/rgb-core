@@ -90,11 +90,10 @@ where
 }
 
 /// Possible errors during strict encoding and decoding process
-#[derive(Debug, From, Error)]
+#[derive(Clone, PartialEq, Eq, Debug, From, Error)]
 pub enum Error {
     /// I/O Error
-    #[derive_from]
-    Io(io::Error),
+    Io(io::ErrorKind),
 
     /// UTF8 Conversion Error
     #[derive_from(std::str::Utf8Error, std::string::FromUtf8Error)]
@@ -145,11 +144,17 @@ impl From<Error> for fmt::Error {
     }
 }
 
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Self::Io(err.kind())
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Error::*;
         match self {
-            Io(e) => write!(f, "I/O error: {}", e),
+            Io(kind) => write!(f, "I/O error: {:?}", kind),
             Utf8Conversion => write!(f, "String data are not in valid UTF-8 encoding"),
             ExceedMaxItems(size) => write!(
                 f,
@@ -407,9 +412,9 @@ pub mod strategies {
         #[inline]
         fn from(e: bitcoin::consensus::encode::Error) -> Self {
             Error::Io(if let bitcoin::consensus::encode::Error::Io(io_err) = e {
-                io_err
+                io_err.kind()
             } else {
-                io::Error::new(io::ErrorKind::Other, "")
+                io::ErrorKind::Other
             })
         }
     }

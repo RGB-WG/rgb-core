@@ -368,7 +368,8 @@ mod strict_encoding {
         use std::io::Write;
 
         // Making sure that <https://github.com/LNP-BP/LNPBPs/issues/58>
-        // is fullfilled
+        // is fulfilled and we do not occasionally commit to all chain
+        // parameters (which may vary and change with time) in RGB contract id
         #[test]
         fn test_genesis_commit_ne_strict() {
             let genesis = Genesis {

@@ -21,6 +21,7 @@ use bitcoin::BlockHash;
 use crate::paradigms::strict_encoding::{
     self, strict_decode, strict_encode, StrictDecode, StrictEncode,
 };
+use bitcoin_hashes::core::cmp::Ordering;
 use bitcoin_hashes::core::option::NoneError;
 
 /// P2P network magic number: prefix identifying network on which node operates
@@ -112,11 +113,11 @@ impl Debug for P2pNetworkId {
 impl Display for P2pNetworkId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            P2pNetworkId::Mainnet => Debug::fmt("mainnet", f),
-            P2pNetworkId::Testnet => Debug::fmt("testnet", f),
-            P2pNetworkId::Regtest => Debug::fmt("regtest", f),
-            P2pNetworkId::Signet => Debug::fmt("signet", f),
-            P2pNetworkId::Other(_) => Debug::fmt("unknown", f),
+            P2pNetworkId::Mainnet => f.write_str("mainnet"),
+            P2pNetworkId::Testnet => f.write_str("testnet"),
+            P2pNetworkId::Regtest => f.write_str("regtest"),
+            P2pNetworkId::Signet => f.write_str("signet"),
+            P2pNetworkId::Other(_) => f.write_str("unknown"),
         }
     }
 }
@@ -371,11 +372,11 @@ pub enum AssetLayer {
     /// Native chain asset(s), which can operate both on the layer of blockchain
     /// and payment/state channels (Bitcoin, sidechain-specific asset(s), like
     /// liquidBTC or confidential assets in Liquid)
-    Layer1and2,
+    Layer1and2 = 1,
 
     /// Derived assets, which are created and defined above blockchain (like
     /// RGB), but also can be used on top of payment/state channels
-    Layer2and3,
+    Layer2and3 = 2,
 }
 impl_enum_strict_encoding!(AssetLayer);
 
@@ -387,13 +388,13 @@ impl_enum_strict_encoding!(AssetLayer);
 #[repr(u8)]
 pub enum AssetSystem {
     /// Native blockchain asset, including liquid bitcoin in LiquidV1 network
-    NativeBlockchain,
+    NativeBlockchain = 0,
 
     /// Liquid confidential assets used in LiquidV1 network
-    LiquidV1ConfidentialAssets,
+    LiquidV1ConfidentialAssets = 1,
 
     /// RGB confidential assets
-    RgbAssets,
+    RgbAssets = 2,
 }
 impl_enum_strict_encoding!(AssetSystem);
 
@@ -586,7 +587,7 @@ impl StrictDecode for ChainParams {
 
 /// A set of recommended standard networks. Differs from bitcoin::Network in
 /// ability to support non-standard and non-predefined networks
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Debug, Hash)]
 #[non_exhaustive]
 #[repr(u32)]
 pub enum Chains {
@@ -613,6 +614,26 @@ pub enum Chains {
     /// All other networks/chains, providing full information on chain
     /// parameters
     Other(ChainParams),
+}
+
+impl PartialEq for Chains {
+    fn eq(&self, other: &Self) -> bool {
+        self.chain_params().eq(&other.chain_params())
+    }
+}
+
+impl Eq for Chains {}
+
+impl PartialOrd for Chains {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.chain_params().partial_cmp(&other.chain_params())
+    }
+}
+
+impl Ord for Chains {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.chain_params().cmp(&other.chain_params())
+    }
 }
 
 impl Chains {
@@ -714,14 +735,19 @@ impl From<bitcoin::Network> for Chains {
 }
 
 impl TryFrom<Chains> for bitcoin::Network {
-    type Error = ();
+    type Error = NoneError;
     fn try_from(bn: Chains) -> Result<Self, Self::Error> {
         Ok(match bn {
             Chains::Mainnet => bitcoin::Network::Bitcoin,
             Chains::Testnet3 => bitcoin::Network::Testnet,
-            Chains::Regtest(_) => bitcoin::Network::Regtest,
+            Chains::Regtest(hash) if hash == CHAIN_PARAMS_REGTEST.genesis_hash => {
+                bitcoin::Network::Regtest
+            }
             Chains::Signet => bitcoin::Network::Signet,
-            _ => Err(())?,
+            Chains::SignetCustom(hash) if hash == CHAIN_PARAMS_SIGNET.genesis_hash => {
+                bitcoin::Network::Signet
+            }
+            _ => Err(NoneError)?,
         })
     }
 }
@@ -729,14 +755,30 @@ impl TryFrom<Chains> for bitcoin::Network {
 impl Display for Chains {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Chains::Other(params) => write!(f, "other:{:x?}", strict_encode(params)?.to_hex()),
-            Chains::Mainnet => write!(f, "mainnet"),
+            Chains::Mainnet => write!(f, "bitcoin"),
             Chains::Testnet3 => write!(f, "testnet"),
             Chains::Regtest(hash) if &hash[..] == GENESIS_HASH_REGTEST => write!(f, "regtest"),
             Chains::Regtest(hash) => write!(f, "regtest:{}", hash),
             Chains::Signet => write!(f, "signet"),
+            Chains::SignetCustom(hash) if &hash[..] == GENESIS_HASH_SIGNET => write!(f, "signet"),
             Chains::SignetCustom(hash) => write!(f, "signet:{}", hash),
             Chains::LiquidV1 => write!(f, "liquidv1"),
+            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_MAINNET => {
+                write!(f, "bitcoin")
+            }
+            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_TESTNET => {
+                write!(f, "testnet")
+            }
+            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_REGTEST => {
+                write!(f, "regtest")
+            }
+            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_SIGNET => {
+                write!(f, "signet")
+            }
+            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_LIQUIDV1 => {
+                write!(f, "liquidv1")
+            }
+            Chains::Other(params) => write!(f, "other:0x{}", strict_encode(params)?.to_hex()),
         }
     }
 }
@@ -806,6 +848,8 @@ impl FromStr for Chains {
 
 #[cfg(test)]
 mod test {
+    use num_traits::{FromPrimitive, ToPrimitive};
+
     use super::*;
     use crate::bp::strict_encoding::test::test_suite;
 
@@ -815,7 +859,7 @@ mod test {
         let testnet_bytes = &[0x0Bu8, 0x11u8, 0x09u8, 0x07u8][..];
         let regtest_bytes = &[0xFAu8, 0xBFu8, 0xB5u8, 0xDAu8][..];
         let signet_bytes = &[0x0Au8, 0x03u8, 0xCFu8, 0x40u8][..];
-        let random_bytes = &[0xA1u8, 0xA2u8, 0xA3u8, 0xA4u8][..];
+        let random_bytes = [0xA1u8, 0xA2u8, 0xA3u8, 0xA4u8];
 
         assert_eq!(P2P_MAGIC_MAINNET.to_le_bytes(), mainnet_bytes);
         assert_eq!(P2P_MAGIC_TESTNET.to_le_bytes(), testnet_bytes);
@@ -827,11 +871,14 @@ mod test {
         assert_eq!(P2P_MAGIC_REGTEST, bitcoin::Network::Regtest.magic());
         assert_eq!(P2P_MAGIC_SIGNET, bitcoin::Network::Signet.magic());
 
+        let other = P2pNetworkId::Other(u32::from_le_bytes(random_bytes));
+
         let bp_mainnet = P2pNetworkId::strict_decode(mainnet_bytes).unwrap();
         let bp_testnet = P2pNetworkId::strict_decode(testnet_bytes).unwrap();
         let bp_regtest = P2pNetworkId::strict_decode(regtest_bytes).unwrap();
         let bp_signet = P2pNetworkId::strict_decode(signet_bytes).unwrap();
-        let bp_other = P2pNetworkId::strict_decode(random_bytes).unwrap();
+        let bp_other = P2pNetworkId::strict_decode(&random_bytes[..]).unwrap();
+        assert_eq!(bp_other, other);
 
         assert!(test_suite(&bp_mainnet, &mainnet_bytes, 4).is_ok());
         assert!(test_suite(&bp_testnet, &testnet_bytes, 4).is_ok());
@@ -841,7 +888,64 @@ mod test {
     }
 
     #[test]
+    fn test_p2p_magic_number_fmt() {
+        assert_eq!(format!("{}", P2pNetworkId::Mainnet), "mainnet");
+        assert_eq!(format!("{}", P2pNetworkId::Testnet), "testnet");
+        assert_eq!(format!("{}", P2pNetworkId::Regtest), "regtest");
+        assert_eq!(format!("{}", P2pNetworkId::Signet), "signet");
+        assert_eq!(format!("{}", P2pNetworkId::Other(0x01)), "unknown");
+
+        assert_eq!(
+            format!("{:?}", P2pNetworkId::Mainnet),
+            format!("mainnet({:#x?})", P2P_MAGIC_MAINNET)
+        );
+        assert_eq!(
+            format!("{:?}", P2pNetworkId::Testnet),
+            format!("testnet({:#x?})", P2P_MAGIC_TESTNET)
+        );
+        assert_eq!(
+            format!("{:?}", P2pNetworkId::Regtest),
+            format!("regtest({:#x?})", P2P_MAGIC_REGTEST)
+        );
+        assert_eq!(
+            format!("{:?}", P2pNetworkId::Signet),
+            format!("signet({:#x?})", P2P_MAGIC_SIGNET)
+        );
+        assert_eq!(
+            format!("{:?}", P2pNetworkId::Other(0x01u32)),
+            format!("unknown({:#x?})", 0x01u32)
+        );
+    }
+
+    #[test]
     fn test_p2p_magic_number_from() {
+        assert_eq!(P2pNetworkId::from(P2P_MAGIC_MAINNET), P2pNetworkId::Mainnet);
+        assert_eq!(P2pNetworkId::from(P2P_MAGIC_TESTNET), P2pNetworkId::Testnet);
+        assert_eq!(P2pNetworkId::from(P2P_MAGIC_REGTEST), P2pNetworkId::Regtest);
+        assert_eq!(P2pNetworkId::from(P2P_MAGIC_SIGNET), P2pNetworkId::Signet);
+        assert_eq!(
+            P2pNetworkId::from(0x0102030),
+            P2pNetworkId::Other(0x0102030)
+        );
+
+        assert_eq!(
+            P2P_MAGIC_MAINNET,
+            P2pMagicNumber::from(P2pNetworkId::Mainnet)
+        );
+        assert_eq!(
+            P2P_MAGIC_TESTNET,
+            P2pMagicNumber::from(P2pNetworkId::Testnet)
+        );
+        assert_eq!(
+            P2P_MAGIC_REGTEST,
+            P2pMagicNumber::from(P2pNetworkId::Regtest)
+        );
+        assert_eq!(P2P_MAGIC_SIGNET, P2pMagicNumber::from(P2pNetworkId::Signet));
+        assert_eq!(
+            0x0102030,
+            P2pMagicNumber::from(P2pNetworkId::Other(0x0102030))
+        );
+
         assert_eq!(
             P2pNetworkId::from(bitcoin::Network::Bitcoin),
             P2pNetworkId::Mainnet
@@ -898,6 +1002,132 @@ mod test {
     #[should_panic = "NoneError"]
     fn test_p2p_network_id_other() {
         bitcoin::Network::try_from(P2pNetworkId::Other(0xA1A2A3A4)).unwrap();
+    }
+
+    // TODO: (new) Move into derive macro
+    macro_rules! test_enum_u8_exhaustive {
+        ($enum:ident; $( $item:path => $val:expr ),+) => {
+            $( assert_eq!($item.to_u8().unwrap(), $val); )+
+            $( assert_eq!($enum::from_u8($val).unwrap(), $item); )+
+            let mut set = ::std::collections::HashSet::new();
+            $( set.insert($val); )+
+            for x in 0..=u8::MAX {
+                if !set.contains(&x) {
+                    assert_eq!($enum::from_u8(x), None);
+                    let decoded: Result<$enum, _> = strict_decode(&[x]);
+                    assert_eq!(decoded.unwrap_err(), $crate::strict_encoding::Error::EnumValueNotKnown(stringify!($enum).to_string(), x));
+                }
+            }
+            let mut all = ::std::collections::BTreeSet::new();
+            $( all.insert($item); )+
+            for (idx, a) in all.iter().enumerate() {
+                assert_eq!(a, a);
+                for b in all.iter().skip(idx + 1) {
+                    assert_ne!(a, b);
+                    assert!(a < b);
+                }
+            }
+            $( assert_eq!(strict_encode(&$item).unwrap(), &[$val]); )+
+            $( assert_eq!($item, strict_decode(&[$val]).unwrap()); )+
+        };
+    }
+
+    #[test]
+    fn test_chain_param_enums() {
+        test_enum_u8_exhaustive!(ChainFormat;
+            ChainFormat::Bitcoin => 0,
+            ChainFormat::Elements => 1
+        );
+
+        test_enum_u8_exhaustive!(AssetLayer;
+            AssetLayer::Layer1and2 => 1,
+            AssetLayer::Layer2and3 => 2
+        );
+
+        test_enum_u8_exhaustive!(AssetSystem;
+            AssetSystem::NativeBlockchain => 0,
+            AssetSystem::LiquidV1ConfidentialAssets => 1,
+            AssetSystem::RgbAssets => 2
+        );
+    }
+
+    #[test]
+    fn test_asset_params_eq() {
+        let asset1 = AssetParams {
+            ticker: "AAA".to_string(),
+            unit_of_accounting: "Aaa".to_string(),
+            indivisible_unit: "a".to_string(),
+            divisibility: 0,
+            asset_id: Default::default(),
+            asset_system: AssetSystem::NativeBlockchain,
+        };
+
+        let asset2 = AssetParams {
+            ticker: "AAA".to_string(),
+            unit_of_accounting: "Aaa".to_string(),
+            indivisible_unit: "a".to_string(),
+            divisibility: 0,
+            asset_id: Default::default(),
+            asset_system: AssetSystem::LiquidV1ConfidentialAssets,
+        };
+
+        let asset3 = AssetParams {
+            ticker: "BBB".to_string(),
+            unit_of_accounting: "Bbb".to_string(),
+            indivisible_unit: "b".to_string(),
+            divisibility: 1,
+            asset_id: Default::default(),
+            asset_system: AssetSystem::NativeBlockchain,
+        };
+
+        let asset4 = AssetParams {
+            ticker: "AAA".to_string(),
+            unit_of_accounting: "Aaa".to_string(),
+            indivisible_unit: "a".to_string(),
+            divisibility: 0,
+            asset_id: AssetId::hash(b"asset"),
+            asset_system: AssetSystem::NativeBlockchain,
+        };
+
+        assert_eq!(asset1, asset1);
+        assert_eq!(asset1, asset3);
+        assert_ne!(asset1, asset2);
+        assert_ne!(asset1, asset4);
+        assert_ne!(asset2, asset3);
+        assert_ne!(asset2, asset4);
+        assert_ne!(asset3, asset4);
+    }
+
+    #[test]
+    fn test_chain_params() {
+        assert_eq!(Chains::Mainnet.chain_params(), *CHAIN_PARAMS_MAINNET);
+        assert_eq!(Chains::Testnet3.chain_params(), *CHAIN_PARAMS_TESTNET);
+        assert_eq!(
+            Chains::Regtest(BlockHash::from_slice(&GENESIS_HASH_REGTEST).unwrap()).chain_params(),
+            *CHAIN_PARAMS_REGTEST
+        );
+        assert_eq!(Chains::Signet.chain_params(), *CHAIN_PARAMS_SIGNET);
+        assert_eq!(
+            Chains::SignetCustom(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
+                .chain_params(),
+            *CHAIN_PARAMS_SIGNET
+        );
+        assert_eq!(Chains::LiquidV1.chain_params(), *CHAIN_PARAMS_LIQUIDV1);
+
+        assert_eq!(Chains::Mainnet, Chains::Mainnet);
+        assert_eq!(
+            Chains::Signet,
+            Chains::SignetCustom(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
+        );
+        assert_ne!(Chains::Mainnet, Chains::LiquidV1);
+        assert_ne!(Chains::Mainnet, Chains::Testnet3);
+        assert_ne!(Chains::Mainnet, Chains::Signet);
+        assert_ne!(Chains::Signet, Chains::Testnet3);
+        assert_eq!(
+            Chains::Signet,
+            Chains::Regtest(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
+        );
+        assert_ne!(Chains::Signet, Chains::SignetCustom(BlockHash::hash(b"")));
     }
 
     #[test]
@@ -987,7 +1217,197 @@ mod test {
             &Chains::Other(chain_params).as_genesis_hash()[..],
             &random_hash[..]
         );
+
+        assert_eq!(
+            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_MAINNET).unwrap())
+                .unwrap(),
+            Chains::Mainnet
+        );
+        assert_eq!(
+            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_TESTNET).unwrap())
+                .unwrap(),
+            Chains::Testnet3
+        );
+        assert_eq!(
+            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_SIGNET).unwrap())
+                .unwrap(),
+            Chains::Signet
+        );
+        assert_eq!(
+            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_LIQUIDV1).unwrap())
+                .unwrap(),
+            Chains::LiquidV1
+        );
+        let regtest =
+            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_REGTEST).unwrap())
+                .unwrap();
+        assert_eq!(regtest, Chains::Regtest(*regtest.as_genesis_hash()));
+        assert_ne!(regtest, Chains::Regtest(random_hash));
+        assert_eq!(Chains::from_genesis_hash(&random_hash), None);
     }
 
-    // TODO: (new) add more tests
+    #[test]
+    fn test_chains() {
+        let random_hash = BlockHash::hash(b"rascafvsdg");
+
+        assert_eq!(Chains::Mainnet, Chains::from(CHAIN_PARAMS_MAINNET.clone()));
+        assert_eq!(Chains::Testnet3, Chains::from(CHAIN_PARAMS_TESTNET.clone()));
+        assert_eq!(
+            Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
+            Chains::from(CHAIN_PARAMS_REGTEST.clone())
+        );
+        assert_ne!(
+            Chains::Regtest(random_hash),
+            Chains::from(CHAIN_PARAMS_REGTEST.clone())
+        );
+        assert_eq!(Chains::Signet, Chains::from(CHAIN_PARAMS_SIGNET.clone()));
+        assert_eq!(
+            Chains::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash),
+            Chains::from(CHAIN_PARAMS_SIGNET.clone())
+        );
+        assert_ne!(
+            Chains::SignetCustom(random_hash),
+            Chains::from(CHAIN_PARAMS_SIGNET.clone())
+        );
+        assert_eq!(
+            Chains::LiquidV1,
+            Chains::from(CHAIN_PARAMS_LIQUIDV1.clone())
+        );
+
+        assert_eq!(Chains::Mainnet, Chains::from(bitcoin::Network::Bitcoin));
+        assert_eq!(Chains::Testnet3, Chains::from(bitcoin::Network::Testnet));
+        assert_eq!(
+            Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
+            Chains::from(bitcoin::Network::Regtest)
+        );
+        assert_eq!(Chains::Signet, Chains::from(bitcoin::Network::Signet));
+
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::Mainnet).unwrap(),
+            bitcoin::Network::Bitcoin
+        );
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::Testnet3).unwrap(),
+            bitcoin::Network::Testnet
+        );
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::Signet).unwrap(),
+            bitcoin::Network::Signet
+        );
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)).unwrap(),
+            bitcoin::Network::Regtest
+        );
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash))
+                .unwrap(),
+            bitcoin::Network::Signet
+        );
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::Regtest(CHAIN_PARAMS_SIGNET.genesis_hash))
+                .unwrap_err(),
+            NoneError
+        );
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::SignetCustom(CHAIN_PARAMS_REGTEST.genesis_hash))
+                .unwrap_err(),
+            NoneError
+        );
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::Regtest(random_hash)).unwrap_err(),
+            NoneError
+        );
+        assert_eq!(
+            bitcoin::Network::try_from(Chains::SignetCustom(random_hash)).unwrap_err(),
+            NoneError
+        );
+    }
+
+    #[test]
+    fn test_chains_display() {
+        let custom_hash = BlockHash::hash(b"00350429507202701943");
+        assert_eq!(format!("{}", Chains::Mainnet), "bitcoin");
+        assert_eq!(format!("{}", Chains::Testnet3), "testnet");
+        assert_eq!(format!("{}", Chains::Signet), "signet");
+        assert_eq!(format!("{}", Chains::LiquidV1), "liquidv1");
+        assert_eq!(
+            format!("{}", Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)),
+            "regtest"
+        );
+        assert_eq!(
+            format!("{}", Chains::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash)),
+            "signet"
+        );
+        assert_eq!(
+            format!("{}", Chains::Regtest(custom_hash)),
+            format!("regtest:{}", custom_hash)
+        );
+        assert_eq!(
+            format!("{}", Chains::SignetCustom(custom_hash)),
+            format!("signet:{}", custom_hash)
+        );
+
+        assert_eq!(
+            format!("{}", Chains::Other(CHAIN_PARAMS_MAINNET.clone())),
+            "bitcoin"
+        );
+        assert_eq!(
+            format!("{}", Chains::Other(CHAIN_PARAMS_TESTNET.clone())),
+            "testnet"
+        );
+        assert_eq!(
+            format!("{}", Chains::Other(CHAIN_PARAMS_REGTEST.clone())),
+            "regtest"
+        );
+        assert_eq!(
+            format!("{}", Chains::Other(CHAIN_PARAMS_SIGNET.clone())),
+            "signet"
+        );
+        assert_eq!(
+            format!("{}", Chains::Other(CHAIN_PARAMS_LIQUIDV1.clone())),
+            "liquidv1"
+        );
+
+        let mut custom_params = CHAIN_PARAMS_MAINNET.clone();
+        custom_params.genesis_hash = custom_hash;
+        assert_eq!(format!("{}", Chains::Other(custom_params.clone())), "other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001");
+
+        assert_eq!(Chains::from_str("bitcoin").unwrap(), Chains::Mainnet);
+        assert_eq!(Chains::from_str("testnet").unwrap(), Chains::Testnet3);
+        assert_eq!(
+            Chains::from_str("regtest").unwrap(),
+            Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)
+        );
+        assert_eq!(
+            Chains::from_str(
+                "regtest:a2695249197ea6b95e48eb1da3b5fe24d91e427ba6a3d46f529c7df41e741b0e"
+            )
+            .unwrap(),
+            Chains::Regtest(custom_hash)
+        );
+        assert_eq!(Chains::from_str("signet").unwrap(), Chains::Signet);
+        assert_eq!(
+            Chains::from_str(
+                "signet:a2695249197ea6b95e48eb1da3b5fe24d91e427ba6a3d46f529c7df41e741b0e"
+            )
+            .unwrap(),
+            Chains::SignetCustom(custom_hash)
+        );
+        assert_eq!(Chains::from_str("liquidv1").unwrap(), Chains::LiquidV1);
+
+        assert_eq!(Chains::from_str("Bitcoin").unwrap(), Chains::Mainnet);
+        assert_eq!(Chains::from_str("bItcOin").unwrap(), Chains::Mainnet);
+
+        assert_eq!(Chains::from_str("bc").unwrap(), Chains::Mainnet);
+        assert_eq!(Chains::from_str("main").unwrap(), Chains::Mainnet);
+
+        assert_eq!(
+            Chains::from_str("aljsic").unwrap_err(),
+            ParseError::WrongNetworkName
+        );
+        assert_eq!(
+            Chains::from_str("other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001").unwrap(), 
+            Chains::Other(custom_params)
+        );
+    }
 }
