@@ -15,12 +15,15 @@ use std::io;
 
 use bitcoin::hashes::{hash160, sha256, sha256d, sha512};
 use bitcoin::util::psbt::PartiallySignedTransaction;
-use bitcoin::{secp256k1, util::bip32, OutPoint, Script, Txid, XpubIdentifier};
+use bitcoin::{secp256k1, util::bip32, BlockHash, OutPoint, Script, Txid, XpubIdentifier};
 
-use super::{blind::OutpointHash, blind::OutpointReveal, Network, ShortId};
+use super::{blind::OutpointHash, blind::OutpointReveal, ShortId};
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 
 impl strict_encoding::Strategy for Txid {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for BlockHash {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 impl strict_encoding::Strategy for OutpointHash {
@@ -172,24 +175,6 @@ impl StrictDecode for bitcoin::Network {
             0..0,
             magic as u128,
         ))?)
-    }
-}
-
-impl StrictEncode for Network {
-    type Error = Error;
-
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
-        Ok(self.as_magic().strict_encode(e)?)
-    }
-}
-
-impl StrictDecode for Network {
-    type Error = Error;
-
-    #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-        Ok(Self::from_magic(u32::strict_decode(d)?))
     }
 }
 
@@ -368,20 +353,24 @@ impl StrictDecode for bip32::ExtendedPubKey {
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::bp::{short_id::Descriptor, BlockChecksum, TxChecksum};
-    use bitcoin::{hashes::hex::FromHex, secp256k1::Message, BlockHash};
+pub(crate) mod test {
     use std::{convert::TryFrom, fmt::Debug, str::FromStr};
 
-    fn encode_decode<T: StrictEncode + StrictDecode>(object: &T) -> Result<(T, usize), Error> {
+    use bitcoin::{hashes::hex::FromHex, secp256k1::Message, BlockHash};
+
+    use super::*;
+    use crate::bp::{short_id::Descriptor, BlockChecksum, TxChecksum};
+
+    pub(crate) fn encode_decode<T: StrictEncode + StrictDecode>(
+        object: &T,
+    ) -> Result<(T, usize), Error> {
         let mut encoded_object: Vec<u8> = vec![];
         let written = object.strict_encode(&mut encoded_object).unwrap();
         let decoded_object = T::strict_decode(&encoded_object[..]).unwrap();
         Ok((decoded_object, written))
     }
 
-    fn test_suite<T: StrictEncode + StrictDecode + PartialEq + Debug>(
+    pub(crate) fn test_suite<T: StrictEncode + StrictDecode + PartialEq + Debug>(
         object: &T,
         test_vec: &[u8],
         test_size: usize,
@@ -411,22 +400,10 @@ mod test {
         let regtest = bitcoin::Network::strict_decode(regtest_bytes).unwrap();
         let signet = bitcoin::Network::strict_decode(signet_bytes).unwrap();
 
-        let bp_mainnet = Network::strict_decode(mainnet_bytes).unwrap();
-        let bp_testnet = Network::strict_decode(testnet_bytes).unwrap();
-        let bp_regtest = Network::strict_decode(regtest_bytes).unwrap();
-        let bp_signet = Network::strict_decode(signet_bytes).unwrap();
-        let bp_other = Network::strict_decode(random_bytes).unwrap();
-
         assert!(test_suite(&mainnet, &mainnet_bytes, 4).is_ok());
         assert!(test_suite(&testnet, &testnet_bytes, 4).is_ok());
         assert!(test_suite(&regtest, &regtest_bytes, 4).is_ok());
         assert!(test_suite(&signet, &signet_bytes, 4).is_ok());
-
-        assert!(test_suite(&bp_mainnet, &mainnet_bytes, 4).is_ok());
-        assert!(test_suite(&bp_testnet, &testnet_bytes, 4).is_ok());
-        assert!(test_suite(&bp_regtest, &regtest_bytes, 4).is_ok());
-        assert!(test_suite(&bp_signet, &signet_bytes, 4).is_ok());
-        assert!(test_suite(&bp_other, &random_bytes, 4).is_ok());
     }
 
     #[test]

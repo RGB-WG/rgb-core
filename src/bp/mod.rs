@@ -16,14 +16,14 @@ use bitcoin::hashes::{sha256d, Hash};
 #[macro_use]
 pub mod tagged256;
 pub mod blind;
+pub mod chain;
 pub mod dbc;
-pub mod network;
 pub mod scripts;
 mod seals;
 pub mod short_id;
 mod strict_encoding;
 
-pub use network::{MagicNumber, Network};
+pub use chain::{Chains, P2pMagic};
 pub use scripts::*;
 pub use seals::*;
 pub use short_id::*;

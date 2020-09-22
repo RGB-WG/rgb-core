@@ -114,7 +114,7 @@ impl AutoConceal for &mut dyn Node {
 #[derive(Clone, Debug)]
 pub struct Genesis {
     schema_id: SchemaId,
-    network: bp::Network,
+    network: bp::Chains,
     metadata: Metadata,
     assignments: Assignments,
     script: SimplicityScript,
@@ -226,7 +226,7 @@ impl Node for Transition {
 impl Genesis {
     pub fn with(
         schema_id: SchemaId,
-        network: bp::Network,
+        network: bp::Chains,
         metadata: Metadata,
         assignments: Assignments,
         script: SimplicityScript,
@@ -253,7 +253,7 @@ impl Genesis {
 
     #[inline]
     #[allow(dead_code)]
-    pub fn network(&self) -> bp::Network {
+    pub fn network(&self) -> bp::Chains {
         self.network
     }
 }
@@ -308,7 +308,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             Ok(Self {
                 schema_id: SchemaId::strict_decode(&mut d)?,
-                network: bp::Network::strict_decode(&mut d)?,
+                network: bp::Chains::strict_decode(&mut d)?,
                 metadata: Metadata::strict_decode(&mut d)?,
                 assignments: Assignments::strict_decode(&mut d)?,
                 script: SimplicityScript::strict_decode(&mut d)?,
