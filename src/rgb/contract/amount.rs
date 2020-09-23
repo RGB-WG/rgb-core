@@ -13,9 +13,11 @@
 
 use core::cmp::Ordering;
 use core::ops::Add;
+use std::io;
 
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
+use bitcoin::hashes::sha256;
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::rand::{Rng, RngCore};
 use secp256k1zkp::ContextFlag;
@@ -23,6 +25,7 @@ use secp256k1zkp::ContextFlag;
 use super::{data, ConfidentialState, RevealedState, SECP256K1_ZKP};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
 use crate::commit_verify::CommitVerify;
+use crate::paradigms::client_side_validation::CommitEncode;
 
 pub type Amount = u64;
 
@@ -86,8 +89,18 @@ pub struct Confidential {
 
 impl ConfidentialState for Confidential {}
 
-impl CommitEncodeWithStrategy for Confidential {
+impl CommitEncodeWithStrategy for pedersen::Commitment {
     type Strategy = commit_strategy::UsingStrict;
+}
+
+impl CommitEncodeWithStrategy for pedersen::RangeProof {
+    type Strategy = commit_strategy::UsingHash<sha256::Hash>;
+}
+
+impl CommitEncode for Confidential {
+    fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
+        self.commitment.commit_encode(&mut e) + self.bulletproof.commit_encode(&mut e)
+    }
 }
 
 impl PartialOrd for Confidential {
@@ -451,6 +464,12 @@ mod test {
         0x8c, 0x59, 0x5a, 0xfc, 0x8b, 0x55, 0xe5, 0x5f, 0x72, 0xd7, 0x29, 0x1, 0x55, 0xfa, 0x68,
         0x25, 0xe6, 0x3f, 0x62, 0x73, 0x54, 0xab, 0xfd, 0x11, 0x2e, 0xf5,
     ];
+    static CONFIDENTIAL_COMMITMENT: [u8; 67] = [
+        33, 0, 9, 125, 114, 210, 222, 31, 130, 153, 18, 25, 95, 36, 15, 61, 229, 94, 29, 100, 154,
+        171, 251, 47, 128, 135, 176, 29, 117, 78, 198, 19, 187, 56, 251, 119, 47, 229, 218, 135,
+        170, 85, 106, 36, 197, 219, 244, 78, 213, 210, 148, 100, 236, 123, 67, 180, 184, 7, 119,
+        195, 36, 249, 250, 21, 247, 143, 218,
+    ];
     static CONFIDENTIAL_AMOUNT: [u8; 712] = [
         0x21, 0x0, 0x9, 0x7d, 0x72, 0xd2, 0xde, 0x1f, 0x82, 0x99, 0x12, 0x19, 0x5f, 0x24, 0xf,
         0x3d, 0xe5, 0x5e, 0x1d, 0x64, 0x9a, 0xab, 0xfb, 0x2f, 0x80, 0x87, 0xb0, 0x1d, 0x75, 0x4e,
@@ -521,7 +540,7 @@ mod test {
         test_encode!((CONFIDENTIAL_AMOUNT, Confidential));
 
         // Test commitment
-        test_confidential::<Revealed>(&AMOUNT_65, &CONFIDENTIAL_AMOUNT);
+        test_confidential::<Revealed>(&AMOUNT_65, &CONFIDENTIAL_AMOUNT, &CONFIDENTIAL_COMMITMENT);
 
         // Test comparison
         let revealed_64 = Revealed::strict_decode(&AMOUNT_64[..]).unwrap();
