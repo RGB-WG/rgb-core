@@ -18,8 +18,6 @@ use ::core::fmt::{Display, Formatter};
 use ::core::str::pattern::Pattern;
 use ::core::str::FromStr;
 
-use num_traits::{FromPrimitive, ToPrimitive};
-
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, ToPrimitive, FromPrimitive)]
 pub enum DataFormat {
     Yaml,

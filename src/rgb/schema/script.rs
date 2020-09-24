@@ -14,9 +14,6 @@
 use std::collections::BTreeMap;
 use std::io;
 
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive, ToPrimitive};
-
 /// For now, Simplicity script is not implemented, so we use a byte array as a
 /// placeholder for script data
 pub type SimplicityScript = Vec<u8>;

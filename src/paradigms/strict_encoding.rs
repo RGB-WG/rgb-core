@@ -90,11 +90,10 @@ where
 }
 
 /// Possible errors during strict encoding and decoding process
-#[derive(Debug, From, Error)]
+#[derive(Clone, PartialEq, Eq, Debug, From, Error)]
 pub enum Error {
     /// I/O Error
-    #[derive_from]
-    Io(io::Error),
+    Io(io::ErrorKind),
 
     /// UTF8 Conversion Error
     #[derive_from(std::str::Utf8Error, std::string::FromUtf8Error)]
@@ -139,11 +138,23 @@ pub enum Error {
     DataIntegrityError(String),
 }
 
+impl From<Error> for fmt::Error {
+    fn from(_: Error) -> Self {
+        fmt::Error
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Self::Io(err.kind())
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Error::*;
         match self {
-            Io(e) => write!(f, "I/O error: {}", e),
+            Io(kind) => write!(f, "I/O error: {:?}", kind),
             Utf8Conversion => write!(f, "String data are not in valid UTF-8 encoding"),
             ExceedMaxItems(size) => write!(
                 f,
@@ -221,6 +232,19 @@ macro_rules! strict_encode_list {
 }
 
 #[macro_export]
+macro_rules! strict_decode_self {
+    ( $decoder:ident; $($item:ident),+ ) => {
+        {
+            Self {
+            $(
+                $item: StrictDecode::strict_decode(&mut $decoder)?,
+            )+
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! impl_enum_strict_encoding {
     ($type:ty) => {
         impl $crate::strict_encoding::StrictEncode for $type {
@@ -228,6 +252,8 @@ macro_rules! impl_enum_strict_encoding {
 
             #[inline]
             fn strict_encode<E: ::std::io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+                use ::num_traits::ToPrimitive;
+
                 match self.to_u8() {
                     Some(result) => result.strict_encode(e),
                     None => Err($crate::strict_encoding::Error::EnumValueOverflow(
@@ -242,6 +268,8 @@ macro_rules! impl_enum_strict_encoding {
 
             #[inline]
             fn strict_decode<D: ::std::io::Read>(d: D) -> Result<Self, Self::Error> {
+                use ::num_traits::FromPrimitive;
+
                 let value = u8::strict_decode(d)?;
                 match Self::from_u8(value) {
                     Some(result) => Ok(result),
@@ -384,9 +412,9 @@ pub mod strategies {
         #[inline]
         fn from(e: bitcoin::consensus::encode::Error) -> Self {
             Error::Io(if let bitcoin::consensus::encode::Error::Io(io_err) = e {
-                io_err
+                io_err.kind()
             } else {
-                io::Error::new(io::ErrorKind::Other, "")
+                io::ErrorKind::Other
             })
         }
     }
@@ -428,6 +456,24 @@ mod number_little_endian {
     }
     impl Strategy for i64 {
         type Strategy = strategies::BitcoinConsensus;
+    }
+
+    impl StrictEncode for bool {
+        type Error = Error;
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            (*self as u8).strict_encode(&mut e)
+        }
+    }
+
+    impl StrictDecode for bool {
+        type Error = Error;
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            match u8::strict_decode(&mut d)? {
+                0 => Ok(false),
+                1 => Ok(true),
+                v => Err(Error::ValueOutOfRange("boolean", 0..1, v as u128)),
+            }
+        }
     }
 
     impl StrictEncode for usize {

@@ -16,6 +16,7 @@ use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 use super::{Ancestors, Assignments, AssignmentsVariant, AutoConceal};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
+use crate::paradigms::client_side_validation::CommitEncode;
 use crate::rgb::schema::AssignmentsType;
 use crate::rgb::{schema, seal, Metadata, SchemaId, SimplicityScript};
 
@@ -114,7 +115,7 @@ impl AutoConceal for &mut dyn Node {
 #[derive(Clone, Debug)]
 pub struct Genesis {
     schema_id: SchemaId,
-    network: bp::Network,
+    network: bp::Chains,
     metadata: Metadata,
     assignments: Assignments,
     script: SimplicityScript,
@@ -127,10 +128,6 @@ pub struct Transition {
     ancestors: Ancestors,
     assignments: Assignments,
     script: SimplicityScript,
-}
-
-impl CommitEncodeWithStrategy for Genesis {
-    type Strategy = commit_strategy::UsingStrict;
 }
 
 impl ConsensusCommit for Genesis {
@@ -226,7 +223,7 @@ impl Node for Transition {
 impl Genesis {
     pub fn with(
         schema_id: SchemaId,
-        network: bp::Network,
+        network: bp::Chains,
         metadata: Metadata,
         assignments: Assignments,
         script: SimplicityScript,
@@ -253,8 +250,8 @@ impl Genesis {
 
     #[inline]
     #[allow(dead_code)]
-    pub fn network(&self) -> bp::Network {
-        self.network
+    pub fn network(&self) -> &bp::Chains {
+        &self.network
     }
 }
 
@@ -289,6 +286,25 @@ mod strict_encoding {
         type Strategy = strategies::HashFixedBytes;
     }
 
+    // ![CONSENSUS-CRITICAL]: Commit encode is different for genesis from strict
+    //                        encode since we only commit to chain genesis block
+    //                        hash and not all chain parameters.
+    // See <https://github.com/LNP-BP/LNPBPs/issues/58> for details.
+    impl CommitEncode for Genesis {
+        fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
+            let mut encoder = || -> Result<_, Error> {
+                let mut len = self.schema_id.strict_encode(&mut e)?;
+                len += self.network.as_genesis_hash().strict_encode(&mut e)?;
+                Ok(strict_encode_list!(e; len;
+                    self.metadata,
+                    self.assignments,
+                    self.script
+                ))
+            };
+            encoder().expect("Strict encoding of genesis data must not fail")
+        }
+    }
+
     impl StrictEncode for Genesis {
         type Error = Error;
 
@@ -308,7 +324,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             Ok(Self {
                 schema_id: SchemaId::strict_decode(&mut d)?,
-                network: bp::Network::strict_decode(&mut d)?,
+                network: bp::Chains::strict_decode(&mut d)?,
                 metadata: Metadata::strict_decode(&mut d)?,
                 assignments: Assignments::strict_decode(&mut d)?,
                 script: SimplicityScript::strict_decode(&mut d)?,
@@ -340,6 +356,44 @@ mod strict_encoding {
                 assignments: Assignments::strict_decode(&mut d)?,
                 script: SimplicityScript::strict_decode(&mut d)?,
             })
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use crate::bp::chain::{Chains, GENESIS_HASH_MAINNET};
+        use crate::commit_verify::CommitVerify;
+        use crate::strict_encoding::strict_encode;
+        use std::io::Write;
+
+        // Making sure that <https://github.com/LNP-BP/LNPBPs/issues/58>
+        // is fulfilled and we do not occasionally commit to all chain
+        // parameters (which may vary and change with time) in RGB contract id
+        #[test]
+        fn test_genesis_commit_ne_strict() {
+            let genesis = Genesis {
+                schema_id: Default::default(),
+                network: Chains::Mainnet,
+                metadata: Default::default(),
+                assignments: Default::default(),
+                script: vec![],
+            };
+            assert_ne!(
+                strict_encode(&genesis).unwrap(),
+                genesis.clone().consensus_commit().to_vec()
+            );
+
+            let mut encoder = io::Cursor::new(vec![]);
+            genesis.schema_id.strict_encode(&mut encoder).unwrap();
+            encoder.write_all(GENESIS_HASH_MAINNET).unwrap();
+            genesis.metadata.strict_encode(&mut encoder).unwrap();
+            genesis.assignments.strict_encode(&mut encoder).unwrap();
+            genesis.script.strict_encode(&mut encoder).unwrap();
+            assert_eq!(
+                genesis.consensus_commit(),
+                NodeId::commit(&encoder.into_inner())
+            );
         }
     }
 }

@@ -150,7 +150,7 @@ mod strict_encoding {
     use core::fmt::Debug;
     use core::ops::{Add, Bound, RangeBounds, RangeInclusive, Sub};
     use num_derive::{FromPrimitive, ToPrimitive};
-    use num_traits::{Bounded, FromPrimitive, ToPrimitive};
+    use num_traits::{Bounded, ToPrimitive};
 
     impl StrictEncode for StateSchema {
         type Error = Error;
