@@ -80,9 +80,18 @@ pub fn encrypt(
         buf.extend_from_slice(&hash[..even - buf.len()])
     }
 
+    // For a zero-length messages we encrypt the hash of the unblinding key, so
+    // the message content (empty) still can't be guessed
+    if buf.is_empty() {
+        let unblinding_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, blinding_key);
+        let hash = sha256::Hash::hash(&unblinding_key.serialize());
+        buf.extend_from_slice(&hash[..30])
+    }
+
     // Encrypt message, chunk by chunk
     let mut buf = &buf[..];
     let mut acc = vec![];
+
     while buf.len() > 0 {
         let chunk30 = &buf[..30];
         let mut chunk33 = [0u8; 33];
@@ -133,6 +142,8 @@ pub fn decrypt(
 
     // Decrypt message chunk by chunk
     let mut acc = vec![];
+
+    let orig_len = encrypted.len();
     while encrypted.len() > 0 {
         // Here we automatically negate the key extracted from the message:
         // it is created with 0x2 first byte and restored with 0x2 byte, then
@@ -144,8 +155,13 @@ pub fn decrypt(
         let unencrypted = pubkey.combine(&encryption_key)?;
         // Remove random tail from the data
         let chunk30 = &unencrypted.serialize()[1..31];
-        acc.push(chunk30.to_vec());
-        encrypted = &encrypted[32..];
+
+        // If the original message was empty, it will be represented by an
+        // encrypted hash of the unblinding key:
+        if orig_len != 32 || chunk30 != &sha256::Hash::hash(&unblinding_key.serialize())[..30] {
+            acc.push(chunk30.to_vec());
+            encrypted = &encrypted[32..];
+        }
     }
 
     // Destroy decryption key
@@ -158,15 +174,24 @@ pub fn decrypt(
 mod test {
     use super::*;
     use secp256k1::rand::{thread_rng, RngCore};
+    use secp256k1zkp::rand::Rng;
 
     fn run_test_text(msg1: &str) {
         let source = msg1.as_bytes();
-        let decrypted = run_test_bin(source);
+        let (_, decrypted, ..) = run_test_bin(source);
         let msg2 = String::from_utf8(decrypted).unwrap();
         assert_eq!(msg1, msg2);
     }
 
-    fn run_test_bin(source: &[u8]) -> Vec<u8> {
+    fn run_test_bin(
+        source: &[u8],
+    ) -> (
+        Vec<u8>,
+        Vec<u8>,
+        secp256k1::PublicKey,
+        secp256k1::SecretKey,
+        secp256k1::PublicKey,
+    ) {
         let len = source.len();
         let mut entropy = [0u8; 32];
 
@@ -178,6 +203,7 @@ mod test {
 
         thread_rng().fill_bytes(&mut entropy);
         let mut blinding_key = secp256k1::SecretKey::from_slice(&entropy).unwrap();
+        let blinding_key_copy = blinding_key.clone();
         let unblinding_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &blinding_key);
         // Checking that we have a random key
         assert_ne!(blinding_key[..], secp256k1::key::ONE_KEY[..]);
@@ -191,19 +217,28 @@ mod test {
         );
 
         let encrypted = encrypt(source, encryption_key, &mut blinding_key).unwrap();
-        // Checking that we have wiped out our blinding key
-        assert_ne!(source[..], encrypted[..len]);
+        if len > 30 {
+            // Checking that we have wiped out our blinding key
+            assert_ne!(source[..], encrypted[..len]);
+        }
         assert_eq!(blinding_key[..], secp256k1::key::ONE_KEY[..]);
-        assert_eq!(encrypted.len(), (len / 30 + 1) * 32);
+        let no_chunks = if len == 0 { 1 } else { (len - 1) / 30 + 1 };
+        assert_eq!(encrypted.len(), no_chunks * 32);
 
         let decrypted = decrypt(&encrypted, &mut decryption_key, unblinding_key).unwrap();
         let result = &decrypted[..];
         // Checking that we have wiped out our decryption key
         assert_eq!(decryption_key[..], secp256k1::key::ONE_KEY[..]);
-        assert_eq!(decrypted.len(), (len / 30 + 1) * 30);
+        assert_eq!(decrypted.len(), no_chunks * 30);
         assert_eq!(result[..len], source[..]);
 
-        decrypted[..len].to_vec()
+        (
+            encrypted,
+            decrypted[..len].to_vec(),
+            encryption_key,
+            blinding_key_copy,
+            unblinding_key,
+        )
     }
 
     #[test]
@@ -214,33 +249,52 @@ mod test {
     #[test]
     fn test_text_long() {
         run_test_text(
-            "Yes, there is a elliptic curve based public key encryption
-                        Let 𝑎 be A's private key and 𝛼=𝑎𝐺 be his public key. 
-                        B who wants to send an encrypted message to A, does the 
-                        following :
-                        
-                        B chooses a random number 𝑟, 1≤𝑟≤𝑛−1 and computes 𝑟𝐺
-                        B then computes 𝑀+𝑟𝛼. Here the message 𝑀 (a binary string) 
-                        has been represented as a point in ⟨𝐺⟩
-                        B sends the encrypted text pair ⟨𝑟𝐺,𝑀+𝑟𝛼⟩ to A
-                        On receiving this encrypted text A decrypts in the 
-                        following manner
-                        
-                        A extracts 𝑟𝐺 and computes 𝑎⋅(𝑟𝐺)=𝑟⋅(𝑎𝐺)=𝑟𝛼
-                        A extracts the second part of the pair 𝑀+𝑟𝛼 and subtracts 
-                        out 𝑟𝛼 to obtain 𝑀+𝑟𝛼−𝑟𝛼=𝑀
-                        There is a drawback in this as block of plaintext has to 
-                        be converted to a point before being encrypted, denoted 
-                        by 𝑀 above. After the decryption it has to be 
-                        re-converted to plain text.",
+            "Let 𝑎 be A's private key and 𝛼=𝑎𝐺 be his public key. 
+            B who wants to send an encrypted message to A, does the 
+            following:
+            
+            B chooses a random number 𝑟, 1≤𝑟≤𝑛−1 and computes 𝑟𝐺
+            B then computes 𝑀+𝑟𝛼. Here the message 𝑀 (a binary string) 
+            has been represented as a point in ⟨𝐺⟩
+            B sends the encrypted text pair ⟨𝑟𝐺,𝑀+𝑟𝛼⟩ to A
+            On receiving this encrypted text A decrypts in the 
+            following manner
+            
+            A extracts 𝑟𝐺 and computes 𝑎⋅(𝑟𝐺)=𝑟⋅(𝑎𝐺)=𝑟𝛼
+            A extracts the second part of the pair 𝑀+𝑟𝛼 and subtracts 
+            out 𝑟𝛼 to obtain 𝑀+𝑟𝛼−𝑟𝛼=𝑀
+            There is a drawback in this as block of plaintext has to 
+            be converted to a point before being encrypted, denoted 
+            by 𝑀 above. After the decryption it has to be 
+            re-converted to plain text.",
         );
     }
 
     #[test]
+    fn test_zero_length() {
+        let (encrypted, _, encryption_key, mut blinding_key, unblinding_key) = run_test_bin(b"");
+        let hash = sha256::Hash::hash(&unblinding_key.serialize());
+        let encrypted_hash = encrypt(&hash[..30], encryption_key, &mut blinding_key).unwrap();
+        assert_eq!(encrypted, encrypted_hash);
+    }
+
+    #[test]
+    fn test_exhaustive_small_lengths() {
+        for byte in 0..u8::MAX {
+            for len in 1..66 {
+                run_test_bin(&vec![byte; len as usize]);
+            }
+        }
+    }
+
+    #[test]
     fn test_text_rand() {
-        let mut entropy = [0u8; 24345];
-        thread_rng().fill_bytes(&mut entropy);
-        run_test_bin(&entropy);
+        for _ in 1..10 {
+            let len = thread_rng().gen_range(2, u16::MAX);
+            let mut entropy = vec![0u8; len as usize];
+            thread_rng().fill_bytes(&mut entropy);
+            run_test_bin(&entropy);
+        }
     }
 
     #[test]
