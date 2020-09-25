@@ -19,6 +19,7 @@ use bitcoin::{secp256k1, util::bip32, BlockHash, OutPoint, Script, Txid, XpubIde
 
 use super::{blind::OutpointHash, blind::OutpointReveal, ShortId};
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
+use bitcoin::util::bip32::KeyApplications;
 
 impl strict_encoding::Strategy for Txid {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
@@ -354,12 +355,13 @@ impl StrictDecode for bip32::ExtendedPubKey {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use std::{convert::TryFrom, fmt::Debug, str::FromStr};
+    use std::{convert::TryFrom, str::FromStr};
 
     use bitcoin::{hashes::hex::FromHex, secp256k1::Message, BlockHash};
 
     use super::*;
     use crate::bp::{short_id::Descriptor, BlockChecksum, TxChecksum};
+    use crate::strict_encoding::test::test_suite;
 
     pub(crate) fn encode_decode<T: StrictEncode + StrictDecode>(
         object: &T,
@@ -368,23 +370,6 @@ pub(crate) mod test {
         let written = object.strict_encode(&mut encoded_object).unwrap();
         let decoded_object = T::strict_decode(&encoded_object[..]).unwrap();
         Ok((decoded_object, written))
-    }
-
-    pub(crate) fn test_suite<T: StrictEncode + StrictDecode + PartialEq + Debug>(
-        object: &T,
-        test_vec: &[u8],
-        test_size: usize,
-    ) -> Result<T, Error> {
-        let mut encoded_object: Vec<u8> = vec![];
-        let write_1 = object.strict_encode(&mut encoded_object).unwrap();
-        let decoded_object = T::strict_decode(&encoded_object[..]).unwrap();
-        assert_eq!(write_1, test_size);
-        assert_eq!(decoded_object, *object);
-        encoded_object.clear();
-        let write_2 = decoded_object.strict_encode(&mut encoded_object).unwrap();
-        assert_eq!(encoded_object, test_vec);
-        assert_eq!(write_2, test_size);
-        Ok(decoded_object)
     }
 
     #[test]
@@ -399,10 +384,10 @@ pub(crate) mod test {
         let regtest = bitcoin::Network::strict_decode(regtest_bytes).unwrap();
         let signet = bitcoin::Network::strict_decode(signet_bytes).unwrap();
 
-        assert!(test_suite(&mainnet, &mainnet_bytes, 4).is_ok());
-        assert!(test_suite(&testnet, &testnet_bytes, 4).is_ok());
-        assert!(test_suite(&regtest, &regtest_bytes, 4).is_ok());
-        assert!(test_suite(&signet, &signet_bytes, 4).is_ok());
+        test_suite(&mainnet, &mainnet_bytes, 4);
+        test_suite(&testnet, &testnet_bytes, 4);
+        test_suite(&regtest, &regtest_bytes, 4);
+        test_suite(&signet, &signet_bytes, 4);
     }
 
     #[test]
@@ -443,10 +428,10 @@ pub(crate) mod test {
         let pubkey_04 = bitcoin::PublicKey::strict_decode(&PK_BYTES_04[..]).unwrap();
         let pubkey_onekey = bitcoin::PublicKey::strict_decode(&PK_BYTES_ONEKEY[..]).unwrap();
 
-        assert!(test_suite(&pubkey_02, &PK_BYTES_02, 33).is_ok());
-        assert!(test_suite(&pubkey_03, &PK_BYTES_03, 33).is_ok());
-        assert!(test_suite(&pubkey_04, &PK_BYTES_04, 65).is_ok());
-        assert!(test_suite(&pubkey_onekey, &PK_BYTES_ONEKEY, 33).is_ok());
+        test_suite(&pubkey_02, &PK_BYTES_02, 33);
+        test_suite(&pubkey_03, &PK_BYTES_03, 33);
+        test_suite(&pubkey_04, &PK_BYTES_04, 65);
+        test_suite(&pubkey_onekey, &PK_BYTES_ONEKEY, 33);
     }
 
     #[test]
@@ -496,7 +481,7 @@ pub(crate) mod test {
         let msg = Message::from_slice(&[1u8; 32]).unwrap();
 
         let sig = s.sign(&msg, &privkey);
-        let decoded_sig = test_suite(&sig, &SIG_BYTES, 64).unwrap();
+        let decoded_sig = test_suite(&sig, &SIG_BYTES, 64);
 
         assert!(s.verify(&msg, &decoded_sig, &pubkey).is_ok());
     }
@@ -512,6 +497,15 @@ pub(crate) mod test {
             0x82,
         ];
         secp256k1::Signature::strict_decode(&SIG_BYTES[..]).unwrap();
+    }
+
+    #[test]
+    fn test_encoding_keyapplications() {
+        test_suite(&KeyApplications::Legacy, &[0], 1);
+        test_suite(&KeyApplications::SegWitLegacySinglesig, &[1], 1);
+        test_suite(&KeyApplications::SegWitLegacyMultisig, &[2], 1);
+        test_suite(&KeyApplications::SegWitV0Singlesig, &[3], 1);
+        test_suite(&KeyApplications::SegWitV0Miltisig, &[4], 1);
     }
 
     #[test]
@@ -545,7 +539,7 @@ pub(crate) mod test {
         let short_id = ShortId::try_from(des).unwrap();
         // TOD0: descriptor validity fails
         //short_id.get_descriptor().try_validity().unwrap();
-        assert!(test_suite(&short_id, &SHORT_ONCHAINBLOCK, 8).is_ok());
+        test_suite(&short_id, &SHORT_ONCHAINBLOCK, 8);
 
         // test ShortId for OnchainTransaction
         let des = Descriptor::OnchainTransaction {
@@ -554,7 +548,7 @@ pub(crate) mod test {
             tx_index: tx_index,
         };
         let short_id = ShortId::try_from(des).unwrap();
-        assert!(test_suite(&short_id, &SHORT_ONCHAINTX, 8).is_ok());
+        test_suite(&short_id, &SHORT_ONCHAINTX, 8);
 
         // test ShortId for OnchainTxInput
         let des = Descriptor::OnchainTxInput {
@@ -564,7 +558,7 @@ pub(crate) mod test {
             input_index: input_index,
         };
         let short_id = ShortId::try_from(des).unwrap();
-        assert!(test_suite(&short_id, &SHORT_ONCHAINTXINPUT, 8).is_ok());
+        test_suite(&short_id, &SHORT_ONCHAINTXINPUT, 8);
 
         // test ShortId for OnchainTxOutput
         let des = Descriptor::OnchainTxOutput {
@@ -574,14 +568,14 @@ pub(crate) mod test {
             output_index: output_index,
         };
         let short_id = ShortId::try_from(des).unwrap();
-        assert!(test_suite(&short_id, &SHORT_ONCHAINTXOUT, 8).is_ok());
+        test_suite(&short_id, &SHORT_ONCHAINTXOUT, 8);
 
         // test ShortId for OffchainTransaction
         let des = Descriptor::OffchainTransaction {
             tx_checksum: tx_checksum,
         };
         let short_id = ShortId::try_from(des).unwrap();
-        assert!(test_suite(&short_id, &SHORT_OFFCHAINTX, 8).is_ok());
+        test_suite(&short_id, &SHORT_OFFCHAINTX, 8);
 
         // test ShortId for OffchainTxInput
         let des = Descriptor::OffchainTxInput {
@@ -589,7 +583,7 @@ pub(crate) mod test {
             input_index: input_index,
         };
         let short_id = ShortId::try_from(des).unwrap();
-        assert!(test_suite(&short_id, &SHORT_OFFCHAINTXIN, 8).is_ok());
+        test_suite(&short_id, &SHORT_OFFCHAINTXIN, 8);
 
         // test ShortId for OffchainTxOutput
         let des = Descriptor::OffchainTxOutput {
@@ -597,7 +591,7 @@ pub(crate) mod test {
             output_index: output_index,
         };
         let short_id = ShortId::try_from(des).unwrap();
-        assert!(test_suite(&short_id, &SHORT_OFFCHAINTXOUT, 8).is_ok());
+        test_suite(&short_id, &SHORT_OFFCHAINTXOUT, 8);
     }
 
     #[test]
@@ -620,9 +614,9 @@ pub(crate) mod test {
 
         // test random and null outpoints
         let outpoint = OutPoint::new(txid, vout);
-        let decoded_outpoint = test_suite(&outpoint, &OUTPOINT, 36).unwrap();
+        let decoded_outpoint = test_suite(&outpoint, &OUTPOINT, 36);
         let null = OutPoint::null();
-        let decoded_null = test_suite(&null, &OUTPOINT_NULL, 36).unwrap();
+        let decoded_null = test_suite(&null, &OUTPOINT_NULL, 36);
 
         // test random and null rvealed outpoints
         // test_suite cannot be used here because blinding factor is random.
@@ -678,10 +672,10 @@ pub(crate) mod test {
         ];
 
         let ext_pubkey1 = bip32::ExtendedPubKey::from_str("xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8").unwrap();
-        assert!(test_suite(&ext_pubkey1, &EXT_PUBKEY1, 78).is_ok());
+        test_suite(&ext_pubkey1, &EXT_PUBKEY1, 78);
 
         let ext_pubkey2 = bip32::ExtendedPubKey::from_str("xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5").unwrap();
-        assert!(test_suite(&ext_pubkey2, &EXT_PUBKEY2, 78).is_ok());
+        test_suite(&ext_pubkey2, &EXT_PUBKEY2, 78);
     }
 
     #[test]
@@ -717,32 +711,32 @@ pub(crate) mod test {
 
         // OP_RETURN
         let op_return = Script::strict_decode(&OP_RETURN[..]).unwrap();
-        let decode_opreturn = test_suite(&op_return, &OP_RETURN, 40).unwrap();
+        let decode_opreturn = test_suite(&op_return, &OP_RETURN, 40);
         assert!(decode_opreturn.is_op_return());
 
         // P2PK
         let p2pk = Script::strict_decode(&P2PK[..]).unwrap();
-        let decode_p2pk = test_suite(&p2pk, &P2PK, 37).unwrap();
+        let decode_p2pk = test_suite(&p2pk, &P2PK, 37);
         assert!(decode_p2pk.is_p2pk());
 
         //P2PKH
         let p2pkh = Script::strict_decode(&P2PKH[..]).unwrap();
-        let decode_p2pkh = test_suite(&p2pkh, &P2PKH, 27).unwrap();
+        let decode_p2pkh = test_suite(&p2pkh, &P2PKH, 27);
         assert!(decode_p2pkh.is_p2pkh());
 
         //P2SH
         let p2sh = Script::strict_decode(&P2SH[..]).unwrap();
-        let decode_p2sh = test_suite(&p2sh, &P2SH, 25).unwrap();
+        let decode_p2sh = test_suite(&p2sh, &P2SH, 25);
         assert!(decode_p2sh.is_p2sh());
 
         //P2WPKH
         let p2wpkh = Script::strict_decode(&P2WPKH[..]).unwrap();
-        let decode_p2wpkh = test_suite(&p2wpkh, &P2WPKH, 24).unwrap();
+        let decode_p2wpkh = test_suite(&p2wpkh, &P2WPKH, 24);
         assert!(decode_p2wpkh.is_v0_p2wpkh());
 
         //P2WSH
         let p2wsh = Script::strict_decode(&P2WSH[..]).unwrap();
-        let decoded_p2wsh = test_suite(&p2wsh, &P2WSH, 36).unwrap();
+        let decoded_p2wsh = test_suite(&p2wsh, &P2WSH, 36);
         assert!(decoded_p2wsh.is_v0_p2wsh());
     }
 }

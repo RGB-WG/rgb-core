@@ -230,11 +230,11 @@ mod strict_encoding {
 
 #[cfg(test)]
 mod test {
-    use super::super::testutils::*;
     use super::*;
     use crate::amplify::Wrapper;
-    use crate::paradigms::client_side_validation::{merklize, CommitEncode, Conceal, MerkleNode};
-    use crate::paradigms::strict_encoding::{StrictDecode, StrictEncode};
+    use crate::client_side_validation::{merklize, CommitEncode, Conceal, MerkleNode};
+    use crate::strict_encoding::test::*;
+    use crate::strict_encoding::{StrictDecode, StrictEncode};
     use bitcoin_hashes::Hash;
     use secp256k1zkp::rand::{thread_rng, RngCore};
 
