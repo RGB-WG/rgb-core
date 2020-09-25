@@ -159,6 +159,33 @@ impl StrictDecode for bitcoin::Network {
     }
 }
 
+impl StrictEncode for KeyApplications {
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        match self {
+            KeyApplications::Legacy => 0u8.strict_encode(e),
+            KeyApplications::SegWitLegacySinglesig => 1u8.strict_encode(e),
+            KeyApplications::SegWitLegacyMultisig => 2u8.strict_encode(e),
+            KeyApplications::SegWitV0Singlesig => 3u8.strict_encode(e),
+            KeyApplications::SegWitV0Miltisig => 4u8.strict_encode(e),
+        }
+    }
+}
+
+impl StrictDecode for KeyApplications {
+    #[inline]
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        Ok(match u8::strict_decode(d)? {
+            0 => Self::Legacy,
+            1 => Self::SegWitLegacySinglesig,
+            2 => Self::SegWitLegacyMultisig,
+            3 => Self::SegWitV0Singlesig,
+            4 => Self::SegWitV0Miltisig,
+            x => Err(Error::EnumValueNotKnown("KeyApplications".to_string(), x))?,
+        })
+    }
+}
+
 impl StrictEncode for ShortId {
     #[inline]
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
