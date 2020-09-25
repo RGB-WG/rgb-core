@@ -102,16 +102,6 @@ pub trait Node {
     }
 }
 
-impl AutoConceal for &mut dyn Node {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
-        let mut count = 0;
-        for (_, assignment) in self.assignments_mut() {
-            count += assignment.conceal_except(seals);
-        }
-        count
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Genesis {
     schema_id: SchemaId,
@@ -140,6 +130,26 @@ impl CommitEncodeWithStrategy for Transition {
 
 impl ConsensusCommit for Transition {
     type Commitment = NodeId;
+}
+
+impl AutoConceal for Genesis {
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        let mut count = 0;
+        for (_, assignment) in self.assignments_mut() {
+            count += assignment.conceal_except(seals);
+        }
+        count
+    }
+}
+
+impl AutoConceal for Transition {
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        let mut count = 0;
+        for (_, assignment) in self.assignments_mut() {
+            count += assignment.conceal_except(seals);
+        }
+        count
+    }
 }
 
 impl Node for Genesis {
@@ -1192,7 +1202,7 @@ mod test {
 
     #[test]
     fn test_autoconceal_node() {
-        let genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
+        let mut genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
 
         let concealed = genesis.conceal_all();
     }
