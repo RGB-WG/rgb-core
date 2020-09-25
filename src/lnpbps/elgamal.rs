@@ -19,7 +19,7 @@ use bitcoin::secp256k1;
 
 use crate::SECP256K1;
 
-#[derive(Clone, Debug, Display, Error, From)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error, From)]
 #[display_from(Debug)]
 pub enum Error {
     /// Encrypted message length is incorrect: it must be proportional to
@@ -67,9 +67,7 @@ pub fn encrypt(
     // Compute hash of the encryption key, which will be used later as an
     // entropy for both data padding and deterministic bidirectional message
     // chunk-to-elliptic point mapping function
-    let mut engine = sha256::Hash::engine();
-    engine.input(&encryption_key.serialize());
-    let mut hash = sha256::Hash::from_engine(engine);
+    let mut hash = sha256::Hash::hash(&encryption_key.serialize());
 
     // Tweaking the encryption key with the blinding factor
     encryption_key.add_exp_assign(&SECP256K1, &blinding_key[..])?;
@@ -243,5 +241,39 @@ mod test {
         let mut entropy = [0u8; 24345];
         thread_rng().fill_bytes(&mut entropy);
         run_test_bin(&entropy);
+    }
+
+    #[test]
+    // CASE 1: If we encrypt the decryption key, we must fail due to the
+    //         point-at-infinity overflow. However it can't be done since
+    //         the discrete logarithm problem: we are adding entrtopy
+    //         produced by hashing corresponding encryption public key, so
+    //         we should be unable to guess a decryption secret key that is
+    //         an inverse of itself
+    fn test_forged_message_attack() {
+        let mut entropy = [0u8; 32];
+        thread_rng().fill_bytes(&mut entropy);
+        let decryption_key = secp256k1::SecretKey::from_slice(&entropy).unwrap();
+        let encryption_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &decryption_key);
+
+        let mut blinding_key = secp256k1::key::ONE_KEY;
+        encrypt(&decryption_key[1..], encryption_key, &mut blinding_key).unwrap();
+    }
+
+    #[test]
+    // CASE 2: If we use blinding key which is a negation of the decryption
+    //         key we must fail due to the point-at-infinity overflow
+    fn test_forged_blinding_key() {
+        let mut entropy = [0u8; 32];
+        thread_rng().fill_bytes(&mut entropy);
+        let decryption_key = secp256k1::SecretKey::from_slice(&entropy).unwrap();
+        let encryption_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &decryption_key);
+
+        let mut blinding_key = decryption_key.clone();
+        blinding_key.negate_assign();
+        assert_eq!(
+            encrypt(b"message", encryption_key, &mut blinding_key).unwrap_err(),
+            Error::GroupOverflow
+        );
     }
 }
