@@ -34,7 +34,9 @@ pub mod commit_strategy {
     // Defining strategies:
     pub struct UsingStrict;
     pub struct UsingConceal;
-    pub struct FixedBytes;
+    pub struct UsingHash<H>(std::marker::PhantomData<H>)
+    where
+        H: Hash + strict_encoding::StrictEncode;
     pub struct Merklization;
 
     impl<T> CommitEncode for amplify::Holder<T, UsingStrict>
@@ -56,6 +58,25 @@ pub mod commit_strategy {
     {
         fn commit_encode<E: io::Write>(self, e: E) -> usize {
             self.into_inner().conceal().commit_encode(e)
+        }
+    }
+
+    impl<T, H> CommitEncode for amplify::Holder<T, UsingHash<H>>
+    where
+        H: Hash + strict_encoding::StrictEncode,
+        T: strict_encoding::StrictEncode,
+    {
+        fn commit_encode<E: io::Write>(self, e: E) -> usize {
+            let mut engine = H::engine();
+            engine
+                .input(&strict_encoding::strict_encode(&self.into_inner()).expect(
+                    "Strict encoding of hash strategy-based commitment data must not fail",
+                ));
+            let hash = H::from_engine(engine);
+            hash.strict_encode(e).expect(
+                "Strict encoding must not fail for types implementing \
+                      ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
+            )
         }
     }
 
@@ -345,7 +366,7 @@ pub mod test {
     use super::*;
     use strict_encoding::{StrictDecode, StrictEncode};
 
-    pub fn test_confidential<T>(data: &[u8], commitment: &[u8])
+    pub fn test_confidential<T>(data: &[u8], encoded: &[u8], commitment: &[u8])
     where
         T: Conceal + StrictDecode + StrictEncode + Clone + CommitEncode,
         <T as Conceal>::Confidential: StrictDecode + StrictEncode + Eq,
@@ -367,7 +388,7 @@ pub mod test {
         revealed.strict_encode(&mut revealed_encoded).unwrap();
 
         // Assert encoded Confidential matches precomputed vector
-        assert_eq!(commitment, confidential_encoded);
+        assert_eq!(encoded, confidential_encoded);
 
         // Assert encoded Confidential and Revealed are not equal
         assert_ne!(confidential_encoded.to_vec(), revealed_encoded);
@@ -376,8 +397,13 @@ pub mod test {
         let mut commit_encoded_revealed = vec![];
         revealed.clone().commit_encode(&mut commit_encoded_revealed);
 
-        // Assert commit_encode and encoded Confidential matches
-        assert_eq!(commit_encoded_revealed, confidential_encoded);
+        if encoded == commitment {
+            // Assert commit_encode and encoded Confidential matches
+            assert_eq!(commit_encoded_revealed, confidential_encoded);
+        } else {
+            // Assert commit_encode and encoded Confidential does not match
+            assert_ne!(commit_encoded_revealed, confidential_encoded);
+        }
 
         // Assert commit_encode and precomputed Confidential matches
         assert_eq!(commit_encoded_revealed, commitment);
@@ -389,7 +415,7 @@ pub mod test {
         ($(($revealed:ident, $conf:ident, $T:ty)),*) => (
             {
                 $(
-                    test_confidential::<$T>(&$revealed[..], &$conf[..]);
+                    test_confidential::<$T>(&$revealed[..], &$conf[..], &$conf[..]);
                 )*
             }
         );
