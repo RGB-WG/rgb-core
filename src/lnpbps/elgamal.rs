@@ -30,12 +30,36 @@ pub enum Error {
     /// a message encrypted with the current ElGamal algorithm
     InvalidEncryptedMessage,
 
-    /// Secp256k1 operation error (has negligible probability)
-    #[derive_from]
-    Secp256k1(secp256k1::Error),
+    /// Elliptic curve operation lead to an overflow (i.e. for instance a
+    /// public key tweak can't be applied, resulting in a point at infinity)
+    GroupOverflow,
+
+    /// Run out of memory during encryption/decryption process
+    NotEnoughMemory,
+
+    /// Secp256k1 library returned an unexpected error type, implying that the
+    /// library code was changed in an incompatible way or broken and
+    /// needs devs attention
+    Secp256k1Broken,
 }
 
-pub fn encrypt_elgamal(
+impl From<secp256k1::Error> for Error {
+    fn from(err: secp256k1::Error) -> Self {
+        match err {
+            secp256k1::Error::InvalidTweak => Error::GroupOverflow,
+
+            secp256k1::Error::NotEnoughMemory => Error::NotEnoughMemory,
+
+            // All other error types can't happen produced with the way we use
+            // Secp256k1 library for ElGamal encryption, implying that the
+            // library code was changed in an incompatible way or broken and
+            // needs devs attention
+            _ => Error::Secp256k1Broken,
+        }
+    }
+}
+
+pub fn encrypt(
     message: &[u8],
     mut encryption_key: secp256k1::PublicKey,
     blinding_key: &mut secp256k1::SecretKey,
@@ -96,7 +120,7 @@ pub fn encrypt_elgamal(
     Ok(acc.concat())
 }
 
-pub fn decrypt_elgamal(
+pub fn decrypt(
     mut encrypted: &[u8],
     decryption_key: &mut secp256k1::SecretKey,
     mut unblinding_key: secp256k1::PublicKey,
@@ -168,13 +192,13 @@ mod test {
             uk.add_exp_assign(&SECP256K1, &decryption_key[..])
         );
 
-        let encrypted = encrypt_elgamal(source, encryption_key, &mut blinding_key).unwrap();
+        let encrypted = encrypt(source, encryption_key, &mut blinding_key).unwrap();
         // Checking that we have wiped out our blinding key
         assert_ne!(source[..], encrypted[..len]);
         assert_eq!(blinding_key[..], secp256k1::key::ONE_KEY[..]);
         assert_eq!(encrypted.len(), (len / 30 + 1) * 32);
 
-        let decrypted = decrypt_elgamal(&encrypted, &mut decryption_key, unblinding_key).unwrap();
+        let decrypted = decrypt(&encrypted, &mut decryption_key, unblinding_key).unwrap();
         let result = &decrypted[..];
         // Checking that we have wiped out our decryption key
         assert_eq!(decryption_key[..], secp256k1::key::ONE_KEY[..]);
