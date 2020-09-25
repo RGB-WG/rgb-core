@@ -442,9 +442,9 @@ mod serde_impl {
 
 #[cfg(test)]
 mod test {
-    use super::super::testutils::*;
     use super::*;
-    use crate::strict_encoding::{StrictDecode, StrictEncode};
+    use crate::client_side_validation::test::*;
+    use crate::strict_encoding::{test::*, StrictDecode, StrictEncode};
 
     static AMOUNT_65: [u8; 43] = [
         0x3, 0x41, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0xa6, 0x2b, 0x27, 0xae, 0x5a, 0xf,
@@ -521,7 +521,7 @@ mod test {
         test_encode!((CONFIDENTIAL_AMOUNT, Confidential));
 
         // Test commitment
-        assert!(test_confidential::<Revealed>(&AMOUNT_65, &CONFIDENTIAL_AMOUNT).is_ok());
+        test_confidential::<Revealed>(&AMOUNT_65, &CONFIDENTIAL_AMOUNT);
 
         // Test comparison
         let revealed_64 = Revealed::strict_decode(&AMOUNT_64[..]).unwrap();

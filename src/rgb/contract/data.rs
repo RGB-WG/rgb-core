@@ -291,9 +291,10 @@ pub(super) mod strict_encoding {
 
 #[cfg(test)]
 mod test {
-    use super::super::testutils::*;
     use super::*;
-    use crate::paradigms::strict_encoding::StrictDecode;
+    use crate::client_side_validation::test::test_confidential;
+    use crate::strict_encoding::test::*;
+    use crate::strict_encoding::StrictDecode;
 
     // Hard coded test vectors
     static U_8: [u8; 2] = [0x0, 0x8];

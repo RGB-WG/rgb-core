@@ -11,10 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#[macro_use]
-#[allow(dead_code)]
-#[allow(unused_macros)]
-pub(crate) mod testutils;
 pub mod amount;
 mod assignments;
 pub mod data;

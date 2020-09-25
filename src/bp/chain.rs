@@ -851,7 +851,7 @@ mod test {
     use num_traits::{FromPrimitive, ToPrimitive};
 
     use super::*;
-    use crate::bp::strict_encoding::test::test_suite;
+    use crate::strict_encoding::test::test_suite;
 
     #[test]
     fn test_p2p_magic_number_byteorder() {
@@ -880,11 +880,11 @@ mod test {
         let bp_other = P2pNetworkId::strict_decode(&random_bytes[..]).unwrap();
         assert_eq!(bp_other, other);
 
-        assert!(test_suite(&bp_mainnet, &mainnet_bytes, 4).is_ok());
-        assert!(test_suite(&bp_testnet, &testnet_bytes, 4).is_ok());
-        assert!(test_suite(&bp_regtest, &regtest_bytes, 4).is_ok());
-        assert!(test_suite(&bp_signet, &signet_bytes, 4).is_ok());
-        assert!(test_suite(&bp_other, &random_bytes, 4).is_ok());
+        test_suite(&bp_mainnet, &mainnet_bytes, 4);
+        test_suite(&bp_testnet, &testnet_bytes, 4);
+        test_suite(&bp_regtest, &regtest_bytes, 4);
+        test_suite(&bp_signet, &signet_bytes, 4);
+        test_suite(&bp_other, &random_bytes, 4);
     }
 
     #[test]

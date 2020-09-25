@@ -703,14 +703,12 @@ mod strict_encoding {
 
 #[cfg(test)]
 mod test {
-    use super::super::testutils::*;
     use super::*;
     use crate::bp::blind::OutpointReveal;
-    use crate::paradigms::client_side_validation::CommitEncode;
-    use crate::paradigms::client_side_validation::Conceal;
-    use crate::paradigms::client_side_validation::{merklize, MerkleNode};
+    use crate::client_side_validation::{merklize, CommitEncode, Conceal, MerkleNode};
     use crate::rgb::contract::seal::Revealed;
     use crate::rgb::data;
+    use crate::strict_encoding::test::*;
     use bitcoin::blockdata::transaction::OutPoint;
     use bitcoin_hashes::{
         hex::{FromHex, ToHex},

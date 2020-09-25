@@ -123,11 +123,10 @@ mod strict_encoding {
 
 #[cfg(test)]
 mod test {
-    use super::super::testutils::*;
     use super::*;
+    use crate::client_side_validation::CommitEncode;
+    use crate::strict_encoding::test::*;
     use crate::strict_encoding::{StrictDecode, StrictEncode};
-    //use bitcoin::secp256k1::rand::{thread_rng};
-    use crate::paradigms::client_side_validation::CommitEncode;
     use bitcoin_hashes::hex::FromHex;
     use secp256k1zkp::rand::thread_rng;
     use secp256k1zkp::rand::RngCore;
