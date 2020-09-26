@@ -337,7 +337,7 @@ pub(crate) mod test {
     use bitcoin::{hashes::hex::FromHex, secp256k1::Message, BlockHash};
 
     use super::*;
-    use crate::bp::{short_id::Descriptor, BlockChecksum, TxChecksum};
+    use crate::bp::short_id;
     use crate::strict_encoding::test::test_suite;
 
     pub(crate) fn encode_decode<T: StrictEncode + StrictDecode>(
@@ -495,11 +495,11 @@ pub(crate) mod test {
         static SHORT_OFFCHAINTXIN: [u8; 8] = [0x6, 0x0, 0x53, 0xc6, 0x31, 0x13, 0xed, 0x80];
         static SHORT_OFFCHAINTXOUT: [u8; 8] = [0x6, 0x0, 0x53, 0xc6, 0x31, 0x13, 0xed, 0x80];
 
-        let block_checksum = BlockChecksum::from(
+        let block_checksum = short_id::BlockChecksum::from(
             BlockHash::from_hex("00000000000000000000fc48ad6e814097387355463c9ba4fdf8ecc2df34b52f")
                 .unwrap(),
         );
-        let tx_checksum = TxChecksum::from(
+        let tx_checksum = short_id::TxChecksum::from(
             Txid::from_hex("217861d1a487f8e7140b9da48385e3e5d64d1ffdcd8edf0afc6818ed1331c653")
                 .unwrap(),
         );
@@ -509,7 +509,7 @@ pub(crate) mod test {
         let output_index = 5u16;
 
         // Test OnchainBlock
-        let des = Descriptor::OnchainBlock {
+        let des = short_id::Descriptor::OnchainBlock {
             block_height: height,
             block_checksum: block_checksum,
         };
@@ -519,7 +519,7 @@ pub(crate) mod test {
         test_suite(&short_id, &SHORT_ONCHAINBLOCK, 8);
 
         // test ShortId for OnchainTransaction
-        let des = Descriptor::OnchainTransaction {
+        let des = short_id::Descriptor::OnchainTransaction {
             block_height: height,
             block_checksum: block_checksum,
             tx_index: tx_index,
@@ -528,7 +528,7 @@ pub(crate) mod test {
         test_suite(&short_id, &SHORT_ONCHAINTX, 8);
 
         // test ShortId for OnchainTxInput
-        let des = Descriptor::OnchainTxInput {
+        let des = short_id::Descriptor::OnchainTxInput {
             block_height: height,
             block_checksum: block_checksum,
             tx_index: tx_index,
@@ -538,7 +538,7 @@ pub(crate) mod test {
         test_suite(&short_id, &SHORT_ONCHAINTXINPUT, 8);
 
         // test ShortId for OnchainTxOutput
-        let des = Descriptor::OnchainTxOutput {
+        let des = short_id::Descriptor::OnchainTxOutput {
             block_height: height,
             block_checksum: block_checksum,
             tx_index: tx_index,
@@ -548,14 +548,14 @@ pub(crate) mod test {
         test_suite(&short_id, &SHORT_ONCHAINTXOUT, 8);
 
         // test ShortId for OffchainTransaction
-        let des = Descriptor::OffchainTransaction {
+        let des = short_id::Descriptor::OffchainTransaction {
             tx_checksum: tx_checksum,
         };
         let short_id = ShortId::try_from(des).unwrap();
         test_suite(&short_id, &SHORT_OFFCHAINTX, 8);
 
         // test ShortId for OffchainTxInput
-        let des = Descriptor::OffchainTxInput {
+        let des = short_id::Descriptor::OffchainTxInput {
             tx_checksum: tx_checksum,
             input_index: input_index,
         };
@@ -563,7 +563,7 @@ pub(crate) mod test {
         test_suite(&short_id, &SHORT_OFFCHAINTXIN, 8);
 
         // test ShortId for OffchainTxOutput
-        let des = Descriptor::OffchainTxOutput {
+        let des = short_id::Descriptor::OffchainTxOutput {
             tx_checksum: tx_checksum,
             output_index: output_index,
         };

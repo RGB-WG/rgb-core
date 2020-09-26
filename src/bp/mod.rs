@@ -15,6 +15,7 @@ use bitcoin::hashes::{sha256d, Hash};
 
 #[macro_use]
 pub mod tagged256;
+pub mod bip32;
 pub mod blind;
 pub mod chain;
 pub mod dbc;
@@ -23,10 +24,16 @@ mod seals;
 pub mod short_id;
 mod strict_encoding;
 
-pub use chain::{Chains, P2pNetworkId};
-pub use scripts::*;
-pub use seals::*;
-pub use short_id::*;
+pub use bip32::{DerivationInfo, DerivationTemplate};
+pub use chain::{Chain, P2pNetworkId};
+pub use scripts::*; // TODO: (new) remove wildcard import
+pub use scripts::{
+    LockScript, PubkeyScript, RedeemScript, ScriptPubkeyDescriptor, ScriptPubkeyFormat,
+    ScriptPubkeyStructure, ScriptPubkeyTemplate, ScriptSet, Witness, WitnessProgram, WitnessScript,
+    WitnessVersion,
+};
+pub use seals::TxoutSeal;
+pub use short_id::ShortId;
 
 hash_newtype!(HashLock, sha256d::Hash, 32, doc = "Hashed locks in HTLC");
 hash_newtype!(
