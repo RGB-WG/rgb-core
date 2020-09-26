@@ -115,7 +115,7 @@ impl AutoConceal for &mut dyn Node {
 #[derive(Clone, Debug)]
 pub struct Genesis {
     schema_id: SchemaId,
-    network: bp::Chains,
+    network: bp::Chain,
     metadata: Metadata,
     assignments: Assignments,
     script: SimplicityScript,
@@ -223,7 +223,7 @@ impl Node for Transition {
 impl Genesis {
     pub fn with(
         schema_id: SchemaId,
-        network: bp::Chains,
+        network: bp::Chain,
         metadata: Metadata,
         assignments: Assignments,
         script: SimplicityScript,
@@ -250,7 +250,7 @@ impl Genesis {
 
     #[inline]
     #[allow(dead_code)]
-    pub fn network(&self) -> &bp::Chains {
+    pub fn network(&self) -> &bp::Chain {
         &self.network
     }
 }
@@ -324,7 +324,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             Ok(Self {
                 schema_id: SchemaId::strict_decode(&mut d)?,
-                network: bp::Chains::strict_decode(&mut d)?,
+                network: bp::Chain::strict_decode(&mut d)?,
                 metadata: Metadata::strict_decode(&mut d)?,
                 assignments: Assignments::strict_decode(&mut d)?,
                 script: SimplicityScript::strict_decode(&mut d)?,
@@ -362,7 +362,7 @@ mod strict_encoding {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::bp::chain::{Chains, GENESIS_HASH_MAINNET};
+        use crate::bp::chain::{Chain, GENESIS_HASH_MAINNET};
         use crate::commit_verify::CommitVerify;
         use crate::strict_encoding::strict_encode;
         use std::io::Write;
@@ -374,7 +374,7 @@ mod strict_encoding {
         fn test_genesis_commit_ne_strict() {
             let genesis = Genesis {
                 schema_id: Default::default(),
-                network: Chains::Mainnet,
+                network: Chain::Mainnet,
                 metadata: Default::default(),
                 assignments: Default::default(),
                 script: vec![],

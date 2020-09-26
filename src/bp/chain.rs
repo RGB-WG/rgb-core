@@ -590,7 +590,7 @@ impl StrictDecode for ChainParams {
 #[derive(Clone, Debug, Hash)]
 #[non_exhaustive]
 #[repr(u32)]
-pub enum Chains {
+pub enum Chain {
     /// Bitcoin mainnet
     Mainnet,
 
@@ -616,58 +616,58 @@ pub enum Chains {
     Other(ChainParams),
 }
 
-impl PartialEq for Chains {
+impl PartialEq for Chain {
     fn eq(&self, other: &Self) -> bool {
         self.chain_params().eq(&other.chain_params())
     }
 }
 
-impl Eq for Chains {}
+impl Eq for Chain {}
 
-impl PartialOrd for Chains {
+impl PartialOrd for Chain {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.chain_params().partial_cmp(&other.chain_params())
     }
 }
 
-impl Ord for Chains {
+impl Ord for Chain {
     fn cmp(&self, other: &Self) -> Ordering {
         self.chain_params().cmp(&other.chain_params())
     }
 }
 
-impl Chains {
+impl Chain {
     /// Returns chain parameters [ChainParams] for a given chain id
     pub fn chain_params(&self) -> ChainParams {
         match self {
-            Chains::Mainnet => CHAIN_PARAMS_MAINNET.clone(),
-            Chains::Testnet3 => CHAIN_PARAMS_TESTNET.clone(),
-            Chains::Regtest(hash) => {
+            Chain::Mainnet => CHAIN_PARAMS_MAINNET.clone(),
+            Chain::Testnet3 => CHAIN_PARAMS_TESTNET.clone(),
+            Chain::Regtest(hash) => {
                 let mut regtest = CHAIN_PARAMS_REGTEST.clone();
                 regtest.genesis_hash = *hash;
                 regtest
             }
-            Chains::Signet => CHAIN_PARAMS_SIGNET.clone(),
-            Chains::SignetCustom(hash) => {
+            Chain::Signet => CHAIN_PARAMS_SIGNET.clone(),
+            Chain::SignetCustom(hash) => {
                 let mut signet = CHAIN_PARAMS_SIGNET.clone();
                 signet.genesis_hash = *hash;
                 signet
             }
-            Chains::LiquidV1 => CHAIN_PARAMS_LIQUIDV1.clone(),
-            Chains::Other(params) => params.clone(),
+            Chain::LiquidV1 => CHAIN_PARAMS_LIQUIDV1.clone(),
+            Chain::Other(params) => params.clone(),
         }
     }
 
     /// Returns hash of genesis block
     pub fn as_genesis_hash(&self) -> &BlockHash {
         match self {
-            Chains::Mainnet => &CHAIN_PARAMS_MAINNET.genesis_hash,
-            Chains::Testnet3 => &CHAIN_PARAMS_TESTNET.genesis_hash,
-            Chains::Regtest(hash) => hash,
-            Chains::Signet => &CHAIN_PARAMS_SIGNET.genesis_hash,
-            Chains::SignetCustom(hash) => hash,
-            Chains::LiquidV1 => &CHAIN_PARAMS_LIQUIDV1.genesis_hash,
-            Chains::Other(params) => &params.genesis_hash,
+            Chain::Mainnet => &CHAIN_PARAMS_MAINNET.genesis_hash,
+            Chain::Testnet3 => &CHAIN_PARAMS_TESTNET.genesis_hash,
+            Chain::Regtest(hash) => hash,
+            Chain::Signet => &CHAIN_PARAMS_SIGNET.genesis_hash,
+            Chain::SignetCustom(hash) => hash,
+            Chain::LiquidV1 => &CHAIN_PARAMS_LIQUIDV1.genesis_hash,
+            Chain::Other(params) => &params.genesis_hash,
         }
     }
 
@@ -687,7 +687,7 @@ impl Chains {
     }
 }
 
-impl StrictEncode for Chains {
+impl StrictEncode for Chain {
     type Error = strict_encoding::Error;
 
     #[inline]
@@ -696,7 +696,7 @@ impl StrictEncode for Chains {
     }
 }
 
-impl StrictDecode for Chains {
+impl StrictDecode for Chain {
     type Error = strict_encoding::Error;
 
     #[inline]
@@ -705,46 +705,53 @@ impl StrictDecode for Chains {
     }
 }
 
-impl From<ChainParams> for Chains {
+impl From<ChainParams> for Chain {
     fn from(params: ChainParams) -> Self {
         match params {
-            p if p == Chains::Mainnet.chain_params() => Chains::Mainnet,
-            p if p == Chains::Testnet3.chain_params() => Chains::Testnet3,
-            p if p == Chains::Regtest(p.genesis_hash).chain_params() => {
-                Chains::Regtest(p.genesis_hash)
+            p if p == Chain::Mainnet.chain_params() => Chain::Mainnet,
+            p if p == Chain::Testnet3.chain_params() => Chain::Testnet3,
+            p if p == Chain::Regtest(p.genesis_hash).chain_params() => {
+                Chain::Regtest(p.genesis_hash)
             }
-            p if p == Chains::Signet.chain_params() => Chains::Signet,
-            p if p == Chains::SignetCustom(p.genesis_hash).chain_params() => {
-                Chains::SignetCustom(p.genesis_hash)
+            p if p == Chain::Signet.chain_params() => Chain::Signet,
+            p if p == Chain::SignetCustom(p.genesis_hash).chain_params() => {
+                Chain::SignetCustom(p.genesis_hash)
             }
-            p if p == Chains::LiquidV1.chain_params() => Chains::LiquidV1,
-            p => Chains::Other(p),
+            p if p == Chain::LiquidV1.chain_params() => Chain::LiquidV1,
+            p => Chain::Other(p),
         }
     }
 }
 
-impl From<bitcoin::Network> for Chains {
+impl From<bitcoin::Network> for Chain {
     fn from(bn: bitcoin::Network) -> Self {
         match bn {
-            bitcoin::Network::Bitcoin => Chains::Mainnet,
-            bitcoin::Network::Testnet => Chains::Testnet3,
-            bitcoin::Network::Regtest => Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
-            bitcoin::Network::Signet => Chains::Signet,
+            bitcoin::Network::Bitcoin => Chain::Mainnet,
+            bitcoin::Network::Testnet => Chain::Testnet3,
+            bitcoin::Network::Regtest => Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
+            bitcoin::Network::Signet => Chain::Signet,
         }
     }
 }
 
-impl TryFrom<Chains> for bitcoin::Network {
+impl TryFrom<Chain> for bitcoin::Network {
     type Error = NoneError;
-    fn try_from(bn: Chains) -> Result<Self, Self::Error> {
-        Ok(match bn {
-            Chains::Mainnet => bitcoin::Network::Bitcoin,
-            Chains::Testnet3 => bitcoin::Network::Testnet,
-            Chains::Regtest(hash) if hash == CHAIN_PARAMS_REGTEST.genesis_hash => {
+    fn try_from(chain: Chain) -> Result<Self, Self::Error> {
+        bitcoin::Network::try_from(&chain)
+    }
+}
+
+impl TryFrom<&Chain> for bitcoin::Network {
+    type Error = NoneError;
+    fn try_from(chain: &Chain) -> Result<Self, Self::Error> {
+        Ok(match chain {
+            Chain::Mainnet => bitcoin::Network::Bitcoin,
+            Chain::Testnet3 => bitcoin::Network::Testnet,
+            Chain::Regtest(hash) if hash == &CHAIN_PARAMS_REGTEST.genesis_hash => {
                 bitcoin::Network::Regtest
             }
-            Chains::Signet => bitcoin::Network::Signet,
-            Chains::SignetCustom(hash) if hash == CHAIN_PARAMS_SIGNET.genesis_hash => {
+            Chain::Signet => bitcoin::Network::Signet,
+            Chain::SignetCustom(hash) if hash == &CHAIN_PARAMS_SIGNET.genesis_hash => {
                 bitcoin::Network::Signet
             }
             _ => Err(NoneError)?,
@@ -752,33 +759,33 @@ impl TryFrom<Chains> for bitcoin::Network {
     }
 }
 
-impl Display for Chains {
+impl Display for Chain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Chains::Mainnet => write!(f, "bitcoin"),
-            Chains::Testnet3 => write!(f, "testnet"),
-            Chains::Regtest(hash) if &hash[..] == GENESIS_HASH_REGTEST => write!(f, "regtest"),
-            Chains::Regtest(hash) => write!(f, "regtest:{}", hash),
-            Chains::Signet => write!(f, "signet"),
-            Chains::SignetCustom(hash) if &hash[..] == GENESIS_HASH_SIGNET => write!(f, "signet"),
-            Chains::SignetCustom(hash) => write!(f, "signet:{}", hash),
-            Chains::LiquidV1 => write!(f, "liquidv1"),
-            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_MAINNET => {
+            Chain::Mainnet => write!(f, "bitcoin"),
+            Chain::Testnet3 => write!(f, "testnet"),
+            Chain::Regtest(hash) if &hash[..] == GENESIS_HASH_REGTEST => write!(f, "regtest"),
+            Chain::Regtest(hash) => write!(f, "regtest:{}", hash),
+            Chain::Signet => write!(f, "signet"),
+            Chain::SignetCustom(hash) if &hash[..] == GENESIS_HASH_SIGNET => write!(f, "signet"),
+            Chain::SignetCustom(hash) => write!(f, "signet:{}", hash),
+            Chain::LiquidV1 => write!(f, "liquidv1"),
+            Chain::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_MAINNET => {
                 write!(f, "bitcoin")
             }
-            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_TESTNET => {
+            Chain::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_TESTNET => {
                 write!(f, "testnet")
             }
-            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_REGTEST => {
+            Chain::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_REGTEST => {
                 write!(f, "regtest")
             }
-            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_SIGNET => {
+            Chain::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_SIGNET => {
                 write!(f, "signet")
             }
-            Chains::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_LIQUIDV1 => {
+            Chain::Other(params) if &params.genesis_hash[..] == GENESIS_HASH_LIQUIDV1 => {
                 write!(f, "liquidv1")
             }
-            Chains::Other(params) => write!(f, "other:0x{}", strict_encode(params)?.to_hex()),
+            Chain::Other(params) => write!(f, "other:0x{}", strict_encode(params)?.to_hex()),
         }
     }
 }
@@ -803,7 +810,7 @@ pub enum ParseError {
     GenesisHashEncoding(hex::Error),
 }
 
-impl FromStr for Chains {
+impl FromStr for Chain {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -812,30 +819,30 @@ impl FromStr for Chains {
                 || s == CHAIN_PARAMS_MAINNET.bip70_name
                 || s == CHAIN_PARAMS_MAINNET.bip173_prefix =>
             {
-                Ok(Chains::Mainnet)
+                Ok(Chain::Mainnet)
             }
             // Here we do not use `tb` prefix, since it matches multiple options
             s if s == CHAIN_PARAMS_TESTNET.name || s == CHAIN_PARAMS_TESTNET.bip70_name => {
-                Ok(Chains::Testnet3)
+                Ok(Chain::Testnet3)
             }
             s if s == CHAIN_PARAMS_REGTEST.name || s == CHAIN_PARAMS_REGTEST.bip70_name => {
-                Ok(Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash))
+                Ok(Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash))
             }
             s if s == CHAIN_PARAMS_SIGNET.name || s == CHAIN_PARAMS_SIGNET.bip70_name => {
-                Ok(Chains::Signet)
+                Ok(Chain::Signet)
             }
             s if s == CHAIN_PARAMS_LIQUIDV1.name || s == CHAIN_PARAMS_LIQUIDV1.bip70_name => {
-                Ok(Chains::LiquidV1)
+                Ok(Chain::LiquidV1)
             }
             s => {
                 if let Some(hash) = s.strip_prefix("regtest:") {
-                    Ok(Chains::Regtest(BlockHash::from_hex(hash)?))
+                    Ok(Chain::Regtest(BlockHash::from_hex(hash)?))
                 } else if let Some(hash) = s.strip_prefix("signet:") {
-                    Ok(Chains::SignetCustom(BlockHash::from_hex(hash)?))
+                    Ok(Chain::SignetCustom(BlockHash::from_hex(hash)?))
                 } else if let Some(hex) =
                     s.strip_prefix("other:").and_then(|s| s.strip_prefix("0x"))
                 {
-                    Ok(Chains::Other(strict_decode(
+                    Ok(Chain::Other(strict_decode(
                         &Vec::from_hex(hex).map_err(|_| ParseError::ChainParamsEncoding)?,
                     )?))
                 } else {
@@ -1070,34 +1077,34 @@ mod test {
 
     #[test]
     fn test_chain_params() {
-        assert_eq!(Chains::Mainnet.chain_params(), *CHAIN_PARAMS_MAINNET);
-        assert_eq!(Chains::Testnet3.chain_params(), *CHAIN_PARAMS_TESTNET);
+        assert_eq!(Chain::Mainnet.chain_params(), *CHAIN_PARAMS_MAINNET);
+        assert_eq!(Chain::Testnet3.chain_params(), *CHAIN_PARAMS_TESTNET);
         assert_eq!(
-            Chains::Regtest(BlockHash::from_slice(&GENESIS_HASH_REGTEST).unwrap()).chain_params(),
+            Chain::Regtest(BlockHash::from_slice(&GENESIS_HASH_REGTEST).unwrap()).chain_params(),
             *CHAIN_PARAMS_REGTEST
         );
-        assert_eq!(Chains::Signet.chain_params(), *CHAIN_PARAMS_SIGNET);
+        assert_eq!(Chain::Signet.chain_params(), *CHAIN_PARAMS_SIGNET);
         assert_eq!(
-            Chains::SignetCustom(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
+            Chain::SignetCustom(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
                 .chain_params(),
             *CHAIN_PARAMS_SIGNET
         );
-        assert_eq!(Chains::LiquidV1.chain_params(), *CHAIN_PARAMS_LIQUIDV1);
+        assert_eq!(Chain::LiquidV1.chain_params(), *CHAIN_PARAMS_LIQUIDV1);
 
-        assert_eq!(Chains::Mainnet, Chains::Mainnet);
+        assert_eq!(Chain::Mainnet, Chain::Mainnet);
         assert_eq!(
-            Chains::Signet,
-            Chains::SignetCustom(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
+            Chain::Signet,
+            Chain::SignetCustom(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
         );
-        assert_ne!(Chains::Mainnet, Chains::LiquidV1);
-        assert_ne!(Chains::Mainnet, Chains::Testnet3);
-        assert_ne!(Chains::Mainnet, Chains::Signet);
-        assert_ne!(Chains::Signet, Chains::Testnet3);
+        assert_ne!(Chain::Mainnet, Chain::LiquidV1);
+        assert_ne!(Chain::Mainnet, Chain::Testnet3);
+        assert_ne!(Chain::Mainnet, Chain::Signet);
+        assert_ne!(Chain::Signet, Chain::Testnet3);
         assert_eq!(
-            Chains::Signet,
-            Chains::Regtest(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
+            Chain::Signet,
+            Chain::Regtest(BlockHash::from_slice(&GENESIS_HASH_SIGNET).unwrap())
         );
-        assert_ne!(Chains::Signet, Chains::SignetCustom(BlockHash::hash(b"")));
+        assert_ne!(Chain::Signet, Chain::SignetCustom(BlockHash::hash(b"")));
     }
 
     #[test]
@@ -1149,146 +1156,139 @@ mod test {
 
         let random_hash = BlockHash::hash(b"random string");
 
-        assert_eq!(&Chains::Mainnet.as_genesis_hash()[..], GENESIS_HASH_MAINNET);
+        assert_eq!(&Chain::Mainnet.as_genesis_hash()[..], GENESIS_HASH_MAINNET);
+        assert_eq!(&Chain::Testnet3.as_genesis_hash()[..], GENESIS_HASH_TESTNET);
         assert_eq!(
-            &Chains::Testnet3.as_genesis_hash()[..],
-            GENESIS_HASH_TESTNET
-        );
-        assert_eq!(
-            &Chains::Regtest(BlockHash::from_slice(GENESIS_HASH_REGTEST).unwrap())
-                .as_genesis_hash()[..],
+            &Chain::Regtest(BlockHash::from_slice(GENESIS_HASH_REGTEST).unwrap()).as_genesis_hash()
+                [..],
             GENESIS_HASH_REGTEST
         );
         assert_eq!(
-            &Chains::Regtest(random_hash).as_genesis_hash()[..],
+            &Chain::Regtest(random_hash).as_genesis_hash()[..],
             &random_hash[..]
         );
-        assert_eq!(&Chains::Signet.as_genesis_hash()[..], GENESIS_HASH_SIGNET);
+        assert_eq!(&Chain::Signet.as_genesis_hash()[..], GENESIS_HASH_SIGNET);
         assert_eq!(
-            &Chains::SignetCustom(BlockHash::from_slice(GENESIS_HASH_SIGNET).unwrap())
+            &Chain::SignetCustom(BlockHash::from_slice(GENESIS_HASH_SIGNET).unwrap())
                 .as_genesis_hash()[..],
             GENESIS_HASH_SIGNET
         );
         assert_eq!(
-            &Chains::SignetCustom(random_hash).as_genesis_hash()[..],
+            &Chain::SignetCustom(random_hash).as_genesis_hash()[..],
             &random_hash[..]
         );
         assert_eq!(
-            &Chains::LiquidV1.as_genesis_hash()[..],
+            &Chain::LiquidV1.as_genesis_hash()[..],
             GENESIS_HASH_LIQUIDV1
         );
         assert_eq!(
-            &Chains::Other(Chains::Mainnet.chain_params()).as_genesis_hash()[..],
+            &Chain::Other(Chain::Mainnet.chain_params()).as_genesis_hash()[..],
             GENESIS_HASH_MAINNET
         );
-        let mut chain_params = Chains::Mainnet.chain_params();
+        let mut chain_params = Chain::Mainnet.chain_params();
         chain_params.genesis_hash = random_hash;
         assert_eq!(
-            &Chains::Other(chain_params).as_genesis_hash()[..],
+            &Chain::Other(chain_params).as_genesis_hash()[..],
             &random_hash[..]
         );
 
         assert_eq!(
-            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_MAINNET).unwrap())
+            Chain::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_MAINNET).unwrap())
                 .unwrap(),
-            Chains::Mainnet
+            Chain::Mainnet
         );
         assert_eq!(
-            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_TESTNET).unwrap())
+            Chain::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_TESTNET).unwrap())
                 .unwrap(),
-            Chains::Testnet3
+            Chain::Testnet3
         );
         assert_eq!(
-            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_SIGNET).unwrap())
-                .unwrap(),
-            Chains::Signet
+            Chain::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_SIGNET).unwrap()).unwrap(),
+            Chain::Signet
         );
         assert_eq!(
-            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_LIQUIDV1).unwrap())
+            Chain::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_LIQUIDV1).unwrap())
                 .unwrap(),
-            Chains::LiquidV1
+            Chain::LiquidV1
         );
         let regtest =
-            Chains::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_REGTEST).unwrap())
+            Chain::from_genesis_hash(&BlockHash::from_slice(GENESIS_HASH_REGTEST).unwrap())
                 .unwrap();
-        assert_eq!(regtest, Chains::Regtest(*regtest.as_genesis_hash()));
-        assert_ne!(regtest, Chains::Regtest(random_hash));
-        assert_eq!(Chains::from_genesis_hash(&random_hash), None);
+        assert_eq!(regtest, Chain::Regtest(*regtest.as_genesis_hash()));
+        assert_ne!(regtest, Chain::Regtest(random_hash));
+        assert_eq!(Chain::from_genesis_hash(&random_hash), None);
     }
 
     #[test]
     fn test_chains() {
         let random_hash = BlockHash::hash(b"rascafvsdg");
 
-        assert_eq!(Chains::Mainnet, Chains::from(CHAIN_PARAMS_MAINNET.clone()));
-        assert_eq!(Chains::Testnet3, Chains::from(CHAIN_PARAMS_TESTNET.clone()));
+        assert_eq!(Chain::Mainnet, Chain::from(CHAIN_PARAMS_MAINNET.clone()));
+        assert_eq!(Chain::Testnet3, Chain::from(CHAIN_PARAMS_TESTNET.clone()));
         assert_eq!(
-            Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
-            Chains::from(CHAIN_PARAMS_REGTEST.clone())
+            Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
+            Chain::from(CHAIN_PARAMS_REGTEST.clone())
         );
         assert_ne!(
-            Chains::Regtest(random_hash),
-            Chains::from(CHAIN_PARAMS_REGTEST.clone())
+            Chain::Regtest(random_hash),
+            Chain::from(CHAIN_PARAMS_REGTEST.clone())
         );
-        assert_eq!(Chains::Signet, Chains::from(CHAIN_PARAMS_SIGNET.clone()));
+        assert_eq!(Chain::Signet, Chain::from(CHAIN_PARAMS_SIGNET.clone()));
         assert_eq!(
-            Chains::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash),
-            Chains::from(CHAIN_PARAMS_SIGNET.clone())
+            Chain::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash),
+            Chain::from(CHAIN_PARAMS_SIGNET.clone())
         );
         assert_ne!(
-            Chains::SignetCustom(random_hash),
-            Chains::from(CHAIN_PARAMS_SIGNET.clone())
+            Chain::SignetCustom(random_hash),
+            Chain::from(CHAIN_PARAMS_SIGNET.clone())
         );
-        assert_eq!(
-            Chains::LiquidV1,
-            Chains::from(CHAIN_PARAMS_LIQUIDV1.clone())
-        );
+        assert_eq!(Chain::LiquidV1, Chain::from(CHAIN_PARAMS_LIQUIDV1.clone()));
 
-        assert_eq!(Chains::Mainnet, Chains::from(bitcoin::Network::Bitcoin));
-        assert_eq!(Chains::Testnet3, Chains::from(bitcoin::Network::Testnet));
+        assert_eq!(Chain::Mainnet, Chain::from(bitcoin::Network::Bitcoin));
+        assert_eq!(Chain::Testnet3, Chain::from(bitcoin::Network::Testnet));
         assert_eq!(
-            Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
-            Chains::from(bitcoin::Network::Regtest)
+            Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
+            Chain::from(bitcoin::Network::Regtest)
         );
-        assert_eq!(Chains::Signet, Chains::from(bitcoin::Network::Signet));
+        assert_eq!(Chain::Signet, Chain::from(bitcoin::Network::Signet));
 
         assert_eq!(
-            bitcoin::Network::try_from(Chains::Mainnet).unwrap(),
+            bitcoin::Network::try_from(Chain::Mainnet).unwrap(),
             bitcoin::Network::Bitcoin
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chains::Testnet3).unwrap(),
+            bitcoin::Network::try_from(Chain::Testnet3).unwrap(),
             bitcoin::Network::Testnet
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chains::Signet).unwrap(),
+            bitcoin::Network::try_from(Chain::Signet).unwrap(),
             bitcoin::Network::Signet
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)).unwrap(),
+            bitcoin::Network::try_from(Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)).unwrap(),
             bitcoin::Network::Regtest
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chains::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash))
+            bitcoin::Network::try_from(Chain::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash))
                 .unwrap(),
             bitcoin::Network::Signet
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chains::Regtest(CHAIN_PARAMS_SIGNET.genesis_hash))
+            bitcoin::Network::try_from(Chain::Regtest(CHAIN_PARAMS_SIGNET.genesis_hash))
                 .unwrap_err(),
             NoneError
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chains::SignetCustom(CHAIN_PARAMS_REGTEST.genesis_hash))
+            bitcoin::Network::try_from(Chain::SignetCustom(CHAIN_PARAMS_REGTEST.genesis_hash))
                 .unwrap_err(),
             NoneError
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chains::Regtest(random_hash)).unwrap_err(),
+            bitcoin::Network::try_from(Chain::Regtest(random_hash)).unwrap_err(),
             NoneError
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chains::SignetCustom(random_hash)).unwrap_err(),
+            bitcoin::Network::try_from(Chain::SignetCustom(random_hash)).unwrap_err(),
             NoneError
         );
     }
@@ -1296,88 +1296,88 @@ mod test {
     #[test]
     fn test_chains_display() {
         let custom_hash = BlockHash::hash(b"00350429507202701943");
-        assert_eq!(format!("{}", Chains::Mainnet), "bitcoin");
-        assert_eq!(format!("{}", Chains::Testnet3), "testnet");
-        assert_eq!(format!("{}", Chains::Signet), "signet");
-        assert_eq!(format!("{}", Chains::LiquidV1), "liquidv1");
+        assert_eq!(format!("{}", Chain::Mainnet), "bitcoin");
+        assert_eq!(format!("{}", Chain::Testnet3), "testnet");
+        assert_eq!(format!("{}", Chain::Signet), "signet");
+        assert_eq!(format!("{}", Chain::LiquidV1), "liquidv1");
         assert_eq!(
-            format!("{}", Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)),
+            format!("{}", Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)),
             "regtest"
         );
         assert_eq!(
-            format!("{}", Chains::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash)),
+            format!("{}", Chain::SignetCustom(CHAIN_PARAMS_SIGNET.genesis_hash)),
             "signet"
         );
         assert_eq!(
-            format!("{}", Chains::Regtest(custom_hash)),
+            format!("{}", Chain::Regtest(custom_hash)),
             format!("regtest:{}", custom_hash)
         );
         assert_eq!(
-            format!("{}", Chains::SignetCustom(custom_hash)),
+            format!("{}", Chain::SignetCustom(custom_hash)),
             format!("signet:{}", custom_hash)
         );
 
         assert_eq!(
-            format!("{}", Chains::Other(CHAIN_PARAMS_MAINNET.clone())),
+            format!("{}", Chain::Other(CHAIN_PARAMS_MAINNET.clone())),
             "bitcoin"
         );
         assert_eq!(
-            format!("{}", Chains::Other(CHAIN_PARAMS_TESTNET.clone())),
+            format!("{}", Chain::Other(CHAIN_PARAMS_TESTNET.clone())),
             "testnet"
         );
         assert_eq!(
-            format!("{}", Chains::Other(CHAIN_PARAMS_REGTEST.clone())),
+            format!("{}", Chain::Other(CHAIN_PARAMS_REGTEST.clone())),
             "regtest"
         );
         assert_eq!(
-            format!("{}", Chains::Other(CHAIN_PARAMS_SIGNET.clone())),
+            format!("{}", Chain::Other(CHAIN_PARAMS_SIGNET.clone())),
             "signet"
         );
         assert_eq!(
-            format!("{}", Chains::Other(CHAIN_PARAMS_LIQUIDV1.clone())),
+            format!("{}", Chain::Other(CHAIN_PARAMS_LIQUIDV1.clone())),
             "liquidv1"
         );
 
         let mut custom_params = CHAIN_PARAMS_MAINNET.clone();
         custom_params.genesis_hash = custom_hash;
-        assert_eq!(format!("{}", Chains::Other(custom_params.clone())), "other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001");
+        assert_eq!(format!("{}", Chain::Other(custom_params.clone())), "other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001");
 
-        assert_eq!(Chains::from_str("bitcoin").unwrap(), Chains::Mainnet);
-        assert_eq!(Chains::from_str("testnet").unwrap(), Chains::Testnet3);
+        assert_eq!(Chain::from_str("bitcoin").unwrap(), Chain::Mainnet);
+        assert_eq!(Chain::from_str("testnet").unwrap(), Chain::Testnet3);
         assert_eq!(
-            Chains::from_str("regtest").unwrap(),
-            Chains::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)
+            Chain::from_str("regtest").unwrap(),
+            Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)
         );
         assert_eq!(
-            Chains::from_str(
+            Chain::from_str(
                 "regtest:a2695249197ea6b95e48eb1da3b5fe24d91e427ba6a3d46f529c7df41e741b0e"
             )
             .unwrap(),
-            Chains::Regtest(custom_hash)
+            Chain::Regtest(custom_hash)
         );
-        assert_eq!(Chains::from_str("signet").unwrap(), Chains::Signet);
+        assert_eq!(Chain::from_str("signet").unwrap(), Chain::Signet);
         assert_eq!(
-            Chains::from_str(
+            Chain::from_str(
                 "signet:a2695249197ea6b95e48eb1da3b5fe24d91e427ba6a3d46f529c7df41e741b0e"
             )
             .unwrap(),
-            Chains::SignetCustom(custom_hash)
+            Chain::SignetCustom(custom_hash)
         );
-        assert_eq!(Chains::from_str("liquidv1").unwrap(), Chains::LiquidV1);
+        assert_eq!(Chain::from_str("liquidv1").unwrap(), Chain::LiquidV1);
 
-        assert_eq!(Chains::from_str("Bitcoin").unwrap(), Chains::Mainnet);
-        assert_eq!(Chains::from_str("bItcOin").unwrap(), Chains::Mainnet);
+        assert_eq!(Chain::from_str("Bitcoin").unwrap(), Chain::Mainnet);
+        assert_eq!(Chain::from_str("bItcOin").unwrap(), Chain::Mainnet);
 
-        assert_eq!(Chains::from_str("bc").unwrap(), Chains::Mainnet);
-        assert_eq!(Chains::from_str("main").unwrap(), Chains::Mainnet);
+        assert_eq!(Chain::from_str("bc").unwrap(), Chain::Mainnet);
+        assert_eq!(Chain::from_str("main").unwrap(), Chain::Mainnet);
 
         assert_eq!(
-            Chains::from_str("aljsic").unwrap_err(),
+            Chain::from_str("aljsic").unwrap_err(),
             ParseError::WrongNetworkName
         );
         assert_eq!(
-            Chains::from_str("other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001").unwrap(), 
-            Chains::Other(custom_params)
+            Chain::from_str("other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001").unwrap(),
+            Chain::Other(custom_params)
         );
     }
 }
