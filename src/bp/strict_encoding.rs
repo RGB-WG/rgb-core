@@ -19,7 +19,7 @@ use bitcoin::{secp256k1, util::bip32, BlockHash, OutPoint, Script, Txid, XpubIde
 
 use super::{blind::OutpointHash, blind::OutpointReveal, ShortId};
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
-use bitcoin::util::bip32::KeyApplications;
+use bitcoin::util::bip32::KeyApplication;
 
 impl strict_encoding::Strategy for Txid {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
@@ -159,20 +159,20 @@ impl StrictDecode for bitcoin::Network {
     }
 }
 
-impl StrictEncode for KeyApplications {
+impl StrictEncode for KeyApplication {
     #[inline]
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
         match self {
-            KeyApplications::Legacy => 0u8.strict_encode(e),
-            KeyApplications::SegWitLegacySinglesig => 1u8.strict_encode(e),
-            KeyApplications::SegWitLegacyMultisig => 2u8.strict_encode(e),
-            KeyApplications::SegWitV0Singlesig => 3u8.strict_encode(e),
-            KeyApplications::SegWitV0Miltisig => 4u8.strict_encode(e),
+            KeyApplication::Legacy => 0u8.strict_encode(e),
+            KeyApplication::SegWitLegacySinglesig => 1u8.strict_encode(e),
+            KeyApplication::SegWitLegacyMultisig => 2u8.strict_encode(e),
+            KeyApplication::SegWitV0Singlesig => 3u8.strict_encode(e),
+            KeyApplication::SegWitV0Miltisig => 4u8.strict_encode(e),
         }
     }
 }
 
-impl StrictDecode for KeyApplications {
+impl StrictDecode for KeyApplication {
     #[inline]
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
         Ok(match u8::strict_decode(d)? {
@@ -181,7 +181,7 @@ impl StrictDecode for KeyApplications {
             2 => Self::SegWitLegacyMultisig,
             3 => Self::SegWitV0Singlesig,
             4 => Self::SegWitV0Miltisig,
-            x => Err(Error::EnumValueNotKnown("KeyApplications".to_string(), x))?,
+            x => Err(Error::EnumValueNotKnown("KeyApplication".to_string(), x))?,
         })
     }
 }
@@ -495,12 +495,12 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_encoding_keyapplications() {
-        test_suite(&KeyApplications::Legacy, &[0], 1);
-        test_suite(&KeyApplications::SegWitLegacySinglesig, &[1], 1);
-        test_suite(&KeyApplications::SegWitLegacyMultisig, &[2], 1);
-        test_suite(&KeyApplications::SegWitV0Singlesig, &[3], 1);
-        test_suite(&KeyApplications::SegWitV0Miltisig, &[4], 1);
+    fn test_encoding_keyapplication() {
+        test_suite(&KeyApplication::Legacy, &[0], 1);
+        test_suite(&KeyApplication::SegWitLegacySinglesig, &[1], 1);
+        test_suite(&KeyApplication::SegWitLegacyMultisig, &[2], 1);
+        test_suite(&KeyApplication::SegWitV0Singlesig, &[3], 1);
+        test_suite(&KeyApplication::SegWitV0Miltisig, &[4], 1);
     }
 
     #[test]
