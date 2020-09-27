@@ -330,6 +330,24 @@ impl StrictDecode for bip32::ExtendedPubKey {
     }
 }
 
+impl StrictEncode for bip32::ExtendedPrivKey {
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        Ok(e.write(&self.encode())?)
+    }
+}
+
+impl StrictDecode for bip32::ExtendedPrivKey {
+    #[inline]
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        let mut buf = [0u8; 78];
+        d.read_exact(&mut buf)?;
+        Ok(bip32::ExtendedPrivKey::decode(&buf).map_err(|_| {
+            Error::DataIntegrityError("Extended privkey integrity is broken".to_string())
+        })?)
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod test {
     use std::{convert::TryFrom, str::FromStr};
