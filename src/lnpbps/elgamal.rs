@@ -154,7 +154,7 @@ pub fn decrypt(
         pubkey.negate_assign(&SECP256K1);
         let unencrypted = pubkey.combine(&encryption_key)?;
         // Remove random tail from the data
-        let chunk30 = &unencrypted.serialize()[1..31];
+        let chunk30 = &mut unencrypted.serialize()[1..31];
 
         // If the original message was empty, it will be represented by an
         // encrypted hash of the unblinding key:
@@ -162,6 +162,9 @@ pub fn decrypt(
             acc.push(chunk30.to_vec());
             encrypted = &encrypted[32..];
         }
+
+        // Clearing copy of unencrypted data
+        chunk30.copy_from_slice(&[0u8; 30]);
     }
 
     // Destroy decryption key
