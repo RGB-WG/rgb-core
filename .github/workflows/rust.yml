@@ -1,4 +1,4 @@
-name: Code Coverage
+name: Rust
 
 on:
   push:
@@ -10,21 +10,23 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  codecov:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install -y libzmq3-dev libpcre3-dev libpq-dev libssl-dev
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           override: true
-      - name: Dependencies
-        run: sudo apt-get install -y libzmq3-dev libpcre3-dev libpq-dev libssl-dev
-      - name: Build
+          components: rustfmt
+      - name: Build & test
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features --no-fail-fast
+          args: --all --all-features --no-fail-fast
         env:
           CARGO_INCREMENTAL: '0'
           RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
@@ -37,3 +39,8 @@ jobs:
         with:
           file: ${{ steps.coverage.outputs.report }}
           directory: ./coverage/reports/
+      - uses: actions-rs/cargo@v1
+        name: Lints
+        with:
+          command: fmt
+          args: --all -- --check
