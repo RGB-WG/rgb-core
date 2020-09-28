@@ -302,6 +302,8 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
 
         impl TypedEnum for #ident_name {
             fn try_from_type(type_id: Type, data: &dyn ::core::any::Any) -> Result<Self, UnknownTypeError> {
+                use ::amplify::Wrapper;
+
                 const ERR: &'static str = "Internal API parsing inconsistency";
                 Ok(match type_id.into_inner() {
                     #from_type
