@@ -42,7 +42,7 @@ impl CommitEncodeWithStrategy for Void {
 }
 
 #[derive(Clone, Debug, Display, AsAny)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum Revealed {
     U8(u8),

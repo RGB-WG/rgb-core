@@ -35,7 +35,7 @@ wrapper!(
 impl EvenOdd for Type {}
 
 #[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct Payload(Vec<Arc<dyn Any>>);
 
 pub trait Message: AsAny {
@@ -63,7 +63,7 @@ pub trait Message: AsAny {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, AsAny)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct RawMessage {
     pub type_id: Type,
     pub payload: Vec<u8>,

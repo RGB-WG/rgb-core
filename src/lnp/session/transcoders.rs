@@ -35,7 +35,7 @@ pub trait Transcode: Bipolar + Encrypt + Decrypt {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct DecryptionError;
 
 impl Encrypt for Encryptor {
@@ -98,7 +98,7 @@ impl Bipolar for Transcoder {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct NoEncryption;
 
 impl Encrypt for NoEncryption {

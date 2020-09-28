@@ -23,15 +23,120 @@ extern crate quote;
 #[macro_use]
 extern crate syn;
 
-use amplify::proc_macro;
 use core::convert::TryFrom;
 use core::option::NoneError;
 use syn::export::{Span, ToTokens, TokenStream, TokenStream2};
 use syn::spanned::Spanned;
 use syn::{
     Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields, Ident, Index, Lit,
-    Member, Meta, NestedMeta, Path, Result, Type, TypeSlice, Variant,
+    Member, Meta, MetaNameValue, NestedMeta, Path, Result, Type, TypeSlice, Variant,
 };
+
+macro_rules! proc_macro_err {
+    ($attr:ident, $msg:tt, $example:tt) => {
+        Err(Error::new(
+            $attr.span(),
+            format!(
+                "Attribute macro canonical form `{}` violation: {}",
+                $example, $msg
+            ),
+        ));
+    };
+}
+
+fn attr_named_value(input: &DeriveInput, ident: &str, example: &str) -> Result<Option<Lit>> {
+    for attr in &input.attrs {
+        if attr.path.is_ident(ident) {
+            match attr.parse_meta() {
+                Ok(meta) => match meta {
+                    Meta::Path(_) => {
+                        return proc_macro_err!(attr, "unexpected path argument", example)
+                    }
+                    Meta::List(_) => {
+                        return proc_macro_err!(
+                            attr,
+                            "must have form `name=value`, not `name(value)`",
+                            example
+                        )
+                    }
+                    Meta::NameValue(name_val) => return Ok(Some(name_val.lit)),
+                },
+                Err(_) => return proc_macro_err!(attr, "wrong format", example),
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+fn attr_list<'a>(
+    attrs: impl IntoIterator<Item = &'a Attribute>,
+    ident: &str,
+    example: &str,
+) -> Result<Option<Vec<NestedMeta>>> {
+    for attr in attrs {
+        if attr.path.is_ident(ident) {
+            match attr.parse_meta() {
+                Ok(meta) => match meta {
+                    Meta::Path(_) => {
+                        return proc_macro_err!(attr, "unexpected path argument", example)
+                    }
+                    Meta::List(list) => return Ok(Some(list.nested.into_iter().collect())),
+                    Meta::NameValue(_) => {
+                        return proc_macro_err!(attr, "unexpected name=value argument", example)
+                    }
+                },
+                Err(_) => return proc_macro_err!(attr, "wrong format", example),
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+fn attr_nested_one_arg(
+    mut list: impl ExactSizeIterator<Item = NestedMeta>,
+    attr_name: &str,
+    example: &str,
+) -> Result<Option<Ident>> {
+    match list.len() {
+        0 => proc_macro_err!(attr_name, "unexpected absence of argument", example),
+        1 => match list.next().expect("Core library iterator is broken") {
+            NestedMeta::Meta(meta) => match meta {
+                Meta::Path(path) => Ok(path.get_ident().cloned()),
+                _ => proc_macro_err!(attr_name, "unexpected attribute type", example),
+            },
+            NestedMeta::Lit(_) => proc_macro_err!(
+                attr_name,
+                "unexpected literal for type identifier is met",
+                example
+            ),
+        },
+        _ => proc_macro_err!(attr_name, "unexpected multiple type identifiers", example),
+    }
+}
+
+fn attr_nested_one_named_value(
+    mut list: impl ExactSizeIterator<Item = NestedMeta>,
+    attr_name: &str,
+    example: &str,
+) -> Result<MetaNameValue> {
+    match list.len() {
+        0 => proc_macro_err!(attr_name, "unexpected absence of argument", example),
+        1 => match list.next().expect("Core library iterator is broken") {
+            NestedMeta::Meta(meta) => match meta {
+                Meta::NameValue(path) => Ok(path),
+                _ => proc_macro_err!(attr_name, "unexpected attribute type", example),
+            },
+            NestedMeta::Lit(_) => proc_macro_err!(
+                attr_name,
+                "unexpected literal for type identifier is met",
+                example
+            ),
+        },
+        _ => proc_macro_err!(attr_name, "unexpected multiple type identifiers", example),
+    }
+}
 
 // LNP API Derive
 // ==============
@@ -133,13 +238,12 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
 
     let name = "lnp_api";
     let example = "#[lnp_api(encoding=\"strict|bitcoin|lightning\")]";
-    let global_params = match proc_macro::attr_list(&input.attrs, name, example)? {
+    let global_params = match attr_list(&input.attrs, name, example)? {
         Some(x) => x,
         None => vec![],
     };
     let global_encoding = EncodingSrategy::try_from(
-        proc_macro::attr_nested_one_named_value(global_params.into_iter(), "encoding", example)?
-            .lit,
+        attr_nested_one_named_value(global_params.into_iter(), "encoding", example)?.lit,
     )?;
 
     let example = "#[lnp_api(type=1000)]";
@@ -150,7 +254,7 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
     let mut get_type = vec![];
     let mut get_payload = vec![];
     for v in &data.variants {
-        let meta = proc_macro::attr_list(&v.attrs, "lnp_api", example)?.ok_or(Error::new(
+        let meta = attr_list(&v.attrs, "lnp_api", example)?.ok_or(Error::new(
             v.span(),
             format!(
                 "Attribute macro canonical form `{}` violation: {}",
@@ -158,8 +262,7 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
             ),
         ))?;
 
-        let type_lit: Lit =
-            proc_macro::attr_nested_one_named_value(meta.into_iter(), "type", example)?.lit;
+        let type_lit: Lit = attr_nested_one_named_value(meta.into_iter(), "type", example)?.lit;
         let type_id: u16 = match type_lit {
             Lit::Int(i) => i
                 .base10_parse()
@@ -499,11 +602,11 @@ fn get_strict_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStrea
     let example = "#[strict_error(ErrorType)]";
     let mut strict_error: Option<Ident> = None;
 
-    let list = match proc_macro::attr_list(&input.attrs, name, example)? {
+    let list = match attr_list(&input.attrs, name, example)? {
         Some(x) => x,
         None => return Ok(quote! {}),
     };
-    let strict_error = proc_macro::attr_nested_one_arg(list.into_iter(), name, example)?;
+    let strict_error = attr_nested_one_arg(list.into_iter(), name, example)?;
 
     Ok(match strict_error {
         Some(ident) => quote! { type Error = #ident; },

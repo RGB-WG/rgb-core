@@ -21,7 +21,7 @@ use super::{
 use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct TxContainer {
     pub protocol_factor: u32,
     pub fee: u64,
@@ -47,7 +47,7 @@ fn get_mut_txout(fee: u64, entropy: u32, tx: &mut Transaction) -> &mut TxOut {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct TxSupplement {
     pub protocol_factor: u32,
     pub fee: u64,

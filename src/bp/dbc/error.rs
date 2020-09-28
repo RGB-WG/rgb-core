@@ -15,14 +15,14 @@ use crate::bp::{scripts::Error as ScriptPubkeyError, PubkeyParseError};
 use bitcoin::secp256k1;
 
 #[derive(Clone, PartialEq, Debug, Display, Error, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {
-    //#[derive_from(secp256k1::Error)]
+    //#[from(secp256k1::Error)]
     Secp256k1(secp256k1::Error),
 
     InvalidProofStructure,
 
-    #[derive_from]
+    #[from]
     InvalidScriptPubkey(ScriptPubkeyError),
 
     LockscriptParseError,

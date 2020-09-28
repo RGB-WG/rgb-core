@@ -24,7 +24,7 @@ use super::LockScript;
 
 /// Errors that may happen during LockScript parsing process
 #[derive(Debug, Display, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum PubkeyParseError {
     /// Unexpected pubkey hash when enumerating in "keys only" mode
     PubkeyHash(<bitcoin::PublicKey as MiniscriptKey>::Hash),

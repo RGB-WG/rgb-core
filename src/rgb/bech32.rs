@@ -98,21 +98,21 @@ impl ToBech32 for Disclosure {
 }
 
 #[derive(Debug, Display, From, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {
     WrongHrp(String),
 
-    #[derive_from]
+    #[from]
     Bech32Error(::bech32::Error),
 
-    #[derive_from]
+    #[from]
     WrongData(strict_encoding::Error),
 
     WrongType,
 
     // TODO: Remove once the default `Display` implementation for
     //       hash-derived types is removed
-    #[derive_from(::bitcoin_hashes::hex::Error)]
+    #[from(::bitcoin_hashes::hex::Error)]
     HexError,
 }
 

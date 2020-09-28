@@ -20,7 +20,7 @@ use crate::SECP256K1;
 //use super::{NodeAddr, NodeLocator, Session, SessionTrait};
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct LocalNode {
     private_key: secp256k1::SecretKey,
     ephemeral_private_key: secp256k1::SecretKey,

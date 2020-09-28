@@ -40,7 +40,7 @@ impl DataFormat {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum FileFormatParseError {
     UnknownFormat,
 }

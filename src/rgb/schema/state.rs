@@ -19,7 +19,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
 
 #[derive(Clone, PartialEq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct StateSchema {
     pub format: StateFormat,
     pub abi: script::AssignmentAbi,
@@ -30,7 +30,7 @@ pub struct StateSchema {
 )]
 #[non_exhaustive]
 #[repr(u8)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum StateType {
     Declarative = 0,
     DiscreteFiniteField = 1,
@@ -39,7 +39,7 @@ pub enum StateType {
 
 #[derive(Clone, PartialEq, Debug, Display)]
 #[non_exhaustive]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum StateFormat {
     Declarative,
     DiscreteFiniteField(DiscreteFiniteFieldFormat),
@@ -47,7 +47,7 @@ pub enum StateFormat {
 }
 
 #[derive(Clone, PartialEq, Debug, Display, ToPrimitive, FromPrimitive)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
 /// Today we support only a single format of confidential data, because of the
@@ -62,7 +62,7 @@ pub enum DiscreteFiniteFieldFormat {
 }
 
 #[derive(Clone, PartialEq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum DataFormat {
     Unsigned(Bits, u128, u128),
@@ -205,7 +205,7 @@ mod strict_encoding {
     }
 
     #[derive(Debug, Display, FromPrimitive, ToPrimitive)]
-    #[display_from(Debug)]
+    #[display(Debug)]
     #[repr(u8)]
     enum EncodingTag {
         Unsigned = 0,

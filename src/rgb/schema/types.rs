@@ -81,7 +81,7 @@ impl Number for f64 {}
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum Bits {
@@ -117,7 +117,7 @@ impl Bits {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum Occurences<I>
@@ -184,7 +184,7 @@ where
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct OccurrencesError {
     pub min: u128,
     pub max: u128,
@@ -194,7 +194,7 @@ pub struct OccurrencesError {
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum DigestAlgorithm {
@@ -216,7 +216,7 @@ pub mod elliptic_curve {
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
     )]
-    #[display_from(Debug)]
+    #[display(Debug)]
     #[repr(u8)]
     #[non_exhaustive]
     pub enum EllipticCurve {
@@ -227,7 +227,7 @@ pub mod elliptic_curve {
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
     )]
-    #[display_from(Debug)]
+    #[display(Debug)]
     #[repr(u8)]
     #[non_exhaustive]
     pub enum SignatureAlgorithm {
@@ -239,7 +239,7 @@ pub mod elliptic_curve {
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
     )]
-    #[display_from(Debug)]
+    #[display(Debug)]
     #[repr(u8)]
     #[non_exhaustive]
     pub enum PointSerialization {

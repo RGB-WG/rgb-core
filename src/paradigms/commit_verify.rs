@@ -117,7 +117,7 @@ pub(crate) mod test {
     use std::collections::HashSet;
 
     #[derive(Debug, Display, Error)]
-    #[display_from(Debug)]
+    #[display(Debug)]
     struct Error;
     #[derive(Clone, PartialEq, Eq, Debug, Hash)]
     struct DummyHashCommitment(sha256d::Hash);

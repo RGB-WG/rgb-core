@@ -80,7 +80,7 @@ pub enum ScriptPubkeyFormat {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyDescriptor {
     P2S(PubkeyScript),
@@ -94,7 +94,7 @@ pub enum ScriptPubkeyDescriptor {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyTemplate {
     P2S(PubkeyScript),
@@ -112,7 +112,7 @@ pub enum ScriptPubkeyTemplate {
 }
 
 #[derive(Clone, PartialEq, Eq, Display, Debug, From, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {
     InvalidKeyData,
     UnsupportedWitnessVersion,

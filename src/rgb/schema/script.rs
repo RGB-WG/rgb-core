@@ -22,14 +22,14 @@ pub type SimplicityScript = Vec<u8>;
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum GenesisAction {}
 
 #[non_exhaustive]
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum TransitionAction {
     GenerateBlank = 0,
@@ -39,7 +39,7 @@ pub enum TransitionAction {
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum AssignmentAction {
     Validate = 0,
@@ -51,7 +51,7 @@ pub type AssignmentAbi = BTreeMap<AssignmentAction, Procedure>;
 
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Procedure {
     Standard(StandardProcedure),
     Simplicity { offset: u32 },
@@ -61,7 +61,7 @@ pub enum Procedure {
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum StandardProcedure {
     ConfidentialAmount = 1,

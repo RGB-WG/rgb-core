@@ -33,7 +33,7 @@ pub trait Container: Sized {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct Proof {
     pub pubkey: secp256k1::PublicKey,
     pub script_info: ScriptInfo,
@@ -49,7 +49,7 @@ impl From<secp256k1::PublicKey> for Proof {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum ScriptInfo {
     None,

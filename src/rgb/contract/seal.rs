@@ -23,7 +23,7 @@ pub type Confidential = OutpointHash;
 pub type SealDefinition = Revealed;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Revealed {
     /// Seal that is revealed
     TxOutpoint(OutpointReveal),
@@ -69,7 +69,7 @@ impl CommitEncodeWithStrategy for Confidential {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct WitnessVoutError;
 
 impl TryFrom<Revealed> for OutPoint {

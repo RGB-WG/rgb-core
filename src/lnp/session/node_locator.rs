@@ -112,7 +112,7 @@ impl From<NodeAddr> for NodeLocator {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum ConversionError {
     NoPort,
     UnsupportedType,
@@ -134,15 +134,15 @@ impl TryFrom<NodeLocator> for NodeAddr {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum UrlError {
     MalformedUrl,
     UnknownScheme(String),
     HostRequired,
     InvalidPubkey,
-    #[derive_from]
+    #[from]
     InvalidHost(String),
-    #[derive_from(AddrParseError)]
+    #[from(AddrParseError)]
     InvalidIp,
     InvalidZmqType(String),
     ApiTypeRequired,

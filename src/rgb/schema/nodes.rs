@@ -21,7 +21,7 @@ pub type MetadataStructure = BTreeMap<FieldType, Occurences<u16>>;
 pub type SealsStructure = BTreeMap<AssignmentsType, Occurences<u16>>;
 
 #[derive(Clone, PartialEq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
     pub defines: SealsStructure,
@@ -29,7 +29,7 @@ pub struct GenesisSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
     pub closes: SealsStructure,

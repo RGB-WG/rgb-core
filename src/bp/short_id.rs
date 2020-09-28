@@ -18,7 +18,7 @@ use std::{
 };
 
 #[derive(Copy, Clone, Debug, Display, PartialEq, Eq)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {
     BlockHeightOutOfRange,
     InputIndexOutOfRange,
@@ -67,7 +67,7 @@ impl From<Txid> for TxChecksum {
 }
 
 #[derive(Copy, Clone, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Descriptor {
     OnchainBlock {
         block_height: u32,
@@ -104,7 +104,7 @@ pub enum Descriptor {
 }
 
 #[derive(Copy, Clone, Debug, Display, PartialEq, Eq)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Dimension {
     Input,
     Output,
@@ -340,7 +340,7 @@ impl Descriptor {
 }
 
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct ShortId(u64);
 
 impl ShortId {

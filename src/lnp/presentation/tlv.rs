@@ -39,7 +39,7 @@ wrapper!(
 impl EvenOdd for Type {}
 
 #[derive(Debug, Display, Default)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct Stream(BTreeMap<Type, Arc<dyn Any>>);
 
 impl Stream {

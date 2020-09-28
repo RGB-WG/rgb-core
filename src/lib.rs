@@ -39,8 +39,6 @@ extern crate amplify_derive;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
-extern crate derive_wrapper;
-#[macro_use]
 extern crate num_derive;
 
 // Support for node & node clients development (include API helpers)

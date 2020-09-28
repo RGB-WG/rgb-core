@@ -25,7 +25,7 @@ use crate::bp::{GenerateScripts, LockScript, PubkeyScript, ScriptPubkeyDescripto
 use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyComposition {
     PublicKey,
@@ -41,7 +41,7 @@ pub enum ScriptPubkeyComposition {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct ScriptPubkeyContainer {
     pub pubkey: secp256k1::PublicKey,
     pub script_info: ScriptInfo,

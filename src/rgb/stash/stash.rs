@@ -17,7 +17,7 @@
 use crate::rgb::{Anchor, Consignment, ContractId, Node, SealDefinition, Transition};
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {}
 
 pub trait Stash {

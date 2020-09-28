@@ -33,7 +33,7 @@ pub type Amount = u64;
 pub type BlindingFactor = secp256k1zkp::key::SecretKey;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, AsAny)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct Revealed {
     pub amount: Amount,
     pub blinding: BlindingFactor,
@@ -81,7 +81,7 @@ impl Ord for Revealed {
 }
 
 #[derive(Clone, Debug, Display, AsAny)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct Confidential {
     pub commitment: pedersen::Commitment,
     pub bulletproof: pedersen::RangeProof,

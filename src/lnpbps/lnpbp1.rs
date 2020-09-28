@@ -21,7 +21,7 @@ use crate::commit_verify::EmbedCommitVerify;
 /// Auxiliary structure that can be used for keeping LNPBP-1 commitment-related
 /// information
 #[derive(Clone, PartialEq, Eq, Debug, Display, Hash)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct Commitment {
     /// The original public key; it is a proof of the commitment (without
     /// it is impossible to verify the commitment)

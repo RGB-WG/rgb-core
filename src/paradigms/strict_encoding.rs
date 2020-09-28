@@ -96,7 +96,8 @@ pub enum Error {
     Io(io::ErrorKind),
 
     /// UTF8 Conversion Error
-    #[derive_from(std::str::Utf8Error, std::string::FromUtf8Error)]
+    #[from(std::str::Utf8Error)]
+    #[from(std::string::FromUtf8Error)]
     Utf8Conversion,
 
     /// A collection (slice, vector or other type) has more items than

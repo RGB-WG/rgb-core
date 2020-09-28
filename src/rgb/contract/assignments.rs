@@ -30,7 +30,7 @@ pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
 pub type Ancestors = BTreeMap<NodeId, BTreeMap<schema::AssignmentsType, Vec<u16>>>;
 
 #[derive(Clone, Debug, Display, PartialEq)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum AssignmentsVariant {
     Declarative(BTreeSet<Assignment<DeclarativeStrategy>>),
     DiscreteFiniteField(BTreeSet<Assignment<PedersenStrategy>>),
@@ -334,7 +334,7 @@ impl StateTypes for HashStrategy {
 }
 
 #[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Assignment<STATE>
 where
     STATE: StateTypes,

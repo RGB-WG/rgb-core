@@ -44,7 +44,7 @@ pub(super) static SHA256_LNPBP1: [u8; 32] = [
 /// must be hashed during commitment process. Here we use pre-hashed version
 /// of the tag in order to maximize performance for multiple commitments.
 #[derive(Clone, PartialEq, Eq, Debug, Display, Hash)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct LNPBP1Container {
     /// The original public key: host for commitment
     pub pubkey: secp256k1::PublicKey,

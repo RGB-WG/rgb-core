@@ -26,7 +26,7 @@ pub type ConsignmentData = Vec<(Anchor, Transition)>;
 pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
 
 #[derive(Clone, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct Consignment {
     version: u16,
     pub genesis: Genesis,

@@ -15,16 +15,16 @@ use crate::strict_encoding;
 use lightning::ln::msgs::DecodeError;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {
-    #[derive_from(std::io::Error)]
+    #[from(std::io::Error)]
     Io,
     NoData,
     NoEncoder,
     UnknownProtocolVersion,
-    #[derive_from(strict_encoding::Error)]
+    #[from(strict_encoding::Error)]
     EncodingError,
-    #[derive_from(UnknownTypeError)]
+    #[from(UnknownTypeError)]
     UnknownDataType,
     InvalidValue,
     MessageEvenType,
@@ -49,5 +49,5 @@ impl From<DecodeError> for Error {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct UnknownTypeError;

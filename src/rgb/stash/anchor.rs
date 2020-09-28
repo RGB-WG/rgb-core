@@ -48,14 +48,14 @@ lazy_static! {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {
     NoRequiredOutputInformation(usize),
     NoRequiredPubkey(usize),
     NoFeeInformation,
-    #[derive_from]
+    #[from]
     WrongPubkeyData(secp256k1::Error),
-    #[derive_from(TooManyMessagesError)]
+    #[from(TooManyMessagesError)]
     TooManyContracts,
 }
 

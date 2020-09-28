@@ -16,7 +16,7 @@ use ::std::path::PathBuf;
 
 /// Represents a connection to a generic node operating with LNP protocol
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum RemoteAddr {
     /// Direct access to LNP API methods without any serialization/deserialization

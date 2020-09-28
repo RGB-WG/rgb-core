@@ -40,7 +40,7 @@ use super::MAX_TRANSPORT_FRAME_SIZE;
 //use crate::lnp::transport::{Read, Write};
 
 #[derive(Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum ConnectionError {
     TorNotYetSupported,
     FailedHandshake(String),

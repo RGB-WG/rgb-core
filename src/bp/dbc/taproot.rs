@@ -19,7 +19,7 @@ use crate::bp::dbc::LNPBP1Container;
 use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct TaprootContainer {
     pub script_root: sha256::Hash,
     pub intermediate_key: secp256k1::PublicKey,
@@ -78,7 +78,7 @@ impl Container for TaprootContainer {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct TaprootCommitment {
     pub script_root: sha256::Hash,
     pub intermediate_key_commitment: LNPBP1Commitment,

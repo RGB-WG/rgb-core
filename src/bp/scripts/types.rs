@@ -197,7 +197,7 @@ wrapper!(
 /// specification; if a plain `u8` type will be used instead it will mean that
 /// version > 16, which is incorrect.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum WitnessVersion {
     /// Current, initial version of Witness Program. Used for P2WPKH and P2WPK
@@ -243,7 +243,7 @@ pub enum WitnessVersion {
 /// A error covering only one possible failure in WitnessVersion creation:
 /// when the provided version > 16
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum WitnessVersionError {
     /// The opocde provided for the version construction is incorrect
     IncorrectOpcode,
@@ -343,7 +343,7 @@ impl From<WScriptHash> for WitnessProgram {
 /// Defines strategy for converting some source Bitcoin script (i.e. [LockScript])
 /// into both `scriptPubkey` and `sigScript`/`witness` fields
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Hash)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum Strategy {
     /// The script or public key gets right into `scriptPubkey`, i.e. as
@@ -374,7 +374,7 @@ pub enum Strategy {
 
 /// Errors that happens during [ConversionStrategy::deduce] process
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum StrategyError {
     /// For P2SH scripts we need to know whether it is created for the
     /// witness-containing spending transaction input, i.e. whether its redeem
@@ -451,7 +451,7 @@ impl Strategy {
 /// parts that can be generated from some complete bitcoin Script ([LockScript])
 /// or public key using particular [ConversionStrategy]
 #[derive(Clone, PartialEq, Eq, Debug, Display, Hash, Default)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct ScriptSet {
     pub pubkey_script: PubkeyScript,
     pub sig_script: SigScript,

@@ -24,7 +24,7 @@ use super::{
 use crate::rgb::AssignmentsVariant;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct TxResolverError;
 
 pub trait TxResolver {
@@ -32,7 +32,7 @@ pub trait TxResolver {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum Validity {
     Valid,
@@ -41,7 +41,7 @@ pub enum Validity {
 }
 
 #[derive(Clone, Debug, Display, Default)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct Status {
     pub unresolved_txids: Vec<Txid>,
     pub failures: Vec<Failure>,
@@ -128,7 +128,7 @@ impl Status {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Failure {
     SchemaUnknown(SchemaId),
 
@@ -192,7 +192,7 @@ pub enum Failure {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Warning {
     EndpointTransitionNotFound(NodeId),
     EndpointDuplication(NodeId, seal::Confidential),
@@ -202,7 +202,7 @@ pub enum Warning {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Info {
     UncheckableConfidentialStateData(NodeId, usize),
 }

@@ -35,7 +35,7 @@ use crate::bp::scripts::*;
 use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct LockscriptContainer {
     pub script: LockScript,
     pub pubkey: secp256k1::PublicKey,

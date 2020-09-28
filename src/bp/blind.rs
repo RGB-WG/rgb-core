@@ -21,7 +21,7 @@ use crate::commit_verify::CommitVerify;
 /// Data required to generate or reveal the information about blinded
 /// transaction outpoint
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Default)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct OutpointReveal {
     /// Blinding factor preventing rainbow table bruteforce attack based on
     /// the existing blockchain txid set

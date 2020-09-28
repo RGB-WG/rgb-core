@@ -26,7 +26,7 @@ use crate::SECP256K1;
 /// must be hashed during commitment process. Here we use pre-hashed version
 /// of the tag in order to maximize performance for multiple commitments.
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct KeysetContainer {
     /// The original public key: host for the commitment
     pub pubkey: secp256k1::PublicKey,

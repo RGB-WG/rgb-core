@@ -44,7 +44,7 @@ hash_newtype!(
 );
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 pub enum Challenge {
     Signature(bitcoin::PublicKey),

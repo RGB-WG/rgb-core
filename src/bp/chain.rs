@@ -351,7 +351,7 @@ lazy_static! {
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash, FromPrimitive, ToPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum ChainFormat {
@@ -366,7 +366,7 @@ impl_enum_strict_encoding!(ChainFormat);
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash, FromPrimitive, ToPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum AssetLayer {
     /// Native chain asset(s), which can operate both on the layer of blockchain
@@ -383,7 +383,7 @@ impl_enum_strict_encoding!(AssetLayer);
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash, FromPrimitive, ToPrimitive,
 )]
-#[display_from(Debug)]
+#[display(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum AssetSystem {
@@ -401,7 +401,7 @@ impl_enum_strict_encoding!(AssetSystem);
 /// Parameters for a given asset, which are shared between different types of
 /// Layer 1, 2 and 3 assets.
 #[derive(Clone, PartialOrd, Ord, Debug, Display, Hash)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct AssetParams {
     /// Short asset name, or ticker, like BTC for bitcoin. Case-sensitive with
     /// default use of uppercase.
@@ -474,7 +474,7 @@ impl StrictDecode for AssetParams {
 /// Full set of parameters which uniquely define given blockchain,
 /// corresponding P2P network and RPC interface of fully validating nodes
 #[derive(Clone, PartialOrd, Ord, Debug, Display, Hash)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct ChainParams {
     /// Hash of the genesis block, uniquely defining chain
     pub genesis_hash: BlockHash,
@@ -792,7 +792,7 @@ impl Display for Chain {
 
 /// Chain data parse errors
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Display, Error, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum ParseError {
     /// The provided string does not matches any known chain; chain parameters
     /// can't be guessed. Please use `other:0x<hex_encoded_parameters>` for
@@ -801,12 +801,12 @@ pub enum ParseError {
 
     /// Chain parameters can't be decoded. Please check that they are provided
     /// as a hexadecimal string starting with `0x` sign (case is irrelevant).
-    #[derive_from(strict_encoding::Error)]
+    #[from(strict_encoding::Error)]
     ChainParamsEncoding,
 
     /// Can't decode value for genesis (chain) hash, please make sure that the
     /// provided string contains
-    #[derive_from]
+    #[from]
     GenesisHashEncoding(hex::Error),
 }
 

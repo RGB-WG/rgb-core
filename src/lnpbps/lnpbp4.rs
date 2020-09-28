@@ -26,11 +26,11 @@ pub type MultiMsg = BTreeMap<sha256::Hash, sha256::Hash>;
 pub type Lnpbp4Hash = sha256::Hash;
 
 #[derive(Copy, Clone, Error, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct TooManyMessagesError;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct MultimsgCommitmentItem {
     pub protocol: Option<sha256::Hash>,
     pub commitment: Lnpbp4Hash,
@@ -47,7 +47,7 @@ impl MultimsgCommitmentItem {
 
 /// Multimessage commitment data according to LNPBP-4 specification
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct MultimsgCommitment {
     pub commitments: Vec<MultimsgCommitmentItem>,
     pub entropy: Option<u64>,

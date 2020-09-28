@@ -119,7 +119,7 @@ impl Metadata {
 }
 
 #[derive(Clone, PartialEq, Hash, Debug, Display, Default)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct FieldData<T>
 where
     T: Clone + Debug + PartialEq + Default,

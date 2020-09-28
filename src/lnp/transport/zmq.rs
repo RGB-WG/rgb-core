@@ -27,7 +27,7 @@ use crate::Bipolar;
 
 /// API type for node-to-node communications used by ZeroMQ
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Copy)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum ApiType {
     /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ sockets.
@@ -92,15 +92,15 @@ impl Display for SocketLocator {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum UrlError {
     UnknownScheme(String),
     HostRequired,
     PortRequired,
     UnexpectedAuthority,
-    #[cfg_attr(feature = "url", derive_from(url::ParseError))]
+    #[cfg_attr(feature = "url", from(url::ParseError))]
     MalformedUrl,
-    #[derive_from(std::net::AddrParseError)]
+    #[from(std::net::AddrParseError)]
     MalformedIp,
 }
 

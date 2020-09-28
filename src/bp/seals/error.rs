@@ -14,7 +14,7 @@
 use crate::bp::dbc;
 
 #[derive(Clone, PartialEq, Debug, Display, From, Error)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {
     InvalidSealDefinition,
     SpentTxout,

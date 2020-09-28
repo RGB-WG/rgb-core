@@ -20,7 +20,7 @@ use bitcoin::secp256k1;
 use crate::SECP256K1;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error, From)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum Error {
     /// Encrypted message length is incorrect: it must be proportional to
     /// 32 bytes.

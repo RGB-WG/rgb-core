@@ -270,7 +270,7 @@ where
 ///   opened), however this is not a part of the specification and we should
 ///   not rely on the existence of such possibility in all cases.
 #[derive(Clone, Copy, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum SealStatus {
     /// It is unknown/undetermined whether the seal was closed
@@ -290,7 +290,7 @@ pub enum SealStatus {
 /// case; the type of MediumAccessError is defined through generic argument
 /// to [SealMediumError].
 #[derive(Clone, Copy, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub enum SealMediumError<M: std::error::Error> {
     /// Can't access the publication medium
     MediumAccessError(M),

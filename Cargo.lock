@@ -11,20 +11,20 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "0.1.9"
+version = "1.0.0-beta.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1a30b8af95508ae51f59035bdafc2540a49b93fb2ac32b05567c0d2512e28de"
+checksum = "0ff3e43900177713959949e5143190828d5772f61531992ae3330e70f31e35b2"
 dependencies = [
  "serde",
- "syn 1.0.42",
 ]
 
 [[package]]
 name = "amplify_derive"
-version = "0.1.3"
+version = "1.0.0-beta.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "883dc688510d4bfc19de0666a03a238961c9d2088c03484780f78916d8244020"
+checksum = "9c5b475e76a06066e25932bb62ed352390a2699e85dc7e68728566f276ebfe8b"
 dependencies = [
+ "amplify",
  "quote 1.0.7",
  "syn 1.0.42",
 ]
@@ -217,16 +217,6 @@ dependencies = [
  "quote 0.6.13",
  "regex",
  "rustc_version",
- "syn 0.15.44",
-]
-
-[[package]]
-name = "derive_wrapper"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a5604842443ca958616cd97cbca52a009644827f5b764969829dfe7e8d685a1"
-dependencies = [
- "quote 0.6.13",
  "syn 0.15.44",
 ]
 
@@ -565,7 +555,6 @@ dependencies = [
  "bech32",
  "bitcoin",
  "bitcoin_hashes",
- "derive_wrapper",
  "ed25519-dalek",
  "futures",
  "grin_secp256k1zkp",
@@ -589,7 +578,6 @@ name = "lnpbp_derive"
 version = "0.1.0"
 dependencies = [
  "amplify",
- "derive_wrapper",
  "lnpbp",
  "quote 1.0.7",
  "syn 1.0.42",

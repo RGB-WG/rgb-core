@@ -23,7 +23,7 @@ use crate::bp::PubkeyScript;
 use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display_from(Debug)]
+#[display(Debug)]
 pub struct TxoutContainer {
     pub value: u64,
     pub script_container: ScriptPubkeyContainer,
