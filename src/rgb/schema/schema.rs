@@ -11,18 +11,22 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
 use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{
-    vm, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateSchema, TransitionSchema,
+    vm, AssignmentsType, DataFormat, ExtensionSchema, GenesisSchema, SimplicityScript, StateSchema,
+    TransitionSchema,
 };
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
+use crate::rgb::schema::ValenciesType;
 
-pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
+// Here we can use usize since encoding/decoding makes sure that it's u16
+pub type FieldType = usize;
+pub type ExtensionType = usize;
+pub type TransitionType = usize;
 
 lazy_static! {
     static ref MIDSTATE_SHEMA_ID: [u8; 32] = {
@@ -45,7 +49,9 @@ tagged_hash!(
 pub struct Schema {
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateSchema>,
+    pub valencies_types: BTreeSet<ValenciesType>,
     pub genesis: GenesisSchema,
+    pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
 }
 
@@ -85,7 +91,9 @@ mod strict_encoding {
             Ok(strict_encode_list!(e;
                 self.field_types,
                 self.assignment_types,
+                self.valencies_types,
                 self.genesis,
+                self.extensions,
                 self.transitions,
                 // We keep this parameter for future script extended info (like ABI)
                 Vec::<u8>::new()
@@ -100,7 +108,9 @@ mod strict_encoding {
             let me = Self {
                 field_types: BTreeMap::strict_decode(&mut d)?,
                 assignment_types: BTreeMap::strict_decode(&mut d)?,
+                valencies_types: BTreeSet::strict_decode(&mut d)?,
                 genesis: GenesisSchema::strict_decode(&mut d)?,
+                extensions: BTreeMap::strict_decode(&mut d)?,
                 transitions: BTreeMap::strict_decode(&mut d)?,
             };
             // We keep this parameter for future script extended info (like ABI)
@@ -116,6 +126,7 @@ mod strict_encoding {
     }
 }
 
+/// TODO: (new) Add extension validation
 mod _validation {
     use super::*;
 
@@ -553,8 +564,10 @@ pub(crate) mod test {
                     ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None),
                     ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None)
                 },
+                valencies: bmap! {},
                 abi: bmap! {},
             },
+            extensions: bmap! {},
             transitions: bmap! {
                 TRANSITION_ISSUE => TransitionSchema {
                     metadata: bmap! {
@@ -568,7 +581,8 @@ pub(crate) mod test {
                         ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                abi: bmap! {}
+                    valencies: bmap! {},
+                    abi: bmap! {}
                 },
                 TRANSITION_TRANSFER => TransitionSchema {
                     metadata: bmap! {},
@@ -578,6 +592,7 @@ pub(crate) mod test {
                     defines: bmap! {
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
+                    valencies: bmap! {},
                     abi: bmap! {}
                 },
                 TRANSITION_PRUNE => TransitionSchema {
@@ -592,6 +607,7 @@ pub(crate) mod test {
                         ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
+                    valencies: bmap! {},
                     abi: bmap! {}
                 }
             },

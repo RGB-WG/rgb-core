@@ -19,12 +19,13 @@ mod types;
 
 pub(self) use super::vm;
 pub use nodes::{
-    AssignmentsType, GenesisSchema, MetadataStructure, SealsStructure, TransitionSchema,
+    AssignmentsType, ExtensionSchema, GenesisSchema, MetadataStructure, SealsStructure,
+    TransitionSchema, ValenciesStructure, ValenciesType,
 };
-pub use schema::{FieldType, Schema, SchemaId, TransitionType};
+pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{
-    AssignmentAbi, AssignmentAction, GenesisAbi, GenesisAction, SimplicityScript, TransitionAbi,
-    TransitionAction,
+    AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, GenesisAbi, GenesisAction,
+    SimplicityScript, TransitionAbi, TransitionAction,
 };
 pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
 pub use types::{

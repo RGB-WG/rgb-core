@@ -30,6 +30,13 @@ pub enum GenesisAction {}
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
 #[display(Debug)]
+pub enum ExtensionAction {}
+
+#[non_exhaustive]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
+#[display(Debug)]
 #[repr(u8)]
 pub enum TransitionAction {
     GenerateBlank = 0,
@@ -46,6 +53,7 @@ pub enum AssignmentAction {
 }
 
 pub type GenesisAbi = BTreeMap<GenesisAction, Procedure>;
+pub type ExtensionAbi = BTreeMap<ExtensionAction, Procedure>;
 pub type TransitionAbi = BTreeMap<TransitionAction, Procedure>;
 pub type AssignmentAbi = BTreeMap<AssignmentAction, Procedure>;
 
@@ -76,6 +84,7 @@ mod strict_encoding {
     impl_enum_strict_encoding!(GenesisAction);
     impl_enum_strict_encoding!(TransitionAction);
     impl_enum_strict_encoding!(AssignmentAction);
+    impl_enum_strict_encoding!(ExtensionAction);
 
     impl_enum_strict_encoding!(StandardProcedure);
 

@@ -36,7 +36,8 @@ tagged_hash!(
     NodeId,
     NodeIdTag,
     MIDSTATE_NODE_ID,
-    doc = "Unique node (genesis and state transition) identifier equivalent to the commitment hash"
+    doc = "Unique node (genesis, extensions & state transition) identifier \
+           equivalent to the commitment hash"
 );
 
 impl CommitEncodeWithStrategy for NodeId {
@@ -47,7 +48,8 @@ tagged_hash!(
     ContractId,
     ContractIdTag,
     MIDSTATE_NODE_ID,
-    doc = "Unique contract identifier equivalent to the contract genesis commitment hash"
+    doc = "Unique contract identifier equivalent to the contract genesis \
+           commitment hash"
 );
 
 pub trait Node {
