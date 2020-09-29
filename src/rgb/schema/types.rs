@@ -319,6 +319,20 @@ mod strict_encoding {
 #[cfg(test)]
 mod test {
     use super::Occurences;
+    use super::*;
+    use crate::strict_encoding::{test::*, StrictDecode};
+
+    static ONCE: [u8; 9] = [0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+
+    static NONEORONCE: [u8; 9] = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+
+    static NONEUPTO_U8: [u8; 9] = [0xfe, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+
+    static NONEUPTO_U16: [u8; 9] = [0xfe, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+
+    static NONEUPTO_U32: [u8; 9] = [0xfe, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0];
+
+    static NONEUPTO_U64: [u8; 9] = [0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
 
     #[test]
     fn test_once_check_count() {
@@ -414,5 +428,272 @@ mod test {
     fn test_none_or_up_to_42_large() {
         let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
         occurence.check(43u32).unwrap();
+    }
+
+    #[test]
+    fn test_encode_occurance() {
+        test_encode!(
+            (ONCE, Occurences<u8>),
+            (ONCE, Occurences<u16>),
+            (ONCE, Occurences<u32>),
+            (ONCE, Occurences<u64>),
+            (NONEORONCE, Occurences<u8>),
+            (NONEORONCE, Occurences<u16>),
+            (NONEORONCE, Occurences<u32>),
+            (NONEORONCE, Occurences<u64>)
+        );
+
+        test_encode!(
+            (NONEUPTO_U8, Occurences<u8>),
+            (NONEUPTO_U16, Occurences<u16>),
+            (NONEUPTO_U32, Occurences<u32>),
+            (NONEUPTO_U64, Occurences<u64>)
+        );
+    }
+
+    #[test]
+    fn test_encode_occurance_2() {
+        let mut once_upto_u8 = NONEUPTO_U8.clone();
+        let mut once_upto_u16 = NONEUPTO_U16.clone();
+        let mut once_upto_u32 = NONEUPTO_U32.clone();
+        let mut once_upto_u64 = NONEUPTO_U64.clone();
+
+        once_upto_u8[0] = 0xFF;
+        once_upto_u16[0] = 0xFF;
+        once_upto_u32[0] = 0xFF;
+        once_upto_u64[0] = 0xFF;
+
+        let dec1: Occurences<u8> = Occurences::strict_decode(&once_upto_u8[..]).unwrap();
+        let dec2: Occurences<u16> = Occurences::strict_decode(&once_upto_u16[..]).unwrap();
+        let dec3: Occurences<u32> = Occurences::strict_decode(&once_upto_u32[..]).unwrap();
+        let dec4: Occurences<u64> = Occurences::strict_decode(&once_upto_u64[..]).unwrap();
+
+        assert_eq!(dec1, Occurences::OnceOrUpTo(None));
+        assert_eq!(dec2, Occurences::OnceOrUpTo(None));
+        assert_eq!(dec3, Occurences::OnceOrUpTo(None));
+        assert_eq!(dec4, Occurences::OnceOrUpTo(None));
+
+        let wc1: Occurences<u64> = Occurences::strict_decode(&once_upto_u8[..]).unwrap();
+        let wc2: Occurences<u64> = Occurences::strict_decode(&once_upto_u16[..]).unwrap();
+        let wc3: Occurences<u64> = Occurences::strict_decode(&once_upto_u32[..]).unwrap();
+
+        assert_eq!(wc1, Occurences::OnceOrUpTo(Some(u8::MAX as u64)));
+        assert_eq!(wc2, Occurences::OnceOrUpTo(Some(u16::MAX as u64)));
+        assert_eq!(wc3, Occurences::OnceOrUpTo(Some(u32::MAX as u64)));
+    }
+
+    #[test]
+    #[should_panic(expected = "New occurrence types can't appear w/o this library to be aware of")]
+    fn test_occurrence_panic_1() {
+        test_garbage!((NONEUPTO_U8, Occurences<u8>));
+    }
+
+    #[test]
+    #[should_panic(expected = "New occurrence types can't appear w/o this library to be aware of")]
+    fn test_occurrence_panic_2() {
+        test_garbage!((NONEUPTO_U16, Occurences<u16>));
+    }
+
+    #[test]
+    #[should_panic(expected = "New occurrence types can't appear w/o this library to be aware of")]
+    fn test_occurrence_panic_3() {
+        test_garbage!((NONEUPTO_U32, Occurences<u32>));
+    }
+
+    #[test]
+    #[should_panic(expected = "New occurrence types can't appear w/o this library to be aware of")]
+    fn test_occurrence_panic_4() {
+        test_garbage!((NONEUPTO_U64, Occurences<u64>));
+    }
+
+    #[test]
+    #[should_panic(expected = "ValueOutOfRange")]
+    fn test_occurrence_panic_5() {
+        test_encode!((NONEUPTO_U64, Occurences<u8>));
+    }
+
+    #[test]
+    #[should_panic(expected = "ValueOutOfRange")]
+    fn test_occurrence_panic_6() {
+        test_encode!((NONEUPTO_U32, Occurences<u16>));
+    }
+
+    #[test]
+    fn test_digest_algorithm() {
+        let sha256 = DigestAlgorithm::Sha256;
+        let sha512 = DigestAlgorithm::Sha512;
+        let bitcoin160 = DigestAlgorithm::Bitcoin160;
+        let bitcoin256 = DigestAlgorithm::Bitcoin256;
+
+        print_bytes(&sha256);
+        print_bytes(&sha512);
+        print_bytes(&bitcoin160);
+        print_bytes(&bitcoin256);
+
+        let sha256_byte: [u8; 1] = [0x11];
+        let sha512_byte: [u8; 1] = [0x12];
+        let bitcoin160_byte: [u8; 1] = [0x48];
+        let bitcoin256_byte: [u8; 1] = [0x51];
+
+        test_encode!(
+            (sha256_byte, DigestAlgorithm),
+            (sha512_byte, DigestAlgorithm),
+            (bitcoin160_byte, DigestAlgorithm),
+            (bitcoin256_byte, DigestAlgorithm)
+        );
+
+        let sha256 = DigestAlgorithm::strict_decode(&[0x11][..]).unwrap();
+        let sha512 = DigestAlgorithm::strict_decode(&[0x12][..]).unwrap();
+        let bitcoin160 = DigestAlgorithm::strict_decode(&[0x48][..]).unwrap();
+        let bitcoin256 = DigestAlgorithm::strict_decode(&[0x51][..]).unwrap();
+
+        assert_eq!(sha256, DigestAlgorithm::Sha256);
+        assert_eq!(sha512, DigestAlgorithm::Sha512);
+        assert_eq!(bitcoin160, DigestAlgorithm::Bitcoin160);
+        assert_eq!(bitcoin256, DigestAlgorithm::Bitcoin256);
+    }
+
+    #[test]
+    #[should_panic(expected = "EnumValueNotKnown")]
+    fn test_digest_panic() {
+        DigestAlgorithm::strict_decode(&[0x17][..]).unwrap();
+    }
+
+    #[test]
+    fn test_bits() {
+        let bit8 = Bits::strict_decode(&[0x01][..]).unwrap();
+        let bit16 = Bits::strict_decode(&[0x02][..]).unwrap();
+        let bit32 = Bits::strict_decode(&[0x04][..]).unwrap();
+        let bit64 = Bits::strict_decode(&[0x08][..]).unwrap();
+
+        assert_eq!(bit8, Bits::Bit8);
+        assert_eq!(bit16, Bits::Bit16);
+        assert_eq!(bit32, Bits::Bit32);
+        assert_eq!(bit64, Bits::Bit64);
+
+        assert_eq!(bit8.max_value(), u8::MAX as u128);
+        assert_eq!(bit16.max_value(), u16::MAX as u128);
+        assert_eq!(bit32.max_value(), u32::MAX as u128);
+        assert_eq!(bit64.max_value(), u64::MAX as u128);
+
+        assert_eq!(bit8.bit_len(), 8 as usize);
+        assert_eq!(bit8.byte_len(), 1 as usize);
+        assert_eq!(bit16.bit_len(), 16 as usize);
+        assert_eq!(bit16.byte_len(), 2 as usize);
+        assert_eq!(bit32.bit_len(), 32 as usize);
+        assert_eq!(bit32.byte_len(), 4 as usize);
+        assert_eq!(bit64.bit_len(), 64 as usize);
+        assert_eq!(bit64.byte_len(), 8 as usize);
+    }
+
+    #[test]
+    #[should_panic(expected = "EnumValueNotKnown")]
+    fn test_bits_panic() {
+        Bits::strict_decode(&[0x12][..]).unwrap();
+    }
+
+    #[test]
+    fn test_elliptic_curve() {
+        let secp: [u8; 1] = [0x00];
+        let c25519: [u8; 1] = [0x10];
+
+        test_encode!(
+            (secp, elliptic_curve::EllipticCurve),
+            (c25519, elliptic_curve::EllipticCurve)
+        );
+
+        assert_eq!(
+            elliptic_curve::EllipticCurve::strict_decode(&[0x00][..]).unwrap(),
+            elliptic_curve::EllipticCurve::Secp256k1
+        );
+
+        assert_eq!(
+            elliptic_curve::EllipticCurve::strict_decode(&[0x10][..]).unwrap(),
+            elliptic_curve::EllipticCurve::Curve25519
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "EnumValueNotKnown")]
+    fn test_elliptic_curve_panic() {
+        elliptic_curve::EllipticCurve::strict_decode(&[0x09][..]).unwrap();
+    }
+
+    #[test]
+    fn test_signature_algo() {
+        let ecdsa_byte: [u8; 1] = [0x00];
+        let schnorr_byte: [u8; 1] = [0x01];
+        let ed25519_byte: [u8; 1] = [0x02];
+
+        test_encode!(
+            (ecdsa_byte, elliptic_curve::SignatureAlgorithm),
+            (schnorr_byte, elliptic_curve::SignatureAlgorithm),
+            (ed25519_byte, elliptic_curve::SignatureAlgorithm)
+        );
+
+        let ecdsa = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x00][..]).unwrap();
+        let schnorr = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x01][..]).unwrap();
+        let ed25519 = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x02][..]).unwrap();
+
+        assert_eq!(ecdsa, elliptic_curve::SignatureAlgorithm::Ecdsa);
+        assert_eq!(schnorr, elliptic_curve::SignatureAlgorithm::Schnorr);
+        assert_eq!(ed25519, elliptic_curve::SignatureAlgorithm::Ed25519);
+    }
+
+    #[test]
+    #[should_panic(expected = "EnumValueNotKnown")]
+    fn test_signature_algo_panic() {
+        elliptic_curve::SignatureAlgorithm::strict_decode(&[0x03][..]).unwrap();
+    }
+
+    #[test]
+    fn test_point_ser() {
+        let uncompressed_byte: [u8; 1] = [0x00];
+        let compressed_byte: [u8; 1] = [0x01];
+        let schnorr_bip_byte: [u8; 1] = [0x02];
+
+        test_encode!(
+            (uncompressed_byte, elliptic_curve::PointSerialization),
+            (compressed_byte, elliptic_curve::PointSerialization),
+            (schnorr_bip_byte, elliptic_curve::PointSerialization)
+        );
+
+        assert_eq!(
+            elliptic_curve::PointSerialization::strict_decode(&[0x00][..]).unwrap(),
+            elliptic_curve::PointSerialization::Uncompressed
+        );
+
+        assert_eq!(
+            elliptic_curve::PointSerialization::strict_decode(&[0x01][..]).unwrap(),
+            elliptic_curve::PointSerialization::Compressed
+        );
+
+        assert_eq!(
+            elliptic_curve::PointSerialization::strict_decode(&[0x02][..]).unwrap(),
+            elliptic_curve::PointSerialization::SchnorrBip
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "EnumValueNotKnown")]
+    fn test_point_ser_panic() {
+        elliptic_curve::PointSerialization::strict_decode(&[0x03][..]).unwrap();
+    }
+
+    #[test]
+    fn test_unsigned() {
+        let u8_unsigned = u8::MAX;
+        let u16_unsigned = u16::MAX;
+        let u32_unsigned = u32::MAX;
+        let u64_unsigned = u64::MAX;
+
+        assert_eq!(u8_unsigned.as_u64(), u8::MAX as u64);
+        assert_eq!(u8::bits(), Bits::Bit8);
+        assert_eq!(u16_unsigned.as_u64(), u16::MAX as u64);
+        assert_eq!(u16::bits(), Bits::Bit16);
+        assert_eq!(u32_unsigned.as_u64(), u32::MAX as u64);
+        assert_eq!(u32::bits(), Bits::Bit32);
+        assert_eq!(u64_unsigned.as_u64(), u64::MAX as u64);
+        assert_eq!(u64::bits(), Bits::Bit64);
     }
 }
