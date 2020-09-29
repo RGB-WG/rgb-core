@@ -508,6 +508,8 @@ pub(crate) mod test {
         const FIELD_PRUNE_PROOF: usize = 7;
         const FIELD_TIMESTAMP: usize = 8;
 
+        const FIELD_PROOF_OF_BURN: usize = 0x10;
+
         const ASSIGNMENT_ISSUE: usize = 0;
         const ASSIGNMENT_ASSETS: usize = 1;
         const ASSIGNMENT_PRUNE: usize = 2;
@@ -515,6 +517,10 @@ pub(crate) mod test {
         const TRANSITION_ISSUE: usize = 0;
         const TRANSITION_TRANSFER: usize = 1;
         const TRANSITION_PRUNE: usize = 2;
+
+        const VALENCIES_DECENTRALIZED_ISSUE: usize = 0;
+
+        const EXTENSION_DECENTRALIZED_ISSUE: usize = 0;
 
         Schema {
             field_types: bmap! {
@@ -526,7 +532,9 @@ pub(crate) mod test {
                 FIELD_ISSUED_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_DUST_LIMIT => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_PRUNE_PROOF => DataFormat::Bytes(core::u16::MAX),
-                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
+                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
+                // TODO: (new) Fix this with introduction of new data type
+                FIELD_PROOF_OF_BURN => DataFormat::String(0)
             },
             assignment_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema {
@@ -548,6 +556,9 @@ pub(crate) mod test {
                     }
                 }
             },
+            valencies_types: bset! {
+                VALENCIES_DECENTRALIZED_ISSUE
+            },
             genesis: GenesisSchema {
                 metadata: bmap! {
                     FIELD_TICKER => Occurences::Once,
@@ -564,10 +575,23 @@ pub(crate) mod test {
                     ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None),
                     ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None)
                 },
-                valencies: bmap! {},
+                valencies: bset! { VALENCIES_DECENTRALIZED_ISSUE },
                 abi: bmap! {},
             },
-            extensions: bmap! {},
+            extensions: bmap! {
+                EXTENSION_DECENTRALIZED_ISSUE => ExtensionSchema {
+                    metadata: bmap! {
+                        FIELD_ISSUED_SUPPLY => Occurences::Once,
+                        FIELD_PROOF_OF_BURN => Occurences::OnceOrUpTo(None)
+                    },
+                    defines: bmap! {
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                    },
+                    extends: bset! { VALENCIES_DECENTRALIZED_ISSUE },
+                    valencies: bset! { },
+                    abi: bmap! {},
+                }
+            },
             transitions: bmap! {
                 TRANSITION_ISSUE => TransitionSchema {
                     metadata: bmap! {
@@ -581,7 +605,7 @@ pub(crate) mod test {
                         ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                    valencies: bmap! {},
+                    valencies: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_TRANSFER => TransitionSchema {
@@ -592,7 +616,7 @@ pub(crate) mod test {
                     defines: bmap! {
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                    valencies: bmap! {},
+                    valencies: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_PRUNE => TransitionSchema {
@@ -607,7 +631,7 @@ pub(crate) mod test {
                         ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                    valencies: bmap! {},
+                    valencies: bset! {},
                     abi: bmap! {}
                 }
             },
