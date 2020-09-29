@@ -18,13 +18,6 @@ pub enum Error {
     #[from(std::io::Error)]
     SocketError,
     RequiresLocalSocket,
+    #[from(!)]
     UnreachableError,
-}
-
-// TODO: (new) Replace with `#[from(!)]` once the issue in amplify_derive will
-//       be solved: <https://github.com/LNP-BP/rust-amplify/issues/3>
-impl From<!> for Error {
-    fn from(_: !) -> Self {
-        Error::UnreachableError
-    }
 }
