@@ -33,8 +33,8 @@ pub struct Consignment {
     version: u16,
     pub genesis: Genesis,
     pub endpoints: ConsignmentEndpoints,
-    pub data: OwnedData,
-    pub extensions: ExtensionData,
+    pub owned_data: OwnedData,
+    pub extension_data: ExtensionData,
 }
 
 impl Consignment {
@@ -47,22 +47,25 @@ impl Consignment {
         Self {
             version: RGB_CONSIGNMENT_VERSION,
             genesis,
-            extensions,
+            extension_data: extensions,
             endpoints,
-            data,
+            owned_data: data,
         }
     }
 
     #[inline]
     pub fn txids(&self) -> BTreeSet<Txid> {
-        self.data.iter().map(|(anchor, _)| anchor.txid).collect()
+        self.owned_data
+            .iter()
+            .map(|(anchor, _)| anchor.txid)
+            .collect()
     }
 
     #[inline]
     pub fn node_ids(&self) -> BTreeSet<NodeId> {
         let mut set = bset![self.genesis.node_id()];
-        set.extend(self.data.iter().map(|(_, node)| node.node_id()));
-        set.extend(self.extensions.iter().map(Extension::node_id));
+        set.extend(self.owned_data.iter().map(|(_, node)| node.node_id()));
+        set.extend(self.extension_data.iter().map(Extension::node_id));
         set
     }
 

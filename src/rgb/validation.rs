@@ -21,6 +21,7 @@ use super::schema::OccurrencesError;
 use super::{
     schema, seal, Anchor, AnchorId, Consignment, ContractId, Node, NodeId, Schema, SchemaId,
 };
+use crate::rgb::schema::NodeType;
 use crate::rgb::AssignmentsVariant;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
@@ -245,12 +246,16 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
         let mut anchor_index = BTreeMap::<NodeId, &Anchor>::new();
-        for (anchor, transition) in &consignment.data {
+        for (anchor, transition) in &consignment.owned_data {
             let node_id = transition.node_id();
             node_index.insert(node_id, transition);
             anchor_index.insert(node_id, anchor);
         }
         node_index.insert(genesis_id, &consignment.genesis);
+        for extension in &consignment.extension_data {
+            let node_id = extension.node_id();
+            node_index.insert(node_id, extension);
+        }
 
         // Collect all endpoint transitions
         // This is pretty simple operation; it takes a lot of code because
@@ -382,6 +387,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         queue.push_back(node);
         while let Some(node) = queue.pop_front() {
             let node_id = node.node_id();
+            let node_type = node.node_type();
 
             // [VALIDATION]: Verify node against the schema. Here we check
             //               only a single node, not state evolution (it
@@ -392,8 +398,8 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             }
 
             // Making sure we do have a corresponding anchor; otherwise
-            // reporting failure (see below) - with the except of genesis
-            // node, which does not have a corresponding anchor
+            // reporting failure (see below) - with the except of genesis and
+            // extension nodes, which does not have a corresponding anchor
             if let Some(anchor) = self.anchor_index.get(&node_id).cloned() {
                 // Ok, now we have the `node` and the `anchor`, let's do all
                 // required checks
@@ -409,9 +415,9 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 self.validate_graph_node(node, anchor);
 
             // Ouch, we are out of that multi-level nested cycles :)
-            } else if node_id != self.genesis_id {
+            } else if node_type != NodeType::Genesis && node_type != NodeType::Extension {
                 // This point is actually unreachable: b/c of the
-                // consignment structure, each node (other then genesis)
+                // consignment structure, each state transition
                 // has a corresponding anchor. So if we've got here there
                 // is something broken with LNP/BP core library.
                 // TODO: Consider to remove this failure and replace it
@@ -443,6 +449,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
     fn validate_graph_node(&mut self, node: &'validator dyn Node, anchor: &'validator Anchor) {
         let txid = anchor.txid;
         let node_id = node.node_id();
+        let node_type = node.node_type();
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.
