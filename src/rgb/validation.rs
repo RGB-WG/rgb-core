@@ -184,6 +184,13 @@ pub enum Failure {
         outpoint: bitcoin::OutPoint,
     },
 
+    ExtensionAbsent(NodeId),
+    ExtensionAncestorWrongValenciesType {
+        node_id: NodeId,
+        ancestor_id: NodeId,
+        valencies_type: schema::ValenciesType,
+    },
+
     WitnessTransactionMissed(Txid),
     WitnessNoCommitment(NodeId, AnchorId, Txid),
 
