@@ -157,7 +157,8 @@ pub struct Genesis {
     script: SimplicityScript,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
@@ -167,7 +168,7 @@ pub struct Extension {
     script: SimplicityScript,
 }
 
-#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode)]
 #[strict_crate(crate)]
 pub struct Transition {
     transition_type: TransitionType,
