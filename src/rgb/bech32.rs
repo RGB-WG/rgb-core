@@ -13,9 +13,11 @@
 
 use ::bech32::{self, FromBase32, ToBase32};
 use ::core::fmt::{Display, Formatter};
-use ::core::str::{pattern::Pattern, FromStr};
+use ::core::str::FromStr;
 
-use crate::rgb::{seal, Anchor, ContractId, Disclosure, Genesis, Schema, SchemaId, Transition};
+use crate::rgb::{
+    seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId, Transition,
+};
 use crate::strict_encoding::{self, strict_decode, strict_encode};
 
 #[derive(Clone, Debug)]
@@ -25,6 +27,7 @@ pub enum Bech32 {
     Schema(Schema),
     SchemaId(SchemaId),
     Genesis(Genesis),
+    Extension(Extension),
     Transition(Transition),
     Anchor(Anchor),
     Disclosure(Disclosure),
@@ -32,15 +35,17 @@ pub enum Bech32 {
 }
 
 impl Bech32 {
-    pub const HRP: &'static str = "rgb";
+    pub const HRP_CONTRACT_ID: &'static str = "rgb";
+    pub const HRP_SCHEMA_ID: &'static str = "sch";
+
     pub const HRP_OUTPOINT: &'static str = "txo";
-    pub const HRP_ID: &'static str = "rgb";
-    pub const HRP_SCHEMA: &'static str = "schema_data";
-    pub const HRP_SCHEMA_ID: &'static str = "schema";
+
+    pub const HRP_SCHEMA: &'static str = "schema";
     pub const HRP_GENESIS: &'static str = "genesis";
-    pub const HRP_TRANSITION: &'static str = "rgb_ts";
-    pub const HRP_ANCHOR: &'static str = "rgb_anc";
-    pub const HRP_DISCLOSURE: &'static str = "rgb_disclosure";
+    pub const HRP_EXTENSION: &'static str = "statex";
+    pub const HRP_TRANSITION: &'static str = "transition";
+    pub const HRP_ANCHOR: &'static str = "anchor";
+    pub const HRP_DISCLOSURE: &'static str = "disclosure";
 }
 
 pub trait ToBech32 {
@@ -73,9 +78,16 @@ impl ToBech32 for SchemaId {
         Bech32::SchemaId(self.clone())
     }
 }
+
 impl ToBech32 for Genesis {
     fn to_bech32(&self) -> Bech32 {
         Bech32::Genesis(self.clone())
+    }
+}
+
+impl ToBech32 for Extension {
+    fn to_bech32(&self) -> Bech32 {
+        Bech32::Extension(self.clone())
     }
 }
 
@@ -125,15 +137,15 @@ impl FromStr for Bech32 {
 
         Ok(match hrp {
             x if x == Self::HRP_OUTPOINT => Self::Outpoint(strict_decode(&data)?),
-            x if x == Self::HRP_ID => Self::ContractId(strict_decode(&data)?),
+            x if x == Self::HRP_CONTRACT_ID => Self::ContractId(strict_decode(&data)?),
             x if x == Self::HRP_SCHEMA => Self::Schema(strict_decode(&data)?),
             x if x == Self::HRP_SCHEMA_ID => Self::SchemaId(strict_decode(&data)?),
             x if x == Self::HRP_GENESIS => Self::Genesis(strict_decode(&data)?),
+            x if x == Self::HRP_EXTENSION => Self::Extension(strict_decode(&data)?),
             x if x == Self::HRP_TRANSITION => Self::Transition(strict_decode(&data)?),
             x if x == Self::HRP_ANCHOR => Self::Anchor(strict_decode(&data)?),
             x if x == Self::HRP_DISCLOSURE => Self::Disclosure(strict_decode(&data)?),
-            other if Self::HRP.is_prefix_of(&other) => Self::Other(other, data),
-            other => Err(Error::WrongHrp(other))?,
+            other => Self::Other(other, data),
         })
     }
 }
@@ -142,10 +154,11 @@ impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
             Self::Outpoint(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)),
-            Self::ContractId(obj) => (Self::HRP_ID, strict_encode(obj)),
+            Self::ContractId(obj) => (Self::HRP_CONTRACT_ID, strict_encode(obj)),
             Self::Schema(obj) => (Self::HRP_SCHEMA, strict_encode(obj)),
             Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_encode(obj)),
             Self::Genesis(obj) => (Self::HRP_GENESIS, strict_encode(obj)),
+            Self::Extension(obj) => (Self::HRP_EXTENSION, strict_encode(obj)),
             Self::Transition(obj) => (Self::HRP_TRANSITION, strict_encode(obj)),
             Self::Anchor(obj) => (Self::HRP_ANCHOR, strict_encode(obj)),
             Self::Disclosure(obj) => (Self::HRP_DISCLOSURE, strict_encode(obj)),
@@ -174,6 +187,17 @@ impl FromStr for Genesis {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match Bech32::from_str(s)? {
             Bech32::Genesis(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl FromStr for Extension {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Bech32::from_str(s)? {
+            Bech32::Extension(obj) => Ok(obj),
             _ => Err(Error::WrongType),
         }
     }

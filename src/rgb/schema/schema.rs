@@ -11,18 +11,22 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
 use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{
-    vm, AssignmentsType, DataFormat, GenesisSchema, SimplicityScript, StateSchema, TransitionSchema,
+    vm, AssignmentsType, DataFormat, ExtensionSchema, GenesisSchema, SimplicityScript, StateSchema,
+    TransitionSchema,
 };
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
+use crate::rgb::schema::ValenciesType;
 
-pub type FieldType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type TransitionType = usize; // Here we can use usize since encoding/decoding makes sure that it's u16
+// Here we can use usize since encoding/decoding makes sure that it's u16
+pub type FieldType = usize;
+pub type ExtensionType = usize;
+pub type TransitionType = usize;
 
 lazy_static! {
     static ref MIDSTATE_SHEMA_ID: [u8; 32] = {
@@ -49,7 +53,9 @@ pub struct Schema {
     // pub family_schema_id: SchemaId,
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateSchema>,
+    pub valencies_types: BTreeSet<ValenciesType>,
     pub genesis: GenesisSchema,
+    pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
 }
 
@@ -89,7 +95,9 @@ mod strict_encoding {
             Ok(strict_encode_list!(e;
                 self.field_types,
                 self.assignment_types,
+                self.valencies_types,
                 self.genesis,
+                self.extensions,
                 self.transitions,
                 // We keep this parameter for future script extended info (like ABI)
                 Vec::<u8>::new()
@@ -104,7 +112,9 @@ mod strict_encoding {
             let me = Self {
                 field_types: BTreeMap::strict_decode(&mut d)?,
                 assignment_types: BTreeMap::strict_decode(&mut d)?,
+                valencies_types: BTreeSet::strict_decode(&mut d)?,
                 genesis: GenesisSchema::strict_decode(&mut d)?,
+                extensions: BTreeMap::strict_decode(&mut d)?,
                 transitions: BTreeMap::strict_decode(&mut d)?,
             };
             // We keep this parameter for future script extended info (like ABI)
@@ -126,7 +136,8 @@ mod _validation {
     use core::convert::TryFrom;
     use std::collections::BTreeSet;
 
-    use crate::rgb::schema::{script, MetadataStructure, SealsStructure};
+    use crate::rgb::contract::nodes::Valencies;
+    use crate::rgb::schema::{script, MetadataStructure, SealsStructure, ValenciesStructure};
     use crate::rgb::{
         validation, Ancestors, AssignmentAction, Assignments, AssignmentsVariant, Metadata, Node,
         NodeId, VirtualMachine,
@@ -139,20 +150,28 @@ mod _validation {
             node: &dyn Node,
         ) -> validation::Status {
             let node_id = node.node_id();
-            let type_id = node.type_id();
 
             let empty_seals_structure = SealsStructure::default();
-            let (metadata_structure, ancestors_structure, assignments_structure) = match type_id {
-                None => (
+            let (
+                metadata_structure,
+                ancestors_structure,
+                assignments_structure,
+                valencies_structure,
+            ) = match (node.transition_type(), node.extension_type()) {
+                (None, None) => (
                     &self.genesis.metadata,
                     &empty_seals_structure,
                     &self.genesis.defines,
+                    &self.genesis.valencies,
                 ),
-                Some(type_id) => {
-                    let transition_type = match self.transitions.get(&type_id) {
+                (Some(transition_type), None) => {
+                    let transition_type = match self.transitions.get(&transition_type) {
                         None => {
                             return validation::Status::with_failure(
-                                validation::Failure::SchemaUnknownTransitionType(node_id, type_id),
+                                validation::Failure::SchemaUnknownTransitionType(
+                                    node_id,
+                                    transition_type,
+                                ),
                             )
                         }
                         Some(transition_type) => transition_type,
@@ -162,8 +181,30 @@ mod _validation {
                         &transition_type.metadata,
                         &transition_type.closes,
                         &transition_type.defines,
+                        &transition_type.valencies,
                     )
                 }
+                (None, Some(extension_type)) => {
+                    let extension_type = match self.extensions.get(&extension_type) {
+                        None => {
+                            return validation::Status::with_failure(
+                                validation::Failure::SchemaUnknownExtensionType(
+                                    node_id,
+                                    extension_type,
+                                ),
+                            )
+                        }
+                        Some(extension_type) => extension_type,
+                    };
+
+                    (
+                        &extension_type.metadata,
+                        &empty_seals_structure,
+                        &extension_type.defines,
+                        &extension_type.extends,
+                    )
+                }
+                _ => unreachable!("Node can't be extension and state transition at the same time"),
             };
 
             let mut status = validation::Status::new();
@@ -172,9 +213,10 @@ mod _validation {
             status += self.validate_meta(node_id, node.metadata(), metadata_structure);
             status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
             status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
+            status += self.validate_valencies(node_id, node.valencies(), valencies_structure);
             status += self.validate_state_evolution(
                 node_id,
-                node.type_id(),
+                node.transition_type(),
                 &ancestor_assignments,
                 node.assignments(),
                 node.metadata(),
@@ -317,6 +359,26 @@ mod _validation {
                     }),
                 };
             }
+
+            status
+        }
+
+        fn validate_valencies(
+            &self,
+            node_id: NodeId,
+            valencies: &Valencies,
+            valencies_structure: &ValenciesStructure,
+        ) -> validation::Status {
+            let mut status = validation::Status::new();
+
+            valencies
+                .difference(&valencies_structure)
+                .for_each(|valencies_id| {
+                    status.add_failure(validation::Failure::SchemaUnknownValenciesType(
+                        node_id,
+                        *valencies_id,
+                    ));
+                });
 
             status
         }
@@ -501,6 +563,8 @@ pub(crate) mod test {
         const FIELD_PRUNE_PROOF: usize = 7;
         const FIELD_TIMESTAMP: usize = 8;
 
+        const FIELD_PROOF_OF_BURN: usize = 0x10;
+
         const ASSIGNMENT_ISSUE: usize = 0;
         const ASSIGNMENT_ASSETS: usize = 1;
         const ASSIGNMENT_PRUNE: usize = 2;
@@ -508,6 +572,10 @@ pub(crate) mod test {
         const TRANSITION_ISSUE: usize = 0;
         const TRANSITION_TRANSFER: usize = 1;
         const TRANSITION_PRUNE: usize = 2;
+
+        const VALENCIES_DECENTRALIZED_ISSUE: usize = 0;
+
+        const EXTENSION_DECENTRALIZED_ISSUE: usize = 0;
 
         Schema {
             field_types: bmap! {
@@ -519,7 +587,9 @@ pub(crate) mod test {
                 FIELD_ISSUED_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_DUST_LIMIT => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_PRUNE_PROOF => DataFormat::Bytes(core::u16::MAX),
-                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
+                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
+                // TODO: (new) Fix this with introduction of new data type
+                FIELD_PROOF_OF_BURN => DataFormat::String(0)
             },
             assignment_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema {
@@ -541,6 +611,9 @@ pub(crate) mod test {
                     }
                 }
             },
+            valencies_types: bset! {
+                VALENCIES_DECENTRALIZED_ISSUE
+            },
             genesis: GenesisSchema {
                 metadata: bmap! {
                     FIELD_TICKER => Occurences::Once,
@@ -557,7 +630,22 @@ pub(crate) mod test {
                     ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None),
                     ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None)
                 },
+                valencies: bset! { VALENCIES_DECENTRALIZED_ISSUE },
                 abi: bmap! {},
+            },
+            extensions: bmap! {
+                EXTENSION_DECENTRALIZED_ISSUE => ExtensionSchema {
+                    metadata: bmap! {
+                        FIELD_ISSUED_SUPPLY => Occurences::Once,
+                        FIELD_PROOF_OF_BURN => Occurences::OnceOrUpTo(None)
+                    },
+                    defines: bmap! {
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                    },
+                    extends: bset! { VALENCIES_DECENTRALIZED_ISSUE },
+                    valencies: bset! { },
+                    abi: bmap! {},
+                }
             },
             transitions: bmap! {
                 TRANSITION_ISSUE => TransitionSchema {
@@ -572,7 +660,8 @@ pub(crate) mod test {
                         ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                abi: bmap! {}
+                    valencies: bset! {},
+                    abi: bmap! {}
                 },
                 TRANSITION_TRANSFER => TransitionSchema {
                     metadata: bmap! {},
@@ -582,6 +671,7 @@ pub(crate) mod test {
                     defines: bmap! {
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
+                    valencies: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_PRUNE => TransitionSchema {
@@ -596,6 +686,7 @@ pub(crate) mod test {
                         ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
+                    valencies: bset! {},
                     abi: bmap! {}
                 }
             },
@@ -607,25 +698,27 @@ pub(crate) mod test {
         let schema = schema();
         let encoded = strict_encode(&schema).unwrap();
         let encoded_standard: Vec<u8> = vec![
-            9, 0, 0, 0, 4, 16, 0, 1, 0, 4, 0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0,
-            255, 255, 255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255,
-            255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255,
-            255, 255, 255, 255, 6, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0, 0, 7, 0,
-            5, 255, 255, 8, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
-            255, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255,
-            255, 255, 255, 255, 255, 255, 1, 0, 0, 255, 1, 2, 0, 0, 1, 0, 0, 255, 3, 8, 0, 0, 0, 1,
-            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 6, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,
+            10, 0, 0, 0, 4, 16, 0, 1, 0, 4, 0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0,
+            0, 255, 255, 255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255,
+            255, 255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255,
+            255, 255, 255, 255, 255, 6, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0, 0,
+            7, 0, 5, 255, 255, 8, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255,
+            255, 255, 16, 0, 4, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0, 0, 0, 0, 0,
+            0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0, 0, 255, 1, 2, 0, 0, 1, 0, 0,
+            255, 3, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0,
+            0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 8,
+            0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255,
+            255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 0, 0, 2, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 255, 255, 255, 0, 0, 0, 0, 0,
+            0, 1, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0,
+            0, 1, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255,
-            255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-            1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-            254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-            0, 0, 0, 1, 0, 1, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 7, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0,
-            255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0,
-            254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0,
+            255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 255, 255, 255, 0, 0,
+            0, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0,
+            7, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2,
+            0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0,
+            254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         assert_eq!(encoded, encoded_standard);
 

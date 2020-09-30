@@ -16,10 +16,13 @@ use std::collections::BTreeSet;
 use bitcoin::Txid;
 
 use crate::bp;
-use crate::rgb::{validation, Anchor, Genesis, Node, NodeId, Schema, Transition, Validator};
+use crate::rgb::{
+    validation, Anchor, Extension, Genesis, Node, NodeId, Schema, Transition, Validator,
+};
 
 pub type ConsignmentEndpoints = Vec<(NodeId, bp::blind::OutpointHash)>;
-pub type ConsignmentData = Vec<(Anchor, Transition)>;
+pub type OwnedData = Vec<(Anchor, Transition)>;
+pub type ExtensionData = Vec<Extension>;
 
 pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
 
@@ -30,32 +33,39 @@ pub struct Consignment {
     version: u16,
     pub genesis: Genesis,
     pub endpoints: ConsignmentEndpoints,
-    pub data: ConsignmentData,
+    pub owned_data: OwnedData,
+    pub extension_data: ExtensionData,
 }
 
 impl Consignment {
     pub fn with(
         genesis: Genesis,
         endpoints: ConsignmentEndpoints,
-        data: ConsignmentData,
+        data: OwnedData,
+        extensions: ExtensionData,
     ) -> Consignment {
         Self {
             version: RGB_CONSIGNMENT_VERSION,
             genesis,
+            extension_data: extensions,
             endpoints,
-            data,
+            owned_data: data,
         }
     }
 
     #[inline]
     pub fn txids(&self) -> BTreeSet<Txid> {
-        self.data.iter().map(|(anchor, _)| anchor.txid).collect()
+        self.owned_data
+            .iter()
+            .map(|(anchor, _)| anchor.txid)
+            .collect()
     }
 
     #[inline]
     pub fn node_ids(&self) -> BTreeSet<NodeId> {
-        let mut set: BTreeSet<NodeId> = self.data.iter().map(|(_, node)| node.node_id()).collect();
-        set.insert(self.genesis.node_id());
+        let mut set = bset![self.genesis.node_id()];
+        set.extend(self.owned_data.iter().map(|(_, node)| node.node_id()));
+        set.extend(self.extension_data.iter().map(Extension::node_id));
         set
     }
 
@@ -190,6 +200,7 @@ pub(crate) mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_consignment_validation() {
         let consignment = consignment();
         let schema = schema();

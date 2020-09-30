@@ -27,7 +27,7 @@ pub use assignments::{
 };
 pub use conceal::AutoConceal;
 pub use field::{FieldData, Metadata};
-pub use nodes::{ContractId, Genesis, Node, NodeId, Transition};
+pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
 pub use seal::SealDefinition;
 
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
