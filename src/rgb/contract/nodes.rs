@@ -107,7 +107,7 @@ pub trait Node {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Genesis {
     schema_id: SchemaId,
-    network: bp::Chain,
+    chain: bp::Chain,
     metadata: Metadata,
     assignments: Assignments,
     script: SimplicityScript,
@@ -235,14 +235,14 @@ impl Node for Transition {
 impl Genesis {
     pub fn with(
         schema_id: SchemaId,
-        network: bp::Chain,
+        chain: bp::Chain,
         metadata: Metadata,
         assignments: Assignments,
         script: SimplicityScript,
     ) -> Self {
         Self {
             schema_id,
-            network,
+            chain,
             metadata,
             assignments,
             script,
@@ -255,15 +255,13 @@ impl Genesis {
     }
 
     #[inline]
-    #[allow(dead_code)]
     pub fn schema_id(&self) -> SchemaId {
         self.schema_id
     }
 
     #[inline]
-    #[allow(dead_code)]
-    pub fn network(&self) -> &bp::Chain {
-        &self.network
+    pub fn chain(&self) -> &bp::Chain {
+        &self.chain
     }
 }
 
@@ -306,7 +304,7 @@ mod strict_encoding {
         fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
             let mut encoder = || -> Result<_, Error> {
                 let mut len = self.schema_id.strict_encode(&mut e)?;
-                len += self.network.as_genesis_hash().strict_encode(&mut e)?;
+                len += self.chain.as_genesis_hash().strict_encode(&mut e)?;
                 Ok(strict_encode_list!(e; len;
                     self.metadata,
                     self.assignments,
@@ -323,7 +321,7 @@ mod strict_encoding {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(strict_encode_list!(e;
                     self.schema_id,
-                    self.network,
+                    self.chain,
                     self.metadata,
                     self.assignments,
                     self.script))
@@ -336,7 +334,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             Ok(Self {
                 schema_id: SchemaId::strict_decode(&mut d)?,
-                network: bp::Chain::strict_decode(&mut d)?,
+                chain: bp::Chain::strict_decode(&mut d)?,
                 metadata: Metadata::strict_decode(&mut d)?,
                 assignments: Assignments::strict_decode(&mut d)?,
                 script: SimplicityScript::strict_decode(&mut d)?,
@@ -712,7 +710,7 @@ mod test {
     fn test_genesis_commit_ne_strict() {
         let genesis = Genesis {
             schema_id: Default::default(),
-            network: Chain::Mainnet,
+            chain: Chain::Mainnet,
             metadata: Default::default(),
             assignments: Default::default(),
             script: vec![],
@@ -1011,7 +1009,7 @@ mod test {
 
         let contractid = genesis.contract_id();
         let schemaid = genesis.schema_id();
-        let network = genesis.network();
+        let chain = genesis.chain();
 
         assert_eq!(
             contractid,
@@ -1025,6 +1023,6 @@ mod test {
             SchemaId::from_hex("8eafd3360d65258952f4d9575eac1b1f18ee185129718293b6d7622b1edd1f20")
                 .unwrap()
         );
-        assert_eq!(network, &bp::chain::Chain::Mainnet);
+        assert_eq!(chain, &bp::chain::Chain::Mainnet);
     }
 }
