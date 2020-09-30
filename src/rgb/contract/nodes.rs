@@ -542,7 +542,7 @@ mod test {
     use bitcoin_hashes::hex::{FromHex, ToHex};
     use std::io::Write;
 
-    static TRANSITION: [u8; 2356] = [
+    static TRANSITION: [u8; 2364] = [
         0xa, 0x0, 0x1, 0x0, 0xd, 0x0, 0x15, 0x0, 0x0, 0x2, 0x0, 0x3, 0x1, 0x2, 0x0, 0x2, 0x2, 0x0,
         0x0, 0x0, 0x2, 0x3, 0x0, 0x0, 0x0, 0x3, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x3,
         0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8, 0x2, 0x8, 0x3, 0xa, 0x2, 0x0, 0x0, 0x0, 0xa, 0x3,
@@ -696,11 +696,11 @@ mod test {
         0xd9, 0x57, 0x5e, 0xac, 0x1b, 0x1f, 0x18, 0xee, 0x18, 0x51, 0x29, 0x71, 0x82, 0x93, 0xb6,
         0xd7, 0x62, 0x2b, 0x1e, 0xdd, 0x1f, 0x20, 0x1, 0x0, 0x0, 0x0, 0x40, 0xe7, 0xa, 0x36, 0xe2,
         0xce, 0x51, 0xd3, 0x1d, 0x4c, 0xf5, 0xd6, 0x73, 0x1f, 0xa6, 0x37, 0x38, 0x64, 0x81, 0x27,
-        0xdb, 0x83, 0x37, 0x15, 0xd3, 0x96, 0x52, 0xd8, 0x6d, 0x92, 0x7d, 0x48, 0x88, 0x5, 0x0,
-        0x1, 0x2, 0x3, 0x4, 0x5,
+        0xdb, 0x83, 0x37, 0x15, 0xd3, 0x96, 0x52, 0xd8, 0x6d, 0x92, 0x7d, 0x48, 0x88, 0x3, 0x0,
+        0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x5, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5,
     ];
 
-    static GENESIS: [u8; 2450] = [
+    static GENESIS: [u8; 2458] = [
         0x20, 0x1f, 0xdd, 0x1e, 0x2b, 0x62, 0xd7, 0xb6, 0x93, 0x82, 0x71, 0x29, 0x51, 0x18, 0xee,
         0x18, 0x1f, 0x1b, 0xac, 0x5e, 0x57, 0xd9, 0xf4, 0x52, 0x89, 0x25, 0x65, 0xd, 0x36, 0xd3,
         0xaf, 0x8e, 0x6f, 0xe2, 0x8c, 0xa, 0xb6, 0xf1, 0xb3, 0x72, 0xc1, 0xa6, 0xa2, 0x46, 0xae,
@@ -861,7 +861,7 @@ mod test {
         0x71, 0x82, 0x93, 0xb6, 0xd7, 0x62, 0x2b, 0x1e, 0xdd, 0x1f, 0x20, 0x1, 0x0, 0x0, 0x0, 0x40,
         0xe7, 0xa, 0x36, 0xe2, 0xce, 0x51, 0xd3, 0x1d, 0x4c, 0xf5, 0xd6, 0x73, 0x1f, 0xa6, 0x37,
         0x38, 0x64, 0x81, 0x27, 0xdb, 0x83, 0x37, 0x15, 0xd3, 0x96, 0x52, 0xd8, 0x6d, 0x92, 0x7d,
-        0x48, 0x88, 0x5, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5,
+        0x48, 0x88, 0x3, 0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x5, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5,
     ];
 
     // Making sure that <https://github.com/LNP-BP/LNPBPs/issues/58>
@@ -887,6 +887,7 @@ mod test {
         encoder.write_all(GENESIS_HASH_MAINNET).unwrap();
         genesis.metadata.strict_encode(&mut encoder).unwrap();
         genesis.assignments.strict_encode(&mut encoder).unwrap();
+        genesis.valencies.strict_encode(&mut encoder).unwrap();
         genesis.script.strict_encode(&mut encoder).unwrap();
         assert_eq!(
             genesis.consensus_commit(),
@@ -902,7 +903,7 @@ mod test {
             script: Default::default(),
         };
 
-        let mut encoder = std::io::Cursor::new(vec![]);
+        let mut encoder = vec![];
         transition
             .transition_type
             .strict_encode(&mut encoder)
@@ -910,6 +911,7 @@ mod test {
         transition.metadata.strict_encode(&mut encoder).unwrap();
         transition.ancestors.strict_encode(&mut encoder).unwrap();
         transition.assignments.strict_encode(&mut encoder).unwrap();
+        transition.valencies.strict_encode(&mut encoder).unwrap();
         transition.script.strict_encode(&mut encoder).unwrap();
 
         let mut encoder1 = vec![];
@@ -919,6 +921,7 @@ mod test {
         transition.clone().strict_encode(&mut encoder2).unwrap();
 
         assert_eq!(encoder1, encoder2);
+        assert_eq!(encoder, encoder1);
     }
 
     #[test]
@@ -933,14 +936,13 @@ mod test {
         let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
 
         // Typeid/Nodeid test
-
         assert_eq!(
             genesis.node_id().to_hex(),
-            "3d99edbf23ec7b7d38ef76d54bcad568e8420d98f91ec61ee21ea38579c08c8b"
+            "d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15"
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "5b81b9895ccc0f2cb9afaa54d73a70cab3a10d0de67f7b2c119099ed435355fd"
+            "94628edd6cb9f20206c0d05bfc6847d881f21d87c5d3d3f7f26af9c3fcab4fd4"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1145,12 +1147,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("3d99edbf23ec7b7d38ef76d54bcad568e8420d98f91ec61ee21ea38579c08c8b")
+            NodeId::from_hex("d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("5b81b9895ccc0f2cb9afaa54d73a70cab3a10d0de67f7b2c119099ed435355fd")
+            NodeId::from_hex("94628edd6cb9f20206c0d05bfc6847d881f21d87c5d3d3f7f26af9c3fcab4fd4")
                 .unwrap()
         );
 
@@ -1159,19 +1161,19 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("9efdb1eece0ec6551a21512d1cff53318afe70c266908c6f5006ffa800869154")
+            NodeId::from_hex("978e5928309838e4ef1aa6206f4fa4a297ae454108baf74940949af8ace89aec")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("3fa8ec33ffc2402056cbbe0729ee26ee2f8580e52f05057bb238036db19d7f50")
+            NodeId::from_hex("4e53133b0581f0b69c0c3da9a84ec0e8acacd050862797682e42f36de5584215")
                 .unwrap()
         );
     }
 
     #[test]
     fn test_genesis_impl() {
-        let genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
+        let genesis: Genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
 
         let contractid = genesis.contract_id();
         let schemaid = genesis.schema_id();
@@ -1180,7 +1182,7 @@ mod test {
         assert_eq!(
             contractid,
             ContractId::from_hex(
-                "3d99edbf23ec7b7d38ef76d54bcad568e8420d98f91ec61ee21ea38579c08c8b"
+                "d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15"
             )
             .unwrap()
         );

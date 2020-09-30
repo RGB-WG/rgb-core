@@ -200,6 +200,7 @@ pub(crate) mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_consignment_validation() {
         let consignment = consignment();
         let schema = schema();
