@@ -229,31 +229,8 @@ hash_newtype!(
 );
 impl_hashencode!(MerkleNode);
 
-mod strict_encode {
-    use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
-
-    impl StrictEncode for MerkleNode {
-        type Error = Error;
-
-        #[inline]
-        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
-            self.into_inner().to_vec().strict_encode(e)
-        }
-    }
-
-    impl StrictDecode for MerkleNode {
-        type Error = Error;
-
-        #[inline]
-        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-            Ok(
-                Self::from_slice(&Vec::<u8>::strict_decode(d)?).map_err(|_| {
-                    Error::DataIntegrityError("Wrong merkle node hash data size".to_string())
-                })?,
-            )
-        }
-    }
+impl strict_encoding::Strategy for MerkleNode {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 
 /// Merklization procedure that uses tagged hashes with depth commitments

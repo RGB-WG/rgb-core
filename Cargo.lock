@@ -561,6 +561,7 @@ dependencies = [
  "lazy_static",
  "lightning",
  "lightning-net-tokio",
+ "lnpbp_derive",
  "log",
  "miniscript",
  "num-derive",

@@ -17,7 +17,7 @@ use bitcoin::hashes::{hash160, sha256, sha256d, sha512};
 use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{secp256k1, util::bip32, BlockHash, OutPoint, Script, Txid, XpubIdentifier};
 
-use super::{blind::OutpointHash, blind::OutpointReveal, ShortId};
+use super::blind::OutpointHash;
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 use bitcoin::util::bip32::KeyApplication;
 
@@ -203,20 +203,6 @@ impl StrictDecode for KeyApplication {
     }
 }
 
-impl StrictEncode for ShortId {
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
-        self.into_u64().strict_encode(e)
-    }
-}
-
-impl StrictDecode for ShortId {
-    #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-        Ok(Self::from(u64::strict_decode(d)?))
-    }
-}
-
 impl StrictEncode for OutPoint {
     #[inline]
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
@@ -228,24 +214,6 @@ impl StrictDecode for OutPoint {
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         Ok(Self {
-            txid: Txid::strict_decode(&mut d)?,
-            vout: u32::strict_decode(&mut d)?,
-        })
-    }
-}
-
-impl StrictEncode for OutpointReveal {
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
-        Ok(strict_encode_list!(e; self.blinding, self.txid, self.vout))
-    }
-}
-
-impl StrictDecode for OutpointReveal {
-    #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-        Ok(Self {
-            blinding: u64::strict_decode(&mut d)?,
             txid: Txid::strict_decode(&mut d)?,
             vout: u32::strict_decode(&mut d)?,
         })
@@ -372,7 +340,7 @@ pub(crate) mod test {
     use bitcoin::{hashes::hex::FromHex, secp256k1::Message, BlockHash};
 
     use super::*;
-    use crate::bp::short_id;
+    use crate::bp::{blind::OutpointReveal, short_id, ShortId};
     use crate::strict_encoding::test::test_suite;
 
     pub(crate) fn encode_decode<T: StrictEncode + StrictDecode>(

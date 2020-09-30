@@ -80,7 +80,8 @@ impl Ord for Revealed {
     }
 }
 
-#[derive(Clone, Debug, Display, AsAny)]
+#[derive(Clone, Debug, Display, AsAny, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 #[display(Debug)]
 pub struct Confidential {
     pub commitment: pedersen::Commitment,
@@ -278,25 +279,6 @@ mod strict_encoding {
                     ))),
                 }
             }
-        }
-    }
-
-    impl StrictEncode for Confidential {
-        type Error = Error;
-
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
-            Ok(strict_encode_list!(e; self.commitment, self.bulletproof))
-        }
-    }
-
-    impl StrictDecode for Confidential {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-            Ok(Self {
-                commitment: pedersen::Commitment::strict_decode(&mut d)?,
-                bulletproof: pedersen::RangeProof::strict_decode(&mut d)?,
-            })
         }
     }
 

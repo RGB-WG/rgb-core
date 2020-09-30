@@ -67,6 +67,9 @@ pub extern crate bitcoin_hashes;
 pub extern crate miniscript;
 
 #[macro_use]
+extern crate lnpbp_derive;
+
+#[macro_use]
 mod paradigms;
 #[macro_use]
 mod common;

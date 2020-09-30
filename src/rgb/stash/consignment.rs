@@ -12,20 +12,19 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::BTreeSet;
-use std::io;
 
 use bitcoin::Txid;
 
 use crate::bp;
 use crate::rgb::{validation, Anchor, Genesis, Node, NodeId, Schema, Transition, Validator};
-use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 pub type ConsignmentEndpoints = Vec<(NodeId, bp::blind::OutpointHash)>;
 pub type ConsignmentData = Vec<(Anchor, Transition)>;
 
 pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, Debug, Display, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 #[display(Debug)]
 pub struct Consignment {
     version: u16,
@@ -69,28 +68,12 @@ impl Consignment {
     }
 }
 
-impl StrictEncode for Consignment {
-    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.version, self.genesis, self.endpoints, self.data))
-    }
-}
-
-impl StrictDecode for Consignment {
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        Ok(Self {
-            version: u16::strict_decode(&mut d)?,
-            genesis: Genesis::strict_decode(&mut d)?,
-            endpoints: ConsignmentEndpoints::strict_decode(&mut d)?,
-            data: ConsignmentData::strict_decode(&mut d)?,
-        })
-    }
-}
-
 #[cfg(test)]
 pub(crate) mod test {
     use super::*;
     use crate::rgb::schema::test::schema;
     use crate::rgb::validation::TxResolver;
+    use crate::strict_encoding::StrictDecode;
 
     pub(crate) fn consignment() -> Consignment {
         let data: Vec<u8> = vec![

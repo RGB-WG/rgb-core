@@ -32,7 +32,8 @@ pub trait Container: Sized {
     fn into_proof(self) -> Proof;
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 #[display(Debug)]
 pub struct Proof {
     pub pubkey: secp256k1::PublicKey,
@@ -90,21 +91,6 @@ pub(super) mod strict_encoding {
                     ScriptInfo::LockScript(LockScript::strict_decode(&mut d)?)
                 }
                 EncodingTag::Taproot => ScriptInfo::Taproot(sha256::Hash::strict_decode(&mut d)?),
-            })
-        }
-    }
-
-    impl StrictEncode for Proof {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-            Ok(strict_encode_list!(e; self.pubkey, self.script_info))
-        }
-    }
-
-    impl StrictDecode for Proof {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-            Ok(Self {
-                pubkey: secp256k1::PublicKey::strict_decode(&mut d)?,
-                script_info: ScriptInfo::strict_decode(&mut d)?,
             })
         }
     }

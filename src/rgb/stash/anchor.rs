@@ -12,7 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{BTreeMap, HashMap};
-use std::io;
 
 use amplify::Wrapper;
 use bitcoin::secp256k1;
@@ -29,7 +28,6 @@ use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, C
 use crate::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
 use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
 use crate::rgb::{ContractId, NodeId};
-use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 pub const PSBT_FEE_KEY: &[u8] = b"\x03rgb\x01";
 pub const PSBT_PUBKEY_KEY: &[u8] = b"\x03rgb\x02";
@@ -66,7 +64,8 @@ tagged_hash!(
     doc = "Unique anchor identifier equivalent to the anchor commitment hash"
 );
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 pub struct Anchor {
     pub txid: Txid,
     pub commitment: MultimsgCommitment,
@@ -257,20 +256,4 @@ impl CommitEncodeWithStrategy for Anchor {
 
 impl ConsensusCommit for Anchor {
     type Commitment = AnchorId;
-}
-
-impl StrictEncode for Anchor {
-    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.txid, self.commitment, self.proof))
-    }
-}
-
-impl StrictDecode for Anchor {
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        Ok(Self {
-            txid: Txid::strict_decode(&mut d)?,
-            commitment: MultimsgCommitment::strict_decode(&mut d)?,
-            proof: Proof::strict_decode(&mut d)?,
-        })
-    }
 }

@@ -98,12 +98,12 @@ fn attr_nested_one_arg(
     mut list: impl ExactSizeIterator<Item = NestedMeta>,
     attr_name: &str,
     example: &str,
-) -> Result<Option<Ident>> {
+) -> Result<Option<Path>> {
     match list.len() {
         0 => proc_macro_err!(attr_name, "unexpected absence of argument", example),
         1 => match list.next().expect("Core library iterator is broken") {
             NestedMeta::Meta(meta) => match meta {
-                Meta::Path(path) => Ok(path.get_ident().cloned()),
+                Meta::Path(path) => Ok(Some(path)),
                 _ => proc_macro_err!(attr_name, "unexpected attribute type", example),
             },
             NestedMeta::Lit(_) => proc_macro_err!(
@@ -436,7 +436,7 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
 // Strict Encode/Decode Derives
 // ============================
 
-#[proc_macro_derive(StrictEncode, attributes(strict_error))]
+#[proc_macro_derive(StrictEncode, attributes(strict_error, strict_crate))]
 pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     strict_encode_inner(derive_input)
@@ -444,7 +444,7 @@ pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(StrictDecode, attributes(strict_decode))]
+#[proc_macro_derive(StrictDecode, attributes(strict_error, strict_crate))]
 pub fn derive_strict_decode(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     strict_decode_inner(derive_input)
@@ -487,6 +487,7 @@ fn strict_encode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
     let ident_name = &input.ident;
 
     let error_type_def = get_strict_error(input, data)?;
+    let import = get_strict_crate(input, data)?;
 
     let recurse = match data.fields {
         Fields::Named(ref fields) => fields
@@ -527,7 +528,7 @@ fn strict_encode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
 
     Ok(quote! {
         #[allow(unused_qualifications)]
-        impl #impl_generics lnpbp::strict_encoding::StrictEncode for #ident_name #ty_generics #where_clause {
+        impl #impl_generics #import::StrictEncode for #ident_name #ty_generics #where_clause {
             #error_type_def
 
             #[inline]
@@ -543,6 +544,7 @@ fn strict_decode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
     let ident_name = &input.ident;
 
     let error_type_def = get_strict_error(input, data)?;
+    let import = get_strict_crate(input, data)?;
 
     let inner = match data.fields {
         Fields::Named(ref fields) => {
@@ -552,7 +554,7 @@ fn strict_decode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
                 .map(|f| {
                     let name = &f.ident;
                     quote_spanned! { f.span() =>
-                        #name: lnpbp::strict_encoding::StrictDecode::strict_decode(&mut d)?,
+                        #name: #import::StrictDecode::strict_decode(&mut d)?,
                     }
                 })
                 .collect();
@@ -568,7 +570,7 @@ fn strict_decode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
                 .iter()
                 .map(|f| {
                     quote_spanned! { f.span() =>
-                        lnpbp::strict_encoding::StrictDecode::strict_decode(&mut d)?,
+                        #import::StrictDecode::strict_decode(&mut d)?,
                     }
                 })
                 .collect();
@@ -586,7 +588,7 @@ fn strict_decode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
 
     Ok(quote! {
         #[allow(unused_qualifications)]
-        impl #impl_generics lnpbp::strict_encoding::StrictDecode for #ident_name #ty_generics #where_clause {
+        impl #impl_generics #import::StrictDecode for #ident_name #ty_generics #where_clause {
             #error_type_def
 
             #[inline]
@@ -611,5 +613,22 @@ fn get_strict_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStrea
     Ok(match strict_error {
         Some(ident) => quote! { type Error = #ident; },
         None => quote! {},
+    })
+}
+
+fn get_strict_crate(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream2> {
+    let name = "strict_crate";
+    let example = "#[strict_crate(lnpbp_other_name)]";
+    let default = quote! { ::lnpbp::strict_encoding };
+
+    let list = match attr_list(&input.attrs, name, example)? {
+        Some(x) => x,
+        None => return Ok(default),
+    };
+    let strict_crate = attr_nested_one_arg(list.into_iter(), name, example)?;
+
+    Ok(match strict_crate {
+        Some(ident) => quote! { #ident::strict_encoding },
+        None => return Ok(default),
     })
 }

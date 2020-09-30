@@ -104,7 +104,8 @@ pub trait Node {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 pub struct Genesis {
     schema_id: SchemaId,
     chain: bp::Chain,
@@ -113,7 +114,8 @@ pub struct Genesis {
     script: SimplicityScript,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 pub struct Transition {
     type_id: schema::TransitionType,
     metadata: Metadata,
@@ -285,7 +287,7 @@ impl Transition {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
+    use crate::strict_encoding::{strategies, Error, Strategy, StrictEncode};
     use std::io;
 
     impl Strategy for NodeId {
@@ -312,60 +314,6 @@ mod strict_encoding {
                 ))
             };
             encoder().expect("Strict encoding of genesis data must not fail")
-        }
-    }
-
-    impl StrictEncode for Genesis {
-        type Error = Error;
-
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
-            Ok(strict_encode_list!(e;
-                    self.schema_id,
-                    self.chain,
-                    self.metadata,
-                    self.assignments,
-                    self.script))
-        }
-    }
-
-    impl StrictDecode for Genesis {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-            Ok(Self {
-                schema_id: SchemaId::strict_decode(&mut d)?,
-                chain: bp::Chain::strict_decode(&mut d)?,
-                metadata: Metadata::strict_decode(&mut d)?,
-                assignments: Assignments::strict_decode(&mut d)?,
-                script: SimplicityScript::strict_decode(&mut d)?,
-            })
-        }
-    }
-
-    impl StrictEncode for Transition {
-        type Error = Error;
-
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
-            Ok(strict_encode_list!(e;
-                    self.type_id,
-                    self.metadata,
-                    self.ancestors,
-                    self.assignments,
-                    self.script))
-        }
-    }
-
-    impl StrictDecode for Transition {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-            Ok(Self {
-                type_id: schema::TransitionType::strict_decode(&mut d)?,
-                metadata: Metadata::strict_decode(&mut d)?,
-                ancestors: Ancestors::strict_decode(&mut d)?,
-                assignments: Assignments::strict_decode(&mut d)?,
-                script: SimplicityScript::strict_decode(&mut d)?,
-            })
         }
     }
 }

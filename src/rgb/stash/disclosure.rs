@@ -16,21 +16,6 @@
 
 // TODO: Implement disclosures
 
-use std::io;
-
-use crate::strict_encoding::{self, StrictDecode, StrictEncode};
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 pub struct Disclosure {}
-
-impl StrictEncode for Disclosure {
-    fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, strict_encoding::Error> {
-        unimplemented!()
-    }
-}
-
-impl StrictDecode for Disclosure {
-    fn strict_decode<D: io::Read>(_: D) -> Result<Self, strict_encoding::Error> {
-        unimplemented!()
-    }
-}

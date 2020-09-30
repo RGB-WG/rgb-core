@@ -12,14 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::BTreeMap;
-use std::io;
 
 use bitcoin::hashes::{sha256, Hash, HashEngine};
 use bitcoin::secp256k1::rand::{thread_rng, Rng};
 use bitcoin::util::uint::Uint256;
 
 use crate::commit_verify::TryCommitVerify;
-use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 /// Source data for creation of multi-message commitments according to LNPBP-4 procedure
 pub type MultiMsg = BTreeMap<sha256::Hash, sha256::Hash>;
@@ -29,7 +27,8 @@ pub type Lnpbp4Hash = sha256::Hash;
 #[display(Debug)]
 pub struct TooManyMessagesError;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 #[display(Debug)]
 pub struct MultimsgCommitmentItem {
     pub protocol: Option<sha256::Hash>,
@@ -46,7 +45,8 @@ impl MultimsgCommitmentItem {
 }
 
 /// Multimessage commitment data according to LNPBP-4 specification
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 #[display(Debug)]
 pub struct MultimsgCommitment {
     pub commitments: Vec<MultimsgCommitmentItem>,
@@ -113,36 +113,6 @@ impl TryCommitVerify<MultiMsg> for MultimsgCommitment {
         Ok(Self {
             commitments,
             entropy: Some(entropy),
-        })
-    }
-}
-
-impl StrictEncode for MultimsgCommitmentItem {
-    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.protocol, self.commitment))
-    }
-}
-
-impl StrictDecode for MultimsgCommitmentItem {
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        Ok(Self {
-            protocol: Option::<sha256::Hash>::strict_decode(&mut d)?,
-            commitment: Lnpbp4Hash::strict_decode(&mut d)?,
-        })
-    }
-}
-
-impl StrictEncode for MultimsgCommitment {
-    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.commitments, self.entropy))
-    }
-}
-
-impl StrictDecode for MultimsgCommitment {
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        Ok(Self {
-            commitments: Vec::<MultimsgCommitmentItem>::strict_decode(&mut d)?,
-            entropy: Option::<u64>::strict_decode(&mut d)?,
         })
     }
 }

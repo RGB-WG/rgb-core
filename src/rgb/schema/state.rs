@@ -18,7 +18,8 @@ use num_derive::{FromPrimitive, ToPrimitive};
 
 use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
 
-#[derive(Clone, PartialEq, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display, StrictEncode, StrictDecode)]
+#[strict_crate(crate)]
 #[display(Debug)]
 pub struct StateSchema {
     pub format: StateFormat,
@@ -151,25 +152,6 @@ mod strict_encoding {
     use core::ops::{Add, Bound, RangeBounds, RangeInclusive, Sub};
     use num_derive::{FromPrimitive, ToPrimitive};
     use num_traits::{Bounded, ToPrimitive};
-
-    impl StrictEncode for StateSchema {
-        type Error = Error;
-
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            Ok(strict_encode_list!(e; self.format, self.abi))
-        }
-    }
-
-    impl StrictDecode for StateSchema {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            Ok(Self {
-                format: StateFormat::strict_decode(&mut d)?,
-                abi: script::AssignmentAbi::strict_decode(&mut d)?,
-            })
-        }
-    }
 
     impl_enum_strict_encoding!(StateType);
 

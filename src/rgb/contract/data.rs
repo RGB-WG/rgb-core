@@ -157,7 +157,6 @@ impl CommitEncodeWithStrategy for Confidential {
     type Strategy = commit_strategy::UsingStrict;
 }
 
-// TODO: Automate this with #derive macros
 pub(super) mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
