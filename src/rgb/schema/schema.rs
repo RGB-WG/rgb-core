@@ -43,6 +43,10 @@ tagged_hash!(
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Schema {
+    // TODO: (new) add versioning/features
+    // pub rgb_features: FeatureFlags,
+    // TODO: (new) add superschema reference
+    // pub family_schema_id: SchemaId,
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateSchema>,
     pub genesis: GenesisSchema,
