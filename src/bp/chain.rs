@@ -710,14 +710,14 @@ impl From<ChainParams> for Chain {
         match params {
             p if p == Chain::Mainnet.chain_params() => Chain::Mainnet,
             p if p == Chain::Testnet3.chain_params() => Chain::Testnet3,
+            p if p == Chain::Signet.chain_params() => Chain::Signet,
+            p if p == Chain::LiquidV1.chain_params() => Chain::LiquidV1,
             p if p == Chain::Regtest(p.genesis_hash).chain_params() => {
                 Chain::Regtest(p.genesis_hash)
             }
-            p if p == Chain::Signet.chain_params() => Chain::Signet,
             p if p == Chain::SignetCustom(p.genesis_hash).chain_params() => {
                 Chain::SignetCustom(p.genesis_hash)
             }
-            p if p == Chain::LiquidV1.chain_params() => Chain::LiquidV1,
             p => Chain::Other(p),
         }
     }
