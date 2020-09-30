@@ -146,32 +146,42 @@ mod _validation {
             node: &dyn Node,
         ) -> validation::Status {
             let node_id = node.node_id();
-            let type_id = node.type_id();
 
             let empty_seals_structure = SealsStructure::default();
-            let (metadata_structure, ancestors_structure, assignments_structure) = match type_id {
-                None => (
-                    &self.genesis.metadata,
-                    &empty_seals_structure,
-                    &self.genesis.defines,
-                ),
-                Some(type_id) => {
-                    let transition_type = match self.transitions.get(&type_id) {
-                        None => {
-                            return validation::Status::with_failure(
-                                validation::Failure::SchemaUnknownTransitionType(node_id, type_id),
-                            )
-                        }
-                        Some(transition_type) => transition_type,
-                    };
+            let (metadata_structure, ancestors_structure, assignments_structure) =
+                match (node.transition_type(), node.extension_type()) {
+                    (None, None) => (
+                        &self.genesis.metadata,
+                        &empty_seals_structure,
+                        &self.genesis.defines,
+                    ),
+                    (Some(transition_type), None) => {
+                        let transition_type = match self.transitions.get(&transition_type) {
+                            None => {
+                                return validation::Status::with_failure(
+                                    validation::Failure::SchemaUnknownTransitionType(
+                                        node_id,
+                                        transition_type,
+                                    ),
+                                )
+                            }
+                            Some(transition_type) => transition_type,
+                        };
 
-                    (
-                        &transition_type.metadata,
-                        &transition_type.closes,
-                        &transition_type.defines,
-                    )
-                }
-            };
+                        (
+                            &transition_type.metadata,
+                            &transition_type.closes,
+                            &transition_type.defines,
+                        )
+                    }
+                    (None, Some(_extension_type)) => {
+                        // TODO: (new) Add extension validation
+                        unimplemented!()
+                    }
+                    _ => unreachable!(
+                        "Node can't be extension and state transition at the same time"
+                    ),
+                };
 
             let mut status = validation::Status::new();
             let ancestor_assignments =
@@ -181,7 +191,7 @@ mod _validation {
             status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
             status += self.validate_state_evolution(
                 node_id,
-                node.type_id(),
+                node.transition_type(),
                 &ancestor_assignments,
                 node.assignments(),
                 node.metadata(),

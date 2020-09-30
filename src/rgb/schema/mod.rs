@@ -19,7 +19,7 @@ mod types;
 
 pub(self) use super::vm;
 pub use nodes::{
-    AssignmentsType, ExtensionSchema, GenesisSchema, MetadataStructure, SealsStructure,
+    AssignmentsType, ExtensionSchema, GenesisSchema, MetadataStructure, NodeType, SealsStructure,
     TransitionSchema, ValenciesStructure, ValenciesType,
 };
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};

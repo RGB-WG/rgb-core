@@ -223,6 +223,7 @@ pub struct Validator<'validator, R: TxResolver> {
     resolver: R,
 }
 
+/// TODO: (new) Add extension & vacancies validation
 impl<'validator, R: TxResolver> Validator<'validator, R> {
     fn init(consignment: &'validator Consignment, resolver: R) -> Self {
         // We use validation status object to store all detected failures and

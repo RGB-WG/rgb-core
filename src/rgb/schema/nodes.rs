@@ -23,6 +23,28 @@ pub type MetadataStructure = BTreeMap<FieldType, Occurences<u16>>;
 pub type ValenciesStructure = BTreeSet<ValenciesType>;
 pub type SealsStructure = BTreeMap<AssignmentsType, Occurences<u16>>;
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+/// Node type: genesis, extensions and state transitions
+pub enum NodeType {
+    /// Genesis node: single node per contract, defining contract and committing
+    /// to a specific schema and underlying chain hash
+    #[display("genesis")]
+    Genesis,
+
+    /// Multiple points for decentralized & unowned contract extension,
+    /// committing either to a genesis or some state transition via their
+    /// valencies
+    #[display("extension")]
+    Extension,
+
+    /// State transition performing owned change to the state data and
+    /// committing to (potentially multiple) ancestors (i.e. genesis, extensions
+    /// and/or  other state transitions) via spending corresponding transaction
+    /// outputs assigned some state by ancestors
+    #[display("transition")]
+    StateTransition,
+}
+
 #[derive(Clone, PartialEq, Debug, Display)]
 #[display(Debug)]
 pub struct GenesisSchema {

@@ -19,8 +19,14 @@ use super::{Ancestors, Assignments, AssignmentsVariant, AutoConceal};
 use crate::bp;
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::paradigms::client_side_validation::CommitEncode;
-use crate::rgb::schema::AssignmentsType;
+use crate::rgb::schema::{
+    AssignmentsType, ExtensionType, FieldType, NodeType, TransitionType, ValenciesType,
+};
 use crate::rgb::{schema, seal, Metadata, SchemaId, SimplicityScript};
+
+/// Holds definition of valencies for contract nodes, which is a set of
+/// allowed valencies types
+pub type Valencies = BTreeSet<ValenciesType>;
 
 lazy_static! {
     static ref MIDSTATE_NODE_ID: [u8; 32] = {
@@ -44,6 +50,7 @@ impl CommitEncodeWithStrategy for NodeId {
     type Strategy = commit_strategy::UsingStrict;
 }
 
+// TODO: (new) display in a reverse format
 tagged_hash!(
     ContractId,
     ContractIdTag,
@@ -52,36 +59,67 @@ tagged_hash!(
            commitment hash"
 );
 
+impl CommitEncodeWithStrategy for ContractId {
+    type Strategy = commit_strategy::UsingStrict;
+}
+
+/// Trait which is implemented by all node types (see [`NodeType`])
 pub trait Node {
+    /// Returns type of the node (see [`NodeType`]). Unfortunately, this can't
+    /// be just a const, since it will break our ability to convert concrete
+    /// `Node` types into `&dyn Node` (entities implementing traits with const
+    /// definitions can't be made into objects)
+    fn node_type(&self) -> NodeType;
+
+    /// Returns [`NodeId`], which is a hash of this node commitment
+    /// serialization
     fn node_id(&self) -> NodeId;
 
-    /// Returns `Some([schema::TransitionType])` for Transitions or None for
-    /// Genesis node
-    fn type_id(&self) -> Option<schema::TransitionType>;
+    /// Returns [`Option::Some`]`(`[`ContractId`]`)`, which is a hash of
+    /// genesis.
+    /// - For genesis node, this hash is byte-equal to [`NodeId`] (however
+    ///   displayed in a reverse manner, to introduce semantical distinction)
+    /// - For extension node function returns id of the genesis, to which this
+    ///   node commits to
+    /// - For state transition function returns [`Option::None`], since they do
+    ///   not keep this information; it must be deduced through state transition
+    ///   graph
+    fn contract_id(&self) -> Option<ContractId>;
+
+    /// Returns [`Option::Some`]`(`[`TransitionType`]`)` for transitions or
+    /// [`Option::None`] for genesis and extension node types
+    fn transition_type(&self) -> Option<TransitionType>;
+
+    /// Returns [`Option::Some`]`(`[`ExtensionType`]`)` for extension nodes or
+    /// [`Option::None`] for genesis and trate transitions
+    fn extension_type(&self) -> Option<ExtensionType>;
 
     fn ancestors(&self) -> &Ancestors;
     fn metadata(&self) -> &Metadata;
     fn assignments(&self) -> &Assignments;
     fn assignments_mut(&mut self) -> &mut Assignments;
+    fn valencies(&self) -> &Valencies;
+    fn valencies_mut(&mut self) -> &mut Valencies;
     fn script(&self) -> &SimplicityScript;
 
     #[inline]
-    fn field_types(&self) -> Vec<schema::FieldType> {
+    fn field_types(&self) -> Vec<FieldType> {
         self.metadata().keys().cloned().collect()
     }
 
     #[inline]
-    fn assignment_types(&self) -> BTreeSet<schema::AssignmentsType> {
+    fn assignment_types(&self) -> BTreeSet<AssignmentsType> {
         self.assignments().keys().cloned().collect()
     }
 
     #[inline]
-    fn assignments_by_type(&self, t: schema::AssignmentsType) -> Option<&AssignmentsVariant> {
+    fn assignments_by_type(&self, t: AssignmentsType) -> Option<&AssignmentsVariant> {
         self.assignments()
             .into_iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
     }
 
+    #[inline]
     fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
         self.assignments()
             .into_iter()
@@ -89,6 +127,7 @@ pub trait Node {
             .collect()
     }
 
+    #[inline]
     fn known_seal_definitions(&self) -> Vec<&seal::Revealed> {
         self.assignments()
             .into_iter()
@@ -96,6 +135,7 @@ pub trait Node {
             .collect()
     }
 
+    #[inline]
     fn known_seal_definitions_by_type(
         &self,
         assignment_type: AssignmentsType,
@@ -113,16 +153,28 @@ pub struct Genesis {
     chain: bp::Chain,
     metadata: Metadata,
     assignments: Assignments,
+    valencies: Valencies,
+    script: SimplicityScript,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Extension {
+    extension_type: ExtensionType,
+    contract_id: ContractId,
+    metadata: Metadata,
+    assignments: Assignments,
+    valencies: Valencies,
     script: SimplicityScript,
 }
 
 #[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
 #[strict_crate(crate)]
 pub struct Transition {
-    type_id: schema::TransitionType,
+    transition_type: TransitionType,
     metadata: Metadata,
     ancestors: Ancestors,
     assignments: Assignments,
+    valencies: Valencies,
     script: SimplicityScript,
 }
 
@@ -130,15 +182,33 @@ impl ConsensusCommit for Genesis {
     type Commitment = NodeId;
 }
 
-impl CommitEncodeWithStrategy for Transition {
-    type Strategy = commit_strategy::UsingStrict;
+impl ConsensusCommit for Extension {
+    type Commitment = NodeId;
 }
 
 impl ConsensusCommit for Transition {
     type Commitment = NodeId;
 }
 
+impl CommitEncodeWithStrategy for Extension {
+    type Strategy = commit_strategy::UsingStrict;
+}
+
+impl CommitEncodeWithStrategy for Transition {
+    type Strategy = commit_strategy::UsingStrict;
+}
+
 impl AutoConceal for Genesis {
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        let mut count = 0;
+        for (_, assignment) in self.assignments_mut() {
+            count += assignment.conceal_except(seals);
+        }
+        count
+    }
+}
+
+impl AutoConceal for Extension {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         let mut count = 0;
         for (_, assignment) in self.assignments_mut() {
@@ -160,13 +230,27 @@ impl AutoConceal for Transition {
 
 impl Node for Genesis {
     #[inline]
+    fn node_type(&self) -> NodeType {
+        NodeType::Genesis
+    }
 
+    #[inline]
     fn node_id(&self) -> NodeId {
         self.clone().consensus_commit()
     }
 
     #[inline]
-    fn type_id(&self) -> Option<schema::TransitionType> {
+    fn contract_id(&self) -> Option<ContractId> {
+        Some(ContractId::from_inner(self.node_id().into_inner()))
+    }
+
+    #[inline]
+    fn transition_type(&self) -> Option<schema::TransitionType> {
+        None
+    }
+
+    #[inline]
+    fn extension_type(&self) -> Option<usize> {
         None
     }
 
@@ -194,6 +278,81 @@ impl Node for Genesis {
     }
 
     #[inline]
+    fn valencies(&self) -> &Valencies {
+        &self.valencies
+    }
+
+    #[inline]
+    fn valencies_mut(&mut self) -> &mut Valencies {
+        &mut self.valencies
+    }
+
+    #[inline]
+    fn script(&self) -> &SimplicityScript {
+        &self.script
+    }
+}
+
+impl Node for Extension {
+    #[inline]
+    fn node_type(&self) -> NodeType {
+        NodeType::Extension
+    }
+
+    #[inline]
+    fn node_id(&self) -> NodeId {
+        self.clone().consensus_commit()
+    }
+
+    #[inline]
+    fn contract_id(&self) -> Option<ContractId> {
+        Some(self.contract_id)
+    }
+
+    #[inline]
+    fn transition_type(&self) -> Option<schema::TransitionType> {
+        None
+    }
+
+    #[inline]
+    fn extension_type(&self) -> Option<usize> {
+        Some(self.extension_type)
+    }
+
+    #[inline]
+    fn ancestors(&self) -> &Ancestors {
+        lazy_static! {
+            static ref ANCESTORS: Ancestors = Ancestors::new();
+        }
+        &ANCESTORS
+    }
+
+    #[inline]
+    fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
+
+    #[inline]
+    fn assignments(&self) -> &Assignments {
+        &self.assignments
+    }
+
+    #[inline]
+    fn assignments_mut(&mut self) -> &mut Assignments {
+        &mut self.assignments
+    }
+
+    #[inline]
+    fn valencies(&self) -> &Valencies {
+        &self.valencies
+    }
+
+    #[inline]
+    fn valencies_mut(&mut self) -> &mut Valencies {
+        &mut self.valencies
+    }
+
+    #[inline]
     fn script(&self) -> &SimplicityScript {
         &self.script
     }
@@ -201,13 +360,28 @@ impl Node for Genesis {
 
 impl Node for Transition {
     #[inline]
+    fn node_type(&self) -> NodeType {
+        NodeType::StateTransition
+    }
+
+    #[inline]
     fn node_id(&self) -> NodeId {
         self.clone().consensus_commit()
     }
 
     #[inline]
-    fn type_id(&self) -> Option<schema::TransitionType> {
-        Some(self.type_id)
+    fn contract_id(&self) -> Option<ContractId> {
+        None
+    }
+
+    #[inline]
+    fn transition_type(&self) -> Option<schema::TransitionType> {
+        Some(self.transition_type)
+    }
+
+    #[inline]
+    fn extension_type(&self) -> Option<usize> {
+        None
     }
 
     #[inline]
@@ -231,6 +405,16 @@ impl Node for Transition {
     }
 
     #[inline]
+    fn valencies(&self) -> &Valencies {
+        &self.valencies
+    }
+
+    #[inline]
+    fn valencies_mut(&mut self) -> &mut Valencies {
+        &mut self.valencies
+    }
+
+    #[inline]
     fn script(&self) -> &SimplicityScript {
         &self.script
     }
@@ -242,6 +426,7 @@ impl Genesis {
         chain: bp::Chain,
         metadata: Metadata,
         assignments: Assignments,
+        valencies: Valencies,
         script: SimplicityScript,
     ) -> Self {
         Self {
@@ -249,6 +434,7 @@ impl Genesis {
             chain,
             metadata,
             assignments,
+            valencies,
             script,
         }
     }
@@ -269,19 +455,41 @@ impl Genesis {
     }
 }
 
+impl Extension {
+    pub fn with(
+        extension_type: ExtensionType,
+        contract_id: ContractId,
+        metadata: Metadata,
+        assignments: Assignments,
+        valencies: Valencies,
+        script: SimplicityScript,
+    ) -> Self {
+        Self {
+            extension_type,
+            contract_id,
+            metadata,
+            assignments,
+            valencies,
+            script,
+        }
+    }
+}
+
 impl Transition {
     pub fn with(
         type_id: schema::TransitionType,
         metadata: Metadata,
         ancestors: Ancestors,
         assignments: Assignments,
+        valencies: Valencies,
         script: SimplicityScript,
     ) -> Self {
         Self {
-            type_id,
+            transition_type: type_id,
             metadata,
             ancestors,
             assignments,
+            valencies,
             script,
         }
     }
@@ -312,6 +520,7 @@ mod strict_encoding {
                 Ok(strict_encode_list!(e; len;
                     self.metadata,
                     self.assignments,
+                    self.valencies,
                     self.script
                 ))
             };
@@ -322,6 +531,7 @@ mod strict_encoding {
 
 #[cfg(test)]
 mod test {
+    // TODO: (new) Implement tests for extensions and valencies
 
     use super::*;
     use crate::bp::chain::{Chain, GENESIS_HASH_MAINNET};
@@ -663,7 +873,8 @@ mod test {
             chain: Chain::Mainnet,
             metadata: Default::default(),
             assignments: Default::default(),
-            script: vec![],
+            valencies: Default::default(),
+            script: Default::default(),
         };
         assert_ne!(
             strict_encode(&genesis).unwrap(),
@@ -682,15 +893,19 @@ mod test {
         );
 
         let transition = Transition {
-            type_id: Default::default(),
+            transition_type: Default::default(),
             metadata: Default::default(),
             ancestors: Default::default(),
             assignments: Default::default(),
+            valencies: Default::default(),
             script: Default::default(),
         };
 
         let mut encoder = std::io::Cursor::new(vec![]);
-        transition.type_id.strict_encode(&mut encoder).unwrap();
+        transition
+            .transition_type
+            .strict_encode(&mut encoder)
+            .unwrap();
         transition.metadata.strict_encode(&mut encoder).unwrap();
         transition.ancestors.strict_encode(&mut encoder).unwrap();
         transition.assignments.strict_encode(&mut encoder).unwrap();
@@ -727,8 +942,8 @@ mod test {
             "5b81b9895ccc0f2cb9afaa54d73a70cab3a10d0de67f7b2c119099ed435355fd"
         );
 
-        assert_eq!(genesis.type_id(), None);
-        assert_eq!(transition.type_id(), Some(10));
+        assert_eq!(genesis.transition_type(), None);
+        assert_eq!(transition.transition_type(), Some(10));
 
         // Ancestor test
 
