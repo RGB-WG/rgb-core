@@ -104,7 +104,7 @@ pub trait Node {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, PartialEq)]
 #[strict_crate(crate)]
 pub struct Genesis {
     schema_id: SchemaId,
@@ -287,7 +287,9 @@ impl Transition {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{strategies, Error, Strategy, StrictEncode};
+    use crate::bp::chain::ChainParams;
+    use crate::paradigms::strict_encoding::StrictDecode;
+    use crate::strict_encoding::{strategies, strict_encode, Error, Strategy, StrictEncode};
     use std::io;
 
     impl Strategy for NodeId {
@@ -314,6 +316,58 @@ mod strict_encoding {
                 ))
             };
             encoder().expect("Strict encoding of genesis data must not fail")
+        }
+    }
+
+    impl StrictEncode for Genesis {
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+            let chain_params = strict_encode(&self.chain.chain_params())?;
+            Ok(strict_encode_list!(e;
+                self.schema_id,
+                // ![NETWORK-CRITICAL]: Chain params fields may update, so we
+                //                      will serialize chain parameters in all
+                //                      known/legacy formats for compatibility.
+                //                      Thus, they are serialized as a vector
+                //                      of byte strings, each one representing
+                //                      a next version of chain parameters
+                //                      representation.
+                // <https://github.com/LNP-BP/rust-lnpbp/issues/114>
+                1usize,
+                chain_params.len(),
+                chain_params,
+                self.metadata,
+                self.assignments,
+                self.script
+            ))
+        }
+    }
+
+    impl StrictDecode for Genesis {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            let schema_id = StrictDecode::strict_decode(&mut d)?;
+            let chain_params_no = usize::strict_decode(&mut d)?;
+            if chain_params_no < 1 {
+                Err(Error::ValueOutOfRange(
+                    "genesis must contain at least one `chain_param` data structure",
+                    1u128..u16::MAX,
+                    0,
+                ))?
+            }
+            let chain = ChainParams::strict_decode(&mut d)?.into();
+            for n in 1..chain_params_no {
+                // Ignoring the rest of chain parameters
+                let _ = Vec::<u8>::strict_decode(&mut d)?;
+            }
+            let metadata = StrictDecode::strict_decode(&mut d)?;
+            let assignments = StrictDecode::strict_decode(&mut d)?;
+            let script = StrictDecode::strict_decode(&mut d)?;
+            Ok(Self {
+                schema_id,
+                chain,
+                metadata,
+                assignments,
+                script,
+            })
         }
     }
 }
