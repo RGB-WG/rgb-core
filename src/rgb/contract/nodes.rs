@@ -549,6 +549,7 @@ mod strict_encoding {
                 chain_params,
                 self.metadata,
                 self.assignments,
+                self.valencies,
                 self.script
             ))
         }
@@ -556,7 +557,7 @@ mod strict_encoding {
 
     impl StrictDecode for Genesis {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let schema_id = StrictDecode::strict_decode(&mut d)?;
+            let schema_id = SchemaId::strict_decode(&mut d)?;
             let chain_params_no = usize::strict_decode(&mut d)?;
             if chain_params_no < 1 {
                 Err(Error::ValueOutOfRange(
@@ -570,14 +571,16 @@ mod strict_encoding {
                 // Ignoring the rest of chain parameters
                 let _ = Vec::<u8>::strict_decode(&mut d)?;
             }
-            let metadata = StrictDecode::strict_decode(&mut d)?;
-            let assignments = StrictDecode::strict_decode(&mut d)?;
-            let script = StrictDecode::strict_decode(&mut d)?;
+            let metadata = Metadata::strict_decode(&mut d)?;
+            let assignments = Assignments::strict_decode(&mut d)?;
+            let valencies = Valencies::strict_decode(&mut d)?;
+            let script = SimplicityScript::strict_decode(&mut d)?;
             Ok(Self {
                 schema_id,
                 chain,
                 metadata,
                 assignments,
+                valencies,
                 script,
             })
         }
