@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::collections::BTreeSet;
+
 use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{Ancestors, Assignments, AssignmentsVariant, AutoConceal};
@@ -67,7 +69,7 @@ pub trait Node {
     }
 
     #[inline]
-    fn assignment_types(&self) -> Vec<schema::AssignmentsType> {
+    fn assignment_types(&self) -> BTreeSet<schema::AssignmentsType> {
         self.assignments().keys().cloned().collect()
     }
 
@@ -878,7 +880,7 @@ mod test {
 
         assert_eq!(gen_script, tran_script);
 
-        assert_eq!(gen_script, &[1, 2, 3, 4, 5].to_vec());
+        assert_eq!(gen_script, &[1, 2, 3, 4, 5]);
 
         // Field Types
         let gen_fields = genesis.field_types();
@@ -886,7 +888,7 @@ mod test {
 
         assert_eq!(gen_fields, tran_fields);
 
-        assert_eq!(gen_fields, [13usize].to_vec());
+        assert_eq!(gen_fields, vec![13usize]);
 
         // Assignment types
         let gen_ass_types = genesis.assignment_types();
@@ -894,7 +896,7 @@ mod test {
 
         assert_eq!(gen_ass_types, tran_ass_types);
 
-        assert_eq!(gen_ass_types, [1usize, 2, 3].to_vec());
+        assert_eq!(gen_ass_types, bset![1usize, 2, 3]);
 
         // assignment by types
         let assignment_gen = genesis.assignments_by_type(3).unwrap();
