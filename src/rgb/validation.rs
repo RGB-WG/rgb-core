@@ -132,11 +132,11 @@ impl Status {
 pub enum Failure {
     SchemaUnknown(SchemaId),
 
+    SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
     SchemaUnknownTransitionType(NodeId, schema::TransitionType),
-
     SchemaUnknownFieldType(NodeId, schema::FieldType),
-
     SchemaUnknownAssignmentType(NodeId, schema::AssignmentsType),
+    SchemaUnknownValenciesType(NodeId, schema::ValenciesType),
 
     SchemaDeniedScriptExtension(NodeId),
 

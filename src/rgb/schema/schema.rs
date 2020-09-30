@@ -126,14 +126,14 @@ mod strict_encoding {
     }
 }
 
-/// TODO: (new) Add extension validation
 mod _validation {
     use super::*;
 
     use core::convert::TryFrom;
     use std::collections::BTreeSet;
 
-    use crate::rgb::schema::{script, MetadataStructure, SealsStructure};
+    use crate::rgb::contract::nodes::Valencies;
+    use crate::rgb::schema::{script, MetadataStructure, SealsStructure, ValenciesStructure};
     use crate::rgb::{
         validation, Ancestors, AssignmentAction, Assignments, AssignmentsVariant, Metadata, Node,
         NodeId, VirtualMachine,
@@ -148,40 +148,60 @@ mod _validation {
             let node_id = node.node_id();
 
             let empty_seals_structure = SealsStructure::default();
-            let (metadata_structure, ancestors_structure, assignments_structure) =
-                match (node.transition_type(), node.extension_type()) {
-                    (None, None) => (
-                        &self.genesis.metadata,
-                        &empty_seals_structure,
-                        &self.genesis.defines,
-                    ),
-                    (Some(transition_type), None) => {
-                        let transition_type = match self.transitions.get(&transition_type) {
-                            None => {
-                                return validation::Status::with_failure(
-                                    validation::Failure::SchemaUnknownTransitionType(
-                                        node_id,
-                                        transition_type,
-                                    ),
-                                )
-                            }
-                            Some(transition_type) => transition_type,
-                        };
+            let (
+                metadata_structure,
+                ancestors_structure,
+                assignments_structure,
+                valencies_structure,
+            ) = match (node.transition_type(), node.extension_type()) {
+                (None, None) => (
+                    &self.genesis.metadata,
+                    &empty_seals_structure,
+                    &self.genesis.defines,
+                    &self.genesis.valencies,
+                ),
+                (Some(transition_type), None) => {
+                    let transition_type = match self.transitions.get(&transition_type) {
+                        None => {
+                            return validation::Status::with_failure(
+                                validation::Failure::SchemaUnknownTransitionType(
+                                    node_id,
+                                    transition_type,
+                                ),
+                            )
+                        }
+                        Some(transition_type) => transition_type,
+                    };
 
-                        (
-                            &transition_type.metadata,
-                            &transition_type.closes,
-                            &transition_type.defines,
-                        )
-                    }
-                    (None, Some(_extension_type)) => {
-                        // TODO: (new) Add extension validation
-                        unimplemented!()
-                    }
-                    _ => unreachable!(
-                        "Node can't be extension and state transition at the same time"
-                    ),
-                };
+                    (
+                        &transition_type.metadata,
+                        &transition_type.closes,
+                        &transition_type.defines,
+                        &transition_type.valencies,
+                    )
+                }
+                (None, Some(extension_type)) => {
+                    let extension_type = match self.extensions.get(&extension_type) {
+                        None => {
+                            return validation::Status::with_failure(
+                                validation::Failure::SchemaUnknownExtensionType(
+                                    node_id,
+                                    extension_type,
+                                ),
+                            )
+                        }
+                        Some(extension_type) => extension_type,
+                    };
+
+                    (
+                        &extension_type.metadata,
+                        &empty_seals_structure,
+                        &extension_type.defines,
+                        &extension_type.extends,
+                    )
+                }
+                _ => unreachable!("Node can't be extension and state transition at the same time"),
+            };
 
             let mut status = validation::Status::new();
             let ancestor_assignments =
@@ -189,6 +209,7 @@ mod _validation {
             status += self.validate_meta(node_id, node.metadata(), metadata_structure);
             status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
             status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
+            status += self.validate_valencies(node_id, node.valencies(), valencies_structure);
             status += self.validate_state_evolution(
                 node_id,
                 node.transition_type(),
@@ -334,6 +355,26 @@ mod _validation {
                     }),
                 };
             }
+
+            status
+        }
+
+        fn validate_valencies(
+            &self,
+            node_id: NodeId,
+            valencies: &Valencies,
+            valencies_structure: &ValenciesStructure,
+        ) -> validation::Status {
+            let mut status = validation::Status::new();
+
+            valencies
+                .difference(&valencies_structure)
+                .for_each(|valencies_id| {
+                    status.add_failure(validation::Failure::SchemaUnknownValenciesType(
+                        node_id,
+                        *valencies_id,
+                    ));
+                });
 
             status
         }
