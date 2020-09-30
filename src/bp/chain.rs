@@ -473,7 +473,7 @@ impl StrictDecode for AssetParams {
 
 /// Full set of parameters which uniquely define given blockchain,
 /// corresponding P2P network and RPC interface of fully validating nodes
-#[derive(Clone, PartialOrd, Ord, Debug, Display, Hash)]
+#[derive(Clone, PartialOrd, Ord, Debug, Display, Hash, StrictEncode, StrictDecode)]
 #[display(Debug)]
 pub struct ChainParams {
     /// Hash of the genesis block, uniquely defining chain
@@ -536,54 +536,6 @@ impl PartialEq for ChainParams {
 }
 
 impl Eq for ChainParams {}
-
-impl StrictEncode for ChainParams {
-    type Error = strict_encoding::Error;
-
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
-        Ok(strict_encode_list!(e;
-            self.genesis_hash,
-            self.name,
-            self.p2p_magic,
-            self.bip70_name,
-            self.bip173_prefix,
-            self.p2p_port,
-            self.rpc_port,
-            self.ln_height,
-            self.rgb_height,
-            self.format,
-            self.dust_limit,
-            self.native_asset,
-            self.is_testnet,
-            self.is_pow
-        ))
-    }
-}
-
-impl StrictDecode for ChainParams {
-    type Error = strict_encoding::Error;
-
-    #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-        Ok(strict_decode_self!(d;
-            genesis_hash,
-            name,
-            p2p_magic,
-            bip70_name,
-            bip173_prefix,
-            p2p_port,
-            rpc_port,
-            ln_height,
-            rgb_height,
-            format,
-            dust_limit,
-            native_asset,
-            is_testnet,
-            is_pow
-        ))
-    }
-}
 
 /// A set of recommended standard networks. Differs from bitcoin::Network in
 /// ability to support non-standard and non-predefined networks
