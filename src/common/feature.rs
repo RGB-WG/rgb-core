@@ -291,7 +291,7 @@ impl FlagVec {
     #[inline]
     pub fn unknown_iter(&self, mut known: FlagVec) -> FilteredIter {
         known.enlarge(self.capacity());
-        for byte in 1..self.capacity() {
+        for byte in 0..self.0.len() {
             known.0[byte as usize] = !known.0[byte as usize];
         }
         FilteredIter::new(&self, known)
@@ -433,10 +433,10 @@ impl Iterator for AllSet<'_> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         while self.offset < self.features.capacity() {
-            if self.features.is_set(self.offset) {
-                return Some(self.offset);
-            }
             self.offset += 1;
+            if self.features.is_set(self.offset - 1) {
+                return Some(self.offset - 1);
+            }
         }
         None
     }
@@ -474,10 +474,10 @@ impl Iterator for FilteredIter<'_> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         while self.offset < self.features.capacity() {
-            if self.features.is_set(self.offset) && self.filter.is_set(self.offset) {
-                return Some(self.offset);
-            }
             self.offset += 1;
+            if self.features.is_set(self.offset - 1) && self.filter.is_set(self.offset - 1) {
+                return Some(self.offset - 1);
+            }
         }
         None
     }
@@ -595,7 +595,7 @@ mod test {
         );
         assert_eq!(
             f2.unknown_iter(f1).collect::<Vec<_>>(),
-            vec![1u16, 2, 5, 9, 12, 15]
+            vec![1u16, 2, 5, 12, 15]
         );
     }
 
