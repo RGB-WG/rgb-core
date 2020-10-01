@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use num_traits::{FromPrimitive, ToPrimitive};
 use std::collections::BTreeMap;
 use std::io;
 
@@ -18,28 +19,11 @@ use std::io;
 /// placeholder for script data
 pub type SimplicityScript = Vec<u8>;
 
-#[non_exhaustive]
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
-)]
-#[display(Debug)]
-pub enum GenesisAction {}
-
-#[non_exhaustive]
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
-)]
-#[display(Debug)]
-pub enum ExtensionAction {}
-
-#[non_exhaustive]
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
-)]
-#[display(Debug)]
-#[repr(u8)]
-pub enum TransitionAction {
-    GenerateBlank = 0,
+/// Marker trait for all node-specific action types
+pub trait NodeAction: ToPrimitive + FromPrimitive + Ord
+where
+    Self: Sized,
+{
 }
 
 #[non_exhaustive]
@@ -47,7 +31,34 @@ pub enum TransitionAction {
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
 )]
 #[display(Debug)]
-#[repr(u8)]
+pub enum GenesisAction {}
+impl NodeAction for GenesisAction {}
+
+#[non_exhaustive]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
+#[display(Debug)]
+pub enum ExtensionAction {}
+impl NodeAction for ExtensionAction {}
+
+#[non_exhaustive]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
+#[display(Debug)]
+#[repr(u16)]
+pub enum TransitionAction {
+    GenerateBlank = 0,
+}
+impl NodeAction for TransitionAction {}
+
+#[non_exhaustive]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+)]
+#[display(Debug)]
+#[repr(u16)]
 pub enum AssignmentAction {
     Validate = 0,
 }

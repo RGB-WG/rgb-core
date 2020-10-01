@@ -19,13 +19,13 @@ mod types;
 
 pub(self) use super::vm;
 pub use nodes::{
-    AssignmentsType, ExtensionSchema, GenesisSchema, MetadataStructure, NodeType, SealsStructure,
-    TransitionSchema, ValenciesStructure, ValenciesType,
+    AssignmentsType, ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeType,
+    SealsStructure, TransitionSchema, ValenciesStructure, ValenciesType,
 };
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{
     AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, GenesisAbi, GenesisAction,
-    SimplicityScript, TransitionAbi, TransitionAction,
+    NodeAction, Procedure, SimplicityScript, TransitionAbi, TransitionAction,
 };
 pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
 pub use types::{
@@ -34,3 +34,13 @@ pub use types::{
 
 #[cfg(test)]
 pub(crate) use schema::test;
+
+mod verify {
+    use crate::rgb::validation;
+
+    /// Trait used for internal schema validation against some root schema
+    pub trait SchemaVerify {
+        fn schema_verify(&self, root: &Self) -> validation::Status;
+    }
+}
+pub use verify::SchemaVerify;

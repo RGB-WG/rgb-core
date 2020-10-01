@@ -18,11 +18,10 @@ use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{
     vm, AssignmentsType, DataFormat, ExtensionSchema, GenesisSchema, SimplicityScript, StateSchema,
-    TransitionSchema,
+    TransitionSchema, ValenciesType,
 };
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
 use crate::feature;
-use crate::rgb::schema::ValenciesType;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = usize;
@@ -49,8 +48,7 @@ tagged_hash!(
 #[derive(Clone, PartialEq, Debug)]
 pub struct Schema {
     pub rgb_features: feature::FlagVec,
-    // TODO: (new) add superschema reference
-    // pub family_schema_id: SchemaId,
+    pub root_id: SchemaId,
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateSchema>,
     pub valencies_types: BTreeSet<ValenciesType>,
@@ -94,6 +92,7 @@ mod strict_encoding {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(strict_encode_list!(e;
                 self.rgb_features,
+                self.root_id,
                 self.field_types,
                 self.assignment_types,
                 self.valencies_types,
@@ -112,6 +111,7 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let me = Self {
                 rgb_features: feature::FlagVec::strict_decode(&mut d)?,
+                root_id: SchemaId::strict_decode(&mut d)?,
                 field_types: BTreeMap::strict_decode(&mut d)?,
                 assignment_types: BTreeMap::strict_decode(&mut d)?,
                 valencies_types: BTreeSet::strict_decode(&mut d)?,
@@ -139,11 +139,78 @@ mod _validation {
     use std::collections::BTreeSet;
 
     use crate::rgb::contract::nodes::Valencies;
-    use crate::rgb::schema::{script, MetadataStructure, SealsStructure, ValenciesStructure};
+    use crate::rgb::schema::{
+        script, MetadataStructure, SchemaVerify, SealsStructure, ValenciesStructure,
+    };
     use crate::rgb::{
         validation, Ancestors, AssignmentAction, Assignments, AssignmentsVariant, Metadata, Node,
         NodeId, VirtualMachine,
     };
+
+    impl SchemaVerify for Schema {
+        fn schema_verify(&self, root: &Schema) -> validation::Status {
+            let mut status = validation::Status::new();
+
+            if root.root_id != SchemaId::default() {
+                status.add_failure(validation::Failure::SchemaRootHierarchy(root.root_id));
+            }
+
+            for (field_type, data_format) in &self.field_types {
+                match root.field_types.get(field_type) {
+                    None => status
+                        .add_failure(validation::Failure::SchemaRootNoFieldTypeMatch(*field_type)),
+                    Some(root_data_format) if root_data_format != data_format => status
+                        .add_failure(validation::Failure::SchemaRootNoFieldTypeMatch(*field_type)),
+                    _ => &status,
+                };
+            }
+
+            for (assignments_type, state_schema) in &self.assignment_types {
+                match root.assignment_types.get(assignments_type) {
+                    None => status.add_failure(
+                        validation::Failure::SchemaRootNoAssignmentsTypeMatch(*assignments_type),
+                    ),
+                    Some(root_state_schema) if root_state_schema != state_schema => status
+                        .add_failure(validation::Failure::SchemaRootNoAssignmentsTypeMatch(
+                            *assignments_type,
+                        )),
+                    _ => &status,
+                };
+            }
+
+            for valencies_type in &self.valencies_types {
+                match root.valencies_types.contains(valencies_type) {
+                    false => status.add_failure(
+                        validation::Failure::SchemaRootNoValenciesTypeMatch(*valencies_type),
+                    ),
+                    _ => &status,
+                };
+            }
+
+            status += self.genesis.schema_verify(&root.genesis);
+
+            for (transition_type, transition_schema) in &self.transitions {
+                if let Some(root_transition_schema) = root.transitions.get(transition_type) {
+                    status += transition_schema.schema_verify(root_transition_schema);
+                } else {
+                    status.add_failure(validation::Failure::SchemaRootNoTransitionTypeMatch(
+                        *transition_type,
+                    ));
+                }
+            }
+            for (extension_type, extension_schema) in &self.extensions {
+                if let Some(root_extension_schema) = root.extensions.get(extension_type) {
+                    status += extension_schema.schema_verify(root_extension_schema);
+                } else {
+                    status.add_failure(validation::Failure::SchemaRootNoExtensionTypeMatch(
+                        *extension_type,
+                    ));
+                }
+            }
+
+            status
+        }
+    }
 
     impl Schema {
         pub fn validate(
@@ -581,6 +648,7 @@ pub(crate) mod test {
 
         Schema {
             rgb_features: feature::FlagVec::default(),
+            root_id: Default::default(),
             field_types: bmap! {
                 FIELD_TICKER => DataFormat::String(16),
                 FIELD_NAME => DataFormat::String(256),
@@ -701,27 +769,28 @@ pub(crate) mod test {
         let schema = schema();
         let encoded = strict_encode(&schema).unwrap();
         let encoded_standard: Vec<u8> = vec![
-            0, 0, 10, 0, 0, 0, 4, 16, 0, 1, 0, 4, 0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0, 0, 0, 0,
-            0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0,
-            255, 255, 255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255,
-            255, 255, 255, 255, 255, 255, 6, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0,
-            0, 7, 0, 5, 255, 255, 8, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255,
-            255, 255, 16, 0, 4, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0, 0, 0, 0, 0,
-            0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0, 0, 255, 1, 2, 0, 0, 1, 0, 0,
-            255, 3, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0,
-            0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0, 0,
-            0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 8,
-            0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255,
-            255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-            1, 0, 0, 0, 2, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 255, 255, 255, 0, 0, 0, 0, 0,
-            0, 1, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0,
-            0, 1, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255,
-            255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 255, 255, 255, 0, 0,
-            0, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0,
-            7, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2,
-            0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0,
-            254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 10, 0, 0, 0, 4, 16, 0, 1, 0, 4, 0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0,
+            0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0,
+            0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255,
+            255, 255, 255, 255, 255, 255, 255, 6, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0,
+            0, 0, 0, 7, 0, 5, 255, 255, 8, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255,
+            255, 255, 255, 255, 16, 0, 4, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0,
+            0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0, 0, 255, 1, 2, 0, 0,
+            1, 0, 0, 255, 3, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 0, 0, 0, 0, 0, 0,
+            0, 0, 8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+            254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+            0, 0, 0, 1, 0, 0, 0, 2, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 255, 255, 255, 0, 0,
+            0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            3, 0, 0, 0, 1, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0,
+            254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 255, 255,
+            255, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            2, 0, 1, 0, 7, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 255, 255, 255, 0, 0, 0,
+            0, 0, 0, 2, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0,
+            0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         assert_eq!(encoded, encoded_standard);
 

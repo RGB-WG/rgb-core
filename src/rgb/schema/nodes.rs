@@ -14,7 +14,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
-use super::{ExtensionAbi, FieldType, GenesisAbi, Occurences, TransitionAbi};
+use super::{
+    ExtensionAbi, ExtensionAction, FieldType, GenesisAbi, GenesisAction, NodeAction, Occurences,
+    Procedure, TransitionAbi, TransitionAction,
+};
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type AssignmentsType = usize;
@@ -45,7 +48,20 @@ pub enum NodeType {
     StateTransition,
 }
 
-#[derive(Clone, PartialEq, Debug, Display)]
+/// Trait defining common API for all node type schemata
+pub trait NodeSchema {
+    type Action: NodeAction;
+
+    fn node_type(&self) -> NodeType;
+    fn metadata(&self) -> &MetadataStructure;
+    fn closes(&self) -> &SealsStructure;
+    fn extends(&self) -> &ValenciesStructure;
+    fn defines(&self) -> &SealsStructure;
+    fn valencies(&self) -> &ValenciesStructure;
+    fn abi(&self) -> &BTreeMap<Self::Action, Procedure>;
+}
+
+#[derive(Clone, PartialEq, Debug, Display, AsAny)]
 #[display(Debug)]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
@@ -54,7 +70,7 @@ pub struct GenesisSchema {
     pub abi: GenesisAbi,
 }
 
-#[derive(Clone, PartialEq, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display, AsAny)]
 #[display(Debug)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
@@ -64,7 +80,7 @@ pub struct ExtensionSchema {
     pub abi: ExtensionAbi,
 }
 
-#[derive(Clone, PartialEq, Debug, Display)]
+#[derive(Clone, PartialEq, Debug, Display, AsAny)]
 #[display(Debug)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
@@ -72,6 +88,110 @@ pub struct TransitionSchema {
     pub defines: SealsStructure,
     pub valencies: ValenciesStructure,
     pub abi: TransitionAbi,
+}
+
+lazy_static! {
+    static ref EMPTY_SEALS: SealsStructure = SealsStructure::new();
+    static ref EMPTY_VALENCIES: ValenciesStructure = ValenciesStructure::new();
+}
+
+impl NodeSchema for GenesisSchema {
+    type Action = GenesisAction;
+
+    #[inline]
+    fn node_type(&self) -> NodeType {
+        NodeType::Genesis
+    }
+    #[inline]
+    fn metadata(&self) -> &MetadataStructure {
+        &self.metadata
+    }
+    #[inline]
+    fn closes(&self) -> &SealsStructure {
+        &EMPTY_SEALS
+    }
+    #[inline]
+    fn extends(&self) -> &ValenciesStructure {
+        &EMPTY_VALENCIES
+    }
+    #[inline]
+    fn defines(&self) -> &SealsStructure {
+        &self.defines
+    }
+    #[inline]
+    fn valencies(&self) -> &ValenciesStructure {
+        &self.valencies
+    }
+    #[inline]
+    fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
+        &self.abi
+    }
+}
+
+impl NodeSchema for ExtensionSchema {
+    type Action = ExtensionAction;
+
+    #[inline]
+    fn node_type(&self) -> NodeType {
+        NodeType::Extension
+    }
+    #[inline]
+    fn metadata(&self) -> &MetadataStructure {
+        &self.metadata
+    }
+    #[inline]
+    fn closes(&self) -> &SealsStructure {
+        &EMPTY_SEALS
+    }
+    #[inline]
+    fn extends(&self) -> &ValenciesStructure {
+        &self.extends
+    }
+    #[inline]
+    fn defines(&self) -> &SealsStructure {
+        &self.defines
+    }
+    #[inline]
+    fn valencies(&self) -> &ValenciesStructure {
+        &self.valencies
+    }
+    #[inline]
+    fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
+        &self.abi
+    }
+}
+
+impl NodeSchema for TransitionSchema {
+    type Action = TransitionAction;
+
+    #[inline]
+    fn node_type(&self) -> NodeType {
+        NodeType::StateTransition
+    }
+    #[inline]
+    fn metadata(&self) -> &MetadataStructure {
+        &self.metadata
+    }
+    #[inline]
+    fn closes(&self) -> &SealsStructure {
+        &self.closes
+    }
+    #[inline]
+    fn extends(&self) -> &ValenciesStructure {
+        &EMPTY_VALENCIES
+    }
+    #[inline]
+    fn defines(&self) -> &SealsStructure {
+        &self.defines
+    }
+    #[inline]
+    fn valencies(&self) -> &ValenciesStructure {
+        &self.valencies
+    }
+    #[inline]
+    fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
+        &self.abi
+    }
 }
 
 mod strict_encoding {
@@ -184,6 +304,112 @@ mod strict_encoding {
             } else {
                 Ok(me)
             }
+        }
+    }
+}
+
+mod _verify {
+    use super::*;
+    use crate::rgb::schema::SchemaVerify;
+    use crate::rgb::validation;
+    use num_traits::ToPrimitive;
+
+    impl<T> SchemaVerify for T
+    where
+        T: NodeSchema,
+    {
+        fn schema_verify(&self, root: &Self) -> validation::Status {
+            let mut status = validation::Status::new();
+            let node_type = self.node_type();
+
+            for (field_type, occ) in self.metadata() {
+                match root.metadata().get(field_type) {
+                    None => status.add_failure(validation::Failure::SchemaRootNoMetadataMatch(
+                        node_type,
+                        *field_type,
+                    )),
+                    Some(root_occ) if occ != root_occ => status.add_failure(
+                        validation::Failure::SchemaRootNoMetadataMatch(node_type, *field_type),
+                    ),
+                    _ => &status,
+                };
+            }
+
+            for (assignments_type, occ) in self.closes() {
+                match root.closes().get(assignments_type) {
+                    None => {
+                        status.add_failure(validation::Failure::SchemaRootNoClosedAssignmentsMatch(
+                            node_type,
+                            *assignments_type,
+                        ))
+                    }
+                    Some(root_occ) if occ != root_occ => {
+                        status.add_failure(validation::Failure::SchemaRootNoClosedAssignmentsMatch(
+                            node_type,
+                            *assignments_type,
+                        ))
+                    }
+                    _ => &status,
+                };
+            }
+
+            for (assignments_type, occ) in self.defines() {
+                match root.defines().get(assignments_type) {
+                    None => status.add_failure(
+                        validation::Failure::SchemaRootNoDefinedAssignmentsMatch(
+                            node_type,
+                            *assignments_type,
+                        ),
+                    ),
+                    Some(root_occ) if occ != root_occ => status.add_failure(
+                        validation::Failure::SchemaRootNoDefinedAssignmentsMatch(
+                            node_type,
+                            *assignments_type,
+                        ),
+                    ),
+                    _ => &status,
+                };
+            }
+
+            for valencies_type in self.extends() {
+                if !root.extends().contains(valencies_type) {
+                    status.add_failure(validation::Failure::SchemaRootNoExtendedValenciesMatch(
+                        node_type,
+                        *valencies_type,
+                    ));
+                }
+            }
+
+            for valencies_type in self.valencies() {
+                if !root.valencies().contains(valencies_type) {
+                    status.add_failure(validation::Failure::SchemaRootNoDefinedValenciesMatch(
+                        node_type,
+                        *valencies_type,
+                    ));
+                }
+            }
+
+            for (action, proc) in self.abi() {
+                match root.abi().get(action) {
+                    None => status.add_failure(validation::Failure::SchemaRootNoAbiMatch {
+                        node_type,
+                        action_id: action
+                            .to_u16()
+                            .expect("Action type can't exceed 16-bit integer"),
+                    }),
+                    Some(root_proc) if root_proc != proc => {
+                        status.add_failure(validation::Failure::SchemaRootNoAbiMatch {
+                            node_type,
+                            action_id: action
+                                .to_u16()
+                                .expect("Action type can't exceed 16-bit integer"),
+                        })
+                    }
+                    _ => &status,
+                };
+            }
+
+            status
         }
     }
 }

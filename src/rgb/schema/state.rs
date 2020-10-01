@@ -696,7 +696,10 @@ mod _validation {
                     range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Unsigned(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits(item_id, *bits));
+                    status.add_failure(validation::Failure::SchemaMismatchedBits {
+                        field_or_state_type: item_id,
+                        expected: *bits,
+                    });
                 }
 
                 (Self::Integer(Bits::Bit8, min, max), data::Revealed::I8(val)) => {
@@ -712,7 +715,10 @@ mod _validation {
                     range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Integer(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits(item_id, *bits));
+                    status.add_failure(validation::Failure::SchemaMismatchedBits {
+                        field_or_state_type: item_id,
+                        expected: *bits,
+                    });
                 }
 
                 (Self::Float(Bits::Bit32, min, max), data::Revealed::F32(val)) => {
@@ -722,38 +728,43 @@ mod _validation {
                     range_check(item_id, true, *val, *min, *max, &mut status)
                 }
                 (Self::Float(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits(item_id, *bits));
+                    status.add_failure(validation::Failure::SchemaMismatchedBits {
+                        field_or_state_type: item_id,
+                        expected: *bits,
+                    });
                 }
 
                 (Self::Enum(value_set), data::Revealed::U8(val)) => {
                     if !value_set.contains(val) {
-                        status
-                            .add_failure(validation::Failure::SchemaWrongEnumValue(item_id, *val));
+                        status.add_failure(validation::Failure::SchemaWrongEnumValue {
+                            field_or_state_type: item_id,
+                            unexpected: *val,
+                        });
                     }
                 }
                 (Self::Enum(_), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits(
-                        item_id,
-                        Bits::Bit8,
-                    ));
+                    status.add_failure(validation::Failure::SchemaMismatchedBits {
+                        field_or_state_type: item_id,
+                        expected: Bits::Bit8,
+                    });
                 }
 
                 (Self::String(len), data::Revealed::String(val)) => {
                     if val.len() > *len as usize {
-                        status.add_failure(validation::Failure::SchemaWrongDataLength(
-                            item_id,
-                            *len,
-                            val.len(),
-                        ));
+                        status.add_failure(validation::Failure::SchemaWrongDataLength {
+                            field_or_state_type: item_id,
+                            max_expected: *len,
+                            found: val.len(),
+                        });
                     }
                 }
                 (Self::Bytes(len), data::Revealed::Bytes(val)) => {
                     if val.len() > *len as usize {
-                        status.add_failure(validation::Failure::SchemaWrongDataLength(
-                            item_id,
-                            *len,
-                            val.len(),
-                        ));
+                        status.add_failure(validation::Failure::SchemaWrongDataLength {
+                            field_or_state_type: item_id,
+                            max_expected: *len,
+                            found: val.len(),
+                        });
                     }
                 }
 

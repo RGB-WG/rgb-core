@@ -17,12 +17,11 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
 
-use super::schema::OccurrencesError;
+use super::schema::{NodeType, OccurrencesError};
 use super::{
-    schema, seal, Anchor, AnchorId, Consignment, ContractId, Node, NodeId, Schema, SchemaId,
+    schema, seal, Anchor, AnchorId, AssignmentsVariant, Consignment, ContractId, Node, NodeId,
+    Schema, SchemaId,
 };
-use crate::rgb::schema::NodeType;
-use crate::rgb::AssignmentsVariant;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
 #[display(Debug)]
@@ -132,6 +131,22 @@ impl Status {
 #[display(Debug)]
 pub enum Failure {
     SchemaUnknown(SchemaId),
+    /// Root schema for this schema has another root, which is prohibited
+    SchemaRootHierarchy(SchemaId),
+    SchemaRootNoFieldTypeMatch(schema::FieldType),
+    SchemaRootNoAssignmentsTypeMatch(schema::AssignmentsType),
+    SchemaRootNoTransitionTypeMatch(schema::TransitionType),
+    SchemaRootNoExtensionTypeMatch(schema::ExtensionType),
+    SchemaRootNoValenciesTypeMatch(schema::ValenciesType),
+    SchemaRootNoMetadataMatch(NodeType, schema::FieldType),
+    SchemaRootNoClosedAssignmentsMatch(NodeType, schema::AssignmentsType),
+    SchemaRootNoDefinedAssignmentsMatch(NodeType, schema::AssignmentsType),
+    SchemaRootNoExtendedValenciesMatch(NodeType, schema::ValenciesType),
+    SchemaRootNoDefinedValenciesMatch(NodeType, schema::ValenciesType),
+    SchemaRootNoAbiMatch {
+        node_type: NodeType,
+        action_id: u16,
+    },
 
     SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
     SchemaUnknownTransitionType(NodeId, schema::TransitionType),
@@ -141,17 +156,26 @@ pub enum Failure {
 
     SchemaDeniedScriptExtension(NodeId),
 
-    // TODO: Replace with named values: this will reduce confusion for developers
-    //       usize -> type_id; schema::Bits -> expected_bits
-    SchemaMetaValueTooSmall(usize),
-    SchemaMetaValueTooLarge(usize),
-    SchemaStateValueTooSmall(usize),
-    SchemaStateValueTooLarge(usize),
-    SchemaMismatchedBits(usize, schema::Bits),
-    SchemaWrongEnumValue(usize, u8),
-    SchemaWrongDataLength(usize, u16, usize),
+    SchemaMetaValueTooSmall(schema::FieldType),
+    SchemaMetaValueTooLarge(schema::FieldType),
+    SchemaStateValueTooSmall(schema::AssignmentsType),
+    SchemaStateValueTooLarge(schema::AssignmentsType),
+
+    SchemaMismatchedBits {
+        field_or_state_type: usize,
+        expected: schema::Bits,
+    },
+    SchemaWrongEnumValue {
+        field_or_state_type: usize,
+        unexpected: u8,
+    },
+    SchemaWrongDataLength {
+        field_or_state_type: usize,
+        max_expected: u16,
+        found: usize,
+    },
     SchemaMismatchedDataType(usize),
-    SchemaMismatchedStateType(usize),
+    SchemaMismatchedStateType(schema::AssignmentsType),
 
     SchemaMetaOccurencesError(NodeId, schema::FieldType, OccurrencesError),
     SchemaAncestorsOccurencesError(NodeId, schema::AssignmentsType, OccurrencesError),
