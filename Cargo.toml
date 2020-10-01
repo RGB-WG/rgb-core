@@ -27,7 +27,7 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # not introduce risk of breaking the consensus and even security updates must
 # be done manualy after through testing
 [dependencies]
-amplify = { version = "~1.0.0", features = ["serde", "std"] }
+amplify = "~1.0.0"
 amplify_derive = "~1.0.0"
 lnpbp_derive = { path = "derive" }
 lazy_static = "~1.4.0"
@@ -45,9 +45,7 @@ num-traits = "~0.2.11"
 num-derive = "~0.3.0"
 tokio = { version = "~0.2.18", features = ["tcp", "sync"], optional = true }
 futures = "~0.3.4"
-torut = { version = "~0.1.2", features = ["v2", "v3"] }
 async-trait = { version = "~0.1.30", optional = true }
-log = { version = "~0.4.8", features = ["max_level_trace", "release_max_level_debug"], optional = true }
 zmq = { version = "~0.9.2", optional = true }
 parse_arg = { version = "~0.1.4", optional = true }
 url = { version = "~2.1.1", optional = true }
@@ -60,6 +58,8 @@ miniscript = { version = "~1.0.0", features = ["compiler"] }
 bitcoin = { version = "~0.25.0", branch = "develop", features = ["rand"] }
 
 [patch.crates-io]
+amplify = { git = "https://github.com/LNP-BP/rust-amplify" }
+amplify_derive = { git = "https://github.com/LNP-BP/rust-amplify" }
 bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
 bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
 lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
@@ -67,18 +67,17 @@ lightning-net-tokio = { git = "https://github.com/LNP-BP/rust-lightning", branch
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
 
 [features]
-default = ["tor", "lnp", "tokio", "log", "url"]
-all = ["tor", "lnp", "tokio", "log", "url", "parse_arg",
-       "rgb", "daemons", "serde", "keygen", "websockets"]
+default = ["tor", "lnp", "tokio", "url"]
+all = ["tor", "lnp", "tokio", "url", "parse_arg",
+       "rgb", "serde", "keygen", "websockets"]
 lnp = ["lightning", "async", "zmq"]
-async = ["async-trait"]
-rgb = ["bulletproofs"]
-tor = ["torut/v3", "torut/v2", "ed25519-dalek"]
+async = ["async-trait", "amplify/async"]
+rgb = ["bulletproofs", "ed25519-dalek"]
+tor = ["amplify/tor"]
 lightning_tokio = ["lightning", "lightning-net-tokio"]
 bulletproofs = ["grin_secp256k1zkp"]
 api = ["zmq"]
-daemons = ["async", "api", "lnp"]
-serde = ["serde_crate", "torut/serialize", "bitcoin/use-serde", "miniscript/serde", "amplify/serde"]
+serde = ["serde_crate", "bitcoin/use-serde", "miniscript/serde", "amplify/serde"]
 keygen = ["bitcoin/rand"]
 websockets = []
 

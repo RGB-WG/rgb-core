@@ -11,8 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::internet::InetSocketAddr;
 use ::std::path::PathBuf;
+use amplify::internet::InetSocketAddr;
 
 /// Represents a connection to a generic node operating with LNP protocol
 #[derive(Clone, PartialEq, Eq, Debug, Display)]

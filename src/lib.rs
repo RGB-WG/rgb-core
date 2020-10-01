@@ -51,14 +51,6 @@ extern crate async_trait;
 #[macro_use]
 extern crate serde_crate as serde;
 
-// Logging
-#[cfg(feature = "log")]
-// We need this since under some feature combinations log macros are not
-// required
-#[allow(unused_imports)]
-#[macro_use]
-extern crate log;
-
 // Bitcoin-specific imports. We make them public while we use custom versions
 // of the libs so downstream dependencies can use them directly from this lib
 // TODO: Refactor re-exported bitcoin and hashes functionality
@@ -73,9 +65,7 @@ extern crate lnpbp_derive;
 
 #[macro_use]
 mod paradigms;
-#[macro_use]
-mod common;
-mod lnpbps;
+mod standards;
 #[macro_use]
 pub mod bp;
 #[cfg(feature = "lnp")]
@@ -85,9 +75,10 @@ pub mod lnp;
 #[cfg(feature = "rgb")]
 pub mod rgb;
 
-pub use common::*;
-pub use lnpbps::*;
-pub use paradigms::*;
+pub use paradigms::{
+    client_side_validation, commit_verify, single_use_seals, strict_encoding,
+};
+pub use standards::{elgamal, features, lnpbp1, lnpbp2, lnpbp3, lnpbp4};
 
 lazy_static! {
     /// Global Secp256k1 context object

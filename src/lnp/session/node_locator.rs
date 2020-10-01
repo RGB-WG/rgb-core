@@ -24,10 +24,10 @@ use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
 
+use amplify::internet::{InetAddr, InetSocketAddr};
 use bitcoin::secp256k1;
 
 use super::NodeAddr;
-use crate::internet::{InetAddr, InetSocketAddr};
 use crate::lnp::transport::zmq::ApiType as ZmqType;
 
 /// Universal Node Locator (from LNPBP-19)

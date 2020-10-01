@@ -14,10 +14,10 @@
 use std::fmt;
 use std::str::FromStr;
 
+use amplify::internet::InetSocketAddr;
 use bitcoin::secp256k1;
 
 use super::{Connection, ConnectionError};
-use crate::internet::InetSocketAddr;
 use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 
 #[derive(Clone, PartialEq, Eq, Debug)]

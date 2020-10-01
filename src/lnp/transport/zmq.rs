@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Bipolar;
 use core::borrow::Borrow;
 #[cfg(feature = "url")]
 use core::convert::TryFrom;
@@ -23,7 +24,6 @@ use std::path::PathBuf;
 use url::Url;
 
 use super::{Bidirect, Error, Input, Output, Read, Write};
-use crate::Bipolar;
 
 /// API type for node-to-node communications used by ZeroMQ
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Copy)]

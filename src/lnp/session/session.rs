@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::AsAny;
+use amplify::{AsAny, Bipolar};
 use core::borrow::Borrow;
 
 use super::{Decrypt, Encrypt, NodeLocator, Transcode};
@@ -22,7 +22,6 @@ use crate::lnp::transport::zmq::{
 use crate::lnp::transport::{
     self, Bidirect, Error, Input, Output, Read, Write,
 };
-use crate::Bipolar;
 
 pub trait SessionTrait: Bipolar + AsAny {}
 

@@ -12,17 +12,18 @@ dependencies = [
 [[package]]
 name = "amplify"
 version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7bb80c6461fdb3caa8c0ebbbcbe340f66ee0b240ec0e6b55a2f980b5f10917c"
+source = "git+https://github.com/LNP-BP/rust-amplify#f558ed1029a28dc553225ab652c187333c9b5642"
 dependencies = [
+ "async-trait",
+ "ed25519-dalek",
  "serde",
+ "torut",
 ]
 
 [[package]]
 name = "amplify_derive"
 version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8500c5e061bd032108f2680224440e3635241d0a51b4fb5656505c95cc9369f4"
+source = "git+https://github.com/LNP-BP/rust-amplify#f558ed1029a28dc553225ab652c187333c9b5642"
 dependencies = [
  "amplify",
  "quote 1.0.7",
@@ -562,14 +563,12 @@ dependencies = [
  "lightning",
  "lightning-net-tokio",
  "lnpbp_derive",
- "log",
  "miniscript",
  "num-derive",
  "num-traits",
  "parse_arg",
  "serde",
  "tokio",
- "torut",
  "url",
  "zmq",
 ]

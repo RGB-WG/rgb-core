@@ -11,13 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Bipolar;
 use std::borrow::Borrow;
 
 use lightning::ln::peers::encryption::{Decryptor, Encryptor};
-use lightning::ln::peers::handshake::CompletedHandshakeInfo as Transcoder;
+use lightning::ln::peers::handshake::CompletedHandshakeInfo;
 //use lightning::ln::peers::handshake::PeerHandshake;
 
-use crate::Bipolar;
+pub struct Transcoder(CompletedHandshakeInfo);
 
 pub trait Encrypt {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8>;
@@ -65,7 +66,7 @@ impl Decrypt for Decryptor {
 
 impl Encrypt for Transcoder {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
-        self.encryptor.encrypt_buf(buffer.borrow())
+        self.0.encryptor.encrypt_buf(buffer.borrow())
     }
 }
 
@@ -76,7 +77,7 @@ impl Decrypt for Transcoder {
         &mut self,
         buffer: impl Borrow<[u8]>,
     ) -> Result<Vec<u8>, Self::Error> {
-        match self.decryptor.decrypt_next(buffer.borrow()) {
+        match self.0.decryptor.decrypt_next(buffer.borrow()) {
             Ok((Some(data), _)) => Ok(data),
             _ => Err(DecryptionError),
         }
@@ -95,19 +96,19 @@ impl Bipolar for Transcoder {
     /// Creates conduit by joining encrypting and decrypting parts
     fn join(encryptor: Self::Left, decryptor: Self::Right) -> Self {
         // TODO: (new) figure out what to do with `their_node_id` field
-        Self {
+        Self(CompletedHandshakeInfo {
             decryptor,
             encryptor,
             their_node_id: bitcoin::secp256k1::PublicKey::from_slice(
                 &[0u8; 33],
             )
             .unwrap(),
-        }
+        })
     }
 
     /// Splits conduit into an encrypting and decrypting parts
     fn split(self) -> (Self::Left, Self::Right) {
-        (self.encryptor, self.decryptor)
+        (self.0.encryptor, self.0.decryptor)
     }
 }
 
