@@ -15,6 +15,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::cmp::max;
+use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::ops::{BitAnd, BitOr, BitXor};
@@ -34,9 +35,9 @@ pub struct FlagRef<'a> {
 
 /// Structure holding a given set of features
 #[derive(Clone)]
-pub struct Features(Vec<u8>);
+pub struct FlagVec(Vec<u8>);
 
-impl BitOr for Features {
+impl BitOr for FlagVec {
     type Output = Self;
     fn bitor(self, mut rhs: Self) -> Self::Output {
         let mut lhs = self.shrunk();
@@ -51,7 +52,7 @@ impl BitOr for Features {
     }
 }
 
-impl BitAnd for Features {
+impl BitAnd for FlagVec {
     type Output = Self;
     fn bitand(self, mut rhs: Self) -> Self::Output {
         let mut lhs = self.shrunk();
@@ -66,7 +67,7 @@ impl BitAnd for Features {
     }
 }
 
-impl BitXor for Features {
+impl BitXor for FlagVec {
     type Output = Self;
     fn bitxor(self, mut rhs: Self) -> Self::Output {
         let mut lhs = self.shrunk();
@@ -81,42 +82,62 @@ impl BitXor for Features {
     }
 }
 
-impl Default for Features {
+impl Default for FlagVec {
     fn default() -> Self {
-        Features::new()
+        FlagVec::new()
     }
 }
 
-impl PartialEq for Features {
+impl PartialEq for FlagVec {
     fn eq(&self, other: &Self) -> bool {
         self.shrunk().0 == other.shrunk().0
     }
 }
 
-impl Eq for Features {}
+impl Eq for FlagVec {}
 
-impl Hash for Features {
+impl Hash for FlagVec {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.shrunk().0.hash(state)
     }
 }
 
-impl StrictEncode for Features {
+impl Debug for FlagVec {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("flags:")?;
+        for b in 0..self.capacity() {
+            write!(f, "{}", if self.is_set(b) { 1 } else { 0 })?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for FlagVec {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let cap = self.shrunk().capacity();
+        for b in 0..cap {
+            write!(f, "{}", if self.is_set(b) { 1 } else { 0 })?;
+        }
+        Ok(())
+    }
+}
+
+impl StrictEncode for FlagVec {
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
         self.shrunk().0.strict_encode(e)
     }
 }
 
-impl StrictDecode for Features {
+impl StrictDecode for FlagVec {
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
         Ok(Self(StrictDecode::strict_decode(d)?))
     }
 }
 
-impl Features {
+impl FlagVec {
     /// Constructs a features vector of zero feature flag set
-    pub fn new() -> Features {
-        Features(vec![])
+    pub fn new() -> FlagVec {
+        FlagVec(vec![])
     }
 
     /// Returns a shrunk copy of the self
@@ -134,7 +155,7 @@ impl Features {
 
     /// Creates iterator over known set of the features
     #[inline]
-    pub fn known_iter(&self, mut known: Features) -> FilteredIter {
+    pub fn known_iter(&self, mut known: FlagVec) -> FilteredIter {
         known.enlarge(self.capacity());
         FilteredIter::new(&self, known)
     }
@@ -142,7 +163,7 @@ impl Features {
     /// Creates iterator over unknown set of the features, i.e. features that
     /// **do not** match flags set in `known` parameter
     #[inline]
-    pub fn unknown_iter(&self, mut known: Features) -> FilteredIter {
+    pub fn unknown_iter(&self, mut known: FlagVec) -> FilteredIter {
         known.enlarge(self.capacity());
         for byte in 1..self.capacity() {
             known.0[byte as usize] = !known.0[byte as usize];
@@ -182,7 +203,7 @@ impl Features {
     pub fn shrink(&mut self) -> bool {
         let capacity = self.capacity();
         let mut top = 1;
-        while !self.is_set(capacity - top) && top < capacity {
+        while top < capacity && !self.is_set(capacity - top) {
             top += 1;
         }
         let used = ((top + 1) / 8) as usize;
@@ -259,7 +280,7 @@ impl Features {
 #[derive(Clone, PartialEq, Eq)]
 pub struct AllSet<'a> {
     /// Reference to features object we iterate
-    features: &'a Features,
+    features: &'a FlagVec,
 
     /// Offset of the last feature flag
     offset: FlagNo,
@@ -268,7 +289,7 @@ pub struct AllSet<'a> {
 impl<'a> AllSet<'a> {
     /// Constructs an iterator over a given set of feature flags
     #[inline]
-    pub fn new(features: &'a Features) -> Self {
+    pub fn new(features: &'a FlagVec) -> Self {
         Self {
             features,
             offset: 0,
@@ -295,10 +316,10 @@ impl Iterator for AllSet<'_> {
 #[derive(Clone, PartialEq, Eq)]
 pub struct FilteredIter<'a> {
     /// Reference to features object we iterate
-    features: &'a Features,
+    features: &'a FlagVec,
 
     /// Parameter defining a set of features which are known
-    filter: Features,
+    filter: FlagVec,
 
     /// Offset of the last feature flag
     offset: FlagNo,
@@ -308,7 +329,7 @@ impl<'a> FilteredIter<'a> {
     /// Constructs an iterator over a given set of features with some filter for
     /// feature flags
     #[inline]
-    pub fn new(features: &'a Features, filter: Features) -> Self {
+    pub fn new(features: &'a FlagVec, filter: FlagVec) -> Self {
         Self {
             features,
             filter,

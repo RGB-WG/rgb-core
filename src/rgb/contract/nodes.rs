@@ -567,7 +567,7 @@ mod strict_encoding {
             }
             let chain_data = Vec::<u8>::strict_decode(&mut d)?;
             let chain = strict_decode(&chain_data)?;
-            for n in 1..chain_params_no {
+            for _ in 1..chain_params_no {
                 // Ignoring the rest of chain parameters
                 let _ = Vec::<u8>::strict_decode(&mut d)?;
             }

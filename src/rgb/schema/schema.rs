@@ -21,6 +21,7 @@ use super::{
     TransitionSchema,
 };
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
+use crate::feature;
 use crate::rgb::schema::ValenciesType;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -47,8 +48,7 @@ tagged_hash!(
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Schema {
-    // TODO: (new) add versioning/features
-    // pub rgb_features: FeatureFlags,
+    pub rgb_features: feature::FlagVec,
     // TODO: (new) add superschema reference
     // pub family_schema_id: SchemaId,
     pub field_types: BTreeMap<FieldType, DataFormat>,
@@ -93,6 +93,7 @@ mod strict_encoding {
 
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
             Ok(strict_encode_list!(e;
+                self.rgb_features,
                 self.field_types,
                 self.assignment_types,
                 self.valencies_types,
@@ -110,6 +111,7 @@ mod strict_encoding {
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let me = Self {
+                rgb_features: feature::FlagVec::strict_decode(&mut d)?,
                 field_types: BTreeMap::strict_decode(&mut d)?,
                 assignment_types: BTreeMap::strict_decode(&mut d)?,
                 valencies_types: BTreeSet::strict_decode(&mut d)?,
@@ -578,6 +580,7 @@ pub(crate) mod test {
         const EXTENSION_DECENTRALIZED_ISSUE: usize = 0;
 
         Schema {
+            rgb_features: feature::FlagVec::default(),
             field_types: bmap! {
                 FIELD_TICKER => DataFormat::String(16),
                 FIELD_NAME => DataFormat::String(256),
@@ -698,11 +701,11 @@ pub(crate) mod test {
         let schema = schema();
         let encoded = strict_encode(&schema).unwrap();
         let encoded_standard: Vec<u8> = vec![
-            10, 0, 0, 0, 4, 16, 0, 1, 0, 4, 0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0,
-            0, 255, 255, 255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255,
-            255, 255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255,
-            255, 255, 255, 255, 255, 6, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0, 0,
-            7, 0, 5, 255, 255, 8, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255,
+            0, 0, 10, 0, 0, 0, 4, 16, 0, 1, 0, 4, 0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0, 0, 0, 0,
+            0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0,
+            255, 255, 255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255,
+            255, 255, 255, 255, 255, 255, 6, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0,
+            0, 7, 0, 5, 255, 255, 8, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255,
             255, 255, 16, 0, 4, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0, 0, 0, 0, 0,
             0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0, 0, 255, 1, 2, 0, 0, 1, 0, 0,
             255, 3, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0,

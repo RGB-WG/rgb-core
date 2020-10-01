@@ -449,7 +449,6 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
     fn validate_graph_node(&mut self, node: &'validator dyn Node, anchor: &'validator Anchor) {
         let txid = anchor.txid;
         let node_id = node.node_id();
-        let node_type = node.node_type();
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.

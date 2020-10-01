@@ -15,12 +15,11 @@
 
 mod bipolar;
 pub mod data_format;
-pub mod features;
+pub mod feature;
 pub mod internet;
 #[cfg(feature = "daemons")]
 pub mod service;
 
 pub use bipolar::Bipolar;
-pub use features::Features;
 #[cfg(feature = "daemons")]
 pub use service::{Service, TryService};

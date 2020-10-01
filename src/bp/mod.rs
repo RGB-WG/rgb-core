@@ -15,6 +15,7 @@ use bitcoin::hashes::{sha256d, Hash};
 
 #[macro_use]
 pub mod tagged256;
+#[allow(unused_variables)]
 pub mod bip32;
 pub mod blind;
 pub mod chain;
