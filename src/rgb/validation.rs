@@ -255,7 +255,6 @@ pub struct Validator<'validator, R: TxResolver> {
     resolver: R,
 }
 
-/// TODO: (new) Add extension & vacancies validation
 impl<'validator, R: TxResolver> Validator<'validator, R> {
     fn init(consignment: &'validator Consignment, resolver: R) -> Self {
         // We use validation status object to store all detected failures and
@@ -444,8 +443,6 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // consignment structure, each state transition
                 // has a corresponding anchor. So if we've got here there
                 // is something broken with LNP/BP core library.
-                // TODO: Consider to remove this failure and replace it
-                //       with panic using `unreachable!()` macro.
                 self.status
                     .add_failure(Failure::TransitionNotAnchored(node_id));
             }

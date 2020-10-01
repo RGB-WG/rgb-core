@@ -21,7 +21,7 @@ use super::{
     TransitionSchema, ValenciesType,
 };
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
-use crate::feature;
+use crate::features;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = usize;
@@ -47,7 +47,7 @@ tagged_hash!(
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Schema {
-    pub rgb_features: feature::FlagVec,
+    pub rgb_features: features::FlagVec,
     pub root_id: SchemaId,
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub assignment_types: BTreeMap<AssignmentsType, StateSchema>,
@@ -110,7 +110,7 @@ mod strict_encoding {
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let me = Self {
-                rgb_features: feature::FlagVec::strict_decode(&mut d)?,
+                rgb_features: features::FlagVec::strict_decode(&mut d)?,
                 root_id: SchemaId::strict_decode(&mut d)?,
                 field_types: BTreeMap::strict_decode(&mut d)?,
                 assignment_types: BTreeMap::strict_decode(&mut d)?,
@@ -647,7 +647,7 @@ pub(crate) mod test {
         const EXTENSION_DECENTRALIZED_ISSUE: usize = 0;
 
         Schema {
-            rgb_features: feature::FlagVec::default(),
+            rgb_features: features::FlagVec::default(),
             root_id: Default::default(),
             field_types: bmap! {
                 FIELD_TICKER => DataFormat::String(16),

@@ -27,10 +27,11 @@
     non_camel_case_types,
     non_snake_case,
     unused_mut,
-    unused_imports
+    unused_imports,
+    dead_code
 )]
 // TODO: when we will be ready for the release #![deny(missing_docs)]
-// TODO: when we will be ready for the release #![deny(dead_code)]
+// #![warn(missing_docs)]
 
 #[macro_use]
 extern crate amplify;
@@ -59,7 +60,7 @@ extern crate log;
 
 // Bitcoin-specific imports. We make them public while we use custom versions
 // of the libs so downstream dependencies can use them directly from this lib
-// TODO: Remove re-exporting of bitcoin crates on release
+// TODO: Refactor re-exported bitcoin and hashes functionality
 #[macro_use]
 pub extern crate bitcoin;
 #[macro_use]

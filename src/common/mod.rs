@@ -15,7 +15,7 @@
 
 mod bipolar;
 pub mod data_format;
-pub mod feature;
+pub mod features;
 pub mod internet;
 #[cfg(feature = "daemons")]
 pub mod service;

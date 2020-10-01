@@ -27,11 +27,10 @@ mod strict_encoding;
 
 pub use bip32::{DerivationInfo, DerivationTemplate};
 pub use chain::{Chain, P2pNetworkId};
-pub use scripts::*; // TODO: (new) remove wildcard import
 pub use scripts::{
-    LockScript, PubkeyScript, RedeemScript, ScriptPubkeyDescriptor, ScriptPubkeyFormat,
-    ScriptPubkeyStructure, ScriptPubkeyTemplate, ScriptSet, Witness, WitnessProgram, WitnessScript,
-    WitnessVersion,
+    GenerateScripts, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
+    ScriptPubkeyDescriptor, ScriptPubkeyFormat, ScriptPubkeyStructure, ScriptPubkeyTemplate,
+    ScriptSet, Strategy, Witness, WitnessProgram, WitnessScript, WitnessVersion,
 };
 pub use seals::TxoutSeal;
 pub use short_id::ShortId;
