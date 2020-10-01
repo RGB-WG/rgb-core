@@ -659,8 +659,7 @@ pub(crate) mod test {
                 FIELD_DUST_LIMIT => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_PRUNE_PROOF => DataFormat::Bytes(core::u16::MAX),
                 FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                // TODO: (new) Fix this with introduction of new data type
-                FIELD_PROOF_OF_BURN => DataFormat::String(0)
+                FIELD_PROOF_OF_BURN => DataFormat::TxOutPoint
             },
             assignment_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema {

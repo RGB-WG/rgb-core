@@ -17,6 +17,7 @@ use core::cmp::Ordering;
 
 use bitcoin::hashes::{hash160, sha256, sha256d, sha512, Hash};
 use bitcoin::secp256k1;
+use bitcoin::OutPoint;
 
 use super::{ConfidentialState, RevealedState};
 use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, Conceal};
@@ -78,6 +79,7 @@ pub enum Revealed {
     Ed25519Signature(ed25519_dalek::Signature),
     // TODO: Add support for Schnorr's signatures once they will be implemented
     //       in rust-secp256k1
+    TxOutPoint(OutPoint),
 }
 
 impl RevealedState for Revealed {}
@@ -195,6 +197,8 @@ pub(super) mod strict_encoding {
 
         Ed25519Pubkey = 0b_1000_1001_u8,
         Ed25519Signature = 0b_1000_1010_u8,
+
+        TxOutPoint = 0b_0101_0001_u8,
     }
     impl_enum_strict_encoding!(EncodingTag);
 
@@ -243,6 +247,7 @@ pub(super) mod strict_encoding {
                 }
                 Revealed::Ed25519Pubkey(_) => unimplemented!(),
                 Revealed::Ed25519Signature(_) => unimplemented!(),
+                Revealed::TxOutPoint(val) => strict_encode_list!(e; EncodingTag::TxOutPoint, val),
             })
         }
     }
@@ -283,6 +288,7 @@ pub(super) mod strict_encoding {
                 }
                 EncodingTag::Ed25519Pubkey => unimplemented!(),
                 EncodingTag::Ed25519Signature => unimplemented!(),
+                EncodingTag::TxOutPoint => Revealed::TxOutPoint(OutPoint::strict_decode(&mut d)?),
             })
         }
     }
@@ -317,7 +323,9 @@ pub(super) mod strict_encoding {
                 EncodingTag::Secp256k1Signature => 0b_1000_0010_u8,
 
                 EncodingTag::Ed25519Pubkey => 0b_1000_1001_u8,
-                EncodingTag::Ed25519Signature => 0b_1000_1010_u8
+                EncodingTag::Ed25519Signature => 0b_1000_1010_u8,
+
+                EncodingTag::TxOutPoint => 0b_0101_0001_u8
             );
         }
     }

@@ -73,6 +73,7 @@ pub enum DataFormat {
     String(u16),
     Bytes(u16),
     Digest(DigestAlgorithm),
+    TxOutPoint,
     PublicKey(EllipticCurve, elliptic_curve::PointSerialization),
     Signature(elliptic_curve::SignatureAlgorithm),
 }
@@ -190,15 +191,19 @@ mod strict_encoding {
     #[display(Debug)]
     #[repr(u8)]
     enum EncodingTag {
+        // Primitive types
         Unsigned = 0,
         Integer = 1,
         Float = 2,
         Enum = 3,
         String = 4,
         Bytes = 5,
-        Digest = 6,
-        PublicKey = 7,
-        Signature = 8,
+        // Cryptographic tyles
+        Digest = 0x10,
+        PublicKey = 0x11,
+        Signature = 0x12,
+        // Composed types
+        TxOutPoint = 0x20,
     }
     impl_enum_strict_encoding!(EncodingTag);
 
@@ -479,6 +484,7 @@ mod strict_encoding {
                     strict_encode_list!(e; EncodingTag::PublicKey, curve, ser)
                 }
                 DataFormat::Signature(algo) => strict_encode_list!(e; EncodingTag::Signature, algo),
+                DataFormat::TxOutPoint => EncodingTag::TxOutPoint.strict_encode(&mut e)?,
             })
         }
     }
@@ -634,6 +640,7 @@ mod strict_encoding {
                 EncodingTag::Signature => DataFormat::Signature(
                     elliptic_curve::SignatureAlgorithm::strict_decode(&mut d)?,
                 ),
+                EncodingTag::TxOutPoint => DataFormat::TxOutPoint,
             })
         }
     }
