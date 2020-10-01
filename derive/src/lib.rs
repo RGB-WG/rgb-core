@@ -312,15 +312,15 @@ fn lnp_api_inner_enum(
     let mut get_type = vec![];
     let mut get_payload = vec![];
     for v in &data.variants {
-        let meta = attr_list(&v.attrs, "lnp_api", example)?
-            .ok_or(Error::new(
-            v.span(),
-            format!(
+        let meta =
+            attr_list(&v.attrs, "lnp_api", example)?.ok_or(Error::new(
+                v.span(),
+                format!(
                 "Attribute macro canonical form `{}` violation: {}",
                 example,
                 "`lnp_api` attribute is required for each message enum case",
             ),
-        ))?;
+            ))?;
 
         let type_lit: Lit =
             attr_nested_one_named_value(meta.into_iter(), "type", example)?.lit;
@@ -358,11 +358,13 @@ fn lnp_api_inner_enum(
         };
 
         match &v.fields {
-            Fields::Named(_) => return proc_macro_err!(
+            Fields::Named(_) => {
+                return proc_macro_err!(
                 v,
                 "LNP API does not support requests represented by named enums",
                 example
-            ),
+            )
+            }
             Fields::Unnamed(args) => {
                 let fields = &args.unnamed;
                 if fields.len() > 1 {
