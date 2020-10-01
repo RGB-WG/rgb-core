@@ -180,4 +180,68 @@ mod strict_encoding {
             })
         }
     }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use crate::strict_encoding::strict_encode;
+
+        #[test]
+        fn test_basics() {
+            // Test Actions and Standard procedures
+            test_enum_u8_exhaustive!(AssignmentAction; AssignmentAction::Validate => 0);
+            test_enum_u8_exhaustive!(TransitionAction; TransitionAction::GenerateBlank => 0);
+            test_enum_u8_exhaustive!(StandardProcedure; StandardProcedure::ConfidentialAmount => 1, 
+                StandardProcedure::IssueControl => 2, 
+                StandardProcedure::Prunning => 3);
+
+            // Test Procedures
+            assert_eq!(
+                vec![0xFF, 0x01],
+                strict_encode(&Procedure::Standard(
+                    StandardProcedure::ConfidentialAmount
+                ))
+                .unwrap()
+            );
+            assert_eq!(
+                vec![0xFF, 0x02],
+                strict_encode(&Procedure::Standard(
+                    StandardProcedure::IssueControl
+                ))
+                .unwrap()
+            );
+            assert_eq!(
+                vec![0xFF, 0x03],
+                strict_encode(&Procedure::Standard(
+                    StandardProcedure::Prunning
+                ))
+                .unwrap()
+            );
+            assert_eq!(
+                vec![0x00, 0x58, 0x00, 0x00, 0x00],
+                strict_encode(&Procedure::Simplicity { offset: 88 }).unwrap()
+            );
+
+            // Test Transition and Assignment ABI
+            let mut trans_abi = TransitionAbi::new();
+            trans_abi.insert(
+                TransitionAction::GenerateBlank,
+                Procedure::Standard(StandardProcedure::ConfidentialAmount),
+            );
+            assert_eq!(
+                vec![0x01, 0x00, 0x00, 0xff, 0x01],
+                strict_encode(&trans_abi).unwrap()
+            );
+
+            let mut assignment_abi = AssignmentAbi::new();
+            assignment_abi.insert(
+                AssignmentAction::Validate,
+                Procedure::Simplicity { offset: 45 },
+            );
+            assert_eq!(
+                vec![0x01, 0x00, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x00],
+                strict_encode(&assignment_abi).unwrap()
+            );
+        }
+    }
 }
