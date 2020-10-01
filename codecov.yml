@@ -5,3 +5,8 @@ coverage:
   precision: 1
   round: nearest
   range: "25...95"
+  status:
+    project:
+      default:
+        target: 0 # TODO: Update it in the future after first release
+        threshold: 1%

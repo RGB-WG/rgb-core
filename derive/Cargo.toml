@@ -7,7 +7,7 @@ description = "LNP/BP Core Library derive macros"
 repository = "https://github.com/LNP-BP/rust-lnpbp"
 homepage = "https://github.com/LNP-BP"
 keywords = ["bitcoin", "lightning", "lnp-bp", "layer-3", "cryptography"]
-readme = "README.md"
+readme = "../README.md"
 edition = "2018"
 
 [lib]
