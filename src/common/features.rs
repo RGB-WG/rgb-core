@@ -14,17 +14,118 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//use core::ops::{Index, IndexMut};
+use std::cmp::max;
+use std::hash::{Hash, Hasher};
+use std::io;
+use std::ops::{BitAnd, BitOr, BitXor};
+
+use crate::paradigms::strict_encoding::StrictDecode;
+use crate::strict_encoding::StrictEncode;
 
 /// A single feature flag, represented by it's number inside feature vector
 pub type FlagNo = u16;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// Keeps a reference to a specific feature flag within [`Features`] vector
+pub struct FlagRef<'a> {
+    byte: &'a u8,
+    bit: u8,
+}
+
 /// Structure holding a given set of features
-#[derive(Clone, PartialEq, Eq, Hash, StrictEncode, StrictDecode)]
-#[strict_crate(crate)]
+#[derive(Clone)]
 pub struct Features(Vec<u8>);
 
+impl BitOr for Features {
+    type Output = Self;
+    fn bitor(self, mut rhs: Self) -> Self::Output {
+        let mut lhs = self.shrunk();
+        rhs.shrink();
+        let size = max(lhs.capacity(), rhs.capacity());
+        lhs.enlarge(size);
+        rhs.enlarge(size);
+        for i in 0..rhs.0.len() {
+            rhs.0[i] = lhs.0[1] | rhs.0[i];
+        }
+        rhs
+    }
+}
+
+impl BitAnd for Features {
+    type Output = Self;
+    fn bitand(self, mut rhs: Self) -> Self::Output {
+        let mut lhs = self.shrunk();
+        rhs.shrink();
+        let size = max(lhs.capacity(), rhs.capacity());
+        lhs.enlarge(size);
+        rhs.enlarge(size);
+        for i in 0..rhs.0.len() {
+            rhs.0[i] = lhs.0[1] & rhs.0[i];
+        }
+        rhs
+    }
+}
+
+impl BitXor for Features {
+    type Output = Self;
+    fn bitxor(self, mut rhs: Self) -> Self::Output {
+        let mut lhs = self.shrunk();
+        rhs.shrink();
+        let size = max(lhs.capacity(), rhs.capacity());
+        lhs.enlarge(size);
+        rhs.enlarge(size);
+        for i in 0..rhs.0.len() {
+            rhs.0[i] = lhs.0[1] ^ rhs.0[i];
+        }
+        rhs
+    }
+}
+
+impl Default for Features {
+    fn default() -> Self {
+        Features::new()
+    }
+}
+
+impl PartialEq for Features {
+    fn eq(&self, other: &Self) -> bool {
+        self.shrunk().0 == other.shrunk().0
+    }
+}
+
+impl Eq for Features {}
+
+impl Hash for Features {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.shrunk().0.hash(state)
+    }
+}
+
+impl StrictEncode for Features {
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        self.shrunk().0.strict_encode(e)
+    }
+}
+
+impl StrictDecode for Features {
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        Ok(Self(StrictDecode::strict_decode(d)?))
+    }
+}
+
 impl Features {
+    /// Constructs a features vector of zero feature flag set
+    pub fn new() -> Features {
+        Features(vec![])
+    }
+
+    /// Returns a shrunk copy of the self
+    pub fn shrunk(&self) -> Self {
+        let mut shrinked = self.clone();
+        shrinked.shrink();
+        shrinked
+    }
+
     /// Creates an iterator for the current feature flags which have "set" state
     #[inline]
     pub fn iter(&self) -> AllSet {
@@ -34,7 +135,7 @@ impl Features {
     /// Creates iterator over known set of the features
     #[inline]
     pub fn known_iter(&self, mut known: Features) -> FilteredIter {
-        known.enlarge(self.max_capacity());
+        known.enlarge(self.capacity());
         FilteredIter::new(&self, known)
     }
 
@@ -42,8 +143,8 @@ impl Features {
     /// **do not** match flags set in `known` parameter
     #[inline]
     pub fn unknown_iter(&self, mut known: Features) -> FilteredIter {
-        known.enlarge(self.max_capacity());
-        for byte in 1..self.max_capacity() {
+        known.enlarge(self.capacity());
+        for byte in 1..self.capacity() {
             known.0[byte as usize] = !known.0[byte as usize];
         }
         FilteredIter::new(&self, known)
@@ -52,7 +153,7 @@ impl Features {
     /// Returns how many features current structure can hold without
     /// re-allocation of the internal buffer
     #[inline]
-    pub(self) fn max_capacity(&self) -> FlagNo {
+    pub(self) fn capacity(&self) -> FlagNo {
         (self.0.len() * 8) as FlagNo
     }
 
@@ -62,7 +163,7 @@ impl Features {
     /// already had sufficient capacity
     #[inline]
     fn enlarge(&mut self, upto: FlagNo) -> bool {
-        if upto <= self.max_capacity() {
+        if upto <= self.capacity() {
             // We have nothing to do
             return false;
         }
@@ -78,8 +179,8 @@ impl Features {
     /// resize operation was required, or `false` otherwise, when the internal
     /// buffer already was of the smallest possible size
     #[inline]
-    pub fn compact(&mut self) -> bool {
-        let capacity = self.max_capacity();
+    pub fn shrink(&mut self) -> bool {
+        let capacity = self.capacity();
         let mut top = 1;
         while !self.is_set(capacity - top) && top < capacity {
             top += 1;
@@ -98,7 +199,7 @@ impl Features {
     /// If the maximum capacity is exceeded, returns [`Option::None`].
     #[inline]
     fn byte_at(&self, flag_no: FlagNo) -> Option<&u8> {
-        if flag_no > self.max_capacity() {
+        if flag_no > self.capacity() {
             return None;
         }
         Some(&self.0[flag_no as usize / 8])
@@ -154,29 +255,6 @@ impl Features {
     }
 }
 
-/*
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-/// Keeps a reference to a specific feature flag within [`Features`] vector
-pub struct FlagRef<'a> {
-    byte: &'a u8,
-    bit: u8,
-}
-
-impl<'self> Index<FlagNo> for Features {
-    type Output = FlagRef<'self>;
-
-    fn index(&self, index: FlagNo) -> &Self::Output {
-
-    }
-}
-
-impl IndexMut<FlagNo> for Features {
-    fn index_mut(&mut self, index: u16) -> &mut Self::Output {
-        unimplemented!()
-    }
-}
-*/
-
 /// Iterator over all set feature flags
 #[derive(Clone, PartialEq, Eq)]
 pub struct AllSet<'a> {
@@ -203,7 +281,7 @@ impl Iterator for AllSet<'_> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        while self.offset < self.features.max_capacity() {
+        while self.offset < self.features.capacity() {
             if self.features.is_set(self.offset) {
                 return Some(self.offset);
             }
@@ -244,7 +322,7 @@ impl Iterator for FilteredIter<'_> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        while self.offset < self.features.max_capacity() {
+        while self.offset < self.features.capacity() {
             if self.features.is_set(self.offset) && self.filter.is_set(self.offset) {
                 return Some(self.offset);
             }
