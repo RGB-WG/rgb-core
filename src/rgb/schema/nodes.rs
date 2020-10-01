@@ -15,8 +15,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
 use super::{
-    ExtensionAbi, ExtensionAction, FieldType, GenesisAbi, GenesisAction, NodeAction, Occurences,
-    Procedure, TransitionAbi, TransitionAction,
+    ExtensionAbi, ExtensionAction, FieldType, GenesisAbi, GenesisAction,
+    NodeAction, Occurences, Procedure, TransitionAbi, TransitionAction,
 };
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -29,8 +29,8 @@ pub type SealsStructure = BTreeMap<AssignmentsType, Occurences<u16>>;
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 /// Node type: genesis, extensions and state transitions
 pub enum NodeType {
-    /// Genesis node: single node per contract, defining contract and committing
-    /// to a specific schema and underlying chain hash
+    /// Genesis node: single node per contract, defining contract and
+    /// committing to a specific schema and underlying chain hash
     #[display("genesis")]
     Genesis,
 
@@ -41,9 +41,9 @@ pub enum NodeType {
     Extension,
 
     /// State transition performing owned change to the state data and
-    /// committing to (potentially multiple) ancestors (i.e. genesis, extensions
-    /// and/or  other state transitions) via spending corresponding transaction
-    /// outputs assigned some state by ancestors
+    /// committing to (potentially multiple) ancestors (i.e. genesis,
+    /// extensions and/or  other state transitions) via spending
+    /// corresponding transaction outputs assigned some state by ancestors
     #[display("transition")]
     StateTransition,
 }
@@ -201,7 +201,10 @@ mod strict_encoding {
     impl StrictEncode for GenesisSchema {
         type Error = Error;
 
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             self.metadata.strict_encode(&mut e)?;
             self.defines.strict_encode(&mut e)?;
             self.valencies.strict_encode(&mut e)?;
@@ -236,7 +239,10 @@ mod strict_encoding {
     impl StrictEncode for ExtensionSchema {
         type Error = Error;
 
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             self.metadata.strict_encode(&mut e)?;
             self.extends.strict_encode(&mut e)?;
             self.defines.strict_encode(&mut e)?;
@@ -273,7 +279,10 @@ mod strict_encoding {
     impl StrictEncode for TransitionSchema {
         type Error = Error;
 
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             self.metadata.strict_encode(&mut e)?;
             self.closes.strict_encode(&mut e)?;
             self.defines.strict_encode(&mut e)?;
@@ -324,12 +333,17 @@ mod _verify {
 
             for (field_type, occ) in self.metadata() {
                 match root.metadata().get(field_type) {
-                    None => status.add_failure(validation::Failure::SchemaRootNoMetadataMatch(
-                        node_type,
-                        *field_type,
-                    )),
+                    None => status.add_failure(
+                        validation::Failure::SchemaRootNoMetadataMatch(
+                            node_type,
+                            *field_type,
+                        ),
+                    ),
                     Some(root_occ) if occ != root_occ => status.add_failure(
-                        validation::Failure::SchemaRootNoMetadataMatch(node_type, *field_type),
+                        validation::Failure::SchemaRootNoMetadataMatch(
+                            node_type,
+                            *field_type,
+                        ),
                     ),
                     _ => &status,
                 };
@@ -337,18 +351,18 @@ mod _verify {
 
             for (assignments_type, occ) in self.closes() {
                 match root.closes().get(assignments_type) {
-                    None => {
-                        status.add_failure(validation::Failure::SchemaRootNoClosedAssignmentsMatch(
+                    None => status.add_failure(
+                        validation::Failure::SchemaRootNoClosedAssignmentsMatch(
                             node_type,
                             *assignments_type,
-                        ))
-                    }
-                    Some(root_occ) if occ != root_occ => {
-                        status.add_failure(validation::Failure::SchemaRootNoClosedAssignmentsMatch(
+                        ),
+                    ),
+                    Some(root_occ) if occ != root_occ => status.add_failure(
+                        validation::Failure::SchemaRootNoClosedAssignmentsMatch(
                             node_type,
                             *assignments_type,
-                        ))
-                    }
+                        ),
+                    ),
                     _ => &status,
                 };
             }
@@ -373,38 +387,44 @@ mod _verify {
 
             for valencies_type in self.extends() {
                 if !root.extends().contains(valencies_type) {
-                    status.add_failure(validation::Failure::SchemaRootNoExtendedValenciesMatch(
-                        node_type,
-                        *valencies_type,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaRootNoExtendedValenciesMatch(
+                            node_type,
+                            *valencies_type,
+                        ),
+                    );
                 }
             }
 
             for valencies_type in self.valencies() {
                 if !root.valencies().contains(valencies_type) {
-                    status.add_failure(validation::Failure::SchemaRootNoDefinedValenciesMatch(
-                        node_type,
-                        *valencies_type,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaRootNoDefinedValenciesMatch(
+                            node_type,
+                            *valencies_type,
+                        ),
+                    );
                 }
             }
 
             for (action, proc) in self.abi() {
                 match root.abi().get(action) {
-                    None => status.add_failure(validation::Failure::SchemaRootNoAbiMatch {
-                        node_type,
-                        action_id: action
-                            .to_u16()
-                            .expect("Action type can't exceed 16-bit integer"),
-                    }),
-                    Some(root_proc) if root_proc != proc => {
-                        status.add_failure(validation::Failure::SchemaRootNoAbiMatch {
+                    None => status.add_failure(
+                        validation::Failure::SchemaRootNoAbiMatch {
                             node_type,
-                            action_id: action
-                                .to_u16()
-                                .expect("Action type can't exceed 16-bit integer"),
-                        })
-                    }
+                            action_id: action.to_u16().expect(
+                                "Action type can't exceed 16-bit integer",
+                            ),
+                        },
+                    ),
+                    Some(root_proc) if root_proc != proc => status.add_failure(
+                        validation::Failure::SchemaRootNoAbiMatch {
+                            node_type,
+                            action_id: action.to_u16().expect(
+                                "Action type can't exceed 16-bit integer",
+                            ),
+                        },
+                    ),
                     _ => &status,
                 };
             }

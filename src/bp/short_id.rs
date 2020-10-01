@@ -132,12 +132,14 @@ impl Descriptor {
             {
                 Err(BlockHeightOutOfRange)
             }
-            OnchainTxInput { input_index, .. } | OffchainTxInput { input_index, .. }
+            OnchainTxInput { input_index, .. }
+            | OffchainTxInput { input_index, .. }
                 if input_index + 1 >= (2u16 << 14) =>
             {
                 Err(InputIndexOutOfRange)
             }
-            OnchainTxOutput { output_index, .. } | OffchainTxOutput { output_index, .. }
+            OnchainTxOutput { output_index, .. }
+            | OffchainTxOutput { output_index, .. }
                 if output_index + 1 >= (2u16 << 14) =>
             {
                 Err(OutputIndexOutOfRange)
@@ -168,7 +170,11 @@ impl Descriptor {
         !self.is_onchain()
     }
 
-    pub fn upgraded(&self, index: u16, dimension: Option<Dimension>) -> Result<Self, Error> {
+    pub fn upgraded(
+        &self,
+        index: u16,
+        dimension: Option<Dimension>,
+    ) -> Result<Self, Error> {
         use Descriptor::*;
         use Dimension::*;
         use Error::*;
@@ -211,21 +217,24 @@ impl Descriptor {
                 tx_index,
                 output_index: index,
             }),
-            (OffchainTransaction { tx_checksum }, Some(dim)) if dim == Input => {
+            (OffchainTransaction { tx_checksum }, Some(dim))
+                if dim == Input =>
+            {
                 Ok(OffchainTxInput {
                     tx_checksum,
                     input_index: index,
                 })
             }
-            (OffchainTransaction { tx_checksum }, Some(dim)) if dim == Output => {
+            (OffchainTransaction { tx_checksum }, Some(dim))
+                if dim == Output =>
+            {
                 Ok(OffchainTxOutput {
                     tx_checksum,
                     output_index: index,
                 })
             }
-            (OnchainTransaction { .. }, None) | (OffchainTransaction { .. }, None) => {
-                Err(DimensionRequired)
-            }
+            (OnchainTransaction { .. }, None)
+            | (OffchainTransaction { .. }, None) => Err(DimensionRequired),
             _ => Err(UpgradeImpossible),
         }
     }
@@ -259,7 +268,8 @@ impl Descriptor {
                 block_checksum,
                 tx_index,
             }),
-            OffchainTxInput { tx_checksum, .. } | OffchainTxOutput { tx_checksum, .. } => {
+            OffchainTxInput { tx_checksum, .. }
+            | OffchainTxOutput { tx_checksum, .. } => {
                 Ok(OffchainTransaction { tx_checksum })
             }
             _ => Err(DowngradeImpossible),
@@ -316,9 +326,8 @@ impl Descriptor {
         use Descriptor::*;
 
         match self {
-            OnchainTxInput { input_index, .. } | OffchainTxInput { input_index, .. } => {
-                Some(*input_index)
-            }
+            OnchainTxInput { input_index, .. }
+            | OffchainTxInput { input_index, .. } => Some(*input_index),
             _ => None,
         }
     }
@@ -327,9 +336,8 @@ impl Descriptor {
         use Descriptor::*;
 
         match self {
-            OnchainTxOutput { output_index, .. } | OffchainTxOutput { output_index, .. } => {
-                Some(*output_index)
-            }
+            OnchainTxOutput { output_index, .. }
+            | OffchainTxOutput { output_index, .. } => Some(*output_index),
             _ => None,
         }
     }
@@ -340,7 +348,17 @@ impl Descriptor {
 }
 
 #[derive(
-    Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+    Copy,
+    Clone,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
 )]
 #[strict_crate(crate)]
 #[display(Debug)]
@@ -381,7 +399,8 @@ impl ShortId {
         let index: u16 = iconv(self.0 & Self::MASK_INOUT);
 
         if self.is_onchain() {
-            let block_height: u32 = iconv((self.0 & Self::MASK_BLOCK) >> Self::SHIFT_BLOCK);
+            let block_height: u32 =
+                iconv((self.0 & Self::MASK_BLOCK) >> Self::SHIFT_BLOCK);
             let block_checksum = BlockChecksum::from(iconv::<u8>(
                 (self.0 & Self::MASK_BLOCKCHECK) >> Self::SHIFT_BLOCKCHECK,
             ));
@@ -391,7 +410,8 @@ impl ShortId {
                     block_checksum,
                 };
             }
-            let tx_index: u16 = iconv((self.0 & Self::MASK_TXIDX) >> Self::SHIFT_TXIDX);
+            let tx_index: u16 =
+                iconv((self.0 & Self::MASK_TXIDX) >> Self::SHIFT_TXIDX);
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
                 return Descriptor::OnchainTransaction {
                     block_height,
@@ -415,7 +435,9 @@ impl ShortId {
                 }
             }
         } else {
-            let tx_checksum = TxChecksum::from((self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX);
+            let tx_checksum = TxChecksum::from(
+                (self.0 & Self::MASK_TXCHECK) >> Self::SHIFT_TXIDX,
+            );
             if (self.0 & (!Self::MASK_INOUT)) == 0 {
                 return Descriptor::OffchainTransaction { tx_checksum };
             }
@@ -479,12 +501,10 @@ impl TryFrom<Descriptor> for ShortId {
             _ => TxChecksum::default(),
         };
         let inout_index: u64 = match descriptor {
-            OnchainTxInput { input_index, .. } | OffchainTxInput { input_index, .. } => {
-                input_index + 1
-            }
-            OnchainTxOutput { output_index, .. } | OffchainTxOutput { output_index, .. } => {
-                output_index + 1
-            }
+            OnchainTxInput { input_index, .. }
+            | OffchainTxInput { input_index, .. } => input_index + 1,
+            OnchainTxOutput { output_index, .. }
+            | OffchainTxOutput { output_index, .. } => output_index + 1,
             _ => 0,
         } as u64;
 
@@ -492,10 +512,12 @@ impl TryFrom<Descriptor> for ShortId {
         short_id |= inout_index;
         if descriptor.is_offchain() {
             short_id |= Self::FLAG_OFFCHAIN;
-            short_id |= (*tx_checksum << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK;
+            short_id |=
+                (*tx_checksum << Self::SHIFT_TXIDX) & Self::MASK_TXCHECK;
         } else {
             short_id |= (block_height << 40) & Self::MASK_BLOCK;
-            short_id |= (block_checksum << Self::SHIFT_BLOCKCHECK) & Self::MASK_BLOCKCHECK;
+            short_id |= (block_checksum << Self::SHIFT_BLOCKCHECK)
+                & Self::MASK_BLOCKCHECK;
             short_id |= (tx_index << 16) & Self::MASK_TXIDX;
         }
 

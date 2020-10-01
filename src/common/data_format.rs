@@ -18,7 +18,9 @@ use ::core::fmt::{Display, Formatter};
 use ::core::str::pattern::Pattern;
 use ::core::str::FromStr;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, ToPrimitive, FromPrimitive)]
+#[derive(
+    Copy, Clone, PartialEq, Eq, Hash, Debug, ToPrimitive, FromPrimitive,
+)]
 pub enum DataFormat {
     Yaml,
     Json,

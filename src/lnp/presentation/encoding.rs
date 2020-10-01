@@ -32,7 +32,10 @@ where
 pub trait Unmarshall {
     type Data;
     type Error: std::error::Error;
-    fn unmarshall(&self, data: &dyn Borrow<[u8]>) -> Result<Self::Data, Self::Error>;
+    fn unmarshall(
+        &self,
+        data: &dyn Borrow<[u8]>,
+    ) -> Result<Self::Data, Self::Error>;
 }
 
 pub type UnmarshallFn<E: ::std::error::Error> =

@@ -15,8 +15,9 @@ use core::ops::Range;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
-/// Re-exporting extended read and write functions from bitcoin consensus module
-/// so others may use semantic convenience `lnpbp::strict_encode::ReadExt`
+/// Re-exporting extended read and write functions from bitcoin consensus
+/// module so others may use semantic convenience
+/// `lnpbp::strict_encode::ReadExt`
 pub use bitcoin::consensus::encode::{ReadExt, WriteExt};
 
 /// Binary encoding according to the strict rules that usually apply to
@@ -106,9 +107,10 @@ pub enum Error {
     ExceedMaxItems(usize),
 
     /// In terms of strict encoding, we interpret `Option` as a zero-length
-    /// `Vec` (for `Optional::None`) or single-item `Vec` (for `Optional::Some`).
-    /// For decoding an attempt to read `Option` from a encoded non-0
-    /// or non-1 length Vec will result in `Error::WrongOptionalEncoding`.
+    /// `Vec` (for `Optional::None`) or single-item `Vec` (for
+    /// `Optional::Some`). For decoding an attempt to read `Option` from a
+    /// encoded non-0 or non-1 length Vec will result in
+    /// `Error::WrongOptionalEncoding`.
     WrongOptionalEncoding(u8),
 
     // TODO: (new) replace all `String` in errors with `&'static str`
@@ -252,14 +254,19 @@ macro_rules! impl_enum_strict_encoding {
             type Error = $crate::strict_encoding::Error;
 
             #[inline]
-            fn strict_encode<E: ::std::io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+            fn strict_encode<E: ::std::io::Write>(
+                &self,
+                e: E,
+            ) -> Result<usize, Self::Error> {
                 use ::num_traits::ToPrimitive;
 
                 match self.to_u8() {
                     Some(result) => result.strict_encode(e),
-                    None => Err($crate::strict_encoding::Error::EnumValueOverflow(
-                        stringify!($type).to_string(),
-                    )),
+                    None => {
+                        Err($crate::strict_encoding::Error::EnumValueOverflow(
+                            stringify!($type).to_string(),
+                        ))
+                    }
                 }
             }
         }
@@ -268,16 +275,20 @@ macro_rules! impl_enum_strict_encoding {
             type Error = $crate::strict_encoding::Error;
 
             #[inline]
-            fn strict_decode<D: ::std::io::Read>(d: D) -> Result<Self, Self::Error> {
+            fn strict_decode<D: ::std::io::Read>(
+                d: D,
+            ) -> Result<Self, Self::Error> {
                 use ::num_traits::FromPrimitive;
 
                 let value = u8::strict_decode(d)?;
                 match Self::from_u8(value) {
                     Some(result) => Ok(result),
-                    None => Err($crate::strict_encoding::Error::EnumValueNotKnown(
-                        stringify!($type).to_string(),
-                        value,
-                    )),
+                    None => {
+                        Err($crate::strict_encoding::Error::EnumValueNotKnown(
+                            stringify!($type).to_string(),
+                            value,
+                        ))
+                    }
                 }
             }
         }
@@ -307,7 +318,10 @@ pub mod strategies {
         type Error = <amplify::Holder<T, T::Strategy> as StrictEncode>::Error;
 
         #[inline]
-        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, Self::Error> {
             amplify::Holder::new(self.clone()).strict_encode(e)
         }
     }
@@ -333,7 +347,10 @@ pub mod strategies {
         type Error = <T::Inner as StrictEncode>::Error;
 
         #[inline]
-        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, Self::Error> {
             Ok(self.as_inner().to_inner().strict_encode(e)?)
         }
     }
@@ -358,7 +375,10 @@ pub mod strategies {
         type Error = Error;
 
         #[inline]
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             e.write_all(&self.as_inner()[..])?;
             Ok(T::LEN)
         }
@@ -385,7 +405,10 @@ pub mod strategies {
         type Error = Error;
 
         #[inline]
-        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, Self::Error> {
             self.as_inner().consensus_encode(e).map_err(Error::from)
         }
     }
@@ -412,11 +435,13 @@ pub mod strategies {
     impl From<bitcoin::consensus::encode::Error> for Error {
         #[inline]
         fn from(e: bitcoin::consensus::encode::Error) -> Self {
-            Error::Io(if let bitcoin::consensus::encode::Error::Io(io_err) = e {
-                io_err.kind()
-            } else {
-                io::ErrorKind::Other
-            })
+            Error::Io(
+                if let bitcoin::consensus::encode::Error::Io(io_err) = e {
+                    io_err.kind()
+                } else {
+                    io::ErrorKind::Other
+                },
+            )
         }
     }
 }
@@ -461,7 +486,10 @@ mod number_little_endian {
 
     impl StrictEncode for bool {
         type Error = Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             (*self as u8).strict_encode(&mut e)
         }
     }
@@ -479,7 +507,10 @@ mod number_little_endian {
 
     impl StrictEncode for usize {
         type Error = Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             if *self > std::u16::MAX as usize {
                 Err(Error::ExceedMaxItems(*self))?;
             }
@@ -497,7 +528,10 @@ mod number_little_endian {
 
     impl StrictEncode for f32 {
         type Error = Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             e.write_all(&self.to_le_bytes())?;
             Ok(4)
         }
@@ -514,7 +548,10 @@ mod number_little_endian {
 
     impl StrictEncode for f64 {
         type Error = Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             e.write_all(&self.to_le_bytes())?;
             Ok(8)
         }
@@ -537,9 +574,13 @@ mod byte_strings {
 
     impl StrictEncode for &[u8] {
         type Error = Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             let mut len = self.len();
-            // We handle oversize problems at the level of `usize` value serializaton
+            // We handle oversize problems at the level of `usize` value
+            // serializaton
             len += len.strict_encode(&mut e)?;
             e.write_all(self)?;
             Ok(len)
@@ -601,7 +642,10 @@ mod compositional_types {
         T::Error: From<Error>,
     {
         type Error = T::Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             Ok(match self {
                 None => strict_encode_list!(e; 0u8),
                 Some(val) => strict_encode_list!(e; 1u8, val),
@@ -641,7 +685,10 @@ mod compositional_types {
         T::Error: From<Error>,
     {
         type Error = T::Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             let len = self.len() as usize;
             let mut encoded = len.strict_encode(&mut e)?;
             for item in self {
@@ -686,7 +733,10 @@ mod compositional_types {
         T::Error: From<Error>,
     {
         type Error = T::Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             let len = self.len() as usize;
             let mut encoded = len.strict_encode(&mut e)?;
             let mut vec: Vec<&T> = self.iter().collect();
@@ -734,7 +784,10 @@ mod compositional_types {
         T::Error: From<Error>,
     {
         type Error = T::Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             let len = self.len() as usize;
             let mut encoded = len.strict_encode(&mut e)?;
             let mut vec: Vec<&T> = self.iter().collect();
@@ -787,7 +840,10 @@ mod compositional_types {
         T::Error: From<Error>,
     {
         type Error = T::Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             let ordered: BTreeMap<usize, T> =
                 self.iter().map(|(key, val)| (*key, val.clone())).collect();
             ordered.strict_encode(&mut e)
@@ -811,10 +867,11 @@ mod compositional_types {
     {
         type Error = T::Error;
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
-            let map: HashMap<usize, T> = BTreeMap::<usize, T>::strict_decode(&mut d)?
-                .iter()
-                .map(|(key, val)| (*key, val.clone()))
-                .collect();
+            let map: HashMap<usize, T> =
+                BTreeMap::<usize, T>::strict_decode(&mut d)?
+                    .iter()
+                    .map(|(key, val)| (*key, val.clone()))
+                    .collect();
             Ok(map)
         }
     }
@@ -836,7 +893,10 @@ mod compositional_types {
         V::Error: From<Error> + From<K::Error>,
     {
         type Error = V::Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             let len = self.len() as usize;
             let encoded = len.strict_encode(&mut e)?;
 
@@ -887,7 +947,10 @@ mod compositional_types {
         V::Error: From<Error> + From<K::Error>,
     {
         type Error = V::Error;
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             Ok(self.0.strict_encode(&mut e)? + self.1.strict_encode(&mut e)?)
         }
     }
@@ -1017,7 +1080,8 @@ pub mod test {
         assert_eq!(write_1, test_size);
         assert_eq!(decoded_object, *object);
         encoded_object.clear();
-        let write_2 = decoded_object.strict_encode(&mut encoded_object).unwrap();
+        let write_2 =
+            decoded_object.strict_encode(&mut encoded_object).unwrap();
         assert_eq!(encoded_object, test_vec);
         assert_eq!(write_2, test_size);
         decoded_object
@@ -1064,8 +1128,8 @@ pub mod test {
         })
     }
 
-    /// Checking that byte encoding and decoding works correctly for the most common
-    /// marginal and middle-probability cases
+    /// Checking that byte encoding and decoding works correctly for the most
+    /// common marginal and middle-probability cases
     #[test]
     fn test_u8_encode() {
         let zero: u8 = 0;
@@ -1099,9 +1163,10 @@ pub mod test {
 
     /// Test for checking the following rule from LNPBP-5:
     ///
-    /// `Option<T>` of any type T, which are set to `Option::None` value MUST encode as two
-    /// zero bytes and it MUST be possible to decode optional of any type from two zero bytes
-    /// which MUST result in `Option::None` value.
+    /// `Option<T>` of any type T, which are set to `Option::None` value MUST
+    /// encode as two zero bytes and it MUST be possible to decode optional
+    /// of any type from two zero bytes which MUST result in `Option::None`
+    /// value.
     #[test]
     fn test_option_encode_none() {
         let o1: Option<u8> = None;
@@ -1118,8 +1183,9 @@ pub mod test {
 
     /// Test for checking the following rule from LNPBP-5:
     ///
-    /// `Option<T>` of any type T, which are set to `Option::Some<T>` value MUST encode as a
-    /// `Vec<T>` structure containing a single item equal to the `Option::unwrap()` value.
+    /// `Option<T>` of any type T, which are set to `Option::Some<T>` value MUST
+    /// encode as a `Vec<T>` structure containing a single item equal to the
+    /// `Option::unwrap()` value.
     #[test]
     fn test_option_encode_some() {
         let o1: Option<u8> = Some(0);
@@ -1136,7 +1202,8 @@ pub mod test {
         let byte_255 = &[1u8, 0xFFu8][..];
         let word_13 = &[1u8, 13u8, 0u8][..];
         let qword_13 = &[1u8, 13u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8][..];
-        let qword_256 = &[1u8, 0xFFu8, 0x01u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8][..];
+        let qword_256 =
+            &[1u8, 0xFFu8, 0x01u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8][..];
         let qword_max = &[
             1u8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8,
         ][..];
@@ -1169,8 +1236,8 @@ pub mod test {
         );
     }
 
-    /// Test trying decoding of non-zero and non-single item vector structures, which MUST
-    /// fail with a specific error.
+    /// Test trying decoding of non-zero and non-single item vector structures,
+    /// which MUST fail with a specific error.
     #[test]
     fn test_option_decode_vec() {
         assert!(Option::<u8>::strict_decode(&[2u8, 0u8, 0u8, 0u8][..])
@@ -1186,21 +1253,24 @@ pub mod test {
 
     /// Test for checking the following rule from LNPBP-5:
     ///
-    /// Array of any commitment-serializable type T MUST contain strictly less than `0x10000` items
-    /// and must encode as 16-bit little-endian value corresponding to the number of items
-    /// followed by a direct encoding of each of the items.
+    /// Array of any commitment-serializable type T MUST contain strictly less
+    /// than `0x10000` items and must encode as 16-bit little-endian value
+    /// corresponding to the number of items followed by a direct encoding
+    /// of each of the items.
     #[test]
     fn test_vec_encode() {
         let v1: Vec<u8> = vec![0, 13, 0xFF];
         let v2: Vec<u8> = vec![13];
         let v3: Vec<u64> = vec![0, 13, 13, 0x1FF, 0xFFFFFFFFFFFFFFFF];
-        let v4: Vec<u8> = (0..0x1FFFF).map(|item| (item % 0xFF) as u8).collect();
+        let v4: Vec<u8> =
+            (0..0x1FFFF).map(|item| (item % 0xFF) as u8).collect();
 
         let s1 = &[3u8, 0u8, 0u8, 13u8, 0xFFu8][..];
         let s2 = &[1u8, 0u8, 13u8][..];
         let s3 = &[
-            5u8, 0u8, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0,
-            0xFF, 1, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            5u8, 0u8, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 13, 0,
+            0, 0, 0, 0, 0, 0, 0xFF, 1, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ][..];
 
         assert_eq!(strict_encode(&v1).unwrap(), s1);

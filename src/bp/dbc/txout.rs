@@ -16,8 +16,8 @@ use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::{secp256k1, TxOut};
 
 use super::{
-    Container, Error, Proof, ScriptInfo, ScriptPubkeyCommitment, ScriptPubkeyComposition,
-    ScriptPubkeyContainer,
+    Container, Error, Proof, ScriptInfo, ScriptPubkeyCommitment,
+    ScriptPubkeyComposition, ScriptPubkeyContainer,
 };
 use crate::bp::PubkeyScript;
 use crate::commit_verify::EmbedCommitVerify;
@@ -100,7 +100,10 @@ where
     type Container = TxoutContainer;
     type Error = Error;
 
-    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(
+        container: &mut Self::Container,
+        msg: &MSG,
+    ) -> Result<Self, Self::Error> {
         let commitment = TxOut {
             value: container.value,
             script_pubkey: (**ScriptPubkeyCommitment::embed_commit(

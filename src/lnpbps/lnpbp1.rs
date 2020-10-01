@@ -15,7 +15,9 @@ use amplify::Wrapper;
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 
-use crate::bp::dbc::{self, Container, LNPBP1Commitment, LNPBP1Container, Proof};
+use crate::bp::dbc::{
+    self, Container, LNPBP1Commitment, LNPBP1Container, Proof,
+};
 use crate::commit_verify::EmbedCommitVerify;
 
 /// Auxiliary structure that can be used for keeping LNPBP-1 commitment-related
@@ -55,9 +57,9 @@ pub fn lnpbp1_commit(
         original_pubkey: pubkey.clone(),
         tweaked_pubkey: *commitment.clone(),
         protocol_tag: protocol_tag.clone(),
-        tweaking_factor: container
-            .tweaking_factor
-            .expect("Tweaking factor must be filled after `commit_embed` procedure"),
+        tweaking_factor: container.tweaking_factor.expect(
+            "Tweaking factor must be filled after `commit_embed` procedure",
+        ),
     })
 }
 
@@ -69,7 +71,11 @@ pub fn lnpbp1_verify(
     message: &[u8],
 ) -> Result<bool, dbc::Error> {
     Ok(LNPBP1Commitment::from_inner(commitment).verify(
-        &LNPBP1Container::reconstruct(&Proof::from(proof), &protocol_tag, &None)?,
+        &LNPBP1Container::reconstruct(
+            &Proof::from(proof),
+            &protocol_tag,
+            &None,
+        )?,
         &message,
     )?)
 }

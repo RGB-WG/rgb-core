@@ -17,7 +17,9 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::str::FromStr;
 #[cfg(feature = "tor")]
-use torut::onion::{OnionAddressV2, OnionAddressV3, TorPublicKeyV3, TORV3_PUBLIC_KEY_LENGTH};
+use torut::onion::{
+    OnionAddressV2, OnionAddressV3, TorPublicKeyV3, TORV3_PUBLIC_KEY_LENGTH,
+};
 
 /// A universal address covering IPv4, IPv6 and Tor in a single byte sequence
 /// of 32 bytes.
@@ -118,8 +120,12 @@ impl InetAddr {
     pub fn to_uniform_encoding(&self) -> [u8; Self::UNIFORM_ADDR_LEN] {
         let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
         match self {
-            InetAddr::IPv4(ipv4_addr) => buf[28..].copy_from_slice(&ipv4_addr.octets()),
-            InetAddr::IPv6(ipv6_addr) => buf[16..].copy_from_slice(&ipv6_addr.octets()),
+            InetAddr::IPv4(ipv4_addr) => {
+                buf[28..].copy_from_slice(&ipv4_addr.octets())
+            }
+            InetAddr::IPv6(ipv6_addr) => {
+                buf[16..].copy_from_slice(&ipv6_addr.octets())
+            }
             #[cfg(feature = "tor")]
             InetAddr::Tor(tor_pubkey) => buf = tor_pubkey.to_bytes(),
             InetAddr::TorV2(onion_addr) => {
@@ -157,10 +163,12 @@ impl TryFrom<InetAddr> for IpAddr {
             InetAddr::IPv4(addr) => IpAddr::V4(addr),
             InetAddr::IPv6(addr) => IpAddr::V6(addr),
             #[cfg(feature = "tor")]
-            InetAddr::Tor(_) => Err(String::from("IpAddr can't be used to store Tor v3 address"))?,
-            InetAddr::TorV2(_) => {
-                Err(String::from("IpAddr can't be used to store Tor v2 address"))?
-            }
+            InetAddr::Tor(_) => Err(String::from(
+                "IpAddr can't be used to store Tor v3 address",
+            ))?,
+            InetAddr::TorV2(_) => Err(String::from(
+                "IpAddr can't be used to store Tor v2 address",
+            ))?,
         })
     }
 }
@@ -250,7 +258,8 @@ impl TryFrom<Vec<u8>> for InetAddr {
     }
 }
 
-// Yes, I checked that onion addresses don't need to optimize ownership of input String.
+// Yes, I checked that onion addresses don't need to optimize ownership of input
+// String.
 #[cfg(feature = "parse_arg")]
 impl parse_arg::ParseArgFromStr for InetAddr {
     fn describe_type<W: std::fmt::Write>(mut writer: W) -> std::fmt::Result {
@@ -318,7 +327,8 @@ impl TryFrom<[u8; InetAddr::UNIFORM_ADDR_LEN]> for InetAddr {
     type Error = String;
     #[inline]
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
-        Self::from_uniform_encoding(&value).ok_or(String::from("Wrong `InetAddr` binary encoding"))
+        Self::from_uniform_encoding(&value)
+            .ok_or(String::from("Wrong `InetAddr` binary encoding"))
     }
 }
 
@@ -339,9 +349,9 @@ pub enum Transport {
     /// More efficient UDP version under developent by Google and consortium of
     /// other internet companies
     QUIC = 4,
-    // There are other rarely used protocols. Do not see any reason to add
-    // them to the LNP/BP stack for now, but it may appear in the future,
-    // so keeping them for referencing purposes:
+    /* There are other rarely used protocols. Do not see any reason to add
+     * them to the LNP/BP stack for now, but it may appear in the future,
+     * so keeping them for referencing purposes: */
     /*
     UDPLite,
     SCTP,
@@ -448,8 +458,10 @@ impl InetSocketAddr {
     #[inline]
     pub fn to_uniform_encoding(&self) -> [u8; Self::UNIFORM_ADDR_LEN] {
         let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
-        buf[..InetAddr::UNIFORM_ADDR_LEN].copy_from_slice(&self.address.to_uniform_encoding());
-        buf[InetAddr::UNIFORM_ADDR_LEN..].copy_from_slice(&self.port.to_be_bytes());
+        buf[..InetAddr::UNIFORM_ADDR_LEN]
+            .copy_from_slice(&self.address.to_uniform_encoding());
+        buf[InetAddr::UNIFORM_ADDR_LEN..]
+            .copy_from_slice(&self.port.to_be_bytes());
         buf
     }
 }
@@ -551,7 +563,9 @@ impl FromStr for InetSocketAddrExt {
         let mut vals = s.split("://");
         let err_msg = String::from("Wrong format of extended socket address string; use <transport>://<inet_address>[:<port>]");
         let em = |_| String::from(err_msg.clone());
-        if let (Some(transport), Some(addr), None) = (vals.next(), vals.next(), vals.next()) {
+        if let (Some(transport), Some(addr), None) =
+            (vals.next(), vals.next(), vals.next())
+        {
             Ok(Self(
                 transport.parse().map_err(em)?,
                 addr.parse().map_err(em)?,

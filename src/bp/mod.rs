@@ -29,8 +29,9 @@ pub use bip32::{DerivationInfo, DerivationTemplate};
 pub use chain::{Chain, P2pNetworkId};
 pub use scripts::{
     GenerateScripts, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
-    ScriptPubkeyDescriptor, ScriptPubkeyFormat, ScriptPubkeyStructure, ScriptPubkeyTemplate,
-    ScriptSet, Strategy, Witness, WitnessProgram, WitnessScript, WitnessVersion,
+    ScriptPubkeyDescriptor, ScriptPubkeyFormat, ScriptPubkeyStructure,
+    ScriptPubkeyTemplate, ScriptSet, Strategy, Witness, WitnessProgram,
+    WitnessScript, WitnessVersion,
 };
 pub use seals::TxoutSeal;
 pub use short_id::ShortId;
@@ -74,7 +75,10 @@ pub mod test {
         ret
     }
 
-    pub fn gen_bitcoin_pubkeys(n: usize, compressed: bool) -> Vec<bitcoin::PublicKey> {
+    pub fn gen_bitcoin_pubkeys(
+        n: usize,
+        compressed: bool,
+    ) -> Vec<bitcoin::PublicKey> {
         gen_secp_pubkeys(n)
             .into_iter()
             .map(|key| bitcoin::PublicKey { key, compressed })

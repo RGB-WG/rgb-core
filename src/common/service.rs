@@ -26,8 +26,13 @@ pub trait TryService: Sized {
         let should_not_return = self.try_run_loop().await;
 
         let message = match should_not_return {
-            Err(err) => format!("{} run loop has failed with error {}", service_name, err),
-            Ok(_) => format!("{} has failed without reporting a error", service_name),
+            Err(err) => format!(
+                "{} run loop has failed with error {}",
+                service_name, err
+            ),
+            Ok(_) => {
+                format!("{} has failed without reporting a error", service_name)
+            }
         };
         #[cfg(feature = "log")]
         error!("{}", message);

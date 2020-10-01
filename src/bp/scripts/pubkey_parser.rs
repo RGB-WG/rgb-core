@@ -42,7 +42,9 @@ impl From<miniscript::Error> for PubkeyParseError {
 impl LockScript {
     /// Returns set of unique public keys from the script; fails on public key
     /// hash
-    pub fn extract_pubkeyset(&self) -> Result<HashSet<secp256k1::PublicKey>, PubkeyParseError> {
+    pub fn extract_pubkeyset(
+        &self,
+    ) -> Result<HashSet<secp256k1::PublicKey>, PubkeyParseError> {
         Ok(HashSet::from_iter(self.extract_pubkeys()?))
     }
 
@@ -50,7 +52,10 @@ impl LockScript {
     /// unique hash values, extracted from the script
     pub fn extract_pubkey_hash_set(
         &self,
-    ) -> Result<(HashSet<secp256k1::PublicKey>, HashSet<PubkeyHash>), PubkeyParseError> {
+    ) -> Result<
+        (HashSet<secp256k1::PublicKey>, HashSet<PubkeyHash>),
+        PubkeyParseError,
+    > {
         let (keys, hashes) = self.extract_pubkeys_and_hashes()?;
         Ok((HashSet::from_iter(keys), HashSet::from_iter(hashes)))
     }
@@ -60,7 +65,8 @@ impl LockScript {
     /// than a single occurrence it returns all occurrences for each of them
     pub fn extract_pubkeys_and_hashes(
         &self,
-    ) -> Result<(Vec<secp256k1::PublicKey>, Vec<PubkeyHash>), PubkeyParseError> {
+    ) -> Result<(Vec<secp256k1::PublicKey>, Vec<PubkeyHash>), PubkeyParseError>
+    {
         Miniscript::<_, Segwitv0>::parse(&*self.clone())?
             .iter_pk_pkh()
             .try_fold(
@@ -78,19 +84,22 @@ impl LockScript {
     /// Returns all public keys found in the script; fails on public key hash.
     /// If the key present multiple times in the script it returns all
     /// occurrences.
-    pub fn extract_pubkeys(&self) -> Result<Vec<secp256k1::PublicKey>, PubkeyParseError> {
+    pub fn extract_pubkeys(
+        &self,
+    ) -> Result<Vec<secp256k1::PublicKey>, PubkeyParseError> {
         Miniscript::<_, Segwitv0>::parse(&*self.clone())?
             .iter_pk_pkh()
-            .try_fold(
-                Vec::<secp256k1::PublicKey>::new(),
-                |mut keys, item| match item {
-                    PkPkh::HashedPubkey(hash) => Err(PubkeyParseError::PubkeyHash(hash)),
+            .try_fold(Vec::<secp256k1::PublicKey>::new(), |mut keys, item| {
+                match item {
+                    PkPkh::HashedPubkey(hash) => {
+                        Err(PubkeyParseError::PubkeyHash(hash))
+                    }
                     PkPkh::PlainPubkey(key) => {
                         keys.push(key.key);
                         Ok(keys)
                     }
-                },
-            )
+                }
+            })
     }
 
     /// Replaces pubkeys using provided matching function; does not fail on
@@ -99,17 +108,18 @@ impl LockScript {
         &self,
         processor: impl Fn(&secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
     ) -> Result<Self, PubkeyParseError> {
-        let result = Miniscript::<_, Segwitv0>::parse(&*self.clone())?.translate_pk(
-            &mut |pk| {
-                Ok(processor(&pk.key)
-                    .map(|key| bitcoin::PublicKey {
-                        compressed: true,
-                        key,
-                    })
-                    .unwrap_or(pk.clone()))
-            },
-            &mut |hash| Err(PubkeyParseError::PubkeyHash(hash.clone())),
-        )?;
+        let result = Miniscript::<_, Segwitv0>::parse(&*self.clone())?
+            .translate_pk(
+                &mut |pk| {
+                    Ok(processor(&pk.key)
+                        .map(|key| bitcoin::PublicKey {
+                            compressed: true,
+                            key,
+                        })
+                        .unwrap_or(pk.clone()))
+                },
+                &mut |hash| Err(PubkeyParseError::PubkeyHash(hash.clone())),
+            )?;
         Ok(LockScript::from(result.encode()))
     }
 
@@ -117,7 +127,9 @@ impl LockScript {
     /// functions.
     pub fn replace_pubkeys_and_hashes(
         &self,
-        key_processor: impl Fn(&secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
+        key_processor: impl Fn(
+            &secp256k1::PublicKey,
+        ) -> Option<secp256k1::PublicKey>,
         hash_processor: impl Fn(&hash160::Hash) -> Option<hash160::Hash>,
     ) -> Result<Self, PubkeyParseError> {
         let result = Miniscript::<_, Segwitv0>::parse(&*self.clone())?
@@ -156,7 +168,9 @@ pub(crate) mod test {
         ($($arg:tt)*) => (LockScript::from(miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap().compile::<Segwitv0>().unwrap().encode()))
     }
 
-    pub(crate) fn gen_pubkeys_and_hashes(n: usize) -> (Vec<PublicKey>, Vec<PubkeyHash>) {
+    pub(crate) fn gen_pubkeys_and_hashes(
+        n: usize,
+    ) -> (Vec<PublicKey>, Vec<PubkeyHash>) {
         let pks = gen_bitcoin_pubkeys(n, true);
         let pkhs = pks.iter().map(PublicKey::pubkey_hash).collect();
         (pks, pkhs)
@@ -176,7 +190,9 @@ pub(crate) mod test {
         proc(ms_str!("hash160({})", dummy_hashes[2]));
     }
 
-    pub(crate) fn single_key_suite(proc: fn(LockScript, secp256k1::PublicKey) -> ()) {
+    pub(crate) fn single_key_suite(
+        proc: fn(LockScript, secp256k1::PublicKey) -> (),
+    ) {
         let (keys, _) = gen_pubkeys_and_hashes(6);
         proc(ms_str!("c:pk_k({})", keys[1]), keys[1].key);
         proc(ms_str!("c:pk_k({})", keys[2]), keys[2].key);
@@ -184,7 +200,9 @@ pub(crate) mod test {
         proc(ms_str!("c:pk_k({})", keys[0]), keys[0].key);
     }
 
-    pub(crate) fn single_unmatched_key_suite(proc: fn(LockScript, secp256k1::PublicKey) -> ()) {
+    pub(crate) fn single_unmatched_key_suite(
+        proc: fn(LockScript, secp256k1::PublicKey) -> (),
+    ) {
         let (keys, _) = gen_pubkeys_and_hashes(6);
         proc(ms_str!("c:pk_k({})", keys[1]), keys[0].key);
         proc(ms_str!("c:pk_k({})", keys[2]), keys[3].key);
@@ -200,7 +218,9 @@ pub(crate) mod test {
         proc(ms_str!("c:pk_h({})", hashes[0]), hashes[0]);
     }
 
-    pub(crate) fn single_unmatched_keyhash_suite(proc: fn(LockScript, PubkeyHash) -> ()) {
+    pub(crate) fn single_unmatched_keyhash_suite(
+        proc: fn(LockScript, PubkeyHash) -> (),
+    ) {
         let (_, hashes) = gen_pubkeys_and_hashes(6);
         proc(ms_str!("c:pk_h({})", hashes[1]), hashes[0]);
         proc(ms_str!("c:pk_h({})", hashes[2]), hashes[3]);
@@ -208,7 +228,9 @@ pub(crate) mod test {
         proc(ms_str!("c:pk_h({})", hashes[4]), hashes[1]);
     }
 
-    pub(crate) fn complex_keys_suite(proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> ()) {
+    pub(crate) fn complex_keys_suite(
+        proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> (),
+    ) {
         let (keys, _) = gen_pubkeys_and_hashes(6);
         proc(
             policy_str!("thresh(2,pk({}),pk({}))", keys[0], keys[1]),
@@ -248,7 +270,9 @@ pub(crate) mod test {
         );
     }
 
-    pub(crate) fn complex_suite(proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> ()) {
+    pub(crate) fn complex_suite(
+        proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> (),
+    ) {
         let (keys, _) = gen_pubkeys_and_hashes(10);
         proc(
             policy_str!(
@@ -310,7 +334,9 @@ pub(crate) mod test {
     #[test]
     fn test_script_parse_singlehash() {
         single_keyhash_suite(|lockscript, hash| {
-            if let Err(PubkeyParseError::PubkeyHash(found_hash)) = lockscript.extract_pubkeyset() {
+            if let Err(PubkeyParseError::PubkeyHash(found_hash)) =
+                lockscript.extract_pubkeyset()
+            {
                 assert_eq!(hash, found_hash.into())
             } else {
                 panic!("extract_pubkeyset must return error")

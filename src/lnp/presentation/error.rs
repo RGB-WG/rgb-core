@@ -48,6 +48,8 @@ impl From<DecodeError> for Error {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
 #[display(Debug)]
 pub struct UnknownTypeError;

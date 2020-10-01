@@ -116,7 +116,8 @@ pub mod commit_strategy {
     impl<T> CommitEncode for T
     where
         T: CommitEncodeWithStrategy,
-        amplify::Holder<T, <T as CommitEncodeWithStrategy>::Strategy>: CommitEncode,
+        amplify::Holder<T, <T as CommitEncodeWithStrategy>::Strategy>:
+            CommitEncode,
     {
         fn commit_encode<E: io::Write>(self, e: E) -> usize {
             amplify::Holder::new(self).commit_encode(e)
@@ -191,7 +192,8 @@ pub trait Conceal {
 }
 
 pub trait ConsensusCommit: Sized + CommitEncode {
-    type Commitment: commit_verify::CommitVerify<Vec<u8>> + bitcoin::hashes::Hash;
+    type Commitment: commit_verify::CommitVerify<Vec<u8>>
+        + bitcoin::hashes::Hash;
 
     #[inline]
     fn consensus_commit(self) -> Self::Commitment {
@@ -263,8 +265,10 @@ pub fn merklize(prefix: &str, data: &[MerkleNode], depth: u16) -> MerkleNode {
         }
         _ => {
             let div = len / 2;
-            merklize(prefix, &data[0..div], depth + 1).commit_encode(&mut engine);
-            merklize(prefix, &data[div..], depth + 1).commit_encode(&mut engine);
+            merklize(prefix, &data[0..div], depth + 1)
+                .commit_encode(&mut engine);
+            merklize(prefix, &data[div..], depth + 1)
+                .commit_encode(&mut engine);
         }
     }
     MerkleNode::from_engine(engine)

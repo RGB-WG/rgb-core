@@ -28,8 +28,9 @@ use core::option::NoneError;
 use syn::export::{Span, ToTokens, TokenStream, TokenStream2};
 use syn::spanned::Spanned;
 use syn::{
-    Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields, Ident, Index, Lit,
-    Member, Meta, MetaNameValue, NestedMeta, Path, Result, Type, TypeSlice, Variant,
+    Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields,
+    Ident, Index, Lit, Member, Meta, MetaNameValue, NestedMeta, Path, Result,
+    Type, TypeSlice, Variant,
 };
 
 macro_rules! proc_macro_err {
@@ -44,13 +45,21 @@ macro_rules! proc_macro_err {
     };
 }
 
-fn attr_named_value(input: &DeriveInput, ident: &str, example: &str) -> Result<Option<Lit>> {
+fn attr_named_value(
+    input: &DeriveInput,
+    ident: &str,
+    example: &str,
+) -> Result<Option<Lit>> {
     for attr in &input.attrs {
         if attr.path.is_ident(ident) {
             match attr.parse_meta() {
                 Ok(meta) => match meta {
                     Meta::Path(_) => {
-                        return proc_macro_err!(attr, "unexpected path argument", example)
+                        return proc_macro_err!(
+                            attr,
+                            "unexpected path argument",
+                            example
+                        )
                     }
                     Meta::List(_) => {
                         return proc_macro_err!(
@@ -61,7 +70,9 @@ fn attr_named_value(input: &DeriveInput, ident: &str, example: &str) -> Result<O
                     }
                     Meta::NameValue(name_val) => return Ok(Some(name_val.lit)),
                 },
-                Err(_) => return proc_macro_err!(attr, "wrong format", example),
+                Err(_) => {
+                    return proc_macro_err!(attr, "wrong format", example)
+                }
             }
         }
     }
@@ -79,14 +90,26 @@ fn attr_list<'a>(
             match attr.parse_meta() {
                 Ok(meta) => match meta {
                     Meta::Path(_) => {
-                        return proc_macro_err!(attr, "unexpected path argument", example)
+                        return proc_macro_err!(
+                            attr,
+                            "unexpected path argument",
+                            example
+                        )
                     }
-                    Meta::List(list) => return Ok(Some(list.nested.into_iter().collect())),
+                    Meta::List(list) => {
+                        return Ok(Some(list.nested.into_iter().collect()))
+                    }
                     Meta::NameValue(_) => {
-                        return proc_macro_err!(attr, "unexpected name=value argument", example)
+                        return proc_macro_err!(
+                            attr,
+                            "unexpected name=value argument",
+                            example
+                        )
                     }
                 },
-                Err(_) => return proc_macro_err!(attr, "wrong format", example),
+                Err(_) => {
+                    return proc_macro_err!(attr, "wrong format", example)
+                }
             }
         }
     }
@@ -100,11 +123,19 @@ fn attr_nested_one_arg(
     example: &str,
 ) -> Result<Option<Path>> {
     match list.len() {
-        0 => proc_macro_err!(attr_name, "unexpected absence of argument", example),
+        0 => proc_macro_err!(
+            attr_name,
+            "unexpected absence of argument",
+            example
+        ),
         1 => match list.next().expect("Core library iterator is broken") {
             NestedMeta::Meta(meta) => match meta {
                 Meta::Path(path) => Ok(Some(path)),
-                _ => proc_macro_err!(attr_name, "unexpected attribute type", example),
+                _ => proc_macro_err!(
+                    attr_name,
+                    "unexpected attribute type",
+                    example
+                ),
             },
             NestedMeta::Lit(_) => proc_macro_err!(
                 attr_name,
@@ -112,7 +143,11 @@ fn attr_nested_one_arg(
                 example
             ),
         },
-        _ => proc_macro_err!(attr_name, "unexpected multiple type identifiers", example),
+        _ => proc_macro_err!(
+            attr_name,
+            "unexpected multiple type identifiers",
+            example
+        ),
     }
 }
 
@@ -122,11 +157,19 @@ fn attr_nested_one_named_value(
     example: &str,
 ) -> Result<MetaNameValue> {
     match list.len() {
-        0 => proc_macro_err!(attr_name, "unexpected absence of argument", example),
+        0 => proc_macro_err!(
+            attr_name,
+            "unexpected absence of argument",
+            example
+        ),
         1 => match list.next().expect("Core library iterator is broken") {
             NestedMeta::Meta(meta) => match meta {
                 Meta::NameValue(path) => Ok(path),
-                _ => proc_macro_err!(attr_name, "unexpected attribute type", example),
+                _ => proc_macro_err!(
+                    attr_name,
+                    "unexpected attribute type",
+                    example
+                ),
             },
             NestedMeta::Lit(_) => proc_macro_err!(
                 attr_name,
@@ -134,7 +177,11 @@ fn attr_nested_one_named_value(
                 example
             ),
         },
-        _ => proc_macro_err!(attr_name, "unexpected multiple type identifiers", example),
+        _ => proc_macro_err!(
+            attr_name,
+            "unexpected multiple type identifiers",
+            example
+        ),
     }
 }
 
@@ -178,7 +225,9 @@ impl EncodingSrategy {
                 use ::lnpbp::strict_encoding::strict_encode;
             ),
             Self::Bitcoin => quote!(
-                use ::lnpbp::bitcoin::consensus::encode::{consensus_encode, Encode};
+                use ::lnpbp::bitcoin::consensus::encode::{
+                    consensus_encode, Encode,
+                };
             ),
             Self::Lightning => unimplemented!(),
         }
@@ -232,8 +281,12 @@ fn lnp_api_inner(input: DeriveInput) -> Result<TokenStream2> {
     }
 }
 
-fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream2> {
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+fn lnp_api_inner_enum(
+    input: &DeriveInput,
+    data: &DataEnum,
+) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
     let ident_name = &input.ident;
 
     let name = "lnp_api";
@@ -243,7 +296,12 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
         None => vec![],
     };
     let global_encoding = EncodingSrategy::try_from(
-        attr_nested_one_named_value(global_params.into_iter(), "encoding", example)?.lit,
+        attr_nested_one_named_value(
+            global_params.into_iter(),
+            "encoding",
+            example,
+        )?
+        .lit,
     )?;
 
     let example = "#[lnp_api(type=1000)]";
@@ -254,20 +312,25 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
     let mut get_type = vec![];
     let mut get_payload = vec![];
     for v in &data.variants {
-        let meta = attr_list(&v.attrs, "lnp_api", example)?.ok_or(Error::new(
+        let meta = attr_list(&v.attrs, "lnp_api", example)?
+            .ok_or(Error::new(
             v.span(),
             format!(
                 "Attribute macro canonical form `{}` violation: {}",
-                example, "`lnp_api` attribute is required for each message enum case",
+                example,
+                "`lnp_api` attribute is required for each message enum case",
             ),
         ))?;
 
-        let type_lit: Lit = attr_nested_one_named_value(meta.into_iter(), "type", example)?.lit;
+        let type_lit: Lit =
+            attr_nested_one_named_value(meta.into_iter(), "type", example)?.lit;
         let type_id: u16 = match type_lit {
-            Lit::Int(i) => i
-                .base10_parse()
-                .or_else(|_| proc_macro_err!(i, "`type` must be an integer", example))?,
-            _ => proc_macro_err!(type_lit, "`type` must be an integer", example)?,
+            Lit::Int(i) => i.base10_parse().or_else(|_| {
+                proc_macro_err!(i, "`type` must be an integer", example)
+            })?,
+            _ => {
+                proc_macro_err!(type_lit, "`type` must be an integer", example)?
+            }
         };
         let type_name = &v.ident;
         let type_snake = Ident::new(
@@ -295,13 +358,11 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
         };
 
         match &v.fields {
-            Fields::Named(_) => {
-                return proc_macro_err!(
-                    v,
-                    "LNP API does not support requests represented by named enums",
-                    example
-                )
-            }
+            Fields::Named(_) => return proc_macro_err!(
+                v,
+                "LNP API does not support requests represented by named enums",
+                example
+            ),
             Fields::Unnamed(args) => {
                 let fields = &args.unnamed;
                 if fields.len() > 1 {
@@ -313,9 +374,10 @@ fn lnp_api_inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStrea
                 }
                 if let Some(f) = fields.first() {
                     let payload = &f.ty;
-                    let payload_fisheye: TokenStream2 =
-                        syn::parse_str(&quote!(#payload).to_string().replacen("<", "::<", 1))
-                            .expect("Internal error");
+                    let payload_fisheye: TokenStream2 = syn::parse_str(
+                        &quote!(#payload).to_string().replacen("<", "::<", 1),
+                    )
+                    .expect("Internal error");
                     let encode_fn = global_encoding.encode_fn(f.span());
                     let decode_fn = global_encoding.decode_fn(f.span());
 
@@ -482,8 +544,12 @@ fn strict_decode_inner(input: DeriveInput) -> Result<TokenStream2> {
     }
 }
 
-fn strict_encode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream2> {
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+fn strict_encode_inner_struct(
+    input: &DeriveInput,
+    data: &DataStruct,
+) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
     let ident_name = &input.ident;
 
     let error_type_def = get_strict_error(input, data)?;
@@ -539,8 +605,12 @@ fn strict_encode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
     })
 }
 
-fn strict_decode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream2> {
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+fn strict_decode_inner_struct(
+    input: &DeriveInput,
+    data: &DataStruct,
+) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
     let ident_name = &input.ident;
 
     let error_type_def = get_strict_error(input, data)?;
@@ -599,7 +669,10 @@ fn strict_decode_inner_struct(input: &DeriveInput, data: &DataStruct) -> Result<
     })
 }
 
-fn get_strict_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream2> {
+fn get_strict_error(
+    input: &DeriveInput,
+    data: &DataStruct,
+) -> Result<TokenStream2> {
     let name = "strict_error";
     let example = "#[strict_error(ErrorType)]";
     let mut strict_error: Option<Ident> = None;
@@ -616,7 +689,10 @@ fn get_strict_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStrea
     })
 }
 
-fn get_strict_crate(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream2> {
+fn get_strict_crate(
+    input: &DeriveInput,
+    data: &DataStruct,
+) -> Result<TokenStream2> {
     let name = "strict_crate";
     let example = "#[strict_crate(lnpbp_other_name)]";
     let default = quote! { ::lnpbp::strict_encoding };

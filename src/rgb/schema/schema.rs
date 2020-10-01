@@ -17,10 +17,12 @@ use std::io;
 use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{
-    vm, AssignmentsType, DataFormat, ExtensionSchema, GenesisSchema, SimplicityScript, StateSchema,
-    TransitionSchema, ValenciesType,
+    vm, AssignmentsType, DataFormat, ExtensionSchema, GenesisSchema,
+    SimplicityScript, StateSchema, TransitionSchema, ValenciesType,
 };
-use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
+use crate::client_side_validation::{
+    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
+};
 use crate::features;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -79,7 +81,9 @@ impl CommitEncodeWithStrategy for Schema {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
+    use crate::strict_encoding::{
+        strategies, Error, Strategy, StrictDecode, StrictEncode,
+    };
 
     // TODO: Use derive macros and generalized `tagged_hash!` in the future
     impl Strategy for SchemaId {
@@ -89,7 +93,10 @@ mod strict_encoding {
     impl StrictEncode for Schema {
         type Error = Error;
 
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             Ok(strict_encode_list!(e;
                 self.rgb_features,
                 self.root_id,
@@ -140,11 +147,12 @@ mod _validation {
 
     use crate::rgb::contract::nodes::Valencies;
     use crate::rgb::schema::{
-        script, MetadataStructure, SchemaVerify, SealsStructure, ValenciesStructure,
+        script, MetadataStructure, SchemaVerify, SealsStructure,
+        ValenciesStructure,
     };
     use crate::rgb::{
-        validation, Ancestors, AssignmentAction, Assignments, AssignmentsVariant, Metadata, Node,
-        NodeId, VirtualMachine,
+        validation, Ancestors, AssignmentAction, Assignments,
+        AssignmentsVariant, Metadata, Node, NodeId, VirtualMachine,
     };
 
     impl SchemaVerify for Schema {
@@ -152,15 +160,27 @@ mod _validation {
             let mut status = validation::Status::new();
 
             if root.root_id != SchemaId::default() {
-                status.add_failure(validation::Failure::SchemaRootHierarchy(root.root_id));
+                status.add_failure(validation::Failure::SchemaRootHierarchy(
+                    root.root_id,
+                ));
             }
 
             for (field_type, data_format) in &self.field_types {
                 match root.field_types.get(field_type) {
-                    None => status
-                        .add_failure(validation::Failure::SchemaRootNoFieldTypeMatch(*field_type)),
-                    Some(root_data_format) if root_data_format != data_format => status
-                        .add_failure(validation::Failure::SchemaRootNoFieldTypeMatch(*field_type)),
+                    None => status.add_failure(
+                        validation::Failure::SchemaRootNoFieldTypeMatch(
+                            *field_type,
+                        ),
+                    ),
+                    Some(root_data_format)
+                        if root_data_format != data_format =>
+                    {
+                        status.add_failure(
+                            validation::Failure::SchemaRootNoFieldTypeMatch(
+                                *field_type,
+                            ),
+                        )
+                    }
                     _ => &status,
                 };
             }
@@ -181,7 +201,9 @@ mod _validation {
             for valencies_type in &self.valencies_types {
                 match root.valencies_types.contains(valencies_type) {
                     false => status.add_failure(
-                        validation::Failure::SchemaRootNoValenciesTypeMatch(*valencies_type),
+                        validation::Failure::SchemaRootNoValenciesTypeMatch(
+                            *valencies_type,
+                        ),
                     ),
                     _ => &status,
                 };
@@ -190,21 +212,31 @@ mod _validation {
             status += self.genesis.schema_verify(&root.genesis);
 
             for (transition_type, transition_schema) in &self.transitions {
-                if let Some(root_transition_schema) = root.transitions.get(transition_type) {
-                    status += transition_schema.schema_verify(root_transition_schema);
+                if let Some(root_transition_schema) =
+                    root.transitions.get(transition_type)
+                {
+                    status +=
+                        transition_schema.schema_verify(root_transition_schema);
                 } else {
-                    status.add_failure(validation::Failure::SchemaRootNoTransitionTypeMatch(
-                        *transition_type,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaRootNoTransitionTypeMatch(
+                            *transition_type,
+                        ),
+                    );
                 }
             }
             for (extension_type, extension_schema) in &self.extensions {
-                if let Some(root_extension_schema) = root.extensions.get(extension_type) {
-                    status += extension_schema.schema_verify(root_extension_schema);
+                if let Some(root_extension_schema) =
+                    root.extensions.get(extension_type)
+                {
+                    status +=
+                        extension_schema.schema_verify(root_extension_schema);
                 } else {
-                    status.add_failure(validation::Failure::SchemaRootNoExtensionTypeMatch(
-                        *extension_type,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaRootNoExtensionTypeMatch(
+                            *extension_type,
+                        ),
+                    );
                 }
             }
 
@@ -277,12 +309,32 @@ mod _validation {
             };
 
             let mut status = validation::Status::new();
-            let ancestor_assignments =
-                extract_ancestor_assignments(all_nodes, node_id, node.ancestors(), &mut status);
-            status += self.validate_meta(node_id, node.metadata(), metadata_structure);
-            status += self.validate_ancestors(node_id, &ancestor_assignments, ancestors_structure);
-            status += self.validate_assignments(node_id, node.assignments(), assignments_structure);
-            status += self.validate_valencies(node_id, node.valencies(), valencies_structure);
+            let ancestor_assignments = extract_ancestor_assignments(
+                all_nodes,
+                node_id,
+                node.ancestors(),
+                &mut status,
+            );
+            status += self.validate_meta(
+                node_id,
+                node.metadata(),
+                metadata_structure,
+            );
+            status += self.validate_ancestors(
+                node_id,
+                &ancestor_assignments,
+                ancestors_structure,
+            );
+            status += self.validate_assignments(
+                node_id,
+                node.assignments(),
+                assignments_structure,
+            );
+            status += self.validate_valencies(
+                node_id,
+                node.valencies(),
+                valencies_structure,
+            );
             status += self.validate_state_evolution(
                 node_id,
                 node.transition_type(),
@@ -306,21 +358,26 @@ mod _validation {
                 .collect::<BTreeSet<_>>()
                 .difference(&metadata_structure.keys().collect())
                 .for_each(|field_id| {
-                    status.add_failure(validation::Failure::SchemaUnknownFieldType(
-                        node_id, **field_id,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaUnknownFieldType(
+                            node_id, **field_id,
+                        ),
+                    );
                 });
 
             for (field_type_id, occ) in metadata_structure {
-                let set = metadata.get(field_type_id).cloned().unwrap_or(bset!());
+                let set =
+                    metadata.get(field_type_id).cloned().unwrap_or(bset!());
 
                 // Checking number of field occurrences
                 if let Err(err) = occ.check(set.len() as u128) {
-                    status.add_failure(validation::Failure::SchemaMetaOccurencesError(
-                        node_id,
-                        *field_type_id,
-                        err,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaMetaOccurencesError(
+                            node_id,
+                            *field_type_id,
+                            err,
+                        ),
+                    );
                 }
 
                 let field = self.field_types.get(field_type_id)
@@ -346,10 +403,12 @@ mod _validation {
                 .collect::<BTreeSet<_>>()
                 .difference(&assignments_structure.keys().collect())
                 .for_each(|assignment_type_id| {
-                    status.add_failure(validation::Failure::SchemaUnknownAssignmentType(
-                        node_id,
-                        **assignment_type_id,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaUnknownAssignmentType(
+                            node_id,
+                            **assignment_type_id,
+                        ),
+                    );
                 });
 
             for (assignment_type_id, occ) in assignments_structure {
@@ -360,11 +419,13 @@ mod _validation {
 
                 // Checking number of ancestor's assignment occurrences
                 if let Err(err) = occ.check(len as u128) {
-                    status.add_failure(validation::Failure::SchemaAncestorsOccurencesError(
-                        node_id,
-                        *assignment_type_id,
-                        err,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaAncestorsOccurencesError(
+                            node_id,
+                            *assignment_type_id,
+                            err,
+                        ),
+                    );
                 }
             }
 
@@ -384,10 +445,12 @@ mod _validation {
                 .collect::<BTreeSet<_>>()
                 .difference(&assignments_structure.keys().collect())
                 .for_each(|assignment_type_id| {
-                    status.add_failure(validation::Failure::SchemaUnknownAssignmentType(
-                        node_id,
-                        **assignment_type_id,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaUnknownAssignmentType(
+                            node_id,
+                            **assignment_type_id,
+                        ),
+                    );
                 });
 
             for (assignment_type_id, occ) in assignments_structure {
@@ -398,11 +461,13 @@ mod _validation {
 
                 // Checking number of assignment occurrences
                 if let Err(err) = occ.check(len as u128) {
-                    status.add_failure(validation::Failure::SchemaSealsOccurencesError(
-                        node_id,
-                        *assignment_type_id,
-                        err,
-                    ));
+                    status.add_failure(
+                        validation::Failure::SchemaSealsOccurencesError(
+                            node_id,
+                            *assignment_type_id,
+                            err,
+                        ),
+                    );
                 }
 
                 let assignment = &self
@@ -415,17 +480,31 @@ mod _validation {
                     None => {}
                     Some(AssignmentsVariant::Declarative(set)) => {
                         set.into_iter().for_each(|data| {
-                            status += assignment.validate(&node_id, *assignment_type_id, data)
+                            status += assignment.validate(
+                                &node_id,
+                                *assignment_type_id,
+                                data,
+                            )
                         })
                     }
                     Some(AssignmentsVariant::DiscreteFiniteField(set)) => {
                         set.into_iter().for_each(|data| {
-                            status += assignment.validate(&node_id, *assignment_type_id, data)
+                            status += assignment.validate(
+                                &node_id,
+                                *assignment_type_id,
+                                data,
+                            )
                         })
                     }
-                    Some(AssignmentsVariant::CustomData(set)) => set.into_iter().for_each(|data| {
-                        status += assignment.validate(&node_id, *assignment_type_id, data)
-                    }),
+                    Some(AssignmentsVariant::CustomData(set)) => {
+                        set.into_iter().for_each(|data| {
+                            status += assignment.validate(
+                                &node_id,
+                                *assignment_type_id,
+                                data,
+                            )
+                        })
+                    }
                 };
             }
 
@@ -440,14 +519,16 @@ mod _validation {
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
-            valencies
-                .difference(&valencies_structure)
-                .for_each(|valencies_id| {
-                    status.add_failure(validation::Failure::SchemaUnknownValenciesType(
-                        node_id,
-                        *valencies_id,
-                    ));
-                });
+            valencies.difference(&valencies_structure).for_each(
+                |valencies_id| {
+                    status.add_failure(
+                        validation::Failure::SchemaUnknownValenciesType(
+                            node_id,
+                            *valencies_id,
+                        ),
+                    );
+                },
+            );
 
             status
         }
@@ -471,7 +552,8 @@ mod _validation {
                     .expect("We already passed assignment type validation, so can be sure that the type exists")
                     .abi;
 
-                // If the procedure is not defined, it means no validation should be performed
+                // If the procedure is not defined, it means no validation
+                // should be performed
                 if let Some(procedure) = abi.get(&AssignmentAction::Validate) {
                     match procedure {
                         script::Procedure::Standard(proc) => {
@@ -528,7 +610,9 @@ mod _validation {
         for (id, details) in ancestors {
             let node = match nodes.get(id) {
                 None => {
-                    status.add_failure(validation::Failure::TransitionAbsent(*id));
+                    status.add_failure(validation::Failure::TransitionAbsent(
+                        *id,
+                    ));
                     continue;
                 }
                 Some(node) => node,
@@ -556,7 +640,9 @@ mod _validation {
                         AssignmentsVariant::Declarative(set) => {
                             match ancestors_assignments
                                 .entry(*type_id)
-                                .or_insert(AssignmentsVariant::Declarative(bset! {}))
+                                .or_insert(AssignmentsVariant::Declarative(
+                                    bset! {},
+                                ))
                                 .declarative_mut()
                             {
                                 Some(base) => {
@@ -574,7 +660,11 @@ mod _validation {
                         AssignmentsVariant::DiscreteFiniteField(set) => {
                             match ancestors_assignments
                                 .entry(*type_id)
-                                .or_insert(AssignmentsVariant::DiscreteFiniteField(bset! {}))
+                                .or_insert(
+                                    AssignmentsVariant::DiscreteFiniteField(
+                                        bset! {},
+                                    ),
+                                )
                                 .field_mut()
                             {
                                 Some(base) => {
@@ -592,7 +682,9 @@ mod _validation {
                         AssignmentsVariant::CustomData(set) => {
                             match ancestors_assignments
                                 .entry(*type_id)
-                                .or_insert(AssignmentsVariant::CustomData(bset! {}))
+                                .or_insert(AssignmentsVariant::CustomData(
+                                    bset! {},
+                                ))
                                 .data_mut()
                             {
                                 Some(base) => {
@@ -768,28 +860,35 @@ pub(crate) mod test {
         let schema = schema();
         let encoded = strict_encode(&schema).unwrap();
         let encoded_standard: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 10, 0, 0, 0, 4, 16, 0, 1, 0, 4, 0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0,
-            0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0,
-            0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255,
-            255, 255, 255, 255, 255, 255, 255, 6, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0,
-            0, 0, 0, 7, 0, 5, 255, 255, 8, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255,
-            255, 255, 255, 255, 16, 0, 32, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0, 0, 0,
-            0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0, 0, 255, 1, 2, 0, 0, 1, 0,
-            0, 255, 3, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0,
-            0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0,
-            0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-            8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255,
-            255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-            1, 0, 0, 0, 2, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 255, 255, 255, 0, 0, 0, 0, 0,
-            0, 1, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0,
-            0, 1, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255,
-            255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 255, 255, 255, 0, 0,
-            0, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0,
-            7, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2,
-            0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0,
-            254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 4, 16, 0, 1, 0, 4,
+            0, 1, 2, 0, 4, 0, 4, 3, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255,
+            255, 255, 255, 255, 255, 255, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0,
+            255, 255, 255, 255, 255, 255, 255, 255, 5, 0, 0, 8, 0, 0, 0, 0, 0,
+            0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 6, 0, 0, 8, 0, 0,
+            0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0, 0, 7, 0, 5, 255, 255, 8, 0,
+            0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
+            255, 16, 0, 32, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0,
+            0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0,
+            0, 255, 1, 2, 0, 0, 1, 0, 0, 255, 3, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0,
+            2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1,
+            0, 0, 0, 2, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 255, 255,
+            255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 4, 0, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0,
+            2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+            0, 1, 0, 1, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 254,
+            255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 7, 0,
+            254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 255, 255, 255, 0, 0,
+            0, 0, 0, 0, 2, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 254,
+            255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
         ];
         assert_eq!(encoded, encoded_standard);
 

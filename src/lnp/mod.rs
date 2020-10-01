@@ -20,10 +20,12 @@ mod session;
 pub mod transport;
 
 pub use presentation::message::{Type, TypedEnum, Unmarshaller};
-pub use presentation::{tlv, Message, UnknownTypeError, Unmarshall, UnmarshallFn};
+pub use presentation::{
+    tlv, Message, UnknownTypeError, Unmarshall, UnmarshallFn,
+};
 pub use session::{
-    ConnectionError, Inbound, LocalNode, NoEncryption, NodeAddr, NodeLocator, Outbound, Session,
-    SessionTrait,
+    ConnectionError, Inbound, LocalNode, NoEncryption, NodeAddr, NodeLocator,
+    Outbound, Session, SessionTrait,
 };
 pub use transport::{tcp, tor, websocket, zmq};
 

@@ -26,7 +26,10 @@ pub trait Encrypt {
 pub trait Decrypt {
     type Error: ::std::error::Error;
 
-    fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error>;
+    fn decrypt(
+        &mut self,
+        buffer: impl Borrow<[u8]>,
+    ) -> Result<Vec<u8>, Self::Error>;
 }
 
 pub trait Transcode: Bipolar + Encrypt + Decrypt {
@@ -34,7 +37,9 @@ pub trait Transcode: Bipolar + Encrypt + Decrypt {
     type Decryptor: Decrypt;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
 #[display(Debug)]
 pub struct DecryptionError;
 
@@ -47,7 +52,10 @@ impl Encrypt for Encryptor {
 impl Decrypt for Decryptor {
     type Error = DecryptionError;
 
-    fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error> {
+    fn decrypt(
+        &mut self,
+        buffer: impl Borrow<[u8]>,
+    ) -> Result<Vec<u8>, Self::Error> {
         match self.decrypt_next(buffer.borrow()) {
             Ok((Some(data), _)) => Ok(data),
             _ => Err(DecryptionError),
@@ -64,7 +72,10 @@ impl Encrypt for Transcoder {
 impl Decrypt for Transcoder {
     type Error = DecryptionError;
 
-    fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error> {
+    fn decrypt(
+        &mut self,
+        buffer: impl Borrow<[u8]>,
+    ) -> Result<Vec<u8>, Self::Error> {
         match self.decryptor.decrypt_next(buffer.borrow()) {
             Ok((Some(data), _)) => Ok(data),
             _ => Err(DecryptionError),
@@ -87,7 +98,10 @@ impl Bipolar for Transcoder {
         Self {
             decryptor,
             encryptor,
-            their_node_id: bitcoin::secp256k1::PublicKey::from_slice(&[0u8; 33]).unwrap(),
+            their_node_id: bitcoin::secp256k1::PublicKey::from_slice(
+                &[0u8; 33],
+            )
+            .unwrap(),
         }
     }
 
@@ -109,7 +123,10 @@ impl Encrypt for NoEncryption {
 
 impl Decrypt for NoEncryption {
     type Error = !;
-    fn decrypt(&mut self, buffer: impl Borrow<[u8]>) -> Result<Vec<u8>, Self::Error> {
+    fn decrypt(
+        &mut self,
+        buffer: impl Borrow<[u8]>,
+    ) -> Result<Vec<u8>, Self::Error> {
         Ok(buffer.borrow().to_vec())
     }
 }

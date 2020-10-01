@@ -19,13 +19,13 @@ use ::std::path::PathBuf;
 #[display(Debug)]
 #[non_exhaustive]
 pub enum RemoteAddr {
-    /// Direct access to LNP API methods without any serialization/deserialization
-    /// of data structures
+    /// Direct access to LNP API methods without any
+    /// serialization/deserialization of data structures
     Embedded,
 
-    /// Local node operating as a separate **thread**, connected with unencrypted
-    /// ZMQ `inproc` socket, utilizing POSIX memory sharing (and not POSIX
-    /// sockets), i.e. mutexes, semaphores etc.
+    /// Local node operating as a separate **thread**, connected with
+    /// unencrypted ZMQ `inproc` socket, utilizing POSIX memory sharing
+    /// (and not POSIX sockets), i.e. mutexes, semaphores etc.
     Inproc(String),
 
     /// Local node operating as a separate **process**, connected with  
@@ -36,13 +36,14 @@ pub enum RemoteAddr {
     /// unencrypted POSIX file I/O (like in c-lightning)
     File(PathBuf),
 
-    /// Standard TCP socket connection **required** to use end-to-end encryption,
-    /// that may be served  either over plain IP, IPSec or Tor v2 and v3
+    /// Standard TCP socket connection **required** to use end-to-end
+    /// encryption, that may be served  either over plain IP, IPSec or Tor
+    /// v2 and v3
     Tcp(InetSocketAddr),
 
-    /// Standard UDP socket connection **required** to use end-to-end encryption,
-    /// that may be served  either over plain IP, IPSec or utilize UDP hole
-    /// punching
+    /// Standard UDP socket connection **required** to use end-to-end
+    /// encryption, that may be served  either over plain IP, IPSec or
+    /// utilize UDP hole punching
     Udp(InetSocketAddr),
 
     /// SMTP connection: asynchronous end-to-end-over SMTP information transfer

@@ -83,7 +83,8 @@ pub fn encrypt(
     // For a zero-length messages we encrypt the hash of the unblinding key, so
     // the message content (empty) still can't be guessed
     if buf.is_empty() {
-        let unblinding_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, blinding_key);
+        let unblinding_key =
+            secp256k1::PublicKey::from_secret_key(&SECP256K1, blinding_key);
         let hash = sha256::Hash::hash(&unblinding_key.serialize());
         buf.extend_from_slice(&hash[..30])
     }
@@ -95,7 +96,8 @@ pub fn encrypt(
     while buf.len() > 0 {
         let chunk30 = &buf[..30];
         let mut chunk33 = [0u8; 33];
-        // Deterministically select one of two possible keys for a given x-point:
+        // Deterministically select one of two possible keys for a given
+        // x-point:
         chunk33[1..31].copy_from_slice(&chunk30);
         acc.push(loop {
             chunk33[31..33].copy_from_slice(&hash[..2]);
@@ -158,7 +160,9 @@ pub fn decrypt(
 
         // If the original message was empty, it will be represented by an
         // encrypted hash of the unblinding key:
-        if orig_len != 32 || chunk30 != &sha256::Hash::hash(&unblinding_key.serialize())[..30] {
+        if orig_len != 32
+            || chunk30 != &sha256::Hash::hash(&unblinding_key.serialize())[..30]
+        {
             acc.push(chunk30.to_vec());
             encrypted = &encrypted[32..];
         }
@@ -198,15 +202,19 @@ mod test {
         let mut entropy = [0u8; 32];
 
         thread_rng().fill_bytes(&mut entropy);
-        let mut decryption_key = secp256k1::SecretKey::from_slice(&entropy).unwrap();
-        let encryption_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &decryption_key);
+        let mut decryption_key =
+            secp256k1::SecretKey::from_slice(&entropy).unwrap();
+        let encryption_key =
+            secp256k1::PublicKey::from_secret_key(&SECP256K1, &decryption_key);
         // Checking that we have a random key
         assert_ne!(decryption_key[..], secp256k1::key::ONE_KEY[..]);
 
         thread_rng().fill_bytes(&mut entropy);
-        let mut blinding_key = secp256k1::SecretKey::from_slice(&entropy).unwrap();
+        let mut blinding_key =
+            secp256k1::SecretKey::from_slice(&entropy).unwrap();
         let blinding_key_copy = blinding_key.clone();
-        let unblinding_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &blinding_key);
+        let unblinding_key =
+            secp256k1::PublicKey::from_secret_key(&SECP256K1, &blinding_key);
         // Checking that we have a random key
         assert_ne!(blinding_key[..], secp256k1::key::ONE_KEY[..]);
         assert_ne!(blinding_key[..], decryption_key[..]);
@@ -218,7 +226,8 @@ mod test {
             uk.add_exp_assign(&SECP256K1, &decryption_key[..])
         );
 
-        let encrypted = encrypt(source, encryption_key, &mut blinding_key).unwrap();
+        let encrypted =
+            encrypt(source, encryption_key, &mut blinding_key).unwrap();
         if len > 30 {
             // Checking that we have wiped out our blinding key
             assert_ne!(source[..], encrypted[..len]);
@@ -227,7 +236,8 @@ mod test {
         let no_chunks = if len == 0 { 1 } else { (len - 1) / 30 + 1 };
         assert_eq!(encrypted.len(), no_chunks * 32);
 
-        let decrypted = decrypt(&encrypted, &mut decryption_key, unblinding_key).unwrap();
+        let decrypted =
+            decrypt(&encrypted, &mut decryption_key, unblinding_key).unwrap();
         let result = &decrypted[..];
         // Checking that we have wiped out our decryption key
         assert_eq!(decryption_key[..], secp256k1::key::ONE_KEY[..]);
@@ -274,9 +284,11 @@ mod test {
 
     #[test]
     fn test_zero_length() {
-        let (encrypted, _, encryption_key, mut blinding_key, unblinding_key) = run_test_bin(b"");
+        let (encrypted, _, encryption_key, mut blinding_key, unblinding_key) =
+            run_test_bin(b"");
         let hash = sha256::Hash::hash(&unblinding_key.serialize());
-        let encrypted_hash = encrypt(&hash[..30], encryption_key, &mut blinding_key).unwrap();
+        let encrypted_hash =
+            encrypt(&hash[..30], encryption_key, &mut blinding_key).unwrap();
         assert_eq!(encrypted, encrypted_hash);
     }
 
@@ -309,11 +321,14 @@ mod test {
     fn test_forged_message_attack() {
         let mut entropy = [0u8; 32];
         thread_rng().fill_bytes(&mut entropy);
-        let decryption_key = secp256k1::SecretKey::from_slice(&entropy).unwrap();
-        let encryption_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &decryption_key);
+        let decryption_key =
+            secp256k1::SecretKey::from_slice(&entropy).unwrap();
+        let encryption_key =
+            secp256k1::PublicKey::from_secret_key(&SECP256K1, &decryption_key);
 
         let mut blinding_key = secp256k1::key::ONE_KEY;
-        encrypt(&decryption_key[1..], encryption_key, &mut blinding_key).unwrap();
+        encrypt(&decryption_key[1..], encryption_key, &mut blinding_key)
+            .unwrap();
     }
 
     #[test]
@@ -322,8 +337,10 @@ mod test {
     fn test_forged_blinding_key() {
         let mut entropy = [0u8; 32];
         thread_rng().fill_bytes(&mut entropy);
-        let decryption_key = secp256k1::SecretKey::from_slice(&entropy).unwrap();
-        let encryption_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &decryption_key);
+        let decryption_key =
+            secp256k1::SecretKey::from_slice(&entropy).unwrap();
+        let encryption_key =
+            secp256k1::PublicKey::from_secret_key(&SECP256K1, &decryption_key);
 
         let mut blinding_key = decryption_key.clone();
         blinding_key.negate_assign();

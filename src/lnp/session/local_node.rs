@@ -38,7 +38,10 @@ impl LocalNode {
         }
     }
 
-    pub fn from_keys(node_key: secp256k1::SecretKey, ephemeral_key: secp256k1::SecretKey) -> Self {
+    pub fn from_keys(
+        node_key: secp256k1::SecretKey,
+        ephemeral_key: secp256k1::SecretKey,
+    ) -> Self {
         Self {
             private_key: node_key,
             ephemeral_private_key: ephemeral_key,

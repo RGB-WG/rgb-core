@@ -14,7 +14,9 @@
 //use bitcoin::Transaction;
 //use std::collections::HashSet;
 
-use crate::rgb::{Anchor, Consignment, ContractId, Node, SealDefinition, Transition};
+use crate::rgb::{
+    Anchor, Consignment, ContractId, Node, SealDefinition, Transition,
+};
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
 #[display(Debug)]
@@ -29,7 +31,10 @@ pub trait Stash {
         endpoints: Vec<SealDefinition>,
     ) -> Result<Consignment, Error>;
 
-    fn merge(&mut self, consignment: Consignment) -> Result<Vec<Box<dyn Node>>, Error>;
+    fn merge(
+        &mut self,
+        consignment: Consignment,
+    ) -> Result<Vec<Box<dyn Node>>, Error>;
 }
 
 /*

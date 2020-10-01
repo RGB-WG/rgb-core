@@ -59,7 +59,10 @@ impl UnsignedInteger for u64 {
     }
 }
 
-pub trait Number: Clone + Copy + PartialEq + PartialOrd + std::fmt::Debug {}
+pub trait Number:
+    Clone + Copy + PartialEq + PartialOrd + std::fmt::Debug
+{
+}
 
 impl Number for u8 {}
 impl Number for u16 {}
@@ -79,7 +82,16 @@ impl Number for f64 {}
 /// nevertheless RGB schema standard allows up to 256-byte numeric types.
 /// Support for larger types can be added later.
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ToPrimitive,
+    FromPrimitive,
 )]
 #[display(Debug)]
 #[repr(u8)]
@@ -89,10 +101,10 @@ pub enum Bits {
     Bit16 = 2,
     Bit32 = 4,
     Bit64 = 8,
-    // TODO: Add support later once bitcoin library will start supporting
-    //       consensus-encoding of the native rust `u128` type
-    //Bit128 = 16,
-    //Bit256 = 32,
+    /* TODO: Add support later once bitcoin library will start supporting
+     *       consensus-encoding of the native rust `u128` type
+     *Bit128 = 16,
+     *Bit256 = 32, */
 }
 
 impl Bits {
@@ -147,8 +159,11 @@ where
         match self {
             Occurences::Once => I::from(1u8),
             Occurences::NoneOrOnce => I::from(1u8),
-            Occurences::OnceOrUpTo(None) | Occurences::NoneOrUpTo(None) => I::MAX,
-            Occurences::OnceOrUpTo(Some(max)) | Occurences::NoneOrUpTo(Some(max)) => *max,
+            Occurences::OnceOrUpTo(None) | Occurences::NoneOrUpTo(None) => {
+                I::MAX
+            }
+            Occurences::OnceOrUpTo(Some(max))
+            | Occurences::NoneOrUpTo(Some(max)) => *max,
         }
     }
 
@@ -171,7 +186,11 @@ where
             Occurences::Once if count == I::from(1u8) => Ok(()),
             Occurences::NoneOrOnce if count <= I::from(1u8) => Ok(()),
             Occurences::OnceOrUpTo(None) if count > I::from(0u8) => Ok(()),
-            Occurences::OnceOrUpTo(Some(max)) if count > I::from(0u8) && count <= *max => Ok(()),
+            Occurences::OnceOrUpTo(Some(max))
+                if count > I::from(0u8) && count <= *max =>
+            {
+                Ok(())
+            }
             Occurences::NoneOrUpTo(None) => Ok(()),
             Occurences::NoneOrUpTo(Some(max)) if count <= *max => Ok(()),
             _ => Err(OccurrencesError {
@@ -192,7 +211,16 @@ pub struct OccurrencesError {
 }
 
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ToPrimitive,
+    FromPrimitive,
 )]
 #[display(Debug)]
 #[repr(u8)]
@@ -205,16 +233,25 @@ pub enum DigestAlgorithm {
     Sha512 = 0b_0001_0010_u8,
     Bitcoin160 = 0b_0100_1000_u8,
     Bitcoin256 = 0b_0101_0001_u8,
-    // Each tagged hash is a type on it's own, so the following umbrella type
-    // was removed; a plain sha256 type must be used instead
-    //Tagged256 = 0b_1100_0000_u8,
+    /* Each tagged hash is a type on it's own, so the following umbrella
+     * type was removed; a plain sha256 type must be used instead
+     *Tagged256 = 0b_1100_0000_u8, */
 }
 
 pub mod elliptic_curve {
     use num_derive::{FromPrimitive, ToPrimitive};
 
     #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+        Clone,
+        Copy,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Debug,
+        Display,
+        ToPrimitive,
+        FromPrimitive,
     )]
     #[display(Debug)]
     #[repr(u8)]
@@ -225,7 +262,16 @@ pub mod elliptic_curve {
     }
 
     #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+        Clone,
+        Copy,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Debug,
+        Display,
+        ToPrimitive,
+        FromPrimitive,
     )]
     #[display(Debug)]
     #[repr(u8)]
@@ -237,7 +283,16 @@ pub mod elliptic_curve {
     }
 
     #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+        Clone,
+        Copy,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Debug,
+        Display,
+        ToPrimitive,
+        FromPrimitive,
     )]
     #[display(Debug)]
     #[repr(u8)]
@@ -326,13 +381,17 @@ mod test {
 
     static NONEORONCE: [u8; 9] = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
 
-    static NONEUPTO_U8: [u8; 9] = [0xfe, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+    static NONEUPTO_U8: [u8; 9] =
+        [0xfe, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
 
-    static NONEUPTO_U16: [u8; 9] = [0xfe, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+    static NONEUPTO_U16: [u8; 9] =
+        [0xfe, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
 
-    static NONEUPTO_U32: [u8; 9] = [0xfe, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0];
+    static NONEUPTO_U32: [u8; 9] =
+        [0xfe, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0];
 
-    static NONEUPTO_U64: [u8; 9] = [0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+    static NONEUPTO_U64: [u8; 9] =
+        [0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
 
     #[test]
     fn test_once_check_count() {
@@ -380,7 +439,9 @@ mod test {
         occurence.check(u32::MAX).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 1, max: 4294967295, found: 0 }")]
+    #[should_panic(
+        expected = "OccurrencesError { min: 1, max: 4294967295, found: 0 }"
+    )]
     fn test_once_or_up_to_none_fail_zero() {
         let occurence: Occurences<u32> = Occurences::OnceOrUpTo(None);
         occurence.check(0u32).unwrap();
@@ -391,7 +452,9 @@ mod test {
         occurence.check(42u32).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 1, max: 42, found: 43 }")]
+    #[should_panic(
+        expected = "OccurrencesError { min: 1, max: 42, found: 43 }"
+    )]
     fn test_once_or_up_to_42_large() {
         let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
         occurence.check(43u32).unwrap();
@@ -424,7 +487,9 @@ mod test {
         occurence.check(42u32).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 0, max: 42, found: 43 }")]
+    #[should_panic(
+        expected = "OccurrencesError { min: 0, max: 42, found: 43 }"
+    )]
     fn test_none_or_up_to_42_large() {
         let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
         occurence.check(43u32).unwrap();
@@ -463,19 +528,26 @@ mod test {
         once_upto_u32[0] = 0xFF;
         once_upto_u64[0] = 0xFF;
 
-        let dec1: Occurences<u8> = Occurences::strict_decode(&once_upto_u8[..]).unwrap();
-        let dec2: Occurences<u16> = Occurences::strict_decode(&once_upto_u16[..]).unwrap();
-        let dec3: Occurences<u32> = Occurences::strict_decode(&once_upto_u32[..]).unwrap();
-        let dec4: Occurences<u64> = Occurences::strict_decode(&once_upto_u64[..]).unwrap();
+        let dec1: Occurences<u8> =
+            Occurences::strict_decode(&once_upto_u8[..]).unwrap();
+        let dec2: Occurences<u16> =
+            Occurences::strict_decode(&once_upto_u16[..]).unwrap();
+        let dec3: Occurences<u32> =
+            Occurences::strict_decode(&once_upto_u32[..]).unwrap();
+        let dec4: Occurences<u64> =
+            Occurences::strict_decode(&once_upto_u64[..]).unwrap();
 
         assert_eq!(dec1, Occurences::OnceOrUpTo(None));
         assert_eq!(dec2, Occurences::OnceOrUpTo(None));
         assert_eq!(dec3, Occurences::OnceOrUpTo(None));
         assert_eq!(dec4, Occurences::OnceOrUpTo(None));
 
-        let wc1: Occurences<u64> = Occurences::strict_decode(&once_upto_u8[..]).unwrap();
-        let wc2: Occurences<u64> = Occurences::strict_decode(&once_upto_u16[..]).unwrap();
-        let wc3: Occurences<u64> = Occurences::strict_decode(&once_upto_u32[..]).unwrap();
+        let wc1: Occurences<u64> =
+            Occurences::strict_decode(&once_upto_u8[..]).unwrap();
+        let wc2: Occurences<u64> =
+            Occurences::strict_decode(&once_upto_u16[..]).unwrap();
+        let wc3: Occurences<u64> =
+            Occurences::strict_decode(&once_upto_u32[..]).unwrap();
 
         assert_eq!(wc1, Occurences::OnceOrUpTo(Some(u8::MAX as u64)));
         assert_eq!(wc2, Occurences::OnceOrUpTo(Some(u16::MAX as u64)));
@@ -483,25 +555,33 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "New occurrence types can't appear w/o this library to be aware of")]
+    #[should_panic(
+        expected = "New occurrence types can't appear w/o this library to be aware of"
+    )]
     fn test_occurrence_panic_1() {
         test_garbage!((NONEUPTO_U8, Occurences<u8>));
     }
 
     #[test]
-    #[should_panic(expected = "New occurrence types can't appear w/o this library to be aware of")]
+    #[should_panic(
+        expected = "New occurrence types can't appear w/o this library to be aware of"
+    )]
     fn test_occurrence_panic_2() {
         test_garbage!((NONEUPTO_U16, Occurences<u16>));
     }
 
     #[test]
-    #[should_panic(expected = "New occurrence types can't appear w/o this library to be aware of")]
+    #[should_panic(
+        expected = "New occurrence types can't appear w/o this library to be aware of"
+    )]
     fn test_occurrence_panic_3() {
         test_garbage!((NONEUPTO_U32, Occurences<u32>));
     }
 
     #[test]
-    #[should_panic(expected = "New occurrence types can't appear w/o this library to be aware of")]
+    #[should_panic(
+        expected = "New occurrence types can't appear w/o this library to be aware of"
+    )]
     fn test_occurrence_panic_4() {
         test_garbage!((NONEUPTO_U64, Occurences<u64>));
     }
@@ -631,9 +711,15 @@ mod test {
             (ed25519_byte, elliptic_curve::SignatureAlgorithm)
         );
 
-        let ecdsa = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x00][..]).unwrap();
-        let schnorr = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x01][..]).unwrap();
-        let ed25519 = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x02][..]).unwrap();
+        let ecdsa =
+            elliptic_curve::SignatureAlgorithm::strict_decode(&[0x00][..])
+                .unwrap();
+        let schnorr =
+            elliptic_curve::SignatureAlgorithm::strict_decode(&[0x01][..])
+                .unwrap();
+        let ed25519 =
+            elliptic_curve::SignatureAlgorithm::strict_decode(&[0x02][..])
+                .unwrap();
 
         assert_eq!(ecdsa, elliptic_curve::SignatureAlgorithm::Ecdsa);
         assert_eq!(schnorr, elliptic_curve::SignatureAlgorithm::Schnorr);
@@ -659,17 +745,20 @@ mod test {
         );
 
         assert_eq!(
-            elliptic_curve::PointSerialization::strict_decode(&[0x00][..]).unwrap(),
+            elliptic_curve::PointSerialization::strict_decode(&[0x00][..])
+                .unwrap(),
             elliptic_curve::PointSerialization::Uncompressed
         );
 
         assert_eq!(
-            elliptic_curve::PointSerialization::strict_decode(&[0x01][..]).unwrap(),
+            elliptic_curve::PointSerialization::strict_decode(&[0x01][..])
+                .unwrap(),
             elliptic_curve::PointSerialization::Compressed
         );
 
         assert_eq!(
-            elliptic_curve::PointSerialization::strict_decode(&[0x02][..]).unwrap(),
+            elliptic_curve::PointSerialization::strict_decode(&[0x02][..])
+                .unwrap(),
             elliptic_curve::PointSerialization::SchnorrBip
         );
     }

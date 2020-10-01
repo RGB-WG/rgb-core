@@ -32,7 +32,9 @@ pub trait Container: Sized {
     fn into_proof(self) -> Proof;
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+)]
 #[strict_crate(crate)]
 #[display(Debug)]
 pub struct Proof {
@@ -63,7 +65,17 @@ pub(super) mod strict_encoding {
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::io;
 
-    #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, FromPrimitive, ToPrimitive, Debug)]
+    #[derive(
+        Copy,
+        Clone,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        FromPrimitive,
+        ToPrimitive,
+        Debug,
+    )]
     #[repr(u8)]
     pub(in super::super) enum EncodingTag {
         None = 0,
@@ -73,24 +85,35 @@ pub(super) mod strict_encoding {
     impl_enum_strict_encoding!(EncodingTag);
 
     impl StrictEncode for ScriptInfo {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, strict_encoding::Error> {
             Ok(match self {
                 ScriptInfo::None => EncodingTag::None.strict_encode(&mut e)?,
-                ScriptInfo::LockScript(val) => strict_encode_list!(e; EncodingTag::LockScript, val),
-                ScriptInfo::Taproot(val) => strict_encode_list!(e; EncodingTag::Taproot, val),
+                ScriptInfo::LockScript(val) => {
+                    strict_encode_list!(e; EncodingTag::LockScript, val)
+                }
+                ScriptInfo::Taproot(val) => {
+                    strict_encode_list!(e; EncodingTag::Taproot, val)
+                }
             })
         }
     }
 
     impl StrictDecode for ScriptInfo {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
+        fn strict_decode<D: io::Read>(
+            mut d: D,
+        ) -> Result<Self, strict_encoding::Error> {
             let format = EncodingTag::strict_decode(&mut d)?;
             Ok(match format {
                 EncodingTag::None => ScriptInfo::None,
                 EncodingTag::LockScript => {
                     ScriptInfo::LockScript(LockScript::strict_decode(&mut d)?)
                 }
-                EncodingTag::Taproot => ScriptInfo::Taproot(sha256::Hash::strict_decode(&mut d)?),
+                EncodingTag::Taproot => {
+                    ScriptInfo::Taproot(sha256::Hash::strict_decode(&mut d)?)
+                }
             })
         }
     }

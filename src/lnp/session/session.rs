@@ -16,8 +16,12 @@ use core::borrow::Borrow;
 
 use super::{Decrypt, Encrypt, NodeLocator, Transcode};
 use crate::lnp::session::NoEncryption;
-use crate::lnp::transport::zmq::{ApiType as ZmqType, Connection, SocketLocator};
-use crate::lnp::transport::{self, Bidirect, Error, Input, Output, Read, Write};
+use crate::lnp::transport::zmq::{
+    ApiType as ZmqType, Connection, SocketLocator,
+};
+use crate::lnp::transport::{
+    self, Bidirect, Error, Input, Output, Read, Write,
+};
 use crate::Bipolar;
 
 pub trait SessionTrait: Bipolar + AsAny {}
@@ -105,7 +109,10 @@ where
         Ok(self.transcoder.decrypt(reader.read()?)?)
     }
 
-    pub fn send_raw_message(&mut self, raw: impl Borrow<[u8]>) -> Result<usize, Error> {
+    pub fn send_raw_message(
+        &mut self,
+        raw: impl Borrow<[u8]>,
+    ) -> Result<usize, Error> {
         let writer = self.stream.writer();
         Ok(writer.write(self.transcoder.encrypt(raw))?)
     }

@@ -113,11 +113,14 @@ where
         let pubkey_sum = keyset_container
             .keyset
             .iter()
-            .try_fold(keyset_container.pubkey, |sum, pubkey| sum.combine(pubkey))?;
+            .try_fold(keyset_container.pubkey, |sum, pubkey| {
+                sum.combine(pubkey)
+            })?;
 
         // ! [CONSENSUS-CRITICAL]:
         // ! [STANDARD-CRITICAL]: HMAC engine is based on sha256 hash
-        let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&pubkey_sum.serialize());
+        let mut hmac_engine =
+            HmacEngine::<sha256::Hash>::new(&pubkey_sum.serialize());
 
         // ! [CONSENSUS-CRITICAL]:
         // ! [STANDARD-CRITICAL]: Hash process started with consuming first

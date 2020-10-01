@@ -110,8 +110,11 @@ impl Connection {
 
         #[cfg(feature = "log")]
         trace!("Starting handshake procedure with {}", node);
-        let mut handshake =
-            PeerHandshake::new_outbound(private_key, &node.node_id, ephemeral_private_key);
+        let mut handshake = PeerHandshake::new_outbound(
+            private_key,
+            &node.node_id,
+            ephemeral_private_key,
+        );
 
         let mut step: usize = 0;
         let mut input: &[u8] = &[];
@@ -137,10 +140,13 @@ impl Connection {
                 stream.write_all(&act)?;
             } else {
                 #[cfg(feature = "log")]
-                error!("`PeerHandshake.process_act` returned non-standard result");
+                error!(
+                    "`PeerHandshake.process_act` returned non-standard result"
+                );
 
                 Err(ConnectionError::FailedHandshake(
-                    "PeerHandshake.process_act returned non-standard result".to_string(),
+                    "PeerHandshake.process_act returned non-standard result"
+                        .to_string(),
                 ))?
             }
 

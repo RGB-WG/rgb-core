@@ -26,7 +26,9 @@ pub use error::Error;
 pub use keyset::{KeysetContainer, LNPBP2Commitment};
 pub use lockscript::{LockscriptCommitment, LockscriptContainer};
 pub use pubkey::{LNPBP1Commitment, LNPBP1Container};
-pub use scriptpubkey::{ScriptPubkeyCommitment, ScriptPubkeyComposition, ScriptPubkeyContainer};
+pub use scriptpubkey::{
+    ScriptPubkeyCommitment, ScriptPubkeyComposition, ScriptPubkeyContainer,
+};
 pub use taproot::{TaprootCommitment, TaprootContainer};
 pub use tx::{compute_lnpbp3_vout, TxCommitment, TxContainer, TxSupplement};
 pub use txout::{TxoutCommitment, TxoutContainer};

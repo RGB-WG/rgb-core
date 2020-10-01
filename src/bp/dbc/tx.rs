@@ -16,7 +16,8 @@ use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::{secp256k1, Transaction, TxOut};
 
 use super::{
-    Container, Error, Proof, ScriptInfo, ScriptPubkeyComposition, TxoutCommitment, TxoutContainer,
+    Container, Error, Proof, ScriptInfo, ScriptPubkeyComposition,
+    TxoutCommitment, TxoutContainer,
 };
 use crate::commit_verify::EmbedCommitVerify;
 
@@ -31,7 +32,10 @@ pub struct TxContainer {
     pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
-pub fn compute_lnpbp3_vout(tx: &Transaction, supplement: &TxSupplement) -> usize {
+pub fn compute_lnpbp3_vout(
+    tx: &Transaction,
+    supplement: &TxSupplement,
+) -> usize {
     compute_vout(supplement.fee, supplement.protocol_factor, tx)
 }
 
@@ -91,11 +95,16 @@ impl Container for TxContainer {
         supplement: &Self::Supplement,
         host: &Self::Host,
     ) -> Result<Self, Error> {
-        let txout = &host.output[compute_vout(supplement.fee, supplement.protocol_factor, host)];
+        let txout = &host.output
+            [compute_vout(supplement.fee, supplement.protocol_factor, host)];
         Ok(Self {
             protocol_factor: supplement.protocol_factor,
             fee: supplement.fee,
-            txout_container: TxoutContainer::reconstruct(proof, &supplement.tag, txout)?,
+            txout_container: TxoutContainer::reconstruct(
+                proof,
+                &supplement.tag,
+                txout,
+            )?,
             tx: host.clone(),
             tweaking_factor: None,
         })
@@ -135,13 +144,18 @@ where
     type Container = TxContainer;
     type Error = Error;
 
-    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(
+        container: &mut Self::Container,
+        msg: &MSG,
+    ) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
         let fee = container.fee;
         let entropy = container.protocol_factor;
 
-        let txout_commitment =
-            TxoutCommitment::embed_commit(&mut container.txout_container.clone(), msg)?;
+        let txout_commitment = TxoutCommitment::embed_commit(
+            &mut container.txout_container.clone(),
+            msg,
+        )?;
         *get_mut_txout(fee, entropy, &mut tx) = txout_commitment.into_inner();
 
         container.tweaking_factor = container.txout_container.tweaking_factor;
@@ -153,7 +167,9 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bp::dbc::{ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer};
+    use crate::bp::dbc::{
+        ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer,
+    };
     use bitcoin::consensus::encode::deserialize;
     use bitcoin::hashes::hex::FromHex;
     use std::str::FromStr;
@@ -203,7 +219,8 @@ mod test {
 
         let msg = "message to commit to";
 
-        let commitment = TxCommitment::embed_commit(&mut container, &msg).unwrap();
+        let commitment =
+            TxCommitment::embed_commit(&mut container, &msg).unwrap();
         assert_eq!(commitment.verify(&container, &msg).unwrap(), true);
     }
 }

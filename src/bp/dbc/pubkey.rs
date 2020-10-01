@@ -13,8 +13,8 @@
 
 //! # LNPBP-1
 //!
-//! Module for Secp256k1 elliptic curve based collision-resistant commitments, implementing
-//! [LNPBP-1](https://github.com/LNP-BP/lnpbps/blob/master/lnpbp-0001.md)
+//! Module for Secp256k1 elliptic curve based collision-resistant commitments,
+//! implementing [LNPBP-1](https://github.com/LNP-BP/lnpbps/blob/master/lnpbp-0001.md)
 //!
 //! The work proposes a standard for cryptographic commitments based on elliptic
 //! curve properties, that can be embedded into Bitcoin transaction without
@@ -22,8 +22,9 @@
 //! detected and  revealed only to the parties sharing some secret (original
 //! value of the public key).
 //!
-//! NB: The library works with `secp256k1::PublicKey` and `secp256k1::SecretKey` keys, not
-//! their wrapped bitcoin counterparts `bitcoin::PublickKey` and `bitcoin::PrivateKey`.
+//! NB: The library works with `secp256k1::PublicKey` and `secp256k1::SecretKey`
+//! keys, not their wrapped bitcoin counterparts `bitcoin::PublickKey` and
+//! `bitcoin::PrivateKey`.
 
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1;
@@ -35,8 +36,8 @@ use crate::SECP256K1;
 /// Single SHA256 hash of "LNPBP1" string according to LNPBP-1 acting as a
 /// prefix to the message in computing tweaking factor
 pub(super) static SHA256_LNPBP1: [u8; 32] = [
-    245, 8, 242, 142, 252, 192, 113, 82, 108, 168, 134, 200, 224, 124, 105, 212, 149, 78, 46, 201,
-    252, 82, 171, 140, 204, 209, 41, 17, 12, 0, 64, 175,
+    245, 8, 242, 142, 252, 192, 113, 82, 108, 168, 134, 200, 224, 124, 105,
+    212, 149, 78, 46, 201, 252, 82, 171, 140, 204, 209, 41, 17, 12, 0, 64, 175,
 ];
 
 /// Container for LNPBP-1 commitments. In order to be constructed, commitment
@@ -115,9 +116,9 @@ where
     /// 1. Construct a byte string `lnbp1_msg`, composed of the original message
     ///    prefixed with a single SHA256 hash of `LNPBP1`
     ///    string and a single SHA256 hash of protocol-specific tag:
-    ///    `lnbp1_msg = SHA256("LNPBP1") || SHA256(<protocol-specific-tag>) || msg`
-    /// 2. Compute HMAC-SHA256 of the `lnbp1_msg` and `P`, named **tweaking
-    ///    factor**: `f = HMAC_SHA256(s, P)`
+    ///    `lnbp1_msg = SHA256("LNPBP1") || SHA256(<protocol-specific-tag>) ||
+    /// msg` 2. Compute HMAC-SHA256 of the `lnbp1_msg` and `P`, named
+    /// **tweaking    factor**: `f = HMAC_SHA256(s, P)`
     /// 3. Make sure that the tweaking factor is less than order `p` of Zp prime
     ///    number set used in Secp256k1 curve; otherwise fail the protocol.
     /// 3. Multiply the tweaking factor on Secp256k1 generator point
@@ -134,7 +135,8 @@ where
     ///    public key `P'` value.
     ///
     /// The final formula for the commitment is:
-    /// `T = P + G * HMAC_SHA256(SHA256("LNPBP1") || SHA256(<protocol-specific-tag>) || msg, P)`
+    /// `T = P + G * HMAC_SHA256(SHA256("LNPBP1") ||
+    /// SHA256(<protocol-specific-tag>) || msg, P)`
     ///
     /// NB: According to LNPBP-1 the message supplied here must be already
     /// prefixed with 32-byte SHA256 hash of the protocol-specific prefix
@@ -147,7 +149,9 @@ where
     ) -> Result<Self, Self::Error> {
         // ! [CONSENSUS-CRITICAL]:
         // ! [STANDARD-CRITICAL]: HMAC engine is based on sha256 hash
-        let mut hmac_engine = HmacEngine::<sha256::Hash>::new(&pubkey_container.pubkey.serialize());
+        let mut hmac_engine = HmacEngine::<sha256::Hash>::new(
+            &pubkey_container.pubkey.serialize(),
+        );
 
         // ! [CONSENSUS-CRITICAL]:
         // ! [STANDARD-CRITICAL]: Hash process started with consuming first

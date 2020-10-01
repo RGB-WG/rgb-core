@@ -88,14 +88,22 @@ pub enum NodeLocator {
 impl NodeLocator {
     pub fn with_port(self, port: u16) -> Self {
         match self {
-            NodeLocator::Native(a, b, _) => NodeLocator::Native(a, b, Some(port)),
+            NodeLocator::Native(a, b, _) => {
+                NodeLocator::Native(a, b, Some(port))
+            }
             NodeLocator::Udp(a, b, _) => NodeLocator::Udp(a, b, Some(port)),
             #[cfg(feature = "zmq")]
-            NodeLocator::ZmqEncrypted(a, b, c, _) => NodeLocator::ZmqEncrypted(a, b, c, Some(port)),
+            NodeLocator::ZmqEncrypted(a, b, c, _) => {
+                NodeLocator::ZmqEncrypted(a, b, c, Some(port))
+            }
             #[cfg(feature = "zmq")]
-            NodeLocator::ZmqUnencrypted(a, b, _) => NodeLocator::ZmqUnencrypted(a, b, Some(port)),
+            NodeLocator::ZmqUnencrypted(a, b, _) => {
+                NodeLocator::ZmqUnencrypted(a, b, Some(port))
+            }
             #[cfg(feature = "websocket")]
-            NodeLocator::Websocket(a, b, _) => NodeLocator::Websocket(a, b, Some(port)),
+            NodeLocator::Websocket(a, b, _) => {
+                NodeLocator::Websocket(a, b, Some(port))
+            }
             _ => self,
         }
     }
@@ -179,7 +187,15 @@ impl TryFrom<Url> for NodeLocator {
             "lnp-zmq" => {
                 let zmq_type = match url
                     .query_pairs()
-                    .find_map(|(key, val)| if key == "api" { Some(val) } else { None })
+                    .find_map(
+                        |(key, val)| {
+                            if key == "api" {
+                                Some(val)
+                            } else {
+                                None
+                            }
+                        },
+                    )
                     .ok_or(UrlError::ApiTypeRequired)?
                     .to_ascii_lowercase()
                     .as_str()
@@ -187,15 +203,21 @@ impl TryFrom<Url> for NodeLocator {
                     "p2p" => Ok(ZmqType::PeerConnecting),
                     "rpc" => Ok(ZmqType::Client),
                     "sub" => Ok(ZmqType::Subscribe),
-                    unknown => Err(UrlError::InvalidZmqType(unknown.to_string())),
+                    unknown => {
+                        Err(UrlError::InvalidZmqType(unknown.to_string()))
+                    }
                 }?;
                 Ok(match (ip, pubkey) {
                     (Some(Err(_)), _) => Err(UrlError::InvalidIp)?,
-                    (_, Err(_)) if !url.username().is_empty() => Err(UrlError::InvalidIp)?,
+                    (_, Err(_)) if !url.username().is_empty() => {
+                        Err(UrlError::InvalidIp)?
+                    }
                     (Some(Ok(ip)), Ok(pubkey)) => {
                         NodeLocator::ZmqEncrypted(pubkey, zmq_type, ip, port)
                     }
-                    (Some(Ok(ip)), _) => NodeLocator::ZmqUnencrypted(zmq_type, ip, port),
+                    (Some(Ok(ip)), _) => {
+                        NodeLocator::ZmqUnencrypted(zmq_type, ip, port)
+                    }
                     (None, _) => {
                         if url.path().is_empty() {
                             Err(UrlError::InprocRequireZmqContext)?
@@ -214,7 +236,8 @@ impl TryFrom<Url> for NodeLocator {
 #[cfg(feature = "url")]
 impl From<&NodeLocator> for Url {
     fn from(locator: &NodeLocator) -> Self {
-        const ERR: &'static str = "URL construction incosistency for NodeLocator";
+        const ERR: &'static str =
+            "URL construction incosistency for NodeLocator";
         match locator {
             NodeLocator::Native(pubkey, inet, port) => {
                 let mut url = Url::parse(&format!("lnp://{}@{}", pubkey, inet))
@@ -223,8 +246,9 @@ impl From<&NodeLocator> for Url {
                 url
             }
             NodeLocator::Udp(pubkey, ip, port) => {
-                let mut url = Url::parse(&format!("lnp-udp://{}@{}", pubkey, ip))
-                    .expect("Internal URL construction error");
+                let mut url =
+                    Url::parse(&format!("lnp-udp://{}@{}", pubkey, ip))
+                        .expect("Internal URL construction error");
                 url.set_port(port.clone()).expect(ERR);
                 url
             }
@@ -242,22 +266,27 @@ impl From<&NodeLocator> for Url {
             }
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqEncrypted(pubkey, zmq_type, ip, port) => {
-                let mut url = Url::parse(&format!("lnp-zmq://{}@{}/?api={}", pubkey, ip, zmq_type))
-                    .expect("Internal URL construction error");
+                let mut url = Url::parse(&format!(
+                    "lnp-zmq://{}@{}/?api={}",
+                    pubkey, ip, zmq_type
+                ))
+                .expect("Internal URL construction error");
                 url.set_port(port.clone()).expect(ERR);
                 url
             }
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqUnencrypted(zmq_type, ip, port) => {
-                let mut url = Url::parse(&format!("lnp-zmq://{}/?api={}", ip, zmq_type))
-                    .expect("Internal URL construction error");
+                let mut url =
+                    Url::parse(&format!("lnp-zmq://{}/?api={}", ip, zmq_type))
+                        .expect("Internal URL construction error");
                 url.set_port(port.clone()).expect(ERR);
                 url
             }
             #[cfg(feature = "websocket")]
             NodeLocator::Websocket(pubkey, ip, port) => {
-                let mut url = Url::parse(&format!("lnp-ws://{}@{}", pubkey, ip))
-                    .expect("Internal URL construction error");
+                let mut url =
+                    Url::parse(&format!("lnp-ws://{}@{}", pubkey, ip))
+                        .expect("Internal URL construction error");
                 url.set_port(port.clone()).expect(ERR);
                 url
             }
@@ -294,10 +323,16 @@ impl PartialEq for NodeLocator {
     fn eq(&self, other: &Self) -> bool {
         use NodeLocator::*;
         match (self, other) {
-            (Native(a1, a2, a3), Native(b1, b2, b3)) => a1 == b1 && a2 == b2 && a3 == b3,
-            (Udp(a1, a2, a3), Udp(b1, b2, b3)) => a1 == b1 && a2 == b2 && a3 == b3,
+            (Native(a1, a2, a3), Native(b1, b2, b3)) => {
+                a1 == b1 && a2 == b2 && a3 == b3
+            }
+            (Udp(a1, a2, a3), Udp(b1, b2, b3)) => {
+                a1 == b1 && a2 == b2 && a3 == b3
+            }
             #[cfg(feature = "websocket")]
-            (Websocket(a1, a2, a3), Websocket(b1, b2, b3)) => a1 == b1 && a2 == b2 && a3 == b3,
+            (Websocket(a1, a2, a3), Websocket(b1, b2, b3)) => {
+                a1 == b1 && a2 == b2 && a3 == b3
+            }
             #[cfg(feature = "zmq")]
             (Ipc(a1, a2), Ipc(b1, b2)) => a1 == b1 && a2 == b2,
             #[cfg(feature = "zmq")]

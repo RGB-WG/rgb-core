@@ -25,7 +25,8 @@ pub struct TaprootContainer {
     pub intermediate_key: secp256k1::PublicKey,
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
-    /// Tweaking factor stored after [TaprootContainer::commit_verify] procedure
+    /// Tweaking factor stored after [TaprootContainer::commit_verify]
+    /// procedure
     pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
@@ -91,7 +92,10 @@ where
     type Container = TaprootContainer;
     type Error = Error;
 
-    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(
+        container: &mut Self::Container,
+        msg: &MSG,
+    ) -> Result<Self, Self::Error> {
         let mut pubkey_container = LNPBP1Container {
             pubkey: container.intermediate_key.clone(),
             tag: container.tag.clone(),

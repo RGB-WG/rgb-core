@@ -16,7 +16,9 @@
 
 use std::cmp::max;
 use std::convert::{TryFrom, TryInto};
-use std::fmt::{self, Binary, Debug, Display, Formatter, LowerHex, Octal, UpperHex};
+use std::fmt::{
+    self, Binary, Debug, Display, Formatter, LowerHex, Octal, UpperHex,
+};
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::ops::{BitAnd, BitOr, BitXor};
@@ -346,8 +348,9 @@ impl FlagVec {
         return false;
     }
 
-    /// Returns reference to the byte responsible for the feature flag `flag_no`.
-    /// If the maximum capacity is exceeded, returns [`Option::None`].
+    /// Returns reference to the byte responsible for the feature flag
+    /// `flag_no`. If the maximum capacity is exceeded, returns
+    /// [`Option::None`].
     #[inline]
     fn byte_at(&self, flag_no: FlagNo) -> Option<&u8> {
         if flag_no >= self.capacity() {
@@ -475,7 +478,9 @@ impl Iterator for FilteredIter<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         while self.offset < self.features.capacity() {
             self.offset += 1;
-            if self.features.is_set(self.offset - 1) && self.filter.is_set(self.offset - 1) {
+            if self.features.is_set(self.offset - 1)
+                && self.filter.is_set(self.offset - 1)
+            {
                 return Some(self.offset - 1);
             }
         }

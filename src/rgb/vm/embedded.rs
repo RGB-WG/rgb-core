@@ -15,7 +15,9 @@ use core::any::Any;
 
 use super::VirtualMachine;
 use crate::client_side_validation::Conceal;
-use crate::rgb::{amount, schema, script::StandardProcedure, AssignmentsVariant, Metadata};
+use crate::rgb::{
+    amount, schema, script::StandardProcedure, AssignmentsVariant, Metadata,
+};
 
 // Data are taken according to RGB-20 (LNPBP-20) standard
 #[allow(unused)]
@@ -80,12 +82,13 @@ impl Embedded {
                             // issue metadata
 
                             // Collect outputs
-                            let outputs = if let Some(ref state) = self.current_state {
-                                state.all_state_pedersen()
-                            } else {
-                                push_stack!(self, 6u8);
-                                return;
-                            };
+                            let outputs =
+                                if let Some(ref state) = self.current_state {
+                                    state.all_state_pedersen()
+                                } else {
+                                    push_stack!(self, 6u8);
+                                    return;
+                                };
 
                             // Check their bulletproofs
                             for c in &outputs {
@@ -96,7 +99,11 @@ impl Embedded {
                             }
 
                             // Get issued supply data
-                            let supply = match self.current_meta.u64(META_ISSUED_SUPPLY).next() {
+                            let supply = match self
+                                .current_meta
+                                .u64(META_ISSUED_SUPPLY)
+                                .next()
+                            {
                                 Some(supply) => supply,
                                 _ => {
                                     push_stack!(self, 7u8);
@@ -106,7 +113,10 @@ impl Embedded {
 
                             // Check zero knowledge correspondence
                             if amount::Confidential::verify_commit_sum(
-                                outputs.into_iter().map(|c| c.commitment).collect(),
+                                outputs
+                                    .into_iter()
+                                    .map(|c| c.commitment)
+                                    .collect(),
                                 vec![
                                     amount::Revealed {
                                         amount: supply,
@@ -127,9 +137,15 @@ impl Embedded {
                         }
                     }
                     Some(ref variant) => {
-                        if let AssignmentsVariant::DiscreteFiniteField(_) = variant {
+                        if let AssignmentsVariant::DiscreteFiniteField(_) =
+                            variant
+                        {
                             let prev = variant.all_state_pedersen();
-                            let curr = self.current_state.as_ref().unwrap().all_state_pedersen();
+                            let curr = self
+                                .current_state
+                                .as_ref()
+                                .unwrap()
+                                .all_state_pedersen();
 
                             for p in &prev {
                                 if p.verify_bullet_proof().is_err() {
@@ -145,8 +161,12 @@ impl Embedded {
                             }
 
                             if amount::Confidential::verify_commit_sum(
-                                curr.into_iter().map(|c| c.commitment).collect(),
-                                prev.into_iter().map(|c| c.commitment).collect(),
+                                curr.into_iter()
+                                    .map(|c| c.commitment)
+                                    .collect(),
+                                prev.into_iter()
+                                    .map(|c| c.commitment)
+                                    .collect(),
                             ) {
                                 push_stack!(self, 0u8);
                                 return;

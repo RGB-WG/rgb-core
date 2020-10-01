@@ -30,9 +30,9 @@ use crate::Bipolar;
 #[display(Debug)]
 #[repr(u8)]
 pub enum ApiType {
-    /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ sockets.
-    /// Each node can send unordered set of messages and does not wait for a
-    /// response.
+    /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ
+    /// sockets. Each node can send unordered set of messages and does not
+    /// wait for a response.
     PeerListening = 0,
     PeerConnecting = 1,
 
@@ -187,7 +187,8 @@ impl Connection {
                 socket.bind(format!("{}", local).as_str())?;
                 Some(socket)
             }
-            (ApiType::PeerListening, None) | (ApiType::PeerConnecting, None) => {
+            (ApiType::PeerListening, None)
+            | (ApiType::PeerConnecting, None) => {
                 Err(Error::RequiresLocalSocket)?
             }
             (_, _) => None,
@@ -278,7 +279,9 @@ impl Bipolar for Connection {
     type Right = <Self as Bidirect>::Output;
 
     fn split(self) -> (Self::Left, Self::Right) {
-        if self.api_type == ApiType::PeerConnecting || self.api_type == ApiType::PeerListening {
+        if self.api_type == ApiType::PeerConnecting
+            || self.api_type == ApiType::PeerListening
+        {
             (self.input, self.output.unwrap())
         } else {
             // We panic here because this is a program architecture design
@@ -298,7 +301,9 @@ impl Bipolar for Connection {
         if input.api_type != output.api_type {
             panic!("ZMQ streams of different type can't be joined");
         }
-        if input.api_type != ApiType::PeerConnecting || input.api_type == ApiType::PeerListening {
+        if input.api_type != ApiType::PeerConnecting
+            || input.api_type == ApiType::PeerListening
+        {
             panic!(format!(
                 "ZMQ streams of {} type can't be joined",
                 input.api_type

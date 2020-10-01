@@ -16,7 +16,8 @@ use ::core::fmt::{Display, Formatter};
 use ::core::str::FromStr;
 
 use crate::rgb::{
-    seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId, Transition,
+    seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
+    Transition,
 };
 use crate::strict_encoding::{self, strict_decode, strict_encode};
 
@@ -136,15 +137,27 @@ impl FromStr for Bech32 {
         let data = Vec::<u8>::from_base32(&data)?;
 
         Ok(match hrp {
-            x if x == Self::HRP_OUTPOINT => Self::Outpoint(strict_decode(&data)?),
-            x if x == Self::HRP_CONTRACT_ID => Self::ContractId(strict_decode(&data)?),
+            x if x == Self::HRP_OUTPOINT => {
+                Self::Outpoint(strict_decode(&data)?)
+            }
+            x if x == Self::HRP_CONTRACT_ID => {
+                Self::ContractId(strict_decode(&data)?)
+            }
             x if x == Self::HRP_SCHEMA => Self::Schema(strict_decode(&data)?),
-            x if x == Self::HRP_SCHEMA_ID => Self::SchemaId(strict_decode(&data)?),
+            x if x == Self::HRP_SCHEMA_ID => {
+                Self::SchemaId(strict_decode(&data)?)
+            }
             x if x == Self::HRP_GENESIS => Self::Genesis(strict_decode(&data)?),
-            x if x == Self::HRP_EXTENSION => Self::Extension(strict_decode(&data)?),
-            x if x == Self::HRP_TRANSITION => Self::Transition(strict_decode(&data)?),
+            x if x == Self::HRP_EXTENSION => {
+                Self::Extension(strict_decode(&data)?)
+            }
+            x if x == Self::HRP_TRANSITION => {
+                Self::Transition(strict_decode(&data)?)
+            }
             x if x == Self::HRP_ANCHOR => Self::Anchor(strict_decode(&data)?),
-            x if x == Self::HRP_DISCLOSURE => Self::Disclosure(strict_decode(&data)?),
+            x if x == Self::HRP_DISCLOSURE => {
+                Self::Disclosure(strict_decode(&data)?)
+            }
             other => Self::Other(other, data),
         })
     }
@@ -154,7 +167,9 @@ impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
             Self::Outpoint(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)),
-            Self::ContractId(obj) => (Self::HRP_CONTRACT_ID, strict_encode(obj)),
+            Self::ContractId(obj) => {
+                (Self::HRP_CONTRACT_ID, strict_encode(obj))
+            }
             Self::Schema(obj) => (Self::HRP_SCHEMA, strict_encode(obj)),
             Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_encode(obj)),
             Self::Genesis(obj) => (Self::HRP_GENESIS, strict_encode(obj)),
@@ -165,7 +180,8 @@ impl Display for Bech32 {
             Self::Other(hrp, obj) => (hrp.as_ref(), Ok(obj.clone())),
         };
         let data = data.map_err(|_| ::core::fmt::Error)?;
-        let b = ::bech32::encode(hrp, data.to_base32()).map_err(|_| ::core::fmt::Error)?;
+        let b = ::bech32::encode(hrp, data.to_base32())
+            .map_err(|_| ::core::fmt::Error)?;
         b.fmt(f)
     }
 }

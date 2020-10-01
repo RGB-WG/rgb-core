@@ -18,10 +18,13 @@ use bitcoin::secp256k1;
 use core::convert::TryFrom;
 
 use super::{
-    Container, Error, LNPBP1Commitment, LNPBP1Container, LockscriptCommitment, LockscriptContainer,
-    Proof, ScriptInfo, TaprootCommitment, TaprootContainer,
+    Container, Error, LNPBP1Commitment, LNPBP1Container, LockscriptCommitment,
+    LockscriptContainer, Proof, ScriptInfo, TaprootCommitment,
+    TaprootContainer,
 };
-use crate::bp::{GenerateScripts, LockScript, PubkeyScript, ScriptPubkeyDescriptor, Strategy};
+use crate::bp::{
+    GenerateScripts, LockScript, PubkeyScript, ScriptPubkeyDescriptor, Strategy,
+};
 use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
@@ -48,7 +51,8 @@ pub struct ScriptPubkeyContainer {
     pub scriptpubkey_composition: ScriptPubkeyComposition,
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
-    /// Tweaking factor stored after [ScriptPubkeyContainer::commit_verify] procedure
+    /// Tweaking factor stored after [ScriptPubkeyContainer::commit_verify]
+    /// procedure
     pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
@@ -89,19 +93,29 @@ impl Container for ScriptPubkeyContainer {
         };
 
         let mut proof = proof.clone();
-        let composition = match ScriptPubkeyDescriptor::try_from(host.clone())? {
+        let composition = match ScriptPubkeyDescriptor::try_from(host.clone())?
+        {
             Descr::P2SH(script_hash) => {
                 let script = Script::new_p2sh(&script_hash);
                 if let Some(lockscript) = lockscript {
-                    if *lockscript.to_script_pubkey(Strategy::LegacyHashed) == script {
+                    if *lockscript.to_script_pubkey(Strategy::LegacyHashed)
+                        == script
+                    {
                         Comp::ScriptHash
-                    } else if *lockscript.to_script_pubkey(Strategy::WitnessScriptHash) == script {
+                    } else if *lockscript
+                        .to_script_pubkey(Strategy::WitnessScriptHash)
+                        == script
+                    {
                         Comp::SHWScriptHash
                     } else {
                         Err(Error::InvalidProofStructure)?
                     }
                 } else {
-                    if *proof.pubkey.to_script_pubkey(Strategy::WitnessScriptHash) == script {
+                    if *proof
+                        .pubkey
+                        .to_script_pubkey(Strategy::WitnessScriptHash)
+                        == script
+                    {
                         Comp::SHWPubkeyHash
                     } else {
                         Err(Error::InvalidProofStructure)?
@@ -109,7 +123,8 @@ impl Container for ScriptPubkeyContainer {
                 }
             }
             Descr::P2S(script) => {
-                proof.script_info = ScriptInfo::LockScript(LockScript::from(script.to_inner()));
+                proof.script_info =
+                    ScriptInfo::LockScript(LockScript::from(script.to_inner()));
                 Comp::PlainScript
             }
             Descr::P2PK(_) => Comp::PubkeyHash,
@@ -132,7 +147,10 @@ impl Container for ScriptPubkeyContainer {
                     Err(Error::InvalidProofStructure)?
                 }
             }
-            Comp::PlainScript | Comp::ScriptHash | Comp::WScriptHash | Comp::SHWScriptHash => {
+            Comp::PlainScript
+            | Comp::ScriptHash
+            | Comp::WScriptHash
+            | Comp::SHWScriptHash => {
                 if let ScriptInfo::LockScript(_) = proof.script_info {
                 } else {
                     Err(Error::InvalidProofStructure)?
@@ -194,26 +212,39 @@ where
     type Container = ScriptPubkeyContainer;
     type Error = super::Error;
 
-    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error> {
+    fn embed_commit(
+        container: &mut Self::Container,
+        msg: &MSG,
+    ) -> Result<Self, Self::Error> {
         use ScriptPubkeyComposition::*;
-        let script_pubkey = if let ScriptInfo::LockScript(ref lockscript) = container.script_info {
+        let script_pubkey = if let ScriptInfo::LockScript(ref lockscript) =
+            container.script_info
+        {
             let mut lockscript_container = LockscriptContainer {
                 script: lockscript.clone(),
                 pubkey: container.pubkey,
                 tag: container.tag,
                 tweaking_factor: None,
             };
-            let lockscript =
-                LockscriptCommitment::embed_commit(&mut lockscript_container, msg)?.into_inner();
+            let lockscript = LockscriptCommitment::embed_commit(
+                &mut lockscript_container,
+                msg,
+            )?
+            .into_inner();
             container.tweaking_factor = lockscript_container.tweaking_factor;
             match container.scriptpubkey_composition {
                 PlainScript => lockscript.to_script_pubkey(Strategy::Exposed),
-                ScriptHash => lockscript.to_script_pubkey(Strategy::LegacyHashed),
+                ScriptHash => {
+                    lockscript.to_script_pubkey(Strategy::LegacyHashed)
+                }
                 WScriptHash => lockscript.to_script_pubkey(Strategy::WitnessV0),
-                SHWScriptHash => lockscript.to_script_pubkey(Strategy::WitnessScriptHash),
+                SHWScriptHash => {
+                    lockscript.to_script_pubkey(Strategy::WitnessScriptHash)
+                }
                 _ => Err(Error::InvalidProofStructure)?,
             }
-        } else if let ScriptInfo::Taproot(taproot_hash) = container.script_info {
+        } else if let ScriptInfo::Taproot(taproot_hash) = container.script_info
+        {
             if container.scriptpubkey_composition != TapRoot {
                 Err(Error::InvalidProofStructure)?
             }
@@ -223,7 +254,8 @@ where
                 tag: container.tag,
                 tweaking_factor: None,
             };
-            let _taproot = TaprootCommitment::embed_commit(&mut taproot_container, msg)?;
+            let _taproot =
+                TaprootCommitment::embed_commit(&mut taproot_container, msg)?;
             container.tweaking_factor = taproot_container.tweaking_factor;
             // TODO: Finalize taproot commitments once taproot will be finalized
             //       We don't know yet how to form scripPubkey from Taproot data
@@ -234,14 +266,19 @@ where
                 tag: container.tag,
                 tweaking_factor: None,
             };
-            let pubkey = *LNPBP1Commitment::embed_commit(&mut pubkey_container, msg)?;
+            let pubkey =
+                *LNPBP1Commitment::embed_commit(&mut pubkey_container, msg)?;
             container.tweaking_factor = pubkey_container.tweaking_factor;
             match container.scriptpubkey_composition {
                 PublicKey => pubkey.to_script_pubkey(Strategy::Exposed),
                 PubkeyHash => pubkey.to_script_pubkey(Strategy::LegacyHashed),
                 WPubkeyHash => pubkey.to_script_pubkey(Strategy::WitnessV0),
-                SHWScriptHash => pubkey.to_script_pubkey(Strategy::WitnessScriptHash),
-                OpReturn => Script::new_op_return(&pubkey.serialize().to_vec()).into(),
+                SHWScriptHash => {
+                    pubkey.to_script_pubkey(Strategy::WitnessScriptHash)
+                }
+                OpReturn => {
+                    Script::new_op_return(&pubkey.serialize().to_vec()).into()
+                }
                 _ => Err(Error::InvalidProofStructure)?,
             }
         };

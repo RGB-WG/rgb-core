@@ -19,7 +19,8 @@ use bitcoin::util::uint::Uint256;
 
 use crate::commit_verify::TryCommitVerify;
 
-/// Source data for creation of multi-message commitments according to LNPBP-4 procedure
+/// Source data for creation of multi-message commitments according to LNPBP-4
+/// procedure
 pub type MultiMsg = BTreeMap<sha256::Hash, sha256::Hash>;
 pub type Lnpbp4Hash = sha256::Hash;
 
@@ -27,7 +28,17 @@ pub type Lnpbp4Hash = sha256::Hash;
 #[display(Debug)]
 pub struct TooManyMessagesError;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
 #[strict_crate(crate)]
 #[display(Debug)]
 pub struct MultimsgCommitmentItem {
@@ -45,7 +56,17 @@ impl MultimsgCommitmentItem {
 }
 
 /// Multimessage commitment data according to LNPBP-4 specification
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
 #[strict_crate(crate)]
 #[display(Debug)]
 pub struct MultimsgCommitment {
@@ -63,21 +84,27 @@ impl TryCommitVerify<MultiMsg> for MultimsgCommitment {
         // We use some minimum number of items, to increase privacy
         n = n.max(3);
         let ordered = loop {
-            let mut ordered = BTreeMap::<usize, (sha256::Hash, sha256::Hash)>::new();
+            let mut ordered =
+                BTreeMap::<usize, (sha256::Hash, sha256::Hash)>::new();
             // TODO: Modify arithmetics in LNPBP-4 spec
             //       <https://github.com/LNP-BP/LNPBPs/issues/19>
             if multimsg.into_iter().all(|(protocol, digest)| {
                 let rem = Uint256::from_be_bytes(protocol.into_inner())
-                    % Uint256::from_u64(n as u64).expect("Bitcoin U256 struct is broken");
+                    % Uint256::from_u64(n as u64)
+                        .expect("Bitcoin U256 struct is broken");
                 ordered
-                    .insert(rem.low_u64() as usize, (protocol.clone(), digest.clone()))
+                    .insert(
+                        rem.low_u64() as usize,
+                        (protocol.clone(), digest.clone()),
+                    )
                     .is_none()
             }) {
                 break ordered;
             }
             n += 1;
             if n > SORT_LIMIT {
-                // Memory allocation limit exceeded while trying to sort multi-message commitment
+                // Memory allocation limit exceeded while trying to sort
+                // multi-message commitment
                 return Err(TooManyMessagesError);
             }
         };
@@ -105,7 +132,10 @@ impl TryCommitVerify<MultiMsg> for MultimsgCommitment {
                     ))
                 }
                 Some((contract_id, commitment)) => {
-                    commitments.push(MultimsgCommitmentItem::new(Some(*contract_id), *commitment))
+                    commitments.push(MultimsgCommitmentItem::new(
+                        Some(*contract_id),
+                        *commitment,
+                    ))
                 }
             }
         }

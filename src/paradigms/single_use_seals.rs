@@ -74,10 +74,10 @@
 //! implementing this trait operates only with messages (which is represented
 //! by [Message] type alias – in fact any type that implements `AsRef<[u8]>`,
 //! i.e. can be represented as a sequence of bytes) and witnesses (which is
-//! represented by an associated type [SingleUseSeal::Witness]). At the same time,
-//! [SingleUseSeal] can't define seals by itself — and also knows nothing about
-//! whether the seal is in fact closed: this requires a "seal medium": a proof
-//! of publication medium on which the seals are defined.
+//! represented by an associated type [SingleUseSeal::Witness]). At the same
+//! time, [SingleUseSeal] can't define seals by itself — and also knows nothing
+//! about whether the seal is in fact closed: this requires a "seal medium": a
+//! proof of publication medium on which the seals are defined.
 //!
 //! The module provides two options of implementing sch medium: synchonous
 //! [SealMedium] and asynchronous [AsyncSealMedium].
@@ -122,7 +122,11 @@ pub trait SingleUseSeal {
     /// seal itself; all the data produced by the process must be placed
     /// into the returned Witness type
     fn close(&self, over: &Message) -> Result<Self::Witness, Self::Error>;
-    fn verify(&self, msg: &Message, witness: &Self::Witness) -> Result<bool, Self::Error>;
+    fn verify(
+        &self,
+        msg: &Message,
+        witness: &Self::Witness,
+    ) -> Result<bool, Self::Error>;
 }
 
 /// Trait for proof-of-publication medium on which the seals are defined and
@@ -156,14 +160,17 @@ where
 
     /// Creates a single-use-seal having type of implementation-specific generic
     /// parameter `SEAL`.
-    fn define_seal(&'a self, definition: &SEAL::Definition) -> Result<SEAL, Self::Error>;
+    fn define_seal(
+        &'a self,
+        definition: &SEAL::Definition,
+    ) -> Result<SEAL, Self::Error>;
 
     /// Checks the status for a given seal in proof-of-publication medium
     fn get_seal_status(&self, seal: &SEAL) -> Result<SealStatus, Self::Error>;
 
-    /// Publishes witness data to the medium. Function has default implementation
-    /// doing nothing and returning [SealMediumError::PublicationIdNotSupported]
-    /// error.
+    /// Publishes witness data to the medium. Function has default
+    /// implementation doing nothing and returning
+    /// [SealMediumError::PublicationIdNotSupported] error.
     fn publish_witness(
         &mut self,
         _witness: &SEAL::Witness,
@@ -212,14 +219,18 @@ where
 
     /// Creates a single-use-seal having type of implementation-specific generic
     /// parameter `SEAL`.
-    async fn define_seal<D>(&self, definition: &D) -> Result<SEAL, Self::Error>;
+    async fn define_seal<D>(&self, definition: &D)
+        -> Result<SEAL, Self::Error>;
 
     /// Checks the status for a given seal in proof-of-publication medium
-    async fn get_seal_status(&self, seal: &SEAL) -> Result<SealStatus, Self::Error>;
+    async fn get_seal_status(
+        &self,
+        seal: &SEAL,
+    ) -> Result<SealStatus, Self::Error>;
 
-    /// Publishes witness data to the medium. Function has default implementation
-    /// doing nothing and returning [SealMediumError::PublicationIdNotSupported]
-    /// error.
+    /// Publishes witness data to the medium. Function has default
+    /// implementation doing nothing and returning
+    /// [SealMediumError::PublicationIdNotSupported] error.
     async fn publish_witness(
         &mut self,
         _witness: &SEAL::Witness,
@@ -286,9 +297,9 @@ pub enum SealStatus {
 /// and the traits provide default implementation for these functions always
 /// returning [SealMediumError::OperationNotSupported]. If the implementation
 /// would like to provide custom implementation, it may embed standard error
-/// related to [SealMedium] operations within [SealMediumError::MediumAccessError]
-/// case; the type of MediumAccessError is defined through generic argument
-/// to [SealMediumError].
+/// related to [SealMedium] operations within
+/// [SealMediumError::MediumAccessError] case; the type of MediumAccessError is
+/// defined through generic argument to [SealMediumError].
 #[derive(Clone, Copy, Debug, Display)]
 #[display(Debug)]
 pub enum SealMediumError<M: std::error::Error> {

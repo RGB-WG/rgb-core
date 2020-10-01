@@ -19,17 +19,22 @@ mod types;
 
 pub(self) use super::vm;
 pub use nodes::{
-    AssignmentsType, ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeType,
-    SealsStructure, TransitionSchema, ValenciesStructure, ValenciesType,
+    AssignmentsType, ExtensionSchema, GenesisSchema, MetadataStructure,
+    NodeSchema, NodeType, SealsStructure, TransitionSchema, ValenciesStructure,
+    ValenciesType,
 };
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{
-    AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, GenesisAbi, GenesisAction,
-    NodeAction, Procedure, SimplicityScript, TransitionAbi, TransitionAction,
+    AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, GenesisAbi,
+    GenesisAction, NodeAction, Procedure, SimplicityScript, TransitionAbi,
+    TransitionAction,
 };
-pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
+pub use state::{
+    DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType,
+};
 pub use types::{
-    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences, OccurrencesError,
+    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences,
+    OccurrencesError,
 };
 
 #[cfg(test)]

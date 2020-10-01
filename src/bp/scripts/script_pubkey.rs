@@ -198,11 +198,16 @@ impl From<ScriptPubkeyDescriptor> for ScriptPubkeyStructure {
             P2PKH(hash) => PkStruct::KeyHash(hash),
             P2SH(hash) => PkStruct::ScriptHash(hash),
             P2OR(data) => PkStruct::OpReturn(data),
-            P2WPKH(hash) => PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into()),
-            P2WSH(hash) => PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into()),
-            P2TR(pubkey) => {
-                PkStruct::Witness(WitnessVersion::V1, pubkey.serialize().to_vec().into())
+            P2WPKH(hash) => {
+                PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into())
             }
+            P2WSH(hash) => {
+                PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into())
+            }
+            P2TR(pubkey) => PkStruct::Witness(
+                WitnessVersion::V1,
+                pubkey.serialize().to_vec().into(),
+            ),
         }
     }
 }

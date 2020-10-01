@@ -21,7 +21,9 @@ use std::io::{self, Read, Write};
 use std::sync::Arc;
 
 use super::tlv;
-use super::{Encode, Error, EvenOdd, UnknownTypeError, Unmarshall, UnmarshallFn};
+use super::{
+    Encode, Error, EvenOdd, UnknownTypeError, Unmarshall, UnmarshallFn,
+};
 use crate::lnp::presentation::tlv::Stream;
 use crate::strict_encoding::{StrictDecode, StrictEncode};
 
@@ -120,7 +122,10 @@ pub trait TypedEnum
 where
     Self: Sized + Clone,
 {
-    fn try_from_type(type_id: Type, data: &dyn Any) -> Result<Self, UnknownTypeError>;
+    fn try_from_type(
+        type_id: Type,
+        data: &dyn Any,
+    ) -> Result<Self, UnknownTypeError>;
     fn get_type(&self) -> Type;
     fn get_payload(&self) -> Vec<u8>;
 }
@@ -154,9 +159,13 @@ where
     type Data = Arc<T>;
     type Error = Error;
 
-    fn unmarshall(&self, data: &dyn Borrow<[u8]>) -> Result<Self::Data, Self::Error> {
+    fn unmarshall(
+        &self,
+        data: &dyn Borrow<[u8]>,
+    ) -> Result<Self::Data, Self::Error> {
         let mut reader = io::Cursor::new(data.borrow());
-        let type_id = Type(u16::strict_decode(&mut reader).map_err(|_| Error::NoData)?);
+        let type_id =
+            Type(u16::strict_decode(&mut reader).map_err(|_| Error::NoData)?);
         match self.known_types.get(&type_id) {
             None if type_id.is_even() => Err(Error::MessageEvenType),
             None => {
@@ -167,8 +176,9 @@ where
                     &RawMessage { type_id, payload },
                 )?))
             }
-            Some(parser) => parser(&mut reader)
-                .and_then(|data| Ok(Arc::new(T::try_from_type(type_id, &*data)?))),
+            Some(parser) => parser(&mut reader).and_then(|data| {
+                Ok(Arc::new(T::try_from_type(type_id, &*data)?))
+            }),
         }
     }
 }
@@ -179,7 +189,10 @@ where
 {
     pub fn new(known_types: BTreeMap<u16, UnmarshallFn<Error>>) -> Self {
         Self {
-            known_types: known_types.into_iter().map(|(t, f)| (Type(t), f)).collect(),
+            known_types: known_types
+                .into_iter()
+                .map(|(t, f)| (Type(t), f))
+                .collect(),
             _phantom: PhantomData,
         }
     }

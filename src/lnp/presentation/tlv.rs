@@ -73,7 +73,10 @@ impl Unmarshall for Unmarshaller {
     type Data = Stream;
     type Error = Error;
 
-    fn unmarshall(&self, data: &dyn Borrow<[u8]>) -> Result<Stream, Self::Error> {
+    fn unmarshall(
+        &self,
+        data: &dyn Borrow<[u8]>,
+    ) -> Result<Stream, Self::Error> {
         let mut reader = io::Cursor::new(data.borrow());
         let mut tlv = Stream::new();
         let mut prev_type_id = Type(0);
@@ -90,7 +93,9 @@ impl Unmarshall for Unmarshaller {
 
                 // if decoded types are not monotonically-increasing
                 // MUST fail to parse the tlv_stream.
-                Ok(type_id) if type_id > prev_type_id => break Err(Error::TlvStreamWrongOrder),
+                Ok(type_id) if type_id > prev_type_id => {
+                    break Err(Error::TlvStreamWrongOrder)
+                }
 
                 // if decoded `type`s are not strictly-increasing
                 // (including situations when two or more occurrences of the \
@@ -101,17 +106,19 @@ impl Unmarshall for Unmarshaller {
                 }
 
                 Ok(type_id) => {
-                    let rec = if let Some(parser) = self.known_types.get(&type_id) {
+                    let rec = if let Some(parser) =
+                        self.known_types.get(&type_id)
+                    {
                         // if type is known:
                         // MUST decode the next length bytes using the known
                         // encoding for type.
                         // The rest of rules MUST be supported by the parser:
                         // - if length is not exactly equal to that required for
-                        //   the known encoding for type
-                        //   MUST fail to parse the tlv_stream.
+                        //   the known encoding for type MUST fail to parse the
+                        //   tlv_stream.
                         // - if variable-length fields within the known encoding
-                        //   for type are not minimal
-                        //   MUST fail to parse the tlv_stream.
+                        //   for type are not minimal MUST fail to parse the
+                        //   tlv_stream.
                         parser(&mut reader)?
                     }
                     // otherwise, if type is unknown:
@@ -144,7 +151,9 @@ impl Unmarshaller {
         }
     }
 
-    fn raw_parser(mut reader: &mut dyn io::Read) -> Result<Arc<dyn Any>, Error> {
+    fn raw_parser(
+        mut reader: &mut dyn io::Read,
+    ) -> Result<Arc<dyn Any>, Error> {
         let len = BigSize::read(&mut reader)?.0 as usize;
 
         // if length exceeds the number of bytes remaining in the message

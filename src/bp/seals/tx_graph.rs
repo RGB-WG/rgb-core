@@ -23,9 +23,21 @@ pub enum SpendingStatus {
 pub trait TxGraph {
     type AccessError: std::error::Error;
 
-    fn spending_status(&self, outpoint: &OutPoint) -> Result<SpendingStatus, Self::AccessError>;
-    fn fetch_spending_tx(&self, outpoint: &OutPoint) -> Result<Transaction, Self::AccessError>;
-    fn create_spending_tx(&self, outpoint: &OutPoint) -> Result<Transaction, Self::AccessError>;
+    fn spending_status(
+        &self,
+        outpoint: &OutPoint,
+    ) -> Result<SpendingStatus, Self::AccessError>;
+    fn fetch_spending_tx(
+        &self,
+        outpoint: &OutPoint,
+    ) -> Result<Transaction, Self::AccessError>;
+    fn create_spending_tx(
+        &self,
+        outpoint: &OutPoint,
+    ) -> Result<Transaction, Self::AccessError>;
     fn fetch_tx(&self, txid: Txid) -> Result<Transaction, Self::AccessError>;
-    fn apply_tx(&self, signed_tx: &Transaction) -> Result<Transaction, Self::AccessError>;
+    fn apply_tx(
+        &self,
+        signed_tx: &Transaction,
+    ) -> Result<Transaction, Self::AccessError>;
 }

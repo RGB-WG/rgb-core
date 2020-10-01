@@ -53,7 +53,8 @@ extern crate serde_crate as serde;
 
 // Logging
 #[cfg(feature = "log")]
-// We need this since under some feature combinations log macros are not required
+// We need this since under some feature combinations log macros are not
+// required
 #[allow(unused_imports)]
 #[macro_use]
 extern crate log;
@@ -78,7 +79,8 @@ mod lnpbps;
 #[macro_use]
 pub mod bp;
 #[cfg(feature = "lnp")]
-#[allow(dead_code, unused_variables)] // TODO: Remove attribute once LNP mod will be finalized
+#[allow(dead_code, unused_variables)]
+// TODO: Remove attribute once LNP mod will be finalized
 pub mod lnp;
 #[cfg(feature = "rgb")]
 pub mod rgb;

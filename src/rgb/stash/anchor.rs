@@ -21,10 +21,13 @@ use bitcoin::{Transaction, Txid};
 use bitcoin_hashes::{sha256, sha256t, Hash, HashEngine};
 
 use crate::bp::dbc::{
-    self, Container, Proof, ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer,
-    TxCommitment, TxContainer, TxSupplement, TxoutContainer,
+    self, Container, Proof, ScriptInfo, ScriptPubkeyComposition,
+    ScriptPubkeyContainer, TxCommitment, TxContainer, TxSupplement,
+    TxoutContainer,
 };
-use crate::client_side_validation::{commit_strategy, CommitEncodeWithStrategy, ConsensusCommit};
+use crate::client_side_validation::{
+    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
+};
 use crate::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
 use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
 use crate::rgb::{ContractId, NodeId};
@@ -32,7 +35,8 @@ use crate::rgb::{ContractId, NodeId};
 pub const PSBT_FEE_KEY: &[u8] = b"\x03rgb\x01";
 pub const PSBT_PUBKEY_KEY: &[u8] = b"\x03rgb\x02";
 lazy_static! {
-    static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash = sha256::Hash::hash(b"LNPBP4");
+    static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash =
+        sha256::Hash::hash(b"LNPBP4");
 }
 
 lazy_static! {
@@ -99,8 +103,8 @@ impl Anchor {
         let fee = u64::from_be_bytes(fee_slice);
 
         // Compute which transition commitments must go into which output and
-        // assemble them in per-output-packs of ContractId: Transition commitment
-        // type
+        // assemble them in per-output-packs of ContractId: Transition
+        // commitment type
         let per_output_sources = transitions.into_iter().fold(
             HashMap::<usize, BTreeMap<sha256::Hash, sha256::Hash>>::new(),
             |mut data, (contract_id, node_id)| {
@@ -174,7 +178,8 @@ impl Anchor {
                 .flatten()
                 .collect();
             let mm_digest = sha256::Hash::commit(&mm_buffer);
-            let commitment = TxCommitment::embed_commit(&mut container, &mm_digest).unwrap();
+            let commitment =
+                TxCommitment::embed_commit(&mut container, &mm_digest).unwrap();
 
             *tx = commitment.into_inner().clone();
             // TODO: Save tweaking factor from container into PSBT key
@@ -195,7 +200,8 @@ impl Anchor {
 
     pub fn validate(&self, contract_id: &ContractId, node_id: &NodeId) -> bool {
         let id = Uint256::from_be_bytes(contract_id.into_inner());
-        let len = Uint256::from_u64(self.commitment.commitments.len() as u64).unwrap();
+        let len = Uint256::from_u64(self.commitment.commitments.len() as u64)
+            .unwrap();
         let pos = (id % len).low_u64() as usize;
         self.commitment
             .commitments
@@ -205,9 +211,15 @@ impl Anchor {
             == sha256::Hash::from_inner(node_id.into_inner())
     }
 
-    pub fn verify(&self, contract_id: &ContractId, tx: &Transaction, fee: u64) -> bool {
+    pub fn verify(
+        &self,
+        contract_id: &ContractId,
+        tx: &Transaction,
+        fee: u64,
+    ) -> bool {
         let id = Uint256::from_be_bytes(contract_id.into_inner());
-        let protocol_factor = id % Uint256::from_u64(tx.output.len() as u64).unwrap();
+        let protocol_factor =
+            id % Uint256::from_u64(tx.output.len() as u64).unwrap();
         let protocol_factor = protocol_factor.low_u64() as u32;
 
         // TODO: Refactor multimessage commitments
@@ -239,7 +251,8 @@ impl Anchor {
         value: sha256::Hash,
     ) -> Result<bool, dbc::Error> {
         // TODO: Refactor using bp::seals
-        let container = TxContainer::reconstruct(&self.proof, &supplement, &tx)?;
+        let container =
+            TxContainer::reconstruct(&self.proof, &supplement, &tx)?;
         let commitment = TxCommitment::from(tx);
         commitment.verify(&container, &value)
     }

@@ -61,21 +61,28 @@ impl FromStr for NodeAddr {
                             ";
 
         let mut splitter = s.split('@');
-        let (id, inet) = match (splitter.next(), splitter.next(), splitter.next()) {
-            (Some(id), Some(inet), None) => (id, inet),
-            _ => Err(String::from(err_msg))?,
-        };
+        let (id, inet) =
+            match (splitter.next(), splitter.next(), splitter.next()) {
+                (Some(id), Some(inet), None) => (id, inet),
+                _ => Err(String::from(err_msg))?,
+            };
 
         let mut splitter = inet.split(':');
-        let (addr, port) = match (splitter.next(), splitter.next(), splitter.next()) {
-            (Some(addr), Some(port), None) => (addr, port.parse().map_err(|_| err_msg)?),
-            (Some(addr), None, _) => (addr, LIGHTNING_P2P_DEFAULT_PORT),
-            _ => Err(String::from(err_msg))?,
-        };
+        let (addr, port) =
+            match (splitter.next(), splitter.next(), splitter.next()) {
+                (Some(addr), Some(port), None) => {
+                    (addr, port.parse().map_err(|_| err_msg)?)
+                }
+                (Some(addr), None, _) => (addr, LIGHTNING_P2P_DEFAULT_PORT),
+                _ => Err(String::from(err_msg))?,
+            };
 
         Ok(Self {
             node_id: id.parse().map_err(|_| err_msg)?,
-            inet_addr: InetSocketAddr::new(addr.parse().map_err(|_| err_msg)?, port),
+            inet_addr: InetSocketAddr::new(
+                addr.parse().map_err(|_| err_msg)?,
+                port,
+            ),
         })
     }
 }

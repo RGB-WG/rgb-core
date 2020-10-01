@@ -28,7 +28,16 @@ where
 
 #[non_exhaustive]
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ToPrimitive,
+    FromPrimitive,
 )]
 #[display(Debug)]
 pub enum GenesisAction {}
@@ -36,7 +45,16 @@ impl NodeAction for GenesisAction {}
 
 #[non_exhaustive]
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ToPrimitive,
+    FromPrimitive,
 )]
 #[display(Debug)]
 pub enum ExtensionAction {}
@@ -44,7 +62,16 @@ impl NodeAction for ExtensionAction {}
 
 #[non_exhaustive]
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ToPrimitive,
+    FromPrimitive,
 )]
 #[display(Debug)]
 #[repr(u16)]
@@ -55,7 +82,16 @@ impl NodeAction for TransitionAction {}
 
 #[non_exhaustive]
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ToPrimitive,
+    FromPrimitive,
 )]
 #[display(Debug)]
 #[repr(u16)]
@@ -78,7 +114,16 @@ pub enum Procedure {
 
 #[non_exhaustive]
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ToPrimitive,
+    FromPrimitive,
 )]
 #[display(Debug)]
 #[repr(u8)]
@@ -102,10 +147,17 @@ mod strict_encoding {
     impl StrictEncode for Procedure {
         type Error = Error;
 
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             Ok(match self {
-                Self::Simplicity { offset } => strict_encode_list!(e; 0u8, offset),
-                Self::Standard(proc_id) => strict_encode_list!(e; 0xFFu8, proc_id),
+                Self::Simplicity { offset } => {
+                    strict_encode_list!(e; 0u8, offset)
+                }
+                Self::Standard(proc_id) => {
+                    strict_encode_list!(e; 0xFFu8, proc_id)
+                }
             })
         }
     }
@@ -118,8 +170,13 @@ mod strict_encoding {
                 0u8 => Self::Simplicity {
                     offset: u32::strict_decode(&mut d)?,
                 },
-                0xFFu8 => Self::Standard(StandardProcedure::strict_decode(&mut d)?),
-                x => Err(Error::EnumValueNotKnown("script::Procedure".to_string(), x))?,
+                0xFFu8 => {
+                    Self::Standard(StandardProcedure::strict_decode(&mut d)?)
+                }
+                x => Err(Error::EnumValueNotKnown(
+                    "script::Procedure".to_string(),
+                    x,
+                ))?,
             })
         }
     }

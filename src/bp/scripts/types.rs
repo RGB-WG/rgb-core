@@ -13,31 +13,38 @@
 
 //! # Bitcoin script types
 //!
-//! Bitcoin doesn't make a distinction between Bitcoin script coming from different sources, like
-//! *scriptPubKey* in transaction output or witness and *sigScript* in transaction input. There are
-//! many other possible script containers for Bitcoin script: redeem script, witness script,
-//! tapscript. In fact, any "script" of [bitcoin::Script] type can be used for inputs and outputs.
-//! What is a valid script for one will be a valid script for the other; the only req. is formatting
-//! of opcodes & pushes. That would mean that in principle every input script can be used as an
-//! output script, but not vice versa. But really what makes a "script" is just the fact that it's
+//! Bitcoin doesn't make a distinction between Bitcoin script coming from
+//! different sources, like *scriptPubKey* in transaction output or witness and
+//! *sigScript* in transaction input. There are many other possible script
+//! containers for Bitcoin script: redeem script, witness script, tapscript. In
+//! fact, any "script" of [bitcoin::Script] type can be used for inputs and
+//! outputs. What is a valid script for one will be a valid script for the
+//! other; the only req. is formatting of opcodes & pushes. That would mean that
+//! in principle every input script can be used as an output script, but not
+//! vice versa. But really what makes a "script" is just the fact that it's
 //! formatted correctly.
 //!
-//! While all `Script`s represent the same type **semantically**, there is a clear distinction
-//! at the **logical** level: Bitcoin script has the property to be committed into some other
-//! Bitcoin script – in a nested structures like in several layers, like *redeemScript* inside of
-//! *sigScript* used for P2SH, or *tapScript* within *witnessScript* coming from *witness* field
-//! for Taproot. These nested layers do distinguish on the information they contain, since some of
-//! them only commit to the hashes of the nested scripts (`ScriptHash`, `WitnessProgram`) or
-//! public keys (`PubkeyHash`, `WPubkeyHash`), while other contain the full source of the script.
+//! While all `Script`s represent the same type **semantically**, there is a
+//! clear distinction at the **logical** level: Bitcoin script has the property
+//! to be committed into some other Bitcoin script – in a nested structures like
+//! in several layers, like *redeemScript* inside of *sigScript* used for P2SH,
+//! or *tapScript* within *witnessScript* coming from *witness* field
+//! for Taproot. These nested layers do distinguish on the information they
+//! contain, since some of them only commit to the hashes of the nested scripts
+//! (`ScriptHash`, `WitnessProgram`) or public keys (`PubkeyHash`,
+//! `WPubkeyHash`), while other contain the full source of the script.
 //!
-//! The present type system represents a solution to the problem: it distinguish different logical
-//! types by introducing `Script` wrapper types. It defines [LockScript] as bottom layer of a script
-//! hierarchy, containing no other script commitments (in form of their hashes). It also defines
-//! types above on it: [PubkeyScript] (for whatever is there in `scriptPubkey` field of a `TxOut`),
-//! [SigScript] (for whatever comes from `sigScript` field of `TxIn`), [RedeemScript] and [TapScript].
-//! Then, there are conversion functions, which for instance, can analyse [PubkeyScript]
-//! and if it is a custom script or P2PK return a [LockScript] type - or otherwise fail with the
-//! error. So with this type system one is always sure which logical information it does contain.
+//! The present type system represents a solution to the problem: it distinguish
+//! different logical types by introducing `Script` wrapper types. It defines
+//! [LockScript] as bottom layer of a script hierarchy, containing no other
+//! script commitments (in form of their hashes). It also defines types above on
+//! it: [PubkeyScript] (for whatever is there in `scriptPubkey` field of a
+//! `TxOut`), [SigScript] (for whatever comes from `sigScript` field of `TxIn`),
+//! [RedeemScript] and [TapScript]. Then, there are conversion functions, which
+//! for instance, can analyse [PubkeyScript] and if it is a custom script or
+//! P2PK return a [LockScript] type - or otherwise fail with the error. So with
+//! this type system one is always sure which logical information it does
+//! contain.
 //!
 //! ## Type derivation
 //!
@@ -63,18 +70,19 @@
 //!                                                                       || /#=V1_WitnessProgram/ |
 //!                                                                       ||      |                |
 //! [?txin.witness] <=====================================================++      +--?---> TapScript
-//!
 //! ```
 //! Legend:
 //! * `[source] <===> `: data source
 //! * `[?source] <===> `: data source which may be absent
 //! * `--+--`: algorithmic branching (alternative computation options)
-//! * `--?-->`: a conversion exists, but it may fail (returns [Option] or [Result])
-//! * `--?!-->`: a conversion exists, but it may fail; however one of alternative branches must
-//!              always succeed
+//! * `--?-->`: a conversion exists, but it may fail (returns [Option] or
+//!   [Result])
+//! * `--?!-->`: a conversion exists, but it may fail; however one of
+//!   alternative branches must always succeed
 //! * `----->`: a conversion exists which can't fail
 //! * `--/format/--`: a format implied by scriptPubKey program
-//! * `--(#=type)--`: the hash of the value following `->` must match to the value of the `<type>`
+//! * `--(#=type)--`: the hash of the value following `->` must match to the
+//!   value of the `<type>`
 //!
 //! ## Type conversion
 //!
@@ -87,7 +95,6 @@
 //!
 //! PubkeyScript --?--> LockScript
 //! ```
-//!
 
 use amplify::Wrapper;
 use bitcoin::{
@@ -242,7 +249,9 @@ pub enum WitnessVersion {
 
 /// A error covering only one possible failure in WitnessVersion creation:
 /// when the provided version > 16
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
 #[display(Debug)]
 pub enum WitnessVersionError {
     /// The opocde provided for the version construction is incorrect
@@ -340,19 +349,21 @@ impl From<WScriptHash> for WitnessProgram {
     }
 }
 
-/// Defines strategy for converting some source Bitcoin script (i.e. [LockScript])
-/// into both `scriptPubkey` and `sigScript`/`witness` fields
+/// Defines strategy for converting some source Bitcoin script (i.e.
+/// [LockScript]) into both `scriptPubkey` and `sigScript`/`witness` fields
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Hash)]
 #[display(Debug)]
 #[non_exhaustive]
 pub enum Strategy {
     /// The script or public key gets right into `scriptPubkey`, i.e. as
-    /// **P2PK** (for a public key) or as custom script (mostly used for `OP_RETURN`)
+    /// **P2PK** (for a public key) or as custom script (mostly used for
+    /// `OP_RETURN`)
     Exposed,
 
-    /// We hash public key or script and use non-SegWit `scriptPubkey` encoding,
-    /// i.e. **P2PKH** or **P2SH** with corresponding non-segwit transaction
-    /// input `sigScript` containing copy of [LockScript] in `redeemScript` field
+    /// We hash public key or script and use non-SegWit `scriptPubkey`
+    /// encoding, i.e. **P2PKH** or **P2SH** with corresponding non-segwit
+    /// transaction input `sigScript` containing copy of [LockScript] in
+    /// `redeemScript` field
     LegacyHashed,
 
     /// Compatibility variant for SegWit outputs when the SegWit version and
@@ -365,7 +376,8 @@ pub enum Strategy {
     WitnessScriptHash,
 
     /// We produce either **P2WPKH** or **P2WSH** output and use witness field
-    /// in transaction input to store the original [LockScript] or the public key
+    /// in transaction input to store the original [LockScript] or the public
+    /// key
     WitnessV0,
 
     /// Will be used for Taproot
@@ -373,7 +385,9 @@ pub enum Strategy {
 }
 
 /// Errors that happens during [ConversionStrategy::deduce] process
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
 #[display(Debug)]
 pub enum StrategyError {
     /// For P2SH scripts we need to know whether it is created for the
@@ -400,9 +414,9 @@ impl Strategy {
     ///       `pubkey_script` value; don't use it for P2SH `scriptPubkey`s,
     ///       otherwise the method will return
     ///       [ConversionStrategyError::IncompleteInformation] error.
-    ///     - `Some(true)`: presence of a witness structure will be required
-    ///       in transaction input to spend the given `pubkey_script`, i.e.
-    ///       it was composed with P2SH-P2W*H scheme
+    ///     - `Some(true)`: presence of a witness structure will be required in
+    ///       transaction input to spend the given `pubkey_script`, i.e. it was
+    ///       composed with P2SH-P2W*H scheme
     ///     - `Some(false)`: if `scriptPubkey` is P2SH, it is a "normal" P2SH
     ///       and was not created with P2SH-P2W*H scheme. The spending
     ///       transaction input would not have `witness` structure.
@@ -416,7 +430,6 @@ impl Strategy {
     ///   (see explanation about the argument usage above).
     /// * `UnsupportedWitnessVersion(WitnessVersion)`: the provided pubkey
     ///   script has a witness version above 1.
-    ///
     pub fn deduce(
         pubkey_script: &PubkeyScript,
         has_witness: Option<bool>,
@@ -425,7 +438,8 @@ impl Strategy {
         match pubkey_script.as_inner() {
             p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(WitnessV0),
             p if p.is_witness_program() => {
-                const ERR: &'static str = "bitcoin::Script::is_witness_program is broken";
+                const ERR: &'static str =
+                    "bitcoin::Script::is_witness_program is broken";
                 match WitnessVersion::try_from(
                     p.instructions_minimal().next().expect(ERR).expect(ERR),
                 )
@@ -505,7 +519,9 @@ impl ScriptSet {
                     self.sig_script = witness_script
                         .as_inner()
                         .iter()
-                        .fold(Builder::new(), |builder, bytes| builder.push_slice(bytes))
+                        .fold(Builder::new(), |builder, bytes| {
+                            builder.push_slice(bytes)
+                        })
                         .into_script()
                         .into();
                     self.witness_script = None;
@@ -539,14 +555,19 @@ impl GenerateScripts for LockScript {
     fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
         match strategy {
             Strategy::Exposed => self.as_inner().into(),
-            Strategy::LegacyHashed => Script::new_p2sh(&self.script_hash()).into(),
-            Strategy::WitnessV0 => Script::new_v0_wsh(&self.wscript_hash()).into(),
+            Strategy::LegacyHashed => {
+                Script::new_p2sh(&self.script_hash()).into()
+            }
+            Strategy::WitnessV0 => {
+                Script::new_v0_wsh(&self.wscript_hash()).into()
+            }
             Strategy::WitnessScriptHash => {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
-                let redeem_script =
-                    LockScript::from(self.to_script_pubkey(Strategy::WitnessV0).to_inner());
+                let redeem_script = LockScript::from(
+                    self.to_script_pubkey(Strategy::WitnessV0).to_inner(),
+                );
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
             Strategy::WitnessV1Taproot => unimplemented!(),
@@ -566,8 +587,9 @@ impl GenerateScripts for LockScript {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
-                let redeem_script =
-                    LockScript::from(self.to_script_pubkey(Strategy::WitnessV0).to_inner());
+                let redeem_script = LockScript::from(
+                    self.to_script_pubkey(Strategy::WitnessV0).to_inner(),
+                );
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -596,7 +618,9 @@ impl GenerateScripts for bitcoin::PublicKey {
     fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
         match strategy {
             Strategy::Exposed => Script::new_p2pk(self).into(),
-            Strategy::LegacyHashed => Script::new_p2pkh(&self.pubkey_hash()).into(),
+            Strategy::LegacyHashed => {
+                Script::new_p2pkh(&self.pubkey_hash()).into()
+            }
             // TODO: (new) Detect uncompressed public key and return error
             Strategy::WitnessV0 => Script::new_v0_wpkh(
                 &self
@@ -623,8 +647,9 @@ impl GenerateScripts for bitcoin::PublicKey {
                 .into(),
             Strategy::WitnessScriptHash => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
-                let redeem_script =
-                    LockScript::from(self.to_script_pubkey(Strategy::WitnessV0).into_inner());
+                let redeem_script = LockScript::from(
+                    self.to_script_pubkey(Strategy::WitnessV0).into_inner(),
+                );
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()

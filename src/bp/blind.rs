@@ -21,7 +21,17 @@ use crate::commit_verify::CommitVerify;
 /// Data required to generate or reveal the information about blinded
 /// transaction outpoint
 #[derive(
-    Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Default, StrictEncode, StrictDecode,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    Default,
+    StrictEncode,
+    StrictDecode,
 )]
 #[strict_crate(crate)]
 #[display(Debug)]

@@ -27,7 +27,16 @@ pub struct StateSchema {
 }
 
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ToPrimitive,
+    FromPrimitive,
 )]
 #[non_exhaustive]
 #[repr(u8)]
@@ -159,9 +168,14 @@ mod strict_encoding {
     impl StrictEncode for StateFormat {
         type Error = Error;
 
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
             Ok(match self {
-                StateFormat::Declarative => StateType::Declarative.strict_encode(e)?,
+                StateFormat::Declarative => {
+                    StateType::Declarative.strict_encode(e)?
+                }
                 StateFormat::DiscreteFiniteField(data) => {
                     strict_encode_list!(e; StateType::DiscreteFiniteField, data)
                 }
@@ -180,9 +194,13 @@ mod strict_encoding {
             Ok(match format {
                 StateType::Declarative => StateFormat::Declarative,
                 StateType::DiscreteFiniteField => {
-                    StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::strict_decode(d)?)
+                    StateFormat::DiscreteFiniteField(
+                        DiscreteFiniteFieldFormat::strict_decode(d)?,
+                    )
                 }
-                StateType::CustomData => StateFormat::CustomData(DataFormat::strict_decode(d)?),
+                StateType::CustomData => {
+                    StateFormat::CustomData(DataFormat::strict_decode(d)?)
+                }
             })
         }
     }
@@ -210,12 +228,16 @@ mod strict_encoding {
     impl StrictEncode for DiscreteFiniteFieldFormat {
         type Error = Error;
 
-        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, Self::Error> {
             match self {
                 // Today we support only a single format of confidential data,
                 // but tomorrow there might be more
                 DiscreteFiniteFieldFormat::Unsigned64bit => {
-                    DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128).strict_encode(e)
+                    DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
+                        .strict_encode(e)
                 }
             }
         }
@@ -265,7 +287,10 @@ mod strict_encoding {
     impl StrictEncode for DataFormat {
         type Error = Error;
 
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
             fn get_bounds<T>(
                 provided: impl RangeBounds<T>,
                 allowed: RangeInclusive<T>,
@@ -282,7 +307,9 @@ mod strict_encoding {
                     + Default,
             {
                 let min = match provided.start_bound() {
-                    Bound::Excluded(bound) | Bound::Included(bound) if !allowed.contains(bound) => {
+                    Bound::Excluded(bound) | Bound::Included(bound)
+                        if !allowed.contains(bound) =>
+                    {
                         Err(Error::DataIntegrityError(format!(
                             "Lower bound {:?} of the allowed range for \
                                  DataFormat is outside of the possible values \
@@ -291,16 +318,22 @@ mod strict_encoding {
                         )))?
                     }
                     Bound::Included(bound) => *bound,
-                    Bound::Excluded(_) if !exclusive => Err(Error::DataIntegrityError(
-                        "Excluded upper bound for the allowed range in \
+                    Bound::Excluded(_) if !exclusive => {
+                        Err(Error::DataIntegrityError(
+                            "Excluded upper bound for the allowed range in \
                          DataFormat does not make sense for float type"
-                            .to_string(),
-                    ))?,
-                    Bound::Excluded(bound) => *bound + T::try_from(1).unwrap_or_default(),
+                                .to_string(),
+                        ))?
+                    }
+                    Bound::Excluded(bound) => {
+                        *bound + T::try_from(1).unwrap_or_default()
+                    }
                     Bound::Unbounded => *allowed.start(),
                 };
                 let max = match provided.end_bound() {
-                    Bound::Excluded(bound) | Bound::Included(bound) if !allowed.contains(bound) => {
+                    Bound::Excluded(bound) | Bound::Included(bound)
+                        if !allowed.contains(bound) =>
+                    {
                         Err(Error::DataIntegrityError(format!(
                             "Upper bound {:?} of the allowed range for \
                                  DataFormat is outside of the possible values \
@@ -309,12 +342,16 @@ mod strict_encoding {
                         )))?
                     }
                     Bound::Included(bound) => *bound,
-                    Bound::Excluded(_) if !exclusive => Err(Error::DataIntegrityError(
-                        "Excluded upper bound for the allowed range in \
+                    Bound::Excluded(_) if !exclusive => {
+                        Err(Error::DataIntegrityError(
+                            "Excluded upper bound for the allowed range in \
                          DataFormat does not make sense for float type"
-                            .to_string(),
-                    ))?,
-                    Bound::Excluded(bound) => *bound - T::try_from(1).unwrap_or_default(),
+                                .to_string(),
+                        ))?
+                    }
+                    Bound::Excluded(bound) => {
+                        *bound - T::try_from(1).unwrap_or_default()
+                    }
                     Bound::Unbounded => *allowed.end(),
                 };
                 Ok((min, max))
@@ -331,7 +368,8 @@ mod strict_encoding {
 
             Ok(match self {
                 DataFormat::Unsigned(bits, min, max) => {
-                    let mut len = (EncodingTag::Unsigned).strict_encode(&mut e)?;
+                    let mut len =
+                        (EncodingTag::Unsigned).strict_encode(&mut e)?;
                     len += bits.strict_encode(&mut e)?;
                     match bits {
                         Bits::Bit8 => {
@@ -343,8 +381,11 @@ mod strict_encoding {
                                 .map_err(|_| Error::ValueOutOfRange(
                                     "Maximum value for Unsigned data type are outside of bit dimension",
                                     (core::u8::MIN as u128)..(core::u8::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::u8::MIN..=core::u8::MAX, true)?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::u8::MIN..=core::u8::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit16 => {
@@ -356,8 +397,11 @@ mod strict_encoding {
                                     .map_err(|_| Error::ValueOutOfRange(
                                         "Maximum value for Unsigned data type are outside of bit dimension",
                                         (core::u16::MIN as u128)..(core::u16::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::u16::MIN..=core::u16::MAX, true)?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::u16::MIN..=core::u16::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit32 => {
@@ -369,8 +413,11 @@ mod strict_encoding {
                                     .map_err(|_| Error::ValueOutOfRange(
                                         "Maximum value for Unsigned data type are outside of bit dimension",
                                         (core::u32::MIN as u128)..(core::u32::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::u32::MIN..=core::u32::MAX, true)?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::u32::MIN..=core::u32::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit64 => {
@@ -382,8 +429,11 @@ mod strict_encoding {
                                     .map_err(|_| Error::ValueOutOfRange(
                                         "Maximum value for Unsigned data type are outside of bit dimension",
                                         (core::u64::MIN as u128)..(core::u64::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::u64::MIN..=core::u64::MAX, true)?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::u64::MIN..=core::u64::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                     }
@@ -391,7 +441,8 @@ mod strict_encoding {
                 }
 
                 DataFormat::Integer(bits, min, max) => {
-                    let mut len = (EncodingTag::Integer).strict_encode(&mut e)?;
+                    let mut len =
+                        (EncodingTag::Integer).strict_encode(&mut e)?;
                     len += bits.strict_encode(&mut e)?;
                     match bits {
                         Bits::Bit8 => {
@@ -403,8 +454,11 @@ mod strict_encoding {
                                 .map_err(|_| Error::ValueOutOfRange(
                                     "Maximum value for Integer data type are outside of bit dimension",
                                     (core::i8::MIN as u128)..(core::i8::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::i8::MIN..=core::i8::MAX, true)?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::i8::MIN..=core::i8::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit16 => {
@@ -416,8 +470,11 @@ mod strict_encoding {
                                 .map_err(|_| Error::ValueOutOfRange(
                                     "Maximum value for Integer data type are outside of bit dimension",
                                     (core::i16::MIN as u128)..(core::i16::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::i16::MIN..=core::i16::MAX, true)?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::i16::MIN..=core::i16::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit32 => {
@@ -429,8 +486,11 @@ mod strict_encoding {
                                 .map_err(|_| Error::ValueOutOfRange(
                                     "Maximum value for Integer data type are outside of bit dimension",
                                     (core::i32::MIN as u128)..(core::i32::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::i32::MIN..=core::i32::MAX, true)?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::i32::MIN..=core::i32::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                         Bits::Bit64 => {
@@ -442,8 +502,11 @@ mod strict_encoding {
                                 .map_err(|_| Error::ValueOutOfRange(
                                     "Maximum value for Integer data type are outside of bit dimension",
                                     (core::i64::MIN as u128)..(core::i64::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::i64::MIN..=core::i64::MAX, true)?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::i64::MIN..=core::i64::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                     }
@@ -476,15 +539,27 @@ mod strict_encoding {
                     len
                 }
 
-                DataFormat::Enum(values) => strict_encode_list!(e; EncodingTag::Enum, values),
-                DataFormat::String(size) => strict_encode_list!(e; EncodingTag::String, size),
-                DataFormat::Bytes(size) => strict_encode_list!(e; EncodingTag::Bytes, size),
-                DataFormat::Digest(algo) => strict_encode_list!(e; EncodingTag::Digest, algo),
+                DataFormat::Enum(values) => {
+                    strict_encode_list!(e; EncodingTag::Enum, values)
+                }
+                DataFormat::String(size) => {
+                    strict_encode_list!(e; EncodingTag::String, size)
+                }
+                DataFormat::Bytes(size) => {
+                    strict_encode_list!(e; EncodingTag::Bytes, size)
+                }
+                DataFormat::Digest(algo) => {
+                    strict_encode_list!(e; EncodingTag::Digest, algo)
+                }
                 DataFormat::PublicKey(curve, ser) => {
                     strict_encode_list!(e; EncodingTag::PublicKey, curve, ser)
                 }
-                DataFormat::Signature(algo) => strict_encode_list!(e; EncodingTag::Signature, algo),
-                DataFormat::TxOutPoint => EncodingTag::TxOutPoint.strict_encode(&mut e)?,
+                DataFormat::Signature(algo) => {
+                    strict_encode_list!(e; EncodingTag::Signature, algo)
+                }
+                DataFormat::TxOutPoint => {
+                    EncodingTag::TxOutPoint.strict_encode(&mut e)?
+                }
             })
         }
     }
@@ -629,10 +704,18 @@ mod strict_encoding {
                     };
                     DataFormat::Float(bits, min, max)
                 }
-                EncodingTag::Enum => DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?),
-                EncodingTag::String => DataFormat::String(u16::strict_decode(&mut d)?),
-                EncodingTag::Bytes => DataFormat::Bytes(u16::strict_decode(&mut d)?),
-                EncodingTag::Digest => DataFormat::Digest(DigestAlgorithm::strict_decode(&mut d)?),
+                EncodingTag::Enum => {
+                    DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?)
+                }
+                EncodingTag::String => {
+                    DataFormat::String(u16::strict_decode(&mut d)?)
+                }
+                EncodingTag::Bytes => {
+                    DataFormat::Bytes(u16::strict_decode(&mut d)?)
+                }
+                EncodingTag::Digest => {
+                    DataFormat::Digest(DigestAlgorithm::strict_decode(&mut d)?)
+                }
                 EncodingTag::PublicKey => DataFormat::PublicKey(
                     EllipticCurve::strict_decode(&mut d)?,
                     elliptic_curve::PointSerialization::strict_decode(&mut d)?,
@@ -653,10 +736,12 @@ mod _validation {
     use super::*;
     use crate::client_side_validation::Conceal;
     use crate::rgb::{
-        data, validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy,
-        StateTypes,
+        data, validation, Assignment, DeclarativeStrategy, HashStrategy,
+        NodeId, PedersenStrategy, StateTypes,
     };
-    use crate::strict_encoding::{Error as EncodingError, StrictDecode, StrictEncode};
+    use crate::strict_encoding::{
+        Error as EncodingError, StrictDecode, StrictEncode,
+    };
 
     fn range_check<T, U>(
         type_id: usize,
@@ -687,98 +772,138 @@ mod _validation {
     }
 
     impl DataFormat {
-        pub fn validate(&self, item_id: usize, data: &data::Revealed) -> validation::Status {
+        pub fn validate(
+            &self,
+            item_id: usize,
+            data: &data::Revealed,
+        ) -> validation::Status {
             let mut status = validation::Status::new();
             match (self, data) {
-                (Self::Unsigned(Bits::Bit8, min, max), data::Revealed::U8(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Unsigned(Bits::Bit16, min, max), data::Revealed::U16(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Unsigned(Bits::Bit32, min, max), data::Revealed::U32(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Unsigned(Bits::Bit64, min, max), data::Revealed::U64(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
+                (
+                    Self::Unsigned(Bits::Bit8, min, max),
+                    data::Revealed::U8(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
+                (
+                    Self::Unsigned(Bits::Bit16, min, max),
+                    data::Revealed::U16(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
+                (
+                    Self::Unsigned(Bits::Bit32, min, max),
+                    data::Revealed::U32(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
+                (
+                    Self::Unsigned(Bits::Bit64, min, max),
+                    data::Revealed::U64(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
                 (Self::Unsigned(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits {
-                        field_or_state_type: item_id,
-                        expected: *bits,
-                    });
+                    status.add_failure(
+                        validation::Failure::SchemaMismatchedBits {
+                            field_or_state_type: item_id,
+                            expected: *bits,
+                        },
+                    );
                 }
 
-                (Self::Integer(Bits::Bit8, min, max), data::Revealed::I8(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Integer(Bits::Bit16, min, max), data::Revealed::I16(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Integer(Bits::Bit32, min, max), data::Revealed::I32(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Integer(Bits::Bit64, min, max), data::Revealed::I64(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
+                (
+                    Self::Integer(Bits::Bit8, min, max),
+                    data::Revealed::I8(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
+                (
+                    Self::Integer(Bits::Bit16, min, max),
+                    data::Revealed::I16(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
+                (
+                    Self::Integer(Bits::Bit32, min, max),
+                    data::Revealed::I32(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
+                (
+                    Self::Integer(Bits::Bit64, min, max),
+                    data::Revealed::I64(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
                 (Self::Integer(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits {
-                        field_or_state_type: item_id,
-                        expected: *bits,
-                    });
+                    status.add_failure(
+                        validation::Failure::SchemaMismatchedBits {
+                            field_or_state_type: item_id,
+                            expected: *bits,
+                        },
+                    );
                 }
 
-                (Self::Float(Bits::Bit32, min, max), data::Revealed::F32(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Float(Bits::Bit64, min, max), data::Revealed::F64(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
+                (
+                    Self::Float(Bits::Bit32, min, max),
+                    data::Revealed::F32(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
+                (
+                    Self::Float(Bits::Bit64, min, max),
+                    data::Revealed::F64(val),
+                ) => range_check(item_id, true, *val, *min, *max, &mut status),
                 (Self::Float(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits {
-                        field_or_state_type: item_id,
-                        expected: *bits,
-                    });
+                    status.add_failure(
+                        validation::Failure::SchemaMismatchedBits {
+                            field_or_state_type: item_id,
+                            expected: *bits,
+                        },
+                    );
                 }
 
                 (Self::Enum(value_set), data::Revealed::U8(val)) => {
                     if !value_set.contains(val) {
-                        status.add_failure(validation::Failure::SchemaWrongEnumValue {
-                            field_or_state_type: item_id,
-                            unexpected: *val,
-                        });
+                        status.add_failure(
+                            validation::Failure::SchemaWrongEnumValue {
+                                field_or_state_type: item_id,
+                                unexpected: *val,
+                            },
+                        );
                     }
                 }
                 (Self::Enum(_), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits {
-                        field_or_state_type: item_id,
-                        expected: Bits::Bit8,
-                    });
+                    status.add_failure(
+                        validation::Failure::SchemaMismatchedBits {
+                            field_or_state_type: item_id,
+                            expected: Bits::Bit8,
+                        },
+                    );
                 }
 
                 (Self::String(len), data::Revealed::String(val)) => {
                     if val.len() > *len as usize {
-                        status.add_failure(validation::Failure::SchemaWrongDataLength {
-                            field_or_state_type: item_id,
-                            max_expected: *len,
-                            found: val.len(),
-                        });
+                        status.add_failure(
+                            validation::Failure::SchemaWrongDataLength {
+                                field_or_state_type: item_id,
+                                max_expected: *len,
+                                found: val.len(),
+                            },
+                        );
                     }
                 }
                 (Self::Bytes(len), data::Revealed::Bytes(val)) => {
                     if val.len() > *len as usize {
-                        status.add_failure(validation::Failure::SchemaWrongDataLength {
-                            field_or_state_type: item_id,
-                            max_expected: *len,
-                            found: val.len(),
-                        });
+                        status.add_failure(
+                            validation::Failure::SchemaWrongDataLength {
+                                field_or_state_type: item_id,
+                                max_expected: *len,
+                                found: val.len(),
+                            },
+                        );
                     }
                 }
 
-                (Self::Digest(DigestAlgorithm::Sha256), data::Revealed::Sha256(_)) => {}
-                (Self::Digest(DigestAlgorithm::Sha512), data::Revealed::Sha512(_)) => {}
-                (Self::Digest(DigestAlgorithm::Bitcoin160), data::Revealed::Bitcoin160(_)) => {}
-                (Self::Digest(DigestAlgorithm::Bitcoin256), data::Revealed::Bitcoin256(_)) => {}
+                (
+                    Self::Digest(DigestAlgorithm::Sha256),
+                    data::Revealed::Sha256(_),
+                ) => {}
+                (
+                    Self::Digest(DigestAlgorithm::Sha512),
+                    data::Revealed::Sha512(_),
+                ) => {}
+                (
+                    Self::Digest(DigestAlgorithm::Bitcoin160),
+                    data::Revealed::Bitcoin160(_),
+                ) => {}
+                (
+                    Self::Digest(DigestAlgorithm::Bitcoin256),
+                    data::Revealed::Bitcoin256(_),
+                ) => {}
 
                 (
                     Self::PublicKey(EllipticCurve::Secp256k1, _),
@@ -793,12 +918,16 @@ mod _validation {
                     data::Revealed::Secp256k1ECDSASignature(_),
                 ) => {}
                 (
-                    Self::Signature(elliptic_curve::SignatureAlgorithm::Ed25519),
+                    Self::Signature(
+                        elliptic_curve::SignatureAlgorithm::Ed25519,
+                    ),
                     data::Revealed::Ed25519Signature(_),
                 ) => {}
 
                 _ => {
-                    status.add_failure(validation::Failure::SchemaMismatchedDataType(item_id));
+                    status.add_failure(
+                        validation::Failure::SchemaMismatchedDataType(item_id),
+                    );
                 }
             }
             status
@@ -815,7 +944,8 @@ mod _validation {
         where
             STATE: StateTypes,
             STATE::Confidential: PartialEq + Eq,
-            STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+            STATE::Confidential:
+                From<<STATE::Revealed as Conceal>::Confidential>,
             EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
                 + From<<STATE::Confidential as StrictDecode>::Error>
                 + From<<STATE::Revealed as StrictEncode>::Error>

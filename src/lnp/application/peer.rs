@@ -52,7 +52,8 @@ impl Peer {
         private_key: &secp256k1::SecretKey,
         ephemeral_private_key: &secp256k1::SecretKey,
     ) -> Result<Self, ConnectionError> {
-        let connection = node.connect(private_key, ephemeral_private_key).await?;
+        let connection =
+            node.connect(private_key, ephemeral_private_key).await?;
         Ok(Self {
             node,
             connection,
@@ -60,7 +61,10 @@ impl Peer {
         })
     }
 
-    pub async fn send(&self, _msg: &dyn Message) -> Result<(), ConnectionError> {
+    pub async fn send(
+        &self,
+        _msg: &dyn Message,
+    ) -> Result<(), ConnectionError> {
         // TODO: Implement
         Ok(())
     }

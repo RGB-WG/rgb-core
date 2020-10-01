@@ -19,8 +19,8 @@ use bitcoin::{Transaction, Txid};
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
-    schema, seal, Anchor, AnchorId, AssignmentsVariant, Consignment, ContractId, Node, NodeId,
-    Schema, SchemaId,
+    schema, seal, Anchor, AnchorId, AssignmentsVariant, Consignment,
+    ContractId, Node, NodeId, Schema, SchemaId,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
@@ -28,7 +28,10 @@ use super::{
 pub struct TxResolverError;
 
 pub trait TxResolver {
-    fn resolve(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
+    fn resolve(
+        &self,
+        txid: &Txid,
+    ) -> Result<Option<(Transaction, u64)>, TxResolverError>;
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -178,8 +181,16 @@ pub enum Failure {
     SchemaMismatchedStateType(schema::AssignmentsType),
 
     SchemaMetaOccurencesError(NodeId, schema::FieldType, OccurrencesError),
-    SchemaAncestorsOccurencesError(NodeId, schema::AssignmentsType, OccurrencesError),
-    SchemaSealsOccurencesError(NodeId, schema::AssignmentsType, OccurrencesError),
+    SchemaAncestorsOccurencesError(
+        NodeId,
+        schema::AssignmentsType,
+        OccurrencesError,
+    ),
+    SchemaSealsOccurencesError(
+        NodeId,
+        schema::AssignmentsType,
+        OccurrencesError,
+    ),
 
     TransitionAbsent(NodeId),
     TransitionNotAnchored(NodeId),
@@ -296,7 +307,10 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                         .len()
                         > 0
                     {
-                        status.add_warning(Warning::EndpointDuplication(*node_id, *outpoint_hash));
+                        status.add_warning(Warning::EndpointDuplication(
+                            *node_id,
+                            *outpoint_hash,
+                        ));
                     } else {
                         end_transitions.push(*node);
                     }
@@ -304,16 +318,19 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
                     // endpoint list
-                    status.add_warning(Warning::EndpointTransitionSealNotFound(
-                        *node_id,
-                        *outpoint_hash,
-                    ));
+                    status.add_warning(
+                        Warning::EndpointTransitionSealNotFound(
+                            *node_id,
+                            *outpoint_hash,
+                        ),
+                    );
                 }
             } else {
                 // We generate just a warning here because it's up to a user
                 // to decide whether to accept consignment with wrong
                 // endpoint list
-                status.add_warning(Warning::EndpointTransitionNotFound(*node_id));
+                status
+                    .add_warning(Warning::EndpointTransitionNotFound(*node_id));
             }
         }
 
@@ -345,7 +362,11 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
     /// the status object, but the validation continues for the rest of the
     /// consignment data. This can help it debugging and detecting all problems
     /// with the consignment.
-    pub fn validate(schema: &Schema, consignment: &'validator Consignment, resolver: R) -> Status {
+    pub fn validate(
+        schema: &Schema,
+        consignment: &'validator Consignment,
+        resolver: R,
+    ) -> Status {
         let mut validator = Validator::init(consignment, resolver);
 
         validator.validate_root(schema);
@@ -370,7 +391,8 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         }
 
         // [VALIDATION]: Validate genesis
-        self.status += schema.validate(&self.node_index, &self.consignment.genesis);
+        self.status +=
+            schema.validate(&self.node_index, &self.consignment.genesis);
         self.validation_index.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
@@ -431,14 +453,18 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 //               anchor. This must be done with
                 //               deterministic bitcoin commitments & LNPBP-4
                 if !anchor.validate(&self.contract_id, &node_id) {
-                    self.status
-                        .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.anchor_id()));
+                    self.status.add_failure(Failure::TransitionNotInAnchor(
+                        node_id,
+                        anchor.anchor_id(),
+                    ));
                 }
 
                 self.validate_graph_node(node, anchor);
 
             // Ouch, we are out of that multi-level nested cycles :)
-            } else if node_type != NodeType::Genesis && node_type != NodeType::Extension {
+            } else if node_type != NodeType::Genesis
+                && node_type != NodeType::Extension
+            {
                 // This point is actually unreachable: b/c of the
                 // consignment structure, each state transition
                 // has a corresponding anchor. So if we've got here there
@@ -467,7 +493,11 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         }
     }
 
-    fn validate_graph_node(&mut self, node: &'validator dyn Node, anchor: &'validator Anchor) {
+    fn validate_graph_node(
+        &mut self,
+        node: &'validator dyn Node,
+        anchor: &'validator Anchor,
+    ) {
         let txid = anchor.txid;
         let node_id = node.node_id();
 
@@ -478,10 +508,11 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // We wre unable to retrieve corresponding transaction, so can't
                 // check. Reporting this incident and continuing further.
                 // Why this happens? no connection to Bitcoin Core, Electrum or
-                // other backend etc. So this is not a failure in a strict sense,
-                // however we can't be sure that the consignment is valid.
-                // That's why we keep the track of such information in a
-                // separate place (`unresolved_txids` field of the validation
+                // other backend etc. So this is not a failure in a strict
+                // sense, however we can't be sure that the
+                // consignment is valid. That's why we keep the
+                // track of such information in a separate place
+                // (`unresolved_txids` field of the validation
                 // status object).
                 self.status.unresolved_txids.push(txid);
             }
@@ -516,17 +547,19 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // transition ancestors.
                 for (ancestor_id, assignments) in node.ancestors() {
                     let ancestor_id = *ancestor_id;
-                    let ancestor_node =
-                        if let Some(ancestor_node) = self.node_index.get(&ancestor_id) {
-                            *ancestor_node
-                        } else {
-                            // Node, referenced as the ancestor, was not found
-                            // in the consignment. Usually this means that the
-                            // consignment data are broken
-                            self.status
-                                .add_failure(Failure::TransitionAbsent(ancestor_id));
-                            continue;
-                        };
+                    let ancestor_node = if let Some(ancestor_node) =
+                        self.node_index.get(&ancestor_id)
+                    {
+                        *ancestor_node
+                    } else {
+                        // Node, referenced as the ancestor, was not found
+                        // in the consignment. Usually this means that the
+                        // consignment data are broken
+                        self.status.add_failure(Failure::TransitionAbsent(
+                            ancestor_id,
+                        ));
+                        continue;
+                    };
 
                     for (assignment_type, assignment_indexes) in assignments {
                         let assignment_type = *assignment_type;
@@ -536,12 +569,13 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                         {
                             variant
                         } else {
-                            self.status
-                                .add_failure(Failure::TransitionAncestorWrongSealType {
+                            self.status.add_failure(
+                                Failure::TransitionAncestorWrongSealType {
                                     node_id,
                                     ancestor_id,
                                     assignment_type,
-                                });
+                                },
+                            );
                             continue;
                         };
 
@@ -590,13 +624,14 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // Everything is ok, but we have incomplete confidential data,
                 // thus can't do a full verification and have to report the
                 // failure
-                self.status
-                    .add_failure(Failure::TransitionAncestorConfidentialSeal {
+                self.status.add_failure(
+                    Failure::TransitionAncestorConfidentialSeal {
                         node_id,
                         ancestor_id,
                         assignment_type,
                         seal_index,
-                    });
+                    },
+                );
                 None
             }
             (Ok(Some(seal::Revealed::TxOutpoint(outpoint))), None) => {
@@ -610,7 +645,8 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             }
             (Ok(Some(seal)), Some(anchor)) => {
                 Some(bitcoin::OutPoint::from(seal.outpoint_reveal(anchor.txid)))
-            } // -> ... so we can check that the bitcoin transaction references it as one of its inputs
+            } /* -> ... so we can check that the bitcoin transaction
+               * references it as one of its inputs */
         }
         .map(|outpoint| {
             if witness_tx
@@ -623,14 +659,15 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // ancestors in the witness transaction. The consignment is
                 // clearly invalid; reporting this and processing to other
                 // potential issues.
-                self.status
-                    .add_failure(Failure::TransitionAncestorIsNotWitnessInput {
+                self.status.add_failure(
+                    Failure::TransitionAncestorIsNotWitnessInput {
                         node_id,
                         ancestor_id,
                         assignment_type,
                         seal_index,
                         outpoint,
-                    });
+                    },
+                );
             }
         });
     }

@@ -46,8 +46,9 @@ where
     /// Tries to create commitment to a byte representation of a given message
     fn try_commit(msg: &MSG) -> Result<Self, Self::Error>;
 
-    /// Tries to verify commitment against the message; default implementation just
-    /// repeats the commitment to the message and check it against the `self`.
+    /// Tries to verify commitment against the message; default implementation
+    /// just repeats the commitment to the message and check it against the
+    /// `self`.
     #[inline]
     fn try_verify(&self, msg: &MSG) -> Result<bool, Self::Error> {
         Ok(Self::try_commit(msg)? == *self)
@@ -75,15 +76,19 @@ pub trait EmbedCommitVerify<MSG>
 where
     Self: Sized + Eq,
 {
-    /// External container type that will be used to host commitment to a message
+    /// External container type that will be used to host commitment to a
+    /// message
     type Container: Clone;
     /// Error type that may be reported during [commit_embed] procedure
     type Error: std::error::Error;
 
     /// Creates a commitment and embeds it into the provided container returning
-    /// `Self` containing both message commitment and all additional data required
-    /// to reconstruct the original container
-    fn embed_commit(container: &mut Self::Container, msg: &MSG) -> Result<Self, Self::Error>;
+    /// `Self` containing both message commitment and all additional data
+    /// required to reconstruct the original container
+    fn embed_commit(
+        container: &mut Self::Container,
+        msg: &MSG,
+    ) -> Result<Self, Self::Error>;
 
     /// Verifies commitment against the message; default implementation just
     /// reconstructs the original container with [container] function,
@@ -92,14 +97,18 @@ where
     /// Verification is a failable procedure returning bool. The difference
     /// between returning `Ok(false)` and `Err(_)` is the following:
     /// * `Err(_)`: validation was not possible due to container data structure-
-    ///   related error or some internal error during the validation process.
-    ///   It is undefined whether the message corresponds to the commitment.
-    /// * `Ok(false)`: validation was performed completely; the message does
-    ///   not correspond to the commitment
+    ///   related error or some internal error during the validation process. It
+    ///   is undefined whether the message corresponds to the commitment.
+    /// * `Ok(false)`: validation was performed completely; the message does not
+    ///   correspond to the commitment
     /// * `Ok(true)`: validation was performed completely; the message does
     ///   correspond to the commitment
     #[inline]
-    fn verify(&self, container: &Self::Container, msg: &MSG) -> Result<bool, Self::Error> {
+    fn verify(
+        &self,
+        container: &Self::Container,
+        msg: &MSG,
+    ) -> Result<bool, Self::Error> {
         let mut container = container.clone();
         Ok(match Self::embed_commit(&mut container, msg) {
             Ok(commitment) => commitment == *self,
@@ -139,7 +148,10 @@ pub(crate) mod test {
         type Container = DummyVec;
         type Error = Error;
 
-        fn embed_commit(container: &mut Self::Container, msg: &T) -> Result<Self, Self::Error> {
+        fn embed_commit(
+            container: &mut Self::Container,
+            msg: &T,
+        ) -> Result<Self, Self::Error> {
             let mut result = container.0.clone();
             result.extend(msg.as_ref());
             Ok(DummyVec(result))
@@ -201,7 +213,8 @@ pub(crate) mod test {
                 });
 
                 acc.iter().for_each(|cmt| {
-                    // Testing that verification against other commitments returns `false`
+                    // Testing that verification against other commitments
+                    // returns `false`
                     assert_eq!(cmt.verify(msg), false);
                 });
 
@@ -228,7 +241,10 @@ pub(crate) mod test {
                 // Commitments MUST be deterministic: each message should
                 // produce unique commitment
                 (1..10).for_each(|_| {
-                    assert_eq!(CMT::embed_commit(container, msg).unwrap(), commitment);
+                    assert_eq!(
+                        CMT::embed_commit(container, msg).unwrap(),
+                        commitment
+                    );
                 });
 
                 // Testing verification
@@ -237,11 +253,15 @@ pub(crate) mod test {
                 messages.iter().for_each(|m| {
                     // Testing that commitment verification succeeds only
                     // for the original message and fails for the rest
-                    assert_eq!(commitment.verify(container, m).unwrap(), m == msg);
+                    assert_eq!(
+                        commitment.verify(container, m).unwrap(),
+                        m == msg
+                    );
                 });
 
                 acc.iter().for_each(|cmt| {
-                    // Testing that verification against other commitments returns `false`
+                    // Testing that verification against other commitments
+                    // returns `false`
                     assert_eq!(cmt.verify(container, msg).unwrap(), false);
                 });
 
@@ -260,6 +280,9 @@ pub(crate) mod test {
 
     #[test]
     fn test_embed_commit() {
-        embed_commit_verify_suite::<Vec<u8>, DummyVec>(gen_messages(), &mut DummyVec(vec![]));
+        embed_commit_verify_suite::<Vec<u8>, DummyVec>(
+            gen_messages(),
+            &mut DummyVec(vec![]),
+        );
     }
 }

@@ -57,7 +57,11 @@ where
         Ok(Witness(tx_commitment, container.to_proof()))
     }
 
-    fn verify(&self, msg: &Message, witness: &Self::Witness) -> Result<bool, Self::Error> {
+    fn verify(
+        &self,
+        msg: &Message,
+        witness: &Self::Witness,
+    ) -> Result<bool, Self::Error> {
         let (host, supplement) = self
             .resolver
             .tx_and_data(self.seal_definition)
@@ -69,7 +73,8 @@ where
         if found_seals.count() != 1 {
             Err(Error::ResolverLying)?
         }
-        let container = TxContainer::reconstruct(&witness.1, &supplement, &host)?;
+        let container =
+            TxContainer::reconstruct(&witness.1, &supplement, &host)?;
         let commitment = TxCommitment::from_inner(host);
         Ok(commitment.verify(&container, &msg)?)
     }
@@ -93,12 +98,17 @@ where
         {
             SpendingStatus::Unknown => Err(Error::InvalidSealDefinition),
             SpendingStatus::Invalid => Err(Error::InvalidSealDefinition),
-            SpendingStatus::Unspent => Ok(TxoutSeal::new(outpoint.clone(), self)),
+            SpendingStatus::Unspent => {
+                Ok(TxoutSeal::new(outpoint.clone(), self))
+            }
             SpendingStatus::Spent(_) => Err(Error::SpentTxout),
         }
     }
 
-    fn get_seal_status(&self, seal: &TxoutSeal<TXGRAPH>) -> Result<SealStatus, Self::Error> {
+    fn get_seal_status(
+        &self,
+        seal: &TxoutSeal<TXGRAPH>,
+    ) -> Result<SealStatus, Self::Error> {
         match self
             .spending_status(&seal.seal_definition)
             .map_err(|_| Error::MediumAccessError)?
@@ -115,6 +125,12 @@ where
 
 pub trait TxResolve {
     type Error: std::error::Error;
-    fn tx_container(&self, outpoint: OutPoint) -> Result<TxContainer, Self::Error>;
-    fn tx_and_data(&self, outpoint: OutPoint) -> Result<(Transaction, TxSupplement), Self::Error>;
+    fn tx_container(
+        &self,
+        outpoint: OutPoint,
+    ) -> Result<TxContainer, Self::Error>;
+    fn tx_and_data(
+        &self,
+        outpoint: OutPoint,
+    ) -> Result<(Transaction, TxSupplement), Self::Error>;
 }
