@@ -15,13 +15,10 @@
     never_type,
     associated_type_defaults,
     arbitrary_enum_discriminant,
-    in_band_lifetimes,
-    try_trait,
-    pattern
+    try_trait
 )]
 #![recursion_limit = "256"]
 // Coding conventions
-#![allow(incomplete_features, type_alias_bounds)]
 #![deny(
     non_upper_case_globals,
     non_camel_case_types,

@@ -38,5 +38,5 @@ pub trait Unmarshall {
     ) -> Result<Self::Data, Self::Error>;
 }
 
-pub type UnmarshallFn<E: ::std::error::Error> =
+pub type UnmarshallFn<E> =
     fn(reader: &mut dyn io::Read) -> Result<Arc<dyn Any>, E>;

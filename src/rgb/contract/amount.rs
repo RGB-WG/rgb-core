@@ -363,7 +363,7 @@ mod serde_impl {
         }
     }
 
-    impl Deserialize<'de> for Revealed {
+    impl<'de> Deserialize<'de> for Revealed {
         fn deserialize<D>(
             deserializer: D,
         ) -> Result<Self, <D as Deserializer<'de>>::Error>
@@ -416,7 +416,7 @@ mod serde_impl {
 
                 fn expecting(
                     &self,
-                    formatter: &mut Formatter<'a>,
+                    formatter: &mut Formatter<'_>,
                 ) -> fmt::Result {
                     formatter.write_str("struct Revealed")
                 }
