@@ -11,9 +11,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2fef88ffeb537a933836e6c0d956fb3f73e9aa32502bac7f79ee3c3235788c7"
+checksum = "0c4a7dfb3b07fc73964307fd770361b66535a9e564e1650e365bbf1f041ac252"
 dependencies = [
  "async-trait",
  "ed25519-dalek",
@@ -512,8 +512,8 @@ dependencies = [
 
 [[package]]
 name = "miniscript"
-version = "1.0.0"
-source = "git+https://github.com/LNP-BP/rust-miniscript?branch=develop#07f37be581f7ea5cc6a8bc915980a5ef2e002108"
+version = "2.0.0"
+source = "git+https://github.com/LNP-BP/rust-miniscript?branch=develop#ba5010e4375bb07c5653ceba5336e6a4b17e950a"
 dependencies = [
  "bitcoin",
  "serde",

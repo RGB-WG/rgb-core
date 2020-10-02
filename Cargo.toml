@@ -41,7 +41,7 @@ lnpbp_derive = { path = "derive" }
 bitcoin = "~0.25.0"
 bitcoin_hashes = "~0.9.0" # we need macro from here
 lightning = { version = "~0.0.11", optional = true }
-miniscript = "~1.0.0" # TODO: (new) Upgrade to 2.0.0 (requires rebasing
+miniscript = "~2.0.0" # TODO: (new) Upgrade to 2.0.0 (requires rebasing
                       #       `develop` branch in miniscript fork
 bech32 = "~0.7.2"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
@@ -78,7 +78,7 @@ num-derive = "~0.3.0"
 async-trait = { version = "~0.1.30", optional = true }
 
 [dev-dependencies]
-miniscript = { version = "~1.0.0", features = ["compiler"] }
+miniscript = { version = "~2.0.0", features = ["compiler"] }
 bitcoin = { version = "~0.25.0", branch = "develop", features = ["rand"] }
 
 # Forked dependencies
