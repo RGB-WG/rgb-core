@@ -1,6 +1,20 @@
 #!/bin/sh -ex
 
-FEATURES="rgb lnp keygen tor tokio url bulletproofs serde websockets lnp,websockets,url,tokio,async,keygen rgb,lnp,websockets,url,tokio,async,keygen"
+# Library components, one by one
+FEATURES="rgb lnp"
+# ... and used together
+FEATURES="${FEATURES} rgb,lnp"
+# Cryptographic optionals
+FEATURES="${FEATURES} keygen bulletproofs elgamal"
+# Core rust optionals
+FEATURES="${FEATURES} serde tokio async"
+# Networking
+FEATURES="${FEATURES} tor url websockets"
+FEATURES="${FEATURES} tor,url"
+# Full LNP strength, but without Serde
+FEATURES="${FEATURES} lnp,websockets,url,tokio,async,keygen"
+# Full library strength, but without Serde
+FEATURES="${FEATURES} rgb,lnp,tokio,websockets,url,async,keygen"
 
 if [ "$DO_COV" = true ]
 then

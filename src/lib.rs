@@ -75,7 +75,9 @@ pub mod rgb;
 pub use paradigms::{
     client_side_validation, commit_verify, single_use_seals, strict_encoding,
 };
-pub use standards::{elgamal, features, lnpbp1, lnpbp2, lnpbp3, lnpbp4};
+#[cfg(feature = "elgamal")]
+pub use standards::elgamal;
+pub use standards::{features, lnpbp1, lnpbp2, lnpbp3, lnpbp4};
 
 lazy_static! {
     /// Global Secp256k1 context object

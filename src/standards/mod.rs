@@ -14,6 +14,7 @@
 //! Modules implementing convenient interfaces covering specific LNPBP
 //! standards. Check [LNP/BP Standards page](https://github.com/LNP-BP/LNPBPs) for details.
 
+#[cfg(feature = "elgamal")]
 pub mod elgamal;
 pub mod features;
 pub mod lnpbp1;

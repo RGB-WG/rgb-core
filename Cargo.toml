@@ -15,10 +15,14 @@ name = "lnpbp"
 path = "src/lib.rs"
 crate-type = ["dylib", "rlib", "staticlib"]
 
-# Dependencies version policy
-# ---------------------------
+# Dependencies
+# ============
+#
+# Version policy
+# --------------
 # The policy in specifying dependencies versions are to use tilde requirements
-# according to https://doc.rust-lang.org/nightly/cargo/reference/specifying-dependencies.html?highlight=feature#tilde-requirements
+# according to
+# <https://doc.rust-lang.org/nightly/cargo/reference/specifying-dependencies.html?highlight=feature#tilde-requirements>
 # with full semver version specification (major, minor and patch components)
 # which means that we may upgrade for patches/bugfixes, but must not change
 # even the minor version of the package.
@@ -27,53 +31,108 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # not introduce risk of breaking the consensus and even security updates must
 # be done manualy after through testing
 [dependencies]
-amplify = "~1.1.0"
+# Dependencies on other LNP/BP repositories
+# -----------------------------------------
+amplify = "~1.1.0" # This project does not have any non-optional dependencies
 amplify_derive = "~1.1.1"
 lnpbp_derive = { path = "derive" }
-lazy_static = "~1.4.0"
-bech32 = "~0.7.2"
-ed25519-dalek = { version = "~1.0.0", optional = true }
+# Dependencies on core rust-bitcoin ecosystem projects
+# ----------------------------------------------------
 bitcoin = "~0.25.0"
 bitcoin_hashes = "~0.9.0" # we need macro from here
 lightning = { version = "~0.0.11", optional = true }
-miniscript = "~1.0.0"
-# We are of no control of what's happening in Grin and would like to prevent
-# updates w/o checking them manually
-grin_secp256k1zkp = { version = "=0.7.9", optional = true }
-num-traits = "~0.2.11"
-num-derive = "~0.3.0"
+miniscript = "~1.0.0" # TODO: (new) Upgrade to 2.0.0 (requires rebasing
+                      #       `develop` branch in miniscript fork
+bech32 = "~0.7.2"
+#   Used only as a part of RGB for encoding Ed25519 key data (for instance as
+#   a part of Tor address)
+ed25519-dalek = { version = "~1.0.0", optional = true }
+# Core rust projects
+# ------------------
+#   This strange naming is a workaround for not being able to define required
+#   features for a dependency. See
+#   <https://github.com/rust-lang/api-guidelines/issues/180> for the explanation
+#   and references.
+serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
 tokio = { version = "~0.2.18", features = ["tcp", "sync"], optional = true }
-futures = "~0.3.4"
-async-trait = { version = "~0.1.30", optional = true }
+lazy_static = "~1.4.0"
+# Networking deps
+# ---------------
+#   All these dependencies are used to provide support for networking URLs in
+#   `lnp` mod and are turned on only if `lbp`, `zmq` or `url` features are used
 zmq = { version = "~0.9.2", optional = true }
 url = { version = "~2.1.1", optional = true }
-# This strange naming is a workaround for not being able to define required features for a dependency
-# See https://github.com/rust-lang/api-guidelines/issues/180 for the explanation and references.
-serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
+# Temporary-needed dependencies:
+# ------------------------------
+# 1. We are of no control of what's happening in Grin and would like to prevent
+#    updates w/o checking them manually. Should Elements Project secpk256k-zkp
+#    accept bulletproofs code, we will switch to it
+grin_secp256k1zkp = { version = "=0.7.9", optional = true }
+# 2. We use these to simplify enum strict encoding, but once the required
+#    functionality will become part of either amplify_derive or lnpbp_derive
+#    crates they should be removed
+num-traits = "~0.2.11"
+num-derive = "~0.3.0"
+# 3. Once async traits will get to rust compiler, this one will be also not
+#    needed
+async-trait = { version = "~0.1.30", optional = true }
 
 [dev-dependencies]
 miniscript = { version = "~1.0.0", features = ["compiler"] }
 bitcoin = { version = "~0.25.0", branch = "develop", features = ["rand"] }
 
+# Forked dependencies
+# -------------------
+# Some of the functionality required for
+# LNP/BP development related to the base Bitcoin protocol and Lightning Network
+# is contributed by LNP/BP Association directly into corresponding libraries;
+# however sometimes the present library requires changes in them that can't or
+# not yet accepted by the community. This brings necessity to maintain our own
+# forks of the dependencies. Sometimes upstream crates does not have any PRs
+# by LNP/BP, but we still need to patch them with importing underlying forked
+# versions (like `bitcoin` in `miniscript`), otherwise we are getting library
+# conflicts breaking compilation
 [patch.crates-io]
 bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
 bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
 lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
+# No changes here, just need to import forked `bitcoin` library
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
 
+# Features
+# ========
 [features]
-default = ["tor", "lnp", "tokio", "url"]
-all = ["tor", "lnp", "tokio", "url",
-       "rgb", "serde", "keygen", "websockets"]
+# Listings
+# --------
+#   By default we use tokio-enhanced LNP with Tor support and URL support
+default = ["lnp", "tokio", "tor", "url"]
+all = [
+       # Library components
+       "lnp", "rgb",
+       # Core rust
+       "serde", "tokio", "async",
+       # Cryptographic optionals
+       "keygen", "elgamal",
+       # Networking
+       "tor", "url", "websockets"]
+# High-level library components
+# -----------------------------
 lnp = ["lightning", "async", "zmq"]
-async = ["async-trait", "amplify/async"]
 rgb = ["bulletproofs", "ed25519-dalek"]
-tor = ["amplify/tor"]
-bulletproofs = ["grin_secp256k1zkp"]
-api = ["zmq"]
+# Exposing core rust componens
+# ----------------------------
+#   These also include re-assembly of necessary features from dependencies
+async = ["async-trait", "amplify/async"]
 serde = ["serde_crate", "bitcoin/use-serde", "miniscript/serde", "amplify/serde"]
+# Optional cryptographic functionality
+# ------------------------------------
+bulletproofs = ["grin_secp256k1zkp"] # Auto-required and used only by RGB
 keygen = ["bitcoin/rand"]
-websockets = []
+elgamal = [] # Provides ElGamal encryption module from this library
+# Networking
+# ----------
+websockets = [] # Used only by LNP
+tor = ["amplify/tor"] # Exposes dependency feature
 
 [workspace]
 members = ["derive", "."]
