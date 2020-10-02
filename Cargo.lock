@@ -11,19 +11,22 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "1.0.0"
-source = "git+https://github.com/LNP-BP/rust-amplify#f558ed1029a28dc553225ab652c187333c9b5642"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2fef88ffeb537a933836e6c0d956fb3f73e9aa32502bac7f79ee3c3235788c7"
 dependencies = [
  "async-trait",
  "ed25519-dalek",
+ "parse_arg",
  "serde",
  "torut",
 ]
 
 [[package]]
 name = "amplify_derive"
-version = "1.0.0"
-source = "git+https://github.com/LNP-BP/rust-amplify#f558ed1029a28dc553225ab652c187333c9b5642"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6e85a39efb3a9220c0e6e23ad97868b2b8e056a26ee6cef2d752468c98cc6c6"
 dependencies = [
  "amplify",
  "quote 1.0.7",
@@ -537,16 +540,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lightning-net-tokio"
-version = "0.0.4"
-source = "git+https://github.com/LNP-BP/rust-lightning?branch=develop#7b7f5b4f710e7b778e000e829ef6b1dad79b0a6a"
-dependencies = [
- "bitcoin",
- "lightning",
- "tokio",
-]
-
-[[package]]
 name = "lnpbp"
 version = "0.1.0"
 dependencies = [
@@ -561,12 +554,10 @@ dependencies = [
  "grin_secp256k1zkp",
  "lazy_static",
  "lightning",
- "lightning-net-tokio",
  "lnpbp_derive",
  "miniscript",
  "num-derive",
  "num-traits",
- "parse_arg",
  "serde",
  "tokio",
  "url",
@@ -1263,19 +1254,6 @@ dependencies = [
  "memchr",
  "mio",
  "pin-project-lite",
- "slab",
- "tokio-macros",
-]
-
-[[package]]
-name = "tokio-macros"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
-dependencies = [
- "proc-macro2 1.0.24",
- "quote 1.0.7",
- "syn 1.0.42",
 ]
 
 [[package]]

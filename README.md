@@ -118,13 +118,6 @@ Include this line into your `Cargo.toml` file:
 lnpbp = { git = "https://github.com/lnp-bp/rust-lnpbp.git", branch = "master" }
 ```
 
-### Use command-line tool for LNP/BP:
-
-We have developed a command-line tool [`lbx`](https://github.com/lnp-bp/lbx) 
-which implements most of this library functionality, so it can be accessed and 
-played with. Download it and build according to the instructions in
-<https://github.com/lnp-bp/lbx>
-
 ## Contributing
 
 Contribution guidelines can be found in a separate 

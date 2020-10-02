@@ -1,6 +1,8 @@
-# Change Log
+Change Log
+==========
 
-## v0.1.0-beta.4
+v0.1.0-beta.4
+-------------
 
 ### Breaking changes:
 - Updated upstream crates (bitcoin, bitcoin_hashes, secp256k1, grin_secp256k1zpk, miniscript, lightning) with many PRs merged
@@ -15,7 +17,8 @@
 - Minimal support for Tor V2 addresses; improved internet address parsing
 
 
-## v0.1.0-beta.3
+v0.1.0-beta.3
+-------------
 
 ### Breaking changes
 
@@ -28,7 +31,8 @@
 - Test cases for BP mod strict encoding
 
 
-## v0.1.0-beta.2
+v0.1.0-beta.2
+-------------
 
 ### Features overview
 - Complete validation workflow with new Validator object

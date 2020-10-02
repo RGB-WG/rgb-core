@@ -27,8 +27,8 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # not introduce risk of breaking the consensus and even security updates must
 # be done manualy after through testing
 [dependencies]
-amplify = "~1.0.0"
-amplify_derive = "~1.0.0"
+amplify = "~1.1.0"
+amplify_derive = "~1.1.1"
 lnpbp_derive = { path = "derive" }
 lazy_static = "~1.4.0"
 bech32 = "~0.7.2"
@@ -36,7 +36,6 @@ ed25519-dalek = { version = "~1.0.0", optional = true }
 bitcoin = "~0.25.0"
 bitcoin_hashes = "~0.9.0" # we need macro from here
 lightning = { version = "~0.0.11", optional = true }
-lightning-net-tokio = { version = "~0.0.4", optional = true }
 miniscript = "~1.0.0"
 # We are of no control of what's happening in Grin and would like to prevent
 # updates w/o checking them manually
@@ -47,7 +46,6 @@ tokio = { version = "~0.2.18", features = ["tcp", "sync"], optional = true }
 futures = "~0.3.4"
 async-trait = { version = "~0.1.30", optional = true }
 zmq = { version = "~0.9.2", optional = true }
-parse_arg = { version = "~0.1.4", optional = true }
 url = { version = "~2.1.1", optional = true }
 # This strange naming is a workaround for not being able to define required features for a dependency
 # See https://github.com/rust-lang/api-guidelines/issues/180 for the explanation and references.
@@ -58,23 +56,19 @@ miniscript = { version = "~1.0.0", features = ["compiler"] }
 bitcoin = { version = "~0.25.0", branch = "develop", features = ["rand"] }
 
 [patch.crates-io]
-amplify = { git = "https://github.com/LNP-BP/rust-amplify" }
-amplify_derive = { git = "https://github.com/LNP-BP/rust-amplify" }
 bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
 bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
 lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
-lightning-net-tokio = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
 
 [features]
 default = ["tor", "lnp", "tokio", "url"]
-all = ["tor", "lnp", "tokio", "url", "parse_arg",
+all = ["tor", "lnp", "tokio", "url",
        "rgb", "serde", "keygen", "websockets"]
 lnp = ["lightning", "async", "zmq"]
 async = ["async-trait", "amplify/async"]
 rgb = ["bulletproofs", "ed25519-dalek"]
 tor = ["amplify/tor"]
-lightning_tokio = ["lightning", "lightning-net-tokio"]
 bulletproofs = ["grin_secp256k1zkp"]
 api = ["zmq"]
 serde = ["serde_crate", "bitcoin/use-serde", "miniscript/serde", "amplify/serde"]
