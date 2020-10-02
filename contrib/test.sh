@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-FEATURES="rgb lnp daemons keygen tor tokio log url bulletproofs serde lnp,websockets,url,tokio,async"
+FEATURES="rgb lnp keygen tor tokio url bulletproofs serde websockets lnp,websockets,url,tokio,async,keygen rgb,lnp,websockets,url,tokio,async,keygen"
 
 if [ "$DO_COV" = true ]
 then
@@ -15,8 +15,8 @@ then
 fi
 
 # Check that we can build w/o features
-cargo check --verbose --all-targets
-cargo check --verbose --no-default-features --all-targets
+cargo check --verbose --all-targets --workspace
+cargo check --verbose --no-default-features --all-targets --workspace
 
 # Check that we can build with each feature
 for feature in ${FEATURES}
@@ -25,7 +25,7 @@ do
 done
 
 # Test all features
-cargo test --verbose --all-features --all-targets
+cargo test --verbose --all-features --all-targets --workspace
 
 # Fuzz if told to
 if [ "$DO_FUZZ" = true ]
