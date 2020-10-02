@@ -1,6 +1,7 @@
 #!/bin/sh -ex
 
 AS_DEPENDENCY=true
+DO_LINT=true
 
 # Library components, one by one
 FEATURES="rgb lnp"

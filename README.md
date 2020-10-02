@@ -4,22 +4,42 @@
 [![codecov](https://codecov.io/gh/LNP-BP/rust-lnpbp/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/rust-lnpbp)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-This is Rust library implementing LNP/BP specifications 
+This is LNP/BP Core Library: a rust library implementing LNP/BP specifications 
 <https://github.com/LNP-BP/LNPBPs>. It can be used to simplify development of
 layer 2 & 3 solutions on top of Lightning Network and Bitcoin blockchain. 
 
-The current list of such projects include:
+The current list of the projects based on the library include:
 * [RGB](https://github.com/LNP-BP/rgb-node): Confidential smart contracts for 
   Bitcoin & Lightning
-* [LNP node](https://github.com/LNP-BP/lnp-node): Experimental rust-based 
-  modular Lightning network node
+* [Generalized Lightning Network](https://www.youtube.com/watch?v=YmmNsWS5wiM) 
+  and it's reference implementation named 
+  [LNP node](https://github.com/LNP-BP/lnp-node) enabling:
+  - RGB extensions
+  - DLC extensions
+  - [Lightspeed payments](https://github.com/LNP-BP/LNPBPs/issues/24)
+  - Multi-peer channels
+  - Faster lightning experiments (quicker adoption of eltoo, Taproot etc)
+* [LNP](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP%20Networking%20%26%20RGB%20Integration_final.pdf): 
+  Networking protocol for privacy-keeping and censorship-resistant applications,
+  operating in both P2P and RPC modes (currently used as a part of Lightning 
+  network, but our effort is to make it more generic and usable even outside of 
+  LN). All services, developed by LNP/BP Standards Association (see points
+  below) are made with LNP.
 * [BP node](https://github.com/LNP-BP/bp-node): Indexing service for bitcoin 
-  blockchain; more efficient & universal Electrum server replacement
+  blockchain; more efficient & universal Electrum server replacement. In 
+  perspective - validating Bitcoin network node (using libbitcoinconsus)
 
 The planned projects:
-* Spectrum: Decentralized exchange for Lightning Network
+* Decentralized exchange for Lightning Network
+* Bifrost Node: P2P LNP/BP network infrastructural node running
+  - Decentralized exchange information workflows
+  - Watchtowers (RGB-enabled)
+  - DLC oracle provider
+  - Anonymous intermediate storage for client-validated data (like RGB 
+    consignments)
+  - Storm storage providers (see below)
 * [Storm](https://github.com/storm-org): Incentivised trustless storage and 
-  messaging
+  messaging protocol
 * [Prometheus](https://github.com/pandoracore/prometheus-spec): Decentralized 
   trustless computing
 
@@ -30,7 +50,7 @@ Potentially, with LNP/BP Core library you can simplify the development of
   architectures
 
 To learn more about the technologies enabled by the library please check:
-* [RGB Technology Guide](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/RGB%20Technology%20Guide%2C%20part%20I.pdf)
+* [RGB Technology Internals](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/)
 * [Networking with LNP](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP%20Networking%20%26%20RGB%20Integration_final.pdf)
 * [LNP/BP Nodes Initiative](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP-BP%20Nodes%20Initiative.pdf)
 
