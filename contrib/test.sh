@@ -1,5 +1,7 @@
 #!/bin/sh -ex
 
+AS_DEPENDENCY=true
+
 # Library components, one by one
 FEATURES="rgb lnp"
 # ... and used together
@@ -38,9 +40,6 @@ do
     cargo check --verbose --features="$feature" --all-targets
 done
 
-# Test all features
-cargo test --verbose --all-features --all-targets --workspace
-
 # Fuzz if told to
 if [ "$DO_FUZZ" = true ]
 then
@@ -62,11 +61,14 @@ if [ -n "$AS_DEPENDENCY" ]
 then
     cargo new dep_test
     cd dep_test
-    printf 'lnpbp = { path = "..", features = ["all"] }\n\n[workspace]' >> Cargo.toml
+    cat ../contrib/depCargo.toml >> Cargo.toml
     cargo build --verbose
     cd ..
     rm -rf dep_test
 fi
+
+# Test all features
+cargo test --verbose --all-features --all-targets --workspace
 
 # Lint if told to
 if [ "$DO_LINT" = true ]

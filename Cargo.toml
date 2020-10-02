@@ -92,6 +92,8 @@ bitcoin = { version = "~0.25.0", branch = "develop", features = ["rand"] }
 # by LNP/BP, but we still need to patch them with importing underlying forked
 # versions (like `bitcoin` in `miniscript`), otherwise we are getting library
 # conflicts breaking compilation
+# NB: These patches MUST be applied in exactly same manner by any library which
+#     uses this as a dependency
 [patch.crates-io]
 bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
 bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }

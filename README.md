@@ -1,7 +1,8 @@
 # LNP/BP Core Library
 
-[![TravisCI](https://api.travis-ci.com/LNP-BP/rust-lnpbp.svg?branch=master)](https://api.travis-ci.com/LNP-BP/rust-lnpbp)
+![Tests](https://github.com/LNP-BP/rust-lnpbp/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/LNP-BP/rust-lnpbp/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/rust-lnpbp)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 This is Rust library implementing LNP/BP specifications 
 <https://github.com/LNP-BP/LNPBPs>. It can be used to simplify development of
@@ -101,10 +102,10 @@ cargo build --release
 
 The library can be found in `target/release` directory.
 
-You can run tests with:
+You can run full test suite with:
 
 ```
-cargo test
+./contrib/test.sh
 ```
 
 Please refer to the [`cargo` documentation](https://doc.rust-lang.org/stable/cargo/) 
@@ -112,11 +113,21 @@ for more detailed instructions.
 
 ### Use library in other projects
 
-Include this line into your `Cargo.toml` file:
+Add these lines to your `Cargo.toml` file at the very end of the `[dependecies]`
+section:
 
 ```toml
 lnpbp = { git = "https://github.com/lnp-bp/rust-lnpbp.git", branch = "master" }
+
+[patch.crates-io]
+bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
+bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
+lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
+miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
 ```
+NB: These patches MUST be applied in exactly same manner by any library which
+uses LNP/BP Core library as a dependency for now
+
 
 ## Contributing
 

@@ -1,0 +1,11 @@
+# This is an add-on that must be added to any dependency using this library
+
+lnpbp = { path = "..", features = ["all"] }
+
+[patch.crates-io]
+bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
+bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
+lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
+miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
+
+[workspace]

@@ -1,0 +1,37 @@
+name: Dependency build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  dependency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install -y libzmq3-dev libpcre3-dev libpq-dev libssl-dev
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Create dependency
+        run: |
+          cargo new dep_test
+          cd dep_test
+          printf 'amplify = { path = ".." }\namplify_derive = { path = "../derive" }\n\n[workspace]' >> Cargo.toml
+      - name: Build dependency
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose
+      - name: Clean up
+        run: |
+          cd ..
+          rm -rf dep_test

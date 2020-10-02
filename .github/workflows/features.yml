@@ -1,0 +1,76 @@
+name: Features & Rust ver
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  features:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          # Library components, one by one
+          - rgb
+          - lnp
+          # ... and used together
+          - rgb,lnp
+          # Cryptographic optionals
+          - keygen
+          - bulletproofs
+          - elgamal
+          # Core rust optionals
+          - serde
+          - tokio
+          - async
+          # Networking
+          - tor
+          - url
+          - websockets
+          - tor,url
+          # Full LNP strength, but without Serde
+          - lnp,websockets,url,tokio,async,keygen
+          # Full library strength, but without Serde
+          - rgb,lnp,tokio,websockets,url,async,keygen
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install -y libzmq3-dev libpcre3-dev libpq-dev libssl-dev
+      - name: Install rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Feature ${{matrix.feature}}
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --no-default-features --features=${{matrix.feature}}
+      - name: Defaults + ${{matrix.feature}}
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --features=${{matrix.feature}}
+# Uncomment this once the library will support non-nightly only rust compiler
+#  toolchains:
+#    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        toolchain: [ nightly, beta, stable, 1.46.0 ]
+#    steps:
+#      - uses: actions/checkout@v2
+#      - name: Install rust ${{matrix.toolchain}}
+#        uses: actions-rs/toolchain@v1
+#        with:
+#          toolchain: ${{matrix.toolchain}}
+#          override: true
+#      - name: All features
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: build
+#          args: --workspace --all-targets --all-features
