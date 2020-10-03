@@ -11,13 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//mod error;
+pub mod descriptor;
 mod pubkey_parser;
 mod script_pubkey;
 mod types;
 
 //pub use error::Error;
 pub use pubkey_parser::PubkeyParseError;
-pub use script_pubkey::Error;
-pub use script_pubkey::*;
-pub use types::*;
+pub use script_pubkey::{
+    Error, ScriptPubkeyContent, ScriptPubkeyFormat, ScriptPubkeyStructure,
+    ScriptPubkeyTemplate,
+};
+pub use types::{
+    GenerateScripts, LockScript, PubkeyScript, RedeemScript, ScriptSet,
+    Strategy, Witness, WitnessProgram, WitnessScript, WitnessVersion,
+};
