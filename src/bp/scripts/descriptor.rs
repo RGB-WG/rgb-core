@@ -13,12 +13,14 @@
 
 use std::str::FromStr;
 
+use bitcoin::hashes::hash160;
 use bitcoin::secp256k1;
 use bitcoin::util::bip32::ChildNumber;
 use miniscript::descriptor::{DescriptorKeyParseError, DescriptorPublicKey};
-use miniscript::ToPublicKey;
+use miniscript::{MiniscriptKey, ToPublicKey};
 
 use crate::SECP256K1;
+use std::hash::{Hash, Hasher};
 
 /// Errors related to extended descriptor parsing
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error)]
@@ -52,7 +54,7 @@ impl From<DescriptorKeyParseError> for ParseError {
 /// [`miniscript::DescriptorPublicKey`] type can contain tweaking factor applied
 /// to a public key after derication. In string-serialized form this factor
 /// can be given as an optional extension after `+` sign.
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 pub enum PublicKey {
     /// Public key or extended public key without tweaking factor information
     #[display("{_0}")]
@@ -61,6 +63,18 @@ pub enum PublicKey {
     /// Public key or extended public key with tweaking information
     #[display("{_0}+{_1}")]
     Tweaked(DescriptorPublicKey, secp256k1::SecretKey),
+}
+
+impl Hash for PublicKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            PublicKey::Native(pk) => pk.hash(state),
+            PublicKey::Tweaked(pk, t) => {
+                pk.hash(state);
+                t.as_ref().hash(state);
+            }
+        }
+    }
 }
 
 impl FromStr for PublicKey {
@@ -134,20 +148,48 @@ impl PublicKey {
     pub fn to_tweaked_public_key(
         &self,
         index: Option<u32>,
-    ) -> Option<secp256k1::PublicKey> {
-        self.as_tweaking_factor().and_then(|factor| {
-            let dpk = self.as_descriptor_public_key().clone();
-            let mut pk = match index {
-                Some(index) => {
-                    dpk.derive(ChildNumber::Normal { index })
-                        .to_public_key()
-                        .key
-                }
-                None => dpk.to_public_key().key,
-            };
-            pk.add_exp_assign(&SECP256K1, &factor[..]).ok()?;
-            Some(pk)
-        })
+    ) -> secp256k1::PublicKey {
+        self.as_tweaking_factor()
+            .and_then(|factor| {
+                let dpk = self.as_descriptor_public_key().clone();
+                let mut pk = match index {
+                    Some(index) => {
+                        dpk.derive(ChildNumber::Normal { index })
+                            .to_public_key()
+                            .key
+                    }
+                    None => dpk.to_public_key().key,
+                };
+                pk.add_exp_assign(&SECP256K1, &factor[..]).ok()?;
+                Some(pk)
+            })
+            .unwrap_or_else(|| {
+                self.clone()
+                    .into_descriptor_public_key()
+                    .to_public_key()
+                    .key
+            })
+    }
+}
+
+impl MiniscriptKey for PublicKey {
+    type Hash = Self;
+
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
+}
+
+impl ToPublicKey for PublicKey {
+    fn to_public_key(&self) -> bitcoin::PublicKey {
+        bitcoin::PublicKey {
+            compressed: true,
+            key: self.to_tweaked_public_key(None),
+        }
+    }
+
+    fn hash_to_hash160(hash: &Self::Hash) -> hash160::Hash {
+        hash.to_public_key().to_pubkeyhash()
     }
 }
 
@@ -173,9 +215,16 @@ mod test {
 
         for pkstr in dpk {
             let pk = PublicKey::from_str(pkstr).unwrap();
+
+            assert_eq!(pk.to_pubkeyhash(), pk);
+            assert_eq!(
+                pk.to_public_key(),
+                pk.as_descriptor_public_key().to_public_key()
+            );
+
             assert_eq!(pk.has_tweak(), false);
             assert_eq!(pk.as_tweaking_factor(), None);
-            assert_eq!(pk.to_tweaked_public_key(None), None);
+            assert_eq!(pk.to_tweaked_public_key(None), pk.to_public_key().key);
             assert_eq!(pk.into_tweaking_factor(), None);
         }
 
@@ -183,9 +232,12 @@ mod test {
             let pk = PublicKey::from_str(&pkstr).unwrap();
             assert_eq!(pk.has_tweak(), true);
 
+            assert_eq!(pk.to_pubkeyhash(), pk);
+            assert_eq!(pk.to_public_key().key, pk.to_tweaked_public_key(None));
+
             assert_eq!(pk.as_tweaking_factor().unwrap(), &tweak);
             assert_ne!(
-                pk.to_tweaked_public_key(None).unwrap(),
+                pk.to_tweaked_public_key(None),
                 pk.clone().into_descriptor_public_key().to_public_key().key
             );
             assert_eq!(pk.into_tweaking_factor().unwrap(), tweak);
