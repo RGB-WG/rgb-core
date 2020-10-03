@@ -16,8 +16,8 @@ use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::{secp256k1, TxOut};
 
 use super::{
-    Container, Error, Proof, ScriptInfo, ScriptPubkeyCommitment,
-    ScriptPubkeyComposition, ScriptPubkeyContainer,
+    Container, Error, Proof, ScriptEncodeData, ScriptEncodeMethod,
+    SpkCommitment, SpkContainer,
 };
 use crate::bp::PubkeyScript;
 use crate::commit_verify::EmbedCommitVerify;
@@ -26,7 +26,7 @@ use crate::commit_verify::EmbedCommitVerify;
 #[display(Debug)]
 pub struct TxoutContainer {
     pub value: u64,
-    pub script_container: ScriptPubkeyContainer,
+    pub script_container: SpkContainer,
     /// Tweaking factor stored after [TxoutContainer::commit_verify] procedure
     pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
@@ -36,16 +36,16 @@ impl TxoutContainer {
         protocol_tag: &sha256::Hash,
         value: u64,
         pubkey: secp256k1::PublicKey,
-        script_info: ScriptInfo,
-        scriptpubkey_composition: ScriptPubkeyComposition,
+        source: ScriptEncodeData,
+        method: ScriptEncodeMethod,
     ) -> Self {
         Self {
             value,
-            script_container: ScriptPubkeyContainer::construct(
+            script_container: SpkContainer::construct(
                 protocol_tag,
                 pubkey,
-                script_info,
-                scriptpubkey_composition,
+                source,
+                method,
             ),
             tweaking_factor: None,
         }
@@ -64,7 +64,7 @@ impl Container for TxoutContainer {
     ) -> Result<Self, Error> {
         Ok(Self {
             value: host.value,
-            script_container: ScriptPubkeyContainer::reconstruct(
+            script_container: SpkContainer::reconstruct(
                 proof,
                 supplement,
                 &PubkeyScript::from_inner(host.clone().script_pubkey),
@@ -106,7 +106,7 @@ where
     ) -> Result<Self, Self::Error> {
         let commitment = TxOut {
             value: container.value,
-            script_pubkey: (**ScriptPubkeyCommitment::embed_commit(
+            script_pubkey: (**SpkCommitment::embed_commit(
                 &mut container.script_container,
                 msg,
             )?)

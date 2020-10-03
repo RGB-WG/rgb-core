@@ -82,33 +82,33 @@ pub enum ScriptPubkeyFormat {
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]
 #[non_exhaustive]
-pub enum ScriptPubkeyDescriptor {
-    P2S(PubkeyScript),
-    P2PK(bitcoin::PublicKey),
-    P2PKH(PubkeyHash),
-    P2SH(ScriptHash),
-    P2OR(Vec<Vec<u8>>),
-    P2WPKH(WPubkeyHash),
-    P2WSH(WScriptHash),
-    P2TR(secp256k1::PublicKey),
+pub enum ScriptPubkeyContent {
+    Bare(PubkeyScript),
+    Pk(bitcoin::PublicKey),
+    Pkh(PubkeyHash),
+    Sh(ScriptHash),
+    Return(Vec<Vec<u8>>),
+    Wpkh(WPubkeyHash),
+    Wsh(WScriptHash),
+    Taproot(secp256k1::PublicKey),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyTemplate {
-    P2S(PubkeyScript),
-    P2PK(bitcoin::PublicKey),
-    P2PKH(bitcoin::PublicKey),
-    P2SH(LockScript),
-    P2OR(Vec<Vec<u8>>),
+    Bare(PubkeyScript),
+    Pk(bitcoin::PublicKey),
+    Pkh(bitcoin::PublicKey),
+    Sh(LockScript),
+    Return(Vec<Vec<u8>>),
     #[allow(non_camel_case_types)]
-    P2SH_P2WPKH(bitcoin::PublicKey),
+    ShWpkh(bitcoin::PublicKey),
     #[allow(non_camel_case_types)]
-    P2SH_P2WSH(LockScript),
-    P2WPKH(bitcoin::PublicKey),
-    P2WSH(LockScript),
-    P2TR(secp256k1::PublicKey, TapScript),
+    ShWsh(LockScript),
+    Wpkh(bitcoin::PublicKey),
+    Wsh(LockScript),
+    Taproot(secp256k1::PublicKey, TapScript),
 }
 
 #[derive(Clone, PartialEq, Eq, Display, Debug, From, Error)]
@@ -118,11 +118,11 @@ pub enum Error {
     UnsupportedWitnessVersion,
 }
 
-impl TryFrom<PubkeyScript> for ScriptPubkeyDescriptor {
+impl TryFrom<PubkeyScript> for ScriptPubkeyContent {
     type Error = Error;
     fn try_from(script_pubkey: PubkeyScript) -> Result<Self, Self::Error> {
         use bitcoin::blockdata::opcodes::all::*;
-        use ScriptPubkeyDescriptor::*;
+        use ScriptPubkeyContent::*;
 
         let script = &*script_pubkey;
         let p = script.as_bytes();
@@ -134,22 +134,22 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescriptor {
                     _ => panic!("Reading hash from fixed slice failed"),
                 }
                 .map_err(|_| Error::InvalidKeyData)?;
-                P2PK(key)
+                Pk(key)
             }
-            s if s.is_p2pkh() => P2PKH(
+            s if s.is_p2pkh() => Pkh(
                 PubkeyHash::from_slice(&p[2..23]).expect("Reading hash from fixed slice failed"),
             ),
-            s if s.is_p2sh() => P2SH(
+            s if s.is_p2sh() => Sh(
                 ScriptHash::from_slice(&p[1..22]).expect("Reading hash from fixed slice failed"),
             ),
-            s if s.is_v0_p2wpkh() => P2WPKH(
+            s if s.is_v0_p2wpkh() => Wpkh(
                 WPubkeyHash::from_slice(&p[2..23]).expect("Reading hash from fixed slice failed"),
             ),
-            s if s.is_v0_p2wsh() => P2WSH(
+            s if s.is_v0_p2wsh() => Wsh(
                 WScriptHash::from_slice(&p[2..34]).expect("Reading hash from fixed slice failed"),
             ),
             s if s.is_witness_program() => Err(Error::UnsupportedWitnessVersion)?,
-            s if s.is_op_return() => P2OR(
+            s if s.is_op_return() => Return(
                 Script::from(p[1..].to_vec())
                     .instructions()
                     .map(|instr| {
@@ -161,50 +161,50 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescriptor {
                     })
                     .collect(),
             ),
-            _ => P2S(script_pubkey),
+            _ => Bare(script_pubkey),
         })
     }
 }
 
-impl From<ScriptPubkeyDescriptor> for PubkeyScript {
-    fn from(spkt: ScriptPubkeyDescriptor) -> PubkeyScript {
-        use ScriptPubkeyDescriptor::*;
+impl From<ScriptPubkeyContent> for PubkeyScript {
+    fn from(spkt: ScriptPubkeyContent) -> PubkeyScript {
+        use ScriptPubkeyContent::*;
 
         PubkeyScript::from(match spkt {
-            P2S(script) => (*script).clone(),
-            P2PK(pubkey) => Script::new_p2pk(&pubkey),
-            P2PKH(pubkey_hash) => Script::new_p2pkh(&pubkey_hash),
-            P2SH(script_hash) => Script::new_p2sh(&script_hash),
-            P2OR(data) => {
+            Bare(script) => (*script).clone(),
+            Pk(pubkey) => Script::new_p2pk(&pubkey),
+            Pkh(pubkey_hash) => Script::new_p2pkh(&pubkey_hash),
+            Sh(script_hash) => Script::new_p2sh(&script_hash),
+            Return(data) => {
                 if data.len() > 1 {
                     panic!("Underlying rust bitcoin library does not support multiple data in OP_RETURN")
                 }
                 Script::new_op_return(&data[0])
             }
-            P2WPKH(wpubkey_hash) => Script::new_v0_wpkh(&wpubkey_hash),
-            P2WSH(wscript_hash) => Script::new_v0_wsh(&wscript_hash),
-            P2TR(_) => unimplemented!(),
+            Wpkh(wpubkey_hash) => Script::new_v0_wpkh(&wpubkey_hash),
+            Wsh(wscript_hash) => Script::new_v0_wsh(&wscript_hash),
+            Taproot(_) => unimplemented!(),
         })
     }
 }
 
-impl From<ScriptPubkeyDescriptor> for ScriptPubkeyStructure {
-    fn from(descr: ScriptPubkeyDescriptor) -> Self {
-        use ScriptPubkeyDescriptor::*;
+impl From<ScriptPubkeyContent> for ScriptPubkeyStructure {
+    fn from(descr: ScriptPubkeyContent) -> Self {
+        use ScriptPubkeyContent::*;
         use ScriptPubkeyStructure as PkStruct;
         match descr {
-            P2S(script) => PkStruct::Custom((*script).clone()),
-            P2PK(pubkey) => PkStruct::KeyChecksig(pubkey),
-            P2PKH(hash) => PkStruct::KeyHash(hash),
-            P2SH(hash) => PkStruct::ScriptHash(hash),
-            P2OR(data) => PkStruct::OpReturn(data),
-            P2WPKH(hash) => {
+            Bare(script) => PkStruct::Custom((*script).clone()),
+            Pk(pubkey) => PkStruct::KeyChecksig(pubkey),
+            Pkh(hash) => PkStruct::KeyHash(hash),
+            Sh(hash) => PkStruct::ScriptHash(hash),
+            Return(data) => PkStruct::OpReturn(data),
+            Wpkh(hash) => {
                 PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into())
             }
-            P2WSH(hash) => {
+            Wsh(hash) => {
                 PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into())
             }
-            P2TR(pubkey) => PkStruct::Witness(
+            Taproot(pubkey) => PkStruct::Witness(
                 WitnessVersion::V1,
                 pubkey.serialize().to_vec().into(),
             ),

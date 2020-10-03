@@ -16,7 +16,7 @@ use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::{secp256k1, Transaction, TxOut};
 
 use super::{
-    Container, Error, Proof, ScriptInfo, ScriptPubkeyComposition,
+    Container, Error, Proof, ScriptEncodeData, ScriptEncodeMethod,
     TxoutCommitment, TxoutContainer,
 };
 use crate::commit_verify::EmbedCommitVerify;
@@ -66,8 +66,8 @@ impl TxContainer {
         fee: u64,
         tx: Transaction,
         pubkey: secp256k1::PublicKey,
-        script_info: ScriptInfo,
-        scriptpubkey_composition: ScriptPubkeyComposition,
+        source: ScriptEncodeData,
+        method: ScriptEncodeMethod,
     ) -> Self {
         let txout = &tx.output[compute_vout(fee, protocol_factor, &tx)];
         Self {
@@ -78,8 +78,8 @@ impl TxContainer {
                 protocol_tag,
                 txout.value,
                 pubkey,
-                script_info,
-                scriptpubkey_composition,
+                source,
+                method,
             ),
             tweaking_factor: None,
         }
@@ -167,9 +167,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bp::dbc::{
-        ScriptInfo, ScriptPubkeyComposition, ScriptPubkeyContainer,
-    };
+    use crate::bp::dbc::{ScriptEncodeData, ScriptEncodeMethod, SpkContainer};
     use bitcoin::consensus::encode::deserialize;
     use bitcoin::hashes::hex::FromHex;
     use std::str::FromStr;
@@ -202,13 +200,13 @@ mod test {
             protocol_factor: 0,
             txout_container: TxoutContainer {
                 value: 0,
-                script_container: ScriptPubkeyContainer {
+                script_container: SpkContainer {
                     pubkey: secp256k1::PublicKey::from_str(
                         "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
                     )
                     .unwrap(),
-                    script_info: ScriptInfo::None,
-                    scriptpubkey_composition: ScriptPubkeyComposition::PublicKey,
+                    source: ScriptEncodeData::SinglePubkey,
+                    method: ScriptEncodeMethod::PublicKey,
                     tag: Default::default(),
                     tweaking_factor: None,
                 },

@@ -8,5 +8,5 @@ coverage:
   status:
     project:
       default:
-        target: 0 # TODO: Update it in the future after first release
+        target: 0% # TODO: Update it in the future after first release
         threshold: 1%

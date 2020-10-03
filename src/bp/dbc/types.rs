@@ -11,10 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{hashes::sha256, secp256k1};
+use bitcoin::secp256k1;
 
-use super::Error;
-use crate::bp::LockScript;
+use super::{Error, ScriptEncodeData};
 
 pub trait Container: Sized {
     type Supplement;
@@ -39,96 +38,14 @@ pub trait Container: Sized {
 #[display(Debug)]
 pub struct Proof {
     pub pubkey: secp256k1::PublicKey,
-    pub script_info: ScriptInfo,
+    pub source: ScriptEncodeData,
 }
 
 impl From<secp256k1::PublicKey> for Proof {
     fn from(pubkey: secp256k1::PublicKey) -> Self {
         Self {
             pubkey,
-            script_info: ScriptInfo::None,
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display(Debug)]
-#[non_exhaustive]
-pub enum ScriptInfo {
-    None,
-    LockScript(LockScript),
-    Taproot(sha256::Hash),
-}
-
-pub(super) mod strict_encoding {
-    use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
-    use std::io;
-
-    #[derive(
-        Copy,
-        Clone,
-        PartialEq,
-        Eq,
-        PartialOrd,
-        Ord,
-        FromPrimitive,
-        ToPrimitive,
-        Debug,
-    )]
-    #[repr(u8)]
-    pub(in super::super) enum EncodingTag {
-        None = 0,
-        LockScript = 1,
-        Taproot = 2,
-    }
-    impl_enum_strict_encoding!(EncodingTag);
-
-    impl StrictEncode for ScriptInfo {
-        fn strict_encode<E: io::Write>(
-            &self,
-            mut e: E,
-        ) -> Result<usize, strict_encoding::Error> {
-            Ok(match self {
-                ScriptInfo::None => EncodingTag::None.strict_encode(&mut e)?,
-                ScriptInfo::LockScript(val) => {
-                    strict_encode_list!(e; EncodingTag::LockScript, val)
-                }
-                ScriptInfo::Taproot(val) => {
-                    strict_encode_list!(e; EncodingTag::Taproot, val)
-                }
-            })
-        }
-    }
-
-    impl StrictDecode for ScriptInfo {
-        fn strict_decode<D: io::Read>(
-            mut d: D,
-        ) -> Result<Self, strict_encoding::Error> {
-            let format = EncodingTag::strict_decode(&mut d)?;
-            Ok(match format {
-                EncodingTag::None => ScriptInfo::None,
-                EncodingTag::LockScript => {
-                    ScriptInfo::LockScript(LockScript::strict_decode(&mut d)?)
-                }
-                EncodingTag::Taproot => {
-                    ScriptInfo::Taproot(sha256::Hash::strict_decode(&mut d)?)
-                }
-            })
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-
-        #[test]
-        fn test_encoding_tag_exhaustive() {
-            test_enum_u8_exhaustive!(EncodingTag;
-                EncodingTag::None => 0,
-                EncodingTag::LockScript => 1,
-                EncodingTag::Taproot => 2
-            );
+            source: ScriptEncodeData::SinglePubkey,
         }
     }
 }

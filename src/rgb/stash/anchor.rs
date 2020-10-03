@@ -21,9 +21,8 @@ use bitcoin::{Transaction, Txid};
 use bitcoin_hashes::{sha256, sha256t, Hash, HashEngine};
 
 use crate::bp::dbc::{
-    self, Container, Proof, ScriptInfo, ScriptPubkeyComposition,
-    ScriptPubkeyContainer, TxCommitment, TxContainer, TxSupplement,
-    TxoutContainer,
+    self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
+    TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
@@ -136,20 +135,25 @@ impl Anchor {
                 .get(&pubkey_key)
                 .ok_or(Error::NoRequiredPubkey(vout))?;
             let pubkey = secp256k1::PublicKey::from_slice(pubkey)?;
-            let script_info = match psbt_out
+            // TODO: (new) Add support for Taproot parsing
+            let source = match psbt_out
                 .redeem_script
                 .as_ref()
                 .or_else(|| psbt_out.witness_script.as_ref())
             {
-                None => ScriptInfo::None,
-                Some(script) => ScriptInfo::LockScript(script.into()),
+                None => ScriptEncodeData::SinglePubkey,
+                Some(script) => ScriptEncodeData::LockScript(script.into()),
             };
-            let scriptpubkey_composition = if psbt_out.redeem_script.is_some() {
-                ScriptPubkeyComposition::ScriptHash
+            // TODO: (new) Move parsing of the output+input into Descriptor impl
+            // TODO: (new) With miniscript stabilization refactor this to use it
+            let method = if psbt_out.redeem_script.is_some() {
+                ScriptEncodeMethod::ScriptHash
             } else if psbt_out.witness_script.is_some() {
-                ScriptPubkeyComposition::WScriptHash
+                ScriptEncodeMethod::WScriptHash
             } else {
-                ScriptPubkeyComposition::WPubkeyHash
+                // TODO: (new) Check PSBT whether pubkey output is witness and
+                //       return error otherwise
+                ScriptEncodeMethod::WPubkeyHash
             };
 
             let mut container = TxContainer {
@@ -158,10 +162,10 @@ impl Anchor {
                 protocol_factor: vout as u32,
                 txout_container: TxoutContainer {
                     value: tx_out.value,
-                    script_container: ScriptPubkeyContainer {
+                    script_container: SpkContainer {
                         pubkey,
-                        script_info,
-                        scriptpubkey_composition,
+                        method,
+                        source,
                         tag: *LNPBP4_TAG,
                         tweaking_factor: None,
                     },

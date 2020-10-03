@@ -46,7 +46,7 @@ pub(super) static SHA256_LNPBP1: [u8; 32] = [
 /// of the tag in order to maximize performance for multiple commitments.
 #[derive(Clone, PartialEq, Eq, Debug, Display, Hash)]
 #[display(Debug)]
-pub struct LNPBP1Container {
+pub struct PubkeyContainer {
     /// The original public key: host for commitment
     pub pubkey: secp256k1::PublicKey,
     /// Single SHA256 hash of the protocol-specific tag
@@ -55,7 +55,7 @@ pub struct LNPBP1Container {
     pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
-impl Container for LNPBP1Container {
+impl Container for PubkeyContainer {
     /// Out supplement is a protocol-specific tag in its hashed form
     type Supplement = sha256::Hash;
     /// Our proof contains the host, so we don't need host here
@@ -93,17 +93,17 @@ impl Container for LNPBP1Container {
 }
 
 wrapper!(
-    LNPBP1Commitment,
+    PubkeyCommitment,
     secp256k1::PublicKey,
     doc = "Public key committed to some message via LNPBP1-based tweaking procedure",
     derive = [PartialEq, Eq, Hash]
 );
 
-impl<MSG> EmbedCommitVerify<MSG> for LNPBP1Commitment
+impl<MSG> EmbedCommitVerify<MSG> for PubkeyCommitment
 where
     MSG: AsRef<[u8]>,
 {
-    type Container = LNPBP1Container;
+    type Container = PubkeyContainer;
     type Error = secp256k1::Error;
 
     /// Function implements commitment procedure according to LNPBP-1.
@@ -183,7 +183,7 @@ where
         tweaked_pubkey.add_exp_assign(&SECP256K1, factor)?;
 
         // Returning tweaked public key
-        Ok(LNPBP1Commitment(tweaked_pubkey))
+        Ok(PubkeyCommitment(tweaked_pubkey))
     }
 }
 
@@ -233,9 +233,9 @@ mod test {
     fn test_pubkey_commitment() {
         let tag = sha256::Hash::hash(b"TEST_TAG");
         gen_secp_pubkeys(9).into_iter().for_each(|pubkey| {
-            embed_commit_verify_suite::<Vec<u8>, LNPBP1Commitment>(
+            embed_commit_verify_suite::<Vec<u8>, PubkeyCommitment>(
                 gen_messages(),
-                &mut LNPBP1Container {
+                &mut PubkeyContainer {
                     pubkey,
                     tag,
                     tweaking_factor: None,
@@ -252,8 +252,8 @@ mod test {
             "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
         )
         .unwrap();
-        let commitment = LNPBP1Commitment::embed_commit(
-            &mut LNPBP1Container {
+        let commitment = PubkeyCommitment::embed_commit(
+            &mut PubkeyContainer {
                 pubkey,
                 tag,
                 tweaking_factor: None,

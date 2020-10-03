@@ -29,7 +29,7 @@ pub use bip32::{DerivationInfo, DerivationTemplate};
 pub use chain::{Chain, P2pNetworkId};
 pub use scripts::{
     GenerateScripts, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
-    ScriptPubkeyDescriptor, ScriptPubkeyFormat, ScriptPubkeyStructure,
+    ScriptPubkeyContent, ScriptPubkeyFormat, ScriptPubkeyStructure,
     ScriptPubkeyTemplate, ScriptSet, Strategy, Witness, WitnessProgram,
     WitnessScript, WitnessVersion,
 };

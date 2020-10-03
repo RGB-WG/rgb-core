@@ -17,7 +17,7 @@ use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1;
 use std::collections::HashSet;
 
-use super::{pubkey::SHA256_LNPBP1, Container, Error, Proof, ScriptInfo};
+use super::{pubkey::SHA256_LNPBP1, Container, Error, Proof, ScriptEncodeData};
 use crate::commit_verify::EmbedCommitVerify;
 use crate::SECP256K1;
 
@@ -51,7 +51,7 @@ impl Container for KeysetContainer {
         supplement: &Self::Supplement,
         _: &Self::Host,
     ) -> Result<Self, Error> {
-        if let ScriptInfo::LockScript(ref script) = proof.script_info {
+        if let ScriptEncodeData::LockScript(ref script) = proof.source {
             Ok(Self {
                 pubkey: proof.pubkey,
                 keyset: script.extract_pubkeyset()?,
@@ -86,13 +86,13 @@ impl Container for KeysetContainer {
 }
 
 wrapper!(
-    LNPBP2Commitment,
+    KeysetCommitment,
     secp256k1::PublicKey,
     doc = "Public key committed to some message plus a sum of other public keys via LNPBP2-based tweaking procedure",
     derive = [PartialEq, Eq, Hash]
 );
 
-impl<MSG> EmbedCommitVerify<MSG> for LNPBP2Commitment
+impl<MSG> EmbedCommitVerify<MSG> for KeysetCommitment
 where
     MSG: AsRef<[u8]>,
 {
@@ -154,7 +154,7 @@ where
         tweaked_pubkey.add_exp_assign(&SECP256K1, factor)?;
 
         // Returning tweaked public key
-        Ok(LNPBP2Commitment(tweaked_pubkey))
+        Ok(KeysetCommitment(tweaked_pubkey))
     }
 }
 
@@ -175,8 +175,8 @@ mod test {
         let tag = sha256::Hash::hash(b"TEST_TAG2");
         let msg = "test message";
         gen_secp_pubkeys(9).into_iter().for_each(|pubkey| {
-            let lnpbp1_commitment = LNPBP1Commitment::embed_commit(
-                &mut LNPBP1Container {
+            let lnpbp1_commitment = PubkeyCommitment::embed_commit(
+                &mut PubkeyContainer {
                     pubkey,
                     tag,
                     tweaking_factor: None,
@@ -184,7 +184,7 @@ mod test {
                 &msg,
             )
             .unwrap();
-            let lnpbp2_commitment = LNPBP2Commitment::embed_commit(
+            let lnpbp2_commitment = KeysetCommitment::embed_commit(
                 &mut KeysetContainer {
                     pubkey,
                     keyset: HashSet::new(),
@@ -210,7 +210,7 @@ mod test {
         )
         .unwrap();
         (1..9).into_iter().for_each(|n_keys| {
-            embed_commit_verify_suite::<Vec<u8>, LNPBP2Commitment>(
+            embed_commit_verify_suite::<Vec<u8>, KeysetCommitment>(
                 gen_messages(),
                 &mut KeysetContainer {
                     pubkey,
@@ -235,7 +235,7 @@ mod test {
         )
         .unwrap()]);
 
-        let commitment = LNPBP2Commitment::embed_commit(
+        let commitment = KeysetCommitment::embed_commit(
             &mut KeysetContainer {
                 pubkey,
                 keyset,

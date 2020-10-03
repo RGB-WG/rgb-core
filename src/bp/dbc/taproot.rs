@@ -14,8 +14,8 @@
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 
-use super::{Container, Error, LNPBP1Commitment, Proof, ScriptInfo};
-use crate::bp::dbc::LNPBP1Container;
+use super::{Container, Error, Proof, PubkeyCommitment, ScriptEncodeData};
+use crate::bp::dbc::PubkeyContainer;
 use crate::commit_verify::EmbedCommitVerify;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
@@ -41,7 +41,7 @@ impl Container for TaprootContainer {
         supplement: &Self::Supplement,
         _: &Self::Host,
     ) -> Result<Self, Error> {
-        if let ScriptInfo::Taproot(ref tapscript_root) = proof.script_info {
+        if let ScriptEncodeData::Taproot(ref tapscript_root) = proof.source {
             Ok(Self {
                 script_root: tapscript_root.clone(),
                 intermediate_key: proof.pubkey,
@@ -57,7 +57,7 @@ impl Container for TaprootContainer {
         (
             Proof {
                 pubkey: self.intermediate_key,
-                script_info: ScriptInfo::Taproot(self.script_root),
+                source: ScriptEncodeData::Taproot(self.script_root),
             },
             self.tag,
         )
@@ -66,14 +66,14 @@ impl Container for TaprootContainer {
     fn to_proof(&self) -> Proof {
         Proof {
             pubkey: self.intermediate_key.clone(),
-            script_info: ScriptInfo::Taproot(self.script_root.clone()),
+            source: ScriptEncodeData::Taproot(self.script_root.clone()),
         }
     }
 
     fn into_proof(self) -> Proof {
         Proof {
             pubkey: self.intermediate_key,
-            script_info: ScriptInfo::Taproot(self.script_root),
+            source: ScriptEncodeData::Taproot(self.script_root),
         }
     }
 }
@@ -82,7 +82,7 @@ impl Container for TaprootContainer {
 #[display(Debug)]
 pub struct TaprootCommitment {
     pub script_root: sha256::Hash,
-    pub intermediate_key_commitment: LNPBP1Commitment,
+    pub intermediate_key_commitment: PubkeyCommitment,
 }
 
 impl<MSG> EmbedCommitVerify<MSG> for TaprootCommitment
@@ -96,13 +96,13 @@ where
         container: &mut Self::Container,
         msg: &MSG,
     ) -> Result<Self, Self::Error> {
-        let mut pubkey_container = LNPBP1Container {
+        let mut pubkey_container = PubkeyContainer {
             pubkey: container.intermediate_key.clone(),
             tag: container.tag.clone(),
             tweaking_factor: None,
         };
 
-        let cmt = LNPBP1Commitment::embed_commit(&mut pubkey_container, msg)?;
+        let cmt = PubkeyCommitment::embed_commit(&mut pubkey_container, msg)?;
 
         container.tweaking_factor = pubkey_container.tweaking_factor;
 

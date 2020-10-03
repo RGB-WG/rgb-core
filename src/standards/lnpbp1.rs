@@ -16,7 +16,7 @@ use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 
 use crate::bp::dbc::{
-    self, Container, LNPBP1Commitment, LNPBP1Container, Proof,
+    self, Container, Proof, PubkeyCommitment, PubkeyContainer,
 };
 use crate::commit_verify::EmbedCommitVerify;
 
@@ -45,13 +45,13 @@ pub fn lnpbp1_commit(
     protocol_tag: &sha256::Hash,
     message: &[u8],
 ) -> Result<Commitment, secp256k1::Error> {
-    let mut container = LNPBP1Container {
+    let mut container = PubkeyContainer {
         pubkey: pubkey.clone(),
         tag: protocol_tag.clone(),
         tweaking_factor: None,
     };
 
-    let commitment = LNPBP1Commitment::embed_commit(&mut container, &message)?;
+    let commitment = PubkeyCommitment::embed_commit(&mut container, &message)?;
 
     Ok(Commitment {
         original_pubkey: pubkey.clone(),
@@ -70,8 +70,8 @@ pub fn lnpbp1_verify(
     protocol_tag: sha256::Hash,
     message: &[u8],
 ) -> Result<bool, dbc::Error> {
-    Ok(LNPBP1Commitment::from_inner(commitment).verify(
-        &LNPBP1Container::reconstruct(
+    Ok(PubkeyCommitment::from_inner(commitment).verify(
+        &PubkeyContainer::reconstruct(
             &Proof::from(proof),
             &protocol_tag,
             &None,

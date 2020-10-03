@@ -29,7 +29,7 @@ use bitcoin::PubkeyHash;
 use core::cell::RefCell;
 use std::collections::HashSet;
 
-use super::{Container, Error, LNPBP2Commitment, Proof, ScriptInfo};
+use super::{Container, Error, KeysetCommitment, Proof, ScriptEncodeData};
 use crate::bp::dbc::KeysetContainer;
 use crate::bp::scripts::*;
 use crate::commit_verify::EmbedCommitVerify;
@@ -57,7 +57,7 @@ impl Container for LockscriptContainer {
         supplement: &Self::Supplement,
         _: &Self::Host,
     ) -> Result<Self, Error> {
-        if let ScriptInfo::LockScript(ref script) = proof.script_info {
+        if let ScriptEncodeData::LockScript(ref script) = proof.source {
             Ok(Self {
                 pubkey: proof.pubkey,
                 script: script.clone(),
@@ -73,7 +73,7 @@ impl Container for LockscriptContainer {
     fn deconstruct(self) -> (Proof, Self::Supplement) {
         (
             Proof {
-                script_info: ScriptInfo::LockScript(self.script),
+                source: ScriptEncodeData::LockScript(self.script),
                 pubkey: self.pubkey,
             },
             self.tag,
@@ -83,7 +83,7 @@ impl Container for LockscriptContainer {
     #[inline]
     fn to_proof(&self) -> Proof {
         Proof {
-            script_info: ScriptInfo::LockScript(self.script.clone()),
+            source: ScriptEncodeData::LockScript(self.script.clone()),
             pubkey: self.pubkey.clone(),
         }
     }
@@ -91,7 +91,7 @@ impl Container for LockscriptContainer {
     #[inline]
     fn into_proof(self) -> Proof {
         Proof {
-            script_info: ScriptInfo::LockScript(self.script),
+            source: ScriptEncodeData::LockScript(self.script),
             pubkey: self.pubkey,
         }
     }
@@ -187,7 +187,7 @@ where
         };
 
         let tweaked_pubkey =
-            LNPBP2Commitment::embed_commit(&mut keyset_container, msg)?;
+            KeysetCommitment::embed_commit(&mut keyset_container, msg)?;
 
         container.tweaking_factor = keyset_container.tweaking_factor;
 

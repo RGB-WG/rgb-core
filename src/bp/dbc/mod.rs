@@ -16,20 +16,20 @@ mod error;
 mod keyset;
 mod lockscript;
 mod pubkey;
-mod scriptpubkey;
+mod spk;
 mod taproot;
 mod tx;
 mod txout;
 mod types;
 
 pub use error::Error;
-pub use keyset::{KeysetContainer, LNPBP2Commitment};
+pub use keyset::{KeysetCommitment, KeysetContainer};
 pub use lockscript::{LockscriptCommitment, LockscriptContainer};
-pub use pubkey::{LNPBP1Commitment, LNPBP1Container};
-pub use scriptpubkey::{
-    ScriptPubkeyCommitment, ScriptPubkeyComposition, ScriptPubkeyContainer,
+pub use pubkey::{PubkeyCommitment, PubkeyContainer};
+pub use spk::{
+    ScriptEncodeData, ScriptEncodeMethod, SpkCommitment, SpkContainer,
 };
 pub use taproot::{TaprootCommitment, TaprootContainer};
 pub use tx::{compute_lnpbp3_vout, TxCommitment, TxContainer, TxSupplement};
 pub use txout::{TxoutCommitment, TxoutContainer};
-pub use types::{Container, Proof, ScriptInfo};
+pub use types::{Container, Proof};
