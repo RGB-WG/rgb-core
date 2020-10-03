@@ -49,63 +49,211 @@ impl From<DescriptorKeyParseError> for ParseError {
     }
 }
 
-/// Public key information that can be used as a part of Bitcoin Core/miniscript
-/// descriptors and parsed/serialized into string. Unlike
-/// [`miniscript::DescriptorPublicKey`] type can contain tweaking factor applied
-/// to a public key after derication. In string-serialized form this factor
-/// can be given as an optional extension after `+` sign.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-pub enum PublicKey {
-    /// Public key or extended public key without tweaking factor information
-    #[display("{_0}")]
-    Native(DescriptorPublicKey),
+pub trait MaybeTweakPair {
+    /// Returns whether key has embedded tweaking information
+    fn has_tweak(&self) -> bool;
 
-    /// Public key or extended public key with tweaking information
-    #[display("{_0}+{_1}")]
-    Tweaked(DescriptorPublicKey, secp256k1::SecretKey),
+    /// Returns reference to a tweaking factor (in form of
+    /// [`Option::Some`]`(`[`secp256k1::SecretKey`]`)` for
+    /// [`PublicKey::Tweaked`] variant, or [`Option::None`] otherwise
+    fn as_tweaking_factor(&self) -> Option<&secp256k1::SecretKey>;
+
+    /// Returns reference to an untweaked [`DescriptorPublicKey`] value
+    fn as_descriptor_public_key(&self) -> &DescriptorPublicKey;
+
+    /// Converts into a tweaking factor value (in form of
+    /// [`Option::Some`]`(`[`secp256k1::SecretKey`]`)` for
+    /// [`PublicKey::Tweaked`] variant, or [`Option::None`] otherwise
+    fn into_tweaking_factor(self) -> Option<secp256k1::SecretKey>;
+
+    /// Converts into an untweaked [`DescriptorPublicKey`] value
+    fn into_descriptor_public_key(self) -> DescriptorPublicKey;
+
+    /// Converts into an untweaked [`DescriptorPublicKey`] value, optionally
+    /// using derivation into a child with `index`
+    fn to_tweaked_public_key(&self, index: Option<u32>)
+        -> secp256k1::PublicKey;
 }
 
-impl Hash for PublicKey {
+/// Representation of a public key with attached tweaking factor
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display("{pubkey}+{tweak}")]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+pub struct PubkeyWithTweak {
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::rust::display_fromstr")
+    )]
+    pub pubkey: DescriptorPublicKey,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::rust::display_fromstr")
+    )]
+    pub tweak: secp256k1::SecretKey,
+}
+
+impl Hash for PubkeyWithTweak {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            PublicKey::Native(pk) => pk.hash(state),
-            PublicKey::Tweaked(pk, t) => {
-                pk.hash(state);
-                t.as_ref().hash(state);
-            }
-        }
+        self.pubkey.hash(state);
+        self.tweak.as_ref().hash(state);
     }
 }
 
-impl FromStr for PublicKey {
+impl FromStr for PubkeyWithTweak {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s.split('+');
+
         Ok(match (parts.next(), parts.next(), parts.next()) {
-            (Some(key), None, _) => {
-                PublicKey::Native(DescriptorPublicKey::from_str(key)?)
-            }
             (Some(key), Some(tweak), None) => {
-                let dpk = DescriptorPublicKey::from_str(key)?;
-                let sk =
+                let pubkey = DescriptorPublicKey::from_str(key)?;
+                let tweak =
                     secp256k1::SecretKey::from_str(tweak).map_err(|_| {
                         ParseError::WrongTweakFormat(tweak.to_string())
                     })?;
-                let _ = secp256k1::PublicKey::from_secret_key(&SECP256K1, &sk);
-                PublicKey::Tweaked(dpk, sk)
+                let _ =
+                    secp256k1::PublicKey::from_secret_key(&SECP256K1, &tweak);
+                PubkeyWithTweak { pubkey, tweak }
             }
             _ => return Err(ParseError::WrongFormat(s.to_string())),
         })
     }
 }
 
-impl PublicKey {
+impl MaybeTweakPair for PubkeyWithTweak {
+    /// Returns whether key has embedded tweaking information
+    fn has_tweak(&self) -> bool {
+        true
+    }
+
+    /// Returns reference to a tweaking factor (in form of
+    /// [`Option::Some`]`(`[`secp256k1::SecretKey`]`)` for
+    /// [`PublicKey::Tweaked`] variant, or [`Option::None`] otherwise
+    fn as_tweaking_factor(&self) -> Option<&secp256k1::SecretKey> {
+        Some(&self.tweak)
+    }
+
+    /// Returns reference to an untweaked [`DescriptorPublicKey`] value
+    fn as_descriptor_public_key(&self) -> &DescriptorPublicKey {
+        &self.pubkey
+    }
+
+    /// Converts into a tweaking factor value (in form of
+    /// [`Option::Some`]`(`[`secp256k1::SecretKey`]`)` for
+    /// [`PublicKey::Tweaked`] variant, or [`Option::None`] otherwise
+    fn into_tweaking_factor(self) -> Option<secp256k1::SecretKey> {
+        Some(self.tweak)
+    }
+
+    /// Converts into an untweaked [`DescriptorPublicKey`] value
+    fn into_descriptor_public_key(self) -> DescriptorPublicKey {
+        self.pubkey
+    }
+
+    /// Converts into an untweaked [`DescriptorPublicKey`] value, optionally
+    /// using derivation into a child with `index`
+    fn to_tweaked_public_key(
+        &self,
+        index: Option<u32>,
+    ) -> secp256k1::PublicKey {
+        let dpk = self.as_descriptor_public_key().clone();
+        let mut pk = match index {
+            Some(index) => {
+                dpk.derive(ChildNumber::Normal { index })
+                    .to_public_key()
+                    .key
+            }
+            None => dpk.to_public_key().key,
+        };
+        pk.add_exp_assign(&SECP256K1, &self.tweak[..]).expect(
+            "Tweaking with secret key can fail with negligible probability",
+        );
+        pk
+    }
+}
+
+impl MiniscriptKey for PubkeyWithTweak {
+    type Hash = Self;
+
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
+}
+
+impl ToPublicKey for PubkeyWithTweak {
+    fn to_public_key(&self) -> bitcoin::PublicKey {
+        bitcoin::PublicKey {
+            compressed: true,
+            key: self.to_tweaked_public_key(None),
+        }
+    }
+
+    fn hash_to_hash160(hash: &Self::Hash) -> hash160::Hash {
+        hash.to_public_key().to_pubkeyhash()
+    }
+}
+
+/// Public key information that can be used as a part of Bitcoin Core/miniscript
+/// descriptors and parsed/serialized into string. Unlike
+/// [`miniscript::DescriptorPublicKey`] type can contain tweaking factor applied
+/// to a public key after derication. In string-serialized form this factor
+/// can be given as an optional extension after `+` sign.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+pub enum PubkeyExtended {
+    /// Public key or extended public key without tweaking factor information
+    #[display("{_0}")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::rust::display_fromstr")
+    )]
+    Native(DescriptorPublicKey),
+
+    /// Public key or extended public key with tweaking information
+    #[display("{_0}")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::rust::display_fromstr")
+    )]
+    Tweaked(PubkeyWithTweak),
+}
+
+impl Hash for PubkeyExtended {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            PubkeyExtended::Native(pk) => pk.hash(state),
+            PubkeyExtended::Tweaked(tpk) => tpk.hash(state),
+        }
+    }
+}
+
+impl FromStr for PubkeyExtended {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(if s.contains('+') {
+            PubkeyExtended::Tweaked(PubkeyWithTweak::from_str(s)?)
+        } else {
+            PubkeyExtended::Native(DescriptorPublicKey::from_str(s)?)
+        })
+    }
+}
+
+impl PubkeyExtended {
     /// Returns whether key has embedded tweaking information
     pub fn has_tweak(&self) -> bool {
         match self {
-            PublicKey::Native(_) => false,
-            PublicKey::Tweaked(_, _) => true,
+            PubkeyExtended::Native(_) => false,
+            PubkeyExtended::Tweaked(_) => true,
         }
     }
 
@@ -114,15 +262,16 @@ impl PublicKey {
     /// [`PublicKey::Tweaked`] variant, or [`Option::None`] otherwise
     pub fn as_tweaking_factor(&self) -> Option<&secp256k1::SecretKey> {
         match self {
-            PublicKey::Native(_) => None,
-            PublicKey::Tweaked(_, tweak_factor) => Some(tweak_factor),
+            PubkeyExtended::Native(_) => None,
+            PubkeyExtended::Tweaked(t) => t.as_tweaking_factor(),
         }
     }
 
     /// Returns reference to an untweaked [`DescriptorPublicKey`] value
     pub fn as_descriptor_public_key(&self) -> &DescriptorPublicKey {
         match self {
-            PublicKey::Native(pk) | PublicKey::Tweaked(pk, _) => pk,
+            PubkeyExtended::Native(pk) => pk,
+            PubkeyExtended::Tweaked(pk) => pk.as_descriptor_public_key(),
         }
     }
 
@@ -131,15 +280,16 @@ impl PublicKey {
     /// [`PublicKey::Tweaked`] variant, or [`Option::None`] otherwise
     pub fn into_tweaking_factor(self) -> Option<secp256k1::SecretKey> {
         match self {
-            PublicKey::Native(_) => None,
-            PublicKey::Tweaked(_, tweak_factor) => Some(tweak_factor),
+            PubkeyExtended::Native(_) => None,
+            PubkeyExtended::Tweaked(tpk) => tpk.into_tweaking_factor(),
         }
     }
 
     /// Converts into an untweaked [`DescriptorPublicKey`] value
     pub fn into_descriptor_public_key(self) -> DescriptorPublicKey {
         match self {
-            PublicKey::Native(pk) | PublicKey::Tweaked(pk, _) => pk,
+            PubkeyExtended::Native(pk) => pk,
+            PubkeyExtended::Tweaked(pk) => pk.into_descriptor_public_key(),
         }
     }
 
@@ -149,30 +299,19 @@ impl PublicKey {
         &self,
         index: Option<u32>,
     ) -> secp256k1::PublicKey {
-        self.as_tweaking_factor()
-            .and_then(|factor| {
-                let dpk = self.as_descriptor_public_key().clone();
-                let mut pk = match index {
-                    Some(index) => {
-                        dpk.derive(ChildNumber::Normal { index })
-                            .to_public_key()
-                            .key
-                    }
-                    None => dpk.to_public_key().key,
-                };
-                pk.add_exp_assign(&SECP256K1, &factor[..]).ok()?;
-                Some(pk)
-            })
-            .unwrap_or_else(|| {
+        match self {
+            PubkeyExtended::Native(_) => {
                 self.clone()
                     .into_descriptor_public_key()
                     .to_public_key()
                     .key
-            })
+            }
+            PubkeyExtended::Tweaked(tpk) => tpk.to_tweaked_public_key(index),
+        }
     }
 }
 
-impl MiniscriptKey for PublicKey {
+impl MiniscriptKey for PubkeyExtended {
     type Hash = Self;
 
     fn to_pubkeyhash(&self) -> Self::Hash {
@@ -180,7 +319,7 @@ impl MiniscriptKey for PublicKey {
     }
 }
 
-impl ToPublicKey for PublicKey {
+impl ToPublicKey for PubkeyExtended {
     fn to_public_key(&self) -> bitcoin::PublicKey {
         bitcoin::PublicKey {
             compressed: true,
@@ -214,7 +353,7 @@ mod test {
             .collect::<Vec<_>>();
 
         for pkstr in dpk {
-            let pk = PublicKey::from_str(pkstr).unwrap();
+            let pk = PubkeyExtended::from_str(pkstr).unwrap();
 
             assert_eq!(pk.to_pubkeyhash(), pk);
             assert_eq!(
@@ -229,7 +368,7 @@ mod test {
         }
 
         for pkstr in tdpk {
-            let pk = PublicKey::from_str(&pkstr).unwrap();
+            let pk = PubkeyExtended::from_str(&pkstr).unwrap();
             assert_eq!(pk.has_tweak(), true);
 
             assert_eq!(pk.to_pubkeyhash(), pk);

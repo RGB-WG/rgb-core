@@ -54,6 +54,7 @@ ed25519-dalek = { version = "~1.0.0", optional = true }
 #   <https://github.com/rust-lang/api-guidelines/issues/180> for the explanation
 #   and references.
 serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
+serde_with = { version = "~1.5.0", optional = true }
 tokio = { version = "~0.2.18", features = ["tcp", "sync"], optional = true }
 lazy_static = "~1.4.0"
 # Networking deps
@@ -125,7 +126,7 @@ rgb = ["bulletproofs", "ed25519-dalek"]
 # ----------------------------
 #   These also include re-assembly of necessary features from dependencies
 async = ["async-trait", "amplify/async"]
-serde = ["serde_crate", "bitcoin/use-serde", "miniscript/serde", "amplify/serde"]
+serde = ["serde_crate", "serde_with", "bitcoin/use-serde", "miniscript/serde", "amplify/serde"]
 # Optional cryptographic functionality
 # ------------------------------------
 bulletproofs = ["grin_secp256k1zkp"] # Auto-required and used only by RGB
