@@ -82,9 +82,11 @@ pub enum DataFormat {
     String(u16),
     Bytes(u16),
     Digest(DigestAlgorithm),
-    TxOutPoint,
     PublicKey(EllipticCurve, elliptic_curve::PointSerialization),
     Signature(elliptic_curve::SignatureAlgorithm),
+    TxOutPoint,
+    Tx,
+    Psbt,
 }
 
 // Convenience methods
@@ -222,6 +224,8 @@ mod strict_encoding {
         Signature = 0x12,
         // Composed types
         TxOutPoint = 0x20,
+        Tx = 0x21,
+        Psbt = 0x22,
     }
     impl_enum_strict_encoding!(EncodingTag);
 
@@ -560,6 +564,8 @@ mod strict_encoding {
                 DataFormat::TxOutPoint => {
                     EncodingTag::TxOutPoint.strict_encode(&mut e)?
                 }
+                DataFormat::Tx => EncodingTag::Tx.strict_encode(&mut e)?,
+                DataFormat::Psbt => EncodingTag::Psbt.strict_encode(&mut e)?,
             })
         }
     }
@@ -724,6 +730,8 @@ mod strict_encoding {
                     elliptic_curve::SignatureAlgorithm::strict_decode(&mut d)?,
                 ),
                 EncodingTag::TxOutPoint => DataFormat::TxOutPoint,
+                EncodingTag::Tx => DataFormat::Tx,
+                EncodingTag::Psbt => DataFormat::Psbt,
             })
         }
     }
@@ -924,6 +932,8 @@ mod _validation {
                     data::Revealed::Ed25519Signature(_),
                 ) => {}
                 (Self::TxOutPoint, data::Revealed::TxOutPoint(_)) => {}
+                (Self::Tx, data::Revealed::Tx(_)) => {}
+                (Self::Psbt, data::Revealed::Psbt(_)) => {}
 
                 _ => {
                     status.add_failure(
