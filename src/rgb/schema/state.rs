@@ -923,6 +923,7 @@ mod _validation {
                     ),
                     data::Revealed::Ed25519Signature(_),
                 ) => {}
+                (Self::TxOutPoint, data::Revealed::TxOutPoint(_)) => {}
 
                 _ => {
                     status.add_failure(
