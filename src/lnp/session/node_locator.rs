@@ -37,6 +37,7 @@ use crate::lnp::transport::zmq::ApiType as ZmqType;
 pub enum NodeLocator {
     /// Native Lightning network connection: uses end-to-end encryption and
     /// runs on top of either TCP or Tor socket
+    ///
     /// # URL Scheme
     /// lnp://<node-id>@<ip>|<onion>:<port>
     Native(secp256k1::PublicKey, InetAddr, Option<u16>),
@@ -44,6 +45,7 @@ pub enum NodeLocator {
     /// UDP-based connection that uses UDP packets instead of TCP. Can't work
     /// with Tor, but may use UDP hole punching in a secure way, since the
     /// connection is still required to be encrypted.
+    ///
     /// # URL Scheme
     /// lnp-udp://<node-id>@<ip>:<port>
     Udp(secp256k1::PublicKey, IpAddr, Option<u16>),
@@ -51,6 +53,7 @@ pub enum NodeLocator {
     /// Local (for inter-process communication based on POSIX sockets)
     /// connection without encryption. Relies on ZMQ IPC sockets internally;
     /// specific socket pair for ZMQ is provided via query parameter
+    ///
     /// # URL Schema
     /// lnp-zmq:<file-path>?api=<p2p|rpc|sub>
     #[cfg(feature = "zmq")]
@@ -60,20 +63,25 @@ pub enum NodeLocator {
     /// Mutex'es and other sync managing routines) without encryption.
     /// Relies on ZMQ IPC sockets internally; specific socket pair for ZMQ is
     /// provided via query parameter
+    ///
     /// # URL Schema
     /// lnp-zmq:?api=<p2p|rpc|sub>#<id>
     #[cfg(feature = "zmq")]
     Inproc(String, zmq::Context, ZmqType),
 
-    /// SHOULD be used only for DMZ area connections; otherwise Native or
-    /// Webscoket-based connection MUST be used
+    /// SHOULD be used only for DMZ area connections; otherwise
+    /// [`NodeLocator::Native`] or [`NodeLocator::Websocket`] connection
+    /// MUST be used
+    ///
     /// # URL Schema
     /// lnp-zmq://<node-id>@<ip>|<onion>:<port>/?api=<p2p|rpc|sub>
     #[cfg(feature = "zmq")]
     ZmqEncrypted(secp256k1::PublicKey, ZmqType, IpAddr, Option<u16>),
 
-    /// SHOULD be used only for DMZ area connections; otherwise Native or
-    /// Webscoket-based connection MUST be used
+    /// SHOULD be used only for DMZ area connections; otherwise
+    /// [`NodeLocator::Native`] or [`NodeLocator::Websocket`] connection
+    /// MUST be used
+    ///
     /// # URL Schema
     /// lnp-zmq://<ip>|<onion>:<port>/?api=<p2p|rpc|sub>
     #[cfg(feature = "zmq")]
@@ -83,6 +91,14 @@ pub enum NodeLocator {
     /// lnp-ws://<node-id>@<ip>|<onion>:<port>
     #[cfg(feature = "websocket")]
     Websocket(secp256k1::PublicKey, IpAddr, Option<u16>),
+
+    /// Text (Bech32-based) connection for high latency or non-interactive
+    /// protocols. Can work with SMPT, for mesh and satellite networks – or
+    /// with other mediums of communications (chat messages, QR codes etc).
+    ///
+    /// # URL Schema
+    /// lnp-text://<node-id>
+    Text(secp256k1::PublicKey),
 }
 
 impl NodeLocator {
@@ -228,6 +244,9 @@ impl TryFrom<Url> for NodeLocator {
                     }
                 })
             }
+            "lnp-text" => Ok(NodeLocator::Text(
+                pubkey.map_err(|_| UrlError::InvalidPubkey)?,
+            )),
             unknown => Err(UrlError::UnknownScheme(unknown.to_string())),
         }
     }
@@ -290,6 +309,10 @@ impl From<&NodeLocator> for Url {
                 url.set_port(port.clone()).expect(ERR);
                 url
             }
+            NodeLocator::Text(pubkey) => {
+                Url::parse(&format!("lnp-text://{}", pubkey))
+                    .expect("Internal URL construction error")
+            }
         }
     }
 }
@@ -345,6 +368,7 @@ impl PartialEq for NodeLocator {
             (ZmqEncrypted(a1, a2, a3, a4), ZmqEncrypted(b1, b2, b3, b4)) => {
                 a1 == b1 && a2 == b2 && a3 == b3 && a4 == b4
             }
+            (Text(pubkey1), Text(pubkey2)) => pubkey1 == pubkey2,
             (_, _) => false,
         }
     }
