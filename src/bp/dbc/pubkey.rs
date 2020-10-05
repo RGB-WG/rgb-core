@@ -116,18 +116,18 @@ where
     /// 1. Construct a byte string `lnbp1_msg`, composed of the original message
     ///    prefixed with a single SHA256 hash of `LNPBP1`
     ///    string and a single SHA256 hash of protocol-specific tag:
-    ///    `lnbp1_msg = SHA256("LNPBP1") || SHA256(<protocol-specific-tag>) ||
-    /// msg` 2. Compute HMAC-SHA256 of the `lnbp1_msg` and `P`, named
-    /// **tweaking    factor**: `f = HMAC_SHA256(lnbp1_msg, P)`
+    ///    `lnbp1_msg = SHA256("LNPBP1") || SHA256(<protocol-specific-tag>) ||msg` 
+    /// 2. Compute HMAC-SHA256 of the `lnbp1_msg` and `P`, named **tweaking
+    ///    factor**: `f = HMAC_SHA256(lnbp1_msg, P)`
     /// 3. Make sure that the tweaking factor is less than order `p` of Zp prime
     ///    number set used in Secp256k1 curve; otherwise fail the protocol.
-    /// 3. Multiply the tweaking factor on Secp256k1 generator point
+    /// 4. Multiply the tweaking factor on Secp256k1 generator point
     ///    `G`: `F = G * f` ignoring the possible overflow of the resulting
     ///    elliptic curve point `F` over the order `n` of `G`. Check that the
     ///    result not equal to the point-at-infinity; otherwise fail the
     ///    protocol, indicating the reason of failure, such that the protocol
     ///    may be run with another initial public key `P'` value.
-    /// 4. Add two elliptic curve points, the original public key `P` and
+    /// 5. Add two elliptic curve points, the original public key `P` and
     ///    tweaking-factor based point `F`, obtaining the resulting tweaked
     ///    public key `T`: `T = P + F`. Check that the result not equal to the
     ///    point-at-infinity; otherwise fail the protocol, indicating the reason
