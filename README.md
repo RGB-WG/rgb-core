@@ -1,6 +1,8 @@
 # LNP/BP Core Library
 
+![Build](https://github.com/LNP-BP/rust-lnpbp/workflows/Build/badge.svg)
 ![Tests](https://github.com/LNP-BP/rust-lnpbp/workflows/Tests/badge.svg)
+![Lints](https://github.com/LNP-BP/rust-lnpbp/workflows/Lints/badge.svg)
 [![codecov](https://codecov.io/gh/LNP-BP/rust-lnpbp/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/rust-lnpbp)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
