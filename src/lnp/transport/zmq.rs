@@ -19,6 +19,7 @@ use core::fmt::{self, Display, Formatter};
 #[cfg(feature = "url")]
 use core::str::FromStr;
 use std::net::SocketAddr;
+use std::option::NoneError;
 use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
@@ -27,29 +28,53 @@ use super::{Bidirect, Error, Input, Output, Read, Write};
 
 /// API type for node-to-node communications used by ZeroMQ
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Copy)]
-#[display(Debug)]
 #[repr(u8)]
 pub enum ApiType {
     /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ
     /// sockets. Each node can send unordered set of messages and does not
     /// wait for a response.
+    /// This part represents listening socket ([`zmq::SocketType::PULL`])
+    #[display("p2p-listen")]
     PeerListening = 0,
+
+    /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ
+    /// sockets. Each node can send unordered set of messages and does not
+    /// wait for a response.
+    /// This part represents connected socket ([`zmq::SocketType::PUSH`])
+    #[display("p2p-connect")]
     PeerConnecting = 1,
 
     /// Remote procedure call communications done with REQ/REP pair of ZMQ
     /// sockets. Two roles: client and server; client sends requests and awaits
     /// for client responses.
+    /// This part represents client-size socket ([`zmq::SocketType::REQ`])
+    #[display("rpc-client")]
     Client = 2,
+
+    /// Remote procedure call communications done with REQ/REP pair of ZMQ
+    /// sockets. Two roles: client and server; client sends requests and awaits
+    /// for client responses.
+    /// This part represents client-size socket ([`zmq::SocketType::REP`])
+    #[display("rpc-server")]
     Server = 3,
 
     /// Subscription API done with SUB/PUB pair of ZMQ sockets. Two roles:
     /// publisher (server) and subscriber (client); subscriber awaits for
     /// messages from publisher and does not communicates back.
+    /// This part represents publisher part ([`zmq::SocketType::PUB`])
+    #[display("pub")]
     Publish = 4,
+
+    /// Subscription API done with SUB/PUB pair of ZMQ sockets. Two roles:
+    /// publisher (server) and subscriber (client); subscriber awaits for
+    /// messages from publisher and does not communicates back.
+    /// This part represents subscriber part ([`zmq::SocketType::SUB`])
+    #[display("sub")]
     Subscribe = 5,
 }
 
 impl ApiType {
+    /// Returns [`zmq::SocketType`] corresponding to the given [`ApiType`]
     pub fn socket_type(&self) -> zmq::SocketType {
         match self {
             ApiType::PeerListening => zmq::PULL,
@@ -59,6 +84,35 @@ impl ApiType {
             ApiType::Publish => zmq::PUB,
             ApiType::Subscribe => zmq::SUB,
         }
+    }
+
+    /// Returns name for the used ZMQ API type that can be used as a part of
+    /// URL query
+    pub fn api_name(&self) -> String {
+        match self {
+            ApiType::PeerListening | ApiType::PeerConnecting => s!("p2p"),
+            ApiType::Client | ApiType::Server => s!("rpc"),
+            ApiType::Publish | ApiType::Subscribe => s!("sub"),
+        }
+    }
+}
+
+impl FromStr for ApiType {
+    type Err = NoneError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.to_lowercase();
+        vec![
+            ApiType::PeerConnecting,
+            ApiType::PeerListening,
+            ApiType::Client,
+            ApiType::Server,
+            ApiType::Publish,
+            ApiType::Subscribe,
+        ]
+        .into_iter()
+        .find(|api| api.to_string() == s)
+        .ok_or(NoneError)
     }
 }
 

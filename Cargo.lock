@@ -12,8 +12,7 @@ dependencies = [
 [[package]]
 name = "amplify"
 version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c4a7dfb3b07fc73964307fd770361b66535a9e564e1650e365bbf1f041ac252"
+source = "git+https://github.com/LNP-BP/rust-amplify?branch=develop#58dc3751a6b854bc329a2116d3a5e8c8e2d51237"
 dependencies = [
  "async-trait",
  "ed25519-dalek",
@@ -473,9 +472,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.78"
+version = "0.2.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa7087f49d294270db4e1928fc110c976cd4b9e5a16348e0a1df09afa99e6c98"
+checksum = "2448f6066e80e3bfc792e9c98bf705b4b0fc6e8ef5b43e5889aff0eaa9c58743"
 
 [[package]]
 name = "lightning"
@@ -662,6 +661,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "openssl-src"
+version = "111.11.0+1.1.1h"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "380fe324132bea01f45239fadfec9343adb044615f29930d039bec1ae7b9fa5b"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -670,6 +678,7 @@ dependencies = [
  "autocfg 1.0.1",
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -1026,9 +1035,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe2c6a4cb9be4c26e73a98dc94fdd90b876971e3b575eeed6d4b82c7d17aa4a5"
+checksum = "738e6b326723cdf0d9afce8d386dc6a967ffa91e0b4de82f6450c154199ae798"
 dependencies = [
  "darling",
  "proc-macro2 1.0.24",
@@ -1195,8 +1204,7 @@ checksum = "736b60249cb25337bc196faa43ee12c705e426f3d55c214d73a4e7be06f92cb4"
 [[package]]
 name = "torut"
 version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a877b6420f50b727678db0163bbc77d9c763ace9a77619fad9d3c2d8e381f498"
+source = "git+https://github.com/LNP-BP/torut?branch=develop#91d918c1175ff32bf656461c949ccadd0de767a0"
 dependencies = [
  "base32",
  "base64",

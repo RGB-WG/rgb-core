@@ -51,38 +51,60 @@ impl fmt::Display for NodeAddr {
     }
 }
 
+#[derive(
+    Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From,
+)]
+#[display(doc_comments)]
+/// Error parsing [`NodeAddr`] from string representation, which must be in
+/// `<node_id>@<node_inet_addr>[:<port>]` format, where <node_inet_addr> may be
+/// IPv4, IPv6 or TOR v2, v3 address
+pub enum ParseError {
+    /// Node id can't be decoded from the given information. Node id must be a
+    /// valid Secp256k1 public key in a compact form
+    #[from(bitcoin::secp256k1::Error)]
+    WrongNodeId,
+
+    /// Node address must be given as in form of
+    /// `<node_id>@<node_inet_addr>[:<port>]`, where <node_inet_addr> may be
+    /// IPv4, IPv6 or TORv3 address
+    NoNodeId,
+
+    /// The provided node address is incorrect; it must be IPv4, IPv6 or TOR
+    /// v2, v3 address
+    #[from]
+    WrongInetAddr(String),
+
+    /// Port information can't be decoded; it must be a 16-bit unsigned integer
+    /// literal
+    #[from(std::num::ParseIntError)]
+    WrongPort,
+
+    /// No port information in the node address string.
+    NoPort,
+}
+
 impl FromStr for NodeAddr {
-    type Err = String;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let err_msg = "Wrong LN peer id; it must be in format \
-                            `<node_id>@<node_inet_addr>[:<port>]`, \
-                            where <node_inet_addr> may be IPv4, IPv6 or TORv3 address\
-                            ";
-
         let mut splitter = s.split('@');
         let (id, inet) =
             match (splitter.next(), splitter.next(), splitter.next()) {
                 (Some(id), Some(inet), None) => (id, inet),
-                _ => Err(String::from(err_msg))?,
+                _ => Err(ParseError::NoNodeId)?,
             };
 
         let mut splitter = inet.split(':');
         let (addr, port) =
             match (splitter.next(), splitter.next(), splitter.next()) {
-                (Some(addr), Some(port), None) => {
-                    (addr, port.parse().map_err(|_| err_msg)?)
-                }
+                (Some(addr), Some(port), None) => (addr, port.parse()?),
                 (Some(addr), None, _) => (addr, LIGHTNING_P2P_DEFAULT_PORT),
-                _ => Err(String::from(err_msg))?,
+                _ => Err(ParseError::NoPort)?,
             };
 
         Ok(Self {
-            node_id: id.parse().map_err(|_| err_msg)?,
-            inet_addr: InetSocketAddr::new(
-                addr.parse().map_err(|_| err_msg)?,
-                port,
-            ),
+            node_id: id.parse()?,
+            inet_addr: InetSocketAddr::new(addr.parse()?, port),
         })
     }
 }

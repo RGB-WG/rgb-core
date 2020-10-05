@@ -101,6 +101,9 @@ bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpb
 lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
 # No changes here, just need to import forked `bitcoin` library
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
+# We can remove these two after <https://github.com/LNP-BP/rust-amplify/pull/21>
+amplify = { git = "https://github.com/LNP-BP/rust-amplify", branch = "develop" }
+torut = { git = "https://github.com/LNP-BP/torut", branch = "develop" }
 
 # Features
 # ========
