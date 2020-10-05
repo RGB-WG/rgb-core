@@ -116,7 +116,7 @@ where
     /// 1. Construct a byte string `lnbp1_msg`, composed of the original message
     ///    prefixed with a single SHA256 hash of `LNPBP1`
     ///    string and a single SHA256 hash of protocol-specific tag:
-    ///    `lnbp1_msg = SHA256("LNPBP1") || SHA256(<protocol-specific-tag>) ||msg` 
+    ///    `lnbp1_msg = SHA256("LNPBP1")||SHA256(<protocol-specific-tag>)||msg`
     /// 2. Compute HMAC-SHA256 of the `lnbp1_msg` and `P`, named **tweaking
     ///    factor**: `f = HMAC_SHA256(lnbp1_msg, P)`
     /// 3. Make sure that the tweaking factor is less than order `p` of Zp prime
