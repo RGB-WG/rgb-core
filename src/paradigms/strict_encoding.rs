@@ -1012,7 +1012,7 @@ pub mod test {
         } };
     }
 
-    // Macro to run test_suite
+    /// Macro to run test_suite
     #[macro_export]
     macro_rules! test_encode {
         ($(($x:ident, $ty:ty)),*) => (
@@ -1025,30 +1025,33 @@ pub mod test {
         );
     }
 
-    // Macro to run test suite with garbage vector
-    // Should produce "EnumValueNotKnown" error
+    /// Macro to run test suite with garbage vector against all non-consensus
+    /// enum values
     #[macro_export]
-    macro_rules! test_garbage {
-        ($(($x:ident, $ty:ty)),*) => (
-            {
-                $(
-                    let mut cp = $x.clone();
-                    cp[0] = 0x36 as u8;
-                    <$ty>::strict_decode(&cp[..]).unwrap();
-                )*
+    macro_rules! test_garbage_exhaustive {
+    ($range:expr; $( ($x:ident, $ty:ty, $err:ident) ),+ ) => (
+        {$(
+            let mut cp = $x.clone();
+            for byte in $range {
+                cp[0] = byte as u8;
+                assert_eq!(
+                    <$ty>::strict_decode(&cp[..]).unwrap_err(),
+                    crate::paradigms::strict_encoding::Error::EnumValueNotKnown($err.to_string(), byte)
+                );
             }
-        );
-    }
+        )+}
+    );
+}
 
-    // Helper function to print decoded object in console
+    /// Helper function to print decoded object in console
     pub fn print_bytes<T: StrictEncode + StrictDecode>(object: &T) {
         let mut buf = vec![];
         object.strict_encode(&mut buf).unwrap();
         println!("{:#x?}", buf);
     }
 
-    // Helper function to print encoded bytes to a file
-    // Used for large objects that doesn't fit in console output
+    /// Helper function to print encoded bytes to a file
+    /// Used for large objects that doesn't fit in console output
     pub fn print_to_file<T: StrictEncode + StrictDecode>(
         object: &T,
     ) -> Result<usize, Box<dyn std::error::Error>> {
@@ -1068,7 +1071,7 @@ pub mod test {
         T::strict_decode(&encoded_object[..]).unwrap();
     }
 
-    // Test suite function to test against the vectors
+    /// Test suite function to test against the vectors
     pub fn test_suite<T: StrictEncode + StrictDecode + PartialEq + Debug>(
         object: &T,
         test_vec: &[u8],

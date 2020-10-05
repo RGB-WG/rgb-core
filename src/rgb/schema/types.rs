@@ -559,7 +559,9 @@ mod test {
         expected = "New occurrence types can't appear w/o this library to be aware of"
     )]
     fn test_occurrence_panic_1() {
-        test_garbage!((NONEUPTO_U8, Occurences<u8>));
+        let mut data = NONEUPTO_U8.clone();
+        data[0] = 0x36 as u8;
+        Occurences::<u8>::strict_decode(&data[..]).unwrap();
     }
 
     #[test]
@@ -567,7 +569,9 @@ mod test {
         expected = "New occurrence types can't appear w/o this library to be aware of"
     )]
     fn test_occurrence_panic_2() {
-        test_garbage!((NONEUPTO_U16, Occurences<u16>));
+        let mut data = NONEUPTO_U16.clone();
+        data[0] = 0x36 as u8;
+        Occurences::<u16>::strict_decode(&data[..]).unwrap();
     }
 
     #[test]
@@ -575,7 +579,9 @@ mod test {
         expected = "New occurrence types can't appear w/o this library to be aware of"
     )]
     fn test_occurrence_panic_3() {
-        test_garbage!((NONEUPTO_U32, Occurences<u32>));
+        let mut data = NONEUPTO_U32.clone();
+        data[0] = 0x36 as u8;
+        Occurences::<u32>::strict_decode(&data[..]).unwrap();
     }
 
     #[test]
@@ -583,7 +589,9 @@ mod test {
         expected = "New occurrence types can't appear w/o this library to be aware of"
     )]
     fn test_occurrence_panic_4() {
-        test_garbage!((NONEUPTO_U64, Occurences<u64>));
+        let mut data = NONEUPTO_U32.clone();
+        data[0] = 0x36 as u8;
+        Occurences::<u32>::strict_decode(&data[..]).unwrap();
     }
 
     #[test]

@@ -718,15 +718,11 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_garbage() {
-        test_garbage!((AMOUNT_65, Revealed));
-    }
-
-    #[test]
     #[should_panic(expected = "DataIntegrityError")]
     fn test_garbage_conf() {
-        test_garbage!((CONFIDENTIAL_AMOUNT, Confidential));
+        let mut data = CONFIDENTIAL_AMOUNT.clone();
+        data[0] = 0x36 as u8;
+        Confidential::strict_decode(&data[..]).unwrap();
     }
 
     #[test]
