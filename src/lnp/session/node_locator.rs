@@ -21,7 +21,6 @@ use core::fmt::{Display, Formatter};
 use core::str::FromStr;
 use std::net::{AddrParseError, IpAddr};
 use std::path::PathBuf;
-use std::sync::Arc;
 #[cfg(feature = "url")]
 use url::Url;
 
@@ -68,7 +67,7 @@ pub enum NodeLocator {
     /// represented in the form of URL. It requires presence of ZMQ context
     /// object, which can't be encoded as a string.
     #[cfg(feature = "zmq")]
-    Inproc(String, Arc<zmq::Context>, ZmqType),
+    Inproc(String, zmq::Context, ZmqType),
 
     /// SHOULD be used only for DMZ area connections; otherwise
     /// [`NodeLocator::Native`] or [`NodeLocator::Websocket`] connection
@@ -90,7 +89,7 @@ pub enum NodeLocator {
 
     /// # URL Schema
     /// lnpws://<node-id>@<ip>|<onion>:<port>
-    #[cfg(feature = "websocket")]
+    #[cfg(feature = "websockets")]
     Websocket(secp256k1::PublicKey, IpAddr, Option<u16>),
 
     /// Text (Bech32-based) connection for high latency or non-interactive
@@ -98,7 +97,7 @@ pub enum NodeLocator {
     /// with other mediums of communications (chat messages, QR codes etc).
     ///
     /// # URL Schema
-    /// lnpt://<node-id>
+    /// lnpt://<node-id>@
     Text(secp256k1::PublicKey),
 }
 
@@ -120,7 +119,7 @@ impl NodeLocator {
             NodeLocator::ZmqUnencrypted(a, b, _) => {
                 NodeLocator::ZmqUnencrypted(a, b, Some(port))
             }
-            #[cfg(feature = "websocket")]
+            #[cfg(feature = "websockets")]
             NodeLocator::Websocket(a, b, _) => {
                 NodeLocator::Websocket(a, b, Some(port))
             }
@@ -137,7 +136,7 @@ impl NodeLocator {
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqEncrypted(_, _, _, _)
             | NodeLocator::ZmqUnencrypted(_, _, _) => s!("lnpz"),
-            #[cfg(feature = "websocket")]
+            #[cfg(feature = "websockets")]
             NodeLocator::Websocket(_, _, _) => s!("lnpws"),
             NodeLocator::Text(_) => s!("lnpt"),
         }
@@ -193,7 +192,7 @@ impl NodeLocator {
                     zmq_type.api_name()
                 )
             }
-            #[cfg(feature = "websocket")]
+            #[cfg(feature = "websockets")]
             NodeLocator::Websocket(pubkey, ip, port) => {
                 let p = port.map(|x| format!(":{}", x)).unwrap_or_default();
                 format!("{}://{}@{}{}", self.scheme(), pubkey, ip, p)
@@ -249,7 +248,7 @@ impl NodeLocator {
             NodeLocator::ZmqUnencrypted(api, ip, port) => {
                 (None, Some(InetAddr::from(*ip)), *port, None, Some(*api))
             }
-            #[cfg(feature = "websocket")]
+            #[cfg(feature = "websockets")]
             NodeLocator::Websocket(pubkey, ip, port) => {
                 (Some(*pubkey), Some(InetAddr::from(*ip)), *port, None, None)
             }
@@ -348,16 +347,22 @@ pub enum ParseError {
     HostRequired,
 
     /// Invalid public key data representing node id
+    #[from(secp256k1::Error)]
     InvalidPubkey,
 
     /// Unrecognized host information ({_0}).
     /// NB: DNS addressing is not used since it is considered insecure in terms
     ///     of censorship resistance, so you need to provide it in a form of
-    ///     either IPv4, IPv6 address or Tor v2, v3 address only
+    ///     either IPv4, IPv6 address or Tor v2, v3 address (no `.onion`
+    /// suffix)
+    #[from]
     InvalidHost(String),
 
     /// Used schema must not contain information about host
     HostPresent,
+
+    /// Used schema must not contain information about port
+    PortPresent,
 
     /// Invalid IP information
     #[from(AddrParseError)]
@@ -378,10 +383,9 @@ pub enum ParseError {
 
     /// Can't read string as a proper node address: it must be in
     /// `<node_id>@<node_inet_addr>[:<port>]` format, where <node_inet_addr>
-    /// may be IPv4, IPv6 or TORv3 address
-    #[from(node_addr::ParseError)]
-    #[from(String)]
-    NodeAddr,
+    /// may be IPv4, IPv6 or Tor v3, v2 address (no `.onion` suffix)
+    #[from]
+    NodeAddr(node_addr::ParseError),
 }
 
 #[cfg(feature = "url")]
@@ -398,18 +402,18 @@ impl TryFrom<Url> for NodeLocator {
         let port = url.port();
         match url.scheme() {
             "lnp" => Ok(NodeLocator::Native(
-                pubkey.map_err(|_| ParseError::InvalidPubkey)?,
+                pubkey?,
                 host.ok_or(ParseError::HostRequired)?.parse::<InetAddr>()?,
                 port,
             )),
             "lnpu" => Ok(NodeLocator::Udp(
-                pubkey.map_err(|_| ParseError::InvalidPubkey)?,
+                pubkey?,
                 ip.ok_or(ParseError::HostRequired)??,
                 port,
             )),
-            #[cfg(feature = "websocket")]
+            #[cfg(feature = "websockets")]
             "lnpws" => Ok(NodeLocator::Websocket(
-                pubkey.map_err(|_| ParseError::InvalidPubkey)?,
+                pubkey?,
                 ip.ok_or(ParseError::HostRequired)??,
                 port,
             )),
@@ -460,12 +464,18 @@ impl TryFrom<Url> for NodeLocator {
             }
             "lnpt" => {
                 // In this URL scheme we must not use IP address
-                if let Some(ip) = ip {
+                if let Ok(pubkey) = pubkey {
                     Err(ParseError::HostPresent)?
                 }
-                Ok(NodeLocator::Text(
-                    pubkey.map_err(|_| ParseError::InvalidPubkey)?,
-                ))
+                // In this URL scheme we must not use IP address
+                if let Some(port) = port {
+                    Err(ParseError::PortPresent)?
+                }
+                if let Some(host) = host {
+                    Ok(NodeLocator::Text(secp256k1::PublicKey::from_str(host)?))
+                } else {
+                    Err(ParseError::InvalidPubkey)?
+                }
             }
             unknown => Err(ParseError::UnknownUrlScheme(unknown.to_string())),
         }
@@ -511,6 +521,52 @@ impl Display for NodeLocator {
     }
 }
 
+impl Debug for NodeLocator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        match self {
+            NodeLocator::Native(pubkey, inet, port) => writeln!(
+                f,
+                "NodeLocator::Native({:?}, {:?}, {:?})",
+                pubkey, inet, port
+            ),
+            NodeLocator::Udp(pubkey, ip, port) => writeln!(
+                f,
+                "NodeLocator::Udp({:?}, {:?}, {:?})",
+                pubkey, ip, port
+            ),
+            NodeLocator::Ipc(file, api) => {
+                writeln!(f, "NodeLocator::Ipc({:?}, {:?})", file, api)
+            }
+            NodeLocator::Inproc(name, _, api) => writeln!(
+                f,
+                "NodeLocator::Inproc({:?}, <zmq::Context>, {:?})",
+                name, api
+            ),
+            #[cfg(feature = "zmq")]
+            NodeLocator::ZmqEncrypted(pubkey, api, ip, port) => writeln!(
+                f,
+                "NodeLocator::ZmqEncrypted({:?}, {:?}, {:?}, {:?})",
+                pubkey, api, ip, port
+            ),
+            #[cfg(feature = "zmq")]
+            NodeLocator::ZmqUnencrypted(api, ip, port) => writeln!(
+                f,
+                "NodeLocator::ZmqUnencrypted({:?}, {:?}, {:?})",
+                api, ip, port
+            ),
+            #[cfg(feature = "websockets")]
+            NodeLocator::Websocket(pubkey, ip, port) => writeln!(
+                f,
+                "NodeLocator::Websocket({:?}, {:?}, {:?})",
+                pubkey, ip, port
+            ),
+            NodeLocator::Text(pubkey) => {
+                writeln!(f, "NodeLocator::Text({:?})", pubkey)
+            }
+        }
+    }
+}
+
 #[cfg(feature = "url")]
 impl FromStr for NodeLocator {
     type Err = ParseError;
@@ -522,7 +578,7 @@ impl FromStr for NodeLocator {
             .find(|p| s.starts_with(*p))
             .is_none()
         {
-            s = format!("lnp:{}", s);
+            s = format!("lnp://{}", s);
         }
         Url::from_str(&s)
             .map_err(|_| ParseError::MalformedUrl)?
@@ -533,6 +589,15 @@ impl FromStr for NodeLocator {
 impl PartialEq for NodeLocator {
     fn eq(&self, other: &Self) -> bool {
         use NodeLocator::*;
+
+        fn api_eq(a: &ZmqType, b: &ZmqType) -> bool {
+            a == b
+                || (*a == ZmqType::PeerListening
+                    && *b == ZmqType::PeerConnecting)
+                || (*b == ZmqType::PeerListening
+                    && *a == ZmqType::PeerConnecting)
+        }
+
         match (self, other) {
             (Native(a1, a2, a3), Native(b1, b2, b3)) => {
                 a1 == b1 && a2 == b2 && a3 == b3
@@ -540,21 +605,23 @@ impl PartialEq for NodeLocator {
             (Udp(a1, a2, a3), Udp(b1, b2, b3)) => {
                 a1 == b1 && a2 == b2 && a3 == b3
             }
-            #[cfg(feature = "websocket")]
+            #[cfg(feature = "websockets")]
             (Websocket(a1, a2, a3), Websocket(b1, b2, b3)) => {
                 a1 == b1 && a2 == b2 && a3 == b3
             }
             #[cfg(feature = "zmq")]
-            (Ipc(a1, a2), Ipc(b1, b2)) => a1 == b1 && a2 == b2,
+            (Ipc(a1, a2), Ipc(b1, b2)) => a1 == b1 && api_eq(a2, b2),
             #[cfg(feature = "zmq")]
-            (Inproc(a1, _, a2), Inproc(b1, _, b2)) => a1 == b1 && a2 == b2,
+            (Inproc(a1, _, a2), Inproc(b1, _, b2)) => {
+                a1 == b1 && api_eq(a2, b2)
+            }
             #[cfg(feature = "zmq")]
             (ZmqUnencrypted(a1, a2, a3), ZmqUnencrypted(b1, b2, b3)) => {
-                a1 == b1 && a2 == b2 && a3 == b3
+                api_eq(a1, b1) && a2 == b2 && a3 == b3
             }
             #[cfg(feature = "zmq")]
             (ZmqEncrypted(a1, a2, a3, a4), ZmqEncrypted(b1, b2, b3, b4)) => {
-                a1 == b1 && a2 == b2 && a3 == b3 && a4 == b4
+                a1 == b1 && api_eq(a2, b2) && a3 == b3 && a4 == b4
             }
             (Text(pubkey1), Text(pubkey2)) => pubkey1 == pubkey2,
             (_, _) => false,
@@ -563,3 +630,559 @@ impl PartialEq for NodeLocator {
 }
 
 impl Eq for NodeLocator {}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_native() {
+        let pubkey1 = secp256k1::PublicKey::from_str(
+            "022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let pubkey2 = secp256k1::PublicKey::from_str(
+            "032e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let inet1 = InetAddr::from_str("127.0.0.1").unwrap();
+        let inet2 = InetAddr::from_str("127.0.0.2").unwrap();
+        let locator1 = NodeLocator::Native(pubkey1, inet1, None);
+        let locator2 = NodeLocator::Native(pubkey2, inet2, None);
+
+        assert_ne!(locator1, locator2);
+        assert_eq!(locator1, locator1.clone());
+        assert_eq!(locator2, locator2.clone());
+
+        assert_eq!(locator1.scheme(), "lnp");
+        assert_eq!(locator1.node_id(), Some(pubkey1));
+        assert_eq!(locator1.port(), None);
+        assert_eq!(locator1.api_type(), None);
+        assert_eq!(locator1.inet_addr(), Some(inet1));
+        assert_eq!(locator1.socket_name(), None);
+        let locator_with_port = locator1.with_port(24);
+        assert_eq!(locator_with_port.port(), Some(24));
+
+        let socket_addr = InetSocketAddr {
+            address: inet1,
+            port: 24,
+        };
+        let node_addr = NodeAddr {
+            node_id: pubkey1,
+            inet_addr: socket_addr,
+        };
+        let l = NodeLocator::from(node_addr);
+        assert_eq!(l, locator_with_port);
+        assert_ne!(l, locator1);
+        assert_eq!(
+            NodeAddr::try_from(locator1.clone()),
+            Err(ConversionError::NoPort)
+        );
+        assert_eq!(
+            NodeAddr::try_from(locator_with_port.clone()),
+            Ok(node_addr)
+        );
+
+        assert_eq!(
+            locator1.to_url_string(),
+            "lnp://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1"
+        );
+        assert_eq!(
+            locator_with_port.to_url_string(),
+            "lnp://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24"
+        );
+        assert_eq!(
+            l.to_url_string(),
+            "lnp://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24"
+        );
+
+        #[cfg(feature = "url")]
+        {
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnp://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1"
+                ).unwrap(),
+                locator1
+            );
+            assert_eq!(
+                NodeLocator::from_str(
+                    "022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24"
+                ).unwrap(),
+                locator_with_port
+            );
+
+            #[cfg(feature = "tor")]
+            {
+                use torut::onion::{OnionAddressV2, OnionAddressV3};
+
+                assert_eq!(
+                    NodeLocator::from_str(
+                        "lnp://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af\
+                        @32zzibxmqi2ybxpqyggwwuwz7a3lbvtzoloti7cxoevyvijexvgsfeid"
+                    ).unwrap().inet_addr().unwrap().to_onion().unwrap(),
+                    OnionAddressV3::from_str(
+                        "32zzibxmqi2ybxpqyggwwuwz7a3lbvtzoloti7cxoevyvijexvgsfeid"
+                    ).unwrap()
+                );
+
+                assert_eq!(
+                    NodeLocator::from_str(
+                        "lnp://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af\
+                        @6zdgh5a5e6zpchdz"
+                    ).unwrap().inet_addr().unwrap().to_onion_v2().unwrap(),
+                    OnionAddressV2::from_str(
+                        "6zdgh5a5e6zpchdz"
+                    ).unwrap()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_udp() {
+        let pubkey1 = secp256k1::PublicKey::from_str(
+            "022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let pubkey2 = secp256k1::PublicKey::from_str(
+            "032e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let inet1 = IpAddr::from_str("127.0.0.1").unwrap();
+        let inet2 = IpAddr::from_str("127.0.0.2").unwrap();
+        let locator1 = NodeLocator::Udp(pubkey1, inet1, None);
+        let locator2 = NodeLocator::Udp(pubkey2, inet2, None);
+
+        assert_ne!(locator1, locator2);
+        assert_eq!(locator1, locator1.clone());
+        assert_eq!(locator2, locator2.clone());
+
+        assert_eq!(locator1.scheme(), "lnpu");
+        assert_eq!(locator1.node_id(), Some(pubkey1));
+        assert_eq!(locator1.port(), None);
+        assert_eq!(locator1.api_type(), None);
+        assert_eq!(locator1.inet_addr(), Some(InetAddr::from(inet1)));
+        assert_eq!(locator1.socket_name(), None);
+        let locator_with_port = locator1.with_port(24);
+        assert_eq!(locator_with_port.port(), Some(24));
+
+        assert_eq!(
+            NodeAddr::try_from(locator1.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+        assert_eq!(
+            NodeAddr::try_from(locator_with_port.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+
+        assert_eq!(
+            locator1.to_url_string(),
+            "lnpu://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1"
+        );
+        assert_eq!(
+            locator_with_port.to_url_string(),
+            "lnpu://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24"
+        );
+
+        #[cfg(feature = "url")]
+        {
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpu://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1"
+                ).unwrap(),
+                locator1
+            );
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpu://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24"
+                ).unwrap(),
+                locator_with_port
+            );
+        }
+    }
+
+    #[cfg(feature = "websockets")]
+    #[test]
+    fn test_websocket() {
+        let pubkey1 = secp256k1::PublicKey::from_str(
+            "022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let pubkey2 = secp256k1::PublicKey::from_str(
+            "032e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let inet1 = IpAddr::from_str("127.0.0.1").unwrap();
+        let inet2 = IpAddr::from_str("127.0.0.2").unwrap();
+        let locator1 = NodeLocator::Websocket(pubkey1, inet1, None);
+        let locator2 = NodeLocator::Websocket(pubkey2, inet2, None);
+
+        assert_ne!(locator1, locator2);
+        assert_eq!(locator1, locator1.clone());
+        assert_eq!(locator2, locator2.clone());
+
+        assert_eq!(locator1.scheme(), "lnpws");
+        assert_eq!(locator1.node_id(), Some(pubkey1));
+        assert_eq!(locator1.port(), None);
+        assert_eq!(locator1.api_type(), None);
+        assert_eq!(locator1.inet_addr(), Some(InetAddr::from(inet1)));
+        assert_eq!(locator1.socket_name(), None);
+        let locator_with_port = locator1.with_port(24);
+        assert_eq!(locator_with_port.port(), Some(24));
+
+        assert_eq!(
+            NodeAddr::try_from(locator1.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+        assert_eq!(
+            NodeAddr::try_from(locator_with_port.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+
+        assert_eq!(
+            locator1.to_url_string(),
+            "lnpws://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1"
+        );
+        assert_eq!(
+            locator_with_port.to_url_string(),
+            "lnpws://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24"
+        );
+
+        #[cfg(feature = "url")]
+        {
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpws://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1"
+                ).unwrap(),
+                locator1
+            );
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpws://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24"
+                ).unwrap(),
+                locator_with_port
+            );
+        }
+    }
+
+    #[cfg(feature = "zmq")]
+    #[test]
+    fn test_zmq_encrypted() {
+        let pubkey1 = secp256k1::PublicKey::from_str(
+            "022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let pubkey2 = secp256k1::PublicKey::from_str(
+            "032e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let inet1 = IpAddr::from_str("127.0.0.1").unwrap();
+        let inet2 = IpAddr::from_str("127.0.0.2").unwrap();
+        let locator1 = NodeLocator::ZmqEncrypted(
+            pubkey1,
+            ZmqType::PeerListening,
+            inet1,
+            None,
+        );
+        let locator2 =
+            NodeLocator::ZmqEncrypted(pubkey2, ZmqType::Client, inet2, None);
+        let locator3 = NodeLocator::ZmqEncrypted(
+            pubkey1,
+            ZmqType::PeerConnecting,
+            inet1,
+            None,
+        );
+        let locator4 =
+            NodeLocator::ZmqEncrypted(pubkey2, ZmqType::Server, inet2, None);
+
+        assert_ne!(locator1, locator2);
+        assert_ne!(locator2, locator4);
+        assert_eq!(locator1, locator3);
+        assert_eq!(locator1, locator1.clone());
+        assert_eq!(locator2, locator2.clone());
+
+        assert_eq!(locator1.scheme(), "lnpz");
+        assert_eq!(locator1.node_id(), Some(pubkey1));
+        assert_eq!(locator1.port(), None);
+        assert_eq!(locator1.api_type(), Some(ZmqType::PeerListening));
+        assert_eq!(locator1.inet_addr(), Some(InetAddr::from(inet1)));
+        assert_eq!(locator1.socket_name(), None);
+        let locator_with_port = locator1.with_port(24);
+        assert_eq!(locator_with_port.port(), Some(24));
+
+        assert_eq!(
+            NodeAddr::try_from(locator1.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+        assert_eq!(
+            NodeAddr::try_from(locator_with_port.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+
+        assert_eq!(
+            locator1.to_url_string(),
+            "lnpz://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1/?api=p2p"
+        );
+        assert_eq!(
+            locator2.to_url_string(),
+            "lnpz://032e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.2/?api=rpc"
+        );
+        assert_eq!(
+            locator_with_port.to_url_string(),
+            "lnpz://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24/?api=p2p"
+        );
+
+        #[cfg(feature = "url")]
+        {
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpz://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1/?api=p2p"
+                ).unwrap(),
+                locator1
+            );
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpz://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.0.1:24/?api=p2p"
+                ).unwrap(),
+                locator_with_port
+            );
+        }
+    }
+
+    #[cfg(feature = "zmq")]
+    #[test]
+    fn test_zmq_unencrypted() {
+        let inet1 = IpAddr::from_str("127.0.0.1").unwrap();
+        let inet2 = IpAddr::from_str("127.0.0.2").unwrap();
+        let locator1 =
+            NodeLocator::ZmqUnencrypted(ZmqType::PeerListening, inet1, None);
+        let locator2 =
+            NodeLocator::ZmqUnencrypted(ZmqType::Client, inet2, None);
+        let locator3 =
+            NodeLocator::ZmqUnencrypted(ZmqType::PeerConnecting, inet1, None);
+        let locator4 =
+            NodeLocator::ZmqUnencrypted(ZmqType::Server, inet2, None);
+
+        assert_ne!(locator1, locator2);
+        assert_ne!(locator2, locator4);
+        assert_eq!(locator1, locator3);
+        assert_eq!(locator1, locator1.clone());
+        assert_eq!(locator2, locator2.clone());
+
+        assert_eq!(locator1.scheme(), "lnpz");
+        assert_eq!(locator1.node_id(), None);
+        assert_eq!(locator1.port(), None);
+        assert_eq!(locator1.api_type(), Some(ZmqType::PeerListening));
+        assert_eq!(locator1.inet_addr(), Some(InetAddr::from(inet1)));
+        let locator_with_port = locator1.with_port(24);
+        assert_eq!(locator_with_port.port(), Some(24));
+
+        assert_eq!(
+            NodeAddr::try_from(locator1.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+        assert_eq!(
+            NodeAddr::try_from(locator_with_port.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+
+        assert_eq!(locator1.to_url_string(), "lnpz://127.0.0.1/?api=p2p");
+        assert_eq!(locator2.to_url_string(), "lnpz://127.0.0.2/?api=rpc");
+        assert_eq!(
+            locator_with_port.to_url_string(),
+            "lnpz://127.0.0.1:24/?api=p2p"
+        );
+
+        #[cfg(feature = "url")]
+        {
+            assert_eq!(
+                NodeLocator::from_str("lnpz://127.0.0.1/?api=p2p").unwrap(),
+                locator1
+            );
+        }
+    }
+
+    #[cfg(feature = "zmq")]
+    #[test]
+    fn test_zmq_inproc() {
+        let context1 = zmq::Context::new();
+        let context2 = zmq::Context::new();
+
+        let locator1 = NodeLocator::Inproc(
+            s!("socket1"),
+            context1.clone(),
+            ZmqType::PeerListening,
+        );
+        let locator1_1 = NodeLocator::Inproc(
+            s!("socket1"),
+            context2.clone(),
+            ZmqType::PeerListening,
+        );
+        let locator2 = NodeLocator::Inproc(
+            s!("socket2"),
+            context2.clone(),
+            ZmqType::Client,
+        );
+        let locator3 = NodeLocator::Inproc(
+            s!("socket1"),
+            context1.clone(),
+            ZmqType::PeerConnecting,
+        );
+        let locator4 = NodeLocator::Inproc(
+            s!("socket2"),
+            context2.clone(),
+            ZmqType::Server,
+        );
+
+        assert_eq!(locator1, locator1_1);
+        assert_ne!(locator1, locator2);
+        assert_ne!(locator2, locator4);
+        assert_eq!(locator1, locator3);
+        assert_eq!(locator1, locator1.clone());
+        assert_eq!(locator2, locator2.clone());
+
+        assert_eq!(locator1.scheme(), "lnpz");
+        assert_eq!(locator1.node_id(), None);
+        assert_eq!(locator1.port(), None);
+        assert_eq!(locator1.api_type(), Some(ZmqType::PeerListening));
+        assert_eq!(locator1.inet_addr(), None);
+        assert_eq!(locator1.socket_name(), Some(s!("socket1")));
+        let locator_with_port = locator1.with_port(24);
+        assert_eq!(locator_with_port.port(), None);
+
+        assert_eq!(
+            NodeAddr::try_from(locator1.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+        assert_eq!(
+            NodeAddr::try_from(locator_with_port.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+
+        assert_eq!(locator1.to_url_string(), "lnpz:?api=p2p#socket1");
+        assert_eq!(locator2.to_url_string(), "lnpz:?api=rpc#socket2");
+        assert_eq!(locator_with_port.to_url_string(), "lnpz:?api=p2p#socket1");
+
+        #[cfg(feature = "url")]
+        {
+            assert_eq!(
+                NodeLocator::from_str("lnpz:?api=p2p#socket1").unwrap_err(),
+                ParseError::InprocRequireZmqContext
+            );
+        }
+    }
+
+    #[cfg(feature = "zmq")]
+    #[test]
+    fn test_zmq_ipc() {
+        let locator1 = NodeLocator::Ipc(
+            PathBuf::from_str("./socket1").unwrap(),
+            ZmqType::PeerListening,
+        );
+        let locator2 = NodeLocator::Ipc(
+            PathBuf::from_str("./socket2").unwrap(),
+            ZmqType::Client,
+        );
+        let locator3 = NodeLocator::Ipc(
+            PathBuf::from_str("./socket1").unwrap(),
+            ZmqType::PeerConnecting,
+        );
+        let locator4 = NodeLocator::Ipc(
+            PathBuf::from_str("./socket2").unwrap(),
+            ZmqType::Server,
+        );
+
+        assert_ne!(locator1, locator2);
+        assert_ne!(locator2, locator4);
+        assert_eq!(locator1, locator3);
+        assert_eq!(locator1, locator1.clone());
+        assert_eq!(locator2, locator2.clone());
+
+        assert_eq!(locator1.scheme(), "lnpz");
+        assert_eq!(locator1.node_id(), None);
+        assert_eq!(locator1.port(), None);
+        assert_eq!(locator1.api_type(), Some(ZmqType::PeerListening));
+        assert_eq!(locator1.inet_addr(), None);
+        assert_eq!(locator1.socket_name(), Some(s!("./socket1")));
+        let locator_with_port = locator1.with_port(24);
+        assert_eq!(locator_with_port.port(), None);
+
+        assert_eq!(
+            NodeAddr::try_from(locator1.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+        assert_eq!(
+            NodeAddr::try_from(locator_with_port.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+
+        assert_eq!(locator1.to_url_string(), "lnpz:./socket1?api=p2p");
+        assert_eq!(locator2.to_url_string(), "lnpz:./socket2?api=rpc");
+        assert_eq!(locator_with_port.to_url_string(), "lnpz:./socket1?api=p2p");
+
+        #[cfg(feature = "url")]
+        {
+            assert_eq!(
+                NodeLocator::from_str("lnpz:./socket1?api=p2p").unwrap(),
+                locator1
+            );
+        }
+    }
+
+    #[test]
+    fn test_text() {
+        let pubkey1 = secp256k1::PublicKey::from_str(
+            "022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let pubkey2 = secp256k1::PublicKey::from_str(
+            "032e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        ).unwrap();
+        let locator1 = NodeLocator::Text(pubkey1);
+        let locator2 = NodeLocator::Text(pubkey2);
+
+        assert_ne!(locator1, locator2);
+        assert_eq!(locator1, locator1.clone());
+        assert_eq!(locator2, locator2.clone());
+
+        assert_eq!(locator1.scheme(), "lnpt");
+        assert_eq!(locator1.node_id(), Some(pubkey1));
+        assert_eq!(locator1.port(), None);
+        assert_eq!(locator1.api_type(), None);
+        assert_eq!(locator1.inet_addr(), None);
+        assert_eq!(locator1.socket_name(), None);
+        let locator_with_port = locator1.with_port(24);
+        assert_eq!(locator_with_port.port(), None);
+
+        assert_eq!(
+            NodeAddr::try_from(locator1.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+        assert_eq!(
+            NodeAddr::try_from(locator_with_port.clone()),
+            Err(ConversionError::UnsupportedType)
+        );
+
+        assert_eq!(
+            locator1.to_url_string(),
+            "lnpt://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        );
+        assert_eq!(
+            locator_with_port.to_url_string(),
+            "lnpt://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+        );
+
+        #[cfg(feature = "url")]
+        {
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpt://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af"
+                ).unwrap(),
+                locator1
+            );
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpt://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.01"
+                ).unwrap_err(),
+                ParseError::HostPresent
+            );
+            assert_eq!(
+                NodeLocator::from_str(
+                    "lnpt://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af:1323"
+                ).unwrap_err(),
+                ParseError::PortPresent
+            );
+        }
+    }
+}

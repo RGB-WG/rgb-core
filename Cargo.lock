@@ -12,7 +12,7 @@ dependencies = [
 [[package]]
 name = "amplify"
 version = "1.1.1"
-source = "git+https://github.com/LNP-BP/rust-amplify?branch=develop#58dc3751a6b854bc329a2116d3a5e8c8e2d51237"
+source = "git+https://github.com/LNP-BP/rust-amplify?branch=develop#0a8178b684e409aee72eb7a388004922466ddbcb"
 dependencies = [
  "async-trait",
  "ed25519-dalek",
@@ -505,6 +505,7 @@ dependencies = [
  "serde",
  "serde_with",
  "tokio",
+ "torut",
  "url",
  "zmq",
 ]

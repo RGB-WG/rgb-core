@@ -81,6 +81,7 @@ async-trait = { version = "~0.1.30", optional = true }
 [dev-dependencies]
 miniscript = { version = "~2.0.0", features = ["compiler"] }
 bitcoin = { version = "~0.25.0", branch = "develop", features = ["rand"] }
+torut = { version = "~0.1.5", features = ["v2", "v3"] }
 
 # Forked dependencies
 # -------------------
