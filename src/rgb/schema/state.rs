@@ -369,9 +369,8 @@ mod strict_encoding {
                     );
                     $e.write_all(&min)?;
                     $e.write_all(&max)?;
-                    // TODO: Investigate why ::core::mem::size_of_val(&min)
-                    //       is not giving correct length
-                    $len += min.len() * 2
+                    $len += ::core::mem::size_of_val(&$min)
+                          + ::core::mem::size_of_val(&$max);
                 };
             }
 
@@ -1225,7 +1224,7 @@ mod test {
         map.insert("Signature(Schnorr)", vec![2, 18, 1]);
         map.insert("Signature(Ed25519)", vec![2, 18, 2]);
 
-        //TX TxOutpoint and Psbt
+        // TX TxOutpoint and Psbt
         map.insert("TxOutpoint", vec![2, 32]);
         map.insert("Tx", vec![2, 33]);
         map.insert("Psbt", vec![2, 34]);
@@ -1441,8 +1440,6 @@ mod test {
         );
 
         // Test failure cases for String format
-        // TODO: Add failure cases when provided size is less the permitted
-        // format
         let string_data = Revealed::String("Hello".to_string());
         let string_format = DataFormat::String(2u16);
         assert_eq!(
@@ -1455,12 +1452,9 @@ mod test {
         );
 
         // Test failure cases for Bytes format
-        // TODO: Add failure cases when provided size is less the permitted
-        // format
         let bytes = vec![1u8, 2u8, 3u8];
         let bytes_data = Revealed::Bytes(bytes);
         let bytes_format = DataFormat::Bytes(2u16);
-
         assert_eq!(
             bytes_format.validate(3, &bytes_data).failures[0],
             Failure::SchemaWrongDataLength {
