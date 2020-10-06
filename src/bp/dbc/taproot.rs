@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::{sha256, Hmac};
+use bitcoin::hashes::sha256;
 use bitcoin::secp256k1;
 
 use super::{Container, Error, Proof, PubkeyCommitment, ScriptEncodeData};
@@ -27,7 +27,7 @@ pub struct TaprootContainer {
     pub tag: sha256::Hash,
     /// Tweaking factor stored after [TaprootContainer::commit_verify]
     /// procedure
-    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
+    pub tweaking_factor: Option<[u8; 32]>,
 }
 
 impl Container for TaprootContainer {

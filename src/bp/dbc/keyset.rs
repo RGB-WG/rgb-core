@@ -13,13 +13,13 @@
 
 //! # LNPBP-2 related
 
-use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
+use bitcoin::hashes::sha256;
 use bitcoin::secp256k1;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
-use super::{pubkey::SHA256_LNPBP1, Container, Error, Proof, ScriptEncodeData};
+use super::{Container, Error, Proof, ScriptEncodeData};
 use crate::commit_verify::EmbedCommitVerify;
-use crate::SECP256K1;
+use crate::lnpbp1;
 
 /// Container for LNPBP-1 commitments. In order to be constructed, commitment
 /// requires an original public key and a protocol-specific tag, which
@@ -31,11 +31,11 @@ pub struct KeysetContainer {
     /// The original public key: host for the commitment
     pub pubkey: secp256k1::PublicKey,
     /// Other keys that will participate the commitment procedure
-    pub keyset: HashSet<secp256k1::PublicKey>,
+    pub keyset: BTreeSet<secp256k1::PublicKey>,
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
     /// Tweaking factor stored after [KeysetContainer::commit_verify] procedure
-    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
+    pub tweaking_factor: Option<[u8; 32]>,
 }
 
 impl Container for KeysetContainer {
@@ -97,64 +97,29 @@ where
     MSG: AsRef<[u8]>,
 {
     type Container = KeysetContainer;
-    type Error = secp256k1::Error;
+    type Error = lnpbp1::Error;
 
-    /// Function implements commitment procedure on a set of public keys
-    /// according to LNPBP-2.
-    // #[consensus_critical]
+    // #[consensus_critical("RGB")]
     // #[standard_critical("LNPBP-1")]
     fn embed_commit(
         keyset_container: &mut Self::Container,
         msg: &MSG,
     ) -> Result<Self, Self::Error> {
-        // ! [CONSENSUS-CRITICAL]:
-        // ! [STANDARD-CRITICAL]: We commit to the sum of all public keys,
-        //                        not a single pubkey
-        let pubkey_sum = keyset_container
-            .keyset
-            .iter()
-            .try_fold(keyset_container.pubkey, |sum, pubkey| {
-                sum.combine(pubkey)
-            })?;
+        let mut keyset = keyset_container.keyset.clone();
+        let mut pubkey = keyset_container.pubkey.clone();
+        keyset.insert(pubkey);
 
-        // ! [CONSENSUS-CRITICAL]:
-        // ! [STANDARD-CRITICAL]: HMAC engine is based on sha256 hash
-        let mut hmac_engine =
-            HmacEngine::<sha256::Hash>::new(&pubkey_sum.serialize());
+        let tweaking_factor = lnpbp1::commit(
+            &mut keyset,
+            &mut pubkey,
+            &keyset_container.tag,
+            msg,
+        )?;
 
-        // ! [CONSENSUS-CRITICAL]:
-        // ! [STANDARD-CRITICAL]: Hash process started with consuming first
-        //                        protocol prefix: single SHA256 hash of
-        //                        ASCII "LNPBP-1" string.
-        // NB: We use the same hash as in LNPBP-1 so when there is no other
-        //     keys involved the commitment would not differ.
-        hmac_engine.input(&SHA256_LNPBP1);
-
-        // ! [CONSENSUS-CRITICAL]:
-        // ! [STANDARD-CRITICAL]: The second prefix comes from the upstream
-        //                        protocol as a part of the container
-        hmac_engine.input(&keyset_container.tag[..]);
-
-        // ! [CONSENSUS-CRITICAL]:
-        // ! [STANDARD-CRITICAL]: Next we hash the message. The message must be
-        //                        prefixed with the protocol-specific prefix:
-        //                        another single SHA256 hash of protocol name.
-        //                        However this is not the part of this function,
-        //                        the function expect that the `msg` is already
-        //                        properly prefixed
-        hmac_engine.input(msg.as_ref());
-
-        // Producing and storing tweaking factor in container
-        let hmac = Hmac::from_engine(hmac_engine);
-        keyset_container.tweaking_factor = Some(hmac);
-
-        // Applying tweaking factor to public key
-        let factor = &hmac[..];
-        let mut tweaked_pubkey = keyset_container.pubkey.clone();
-        tweaked_pubkey.add_exp_assign(&SECP256K1, factor)?;
+        keyset_container.tweaking_factor = Some(tweaking_factor);
 
         // Returning tweaked public key
-        Ok(KeysetCommitment(tweaked_pubkey))
+        Ok(KeysetCommitment(pubkey))
     }
 }
 
@@ -165,7 +130,7 @@ mod test {
     use crate::bp::test::*;
     use crate::commit_verify::test::*;
     use amplify::Wrapper;
-    use bitcoin::hashes::{hex::ToHex, sha256};
+    use bitcoin::hashes::{hex::ToHex, sha256, Hash};
     use bitcoin::secp256k1;
     use std::iter::FromIterator;
     use std::str::FromStr;
@@ -187,7 +152,7 @@ mod test {
             let lnpbp2_commitment = KeysetCommitment::embed_commit(
                 &mut KeysetContainer {
                     pubkey,
-                    keyset: HashSet::new(),
+                    keyset: BTreeSet::new(),
                     tag,
                     tweaking_factor: None,
                 },
@@ -214,7 +179,7 @@ mod test {
                 gen_messages(),
                 &mut KeysetContainer {
                     pubkey,
-                    keyset: HashSet::from_iter(gen_secp_pubkeys(n_keys)),
+                    keyset: BTreeSet::from_iter(gen_secp_pubkeys(n_keys)),
                     tag,
                     tweaking_factor: None,
                 },
@@ -230,7 +195,7 @@ mod test {
             "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
         )
         .unwrap();
-        let keyset = HashSet::from_iter(vec![secp256k1::PublicKey::from_str(
+        let keyset = BTreeSet::from_iter(vec![secp256k1::PublicKey::from_str(
             "03cfb81a7609a4d40914dfd41860f501209c30468d91834c8af1af34ce73f4f3fd",
         )
         .unwrap()]);

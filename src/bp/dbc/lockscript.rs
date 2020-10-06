@@ -23,7 +23,7 @@
 //! private key modifications (tweaks) inside all the existing types of Bitcoin
 //! transaction output and arbitrary complex Bitcoin scripts.
 
-use bitcoin::hashes::{hash160, sha256, Hmac};
+use bitcoin::hashes::{hash160, sha256};
 use bitcoin::secp256k1;
 use bitcoin::PubkeyHash;
 use core::cell::RefCell;
@@ -43,7 +43,7 @@ pub struct LockscriptContainer {
     pub tag: sha256::Hash,
     /// Tweaking factor stored after [LockscriptContainer::commit_verify]
     /// procedure
-    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
+    pub tweaking_factor: Option<[u8; 32]>,
 }
 
 impl Container for LockscriptContainer {

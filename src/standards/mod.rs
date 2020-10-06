@@ -11,8 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//! Modules implementing convenient interfaces covering specific LNPBP
-//! standards. Check [LNP/BP Standards page](https://github.com/LNP-BP/LNPBPs) for details.
+//! Modules implementing specific LNPBP standards. Check
+//! [LNP/BP Standards page](https://github.com/LNP-BP/LNPBPs) for details.
+//!
+//! Here reside low-level standards implementations, used by a higher-level
+//! convenience wrappers (like `bp::dbc`) or not fitting into the scope of any
+//! other part of the library (like Elgamal encryption).
 
 #[cfg(feature = "elgamal")]
 pub mod elgamal;

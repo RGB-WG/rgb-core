@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::Wrapper;
-use bitcoin::hashes::{sha256, Hmac};
+use bitcoin::hashes::sha256;
 use bitcoin::{secp256k1, TxOut};
 
 use super::{
@@ -28,7 +28,7 @@ pub struct TxoutContainer {
     pub value: u64,
     pub script_container: SpkContainer,
     /// Tweaking factor stored after [TxoutContainer::commit_verify] procedure
-    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
+    pub tweaking_factor: Option<[u8; 32]>,
 }
 
 impl TxoutContainer {

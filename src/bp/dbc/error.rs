@@ -11,24 +11,39 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::bp::{scripts::Error as ScriptPubkeyError, PubkeyParseError};
-use bitcoin::secp256k1;
+use crate::bp;
+use crate::lnpbp1;
 
-#[derive(Clone, PartialEq, Debug, Display, Error, From)]
-#[display(Debug)]
+/// Different error types which may happen during deterministic bitcoin
+/// commitment generation procedures
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error, From)]
+#[display(doc_comments)]
 pub enum Error {
-    //#[from(secp256k1::Error)]
-    Secp256k1(secp256k1::Error),
+    /// Indicates failure of applying commitment tweak to a public key
+    #[from]
+    Lnpbp1Commitment(lnpbp1::Error),
 
+    /// Unable to verify commitment due to an incorrect proof data structure
     InvalidProofStructure,
 
-    #[from]
-    InvalidScriptPubkey(ScriptPubkeyError),
+    /// Can't deserealized public key from bitcoin script push op code
+    InvalidKeyData,
 
+    /// Wrong witness version, may be you need to upgrade used library version
+    UnsupportedWitnessVersion,
+
+    /// Miniscript was unable to parse provided script data; they are either
+    /// invalid or miniscript library contains a bug
+    #[from(crate::bp::scripts::PubkeyParseError)]
     LockscriptParseError,
 
+    /// Provided script contains no keys, so commitment or its verification is
+    /// impossible
     LockscriptContainsNoKeys,
 
+    /// Bitcoin script contains public key hashes with no matching public
+    /// keys provided. Commitment procedure fails since it can't ensure that
+    /// commitment include all public key.
     LockscriptContainsUnknownHashes,
 
     /// Attempt to commit into LockScript has failed: the key that must contain
@@ -37,14 +52,13 @@ pub enum Error {
     LockscriptKeyNotFound,
 }
 
-impl From<secp256k1::Error> for Error {
-    fn from(err: secp256k1::Error) -> Self {
-        Self::Secp256k1(err)
-    }
-}
-
-impl From<PubkeyParseError> for Error {
-    fn from(_: PubkeyParseError) -> Self {
-        Self::LockscriptParseError
+impl From<bp::scripts::Error> for Error {
+    fn from(err: bp::scripts::Error) -> Self {
+        match err {
+            bp::scripts::Error::InvalidKeyData => Error::InvalidKeyData,
+            bp::scripts::Error::UnsupportedWitnessVersion => {
+                Error::UnsupportedWitnessVersion
+            }
+        }
     }
 }
