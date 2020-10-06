@@ -40,7 +40,9 @@ where
     FromPrimitive,
 )]
 #[display(Debug)]
-pub enum GenesisAction {}
+pub enum GenesisAction {
+    GenerateBlank = 0,
+}
 impl NodeAction for GenesisAction {}
 
 #[non_exhaustive]
@@ -57,7 +59,9 @@ impl NodeAction for GenesisAction {}
     FromPrimitive,
 )]
 #[display(Debug)]
-pub enum ExtensionAction {}
+pub enum ExtensionAction {
+    GenerateBlank = 0,
+}
 impl NodeAction for ExtensionAction {}
 
 #[non_exhaustive]
