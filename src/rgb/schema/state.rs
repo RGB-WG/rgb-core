@@ -218,7 +218,7 @@ mod strict_encoding {
         Enum = 3,
         String = 4,
         Bytes = 5,
-        // Cryptographic tyles
+        // Cryptographic types
         Digest = 0x10,
         PublicKey = 0x11,
         Signature = 0x12,
@@ -316,8 +316,8 @@ mod strict_encoding {
                     {
                         Err(Error::DataIntegrityError(format!(
                             "Lower bound {:?} of the allowed range for \
-                                 DataFormat is outside of the possible values \
-                                 of used number type",
+                             DataFormat is outside of the possible values \
+                             of used number type",
                             bound,
                         )))?
                     }
@@ -325,7 +325,7 @@ mod strict_encoding {
                     Bound::Excluded(_) if !exclusive => {
                         Err(Error::DataIntegrityError(
                             "Excluded upper bound for the allowed range in \
-                         DataFormat does not make sense for float type"
+                             DataFormat does not make sense for float type"
                                 .to_string(),
                         ))?
                     }
@@ -340,8 +340,8 @@ mod strict_encoding {
                     {
                         Err(Error::DataIntegrityError(format!(
                             "Upper bound {:?} of the allowed range for \
-                                 DataFormat is outside of the possible values \
-                                 of used number type",
+                             DataFormat is outside of the possible values \
+                             of used number type",
                             bound,
                         )))?
                     }
@@ -349,7 +349,7 @@ mod strict_encoding {
                     Bound::Excluded(_) if !exclusive => {
                         Err(Error::DataIntegrityError(
                             "Excluded upper bound for the allowed range in \
-                         DataFormat does not make sense for float type"
+                             DataFormat does not make sense for float type"
                                 .to_string(),
                         ))?
                     }
@@ -363,10 +363,14 @@ mod strict_encoding {
 
             macro_rules! write_min_max {
                 ($min:ident, $max:ident, $e:ident, $len:ident) => {
-                    let (min, max) = ($min.to_le_bytes().to_vec(), $max.to_le_bytes().to_vec());
+                    let (min, max) = (
+                        $min.to_le_bytes().to_vec(),
+                        $max.to_le_bytes().to_vec(),
+                    );
                     $e.write_all(&min)?;
                     $e.write_all(&max)?;
-                    $len += ::core::mem::size_of_val(&min) * 2
+                    $len += ::core::mem::size_of_val(&$min)
+                          + ::core::mem::size_of_val(&$max);
                 };
             }
 
@@ -1053,5 +1057,579 @@ mod _validation {
             }
             status
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::bp::blind::OutpointReveal;
+    use crate::paradigms::client_side_validation::Conceal;
+    use crate::rgb::contract::amount;
+    use crate::rgb::contract::data;
+    use crate::rgb::contract::data::Revealed;
+    use crate::rgb::contract::NodeId;
+    use crate::rgb::validation::{Failure, Validity};
+    use crate::rgb::{
+        Assignment, DeclarativeStrategy, HashStrategy, PedersenStrategy,
+    };
+    use crate::strict_encoding::{test::*, StrictDecode};
+    use bitcoin::blockdata::transaction::OutPoint;
+    use bitcoin_hashes::{hex::FromHex, sha256};
+    use secp256k1zkp::rand::thread_rng;
+    use std::collections::BTreeMap;
+
+    use crate::paradigms::strict_encoding::strict_encode;
+
+    // Txids to generate seals
+    static TXID_VEC: [&str; 4] = [
+        "201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e",
+        "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06",
+        "12072893d951c633dcafb4d3074d1fc41c5e6e64b8d53e3b0705c41bc6679d54",
+        "8f75db9f89c7c75f0a54322f18cd4d557ae75c24a8e5a95eae13fe26edc2d789",
+    ];
+
+    #[test]
+    #[should_panic(expected = "UnsupportedDataStructure")]
+    fn test_garbage_df_format1() {
+        let bytes: Vec<u8> = vec![
+            0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
+            255,
+        ];
+        DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "UnsupportedDataStructure")]
+    fn test_garbage_df_format2() {
+        let bytes: Vec<u8> = vec![
+            1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
+            255,
+        ];
+        DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "UnsupportedDataStructure")]
+    fn test_garbage_df_format3() {
+        let bytes: Vec<u8> = vec![
+            1, 8, 0, 0, 0, 0, 0, 0, 0, 1, 255, 255, 255, 255, 255, 255, 255,
+            255,
+        ];
+        DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "UnsupportedDataStructure")]
+    fn test_garbage_df_format4() {
+        let bytes: Vec<u8> = vec![
+            1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
+            127,
+        ];
+        DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "DataIntegrityError")]
+    fn test_garbage_data_format1() {
+        let bytes: Vec<u8> = vec![2, 2, 4, 0, 0, 0, 0, 255, 255, 127, 127];
+        DataFormat::strict_decode(&bytes[..]).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "ValueOutOfRange")]
+    fn test_garbage_data_format2() {
+        let format = DataFormat::Float(Bits::Bit16, 0.0, core::f32::MAX as f64);
+        strict_encode(&format).unwrap();
+    }
+
+    #[test]
+    fn test_random() {
+        let n = 67u8;
+        println!("{}", ::core::mem::size_of_val(&n));
+    }
+
+    #[test]
+    fn test_encoding_state_format() {
+        // Create a Map of Format type and encoded data
+
+        let mut map: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
+        // Declarative and Pedersan formats
+        map.insert("Declerative", vec![0]);
+        map.insert(
+            "DiscreteFinite format",
+            vec![
+                1, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255,
+                255, 255,
+            ],
+        );
+        // data formats
+        map.insert("u8", vec![2, 0, 1, 0, 255]);
+        map.insert("u16", vec![2, 0, 2, 0, 0, 255, 255]);
+        map.insert("u32", vec![2, 0, 4, 0, 0, 0, 0, 255, 255, 255, 255]);
+        map.insert(
+            "u64",
+            vec![
+                2, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255,
+                255, 255,
+            ],
+        );
+        map.insert("i8", vec![2, 1, 1, 0, 127]);
+        map.insert("i16", vec![2, 1, 2, 0, 0, 255, 127]);
+        map.insert("i32", vec![2, 1, 4, 0, 0, 0, 0, 255, 255, 255, 127]);
+        map.insert(
+            "i64",
+            vec![
+                2, 1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255,
+                255, 127,
+            ],
+        );
+        map.insert("f32", vec![2, 2, 4, 0, 0, 0, 0, 255, 255, 127, 127]);
+        map.insert(
+            "f64",
+            vec![
+                2, 2, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255,
+                239, 127,
+            ],
+        );
+
+        // Enums
+        map.insert("Enum(1, 2, 3)", vec![2, 3, 3, 0, 1, 2, 3]);
+
+        // String
+        map.insert("String(13", vec![2, 4, 13, 0]);
+
+        // Bytes
+        map.insert("Bytes(27)", vec![2, 5, 27, 0]);
+
+        // Digest Algo
+        map.insert("Digest(Sha256)", vec![2, 16, 17]);
+        map.insert("Digest(Sha512)", vec![2, 16, 18]);
+        map.insert("Digest(Bitcoin160)", vec![2, 16, 72]);
+        map.insert("Digest(Bitcoin256)", vec![2, 16, 81]);
+
+        // Txoutpoint
+        map.insert("TxOutPoint", vec![2, 32]);
+
+        // Public Keys
+        map.insert("PublickKey(Secp, Compressed)", vec![2, 17, 0, 1]);
+        map.insert("PublickKey(Secp, Unompressed)", vec![2, 17, 0, 0]);
+        map.insert("PublickKey(Secp, SchnorrBip)", vec![2, 17, 0, 2]);
+        map.insert("PublickKey(Curve25519, Compressed)", vec![2, 17, 16, 1]);
+        map.insert("PublickKey(Curve25519, Unompressed)", vec![2, 17, 16, 0]);
+        map.insert("PublickKey(Curve25519, SchnorrBip)", vec![2, 17, 16, 2]);
+
+        // Signatures
+        map.insert("Signature(Ecdsa)", vec![2, 18, 0]);
+        map.insert("Signature(Schnorr)", vec![2, 18, 1]);
+        map.insert("Signature(Ed25519)", vec![2, 18, 2]);
+
+        // TX TxOutpoint and Psbt
+        map.insert("TxOutpoint", vec![2, 32]);
+        map.insert("Tx", vec![2, 33]);
+        map.insert("Psbt", vec![2, 34]);
+
+        // Test for correct encoding of each cases
+        let _test: Vec<()> = map
+            .iter()
+            .map(|pair| {
+                let data = pair.1;
+                test_encode!((data, StateFormat));
+            })
+            .collect();
+
+        // Test for correct encoding in StateSchema
+        // Only one variant is created as StateSchema::Abi
+        // maps against single AssignmentAction variant
+        let schema_bytes = vec![0u8, 1, 0, 0, 255, 3];
+        let schema = StateSchema::strict_decode(&schema_bytes[..]).unwrap();
+
+        test_encode!((schema_bytes, StateSchema));
+        assert_eq!(schema.format, StateFormat::Declarative);
+        assert_eq!(
+            schema.abi.get(&script::AssignmentAction::Validate).unwrap(),
+            &script::Procedure::Standard(script::StandardProcedure::Prunning,)
+        );
+    }
+
+    #[test]
+    fn test_dataformat_validate() {
+        // Test general cases that pass validation=
+        assert_eq!(
+            DataFormat::u8().validate(3, &Revealed::U8(32u8)).validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::u16()
+                .validate(3, &Revealed::U16(32u16))
+                .validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::u32()
+                .validate(3, &Revealed::U32(32u32))
+                .validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::u64()
+                .validate(3, &Revealed::U64(32u64))
+                .validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::i8().validate(3, &Revealed::I8(32i8)).validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::i16()
+                .validate(3, &Revealed::I16(32i16))
+                .validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::i32()
+                .validate(3, &Revealed::I32(32i32))
+                .validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::i64()
+                .validate(3, &Revealed::I64(32i64))
+                .validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::f32()
+                .validate(3, &Revealed::F32(32f32))
+                .validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            DataFormat::f64()
+                .validate(3, &Revealed::F64(32f64))
+                .validity(),
+            Validity::Valid
+        );
+
+        // Test failure for values smaller than allowed
+        assert_eq!(
+            DataFormat::i32()
+                .validate(3, &Revealed::I32(-25i32))
+                .validity(),
+            Validity::Invalid
+        );
+        assert_eq!(
+            DataFormat::i32()
+                .validate(3, &Revealed::I32(-25i32))
+                .failures[0],
+            Failure::SchemaMetaValueTooSmall(3)
+        );
+        assert_eq!(
+            DataFormat::i8()
+                .validate(3, &Revealed::I8(-25i8))
+                .validity(),
+            Validity::Invalid
+        );
+        assert_eq!(
+            DataFormat::i8().validate(3, &Revealed::I8(-25i8)).failures[0],
+            Failure::SchemaMetaValueTooSmall(3)
+        );
+        assert_eq!(
+            DataFormat::i16()
+                .validate(3, &Revealed::I16(-25i16))
+                .validity(),
+            Validity::Invalid
+        );
+        assert_eq!(
+            DataFormat::i16()
+                .validate(3, &Revealed::I16(-25i16))
+                .failures[0],
+            Failure::SchemaMetaValueTooSmall(3)
+        );
+        assert_eq!(
+            DataFormat::i64()
+                .validate(3, &Revealed::I64(-25i64))
+                .validity(),
+            Validity::Invalid
+        );
+        assert_eq!(
+            DataFormat::i64()
+                .validate(3, &Revealed::I64(-25i64))
+                .failures[0],
+            Failure::SchemaMetaValueTooSmall(3)
+        );
+        assert_eq!(
+            DataFormat::f32()
+                .validate(3, &Revealed::F32(-25f32))
+                .validity(),
+            Validity::Invalid
+        );
+        assert_eq!(
+            DataFormat::f32()
+                .validate(3, &Revealed::F32(-25f32))
+                .failures[0],
+            Failure::SchemaMetaValueTooSmall(3)
+        );
+        assert_eq!(
+            DataFormat::f64()
+                .validate(3, &Revealed::F64(-25f64))
+                .validity(),
+            Validity::Invalid
+        );
+        assert_eq!(
+            DataFormat::f64()
+                .validate(3, &Revealed::F64(-25f64))
+                .failures[0],
+            Failure::SchemaMetaValueTooSmall(3)
+        );
+        assert_eq!(
+            DataFormat::i32()
+                .validate(3, &Revealed::I64(-25i64))
+                .failures[0],
+            Failure::SchemaMismatchedBits {
+                field_or_state_type: 3,
+                expected: Bits::Bit32
+            }
+        );
+
+        // Test incompatible data
+        assert_eq!(
+            DataFormat::u16()
+                .validate(3, &Revealed::U32(25u32))
+                .failures[0],
+            Failure::SchemaMismatchedBits {
+                field_or_state_type: 3,
+                expected: Bits::Bit16
+            }
+        );
+        assert_eq!(
+            DataFormat::f32()
+                .validate(3, &Revealed::F64(25f64))
+                .failures[0],
+            Failure::SchemaMismatchedBits {
+                field_or_state_type: 3,
+                expected: Bits::Bit32
+            }
+        );
+
+        // Test validity and failure cases for Enum format
+        let mut set = BTreeSet::new();
+        set.insert(1u8);
+        set.insert(2u8);
+        set.insert(3u8);
+
+        let enum_fromat = DataFormat::Enum(set);
+        assert_eq!(
+            enum_fromat.validate(3, &Revealed::U8(3u8)).validity(),
+            Validity::Valid
+        );
+        assert_eq!(
+            enum_fromat.validate(3, &Revealed::U8(4u8)).failures[0],
+            Failure::SchemaWrongEnumValue {
+                field_or_state_type: 3,
+                unexpected: 4
+            }
+        );
+        assert_eq!(
+            enum_fromat.validate(3, &Revealed::U16(4u16)).failures[0],
+            Failure::SchemaMismatchedBits {
+                field_or_state_type: 3,
+                expected: Bits::Bit8
+            }
+        );
+
+        // Test failure cases for String format
+        let string_data = Revealed::String("Hello".to_string());
+        let string_format = DataFormat::String(2u16);
+        assert_eq!(
+            string_format.validate(3, &string_data).failures[0],
+            Failure::SchemaWrongDataLength {
+                field_or_state_type: 3,
+                max_expected: 2,
+                found: 5
+            }
+        );
+
+        // Test failure cases for Bytes format
+        let bytes = vec![1u8, 2u8, 3u8];
+        let bytes_data = Revealed::Bytes(bytes);
+        let bytes_format = DataFormat::Bytes(2u16);
+        assert_eq!(
+            bytes_format.validate(3, &bytes_data).failures[0],
+            Failure::SchemaWrongDataLength {
+                field_or_state_type: 3,
+                max_expected: 2,
+                found: 3
+            }
+        );
+
+        // Generic failure situation
+        assert_eq!(
+            bytes_format.validate(3, &string_data).failures[0],
+            Failure::SchemaMismatchedDataType(3)
+        );
+    }
+
+    #[test]
+    fn test_state_format() {
+        // Create typical assignments
+        // Only Revealed and Confidential variants are created for simplicity
+        // Which covers the two validation branch
+        let mut rng = thread_rng();
+
+        let txid_vec: Vec<bitcoin::Txid> = TXID_VEC
+            .iter()
+            .map(|txid| bitcoin::Txid::from_hex(txid).unwrap())
+            .collect();
+
+        // Create Declerative Assignments
+        let assignment_dec_rev = Assignment::<DeclarativeStrategy>::Revealed {
+            seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
+                OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
+            ),
+            assigned_state: data::Void,
+        };
+
+        let assignment_dec_conf =
+            Assignment::<DeclarativeStrategy>::Confidential {
+                seal_definition:
+                    crate::rgb::contract::seal::Revealed::TxOutpoint(
+                        OutpointReveal::from(OutPoint::new(txid_vec[1], 2)),
+                    )
+                    .conceal(),
+                assigned_state: data::Void,
+            };
+
+        // Create Pedersan Assignments
+        let assignment_ped_rev = Assignment::<PedersenStrategy>::Revealed {
+            seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
+                OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
+            ),
+            assigned_state: amount::Revealed::with_amount(10u64, &mut rng),
+        };
+
+        let assignment_ped_conf =
+            Assignment::<PedersenStrategy>::Confidential {
+                seal_definition:
+                    crate::rgb::contract::seal::Revealed::TxOutpoint(
+                        OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
+                    )
+                    .conceal(),
+                assigned_state: amount::Revealed::with_amount(10u64, &mut rng)
+                    .conceal(),
+            };
+
+        // Create CustomData Assignmnets
+        let state_data_vec: Vec<data::Revealed> = TXID_VEC
+            .iter()
+            .map(|data| {
+                data::Revealed::Sha256(sha256::Hash::from_hex(data).unwrap())
+            })
+            .collect();
+
+        let assignment_hash_rev = Assignment::<HashStrategy>::Revealed {
+            seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
+                OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
+            ),
+            assigned_state: state_data_vec[0].clone(),
+        };
+
+        let assignment_hash_conf = Assignment::<HashStrategy>::Confidential {
+            seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
+                OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
+            )
+            .conceal(),
+            assigned_state: state_data_vec[0].clone().conceal(),
+        };
+
+        // Create NodeId amd Stateformats
+        let node_id = NodeId::from_hex(
+            "201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e",
+        )
+        .unwrap();
+        let dec_format = StateFormat::Declarative;
+        let ped_format = StateFormat::DiscreteFiniteField(
+            DiscreteFiniteFieldFormat::Unsigned64bit,
+        );
+        let hash_format = StateFormat::CustomData(DataFormat::Digest(
+            DigestAlgorithm::Sha256,
+        ));
+
+        // Assert different failure combinations
+        assert_eq!(
+            dec_format
+                .validate(&node_id, 3usize, &assignment_ped_rev)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            dec_format
+                .validate(&node_id, 3usize, &assignment_ped_conf)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            dec_format
+                .validate(&node_id, 3usize, &assignment_hash_rev)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            dec_format
+                .validate(&node_id, 3usize, &assignment_hash_conf)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+
+        assert_eq!(
+            ped_format
+                .validate(&node_id, 3usize, &assignment_dec_rev)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            ped_format
+                .validate(&node_id, 3usize, &assignment_dec_conf)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            ped_format
+                .validate(&node_id, 3usize, &assignment_hash_rev)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            ped_format
+                .validate(&node_id, 3usize, &assignment_hash_conf)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+
+        assert_eq!(
+            hash_format
+                .validate(&node_id, 3usize, &assignment_dec_rev)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            hash_format
+                .validate(&node_id, 3usize, &assignment_dec_conf)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            hash_format
+                .validate(&node_id, 3usize, &assignment_ped_rev)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
+        assert_eq!(
+            hash_format
+                .validate(&node_id, 3usize, &assignment_ped_conf)
+                .failures[0],
+            Failure::SchemaMismatchedStateType(3)
+        );
     }
 }

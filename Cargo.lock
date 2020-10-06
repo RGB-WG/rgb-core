@@ -89,7 +89,7 @@ checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 [[package]]
 name = "bitcoin"
 version = "0.25.0"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=develop#0d8139bd3a80603bee3dcd5a30b6d472ea70c1a9"
+source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=develop#31e4d4ebd89cdf314feab8175e18f064a25642d9"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
