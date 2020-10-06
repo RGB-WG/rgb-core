@@ -316,8 +316,8 @@ mod strict_encoding {
                     {
                         Err(Error::DataIntegrityError(format!(
                             "Lower bound {:?} of the allowed range for \
-                                 DataFormat is outside of the possible values \
-                                 of used number type",
+                             DataFormat is outside of the possible values \
+                             of used number type",
                             bound,
                         )))?
                     }
@@ -325,7 +325,7 @@ mod strict_encoding {
                     Bound::Excluded(_) if !exclusive => {
                         Err(Error::DataIntegrityError(
                             "Excluded upper bound for the allowed range in \
-                         DataFormat does not make sense for float type"
+                             DataFormat does not make sense for float type"
                                 .to_string(),
                         ))?
                     }
@@ -340,8 +340,8 @@ mod strict_encoding {
                     {
                         Err(Error::DataIntegrityError(format!(
                             "Upper bound {:?} of the allowed range for \
-                                 DataFormat is outside of the possible values \
-                                 of used number type",
+                             DataFormat is outside of the possible values \
+                             of used number type",
                             bound,
                         )))?
                     }
@@ -349,7 +349,7 @@ mod strict_encoding {
                     Bound::Excluded(_) if !exclusive => {
                         Err(Error::DataIntegrityError(
                             "Excluded upper bound for the allowed range in \
-                         DataFormat does not make sense for float type"
+                             DataFormat does not make sense for float type"
                                 .to_string(),
                         ))?
                     }
@@ -369,9 +369,8 @@ mod strict_encoding {
                     );
                     $e.write_all(&min)?;
                     $e.write_all(&max)?;
-                    // TODO: 
-                    // Investigate why ::core::mem::size_of_val(&min)
-                    // is not giving correct length
+                    // TODO: Investigate why ::core::mem::size_of_val(&min)
+                    //       is not giving correct length
                     $len += min.len() * 2
                 };
             }
