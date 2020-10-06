@@ -20,8 +20,8 @@ mod types;
 pub(self) use super::vm;
 pub use nodes::{
     ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeType,
-    OwnedRightStructure, OwnedRightType, PublicRightStructure, PublicRightType,
-    TransitionSchema,
+    OwnedRightType, OwnedRightsStructure, PublicRightType,
+    PublicRightsStructure, TransitionSchema,
 };
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{

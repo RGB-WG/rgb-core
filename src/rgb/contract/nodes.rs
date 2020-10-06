@@ -15,7 +15,10 @@ use std::collections::BTreeSet;
 
 use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
-use super::{AssignedState, AutoConceal, OwnedRights, Parents};
+use super::{
+    Assignments, AutoConceal, OwnedRights, ParentOwnedRights,
+    ParentPublicRights,
+};
 use crate::bp;
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
@@ -97,8 +100,9 @@ pub trait Node {
     /// [`Option::None`] for genesis and trate transitions
     fn extension_type(&self) -> Option<ExtensionType>;
 
-    fn ancestors(&self) -> &Parents;
     fn metadata(&self) -> &Metadata;
+    fn parent_owned_rights(&self) -> &ParentOwnedRights;
+    fn parent_public_rights(&self) -> &ParentPublicRights;
     fn owned_rights(&self) -> &OwnedRights;
     fn owned_rights_mut(&mut self) -> &mut OwnedRights;
     fn public_rights(&self) -> &PublicRights;
@@ -116,10 +120,7 @@ pub trait Node {
     }
 
     #[inline]
-    fn owned_rights_by_type(
-        &self,
-        t: OwnedRightType,
-    ) -> Option<&AssignedState> {
+    fn owned_rights_by_type(&self, t: OwnedRightType) -> Option<&Assignments> {
         self.owned_rights().into_iter().find_map(|(t2, a)| {
             if *t2 == t {
                 Some(a)
@@ -151,7 +152,7 @@ pub trait Node {
         assignment_type: OwnedRightType,
     ) -> Vec<&seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
-            .map(AssignedState::known_seals)
+            .map(Assignments::known_seals)
             .unwrap_or(vec![])
     }
 }
@@ -172,6 +173,7 @@ pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
     metadata: Metadata,
+    parent_public_rights: ParentPublicRights,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
     script: SimplicityScript,
@@ -182,7 +184,7 @@ pub struct Extension {
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
-    ancestors: Parents,
+    parent_owned_rights: ParentOwnedRights,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
     script: SimplicityScript,
@@ -265,11 +267,21 @@ impl Node for Genesis {
     }
 
     #[inline]
-    fn ancestors(&self) -> &Parents {
+    fn parent_owned_rights(&self) -> &ParentOwnedRights {
         lazy_static! {
-            static ref ANCESTORS: Parents = Parents::new();
+            static ref PARENT_EMPTY: ParentOwnedRights =
+                ParentOwnedRights::new();
         }
-        &ANCESTORS
+        &PARENT_EMPTY
+    }
+
+    #[inline]
+    fn parent_public_rights(&self) -> &ParentPublicRights {
+        lazy_static! {
+            static ref PARENT_EMPTY: ParentPublicRights =
+                ParentPublicRights::new();
+        }
+        &PARENT_EMPTY
     }
 
     #[inline]
@@ -330,11 +342,17 @@ impl Node for Extension {
     }
 
     #[inline]
-    fn ancestors(&self) -> &Parents {
+    fn parent_owned_rights(&self) -> &ParentOwnedRights {
         lazy_static! {
-            static ref ANCESTORS: Parents = Parents::new();
+            static ref PARENT_EMPTY: ParentOwnedRights =
+                ParentOwnedRights::new();
         }
-        &ANCESTORS
+        &PARENT_EMPTY
+    }
+
+    #[inline]
+    fn parent_public_rights(&self) -> &ParentPublicRights {
+        &self.parent_public_rights
     }
 
     #[inline]
@@ -395,8 +413,17 @@ impl Node for Transition {
     }
 
     #[inline]
-    fn ancestors(&self) -> &Parents {
-        &self.ancestors
+    fn parent_owned_rights(&self) -> &ParentOwnedRights {
+        &self.parent_owned_rights
+    }
+
+    #[inline]
+    fn parent_public_rights(&self) -> &ParentPublicRights {
+        lazy_static! {
+            static ref PARENT_EMPTY: ParentPublicRights =
+                ParentPublicRights::new();
+        }
+        &PARENT_EMPTY
     }
 
     #[inline]
@@ -435,16 +462,16 @@ impl Genesis {
         schema_id: SchemaId,
         chain: bp::Chain,
         metadata: Metadata,
-        assignments: OwnedRights,
-        valencies: PublicRights,
+        owned_rights: OwnedRights,
+        public_rights: PublicRights,
         script: SimplicityScript,
     ) -> Self {
         Self {
             schema_id,
             chain,
             metadata,
-            owned_rights: assignments,
-            public_rights: valencies,
+            owned_rights,
+            public_rights,
             script,
         }
     }
@@ -470,16 +497,18 @@ impl Extension {
         extension_type: ExtensionType,
         contract_id: ContractId,
         metadata: Metadata,
-        assignments: OwnedRights,
-        valencies: PublicRights,
+        parent_public_rights: ParentPublicRights,
+        owned_rights: OwnedRights,
+        public_rights: PublicRights,
         script: SimplicityScript,
     ) -> Self {
         Self {
             extension_type,
             contract_id,
             metadata,
-            owned_rights: assignments,
-            public_rights: valencies,
+            parent_public_rights,
+            owned_rights,
+            public_rights,
             script,
         }
     }
@@ -487,19 +516,19 @@ impl Extension {
 
 impl Transition {
     pub fn with(
-        type_id: schema::TransitionType,
+        transition_type: schema::TransitionType,
         metadata: Metadata,
-        ancestors: Parents,
-        assignments: OwnedRights,
-        valencies: PublicRights,
+        parent_owned_rights: ParentOwnedRights,
+        owned_rights: OwnedRights,
+        public_rights: PublicRights,
         script: SimplicityScript,
     ) -> Self {
         Self {
-            transition_type: type_id,
+            transition_type,
             metadata,
-            ancestors,
-            owned_rights: assignments,
-            public_rights: valencies,
+            parent_owned_rights,
+            owned_rights,
+            public_rights,
             script,
         }
     }
@@ -1044,7 +1073,7 @@ mod test {
         let transition = Transition {
             transition_type: Default::default(),
             metadata: Default::default(),
-            ancestors: Default::default(),
+            parent_owned_rights: Default::default(),
             owned_rights: Default::default(),
             public_rights: Default::default(),
             script: Default::default(),
@@ -1056,7 +1085,10 @@ mod test {
             .strict_encode(&mut encoder)
             .unwrap();
         transition.metadata.strict_encode(&mut encoder).unwrap();
-        transition.ancestors.strict_encode(&mut encoder).unwrap();
+        transition
+            .parent_owned_rights
+            .strict_encode(&mut encoder)
+            .unwrap();
         transition.owned_rights.strict_encode(&mut encoder).unwrap();
         transition
             .public_rights
@@ -1100,9 +1132,9 @@ mod test {
 
         // Ancestor test
 
-        assert_eq!(genesis.ancestors(), &Parents::new());
+        assert_eq!(genesis.parent_owned_rights(), &ParentOwnedRights::new());
 
-        let ancestor_trn = transition.ancestors();
+        let ancestor_trn = transition.parent_owned_rights();
         let assignments = ancestor_trn
             .get(
                 &NodeId::from_hex(

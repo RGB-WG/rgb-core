@@ -16,7 +16,7 @@ use core::any::Any;
 use super::VirtualMachine;
 use crate::client_side_validation::Conceal;
 use crate::rgb::{
-    amount, schema, script::StandardProcedure, AssignedState, Metadata,
+    amount, schema, script::StandardProcedure, Assignments, Metadata,
 };
 
 // Data are taken according to RGB-20 (LNPBP-20) standard
@@ -46,8 +46,8 @@ macro_rules! push_stack {
 #[derive(Debug)]
 pub struct Embedded {
     transition_type: Option<schema::TransitionType>,
-    previous_state: Option<AssignedState>,
-    current_state: Option<AssignedState>,
+    previous_state: Option<Assignments>,
+    current_state: Option<Assignments>,
     current_meta: Metadata,
 
     stack: Vec<Box<dyn Any>>,
@@ -56,8 +56,8 @@ pub struct Embedded {
 impl Embedded {
     pub fn with(
         transition_type: Option<schema::TransitionType>,
-        previous_state: Option<AssignedState>,
-        current_state: Option<AssignedState>,
+        previous_state: Option<Assignments>,
+        current_state: Option<Assignments>,
         current_meta: Metadata,
     ) -> Self {
         Self {
@@ -137,7 +137,7 @@ impl Embedded {
                         }
                     }
                     Some(ref variant) => {
-                        if let AssignedState::DiscreteFiniteField(_) = variant {
+                        if let Assignments::DiscreteFiniteField(_) = variant {
                             let prev = variant.all_state_pedersen();
                             let curr = self
                                 .current_state

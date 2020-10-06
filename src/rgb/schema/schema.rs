@@ -52,8 +52,8 @@ pub struct Schema {
     pub rgb_features: features::FlagVec,
     pub root_id: SchemaId,
     pub field_types: BTreeMap<FieldType, DataFormat>,
-    pub assignment_types: BTreeMap<OwnedRightType, StateSchema>,
-    pub valencies_types: BTreeSet<PublicRightType>,
+    pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,
+    pub public_right_types: BTreeSet<PublicRightType>,
     pub genesis: GenesisSchema,
     pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
@@ -101,8 +101,8 @@ mod strict_encoding {
                 self.rgb_features,
                 self.root_id,
                 self.field_types,
-                self.assignment_types,
-                self.valencies_types,
+                self.owned_right_types,
+                self.public_right_types,
                 self.genesis,
                 self.extensions,
                 self.transitions,
@@ -120,8 +120,8 @@ mod strict_encoding {
                 rgb_features: features::FlagVec::strict_decode(&mut d)?,
                 root_id: SchemaId::strict_decode(&mut d)?,
                 field_types: BTreeMap::strict_decode(&mut d)?,
-                assignment_types: BTreeMap::strict_decode(&mut d)?,
-                valencies_types: BTreeSet::strict_decode(&mut d)?,
+                owned_right_types: BTreeMap::strict_decode(&mut d)?,
+                public_right_types: BTreeSet::strict_decode(&mut d)?,
                 genesis: GenesisSchema::strict_decode(&mut d)?,
                 extensions: BTreeMap::strict_decode(&mut d)?,
                 transitions: BTreeMap::strict_decode(&mut d)?,
@@ -147,12 +147,12 @@ mod _validation {
 
     use crate::rgb::contract::nodes::PublicRights;
     use crate::rgb::schema::{
-        script, MetadataStructure, OwnedRightStructure, PublicRightStructure,
+        script, MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
         SchemaVerify,
     };
     use crate::rgb::{
-        validation, AssignedState, AssignmentAction, Metadata, Node, NodeId,
-        OwnedRights, Parents, VirtualMachine,
+        validation, AssignmentAction, Assignments, Metadata, Node, NodeId,
+        OwnedRights, ParentOwnedRights, ParentPublicRights, VirtualMachine,
     };
 
     impl SchemaVerify for Schema {
@@ -185,23 +185,23 @@ mod _validation {
                 };
             }
 
-            for (assignments_type, state_schema) in &self.assignment_types {
-                match root.assignment_types.get(assignments_type) {
+            for (assignments_type, state_schema) in &self.owned_right_types {
+                match root.owned_right_types.get(assignments_type) {
                     None => status.add_failure(
-                        validation::Failure::SchemaRootNoAssignmentsTypeMatch(*assignments_type),
+                        validation::Failure::SchemaRootNoOwnedRightTypeMatch(*assignments_type),
                     ),
                     Some(root_state_schema) if root_state_schema != state_schema => status
-                        .add_failure(validation::Failure::SchemaRootNoAssignmentsTypeMatch(
+                        .add_failure(validation::Failure::SchemaRootNoOwnedRightTypeMatch(
                             *assignments_type,
                         )),
                     _ => &status,
                 };
             }
 
-            for valencies_type in &self.valencies_types {
-                match root.valencies_types.contains(valencies_type) {
+            for valencies_type in &self.public_right_types {
+                match root.public_right_types.contains(valencies_type) {
                     false => status.add_failure(
-                        validation::Failure::SchemaRootNoValenciesTypeMatch(
+                        validation::Failure::SchemaRootNoPublicRightTypeMatch(
                             *valencies_type,
                         ),
                     ),
@@ -252,20 +252,43 @@ mod _validation {
         ) -> validation::Status {
             let node_id = node.node_id();
 
-            let empty_seals_structure = OwnedRightStructure::default();
+            let empty_owned_structure = OwnedRightsStructure::default();
+            let empty_public_structure = PublicRightsStructure::default();
             let (
                 metadata_structure,
-                ancestors_structure,
+                parent_owned_structure,
+                parent_public_structure,
                 assignments_structure,
                 valencies_structure,
             ) = match (node.transition_type(), node.extension_type()) {
-                (None, None) => (
-                    &self.genesis.metadata,
-                    &empty_seals_structure,
-                    &self.genesis.owned_rights,
-                    &self.genesis.public_rights,
-                ),
+                (None, None) => {
+                    // Right now we do not have actions to implement; but later
+                    // we may have embedded procedures which must be verified
+                    // here
+                    /*
+                    if let Some(procedure) = self.genesis.abi.get(&GenesisAction::NoOp) {
+
+                    }
+                     */
+
+                    (
+                        &self.genesis.metadata,
+                        &empty_owned_structure,
+                        &empty_public_structure,
+                        &self.genesis.owned_rights,
+                        &self.genesis.public_rights
+                    )
+                },
                 (Some(transition_type), None) => {
+                    // Right now we do not have actions to implement; but later
+                    // we may have embedded procedures which must be verified
+                    // here
+                    /*
+                    if let Some(procedure) = transition_type.abi.get(&TransitionAction::NoOp) {
+
+                    }
+                     */
+
                     let transition_type = match self.transitions.get(&transition_type) {
                         None => {
                             return validation::Status::with_failure(
@@ -281,11 +304,21 @@ mod _validation {
                     (
                         &transition_type.metadata,
                         &transition_type.closes,
+                        &empty_public_structure,
                         &transition_type.owned_rights,
                         &transition_type.public_rights,
                     )
                 }
                 (None, Some(extension_type)) => {
+                    // Right now we do not have actions to implement; but later
+                    // we may have embedded procedures which must be verified
+                    // here
+                    /*
+                    if let Some(procedure) = extension_type.abi.get(&ExtensionAction::NoOp) {
+
+                    }
+                     */
+
                     let extension_type = match self.extensions.get(&extension_type) {
                         None => {
                             return validation::Status::with_failure(
@@ -300,7 +333,8 @@ mod _validation {
 
                     (
                         &extension_type.metadata,
-                        &empty_seals_structure,
+                        &empty_owned_structure,
+                        &extension_type.extends,
                         &extension_type.owned_rights,
                         &extension_type.extends,
                     )
@@ -309,10 +343,15 @@ mod _validation {
             };
 
             let mut status = validation::Status::new();
-            let ancestor_assignments = extract_ancestor_assignments(
+            let parent_owned_rights = extract_parent_owned_rights(
                 all_nodes,
                 node_id,
-                node.ancestors(),
+                node.parent_owned_rights(),
+                &mut status,
+            );
+            let parent_public_rights = extract_parent_public_rights(
+                all_nodes,
+                node.parent_public_rights(),
                 &mut status,
             );
             status += self.validate_meta(
@@ -320,17 +359,22 @@ mod _validation {
                 node.metadata(),
                 metadata_structure,
             );
-            status += self.validate_ancestors(
+            status += self.validate_parent_owned_rights(
                 node_id,
-                &ancestor_assignments,
-                ancestors_structure,
+                &parent_owned_rights,
+                parent_owned_structure,
             );
-            status += self.validate_assignments(
+            status += self.validate_parent_public_rights(
+                node_id,
+                &parent_public_rights,
+                parent_public_structure,
+            );
+            status += self.validate_owned_rights(
                 node_id,
                 node.owned_rights(),
                 assignments_structure,
             );
-            status += self.validate_valencies(
+            status += self.validate_public_rights(
                 node_id,
                 node.public_rights(),
                 valencies_structure,
@@ -338,7 +382,7 @@ mod _validation {
             status += self.validate_state_evolution(
                 node_id,
                 node.transition_type(),
-                &ancestor_assignments,
+                &parent_owned_rights,
                 node.owned_rights(),
                 node.metadata(),
             );
@@ -390,39 +434,39 @@ mod _validation {
             status
         }
 
-        fn validate_ancestors(
+        fn validate_parent_owned_rights(
             &self,
             node_id: NodeId,
-            assignments: &OwnedRights,
-            assignments_structure: &OwnedRightStructure,
+            owned_rights: &OwnedRights,
+            owned_rights_structure: &OwnedRightsStructure,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
-            assignments
+            owned_rights
                 .keys()
                 .collect::<BTreeSet<_>>()
-                .difference(&assignments_structure.keys().collect())
-                .for_each(|assignment_type_id| {
+                .difference(&owned_rights_structure.keys().collect())
+                .for_each(|owned_type_id| {
                     status.add_failure(
-                        validation::Failure::SchemaUnknownAssignmentType(
+                        validation::Failure::SchemaUnknownOwnedRightType(
                             node_id,
-                            **assignment_type_id,
+                            **owned_type_id,
                         ),
                     );
                 });
 
-            for (assignment_type_id, occ) in assignments_structure {
-                let len = assignments
-                    .get(assignment_type_id)
-                    .map(AssignedState::len)
+            for (owned_type_id, occ) in owned_rights_structure {
+                let len = owned_rights
+                    .get(owned_type_id)
+                    .map(Assignments::len)
                     .unwrap_or(0);
 
                 // Checking number of ancestor's assignment occurrences
                 if let Err(err) = occ.check(len as u128) {
                     status.add_failure(
-                        validation::Failure::SchemaAncestorsOccurencesError(
+                        validation::Failure::SchemaParentOwnedRightOccurencesError(
                             node_id,
-                            *assignment_type_id,
+                            *owned_type_id,
                             err,
                         ),
                     );
@@ -432,75 +476,97 @@ mod _validation {
             status
         }
 
-        fn validate_assignments(
+        fn validate_parent_public_rights(
             &self,
             node_id: NodeId,
-            assignments: &OwnedRights,
-            assignments_structure: &OwnedRightStructure,
+            public_rights: &PublicRights,
+            public_rights_structure: &PublicRightsStructure,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
-            assignments
+            public_rights.difference(&public_rights_structure).for_each(
+                |public_type_id| {
+                    status.add_failure(
+                        validation::Failure::SchemaUnknownPublicRightType(
+                            node_id,
+                            *public_type_id,
+                        ),
+                    );
+                },
+            );
+
+            status
+        }
+
+        fn validate_owned_rights(
+            &self,
+            node_id: NodeId,
+            owned_rights: &OwnedRights,
+            owned_rights_structure: &OwnedRightsStructure,
+        ) -> validation::Status {
+            let mut status = validation::Status::new();
+
+            owned_rights
                 .keys()
                 .collect::<BTreeSet<_>>()
-                .difference(&assignments_structure.keys().collect())
+                .difference(&owned_rights_structure.keys().collect())
                 .for_each(|assignment_type_id| {
                     status.add_failure(
-                        validation::Failure::SchemaUnknownAssignmentType(
+                        validation::Failure::SchemaUnknownOwnedRightType(
                             node_id,
                             **assignment_type_id,
                         ),
                     );
                 });
 
-            for (assignment_type_id, occ) in assignments_structure {
-                let len = assignments
-                    .get(assignment_type_id)
-                    .map(AssignedState::len)
+            for (owned_type_id, occ) in owned_rights_structure {
+                let len = owned_rights
+                    .get(owned_type_id)
+                    .map(Assignments::len)
                     .unwrap_or(0);
 
                 // Checking number of assignment occurrences
                 if let Err(err) = occ.check(len as u128) {
                     status.add_failure(
-                        validation::Failure::SchemaSealsOccurencesError(
+                        validation::Failure::SchemaOwnedRightOccurencesError(
                             node_id,
-                            *assignment_type_id,
+                            *owned_type_id,
                             err,
                         ),
                     );
                 }
 
                 let assignment = &self
-                    .assignment_types
-                    .get(assignment_type_id)
+                    .owned_right_types
+                    .get(owned_type_id)
                     .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point")
                     .format;
 
-                match assignments.get(assignment_type_id) {
+                match owned_rights.get(owned_type_id) {
                     None => {}
-                    Some(AssignedState::Declarative(set)) => {
+                    Some(Assignments::Declarative(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
-                                *assignment_type_id,
+                                *owned_type_id,
                                 data,
                             )
                         })
                     }
-                    Some(AssignedState::DiscreteFiniteField(set)) => {
+                    Some(Assignments::DiscreteFiniteField(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
-                                *assignment_type_id,
+                                *owned_type_id,
                                 data,
                             )
                         })
                     }
-                    Some(AssignedState::CustomData(set)) => {
+                    Some(Assignments::CustomData(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
-                                *assignment_type_id,
+                                *owned_type_id,
                                 data,
                             )
                         })
@@ -511,20 +577,20 @@ mod _validation {
             status
         }
 
-        fn validate_valencies(
+        fn validate_public_rights(
             &self,
             node_id: NodeId,
-            valencies: &PublicRights,
-            valencies_structure: &PublicRightStructure,
+            public_rights: &PublicRights,
+            public_rights_structure: &PublicRightsStructure,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
-            valencies.difference(&valencies_structure).for_each(
-                |valencies_id| {
+            public_rights.difference(&public_rights_structure).for_each(
+                |public_type_id| {
                     status.add_failure(
-                        validation::Failure::SchemaUnknownValenciesType(
+                        validation::Failure::SchemaUnknownPublicRightType(
                             node_id,
-                            *valencies_id,
+                            *public_type_id,
                         ),
                     );
                 },
@@ -537,19 +603,23 @@ mod _validation {
             &self,
             node_id: NodeId,
             transition_type: Option<TransitionType>,
-            previous_state: &OwnedRights,
-            current_state: &OwnedRights,
-            current_meta: &Metadata,
+            parent_owned_rights: &OwnedRights,
+            owned_rights: &OwnedRights,
+            metadata: &Metadata,
         ) -> validation::Status {
-            let assignment_types: BTreeSet<&OwnedRightType> =
-                previous_state.keys().chain(current_state.keys()).collect();
-
             let mut status = validation::Status::new();
-            for assignment_type in assignment_types {
+
+            let owned_right_types: BTreeSet<&OwnedRightType> =
+                parent_owned_rights
+                    .keys()
+                    .chain(owned_rights.keys())
+                    .collect();
+
+            for owned_type_id in owned_right_types {
                 let abi = &self
-                    .assignment_types
-                    .get(&assignment_type)
-                    .expect("We already passed assignment type validation, so can be sure that the type exists")
+                    .owned_right_types
+                    .get(&owned_type_id)
+                    .expect("We already passed owned rights type validation, so can be sure that the type exists")
                     .abi;
 
                 // If the procedure is not defined, it means no validation
@@ -559,9 +629,11 @@ mod _validation {
                         script::Procedure::Standard(proc) => {
                             let mut vm = vm::Embedded::with(
                                 transition_type,
-                                previous_state.get(&assignment_type).cloned(),
-                                current_state.get(&assignment_type).cloned(),
-                                current_meta.clone(),
+                                parent_owned_rights
+                                    .get(&owned_type_id)
+                                    .cloned(),
+                                owned_rights.get(&owned_type_id).cloned(),
+                                metadata.clone(),
                             );
                             vm.execute(*proc);
                             match vm.pop_stack().and_then(|x| x.downcast_ref::<u8>().cloned()) {
@@ -596,18 +668,21 @@ mod _validation {
                 }
             }
 
+            // We do not validate public rights, since they do not have an
+            // associated state and there is nothing to validate beyond schema
+
             status
         }
     }
 
-    fn extract_ancestor_assignments(
+    fn extract_parent_owned_rights(
         nodes: &BTreeMap<NodeId, &dyn Node>,
         node_id: NodeId,
-        ancestors: &Parents,
+        parent_owned_rights: &ParentOwnedRights,
         status: &mut validation::Status,
     ) -> OwnedRights {
-        let mut ancestors_assignments = OwnedRights::new();
-        for (id, details) in ancestors {
+        let mut owned_rights = OwnedRights::new();
+        for (id, details) in parent_owned_rights {
             let node = match nodes.get(id) {
                 None => {
                     status.add_failure(validation::Failure::TransitionAbsent(
@@ -618,13 +693,13 @@ mod _validation {
                 Some(node) => node,
             };
 
-            for (type_id, assignment_indexes) in details {
-                let variants: Vec<&AssignedState> = node
+            for (type_id, indexes) in details {
+                let assignements: Vec<&Assignments> = node
                     .owned_rights_by_type(*type_id)
                     .into_iter()
                     .enumerate()
                     .filter_map(|(index, v)| {
-                        if assignment_indexes.contains(&u16::try_from(index).expect(
+                        if indexes.contains(&u16::try_from(index).expect(
                             "All collection sizes in RGB are 160bit integers; \
                                 so this can only fail if RGB consensus code is broken",
                         )) {
@@ -635,12 +710,12 @@ mod _validation {
                     })
                     .collect();
 
-                for variant in variants {
-                    match variant {
-                        AssignedState::Declarative(set) => {
-                            match ancestors_assignments
+                for assignment in assignements {
+                    match assignment {
+                        Assignments::Declarative(set) => {
+                            match owned_rights
                                 .entry(*type_id)
-                                .or_insert(AssignedState::Declarative(bset! {}))
+                                .or_insert(Assignments::Declarative(bset! {}))
                                 .declarative_mut()
                             {
                                 Some(base) => {
@@ -648,17 +723,17 @@ mod _validation {
                                 }
                                 None => {
                                     status.add_warning(
-                                        validation::Warning::AncestorsHeterogenousAssignments(
+                                        validation::Warning::ParentHeterogenousAssignments(
                                             node_id, *type_id,
                                         ),
                                     );
                                 }
                             };
                         }
-                        AssignedState::DiscreteFiniteField(set) => {
-                            match ancestors_assignments
+                        Assignments::DiscreteFiniteField(set) => {
+                            match owned_rights
                                 .entry(*type_id)
-                                .or_insert(AssignedState::DiscreteFiniteField(
+                                .or_insert(Assignments::DiscreteFiniteField(
                                     bset! {},
                                 ))
                                 .field_mut()
@@ -668,17 +743,17 @@ mod _validation {
                                 }
                                 None => {
                                     status.add_warning(
-                                        validation::Warning::AncestorsHeterogenousAssignments(
+                                        validation::Warning::ParentHeterogenousAssignments(
                                             node_id, *type_id,
                                         ),
                                     );
                                 }
                             };
                         }
-                        AssignedState::CustomData(set) => {
-                            match ancestors_assignments
+                        Assignments::CustomData(set) => {
+                            match owned_rights
                                 .entry(*type_id)
-                                .or_insert(AssignedState::CustomData(bset! {}))
+                                .or_insert(Assignments::CustomData(bset! {}))
                                 .data_mut()
                             {
                                 Some(base) => {
@@ -686,7 +761,7 @@ mod _validation {
                                 }
                                 None => {
                                     status.add_warning(
-                                        validation::Warning::AncestorsHeterogenousAssignments(
+                                        validation::Warning::ParentHeterogenousAssignments(
                                             node_id, *type_id,
                                         ),
                                     );
@@ -697,7 +772,23 @@ mod _validation {
                 }
             }
         }
-        ancestors_assignments
+        owned_rights
+    }
+
+    fn extract_parent_public_rights(
+        nodes: &BTreeMap<NodeId, &dyn Node>,
+        parent_public_rights: &ParentPublicRights,
+        status: &mut validation::Status,
+    ) -> PublicRights {
+        let mut public_rights = PublicRights::new();
+        for (id, public_right_types) in parent_public_rights {
+            if nodes.get(id).is_none() {
+                status.add_failure(validation::Failure::TransitionAbsent(*id));
+            } else {
+                public_rights.extend(public_right_types);
+            }
+        }
+        public_rights
     }
 }
 
@@ -747,7 +838,7 @@ pub(crate) mod test {
                 FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_PROOF_OF_BURN => DataFormat::TxOutPoint
             },
-            assignment_types: bmap! {
+            owned_right_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
@@ -767,7 +858,7 @@ pub(crate) mod test {
                     }
                 }
             },
-            valencies_types: bset! {
+            public_right_types: bset! {
                 VALENCIES_DECENTRALIZED_ISSUE
             },
             genesis: GenesisSchema {
