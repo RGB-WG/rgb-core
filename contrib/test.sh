@@ -60,6 +60,7 @@ fi
 # Use as dependency if told to
 if [ -n "$AS_DEPENDENCY" ]
 then
+    rm -rf dep_test
     cargo new dep_test
     cd dep_test
     cat ../contrib/depCargo.toml >> Cargo.toml
