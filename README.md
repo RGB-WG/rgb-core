@@ -146,6 +146,9 @@ bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
 bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
 lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
+# TODO: (new) remove them before 1.0 release
+amplify = { git = "https://github.com/LNP-BP/rust-amplify", branch = "develop" }
+torut = { git = "https://github.com/LNP-BP/torut", branch = "develop" }
 ```
 NB: These patches MUST be applied in exactly same manner by any library which
 uses LNP/BP Core library as a dependency for now

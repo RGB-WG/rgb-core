@@ -496,7 +496,7 @@ mod test {
     }
 
     #[test]
-    fn test_nodetraits_for_genesis() {
+    fn test_node_for_genesis() {
         let genesis_schema =
             GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]).unwrap();
 
@@ -508,7 +508,7 @@ mod test {
 
         let mut genesis_abi = GenesisAbi::new();
         genesis_abi.insert(
-            GenesisAction::GenerateBlank,
+            GenesisAction::NoOp,
             Procedure::Standard(StandardProcedure::ConfidentialAmount),
         );
 
@@ -528,7 +528,7 @@ mod test {
     }
 
     #[test]
-    fn test_nodetraits_for_transition() {
+    fn test_node_for_transition() {
         let transition_schema =
             TransitionSchema::strict_decode(&TRANSITION_SCHEMA[..]).unwrap();
 
@@ -563,7 +563,7 @@ mod test {
     }
 
     #[test]
-    fn test_nodetratits_for_extension() {
+    fn test_node_for_extension() {
         let extension_schema =
             ExtensionSchema::strict_decode(&EXTENSION_SCHEMA[..]).unwrap();
 
@@ -575,7 +575,7 @@ mod test {
 
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
-            ExtensionAction::GenerateBlank,
+            ExtensionAction::NoOp,
             Procedure::Standard(StandardProcedure::ConfidentialAmount),
         );
 
@@ -658,7 +658,7 @@ mod test {
 
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
-            ExtensionAction::GenerateBlank,
+            ExtensionAction::NoOp,
             Procedure::Standard(StandardProcedure::ConfidentialAmount),
         );
 

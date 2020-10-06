@@ -41,7 +41,8 @@ where
 )]
 #[display(Debug)]
 pub enum GenesisAction {
-    GenerateBlank = 0,
+    #[cfg(test)]
+    NoOp = 0,
 }
 impl NodeAction for GenesisAction {}
 
@@ -60,7 +61,8 @@ impl NodeAction for GenesisAction {}
 )]
 #[display(Debug)]
 pub enum ExtensionAction {
-    GenerateBlank = 0,
+    #[cfg(test)]
+    NoOp = 0,
 }
 impl NodeAction for ExtensionAction {}
 
