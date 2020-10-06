@@ -19,8 +19,8 @@ use bitcoin::{Transaction, Txid};
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
-    schema, seal, Anchor, AnchorId, AssignmentsVariant, Consignment,
-    ContractId, Node, NodeId, Schema, SchemaId,
+    schema, seal, Anchor, AnchorId, Assignments, Consignment, ContractId, Node,
+    NodeId, Schema, SchemaId,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
@@ -137,15 +137,16 @@ pub enum Failure {
     /// Root schema for this schema has another root, which is prohibited
     SchemaRootHierarchy(SchemaId),
     SchemaRootNoFieldTypeMatch(schema::FieldType),
-    SchemaRootNoAssignmentsTypeMatch(schema::AssignmentsType),
+    SchemaRootNoOwnedRightTypeMatch(schema::OwnedRightType),
+    SchemaRootNoPublicRightTypeMatch(schema::PublicRightType),
     SchemaRootNoTransitionTypeMatch(schema::TransitionType),
     SchemaRootNoExtensionTypeMatch(schema::ExtensionType),
-    SchemaRootNoValenciesTypeMatch(schema::ValenciesType),
+
     SchemaRootNoMetadataMatch(NodeType, schema::FieldType),
-    SchemaRootNoClosedAssignmentsMatch(NodeType, schema::AssignmentsType),
-    SchemaRootNoDefinedAssignmentsMatch(NodeType, schema::AssignmentsType),
-    SchemaRootNoExtendedValenciesMatch(NodeType, schema::ValenciesType),
-    SchemaRootNoDefinedValenciesMatch(NodeType, schema::ValenciesType),
+    SchemaRootNoParentOwnedRightsMatch(NodeType, schema::OwnedRightType),
+    SchemaRootNoParentPublicRightsMatch(NodeType, schema::PublicRightType),
+    SchemaRootNoOwnedRightsMatch(NodeType, schema::OwnedRightType),
+    SchemaRootNoPublicRightsMatch(NodeType, schema::PublicRightType),
     SchemaRootNoAbiMatch {
         node_type: NodeType,
         action_id: u16,
@@ -154,15 +155,15 @@ pub enum Failure {
     SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
     SchemaUnknownTransitionType(NodeId, schema::TransitionType),
     SchemaUnknownFieldType(NodeId, schema::FieldType),
-    SchemaUnknownAssignmentType(NodeId, schema::AssignmentsType),
-    SchemaUnknownValenciesType(NodeId, schema::ValenciesType),
+    SchemaUnknownOwnedRightType(NodeId, schema::OwnedRightType),
+    SchemaUnknownPublicRightType(NodeId, schema::PublicRightType),
 
     SchemaDeniedScriptExtension(NodeId),
 
     SchemaMetaValueTooSmall(schema::FieldType),
     SchemaMetaValueTooLarge(schema::FieldType),
-    SchemaStateValueTooSmall(schema::AssignmentsType),
-    SchemaStateValueTooLarge(schema::AssignmentsType),
+    SchemaStateValueTooSmall(schema::OwnedRightType),
+    SchemaStateValueTooLarge(schema::OwnedRightType),
 
     SchemaMismatchedBits {
         field_or_state_type: usize,
@@ -178,53 +179,53 @@ pub enum Failure {
         found: usize,
     },
     SchemaMismatchedDataType(usize),
-    SchemaMismatchedStateType(schema::AssignmentsType),
+    SchemaMismatchedStateType(schema::OwnedRightType),
 
     SchemaMetaOccurencesError(NodeId, schema::FieldType, OccurrencesError),
-    SchemaAncestorsOccurencesError(
+    SchemaParentOwnedRightOccurencesError(
         NodeId,
-        schema::AssignmentsType,
+        schema::OwnedRightType,
         OccurrencesError,
     ),
-    SchemaSealsOccurencesError(
+    SchemaOwnedRightOccurencesError(
         NodeId,
-        schema::AssignmentsType,
+        schema::OwnedRightType,
         OccurrencesError,
     ),
 
     TransitionAbsent(NodeId),
     TransitionNotAnchored(NodeId),
     TransitionNotInAnchor(NodeId, AnchorId),
-    TransitionAncestorWrongSealType {
+    TransitionParentWrongSealType {
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
+        assignment_type: schema::OwnedRightType,
     },
-    TransitionAncestorWrongSeal {
+    TransitionParentWrongSeal {
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
+        assignment_type: schema::OwnedRightType,
         seal_index: u16,
     },
-    TransitionAncestorConfidentialSeal {
+    TransitionParentConfidentialSeal {
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
+        assignment_type: schema::OwnedRightType,
         seal_index: u16,
     },
-    TransitionAncestorIsNotWitnessInput {
+    TransitionParentIsNotWitnessInput {
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
+        assignment_type: schema::OwnedRightType,
         seal_index: u16,
         outpoint: bitcoin::OutPoint,
     },
 
     ExtensionAbsent(NodeId),
-    ExtensionAncestorWrongValenciesType {
+    ExtensionParentWrongValenciesType {
         node_id: NodeId,
         ancestor_id: NodeId,
-        valencies_type: schema::ValenciesType,
+        valencies_type: schema::PublicRightType,
     },
 
     WitnessTransactionMissed(Txid),
@@ -240,7 +241,7 @@ pub enum Warning {
     EndpointTransitionNotFound(NodeId),
     EndpointDuplication(NodeId, seal::Confidential),
     EndpointTransitionSealNotFound(NodeId, seal::Confidential),
-    AncestorsHeterogenousAssignments(NodeId, schema::AssignmentsType),
+    ParentHeterogenousAssignments(NodeId, schema::OwnedRightType),
     ExcessiveTransition(NodeId),
 }
 
@@ -280,13 +281,13 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
         let mut anchor_index = BTreeMap::<NodeId, &Anchor>::new();
-        for (anchor, transition) in &consignment.owned_data {
+        for (anchor, transition) in &consignment.state_transitions {
             let node_id = transition.node_id();
             node_index.insert(node_id, transition);
             anchor_index.insert(node_id, anchor);
         }
         node_index.insert(genesis_id, &consignment.genesis);
-        for extension in &consignment.extension_data {
+        for extension in &consignment.state_extensions {
             let node_id = extension.node_id();
             node_index.insert(node_id, extension);
         }
@@ -473,10 +474,10 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                     .add_failure(Failure::TransitionNotAnchored(node_id));
             }
 
-            // Now, we must collect all ancestor nodes and add them to the
+            // Now, we must collect all parent nodes and add them to the
             // verification queue
-            let ancestors: Vec<&dyn Node> = node
-                .ancestors()
+            let parent_nodes_1: Vec<&dyn Node> = node
+                .parent_owned_rights()
                 .into_iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
@@ -489,7 +490,24 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                     })
                 })
                 .collect();
-            queue.extend(ancestors);
+
+            let parent_nodes_2: Vec<&dyn Node> = node
+                .parent_public_rights()
+                .into_iter()
+                .filter_map(|(id, _)| {
+                    self.node_index.get(id).cloned().or_else(|| {
+                        // This will not actually happen since we already
+                        // checked that each ancrstor reference has a
+                        // corresponding node in the code above. But rust
+                        // requires to double-check :)
+                        self.status.add_failure(Failure::TransitionAbsent(*id));
+                        None
+                    })
+                })
+                .collect();
+
+            queue.extend(parent_nodes_1);
+            queue.extend(parent_nodes_2);
         }
     }
 
@@ -545,7 +563,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
                 // Checking that bitcoin transaction closes seals defined by
                 // transition ancestors.
-                for (ancestor_id, assignments) in node.ancestors() {
+                for (ancestor_id, assignments) in node.parent_owned_rights() {
                     let ancestor_id = *ancestor_id;
                     let ancestor_node = if let Some(ancestor_node) =
                         self.node_index.get(&ancestor_id)
@@ -565,12 +583,12 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                         let assignment_type = *assignment_type;
 
                         let variant = if let Some(variant) =
-                            ancestor_node.assignments_by_type(assignment_type)
+                            ancestor_node.owned_rights_by_type(assignment_type)
                         {
                             variant
                         } else {
                             self.status.add_failure(
-                                Failure::TransitionAncestorWrongSealType {
+                                Failure::TransitionParentWrongSealType {
                                     node_id,
                                     ancestor_id,
                                     assignment_type,
@@ -601,8 +619,8 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         witness_tx: &Transaction,
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
-        variant: &'validator AssignmentsVariant,
+        assignment_type: schema::OwnedRightType,
+        variant: &'validator Assignments,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
@@ -611,13 +629,12 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             self.anchor_index.get(&ancestor_id),
         ) {
             (Err(_), _) => {
-                self.status
-                    .add_failure(Failure::TransitionAncestorWrongSeal {
-                        node_id,
-                        ancestor_id,
-                        assignment_type,
-                        seal_index,
-                    });
+                self.status.add_failure(Failure::TransitionParentWrongSeal {
+                    node_id,
+                    ancestor_id,
+                    assignment_type,
+                    seal_index,
+                });
                 None
             }
             (Ok(None), _) => {
@@ -625,7 +642,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // thus can't do a full verification and have to report the
                 // failure
                 self.status.add_failure(
-                    Failure::TransitionAncestorConfidentialSeal {
+                    Failure::TransitionParentConfidentialSeal {
                         node_id,
                         ancestor_id,
                         assignment_type,
@@ -660,7 +677,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // clearly invalid; reporting this and processing to other
                 // potential issues.
                 self.status.add_failure(
-                    Failure::TransitionAncestorIsNotWitnessInput {
+                    Failure::TransitionParentIsNotWitnessInput {
                         node_id,
                         ancestor_id,
                         assignment_type,

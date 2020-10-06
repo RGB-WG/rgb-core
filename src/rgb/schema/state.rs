@@ -748,8 +748,8 @@ mod _validation {
     use super::*;
     use crate::client_side_validation::Conceal;
     use crate::rgb::{
-        data, validation, Assignment, DeclarativeStrategy, HashStrategy,
-        NodeId, PedersenStrategy, StateTypes,
+        data, validation, DeclarativeStrategy, HashStrategy, NodeId,
+        OwnedState, PedersenStrategy, StateTypes,
     };
     use crate::strict_encoding::{
         Error as EncodingError, StrictDecode, StrictEncode,
@@ -954,7 +954,7 @@ mod _validation {
             &self,
             node_id: &NodeId,
             assignment_id: usize,
-            data: &Assignment<STATE>,
+            data: &OwnedState<STATE>,
         ) -> validation::Status
         where
             STATE: StateTypes,
@@ -968,8 +968,8 @@ mod _validation {
         {
             let mut status = validation::Status::new();
             match data {
-                Assignment::Confidential { assigned_state, .. }
-                | Assignment::ConfidentialAmount { assigned_state, .. } => {
+                OwnedState::Confidential { assigned_state, .. }
+                | OwnedState::ConfidentialAmount { assigned_state, .. } => {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
                         StateFormat::Declarative => {
@@ -1014,8 +1014,8 @@ mod _validation {
                         }
                     }
                 }
-                Assignment::Revealed { assigned_state, .. }
-                | Assignment::ConfidentialSeal { assigned_state, .. } => {
+                OwnedState::Revealed { assigned_state, .. }
+                | OwnedState::ConfidentialSeal { assigned_state, .. } => {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
                         StateFormat::Declarative => {
@@ -1071,7 +1071,7 @@ mod test {
     use crate::rgb::contract::NodeId;
     use crate::rgb::validation::{Failure, Validity};
     use crate::rgb::{
-        Assignment, DeclarativeStrategy, HashStrategy, PedersenStrategy,
+        DeclarativeStrategy, HashStrategy, OwnedState, PedersenStrategy,
     };
     use crate::strict_encoding::{test::*, StrictDecode};
     use bitcoin::blockdata::transaction::OutPoint;
@@ -1484,7 +1484,7 @@ mod test {
             .collect();
 
         // Create Declerative Assignments
-        let assignment_dec_rev = Assignment::<DeclarativeStrategy>::Revealed {
+        let assignment_dec_rev = OwnedState::<DeclarativeStrategy>::Revealed {
             seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
             ),
@@ -1492,7 +1492,7 @@ mod test {
         };
 
         let assignment_dec_conf =
-            Assignment::<DeclarativeStrategy>::Confidential {
+            OwnedState::<DeclarativeStrategy>::Confidential {
                 seal_definition:
                     crate::rgb::contract::seal::Revealed::TxOutpoint(
                         OutpointReveal::from(OutPoint::new(txid_vec[1], 2)),
@@ -1502,7 +1502,7 @@ mod test {
             };
 
         // Create Pedersan Assignments
-        let assignment_ped_rev = Assignment::<PedersenStrategy>::Revealed {
+        let assignment_ped_rev = OwnedState::<PedersenStrategy>::Revealed {
             seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
             ),
@@ -1510,7 +1510,7 @@ mod test {
         };
 
         let assignment_ped_conf =
-            Assignment::<PedersenStrategy>::Confidential {
+            OwnedState::<PedersenStrategy>::Confidential {
                 seal_definition:
                     crate::rgb::contract::seal::Revealed::TxOutpoint(
                         OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
@@ -1528,14 +1528,14 @@ mod test {
             })
             .collect();
 
-        let assignment_hash_rev = Assignment::<HashStrategy>::Revealed {
+        let assignment_hash_rev = OwnedState::<HashStrategy>::Revealed {
             seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
             ),
             assigned_state: state_data_vec[0].clone(),
         };
 
-        let assignment_hash_conf = Assignment::<HashStrategy>::Confidential {
+        let assignment_hash_conf = OwnedState::<HashStrategy>::Confidential {
             seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
             )

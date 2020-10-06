@@ -23,7 +23,7 @@ use crate::rgb::{
 };
 
 pub type ConsignmentEndpoints = Vec<(NodeId, bp::blind::OutpointHash)>;
-pub type OwnedData = Vec<(Anchor, Transition)>;
+pub type TransitionData = Vec<(Anchor, Transition)>;
 pub type ExtensionData = Vec<Extension>;
 
 pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
@@ -35,29 +35,29 @@ pub struct Consignment {
     version: u16,
     pub genesis: Genesis,
     pub endpoints: ConsignmentEndpoints,
-    pub owned_data: OwnedData,
-    pub extension_data: ExtensionData,
+    pub state_transitions: TransitionData,
+    pub state_extensions: ExtensionData,
 }
 
 impl Consignment {
     pub fn with(
         genesis: Genesis,
         endpoints: ConsignmentEndpoints,
-        data: OwnedData,
+        data: TransitionData,
         extensions: ExtensionData,
     ) -> Consignment {
         Self {
             version: RGB_CONSIGNMENT_VERSION,
             genesis,
-            extension_data: extensions,
+            state_extensions: extensions,
             endpoints,
-            owned_data: data,
+            state_transitions: data,
         }
     }
 
     #[inline]
     pub fn txids(&self) -> BTreeSet<Txid> {
-        self.owned_data
+        self.state_transitions
             .iter()
             .map(|(anchor, _)| anchor.txid)
             .collect()
@@ -66,8 +66,12 @@ impl Consignment {
     #[inline]
     pub fn node_ids(&self) -> BTreeSet<NodeId> {
         let mut set = bset![self.genesis.node_id()];
-        set.extend(self.owned_data.iter().map(|(_, node)| node.node_id()));
-        set.extend(self.extension_data.iter().map(Extension::node_id));
+        set.extend(
+            self.state_transitions
+                .iter()
+                .map(|(_, node)| node.node_id()),
+        );
+        set.extend(self.state_extensions.iter().map(Extension::node_id));
         set
     }
 
@@ -87,16 +91,16 @@ impl Consignment {
         known_seals: impl Iterator<Item = &'a OutpointReveal> + Clone,
     ) -> usize {
         let counter = 0;
-        for (_, transition) in &mut self.owned_data {
-            transition.assignments_mut().into_iter().fold(
+        for (_, transition) in &mut self.state_transitions {
+            transition.owned_rights_mut().into_iter().fold(
                 counter,
                 |counter, (_, assignment)| {
                     counter + assignment.reveal_seals(known_seals.clone())
                 },
             );
         }
-        for extension in &mut self.extension_data {
-            extension.assignments_mut().into_iter().fold(
+        for extension in &mut self.state_extensions {
+            extension.owned_rights_mut().into_iter().fold(
                 counter,
                 |counter, (_, assignment)| {
                     counter + assignment.reveal_seals(known_seals.clone())
