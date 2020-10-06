@@ -19,6 +19,7 @@ use core::fmt::Debug;
 use core::fmt::{Display, Formatter};
 #[cfg(feature = "url")]
 use core::str::FromStr;
+use std::hash::{Hash, Hasher};
 use std::net::{AddrParseError, IpAddr};
 use std::path::PathBuf;
 #[cfg(feature = "url")]
@@ -630,6 +631,12 @@ impl PartialEq for NodeLocator {
 }
 
 impl Eq for NodeLocator {}
+
+impl Hash for NodeLocator {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write(self.to_url_string().as_bytes());
+    }
+}
 
 #[cfg(test)]
 mod test {
