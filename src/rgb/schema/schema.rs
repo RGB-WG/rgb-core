@@ -17,8 +17,8 @@ use std::io;
 use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{
-    vm, AssignmentsType, DataFormat, ExtensionSchema, GenesisSchema,
-    SimplicityScript, StateSchema, TransitionSchema, ValenciesType,
+    vm, DataFormat, ExtensionSchema, GenesisSchema, OwnedRightType,
+    PublicRightType, SimplicityScript, StateSchema, TransitionSchema,
 };
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
@@ -52,8 +52,8 @@ pub struct Schema {
     pub rgb_features: features::FlagVec,
     pub root_id: SchemaId,
     pub field_types: BTreeMap<FieldType, DataFormat>,
-    pub assignment_types: BTreeMap<AssignmentsType, StateSchema>,
-    pub valencies_types: BTreeSet<ValenciesType>,
+    pub assignment_types: BTreeMap<OwnedRightType, StateSchema>,
+    pub valencies_types: BTreeSet<PublicRightType>,
     pub genesis: GenesisSchema,
     pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
@@ -145,14 +145,14 @@ mod _validation {
     use core::convert::TryFrom;
     use std::collections::BTreeSet;
 
-    use crate::rgb::contract::nodes::Valencies;
+    use crate::rgb::contract::nodes::PublicRights;
     use crate::rgb::schema::{
-        script, MetadataStructure, SchemaVerify, SealsStructure,
-        ValenciesStructure,
+        script, MetadataStructure, OwnedRightStructure, PublicRightStructure,
+        SchemaVerify,
     };
     use crate::rgb::{
-        validation, Ancestors, AssignmentAction, Assignments,
-        AssignmentsVariant, Metadata, Node, NodeId, VirtualMachine,
+        validation, AssignedState, AssignmentAction, Metadata, Node, NodeId,
+        OwnedRights, Parents, VirtualMachine,
     };
 
     impl SchemaVerify for Schema {
@@ -252,7 +252,7 @@ mod _validation {
         ) -> validation::Status {
             let node_id = node.node_id();
 
-            let empty_seals_structure = SealsStructure::default();
+            let empty_seals_structure = OwnedRightStructure::default();
             let (
                 metadata_structure,
                 ancestors_structure,
@@ -262,8 +262,8 @@ mod _validation {
                 (None, None) => (
                     &self.genesis.metadata,
                     &empty_seals_structure,
-                    &self.genesis.defines,
-                    &self.genesis.valencies,
+                    &self.genesis.owned_rights,
+                    &self.genesis.public_rights,
                 ),
                 (Some(transition_type), None) => {
                     let transition_type = match self.transitions.get(&transition_type) {
@@ -281,8 +281,8 @@ mod _validation {
                     (
                         &transition_type.metadata,
                         &transition_type.closes,
-                        &transition_type.defines,
-                        &transition_type.valencies,
+                        &transition_type.owned_rights,
+                        &transition_type.public_rights,
                     )
                 }
                 (None, Some(extension_type)) => {
@@ -301,7 +301,7 @@ mod _validation {
                     (
                         &extension_type.metadata,
                         &empty_seals_structure,
-                        &extension_type.defines,
+                        &extension_type.owned_rights,
                         &extension_type.extends,
                     )
                 }
@@ -327,19 +327,19 @@ mod _validation {
             );
             status += self.validate_assignments(
                 node_id,
-                node.assignments(),
+                node.owned_rights(),
                 assignments_structure,
             );
             status += self.validate_valencies(
                 node_id,
-                node.valencies(),
+                node.public_rights(),
                 valencies_structure,
             );
             status += self.validate_state_evolution(
                 node_id,
                 node.transition_type(),
                 &ancestor_assignments,
-                node.assignments(),
+                node.owned_rights(),
                 node.metadata(),
             );
             status
@@ -393,8 +393,8 @@ mod _validation {
         fn validate_ancestors(
             &self,
             node_id: NodeId,
-            assignments: &Assignments,
-            assignments_structure: &SealsStructure,
+            assignments: &OwnedRights,
+            assignments_structure: &OwnedRightStructure,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
@@ -414,7 +414,7 @@ mod _validation {
             for (assignment_type_id, occ) in assignments_structure {
                 let len = assignments
                     .get(assignment_type_id)
-                    .map(AssignmentsVariant::len)
+                    .map(AssignedState::len)
                     .unwrap_or(0);
 
                 // Checking number of ancestor's assignment occurrences
@@ -435,8 +435,8 @@ mod _validation {
         fn validate_assignments(
             &self,
             node_id: NodeId,
-            assignments: &Assignments,
-            assignments_structure: &SealsStructure,
+            assignments: &OwnedRights,
+            assignments_structure: &OwnedRightStructure,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
@@ -456,7 +456,7 @@ mod _validation {
             for (assignment_type_id, occ) in assignments_structure {
                 let len = assignments
                     .get(assignment_type_id)
-                    .map(AssignmentsVariant::len)
+                    .map(AssignedState::len)
                     .unwrap_or(0);
 
                 // Checking number of assignment occurrences
@@ -478,7 +478,7 @@ mod _validation {
 
                 match assignments.get(assignment_type_id) {
                     None => {}
-                    Some(AssignmentsVariant::Declarative(set)) => {
+                    Some(AssignedState::Declarative(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
@@ -487,7 +487,7 @@ mod _validation {
                             )
                         })
                     }
-                    Some(AssignmentsVariant::DiscreteFiniteField(set)) => {
+                    Some(AssignedState::DiscreteFiniteField(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
@@ -496,7 +496,7 @@ mod _validation {
                             )
                         })
                     }
-                    Some(AssignmentsVariant::CustomData(set)) => {
+                    Some(AssignedState::CustomData(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
@@ -514,8 +514,8 @@ mod _validation {
         fn validate_valencies(
             &self,
             node_id: NodeId,
-            valencies: &Valencies,
-            valencies_structure: &ValenciesStructure,
+            valencies: &PublicRights,
+            valencies_structure: &PublicRightStructure,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
@@ -537,11 +537,11 @@ mod _validation {
             &self,
             node_id: NodeId,
             transition_type: Option<TransitionType>,
-            previous_state: &Assignments,
-            current_state: &Assignments,
+            previous_state: &OwnedRights,
+            current_state: &OwnedRights,
             current_meta: &Metadata,
         ) -> validation::Status {
-            let assignment_types: BTreeSet<&AssignmentsType> =
+            let assignment_types: BTreeSet<&OwnedRightType> =
                 previous_state.keys().chain(current_state.keys()).collect();
 
             let mut status = validation::Status::new();
@@ -603,10 +603,10 @@ mod _validation {
     fn extract_ancestor_assignments(
         nodes: &BTreeMap<NodeId, &dyn Node>,
         node_id: NodeId,
-        ancestors: &Ancestors,
+        ancestors: &Parents,
         status: &mut validation::Status,
-    ) -> Assignments {
-        let mut ancestors_assignments = Assignments::new();
+    ) -> OwnedRights {
+        let mut ancestors_assignments = OwnedRights::new();
         for (id, details) in ancestors {
             let node = match nodes.get(id) {
                 None => {
@@ -619,8 +619,8 @@ mod _validation {
             };
 
             for (type_id, assignment_indexes) in details {
-                let variants: Vec<&AssignmentsVariant> = node
-                    .assignments_by_type(*type_id)
+                let variants: Vec<&AssignedState> = node
+                    .owned_rights_by_type(*type_id)
                     .into_iter()
                     .enumerate()
                     .filter_map(|(index, v)| {
@@ -637,12 +637,10 @@ mod _validation {
 
                 for variant in variants {
                     match variant {
-                        AssignmentsVariant::Declarative(set) => {
+                        AssignedState::Declarative(set) => {
                             match ancestors_assignments
                                 .entry(*type_id)
-                                .or_insert(AssignmentsVariant::Declarative(
-                                    bset! {},
-                                ))
+                                .or_insert(AssignedState::Declarative(bset! {}))
                                 .declarative_mut()
                             {
                                 Some(base) => {
@@ -657,14 +655,12 @@ mod _validation {
                                 }
                             };
                         }
-                        AssignmentsVariant::DiscreteFiniteField(set) => {
+                        AssignedState::DiscreteFiniteField(set) => {
                             match ancestors_assignments
                                 .entry(*type_id)
-                                .or_insert(
-                                    AssignmentsVariant::DiscreteFiniteField(
-                                        bset! {},
-                                    ),
-                                )
+                                .or_insert(AssignedState::DiscreteFiniteField(
+                                    bset! {},
+                                ))
                                 .field_mut()
                             {
                                 Some(base) => {
@@ -679,12 +675,10 @@ mod _validation {
                                 }
                             };
                         }
-                        AssignmentsVariant::CustomData(set) => {
+                        AssignedState::CustomData(set) => {
                             match ancestors_assignments
                                 .entry(*type_id)
-                                .or_insert(AssignmentsVariant::CustomData(
-                                    bset! {},
-                                ))
+                                .or_insert(AssignedState::CustomData(bset! {}))
                                 .data_mut()
                             {
                                 Some(base) => {
@@ -787,68 +781,68 @@ pub(crate) mod test {
                     FIELD_PRECISION => Occurences::Once,
                     FIELD_TIMESTAMP => Occurences::Once
                 },
-                defines: bmap! {
+                owned_rights: bmap! {
                     ASSIGNMENT_ISSUE => Occurences::NoneOrOnce,
                     ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None),
                     ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None)
                 },
-                valencies: bset! { VALENCIES_DECENTRALIZED_ISSUE },
+                public_rights: bset! { VALENCIES_DECENTRALIZED_ISSUE },
                 abi: bmap! {},
             },
             extensions: bmap! {
                 EXTENSION_DECENTRALIZED_ISSUE => ExtensionSchema {
+                    extends: bset! { VALENCIES_DECENTRALIZED_ISSUE },
                     metadata: bmap! {
                         FIELD_ISSUED_SUPPLY => Occurences::Once,
                         FIELD_PROOF_OF_BURN => Occurences::OnceOrUpTo(None)
                     },
-                    defines: bmap! {
+                    owned_rights: bmap! {
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                    extends: bset! { VALENCIES_DECENTRALIZED_ISSUE },
-                    valencies: bset! { },
+                    public_rights: bset! { },
                     abi: bmap! {},
                 }
             },
             transitions: bmap! {
                 TRANSITION_ISSUE => TransitionSchema {
-                    metadata: bmap! {
-                        FIELD_ISSUED_SUPPLY => Occurences::Once
-                    },
                     closes: bmap! {
                         ASSIGNMENT_ISSUE => Occurences::Once
                     },
-                    defines: bmap! {
+                    metadata: bmap! {
+                        FIELD_ISSUED_SUPPLY => Occurences::Once
+                    },
+                    owned_rights: bmap! {
                         ASSIGNMENT_ISSUE => Occurences::NoneOrOnce,
                         ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                    valencies: bset! {},
+                    public_rights: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_TRANSFER => TransitionSchema {
-                    metadata: bmap! {},
                     closes: bmap! {
                         ASSIGNMENT_ASSETS => Occurences::OnceOrUpTo(None)
                     },
-                    defines: bmap! {
+                    metadata: bmap! {},
+                    owned_rights: bmap! {
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                    valencies: bset! {},
+                    public_rights: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_PRUNE => TransitionSchema {
-                    metadata: bmap! {
-                        FIELD_PRUNE_PROOF => Occurences::NoneOrUpTo(None)
-                    },
                     closes: bmap! {
                         ASSIGNMENT_PRUNE => Occurences::OnceOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::OnceOrUpTo(None)
                     },
-                    defines: bmap! {
+                    metadata: bmap! {
+                        FIELD_PRUNE_PROOF => Occurences::NoneOrUpTo(None)
+                    },
+                    owned_rights: bmap! {
                         ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
                         ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
                     },
-                    valencies: bset! {},
+                    public_rights: bset! {},
                     abi: bmap! {}
                 }
             },

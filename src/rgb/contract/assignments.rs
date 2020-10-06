@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::AsAny;
+use core::cmp::Ordering;
 use core::fmt::Debug;
 use core::option::NoneError;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -20,6 +21,7 @@ use super::{
     super::schema, amount, data, seal, Amount, AutoConceal, NodeId,
     SealDefinition, SECP256K1_ZKP,
 };
+use crate::bp::blind::OutpointReveal;
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
@@ -27,23 +29,19 @@ use crate::strict_encoding::{
     Error as EncodingError, StrictDecode, StrictEncode,
 };
 
-use crate::bp::blind::OutpointReveal;
-use bitcoin_hashes::core::cmp::Ordering;
+pub type OwnedRights = BTreeMap<schema::OwnedRightType, AssignedState>;
 
-pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
-
-pub type Ancestors =
-    BTreeMap<NodeId, BTreeMap<schema::AssignmentsType, Vec<u16>>>;
+pub type Parents = BTreeMap<NodeId, BTreeMap<schema::OwnedRightType, Vec<u16>>>;
 
 #[derive(Clone, Debug, Display, PartialEq)]
 #[display(Debug)]
-pub enum AssignmentsVariant {
+pub enum AssignedState {
     Declarative(BTreeSet<Assignment<DeclarativeStrategy>>),
     DiscreteFiniteField(BTreeSet<Assignment<PedersenStrategy>>),
     CustomData(BTreeSet<Assignment<HashStrategy>>),
 }
 
-impl AssignmentsVariant {
+impl AssignedState {
     pub fn zero_balanced(
         inputs: Vec<amount::Revealed>,
         allocations_ours: Vec<(SealDefinition, Amount)>,
@@ -107,7 +105,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn is_declarative(&self) -> bool {
         match self {
-            AssignmentsVariant::Declarative(_) => true,
+            AssignedState::Declarative(_) => true,
             _ => false,
         }
     }
@@ -115,7 +113,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn is_field(&self) -> bool {
         match self {
-            AssignmentsVariant::DiscreteFiniteField(_) => true,
+            AssignedState::DiscreteFiniteField(_) => true,
             _ => false,
         }
     }
@@ -123,7 +121,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn is_data(&self) -> bool {
         match self {
-            AssignmentsVariant::CustomData(_) => true,
+            AssignedState::CustomData(_) => true,
             _ => false,
         }
     }
@@ -133,7 +131,7 @@ impl AssignmentsVariant {
         &self,
     ) -> Option<&BTreeSet<Assignment<DeclarativeStrategy>>> {
         match self {
-            AssignmentsVariant::Declarative(set) => Some(set),
+            AssignedState::Declarative(set) => Some(set),
             _ => None,
         }
     }
@@ -143,7 +141,7 @@ impl AssignmentsVariant {
         &mut self,
     ) -> Option<&mut BTreeSet<Assignment<DeclarativeStrategy>>> {
         match self {
-            AssignmentsVariant::Declarative(set) => Some(set),
+            AssignedState::Declarative(set) => Some(set),
             _ => None,
         }
     }
@@ -151,7 +149,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn field(&self) -> Option<&BTreeSet<Assignment<PedersenStrategy>>> {
         match self {
-            AssignmentsVariant::DiscreteFiniteField(set) => Some(set),
+            AssignedState::DiscreteFiniteField(set) => Some(set),
             _ => None,
         }
     }
@@ -161,7 +159,7 @@ impl AssignmentsVariant {
         &mut self,
     ) -> Option<&mut BTreeSet<Assignment<PedersenStrategy>>> {
         match self {
-            AssignmentsVariant::DiscreteFiniteField(set) => Some(set),
+            AssignedState::DiscreteFiniteField(set) => Some(set),
             _ => None,
         }
     }
@@ -169,7 +167,7 @@ impl AssignmentsVariant {
     #[inline]
     pub fn data(&self) -> Option<&BTreeSet<Assignment<HashStrategy>>> {
         match self {
-            AssignmentsVariant::CustomData(set) => Some(set),
+            AssignedState::CustomData(set) => Some(set),
             _ => None,
         }
     }
@@ -179,7 +177,7 @@ impl AssignmentsVariant {
         &mut self,
     ) -> Option<&mut BTreeSet<Assignment<HashStrategy>>> {
         match self {
-            AssignmentsVariant::CustomData(set) => Some(set),
+            AssignedState::CustomData(set) => Some(set),
             _ => None,
         }
     }
@@ -193,17 +191,17 @@ impl AssignmentsVariant {
         // done by using `sort` vector method and `Ord` implementation
         // for the `Assignment` type
         Ok(match self {
-            AssignmentsVariant::Declarative(set) => {
+            AssignedState::Declarative(set) => {
                 let mut vec = set.into_iter().collect::<Vec<_>>();
                 vec.sort();
                 vec.get(index as usize)?.seal_definition()
             }
-            AssignmentsVariant::DiscreteFiniteField(set) => {
+            AssignedState::DiscreteFiniteField(set) => {
                 let mut vec = set.into_iter().collect::<Vec<_>>();
                 vec.sort();
                 vec.get(index as usize)?.seal_definition()
             }
-            AssignmentsVariant::CustomData(set) => {
+            AssignedState::CustomData(set) => {
                 let mut vec = set.into_iter().collect::<Vec<_>>();
                 vec.sort();
                 vec.get(index as usize)?.seal_definition()
@@ -213,15 +211,15 @@ impl AssignmentsVariant {
 
     pub fn known_seals(&self) -> Vec<&seal::Revealed> {
         match self {
-            AssignmentsVariant::Declarative(s) => s
+            AssignedState::Declarative(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
-            AssignmentsVariant::DiscreteFiniteField(s) => s
+            AssignedState::DiscreteFiniteField(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
-            AssignmentsVariant::CustomData(s) => s
+            AssignedState::CustomData(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::seal_definition)
                 .collect(),
@@ -230,15 +228,15 @@ impl AssignmentsVariant {
 
     pub fn all_seals(&self) -> Vec<seal::Confidential> {
         match self {
-            AssignmentsVariant::Declarative(s) => s
+            AssignedState::Declarative(s) => s
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
-            AssignmentsVariant::DiscreteFiniteField(s) => s
+            AssignedState::DiscreteFiniteField(s) => s
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
-            AssignmentsVariant::CustomData(s) => s
+            AssignedState::CustomData(s) => s
                 .into_iter()
                 .map(Assignment::<_>::seal_definition_confidential)
                 .collect(),
@@ -247,20 +245,20 @@ impl AssignmentsVariant {
 
     pub fn known_state_homomorphic(&self) -> Vec<&amount::Revealed> {
         match self {
-            AssignmentsVariant::Declarative(_) => vec![],
-            AssignmentsVariant::DiscreteFiniteField(s) => s
+            AssignedState::Declarative(_) => vec![],
+            AssignedState::DiscreteFiniteField(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::assigned_state)
                 .collect(),
-            AssignmentsVariant::CustomData(_) => vec![],
+            AssignedState::CustomData(_) => vec![],
         }
     }
 
     pub fn known_state_data(&self) -> Vec<&data::Revealed> {
         match self {
-            AssignmentsVariant::Declarative(_) => vec![],
-            AssignmentsVariant::DiscreteFiniteField(_) => vec![],
-            AssignmentsVariant::CustomData(s) => s
+            AssignedState::Declarative(_) => vec![],
+            AssignedState::DiscreteFiniteField(_) => vec![],
+            AssignedState::CustomData(s) => s
                 .into_iter()
                 .filter_map(Assignment::<_>::assigned_state)
                 .collect(),
@@ -269,20 +267,20 @@ impl AssignmentsVariant {
 
     pub fn all_state_pedersen(&self) -> Vec<amount::Confidential> {
         match self {
-            AssignmentsVariant::Declarative(_) => vec![],
-            AssignmentsVariant::DiscreteFiniteField(s) => s
+            AssignedState::Declarative(_) => vec![],
+            AssignedState::DiscreteFiniteField(s) => s
                 .into_iter()
                 .map(Assignment::<_>::assigned_state_confidential)
                 .collect(),
-            AssignmentsVariant::CustomData(_) => vec![],
+            AssignedState::CustomData(_) => vec![],
         }
     }
 
     pub fn all_state_hashed(&self) -> Vec<data::Confidential> {
         match self {
-            AssignmentsVariant::Declarative(_) => vec![],
-            AssignmentsVariant::DiscreteFiniteField(_) => vec![],
-            AssignmentsVariant::CustomData(s) => s
+            AssignedState::Declarative(_) => vec![],
+            AssignedState::DiscreteFiniteField(_) => vec![],
+            AssignedState::CustomData(s) => s
                 .into_iter()
                 .map(Assignment::<_>::assigned_state_confidential)
                 .collect(),
@@ -291,9 +289,9 @@ impl AssignmentsVariant {
 
     pub fn len(&self) -> usize {
         match self {
-            AssignmentsVariant::Declarative(set) => set.len(),
-            AssignmentsVariant::DiscreteFiniteField(set) => set.len(),
-            AssignmentsVariant::CustomData(set) => set.len(),
+            AssignedState::Declarative(set) => set.len(),
+            AssignedState::DiscreteFiniteField(set) => set.len(),
+            AssignedState::CustomData(set) => set.len(),
         }
     }
 
@@ -306,9 +304,9 @@ impl AssignmentsVariant {
     ) -> usize {
         let mut counter = 0;
         match self {
-            AssignmentsVariant::Declarative(_) => {}
-            AssignmentsVariant::DiscreteFiniteField(set) => {
-                *self = AssignmentsVariant::DiscreteFiniteField(
+            AssignedState::Declarative(_) => {}
+            AssignedState::DiscreteFiniteField(set) => {
+                *self = AssignedState::DiscreteFiniteField(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -319,8 +317,8 @@ impl AssignmentsVariant {
                         .collect(),
                 );
             }
-            AssignmentsVariant::CustomData(set) => {
-                *self = AssignmentsVariant::CustomData(
+            AssignedState::CustomData(set) => {
+                *self = AssignedState::CustomData(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -336,24 +334,20 @@ impl AssignmentsVariant {
     }
 }
 
-impl AutoConceal for AssignmentsVariant {
+impl AutoConceal for AssignedState {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
-            AssignmentsVariant::Declarative(data) => {
+            AssignedState::Declarative(data) => data as &mut dyn AutoConceal,
+            AssignedState::DiscreteFiniteField(data) => {
                 data as &mut dyn AutoConceal
             }
-            AssignmentsVariant::DiscreteFiniteField(data) => {
-                data as &mut dyn AutoConceal
-            }
-            AssignmentsVariant::CustomData(data) => {
-                data as &mut dyn AutoConceal
-            }
+            AssignedState::CustomData(data) => data as &mut dyn AutoConceal,
         }
         .conceal_except(seals)
     }
 }
 
-impl CommitEncodeWithStrategy for AssignmentsVariant {
+impl CommitEncodeWithStrategy for AssignedState {
     type Strategy = commit_strategy::UsingStrict;
 }
 
@@ -714,7 +708,7 @@ mod strict_encoding {
     use data::strict_encoding::EncodingTag;
     use std::io;
 
-    impl StrictEncode for AssignmentsVariant {
+    impl StrictEncode for AssignedState {
         type Error = Error;
 
         fn strict_encode<E: io::Write>(
@@ -722,39 +716,39 @@ mod strict_encoding {
             mut e: E,
         ) -> Result<usize, Self::Error> {
             Ok(match self {
-                AssignmentsVariant::Declarative(tree) => {
+                AssignedState::Declarative(tree) => {
                     strict_encode_list!(e; schema::StateType::Declarative, tree)
                 }
-                AssignmentsVariant::DiscreteFiniteField(tree) => {
+                AssignedState::DiscreteFiniteField(tree) => {
                     strict_encode_list!(e; schema::StateType::DiscreteFiniteField, EncodingTag::U64, tree)
                 }
-                AssignmentsVariant::CustomData(tree) => {
+                AssignedState::CustomData(tree) => {
                     strict_encode_list!(e; schema::StateType::CustomData, tree)
                 }
             })
         }
     }
 
-    impl StrictDecode for AssignmentsVariant {
+    impl StrictDecode for AssignedState {
         type Error = Error;
 
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
                 schema::StateType::Declarative => {
-                    AssignmentsVariant::Declarative(BTreeSet::strict_decode(d)?)
+                    AssignedState::Declarative(BTreeSet::strict_decode(d)?)
                 }
                 schema::StateType::DiscreteFiniteField => match EncodingTag::strict_decode(&mut d)?
                 {
                     EncodingTag::U64 => {
-                        AssignmentsVariant::DiscreteFiniteField(BTreeSet::strict_decode(&mut d)?)
+                        AssignedState::DiscreteFiniteField(BTreeSet::strict_decode(&mut d)?)
                     }
                     _ => Err(Error::UnsupportedDataStructure(
                         "We support only homomorphic commitments to U64 data",
                     ))?,
                 },
                 schema::StateType::CustomData => {
-                    AssignmentsVariant::CustomData(BTreeSet::strict_decode(d)?)
+                    AssignedState::CustomData(BTreeSet::strict_decode(d)?)
                 }
             })
         }
@@ -1110,18 +1104,18 @@ mod test {
     // Generic encode-decode testing
     #[test]
     fn test_encoded_data() {
-        test_encode!((HASH_VARIANT, AssignmentsVariant));
-        test_encode!((PEDERSAN_VARIANT, AssignmentsVariant));
-        test_encode!((DECLARATIVE_VARIANT, AssignmentsVariant));
+        test_encode!((HASH_VARIANT, AssignedState));
+        test_encode!((PEDERSAN_VARIANT, AssignedState));
+        test_encode!((DECLARATIVE_VARIANT, AssignedState));
     }
 
     // Generic garbage value testing
     #[test]
     fn test_garbage_dec() {
         let err = "StateType";
-        test_garbage_exhaustive!(4..255; (DECLARATIVE_VARIANT, AssignmentsVariant, err), 
-            (HASH_VARIANT, AssignmentsVariant, err), 
-            (DECLARATIVE_VARIANT, AssignmentsVariant, err));
+        test_garbage_exhaustive!(4..255; (DECLARATIVE_VARIANT, AssignedState, err),
+            (HASH_VARIANT, AssignedState, err),
+            (DECLARATIVE_VARIANT, AssignedState, err));
     }
 
     #[test]
@@ -1130,7 +1124,7 @@ mod test {
         let mut bytes = PEDERSAN_VARIANT.clone();
         bytes[1] = 0x02;
 
-        AssignmentsVariant::strict_decode(&bytes[..]).unwrap();
+        AssignedState::strict_decode(&bytes[..]).unwrap();
     }
 
     fn zero_balance(
@@ -1197,11 +1191,8 @@ mod test {
             .collect();
 
         // Balance both the allocations against input amounts
-        let balanced = AssignmentsVariant::zero_balanced(
-            input_revealed.clone(),
-            ours,
-            theirs,
-        );
+        let balanced =
+            AssignedState::zero_balanced(input_revealed.clone(), ours, theirs);
 
         // Extract balanced confidential output amounts
         let outputs: Vec<Commitment> = balanced
@@ -1423,12 +1414,11 @@ mod test {
     #[test]
     fn test_identification() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check correct types are being identified
         // and wrong types return false
@@ -1446,12 +1436,11 @@ mod test {
     #[test]
     fn test_extraction() {
         let mut declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let mut pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let mut hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check Correct type extraction works
         assert!(declarative_type.declarative().is_some());
@@ -1483,12 +1472,11 @@ mod test {
     #[test]
     fn test_seal_extraction() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract a specific Txid from each variants
         let txid_1 = match declarative_type.seal(2).unwrap().unwrap() {
@@ -1521,12 +1509,11 @@ mod test {
     #[test]
     fn test_known_seals() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known Txids from each variants
         let mut dec_txids: Vec<String> = declarative_type
@@ -1586,12 +1573,11 @@ mod test {
     #[test]
     fn test_all_seals() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract seals from all variants and conceal them
         let mut dec_hashes: Vec<String> = declarative_type
@@ -1626,12 +1612,11 @@ mod test {
     #[test]
     fn test_known_state_homomorphic() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from pedersan type variant
         let states = pedersan_type.known_state_homomorphic();
@@ -1669,12 +1654,11 @@ mod test {
     #[test]
     fn test_known_state_data() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from custom data type variant
         let data_set = hash_type.known_state_data();
@@ -1699,12 +1683,11 @@ mod test {
     #[test]
     fn test_all_state_pedersan() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data for pedersan type and conceal them
         let conf_amounts = pedersan_type.all_state_pedersen();
@@ -1740,12 +1723,11 @@ mod test {
     #[test]
     fn test_all_state_hashed() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data from hash type variant and conceal them
         let extracted_states = hash_type.all_state_hashed();
@@ -1779,7 +1761,7 @@ mod test {
         // Pedersan type has very large concealed state data which slows down
         // the test
         let mut hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Conceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
@@ -1856,12 +1838,11 @@ mod test {
     #[test]
     fn test_len() {
         let declarative_type =
-            AssignmentsVariant::strict_decode(&DECLARATIVE_VARIANT[..])
-                .unwrap();
+            AssignedState::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            AssignmentsVariant::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let hash_type =
-            AssignmentsVariant::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignedState::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // All variants have 4 assignments in them
         assert_eq!(declarative_type.len(), 4);
@@ -1871,7 +1852,7 @@ mod test {
 
     #[test]
     fn test_encoding_ancestor() {
-        test_encode!((ANCESTOR, Ancestors));
+        test_encode!((ANCESTOR, Parents));
     }
 
     #[test]
@@ -1879,7 +1860,7 @@ mod test {
     fn test_garbage_ancestor() {
         let mut data = ANCESTOR.clone();
         data[0] = 0x36 as u8;
-        Ancestors::strict_decode(&data[..]).unwrap();
+        Parents::strict_decode(&data[..]).unwrap();
     }
 
     // This doesn't use the merkelize() function
@@ -1891,11 +1872,11 @@ mod test {
         // Ancestor = Map<1, Map<2, [0u16]>>
         let mut assignment = BTreeMap::new();
         let data = 0u16;
-        let ty = 2 as schema::AssignmentsType;
+        let ty = 2 as schema::OwnedRightType;
         assignment.insert(ty, vec![data]);
 
         let nodeid = NodeId::default();
-        let mut ancestor = BTreeMap::new() as Ancestors;
+        let mut ancestor = BTreeMap::new() as Parents;
         ancestor.insert(nodeid, assignment);
 
         let mut original_commit = vec![];
@@ -1972,9 +1953,9 @@ mod test {
         }
 
         // Create 3 assignment type
-        let type1 = 1 as schema::AssignmentsType;
-        let type2 = 2 as schema::AssignmentsType;
-        let type3 = 3 as schema::AssignmentsType;
+        let type1 = 1 as schema::OwnedRightType;
+        let type2 = 2 as schema::OwnedRightType;
+        let type3 = 3 as schema::OwnedRightType;
 
         // Create 1 NodeID
         let node_id = NodeId::default();
@@ -2118,7 +2099,7 @@ mod test {
         set.insert(assignment_3);
         set.insert(assignment_4);
 
-        let declarative_variant = AssignmentsVariant::Declarative(set);
+        let declarative_variant = AssignedState::Declarative(set);
 
         // Create Pedersan Variant
 
@@ -2166,7 +2147,7 @@ mod test {
         set.insert(assignment_3);
         set.insert(assignment_4);
 
-        let pedersen_variant = AssignmentsVariant::DiscreteFiniteField(set);
+        let pedersen_variant = AssignedState::DiscreteFiniteField(set);
 
         // Create Hash variant
         let txid_vec: Vec<bitcoin::Txid> = TXID_VEC
@@ -2218,13 +2199,13 @@ mod test {
         set.insert(assignment_3);
         set.insert(assignment_4);
 
-        let hash_variant = AssignmentsVariant::CustomData(set);
+        let hash_variant = AssignedState::CustomData(set);
 
         // Create assignemnts
 
-        let type1 = 1 as schema::AssignmentsType;
-        let type2 = 2 as schema::AssignmentsType;
-        let type3 = 3 as schema::AssignmentsType;
+        let type1 = 1 as schema::OwnedRightType;
+        let type2 = 2 as schema::OwnedRightType;
+        let type3 = 3 as schema::OwnedRightType;
         let mut assignments = BTreeMap::new();
         assignments.insert(type1, declarative_variant);
         assignments.insert(type2, pedersen_variant);

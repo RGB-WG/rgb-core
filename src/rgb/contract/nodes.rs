@@ -15,21 +15,21 @@ use std::collections::BTreeSet;
 
 use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
-use super::{Ancestors, Assignments, AssignmentsVariant, AutoConceal};
+use super::{AssignedState, AutoConceal, OwnedRights, Parents};
 use crate::bp;
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };
 use crate::paradigms::client_side_validation::CommitEncode;
 use crate::rgb::schema::{
-    AssignmentsType, ExtensionType, FieldType, NodeType, TransitionType,
-    ValenciesType,
+    ExtensionType, FieldType, NodeType, OwnedRightType, PublicRightType,
+    TransitionType,
 };
 use crate::rgb::{schema, seal, Metadata, SchemaId, SimplicityScript};
 
 /// Holds definition of valencies for contract nodes, which is a set of
 /// allowed valencies types
-pub type Valencies = BTreeSet<ValenciesType>;
+pub type PublicRights = BTreeSet<PublicRightType>;
 
 lazy_static! {
     static ref MIDSTATE_NODE_ID: [u8; 32] = {
@@ -97,12 +97,12 @@ pub trait Node {
     /// [`Option::None`] for genesis and trate transitions
     fn extension_type(&self) -> Option<ExtensionType>;
 
-    fn ancestors(&self) -> &Ancestors;
+    fn ancestors(&self) -> &Parents;
     fn metadata(&self) -> &Metadata;
-    fn assignments(&self) -> &Assignments;
-    fn assignments_mut(&mut self) -> &mut Assignments;
-    fn valencies(&self) -> &Valencies;
-    fn valencies_mut(&mut self) -> &mut Valencies;
+    fn owned_rights(&self) -> &OwnedRights;
+    fn owned_rights_mut(&mut self) -> &mut OwnedRights;
+    fn public_rights(&self) -> &PublicRights;
+    fn public_rights_mut(&mut self) -> &mut PublicRights;
     fn script(&self) -> &SimplicityScript;
 
     #[inline]
@@ -111,16 +111,16 @@ pub trait Node {
     }
 
     #[inline]
-    fn assignment_types(&self) -> BTreeSet<AssignmentsType> {
-        self.assignments().keys().cloned().collect()
+    fn owned_right_types(&self) -> BTreeSet<OwnedRightType> {
+        self.owned_rights().keys().cloned().collect()
     }
 
     #[inline]
-    fn assignments_by_type(
+    fn owned_rights_by_type(
         &self,
-        t: AssignmentsType,
-    ) -> Option<&AssignmentsVariant> {
-        self.assignments().into_iter().find_map(|(t2, a)| {
+        t: OwnedRightType,
+    ) -> Option<&AssignedState> {
+        self.owned_rights().into_iter().find_map(|(t2, a)| {
             if *t2 == t {
                 Some(a)
             } else {
@@ -131,7 +131,7 @@ pub trait Node {
 
     #[inline]
     fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
-        self.assignments()
+        self.owned_rights()
             .into_iter()
             .flat_map(|(_, assignment)| assignment.all_seals())
             .collect()
@@ -139,7 +139,7 @@ pub trait Node {
 
     #[inline]
     fn known_seal_definitions(&self) -> Vec<&seal::Revealed> {
-        self.assignments()
+        self.owned_rights()
             .into_iter()
             .flat_map(|(_, assignment)| assignment.known_seals())
             .collect()
@@ -148,10 +148,10 @@ pub trait Node {
     #[inline]
     fn known_seal_definitions_by_type(
         &self,
-        assignment_type: AssignmentsType,
+        assignment_type: OwnedRightType,
     ) -> Vec<&seal::Revealed> {
-        self.assignments_by_type(assignment_type)
-            .map(AssignmentsVariant::known_seals)
+        self.owned_rights_by_type(assignment_type)
+            .map(AssignedState::known_seals)
             .unwrap_or(vec![])
     }
 }
@@ -161,8 +161,8 @@ pub struct Genesis {
     schema_id: SchemaId,
     chain: bp::Chain,
     metadata: Metadata,
-    assignments: Assignments,
-    valencies: Valencies,
+    owned_rights: OwnedRights,
+    public_rights: PublicRights,
     script: SimplicityScript,
 }
 
@@ -172,8 +172,8 @@ pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
     metadata: Metadata,
-    assignments: Assignments,
-    valencies: Valencies,
+    owned_rights: OwnedRights,
+    public_rights: PublicRights,
     script: SimplicityScript,
 }
 
@@ -182,9 +182,9 @@ pub struct Extension {
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
-    ancestors: Ancestors,
-    assignments: Assignments,
-    valencies: Valencies,
+    ancestors: Parents,
+    owned_rights: OwnedRights,
+    public_rights: PublicRights,
     script: SimplicityScript,
 }
 
@@ -211,7 +211,7 @@ impl CommitEncodeWithStrategy for Transition {
 impl AutoConceal for Genesis {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.assignments_mut() {
+        for (_, assignment) in self.owned_rights_mut() {
             count += assignment.conceal_except(seals);
         }
         count
@@ -221,7 +221,7 @@ impl AutoConceal for Genesis {
 impl AutoConceal for Extension {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.assignments_mut() {
+        for (_, assignment) in self.owned_rights_mut() {
             count += assignment.conceal_except(seals);
         }
         count
@@ -231,7 +231,7 @@ impl AutoConceal for Extension {
 impl AutoConceal for Transition {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.assignments_mut() {
+        for (_, assignment) in self.owned_rights_mut() {
             count += assignment.conceal_except(seals);
         }
         count
@@ -265,9 +265,9 @@ impl Node for Genesis {
     }
 
     #[inline]
-    fn ancestors(&self) -> &Ancestors {
+    fn ancestors(&self) -> &Parents {
         lazy_static! {
-            static ref ANCESTORS: Ancestors = Ancestors::new();
+            static ref ANCESTORS: Parents = Parents::new();
         }
         &ANCESTORS
     }
@@ -278,23 +278,23 @@ impl Node for Genesis {
     }
 
     #[inline]
-    fn assignments(&self) -> &Assignments {
-        &self.assignments
+    fn owned_rights(&self) -> &OwnedRights {
+        &self.owned_rights
     }
 
     #[inline]
-    fn assignments_mut(&mut self) -> &mut Assignments {
-        &mut self.assignments
+    fn owned_rights_mut(&mut self) -> &mut OwnedRights {
+        &mut self.owned_rights
     }
 
     #[inline]
-    fn valencies(&self) -> &Valencies {
-        &self.valencies
+    fn public_rights(&self) -> &PublicRights {
+        &self.public_rights
     }
 
     #[inline]
-    fn valencies_mut(&mut self) -> &mut Valencies {
-        &mut self.valencies
+    fn public_rights_mut(&mut self) -> &mut PublicRights {
+        &mut self.public_rights
     }
 
     #[inline]
@@ -330,9 +330,9 @@ impl Node for Extension {
     }
 
     #[inline]
-    fn ancestors(&self) -> &Ancestors {
+    fn ancestors(&self) -> &Parents {
         lazy_static! {
-            static ref ANCESTORS: Ancestors = Ancestors::new();
+            static ref ANCESTORS: Parents = Parents::new();
         }
         &ANCESTORS
     }
@@ -343,23 +343,23 @@ impl Node for Extension {
     }
 
     #[inline]
-    fn assignments(&self) -> &Assignments {
-        &self.assignments
+    fn owned_rights(&self) -> &OwnedRights {
+        &self.owned_rights
     }
 
     #[inline]
-    fn assignments_mut(&mut self) -> &mut Assignments {
-        &mut self.assignments
+    fn owned_rights_mut(&mut self) -> &mut OwnedRights {
+        &mut self.owned_rights
     }
 
     #[inline]
-    fn valencies(&self) -> &Valencies {
-        &self.valencies
+    fn public_rights(&self) -> &PublicRights {
+        &self.public_rights
     }
 
     #[inline]
-    fn valencies_mut(&mut self) -> &mut Valencies {
-        &mut self.valencies
+    fn public_rights_mut(&mut self) -> &mut PublicRights {
+        &mut self.public_rights
     }
 
     #[inline]
@@ -395,7 +395,7 @@ impl Node for Transition {
     }
 
     #[inline]
-    fn ancestors(&self) -> &Ancestors {
+    fn ancestors(&self) -> &Parents {
         &self.ancestors
     }
 
@@ -405,23 +405,23 @@ impl Node for Transition {
     }
 
     #[inline]
-    fn assignments(&self) -> &Assignments {
-        &self.assignments
+    fn owned_rights(&self) -> &OwnedRights {
+        &self.owned_rights
     }
 
     #[inline]
-    fn assignments_mut(&mut self) -> &mut Assignments {
-        &mut self.assignments
+    fn owned_rights_mut(&mut self) -> &mut OwnedRights {
+        &mut self.owned_rights
     }
 
     #[inline]
-    fn valencies(&self) -> &Valencies {
-        &self.valencies
+    fn public_rights(&self) -> &PublicRights {
+        &self.public_rights
     }
 
     #[inline]
-    fn valencies_mut(&mut self) -> &mut Valencies {
-        &mut self.valencies
+    fn public_rights_mut(&mut self) -> &mut PublicRights {
+        &mut self.public_rights
     }
 
     #[inline]
@@ -435,16 +435,16 @@ impl Genesis {
         schema_id: SchemaId,
         chain: bp::Chain,
         metadata: Metadata,
-        assignments: Assignments,
-        valencies: Valencies,
+        assignments: OwnedRights,
+        valencies: PublicRights,
         script: SimplicityScript,
     ) -> Self {
         Self {
             schema_id,
             chain,
             metadata,
-            assignments,
-            valencies,
+            owned_rights: assignments,
+            public_rights: valencies,
             script,
         }
     }
@@ -470,16 +470,16 @@ impl Extension {
         extension_type: ExtensionType,
         contract_id: ContractId,
         metadata: Metadata,
-        assignments: Assignments,
-        valencies: Valencies,
+        assignments: OwnedRights,
+        valencies: PublicRights,
         script: SimplicityScript,
     ) -> Self {
         Self {
             extension_type,
             contract_id,
             metadata,
-            assignments,
-            valencies,
+            owned_rights: assignments,
+            public_rights: valencies,
             script,
         }
     }
@@ -489,17 +489,17 @@ impl Transition {
     pub fn with(
         type_id: schema::TransitionType,
         metadata: Metadata,
-        ancestors: Ancestors,
-        assignments: Assignments,
-        valencies: Valencies,
+        ancestors: Parents,
+        assignments: OwnedRights,
+        valencies: PublicRights,
         script: SimplicityScript,
     ) -> Self {
         Self {
             transition_type: type_id,
             metadata,
             ancestors,
-            assignments,
-            valencies,
+            owned_rights: assignments,
+            public_rights: valencies,
             script,
         }
     }
@@ -532,8 +532,8 @@ mod strict_encoding {
                 len += self.chain.as_genesis_hash().strict_encode(&mut e)?;
                 Ok(strict_encode_list!(e; len;
                     self.metadata,
-                    self.assignments,
-                    self.valencies,
+                    self.owned_rights,
+                    self.public_rights,
                     self.script
                 ))
             };
@@ -560,8 +560,8 @@ mod strict_encoding {
                 1usize,
                 chain_params,
                 self.metadata,
-                self.assignments,
-                self.valencies,
+                self.owned_rights,
+                self.public_rights,
                 self.script
             ))
         }
@@ -585,15 +585,15 @@ mod strict_encoding {
                 let _ = Vec::<u8>::strict_decode(&mut d)?;
             }
             let metadata = Metadata::strict_decode(&mut d)?;
-            let assignments = Assignments::strict_decode(&mut d)?;
-            let valencies = Valencies::strict_decode(&mut d)?;
+            let assignments = OwnedRights::strict_decode(&mut d)?;
+            let valencies = PublicRights::strict_decode(&mut d)?;
             let script = SimplicityScript::strict_decode(&mut d)?;
             Ok(Self {
                 schema_id,
                 chain,
                 metadata,
-                assignments,
-                valencies,
+                owned_rights: assignments,
+                public_rights: valencies,
                 script,
             })
         }
@@ -1023,8 +1023,8 @@ mod test {
             schema_id: Default::default(),
             chain: Chain::Mainnet,
             metadata: Default::default(),
-            assignments: Default::default(),
-            valencies: Default::default(),
+            owned_rights: Default::default(),
+            public_rights: Default::default(),
             script: Default::default(),
         };
         assert_ne!(
@@ -1036,8 +1036,8 @@ mod test {
         genesis.schema_id.strict_encode(&mut encoder).unwrap();
         encoder.write_all(GENESIS_HASH_MAINNET).unwrap();
         genesis.metadata.strict_encode(&mut encoder).unwrap();
-        genesis.assignments.strict_encode(&mut encoder).unwrap();
-        genesis.valencies.strict_encode(&mut encoder).unwrap();
+        genesis.owned_rights.strict_encode(&mut encoder).unwrap();
+        genesis.public_rights.strict_encode(&mut encoder).unwrap();
         genesis.script.strict_encode(&mut encoder).unwrap();
         assert_eq!(genesis.consensus_commit(), NodeId::commit(&encoder));
 
@@ -1045,8 +1045,8 @@ mod test {
             transition_type: Default::default(),
             metadata: Default::default(),
             ancestors: Default::default(),
-            assignments: Default::default(),
-            valencies: Default::default(),
+            owned_rights: Default::default(),
+            public_rights: Default::default(),
             script: Default::default(),
         };
 
@@ -1057,8 +1057,11 @@ mod test {
             .unwrap();
         transition.metadata.strict_encode(&mut encoder).unwrap();
         transition.ancestors.strict_encode(&mut encoder).unwrap();
-        transition.assignments.strict_encode(&mut encoder).unwrap();
-        transition.valencies.strict_encode(&mut encoder).unwrap();
+        transition.owned_rights.strict_encode(&mut encoder).unwrap();
+        transition
+            .public_rights
+            .strict_encode(&mut encoder)
+            .unwrap();
         transition.script.strict_encode(&mut encoder).unwrap();
 
         let mut encoder1 = vec![];
@@ -1097,7 +1100,7 @@ mod test {
 
         // Ancestor test
 
-        assert_eq!(genesis.ancestors(), &Ancestors::new());
+        assert_eq!(genesis.ancestors(), &Parents::new());
 
         let ancestor_trn = transition.ancestors();
         let assignments = ancestor_trn
@@ -1142,8 +1145,8 @@ mod test {
 
         // Assignments test
 
-        let gen_assignments = genesis.assignments();
-        let tran_assingmnets = transition.assignments();
+        let gen_assignments = genesis.owned_rights();
+        let tran_assingmnets = transition.owned_rights();
 
         assert_eq!(gen_assignments, tran_assingmnets);
 
@@ -1206,16 +1209,16 @@ mod test {
         assert_eq!(gen_fields, vec![13usize]);
 
         // Assignment types
-        let gen_ass_types = genesis.assignment_types();
-        let tran_ass_types = transition.assignment_types();
+        let gen_ass_types = genesis.owned_right_types();
+        let tran_ass_types = transition.owned_right_types();
 
         assert_eq!(gen_ass_types, tran_ass_types);
 
         assert_eq!(gen_ass_types, bset![1usize, 2, 3]);
 
         // assignment by types
-        let assignment_gen = genesis.assignments_by_type(3).unwrap();
-        let assignment_tran = transition.assignments_by_type(1).unwrap();
+        let assignment_gen = genesis.owned_rights_by_type(3).unwrap();
+        let assignment_tran = transition.owned_rights_by_type(1).unwrap();
 
         assert!(assignment_gen.is_data());
         assert!(assignment_tran.is_declarative());

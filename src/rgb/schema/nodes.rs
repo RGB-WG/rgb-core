@@ -20,11 +20,11 @@ use super::{
 };
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type AssignmentsType = usize;
-pub type ValenciesType = usize;
+pub type OwnedRightType = usize;
+pub type PublicRightType = usize;
 pub type MetadataStructure = BTreeMap<FieldType, Occurences<u16>>;
-pub type ValenciesStructure = BTreeSet<ValenciesType>;
-pub type SealsStructure = BTreeMap<AssignmentsType, Occurences<u16>>;
+pub type PublicRightStructure = BTreeSet<PublicRightType>;
+pub type OwnedRightStructure = BTreeMap<OwnedRightType, Occurences<u16>>;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 /// Node type: genesis, extensions and state transitions
@@ -54,10 +54,10 @@ pub trait NodeSchema {
 
     fn node_type(&self) -> NodeType;
     fn metadata(&self) -> &MetadataStructure;
-    fn closes(&self) -> &SealsStructure;
-    fn extends(&self) -> &ValenciesStructure;
-    fn defines(&self) -> &SealsStructure;
-    fn valencies(&self) -> &ValenciesStructure;
+    fn closes(&self) -> &OwnedRightStructure;
+    fn extends(&self) -> &PublicRightStructure;
+    fn owned_rights(&self) -> &OwnedRightStructure;
+    fn public_rights(&self) -> &PublicRightStructure;
     fn abi(&self) -> &BTreeMap<Self::Action, Procedure>;
 }
 
@@ -65,8 +65,8 @@ pub trait NodeSchema {
 #[display(Debug)]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
-    pub defines: SealsStructure,
-    pub valencies: ValenciesStructure,
+    pub owned_rights: OwnedRightStructure,
+    pub public_rights: PublicRightStructure,
     pub abi: GenesisAbi,
 }
 
@@ -74,9 +74,9 @@ pub struct GenesisSchema {
 #[display(Debug)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
-    pub extends: ValenciesStructure,
-    pub defines: SealsStructure,
-    pub valencies: ValenciesStructure,
+    pub extends: PublicRightStructure,
+    pub owned_rights: OwnedRightStructure,
+    pub public_rights: PublicRightStructure,
     pub abi: ExtensionAbi,
 }
 
@@ -84,15 +84,16 @@ pub struct ExtensionSchema {
 #[display(Debug)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
-    pub closes: SealsStructure,
-    pub defines: SealsStructure,
-    pub valencies: ValenciesStructure,
+    pub closes: OwnedRightStructure,
+    pub owned_rights: OwnedRightStructure,
+    pub public_rights: PublicRightStructure,
     pub abi: TransitionAbi,
 }
 
 lazy_static! {
-    static ref EMPTY_SEALS: SealsStructure = SealsStructure::new();
-    static ref EMPTY_VALENCIES: ValenciesStructure = ValenciesStructure::new();
+    static ref EMPTY_SEALS: OwnedRightStructure = OwnedRightStructure::new();
+    static ref EMPTY_VALENCIES: PublicRightStructure =
+        PublicRightStructure::new();
 }
 
 impl NodeSchema for GenesisSchema {
@@ -107,20 +108,20 @@ impl NodeSchema for GenesisSchema {
         &self.metadata
     }
     #[inline]
-    fn closes(&self) -> &SealsStructure {
+    fn closes(&self) -> &OwnedRightStructure {
         &EMPTY_SEALS
     }
     #[inline]
-    fn extends(&self) -> &ValenciesStructure {
+    fn extends(&self) -> &PublicRightStructure {
         &EMPTY_VALENCIES
     }
     #[inline]
-    fn defines(&self) -> &SealsStructure {
-        &self.defines
+    fn owned_rights(&self) -> &OwnedRightStructure {
+        &self.owned_rights
     }
     #[inline]
-    fn valencies(&self) -> &ValenciesStructure {
-        &self.valencies
+    fn public_rights(&self) -> &PublicRightStructure {
+        &self.public_rights
     }
     #[inline]
     fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
@@ -140,20 +141,20 @@ impl NodeSchema for ExtensionSchema {
         &self.metadata
     }
     #[inline]
-    fn closes(&self) -> &SealsStructure {
+    fn closes(&self) -> &OwnedRightStructure {
         &EMPTY_SEALS
     }
     #[inline]
-    fn extends(&self) -> &ValenciesStructure {
+    fn extends(&self) -> &PublicRightStructure {
         &self.extends
     }
     #[inline]
-    fn defines(&self) -> &SealsStructure {
-        &self.defines
+    fn owned_rights(&self) -> &OwnedRightStructure {
+        &self.owned_rights
     }
     #[inline]
-    fn valencies(&self) -> &ValenciesStructure {
-        &self.valencies
+    fn public_rights(&self) -> &PublicRightStructure {
+        &self.public_rights
     }
     #[inline]
     fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
@@ -173,20 +174,20 @@ impl NodeSchema for TransitionSchema {
         &self.metadata
     }
     #[inline]
-    fn closes(&self) -> &SealsStructure {
+    fn closes(&self) -> &OwnedRightStructure {
         &self.closes
     }
     #[inline]
-    fn extends(&self) -> &ValenciesStructure {
+    fn extends(&self) -> &PublicRightStructure {
         &EMPTY_VALENCIES
     }
     #[inline]
-    fn defines(&self) -> &SealsStructure {
-        &self.defines
+    fn owned_rights(&self) -> &OwnedRightStructure {
+        &self.owned_rights
     }
     #[inline]
-    fn valencies(&self) -> &ValenciesStructure {
-        &self.valencies
+    fn public_rights(&self) -> &PublicRightStructure {
+        &self.public_rights
     }
     #[inline]
     fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
@@ -207,8 +208,8 @@ mod strict_encoding {
         ) -> Result<usize, Error> {
             let mut len = 0usize;
             len += self.metadata.strict_encode(&mut e)?;
-            len += self.defines.strict_encode(&mut e)?;
-            len += self.valencies.strict_encode(&mut e)?;
+            len += self.owned_rights.strict_encode(&mut e)?;
+            len += self.public_rights.strict_encode(&mut e)?;
             len += self.abi.strict_encode(&mut e)?;
             // We keep this parameter for future script extended info (like ABI)
             len += Vec::<u8>::new().strict_encode(&mut e)?;
@@ -222,8 +223,8 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let me = Self {
                 metadata: MetadataStructure::strict_decode(&mut d)?,
-                defines: SealsStructure::strict_decode(&mut d)?,
-                valencies: ValenciesStructure::strict_decode(&mut d)?,
+                owned_rights: OwnedRightStructure::strict_decode(&mut d)?,
+                public_rights: PublicRightStructure::strict_decode(&mut d)?,
                 abi: GenesisAbi::strict_decode(&mut d)?,
             };
             // We keep this parameter for future script extended info (like ABI)
@@ -248,8 +249,8 @@ mod strict_encoding {
             let mut len = 0usize;
             len += self.metadata.strict_encode(&mut e)?;
             len += self.extends.strict_encode(&mut e)?;
-            len += self.defines.strict_encode(&mut e)?;
-            len += self.valencies.strict_encode(&mut e)?;
+            len += self.owned_rights.strict_encode(&mut e)?;
+            len += self.public_rights.strict_encode(&mut e)?;
             len += self.abi.strict_encode(&mut e)?;
             // We keep this parameter for future script extended info (like ABI)
             len += Vec::<u8>::new().strict_encode(&mut e)?;
@@ -263,9 +264,9 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let me = Self {
                 metadata: MetadataStructure::strict_decode(&mut d)?,
-                extends: ValenciesStructure::strict_decode(&mut d)?,
-                defines: SealsStructure::strict_decode(&mut d)?,
-                valencies: ValenciesStructure::strict_decode(&mut d)?,
+                extends: PublicRightStructure::strict_decode(&mut d)?,
+                owned_rights: OwnedRightStructure::strict_decode(&mut d)?,
+                public_rights: PublicRightStructure::strict_decode(&mut d)?,
                 abi: ExtensionAbi::strict_decode(&mut d)?,
             };
             // We keep this parameter for future script extended info (like ABI)
@@ -290,8 +291,8 @@ mod strict_encoding {
             let mut len = 0usize;
             len += self.metadata.strict_encode(&mut e)?;
             len += self.closes.strict_encode(&mut e)?;
-            len += self.defines.strict_encode(&mut e)?;
-            len += self.valencies.strict_encode(&mut e)?;
+            len += self.owned_rights.strict_encode(&mut e)?;
+            len += self.public_rights.strict_encode(&mut e)?;
             len += self.abi.strict_encode(&mut e)?;
             // We keep this parameter for future script extended info (like ABI)
             len += Vec::<u8>::new().strict_encode(&mut e)?;
@@ -305,9 +306,9 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let me = Self {
                 metadata: MetadataStructure::strict_decode(&mut d)?,
-                closes: SealsStructure::strict_decode(&mut d)?,
-                defines: SealsStructure::strict_decode(&mut d)?,
-                valencies: ValenciesStructure::strict_decode(&mut d)?,
+                closes: OwnedRightStructure::strict_decode(&mut d)?,
+                owned_rights: OwnedRightStructure::strict_decode(&mut d)?,
+                public_rights: PublicRightStructure::strict_decode(&mut d)?,
                 abi: TransitionAbi::strict_decode(&mut d)?,
             };
             // We keep this parameter for future script extended info (like ABI)
@@ -373,8 +374,8 @@ mod _verify {
                 };
             }
 
-            for (assignments_type, occ) in self.defines() {
-                match root.defines().get(assignments_type) {
+            for (assignments_type, occ) in self.owned_rights() {
+                match root.owned_rights().get(assignments_type) {
                     None => status.add_failure(
                         validation::Failure::SchemaRootNoDefinedAssignmentsMatch(
                             node_type,
@@ -402,8 +403,8 @@ mod _verify {
                 }
             }
 
-            for valencies_type in self.valencies() {
-                if !root.valencies().contains(valencies_type) {
+            for valencies_type in self.public_rights() {
+                if !root.public_rights().contains(valencies_type) {
                     status.add_failure(
                         validation::Failure::SchemaRootNoDefinedValenciesMatch(
                             node_type,
@@ -500,7 +501,7 @@ mod test {
         let genesis_schema =
             GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]).unwrap();
 
-        let mut valencies = ValenciesStructure::new();
+        let mut valencies = PublicRightStructure::new();
         valencies.insert(1usize);
         valencies.insert(2usize);
         valencies.insert(3usize);
@@ -517,13 +518,13 @@ mod test {
             genesis_schema.metadata().get(&2usize).unwrap(),
             &Occurences::NoneOrOnce
         );
-        assert_eq!(genesis_schema.closes(), &SealsStructure::new());
-        assert_eq!(genesis_schema.extends(), &ValenciesStructure::new());
+        assert_eq!(genesis_schema.closes(), &OwnedRightStructure::new());
+        assert_eq!(genesis_schema.extends(), &PublicRightStructure::new());
         assert_eq!(
-            genesis_schema.defines().get(&3usize).unwrap(),
+            genesis_schema.owned_rights().get(&3usize).unwrap(),
             &Occurences::OnceOrUpTo(Some(25u16))
         );
-        assert_eq!(genesis_schema.valencies(), &valencies);
+        assert_eq!(genesis_schema.public_rights(), &valencies);
         assert_eq!(genesis_schema.abi(), &genesis_abi);
     }
 
@@ -532,7 +533,7 @@ mod test {
         let transition_schema =
             TransitionSchema::strict_decode(&TRANSITION_SCHEMA[..]).unwrap();
 
-        let mut valencies = ValenciesStructure::new();
+        let mut valencies = PublicRightStructure::new();
         valencies.insert(1usize);
         valencies.insert(2usize);
         valencies.insert(3usize);
@@ -553,12 +554,12 @@ mod test {
             transition_schema.closes().get(&3usize).unwrap(),
             &Occurences::OnceOrUpTo(Some(25u16))
         );
-        assert_eq!(transition_schema.extends(), &ValenciesStructure::new());
+        assert_eq!(transition_schema.extends(), &PublicRightStructure::new());
         assert_eq!(
-            transition_schema.defines().get(&3usize).unwrap(),
+            transition_schema.owned_rights().get(&3usize).unwrap(),
             &Occurences::OnceOrUpTo(Some(25u16))
         );
-        assert_eq!(transition_schema.valencies(), &valencies);
+        assert_eq!(transition_schema.public_rights(), &valencies);
         assert_eq!(transition_schema.abi(), &transition_abi);
     }
 
@@ -567,7 +568,7 @@ mod test {
         let extension_schema =
             ExtensionSchema::strict_decode(&EXTENSION_SCHEMA[..]).unwrap();
 
-        let mut valencies = ValenciesStructure::new();
+        let mut valencies = PublicRightStructure::new();
         valencies.insert(1usize);
         valencies.insert(2usize);
         valencies.insert(3usize);
@@ -584,13 +585,13 @@ mod test {
             extension_schema.metadata().get(&2usize).unwrap(),
             &Occurences::NoneOrOnce
         );
-        assert_eq!(extension_schema.closes(), &SealsStructure::new());
+        assert_eq!(extension_schema.closes(), &OwnedRightStructure::new());
         assert_eq!(extension_schema.extends(), &valencies);
         assert_eq!(
-            extension_schema.defines().get(&3usize).unwrap(),
+            extension_schema.owned_rights().get(&3usize).unwrap(),
             &Occurences::OnceOrUpTo(Some(25u16))
         );
-        assert_eq!(extension_schema.valencies(), &valencies);
+        assert_eq!(extension_schema.public_rights(), &valencies);
         assert_eq!(extension_schema.abi(), &extension_abi);
     }
 
@@ -614,34 +615,34 @@ mod test {
             .insert(4 as FieldType, Occurences::NoneOrUpTo(Some(15u16)));
 
         // Create Two Seal Structures
-        let mut seal_structures = SealsStructure::new();
-        seal_structures.insert(1 as AssignmentsType, Occurences::Once);
-        seal_structures.insert(2 as AssignmentsType, Occurences::NoneOrOnce);
+        let mut seal_structures = OwnedRightStructure::new();
+        seal_structures.insert(1 as OwnedRightType, Occurences::Once);
+        seal_structures.insert(2 as OwnedRightType, Occurences::NoneOrOnce);
         seal_structures
-            .insert(3 as AssignmentsType, Occurences::OnceOrUpTo(Some(25u16)));
+            .insert(3 as OwnedRightType, Occurences::OnceOrUpTo(Some(25u16)));
         seal_structures
-            .insert(4 as AssignmentsType, Occurences::NoneOrUpTo(Some(12u16)));
+            .insert(4 as OwnedRightType, Occurences::NoneOrUpTo(Some(12u16)));
 
-        let mut seal_structures2 = SealsStructure::new();
-        seal_structures2.insert(1 as AssignmentsType, Occurences::Once);
-        seal_structures2.insert(2 as AssignmentsType, Occurences::NoneOrOnce);
+        let mut seal_structures2 = OwnedRightStructure::new();
+        seal_structures2.insert(1 as OwnedRightType, Occurences::Once);
+        seal_structures2.insert(2 as OwnedRightType, Occurences::NoneOrOnce);
         seal_structures2
-            .insert(3 as AssignmentsType, Occurences::OnceOrUpTo(None));
+            .insert(3 as OwnedRightType, Occurences::OnceOrUpTo(None));
         seal_structures2
-            .insert(4 as AssignmentsType, Occurences::NoneOrUpTo(Some(30u16)));
+            .insert(4 as OwnedRightType, Occurences::NoneOrUpTo(Some(30u16)));
 
         // Create Two Valency structure
-        let mut valency_structure = ValenciesStructure::new();
-        valency_structure.insert(1 as ValenciesType);
-        valency_structure.insert(2 as ValenciesType);
-        valency_structure.insert(3 as ValenciesType);
-        valency_structure.insert(4 as ValenciesType);
+        let mut valency_structure = PublicRightStructure::new();
+        valency_structure.insert(1 as PublicRightType);
+        valency_structure.insert(2 as PublicRightType);
+        valency_structure.insert(3 as PublicRightType);
+        valency_structure.insert(4 as PublicRightType);
 
-        let mut valency_structure2 = ValenciesStructure::new();
-        valency_structure2.insert(1 as ValenciesType);
-        valency_structure2.insert(5 as ValenciesType);
-        valency_structure2.insert(3 as ValenciesType);
-        valency_structure2.insert(4 as ValenciesType);
+        let mut valency_structure2 = PublicRightStructure::new();
+        valency_structure2.insert(1 as PublicRightType);
+        valency_structure2.insert(5 as PublicRightType);
+        valency_structure2.insert(3 as PublicRightType);
+        valency_structure2.insert(4 as PublicRightType);
 
         // Create the required ABIs
         let mut transition_abi = TransitionAbi::new();
@@ -666,32 +667,32 @@ mod test {
         let transtion_schema = TransitionSchema {
             metadata: metadata_structures.clone(),
             closes: seal_structures.clone(),
-            defines: seal_structures.clone(),
-            valencies: valency_structure.clone(),
+            owned_rights: seal_structures.clone(),
+            public_rights: valency_structure.clone(),
             abi: transition_abi.clone(),
         };
 
         let transtion_schema2 = TransitionSchema {
             metadata: metadata_structures2.clone(),
             closes: seal_structures2.clone(),
-            defines: seal_structures2.clone(),
-            valencies: valency_structure2.clone(),
+            owned_rights: seal_structures2.clone(),
+            public_rights: valency_structure2.clone(),
             abi: transition_abi2.clone(),
         };
 
         let extension_schema = ExtensionSchema {
             metadata: metadata_structures.clone(),
             extends: valency_structure.clone(),
-            defines: seal_structures.clone(),
-            valencies: valency_structure.clone(),
+            owned_rights: seal_structures.clone(),
+            public_rights: valency_structure.clone(),
             abi: extension_abi.clone(),
         };
 
         let extension_schema2 = ExtensionSchema {
             metadata: metadata_structures.clone(),
             extends: valency_structure2.clone(),
-            defines: seal_structures.clone(),
-            valencies: valency_structure2.clone(),
+            owned_rights: seal_structures.clone(),
+            public_rights: valency_structure2.clone(),
             abi: extension_abi.clone(),
         };
 

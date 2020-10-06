@@ -19,8 +19,8 @@ use bitcoin::{Transaction, Txid};
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
-    schema, seal, Anchor, AnchorId, AssignmentsVariant, Consignment,
-    ContractId, Node, NodeId, Schema, SchemaId,
+    schema, seal, Anchor, AnchorId, AssignedState, Consignment, ContractId,
+    Node, NodeId, Schema, SchemaId,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
@@ -137,15 +137,15 @@ pub enum Failure {
     /// Root schema for this schema has another root, which is prohibited
     SchemaRootHierarchy(SchemaId),
     SchemaRootNoFieldTypeMatch(schema::FieldType),
-    SchemaRootNoAssignmentsTypeMatch(schema::AssignmentsType),
+    SchemaRootNoAssignmentsTypeMatch(schema::OwnedRightType),
     SchemaRootNoTransitionTypeMatch(schema::TransitionType),
     SchemaRootNoExtensionTypeMatch(schema::ExtensionType),
-    SchemaRootNoValenciesTypeMatch(schema::ValenciesType),
+    SchemaRootNoValenciesTypeMatch(schema::PublicRightType),
     SchemaRootNoMetadataMatch(NodeType, schema::FieldType),
-    SchemaRootNoClosedAssignmentsMatch(NodeType, schema::AssignmentsType),
-    SchemaRootNoDefinedAssignmentsMatch(NodeType, schema::AssignmentsType),
-    SchemaRootNoExtendedValenciesMatch(NodeType, schema::ValenciesType),
-    SchemaRootNoDefinedValenciesMatch(NodeType, schema::ValenciesType),
+    SchemaRootNoClosedAssignmentsMatch(NodeType, schema::OwnedRightType),
+    SchemaRootNoDefinedAssignmentsMatch(NodeType, schema::OwnedRightType),
+    SchemaRootNoExtendedValenciesMatch(NodeType, schema::PublicRightType),
+    SchemaRootNoDefinedValenciesMatch(NodeType, schema::PublicRightType),
     SchemaRootNoAbiMatch {
         node_type: NodeType,
         action_id: u16,
@@ -154,15 +154,15 @@ pub enum Failure {
     SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
     SchemaUnknownTransitionType(NodeId, schema::TransitionType),
     SchemaUnknownFieldType(NodeId, schema::FieldType),
-    SchemaUnknownAssignmentType(NodeId, schema::AssignmentsType),
-    SchemaUnknownValenciesType(NodeId, schema::ValenciesType),
+    SchemaUnknownAssignmentType(NodeId, schema::OwnedRightType),
+    SchemaUnknownValenciesType(NodeId, schema::PublicRightType),
 
     SchemaDeniedScriptExtension(NodeId),
 
     SchemaMetaValueTooSmall(schema::FieldType),
     SchemaMetaValueTooLarge(schema::FieldType),
-    SchemaStateValueTooSmall(schema::AssignmentsType),
-    SchemaStateValueTooLarge(schema::AssignmentsType),
+    SchemaStateValueTooSmall(schema::OwnedRightType),
+    SchemaStateValueTooLarge(schema::OwnedRightType),
 
     SchemaMismatchedBits {
         field_or_state_type: usize,
@@ -178,17 +178,17 @@ pub enum Failure {
         found: usize,
     },
     SchemaMismatchedDataType(usize),
-    SchemaMismatchedStateType(schema::AssignmentsType),
+    SchemaMismatchedStateType(schema::OwnedRightType),
 
     SchemaMetaOccurencesError(NodeId, schema::FieldType, OccurrencesError),
     SchemaAncestorsOccurencesError(
         NodeId,
-        schema::AssignmentsType,
+        schema::OwnedRightType,
         OccurrencesError,
     ),
     SchemaSealsOccurencesError(
         NodeId,
-        schema::AssignmentsType,
+        schema::OwnedRightType,
         OccurrencesError,
     ),
 
@@ -198,24 +198,24 @@ pub enum Failure {
     TransitionAncestorWrongSealType {
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
+        assignment_type: schema::OwnedRightType,
     },
     TransitionAncestorWrongSeal {
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
+        assignment_type: schema::OwnedRightType,
         seal_index: u16,
     },
     TransitionAncestorConfidentialSeal {
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
+        assignment_type: schema::OwnedRightType,
         seal_index: u16,
     },
     TransitionAncestorIsNotWitnessInput {
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
+        assignment_type: schema::OwnedRightType,
         seal_index: u16,
         outpoint: bitcoin::OutPoint,
     },
@@ -224,7 +224,7 @@ pub enum Failure {
     ExtensionAncestorWrongValenciesType {
         node_id: NodeId,
         ancestor_id: NodeId,
-        valencies_type: schema::ValenciesType,
+        valencies_type: schema::PublicRightType,
     },
 
     WitnessTransactionMissed(Txid),
@@ -240,7 +240,7 @@ pub enum Warning {
     EndpointTransitionNotFound(NodeId),
     EndpointDuplication(NodeId, seal::Confidential),
     EndpointTransitionSealNotFound(NodeId, seal::Confidential),
-    AncestorsHeterogenousAssignments(NodeId, schema::AssignmentsType),
+    AncestorsHeterogenousAssignments(NodeId, schema::OwnedRightType),
     ExcessiveTransition(NodeId),
 }
 
@@ -280,13 +280,13 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
         let mut anchor_index = BTreeMap::<NodeId, &Anchor>::new();
-        for (anchor, transition) in &consignment.owned_data {
+        for (anchor, transition) in &consignment.state_transitions {
             let node_id = transition.node_id();
             node_index.insert(node_id, transition);
             anchor_index.insert(node_id, anchor);
         }
         node_index.insert(genesis_id, &consignment.genesis);
-        for extension in &consignment.extension_data {
+        for extension in &consignment.state_extensions {
             let node_id = extension.node_id();
             node_index.insert(node_id, extension);
         }
@@ -565,7 +565,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                         let assignment_type = *assignment_type;
 
                         let variant = if let Some(variant) =
-                            ancestor_node.assignments_by_type(assignment_type)
+                            ancestor_node.owned_rights_by_type(assignment_type)
                         {
                             variant
                         } else {
@@ -601,8 +601,8 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         witness_tx: &Transaction,
         node_id: NodeId,
         ancestor_id: NodeId,
-        assignment_type: schema::AssignmentsType,
-        variant: &'validator AssignmentsVariant,
+        assignment_type: schema::OwnedRightType,
+        variant: &'validator AssignedState,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
