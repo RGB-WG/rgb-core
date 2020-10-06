@@ -103,6 +103,7 @@ lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develo
 # No changes here, just need to import forked `bitcoin` library
 miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
 # We can remove these two after <https://github.com/LNP-BP/rust-amplify/pull/21>
+# TODO: (new) remove them before 1.0 release
 amplify = { git = "https://github.com/LNP-BP/rust-amplify", branch = "develop" }
 torut = { git = "https://github.com/LNP-BP/torut", branch = "develop" }
 

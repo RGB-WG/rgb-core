@@ -14,13 +14,12 @@
 use amplify::AsAny;
 use core::fmt::Debug;
 use core::option::NoneError;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use super::{
     super::schema, amount, data, seal, Amount, AutoConceal, NodeId,
     SealDefinition, SECP256K1_ZKP,
 };
-use crate::bp::blind::OutpointHash;
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
@@ -28,6 +27,7 @@ use crate::strict_encoding::{
     Error as EncodingError, StrictDecode, StrictEncode,
 };
 
+use crate::bp::blind::OutpointReveal;
 use bitcoin_hashes::core::cmp::Ordering;
 
 pub type Assignments = BTreeMap<schema::AssignmentsType, AssignmentsVariant>;
@@ -47,7 +47,7 @@ impl AssignmentsVariant {
     pub fn zero_balanced(
         inputs: Vec<amount::Revealed>,
         allocations_ours: Vec<(SealDefinition, Amount)>,
-        allocations_theirs: Vec<(OutpointHash, Amount)>,
+        allocations_theirs: Vec<(seal::Confidential, Amount)>,
     ) -> Self {
         // Generate random blinding factors
         let mut rng = bitcoin::secp256k1::rand::thread_rng();
@@ -296,6 +296,44 @@ impl AssignmentsVariant {
             AssignmentsVariant::CustomData(set) => set.len(),
         }
     }
+
+    /// Reveals previously known seal information (replacing blind UTXOs with
+    /// unblind ones). Function is used when a peer receives consignment
+    /// containing concealed seals for the outputs owned by the peer
+    pub fn reveal_seals<'a>(
+        &mut self,
+        known_seals: impl Iterator<Item = &'a OutpointReveal> + Clone,
+    ) -> usize {
+        let mut counter = 0;
+        match self {
+            AssignmentsVariant::Declarative(_) => {}
+            AssignmentsVariant::DiscreteFiniteField(set) => {
+                *self = AssignmentsVariant::DiscreteFiniteField(
+                    set.iter()
+                        .map(|assignment| {
+                            let mut assignment = assignment.clone();
+                            counter +=
+                                assignment.reveal_seals(known_seals.clone());
+                            assignment
+                        })
+                        .collect(),
+                );
+            }
+            AssignmentsVariant::CustomData(set) => {
+                *self = AssignmentsVariant::CustomData(
+                    set.iter()
+                        .map(|assignment| {
+                            let mut assignment = assignment.clone();
+                            counter +=
+                                assignment.reveal_seals(known_seals.clone());
+                            assignment
+                        })
+                        .collect(),
+                );
+            }
+        }
+        counter
+    }
 }
 
 impl AutoConceal for AssignmentsVariant {
@@ -524,6 +562,53 @@ where
             Assignment::Confidential { .. }
             | Assignment::ConfidentialAmount { .. } => None,
         }
+    }
+
+    /// Reveals previously known seal information (replacing blind UTXOs with
+    /// unblind ones). Function is used when a peer receives consignment
+    /// containing concealed seals for the outputs owned by the peer
+    pub fn reveal_seals<'a>(
+        &mut self,
+        known_seals: impl Iterator<Item = &'a OutpointReveal>,
+    ) -> usize {
+        let known_seals: HashMap<seal::Confidential, OutpointReveal> =
+            known_seals
+                .map(|rev| (rev.conceal(), rev.clone()))
+                .collect();
+
+        let mut counter = 0;
+        match self {
+            Assignment::Confidential {
+                seal_definition,
+                assigned_state,
+            } => {
+                if let Some(reveal) = known_seals.get(seal_definition) {
+                    *self = Assignment::ConfidentialAmount {
+                        seal_definition: seal::Revealed::TxOutpoint(
+                            reveal.clone(),
+                        ),
+                        assigned_state: assigned_state.clone(),
+                    };
+                    counter += 1;
+                };
+            }
+            Assignment::ConfidentialSeal {
+                seal_definition,
+                assigned_state,
+            } => {
+                if let Some(reveal) = known_seals.get(seal_definition) {
+                    *self = Assignment::Revealed {
+                        seal_definition: seal::Revealed::TxOutpoint(
+                            reveal.clone(),
+                        ),
+                        assigned_state: assigned_state.clone(),
+                    };
+                    counter += 1;
+                };
+            }
+            _ => {}
+        }
+        counter
     }
 }
 
@@ -1098,7 +1183,7 @@ mod test {
             .zip(output_amounts[partition..].iter());
 
         // Create their allocations
-        let theirs: Vec<(OutpointHash, Amount)> = zip_data2
+        let theirs: Vec<(seal::Confidential, Amount)> = zip_data2
             .map(|(txid, amount)| {
                 (
                     Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
@@ -1699,7 +1784,7 @@ mod test {
         // Conceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
         // Assignments
-        hash_type.conceal_except(&Vec::<OutpointHash>::new());
+        hash_type.conceal_except(&Vec::<seal::Confidential>::new());
 
         // Precomputed values of revealed seals in 2 ConfidentialState type
         // Assignments

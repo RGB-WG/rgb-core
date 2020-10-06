@@ -16,6 +16,7 @@ use std::collections::BTreeSet;
 use bitcoin::Txid;
 
 use crate::bp;
+use crate::bp::blind::OutpointReveal;
 use crate::rgb::{
     validation, Anchor, Extension, Genesis, Node, NodeId, Schema, Transition,
     Validator,
@@ -76,6 +77,33 @@ impl Consignment {
         resolver: R,
     ) -> validation::Status {
         Validator::validate(schema, self, resolver)
+    }
+
+    /// Reveals previously known seal information (replacing blind UTXOs with
+    /// unblind ones). Function is used when a peer receives consignment
+    /// containing concealed seals for the outputs owned by the peer
+    pub fn reveal_seals<'a>(
+        &mut self,
+        known_seals: impl Iterator<Item = &'a OutpointReveal> + Clone,
+    ) -> usize {
+        let counter = 0;
+        for (_, transition) in &mut self.owned_data {
+            transition.assignments_mut().into_iter().fold(
+                counter,
+                |counter, (_, assignment)| {
+                    counter + assignment.reveal_seals(known_seals.clone())
+                },
+            );
+        }
+        for extension in &mut self.extension_data {
+            extension.assignments_mut().into_iter().fold(
+                counter,
+                |counter, (_, assignment)| {
+                    counter + assignment.reveal_seals(known_seals.clone())
+                },
+            );
+        }
+        counter
     }
 }
 
