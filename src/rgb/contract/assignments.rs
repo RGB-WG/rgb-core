@@ -1032,21 +1032,11 @@ mod test {
 
     // Generic garbage value testing
     #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
     fn test_garbage_dec() {
-        test_garbage!((DECLARATIVE_VARIANT, AssignmentsVariant));
-    }
-
-    #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_garbage_ped() {
-        test_garbage!((PEDERSAN_VARIANT, AssignmentsVariant));
-    }
-
-    #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_garbage_hash() {
-        test_garbage!((HASH_VARIANT, AssignmentsVariant));
+        let err = "StateType";
+        test_garbage_exhaustive!(4..255; (DECLARATIVE_VARIANT, AssignmentsVariant, err), 
+            (HASH_VARIANT, AssignmentsVariant, err), 
+            (DECLARATIVE_VARIANT, AssignmentsVariant, err));
     }
 
     #[test]
@@ -1802,7 +1792,9 @@ mod test {
     #[test]
     #[should_panic(expected = "UnexpectedEof")]
     fn test_garbage_ancestor() {
-        test_garbage!((ANCESTOR, Ancestors));
+        let mut data = ANCESTOR.clone();
+        data[0] = 0x36 as u8;
+        Ancestors::strict_decode(&data[..]).unwrap();
     }
 
     // This doesn't use the merkelize() function

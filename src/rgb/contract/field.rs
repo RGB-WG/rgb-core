@@ -382,8 +382,10 @@ mod test {
 
     #[test]
     #[should_panic(expected = "UnexpectedEof")]
-    fn test_garbage_metadata() {
-        test_garbage!((METADATA, Metadata));
+    fn test_eof_metadata() {
+        let mut data = METADATA.clone();
+        data[0] = 0x36 as u8;
+        Metadata::strict_decode(&data[..]).unwrap();
     }
 
     #[test]

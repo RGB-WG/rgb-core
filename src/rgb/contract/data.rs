@@ -666,30 +666,30 @@ mod test {
 
     // Garbage data encode/decode testing
     #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
     fn test_garbage() {
-        test_garbage!(
-            (U_8, Revealed),
-            (U_16, Revealed),
-            (U_32, Revealed),
-            (U_64, Revealed),
-            (I_8, Revealed),
-            (I_16, Revealed),
-            (I_32, Revealed),
-            (I_64, Revealed),
-            (F_32, Revealed),
-            (F_64, Revealed),
-            (BYTES, Revealed),
-            (STRING, Revealed),
-            (BITCOIN160, Revealed),
-            (BITCOIN256, Revealed),
-            (SHA256, Revealed),
-            (SHA512, Revealed),
-            (PK_BYTES_02, Revealed),
-            (SIG_BYTES, Revealed),
-            (TXOUTPOINT_BYTES, Revealed),
-            (TX_BYTES, Revealed),
-            (PSBT_BYTES, Revealed)
+        let err = "EncodingTag";
+        test_garbage_exhaustive!(150..255;
+            (U_8, Revealed, err),
+            (U_16, Revealed, err),
+            (U_32, Revealed, err),
+            (U_64, Revealed, err),
+            (I_8, Revealed, err),
+            (I_16, Revealed, err),
+            (I_32, Revealed, err),
+            (I_64, Revealed, err),
+            (F_32, Revealed, err),
+            (F_64, Revealed, err),
+            (BYTES, Revealed, err),
+            (STRING, Revealed, err),
+            (BITCOIN160, Revealed, err),
+            (BITCOIN256, Revealed, err),
+            (SHA256, Revealed, err),
+            (SHA512, Revealed, err),
+            (PK_BYTES_02, Revealed, err),
+            (SIG_BYTES, Revealed, err),
+            (TXOUTPOINT_BYTES, Revealed, err),
+            (TX_BYTES, Revealed, err),
+            (PSBT_BYTES, Revealed, err)
         );
     }
 

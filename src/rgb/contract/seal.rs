@@ -120,7 +120,7 @@ mod strict_encoding {
                     blinding: u64::strict_decode(&mut d)?,
                 },
                 invalid => Err(Error::EnumValueNotKnown(
-                    "seal::Confidential".to_string(),
+                    "seal::Revealed".to_string(),
                     invalid,
                 ))?,
             })
@@ -186,15 +186,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_wrong_encoding1() {
-        test_garbage!((REVEALED_TXOUTPOINT, Revealed));
-    }
-
-    #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_wrong_encoding2() {
-        test_garbage!((REVEALED_WITNESSVOUT, Revealed));
+    fn test_wrong_encoding() {
+        let err = "seal::Revealed";
+        test_garbage_exhaustive!(2..255; (REVEALED_TXOUTPOINT, Revealed, err), 
+            (REVEALED_WITNESSVOUT, Revealed, err));
     }
 
     #[test]
