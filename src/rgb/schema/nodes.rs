@@ -205,12 +205,14 @@ mod strict_encoding {
             &self,
             mut e: E,
         ) -> Result<usize, Error> {
-            self.metadata.strict_encode(&mut e)?;
-            self.defines.strict_encode(&mut e)?;
-            self.valencies.strict_encode(&mut e)?;
-            self.abi.strict_encode(&mut e)?;
+            let mut len = 0usize;
+            len += self.metadata.strict_encode(&mut e)?;
+            len += self.defines.strict_encode(&mut e)?;
+            len += self.valencies.strict_encode(&mut e)?;
+            len += self.abi.strict_encode(&mut e)?;
             // We keep this parameter for future script extended info (like ABI)
-            Vec::<u8>::new().strict_encode(&mut e)
+            len += Vec::<u8>::new().strict_encode(&mut e)?;
+            Ok(len)
         }
     }
 
@@ -243,13 +245,15 @@ mod strict_encoding {
             &self,
             mut e: E,
         ) -> Result<usize, Error> {
-            self.metadata.strict_encode(&mut e)?;
-            self.extends.strict_encode(&mut e)?;
-            self.defines.strict_encode(&mut e)?;
-            self.valencies.strict_encode(&mut e)?;
-            self.abi.strict_encode(&mut e)?;
+            let mut len = 0usize;
+            len += self.metadata.strict_encode(&mut e)?;
+            len += self.extends.strict_encode(&mut e)?;
+            len += self.defines.strict_encode(&mut e)?;
+            len += self.valencies.strict_encode(&mut e)?;
+            len += self.abi.strict_encode(&mut e)?;
             // We keep this parameter for future script extended info (like ABI)
-            Vec::<u8>::new().strict_encode(&mut e)
+            len += Vec::<u8>::new().strict_encode(&mut e)?;
+            Ok(len)
         }
     }
 
@@ -283,13 +287,15 @@ mod strict_encoding {
             &self,
             mut e: E,
         ) -> Result<usize, Error> {
-            self.metadata.strict_encode(&mut e)?;
-            self.closes.strict_encode(&mut e)?;
-            self.defines.strict_encode(&mut e)?;
-            self.valencies.strict_encode(&mut e)?;
-            self.abi.strict_encode(&mut e)?;
+            let mut len = 0usize;
+            len += self.metadata.strict_encode(&mut e)?;
+            len += self.closes.strict_encode(&mut e)?;
+            len += self.defines.strict_encode(&mut e)?;
+            len += self.valencies.strict_encode(&mut e)?;
+            len += self.abi.strict_encode(&mut e)?;
             // We keep this parameter for future script extended info (like ABI)
-            Vec::<u8>::new().strict_encode(&mut e)
+            len += Vec::<u8>::new().strict_encode(&mut e)?;
+            Ok(len)
         }
     }
 
@@ -431,5 +437,343 @@ mod _verify {
 
             status
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::rgb::schema::script::StandardProcedure;
+    use crate::rgb::schema::SchemaVerify;
+    use crate::rgb::validation::Failure;
+    use crate::strict_encoding::{test::*, StrictDecode};
+
+    static GENESIS_SCHEMA: [u8; 109] = [
+        0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0xd,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0xfe, 0x11, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x3, 0x0, 0xff, 0x19, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0,
+        0xfe, 0xc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x2,
+        0x0, 0x3, 0x0, 0x4, 0x0, 0x1, 0x0, 0x0, 0xff, 0x1, 0x0, 0x0,
+    ];
+
+    static TRANSITION_SCHEMA: [u8; 155] = [
+        0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0xd,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0xfe, 0x11, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x3, 0x0, 0xff, 0x19, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0,
+        0xfe, 0xc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x1,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0x19, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x4, 0x0, 0xfe, 0xc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4,
+        0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x4, 0x0, 0x1, 0x0, 0x0, 0xff, 0x1,
+        0x0, 0x0,
+    ];
+
+    static EXTENSION_SCHEMA: [u8; 119] = [
+        0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0xd,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0xfe, 0x11, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x4, 0x0,
+        0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0x19,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0xfe, 0xc, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x4, 0x0,
+        0x1, 0x0, 0x0, 0xff, 0x1, 0x0, 0x0,
+    ];
+
+    #[test]
+    fn test_nodeschema_encoding() {
+        test_encode!(
+            (GENESIS_SCHEMA, GenesisSchema),
+            (TRANSITION_SCHEMA, TransitionSchema),
+            (EXTENSION_SCHEMA, ExtensionSchema)
+        );
+    }
+
+    #[test]
+    fn test_node_for_genesis() {
+        let genesis_schema =
+            GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]).unwrap();
+
+        let mut valencies = ValenciesStructure::new();
+        valencies.insert(1usize);
+        valencies.insert(2usize);
+        valencies.insert(3usize);
+        valencies.insert(4usize);
+
+        let mut genesis_abi = GenesisAbi::new();
+        genesis_abi.insert(
+            GenesisAction::NoOp,
+            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+        );
+
+        assert_eq!(genesis_schema.node_type(), NodeType::Genesis);
+        assert_eq!(
+            genesis_schema.metadata().get(&2usize).unwrap(),
+            &Occurences::NoneOrOnce
+        );
+        assert_eq!(genesis_schema.closes(), &SealsStructure::new());
+        assert_eq!(genesis_schema.extends(), &ValenciesStructure::new());
+        assert_eq!(
+            genesis_schema.defines().get(&3usize).unwrap(),
+            &Occurences::OnceOrUpTo(Some(25u16))
+        );
+        assert_eq!(genesis_schema.valencies(), &valencies);
+        assert_eq!(genesis_schema.abi(), &genesis_abi);
+    }
+
+    #[test]
+    fn test_node_for_transition() {
+        let transition_schema =
+            TransitionSchema::strict_decode(&TRANSITION_SCHEMA[..]).unwrap();
+
+        let mut valencies = ValenciesStructure::new();
+        valencies.insert(1usize);
+        valencies.insert(2usize);
+        valencies.insert(3usize);
+        valencies.insert(4usize);
+
+        let mut transition_abi = TransitionAbi::new();
+        transition_abi.insert(
+            TransitionAction::GenerateBlank,
+            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+        );
+
+        assert_eq!(transition_schema.node_type(), NodeType::StateTransition);
+        assert_eq!(
+            transition_schema.metadata().get(&2usize).unwrap(),
+            &Occurences::NoneOrOnce
+        );
+        assert_eq!(
+            transition_schema.closes().get(&3usize).unwrap(),
+            &Occurences::OnceOrUpTo(Some(25u16))
+        );
+        assert_eq!(transition_schema.extends(), &ValenciesStructure::new());
+        assert_eq!(
+            transition_schema.defines().get(&3usize).unwrap(),
+            &Occurences::OnceOrUpTo(Some(25u16))
+        );
+        assert_eq!(transition_schema.valencies(), &valencies);
+        assert_eq!(transition_schema.abi(), &transition_abi);
+    }
+
+    #[test]
+    fn test_node_for_extension() {
+        let extension_schema =
+            ExtensionSchema::strict_decode(&EXTENSION_SCHEMA[..]).unwrap();
+
+        let mut valencies = ValenciesStructure::new();
+        valencies.insert(1usize);
+        valencies.insert(2usize);
+        valencies.insert(3usize);
+        valencies.insert(4usize);
+
+        let mut extension_abi = ExtensionAbi::new();
+        extension_abi.insert(
+            ExtensionAction::NoOp,
+            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+        );
+
+        assert_eq!(extension_schema.node_type(), NodeType::Extension);
+        assert_eq!(
+            extension_schema.metadata().get(&2usize).unwrap(),
+            &Occurences::NoneOrOnce
+        );
+        assert_eq!(extension_schema.closes(), &SealsStructure::new());
+        assert_eq!(extension_schema.extends(), &valencies);
+        assert_eq!(
+            extension_schema.defines().get(&3usize).unwrap(),
+            &Occurences::OnceOrUpTo(Some(25u16))
+        );
+        assert_eq!(extension_schema.valencies(), &valencies);
+        assert_eq!(extension_schema.abi(), &extension_abi);
+    }
+
+    #[test]
+    fn test_validation() {
+        // Create Two Metadata Structures
+        let mut metadata_structures = MetadataStructure::new();
+        metadata_structures.insert(1 as FieldType, Occurences::Once);
+        metadata_structures.insert(2 as FieldType, Occurences::NoneOrOnce);
+        metadata_structures
+            .insert(3 as FieldType, Occurences::OnceOrUpTo(Some(13u16)));
+        metadata_structures
+            .insert(4 as FieldType, Occurences::NoneOrUpTo(Some(17u16)));
+
+        let mut metadata_structures2 = MetadataStructure::new();
+        metadata_structures2.insert(1 as FieldType, Occurences::Once);
+        metadata_structures2.insert(2 as FieldType, Occurences::NoneOrOnce);
+        metadata_structures2
+            .insert(3 as FieldType, Occurences::OnceOrUpTo(None));
+        metadata_structures2
+            .insert(4 as FieldType, Occurences::NoneOrUpTo(Some(15u16)));
+
+        // Create Two Seal Structures
+        let mut seal_structures = SealsStructure::new();
+        seal_structures.insert(1 as AssignmentsType, Occurences::Once);
+        seal_structures.insert(2 as AssignmentsType, Occurences::NoneOrOnce);
+        seal_structures
+            .insert(3 as AssignmentsType, Occurences::OnceOrUpTo(Some(25u16)));
+        seal_structures
+            .insert(4 as AssignmentsType, Occurences::NoneOrUpTo(Some(12u16)));
+
+        let mut seal_structures2 = SealsStructure::new();
+        seal_structures2.insert(1 as AssignmentsType, Occurences::Once);
+        seal_structures2.insert(2 as AssignmentsType, Occurences::NoneOrOnce);
+        seal_structures2
+            .insert(3 as AssignmentsType, Occurences::OnceOrUpTo(None));
+        seal_structures2
+            .insert(4 as AssignmentsType, Occurences::NoneOrUpTo(Some(30u16)));
+
+        // Create Two Valency structure
+        let mut valency_structure = ValenciesStructure::new();
+        valency_structure.insert(1 as ValenciesType);
+        valency_structure.insert(2 as ValenciesType);
+        valency_structure.insert(3 as ValenciesType);
+        valency_structure.insert(4 as ValenciesType);
+
+        let mut valency_structure2 = ValenciesStructure::new();
+        valency_structure2.insert(1 as ValenciesType);
+        valency_structure2.insert(5 as ValenciesType);
+        valency_structure2.insert(3 as ValenciesType);
+        valency_structure2.insert(4 as ValenciesType);
+
+        // Create the required ABIs
+        let mut transition_abi = TransitionAbi::new();
+        transition_abi.insert(
+            TransitionAction::GenerateBlank,
+            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+        );
+
+        let mut transition_abi2 = TransitionAbi::new();
+        transition_abi2.insert(
+            TransitionAction::GenerateBlank,
+            Procedure::Standard(StandardProcedure::Prunning),
+        );
+
+        let mut extension_abi = ExtensionAbi::new();
+        extension_abi.insert(
+            ExtensionAction::NoOp,
+            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+        );
+
+        // Create Four Unequal Transition and Extension Structures
+        let transtion_schema = TransitionSchema {
+            metadata: metadata_structures.clone(),
+            closes: seal_structures.clone(),
+            defines: seal_structures.clone(),
+            valencies: valency_structure.clone(),
+            abi: transition_abi.clone(),
+        };
+
+        let transtion_schema2 = TransitionSchema {
+            metadata: metadata_structures2.clone(),
+            closes: seal_structures2.clone(),
+            defines: seal_structures2.clone(),
+            valencies: valency_structure2.clone(),
+            abi: transition_abi2.clone(),
+        };
+
+        let extension_schema = ExtensionSchema {
+            metadata: metadata_structures.clone(),
+            extends: valency_structure.clone(),
+            defines: seal_structures.clone(),
+            valencies: valency_structure.clone(),
+            abi: extension_abi.clone(),
+        };
+
+        let extension_schema2 = ExtensionSchema {
+            metadata: metadata_structures.clone(),
+            extends: valency_structure2.clone(),
+            defines: seal_structures.clone(),
+            valencies: valency_structure2.clone(),
+            abi: extension_abi.clone(),
+        };
+
+        // Create the expected failure results
+        let transition_failures = vec![
+            Failure::SchemaRootNoMetadataMatch(NodeType::StateTransition, 3),
+            Failure::SchemaRootNoMetadataMatch(NodeType::StateTransition, 4),
+            Failure::SchemaRootNoClosedAssignmentsMatch(
+                NodeType::StateTransition,
+                3,
+            ),
+            Failure::SchemaRootNoClosedAssignmentsMatch(
+                NodeType::StateTransition,
+                4,
+            ),
+            Failure::SchemaRootNoDefinedAssignmentsMatch(
+                NodeType::StateTransition,
+                3,
+            ),
+            Failure::SchemaRootNoDefinedAssignmentsMatch(
+                NodeType::StateTransition,
+                4,
+            ),
+            Failure::SchemaRootNoDefinedValenciesMatch(
+                NodeType::StateTransition,
+                2,
+            ),
+            Failure::SchemaRootNoAbiMatch {
+                node_type: NodeType::StateTransition,
+                action_id: 0,
+            },
+        ];
+
+        let extension_failures = vec![
+            Failure::SchemaRootNoExtendedValenciesMatch(NodeType::Extension, 2),
+            Failure::SchemaRootNoDefinedValenciesMatch(NodeType::Extension, 2),
+        ];
+
+        // Assert failures matches with expectation
+        assert_eq!(
+            transtion_schema.schema_verify(&transtion_schema2).failures,
+            transition_failures
+        );
+        assert_eq!(
+            extension_schema.schema_verify(&extension_schema2).failures,
+            extension_failures
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "UnsupportedDataStructure")]
+    fn test_error_genesis() {
+        let mut genesis_byte = GENESIS_SCHEMA.clone().to_vec();
+        genesis_byte[107] = 2u8;
+        genesis_byte[108] = 0u8;
+        genesis_byte.push(1u8);
+        genesis_byte.push(2u8);
+
+        GenesisSchema::strict_decode(&genesis_byte[..]).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "UnsupportedDataStructure")]
+    fn test_error_transition() {
+        let mut transition_bytes = TRANSITION_SCHEMA.clone().to_vec();
+        transition_bytes[153] = 2u8;
+        transition_bytes[154] = 0u8;
+        transition_bytes.push(1u8);
+        transition_bytes.push(2u8);
+
+        TransitionSchema::strict_decode(&transition_bytes[..]).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "UnsupportedDataStructure")]
+    fn test_error_extension() {
+        let mut extension_bytes = EXTENSION_SCHEMA.clone().to_vec();
+        extension_bytes[117] = 2u8;
+        extension_bytes[118] = 0u8;
+        extension_bytes.push(1u8);
+        extension_bytes.push(2u8);
+
+        ExtensionSchema::strict_decode(&extension_bytes[..]).unwrap();
     }
 }
