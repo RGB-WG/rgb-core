@@ -116,6 +116,7 @@ impl Bech32 {
 
     /// Encoder for v0 of raw data encoding algorithm. Uses plain strict encoded
     /// data
+    #[allow(dead_code)]
     pub(self) fn plain_encode(
         obj: &impl StrictEncode<Error = strict_encoding::Error>,
     ) -> Result<Vec<u8>, Error> {
@@ -398,7 +399,9 @@ impl Display for Bech32 {
             Self::Transition(obj) => {
                 (Self::HRP_TRANSITION, Bech32::deflate_encode(obj)?)
             }
-            Self::Anchor(obj) => (Self::HRP_ANCHOR, Bech32::plain_encode(obj)?),
+            Self::Anchor(obj) => {
+                (Self::HRP_ANCHOR, Bech32::deflate_encode(obj)?)
+            }
             Self::Disclosure(obj) => {
                 (Self::HRP_DISCLOSURE, Bech32::deflate_encode(obj)?)
             }
@@ -522,6 +525,12 @@ impl Display for Transition {
     }
 }
 
+impl Display for Extension {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
+        Bech32::Extension(self.clone()).fmt(f)
+    }
+}
+
 impl Display for Anchor {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         Bech32::Anchor(self.clone()).fmt(f)
@@ -537,13 +546,110 @@ impl Display for Disclosure {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::bp::blind::OutpointReveal;
+    use crate::client_side_validation::Conceal;
 
     #[test]
-    fn test_bech32() {
+    fn test_bech32_outpoint() {
+        let obj = seal::Revealed::TxOutpoint(OutpointReveal {
+            blinding: 11645300769465024575,
+            txid: "42332750017e9547abf0e975ec92832d8cfe3fbbaa78cec434d22175d5b6e6d9"
+                .parse().unwrap(),
+            vout: 3,
+        }).conceal();
+        let bech32 = obj.to_bech32_string();
+        assert_eq!(
+            bech32,
+            "utxob1u4femdvdeztkn5fxvd7zyxe5jzjwh5xgry8lqm2wvyxd2z9pc7vq4k8z0f"
+        );
+        let decoded = seal::Confidential::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
+    }
+
+    #[test]
+    fn test_bech32_schema_id() {
+        let obj = Schema::default().schema_id();
+        let bech32 = obj.to_bech32_string();
+        assert_eq!(
+            bech32,
+            "sch1m2xu4jnkhj6683kas3fj67rgp7mrudl6ydrqrg7550cda242e6wsk7a6yd"
+        );
+        let decoded = SchemaId::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
+    }
+
+    #[test]
+    fn test_bech32_contract_id() {
+        let obj = Genesis::default().contract_id();
+        let bech32 = obj.to_bech32_string();
+        assert_eq!(
+            bech32,
+            "rgb1eddz5h6cymzmnq4xv4r7w5an2gtdzmlhjcfpzkq3dc7wtn9varsskdzvun"
+        );
+        let decoded = ContractId::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
+    }
+
+    #[test]
+    fn test_bech32_schema() {
+        let obj = Schema::default();
+        let bech32 = format!("{}", obj);
+        assert_eq!(bech32, "schema1q93jqycqqqu3u9qr");
+        let decoded = Schema::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
+    }
+
+    #[test]
+    fn test_bech32_genesis() {
+        let obj = Genesis::default();
+        let bech32 = format!("{}", obj);
+        assert_eq!(
+            bech32,
+            "genesis1q93jqqqcr8nrzlyn0dnem09cv9ylnqhy74rfka5l4jvlluurhj8f86ktug\
+            vc68zqx4kqe3vea9u6jf2uenn36crvy6rf9f9a20m5cegynvqsgjjvzqp4jxy2n4pfe\
+            7gcstqu59yuxf9e9uen70s0eckyjt7w9rzvs6r47k2p4gy4jrf3rvxqq4ltfvr"
+        );
+        let decoded = Genesis::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
+    }
+
+    #[test]
+    fn test_bech32_transition() {
         let obj = Transition::default();
         let bech32 = format!("{}", obj);
         assert_eq!(bech32, "transition1q935qqsqpr0f9t");
         let decoded = Transition::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
+    }
+
+    #[test]
+    fn test_bech32_extension() {
+        let obj = Extension::default();
+        let bech32 = format!("{}", obj);
+        assert_eq!(bech32, "statex1q93jqqgqqq2mqg2z");
+        let decoded = Extension::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
+    }
+
+    #[test]
+    fn test_bech32_anchor() {
+        let obj = Anchor::default();
+        let bech32 = format!("{}", obj);
+        assert_eq!(
+            bech32,
+            "anchor1q93jqryc9tm6t40ahjehkn0gs2j2ne76h8vejehlhxkhknhrvmj203ngky0\
+            7yvccqq8jzvcv"
+        );
+        let decoded = Anchor::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
+    }
+
+    #[test]
+    fn test_bech32_disclosure() {
+        let obj = Disclosure::default();
+        let bech32 = format!("{}", obj);
+        assert_eq!(bech32, "disclosure1qypsq90a83g");
+        let decoded = Disclosure::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
     }
 }

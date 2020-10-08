@@ -16,6 +16,6 @@
 
 // TODO: Implement disclosures
 
-#[derive(Clone, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode)]
 #[strict_crate(crate)]
 pub struct Disclosure {}

@@ -64,6 +64,7 @@ impl MultimsgCommitmentItem {
     Ord,
     Debug,
     Display,
+    Default,
     StrictEncode,
     StrictDecode,
 )]

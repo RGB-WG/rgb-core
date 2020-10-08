@@ -78,6 +78,12 @@ pub enum ScriptEncodeData {
     Taproot(sha256::Hash),
 }
 
+impl Default for ScriptEncodeData {
+    fn default() -> Self {
+        Self::SinglePubkey
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display(Debug)]
 pub struct SpkContainer {

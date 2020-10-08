@@ -47,7 +47,7 @@ tagged_hash!(
     doc = "Commitment-based schema identifier used for committing to the schema type"
 );
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub struct Schema {
     pub rgb_features: features::FlagVec,
     pub root_id: SchemaId,

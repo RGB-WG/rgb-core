@@ -67,7 +67,8 @@ tagged_hash!(
     doc = "Unique anchor identifier equivalent to the anchor commitment hash"
 );
 
-#[derive(Clone, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[cfg_attr(test, derive(Default))]
 #[strict_crate(crate)]
 pub struct Anchor {
     pub txid: Txid,
