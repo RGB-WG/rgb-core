@@ -26,6 +26,12 @@ pub enum Error {
     /// Unable to verify commitment due to an incorrect proof data structure
     InvalidProofStructure,
 
+    /// LNPBP-2 standard requires OP_RETURN-based commitments to be produced
+    /// only if serialized version of a tweaked pubkey starts with `02` byte.
+    /// This error indicates that the provided public key does not satisfy this
+    /// condition
+    InvalidOpReturnKey,
+
     /// Can't deserealized public key from bitcoin script push op code
     InvalidKeyData,
 
