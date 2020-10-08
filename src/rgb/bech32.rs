@@ -11,9 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use ::bech32::{self, FromBase32, ToBase32};
-use ::core::fmt::{Display, Formatter};
-use ::core::str::FromStr;
+use bech32::{self, FromBase32, ToBase32};
+use core::fmt::{Display, Formatter};
+use core::str::FromStr;
+use std::convert::{TryFrom, TryInto};
 
 use crate::rgb::{
     seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
@@ -21,112 +22,255 @@ use crate::rgb::{
 };
 use crate::strict_encoding::{self, strict_decode, strict_encode};
 
-#[derive(Clone, Debug)]
+/// Bech32 representation of generic RGB data, that can be generated from
+/// some string basing on Bech32 HRP value.
+#[derive(Clone, Debug, From)]
 pub enum Bech32 {
-    Outpoint(seal::Confidential),
-    ContractId(ContractId),
-    Schema(Schema),
+    /// Blinded UTXO for assigning RGB state to.
+    ///
+    /// HRP: `utxob`
+    #[from]
+    // TODO: (new) Remove it once invoice implementation will be completed
+    BlindedUtxo(seal::Confidential),
+
+    /// RGB Schema ID (hash of the schema data).
+    ///
+    /// HRP: `sch`
+    #[from]
     SchemaId(SchemaId),
+
+    /// RGB Schema raw data (hash of the genesis).
+    ///
+    /// HRP: `schema`
+    #[from]
+    Schema(Schema),
+
+    /// RGB Contract ID (hash of the genesis).
+    ///
+    /// HRP: `rgb`
+    #[from]
+    ContractId(ContractId),
+
+    /// RGB Contract genesis raw data
+    ///
+    /// HRP: `genesis`
+    #[from]
     Genesis(Genesis),
-    Extension(Extension),
+
+    /// Raw data of state transition under some RGB contract
+    ///
+    /// HRP: `transition`
+    #[from]
     Transition(Transition),
+
+    /// Raw data of state extension under some RGB contract
+    ///
+    /// HRP: `statex`
+    #[from]
+    Extension(Extension),
+
+    /// Anchor data for some dterministic bitcoin commitment
+    ///
+    /// HRP: `anchor`
+    #[from]
     Anchor(Anchor),
+
+    /// Disclosure data revealing some specific confidential information about
+    /// RGB contract
+    ///
+    /// HRP: `disclosure`
+    #[from]
     Disclosure(Disclosure),
+
+    /// Binary data for unknown Bech32 HRPs
     Other(String, Vec<u8>),
 }
 
 impl Bech32 {
-    pub const HRP_CONTRACT_ID: &'static str = "rgb";
+    /// HRP for a Bech32-encoded blinded UTXO data
+    pub const HRP_OUTPOINT: &'static str = "utxob";
+
+    /// Bech32 HRP for RGB schema ID encoding
     pub const HRP_SCHEMA_ID: &'static str = "sch";
+    /// Bech32 HRP for RGB contract ID encoding
+    pub const HRP_CONTRACT_ID: &'static str = "rgb";
 
-    pub const HRP_OUTPOINT: &'static str = "txo";
-
+    /// HRP for a Bech32-encoded raw RGB schema data
     pub const HRP_SCHEMA: &'static str = "schema";
+    /// HRP for a Bech32-encoded raw RGB contract genesis data
     pub const HRP_GENESIS: &'static str = "genesis";
-    pub const HRP_EXTENSION: &'static str = "statex";
+    /// HRP for a Bech32-encoded raw RGB state transition data
     pub const HRP_TRANSITION: &'static str = "transition";
+    /// HRP for a Bech32-encoded raw RGB state extension data
+    pub const HRP_EXTENSION: &'static str = "statex";
+    /// HRP for a Bech32-encoded deterministic bitcoin commitments anchor data
     pub const HRP_ANCHOR: &'static str = "anchor";
+    /// HRP for a Bech32-encoded RGB disclosure data
     pub const HRP_DISCLOSURE: &'static str = "disclosure";
 }
 
+/// Trait for types which data can be represented in form of Bech32 string
 pub trait ToBech32 {
+    /// Returns [`Bech32`] enum variant for this specific type
     fn to_bech32(&self) -> Bech32;
+
+    /// Converts type to it's Bech32-encoded representation. Default
+    /// implementation constructs [`Bech32`] object and converts it to string.
     fn to_bech32_string(&self) -> String {
         self.to_bech32().to_string()
     }
 }
 
-impl ToBech32 for seal::Confidential {
-    fn to_bech32(&self) -> Bech32 {
-        Bech32::Outpoint(self.clone())
+/// Trait for types that can be reconstructed from Bech32-encoded data tagged
+/// with specific HRP
+pub trait FromBech32
+where
+    Self: Sized,
+{
+    /// Unwraps [`Bech32`] enum data into a concrete type, if any, or fails with
+    /// [`Error::WrongType`] otherwise
+    fn from_bech32(bech32: Bech32) -> Result<Self, Error>;
+
+    /// Tries to read Bech32-encoded data from `s` argument, checks it's type
+    /// and constructs object if HRP corresponds to the type implementing this
+    /// trait. Fails with [`Error`] type
+    fn from_bech32_str(s: &str) -> Result<Self, Error> {
+        Self::from_bech32(s.parse()?)
     }
 }
 
-impl ToBech32 for ContractId {
+impl<T> ToBech32 for T
+where
+    T: Into<Bech32> + Clone,
+{
     fn to_bech32(&self) -> Bech32 {
-        Bech32::ContractId(self.clone())
+        self.clone().into()
     }
 }
 
-impl ToBech32 for Schema {
-    fn to_bech32(&self) -> Bech32 {
-        Bech32::Schema(self.clone())
+impl<T> FromBech32 for T
+where
+    T: TryFrom<Bech32, Error = Error>,
+{
+    fn from_bech32(bech32: Bech32) -> Result<Self, Error> {
+        Self::try_from(bech32)
     }
 }
 
-impl ToBech32 for SchemaId {
-    fn to_bech32(&self) -> Bech32 {
-        Bech32::SchemaId(self.clone())
-    }
-}
-
-impl ToBech32 for Genesis {
-    fn to_bech32(&self) -> Bech32 {
-        Bech32::Genesis(self.clone())
-    }
-}
-
-impl ToBech32 for Extension {
-    fn to_bech32(&self) -> Bech32 {
-        Bech32::Extension(self.clone())
-    }
-}
-
-impl ToBech32 for Transition {
-    fn to_bech32(&self) -> Bech32 {
-        Bech32::Transition(self.clone())
-    }
-}
-
-impl ToBech32 for Anchor {
-    fn to_bech32(&self) -> Bech32 {
-        Bech32::Anchor(self.clone())
-    }
-}
-
-impl ToBech32 for Disclosure {
-    fn to_bech32(&self) -> Bech32 {
-        Bech32::Disclosure(self.clone())
-    }
-}
-
-#[derive(Debug, Display, From, Error)]
-#[display(Debug)]
+/// Errors generated by Bech32 conversion functions (both parsing and
+/// type-specific conversion errors)
+#[derive(Clone, PartialEq, Debug, Display, From, Error)]
+#[display(doc_comments)]
 pub enum Error {
-    WrongHrp(String),
-
+    /// Bech32 string parse error
     #[from]
     Bech32Error(::bech32::Error),
 
+    /// Payload data parse error
     #[from]
     WrongData(strict_encoding::Error),
 
+    /// Requested object type does not match used Bech32 HRP
     WrongType,
+}
 
-    // TODO: Remove once the default `Display` implementation for
-    //       hash-derived types is removed
-    #[from(::bitcoin_hashes::hex::Error)]
-    HexError,
+impl TryFrom<Bech32> for seal::Confidential {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::BlindedUtxo(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for ContractId {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::ContractId(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for SchemaId {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::SchemaId(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for Schema {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Schema(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for Genesis {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Genesis(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for Extension {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Extension(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for Transition {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Transition(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for Anchor {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Anchor(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for Disclosure {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Disclosure(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
 }
 
 impl FromStr for Bech32 {
@@ -138,7 +282,7 @@ impl FromStr for Bech32 {
 
         Ok(match hrp {
             x if x == Self::HRP_OUTPOINT => {
-                Self::Outpoint(strict_decode(&data)?)
+                Self::BlindedUtxo(strict_decode(&data)?)
             }
             x if x == Self::HRP_CONTRACT_ID => {
                 Self::ContractId(strict_decode(&data)?)
@@ -166,7 +310,7 @@ impl FromStr for Bech32 {
 impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
-            Self::Outpoint(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)),
+            Self::BlindedUtxo(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)),
             Self::ContractId(obj) => {
                 (Self::HRP_CONTRACT_ID, strict_encode(obj))
             }
@@ -190,10 +334,7 @@ impl FromStr for Schema {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::Schema(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
+        Bech32::from_str(s)?.try_into()
     }
 }
 
@@ -201,10 +342,7 @@ impl FromStr for Genesis {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::Genesis(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
+        Bech32::from_str(s)?.try_into()
     }
 }
 
@@ -212,10 +350,7 @@ impl FromStr for Extension {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::Extension(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
+        Bech32::from_str(s)?.try_into()
     }
 }
 
@@ -223,10 +358,7 @@ impl FromStr for Transition {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::Transition(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
+        Bech32::from_str(s)?.try_into()
     }
 }
 
@@ -234,10 +366,7 @@ impl FromStr for Anchor {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::Anchor(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
+        Bech32::from_str(s)?.try_into()
     }
 }
 
@@ -245,16 +374,37 @@ impl FromStr for Disclosure {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Bech32::from_str(s)? {
-            Bech32::Disclosure(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
+        Bech32::from_str(s)?.try_into()
     }
 }
 
-// TODO: Enable after removal of the default `Display` implementation for
-//       hash-derived types
+// TODO: Enable after removal of the default `Display` and `FromStr`
+//       implementations for hash-derived types
 /*
+impl FromStr for seal::Confidential {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Bech32::from_str(s).try_into()
+    }
+}
+
+impl FromStr for ContractId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Bech32::from_str(s).try_into()
+    }
+}
+
+impl FromStr for SchemaId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Bech32::from_str(s).try_into()
+    }
+}
+
 impl Display for seal::Confidential {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         Bech32::Outpoint(self.clone()).fmt(f)
