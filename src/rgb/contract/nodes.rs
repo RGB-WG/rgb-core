@@ -13,6 +13,7 @@
 
 use std::collections::BTreeSet;
 
+use amplify::AsAny;
 use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 use super::{
@@ -70,7 +71,7 @@ impl CommitEncodeWithStrategy for ContractId {
 }
 
 /// Trait which is implemented by all node types (see [`NodeType`])
-pub trait Node {
+pub trait Node: AsAny {
     /// Returns type of the node (see [`NodeType`]). Unfortunately, this can't
     /// be just a const, since it will break our ability to convert concrete
     /// `Node` types into `&dyn Node` (entities implementing traits with const
@@ -157,7 +158,7 @@ pub trait Node {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, AsAny)]
 pub struct Genesis {
     schema_id: SchemaId,
     chain: bp::Chain,
@@ -167,7 +168,7 @@ pub struct Genesis {
     script: SimplicityScript,
 }
 
-#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode, AsAny)]
 #[strict_crate(crate)]
 pub struct Extension {
     extension_type: ExtensionType,
@@ -179,7 +180,9 @@ pub struct Extension {
     script: SimplicityScript,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode, AsAny,
+)]
 #[strict_crate(crate)]
 pub struct Transition {
     transition_type: TransitionType,

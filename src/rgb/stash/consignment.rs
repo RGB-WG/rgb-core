@@ -43,15 +43,15 @@ impl Consignment {
     pub fn with(
         genesis: Genesis,
         endpoints: ConsignmentEndpoints,
-        data: TransitionData,
-        extensions: ExtensionData,
+        state_transitions: TransitionData,
+        state_extensions: ExtensionData,
     ) -> Consignment {
         Self {
             version: RGB_CONSIGNMENT_VERSION,
             genesis,
-            state_extensions: extensions,
             endpoints,
-            state_transitions: data,
+            state_extensions,
+            state_transitions,
         }
     }
 
