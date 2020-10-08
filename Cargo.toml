@@ -63,6 +63,11 @@ lazy_static = "~1.4.0"
 #   `lnp` mod and are turned on only if `lbp`, `zmq` or `url` features are used
 zmq = { version = "~0.9.2", optional = true }
 url = { version = "~2.1.1", optional = true }
+# Serializtion
+# ------------
+#    Used in RGB data Bech32 encodings
+deflate = { version = "~0.8.6", optional = true }
+inflate = { version = "~0.4.5", optional = true }
 # Temporary-needed dependencies:
 # ------------------------------
 # 1. We are of no control of what's happening in Grin and would like to prevent
@@ -126,7 +131,7 @@ all = [
 # High-level library components
 # -----------------------------
 lnp = ["lightning", "async", "zmq"]
-rgb = ["bulletproofs", "ed25519-dalek"]
+rgb = ["bulletproofs", "ed25519-dalek", "deflate", "inflate"]
 # Exposing core rust componens
 # ----------------------------
 #   These also include re-assembly of necessary features from dependencies

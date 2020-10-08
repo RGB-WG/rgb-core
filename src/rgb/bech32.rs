@@ -14,13 +14,16 @@
 use bech32::{self, FromBase32, ToBase32};
 use core::fmt::{Display, Formatter};
 use core::str::FromStr;
+use deflate::{write::DeflateEncoder, Compression};
 use std::convert::{TryFrom, TryInto};
 
 use crate::rgb::{
     seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
     Transition,
 };
-use crate::strict_encoding::{self, strict_decode, strict_encode};
+use crate::strict_encoding::{
+    self, strict_decode, strict_encode, StrictDecode, StrictEncode,
+};
 
 /// Bech32 representation of generic RGB data, that can be generated from
 /// some string basing on Bech32 HRP value.
@@ -107,6 +110,50 @@ impl Bech32 {
     pub const HRP_ANCHOR: &'static str = "anchor";
     /// HRP for a Bech32-encoded RGB disclosure data
     pub const HRP_DISCLOSURE: &'static str = "disclosure";
+
+    pub(self) const RAW_DATA_ENCODING_PLAIN: u8 = 0u8;
+    pub(self) const RAW_DATA_ENCODING_DEFLATE: u8 = 1u8;
+
+    /// Encoder for v0 of raw data encoding algorithm. Uses plain strict encoded
+    /// data
+    pub(self) fn plain_encode(
+        obj: &impl StrictEncode<Error = strict_encoding::Error>,
+    ) -> Result<Vec<u8>, Error> {
+        // We initialize writer with a version byte, indicating plain
+        // algorithm used
+        let mut writer = vec![Self::RAW_DATA_ENCODING_PLAIN];
+        obj.strict_encode(&mut writer)?;
+        Ok(writer)
+    }
+
+    /// Encoder for v1 of raw data encoding algorithm. Uses deflate
+    pub(self) fn deflate_encode(
+        obj: &impl StrictEncode<Error = strict_encoding::Error>,
+    ) -> Result<Vec<u8>, Error> {
+        // We initialize writer with a version byte, indicating deflation
+        // algorithm used
+        let writer = vec![Self::RAW_DATA_ENCODING_DEFLATE];
+        let mut encoder = DeflateEncoder::new(writer, Compression::Best);
+        obj.strict_encode(&mut encoder)?;
+        Ok(encoder.finish().map_err(|_| Error::DeflateEncoding)?)
+    }
+
+    pub(self) fn raw_decode<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
+    where
+        T: StrictDecode<Error = strict_encoding::Error>,
+    {
+        let mut reader = data.as_ref();
+        Ok(match u8::strict_decode(&mut reader)? {
+            Self::RAW_DATA_ENCODING_PLAIN => T::strict_decode(&mut reader)?,
+            Self::RAW_DATA_ENCODING_DEFLATE => {
+                println!("{:#x?}", reader);
+                let decoded = inflate::inflate_bytes(&mut reader)
+                    .map_err(|e| Error::InflateError(e))?;
+                T::strict_decode(&decoded[..])?
+            }
+            unknown_ver => Err(Error::UnknownRawDataEncoding(unknown_ver))?,
+        })
+    }
 }
 
 /// Trait for types which data can be represented in form of Bech32 string
@@ -162,16 +209,31 @@ where
 #[derive(Clone, PartialEq, Debug, Display, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
-    /// Bech32 string parse error
+    /// Bech32 string parse error: {_0}
     #[from]
     Bech32Error(::bech32::Error),
 
-    /// Payload data parse error
+    /// Payload data parse error: {_0}
     #[from]
     WrongData(strict_encoding::Error),
 
     /// Requested object type does not match used Bech32 HRP
     WrongType,
+
+    /// Provided raw data use unknown encoding version {_0}
+    UnknownRawDataEncoding(u8),
+
+    /// Can not encode raw data with DEFLATE algorithm
+    DeflateEncoding,
+
+    /// Error inflating compressed data from payload: {_0}
+    InflateError(String),
+}
+
+impl From<Error> for ::core::fmt::Error {
+    fn from(_: Error) -> Self {
+        ::core::fmt::Error
+    }
 }
 
 impl TryFrom<Bech32> for seal::Confidential {
@@ -280,27 +342,36 @@ impl FromStr for Bech32 {
         let (hrp, data) = bech32::decode(&s)?;
         let data = Vec::<u8>::from_base32(&data)?;
 
+        use bitcoin::hashes::hex::ToHex;
+        println!("{}", data.to_hex());
+
         Ok(match hrp {
             x if x == Self::HRP_OUTPOINT => {
                 Self::BlindedUtxo(strict_decode(&data)?)
             }
-            x if x == Self::HRP_CONTRACT_ID => {
-                Self::ContractId(strict_decode(&data)?)
-            }
-            x if x == Self::HRP_SCHEMA => Self::Schema(strict_decode(&data)?),
             x if x == Self::HRP_SCHEMA_ID => {
                 Self::SchemaId(strict_decode(&data)?)
             }
-            x if x == Self::HRP_GENESIS => Self::Genesis(strict_decode(&data)?),
+            x if x == Self::HRP_CONTRACT_ID => {
+                Self::ContractId(strict_decode(&data)?)
+            }
+            x if x == Self::HRP_SCHEMA => {
+                Self::Schema(Bech32::raw_decode(&data)?)
+            }
+            x if x == Self::HRP_GENESIS => {
+                Self::Genesis(Bech32::raw_decode(&data)?)
+            }
             x if x == Self::HRP_EXTENSION => {
-                Self::Extension(strict_decode(&data)?)
+                Self::Extension(Bech32::raw_decode(&data)?)
             }
             x if x == Self::HRP_TRANSITION => {
-                Self::Transition(strict_decode(&data)?)
+                Self::Transition(Bech32::raw_decode(&data)?)
             }
-            x if x == Self::HRP_ANCHOR => Self::Anchor(strict_decode(&data)?),
+            x if x == Self::HRP_ANCHOR => {
+                Self::Anchor(Bech32::raw_decode(&data)?)
+            }
             x if x == Self::HRP_DISCLOSURE => {
-                Self::Disclosure(strict_decode(&data)?)
+                Self::Disclosure(Bech32::raw_decode(&data)?)
             }
             other => Self::Other(other, data),
         })
@@ -310,20 +381,29 @@ impl FromStr for Bech32 {
 impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
-            Self::BlindedUtxo(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)),
+            Self::BlindedUtxo(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)?),
+            Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_encode(obj)?),
             Self::ContractId(obj) => {
-                (Self::HRP_CONTRACT_ID, strict_encode(obj))
+                (Self::HRP_CONTRACT_ID, strict_encode(obj)?)
             }
-            Self::Schema(obj) => (Self::HRP_SCHEMA, strict_encode(obj)),
-            Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_encode(obj)),
-            Self::Genesis(obj) => (Self::HRP_GENESIS, strict_encode(obj)),
-            Self::Extension(obj) => (Self::HRP_EXTENSION, strict_encode(obj)),
-            Self::Transition(obj) => (Self::HRP_TRANSITION, strict_encode(obj)),
-            Self::Anchor(obj) => (Self::HRP_ANCHOR, strict_encode(obj)),
-            Self::Disclosure(obj) => (Self::HRP_DISCLOSURE, strict_encode(obj)),
-            Self::Other(hrp, obj) => (hrp.as_ref(), Ok(obj.clone())),
+            Self::Schema(obj) => {
+                (Self::HRP_SCHEMA, Bech32::deflate_encode(obj)?)
+            }
+            Self::Genesis(obj) => {
+                (Self::HRP_GENESIS, Bech32::deflate_encode(obj)?)
+            }
+            Self::Extension(obj) => {
+                (Self::HRP_EXTENSION, Bech32::deflate_encode(obj)?)
+            }
+            Self::Transition(obj) => {
+                (Self::HRP_TRANSITION, Bech32::deflate_encode(obj)?)
+            }
+            Self::Anchor(obj) => (Self::HRP_ANCHOR, Bech32::plain_encode(obj)?),
+            Self::Disclosure(obj) => {
+                (Self::HRP_DISCLOSURE, Bech32::deflate_encode(obj)?)
+            }
+            Self::Other(hrp, obj) => (hrp.as_ref(), obj.clone()),
         };
-        let data = data.map_err(|_| ::core::fmt::Error)?;
         let b = ::bech32::encode(hrp, data.to_base32())
             .map_err(|_| ::core::fmt::Error)?;
         b.fmt(f)
@@ -451,5 +531,19 @@ impl Display for Anchor {
 impl Display for Disclosure {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         Bech32::Disclosure(self.clone()).fmt(f)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_bech32() {
+        let obj = Transition::default();
+        let bech32 = format!("{}", obj);
+        assert_eq!(bech32, "transition1q935qqsqpr0f9t");
+        let decoded = Transition::from_bech32_str(&bech32).unwrap();
+        assert_eq!(obj, decoded);
     }
 }
