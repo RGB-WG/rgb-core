@@ -137,7 +137,7 @@ pub fn commit(
     //                        However this is not the part of this function,
     //                        the function expect that the `msg` is already
     //                        properly prefixed
-    hmac_engine.input(message.as_ref());
+    hmac_engine.input(&sha256::Hash::hash(message.as_ref()));
 
     // Producing and storing tweaking factor in container
     let hmac = Hmac::from_engine(hmac_engine);
@@ -262,8 +262,8 @@ mod test {
         let messages = gen_messages();
         let all_keys = gen_secp_pubkeys(6);
         let other_key = all_keys[0];
-        for mut pk in all_keys[1..].to_vec() {
-            for msg in &messages {
+        for msg in &messages {
+            for mut pk in all_keys[1..].to_vec() {
                 let original = pk.clone();
                 let mut keyset = bset![pk];
                 let mut keyset2 = bset![pk];
@@ -296,7 +296,7 @@ mod test {
                     HmacEngine::<sha256::Hash>::new(&original.serialize());
                 engine.input(&*LNPBP1_HASHED_TAG);
                 engine.input(&tag.into_inner());
-                engine.input(msg);
+                engine.input(&sha256::Hash::hash(msg));
                 let hmac = Hmac::from_engine(engine);
                 let tweaking_factor = *hmac.as_inner();
                 let mut altkey = original;
@@ -502,7 +502,7 @@ mod test {
 
     #[test]
     #[should_panic(expected = "SumInfiniteResult")]
-    fn test_crafted() {
+    fn test_crafted_negation() {
         let tag = sha256::Hash::hash(b"ProtoTag");
         let mut pubkey = secp256k1::PublicKey::from_str(
             "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166",
