@@ -36,6 +36,16 @@ pub struct NodeAddr {
 }
 
 impl NodeAddr {
+    #[cfg(not(feature = "lightning"))]
+    pub async fn connect(
+        &self,
+        private_key: &secp256k1::SecretKey,
+        ephemeral_private_key: &secp256k1::SecretKey,
+    ) -> Result<Connection, ConnectionError> {
+        unimplemented!()
+    }
+
+    #[cfg(feature = "lightning")]
     pub async fn connect(
         &self,
         private_key: &secp256k1::SecretKey,

@@ -14,10 +14,13 @@
 use amplify::Bipolar;
 use std::borrow::Borrow;
 
-use lightning::ln::peers::encryption::{Decryptor, Encryptor};
-use lightning::ln::peers::handshake::CompletedHandshakeInfo;
-//use lightning::ln::peers::handshake::PeerHandshake;
+#[cfg(feature = "lightning")]
+use lightning::ln::peers::{
+    encryption::{Decryptor, Encryptor},
+    handshake::CompletedHandshakeInfo,
+};
 
+#[cfg(feature = "lightning")]
 pub struct Transcoder(CompletedHandshakeInfo);
 
 pub trait Encrypt {
@@ -44,12 +47,14 @@ pub trait Transcode: Bipolar + Encrypt + Decrypt {
 #[display(Debug)]
 pub struct DecryptionError;
 
+#[cfg(feature = "lightning")]
 impl Encrypt for Encryptor {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
         self.encrypt_buf(buffer.borrow())
     }
 }
 
+#[cfg(feature = "lightning")]
 impl Decrypt for Decryptor {
     type Error = DecryptionError;
 
@@ -64,12 +69,14 @@ impl Decrypt for Decryptor {
     }
 }
 
+#[cfg(feature = "lightning")]
 impl Encrypt for Transcoder {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
         self.0.encryptor.encrypt_buf(buffer.borrow())
     }
 }
 
+#[cfg(feature = "lightning")]
 impl Decrypt for Transcoder {
     type Error = DecryptionError;
 
@@ -84,11 +91,13 @@ impl Decrypt for Transcoder {
     }
 }
 
+#[cfg(feature = "lightning")]
 impl Transcode for Transcoder {
     type Encryptor = Encryptor;
     type Decryptor = Decryptor;
 }
 
+#[cfg(feature = "lightning")]
 impl Bipolar for Transcoder {
     type Left = <Self as Transcode>::Encryptor;
     type Right = <Self as Transcode>::Decryptor;

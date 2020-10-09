@@ -47,6 +47,16 @@ pub struct PeerOutput {
 }
 
 impl Peer {
+    #[cfg(feature = "lightning")]
+    pub async fn new_outbound(
+        node: NodeAddr,
+        private_key: &secp256k1::SecretKey,
+        ephemeral_private_key: &secp256k1::SecretKey,
+    ) -> Result<Self, ConnectionError> {
+        unimplemented!()
+    }
+
+    #[cfg(not(feature = "lightning"))]
     pub async fn new_outbound(
         node: NodeAddr,
         private_key: &secp256k1::SecretKey,

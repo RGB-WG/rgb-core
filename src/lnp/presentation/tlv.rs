@@ -17,11 +17,13 @@ use std::collections::BTreeMap;
 use std::io;
 use std::sync::Arc;
 
-use lightning::util::ser::{BigSize, Readable};
+#[cfg(feature = "lightning")]
+use lightning::{
+    ln::msgs::DecodeError,
+    util::ser::{BigSize, Readable},
+};
 
 use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
-use crate::lnp::LNP_MSG_MAX_LEN;
-use lightning::ln::msgs::DecodeError;
 
 wrapper!(
     Type,
@@ -73,6 +75,17 @@ impl Unmarshall for Unmarshaller {
     type Data = Stream;
     type Error = Error;
 
+    // TODO: (v0.2.0) Right now TLV implementation uses BigInt from lightning
+    //       library. It has to be re-implemented in order to get TLVs working
+    #[cfg(not(feature = "lightning"))]
+    fn unmarshall(
+        &self,
+        data: &dyn Borrow<[u8]>,
+    ) -> Result<Stream, Self::Error> {
+        unimplemented!()
+    }
+
+    #[cfg(feature = "lightning")]
     fn unmarshall(
         &self,
         data: &dyn Borrow<[u8]>,
@@ -151,6 +164,14 @@ impl Unmarshaller {
         }
     }
 
+    // TODO: (v0.2.0) Right now TLV implementation uses BigInt from lightning
+    //       library. It has to be re-implemented in order to get TLVs working
+    #[cfg(not(feature = "lightning"))]
+    fn raw_parser(reader: &mut dyn io::Read) -> Result<Arc<dyn Any>, Error> {
+        unimplemented!()
+    }
+
+    #[cfg(feature = "lightning")]
     fn raw_parser(
         mut reader: &mut dyn io::Read,
     ) -> Result<Arc<dyn Any>, Error> {
