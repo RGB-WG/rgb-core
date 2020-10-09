@@ -1,6 +1,24 @@
 Change Log
 ==========
 
+v0.1.0-rc.1
+-----------
+
+### Breaking changes:
+- RGB protocol & schema versioning with feature bits
+- Consignment versioning
+- Changed Bech32 encodings of RGB data structures; added deflation encoding
+- Implemented RGB public state extensions
+- Refactored LNP addressing and it's encoding
+- Completed Tor v2 and v3 addresses support
+- RGB data structures naming refactoring
+- Changed bulletproofs commitments which will enable future aggregation
+- Introduced Chain and ChainParam types instead of old network versioning
+
+### Other changes:
+- Test coverage >70%
+- Code docs >50%
+
 v0.1.0-beta.4
 -------------
 
