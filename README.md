@@ -141,14 +141,12 @@ section:
 ```toml
 lnpbp = { git = "https://github.com/lnp-bp/rust-lnpbp.git", branch = "master" }
 
-[patch.crates-io]
-bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
-bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
-lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
-miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
-# TODO: (new) remove them before 1.0 release
-amplify = { git = "https://github.com/LNP-BP/rust-amplify", branch = "develop" }
-torut = { git = "https://github.com/LNP-BP/torut", branch = "develop" }
+# We need this b/c of breaking change in tagged hash type generation
+bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-rc1" }
+bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", tag = "lnpbp-v0.1.0-rc1" }
+# We need custom branches here just to depend on the same bitcoin master and do
+# not have secp256k1 version conflict
+miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", tag = "lnpbp-v0.1.0-rc1" }
 ```
 NB: These patches MUST be applied in exactly same manner by any library which
 uses LNP/BP Core library as a dependency for now

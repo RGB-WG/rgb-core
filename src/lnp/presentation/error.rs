@@ -12,10 +12,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use crate::strict_encoding;
+
+#[cfg(feature = "lightning")]
 use lightning::ln::msgs::DecodeError;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
 #[display(Debug)]
+#[non_exhaustive]
 pub enum Error {
     #[from(std::io::Error)]
     Io,
@@ -35,6 +38,7 @@ pub enum Error {
     TlvRecordInvalidLen,
 }
 
+#[cfg(feature = "lightning")]
 impl From<DecodeError> for Error {
     fn from(err: DecodeError) -> Self {
         match err {

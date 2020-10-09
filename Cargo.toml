@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp"
-version = "0.1.0"
+version = "0.1.0-rc.1"
 license = "MIT"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP Core Library implementing LNPBP specifications & standards"
@@ -40,9 +40,8 @@ lnpbp_derive = { path = "derive" }
 # ----------------------------------------------------
 bitcoin = "~0.25.0"
 bitcoin_hashes = "~0.9.0" # we need macro from here
-lightning = { version = "~0.0.11", optional = true }
-miniscript = "~2.0.0" # TODO: (new) Upgrade to 2.0.0 (requires rebasing
-                      #       `develop` branch in miniscript fork
+# lightning = { version = "~0.0.11", optional = true }
+miniscript = "~2.0.0"
 bech32 = "~0.7.2"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
 #   a part of Tor address)
@@ -82,11 +81,11 @@ num-derive = "~0.3.0"
 # 3. Once async traits will get to rust compiler, this one will be also not
 #    needed
 async-trait = { version = "~0.1.30", optional = true }
+torut = { version = "~0.1.6", features = ["v2", "v3"] }
 
 [dev-dependencies]
 miniscript = { version = "~2.0.0", features = ["compiler"] }
-bitcoin = { version = "~0.25.0", branch = "develop", features = ["rand"] }
-torut = { version = "~0.1.6", features = ["v2", "v3"] }
+bitcoin = { version = "~0.25.0", features = ["rand"] }
 
 # Forked dependencies
 # -------------------
@@ -102,11 +101,12 @@ torut = { version = "~0.1.6", features = ["v2", "v3"] }
 # NB: These patches MUST be applied in exactly same manner by any library which
 #     uses this as a dependency
 [patch.crates-io]
-bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "develop" }
-bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-beta-4" }
-lightning = { git = "https://github.com/LNP-BP/rust-lightning", branch = "develop", optional = true }
-# No changes here, just need to import forked `bitcoin` library
-miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "develop" }
+# We need this b/c of breaking change in tagged hash type generation
+bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-rc1" }
+bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", tag = "lnpbp-v0.1.0-rc1" }
+# We need custom branches here just to depend on the same bitcoin master and do
+# not have secp256k1 version conflict
+miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", tag = "lnpbp-v0.1.0-rc1" }
 
 # Features
 # ========
@@ -126,7 +126,7 @@ all = [
        "tor", "url", "websockets", "vendored_openssl"]
 # High-level library components
 # -----------------------------
-lnp = ["lightning", "async", "zmq"]
+lnp = ["async", "zmq"]
 rgb = ["bulletproofs", "ed25519-dalek", "deflate", "inflate"]
 # Exposing core rust componens
 # ----------------------------
@@ -145,6 +145,6 @@ tor = ["amplify/tor"] # Exposes dependency feature
 vendored_openssl = ["torut/vendored_openssl"]
 
 [workspace]
-members = ["derive", "."]
-default-members = ["derive", "."]
+members = [".", "derive"]
+default-members = [".", "derive"]
 exclude = ["dep_test"]

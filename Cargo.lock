@@ -96,7 +96,7 @@ checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 [[package]]
 name = "bitcoin"
 version = "0.25.0"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=develop#d2e76786c9b9e11dc7bae6e8a39a7da84683c972"
+source = "git+https://github.com/LNP-BP/rust-bitcoin?tag=lnpbp-v0.1.0-rc1#dc06d451c01ef7b22509f0eb4db1f817e4e83daa"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -107,7 +107,7 @@ dependencies = [
 [[package]]
 name = "bitcoin_hashes"
 version = "0.9.0"
-source = "git+https://github.com/LNP-BP/bitcoin_hashes?tag=lnpbp-v0.1.0-beta-4#7269ef478004a6059377bbd0e8b3ffd1839de55c"
+source = "git+https://github.com/LNP-BP/bitcoin_hashes?tag=lnpbp-v0.1.0-rc1#7269ef478004a6059377bbd0e8b3ffd1839de55c"
 dependencies = [
  "serde",
 ]
@@ -503,16 +503,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2448f6066e80e3bfc792e9c98bf705b4b0fc6e8ef5b43e5889aff0eaa9c58743"
 
 [[package]]
-name = "lightning"
-version = "0.0.11"
-source = "git+https://github.com/LNP-BP/rust-lightning?branch=develop#7b7f5b4f710e7b778e000e829ef6b1dad79b0a6a"
-dependencies = [
- "bitcoin",
-]
-
-[[package]]
 name = "lnpbp"
-version = "0.1.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -525,7 +517,6 @@ dependencies = [
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
- "lightning",
  "lnpbp_derive",
  "miniscript",
  "num-derive",
@@ -540,7 +531,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.1.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "amplify",
  "lnpbp",
@@ -583,7 +574,7 @@ dependencies = [
 [[package]]
 name = "miniscript"
 version = "2.0.0"
-source = "git+https://github.com/LNP-BP/rust-miniscript?branch=develop#ba5010e4375bb07c5653ceba5336e6a4b17e950a"
+source = "git+https://github.com/LNP-BP/rust-miniscript?tag=lnpbp-v0.1.0-rc1#ba436de1b8a5953d5050dbc31fa4642e740e4438"
 dependencies = [
  "bitcoin",
  "serde",

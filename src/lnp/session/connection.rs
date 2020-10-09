@@ -11,15 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::convert::TryInto;
 use std::io;
-use std::net::SocketAddr;
 
-#[cfg(feature = "tokio")]
+#[cfg(all(feature = "tokio", feature = "lightning"))]
 use tokio::io::AsyncReadExt;
-#[cfg(feature = "tokio")]
+#[cfg(all(feature = "tokio", feature = "lightning"))]
 use tokio::io::AsyncWriteExt;
-#[cfg(feature = "tokio")]
+#[cfg(all(feature = "tokio"))]
 use tokio::net::{tcp, TcpStream};
 
 #[cfg(not(feature = "tokio"))]
@@ -27,17 +25,13 @@ use std::io::{Read as IoRead, Write as IoWrite};
 #[cfg(not(feature = "tokio"))]
 use std::net::TcpStream;
 
-use bitcoin::secp256k1;
-
-#[cfg(feature = "tokio")]
+#[cfg(all(feature = "tokio", feature = "lightning"))]
 use lightning::ln::peers::encryption::{Decryptor, Encryptor};
-use lightning::ln::peers::handshake::CompletedHandshakeInfo as Transcoder;
-use lightning::ln::peers::handshake::PeerHandshake;
-use lightning::ln::peers::transport::IPeerHandshake;
-
-use super::NodeAddr;
-use super::MAX_TRANSPORT_FRAME_SIZE;
-//use crate::lnp::transport::{Read, Write};
+#[cfg(feature = "lightning")]
+use lightning::ln::peers::{
+    handshake::{CompletedHandshakeInfo as Transcoder, PeerHandshake},
+    transport::IPeerHandshake,
+};
 
 #[derive(Debug, Display)]
 #[display(Debug)]
@@ -56,7 +50,7 @@ impl From<io::Error> for ConnectionError {
 pub struct Connection {
     pub stream: TcpStream,
     pub outbound: bool,
-    #[allow(dead_code)]
+    #[cfg(feature = "lightning")]
     transcoder: Transcoder,
 }
 
@@ -64,6 +58,7 @@ pub struct Connection {
 pub struct ConnectionInput {
     pub istream: tcp::OwnedReadHalf,
     pub outbound: bool,
+    #[cfg(feature = "lightning")]
     pub decryptor: Decryptor,
 }
 
@@ -71,10 +66,12 @@ pub struct ConnectionInput {
 pub struct ConnectionOutput {
     pub ostream: tcp::OwnedWriteHalf,
     pub outbound: bool,
+    #[cfg(feature = "lightning")]
     pub encryptor: Encryptor,
 }
 
 impl Connection {
+    #[cfg(feature = "lightning")]
     pub async fn new(
         node: &NodeAddr,
         private_key: &secp256k1::SecretKey,
@@ -183,11 +180,13 @@ impl Connection {
             ConnectionInput {
                 istream,
                 outbound: self.outbound,
+                #[cfg(feature = "lightning")]
                 decryptor: self.transcoder.decryptor,
             },
             ConnectionOutput {
                 ostream,
                 outbound: self.outbound,
+                #[cfg(feature = "lightning")]
                 encryptor: self.transcoder.encryptor,
             },
         )

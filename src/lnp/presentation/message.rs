@@ -24,7 +24,6 @@ use super::tlv;
 use super::{
     Encode, Error, EvenOdd, UnknownTypeError, Unmarshall, UnmarshallFn,
 };
-use crate::lnp::presentation::tlv::Stream;
 use crate::strict_encoding::{StrictDecode, StrictEncode};
 
 wrapper!(
@@ -80,8 +79,8 @@ impl Message for RawMessage {
         Payload(vec![Arc::new(self.payload.clone())])
     }
 
-    fn get_tlvs(&self) -> Stream {
-        Stream::new()
+    fn get_tlvs(&self) -> tlv::Stream {
+        tlv::Stream::new()
     }
 }
 
