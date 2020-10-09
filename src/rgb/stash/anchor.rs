@@ -15,7 +15,9 @@ use std::collections::{BTreeMap, HashMap};
 
 use amplify::Wrapper;
 use bitcoin::secp256k1;
-use bitcoin::util::psbt::{raw::Key, PartiallySignedTransaction as Psbt};
+use bitcoin::util::psbt::{
+    raw::ProprietaryKey, PartiallySignedTransaction as Psbt,
+};
 use bitcoin::util::uint::Uint256;
 use bitcoin::{Transaction, Txid};
 use bitcoin_hashes::{sha256, sha256t, Hash, HashEngine};
@@ -31,8 +33,6 @@ use crate::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
 use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
 use crate::rgb::{ContractId, NodeId};
 
-pub const PSBT_FEE_KEY: &[u8] = b"\x03rgb\x01";
-pub const PSBT_PUBKEY_KEY: &[u8] = b"\x03rgb\x02";
 lazy_static! {
     static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash =
         sha256::Hash::hash(b"LNPBP4");
@@ -84,18 +84,20 @@ impl Anchor {
         let tx = &mut psbt.global.unsigned_tx;
         let num_outs = tx.output.len() as u64;
 
-        let pubkey_key = Key {
-            type_value: 0xFC,
-            key: PSBT_PUBKEY_KEY.to_vec(),
+        let pubkey_key = ProprietaryKey {
+            prefix: b"RGB".to_vec(),
+            subtype: 2u8,
+            key: vec![],
         };
-        let fee_key = Key {
-            type_value: 0xFC,
-            key: PSBT_FEE_KEY.to_vec(),
+        let fee_key = ProprietaryKey {
+            prefix: b"RGB".to_vec(),
+            subtype: 1u8,
+            key: vec![],
         };
 
         let fee = psbt
             .global
-            .unknown
+            .proprietary
             .get(&fee_key)
             .ok_or(Error::NoFeeInformation)?;
         let mut fee_slice = [0u8; 8];
@@ -132,7 +134,7 @@ impl Anchor {
             let tx_out = &tx.output[vout];
 
             let pubkey = psbt_out
-                .unknown
+                .proprietary
                 .get(&pubkey_key)
                 .ok_or(Error::NoRequiredPubkey(vout))?;
             let pubkey = secp256k1::PublicKey::from_slice(pubkey)?;
