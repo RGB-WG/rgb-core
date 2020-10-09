@@ -22,8 +22,8 @@ pub enum Error {
     NoData,
     NoEncoder,
     UnknownProtocolVersion,
-    #[from(strict_encoding::Error)]
-    EncodingError,
+    #[from]
+    EncodingError(strict_encoding::Error),
     #[from(UnknownTypeError)]
     UnknownDataType,
     InvalidValue,

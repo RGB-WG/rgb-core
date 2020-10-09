@@ -95,7 +95,7 @@ checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 [[package]]
 name = "bitcoin"
 version = "0.25.0"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=develop#31e4d4ebd89cdf314feab8175e18f064a25642d9"
+source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=develop#d2e76786c9b9e11dc7bae6e8a39a7da84683c972"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -167,9 +167,9 @@ checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
 
 [[package]]
 name = "cc"
-version = "1.0.60"
+version = "1.0.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef611cc68ff783f18535d77ddd080185275713d852c4f5cbb6122c462a7a825c"
+checksum = "ed67cbde08356238e75fc4656be4749481eeffb09e19f320a25237d5221c985d"
 
 [[package]]
 name = "cfg-if"

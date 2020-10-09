@@ -435,13 +435,11 @@ pub mod strategies {
     impl From<bitcoin::consensus::encode::Error> for Error {
         #[inline]
         fn from(e: bitcoin::consensus::encode::Error) -> Self {
-            Error::Io(
-                if let bitcoin::consensus::encode::Error::Io(io_err) = e {
-                    io_err.kind()
-                } else {
-                    io::ErrorKind::Other
-                },
-            )
+            if let bitcoin::consensus::encode::Error::Io(err) = e {
+                Error::Io(err.kind())
+            } else {
+                Error::DataIntegrityError(e.to_string())
+            }
         }
     }
 }
