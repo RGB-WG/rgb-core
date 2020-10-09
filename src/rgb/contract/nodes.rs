@@ -158,7 +158,7 @@ pub trait Node: AsAny {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, AsAny)]
+#[derive(Clone, Debug, Default, PartialEq, AsAny)]
 pub struct Genesis {
     schema_id: SchemaId,
     chain: bp::Chain,
@@ -168,7 +168,9 @@ pub struct Genesis {
     script: SimplicityScript,
 }
 
-#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode, AsAny)]
+#[derive(
+    Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode, AsAny,
+)]
 #[strict_crate(crate)]
 pub struct Extension {
     extension_type: ExtensionType,

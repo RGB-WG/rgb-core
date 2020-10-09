@@ -618,6 +618,12 @@ pub enum Chain {
     Other(ChainParams),
 }
 
+impl Default for Chain {
+    fn default() -> Self {
+        Chain::Signet
+    }
+}
+
 impl PartialEq for Chain {
     fn eq(&self, other: &Self) -> bool {
         self.chain_params().eq(&other.chain_params())

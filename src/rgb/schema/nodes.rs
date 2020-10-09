@@ -61,7 +61,7 @@ pub trait NodeSchema {
     fn abi(&self) -> &BTreeMap<Self::Action, Procedure>;
 }
 
-#[derive(Clone, PartialEq, Debug, Display, AsAny)]
+#[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
 #[display(Debug)]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
@@ -70,7 +70,7 @@ pub struct GenesisSchema {
     pub abi: GenesisAbi,
 }
 
-#[derive(Clone, PartialEq, Debug, Display, AsAny)]
+#[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
 #[display(Debug)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
@@ -80,7 +80,7 @@ pub struct ExtensionSchema {
     pub abi: ExtensionAbi,
 }
 
-#[derive(Clone, PartialEq, Debug, Display, AsAny)]
+#[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
 #[display(Debug)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,

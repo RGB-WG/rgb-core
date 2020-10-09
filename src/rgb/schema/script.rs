@@ -41,10 +41,16 @@ where
 )]
 #[display(Debug)]
 pub enum GenesisAction {
-    #[cfg(test)]
     NoOp = 0,
 }
+
 impl NodeAction for GenesisAction {}
+
+impl Default for GenesisAction {
+    fn default() -> Self {
+        GenesisAction::NoOp
+    }
+}
 
 #[non_exhaustive]
 #[derive(
@@ -61,10 +67,16 @@ impl NodeAction for GenesisAction {}
 )]
 #[display(Debug)]
 pub enum ExtensionAction {
-    #[cfg(test)]
     NoOp = 0,
 }
+
 impl NodeAction for ExtensionAction {}
+
+impl Default for ExtensionAction {
+    fn default() -> Self {
+        ExtensionAction::NoOp
+    }
+}
 
 #[non_exhaustive]
 #[derive(
@@ -86,6 +98,12 @@ pub enum TransitionAction {
 }
 impl NodeAction for TransitionAction {}
 
+impl Default for TransitionAction {
+    fn default() -> Self {
+        TransitionAction::GenerateBlank
+    }
+}
+
 #[non_exhaustive]
 #[derive(
     Clone,
@@ -103,6 +121,12 @@ impl NodeAction for TransitionAction {}
 #[repr(u16)]
 pub enum AssignmentAction {
     Validate = 0,
+}
+
+impl Default for AssignmentAction {
+    fn default() -> Self {
+        AssignmentAction::Validate
+    }
 }
 
 pub type GenesisAbi = BTreeMap<GenesisAction, Procedure>;

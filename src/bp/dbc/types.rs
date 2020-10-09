@@ -41,6 +41,20 @@ pub struct Proof {
     pub source: ScriptEncodeData,
 }
 
+#[cfg(test)]
+impl Default for Proof {
+    fn default() -> Self {
+        use crate::SECP256K1;
+        Proof {
+            pubkey: secp256k1::PublicKey::from_secret_key(
+                &SECP256K1,
+                &secp256k1::key::ONE_KEY,
+            ),
+            source: Default::default(),
+        }
+    }
+}
+
 impl From<secp256k1::PublicKey> for Proof {
     fn from(pubkey: secp256k1::PublicKey) -> Self {
         Self {
