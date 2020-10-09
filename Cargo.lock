@@ -17,8 +17,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "1.1.1"
-source = "git+https://github.com/LNP-BP/rust-amplify?branch=develop#0a8178b684e409aee72eb7a388004922466ddbcb"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f0ebe1cc10cc8b2665dd077e7f076b644e94f33577289ee61c7669d75286753"
 dependencies = [
  "async-trait",
  "ed25519-dalek",
@@ -29,9 +30,9 @@ dependencies = [
 
 [[package]]
 name = "amplify_derive"
-version = "1.1.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6e85a39efb3a9220c0e6e23ad97868b2b8e056a26ee6cef2d752468c98cc6c6"
+checksum = "57f080656cc1eb3d55c2446813e6197293f5d43b4cf52ffb1f6cb5ca18e0ac0b"
 dependencies = [
  "amplify",
  "quote 1.0.7",
@@ -689,6 +690,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "openssl-src"
+version = "111.11.0+1.1.1h"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "380fe324132bea01f45239fadfec9343adb044615f29930d039bec1ae7b9fa5b"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -697,6 +707,7 @@ dependencies = [
  "autocfg 1.0.1",
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -1413,8 +1424,3 @@ dependencies = [
  "libc",
  "metadeps",
 ]
-
-[[patch.unused]]
-name = "torut"
-version = "0.1.5"
-source = "git+https://github.com/LNP-BP/torut?branch=develop#91d918c1175ff32bf656461c949ccadd0de767a0"
