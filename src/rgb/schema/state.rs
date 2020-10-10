@@ -1274,7 +1274,7 @@ mod test {
         assert_eq!(
             schema.abi.get(&script::AssignmentAction::Validate).unwrap(),
             &script::Procedure::Embedded(
-                script::StandardProcedure::InflationControlByCount
+                script::StandardProcedure::NonfungibleInflation
             )
         );
     }

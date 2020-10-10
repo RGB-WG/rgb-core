@@ -190,10 +190,12 @@ pub enum Procedure {
 #[repr(u8)]
 pub enum StandardProcedure {
     NoInflationBySum = 0x01,
-    InflationControlBySum = 0x02,
-    InflationControlByCount = 0x03,
+    FungibleInflation = 0x02,
+    NonfungibleInflation = 0x03,
+    IdentityTransfer = 0x04,
     ProofOfBurn = 0x10,
     ProofOfReserve = 0x11,
+    RightsSplit = 0x20,
 }
 
 mod strict_encoding {
@@ -258,11 +260,13 @@ mod strict_encoding {
                 TransitionAction::GenerateBlank => 1
             );
             test_enum_u8_exhaustive!(StandardProcedure;
-                StandardProcedure::NoInflationBySum => 0x1,
-                StandardProcedure::InflationControlBySum => 0x2,
-                StandardProcedure::InflationControlByCount => 0x3,
+                StandardProcedure::NoInflationBySum => 0x01,
+                StandardProcedure::FungibleInflation => 0x02,
+                StandardProcedure::NonfungibleInflation => 0x03,
+                StandardProcedure::IdentityTransfer => 0x04,
                 StandardProcedure::ProofOfBurn => 0x10,
-                StandardProcedure::ProofOfReserve => 0x11
+                StandardProcedure::ProofOfReserve => 0x11,
+                StandardProcedure::RightsSplit => 0x20
             );
 
             // Test Procedures
@@ -276,7 +280,7 @@ mod strict_encoding {
             assert_eq!(
                 vec![0xFF, 0x2],
                 strict_encode(&Procedure::Embedded(
-                    StandardProcedure::InflationControlBySum
+                    StandardProcedure::FungibleInflation
                 ))
                 .unwrap()
             );

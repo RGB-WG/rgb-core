@@ -855,7 +855,7 @@ pub(crate) mod test {
                 ASSIGNMENT_ISSUE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::InflationControlBySum)
+                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::FungibleInflation)
                     }
                 },
                 ASSIGNMENT_ASSETS => StateSchema {

@@ -161,11 +161,11 @@ impl Embedded {
                     }
                 }
             }
-            StandardProcedure::InflationControlBySum => {
+            StandardProcedure::FungibleInflation => {
                 push_stack!(self, 0u8);
                 // TODO: Implement secondary fungible issue validation (trivial)
             }
-            StandardProcedure::InflationControlByCount => {
+            StandardProcedure::NonfungibleInflation => {
                 push_stack!(self, 0u8);
                 // TODO: Implement secondary NFT issue validation (trivial)
             }
@@ -177,6 +177,14 @@ impl Embedded {
                 push_stack!(self, 0u8);
                 // TODO: Implement bitcoin script lock validation (currently
                 // none)
+            }
+            StandardProcedure::IdentityTransfer => {
+                push_stack!(self, 0u8);
+                // TODO: Implement
+            }
+            StandardProcedure::RightsSplit => {
+                push_stack!(self, 0u8);
+                // TODO: Implement
             }
         }
     }
