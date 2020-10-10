@@ -1249,7 +1249,7 @@ mod test {
         assert_eq!(
             schema.abi.get(&script::AssignmentAction::Validate).unwrap(),
             &script::Procedure::Embedded(
-                script::StandardProcedure::ProofOfBurn
+                script::StandardProcedure::InflationControlByCount
             )
         );
     }

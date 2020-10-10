@@ -510,7 +510,7 @@ mod test {
         let mut genesis_abi = GenesisAbi::new();
         genesis_abi.insert(
             GenesisAction::Validate,
-            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
+            Procedure::Embedded(StandardProcedure::NoInflationBySum),
         );
 
         assert_eq!(genesis_schema.node_type(), NodeType::Genesis);
@@ -542,7 +542,7 @@ mod test {
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
             TransitionAction::Validate,
-            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
+            Procedure::Embedded(StandardProcedure::NoInflationBySum),
         );
 
         assert_eq!(transition_schema.node_type(), NodeType::StateTransition);
@@ -577,7 +577,7 @@ mod test {
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
             ExtensionAction::Validate,
-            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
+            Procedure::Embedded(StandardProcedure::NoInflationBySum),
         );
 
         assert_eq!(extension_schema.node_type(), NodeType::Extension);
@@ -648,7 +648,7 @@ mod test {
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
             TransitionAction::Validate,
-            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
+            Procedure::Embedded(StandardProcedure::NoInflationBySum),
         );
 
         let mut transition_abi2 = TransitionAbi::new();
@@ -660,7 +660,7 @@ mod test {
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
             ExtensionAction::Validate,
-            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
+            Procedure::Embedded(StandardProcedure::NoInflationBySum),
         );
 
         // Create Four Unequal Transition and Extension Structures

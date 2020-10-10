@@ -159,9 +159,11 @@ pub enum Procedure {
 #[display(Debug)]
 #[repr(u8)]
 pub enum StandardProcedure {
-    ConfidentialAmount = 1,
-    IssueControl = 2,
-    ProofOfBurn = 3,
+    NoInflationBySum = 0x01,
+    InflationControlBySum = 0x02,
+    InflationControlByCount = 0x03,
+    ProofOfBurn = 0x10,
+    ProofOfReserve = 0x11,
 }
 
 mod strict_encoding {
@@ -226,28 +228,30 @@ mod strict_encoding {
                 TransitionAction::GenerateBlank => 1
             );
             test_enum_u8_exhaustive!(StandardProcedure;
-                StandardProcedure::ConfidentialAmount => 1,
-                StandardProcedure::IssueControl => 2,
-                StandardProcedure::ProofOfBurn => 3
+                StandardProcedure::NoInflationBySum => 0x1,
+                StandardProcedure::InflationControlBySum => 0x2,
+                StandardProcedure::InflationControlByCount => 0x3,
+                StandardProcedure::ProofOfBurn => 0x10,
+                StandardProcedure::ProofOfReserve => 0x11
             );
 
             // Test Procedures
             assert_eq!(
                 vec![0xFF, 0x01],
                 strict_encode(&Procedure::Embedded(
-                    StandardProcedure::ConfidentialAmount
+                    StandardProcedure::NoInflationBySum
                 ))
                 .unwrap()
             );
             assert_eq!(
-                vec![0xFF, 0x02],
+                vec![0xFF, 0x2],
                 strict_encode(&Procedure::Embedded(
-                    StandardProcedure::IssueControl
+                    StandardProcedure::InflationControlBySum
                 ))
                 .unwrap()
             );
             assert_eq!(
-                vec![0xFF, 0x03],
+                vec![0xFF, 0x10],
                 strict_encode(&Procedure::Embedded(
                     StandardProcedure::ProofOfBurn
                 ))
@@ -265,7 +269,7 @@ mod strict_encoding {
             let mut trans_abi = TransitionAbi::new();
             trans_abi.insert(
                 TransitionAction::Validate,
-                Procedure::Embedded(StandardProcedure::ConfidentialAmount),
+                Procedure::Embedded(StandardProcedure::NoInflationBySum),
             );
             assert_eq!(
                 vec![0x01, 0x00, 0x00, 0xff, 0x01],

@@ -49,3 +49,48 @@ mod verify {
     }
 }
 pub use verify::SchemaVerify;
+
+/// Constants used by embedded validation procedures representing standard
+/// metadata fields, state and transition types analyzed by them
+pub mod constants {
+    /// [`FieldType`] that is used by the embedded validation procedure
+    /// [`StandardProcedure::ProofOfReserve`]
+    pub const FIELD_TYPE_LOCK_DESCRIPTOR: usize = 0xC0;
+
+    /// [`FieldType`] that is used by the embedded validation procedure
+    /// [`StandardProcedure::ProofOfReserve`]
+    pub const FIELD_TYPE_LOCK_UTXO: usize = 0xC1;
+
+    /// [`FieldType`] that is used by the embedded validation procedure
+    /// [`StandardProcedure::ProofOfBurn`]
+    pub const FIELD_TYPE_BURN_SUPPLY: usize = 0xB0;
+
+    /// [`FieldType`] that is used by the embedded validation procedure
+    /// [`StandardProcedure::ProofOfBurn`]
+    pub const FIELD_TYPE_BURN_UTXO: usize = 0xB1;
+
+    /// [`FieldType`] that is used by the embedded validation procedure
+    /// [`StandardProcedure::ProofOfBurn`]
+    pub const FIELD_TYPE_HISTORY_PROOF: usize = 0xB2;
+
+    /// [`FieldType`] that is used by the embedded validation procedure
+    /// [`StandardProcedure::ProofOfBurn`]
+    pub const FIELD_TYPE_HISTORY_PROOF_FORMAT: usize = 0xB3;
+
+    /// [`FieldType`] that is used by the embedded validation procedure
+    /// [`StandardProcedure::InflationControlBySum`]
+    pub const FIELD_TYPE_ISSUED_SUPPLY: usize = 0xA0;
+
+    /// [`OwnedRightType`] that is used by the embedded validation procedure
+    /// [`StandardProcedure::InflationControlBySum`]
+    pub const STATE_TYPE_FUNGIBLE_INFLATION: usize = 0xA0;
+
+    /// [`OwnedRightType`] that is used by the embedded validation procedures
+    /// [`StandardProcedure::NoInflationBySum`] and
+    /// [`StandardProcedure::InflationControlBySum`]
+    pub const STATE_TYPE_FUNGIBLE_ASSETS: usize = 0xA1;
+
+    /// [`TransitionType`] that is used by the embedded validation procedures
+    /// [`StandardProcedure::NoInflationBySum`]
+    pub const TRANSITION_TYPE_FUNGIBLE_ISSUE: usize = 0xA0;
+}

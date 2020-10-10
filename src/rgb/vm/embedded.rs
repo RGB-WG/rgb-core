@@ -16,26 +16,9 @@ use core::any::Any;
 use super::VirtualMachine;
 use crate::client_side_validation::Conceal;
 use crate::rgb::{
-    amount, schema, script::StandardProcedure, Assignments, Metadata,
+    amount, schema, schema::constants::*, script::StandardProcedure,
+    Assignments, Metadata,
 };
-
-// Data are taken according to RGB-20 (LNPBP-20) standard
-#[allow(unused)]
-const META_TOTAL_SUPPLY: usize = 3;
-#[allow(unused)]
-const META_ISSUED_SUPPLY: usize = 4;
-#[allow(unused)]
-const SEAL_ISSUE: usize = 0;
-#[allow(unused)]
-const SEAL_ASSETS: usize = 1;
-#[allow(unused)]
-const SEAL_PRUNE: usize = 2;
-#[allow(unused)]
-const TRANSITION_ISSUE: usize = 0;
-#[allow(unused)]
-const TRANSITION_TRANSFER: usize = 1;
-#[allow(unused)]
-const TRANSITION_PRUNE: usize = 2;
 
 macro_rules! push_stack {
     ($self:ident, $ident:literal) => {
@@ -72,11 +55,12 @@ impl Embedded {
 
     pub fn execute(&mut self, proc: StandardProcedure) {
         match proc {
-            StandardProcedure::ConfidentialAmount => {
+            StandardProcedure::NoInflationBySum => {
                 match self.previous_state {
                     None => {
                         if self.transition_type == None
-                            || self.transition_type == Some(TRANSITION_ISSUE)
+                            || self.transition_type
+                                == Some(TRANSITION_TYPE_FUNGIBLE_ISSUE)
                         {
                             // We are at genesis or issue transition, must check
                             // issue metadata
@@ -101,7 +85,7 @@ impl Embedded {
                             // Get issued supply data
                             let supply = match self
                                 .current_meta
-                                .u64(META_ISSUED_SUPPLY)
+                                .u64(FIELD_TYPE_ISSUED_SUPPLY)
                                 .next()
                             {
                                 Some(supply) => supply,
@@ -177,13 +161,22 @@ impl Embedded {
                     }
                 }
             }
-            StandardProcedure::IssueControl => {
+            StandardProcedure::InflationControlBySum => {
                 push_stack!(self, 0u8);
-                // TODO: Implement secondary issue validation (trivial)
+                // TODO: Implement secondary fungible issue validation (trivial)
+            }
+            StandardProcedure::InflationControlByCount => {
+                push_stack!(self, 0u8);
+                // TODO: Implement secondary NFT issue validation (trivial)
             }
             StandardProcedure::ProofOfBurn => {
                 push_stack!(self, 0u8);
                 // TODO: Implement prunning validation (currently none)
+            }
+            StandardProcedure::ProofOfReserve => {
+                push_stack!(self, 0u8);
+                // TODO: Implement bitcoin script lock validation (currently
+                // none)
             }
         }
     }

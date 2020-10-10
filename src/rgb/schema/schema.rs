@@ -842,13 +842,13 @@ pub(crate) mod test {
                 ASSIGNMENT_ISSUE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::IssueControl)
+                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::InflationControlBySum)
                     }
                 },
                 ASSIGNMENT_ASSETS => StateSchema {
                     format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::ConfidentialAmount)
+                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::NoInflationBySum)
                     }
                 },
                 ASSIGNMENT_PRUNE => StateSchema {
@@ -941,7 +941,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_rgb20_encoding_decoding() {
+    fn test_schema_encoding_decoding() {
         let schema = schema();
         let encoded = strict_encode(&schema).unwrap();
         let encoded_standard: Vec<u8> = vec![
@@ -955,7 +955,7 @@ pub(crate) mod test {
             0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
             255, 16, 0, 32, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0,
             0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0,
-            0, 255, 1, 2, 0, 0, 1, 0, 0, 255, 3, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0,
+            0, 255, 1, 2, 0, 0, 1, 0, 0, 255, 16, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0,
             0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0,
             0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 0,
