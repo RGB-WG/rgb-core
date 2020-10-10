@@ -1248,7 +1248,9 @@ mod test {
         assert_eq!(schema.format, StateFormat::Declarative);
         assert_eq!(
             schema.abi.get(&script::AssignmentAction::Validate).unwrap(),
-            &script::Procedure::Standard(script::StandardProcedure::Prunning,)
+            &script::Procedure::Embedded(
+                script::StandardProcedure::ProofOfBurn
+            )
         );
     }
 

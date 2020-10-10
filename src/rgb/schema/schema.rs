@@ -626,7 +626,7 @@ mod _validation {
                 // should be performed
                 if let Some(procedure) = abi.get(&AssignmentAction::Validate) {
                     match procedure {
-                        script::Procedure::Standard(proc) => {
+                        script::Procedure::Embedded(proc) => {
                             let mut vm = vm::Embedded::with(
                                 transition_type,
                                 parent_owned_rights
@@ -842,19 +842,19 @@ pub(crate) mod test {
                 ASSIGNMENT_ISSUE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Standard(script::StandardProcedure::IssueControl)
+                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::IssueControl)
                     }
                 },
                 ASSIGNMENT_ASSETS => StateSchema {
                     format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Standard(script::StandardProcedure::ConfidentialAmount)
+                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::ConfidentialAmount)
                     }
                 },
                 ASSIGNMENT_PRUNE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Standard(script::StandardProcedure::Prunning)
+                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::ProofOfBurn)
                     }
                 }
             },

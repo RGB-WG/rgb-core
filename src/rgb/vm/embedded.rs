@@ -181,7 +181,7 @@ impl Embedded {
                 push_stack!(self, 0u8);
                 // TODO: Implement secondary issue validation (trivial)
             }
-            StandardProcedure::Prunning => {
+            StandardProcedure::ProofOfBurn => {
                 push_stack!(self, 0u8);
                 // TODO: Implement prunning validation (currently none)
             }

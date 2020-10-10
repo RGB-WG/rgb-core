@@ -509,8 +509,8 @@ mod test {
 
         let mut genesis_abi = GenesisAbi::new();
         genesis_abi.insert(
-            GenesisAction::NoOp,
-            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+            GenesisAction::Validate,
+            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
         );
 
         assert_eq!(genesis_schema.node_type(), NodeType::Genesis);
@@ -541,8 +541,8 @@ mod test {
 
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
-            TransitionAction::GenerateBlank,
-            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+            TransitionAction::Validate,
+            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
         );
 
         assert_eq!(transition_schema.node_type(), NodeType::StateTransition);
@@ -576,8 +576,8 @@ mod test {
 
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
-            ExtensionAction::NoOp,
-            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+            ExtensionAction::Validate,
+            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
         );
 
         assert_eq!(extension_schema.node_type(), NodeType::Extension);
@@ -647,20 +647,20 @@ mod test {
         // Create the required ABIs
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
-            TransitionAction::GenerateBlank,
-            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+            TransitionAction::Validate,
+            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
         );
 
         let mut transition_abi2 = TransitionAbi::new();
         transition_abi2.insert(
-            TransitionAction::GenerateBlank,
-            Procedure::Standard(StandardProcedure::Prunning),
+            TransitionAction::Validate,
+            Procedure::Embedded(StandardProcedure::ProofOfBurn),
         );
 
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
-            ExtensionAction::NoOp,
-            Procedure::Standard(StandardProcedure::ConfidentialAmount),
+            ExtensionAction::Validate,
+            Procedure::Embedded(StandardProcedure::ConfidentialAmount),
         );
 
         // Create Four Unequal Transition and Extension Structures

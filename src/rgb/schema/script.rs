@@ -41,14 +41,14 @@ where
 )]
 #[display(Debug)]
 pub enum GenesisAction {
-    NoOp = 0,
+    Validate = 0,
 }
 
 impl NodeAction for GenesisAction {}
 
 impl Default for GenesisAction {
     fn default() -> Self {
-        GenesisAction::NoOp
+        GenesisAction::Validate
     }
 }
 
@@ -67,14 +67,14 @@ impl Default for GenesisAction {
 )]
 #[display(Debug)]
 pub enum ExtensionAction {
-    NoOp = 0,
+    Validate = 0,
 }
 
 impl NodeAction for ExtensionAction {}
 
 impl Default for ExtensionAction {
     fn default() -> Self {
-        ExtensionAction::NoOp
+        ExtensionAction::Validate
     }
 }
 
@@ -94,13 +94,14 @@ impl Default for ExtensionAction {
 #[display(Debug)]
 #[repr(u16)]
 pub enum TransitionAction {
-    GenerateBlank = 0,
+    Validate = 0,
+    GenerateBlank = 1,
 }
 impl NodeAction for TransitionAction {}
 
 impl Default for TransitionAction {
     fn default() -> Self {
-        TransitionAction::GenerateBlank
+        TransitionAction::Validate
     }
 }
 
@@ -138,8 +139,8 @@ pub type AssignmentAbi = BTreeMap<AssignmentAction, Procedure>;
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
 pub enum Procedure {
-    Standard(StandardProcedure),
-    Simplicity { offset: u32 },
+    Embedded(StandardProcedure),
+    Simplicity { abi_table_index: u32 },
 }
 
 #[non_exhaustive]
@@ -160,7 +161,7 @@ pub enum Procedure {
 pub enum StandardProcedure {
     ConfidentialAmount = 1,
     IssueControl = 2,
-    Prunning = 3,
+    ProofOfBurn = 3,
 }
 
 mod strict_encoding {
@@ -182,10 +183,10 @@ mod strict_encoding {
             mut e: E,
         ) -> Result<usize, Error> {
             Ok(match self {
-                Self::Simplicity { offset } => {
-                    strict_encode_list!(e; 0u8, offset)
-                }
-                Self::Standard(proc_id) => {
+                Self::Simplicity {
+                    abi_table_index: offset,
+                } => strict_encode_list!(e; 0u8, offset),
+                Self::Embedded(proc_id) => {
                     strict_encode_list!(e; 0xFFu8, proc_id)
                 }
             })
@@ -198,10 +199,10 @@ mod strict_encoding {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             Ok(match u8::strict_decode(&mut d)? {
                 0u8 => Self::Simplicity {
-                    offset: u32::strict_decode(&mut d)?,
+                    abi_table_index: u32::strict_decode(&mut d)?,
                 },
                 0xFFu8 => {
-                    Self::Standard(StandardProcedure::strict_decode(&mut d)?)
+                    Self::Embedded(StandardProcedure::strict_decode(&mut d)?)
                 }
                 x => Err(Error::EnumValueNotKnown(
                     "script::Procedure".to_string(),
@@ -220,43 +221,51 @@ mod strict_encoding {
         fn test_basics() {
             // Test Actions and Standard procedures
             test_enum_u8_exhaustive!(AssignmentAction; AssignmentAction::Validate => 0);
-            test_enum_u8_exhaustive!(TransitionAction; TransitionAction::GenerateBlank => 0);
-            test_enum_u8_exhaustive!(StandardProcedure; StandardProcedure::ConfidentialAmount => 1, 
-                StandardProcedure::IssueControl => 2, 
-                StandardProcedure::Prunning => 3);
+            test_enum_u8_exhaustive!(TransitionAction;
+                TransitionAction::Validate => 0,
+                TransitionAction::GenerateBlank => 1
+            );
+            test_enum_u8_exhaustive!(StandardProcedure;
+                StandardProcedure::ConfidentialAmount => 1,
+                StandardProcedure::IssueControl => 2,
+                StandardProcedure::ProofOfBurn => 3
+            );
 
             // Test Procedures
             assert_eq!(
                 vec![0xFF, 0x01],
-                strict_encode(&Procedure::Standard(
+                strict_encode(&Procedure::Embedded(
                     StandardProcedure::ConfidentialAmount
                 ))
                 .unwrap()
             );
             assert_eq!(
                 vec![0xFF, 0x02],
-                strict_encode(&Procedure::Standard(
+                strict_encode(&Procedure::Embedded(
                     StandardProcedure::IssueControl
                 ))
                 .unwrap()
             );
             assert_eq!(
                 vec![0xFF, 0x03],
-                strict_encode(&Procedure::Standard(
-                    StandardProcedure::Prunning
+                strict_encode(&Procedure::Embedded(
+                    StandardProcedure::ProofOfBurn
                 ))
                 .unwrap()
             );
             assert_eq!(
                 vec![0x00, 0x58, 0x00, 0x00, 0x00],
-                strict_encode(&Procedure::Simplicity { offset: 88 }).unwrap()
+                strict_encode(&Procedure::Simplicity {
+                    abi_table_index: 88
+                })
+                .unwrap()
             );
 
             // Test Transition and Assignment ABI
             let mut trans_abi = TransitionAbi::new();
             trans_abi.insert(
-                TransitionAction::GenerateBlank,
-                Procedure::Standard(StandardProcedure::ConfidentialAmount),
+                TransitionAction::Validate,
+                Procedure::Embedded(StandardProcedure::ConfidentialAmount),
             );
             assert_eq!(
                 vec![0x01, 0x00, 0x00, 0xff, 0x01],
@@ -266,7 +275,9 @@ mod strict_encoding {
             let mut assignment_abi = AssignmentAbi::new();
             assignment_abi.insert(
                 AssignmentAction::Validate,
-                Procedure::Simplicity { offset: 45 },
+                Procedure::Simplicity {
+                    abi_table_index: 45,
+                },
             );
             assert_eq!(
                 vec![0x01, 0x00, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x00],
