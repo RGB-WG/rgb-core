@@ -62,6 +62,11 @@ pub trait NodeSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
@@ -71,6 +76,11 @@ pub struct GenesisSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
@@ -81,6 +91,11 @@ pub struct ExtensionSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,

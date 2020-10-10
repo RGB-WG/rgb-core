@@ -39,6 +39,11 @@ where
     ToPrimitive,
     FromPrimitive,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 pub enum GenesisAction {
     Validate = 0,
@@ -65,6 +70,11 @@ impl Default for GenesisAction {
     ToPrimitive,
     FromPrimitive,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 pub enum ExtensionAction {
     Validate = 0,
@@ -90,6 +100,11 @@ impl Default for ExtensionAction {
     Display,
     ToPrimitive,
     FromPrimitive,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
 )]
 #[display(Debug)]
 #[repr(u16)]
@@ -118,6 +133,11 @@ impl Default for TransitionAction {
     ToPrimitive,
     FromPrimitive,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum AssignmentAction {
@@ -137,6 +157,11 @@ pub type AssignmentAbi = BTreeMap<AssignmentAction, Procedure>;
 
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 pub enum Procedure {
     Embedded(StandardProcedure),
@@ -155,6 +180,11 @@ pub enum Procedure {
     Display,
     ToPrimitive,
     FromPrimitive,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
 )]
 #[display(Debug)]
 #[repr(u8)]

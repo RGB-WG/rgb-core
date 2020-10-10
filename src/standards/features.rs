@@ -192,8 +192,12 @@ impl Octal for FlagVec {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display(Debug)]
+pub struct ParseError;
+
 impl FromStr for FlagVec {
-    type Err = ();
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut vec = Vec::with_capacity(s.len());
@@ -202,7 +206,7 @@ impl FromStr for FlagVec {
                 '1' | '+' | '*' | '#' => 1,
                 '0' | '-' | '!' | '_' => 0,
                 ' ' | '\n' | '\t' | '\r' => continue,
-                _ => return Err(()),
+                _ => return Err(ParseError),
             })
         }
         vec.try_into()
@@ -210,7 +214,7 @@ impl FromStr for FlagVec {
 }
 
 impl TryFrom<Vec<u8>> for FlagVec {
-    type Error = ();
+    type Error = ParseError;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         Self::try_from(&value[..])
@@ -218,7 +222,7 @@ impl TryFrom<Vec<u8>> for FlagVec {
 }
 
 impl TryFrom<&[u8]> for FlagVec {
-    type Error = ();
+    type Error = ParseError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         let mut vec = FlagVec::with_capacity(value.len() as FlagNo);
@@ -226,7 +230,7 @@ impl TryFrom<&[u8]> for FlagVec {
             match v {
                 1 => vec.set(i as FlagNo),
                 0 => false,
-                _ => return Err(()),
+                _ => return Err(ParseError),
             };
         }
         Ok(vec)

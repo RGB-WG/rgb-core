@@ -19,6 +19,11 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
 
 #[derive(Clone, PartialEq, Debug, Display, StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[strict_crate(crate)]
 #[display(Debug)]
 pub struct StateSchema {
@@ -38,6 +43,11 @@ pub struct StateSchema {
     ToPrimitive,
     FromPrimitive,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[non_exhaustive]
 #[repr(u8)]
 #[display(Debug)]
@@ -48,6 +58,11 @@ pub enum StateType {
 }
 
 #[derive(Clone, PartialEq, Debug, Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[non_exhaustive]
 #[display(Debug)]
 pub enum StateFormat {
@@ -57,6 +72,11 @@ pub enum StateFormat {
 }
 
 #[derive(Clone, PartialEq, Debug, Display, ToPrimitive, FromPrimitive)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
@@ -72,6 +92,11 @@ pub enum DiscreteFiniteFieldFormat {
 }
 
 #[derive(Clone, PartialEq, Debug, Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 #[non_exhaustive]
 pub enum DataFormat {

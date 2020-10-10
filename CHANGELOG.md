@@ -1,6 +1,16 @@
 Change Log
 ==========
 
+v0.1.0-rc.2
+-----------
+
+### Breaking changes:
+- Changed embedded procedure names for RGB VM
+
+### Other changes:
+- Schema serialization
+- More embedded procedures for RGB VM
+
 v0.1.0-rc.1
 -----------
 
@@ -39,12 +49,10 @@ v0.1.0-beta.3
 -------------
 
 ### Breaking changes
-
 - Single-use-seals blinding factor changed from 32-bit to 64-bit of entropy
 - Transaction output indexes in single-use-seal definitions are now 32-bit, as in Bitcoin Core / rust-bitcoin (previously were 16-bit)
 
 ### New features
-
 - Initial Tor V2 address support
 - Test cases for BP mod strict encoding
 

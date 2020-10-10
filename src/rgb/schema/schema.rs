@@ -48,8 +48,21 @@ tagged_hash!(
 );
 
 #[derive(Clone, PartialEq, Debug, Default)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct Schema {
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::rust::display_fromstr")
+    )]
     pub rgb_features: features::FlagVec,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::rust::display_fromstr")
+    )]
     pub root_id: SchemaId,
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,

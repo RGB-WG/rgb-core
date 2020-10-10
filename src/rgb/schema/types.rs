@@ -93,6 +93,11 @@ impl Number for f64 {}
     ToPrimitive,
     FromPrimitive,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
@@ -129,6 +134,11 @@ impl Bits {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
@@ -222,6 +232,11 @@ pub struct OccurrencesError {
     ToPrimitive,
     FromPrimitive,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
@@ -253,6 +268,11 @@ pub mod elliptic_curve {
         ToPrimitive,
         FromPrimitive,
     )]
+    #[cfg_attr(
+        feature = "serde",
+        derive(Serialize, Deserialize),
+        serde(crate = "serde_crate")
+    )]
     #[display(Debug)]
     #[repr(u8)]
     #[non_exhaustive]
@@ -272,6 +292,11 @@ pub mod elliptic_curve {
         Display,
         ToPrimitive,
         FromPrimitive,
+    )]
+    #[cfg_attr(
+        feature = "serde",
+        derive(Serialize, Deserialize),
+        serde(crate = "serde_crate")
     )]
     #[display(Debug)]
     #[repr(u8)]
@@ -293,6 +318,11 @@ pub mod elliptic_curve {
         Display,
         ToPrimitive,
         FromPrimitive,
+    )]
+    #[cfg_attr(
+        feature = "serde",
+        derive(Serialize, Deserialize),
+        serde(crate = "serde_crate")
     )]
     #[display(Debug)]
     #[repr(u8)]
