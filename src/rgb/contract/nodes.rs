@@ -159,6 +159,11 @@ pub trait Node: AsAny {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, AsAny)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct Genesis {
     schema_id: SchemaId,
     chain: bp::Chain,
@@ -170,6 +175,11 @@ pub struct Genesis {
 
 #[derive(
     Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode, AsAny,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
 )]
 #[strict_crate(crate)]
 pub struct Extension {
@@ -184,6 +194,11 @@ pub struct Extension {
 
 #[derive(
     Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode, AsAny,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
 )]
 #[strict_crate(crate)]
 pub struct Transition {

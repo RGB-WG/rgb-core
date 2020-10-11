@@ -948,7 +948,7 @@ mod _validation {
                 ) => {}
                 (
                     Self::PublicKey(EllipticCurve::Curve25519, _),
-                    data::Revealed::Ed25519Pubkey(_),
+                    data::Revealed::Curve25519Pubkey(_),
                 ) => {}
                 (
                     Self::Signature(elliptic_curve::SignatureAlgorithm::Ecdsa),

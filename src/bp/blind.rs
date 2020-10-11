@@ -34,6 +34,11 @@ use crate::commit_verify::CommitVerify;
     StrictDecode,
 )]
 #[strict_crate(crate)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 pub struct OutpointReveal {
     /// Blinding factor preventing rainbow table bruteforce attack based on

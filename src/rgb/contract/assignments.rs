@@ -38,6 +38,11 @@ pub type ParentPublicRights =
 
 #[derive(Clone, Debug, Display, PartialEq)]
 #[display(Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "snake_case")
+)]
 pub enum Assignments {
     Declarative(BTreeSet<OwnedState<DeclarativeStrategy>>),
     DiscreteFiniteField(BTreeSet<OwnedState<PedersenStrategy>>),
@@ -401,6 +406,11 @@ impl StateTypes for HashStrategy {
 
 #[derive(Clone, Debug, Display)]
 #[display(Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "kebab-case")
+)]
 pub enum OwnedState<STATE>
 where
     STATE: StateTypes,

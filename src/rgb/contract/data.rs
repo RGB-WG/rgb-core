@@ -28,6 +28,11 @@ use bitcoin::util::psbt::PartiallySignedTransaction;
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, AsAny)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct Void;
 
 impl ConfidentialState for Void {}
@@ -46,6 +51,11 @@ impl CommitEncodeWithStrategy for Void {
 }
 
 #[derive(Clone, Debug, Display, AsAny)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 #[non_exhaustive]
 pub enum Revealed {
@@ -76,12 +86,26 @@ pub enum Revealed {
     Bitcoin256(sha256d::Hash),
 
     Secp256k1Pubkey(secp256k1::PublicKey),
-    Ed25519Pubkey(ed25519_dalek::PublicKey),
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "crate::rgb::bech32::to_bech32",
+            deserialize_with = "crate::rgb::bech32::from_bech32"
+        )
+    )]
+    Curve25519Pubkey(ed25519_dalek::PublicKey),
 
     Secp256k1ECDSASignature(secp256k1::Signature),
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "crate::rgb::bech32::to_bech32",
+            deserialize_with = "crate::rgb::bech32::from_bech32"
+        )
+    )]
     Ed25519Signature(ed25519_dalek::Signature),
     // TODO: Add support for Schnorr's signatures once they will be
-    // implemented       in rust-secp256k1
+    //       implemented in rust-secp256k1
     TxOutPoint(OutPoint),
     Tx(Transaction),
     Psbt(PartiallySignedTransaction),
@@ -217,7 +241,7 @@ pub(super) mod strict_encoding {
         Secp256k1Pubkey = 0b_1000_0001_u8,
         Secp256k1Signature = 0b_1000_0010_u8,
 
-        Ed25519Pubkey = 0b_1000_1001_u8,
+        Curve25519Pubkey = 0b_1000_1001_u8,
         Ed25519Signature = 0b_1000_1010_u8,
 
         TxOutPoint = 0b_0101_0001_u8,
@@ -309,8 +333,12 @@ pub(super) mod strict_encoding {
                 Revealed::Secp256k1ECDSASignature(val) => {
                     strict_encode_list!(e; EncodingTag::Secp256k1Signature, val)
                 }
-                Revealed::Ed25519Pubkey(_) => unimplemented!(),
-                Revealed::Ed25519Signature(_) => unimplemented!(),
+                Revealed::Curve25519Pubkey(val) => {
+                    strict_encode_list!(e; EncodingTag::Curve25519Pubkey, val)
+                }
+                Revealed::Ed25519Signature(val) => {
+                    strict_encode_list!(e; EncodingTag::Ed25519Signature, val)
+                }
                 Revealed::TxOutPoint(val) => {
                     strict_encode_list!(e; EncodingTag::TxOutPoint, val)
                 }
@@ -370,8 +398,12 @@ pub(super) mod strict_encoding {
                         secp256k1::Signature::strict_decode(&mut d)?,
                     )
                 }
-                EncodingTag::Ed25519Pubkey => unimplemented!(),
-                EncodingTag::Ed25519Signature => unimplemented!(),
+                EncodingTag::Curve25519Pubkey => Revealed::Curve25519Pubkey(
+                    ed25519_dalek::PublicKey::strict_decode(&mut d)?,
+                ),
+                EncodingTag::Ed25519Signature => Revealed::Ed25519Signature(
+                    ed25519_dalek::Signature::strict_decode(&mut d)?,
+                ),
                 EncodingTag::TxOutPoint => {
                     Revealed::TxOutPoint(OutPoint::strict_decode(&mut d)?)
                 }
@@ -414,7 +446,7 @@ pub(super) mod strict_encoding {
                 EncodingTag::Secp256k1Pubkey => 0b_1000_0001_u8,
                 EncodingTag::Secp256k1Signature => 0b_1000_0010_u8,
 
-                EncodingTag::Ed25519Pubkey => 0b_1000_1001_u8,
+                EncodingTag::Curve25519Pubkey => 0b_1000_1001_u8,
                 EncodingTag::Ed25519Signature => 0b_1000_1010_u8,
 
                 EncodingTag::TxOutPoint => 0b_0101_0001_u8,

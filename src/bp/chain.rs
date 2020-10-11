@@ -45,6 +45,11 @@ pub const P2P_MAGIC_SIGNET: P2pMagicNumber = 0x40CF030A;
 /// This enum differs from bitcoin::Network in its ability to support
 /// non-standard and non-predefined networks
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "kebab-case")
+)]
 #[non_exhaustive]
 #[repr(u32)]
 pub enum P2pNetworkId {
@@ -375,6 +380,11 @@ lazy_static! {
     ToPrimitive,
 )]
 #[display(Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "kebab-case")
+)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum ChainFormat {
@@ -400,6 +410,11 @@ impl_enum_strict_encoding!(ChainFormat);
     ToPrimitive,
 )]
 #[display(Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "kebab-case")
+)]
 #[repr(u8)]
 pub enum AssetLayer {
     /// Native chain asset(s), which can operate both on the layer of
@@ -426,6 +441,11 @@ impl_enum_strict_encoding!(AssetLayer);
     FromPrimitive,
     ToPrimitive,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "kebab-case")
+)]
 #[display(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
@@ -434,16 +454,21 @@ pub enum AssetSystem {
     NativeBlockchain = 0,
 
     /// Liquid confidential assets used in LiquidV1 network
-    LiquidV1ConfidentialAssets = 1,
+    ConfidentialAssets = 1,
 
     /// RGB confidential assets
-    RgbAssets = 2,
+    RgbContract = 2,
 }
 impl_enum_strict_encoding!(AssetSystem);
 
 /// Parameters for a given asset, which are shared between different types of
 /// Layer 1, 2 and 3 assets.
 #[derive(Clone, PartialOrd, Ord, Debug, Display, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "kebab-case")
+)]
 #[display(Debug)]
 pub struct AssetParams {
     /// Short asset name, or ticker, like BTC for bitcoin. Case-sensitive with
@@ -523,6 +548,11 @@ impl StrictDecode for AssetParams {
 #[derive(
     Clone, PartialOrd, Ord, Debug, Display, Hash, StrictEncode, StrictDecode,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 #[strict_crate(crate)]
 pub struct ChainParams {
@@ -590,6 +620,11 @@ impl Eq for ChainParams {}
 /// A set of recommended standard networks. Differs from bitcoin::Network in
 /// ability to support non-standard and non-predefined networks
 #[derive(Clone, Debug, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "kebab-case")
+)]
 #[non_exhaustive]
 #[repr(u32)]
 pub enum Chain {
@@ -1084,8 +1119,8 @@ mod test {
 
         test_enum_u8_exhaustive!(AssetSystem;
             AssetSystem::NativeBlockchain => 0,
-            AssetSystem::LiquidV1ConfidentialAssets => 1,
-            AssetSystem::RgbAssets => 2
+            AssetSystem::ConfidentialAssets => 1,
+            AssetSystem::RgbContract => 2
         );
     }
 
@@ -1106,7 +1141,7 @@ mod test {
             indivisible_unit: "a".to_string(),
             divisibility: 0,
             asset_id: Default::default(),
-            asset_system: AssetSystem::LiquidV1ConfidentialAssets,
+            asset_system: AssetSystem::ConfidentialAssets,
         };
 
         let asset3 = AssetParams {

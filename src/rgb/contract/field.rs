@@ -24,6 +24,7 @@ use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy,
 };
 use crate::rgb::schema;
+use miniscript::serde::{Deserializer, Serializer};
 
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
@@ -33,6 +34,33 @@ wrapper!(
     doc = "Transition & genesis metadata fields",
     derive = [Default, PartialEq]
 );
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Metadata {
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Metadata {
+    fn deserialize<D>(
+        deserializer: D,
+    ) -> Result<Self, <D as Deserializer<'de>>::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(Self(<Self as amplify::Wrapper>::Inner::deserialize(
+            deserializer,
+        )?))
+    }
+}
 
 impl IntoIterator for Metadata {
     type Item = <MetadataInner as IntoIterator>::Item;

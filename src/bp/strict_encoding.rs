@@ -14,15 +14,17 @@
 use std::io;
 
 use bitcoin::hashes::{hash160, sha256, sha256d, sha512};
+use bitcoin::util::bip32::KeyApplication;
 use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{
     secp256k1, util::bip32, BlockHash, OutPoint, Script, Transaction, TxIn,
     TxOut, Txid, XpubIdentifier,
 };
+#[cfg(feature = "ed25519-dalek")]
+use ed25519_dalek::ed25519::signature::Signature;
 
 use super::blind::OutpointHash;
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
-use bitcoin::util::bip32::KeyApplication;
 
 impl strict_encoding::Strategy for Txid {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
@@ -77,6 +79,46 @@ impl StrictDecode for Script {
     #[inline]
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
         Ok(Self::from(Vec::<u8>::strict_decode(d)?))
+    }
+}
+
+#[cfg(feature = "ed25519-dalek")]
+impl StrictEncode for ed25519_dalek::PublicKey {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(e.write(&self.as_bytes()[..])?)
+    }
+}
+
+#[cfg(feature = "ed25519-dalek")]
+impl StrictDecode for ed25519_dalek::PublicKey {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        let mut buf = [0u8; ed25519_dalek::PUBLIC_KEY_LENGTH];
+        d.read_exact(&mut buf)?;
+        Ok(Self::from_bytes(&buf).map_err(|_| {
+            Error::DataIntegrityError(
+                "invalid Curve25519 public key data".to_string(),
+            )
+        })?)
+    }
+}
+
+#[cfg(feature = "ed25519-dalek")]
+impl StrictEncode for ed25519_dalek::Signature {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(e.write(&self.as_bytes())?)
+    }
+}
+
+#[cfg(feature = "ed25519-dalek")]
+impl StrictDecode for ed25519_dalek::Signature {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        let mut buf = [0u8; ed25519_dalek::SIGNATURE_LENGTH];
+        d.read_exact(&mut buf)?;
+        Ok(Self::from_bytes(&buf).map_err(|_| {
+            Error::DataIntegrityError(
+                "invalid Ed25519 signature data".to_string(),
+            )
+        })?)
     }
 }
 

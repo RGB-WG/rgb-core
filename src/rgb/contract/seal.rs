@@ -25,6 +25,11 @@ pub type Confidential = OutpointHash;
 pub type SealDefinition = Revealed;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "snake_case")
+)]
 #[display(Debug)]
 pub enum Revealed {
     /// Seal that is revealed

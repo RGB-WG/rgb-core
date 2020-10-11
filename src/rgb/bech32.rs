@@ -17,6 +17,9 @@ use core::str::FromStr;
 use deflate::{write::DeflateEncoder, Compression};
 use std::convert::{TryFrom, TryInto};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serializer};
+
 use crate::rgb::{
     seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
     Transition,
@@ -29,6 +32,30 @@ use crate::strict_encoding::{
 /// some string basing on Bech32 HRP value.
 #[derive(Clone, Debug, From)]
 pub enum Bech32 {
+    /// Pedersen commitment
+    ///
+    /// HRP: `pedersen`
+    #[from]
+    PedersenCommitment(secp256k1zkp::pedersen::Commitment),
+
+    /// Bulletproofs
+    ///
+    /// HRP: `bulletproof`
+    #[from]
+    Bulletproof(secp256k1zkp::pedersen::RangeProof),
+
+    /// Curve25519 public key
+    ///
+    /// HRP: `curve25519pk`
+    #[from]
+    Curve25519Pk(ed25519_dalek::PublicKey),
+
+    /// Ed25519 signature
+    ///
+    /// HRP: `ed25519sign`
+    #[from]
+    Ed25519Sign(ed25519_dalek::Signature),
+
     /// Blinded UTXO for assigning RGB state to.
     ///
     /// HRP: `utxob`
@@ -90,6 +117,14 @@ pub enum Bech32 {
 }
 
 impl Bech32 {
+    /// HRP for a Bech32-encoded Pedersen commitment
+    pub const HRP_PEDERSEN: &'static str = "pedersen";
+    /// HRP for a Bech32-encoded blinded bulletproof range proof data
+    pub const HRP_BULLETPROOF: &'static str = "bulletproof";
+    /// HRP for a Bech32-encoded blinded bulletproof range proof data
+    pub const HRP_CURVE25519OPK: &'static str = "curve25519pk";
+    /// HRP for a Bech32-encoded blinded bulletproof range proof data
+    pub const HRP_ED25519OSIGN: &'static str = "ed25519sign";
     /// HRP for a Bech32-encoded blinded UTXO data
     pub const HRP_OUTPOINT: &'static str = "utxob";
 
@@ -237,6 +272,50 @@ impl From<Error> for ::core::fmt::Error {
     }
 }
 
+impl TryFrom<Bech32> for secp256k1zkp::pedersen::Commitment {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::PedersenCommitment(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for secp256k1zkp::pedersen::RangeProof {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Bulletproof(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for ed25519_dalek::PublicKey {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Curve25519Pk(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
+impl TryFrom<Bech32> for ed25519_dalek::Signature {
+    type Error = Error;
+
+    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
+        match bech32 {
+            Bech32::Ed25519Sign(obj) => Ok(obj),
+            _ => Err(Error::WrongType),
+        }
+    }
+}
+
 impl TryFrom<Bech32> for seal::Confidential {
     type Error = Error;
 
@@ -347,6 +426,18 @@ impl FromStr for Bech32 {
         println!("{}", data.to_hex());
 
         Ok(match hrp {
+            x if x == Self::HRP_PEDERSEN => {
+                Self::PedersenCommitment(strict_decode(&data)?)
+            }
+            x if x == Self::HRP_BULLETPROOF => {
+                Self::Bulletproof(strict_decode(&data)?)
+            }
+            x if x == Self::HRP_CURVE25519OPK => {
+                Self::Curve25519Pk(strict_decode(&data)?)
+            }
+            x if x == Self::HRP_ED25519OSIGN => {
+                Self::Ed25519Sign(strict_decode(&data)?)
+            }
             x if x == Self::HRP_OUTPOINT => {
                 Self::BlindedUtxo(strict_decode(&data)?)
             }
@@ -382,6 +473,18 @@ impl FromStr for Bech32 {
 impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
+            Self::PedersenCommitment(obj) => {
+                (Self::HRP_PEDERSEN, strict_encode(obj)?)
+            }
+            Self::Bulletproof(obj) => {
+                (Self::HRP_BULLETPROOF, strict_encode(obj)?)
+            }
+            Self::Curve25519Pk(obj) => {
+                (Self::HRP_CURVE25519OPK, strict_encode(obj)?)
+            }
+            Self::Ed25519Sign(obj) => {
+                (Self::HRP_ED25519OSIGN, strict_encode(obj)?)
+            }
             Self::BlindedUtxo(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)?),
             Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_encode(obj)?),
             Self::ContractId(obj) => {
@@ -541,6 +644,30 @@ impl Display for Disclosure {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         Bech32::Disclosure(self.clone()).fmt(f)
     }
+}
+
+/// Serializes type to a Bech32 string.
+#[cfg(feature = "serde")]
+pub fn to_bech32<T, S>(buffer: &T, serializer: S) -> Result<S::Ok, S::Error>
+where
+    T: ToBech32,
+    S: Serializer,
+{
+    serializer.serialize_str(&buffer.to_bech32_string())
+}
+
+/// Deserializes a Bech32 to a `Vec<u8>`.
+#[cfg(feature = "serde")]
+pub fn from_bech32<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+where
+    T: FromBech32,
+    D: Deserializer<'de>,
+{
+    use serde::de::Error;
+    String::deserialize(deserializer).and_then(|string| {
+        T::from_bech32_str(&string)
+            .map_err(|err| Error::custom(err.to_string()))
+    })
 }
 
 #[cfg(test)]
