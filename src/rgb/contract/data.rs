@@ -54,7 +54,7 @@ impl CommitEncodeWithStrategy for Void {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "lowercase")
 )]
 #[display(Debug)]
 #[non_exhaustive]

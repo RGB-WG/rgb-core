@@ -371,6 +371,7 @@ mod strict_encoding {
 }
 
 // TODO: Remove this once bitcion will adopt new bitcoin_num crate
+#[cfg(feature = "serde")]
 pub(crate) mod serde_helpers {
     //! Serde serialization helpers
 

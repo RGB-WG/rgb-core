@@ -58,6 +58,7 @@ pub extern crate bitcoin;
 #[macro_use]
 pub extern crate bitcoin_hashes;
 pub extern crate miniscript;
+#[cfg(feature = "grin_secp256k1zkp")]
 pub extern crate secp256k1zkp;
 
 #[macro_use]

@@ -17,6 +17,8 @@ use core::fmt::Debug;
 use core::hash::Hash;
 use core::ops::Try;
 use core::option::NoneError;
+#[cfg(feature = "serde")]
+use serde::{Deserializer, Serializer};
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::data;
@@ -24,7 +26,6 @@ use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy,
 };
 use crate::rgb::schema;
-use miniscript::serde::{Deserializer, Serializer};
 
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
