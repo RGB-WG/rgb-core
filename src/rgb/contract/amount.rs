@@ -35,9 +35,21 @@ pub type Amount = u64;
 pub type BlindingFactor = secp256k1zkp::key::SecretKey;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, AsAny)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display(Debug)]
 pub struct Revealed {
     pub amount: Amount,
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "serde_helpers::to_hex",
+            deserialize_with = "serde_helpers::from_hex"
+        )
+    )]
     pub blinding: BlindingFactor,
 }
 
@@ -358,151 +370,39 @@ mod strict_encoding {
     }
 }
 
-#[cfg(feature = "serde")]
-mod serde_impl {
-    use super::*;
-    use core::fmt::{self, Formatter};
-    use serde::de::{self, Deserializer, MapAccess, SeqAccess, Visitor};
-    use serde::ser::{SerializeStruct, Serializer};
-    use serde::{Deserialize, Serialize};
+// TODO: Remove this once bitcion will adopt new bitcoin_num crate
+pub(crate) mod serde_helpers {
+    //! Serde serialization helpers
 
-    impl Serialize for Revealed {
-        fn serialize<S>(
-            &self,
-            serializer: S,
-        ) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
-        where
-            S: Serializer,
-        {
-            let mut state =
-                serializer.serialize_struct("amount::Revealed", 2)?;
-            state.serialize_field("amount", &self.amount)?;
-            state.serialize_field("blinding", &self.blinding.0)?;
-            state.end()
-        }
+    use bitcoin::hashes::hex::{FromHex, ToHex};
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    /// Serializes `buffer` to a lowercase hex string.
+    pub fn to_hex<T, S>(buffer: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: AsRef<[u8]>,
+        S: Serializer,
+    {
+        serializer.serialize_str(&buffer.as_ref().to_hex())
     }
 
-    impl<'de> Deserialize<'de> for Revealed {
-        fn deserialize<D>(
-            deserializer: D,
-        ) -> Result<Self, <D as Deserializer<'de>>::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            enum Field {
-                Amount,
-                Blinding,
-            };
-
-            impl<'de> Deserialize<'de> for Field {
-                fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
-                where
-                    D: Deserializer<'de>,
-                {
-                    struct FieldVisitor;
-
-                    impl<'de> Visitor<'de> for FieldVisitor {
-                        type Value = Field;
-
-                        fn expecting(
-                            &self,
-                            formatter: &mut fmt::Formatter,
-                        ) -> fmt::Result {
-                            formatter.write_str("`amount` or `blinding`")
-                        }
-
-                        fn visit_str<E>(self, value: &str) -> Result<Field, E>
-                        where
-                            E: de::Error,
-                        {
-                            match value {
-                                "amount" => Ok(Field::Amount),
-                                "blinding" => Ok(Field::Blinding),
-                                _ => {
-                                    Err(de::Error::unknown_field(value, FIELDS))
-                                }
-                            }
-                        }
-                    }
-
-                    deserializer.deserialize_identifier(FieldVisitor)
-                }
-            }
-
-            struct RevealedVisitor;
-            impl<'de> Visitor<'de> for RevealedVisitor {
-                type Value = Revealed;
-
-                fn expecting(
-                    &self,
-                    formatter: &mut Formatter<'_>,
-                ) -> fmt::Result {
-                    formatter.write_str("struct Revealed")
-                }
-
-                fn visit_seq<A>(
-                    self,
-                    mut seq: A,
-                ) -> Result<Self::Value, <A as SeqAccess<'de>>::Error>
-                where
-                    A: SeqAccess<'de>,
-                {
-                    Ok(Revealed {
-                        amount: seq.next_element()?.ok_or_else(|| {
-                            de::Error::invalid_length(0, &self)
-                        })?,
-                        blinding: seq.next_element()?.ok_or_else(|| {
-                            de::Error::invalid_length(0, &self)
-                        })?,
-                    })
-                }
-
-                fn visit_map<A>(
-                    self,
-                    mut map: A,
-                ) -> Result<Self::Value, <A as MapAccess<'de>>::Error>
-                where
-                    A: MapAccess<'de>,
-                {
-                    let mut amount = None;
-                    let mut blinding = None;
-                    while let Some(key) = map.next_key()? {
-                        match key {
-                            Field::Amount => {
-                                if amount.is_some() {
-                                    return Err(de::Error::duplicate_field(
-                                        "amount",
-                                    ));
-                                }
-                                amount = Some(map.next_value()?);
-                            }
-                            Field::Blinding => {
-                                if blinding.is_some() {
-                                    return Err(de::Error::duplicate_field(
-                                        "blinding",
-                                    ));
-                                }
-                                blinding = Some(map.next_value()?);
-                            }
-                        }
-                    }
-                    let amount = amount
-                        .ok_or_else(|| de::Error::missing_field("amount"))?;
-                    let blinding =
-                        secp256k1zkp::key::SecretKey(blinding.ok_or_else(
-                            || de::Error::missing_field("blinding"),
-                        )?);
-                    Ok(Revealed { amount, blinding })
-                }
-            }
-
-            const FIELDS: &'static [&'static str] = &["amount", "blinding"];
-            deserializer.deserialize_struct(
-                "amount::Revealed",
-                FIELDS,
-                RevealedVisitor,
+    /// Deserializes a lowercase hex string to a `Vec<u8>`.
+    pub fn from_hex<'de, D>(
+        deserializer: D,
+    ) -> Result<secp256k1zkp::SecretKey, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        use serde::de::Error;
+        String::deserialize(deserializer).and_then(|string| {
+            secp256k1zkp::SecretKey::from_slice(
+                &crate::rgb::contract::SECP256K1_ZKP,
+                &Vec::<u8>::from_hex(&string).map_err(|_| {
+                    D::Error::custom("wrong hex data for SecretKey")
+                })?[..],
             )
-        }
+            .map_err(|err| Error::custom(err.to_string()))
+        })
     }
 }
 

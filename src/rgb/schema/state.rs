@@ -46,7 +46,7 @@ pub struct StateSchema {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[non_exhaustive]
 #[repr(u8)]
@@ -61,7 +61,7 @@ pub enum StateType {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[non_exhaustive]
 #[display(Debug)]
@@ -75,7 +75,7 @@ pub enum StateFormat {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "lowercase")
 )]
 #[display(Debug)]
 #[non_exhaustive]
@@ -95,7 +95,7 @@ pub enum DiscreteFiniteFieldFormat {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "lowercase")
 )]
 #[display(Debug)]
 #[non_exhaustive]

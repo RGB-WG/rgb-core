@@ -46,6 +46,8 @@ extern crate async_trait;
 
 #[cfg(feature = "serde")]
 #[macro_use]
+extern crate serde_with;
+#[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
 // Bitcoin-specific imports. We make them public while we use custom versions

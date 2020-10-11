@@ -40,7 +40,8 @@ lnpbp_derive = { path = "derive" }
 # ----------------------------------------------------
 bitcoin = "~0.25.0"
 bitcoin_hashes = "~0.9.0" # we need macro from here
-# lightning = { version = "~0.0.11", optional = true }
+# we need this until bitcoin will integrate this crate
+bitcoin_num = { version = "~0.2.3", features = ["serde"], optional = true }
 miniscript = "~2.0.0"
 bech32 = "~0.7.2"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
@@ -53,7 +54,7 @@ ed25519-dalek = { version = "~1.0.0", optional = true }
 #   <https://github.com/rust-lang/api-guidelines/issues/180> for the explanation
 #   and references.
 serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
-serde_with = { version = "~1.5.0", optional = true }
+serde_with = { version = "~1.5.1", optional = true, features = ["hex"] }
 tokio = { version = "~0.2.18", features = ["tcp", "sync"], optional = true }
 lazy_static = "~1.4.0"
 # Networking deps
@@ -132,7 +133,8 @@ rgb = ["bulletproofs", "ed25519-dalek", "deflate", "inflate"]
 # ----------------------------
 #   These also include re-assembly of necessary features from dependencies
 async = ["async-trait", "amplify/async"]
-serde = ["serde_crate", "serde_with", "bitcoin/use-serde", "miniscript/serde", "amplify/serde"]
+serde = ["serde_crate", "serde_with", "bitcoin/use-serde", "bitcoin_num/serde",
+         "miniscript/serde", "amplify/serde"]
 # Optional cryptographic functionality
 # ------------------------------------
 bulletproofs = ["grin_secp256k1zkp"] # Auto-required and used only by RGB

@@ -42,7 +42,7 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
 pub enum GenesisAction {
@@ -73,7 +73,7 @@ impl Default for GenesisAction {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
 pub enum ExtensionAction {
@@ -104,7 +104,7 @@ impl Default for ExtensionAction {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
 #[repr(u16)]
@@ -136,7 +136,7 @@ impl Default for TransitionAction {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
 #[repr(u16)]
@@ -160,7 +160,7 @@ pub type AssignmentAbi = BTreeMap<AssignmentAction, Procedure>;
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
 pub enum Procedure {
@@ -184,7 +184,7 @@ pub enum Procedure {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
 #[repr(u8)]

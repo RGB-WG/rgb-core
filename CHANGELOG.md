@@ -10,6 +10,10 @@ v0.1.0-rc.2
 ### Other changes:
 - Schema serialization
 - More embedded procedures for RGB VM
+- Serde serialization for all RGB structures
+- Strict encoding and decoding of Curve25519 public keys and Ed25519 signatures
+- Implementation of Curve25519 public keys and Ed25519 signatures as RGB state and metadata
+- Bech types for Pedersen commitments, Bulletproofs, Curve25519 data
 
 v0.1.0-rc.1
 -----------

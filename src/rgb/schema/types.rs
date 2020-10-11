@@ -96,7 +96,7 @@ impl Number for f64 {}
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "lowercase")
 )]
 #[display(Debug)]
 #[repr(u8)]
@@ -137,7 +137,7 @@ impl Bits {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[display(Debug)]
 #[repr(u8)]
@@ -235,7 +235,7 @@ pub struct OccurrencesError {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "lowercase")
 )]
 #[display(Debug)]
 #[repr(u8)]
@@ -271,7 +271,7 @@ pub mod elliptic_curve {
     #[cfg_attr(
         feature = "serde",
         derive(Serialize, Deserialize),
-        serde(crate = "serde_crate")
+        serde(crate = "serde_crate", rename_all = "lowercase")
     )]
     #[display(Debug)]
     #[repr(u8)]
@@ -296,7 +296,7 @@ pub mod elliptic_curve {
     #[cfg_attr(
         feature = "serde",
         derive(Serialize, Deserialize),
-        serde(crate = "serde_crate")
+        serde(crate = "serde_crate", rename_all = "lowercase")
     )]
     #[display(Debug)]
     #[repr(u8)]
@@ -322,7 +322,7 @@ pub mod elliptic_curve {
     #[cfg_attr(
         feature = "serde",
         derive(Serialize, Deserialize),
-        serde(crate = "serde_crate")
+        serde(crate = "serde_crate", rename_all = "lowercase")
     )]
     #[display(Debug)]
     #[repr(u8)]
@@ -330,7 +330,7 @@ pub mod elliptic_curve {
     pub enum PointSerialization {
         Uncompressed = 0,
         Compressed,
-        SchnorrBip,
+        Bip340,
     }
 }
 pub use elliptic_curve::EllipticCurve;
@@ -797,7 +797,7 @@ mod test {
         assert_eq!(
             elliptic_curve::PointSerialization::strict_decode(&[0x02][..])
                 .unwrap(),
-            elliptic_curve::PointSerialization::SchnorrBip
+            elliptic_curve::PointSerialization::Bip340
         );
     }
 

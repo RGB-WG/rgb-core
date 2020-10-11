@@ -113,6 +113,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin_num"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "125b6a0228ba7c5f2462f6481db417fff24c4646cf77ee0d44202fd87dbd584a"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -512,6 +521,7 @@ dependencies = [
  "bech32",
  "bitcoin",
  "bitcoin_hashes",
+ "bitcoin_num",
  "deflate",
  "ed25519-dalek",
  "grin_secp256k1zkp",
@@ -1049,6 +1059,7 @@ version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8bac272128fb3b1e98872dca27a05c18d8b78b9bd089d3edb7b5871501b50bce"
 dependencies = [
+ "hex",
  "serde",
  "serde_with_macros",
 ]
