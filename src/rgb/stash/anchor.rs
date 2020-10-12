@@ -26,12 +26,16 @@ use crate::bp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
     TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
+use crate::bp::psbt::{Fee, FeeError};
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };
 use crate::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
 use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
 use crate::rgb::{ContractId, NodeId};
+
+pub const PSBT_OUT_PUBKEY: u8 = 0x1;
+//pub const PSBT_OUT_TWEAK: u8 = 0x2;
 
 lazy_static! {
     static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash =
@@ -53,7 +57,8 @@ lazy_static! {
 pub enum Error {
     NoRequiredOutputInformation(usize),
     NoRequiredPubkey(usize),
-    NoFeeInformation,
+    #[from]
+    FeeEstimationError(FeeError),
     #[from]
     WrongPubkeyData(secp256k1::Error),
     #[from(TooManyMessagesError)]
@@ -81,28 +86,16 @@ impl Anchor {
         transitions: BTreeMap<ContractId, NodeId>,
         psbt: &mut Psbt,
     ) -> Result<(Vec<Self>, HashMap<ContractId, usize>), Error> {
+        let fee = psbt.fee()?;
+
         let tx = &mut psbt.global.unsigned_tx;
         let num_outs = tx.output.len() as u64;
 
         let pubkey_key = ProprietaryKey {
             prefix: b"RGB".to_vec(),
-            subtype: 2u8,
+            subtype: PSBT_OUT_PUBKEY,
             key: vec![],
         };
-        let fee_key = ProprietaryKey {
-            prefix: b"RGB".to_vec(),
-            subtype: 1u8,
-            key: vec![],
-        };
-
-        let fee = psbt
-            .global
-            .proprietary
-            .get(&fee_key)
-            .ok_or(Error::NoFeeInformation)?;
-        let mut fee_slice = [0u8; 8];
-        fee_slice.copy_from_slice(fee);
-        let fee = u64::from_be_bytes(fee_slice);
 
         // Compute which transition commitments must go into which output and
         // assemble them in per-output-packs of ContractId: Transition
