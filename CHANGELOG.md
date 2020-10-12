@@ -6,6 +6,7 @@ v0.1.0-rc.2
 
 ### Breaking changes:
 - Changed embedded procedure names for RGB VM
+- Removed requirement for PSBT to contain fee key in RGB anchor creation (it needs to be a properly constructed PSBT with `witness_utxo`/`non_witness_utxo` data)
 
 ### Other changes:
 - Schema serialization
@@ -14,6 +15,7 @@ v0.1.0-rc.2
 - Strict encoding and decoding of Curve25519 public keys and Ed25519 signatures
 - Implementation of Curve25519 public keys and Ed25519 signatures as RGB state and metadata
 - Bech types for Pedersen commitments, Bulletproofs, Curve25519 data
+- Tweaking factor is added into PSBT information during anchor creation
 
 v0.1.0-rc.1
 -----------
