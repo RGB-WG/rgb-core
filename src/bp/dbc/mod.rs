@@ -30,6 +30,6 @@ pub use spk::{
     ScriptEncodeData, ScriptEncodeMethod, SpkCommitment, SpkContainer,
 };
 pub use taproot::{TaprootCommitment, TaprootContainer};
-pub use tx::{compute_lnpbp3_vout, TxCommitment, TxContainer, TxSupplement};
+pub use tx::{TxCommitment, TxContainer, TxSupplement};
 pub use txout::{TxoutCommitment, TxoutContainer};
 pub use types::{Container, Proof};

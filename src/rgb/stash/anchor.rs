@@ -15,9 +15,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use amplify::Wrapper;
 use bitcoin::secp256k1;
-use bitcoin::util::psbt::{
-    raw::ProprietaryKey, PartiallySignedTransaction as Psbt,
-};
+use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::util::uint::Uint256;
 use bitcoin::{Transaction, Txid};
 use bitcoin_hashes::{sha256, sha256t, Hash, HashEngine};
@@ -26,6 +24,7 @@ use crate::bp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
     TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
+use crate::bp::pasbt::ProprietaryKeyMap;
 use crate::bp::resolvers::{Fee, FeeError};
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
@@ -35,7 +34,7 @@ use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
 use crate::rgb::{ContractId, NodeId};
 
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
-//pub const PSBT_OUT_TWEAK: u8 = 0x2;
+pub const PSBT_OUT_TWEAK: u8 = 0x2;
 
 lazy_static! {
     static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash =
@@ -91,12 +90,6 @@ impl Anchor {
         let tx = &mut psbt.global.unsigned_tx;
         let num_outs = tx.output.len() as u64;
 
-        let pubkey_key = ProprietaryKey {
-            prefix: b"RGB".to_vec(),
-            subtype: PSBT_OUT_PUBKEY,
-            key: vec![],
-        };
-
         // Compute which transition commitments must go into which output and
         // assemble them in per-output-packs of ContractId: Transition
         // commitment type
@@ -127,10 +120,8 @@ impl Anchor {
             let tx_out = &tx.output[vout];
 
             let pubkey = psbt_out
-                .proprietary
-                .get(&pubkey_key)
+                .proprietary_key(b"RGB".to_vec(), PSBT_OUT_PUBKEY, vec![])
                 .ok_or(Error::NoRequiredPubkey(vout))?;
-            let pubkey = secp256k1::PublicKey::from_slice(pubkey)?;
             // TODO: (new) Add support for Taproot parsing
             let source = match psbt_out
                 .redeem_script
@@ -182,7 +173,18 @@ impl Anchor {
                 TxCommitment::embed_commit(&mut container, &mm_digest).unwrap();
 
             *tx = commitment.into_inner().clone();
-            // TODO: Save tweaking factor from container into PSBT key
+            psbt.outputs
+                .get_mut(container.vout())
+                .map(|output| {
+                    output.insert_proprietary_key(
+                        b"RGB".to_vec(),
+                        PSBT_OUT_TWEAK,
+                        vec![],
+                        &container.tweaking_factor.expect(
+                            "Tweaking factor always present after commitment procedure"
+                        )
+                    )
+                });
 
             multimsg.iter().for_each(|(id, _)| {
                 let contract_id = ContractId::from_inner(id.into_inner());

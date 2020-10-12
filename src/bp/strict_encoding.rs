@@ -13,7 +13,7 @@
 
 use std::io;
 
-use bitcoin::hashes::{hash160, sha256, sha256d, sha512};
+use bitcoin::hashes::{hash160, hmac, sha256, sha256d, sha512, Hash};
 use bitcoin::util::bip32::KeyApplication;
 use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{
@@ -49,6 +49,12 @@ impl strict_encoding::Strategy for sha512::Hash {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 impl strict_encoding::Strategy for hash160::Hash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl<T> strict_encoding::Strategy for hmac::Hmac<T>
+where
+    T: Hash,
+{
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 

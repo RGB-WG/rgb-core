@@ -32,24 +32,6 @@ pub struct TxContainer {
     pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
-pub fn compute_lnpbp3_vout(
-    tx: &Transaction,
-    supplement: &TxSupplement,
-) -> usize {
-    compute_vout(supplement.fee, supplement.protocol_factor, tx)
-}
-
-fn compute_vout(fee: u64, entropy: u32, tx: &Transaction) -> usize {
-    let nouts = tx.output.len() as u16;
-    let vout = ((fee + (entropy as u64)) % (nouts as u64)) as u16;
-    vout as usize
-}
-
-fn get_mut_txout(fee: u64, entropy: u32, tx: &mut Transaction) -> &mut TxOut {
-    let tx2 = tx.clone();
-    &mut tx.output[compute_vout(fee, entropy, &tx2)]
-}
-
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]
 pub struct TxSupplement {
@@ -69,20 +51,28 @@ impl TxContainer {
         source: ScriptEncodeData,
         method: ScriptEncodeMethod,
     ) -> Self {
-        let txout = &tx.output[compute_vout(fee, protocol_factor, &tx)];
-        Self {
-            tx: tx.clone(),
+        let mut me = Self {
+            tx,
             fee,
             protocol_factor,
             txout_container: TxoutContainer::construct(
                 protocol_tag,
-                txout.value,
+                0,
                 pubkey,
                 source,
                 method,
             ),
             tweaking_factor: None,
-        }
+        };
+        me.txout_container.value = me.tx.output[me.vout()].value;
+        me
+    }
+
+    pub fn vout(&self) -> usize {
+        let nouts = self.tx.output.len() as u16;
+        let vout = ((self.fee + (self.protocol_factor as u64)) % (nouts as u64))
+            as u16;
+        vout as usize
     }
 }
 
@@ -95,19 +85,23 @@ impl Container for TxContainer {
         supplement: &Self::Supplement,
         host: &Self::Host,
     ) -> Result<Self, Error> {
-        let txout = &host.output
-            [compute_vout(supplement.fee, supplement.protocol_factor, host)];
-        Ok(Self {
+        let mut me = Self {
             protocol_factor: supplement.protocol_factor,
             fee: supplement.fee,
             txout_container: TxoutContainer::reconstruct(
                 proof,
                 &supplement.tag,
-                txout,
+                &TxOut::default(),
             )?,
             tx: host.clone(),
             tweaking_factor: None,
-        })
+        };
+        me.txout_container = TxoutContainer::reconstruct(
+            proof,
+            &supplement.tag,
+            &host.output[me.vout()],
+        )?;
+        Ok(me)
     }
 
     fn deconstruct(self) -> (Proof, Self::Supplement) {
@@ -149,14 +143,12 @@ where
         msg: &MSG,
     ) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
-        let fee = container.fee;
-        let entropy = container.protocol_factor;
 
         let txout_commitment = TxoutCommitment::embed_commit(
             &mut container.txout_container.clone(),
             msg,
         )?;
-        *get_mut_txout(fee, entropy, &mut tx) = txout_commitment.into_inner();
+        tx.output[container.vout()] = txout_commitment.into_inner();
 
         container.tweaking_factor = container.txout_container.tweaking_factor;
 
