@@ -26,7 +26,7 @@
 //! keys, not their wrapped bitcoin counterparts `bitcoin::PublickKey` and
 //! `bitcoin::PrivateKey`.
 
-use bitcoin::hashes::sha256;
+use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 
 use super::{Container, Error, Proof};
@@ -46,7 +46,7 @@ pub struct PubkeyContainer {
     pub tag: sha256::Hash,
     /// Tweaking factor stored after [`PubkeyContainer::commit_verify()`]
     /// procedure
-    pub tweaking_factor: Option<[u8; 32]>,
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 impl Container for PubkeyContainer {

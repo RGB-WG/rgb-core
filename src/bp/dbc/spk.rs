@@ -13,7 +13,7 @@
 
 use amplify::Wrapper;
 use bitcoin::blockdata::script::Script;
-use bitcoin::hashes::sha256;
+use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 use core::convert::TryFrom;
 
@@ -94,7 +94,7 @@ pub struct SpkContainer {
     pub tag: sha256::Hash,
     /// Tweaking factor stored after [ScriptPubkeyContainer::commit_verify]
     /// procedure
-    pub tweaking_factor: Option<[u8; 32]>,
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 pub(super) mod strict_encoding {

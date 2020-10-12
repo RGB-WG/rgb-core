@@ -13,7 +13,7 @@
 
 //! # LNPBP-2 related
 
-use bitcoin::hashes::sha256;
+use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 use std::collections::BTreeSet;
 
@@ -35,7 +35,7 @@ pub struct KeysetContainer {
     /// Single SHA256 hash of the protocol-specific tag
     pub tag: sha256::Hash,
     /// Tweaking factor stored after [KeysetContainer::commit_verify] procedure
-    pub tweaking_factor: Option<[u8; 32]>,
+    pub tweaking_factor: Option<Hmac<sha256::Hash>>,
 }
 
 impl Container for KeysetContainer {

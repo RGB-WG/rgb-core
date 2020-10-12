@@ -98,7 +98,7 @@ pub fn commit(
     target_pubkey: &mut secp256k1::PublicKey,
     protocol_tag: &sha256::Hash,
     message: &impl AsRef<[u8]>,
-) -> Result<[u8; 32], Error> {
+) -> Result<Hmac<sha256::Hash>, Error> {
     if !keyset.remove(target_pubkey) {
         return Err(Error::NotKeysetMember);
     }
@@ -139,9 +139,8 @@ pub fn commit(
     //                        properly prefixed
     hmac_engine.input(&sha256::Hash::hash(message.as_ref()));
 
-    // Producing and storing tweaking factor in container
-    let hmac = Hmac::from_engine(hmac_engine);
-    let tweaking_factor = *hmac.as_inner();
+    // Producing tweaking factor
+    let tweaking_factor = Hmac::from_engine(hmac_engine);
 
     // Applying tweaking factor to public key
     target_pubkey
@@ -278,9 +277,9 @@ mod test {
                 assert_ne!(pk, pk2);
 
                 // Ensure that factor value is not trivial
-                assert_ne!(factor1, [0u8; 32]);
-                assert_ne!(factor1, [1u8; 32]);
-                assert_ne!(factor1, [0xFFu8; 32]);
+                assert_ne!(factor1, Hmac::from_slice(&[0u8; 32]).unwrap());
+                assert_ne!(factor1, Hmac::from_slice(&[1u8; 32]).unwrap());
+                assert_ne!(factor1, Hmac::from_slice(&[0xFFu8; 32]).unwrap());
                 assert_ne!(&factor1[..], &tag[..]);
                 assert_ne!(&factor1[..], &msg[..]);
 
@@ -385,9 +384,9 @@ mod test {
                 assert_ne!(pk, pk2);
 
                 // Ensure that factor value is not trivial
-                assert_ne!(factor1, [0u8; 32]);
-                assert_ne!(factor1, [1u8; 32]);
-                assert_ne!(factor1, [0xFFu8; 32]);
+                assert_ne!(factor1, Hmac::from_slice(&[0u8; 32]).unwrap());
+                assert_ne!(factor1, Hmac::from_slice(&[1u8; 32]).unwrap());
+                assert_ne!(factor1, Hmac::from_slice(&[0xFFu8; 32]).unwrap());
                 assert_ne!(&factor1[..], &tag[..]);
                 assert_ne!(&factor1[..], &msg[..]);
 
