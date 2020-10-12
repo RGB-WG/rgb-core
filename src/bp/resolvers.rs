@@ -11,12 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//! PSBT extensions
+//! Resolvers are traits allow accessing or computing information from a
+//! bitcoin transaction graph (from blockchain, state channel, index, PSBT etc).
 
-use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{TxOut, Txid};
-
-use crate::strict_encoding::{StrictDecode, StrictEncode};
 
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction
@@ -44,40 +42,6 @@ pub trait InputPreviousTxo {
     fn input_previous_txo(&self, index: usize) -> Result<&TxOut, MatchError>;
 }
 
-impl InputPreviousTxo for PartiallySignedTransaction {
-    fn input_previous_txo(&self, index: usize) -> Result<&TxOut, MatchError> {
-        if let (Some(input), Some(txin)) = (
-            self.inputs.get(index),
-            self.global.unsigned_tx.input.get(index),
-        ) {
-            let txid = txin.previous_output.txid;
-            input
-                .witness_utxo
-                .as_ref()
-                .ok_or(MatchError::NoInputTx(index))
-                .or_else(|_| {
-                    input
-                        .non_witness_utxo
-                        .as_ref()
-                        .ok_or(MatchError::NoInputTx(index))
-                        .and_then(|tx| {
-                            if txid != tx.txid() {
-                                Err(MatchError::NoTxidMatch(index, txid))
-                            } else {
-                                tx.output
-                                    .get(txin.previous_output.vout as usize)
-                                    .ok_or(MatchError::UnmatchingInputNumber(
-                                        index,
-                                    ))
-                            }
-                        })
-                })
-        } else {
-            Err(MatchError::WrongInputNo(index))
-        }
-    }
-}
-
 /// Errors happening during fee computation
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -96,27 +60,4 @@ pub trait Fee {
     /// Returns fee for a transaction, or returns error reporting resolver
     /// problem or wrong transaction structure
     fn fee(&self) -> Result<u64, FeeError>;
-}
-
-impl Fee for PartiallySignedTransaction {
-    fn fee(&self) -> Result<u64, FeeError> {
-        let mut input_sum = 0;
-        for index in 0..self.global.unsigned_tx.input.len() {
-            input_sum += self.input_previous_txo(index)?.value;
-        }
-
-        let output_sum = self
-            .global
-            .unsigned_tx
-            .output
-            .iter()
-            .map(|txout| txout.value)
-            .sum();
-
-        if input_sum < output_sum {
-            Err(FeeError::InputsLessThanOutputs)
-        } else {
-            Ok(input_sum - output_sum)
-        }
-    }
 }
