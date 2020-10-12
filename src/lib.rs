@@ -17,6 +17,7 @@
     arbitrary_enum_discriminant,
     try_trait
 )]
+#![feature(try_find)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![deny(

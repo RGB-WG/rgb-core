@@ -26,7 +26,7 @@ use crate::bp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
     TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
-use crate::bp::psbt::{Fee, FeeError};
+use crate::bp::resolvers::{Fee, FeeError};
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };

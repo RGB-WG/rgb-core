@@ -20,7 +20,7 @@ pub mod bip32;
 pub mod blind;
 pub mod chain;
 pub mod dbc;
-pub mod psbt;
+pub mod resolvers;
 pub mod scripts;
 mod seals;
 pub mod short_id;
