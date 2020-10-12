@@ -212,7 +212,7 @@ mod test {
         .unwrap();
         assert_eq!(
             commitment.as_inner().to_hex(),
-            "02021ef8e5ba59c3c9ec6d9fad0d8fbfffffe0d21f86a2ac329b458b6ea87d2399"
+            "02e47bb42c041f158ecfcf1099018f08650ef569a9a51bbb317e8787cdf3e06890"
         );
     }
 }
