@@ -1,6 +1,14 @@
 Change Log
 ==========
 
+v0.1.0
+------
+
+### Breaking changes:
+- RGB `Amount` renamed into `AtomicValue`
+
+### Other changes:
+
 v0.1.0-rc.2
 -----------
 

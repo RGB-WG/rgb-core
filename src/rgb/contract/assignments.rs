@@ -18,7 +18,7 @@ use core::option::NoneError;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use super::{
-    super::schema, amount, data, seal, Amount, AutoConceal, NodeId,
+    super::schema, amount, data, seal, AtomicValue, AutoConceal, NodeId,
     SealDefinition, SECP256K1_ZKP,
 };
 use crate::bp::blind::OutpointReveal;
@@ -52,8 +52,8 @@ pub enum Assignments {
 impl Assignments {
     pub fn zero_balanced(
         inputs: Vec<amount::Revealed>,
-        allocations_ours: Vec<(SealDefinition, Amount)>,
-        allocations_theirs: Vec<(seal::Confidential, Amount)>,
+        allocations_ours: Vec<(SealDefinition, AtomicValue)>,
+        allocations_theirs: Vec<(seal::Confidential, AtomicValue)>,
     ) -> Self {
         // Generate random blinding factors
         let mut rng = bitcoin::secp256k1::rand::thread_rng();
@@ -86,7 +86,7 @@ impl Assignments {
             .map(|(seal_definition, amount)| OwnedState::Revealed {
                 seal_definition,
                 assigned_state: amount::Revealed {
-                    amount,
+                    value: amount,
                     blinding: blinding_iter
                         .next()
                         .expect("Internal inconsistency in `AssignmentsVariant::zero_balanced`"),
@@ -99,7 +99,7 @@ impl Assignments {
                 .map(|(seal_definition, amount)| OwnedState::ConfidentialSeal {
                     seal_definition,
                     assigned_state: amount::Revealed {
-                        amount,
+                        value: amount,
                         blinding: blinding_iter.next().expect(
                             "Internal inconsistency in `AssignmentsVariant::zero_balanced`",
                         ),
@@ -1172,7 +1172,7 @@ mod test {
             .zip(output_amounts[..partition].iter());
 
         // Create our allocations
-        let ours: Vec<(SealDefinition, Amount)> = zip_data
+        let ours: Vec<(SealDefinition, AtomicValue)> = zip_data
             .map(|(txid, amount)| {
                 (
                     Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
@@ -1190,7 +1190,7 @@ mod test {
             .zip(output_amounts[partition..].iter());
 
         // Create their allocations
-        let theirs: Vec<(seal::Confidential, Amount)> = zip_data2
+        let theirs: Vec<(seal::Confidential, AtomicValue)> = zip_data2
             .map(|(txid, amount)| {
                 (
                     Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
@@ -1630,8 +1630,8 @@ mod test {
         let states = pedersan_type.known_state_homomorphic();
 
         // Check the amounts matches with precomputed values
-        assert_eq!(states[0].amount, 10);
-        assert_eq!(states[1].amount, 30);
+        assert_eq!(states[0].value, 10);
+        assert_eq!(states[1].value, 30);
 
         // Precomputed blinding factors
         let blind_1: Vec<u8> = Vec::from_hex(

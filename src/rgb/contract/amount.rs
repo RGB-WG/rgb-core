@@ -29,7 +29,7 @@ use crate::client_side_validation::{
 use crate::commit_verify::CommitVerify;
 use crate::paradigms::client_side_validation::CommitEncode;
 
-pub type Amount = u64;
+pub type AtomicValue = u64;
 
 /// Proof for Pedersen commitment: a blinding key
 pub type BlindingFactor = secp256k1zkp::key::SecretKey;
@@ -42,7 +42,7 @@ pub type BlindingFactor = secp256k1zkp::key::SecretKey;
 )]
 #[display(Debug)]
 pub struct Revealed {
-    pub amount: Amount,
+    pub value: AtomicValue,
     #[cfg_attr(
         feature = "serde",
         serde(
@@ -54,9 +54,12 @@ pub struct Revealed {
 }
 
 impl Revealed {
-    pub fn with_amount<R: Rng + RngCore>(amount: Amount, rng: &mut R) -> Self {
+    pub fn with_amount<R: Rng + RngCore>(
+        amount: AtomicValue,
+        rng: &mut R,
+    ) -> Self {
         Self {
-            amount,
+            value: amount,
             blinding: BlindingFactor::new(&SECP256K1_ZKP, rng),
         }
     }
@@ -77,7 +80,7 @@ impl CommitEncodeWithStrategy for Revealed {
 
 impl PartialOrd for Revealed {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self.amount.partial_cmp(&other.amount) {
+        match self.value.partial_cmp(&other.value) {
             None => None,
             Some(Ordering::Equal) => {
                 self.blinding.0.partial_cmp(&other.blinding.0)
@@ -89,7 +92,7 @@ impl PartialOrd for Revealed {
 
 impl Ord for Revealed {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.amount.cmp(&other.amount) {
+        match self.value.cmp(&other.value) {
             Ordering::Equal => self.blinding.0.cmp(&other.blinding.0),
             other => other,
         }
@@ -180,7 +183,7 @@ impl PartialEq for Confidential {
 impl CommitVerify<Revealed> for Confidential {
     fn commit(revealed: &Revealed) -> Self {
         let blinding = revealed.blinding.clone();
-        let value = revealed.amount;
+        let value = revealed.value;
 
         let commitment = SECP256K1_ZKP
             .commit(value, blinding.clone())
@@ -347,7 +350,7 @@ mod strict_encoding {
             mut e: E,
         ) -> Result<usize, Self::Error> {
             Ok(
-                strict_encode_list!(e; EncodingTag::U64, self.amount, self.blinding),
+                strict_encode_list!(e; EncodingTag::U64, self.value, self.blinding),
             )
         }
     }
@@ -359,7 +362,7 @@ mod strict_encoding {
             let format = EncodingTag::strict_decode(&mut d)?;
             Ok(match format {
                 EncodingTag::U64 => Self {
-                    amount: Amount::strict_decode(&mut d)?,
+                    value: AtomicValue::strict_decode(&mut d)?,
                     blinding: BlindingFactor::strict_decode(&mut d)?,
                 },
                 _ => Err(Error::UnsupportedDataStructure(
@@ -576,7 +579,7 @@ mod test {
             .zip(blinding_factors.iter())
             .map(|(amount, blinding_factor)| {
                 Revealed {
-                    amount,
+                    value: amount,
                     blinding: blinding_factor.clone(),
                 }
                 .conceal()
@@ -601,7 +604,7 @@ mod test {
                 .zip(blinding_factors.iter())
                 .map(|(amount, blinding_factor)| {
                     Revealed {
-                        amount,
+                        value: amount,
                         blinding: blinding_factor.clone(),
                     }
                     .conceal()

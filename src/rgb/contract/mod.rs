@@ -20,7 +20,7 @@ mod conceal;
 pub mod nodes;
 pub mod seal;
 
-pub use amount::Amount;
+pub use amount::AtomicValue;
 pub use assignments::{
     Assignments, ConfidentialState, DeclarativeStrategy, HashStrategy,
     OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,

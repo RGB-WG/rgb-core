@@ -103,7 +103,7 @@ impl Embedded {
                                     .collect(),
                                 vec![
                                     amount::Revealed {
-                                        amount: supply,
+                                        value: supply,
                                         blinding: secp256k1zkp::key::ONE_KEY,
                                     }
                                     .conceal()
