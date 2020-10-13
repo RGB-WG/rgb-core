@@ -241,7 +241,6 @@ pub enum Warning {
     EndpointTransitionNotFound(NodeId),
     EndpointDuplication(NodeId, seal::Confidential),
     EndpointTransitionSealNotFound(NodeId, seal::Confidential),
-    ParentHeterogenousAssignments(NodeId, schema::OwnedRightType),
     ExcessiveTransition(NodeId),
 }
 

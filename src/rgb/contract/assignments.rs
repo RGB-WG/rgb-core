@@ -44,9 +44,9 @@ pub type ParentPublicRights =
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 pub enum Assignments {
-    Declarative(BTreeSet<OwnedState<DeclarativeStrategy>>),
-    DiscreteFiniteField(BTreeSet<OwnedState<PedersenStrategy>>),
-    CustomData(BTreeSet<OwnedState<HashStrategy>>),
+    Declarative(Vec<OwnedState<DeclarativeStrategy>>),
+    DiscreteFiniteField(Vec<OwnedState<PedersenStrategy>>),
+    CustomData(Vec<OwnedState<HashStrategy>>),
 }
 
 impl Assignments {
@@ -81,7 +81,7 @@ impl Assignments {
         blinding_factors.push(blinding_correction);
 
         let mut blinding_iter = blinding_factors.into_iter();
-        let mut set: BTreeSet<OwnedState<_>> = allocations_ours
+        let mut set: Vec<OwnedState<_>> = allocations_ours
             .into_iter()
             .map(|(seal_definition, amount)| OwnedState::Revealed {
                 seal_definition,
@@ -137,7 +137,7 @@ impl Assignments {
     #[inline]
     pub fn declarative_state_mut(
         &mut self,
-    ) -> Option<&mut BTreeSet<OwnedState<DeclarativeStrategy>>> {
+    ) -> Option<&mut Vec<OwnedState<DeclarativeStrategy>>> {
         match self {
             Assignments::Declarative(set) => Some(set),
             _ => None,
@@ -147,7 +147,7 @@ impl Assignments {
     #[inline]
     pub fn discrete_state_mut(
         &mut self,
-    ) -> Option<&mut BTreeSet<OwnedState<PedersenStrategy>>> {
+    ) -> Option<&mut Vec<OwnedState<PedersenStrategy>>> {
         match self {
             Assignments::DiscreteFiniteField(set) => Some(set),
             _ => None,
@@ -157,7 +157,7 @@ impl Assignments {
     #[inline]
     pub fn custom_state_mut(
         &mut self,
-    ) -> Option<&mut BTreeSet<OwnedState<HashStrategy>>> {
+    ) -> Option<&mut Vec<OwnedState<HashStrategy>>> {
         match self {
             Assignments::CustomData(set) => Some(set),
             _ => None,
@@ -165,9 +165,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn to_declarative_state(
-        &self,
-    ) -> BTreeSet<OwnedState<DeclarativeStrategy>> {
+    pub fn to_declarative_state(&self) -> Vec<OwnedState<DeclarativeStrategy>> {
         match self {
             Assignments::Declarative(set) => set.clone(),
             _ => Default::default(),
@@ -175,7 +173,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn to_discrete_state(&self) -> BTreeSet<OwnedState<PedersenStrategy>> {
+    pub fn to_discrete_state(&self) -> Vec<OwnedState<PedersenStrategy>> {
         match self {
             Assignments::DiscreteFiniteField(set) => set.clone(),
             _ => Default::default(),
@@ -183,7 +181,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn to_custom_state(&self) -> BTreeSet<OwnedState<HashStrategy>> {
+    pub fn to_custom_state(&self) -> Vec<OwnedState<HashStrategy>> {
         match self {
             Assignments::CustomData(set) => set.clone(),
             _ => Default::default(),
@@ -193,7 +191,7 @@ impl Assignments {
     #[inline]
     pub fn into_declarative_state(
         self,
-    ) -> BTreeSet<OwnedState<DeclarativeStrategy>> {
+    ) -> Vec<OwnedState<DeclarativeStrategy>> {
         match self {
             Assignments::Declarative(set) => set,
             _ => Default::default(),
@@ -201,7 +199,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn into_discrete_state(self) -> BTreeSet<OwnedState<PedersenStrategy>> {
+    pub fn into_discrete_state(self) -> Vec<OwnedState<PedersenStrategy>> {
         match self {
             Assignments::DiscreteFiniteField(set) => set,
             _ => Default::default(),
@@ -209,7 +207,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn into_custom_state(self) -> BTreeSet<OwnedState<HashStrategy>> {
+    pub fn into_custom_state(self) -> Vec<OwnedState<HashStrategy>> {
         match self {
             Assignments::CustomData(set) => set,
             _ => Default::default(),
@@ -853,19 +851,19 @@ mod strict_encoding {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
                 schema::StateType::Declarative => {
-                    Assignments::Declarative(BTreeSet::strict_decode(d)?)
+                    Assignments::Declarative(StrictDecode::strict_decode(d)?)
                 }
                 schema::StateType::DiscreteFiniteField => match EncodingTag::strict_decode(&mut d)?
                 {
                     EncodingTag::U64 => {
-                        Assignments::DiscreteFiniteField(BTreeSet::strict_decode(&mut d)?)
+                        Assignments::DiscreteFiniteField(StrictDecode::strict_decode(&mut d)?)
                     }
                     _ => Err(Error::UnsupportedDataStructure(
                         "We support only homomorphic commitments to U64 data",
                     ))?,
                 },
                 schema::StateType::CustomData => {
-                    Assignments::CustomData(BTreeSet::strict_decode(d)?)
+                    Assignments::CustomData(StrictDecode::strict_decode(d)?)
                 }
             })
         }
@@ -2201,12 +2199,12 @@ mod test {
             assigned_state: data::Void,
         };
 
-        let mut set = BTreeSet::new();
+        let mut set = Vec::new();
 
-        set.insert(assignment_1);
-        set.insert(assignment_2);
-        set.insert(assignment_3);
-        set.insert(assignment_4);
+        set.push(assignment_1);
+        set.push(assignment_2);
+        set.push(assignment_3);
+        set.push(assignment_4);
 
         let declarative_variant = Assignments::Declarative(set);
 
@@ -2249,12 +2247,12 @@ mod test {
                 .conceal(),
         };
 
-        let mut set = BTreeSet::new();
+        let mut set = Vec::new();
 
-        set.insert(assignment_1);
-        set.insert(assignment_2);
-        set.insert(assignment_3);
-        set.insert(assignment_4);
+        set.push(assignment_1);
+        set.push(assignment_2);
+        set.push(assignment_3);
+        set.push(assignment_4);
 
         let pedersen_variant = Assignments::DiscreteFiniteField(set);
 
@@ -2301,12 +2299,12 @@ mod test {
             assigned_state: state_data_vec[3].clone().conceal(),
         };
 
-        let mut set = BTreeSet::new();
+        let mut set = Vec::new();
 
-        set.insert(assignment_1);
-        set.insert(assignment_2);
-        set.insert(assignment_3);
-        set.insert(assignment_4);
+        set.push(assignment_1);
+        set.push(assignment_2);
+        set.push(assignment_3);
+        set.push(assignment_4);
 
         let hash_variant = Assignments::CustomData(set);
 

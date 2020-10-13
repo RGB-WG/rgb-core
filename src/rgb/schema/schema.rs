@@ -155,9 +155,9 @@ mod strict_encoding {
 mod _validation {
     use super::*;
 
-    use core::convert::TryFrom;
     use std::collections::BTreeSet;
 
+    use crate::client_side_validation::Conceal;
     use crate::rgb::contract::nodes::PublicRights;
     use crate::rgb::schema::{
         script, MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
@@ -165,7 +165,8 @@ mod _validation {
     };
     use crate::rgb::{
         validation, AssignmentAction, Assignments, Metadata, Node, NodeId,
-        OwnedRights, ParentOwnedRights, ParentPublicRights, VirtualMachine,
+        OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
+        StateTypes, VirtualMachine,
     };
 
     impl SchemaVerify for Schema {
@@ -694,7 +695,7 @@ mod _validation {
     ) -> OwnedRights {
         let mut owned_rights = OwnedRights::new();
         for (id, details) in parent_owned_rights {
-            let node = match nodes.get(id) {
+            let parent_node = match nodes.get(id) {
                 None => {
                     status.add_failure(validation::Failure::TransitionAbsent(
                         *id,
@@ -704,49 +705,65 @@ mod _validation {
                 Some(node) => node,
             };
 
-            for (type_id, indexes) in details {
-                let assignements: Vec<&Assignments> = node
-                    .owned_rights_by_type(*type_id)
-                    .into_iter()
+            fn filter<STATE>(
+                set: &Vec<OwnedState<STATE>>,
+                indexes: &Vec<u16>,
+            ) -> Vec<OwnedState<STATE>>
+            where
+                STATE: StateTypes + Clone,
+                STATE::Confidential: PartialEq + Eq,
+                STATE::Confidential:
+                    From<<STATE::Revealed as Conceal>::Confidential>,
+            {
+                set.into_iter()
                     .enumerate()
-                    .filter_map(|(index, v)| {
-                        if indexes.contains(&u16::try_from(index).expect(
-                            "All collection sizes in RGB are 160bit integers; \
-                                so this can only fail if RGB consensus code is broken",
-                        )) {
-                            Some(v)
+                    .filter_map(|(index, item)| {
+                        if indexes.contains(&(index as u16)) {
+                            Some(item.clone())
                         } else {
                             None
                         }
                     })
-                    .collect();
+                    .collect()
+            };
 
-                for assignment in assignements {
-                    match assignment {
-                        Assignments::Declarative(set) => {
-                            owned_rights
-                                .entry(*type_id)
-                                .or_insert(Assignments::Declarative(bset! {}))
-                                .declarative_state_mut()
-                                .map(|state| state.extend(set.clone()));
-                        }
-                        Assignments::DiscreteFiniteField(set) => {
-                            owned_rights
-                                .entry(*type_id)
-                                .or_insert(Assignments::DiscreteFiniteField(
-                                    bset! {},
-                                ))
-                                .discrete_state_mut()
-                                .map(|state| state.extend(set.clone()));
-                        }
-                        Assignments::CustomData(set) => {
-                            owned_rights
-                                .entry(*type_id)
-                                .or_insert(Assignments::CustomData(bset! {}))
-                                .custom_state_mut()
-                                .map(|state| state.extend(set.clone()));
-                        }
-                    };
+            for (type_id, indexes) in details {
+                match parent_node.owned_rights_by_type(*type_id) {
+                    Some(Assignments::Declarative(set)) => {
+                        let set = filter(set, indexes);
+                        owned_rights
+                            .entry(*type_id)
+                            .or_insert(Assignments::Declarative(
+                                Default::default(),
+                            ))
+                            .declarative_state_mut()
+                            .map(|state| state.extend(set));
+                    }
+                    Some(Assignments::DiscreteFiniteField(set)) => {
+                        let set = filter(set, indexes);
+                        owned_rights
+                            .entry(*type_id)
+                            .or_insert(Assignments::DiscreteFiniteField(
+                                Default::default(),
+                            ))
+                            .discrete_state_mut()
+                            .map(|state| state.extend(set));
+                    }
+                    Some(Assignments::CustomData(set)) => {
+                        let set = filter(set, indexes);
+                        owned_rights
+                            .entry(*type_id)
+                            .or_insert(Assignments::CustomData(
+                                Default::default(),
+                            ))
+                            .custom_state_mut()
+                            .map(|state| state.extend(set));
+                    }
+                    None => {
+                        // Presence of the required owned rights type in the
+                        // parent node was already validated; we have nothing to
+                        // report here
+                    }
                 }
             }
         }
