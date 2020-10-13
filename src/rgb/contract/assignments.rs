@@ -135,31 +135,11 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn declarative_state(
-        &self,
-    ) -> Option<&BTreeSet<OwnedState<DeclarativeStrategy>>> {
-        match self {
-            Assignments::Declarative(set) => Some(set),
-            _ => None,
-        }
-    }
-
-    #[inline]
     pub fn declarative_state_mut(
         &mut self,
     ) -> Option<&mut BTreeSet<OwnedState<DeclarativeStrategy>>> {
         match self {
             Assignments::Declarative(set) => Some(set),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn discrete_state(
-        &self,
-    ) -> Option<&BTreeSet<OwnedState<PedersenStrategy>>> {
-        match self {
-            Assignments::DiscreteFiniteField(set) => Some(set),
             _ => None,
         }
     }
@@ -175,7 +155,9 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn custom_state(&self) -> Option<&BTreeSet<OwnedState<HashStrategy>>> {
+    pub fn custom_state_mut(
+        &mut self,
+    ) -> Option<&mut BTreeSet<OwnedState<HashStrategy>>> {
         match self {
             Assignments::CustomData(set) => Some(set),
             _ => None,
@@ -183,12 +165,54 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn custom_state_mut(
-        &mut self,
-    ) -> Option<&mut BTreeSet<OwnedState<HashStrategy>>> {
+    pub fn to_declarative_state(
+        &self,
+    ) -> BTreeSet<OwnedState<DeclarativeStrategy>> {
         match self {
-            Assignments::CustomData(set) => Some(set),
-            _ => None,
+            Assignments::Declarative(set) => set.clone(),
+            _ => Default::default(),
+        }
+    }
+
+    #[inline]
+    pub fn to_discrete_state(&self) -> BTreeSet<OwnedState<PedersenStrategy>> {
+        match self {
+            Assignments::DiscreteFiniteField(set) => set.clone(),
+            _ => Default::default(),
+        }
+    }
+
+    #[inline]
+    pub fn to_custom_state(&self) -> BTreeSet<OwnedState<HashStrategy>> {
+        match self {
+            Assignments::CustomData(set) => set.clone(),
+            _ => Default::default(),
+        }
+    }
+
+    #[inline]
+    pub fn into_declarative_state(
+        self,
+    ) -> BTreeSet<OwnedState<DeclarativeStrategy>> {
+        match self {
+            Assignments::Declarative(set) => set,
+            _ => Default::default(),
+        }
+    }
+
+    #[inline]
+    pub fn into_discrete_state(self) -> BTreeSet<OwnedState<PedersenStrategy>> {
+        match self {
+            Assignments::DiscreteFiniteField(set) => set,
+            _ => Default::default(),
+        }
+    }
+
+    #[inline]
+    pub fn into_custom_state(self) -> BTreeSet<OwnedState<HashStrategy>> {
+        match self {
+            Assignments::CustomData(set) => set,
+            _ => Default::default(),
         }
     }
 
@@ -1535,17 +1559,17 @@ mod test {
             Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check Correct type extraction works
-        assert!(declarative_type.declarative_state().is_some());
-        assert!(pedersan_type.discrete_state().is_some());
-        assert!(hash_type.custom_state().is_some());
+        assert!(!declarative_type.to_declarative_state().is_empty());
+        assert!(!pedersan_type.to_discrete_state().is_empty());
+        assert!(!hash_type.to_custom_state().is_empty());
 
         // Check wrong type extraction doesn't work
-        assert!(declarative_type.discrete_state().is_none());
-        assert!(declarative_type.custom_state().is_none());
-        assert!(pedersan_type.declarative_state().is_none());
-        assert!(pedersan_type.custom_state().is_none());
-        assert!(hash_type.declarative_state().is_none());
-        assert!(hash_type.discrete_state().is_none());
+        assert!(declarative_type.to_discrete_state().is_empty());
+        assert!(declarative_type.clone().into_custom_state().is_empty());
+        assert!(pedersan_type.to_declarative_state().is_empty());
+        assert!(pedersan_type.clone().into_custom_state().is_empty());
+        assert!(hash_type.to_declarative_state().is_empty());
+        assert!(hash_type.clone().into_discrete_state().is_empty());
 
         // Check correct mutable type extraction works
         assert!(declarative_type.declarative_state_mut().is_some());

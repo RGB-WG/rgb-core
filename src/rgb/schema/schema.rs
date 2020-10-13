@@ -358,7 +358,6 @@ mod _validation {
             let mut status = validation::Status::new();
             let parent_owned_rights = extract_parent_owned_rights(
                 all_nodes,
-                node_id,
                 node.parent_owned_rights(),
                 &mut status,
             );
@@ -690,7 +689,6 @@ mod _validation {
 
     fn extract_parent_owned_rights(
         nodes: &BTreeMap<NodeId, &dyn Node>,
-        node_id: NodeId,
         parent_owned_rights: &ParentOwnedRights,
         status: &mut validation::Status,
     ) -> OwnedRights {
@@ -726,60 +724,27 @@ mod _validation {
                 for assignment in assignements {
                     match assignment {
                         Assignments::Declarative(set) => {
-                            match owned_rights
+                            owned_rights
                                 .entry(*type_id)
                                 .or_insert(Assignments::Declarative(bset! {}))
                                 .declarative_state_mut()
-                            {
-                                Some(base) => {
-                                    base.extend(set.clone());
-                                }
-                                None => {
-                                    status.add_warning(
-                                        validation::Warning::ParentHeterogenousAssignments(
-                                            node_id, *type_id,
-                                        ),
-                                    );
-                                }
-                            };
+                                .map(|state| state.extend(set.clone()));
                         }
                         Assignments::DiscreteFiniteField(set) => {
-                            match owned_rights
+                            owned_rights
                                 .entry(*type_id)
                                 .or_insert(Assignments::DiscreteFiniteField(
                                     bset! {},
                                 ))
                                 .discrete_state_mut()
-                            {
-                                Some(base) => {
-                                    base.extend(set.clone());
-                                }
-                                None => {
-                                    status.add_warning(
-                                        validation::Warning::ParentHeterogenousAssignments(
-                                            node_id, *type_id,
-                                        ),
-                                    );
-                                }
-                            };
+                                .map(|state| state.extend(set.clone()));
                         }
                         Assignments::CustomData(set) => {
-                            match owned_rights
+                            owned_rights
                                 .entry(*type_id)
                                 .or_insert(Assignments::CustomData(bset! {}))
                                 .custom_state_mut()
-                            {
-                                Some(base) => {
-                                    base.extend(set.clone());
-                                }
-                                None => {
-                                    status.add_warning(
-                                        validation::Warning::ParentHeterogenousAssignments(
-                                            node_id, *type_id,
-                                        ),
-                                    );
-                                }
-                            };
+                                .map(|state| state.extend(set.clone()));
                         }
                     };
                 }
