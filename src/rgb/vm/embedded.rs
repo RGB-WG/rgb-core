@@ -16,7 +16,7 @@ use core::any::Any;
 use super::VirtualMachine;
 use crate::client_side_validation::Conceal;
 use crate::rgb::{
-    amount, schema, schema::constants::*, script::StandardProcedure,
+    schema, schema::constants::*, script::StandardProcedure, value,
     Assignments, Metadata,
 };
 
@@ -96,13 +96,13 @@ impl Embedded {
                             };
 
                             // Check zero knowledge correspondence
-                            if amount::Confidential::verify_commit_sum(
+                            if value::Confidential::verify_commit_sum(
                                 outputs
                                     .into_iter()
                                     .map(|c| c.commitment)
                                     .collect(),
                                 vec![
-                                    amount::Revealed {
+                                    value::Revealed {
                                         value: supply,
                                         blinding: secp256k1zkp::key::ONE_KEY,
                                     }
@@ -142,7 +142,7 @@ impl Embedded {
                                 }
                             }
 
-                            if amount::Confidential::verify_commit_sum(
+                            if value::Confidential::verify_commit_sum(
                                 curr.into_iter()
                                     .map(|c| c.commitment)
                                     .collect(),

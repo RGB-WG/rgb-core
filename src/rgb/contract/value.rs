@@ -11,6 +11,16 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! This mod represents **atomic rational values** (or, simply just **value**),
+//! it a value representing a portion of something whole with a certain fixed
+//! level of precision (atomicity). Such values are commonly used to represent
+//! some coins of fungible tokens, where each coin or token consists of an
+//! integer number of atomic subdivisions of the total supply (like satoshis in
+//! bitcoin represent just a portion, i.e. fixed-percision rational number, of
+//! the total possible bitcoin supply). Such numbers demonstrate constant
+//! properties regarding their total sum and, thus, can be made confidential
+//! using elliptic curve homomorphic cryptography such as Pedesen commitments.
+
 use core::cmp::Ordering;
 use core::ops::Add;
 use std::io;

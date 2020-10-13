@@ -1090,9 +1090,9 @@ mod test {
     use super::*;
     use crate::bp::blind::OutpointReveal;
     use crate::paradigms::client_side_validation::Conceal;
-    use crate::rgb::contract::amount;
     use crate::rgb::contract::data;
     use crate::rgb::contract::data::Revealed;
+    use crate::rgb::contract::value;
     use crate::rgb::contract::NodeId;
     use crate::rgb::validation::{Failure, Validity};
     use crate::rgb::{
@@ -1533,7 +1533,7 @@ mod test {
             seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
             ),
-            assigned_state: amount::Revealed::with_amount(10u64, &mut rng),
+            assigned_state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
         let assignment_ped_conf =
@@ -1543,7 +1543,7 @@ mod test {
                         OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
                     )
                     .conceal(),
-                assigned_state: amount::Revealed::with_amount(10u64, &mut rng)
+                assigned_state: value::Revealed::with_amount(10u64, &mut rng)
                     .conceal(),
             };
 

@@ -18,7 +18,7 @@ use core::option::NoneError;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use super::{
-    super::schema, amount, data, seal, AtomicValue, AutoConceal, NodeId,
+    super::schema, data, seal, value, AtomicValue, AutoConceal, NodeId,
     SealDefinition, SECP256K1_ZKP,
 };
 use crate::bp::blind::OutpointReveal;
@@ -51,7 +51,7 @@ pub enum Assignments {
 
 impl Assignments {
     pub fn zero_balanced(
-        inputs: Vec<amount::Revealed>,
+        inputs: Vec<value::Revealed>,
         allocations_ours: Vec<(SealDefinition, AtomicValue)>,
         allocations_theirs: Vec<(seal::Confidential, AtomicValue)>,
     ) -> Self {
@@ -63,7 +63,7 @@ impl Assignments {
         let mut blinding_factors = Vec::<_>::with_capacity(count + 1);
         for _ in 0..count {
             blinding_factors
-                .push(amount::BlindingFactor::new(&SECP256K1_ZKP, &mut rng));
+                .push(value::BlindingFactor::new(&SECP256K1_ZKP, &mut rng));
         }
 
         // We need the last factor to be equal to the difference
@@ -85,7 +85,7 @@ impl Assignments {
             .into_iter()
             .map(|(seal_definition, amount)| OwnedState::Revealed {
                 seal_definition,
-                assigned_state: amount::Revealed {
+                assigned_state: value::Revealed {
                     value: amount,
                     blinding: blinding_iter
                         .next()
@@ -98,7 +98,7 @@ impl Assignments {
                 .into_iter()
                 .map(|(seal_definition, amount)| OwnedState::ConfidentialSeal {
                     seal_definition,
-                    assigned_state: amount::Revealed {
+                    assigned_state: value::Revealed {
                         value: amount,
                         blinding: blinding_iter.next().expect(
                             "Internal inconsistency in `AssignmentsVariant::zero_balanced`",
@@ -251,7 +251,7 @@ impl Assignments {
         }
     }
 
-    pub fn known_state_homomorphic(&self) -> Vec<&amount::Revealed> {
+    pub fn known_state_homomorphic(&self) -> Vec<&value::Revealed> {
         match self {
             Assignments::Declarative(_) => vec![],
             Assignments::DiscreteFiniteField(s) => s
@@ -273,7 +273,7 @@ impl Assignments {
         }
     }
 
-    pub fn all_state_pedersen(&self) -> Vec<amount::Confidential> {
+    pub fn all_state_pedersen(&self) -> Vec<value::Confidential> {
         match self {
             Assignments::Declarative(_) => vec![],
             Assignments::DiscreteFiniteField(s) => s
@@ -393,8 +393,8 @@ impl StateTypes for DeclarativeStrategy {
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct PedersenStrategy;
 impl StateTypes for PedersenStrategy {
-    type Confidential = amount::Confidential;
-    type Revealed = amount::Revealed;
+    type Confidential = value::Confidential;
+    type Revealed = value::Revealed;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -1148,9 +1148,9 @@ mod test {
         let mut rng = thread_rng();
 
         // Create revealed amount from input amounts
-        let input_revealed: Vec<amount::Revealed> = input_amounts[..]
+        let input_revealed: Vec<value::Revealed> = input_amounts[..]
             .into_iter()
-            .map(|amount| amount::Revealed::with_amount(*amount, &mut rng))
+            .map(|amount| value::Revealed::with_amount(*amount, &mut rng))
             .collect();
 
         // Allocate Txid vector of size of the output vector
@@ -1230,7 +1230,7 @@ mod test {
     ) -> bool {
         let (inputs, outputs) =
             zero_balance(input_amounts, output_amounts, partition);
-        amount::Confidential::verify_commit_sum(inputs, outputs)
+        value::Confidential::verify_commit_sum(inputs, outputs)
     }
 
     #[test]
@@ -1398,7 +1398,7 @@ mod test {
                 rng.gen_range(0, output_length),
             );
             // Check if test passes
-            assert!(amount::Confidential::verify_commit_sum(
+            assert!(value::Confidential::verify_commit_sum(
                 inputs.clone(),
                 outputs.clone()
             ));
@@ -1406,7 +1406,7 @@ mod test {
             // Check non-equivalent amounts do not verify
             if input_length > 1 {
                 assert_eq!(
-                    amount::Confidential::verify_commit_sum(
+                    value::Confidential::verify_commit_sum(
                         inputs[..(input_length - 1)].to_vec(),
                         outputs
                     ),
@@ -1414,7 +1414,7 @@ mod test {
                 );
             } else if output_length > 1 {
                 assert_eq!(
-                    amount::Confidential::verify_commit_sum(
+                    value::Confidential::verify_commit_sum(
                         inputs,
                         outputs[..(output_length - 1)].to_vec()
                     ),
@@ -2116,14 +2116,14 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[0], 1),
             )),
-            assigned_state: amount::Revealed::with_amount(10u64, &mut rng),
+            assigned_state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
         let assignment_2 = OwnedState::<PedersenStrategy>::ConfidentialAmount {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[1], 1),
             )),
-            assigned_state: amount::Revealed::with_amount(20u64, &mut rng)
+            assigned_state: value::Revealed::with_amount(20u64, &mut rng)
                 .conceal(),
         };
 
@@ -2132,7 +2132,7 @@ mod test {
                 OutPoint::new(txid_vec[2], 1),
             ))
             .conceal(),
-            assigned_state: amount::Revealed::with_amount(30u64, &mut rng),
+            assigned_state: value::Revealed::with_amount(30u64, &mut rng),
         };
 
         let assignment_4 = OwnedState::<PedersenStrategy>::Confidential {
@@ -2140,7 +2140,7 @@ mod test {
                 OutPoint::new(txid_vec[3], 1),
             ))
             .conceal(),
-            assigned_state: amount::Revealed::with_amount(10u64, &mut rng)
+            assigned_state: value::Revealed::with_amount(10u64, &mut rng)
                 .conceal(),
         };
 

@@ -23,7 +23,7 @@ pub mod prelude {
     use super::*;
     pub use super::{bech32, schema, vm};
     pub use contract::{
-        amount, data, seal, Assignments, AtomicValue, AutoConceal,
+        data, seal, value, Assignments, AtomicValue, AutoConceal,
         ConfidentialState, ContractId, DeclarativeStrategy, Extension,
         FieldData, Genesis, HashStrategy, Metadata, Node, NodeId, OwnedRights,
         OwnedState, ParentOwnedRights, ParentPublicRights, PedersenStrategy,

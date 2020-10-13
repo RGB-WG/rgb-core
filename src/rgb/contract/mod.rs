@@ -11,16 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod amount;
 mod assignments;
 pub mod data;
+pub mod value;
 #[macro_use]
 mod field;
 mod conceal;
 pub mod nodes;
 pub mod seal;
 
-pub use amount::AtomicValue;
 pub use assignments::{
     Assignments, ConfidentialState, DeclarativeStrategy, HashStrategy,
     OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
@@ -30,6 +29,7 @@ pub use conceal::AutoConceal;
 pub use field::{FieldData, Metadata};
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
 pub use seal::SealDefinition;
+pub use value::AtomicValue;
 
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 lazy_static! {
