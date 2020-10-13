@@ -140,7 +140,7 @@ pub trait Node: AsAny {
     }
 
     #[inline]
-    fn known_seal_definitions(&self) -> Vec<&seal::Revealed> {
+    fn known_seal_definitions(&self) -> Vec<seal::Revealed> {
         self.owned_rights()
             .into_iter()
             .flat_map(|(_, assignment)| assignment.known_seals())
@@ -151,7 +151,7 @@ pub trait Node: AsAny {
     fn known_seal_definitions_by_type(
         &self,
         assignment_type: OwnedRightType,
-    ) -> Vec<&seal::Revealed> {
+    ) -> Vec<seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
             .map(Assignments::known_seals)
             .unwrap_or(vec![])

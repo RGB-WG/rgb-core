@@ -24,7 +24,7 @@ pub type Confidential = OutpointHash;
 /// Convenience type name useful for defining new seals
 pub type SealDefinition = Revealed;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

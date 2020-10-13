@@ -193,7 +193,7 @@ impl Assignments {
     pub fn seal(
         &self,
         index: u16,
-    ) -> Result<Option<&seal::Revealed>, NoneError> {
+    ) -> Result<Option<seal::Revealed>, NoneError> {
         // NB: Seal indexes are part of the consensus commitment, so we have to
         // use deterministic ordering of the seals. This is currently
         // done by using `sort` vector method and `Ord` implementation
@@ -217,7 +217,7 @@ impl Assignments {
         })
     }
 
-    pub fn known_seals(&self) -> Vec<&seal::Revealed> {
+    pub fn known_seals(&self) -> Vec<seal::Revealed> {
         match self {
             Assignments::Declarative(s) => s
                 .into_iter()
@@ -534,14 +534,14 @@ where
         }
     }
 
-    pub fn seal_definition(&self) -> Option<&seal::Revealed> {
+    pub fn seal_definition(&self) -> Option<seal::Revealed> {
         match self {
             OwnedState::Revealed {
                 seal_definition, ..
             }
             | OwnedState::ConfidentialAmount {
                 seal_definition, ..
-            } => Some(seal_definition),
+            } => Some(*seal_definition),
             OwnedState::Confidential { .. }
             | OwnedState::ConfidentialSeal { .. } => None,
         }

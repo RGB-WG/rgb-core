@@ -22,6 +22,7 @@ use crate::commit_verify::CommitVerify;
 /// transaction outpoint
 #[derive(
     Clone,
+    Copy,
     PartialEq,
     Eq,
     PartialOrd,
