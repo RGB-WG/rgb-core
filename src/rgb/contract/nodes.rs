@@ -135,7 +135,7 @@ pub trait Node: AsAny {
     fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
         self.owned_rights()
             .into_iter()
-            .flat_map(|(_, assignment)| assignment.all_seals())
+            .flat_map(|(_, assignment)| assignment.all_seal_definitions())
             .collect()
     }
 
@@ -143,7 +143,7 @@ pub trait Node: AsAny {
     fn known_seal_definitions(&self) -> Vec<seal::Revealed> {
         self.owned_rights()
             .into_iter()
-            .flat_map(|(_, assignment)| assignment.known_seals())
+            .flat_map(|(_, assignment)| assignment.known_seal_definitions())
             .collect()
     }
 
@@ -153,7 +153,7 @@ pub trait Node: AsAny {
         assignment_type: OwnedRightType,
     ) -> Vec<seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
-            .map(Assignments::known_seals)
+            .map(Assignments::known_seal_definitions)
             .unwrap_or(vec![])
     }
 }
@@ -1186,14 +1186,11 @@ mod test {
 
         let u8_from_gen = gen_meta.u8(13 as schema::FieldType);
 
-        assert_eq!(u8_from_gen.as_vec(), &[2u8, 3u8].to_vec());
+        assert_eq!(u8_from_gen, [2u8, 3u8].to_vec());
 
         let string_from_tran = tran_meta.string(13 as schema::FieldType);
 
-        assert_eq!(
-            string_from_tran.as_vec()[0],
-            "One Random String".to_string()
-        );
+        assert_eq!(string_from_tran[0], "One Random String".to_string());
 
         // Assignments test
 
@@ -1202,14 +1199,14 @@ mod test {
 
         assert_eq!(gen_assignments, tran_assingmnets);
 
-        assert!(gen_assignments.get(&1usize).unwrap().is_declarative());
-        assert!(gen_assignments.get(&2usize).unwrap().is_field());
-        assert!(tran_assingmnets.get(&3usize).unwrap().is_data());
+        assert!(gen_assignments.get(&1usize).unwrap().is_declarative_state());
+        assert!(gen_assignments.get(&2usize).unwrap().is_discrete_state());
+        assert!(tran_assingmnets.get(&3usize).unwrap().is_custom_state());
 
         let seal1 = gen_assignments
             .get(&2usize)
             .unwrap()
-            .seal(1)
+            .seal_definition(1)
             .unwrap()
             .unwrap();
 
@@ -1228,7 +1225,7 @@ mod test {
         let seal2 = tran_assingmnets
             .get(&3usize)
             .unwrap()
-            .seal(1)
+            .seal_definition(1)
             .unwrap()
             .unwrap();
 
@@ -1272,8 +1269,8 @@ mod test {
         let assignment_gen = genesis.owned_rights_by_type(3).unwrap();
         let assignment_tran = transition.owned_rights_by_type(1).unwrap();
 
-        assert!(assignment_gen.is_data());
-        assert!(assignment_tran.is_declarative());
+        assert!(assignment_gen.is_custom_state());
+        assert!(assignment_tran.is_declarative_state());
 
         // All seal confidentials
         let gen_seals = genesis.all_seal_definitions();

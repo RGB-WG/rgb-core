@@ -24,10 +24,10 @@ pub mod prelude {
     pub use super::{bech32, schema, vm};
     pub use contract::{
         data, seal, value, Assignments, AtomicValue, AutoConceal,
-        ConfidentialState, ContractId, DeclarativeStrategy, Extension,
-        FieldData, Genesis, HashStrategy, Metadata, Node, NodeId, OwnedRights,
-        OwnedState, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
-        RevealedState, SealDefinition, StateTypes, Transition,
+        ConfidentialState, ContractId, DeclarativeStrategy, Extension, Genesis,
+        HashStrategy, Metadata, Node, NodeId, OwnedRights, OwnedState,
+        ParentOwnedRights, ParentPublicRights, PedersenStrategy, RevealedState,
+        SealDefinition, StateTypes, Transition,
     };
     pub use schema::{
         script, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction,

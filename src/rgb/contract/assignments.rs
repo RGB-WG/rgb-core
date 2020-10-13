@@ -111,7 +111,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn is_declarative(&self) -> bool {
+    pub fn is_declarative_state(&self) -> bool {
         match self {
             Assignments::Declarative(_) => true,
             _ => false,
@@ -119,7 +119,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn is_field(&self) -> bool {
+    pub fn is_discrete_state(&self) -> bool {
         match self {
             Assignments::DiscreteFiniteField(_) => true,
             _ => false,
@@ -127,7 +127,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn is_data(&self) -> bool {
+    pub fn is_custom_state(&self) -> bool {
         match self {
             Assignments::CustomData(_) => true,
             _ => false,
@@ -135,7 +135,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn declarative(
+    pub fn declarative_state(
         &self,
     ) -> Option<&BTreeSet<OwnedState<DeclarativeStrategy>>> {
         match self {
@@ -145,7 +145,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn declarative_mut(
+    pub fn declarative_state_mut(
         &mut self,
     ) -> Option<&mut BTreeSet<OwnedState<DeclarativeStrategy>>> {
         match self {
@@ -155,7 +155,9 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn field(&self) -> Option<&BTreeSet<OwnedState<PedersenStrategy>>> {
+    pub fn discrete_state(
+        &self,
+    ) -> Option<&BTreeSet<OwnedState<PedersenStrategy>>> {
         match self {
             Assignments::DiscreteFiniteField(set) => Some(set),
             _ => None,
@@ -163,7 +165,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn field_mut(
+    pub fn discrete_state_mut(
         &mut self,
     ) -> Option<&mut BTreeSet<OwnedState<PedersenStrategy>>> {
         match self {
@@ -173,7 +175,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn data(&self) -> Option<&BTreeSet<OwnedState<HashStrategy>>> {
+    pub fn custom_state(&self) -> Option<&BTreeSet<OwnedState<HashStrategy>>> {
         match self {
             Assignments::CustomData(set) => Some(set),
             _ => None,
@@ -181,7 +183,7 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn data_mut(
+    pub fn custom_state_mut(
         &mut self,
     ) -> Option<&mut BTreeSet<OwnedState<HashStrategy>>> {
         match self {
@@ -190,7 +192,7 @@ impl Assignments {
         }
     }
 
-    pub fn seal(
+    pub fn seal_definition(
         &self,
         index: u16,
     ) -> Result<Option<seal::Revealed>, NoneError> {
@@ -217,7 +219,7 @@ impl Assignments {
         })
     }
 
-    pub fn known_seals(&self) -> Vec<seal::Revealed> {
+    pub fn known_seal_definitions(&self) -> Vec<seal::Revealed> {
         match self {
             Assignments::Declarative(s) => s
                 .into_iter()
@@ -234,7 +236,7 @@ impl Assignments {
         }
     }
 
-    pub fn all_seals(&self) -> Vec<seal::Confidential> {
+    pub fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
         match self {
             Assignments::Declarative(s) => s
                 .into_iter()
@@ -251,7 +253,7 @@ impl Assignments {
         }
     }
 
-    pub fn known_state_homomorphic(&self) -> Vec<&value::Revealed> {
+    pub fn known_state_values(&self) -> Vec<&value::Revealed> {
         match self {
             Assignments::Declarative(_) => vec![],
             Assignments::DiscreteFiniteField(s) => s
@@ -304,7 +306,7 @@ impl Assignments {
     }
 
     /// Reveals previously known seal information (replacing blind UTXOs with
-    /// unblind ones). Function is used when a peer receives consignment
+    /// explicit ones). Function is used when a peer receives consignment
     /// containing concealed seals for the outputs owned by the peer
     pub fn reveal_seals<'a>(
         &mut self,
@@ -378,6 +380,81 @@ pub trait RevealedState:
 {
 }
 
+impl Assignments {
+    pub fn u8(&self) -> Vec<u8> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::u8)
+            .collect()
+    }
+    pub fn u16(&self) -> Vec<u16> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::u16)
+            .collect()
+    }
+    pub fn u32(&self) -> Vec<u32> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::u32)
+            .collect()
+    }
+    pub fn u64(&self) -> Vec<u64> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::u64)
+            .collect()
+    }
+    pub fn i8(&self) -> Vec<i8> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::i8)
+            .collect()
+    }
+    pub fn i16(&self) -> Vec<i16> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::i16)
+            .collect()
+    }
+    pub fn i32(&self) -> Vec<i32> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::i32)
+            .collect()
+    }
+    pub fn i64(&self) -> Vec<i64> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::i64)
+            .collect()
+    }
+    pub fn f32(&self) -> Vec<f32> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::f32)
+            .collect()
+    }
+    pub fn f64(&self) -> Vec<f64> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::f64)
+            .collect()
+    }
+    pub fn bytes(&self) -> Vec<Vec<u8>> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::bytes)
+            .collect()
+    }
+    pub fn string(&self) -> Vec<String> {
+        self.known_state_data()
+            .into_iter()
+            .filter_map(data::Revealed::string)
+            .collect()
+    }
+}
+
 pub trait StateTypes: Debug {
     type Confidential: ConfidentialState;
     type Revealed: RevealedState;
@@ -404,6 +481,9 @@ impl StateTypes for HashStrategy {
     type Revealed = data::Revealed;
 }
 
+/// State data are assigned to a seal definition, which means that they are
+/// owned by a person controlling spending of the seal UTXO, unless the seal
+/// is closed, indicating that a transfer of ownership had taken place
 #[derive(Clone, Debug, Display)]
 #[display(Debug)]
 #[cfg_attr(
@@ -1434,15 +1514,15 @@ mod test {
 
         // Check correct types are being identified
         // and wrong types return false
-        assert!(declarative_type.is_declarative());
-        assert!(pedersan_type.is_field());
-        assert!(hash_type.is_data());
-        assert!(!declarative_type.is_data());
-        assert!(!declarative_type.is_field());
-        assert!(!pedersan_type.is_declarative());
-        assert!(!pedersan_type.is_data());
-        assert!(!hash_type.is_declarative());
-        assert!(!hash_type.is_field());
+        assert!(declarative_type.is_declarative_state());
+        assert!(pedersan_type.is_discrete_state());
+        assert!(hash_type.is_custom_state());
+        assert!(!declarative_type.is_custom_state());
+        assert!(!declarative_type.is_discrete_state());
+        assert!(!pedersan_type.is_declarative_state());
+        assert!(!pedersan_type.is_custom_state());
+        assert!(!hash_type.is_declarative_state());
+        assert!(!hash_type.is_discrete_state());
     }
 
     #[test]
@@ -1455,30 +1535,30 @@ mod test {
             Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check Correct type extraction works
-        assert!(declarative_type.declarative().is_some());
-        assert!(pedersan_type.field().is_some());
-        assert!(hash_type.data().is_some());
+        assert!(declarative_type.declarative_state().is_some());
+        assert!(pedersan_type.discrete_state().is_some());
+        assert!(hash_type.custom_state().is_some());
 
         // Check wrong type extraction doesn't work
-        assert!(declarative_type.field().is_none());
-        assert!(declarative_type.data().is_none());
-        assert!(pedersan_type.declarative().is_none());
-        assert!(pedersan_type.data().is_none());
-        assert!(hash_type.declarative().is_none());
-        assert!(hash_type.field().is_none());
+        assert!(declarative_type.discrete_state().is_none());
+        assert!(declarative_type.custom_state().is_none());
+        assert!(pedersan_type.declarative_state().is_none());
+        assert!(pedersan_type.custom_state().is_none());
+        assert!(hash_type.declarative_state().is_none());
+        assert!(hash_type.discrete_state().is_none());
 
         // Check correct mutable type extraction works
-        assert!(declarative_type.declarative_mut().is_some());
-        assert!(pedersan_type.field_mut().is_some());
-        assert!(hash_type.data_mut().is_some());
+        assert!(declarative_type.declarative_state_mut().is_some());
+        assert!(pedersan_type.discrete_state_mut().is_some());
+        assert!(hash_type.custom_state_mut().is_some());
 
         // Check wrong mutable type extraction doesn't work
-        assert!(declarative_type.field_mut().is_none());
-        assert!(declarative_type.data_mut().is_none());
-        assert!(pedersan_type.declarative_mut().is_none());
-        assert!(pedersan_type.data_mut().is_none());
-        assert!(hash_type.declarative_mut().is_none());
-        assert!(hash_type.field_mut().is_none());
+        assert!(declarative_type.discrete_state_mut().is_none());
+        assert!(declarative_type.custom_state_mut().is_none());
+        assert!(pedersan_type.declarative_state_mut().is_none());
+        assert!(pedersan_type.custom_state_mut().is_none());
+        assert!(hash_type.declarative_state_mut().is_none());
+        assert!(hash_type.discrete_state_mut().is_none());
     }
 
     #[test]
@@ -1490,21 +1570,22 @@ mod test {
         let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract a specific Txid from each variants
-        let txid_1 = match declarative_type.seal(2).unwrap().unwrap() {
+        let txid_1 =
+            match declarative_type.seal_definition(2).unwrap().unwrap() {
+                Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
+                _ => None,
+            }
+            .unwrap()
+            .to_hex();
+
+        let txid_2 = match pedersan_type.seal_definition(0).unwrap().unwrap() {
             Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
             _ => None,
         }
         .unwrap()
         .to_hex();
 
-        let txid_2 = match pedersan_type.seal(0).unwrap().unwrap() {
-            Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
-            _ => None,
-        }
-        .unwrap()
-        .to_hex();
-
-        let txid_3 = match hash_type.seal(1).unwrap().unwrap() {
+        let txid_3 = match hash_type.seal_definition(1).unwrap().unwrap() {
             Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
             _ => None,
         }
@@ -1527,7 +1608,7 @@ mod test {
 
         // Extract known Txids from each variants
         let mut dec_txids: Vec<String> = declarative_type
-            .known_seals()
+            .known_seal_definitions()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1540,7 +1621,7 @@ mod test {
             .collect();
 
         let mut ped_txids: Vec<String> = pedersan_type
-            .known_seals()
+            .known_seal_definitions()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1553,7 +1634,7 @@ mod test {
             .collect();
 
         let mut hash_txids: Vec<String> = hash_type
-            .known_seals()
+            .known_seal_definitions()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1590,19 +1671,19 @@ mod test {
 
         // Extract seals from all variants and conceal them
         let mut dec_hashes: Vec<String> = declarative_type
-            .all_seals()
+            .all_seal_definitions()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
 
         let mut ped_hashes: Vec<String> = pedersan_type
-            .all_seals()
+            .all_seal_definitions()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
 
         let mut hash_hashes: Vec<String> = hash_type
-            .all_seals()
+            .all_seal_definitions()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
@@ -1627,7 +1708,7 @@ mod test {
         let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from pedersan type variant
-        let states = pedersan_type.known_state_homomorphic();
+        let states = pedersan_type.known_state_values();
 
         // Check the amounts matches with precomputed values
         assert_eq!(states[0].value, 10);
@@ -1655,8 +1736,8 @@ mod test {
 
         // Check no values returned for declarative and custom data type
         // variants
-        assert_eq!(declarative_type.known_state_homomorphic().len(), 0);
-        assert_eq!(hash_type.known_state_homomorphic().len(), 0);
+        assert_eq!(declarative_type.known_state_values().len(), 0);
+        assert_eq!(hash_type.known_state_values().len(), 0);
     }
 
     #[test]
@@ -1782,7 +1863,7 @@ mod test {
 
         // Extracted seal values
         let extracted_txid: Vec<String> = hash_type
-            .known_seals()
+            .known_seal_definitions()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1807,7 +1888,7 @@ mod test {
 
         // Extract concealed seals
         let extracted_seals_confidential: Vec<String> = hash_type
-            .all_seals()
+            .all_seal_definitions()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();

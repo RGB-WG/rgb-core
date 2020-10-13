@@ -625,7 +625,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
         match (
-            variant.seal(seal_index),
+            variant.seal_definition(seal_index),
             self.anchor_index.get(&ancestor_id),
         ) {
             (Err(_), _) => {

@@ -86,9 +86,9 @@ impl Embedded {
                             let supply = match self
                                 .current_meta
                                 .u64(FIELD_TYPE_ISSUED_SUPPLY)
-                                .next()
+                                .first()
                             {
-                                Some(supply) => supply,
+                                Some(supply) => *supply,
                                 _ => {
                                     push_stack!(self, 7u8);
                                     return;

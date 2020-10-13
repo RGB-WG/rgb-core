@@ -6,6 +6,9 @@ v0.1.0
 
 ### Breaking changes:
 - RGB `Amount` renamed into `AtomicValue`
+- RGB `amount` mod renamed into `value`
+- RGB seal definitions and related structures are now `Copy` and returned by 
+  value
 
 ### Other changes:
 

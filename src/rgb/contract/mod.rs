@@ -12,13 +12,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 mod assignments;
-pub mod data;
-pub mod value;
 #[macro_use]
-mod field;
+pub mod data;
 mod conceal;
+mod metadata;
 pub mod nodes;
 pub mod seal;
+pub mod value;
 
 pub use assignments::{
     Assignments, ConfidentialState, DeclarativeStrategy, HashStrategy,
@@ -26,7 +26,7 @@ pub use assignments::{
     PedersenStrategy, RevealedState, StateTypes,
 };
 pub use conceal::AutoConceal;
-pub use field::{FieldData, Metadata};
+pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
 pub use seal::SealDefinition;
 pub use value::AtomicValue;

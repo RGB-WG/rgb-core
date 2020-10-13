@@ -14,6 +14,7 @@
 use amplify::AsAny;
 use core::any::Any;
 use core::cmp::Ordering;
+use core::fmt::Debug;
 
 use bitcoin::hashes::{hash160, sha256, sha256d, sha512, Hash};
 use bitcoin::OutPoint;
@@ -191,6 +192,81 @@ impl AsAny for Confidential {
 
 impl CommitEncodeWithStrategy for Confidential {
     type Strategy = commit_strategy::UsingStrict;
+}
+
+impl Revealed {
+    pub fn u8(&self) -> Option<u8> {
+        match self {
+            Revealed::U8(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn u16(&self) -> Option<u16> {
+        match self {
+            Revealed::U16(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn u32(&self) -> Option<u32> {
+        match self {
+            Revealed::U32(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn u64(&self) -> Option<u64> {
+        match self {
+            Revealed::U64(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn i8(&self) -> Option<i8> {
+        match self {
+            Revealed::I8(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn i16(&self) -> Option<i16> {
+        match self {
+            Revealed::I16(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn i32(&self) -> Option<i32> {
+        match self {
+            Revealed::I32(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn i64(&self) -> Option<i64> {
+        match self {
+            Revealed::I64(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn f32(&self) -> Option<f32> {
+        match self {
+            Revealed::F32(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn f64(&self) -> Option<f64> {
+        match self {
+            Revealed::F64(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn bytes(&self) -> Option<Vec<u8>> {
+        match self {
+            Revealed::Bytes(val) => Some(val.clone()),
+            _ => None,
+        }
+    }
+    pub fn string(&self) -> Option<String> {
+        match self {
+            Revealed::String(val) => Some(val.clone()),
+            _ => None,
+        }
+    }
 }
 
 pub(super) mod strict_encoding {

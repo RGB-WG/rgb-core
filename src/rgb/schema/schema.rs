@@ -729,7 +729,7 @@ mod _validation {
                             match owned_rights
                                 .entry(*type_id)
                                 .or_insert(Assignments::Declarative(bset! {}))
-                                .declarative_mut()
+                                .declarative_state_mut()
                             {
                                 Some(base) => {
                                     base.extend(set.clone());
@@ -749,7 +749,7 @@ mod _validation {
                                 .or_insert(Assignments::DiscreteFiniteField(
                                     bset! {},
                                 ))
-                                .field_mut()
+                                .discrete_state_mut()
                             {
                                 Some(base) => {
                                     base.extend(set.clone());
@@ -767,7 +767,7 @@ mod _validation {
                             match owned_rights
                                 .entry(*type_id)
                                 .or_insert(Assignments::CustomData(bset! {}))
-                                .data_mut()
+                                .custom_state_mut()
                             {
                                 Some(base) => {
                                     base.extend(set.clone());
