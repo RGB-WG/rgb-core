@@ -22,9 +22,9 @@ use super::{
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type OwnedRightType = usize;
 pub type PublicRightType = usize;
-pub type MetadataStructure = BTreeMap<FieldType, Occurences<u16>>;
+pub type MetadataStructure = BTreeMap<FieldType, Occurences>;
 pub type PublicRightsStructure = BTreeSet<PublicRightType>;
-pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurences<u16>>;
+pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurences>;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 /// Node type: genesis, extensions and state transitions
@@ -464,36 +464,29 @@ mod test {
     use crate::rgb::validation::Failure;
     use crate::strict_encoding::{test::*, StrictDecode};
 
-    static GENESIS_SCHEMA: [u8; 109] = [
-        4, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-        3, 0, 1, 13, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 4,
-        0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 25, 0, 0, 0, 0, 0, 0, 0,
-        4, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4,
-        0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 255, 1, 0, 0,
+    static GENESIS_SCHEMA: [u8; 69] = [
+        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
+        0, 17, 0, 4, 0, 1, 0, 1, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0,
+        2, 1, 0, 0, 1, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 255, 1, 0, 0,
     ];
 
-    static TRANSITION_SCHEMA: [u8; 155] = [
-        4, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-        3, 0, 1, 13, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 4,
-        0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3,
-        0, 1, 25, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 4, 0,
-        1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0,
-        1, 25, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1,
-        0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 255, 1, 0, 0,
+    static TRANSITION_SCHEMA: [u8; 95] = [
+        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
+        0, 17, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 25, 0,
+        4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1,
+        0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0,
+        255, 1, 0, 0,
     ];
 
-    static EXTENSION_SCHEMA: [u8; 119] = [
-        4, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-        3, 0, 1, 13, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 4,
-        0, 1, 0, 2, 0, 3, 0, 4, 0, 4, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0,
-        0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 25, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0,
-        12, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 255, 1,
-        0, 0,
+    static EXTENSION_SCHEMA: [u8; 79] = [
+        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
+        0, 17, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0,
+        0, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3,
+        0, 4, 0, 1, 0, 0, 255, 1, 0, 0,
     ];
 
     #[test]
     fn test_genesis_schema_encoding() {
-        println!("{:?}", GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]));
         test_encode!((GENESIS_SCHEMA, GenesisSchema));
     }
 
@@ -746,41 +739,5 @@ mod test {
             extension_schema.schema_verify(&extension_schema2).failures,
             extension_failures
         );
-    }
-
-    #[test]
-    #[should_panic(expected = "UnsupportedDataStructure")]
-    fn test_error_genesis() {
-        let mut genesis_byte = GENESIS_SCHEMA.clone().to_vec();
-        genesis_byte[107] = 2u8;
-        genesis_byte[108] = 0u8;
-        genesis_byte.push(1u8);
-        genesis_byte.push(2u8);
-
-        GenesisSchema::strict_decode(&genesis_byte[..]).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "UnsupportedDataStructure")]
-    fn test_error_transition() {
-        let mut transition_bytes = TRANSITION_SCHEMA.clone().to_vec();
-        transition_bytes[153] = 2u8;
-        transition_bytes[154] = 0u8;
-        transition_bytes.push(1u8);
-        transition_bytes.push(2u8);
-
-        TransitionSchema::strict_decode(&transition_bytes[..]).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "UnsupportedDataStructure")]
-    fn test_error_extension() {
-        let mut extension_bytes = EXTENSION_SCHEMA.clone().to_vec();
-        extension_bytes[117] = 2u8;
-        extension_bytes[118] = 0u8;
-        extension_bytes.push(1u8);
-        extension_bytes.push(2u8);
-
-        ExtensionSchema::strict_decode(&extension_bytes[..]).unwrap();
     }
 }
