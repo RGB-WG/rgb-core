@@ -106,7 +106,7 @@ The library is based on other projects:
 
 On Debian, run
 ```shell script
-sudo apt-get install cargo
+sudo apt-get install cargo libzmq3-dev
 ```
 
 On Mac OS, run
@@ -119,7 +119,7 @@ brew cargo
 ```shell script
 git clone https://github.com/lnp-bp/rust-lnpbp
 cd rust-lnpbp
-cargo build --release
+cargo build --release --features vendored_openssl
 ```
 
 The library can be found in `target/release` directory.
