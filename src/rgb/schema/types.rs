@@ -148,8 +148,10 @@ where
 {
     Once,
     NoneOrOnce,
-    OnceOrUpTo(Option<I>),
-    NoneOrUpTo(Option<I>),
+    NoneOrMore,
+    OnceOrMore,
+    NoneOrUpTo(I),
+    OnceOrUpTo(I),
 }
 
 impl<I> Occurences<I>
@@ -160,8 +162,10 @@ where
         match self {
             Occurences::Once => I::from(1u8),
             Occurences::NoneOrOnce => I::from(0u8),
-            Occurences::OnceOrUpTo(_) => I::from(1u8),
+            Occurences::NoneOrMore => I::from(0u8),
+            Occurences::OnceOrMore => I::from(1u8),
             Occurences::NoneOrUpTo(_) => I::from(0u8),
+            Occurences::OnceOrUpTo(_) => I::from(1u8),
         }
     }
 
@@ -169,11 +173,8 @@ where
         match self {
             Occurences::Once => I::from(1u8),
             Occurences::NoneOrOnce => I::from(1u8),
-            Occurences::OnceOrUpTo(None) | Occurences::NoneOrUpTo(None) => {
-                I::MAX
-            }
-            Occurences::OnceOrUpTo(Some(max))
-            | Occurences::NoneOrUpTo(Some(max)) => *max,
+            Occurences::NoneOrMore | Occurences::OnceOrMore => I::MAX,
+            Occurences::OnceOrUpTo(max) | Occurences::NoneOrUpTo(max) => *max,
         }
     }
 
@@ -195,14 +196,14 @@ where
         match self {
             Occurences::Once if count == I::from(1u8) => Ok(()),
             Occurences::NoneOrOnce if count <= I::from(1u8) => Ok(()),
-            Occurences::OnceOrUpTo(None) if count > I::from(0u8) => Ok(()),
-            Occurences::OnceOrUpTo(Some(max))
+            Occurences::OnceOrMore if count > I::from(0u8) => Ok(()),
+            Occurences::OnceOrUpTo(max)
                 if count > I::from(0u8) && count <= *max =>
             {
                 Ok(())
             }
-            Occurences::NoneOrUpTo(None) => Ok(()),
-            Occurences::NoneOrUpTo(Some(max)) if count <= *max => Ok(()),
+            Occurences::NoneOrMore => Ok(()),
+            Occurences::NoneOrUpTo(max) if count <= *max => Ok(()),
             _ => Err(OccurrencesError {
                 min: self.min_value().into(),
                 max: self.max_value().into(),
@@ -352,10 +353,12 @@ mod strict_encoding {
 
                 fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
                     let value: (u8, u64) = match self {
-                        Self::NoneOrOnce => (0x00u8, 0),
-                        Self::Once => (0x01u8, 0),
-                        Self::NoneOrUpTo(max) => (0xFEu8, max.unwrap_or(std::$type::MAX).into()),
-                        Self::OnceOrUpTo(max) => (0xFFu8, max.unwrap_or(std::$type::MAX).into()),
+                        Self::NoneOrOnce => (0x00u8, 1),
+                        Self::Once => (0x01u8, 1),
+                        Self::NoneOrMore => (0x00u8, std::$type::MAX.into()),
+                        Self::OnceOrMore => (0x01u8, std::$type::MAX.into()),
+                        Self::NoneOrUpTo(max) => (0x00u8, (*max).into()),
+                        Self::OnceOrUpTo(max) => (0x01u8, (*max).into()),
                     };
                     let mut len = value.0.strict_encode(&mut e)?;
                     len += value.1.strict_encode(&mut e)?;
@@ -368,24 +371,25 @@ mod strict_encoding {
 
                 #[allow(unused_comparisons)]
                 fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-                    let value = u8::strict_decode(&mut d)?;
+                    let min = u8::strict_decode(&mut d)?;
                     let max: u64 = u64::strict_decode(&mut d)?;
-                    let max: Option<$type> = match max {
-                        val if val >= 0 && val < ::std::$type::MAX.into() => {
-                            Ok(Some($type::try_from(max).expect("Can't fail")))
+                    let max: $type = match max {
+                        val if val >= 0 && val <= ::std::$type::MAX.into() => {
+                            $type::try_from(max).expect("Can't fail")
                         }
-                        val if val as u128 == ::std::$type::MAX as u128 => Ok(None),
                         invalid => Err(Error::ValueOutOfRange(
                             stringify!($type),
                             0..(::std::$type::MAX as u128),
                             invalid as u128,
-                        )),
-                    }?;
-                    Ok(match value {
-                        0x00u8 => Self::NoneOrOnce,
-                        0x01u8 => Self::Once,
-                        0xFEu8 => Self::NoneOrUpTo(max),
-                        0xFFu8 => Self::OnceOrUpTo(max),
+                        ))?,
+                    };
+                    Ok(match (min, max) {
+                        (0x00u8, 1) => Self::NoneOrOnce,
+                        (0x01u8, 1) => Self::Once,
+                        (0x00u8, max) if max == ::std::$type::MAX => Self::NoneOrMore,
+                        (0x01u8, max) if max == ::std::$type::MAX => Self::OnceOrMore,
+                        (0x00u8, max) if max > 0 => Self::NoneOrUpTo(max),
+                        (0x01u8, max) if max > 0 => Self::OnceOrUpTo(max),
                         _ => panic!(
                             "New occurrence types can't appear w/o this library to be aware of"
                         ),
@@ -407,21 +411,21 @@ mod test {
     use super::*;
     use crate::strict_encoding::{test::*, StrictDecode};
 
-    static ONCE: [u8; 9] = [0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+    static ONCE: [u8; 9] = [0x1, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
 
-    static NONEORONCE: [u8; 9] = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+    static NONEORONCE: [u8; 9] = [0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
 
     static NONEUPTO_U8: [u8; 9] =
-        [0xfe, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+        [0x00, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
 
     static NONEUPTO_U16: [u8; 9] =
-        [0xfe, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+        [0x00, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
 
     static NONEUPTO_U32: [u8; 9] =
-        [0xfe, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0];
+        [0x00, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0];
 
     static NONEUPTO_U64: [u8; 9] =
-        [0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+        [0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
 
     #[test]
     fn test_once_check_count() {
@@ -460,12 +464,12 @@ mod test {
 
     #[test]
     fn test_once_or_up_to_none() {
-        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(None);
+        let occurence: Occurences<u32> = Occurences::OnceOrMore;
         occurence.check(1u32).unwrap();
     }
     #[test]
     fn test_once_or_up_to_none_large() {
-        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(None);
+        let occurence: Occurences<u32> = Occurences::OnceOrMore;
         occurence.check(u32::MAX).unwrap();
     }
     #[test]
@@ -473,12 +477,12 @@ mod test {
         expected = "OccurrencesError { min: 1, max: 4294967295, found: 0 }"
     )]
     fn test_once_or_up_to_none_fail_zero() {
-        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(None);
+        let occurence: Occurences<u32> = Occurences::OnceOrMore;
         occurence.check(0u32).unwrap();
     }
     #[test]
     fn test_once_or_up_to_42() {
-        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(42);
         occurence.check(42u32).unwrap();
     }
     #[test]
@@ -486,34 +490,34 @@ mod test {
         expected = "OccurrencesError { min: 1, max: 42, found: 43 }"
     )]
     fn test_once_or_up_to_42_large() {
-        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(42);
         occurence.check(43u32).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesError { min: 1, max: 42, found: 0 }")]
     fn test_once_or_up_to_42_fail_zero() {
-        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(Some(42));
+        let occurence: Occurences<u32> = Occurences::OnceOrUpTo(42);
         occurence.check(0u32).unwrap();
     }
 
     #[test]
     fn test_none_or_up_to_none_zero() {
-        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(None);
+        let occurence: Occurences<u32> = Occurences::NoneOrMore;
         occurence.check(0u32).unwrap();
     }
     #[test]
     fn test_none_or_up_to_none_large() {
-        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(None);
+        let occurence: Occurences<u32> = Occurences::NoneOrMore;
         occurence.check(u32::MAX).unwrap();
     }
     #[test]
     fn test_none_or_up_to_42_zero() {
-        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
+        let occurence: Occurences<u32> = Occurences::NoneOrMore;
         occurence.check(0u32).unwrap();
     }
     #[test]
     fn test_none_or_up_to_42() {
-        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
+        let occurence: Occurences<u32> = Occurences::NoneOrMore;
         occurence.check(42u32).unwrap();
     }
     #[test]
@@ -521,7 +525,7 @@ mod test {
         expected = "OccurrencesError { min: 0, max: 42, found: 43 }"
     )]
     fn test_none_or_up_to_42_large() {
-        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(Some(42));
+        let occurence: Occurences<u32> = Occurences::NoneOrUpTo(42);
         occurence.check(43u32).unwrap();
     }
 
@@ -553,10 +557,10 @@ mod test {
         let mut once_upto_u32 = NONEUPTO_U32.clone();
         let mut once_upto_u64 = NONEUPTO_U64.clone();
 
-        once_upto_u8[0] = 0xFF;
-        once_upto_u16[0] = 0xFF;
-        once_upto_u32[0] = 0xFF;
-        once_upto_u64[0] = 0xFF;
+        once_upto_u8[0] = 0x01;
+        once_upto_u16[0] = 0x01;
+        once_upto_u32[0] = 0x01;
+        once_upto_u64[0] = 0x01;
 
         let dec1: Occurences<u8> =
             Occurences::strict_decode(&once_upto_u8[..]).unwrap();
@@ -567,10 +571,10 @@ mod test {
         let dec4: Occurences<u64> =
             Occurences::strict_decode(&once_upto_u64[..]).unwrap();
 
-        assert_eq!(dec1, Occurences::OnceOrUpTo(None));
-        assert_eq!(dec2, Occurences::OnceOrUpTo(None));
-        assert_eq!(dec3, Occurences::OnceOrUpTo(None));
-        assert_eq!(dec4, Occurences::OnceOrUpTo(None));
+        assert_eq!(dec1, Occurences::OnceOrMore);
+        assert_eq!(dec2, Occurences::OnceOrMore);
+        assert_eq!(dec3, Occurences::OnceOrMore);
+        assert_eq!(dec4, Occurences::OnceOrMore);
 
         let wc1: Occurences<u64> =
             Occurences::strict_decode(&once_upto_u8[..]).unwrap();
@@ -579,9 +583,9 @@ mod test {
         let wc3: Occurences<u64> =
             Occurences::strict_decode(&once_upto_u32[..]).unwrap();
 
-        assert_eq!(wc1, Occurences::OnceOrUpTo(Some(u8::MAX as u64)));
-        assert_eq!(wc2, Occurences::OnceOrUpTo(Some(u16::MAX as u64)));
-        assert_eq!(wc3, Occurences::OnceOrUpTo(Some(u32::MAX as u64)));
+        assert_eq!(wc1, Occurences::OnceOrUpTo(u8::MAX as u64));
+        assert_eq!(wc2, Occurences::OnceOrUpTo(u16::MAX as u64));
+        assert_eq!(wc3, Occurences::OnceOrUpTo(u32::MAX as u64));
     }
 
     #[test]

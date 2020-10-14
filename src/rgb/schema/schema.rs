@@ -47,6 +47,17 @@ tagged_hash!(
     doc = "Commitment-based schema identifier used for committing to the schema type"
 );
 
+/* TODO: (new) Uncomment when will be using our own hash type derivation
+impl SchemaId {
+    /// Function used for producing zero parent schema id commitments in schema
+    /// DSL deifinition
+    #[inline]
+    pub fn zeroed() -> Self {
+        Default::default()
+    }
+}
+ */
+
 #[derive(Clone, PartialEq, Debug, Default)]
 #[cfg_attr(
     feature = "serde",
@@ -869,8 +880,8 @@ pub(crate) mod test {
                 },
                 owned_rights: bmap! {
                     ASSIGNMENT_ISSUE => Occurences::NoneOrOnce,
-                    ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None),
-                    ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None)
+                    ASSIGNMENT_ASSETS => Occurences::NoneOrMore,
+                    ASSIGNMENT_PRUNE => Occurences::NoneOrMore
                 },
                 public_rights: bset! { VALENCIES_DECENTRALIZED_ISSUE },
                 abi: bmap! {},
@@ -880,10 +891,10 @@ pub(crate) mod test {
                     extends: bset! { VALENCIES_DECENTRALIZED_ISSUE },
                     metadata: bmap! {
                         FIELD_ISSUED_SUPPLY => Occurences::Once,
-                        FIELD_PROOF_OF_BURN => Occurences::OnceOrUpTo(None)
+                        FIELD_PROOF_OF_BURN => Occurences::OnceOrMore
                     },
                     owned_rights: bmap! {
-                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrMore
                     },
                     public_rights: bset! { },
                     abi: bmap! {},
@@ -899,34 +910,34 @@ pub(crate) mod test {
                     },
                     owned_rights: bmap! {
                         ASSIGNMENT_ISSUE => Occurences::NoneOrOnce,
-                        ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
-                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                        ASSIGNMENT_PRUNE => Occurences::NoneOrMore,
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrMore
                     },
                     public_rights: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_TRANSFER => TransitionSchema {
                     closes: bmap! {
-                        ASSIGNMENT_ASSETS => Occurences::OnceOrUpTo(None)
+                        ASSIGNMENT_ASSETS => Occurences::OnceOrMore
                     },
                     metadata: bmap! {},
                     owned_rights: bmap! {
-                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrMore
                     },
                     public_rights: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_PRUNE => TransitionSchema {
                     closes: bmap! {
-                        ASSIGNMENT_PRUNE => Occurences::OnceOrUpTo(None),
-                        ASSIGNMENT_ASSETS => Occurences::OnceOrUpTo(None)
+                        ASSIGNMENT_PRUNE => Occurences::OnceOrMore,
+                        ASSIGNMENT_ASSETS => Occurences::OnceOrMore
                     },
                     metadata: bmap! {
-                        FIELD_PRUNE_PROOF => Occurences::NoneOrUpTo(None)
+                        FIELD_PRUNE_PROOF => Occurences::NoneOrMore
                     },
                     owned_rights: bmap! {
-                        ASSIGNMENT_PRUNE => Occurences::NoneOrUpTo(None),
-                        ASSIGNMENT_ASSETS => Occurences::NoneOrUpTo(None)
+                        ASSIGNMENT_PRUNE => Occurences::NoneOrMore,
+                        ASSIGNMENT_ASSETS => Occurences::NoneOrMore
                     },
                     public_rights: bset! {},
                     abi: bmap! {}
@@ -950,25 +961,24 @@ pub(crate) mod test {
             0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
             255, 16, 0, 32, 3, 0, 0, 0, 0, 1, 0, 0, 255, 2, 1, 0, 1, 0, 8, 0,
             0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0,
-            0, 255, 1, 2, 0, 0, 1, 0, 0, 255, 16, 1, 0, 0, 0, 8, 0, 0, 0, 1, 0,
-            0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0,
-            0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 0,
-            0, 0, 0, 0, 0, 0, 0, 8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0,
-            2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1,
-            0, 0, 0, 2, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 255, 255,
-            255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 254, 255, 255, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 4, 0, 1, 0, 0, 0,
-            0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0,
-            2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-            0, 1, 0, 1, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 254,
-            255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 7, 0,
-            254, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 255, 255, 255, 0, 0,
-            0, 0, 0, 0, 2, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 254,
-            255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 254, 255, 255, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 255, 1, 2, 0, 0, 1, 0, 0, 255, 16, 1, 0, 0, 0, 8, 0, 0, 0, 1, 1,
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 1,
+            0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 6, 0, 1, 1,
+            0, 0, 0, 0, 0, 0, 0, 8, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
+            0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 255, 255, 0, 0, 0, 0, 0, 0, 2,
+            0, 0, 255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+            0, 2, 0, 4, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 16, 0, 1, 255, 255, 0, 0,
+            0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 255, 255, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 4, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+            0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 0, 255,
+            255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1,
+            255, 255, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 255, 255, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 7, 0, 0, 255, 255, 0, 0, 0, 0, 0,
+            0, 2, 0, 1, 0, 1, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 1, 255, 255, 0,
+            0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 255, 255, 0, 0, 0, 0, 0, 0, 2, 0, 0,
+            255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         assert_eq!(encoded, encoded_standard);
 

@@ -465,50 +465,46 @@ mod test {
     use crate::strict_encoding::{test::*, StrictDecode};
 
     static GENESIS_SCHEMA: [u8; 109] = [
-        0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0xd,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0xfe, 0x11, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-        0x3, 0x0, 0xff, 0x19, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0,
-        0xfe, 0xc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x2,
-        0x0, 0x3, 0x0, 0x4, 0x0, 0x1, 0x0, 0x0, 0xff, 0x1, 0x0, 0x0,
+        4, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        3, 0, 1, 13, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 4,
+        0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 25, 0, 0, 0, 0, 0, 0, 0,
+        4, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4,
+        0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 255, 1, 0, 0,
     ];
 
     static TRANSITION_SCHEMA: [u8; 155] = [
-        0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0xd,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0xfe, 0x11, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-        0x3, 0x0, 0xff, 0x19, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0,
-        0xfe, 0xc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x1,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0x19, 0x0, 0x0, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x4, 0x0, 0xfe, 0xc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4,
-        0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x4, 0x0, 0x1, 0x0, 0x0, 0xff, 0x1,
-        0x0, 0x0,
+        4, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        3, 0, 1, 13, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 4,
+        0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3,
+        0, 1, 25, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 4, 0,
+        1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0,
+        1, 25, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1,
+        0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 255, 1, 0, 0,
     ];
 
     static EXTENSION_SCHEMA: [u8; 119] = [
-        0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0xd,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0xfe, 0x11, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x4, 0x0,
-        0x4, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0xff, 0x19,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0xfe, 0xc, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x0, 0x4, 0x0, 0x1, 0x0, 0x2, 0x0, 0x3, 0x0, 0x4, 0x0,
-        0x1, 0x0, 0x0, 0xff, 0x1, 0x0, 0x0,
+        4, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        3, 0, 1, 13, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 4,
+        0, 1, 0, 2, 0, 3, 0, 4, 0, 4, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0,
+        0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 25, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0,
+        12, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 255, 1,
+        0, 0,
     ];
 
     #[test]
-    fn test_nodeschema_encoding() {
-        test_encode!(
-            (GENESIS_SCHEMA, GenesisSchema),
-            (TRANSITION_SCHEMA, TransitionSchema),
-            (EXTENSION_SCHEMA, ExtensionSchema)
-        );
+    fn test_genesis_schema_encoding() {
+        println!("{:?}", GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]));
+        test_encode!((GENESIS_SCHEMA, GenesisSchema));
+    }
+
+    #[test]
+    fn test_transition_schema_encoding() {
+        test_encode!((TRANSITION_SCHEMA, TransitionSchema));
+    }
+
+    #[test]
+    fn test_extension_schema_encoding() {
+        test_encode!((EXTENSION_SCHEMA, ExtensionSchema));
     }
 
     #[test]
@@ -537,7 +533,7 @@ mod test {
         assert_eq!(genesis_schema.extends(), &PublicRightsStructure::new());
         assert_eq!(
             genesis_schema.owned_rights().get(&3usize).unwrap(),
-            &Occurences::OnceOrUpTo(Some(25u16))
+            &Occurences::OnceOrUpTo(25u16)
         );
         assert_eq!(genesis_schema.public_rights(), &valencies);
         assert_eq!(genesis_schema.abi(), &genesis_abi);
@@ -567,12 +563,12 @@ mod test {
         );
         assert_eq!(
             transition_schema.closes().get(&3usize).unwrap(),
-            &Occurences::OnceOrUpTo(Some(25u16))
+            &Occurences::OnceOrUpTo(25u16)
         );
         assert_eq!(transition_schema.extends(), &PublicRightsStructure::new());
         assert_eq!(
             transition_schema.owned_rights().get(&3usize).unwrap(),
-            &Occurences::OnceOrUpTo(Some(25u16))
+            &Occurences::OnceOrUpTo(25u16)
         );
         assert_eq!(transition_schema.public_rights(), &valencies);
         assert_eq!(transition_schema.abi(), &transition_abi);
@@ -604,7 +600,7 @@ mod test {
         assert_eq!(extension_schema.extends(), &valencies);
         assert_eq!(
             extension_schema.owned_rights().get(&3usize).unwrap(),
-            &Occurences::OnceOrUpTo(Some(25u16))
+            &Occurences::OnceOrUpTo(25u16)
         );
         assert_eq!(extension_schema.public_rights(), &valencies);
         assert_eq!(extension_schema.abi(), &extension_abi);
@@ -617,34 +613,32 @@ mod test {
         metadata_structures.insert(1 as FieldType, Occurences::Once);
         metadata_structures.insert(2 as FieldType, Occurences::NoneOrOnce);
         metadata_structures
-            .insert(3 as FieldType, Occurences::OnceOrUpTo(Some(13u16)));
+            .insert(3 as FieldType, Occurences::OnceOrUpTo(13u16));
         metadata_structures
-            .insert(4 as FieldType, Occurences::NoneOrUpTo(Some(17u16)));
+            .insert(4 as FieldType, Occurences::NoneOrUpTo(17u16));
 
         let mut metadata_structures2 = MetadataStructure::new();
         metadata_structures2.insert(1 as FieldType, Occurences::Once);
         metadata_structures2.insert(2 as FieldType, Occurences::NoneOrOnce);
+        metadata_structures2.insert(3 as FieldType, Occurences::OnceOrMore);
         metadata_structures2
-            .insert(3 as FieldType, Occurences::OnceOrUpTo(None));
-        metadata_structures2
-            .insert(4 as FieldType, Occurences::NoneOrUpTo(Some(15u16)));
+            .insert(4 as FieldType, Occurences::NoneOrUpTo(15u16));
 
         // Create Two Seal Structures
         let mut seal_structures = OwnedRightsStructure::new();
         seal_structures.insert(1 as OwnedRightType, Occurences::Once);
         seal_structures.insert(2 as OwnedRightType, Occurences::NoneOrOnce);
         seal_structures
-            .insert(3 as OwnedRightType, Occurences::OnceOrUpTo(Some(25u16)));
+            .insert(3 as OwnedRightType, Occurences::OnceOrUpTo(25u16));
         seal_structures
-            .insert(4 as OwnedRightType, Occurences::NoneOrUpTo(Some(12u16)));
+            .insert(4 as OwnedRightType, Occurences::NoneOrUpTo(12u16));
 
         let mut seal_structures2 = OwnedRightsStructure::new();
         seal_structures2.insert(1 as OwnedRightType, Occurences::Once);
         seal_structures2.insert(2 as OwnedRightType, Occurences::NoneOrOnce);
+        seal_structures2.insert(3 as OwnedRightType, Occurences::OnceOrMore);
         seal_structures2
-            .insert(3 as OwnedRightType, Occurences::OnceOrUpTo(None));
-        seal_structures2
-            .insert(4 as OwnedRightType, Occurences::NoneOrUpTo(Some(30u16)));
+            .insert(4 as OwnedRightType, Occurences::NoneOrUpTo(30u16));
 
         // Create Two Valency structure
         let mut valency_structure = PublicRightsStructure::new();
