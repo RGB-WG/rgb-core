@@ -12,4 +12,48 @@ readme = "../README.md"
 edition = "2018"
 
 [dependencies]
-async-trait = "~0.1.41"
+# LNP/BP libraries
+amplify = "~1.2.0"
+amplify_derive = "~1.2.0"
+lnpbp = { path = ".." }
+lnpbp_derive = { path = "../derive" }
+# Serialization & parsing
+serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
+serde_with = { version = "~1.5.1", optional = true, features = ["hex"] }
+toml = { version = "~0.5.7", optional = true }
+# Congig
+settings = { version = "~0.10.1", package = "config", optional = true }
+dotenv = { version = "~0.15.0", optional = true }
+clap = { version = "=3.0.0-beta.2", optional = true }
+log = { version = "~0.4.8", optional = true, features = ["max_level_trace", "release_max_level_debug"] }
+env_logger = { version = "~0.7.1", optional = true }
+# Networking
+async-trait = { version = "~0.1.41", optional = true }
+tokio = { version = "~0.2.18", features = ["full"], optional = true }
+zmq = { version = "~0.9.2", optional = true }
+
+# Recommended set of features:
+# 1. Standalone node: `server` (=`node`+`shell`)
+# 2. Cli to remote node: `cli` (auto includes `shell` and `integration`)
+# 3. Mobile app talking to a server: `client`
+# 4. Mobile app with embedded node: `embedded` (auto includes `client` + `node`)
+# 5. Simple cli utility app: `shell`
+[features]
+# Server is a standalone application that runs daemon
+server = ["node", "shell"]
+# Feature is required for any applications that talks to daemon processes
+client = ["zmq"]
+# Embedded is an app that contains ndoe in itself and that talks to it through
+# integration layer
+embedded = ["client", "node"]
+# Command-line application feature
+cli = ["shell", "client"]
+# Required for all apps that can be launched from command-line shell as binaries
+# (i.e. both servers and cli)
+shell = ["dotenv", "clap", "settings", "log", "env_logger", "amplify/parse_arg", "serde"]
+# Besides server node can be run as a part of mobile app
+# and other types of clients; thus `server` != `node`.
+# This feature results in building with features not required for CLI
+node = ["serde", "async", "lnpbp/keygen", "tokio", "zmq"]
+async = ["async-trait", "lnpbp/async"]
+serde = ["serde_crate", "serde_with", "amplify/serde", "lnpbp/serde", "toml"]

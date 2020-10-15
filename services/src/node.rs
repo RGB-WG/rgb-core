@@ -34,9 +34,17 @@ pub trait TryService: Sized {
     /// failure. To implement the actual run loop please provide implementation
     /// for [`try_run_loop()`]
     async fn run_or_panic(self, service_name: &str) -> ! {
-        let should_not_return = self.try_run_loop().await;
-        let msg = handle_failure(service_name, should_not_return);
-        panic!(msg)
+        panic!(match self.try_run_loop().await {
+            Err(err) => {
+                format!(
+                    "{} run loop has failed with error {}",
+                    service_name, err
+                )
+            }
+            Ok(_) => {
+                format!("{} has failed without reporting a error", service_name)
+            }
+        })
     }
 
     /// Main failable run loop implementation. Must produce an error of type
@@ -53,18 +61,4 @@ pub trait Exec {
     type Error: Error;
     /// Main execution routine
     fn exec(&self, runtime: &mut Self::Runtime) -> Result<(), Self::Error>;
-}
-
-fn handle_failure<T>(
-    service_name: &str,
-    result: Result<T, impl Error>,
-) -> String {
-    match result {
-        Err(err) => {
-            format!("{} run loop has failed with error {}", service_name, err)
-        }
-        Ok(_) => {
-            format!("{} has failed without reporting a error", service_name)
-        }
-    }
 }

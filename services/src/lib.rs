@@ -11,6 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! LNP/BP library for building robust and scalable APIs, servers, nodes,
+//! clinets and cli utilities with LNP protocol, ZMQ and multi-threading
+
 #![feature(never_type)]
 #![recursion_limit = "256"]
 // Coding conventions
@@ -24,9 +27,29 @@
     missing_docs
 )]
 
+extern crate amplify;
+#[macro_use]
+extern crate amplify_derive;
+
+// Support for node & node clients development (include API helpers)
+#[cfg(feature = "async")]
 #[macro_use]
 extern crate async_trait;
 
-mod service;
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde_with;
+#[cfg(feature = "serde")]
+extern crate serde_crate as serde;
 
-pub use service::{Exec, Service, TryService};
+#[cfg(feature = "clap")]
+#[macro_use]
+extern crate clap;
+
+pub mod error;
+#[cfg(feature = "cli")]
+pub mod format;
+#[cfg(feature = "node")]
+pub mod node;
+#[cfg(feature = "shell")]
+pub mod shell;
