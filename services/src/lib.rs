@@ -30,6 +30,8 @@
 extern crate amplify;
 #[macro_use]
 extern crate amplify_derive;
+#[macro_use]
+extern crate lnpbp_derive;
 
 // Support for node & node clients development (include API helpers)
 #[cfg(feature = "async")]
@@ -51,5 +53,7 @@ pub mod error;
 pub mod format;
 #[cfg(feature = "node")]
 pub mod node;
+#[cfg(any(feature = "client", feature = "node"))]
+pub mod rpc;
 #[cfg(feature = "shell")]
 pub mod shell;

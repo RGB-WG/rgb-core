@@ -16,25 +16,54 @@ use crate::strict_encoding;
 #[cfg(feature = "lightning")]
 use lightning::ln::msgs::DecodeError;
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
-#[display(Debug)]
+/// Presentation-level LNP error types. They do not include error source
+/// for the simplicity of their encoding
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error, From)]
+#[display(doc_comments)]
 #[non_exhaustive]
+#[repr(u16)]
 pub enum Error {
+    /// I/O error while decoding LNP message; probably socket error or out of
+    /// memory
     #[from(std::io::Error)]
-    Io,
+    Io = 1,
+
+    /// LNP message contains no data
     NoData,
+
+    /// Unknown encoder for encoding LNP message
     NoEncoder,
+
+    /// Unknown LNP protocol version
     UnknownProtocolVersion,
-    #[from]
-    EncodingError(strict_encoding::Error),
+
+    /// Error in strict encoded data in LNP message
+    #[from(strict_encoding::Error)]
+    EncodingError,
+
+    /// Unknown data type in LNP message
     #[from(UnknownTypeError)]
     UnknownDataType,
+
+    /// Invalid value in LNP message
     InvalidValue,
+
+    /// LNP message with unknown even value
     MessageEvenType,
+
+    /// Bad length descriptor in LNP message
     BadLengthDescriptor,
+
+    /// Wrong order of TLV types inside LNP message
     TlvStreamWrongOrder,
+
+    /// Duplicated TLV type item inside LNP message
     TlvStreamDuplicateItem,
+
+    /// Found unknown even TLV record type inside LNP message
     TlvRecordEvenType,
+
+    /// Invalid length of TLV record inside LNP message
     TlvRecordInvalidLen,
 }
 
@@ -52,6 +81,7 @@ impl From<DecodeError> for Error {
     }
 }
 
+/// Error representing unknown LNP message type
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
 )]

@@ -14,91 +14,78 @@
 /// Formats representing generic binary data input or output
 #[derive(Copy, Clone, Debug, Display)]
 #[cfg_attr(feature = "clap", derive(Clap))]
-#[display(doc_comments)]
 pub enum BinaryData {
     /// Raw/binary file with data
+    #[display("bin")]
     Binary,
 
     /// Data encoded as hexadecimal (Base16) string
+    #[display("hex")]
     Hex,
 
     /// Data encoded as Base64 string
+    #[display("base64")]
     Base64,
 
     /// Data encoded as Bech32 string starting with `data1` prefix
+    #[display("bech32")]
     Bech32,
 }
 
-/// Formats representing data structures supporting
-/// [strict encoding](`strict_encoding`)
-#[derive(Copy, Clone, Debug, Display)]
-#[cfg_attr(feature = "clap", derive(Clap))]
-#[display(doc_comments)]
-pub enum StrictData {
-    /// JSON
-    Json,
-
-    /// YAML
-    Yaml,
-
-    /// TOML
-    Toml,
-
-    /// Strict encoding - binary representation
-    StrictBin,
-
-    /// Strict encoding - hex representation
-    StrictHex,
-
-    /// Strict encoding - Bech32 representation
-    StrictBech32,
-
-    /// Strict encoding - base64 representation
-    StrictBase64,
-}
-
-/// formats representing data structures supporting bitcoin consensus encoding
+/// Formats representing data structures supporting binary encoding and which
+/// can be represented by hierarchical data structures, including types
+/// supporting LNP/BP strict encoding, bitcoin consensus encoding
 /// (`bitcoin::consensus::encode`) or other bitcoin-specific binary encodings
 /// (BIP-32 specific encodings, PSBT encoding)
 #[derive(Copy, Clone, Debug, Display)]
 #[cfg_attr(feature = "clap", derive(Clap))]
-#[display(doc_comments)]
-pub enum BitcoinData {
-    /// Binary data
-    Binary,
-
-    /// Bitcoin structure data encoded as hexadecimal string
-    Hex,
-
-    /// Bitcoin structure data encoded with Base64 encoding
-    Base64,
-
-    /// Bitcoin structure data encoded with Base64 encoding. While this is
-    /// non-standard encoding for most of bitcoin structures, we support
-    /// extended set of prefixes (see [`bech32`] module).
-    Bech32,
-
-    /// JSON description of Bitcoin structure data
+pub enum StructuredData {
+    /// JSON
+    #[display("json")]
     Json,
 
-    /// YAML description of Bitcoin structure data
+    /// YAML
+    #[display("yaml")]
     Yaml,
+
+    /// TOML
+    #[display("toml")]
+    Toml,
+
+    /// Binary representation
+    #[display("bin")]
+    Bin,
+
+    /// Hexadecimal representation
+    #[display("hex")]
+    Hex,
+
+    /// Bech32 representation
+    #[display("bech32")]
+    Bech32,
+
+    /// Base64 representation
+    #[display("base64")]
+    Base64,
 }
 
 /// Representation formats for bitcoin script data
 #[derive(Copy, Clone, Debug, Display)]
 #[cfg_attr(feature = "clap", derive(Clap))]
-#[display(doc_comments)]
 pub enum BitcoinScript {
     /// Binary script source encoded as hexadecimal string
+    #[display("hex")]
     Hex,
 
     /// Binary script source encoded as Base64 string
+    #[display("base64")]
     Base64,
 
     /// Miniscript string or descriptor
+    #[display("miniscript")]
     Miniscript,
 
     /// String with assembler opcodes
+    #[display("asm")]
     Assembler,
 }

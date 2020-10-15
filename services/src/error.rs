@@ -15,6 +15,8 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::io;
 
+#[cfg(any(feature = "client", feature = "node"))]
+use crate::rpc;
 #[cfg(feature = "shell")]
 use settings::ConfigError;
 #[cfg(feature = "tokio")]
@@ -139,18 +141,24 @@ where
     #[from]
     Zmq(zmq::Error),
 
-    /// Error on LNP protocol transport level:
+    /// RPC error during communications with the remote peer:
     /// {_0}
-    #[from(lnp::transport::Error)]
-    Transport,
-
-    /// Error in LNP message serialization or structure:
-    /// {_0}
-    #[from(lnp::presentation::Error)]
-    Message,
+    #[cfg(any(feature = "client", feature = "node"))]
+    #[from]
+    Rpc(rpc::Error),
 
     /// Application-level runtime error:
     /// {_0}
     #[from]
     AppLevel(AppLevelError),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum DataParseError {
+    /// Unknown format of the data required to parse
+    UnknownFormat,
+
+    /// format of the data is not supported
+    NotSupported(String),
 }
