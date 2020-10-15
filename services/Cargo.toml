@@ -1,0 +1,15 @@
+[package]
+name = "lnpbp_services"
+version = "0.1.0-rc.2"
+license = "MIT"
+license-file = "../LICENSE"
+authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
+description = "LNP/BP support crate for devloping microservices"
+repository = "https://github.com/LNP-BP/rust-lnpbp"
+homepage = "https://github.com/LNP-BP"
+keywords = ["microservices", "lightning", "lnp-bp", "layer-3", "lnp"]
+readme = "../README.md"
+edition = "2018"
+
+[dependencies]
+async-trait = "~0.1.41"

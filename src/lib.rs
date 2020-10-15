@@ -15,9 +15,9 @@
     never_type,
     associated_type_defaults,
     arbitrary_enum_discriminant,
+    try_find,
     try_trait
 )]
-#![feature(try_find)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![deny(
