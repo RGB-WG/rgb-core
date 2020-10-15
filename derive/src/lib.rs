@@ -451,18 +451,20 @@ fn lnp_api_inner_enum(
     Ok(quote! { mod __lnp_implementaiton {
         use super::#ident_name;
         use ::amplify::Wrapper;
-        use ::lnpbp::lnp::{Type, TypedEnum, UnknownTypeError, UnmarshallFn, Unmarshaller};
+        use ::lnpbp::lnp::{Type, TypedEnum, UnknownTypeError, UnmarshallFn, Unmarshaller, CreateUnmarshaller};
         #encode_use
         #decode_use
 
-        impl #ident_name {
-            #msg_const
-
-            pub fn create_unmarshaller() -> Unmarshaller<Self> {
+        impl CreateUnmarshaller for #ident_name {
+            fn create_unmarshaller() -> Unmarshaller<Self> {
                 let mut map = ::std::collections::BTreeMap::new();
                 #unmarshaller
                 Unmarshaller::new(map)
             }
+        }
+
+        impl #ident_name {
+            #msg_const
 
             #unmarshall_fn
         }

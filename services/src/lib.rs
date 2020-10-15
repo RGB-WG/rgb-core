@@ -27,6 +27,7 @@
     missing_docs
 )]
 
+#[macro_use]
 extern crate amplify;
 #[macro_use]
 extern crate amplify_derive;
@@ -48,6 +49,8 @@ extern crate serde_crate as serde;
 #[macro_use]
 extern crate clap;
 
+#[cfg(feature = "client")]
+pub mod client;
 pub mod error;
 #[cfg(feature = "cli")]
 pub mod format;

@@ -11,9 +11,30 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::fmt::{Debug, Display};
+
+use lnpbp::lnp;
+
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;
-use lnpbp::lnp;
+
+/// Marker trait for LNP RPC requests
+pub trait Request: Clone + Debug + Display + lnp::TypedEnum {}
+
+/// Marker trait for LNP RPC replies
+pub trait Reply:
+    Clone + Debug + Display + lnp::TypedEnum + lnp::CreateUnmarshaller
+{
+}
+
+/// RPC API pair, connecting [`Request`] type with [`Reply`]
+pub trait Api {
+    /// Requests supported by RPC API
+    type Request: Request;
+
+    /// Replies supported by RPC API
+    type Reply: Reply;
+}
 
 /// Information about server-side failure returned through RPC API
 #[derive(
@@ -48,6 +69,9 @@ pub enum Error {
     /// {_0}
     #[from]
     TransportError(lnp::transport::Error),
+
+    /// The provided RPC endpoint {_0} is unknown
+    UnknownEndpoint(String),
 }
 
 impl From<lnp::presentation::Error> for Failure {

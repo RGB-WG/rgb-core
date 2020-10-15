@@ -21,11 +21,12 @@ pub mod transport;
 
 pub use presentation::message::{Type, TypedEnum, Unmarshaller};
 pub use presentation::{
-    tlv, Message, UnknownTypeError, Unmarshall, UnmarshallFn,
+    tlv, CreateUnmarshaller, Message, UnknownTypeError, Unmarshall,
+    UnmarshallFn,
 };
 pub use session::{
-    ConnectionError, Inbound, LocalNode, NoEncryption, NodeAddr, NodeLocator,
-    Outbound, Session, SessionTrait,
+    ConnectionError, Decrypt, Encrypt, Inbound, LocalNode, NoEncryption,
+    NodeAddr, NodeLocator, Outbound, Session, SessionTrait, Transcode,
 };
 pub use transport::{tcp, tor, websocket, zmq};
 

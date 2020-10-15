@@ -65,7 +65,7 @@ where
 impl Session<NoEncryption, transport::zmq::Connection> {
     pub fn new_zmq_unencrypted(
         zmq_type: ZmqType,
-        context: &mut zmq::Context,
+        context: &zmq::Context,
         remote: SocketLocator,
         local: Option<SocketLocator>,
     ) -> Result<Self, Error> {

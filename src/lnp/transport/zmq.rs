@@ -216,7 +216,7 @@ pub struct Connection {
 impl Connection {
     pub fn new(
         api_type: ApiType,
-        context: &mut zmq::Context,
+        context: &zmq::Context,
         remote: SocketLocator,
         local: Option<SocketLocator>,
     ) -> Result<Self, Error> {
