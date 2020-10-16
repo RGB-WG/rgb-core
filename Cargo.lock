@@ -723,7 +723,6 @@ version = "0.1.0-rc.2"
 dependencies = [
  "amplify",
  "amplify_derive",
- "async-trait",
  "clap",
  "config",
  "dotenv",

@@ -12,7 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::HashMap;
-use std::hash::Hash;
 
 use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::transport::zmq::{ApiType, SocketLocator};
@@ -23,20 +22,20 @@ use lnpbp::lnp::{
 
 use crate::rpc;
 
-pub struct Runtime<Endpoints, Api>
+pub struct RpcClient<Endpoints, Api>
 where
     Api: rpc::Api,
-    Endpoints: Copy + Eq + Hash + ToString,
+    Endpoints: rpc::EndpointTypes,
 {
     sessions:
         HashMap<Endpoints, Session<NoEncryption, transport::zmq::Connection>>,
     unmarshaller: Unmarshaller<Api::Reply>,
 }
 
-impl<Endpoints, Api> Runtime<Endpoints, Api>
+impl<Endpoints, Api> RpcClient<Endpoints, Api>
 where
     Api: rpc::Api,
-    Endpoints: Copy + Eq + Hash + ToString,
+    Endpoints: rpc::EndpointTypes,
 {
     pub fn init(
         endpoints: HashMap<Endpoints, SocketLocator>,
@@ -67,12 +66,12 @@ where
         request: Api::Request,
     ) -> Result<Api::Reply, rpc::Error> {
         let data = request.encode()?;
-        let endpoint = self
+        let connection = self
             .sessions
             .get_mut(&endpoint)
             .ok_or(rpc::Error::UnknownEndpoint(endpoint.to_string()))?;
-        endpoint.send_raw_message(data)?;
-        let raw = endpoint.recv_raw_message()?;
+        connection.send_raw_message(data)?;
+        let raw = connection.recv_raw_message()?;
         let reply = self.unmarshaller.unmarshall(&raw)?;
         Ok((&*reply).clone())
     }

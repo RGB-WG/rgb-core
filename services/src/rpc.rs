@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::fmt::{Debug, Display};
+use std::hash::Hash;
 
 use lnpbp::lnp;
 
@@ -19,7 +20,10 @@ use lnpbp::lnp;
 use crate::error::RuntimeError;
 
 /// Marker trait for LNP RPC requests
-pub trait Request: Clone + Debug + Display + lnp::TypedEnum {}
+pub trait Request:
+    Clone + Debug + Display + lnp::TypedEnum + lnp::CreateUnmarshaller
+{
+}
 
 /// Marker trait for LNP RPC replies
 pub trait Reply:
@@ -35,6 +39,9 @@ pub trait Api {
     /// Replies supported by RPC API
     type Reply: Reply;
 }
+
+/// Marker traits for endpoint identifiers lists
+pub trait EndpointTypes: Copy + Eq + Hash + Display {}
 
 /// Information about server-side failure returned through RPC API
 #[derive(
@@ -59,6 +66,11 @@ pub enum Error {
     #[from]
     /// {_0}
     ServerFailure(Failure),
+
+    /// ZeroMQ socket error:
+    /// {_0}
+    #[from]
+    Zmq(zmq::Error),
 
     /// Error on LNP protocol transport level:
     /// {_0}
@@ -94,4 +106,26 @@ where
             info: err.to_string(),
         }
     }
+}
+
+/// Trait for types handling specific set of RPC API requests structured as a
+/// single type implementing [`Request`]. They must return a corresponding reply
+/// type implementing [`Reply`]. This request/replu pair is structured as an
+/// [`Api`] trait provided in form of associated type parameter
+pub trait Handler<Endpoints>
+where
+    Self: Sized,
+    Endpoints: EndpointTypes,
+    <Self::Api as Api>::Reply: From<Self::Error>,
+{
+    type Api: Api;
+    type Error: crate::error::Error + Into<Failure>;
+
+    /// Function that processes specific request and returns either response or
+    /// a error that can be converted into a failure response
+    fn handle(
+        &mut self,
+        endpoint: Endpoints,
+        request: <Self::Api as Api>::Request,
+    ) -> Result<<Self::Api as Api>::Reply, Self::Error>;
 }

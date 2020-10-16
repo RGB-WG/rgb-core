@@ -74,6 +74,10 @@ impl Session<NoEncryption, transport::zmq::Connection> {
             stream: Connection::new(zmq_type, context, remote, local)?,
         })
     }
+
+    pub fn as_socket(&self) -> &zmq::Socket {
+        &self.stream.as_socket()
+    }
 }
 
 impl<T, S> Bipolar for Session<T, S>

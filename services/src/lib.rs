@@ -34,11 +34,6 @@ extern crate amplify_derive;
 #[macro_use]
 extern crate lnpbp_derive;
 
-// Support for node & node clients development (include API helpers)
-#[cfg(feature = "async")]
-#[macro_use]
-extern crate async_trait;
-
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_with;
@@ -48,6 +43,9 @@ extern crate serde_crate as serde;
 #[cfg(feature = "clap")]
 #[macro_use]
 extern crate clap;
+#[cfg(feature = "log")]
+#[macro_use]
+extern crate log;
 
 #[cfg(feature = "client")]
 pub mod client;
@@ -58,5 +56,7 @@ pub mod format;
 pub mod node;
 #[cfg(any(feature = "client", feature = "node"))]
 pub mod rpc;
+#[cfg(feature = "server")]
+pub mod server;
 #[cfg(feature = "shell")]
 pub mod shell;

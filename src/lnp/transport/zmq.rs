@@ -254,6 +254,11 @@ impl Connection {
             output,
         })
     }
+
+    #[inline]
+    pub(crate) fn as_socket(&self) -> &zmq::Socket {
+        &self.input.as_socket()
+    }
 }
 
 impl InputStream {
@@ -264,6 +269,11 @@ impl InputStream {
             input: socket,
         }
     }
+
+    #[inline]
+    pub(crate) fn as_socket(&self) -> &zmq::Socket {
+        &self.input
+    }
 }
 
 impl OutputStream {
@@ -273,6 +283,11 @@ impl OutputStream {
             api_type,
             output: socket,
         }
+    }
+
+    #[inline]
+    pub(crate) fn as_socket(&self) -> &zmq::Socket {
+        &self.output
     }
 }
 
