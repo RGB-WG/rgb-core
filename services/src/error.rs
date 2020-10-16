@@ -47,6 +47,7 @@ pub enum ConfigInitError {
     Toml(toml::ser::Error),
 }
 
+#[cfg(any(feature = "node", feature = "shell"))]
 impl From<io::Error> for ConfigInitError {
     fn from(err: io::Error) -> Self {
         Self::Io(err.to_string())
@@ -108,6 +109,7 @@ where
     AppLevel(AppLevelError),
 }
 
+#[cfg(any(feature = "node", feature = "shell"))]
 impl<E> From<&str> for BootstrapError<E>
 where
     E: Error,
@@ -117,6 +119,7 @@ where
     }
 }
 
+#[cfg(any(feature = "node", feature = "shell"))]
 impl<E> From<io::Error> for BootstrapError<E>
 where
     E: Error,
