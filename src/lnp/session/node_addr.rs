@@ -89,8 +89,8 @@ pub enum ParseError {
     #[from(std::num::ParseIntError)]
     WrongPort,
 
-    /// No port information in the node address string.
-    NoPort,
+    /// Nointerned address specified after node public key
+    MissedInetAddr,
 }
 
 impl FromStr for NodeAddr {
@@ -109,7 +109,7 @@ impl FromStr for NodeAddr {
             match (splitter.next(), splitter.next(), splitter.next()) {
                 (Some(addr), Some(port), None) => (addr, port.parse()?),
                 (Some(addr), None, _) => (addr, LIGHTNING_P2P_DEFAULT_PORT),
-                _ => Err(ParseError::NoPort)?,
+                _ => Err(ParseError::MissedInetAddr)?,
             };
 
         Ok(Self {
