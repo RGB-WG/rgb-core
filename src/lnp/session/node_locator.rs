@@ -29,7 +29,7 @@ use amplify::internet::{InetAddr, InetSocketAddr};
 use bitcoin::secp256k1;
 
 use super::{node_addr, NodeAddr};
-use crate::lnp::transport::zmq::ApiType as ZmqType;
+use crate::lnp::transport::zmqsocket::ApiType as ZmqType;
 
 /// Universal Node Locator for LNP protocol
 /// (from [LNPBP-19](https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0019.md))

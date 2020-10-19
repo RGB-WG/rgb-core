@@ -14,7 +14,7 @@
 use std::collections::HashMap;
 
 use lnpbp::lnp::presentation::Encode;
-use lnpbp::lnp::transport::zmq::{ApiType, SocketLocator};
+use lnpbp::lnp::transport::zmqsocket::{ApiType, SocketLocator};
 use lnpbp::lnp::{
     transport, CreateUnmarshaller, NoEncryption, Session, Unmarshall,
     Unmarshaller,
@@ -27,8 +27,10 @@ where
     Api: rpc::Api,
     Endpoints: rpc::EndpointTypes,
 {
-    sessions:
-        HashMap<Endpoints, Session<NoEncryption, transport::zmq::Connection>>,
+    sessions: HashMap<
+        Endpoints,
+        Session<NoEncryption, transport::zmqsocket::Connection>,
+    >,
     unmarshaller: Unmarshaller<Api::Reply>,
 }
 

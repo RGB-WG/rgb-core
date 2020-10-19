@@ -28,7 +28,7 @@ pub use session::{
     ConnectionError, Decrypt, Encrypt, Inbound, LocalNode, NoEncryption,
     NodeAddr, NodeLocator, Outbound, Session, SessionTrait, Transcode,
 };
-pub use transport::{tcp, tor, websocket, zmq};
+pub use transport::{ftcp, websocket, zmqsocket};
 
 pub const LNP_MSG_MAX_LEN: usize = u64::MAX as usize;
 

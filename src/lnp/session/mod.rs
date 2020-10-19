@@ -31,5 +31,3 @@ pub use session::{Inbound, Outbound, Session, SessionTrait};
 pub use transcoders::{
     Decrypt, DecryptionError, Encrypt, NoEncryption, Transcode,
 };
-
-pub const MAX_TRANSPORT_FRAME_SIZE: usize = 65569;

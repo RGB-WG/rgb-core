@@ -16,11 +16,11 @@ use core::borrow::Borrow;
 
 use super::{Decrypt, Encrypt, NodeLocator, Transcode};
 use crate::lnp::session::NoEncryption;
-use crate::lnp::transport::zmq::{
+use crate::lnp::transport::zmqsocket::{
     ApiType as ZmqType, Connection, SocketLocator,
 };
 use crate::lnp::transport::{
-    self, Bidirect, Error, Input, Output, Read, Write,
+    self, Duplex, Error, Receiver, RecvFrame, SendFrame, Sender,
 };
 
 pub trait SessionTrait: Bipolar + AsAny {}
@@ -28,7 +28,7 @@ pub trait SessionTrait: Bipolar + AsAny {}
 pub struct Session<T, S>
 where
     T: Transcode,
-    S: Bidirect,
+    S: Duplex,
 {
     transcoder: T,
     stream: S,
@@ -37,7 +37,7 @@ where
 pub struct Inbound<D, I>
 where
     D: Decrypt,
-    I: Input,
+    I: Receiver,
 {
     pub(self) decryptor: D,
     pub(self) input: I,
@@ -46,7 +46,7 @@ where
 pub struct Outbound<E, O>
 where
     E: Encrypt,
-    O: Output,
+    O: Sender,
 {
     pub(self) encryptor: E,
     pub(self) output: O,
@@ -55,14 +55,14 @@ where
 impl<T, S> Session<T, S>
 where
     T: Transcode,
-    S: Bidirect,
+    S: Duplex,
 {
     pub fn new(_node_locator: NodeLocator) -> Result<Self, Error> {
         unimplemented!()
     }
 }
 
-impl Session<NoEncryption, transport::zmq::Connection> {
+impl Session<NoEncryption, transport::zmqsocket::Connection> {
     pub fn new_zmq_unencrypted(
         zmq_type: ZmqType,
         context: &zmq::Context,
@@ -85,9 +85,9 @@ where
     T: Transcode,
     T::Left: Decrypt,
     T::Right: Encrypt,
-    S: Bidirect,
-    S::Left: Input,
-    S::Right: Output,
+    S: Duplex,
+    S::Left: Receiver,
+    S::Right: Sender,
 {
     type Left = Inbound<T::Left, S::Left>;
     type Right = Outbound<T::Right, S::Right>;
@@ -104,19 +104,19 @@ where
 impl<T, S> Session<T, S>
 where
     T: Transcode,
-    S: Bidirect,
+    S: Duplex,
     Error: From<T::Error>,
 {
     pub fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
-        let reader = self.stream.reader();
-        Ok(self.transcoder.decrypt(reader.read()?)?)
+        let reader = self.stream.receiver();
+        Ok(self.transcoder.decrypt(reader.recv_frame()?)?)
     }
 
     pub fn send_raw_message(
         &mut self,
         raw: impl Borrow<[u8]>,
     ) -> Result<usize, Error> {
-        let writer = self.stream.writer();
-        Ok(writer.write(self.transcoder.encrypt(raw))?)
+        let writer = self.stream.sender();
+        Ok(writer.send_frame(self.transcoder.encrypt(raw))?)
     }
 }

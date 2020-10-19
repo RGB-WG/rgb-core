@@ -132,7 +132,7 @@ rgb = ["bulletproofs", "ed25519-dalek", "deflate", "inflate"]
 # Exposing core rust componens
 # ----------------------------
 #   These also include re-assembly of necessary features from dependencies
-async = ["async-trait", "amplify/async"]
+async = ["async-trait", "amplify/async", "tokio"]
 serde = ["serde_crate", "serde_with", "bitcoin/use-serde", "bitcoin_num/serde",
          "miniscript/serde", "amplify/serde"]
 # Optional cryptographic functionality

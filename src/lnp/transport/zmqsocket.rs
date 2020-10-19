@@ -12,7 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::Bipolar;
-use core::borrow::Borrow;
 #[cfg(feature = "url")]
 use core::convert::TryFrom;
 use core::fmt::{self, Display, Formatter};
@@ -24,7 +23,7 @@ use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
 
-use super::{Bidirect, Error, Input, Output, Read, Write};
+use super::{Duplex, Error, Receiver, RecvFrame, SendFrame, Sender};
 
 /// API type for node-to-node communications used by ZeroMQ
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Copy)]
@@ -197,20 +196,20 @@ impl TryFrom<Url> for SocketLocator {
     }
 }
 
-pub struct InputStream {
+pub struct ConnectionInput {
     api_type: ApiType,
     input: zmq::Socket,
 }
 
-pub struct OutputStream {
+pub struct ConnectionOutput {
     api_type: ApiType,
     output: zmq::Socket,
 }
 
 pub struct Connection {
     api_type: ApiType,
-    input: InputStream,
-    output: Option<OutputStream>,
+    input: ConnectionInput,
+    output: Option<ConnectionOutput>,
 }
 
 impl Connection {
@@ -247,10 +246,10 @@ impl Connection {
             }
             (_, _) => None,
         }
-        .map(|s| OutputStream::from_zmq_socket(api_type, s));
+        .map(|s| ConnectionOutput::from_zmq_socket(api_type, s));
         Ok(Self {
             api_type,
-            input: InputStream::from_zmq_socket(api_type, socket),
+            input: ConnectionInput::from_zmq_socket(api_type, socket),
             output,
         })
     }
@@ -261,7 +260,7 @@ impl Connection {
     }
 }
 
-impl InputStream {
+impl ConnectionInput {
     #[inline]
     fn from_zmq_socket(api_type: ApiType, socket: zmq::Socket) -> Self {
         Self {
@@ -276,7 +275,7 @@ impl InputStream {
     }
 }
 
-impl OutputStream {
+impl ConnectionOutput {
     #[inline]
     fn from_zmq_socket(api_type: ApiType, socket: zmq::Socket) -> Self {
         Self {
@@ -291,77 +290,61 @@ impl OutputStream {
     }
 }
 
-impl Input for InputStream {
-    type Reader = zmq::Socket;
+impl Receiver for ConnectionInput {
+    type Recv = zmq::Socket;
 
     #[inline]
-    fn reader(&mut self) -> &mut Self::Reader {
+    fn receiver(&mut self) -> &mut Self::Recv {
         &mut self.input
     }
 }
 
-impl Output for InputStream {
-    type Writer = zmq::Socket;
+impl Sender for ConnectionInput {
+    type Send = zmq::Socket;
 
     #[inline]
-    fn writer(&mut self) -> &mut Self::Writer {
+    fn sender(&mut self) -> &mut Self::Send {
         &mut self.input
     }
 }
 
-impl Output for OutputStream {
-    type Writer = zmq::Socket;
+impl Sender for ConnectionOutput {
+    type Send = zmq::Socket;
 
     #[inline]
-    fn writer(&mut self) -> &mut Self::Writer {
+    fn sender(&mut self) -> &mut Self::Send {
         &mut self.output
     }
 }
 
-impl Input for Connection {
-    type Reader = zmq::Socket;
+impl Receiver for Connection {
+    type Recv = zmq::Socket;
 
     #[inline]
-    fn reader(&mut self) -> &mut Self::Reader {
-        self.input.reader()
+    fn receiver(&mut self) -> &mut Self::Recv {
+        self.input.receiver()
     }
 }
 
-impl Output for Connection {
-    type Writer = zmq::Socket;
+impl Sender for Connection {
+    type Send = zmq::Socket;
 
-    fn writer(&mut self) -> &mut Self::Writer {
+    fn sender(&mut self) -> &mut Self::Send {
         match self.output {
-            None => self.input.writer(),
-            Some(ref mut output) => output.writer(),
+            None => self.input.sender(),
+            Some(ref mut output) => output.sender(),
         }
     }
 }
 
-impl Bidirect for Connection {
-    type Input = InputStream;
-    type Output = OutputStream;
+impl Duplex for Connection {
+    type Receiver = ConnectionInput;
+    type Sender = ConnectionOutput;
 }
 
 impl Bipolar for Connection {
-    type Left = <Self as Bidirect>::Input;
-    type Right = <Self as Bidirect>::Output;
-
-    fn split(self) -> (Self::Left, Self::Right) {
-        if self.api_type == ApiType::PeerConnecting
-            || self.api_type == ApiType::PeerListening
-        {
-            (self.input, self.output.unwrap())
-        } else {
-            // We panic here because this is a program architecture design
-            // error and developer must be notified about it; the program using
-            // this pattern can't work
-            panic!(format!(
-                "Split operation is impossible for ZMQ stream type {}",
-                self.api_type
-            ));
-        }
-    }
+    type Left = <Self as Duplex>::Receiver;
+    type Right = <Self as Duplex>::Sender;
 
     fn join(input: Self::Left, output: Self::Right) -> Self {
         // We panic here because this is a program architecture design
@@ -384,19 +367,67 @@ impl Bipolar for Connection {
             output: Some(output),
         }
     }
-}
 
-impl Read for zmq::Socket {
-    #[inline]
-    fn read(&mut self) -> Result<Vec<u8>, Error> {
-        Ok(self.recv_bytes(0)?)
+    fn split(self) -> (Self::Left, Self::Right) {
+        if self.api_type == ApiType::PeerConnecting
+            || self.api_type == ApiType::PeerListening
+        {
+            (self.input, self.output.unwrap())
+        } else {
+            // We panic here because this is a program architecture design
+            // error and developer must be notified about it; the program using
+            // this pattern can't work
+            panic!(format!(
+                "Split operation is impossible for ZMQ stream type {}",
+                self.api_type
+            ));
+        }
     }
 }
 
-impl Write for zmq::Socket {
+impl RecvFrame for zmq::Socket {
     #[inline]
-    fn write(&mut self, data: impl Borrow<[u8]>) -> Result<usize, Error> {
-        self.send(data.borrow(), 0)?;
-        Ok(data.borrow().len())
+    fn recv_frame(&mut self) -> Result<Vec<u8>, Error> {
+        let data = self.recv_bytes(0)?;
+        let len = data.len();
+        if len > super::MAX_FRAME_SIZE as usize {
+            return Err(Error::OversizedFrame(len));
+        }
+        Ok(data)
+    }
+
+    fn recv_raw(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+        Ok(self.recv_bytes(0)?)
+    }
+
+    fn recv_addr(&mut self) -> Result<(Vec<u8>, Vec<u8>), Error> {
+        unimplemented!()
+    }
+}
+
+impl SendFrame for zmq::Socket {
+    #[inline]
+    fn send_frame(&mut self, data: impl AsRef<[u8]>) -> Result<usize, Error> {
+        let data = data.as_ref();
+        let len = data.len();
+        if len > super::MAX_FRAME_SIZE as usize {
+            return Err(Error::OversizedFrame(len));
+        }
+        self.send(data, 0)?;
+        Ok(len)
+    }
+
+    fn send_raw(&mut self, data: impl AsRef<[u8]>) -> Result<usize, Error> {
+        let data = data.as_ref();
+        self.send(data, 0)?;
+        Ok(data.len())
+    }
+
+    fn send_addr(
+        &mut self,
+        dest: impl AsRef<[u8]>,
+        data: impl AsRef<[u8]>,
+    ) -> Result<usize, Error> {
+        unimplemented!()
     }
 }
