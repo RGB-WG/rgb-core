@@ -26,7 +26,7 @@ use url::Url;
 use super::{Duplex, Error, Receiver, RecvFrame, SendFrame, Sender};
 
 /// API type for node-to-node communications used by ZeroMQ
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
 #[repr(u8)]
 pub enum ApiType {
     /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ
@@ -123,7 +123,7 @@ impl FromStr for ApiType {
 )]
 pub enum SocketLocator {
     Inproc(String),
-    Posix(PathBuf),
+    Ipc(PathBuf),
     Tcp(SocketAddr),
 }
 
@@ -133,7 +133,7 @@ impl Display for SocketLocator {
             SocketLocator::Inproc(name) => {
                 write!(f, "inproc://{}", name)?;
             }
-            SocketLocator::Posix(path) => {
+            SocketLocator::Ipc(path) => {
                 write!(f, "ipc://{}", path.display())?;
             }
             SocketLocator::Tcp(socket_addr) => {
@@ -188,7 +188,7 @@ impl TryFrom<Url> for SocketLocator {
                 if url.has_authority() {
                     Err(UrlError::UnexpectedAuthority)
                 } else {
-                    Ok(SocketLocator::Posix(PathBuf::from(url.path())))
+                    Ok(SocketLocator::Ipc(PathBuf::from(url.path())))
                 }
             }
             unknown => Err(UrlError::UnknownScheme(unknown.to_string())),

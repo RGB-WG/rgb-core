@@ -23,6 +23,7 @@
 pub mod ftcp;
 mod remote_addr;
 pub mod websocket;
+#[cfg(feature = "zmq")]
 pub mod zmqsocket;
 
 pub use remote_addr::RemoteAddr;
