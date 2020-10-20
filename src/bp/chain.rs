@@ -145,7 +145,6 @@ impl From<bitcoin::Network> for P2pNetworkId {
             bitcoin::Network::Bitcoin => P2pNetworkId::Mainnet,
             bitcoin::Network::Testnet => P2pNetworkId::Testnet,
             bitcoin::Network::Regtest => P2pNetworkId::Regtest,
-            bitcoin::Network::Signet => P2pNetworkId::Signet,
         }
     }
 }
@@ -157,7 +156,6 @@ impl TryFrom<P2pNetworkId> for bitcoin::Network {
             P2pNetworkId::Mainnet => bitcoin::Network::Bitcoin,
             P2pNetworkId::Testnet => bitcoin::Network::Testnet,
             P2pNetworkId::Regtest => bitcoin::Network::Regtest,
-            P2pNetworkId::Signet => bitcoin::Network::Signet,
             P2pNetworkId::Other(magic) if magic == P2P_MAGIC_MAINNET => {
                 bitcoin::Network::Bitcoin
             }
@@ -166,9 +164,6 @@ impl TryFrom<P2pNetworkId> for bitcoin::Network {
             }
             P2pNetworkId::Other(magic) if magic == P2P_MAGIC_REGTEST => {
                 bitcoin::Network::Regtest
-            }
-            P2pNetworkId::Other(magic) if magic == P2P_MAGIC_SIGNET => {
-                bitcoin::Network::Signet
             }
             _ => Err(NoneError)?,
         })
@@ -780,7 +775,6 @@ impl From<bitcoin::Network> for Chain {
             bitcoin::Network::Regtest => {
                 Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)
             }
-            bitcoin::Network::Signet => Chain::Signet,
         }
     }
 }
@@ -802,12 +796,6 @@ impl TryFrom<&Chain> for bitcoin::Network {
                 if hash == &CHAIN_PARAMS_REGTEST.genesis_hash =>
             {
                 bitcoin::Network::Regtest
-            }
-            Chain::Signet => bitcoin::Network::Signet,
-            Chain::SignetCustom(hash)
-                if hash == &CHAIN_PARAMS_SIGNET.genesis_hash =>
-            {
-                bitcoin::Network::Signet
             }
             _ => Err(NoneError)?,
         })
@@ -954,7 +942,6 @@ mod test {
         assert_eq!(P2P_MAGIC_MAINNET, bitcoin::Network::Bitcoin.magic());
         assert_eq!(P2P_MAGIC_TESTNET, bitcoin::Network::Testnet.magic());
         assert_eq!(P2P_MAGIC_REGTEST, bitcoin::Network::Regtest.magic());
-        assert_eq!(P2P_MAGIC_SIGNET, bitcoin::Network::Signet.magic());
 
         let other = P2pNetworkId::Other(u32::from_le_bytes(random_bytes));
 
@@ -1055,10 +1042,6 @@ mod test {
             P2pNetworkId::from(bitcoin::Network::Regtest),
             P2pNetworkId::Regtest
         );
-        assert_eq!(
-            P2pNetworkId::from(bitcoin::Network::Signet),
-            P2pNetworkId::Signet
-        );
 
         assert_eq!(
             bitcoin::Network::try_from(P2pNetworkId::Mainnet).unwrap(),
@@ -1071,10 +1054,6 @@ mod test {
         assert_eq!(
             bitcoin::Network::try_from(P2pNetworkId::Regtest).unwrap(),
             bitcoin::Network::Regtest
-        );
-        assert_eq!(
-            bitcoin::Network::try_from(P2pNetworkId::Signet).unwrap(),
-            bitcoin::Network::Signet
         );
 
         assert_eq!(
@@ -1091,11 +1070,6 @@ mod test {
             bitcoin::Network::try_from(P2pNetworkId::Other(P2P_MAGIC_REGTEST))
                 .unwrap(),
             bitcoin::Network::Regtest
-        );
-        assert_eq!(
-            bitcoin::Network::try_from(P2pNetworkId::Other(P2P_MAGIC_SIGNET))
-                .unwrap(),
-            bitcoin::Network::Signet
         );
     }
 
@@ -1452,7 +1426,6 @@ mod test {
             Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
             Chain::from(bitcoin::Network::Regtest)
         );
-        assert_eq!(Chain::Signet, Chain::from(bitcoin::Network::Signet));
 
         assert_eq!(
             bitcoin::Network::try_from(Chain::Mainnet).unwrap(),
@@ -1463,22 +1436,11 @@ mod test {
             bitcoin::Network::Testnet
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chain::Signet).unwrap(),
-            bitcoin::Network::Signet
-        );
-        assert_eq!(
             bitcoin::Network::try_from(Chain::Regtest(
                 CHAIN_PARAMS_REGTEST.genesis_hash
             ))
             .unwrap(),
             bitcoin::Network::Regtest
-        );
-        assert_eq!(
-            bitcoin::Network::try_from(Chain::SignetCustom(
-                CHAIN_PARAMS_SIGNET.genesis_hash
-            ))
-            .unwrap(),
-            bitcoin::Network::Signet
         );
         assert_eq!(
             bitcoin::Network::try_from(Chain::Regtest(
