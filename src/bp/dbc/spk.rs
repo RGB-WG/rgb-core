@@ -243,8 +243,8 @@ impl Container for SpkContainer {
                 ));
                 Comp::Bare
             }
-            Descr::Pk(_) => Comp::PubkeyHash,
-            Descr::Pkh(_) => Comp::PublicKey,
+            Descr::Pk(_) => Comp::PublicKey,
+            Descr::Pkh(_) => Comp::PubkeyHash,
             Descr::Return(_) => Comp::OpReturn,
             Descr::Wpkh(_) => Comp::WPubkeyHash,
             Descr::Wsh(_) => Comp::WScriptHash,
@@ -405,8 +405,11 @@ where
                         pubkey.to_script_pubkey(Strategy::WitnessScriptHash)
                     }
                     OpReturn => {
-                        Script::new_op_return(&pubkey.serialize().to_vec())
-                            .into()
+                        let ser = pubkey.serialize();
+                        if ser[0] != 0x02 {
+                            Err(Error::InvalidOpReturnKey)?
+                        }
+                        Script::new_op_return(&ser).into()
                     }
                     _ => Err(Error::InvalidProofStructure)?,
                 }

@@ -13,7 +13,7 @@
 
 // In the future this mod will probably become part of Miniscript library
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::iter::FromIterator;
 
 use bitcoin::{hashes::hash160, secp256k1, PubkeyHash};
@@ -44,8 +44,8 @@ impl LockScript {
     /// hash
     pub fn extract_pubkeyset(
         &self,
-    ) -> Result<HashSet<secp256k1::PublicKey>, PubkeyParseError> {
-        Ok(HashSet::from_iter(self.extract_pubkeys()?))
+    ) -> Result<BTreeSet<secp256k1::PublicKey>, PubkeyParseError> {
+        Ok(BTreeSet::from_iter(self.extract_pubkeys()?))
     }
 
     /// Returns tuple of two sets: one for unique public keys and one for
@@ -53,11 +53,11 @@ impl LockScript {
     pub fn extract_pubkey_hash_set(
         &self,
     ) -> Result<
-        (HashSet<secp256k1::PublicKey>, HashSet<PubkeyHash>),
+        (BTreeSet<secp256k1::PublicKey>, BTreeSet<PubkeyHash>),
         PubkeyParseError,
     > {
         let (keys, hashes) = self.extract_pubkeys_and_hashes()?;
-        Ok((HashSet::from_iter(keys), HashSet::from_iter(hashes)))
+        Ok((BTreeSet::from_iter(keys), BTreeSet::from_iter(hashes)))
     }
 
     /// Returns tuple with two vectors: one for public keys and one for public
@@ -156,7 +156,6 @@ pub(crate) mod test {
     use bitcoin::hashes::{hash160, sha256, Hash};
     use bitcoin::{PubkeyHash, PublicKey};
     use miniscript::Segwitv0;
-    use std::collections::HashSet;
     use std::iter::FromIterator;
     use std::str::FromStr;
 
@@ -310,7 +309,7 @@ pub(crate) mod test {
             assert_eq!(lockscript.extract_pubkeys().unwrap(), vec![]);
             assert_eq!(
                 lockscript.extract_pubkey_hash_set().unwrap(),
-                (HashSet::new(), HashSet::new())
+                (BTreeSet::new(), BTreeSet::new())
             );
         })
     }
@@ -322,7 +321,7 @@ pub(crate) mod test {
             assert_eq!(extract[0], pubkey);
             assert_eq!(
                 lockscript.extract_pubkey_hash_set().unwrap(),
-                (HashSet::from_iter(vec![pubkey]), HashSet::new())
+                (BTreeSet::from_iter(vec![pubkey]), BTreeSet::new())
             );
         });
 
@@ -343,13 +342,13 @@ pub(crate) mod test {
             }
             assert_eq!(
                 lockscript.extract_pubkey_hash_set().unwrap(),
-                (HashSet::new(), HashSet::from_iter(vec![hash]))
+                (BTreeSet::new(), BTreeSet::from_iter(vec![hash]))
             );
         });
 
         single_unmatched_keyhash_suite(|lockscript, hash| {
             let (_, hashset) = lockscript.extract_pubkey_hash_set().unwrap();
-            assert_ne!(hashset, HashSet::from_iter(vec![hash]));
+            assert_ne!(hashset, BTreeSet::from_iter(vec![hash]));
         });
     }
 
@@ -359,7 +358,7 @@ pub(crate) mod test {
             assert_eq!(lockscript.extract_pubkeys().unwrap(), keys.clone());
             assert_eq!(
                 lockscript.extract_pubkey_hash_set().unwrap(),
-                (HashSet::from_iter(keys), HashSet::new())
+                (BTreeSet::from_iter(keys), BTreeSet::new())
             );
         });
     }
@@ -379,7 +378,7 @@ pub(crate) mod test {
             assert_eq!(lockscript.extract_pubkeys().unwrap(), keys.clone());
             assert_eq!(
                 lockscript.extract_pubkeyset().unwrap(),
-                HashSet::from_iter(keys)
+                BTreeSet::from_iter(keys)
             );
         });
     }
