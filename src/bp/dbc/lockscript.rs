@@ -114,6 +114,7 @@ impl Container for LockscriptContainer {
     From,
 )]
 #[display("{_0}", alt = "{_0:#}")]
+#[wrapper(LowerHex, UpperHex)]
 pub struct LockscriptCommitment(LockScript);
 
 impl<MSG> EmbedCommitVerify<MSG> for LockscriptCommitment

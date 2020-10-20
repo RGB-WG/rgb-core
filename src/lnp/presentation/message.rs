@@ -42,6 +42,7 @@ use crate::strict_encoding::{StrictDecode, StrictEncode};
     From,
 )]
 #[display(inner)]
+#[wrapper(LowerHex, UpperHex, Octal, FromStr)]
 pub struct Type(u16);
 
 impl EvenOdd for Type {}

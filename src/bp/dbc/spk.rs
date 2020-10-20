@@ -329,6 +329,7 @@ impl Container for SpkContainer {
     From,
 )]
 #[display("{_0}", alt = "{_0:#}")]
+#[wrapper(LowerHex, UpperHex)]
 pub struct SpkCommitment(PubkeyScript);
 
 impl<MSG> EmbedCommitVerify<MSG> for SpkCommitment

@@ -42,6 +42,7 @@ use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
     From,
 )]
 #[display(inner)]
+#[wrapper(LowerHex, UpperHex, Octal, FromStr)]
 pub struct Type(u64);
 
 /// Unknown TLV record represented by raw bytes

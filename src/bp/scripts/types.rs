@@ -125,6 +125,7 @@ use crate::strict_encoding;
     From,
 )]
 #[display("{_0}", alt = "{_0:x}")]
+#[wrapper(LowerHex, UpperHex)]
 pub struct LockScript(Script);
 
 impl strict_encoding::Strategy for LockScript {
@@ -146,6 +147,7 @@ impl strict_encoding::Strategy for LockScript {
     From,
 )]
 #[display("{_0}", alt = "{_0:x}")]
+#[wrapper(LowerHex, UpperHex)]
 pub struct PubkeyScript(Script);
 
 /// A content of `sigScript` from a transaction input
@@ -163,6 +165,7 @@ pub struct PubkeyScript(Script);
     From,
 )]
 #[display("{_0}", alt = "{_0:x}")]
+#[wrapper(LowerHex, UpperHex)]
 pub struct SigScript(Script);
 
 /// A content of the `witness` field from a transaction input according to
@@ -198,6 +201,7 @@ impl Display for Witness {
     From,
 )]
 #[display("{_0}", alt = "{_0:x}")]
+#[wrapper(LowerHex, UpperHex)]
 pub struct RedeemScript(Script);
 
 impl RedeemScript {
@@ -230,6 +234,7 @@ impl From<LockScript> for RedeemScript {
     From,
 )]
 #[display("{_0}", alt = "{_0:x}")]
+#[wrapper(LowerHex, UpperHex)]
 pub struct WitnessScript(Script);
 
 impl WitnessScript {
@@ -259,6 +264,7 @@ impl From<LockScript> for WitnessScript {
     From,
 )]
 #[display("{_0}", alt = "{_0:x}")]
+#[wrapper(LowerHex, UpperHex)]
 pub struct TapScript(Script);
 
 /// Version of the WitnessProgram: first byte of `scriptPubkey` in
