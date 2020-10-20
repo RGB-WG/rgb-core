@@ -14,7 +14,6 @@
 use std::io;
 
 use bitcoin::hashes::{hash160, hmac, sha256, sha256d, sha512, Hash};
-use bitcoin::util::bip32::KeyApplication;
 use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{
     secp256k1, util::bip32, BlockHash, OutPoint, Script, Transaction, TxIn,
@@ -23,6 +22,7 @@ use bitcoin::{
 #[cfg(feature = "ed25519-dalek")]
 use ed25519_dalek::ed25519::signature::Signature;
 
+use super::bip32::{Decode, Encode};
 use super::blind::OutpointHash;
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 
@@ -249,35 +249,6 @@ impl StrictDecode for bitcoin::Network {
             0..0,
             magic as u128,
         ))?)
-    }
-}
-
-impl StrictEncode for KeyApplication {
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-        match self {
-            KeyApplication::Legacy => 0u8.strict_encode(e),
-            KeyApplication::SegWitLegacySinglesig => 1u8.strict_encode(e),
-            KeyApplication::SegWitLegacyMultisig => 2u8.strict_encode(e),
-            KeyApplication::SegWitV0Singlesig => 3u8.strict_encode(e),
-            KeyApplication::SegWitV0Miltisig => 4u8.strict_encode(e),
-        }
-    }
-}
-
-impl StrictDecode for KeyApplication {
-    #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-        Ok(match u8::strict_decode(d)? {
-            0 => Self::Legacy,
-            1 => Self::SegWitLegacySinglesig,
-            2 => Self::SegWitLegacyMultisig,
-            3 => Self::SegWitV0Singlesig,
-            4 => Self::SegWitV0Miltisig,
-            x => {
-                Err(Error::EnumValueNotKnown("KeyApplication".to_string(), x))?
-            }
-        })
     }
 }
 
@@ -567,15 +538,6 @@ pub(crate) mod test {
             0xa4, 0xb2, 0x82,
         ];
         secp256k1::Signature::strict_decode(&SIG_BYTES[..]).unwrap();
-    }
-
-    #[test]
-    fn test_encoding_keyapplication() {
-        test_suite(&KeyApplication::Legacy, &[0], 1);
-        test_suite(&KeyApplication::SegWitLegacySinglesig, &[1], 1);
-        test_suite(&KeyApplication::SegWitLegacyMultisig, &[2], 1);
-        test_suite(&KeyApplication::SegWitV0Singlesig, &[3], 1);
-        test_suite(&KeyApplication::SegWitV0Miltisig, &[4], 1);
     }
 
     #[test]
