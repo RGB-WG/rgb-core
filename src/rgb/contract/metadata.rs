@@ -13,6 +13,7 @@
 
 //! Convenience metadata accessor methods for Genesis and state transitions.
 
+use amplify::Wrapper;
 #[cfg(feature = "serde")]
 use serde::{Deserializer, Serializer};
 use std::collections::{BTreeMap, BTreeSet};
@@ -25,12 +26,10 @@ use crate::rgb::schema;
 
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
-wrapper!(
-    Metadata,
-    MetadataInner,
-    doc = "Transition & genesis metadata fields",
-    derive = [Default, PartialEq]
-);
+/// Transition & genesis metadata fields
+#[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, Display, From)]
+#[display(Debug)]
+pub struct Metadata(MetadataInner);
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for Metadata {

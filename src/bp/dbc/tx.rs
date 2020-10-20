@@ -124,12 +124,10 @@ impl Container for TxContainer {
     }
 }
 
-wrapper!(
-    TxCommitment,
-    Transaction,
-    doc = "[bitcoin::Transaction] containing LNPBP-3 commitment",
-    derive = [PartialEq, Eq, Hash]
-);
+/// [bitcoin::Transaction] containing LNPBP-3 commitment
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Display, From)]
+#[display(Debug)]
+pub struct TxCommitment(Transaction);
 
 impl<MSG> EmbedCommitVerify<MSG> for TxCommitment
 where

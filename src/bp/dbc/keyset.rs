@@ -13,6 +13,7 @@
 
 //! # LNPBP-2 related
 
+use amplify::Wrapper;
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 use std::collections::BTreeSet;
@@ -85,12 +86,11 @@ impl Container for KeysetContainer {
     }
 }
 
-wrapper!(
-    KeysetCommitment,
-    secp256k1::PublicKey,
-    doc = "Public key committed to some message plus a sum of other public keys via LNPBP2-based tweaking procedure",
-    derive = [PartialEq, Eq, Hash]
-);
+/// Public key committed to some message plus a sum of other public keys via
+/// LNPBP2-based tweaking procedure
+#[derive(Wrapper, Clone, Copy, PartialEq, Eq, Hash, Debug, Display, From)]
+#[display("{_0}", alt = "{_0:#}*")]
+pub struct KeysetCommitment(secp256k1::PublicKey);
 
 impl<MSG> EmbedCommitVerify<MSG> for KeysetCommitment
 where

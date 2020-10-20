@@ -13,6 +13,7 @@
 
 #![feature(
     never_type,
+    trivial_bounds,
     associated_type_defaults,
     arbitrary_enum_discriminant,
     try_trait

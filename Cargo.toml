@@ -33,8 +33,8 @@ crate-type = ["dylib", "rlib", "staticlib"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = "~1.2.0" # This project does not have any non-optional dependencies
-amplify_derive = "~1.2.0"
+amplify = "~2.0.4"
+amplify_derive = "~2.0.6"
 lnpbp_derive = { path = "derive" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
@@ -134,9 +134,9 @@ rgb = ["bulletproofs", "ed25519-dalek", "deflate", "inflate"]
 # Exposing core rust componens
 # ----------------------------
 #   These also include re-assembly of necessary features from dependencies
-async = ["async-trait", "amplify/async"]
-serde = ["serde_crate", "serde_with", "bitcoin/use-serde", "bitcoin_num/serde",
-         "miniscript/serde", "amplify/serde"]
+async = ["async-trait", "tokio"]
+serde = ["serde_crate", "serde_with", "amplify/serde",
+         "bitcoin/use-serde", "bitcoin_num/serde", "miniscript/serde" ]
 # Optional cryptographic functionality
 # ------------------------------------
 bulletproofs = ["grin_secp256k1zkp"] # Auto-required and used only by RGB

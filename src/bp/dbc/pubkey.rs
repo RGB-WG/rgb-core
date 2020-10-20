@@ -26,6 +26,7 @@
 //! keys, not their wrapped bitcoin counterparts `bitcoin::PublickKey` and
 //! `bitcoin::PrivateKey`.
 
+use amplify::Wrapper;
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 
@@ -86,12 +87,10 @@ impl Container for PubkeyContainer {
     }
 }
 
-wrapper!(
-    PubkeyCommitment,
-    secp256k1::PublicKey,
-    doc = "Public key committed to some message via LNPBP1-based tweaking procedure",
-    derive = [PartialEq, Eq, Hash]
-);
+/// Public key committed to some message via LNPBP1-based tweaking procedure
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Display, From)]
+#[display("{_0}", alt = "{_0:#}*")]
+pub struct PubkeyCommitment(secp256k1::PublicKey);
 
 impl<MSG> EmbedCommitVerify<MSG> for PubkeyCommitment
 where

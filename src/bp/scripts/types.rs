@@ -17,7 +17,7 @@
 //! different sources, like *scriptPubKey* in transaction output or witness and
 //! *sigScript* in transaction input. There are many other possible script
 //! containers for Bitcoin script: redeem script, witness script, tapscript. In
-//! fact, any "script" of [bitcoin::Script] type can be used for inputs and
+//! fact, any "script" of [`bitcoin::Script`] type can be used for inputs and
 //! outputs. What is a valid script for one will be a valid script for the
 //! other; the only req. is formatting of opcodes & pushes. That would mean that
 //! in principle every input script can be used as an output script, but not
@@ -31,20 +31,20 @@
 //! or *tapScript* within *witnessScript* coming from *witness* field
 //! for Taproot. These nested layers do distinguish on the information they
 //! contain, since some of them only commit to the hashes of the nested scripts
-//! (`ScriptHash`, `WitnessProgram`) or public keys (`PubkeyHash`,
-//! `WPubkeyHash`), while other contain the full source of the script.
+//! ([`ScriptHash`], [`WitnessProgram`]) or public keys ([`PubkeyHash`],
+//! [`WPubkeyHash`]), while other contain the full source of the script.
 //!
 //! The present type system represents a solution to the problem: it distinguish
 //! different logical types by introducing `Script` wrapper types. It defines
-//! [LockScript] as bottom layer of a script hierarchy, containing no other
+//! [`LockScript`] as bottom layer of a script hierarchy, containing no other
 //! script commitments (in form of their hashes). It also defines types above on
-//! it: [PubkeyScript] (for whatever is there in `scriptPubkey` field of a
-//! `TxOut`), [SigScript] (for whatever comes from `sigScript` field of `TxIn`),
-//! [RedeemScript] and [TapScript]. Then, there are conversion functions, which
-//! for instance, can analyse [PubkeyScript] and if it is a custom script or
-//! P2PK return a [LockScript] type - or otherwise fail with the error. So with
-//! this type system one is always sure which logical information it does
-//! contain.
+//! it: [`PubkeyScript`] (for whatever is there in `scriptPubkey` field of a
+//! `TxOut`), [`SigScript`] (for whatever comes from `sigScript` field of
+//! [`TxIn`]), [`RedeemScript`] and [`TapScript`]. Then, there are conversion
+//! functions, which, for instance, can analyse [`PubkeyScript`] and if it is a
+//! custom script or P2PK return a [`LockScript`] type - or otherwise fail with
+//! error. So with this type system one is always sure which logical information
+//! it does contain.
 //!
 //! ## Type derivation
 //!
@@ -75,8 +75,8 @@
 //! * `[source] <===> `: data source
 //! * `[?source] <===> `: data source which may be absent
 //! * `--+--`: algorithmic branching (alternative computation options)
-//! * `--?-->`: a conversion exists, but it may fail (returns [Option] or
-//!   [Result])
+//! * `--?-->`: a conversion exists, but it may fail (returns [`Option`] or
+//!   [`Result`])
 //! * `--?!-->`: a conversion exists, but it may fail; however one of
 //!   alternative branches must always succeed
 //! * `----->`: a conversion exists which can't fail
@@ -99,59 +99,106 @@
 use amplify::Wrapper;
 use bitcoin::{
     blockdata::{opcodes, opcodes::All, script::*},
+    hashes::hex::ToHex,
     secp256k1, ScriptHash, WPubkeyHash, WScriptHash,
 };
 use core::convert::TryFrom;
+use std::fmt::{self, Display, Formatter};
 
 use crate::strict_encoding;
 
-wrapper!(
-    LockScript,
-    Script,
-    doc = "\
-    Script which knowledge is required for spending some specific transaction output.
-    This is the deepest nested version of Bitcoin script containing no hashes of other \
-    scripts, including P2SH redeemScript hashes or witnessProgram (hash or witness \
-    script), or public keys",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+/// Script which knowledge is required for spending some specific transaction
+/// output. This is the deepest nested version of Bitcoin script containing no
+/// hashes of other scripts, including P2SH redeemScript hashes or
+/// witnessProgram (hash or witness script), or public keys
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:x}")]
+pub struct LockScript(Script);
 
 impl strict_encoding::Strategy for LockScript {
     type Strategy = strict_encoding::strategies::Wrapped;
 }
 
-wrapper!(
-    PubkeyScript,
-    Script,
-    doc = "\
-    A content of `scriptPubkey` from a transaction output",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+/// A content of `scriptPubkey` from a transaction output
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:x}")]
+pub struct PubkeyScript(Script);
 
-wrapper!(
-    SigScript,
-    Script,
-    doc = "\
-    A content of `sigScript` from a transaction input",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+/// A content of `sigScript` from a transaction input
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:x}")]
+pub struct SigScript(Script);
 
-wrapper!(
-    Witness,
-    Vec<Vec<u8>>,
-    doc = "\
-    A content of the `witness` field from a transaction input according to BIP-141",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+/// A content of the `witness` field from a transaction input according to
+/// BIP-141
+#[derive(
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From,
+)]
+pub struct Witness(Vec<Vec<u8>>);
 
-wrapper!(
-    RedeemScript,
-    Script,
-    doc = "\
-    `redeemScript` as part of the `witness` or `sigScript` structure; it is \
-    hashed for P2(W)SH output",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+impl Display for Witness {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("[\n")?;
+        for vec in self.as_inner().iter() {
+            writeln!(f, "{}", vec.to_hex())?;
+        }
+        f.write_str("]\n")
+    }
+}
+
+/// `redeemScript` as part of the `witness` or `sigScript` structure; it is
+///  hashed for P2(W)SH output
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:x}")]
+pub struct RedeemScript(Script);
 
 impl RedeemScript {
     pub fn script_hash(&self) -> ScriptHash {
@@ -165,16 +212,25 @@ impl From<LockScript> for RedeemScript {
     }
 }
 
-wrapper!(
-    WitnessScript,
-    Script,
-    doc = "\
-    A content of the script from `witness` structure; en equivalent of \
-    `redeemScript` for witness-based transaction inputs. However, unlike \
-    [RedeemScript], [WitnessScript] produce SHA256-based hashes of \
-    [WScriptHash] type",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+/// A content of the script from `witness` structure; en equivalent of
+/// `redeemScript` for witness-based transaction inputs. However, unlike
+/// [`RedeemScript`], [`WitnessScript`] produce SHA256-based hashes of
+/// [`WScriptHash`] type
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:x}")]
+pub struct WitnessScript(Script);
 
 impl WitnessScript {
     pub fn script_hash(&self) -> WScriptHash {
@@ -188,13 +244,22 @@ impl From<LockScript> for WitnessScript {
     }
 }
 
-wrapper!(
-    TapScript,
-    Script,
-    doc = "\
-    Any valid branch of Tapscript (BIP-342)",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+/// Any valid branch of Tapscript (BIP-342)
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:x}")]
+pub struct TapScript(Script);
 
 /// Version of the WitnessProgram: first byte of `scriptPubkey` in
 /// transaction output for transactions starting with opcodes ranging from 0
@@ -252,7 +317,7 @@ pub enum WitnessVersion {
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
 )]
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum WitnessVersionError {
     /// The opocde provided for the version construction is incorrect
     IncorrectOpcode,
@@ -322,20 +387,16 @@ impl From<WitnessVersion> for opcodes::All {
     }
 }
 
-wrapper!(
-    WitnessProgram,
-    Vec<u8>,
-    doc = r#"Witness program as defined by BIP-141
-        <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#Witness_program>
-        
-        A scriptPubKey (or redeemScript as defined in BIP16/P2SH) that consists 
-        of a 1-byte push opcode (for 0 to 16) followed by a data push between 2 
-        and 40 bytes gets a new special meaning. The value of the first push is 
-        called the "version byte". The following byte vector pushed is called 
-        the "witness program".
-        "#,
-    derive = [PartialEq, Eq, Default, Hash]
-);
+#[derive(
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From,
+)]
+pub struct WitnessProgram(Vec<u8>);
+
+impl Display for WitnessProgram {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}", self.as_inner().to_hex())
+    }
+}
 
 impl From<WPubkeyHash> for WitnessProgram {
     fn from(wpkh: WPubkeyHash) -> Self {
@@ -554,7 +615,7 @@ pub trait GenerateScripts {
 impl GenerateScripts for LockScript {
     fn to_script_pubkey(&self, strategy: Strategy) -> PubkeyScript {
         match strategy {
-            Strategy::Exposed => self.as_inner().into(),
+            Strategy::Exposed => self.to_inner().into(),
             Strategy::LegacyHashed => {
                 Script::new_p2sh(&self.script_hash()).into()
             }

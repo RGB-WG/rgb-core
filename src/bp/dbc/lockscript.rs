@@ -23,6 +23,7 @@
 //! private key modifications (tweaks) inside all the existing types of Bitcoin
 //! transaction output and arbitrary complex Bitcoin scripts.
 
+use amplify::Wrapper;
 use bitcoin::hashes::{hash160, sha256, Hmac};
 use bitcoin::secp256k1;
 use bitcoin::PubkeyHash;
@@ -97,12 +98,23 @@ impl Container for LockscriptContainer {
     }
 }
 
-wrapper!(
-    LockscriptCommitment,
-    LockScript,
-    doc = "[LockScript] containing public keys which sum is commit to some message according to LNPBP-2",
-    derive = [PartialEq, Eq, Hash]
-);
+/// [`LockScript`] containing public keys which sum is commit to some message
+/// according to LNPBP-2
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:#}")]
+pub struct LockscriptCommitment(LockScript);
 
 impl<MSG> EmbedCommitVerify<MSG> for LockscriptCommitment
 where

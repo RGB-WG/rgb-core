@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Wrapper;
 use core::any::Any;
 use core::borrow::Borrow;
 use std::collections::BTreeMap;
@@ -25,18 +26,40 @@ use lightning::{
 
 use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
 
-wrapper!(
-    Type,
-    u64,
-    doc = "TLV type field value",
-    derive = [Copy, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
-wrapper!(
-    RawRecord,
-    Vec<u8>,
-    doc = "Unknown TLV record represented by raw bytes",
-    derive = [PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+/// TLV type field value
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display(inner)]
+pub struct Type(u64);
+
+/// Unknown TLV record represented by raw bytes
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display(Debug)]
+pub struct RawRecord(Vec<u8>);
 
 impl EvenOdd for Type {}
 

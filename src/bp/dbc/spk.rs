@@ -314,12 +314,22 @@ impl Container for SpkContainer {
     }
 }
 
-wrapper!(
-    SpkCommitment,
-    PubkeyScript,
-    doc = "[`PubkeyScript`] containing LNPBP-2 commitment",
-    derive = [PartialEq, Eq, Hash]
-);
+/// [`PubkeyScript`] containing LNPBP-2 commitment
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:#}")]
+pub struct SpkCommitment(PubkeyScript);
 
 impl<MSG> EmbedCommitVerify<MSG> for SpkCommitment
 where

@@ -24,16 +24,15 @@ use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(
-        try_from = "amplify::CowHelper",
-        into = "String",
-        crate = "serde_crate"
-    )
+    serde(crate = "serde_crate")
 )]
 pub struct NodeAddr {
     pub node_id: secp256k1::PublicKey,
     pub inet_addr: InetSocketAddr,
 }
+
+impl_try_from_stringly_standard!(NodeAddr);
+impl_into_stringly_standard!(NodeAddr);
 
 impl NodeAddr {
     #[cfg(not(feature = "lightning"))]
@@ -118,6 +117,3 @@ impl FromStr for NodeAddr {
         })
     }
 }
-
-impl_try_from_stringly_standard!(NodeAddr);
-impl_into_stringly_standard!(NodeAddr);

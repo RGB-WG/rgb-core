@@ -129,7 +129,9 @@ impl Anchor {
                 .or_else(|| psbt_out.witness_script.as_ref())
             {
                 None => ScriptEncodeData::SinglePubkey,
-                Some(script) => ScriptEncodeData::LockScript(script.into()),
+                Some(script) => {
+                    ScriptEncodeData::LockScript(script.clone().into())
+                }
             };
             // TODO: (new) Move parsing of the output+input into Descriptor impl
             // TODO: (new) With miniscript stabilization refactor this to use it
@@ -255,7 +257,7 @@ impl Anchor {
         // TODO: Refactor using bp::seals
         let container =
             TxContainer::reconstruct(&self.proof, &supplement, &tx)?;
-        let commitment = TxCommitment::from(tx);
+        let commitment = TxCommitment::from(tx.clone());
         commitment.verify(&container, &value)
     }
 
