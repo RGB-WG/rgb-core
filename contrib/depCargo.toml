@@ -1,6 +1,7 @@
 # This is an add-on that must be added to any dependency using this library
 
 lnpbp = { path = "..", features = ["all"] }
+lnpbp_derive = { path = "../derive" }
 
 [patch.crates-io]
 # We need this b/c of breaking change in tagged hash type generation

@@ -80,7 +80,7 @@ jobs:
         with:
           command: build
           args: --features=${{matrix.feature}}
-# Uncomment this once the library will support non-nightly only rust compiler
+# Uncomment this once the library will support non-nightly rust compiler
 #  toolchains:
 #    runs-on: ubuntu-latest
 #    strategy:
@@ -112,8 +112,8 @@ jobs:
       - name: Create dependency
         run: |
           cargo new dep_test
+          cp contrib/depCargo.toml dep_test/Cargo.toml
           cd dep_test
-          printf 'lnpbp = { path = ".." }\nlnpbp_derive = { path = "../derive" }\n\n[workspace]' >> Cargo.toml
       - name: Build dependency
         uses: actions-rs/cargo@v1
         with:
