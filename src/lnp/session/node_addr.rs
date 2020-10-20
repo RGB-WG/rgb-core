@@ -20,6 +20,7 @@ use bitcoin::secp256k1;
 use super::{Connection, ConnectionError};
 use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 
+#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(
     feature = "serde",

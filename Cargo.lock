@@ -17,9 +17,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "2.0.4"
+version = "2.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "185ef5c19a90b6cb718acaac7e460be5271e2c8b8aa0cac71d63d696b5eb4009"
+checksum = "c8bf1e0bf054f0630d4908aa8ca684ef30ad1dcaea805c8bfe8cf2f76b747835"
 dependencies = [
  "ed25519-dalek",
  "parse_arg",
