@@ -13,8 +13,6 @@
 
 use bitcoin::hashes::{sha256d, Hash};
 
-#[macro_use]
-pub mod tagged256;
 #[allow(unused_variables)]
 pub mod bip32;
 pub mod blind;
@@ -26,6 +24,7 @@ pub mod scripts;
 mod seals;
 pub mod short_id;
 mod strict_encoding;
+pub mod tagged_hash;
 
 pub use bip32::{DerivationInfo, DerivationTemplate};
 pub use chain::{Chain, P2pNetworkId};
