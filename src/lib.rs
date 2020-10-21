@@ -11,13 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#![feature(
-    associated_type_defaults,
-    arbitrary_enum_discriminant,
-    never_type,
-    try_trait,
-    try_find
-)]
+#![feature(associated_type_defaults, never_type, try_trait, try_find)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![deny(

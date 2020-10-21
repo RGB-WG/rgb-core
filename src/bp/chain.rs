@@ -54,16 +54,16 @@ pub const P2P_MAGIC_SIGNET: P2pMagicNumber = 0x40CF030A;
 #[repr(u32)]
 pub enum P2pNetworkId {
     /// Bitcoin magic number for mainnet P2P communications
-    Mainnet = P2P_MAGIC_MAINNET,
+    Mainnet,
 
     /// Bitcoin magic number for testnet P2P communications
-    Testnet = P2P_MAGIC_TESTNET,
+    Testnet,
 
     /// Bitcoin magic number for regtest P2P communications
-    Regtest = P2P_MAGIC_REGTEST,
+    Regtest,
 
     /// Bitcoin magic number for signet P2P communications
-    Signet = P2P_MAGIC_SIGNET,
+    Signet,
 
     /// Other magic number, implying some unknown network
     Other(P2pMagicNumber),
