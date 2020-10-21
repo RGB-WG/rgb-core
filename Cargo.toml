@@ -40,8 +40,6 @@ lnpbp_derive = { path = "derive" }
 # ----------------------------------------------------
 bitcoin = { version = "~0.25.1", features = ["rand"] }
 bitcoin_hashes = "~0.9.3" # we need macro from here
-# we need this until bitcoin will integrate this crate
-bitcoin_num = { version = "~0.2.3", features = ["serde"], optional = true }
 miniscript = "~3.0.0"
 bech32 = "~0.7.2"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
@@ -115,7 +113,7 @@ rgb = ["bulletproofs", "ed25519-dalek", "deflate", "inflate"]
 #   These also include re-assembly of necessary features from dependencies
 async = ["async-trait", "tokio"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
-         "bitcoin/use-serde", "bitcoin_num/serde", "miniscript/serde" ]
+         "bitcoin/use-serde", "miniscript/serde" ]
 # Optional cryptographic functionality
 # ------------------------------------
 bulletproofs = ["grin_secp256k1zkp"] # Auto-required and used only by RGB

@@ -12,13 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 #![feature(
-    never_type,
-    trivial_bounds,
     associated_type_defaults,
     arbitrary_enum_discriminant,
-    try_trait
+    never_type,
+    try_trait,
+    try_find
 )]
-#![feature(try_find)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![deny(
@@ -42,7 +41,7 @@ extern crate lazy_static;
 extern crate num_derive;
 
 // Support for node & node clients development (include API helpers)
-#[cfg(any(feature = "daemons", feature = "async"))]
+#[cfg(feature = "async")]
 #[macro_use]
 extern crate async_trait;
 
