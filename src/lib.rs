@@ -33,6 +33,8 @@ extern crate lazy_static;
 #[macro_use]
 extern crate num_derive;
 
+extern crate chacha20poly1305;
+
 // Support for node & node clients development (include API helpers)
 #[cfg(feature = "async")]
 #[macro_use]

@@ -20,6 +20,7 @@ mod node_addr;
 mod node_locator;
 mod session;
 mod transcoders;
+mod noise;
 
 pub use connection::{Connection, ConnectionError};
 #[cfg(feature = "tokio")]
