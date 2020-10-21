@@ -848,7 +848,7 @@ impl Display for Chain {
                 write!(f, "liquidv1")
             }
             Chain::Other(params) => {
-                write!(f, "other:0x{}", strict_encode(params)?.to_hex())
+                write!(f, "other:{}", strict_encode(params)?.to_hex())
             }
         }
     }
@@ -907,19 +907,23 @@ impl FromStr for Chain {
                 Ok(Chain::LiquidV1)
             }
             s => {
-                if let Some(hash) = s.strip_prefix("regtest:") {
-                    Ok(Chain::Regtest(BlockHash::from_hex(hash)?))
-                } else if let Some(hash) = s.strip_prefix("signet:") {
-                    Ok(Chain::SignetCustom(BlockHash::from_hex(hash)?))
-                } else if let Some(hex) =
-                    s.strip_prefix("other:").and_then(|s| s.strip_prefix("0x"))
-                {
-                    Ok(Chain::Other(strict_decode(
-                        &Vec::from_hex(hex)
+                let mut parts = s.split(':');
+                let prefix =
+                    parts.next().ok_or(ParseError::WrongNetworkName)?;
+                let data = parts.next().ok_or(ParseError::WrongNetworkName)?;
+                parts
+                    .next()
+                    .map_or(Ok(()), |_| Err(ParseError::WrongNetworkName))?;
+                match prefix {
+                    "regtest" => Ok(Chain::Regtest(BlockHash::from_hex(data)?)),
+                    "signet" => {
+                        Ok(Chain::SignetCustom(BlockHash::from_hex(data)?))
+                    }
+                    "other" => Ok(Chain::Other(strict_decode(
+                        &Vec::from_hex(data)
                             .map_err(|_| ParseError::ChainParamsEncoding)?,
-                    )?))
-                } else {
-                    Err(ParseError::WrongNetworkName)
+                    )?)),
+                    _ => Err(ParseError::WrongNetworkName),
                 }
             }
         }
@@ -1523,7 +1527,7 @@ mod test {
 
         let mut custom_params = CHAIN_PARAMS_MAINNET.clone();
         custom_params.genesis_hash = custom_hash;
-        assert_eq!(format!("{}", Chain::Other(custom_params.clone())), "other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001");
+        assert_eq!(format!("{}", Chain::Other(custom_params.clone())), "other:0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001");
 
         assert_eq!(Chain::from_str("bitcoin").unwrap(), Chain::Mainnet);
         assert_eq!(Chain::from_str("testnet").unwrap(), Chain::Testnet3);
@@ -1559,7 +1563,7 @@ mod test {
             ParseError::WrongNetworkName
         );
         assert_eq!(
-            Chain::from_str("other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001").unwrap(),
+            Chain::from_str("other:0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001").unwrap(),
             Chain::Other(custom_params)
         );
     }

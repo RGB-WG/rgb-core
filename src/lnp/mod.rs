@@ -29,6 +29,6 @@ pub use session::{
 };
 pub use transport::{tcp, tor, websocket, zmq};
 
-pub const LNP_MSG_MAX_LEN: usize = u64::MAX as usize;
+pub const LNP_MSG_MAX_LEN: usize = core::u64::MAX as usize;
 
 pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;

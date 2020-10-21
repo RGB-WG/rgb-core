@@ -368,7 +368,7 @@ pub mod test {
         revealed.strict_encode(&mut revealed_encoded).unwrap();
 
         // Assert encoded Confidential matches precomputed vector
-        assert_eq!(encoded, confidential_encoded);
+        assert_eq!(encoded, &confidential_encoded[..]);
 
         // Assert encoded Confidential and Revealed are not equal
         assert_ne!(confidential_encoded.to_vec(), revealed_encoded);

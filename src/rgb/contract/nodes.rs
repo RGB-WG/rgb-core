@@ -626,7 +626,7 @@ mod strict_encoding {
             if chain_params_no < 1 {
                 Err(Error::ValueOutOfRange(
                     "genesis must contain at least one `chain_param` data structure",
-                    1u128..(u16::MAX as u128),
+                    1u128..(core::u16::MAX as u128),
                     0,
                 ))?
             }

@@ -39,10 +39,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev
-      - name: Install rust nightly
+      - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Feature ${{matrix.feature}}
         uses: actions-rs/cargo@v1
@@ -65,10 +65,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install rust nightly
+      - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Feature ${{matrix.feature}}
         uses: actions-rs/cargo@v1
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        toolchain: [ nightly, beta, stable ]
+        toolchain: [ nightly, beta, stable, 1.41.1 ]
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
@@ -105,10 +105,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install latest nightly
+      - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Create dependency
         run: |

@@ -1345,20 +1345,24 @@ mod test {
 
     #[test]
     fn test_zero_balance_nonoverflow() {
-        assert!(zero_balance_verify(&[u64::MAX, 1], &[1, u64::MAX], 1));
         assert!(zero_balance_verify(
-            &[u64::MAX, u64::MAX],
-            &[u64::MAX, u64::MAX],
+            &[core::u64::MAX, 1],
+            &[1, core::u64::MAX],
             1
         ));
         assert!(zero_balance_verify(
-            &[u32::MAX as u64, u32::MAX as u64],
-            &[u32::MAX as u64 + u32::MAX as u64],
+            &[core::u64::MAX, core::u64::MAX],
+            &[core::u64::MAX, core::u64::MAX],
             1
         ));
         assert!(zero_balance_verify(
-            &[u32::MAX as u64, u32::MAX as u64, u64::MAX],
-            &[u64::MAX, (u32::MAX as u64) * 2],
+            &[core::u32::MAX as u64, core::u32::MAX as u64],
+            &[core::u32::MAX as u64 + core::u32::MAX as u64],
+            1
+        ));
+        assert!(zero_balance_verify(
+            &[core::u32::MAX as u64, core::u32::MAX as u64, core::u64::MAX],
+            &[core::u64::MAX, (core::u32::MAX as u64) * 2],
             1
         ));
     }
@@ -1369,10 +1373,10 @@ mod test {
         let single_amounts = vec![
             [0u64],
             [1u64],
-            [u16::MAX as u64],
-            [u32::MAX as u64],
-            [u64::MAX - 1u64],
-            [u64::MAX],
+            [core::u16::MAX as u64],
+            [core::u32::MAX as u64],
+            [core::u64::MAX - 1u64],
+            [core::u64::MAX],
         ];
 
         for vec in single_amounts.iter() {
@@ -1386,8 +1390,8 @@ mod test {
     #[test]
     fn test_zero_balance_double() {
         let double_amounts = vec![
-            [(u32::MAX - 1) as u64, (u32::MAX - 1) as u64],
-            [u32::MAX as u64, u32::MAX as u64],
+            [(core::u32::MAX - 1) as u64, (core::u32::MAX - 1) as u64],
+            [core::u32::MAX as u64, core::u32::MAX as u64],
         ];
 
         for vec in double_amounts.iter() {
@@ -1403,10 +1407,15 @@ mod test {
         let multiple_amounts = vec![
             [0u64, 0u64, 0u64, 0u64],
             [0u64, 1u64, 0u64, 1u64],
-            [1u64, 2u64, 3u64, u64::MAX],
+            [1u64, 2u64, 3u64, core::u64::MAX],
             [10u64, 20u64, 30u64, 40u64],
-            [0u64, 197642u64, u64::MAX, 476543u64],
-            [u64::MAX, u64::MAX, u64::MAX, u64::MAX],
+            [0u64, 197642u64, core::u64::MAX, 476543u64],
+            [
+                core::u64::MAX,
+                core::u64::MAX,
+                core::u64::MAX,
+                core::u64::MAX,
+            ],
         ];
 
         for vec in multiple_amounts.iter() {
@@ -1435,29 +1444,38 @@ mod test {
     fn test_zero_balance_negative() {
         // Test when input.sum() != output.sum()
         // When they only differ by 1
-        // When they differ by u64::MAX
+        // When they differ by core::u64::MAX
         assert!(!zero_balance_verify(
             &[0u64, 1u64, 0u64, 1u64],
-            &[1u64, 2u64, 3u64, u64::MAX],
+            &[1u64, 2u64, 3u64, core::u64::MAX],
             2
         ));
         assert!(!zero_balance_verify(
-            &[1u64, 2u64, 3u64, u64::MAX],
+            &[1u64, 2u64, 3u64, core::u64::MAX],
             &[10u64, 20u64, 30u64, 40u64],
             2
         ));
         assert!(!zero_balance_verify(
             &[10u64, 20u64, 30u64, 40u64],
-            &[0u64, 197642u64, u64::MAX, 476543u64],
+            &[0u64, 197642u64, core::u64::MAX, 476543u64],
             2
         ));
         assert!(!zero_balance_verify(
-            &[0u64, 197642u64, u64::MAX, 476543u64],
-            &[u64::MAX, u64::MAX, u64::MAX, u64::MAX],
+            &[0u64, 197642u64, core::u64::MAX, 476543u64],
+            &[
+                core::u64::MAX,
+                core::u64::MAX,
+                core::u64::MAX,
+                core::u64::MAX
+            ],
             2
         ));
         assert!(!zero_balance_verify(&[1, 2, 3, 4], &[1, 2, 3, 5], 2));
-        assert!(!zero_balance_verify(&[1, 2, 3, 0], &[1, 2, 3, u64::MAX], 2));
+        assert!(!zero_balance_verify(
+            &[1, 2, 3, 0],
+            &[1, 2, 3, core::u64::MAX],
+            2
+        ));
     }
 
     #[test]
