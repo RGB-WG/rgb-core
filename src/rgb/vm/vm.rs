@@ -13,7 +13,7 @@
 
 use core::any::Any;
 
-pub const RGB_VM_STACK_SIZE_LIMIT: u16 = u16::MAX;
+pub const RGB_VM_STACK_SIZE_LIMIT: u16 = core::u16::MAX;
 
 pub trait VirtualMachine {
     fn stack(&mut self) -> &mut Vec<Box<dyn Any>>;

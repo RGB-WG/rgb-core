@@ -26,12 +26,24 @@ use super::{
 };
 use crate::strict_encoding::{StrictDecode, StrictEncode};
 
-wrapper!(
-    Type,
-    u16,
-    doc = "Message type field value",
-    derive = [Copy, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
+/// Message type field value
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Display,
+    Debug,
+    From,
+)]
+#[display(inner)]
+#[wrapper(LowerHex, UpperHex, Octal, FromStr)]
+pub struct Type(u16);
 
 impl EvenOdd for Type {}
 

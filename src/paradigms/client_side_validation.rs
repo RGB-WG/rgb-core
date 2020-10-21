@@ -229,7 +229,6 @@ hash_newtype!(
     32,
     doc = "A hash of a arbitrary Merkle tree branch or root"
 );
-impl_hashencode!(MerkleNode);
 
 impl strict_encoding::Strategy for MerkleNode {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
@@ -369,7 +368,7 @@ pub mod test {
         revealed.strict_encode(&mut revealed_encoded).unwrap();
 
         // Assert encoded Confidential matches precomputed vector
-        assert_eq!(encoded, confidential_encoded);
+        assert_eq!(encoded, &confidential_encoded[..]);
 
         // Assert encoded Confidential and Revealed are not equal
         assert_ne!(confidential_encoded.to_vec(), revealed_encoded);

@@ -294,7 +294,7 @@ mod test {
 
     #[test]
     fn test_exhaustive_small_lengths() {
-        for byte in 0..u8::MAX {
+        for byte in 0..core::u8::MAX {
             for len in 1..66 {
                 run_test_bin(&vec![byte; len as usize]);
             }
@@ -304,7 +304,7 @@ mod test {
     #[test]
     fn test_text_rand() {
         for _ in 1..10 {
-            let len = thread_rng().gen_range(2, u16::MAX);
+            let len = thread_rng().gen_range(2, core::u16::MAX);
             let mut entropy = vec![0u8; len as usize];
             thread_rng().fill_bytes(&mut entropy);
             run_test_bin(&entropy);

@@ -14,7 +14,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
-use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
+use bitcoin::hashes::Hash;
 
 use super::{
     vm, DataFormat, ExtensionSchema, GenesisSchema, OwnedRightType,
@@ -30,33 +30,20 @@ pub type FieldType = usize;
 pub type ExtensionType = usize;
 pub type TransitionType = usize;
 
-lazy_static! {
-    static ref MIDSTATE_SHEMA_ID: [u8; 32] = {
-        let hash = sha256::Hash::hash(b"rgb:schema");
-        let mut engine = sha256::Hash::engine();
-        engine.input(&hash[..]);
-        engine.input(&hash[..]);
-        engine.midstate().0
-    };
-}
+static MIDSTATE_SHEMA_ID: [u8; 32] = [
+    0x81, 0x73, 0x33, 0x7c, 0xcb, 0xc4, 0x8b, 0xd1, 0x24, 0x89, 0x65, 0xcd,
+    0xd0, 0xcd, 0xb6, 0xc8, 0x7a, 0xa2, 0x14, 0x81, 0x7d, 0x57, 0x39, 0x22,
+    0x28, 0x90, 0x74, 0x8f, 0x26, 0x75, 0x8e, 0xea,
+];
 
-tagged_hash!(
+sha256t_hash_newtype!(
     SchemaId,
     SchemaIdTag,
     MIDSTATE_SHEMA_ID,
-    doc = "Commitment-based schema identifier used for committing to the schema type"
+    64,
+    doc = "Commitment-based schema identifier used for committing to the schema type",
+    false
 );
-
-/* TODO: (new) Uncomment when will be using our own hash type derivation
-impl SchemaId {
-    /// Function used for producing zero parent schema id commitments in schema
-    /// DSL deifinition
-    #[inline]
-    pub fn zeroed() -> Self {
-        Default::default()
-    }
-}
- */
 
 #[derive(Clone, PartialEq, Debug, Default)]
 #[cfg_attr(
@@ -800,7 +787,10 @@ mod _validation {
 
 #[cfg(test)]
 pub(crate) mod test {
+    use amplify::Wrapper;
+
     use super::*;
+    use crate::bp::tagged_hash;
     use crate::rgb::schema::*;
     use crate::strict_encoding::*;
 
@@ -944,6 +934,12 @@ pub(crate) mod test {
                 }
             },
         }
+    }
+
+    #[test]
+    fn test_schema_id_midstate() {
+        let midstate = tagged_hash::Midstate::with(b"rgb:schema");
+        assert_eq!(midstate.into_inner(), MIDSTATE_SHEMA_ID);
     }
 
     #[test]

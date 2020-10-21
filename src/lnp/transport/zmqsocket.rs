@@ -18,7 +18,6 @@ use core::fmt::{self, Display, Formatter};
 #[cfg(feature = "url")]
 use core::str::FromStr;
 use std::net::SocketAddr;
-use std::option::NoneError;
 use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
@@ -26,7 +25,7 @@ use url::Url;
 use super::{Duplex, Error, Receiver, RecvFrame, SendFrame, Sender};
 
 /// API type for node-to-node communications used by ZeroMQ
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
 #[repr(u8)]
 pub enum ApiType {
     /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ
@@ -72,6 +71,11 @@ pub enum ApiType {
     Subscribe = 5,
 }
 
+/// Unknown [`ApiType`] string
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display(Debug)]
+pub struct UnknownApiType;
+
 impl ApiType {
     /// Returns [`zmq::SocketType`] corresponding to the given [`ApiType`]
     pub fn socket_type(&self) -> zmq::SocketType {
@@ -97,7 +101,7 @@ impl ApiType {
 }
 
 impl FromStr for ApiType {
-    type Err = NoneError;
+    type Err = UnknownApiType;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
@@ -111,7 +115,7 @@ impl FromStr for ApiType {
         ]
         .into_iter()
         .find(|api| api.to_string() == s)
-        .ok_or(NoneError)
+        .ok_or(UnknownApiType)
     }
 }
 
@@ -123,7 +127,7 @@ impl FromStr for ApiType {
 )]
 pub enum SocketLocator {
     Inproc(String),
-    Posix(PathBuf),
+    Ipc(PathBuf),
     Tcp(SocketAddr),
 }
 
@@ -133,7 +137,7 @@ impl Display for SocketLocator {
             SocketLocator::Inproc(name) => {
                 write!(f, "inproc://{}", name)?;
             }
-            SocketLocator::Posix(path) => {
+            SocketLocator::Ipc(path) => {
                 write!(f, "ipc://{}", path.display())?;
             }
             SocketLocator::Tcp(socket_addr) => {
@@ -188,7 +192,7 @@ impl TryFrom<Url> for SocketLocator {
                 if url.has_authority() {
                     Err(UrlError::UnexpectedAuthority)
                 } else {
-                    Ok(SocketLocator::Posix(PathBuf::from(url.path())))
+                    Ok(SocketLocator::Ipc(PathBuf::from(url.path())))
                 }
             }
             unknown => Err(UrlError::UnknownScheme(unknown.to_string())),

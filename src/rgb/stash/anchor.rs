@@ -18,13 +18,13 @@ use bitcoin::secp256k1;
 use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::util::uint::Uint256;
 use bitcoin::{Transaction, Txid};
-use bitcoin_hashes::{sha256, sha256t, Hash, HashEngine};
+use bitcoin_hashes::{sha256, Hash};
 
 use crate::bp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
     TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
-use crate::bp::pasbt::ProprietaryKeyMap;
+use crate::bp::psbt::ProprietaryKeyMap;
 use crate::bp::resolvers::{Fee, FeeError};
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
@@ -41,15 +41,20 @@ lazy_static! {
         sha256::Hash::hash(b"LNPBP4");
 }
 
-lazy_static! {
-    static ref MIDSTATE_ANCHOR_ID: [u8; 32] = {
-        let hash = sha256::Hash::hash(b"rgb:anchor");
-        let mut engine = sha256::Hash::engine();
-        engine.input(&hash[..]);
-        engine.input(&hash[..]);
-        engine.midstate().0
-    };
-}
+static MIDSTATE_ANCHOR_ID: [u8; 32] = [
+    0x2b, 0x17, 0xab, 0x6a, 0x88, 0x35, 0xf6, 0x62, 0x86, 0xc1, 0xa6, 0x14,
+    0x36, 0x18, 0xc, 0x1f, 0xf, 0x80, 0x96, 0x1b, 0x47, 0x70, 0xe5, 0xf5, 0x45,
+    0x45, 0xe4, 0x28, 0x45, 0x47, 0xbf, 0xe9,
+];
+
+sha256t_hash_newtype!(
+    AnchorId,
+    AnchorIdTag,
+    MIDSTATE_ANCHOR_ID,
+    64,
+    doc = "Unique anchor identifier equivalent to the anchor commitment hash",
+    false
+);
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
 #[display(Debug)]
@@ -58,18 +63,11 @@ pub enum Error {
     NoRequiredPubkey(usize),
     #[from]
     FeeEstimationError(FeeError),
-    #[from]
-    WrongPubkeyData(secp256k1::Error),
+    #[from(secp256k1::Error)]
+    WrongPubkeyData,
     #[from(TooManyMessagesError)]
     TooManyContracts,
 }
-
-tagged_hash!(
-    AnchorId,
-    AnchorIdTag,
-    MIDSTATE_ANCHOR_ID,
-    doc = "Unique anchor identifier equivalent to the anchor commitment hash"
-);
 
 #[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
 #[cfg_attr(test, derive(Default))]
@@ -121,7 +119,8 @@ impl Anchor {
 
             let pubkey = psbt_out
                 .proprietary_key(b"RGB".to_vec(), PSBT_OUT_PUBKEY, vec![])
-                .ok_or(Error::NoRequiredPubkey(vout))?;
+                .ok_or(Error::NoRequiredPubkey(vout))?
+                .map_err(|_| Error::WrongPubkeyData)?;
             // TODO: (new) Add support for Taproot parsing
             let source = match psbt_out
                 .redeem_script
@@ -129,7 +128,9 @@ impl Anchor {
                 .or_else(|| psbt_out.witness_script.as_ref())
             {
                 None => ScriptEncodeData::SinglePubkey,
-                Some(script) => ScriptEncodeData::LockScript(script.into()),
+                Some(script) => {
+                    ScriptEncodeData::LockScript(script.clone().into())
+                }
             };
             // TODO: (new) Move parsing of the output+input into Descriptor impl
             // TODO: (new) With miniscript stabilization refactor this to use it
@@ -255,7 +256,7 @@ impl Anchor {
         // TODO: Refactor using bp::seals
         let container =
             TxContainer::reconstruct(&self.proof, &supplement, &tx)?;
-        let commitment = TxCommitment::from(tx);
+        let commitment = TxCommitment::from(tx.clone());
         commitment.verify(&container, &value)
     }
 
@@ -271,4 +272,18 @@ impl CommitEncodeWithStrategy for Anchor {
 
 impl ConsensusCommit for Anchor {
     type Commitment = AnchorId;
+}
+
+#[cfg(test)]
+mod test {
+    use amplify::Wrapper;
+
+    use super::*;
+    use crate::bp::tagged_hash;
+
+    #[test]
+    fn test_anchor_id_midstate() {
+        let midstate = tagged_hash::Midstate::with(b"rgb:anchor");
+        assert_eq!(midstate.into_inner(), MIDSTATE_ANCHOR_ID);
+    }
 }

@@ -4,6 +4,10 @@
 ![Tests](https://github.com/LNP-BP/rust-lnpbp/workflows/Tests/badge.svg)
 ![Lints](https://github.com/LNP-BP/rust-lnpbp/workflows/Lints/badge.svg)
 [![codecov](https://codecov.io/gh/LNP-BP/rust-lnpbp/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/rust-lnpbp)
+
+[![crates.io](https://meritbadge.herokuapp.com/lnpbp)](https://crates.io/crates/lnpbp)
+[![Docs](https://docs.rs/lnpbp/badge.svg)](https://docs.rs/lnpbp)
+[![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 This is LNP/BP Core Library: a rust library implementing LNP/BP specifications 
@@ -11,8 +15,8 @@ This is LNP/BP Core Library: a rust library implementing LNP/BP specifications
 layer 2 & 3 solutions on top of Lightning Network and Bitcoin blockchain. 
 
 The current list of the projects based on the library include:
-* [RGB](https://github.com/LNP-BP/rgb-node): Confidential smart contracts for 
-  Bitcoin & Lightning
+* [RGB](https://github.com/LNP-BP/rgb-node): Confidential & scalable smart 
+  contracts for Bitcoin & Lightning
 * [Generalized Lightning Network](https://www.youtube.com/watch?v=YmmNsWS5wiM) 
   and it's reference implementation named 
   [LNP node](https://github.com/LNP-BP/lnp-node) enabling:
@@ -63,9 +67,11 @@ Association.
 
 The library provides the code for:
 
+* RGB: confidential smart contracts with client-side validation, with Lightning
+  network support
 * Improvements & utilities for Bitcoin protocol 
 * Deterministic commitments that can be embedded into for Bitcoin transactions 
-  and public keys
+  and public keys (DBC)
 * Single-use seals
 * Client-side validation
 * Lightning networking protocol (LNP)
@@ -76,8 +82,6 @@ This code supports both Bitcoin blockchain and Lightning network.
 ## Project structure
 
 The library is built as a single Rust crate with the following top-level mods:
-* common: traits, structures, functions and generics which are used by all parts 
-  of the project
 * paradigms: generic paradigms (API best practices) which are not bitcoin-specific
 * bp: Bitcoin protocol extensions external to [Bitcoin Core](https://github.com/bitcoin/bitcoin) 
   functionality and existing [BIPs](http://github.com/bitcoin/bips). These may
@@ -88,17 +92,17 @@ The library is built as a single Rust crate with the following top-level mods:
   [BOLT specifications](https://github.com/lightningnetwork/lightning-rfc)
 * rgb: smart contracts for Bitcoin and Lightning network based client-side 
   validation, deterministic bitcoin commitments and single-use seals.
-* lnpbps: other LNPBPs standard implementation which does not fit into any of
+* standards: other LNPBPs standard implementation which does not fit into any of
   the categories above
 
 The library is based on other projects:
-* [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin) and it's dependencies
-  * [bitcoin_hashes](https://github.com/rust-bitcoin/bitcoin_hashes)
-  * [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)
-  * [rust-secp256k1-zkp](https://github.com/ElementsProject/rust-secp256k1-zkp) 
-    for Pedersen commitments and Bulletproofs used in confidential state inside 
-    RGB protocols
-* [rust-lightning](https://github.com/rust-bitcoin/rust-lightning)
+* [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin)
+* [bitcoin_hashes](https://github.com/rust-bitcoin/bitcoin_hashes)
+* [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)
+* [rust-secp256k1-zkp](https://github.com/ElementsProject/rust-secp256k1-zkp) 
+  for Pedersen commitments and Bulletproofs used in confidential state inside 
+  RGB protocols
+* [rust-miniscript](https://github.com/rust-bitcoin/rust-miniscript)
 
 ## Install
 
@@ -115,6 +119,8 @@ brew cargo
 ```
 
 ### Clone and compile library
+
+Minimum supported rust compiler version (MSRV): 1.41.1
 
 ```shell script
 git clone https://github.com/lnp-bp/rust-lnpbp
@@ -139,55 +145,15 @@ Add these lines to your `Cargo.toml` file at the very end of the `[dependecies]`
 section:
 
 ```toml
-lnpbp = { git = "https://github.com/lnp-bp/rust-lnpbp.git", branch = "master" }
-
-# We need this b/c of breaking change in tagged hash type generation
-bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-rc1" }
-bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", tag = "lnpbp-v0.1.0-rc1" }
-# We need custom branches here just to depend on the same bitcoin master and do
-# not have secp256k1 version conflict
-miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", tag = "lnpbp-v0.1.0-rc1" }
+lnpbp = "~0.1.0"
+lnpbp_derive = "~0.1.0"
 ```
-NB: These patches MUST be applied in exactly same manner by any library which
-uses LNP/BP Core library as a dependency for now
 
 
 ## Contributing
 
 Contribution guidelines can be found in a separate 
 [CONTRIBUTING](CONTRIBUTING.md) file
-
-### External dependencies
-
-This library depends on a number of external Rust libraries managed by different 
-organizations and people within bitcoin community, including Blockstream, 
-Chaincode Labs, Pandora Core companies. Some of the functionality required for 
-LNP/BP development related to the base Bitcoin protocol and Lightning Network is 
-contributed by LNP/BP Association directly into the underlying libraries; 
-however sometimes the present library requires changes in them that can't or not 
-yet accepted by the community. This brings necessity to maintain our own forks 
-of the dependencies. This section presents guidelines for organizing Git 
-workflow managing all dependencies, branching, forks etc.
-
-LNP/BP Standards Association maintains a fork of the following external 
-libraries:
-* bitcoin_hashes
-* rust-bitcoin
-* rust-miniscript
-* rust-lightning
-* rust-lightning-invoice
-* rust-secp256k1-zkp
-
-Functionality, required for LNP/BP and not yet merged into the upstream `master` 
-branches is kept in `staging` branch of each of these forks, which is defined as 
-a default branch in GitHub. Parties wanting to contribute to it must fork the 
-repo, create a branch per each feature (starting with `feat/` prefix) or bugfix 
-(starting with `fix/` prefix) and do a PR to the `staging` branch.
-
-Each commitment within a PR to the `staging` must 
-* compile without errors;
-* contain all necessary tests for the introduced functional;
-* contain all docs.
 
 
 ## More information

@@ -11,13 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#![feature(
-    never_type,
-    associated_type_defaults,
-    arbitrary_enum_discriminant,
-    try_find,
-    try_trait
-)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![deny(
@@ -43,7 +36,7 @@ extern crate num_derive;
 extern crate chacha20poly1305;
 
 // Support for node & node clients development (include API helpers)
-#[cfg(any(feature = "daemons", feature = "async"))]
+#[cfg(feature = "async")]
 #[macro_use]
 extern crate async_trait;
 
@@ -56,7 +49,6 @@ extern crate serde_crate as serde;
 // Bitcoin-specific imports. We make them public while we use custom versions
 // of the libs so downstream dependencies can use them directly from this lib
 // TODO: Refactor re-exported bitcoin and hashes functionality
-#[macro_use]
 pub extern crate bitcoin;
 #[macro_use]
 pub extern crate bitcoin_hashes;

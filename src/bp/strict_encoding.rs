@@ -14,7 +14,6 @@
 use std::io;
 
 use bitcoin::hashes::{hash160, hmac, sha256, sha256d, sha512, Hash};
-use bitcoin::util::bip32::KeyApplication;
 use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{
     secp256k1, util::bip32, BlockHash, OutPoint, Script, Transaction, TxIn,
@@ -23,6 +22,7 @@ use bitcoin::{
 #[cfg(feature = "ed25519-dalek")]
 use ed25519_dalek::ed25519::signature::Signature;
 
+use super::bip32::{Decode, Encode};
 use super::blind::OutpointHash;
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 
@@ -75,6 +75,8 @@ impl strict_encoding::Strategy for PartiallySignedTransaction {
 }
 
 impl StrictEncode for Script {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
         Ok(self.to_bytes().strict_encode(e)?)
@@ -82,6 +84,8 @@ impl StrictEncode for Script {
 }
 
 impl StrictDecode for Script {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
         Ok(Self::from(Vec::<u8>::strict_decode(d)?))
@@ -90,6 +94,8 @@ impl StrictDecode for Script {
 
 #[cfg(feature = "ed25519-dalek")]
 impl StrictEncode for ed25519_dalek::PublicKey {
+    type Error = Error;
+
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.as_bytes()[..])?)
     }
@@ -97,6 +103,8 @@ impl StrictEncode for ed25519_dalek::PublicKey {
 
 #[cfg(feature = "ed25519-dalek")]
 impl StrictDecode for ed25519_dalek::PublicKey {
+    type Error = Error;
+
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; ed25519_dalek::PUBLIC_KEY_LENGTH];
         d.read_exact(&mut buf)?;
@@ -110,6 +118,8 @@ impl StrictDecode for ed25519_dalek::PublicKey {
 
 #[cfg(feature = "ed25519-dalek")]
 impl StrictEncode for ed25519_dalek::Signature {
+    type Error = Error;
+
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.as_bytes())?)
     }
@@ -117,6 +127,8 @@ impl StrictEncode for ed25519_dalek::Signature {
 
 #[cfg(feature = "ed25519-dalek")]
 impl StrictDecode for ed25519_dalek::Signature {
+    type Error = Error;
+
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; ed25519_dalek::SIGNATURE_LENGTH];
         d.read_exact(&mut buf)?;
@@ -129,6 +141,8 @@ impl StrictDecode for ed25519_dalek::Signature {
 }
 
 impl StrictEncode for secp256k1::SecretKey {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self[..])?)
@@ -136,6 +150,8 @@ impl StrictEncode for secp256k1::SecretKey {
 }
 
 impl StrictDecode for secp256k1::SecretKey {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; secp256k1::constants::SECRET_KEY_SIZE];
@@ -147,6 +163,8 @@ impl StrictDecode for secp256k1::SecretKey {
 }
 
 impl StrictEncode for secp256k1::PublicKey {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.serialize())?)
@@ -154,6 +172,8 @@ impl StrictEncode for secp256k1::PublicKey {
 }
 
 impl StrictDecode for secp256k1::PublicKey {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
@@ -165,6 +185,8 @@ impl StrictDecode for secp256k1::PublicKey {
 }
 
 impl StrictEncode for secp256k1::Signature {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
@@ -175,6 +197,8 @@ impl StrictEncode for secp256k1::Signature {
 }
 
 impl StrictDecode for secp256k1::Signature {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; secp256k1::constants::COMPACT_SIGNATURE_SIZE];
@@ -188,6 +212,8 @@ impl StrictDecode for secp256k1::Signature {
 }
 
 impl StrictEncode for bitcoin::PublicKey {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
@@ -202,6 +228,8 @@ impl StrictEncode for bitcoin::PublicKey {
 }
 
 impl StrictDecode for bitcoin::PublicKey {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let marker = u8::strict_decode(&mut d)?;
@@ -231,6 +259,8 @@ impl StrictDecode for bitcoin::PublicKey {
 }
 
 impl StrictEncode for bitcoin::Network {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
@@ -241,6 +271,8 @@ impl StrictEncode for bitcoin::Network {
 }
 
 impl StrictDecode for bitcoin::Network {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let magic = u32::strict_decode(&mut d)?;
@@ -252,36 +284,9 @@ impl StrictDecode for bitcoin::Network {
     }
 }
 
-impl StrictEncode for KeyApplication {
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-        match self {
-            KeyApplication::Legacy => 0u8.strict_encode(e),
-            KeyApplication::SegWitLegacySinglesig => 1u8.strict_encode(e),
-            KeyApplication::SegWitLegacyMultisig => 2u8.strict_encode(e),
-            KeyApplication::SegWitV0Singlesig => 3u8.strict_encode(e),
-            KeyApplication::SegWitV0Miltisig => 4u8.strict_encode(e),
-        }
-    }
-}
-
-impl StrictDecode for KeyApplication {
-    #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-        Ok(match u8::strict_decode(d)? {
-            0 => Self::Legacy,
-            1 => Self::SegWitLegacySinglesig,
-            2 => Self::SegWitLegacyMultisig,
-            3 => Self::SegWitV0Singlesig,
-            4 => Self::SegWitV0Miltisig,
-            x => {
-                Err(Error::EnumValueNotKnown("KeyApplication".to_string(), x))?
-            }
-        })
-    }
-}
-
 impl StrictEncode for bip32::ChildNumber {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
@@ -296,7 +301,8 @@ impl StrictEncode for bip32::ChildNumber {
 }
 
 impl StrictDecode for bip32::ChildNumber {
-    #[inline]
+    type Error = Error;
+
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let t = u8::strict_decode(&mut d)?;
         let index = u32::strict_decode(&mut d)?;
@@ -312,6 +318,8 @@ impl StrictDecode for bip32::ChildNumber {
 }
 
 impl StrictEncode for bip32::DerivationPath {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
@@ -324,6 +332,8 @@ impl StrictEncode for bip32::DerivationPath {
 }
 
 impl StrictDecode for bip32::DerivationPath {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         Ok(Self::from(Vec::<bip32::ChildNumber>::strict_decode(
@@ -333,6 +343,8 @@ impl StrictDecode for bip32::DerivationPath {
 }
 
 impl StrictEncode for bip32::ChainCode {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
@@ -343,6 +355,8 @@ impl StrictEncode for bip32::ChainCode {
 }
 
 impl StrictDecode for bip32::ChainCode {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; 32];
@@ -352,6 +366,8 @@ impl StrictDecode for bip32::ChainCode {
 }
 
 impl StrictEncode for bip32::Fingerprint {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
@@ -362,6 +378,8 @@ impl StrictEncode for bip32::Fingerprint {
 }
 
 impl StrictDecode for bip32::Fingerprint {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; 4];
@@ -371,7 +389,8 @@ impl StrictDecode for bip32::Fingerprint {
 }
 
 impl StrictEncode for bip32::ExtendedPubKey {
-    #[inline]
+    type Error = Error;
+
     fn strict_encode<E: io::Write>(
         &self,
         mut e: E,
@@ -381,6 +400,8 @@ impl StrictEncode for bip32::ExtendedPubKey {
 }
 
 impl StrictDecode for bip32::ExtendedPubKey {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; 78];
@@ -394,6 +415,8 @@ impl StrictDecode for bip32::ExtendedPubKey {
 }
 
 impl StrictEncode for bip32::ExtendedPrivKey {
+    type Error = Error;
+
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
@@ -404,6 +427,8 @@ impl StrictEncode for bip32::ExtendedPrivKey {
 }
 
 impl StrictDecode for bip32::ExtendedPrivKey {
+    type Error = Error;
+
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
         let mut buf = [0u8; 78];
@@ -442,17 +467,14 @@ pub(crate) mod test {
         let mainnet_bytes = &[0xF9u8, 0xBEu8, 0xB4u8, 0xD9u8][..];
         let testnet_bytes = &[0x0Bu8, 0x11u8, 0x09u8, 0x07u8][..];
         let regtest_bytes = &[0xFAu8, 0xBFu8, 0xB5u8, 0xDAu8][..];
-        let signet_bytes = &[0x0Au8, 0x03u8, 0xCFu8, 0x40u8][..];
 
         let mainnet = bitcoin::Network::strict_decode(mainnet_bytes).unwrap();
         let testnet = bitcoin::Network::strict_decode(testnet_bytes).unwrap();
         let regtest = bitcoin::Network::strict_decode(regtest_bytes).unwrap();
-        let signet = bitcoin::Network::strict_decode(signet_bytes).unwrap();
 
         test_suite(&mainnet, &mainnet_bytes, 4);
         test_suite(&testnet, &testnet_bytes, 4);
         test_suite(&regtest, &regtest_bytes, 4);
-        test_suite(&signet, &signet_bytes, 4);
     }
 
     #[test]
@@ -570,15 +592,6 @@ pub(crate) mod test {
             0xa4, 0xb2, 0x82,
         ];
         secp256k1::Signature::strict_decode(&SIG_BYTES[..]).unwrap();
-    }
-
-    #[test]
-    fn test_encoding_keyapplication() {
-        test_suite(&KeyApplication::Legacy, &[0], 1);
-        test_suite(&KeyApplication::SegWitLegacySinglesig, &[1], 1);
-        test_suite(&KeyApplication::SegWitLegacyMultisig, &[2], 1);
-        test_suite(&KeyApplication::SegWitV0Singlesig, &[3], 1);
-        test_suite(&KeyApplication::SegWitV0Miltisig, &[4], 1);
     }
 
     #[test]

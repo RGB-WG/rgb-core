@@ -14,7 +14,7 @@
 use amplify::internet::InetSocketAddr;
 use std::path::PathBuf;
 
-use super::zmqsocket::SocketLocator;
+use super::zmqsocket;
 
 /// Represents a connection to a generic node operating with LNP protocol
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
@@ -22,16 +22,15 @@ use super::zmqsocket::SocketLocator;
 #[non_exhaustive]
 pub enum RemoteAddr {
     /// Microservices connected using ZeroMQ protocol
-    Zmq(SocketLocator),
+    Zmq(zmqsocket::SocketLocator),
 
-    /// Local node operating as a separate **process**, connected with
-    /// unencrypted POSIX file I/O (like in c-lightning)
+    /// Local node operating as a separate **process** or **threads** connected
+    /// with unencrypted POSIX file I/O (like in c-lightning)
     Posix(PathBuf),
 
-    /// Standard TCP socket connection **required** to use end-to-end
-    /// encryption, that may be served  either over plain IP, IPSec or Tor
-    /// v2 and v3
-    Tcp(InetSocketAddr),
+    /// Framed TCP socket connection, that may be served either over plain IP,
+    /// IPSec or Tor v2 and v3
+    Ftcp(InetSocketAddr),
 
     /// SMTP connection: asynchronous end-to-end-over SMTP information transfer
     /// which is useful for ultra-low bandwidth non-real-time connections like

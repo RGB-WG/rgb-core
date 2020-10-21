@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp_services"
-version = "0.1.0-rc.2"
+version = "0.2.0-alpha.1"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP support crate for devloping microservices"
@@ -12,8 +12,8 @@ edition = "2018"
 
 [dependencies]
 # LNP/BP libraries
-amplify = "~1.2.0"
-amplify_derive = "~1.2.0"
+amplify = "~2.0.6"
+amplify_derive = "~2.0.6"
 lnpbp = { path = ".." }
 lnpbp_derive = { path = "../derive" }
 # Serialization & parsing

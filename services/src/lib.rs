@@ -14,7 +14,6 @@
 //! LNP/BP library for building robust and scalable APIs, servers, nodes,
 //! clinets and cli utilities with LNP protocol, ZMQ and multi-threading
 
-#![feature(never_type)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![deny(

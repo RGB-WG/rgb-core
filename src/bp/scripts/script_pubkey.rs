@@ -111,10 +111,12 @@ pub enum ScriptPubkeyTemplate {
     Taproot(secp256k1::PublicKey, TapScript),
 }
 
-#[derive(Clone, PartialEq, Eq, Display, Debug, From, Error)]
+#[derive(Clone, Copy, PartialEq, Eq, Display, Debug, From, Error)]
 #[display(Debug)]
 pub enum Error {
+    /// Can't deserealized public key from bitcoin script push op code
     InvalidKeyData,
+    /// Wrong witness version, may be you need to upgrade used library version
     UnsupportedWitnessVersion,
 }
 
