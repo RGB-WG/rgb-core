@@ -63,8 +63,8 @@ pub enum Error {
     NoRequiredPubkey(usize),
     #[from]
     FeeEstimationError(FeeError),
-    #[from]
-    WrongPubkeyData(secp256k1::Error),
+    #[from(secp256k1::Error)]
+    WrongPubkeyData,
     #[from(TooManyMessagesError)]
     TooManyContracts,
 }
@@ -119,7 +119,8 @@ impl Anchor {
 
             let pubkey = psbt_out
                 .proprietary_key(b"RGB".to_vec(), PSBT_OUT_PUBKEY, vec![])
-                .ok_or(Error::NoRequiredPubkey(vout))?;
+                .ok_or(Error::NoRequiredPubkey(vout))?
+                .map_err(|_| Error::WrongPubkeyData)?;
             // TODO: (new) Add support for Taproot parsing
             let source = match psbt_out
                 .redeem_script

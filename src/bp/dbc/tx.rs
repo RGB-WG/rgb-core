@@ -142,10 +142,8 @@ where
     ) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
 
-        let txout_commitment = TxoutCommitment::embed_commit(
-            &mut container.txout_container.clone(),
-            msg,
-        )?;
+        let txout_commitment =
+            TxoutCommitment::embed_commit(&mut container.txout_container, msg)?;
         tx.output[container.vout()] = txout_commitment.into_inner();
 
         container.tweaking_factor = container.txout_container.tweaking_factor;
