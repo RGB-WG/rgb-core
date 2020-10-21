@@ -14,7 +14,6 @@
 #![recursion_limit = "256"]
 #![cfg_attr(test, deny(warnings))]
 #![allow(unused)]
-#![feature(try_trait)]
 
 #[macro_use]
 extern crate amplify;
@@ -24,7 +23,6 @@ extern crate quote;
 extern crate syn;
 
 use core::convert::TryFrom;
-use core::option::NoneError;
 use syn::export::{Span, ToTokens, TokenStream, TokenStream2};
 use syn::spanned::Spanned;
 use syn::{

@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::iter::FromIterator;
-use core::ops::{AddAssign, Try};
+use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
@@ -61,25 +61,25 @@ impl AddAssign for Status {
     }
 }
 
-impl Try for Status {
-    type Ok = Status;
-    type Error = Failure;
-
-    fn into_result(self) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
-
-    fn from_error(v: Self::Error) -> Self {
+// TODO: (new) With rust `try_trait` stabilization re-implement using
+//       `Try` trait
+// impl Try for Status {
+//    type Ok = Status;
+//    type Error = Failure;
+//    pub fn into_result(self) -> Result<Self::Ok, Self::Error> {
+//        unimplemented!()
+//    }
+//    pub fn from_ok(v: Self::Ok) -> Self {
+//        v
+//    }
+impl Status {
+    pub fn from_error(v: Failure) -> Self {
         Status {
             unresolved_txids: vec![],
             failures: vec![v],
             warnings: vec![],
             info: vec![],
         }
-    }
-
-    fn from_ok(v: Self::Ok) -> Self {
-        v
     }
 }
 

@@ -25,9 +25,9 @@ pub mod prelude {
     pub use contract::{
         data, seal, value, Assignments, AtomicValue, AutoConceal,
         ConfidentialState, ContractId, DeclarativeStrategy, Extension, Genesis,
-        HashStrategy, Metadata, Node, NodeId, OwnedRights, OwnedState,
-        ParentOwnedRights, ParentPublicRights, PedersenStrategy, RevealedState,
-        SealDefinition, StateTypes, Transition,
+        HashStrategy, Metadata, NoDataError, Node, NodeId, OwnedRights,
+        OwnedState, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
+        RevealedState, SealDefinition, StateTypes, Transition,
     };
     pub use schema::{
         script, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction,

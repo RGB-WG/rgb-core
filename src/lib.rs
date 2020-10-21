@@ -11,7 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#![feature(try_trait, try_find)]
 #![recursion_limit = "256"]
 // Coding conventions
 #![deny(

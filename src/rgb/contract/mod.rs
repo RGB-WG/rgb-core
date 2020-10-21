@@ -36,3 +36,8 @@ lazy_static! {
     /// Secp256k1zpk context object
     pub(crate) static ref SECP256K1_ZKP: Secp256k1zkp = Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
 }
+
+/// Error returned when the requested data does not exist
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display(Debug)]
+pub struct NoDataError;

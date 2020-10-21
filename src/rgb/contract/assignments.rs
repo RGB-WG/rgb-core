@@ -14,12 +14,11 @@
 use amplify::AsAny;
 use core::cmp::Ordering;
 use core::fmt::Debug;
-use core::option::NoneError;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use super::{
-    super::schema, data, seal, value, AtomicValue, AutoConceal, NodeId,
-    SealDefinition, SECP256K1_ZKP,
+    super::schema, data, seal, value, AtomicValue, AutoConceal, NoDataError,
+    NodeId, SealDefinition, SECP256K1_ZKP,
 };
 use crate::bp::blind::OutpointReveal;
 use crate::client_side_validation::{
@@ -214,10 +213,13 @@ impl Assignments {
         }
     }
 
+    /// If seal definition does not exist, returns [`NoDataError`]. If the
+    /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
+    /// seal data packed as `Ok(Some(`[`seal::Revealed`]`))`
     pub fn seal_definition(
         &self,
         index: u16,
-    ) -> Result<Option<seal::Revealed>, NoneError> {
+    ) -> Result<Option<seal::Revealed>, NoDataError> {
         // NB: Seal indexes are part of the consensus commitment, so we have to
         // use deterministic ordering of the seals. This is currently
         // done by using `sort` vector method and `Ord` implementation
@@ -226,17 +228,23 @@ impl Assignments {
             Assignments::Declarative(set) => {
                 let mut vec = set.into_iter().collect::<Vec<_>>();
                 vec.sort();
-                vec.get(index as usize)?.seal_definition()
+                vec.get(index as usize)
+                    .ok_or(NoDataError)?
+                    .seal_definition()
             }
             Assignments::DiscreteFiniteField(set) => {
                 let mut vec = set.into_iter().collect::<Vec<_>>();
                 vec.sort();
-                vec.get(index as usize)?.seal_definition()
+                vec.get(index as usize)
+                    .ok_or(NoDataError)?
+                    .seal_definition()
             }
             Assignments::CustomData(set) => {
                 let mut vec = set.into_iter().collect::<Vec<_>>();
                 vec.sort();
-                vec.get(index as usize)?.seal_definition()
+                vec.get(index as usize)
+                    .ok_or(NoDataError)?
+                    .seal_definition()
             }
         })
     }

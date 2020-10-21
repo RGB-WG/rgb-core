@@ -22,7 +22,6 @@ use crate::paradigms::strict_encoding::{
     self, strict_decode, strict_encode, StrictDecode, StrictEncode,
 };
 use bitcoin_hashes::core::cmp::Ordering;
-use bitcoin_hashes::core::option::NoneError;
 
 /// P2P network magic number: prefix identifying network on which node operates
 pub type P2pMagicNumber = u32;
@@ -149,8 +148,14 @@ impl From<bitcoin::Network> for P2pNetworkId {
     }
 }
 
+/// Indicates that [`bitcoin::Network`] does not has a correspondense for a
+/// given [`P2pNetworkId`] variant
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display(Debug)]
+pub struct ConversionImpossibleError;
+
 impl TryFrom<P2pNetworkId> for bitcoin::Network {
-    type Error = NoneError;
+    type Error = ConversionImpossibleError;
     fn try_from(bn: P2pNetworkId) -> Result<Self, Self::Error> {
         Ok(match bn {
             P2pNetworkId::Mainnet => bitcoin::Network::Bitcoin,
@@ -165,7 +170,7 @@ impl TryFrom<P2pNetworkId> for bitcoin::Network {
             P2pNetworkId::Other(magic) if magic == P2P_MAGIC_REGTEST => {
                 bitcoin::Network::Regtest
             }
-            _ => Err(NoneError)?,
+            _ => Err(ConversionImpossibleError)?,
         })
     }
 }
@@ -780,14 +785,14 @@ impl From<bitcoin::Network> for Chain {
 }
 
 impl TryFrom<Chain> for bitcoin::Network {
-    type Error = NoneError;
+    type Error = ConversionImpossibleError;
     fn try_from(chain: Chain) -> Result<Self, Self::Error> {
         bitcoin::Network::try_from(&chain)
     }
 }
 
 impl TryFrom<&Chain> for bitcoin::Network {
-    type Error = NoneError;
+    type Error = ConversionImpossibleError;
     fn try_from(chain: &Chain) -> Result<Self, Self::Error> {
         Ok(match chain {
             Chain::Mainnet => bitcoin::Network::Bitcoin,
@@ -797,7 +802,7 @@ impl TryFrom<&Chain> for bitcoin::Network {
             {
                 bitcoin::Network::Regtest
             }
-            _ => Err(NoneError)?,
+            _ => Err(ConversionImpossibleError)?,
         })
     }
 }
@@ -1074,7 +1079,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic = "NoneError"]
+    #[should_panic = "ConversionImpossibleError"]
     fn test_p2p_network_id_other() {
         bitcoin::Network::try_from(P2pNetworkId::Other(0xA1A2A3A4)).unwrap();
     }
@@ -1447,24 +1452,24 @@ mod test {
                 CHAIN_PARAMS_SIGNET.genesis_hash
             ))
             .unwrap_err(),
-            NoneError
+            ConversionImpossibleError
         );
         assert_eq!(
             bitcoin::Network::try_from(Chain::SignetCustom(
                 CHAIN_PARAMS_REGTEST.genesis_hash
             ))
             .unwrap_err(),
-            NoneError
+            ConversionImpossibleError
         );
         assert_eq!(
             bitcoin::Network::try_from(Chain::Regtest(random_hash))
                 .unwrap_err(),
-            NoneError
+            ConversionImpossibleError
         );
         assert_eq!(
             bitcoin::Network::try_from(Chain::SignetCustom(random_hash))
                 .unwrap_err(),
-            NoneError
+            ConversionImpossibleError
         );
     }
 
