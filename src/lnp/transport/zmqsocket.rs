@@ -18,7 +18,6 @@ use core::fmt::{self, Display, Formatter};
 #[cfg(feature = "url")]
 use core::str::FromStr;
 use std::net::SocketAddr;
-use std::option::NoneError;
 use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
@@ -72,6 +71,11 @@ pub enum ApiType {
     Subscribe = 5,
 }
 
+/// Unknown [`ApiType`] string
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display(Debug)]
+pub struct UnknownApiType;
+
 impl ApiType {
     /// Returns [`zmq::SocketType`] corresponding to the given [`ApiType`]
     pub fn socket_type(&self) -> zmq::SocketType {
@@ -97,7 +101,7 @@ impl ApiType {
 }
 
 impl FromStr for ApiType {
-    type Err = NoneError;
+    type Err = UnknownApiType;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
@@ -111,7 +115,7 @@ impl FromStr for ApiType {
         ]
         .into_iter()
         .find(|api| api.to_string() == s)
-        .ok_or(NoneError)
+        .ok_or(UnknownApiType)
     }
 }
 

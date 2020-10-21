@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Wrapper;
 use bitcoin::{BlockHash, Txid};
 use std::{
     convert::{TryFrom, TryInto},
@@ -30,13 +31,24 @@ pub enum Error {
     DowngradeImpossible,
 }
 
-wrapper!(
-    BlockChecksum,
-    u8,
-    doc = "Checksum for block id data used by the LNPBP-5",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
-impl Copy for BlockChecksum {}
+/// Checksum for block id data used by the LNPBP-5
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "block_checksum:{_0:#}")]
+#[wrapper(FromStr, LowerHex, UpperHex, Octal)]
+pub struct BlockChecksum(u8);
 
 impl From<BlockHash> for BlockChecksum {
     fn from(block_hash: BlockHash) -> Self {
@@ -48,13 +60,24 @@ impl From<BlockHash> for BlockChecksum {
     }
 }
 
-wrapper!(
-    TxChecksum,
-    u64,
-    doc = "Checksum for transaction id data used by the LNPBP-5",
-    derive = [Default, PartialEq, Eq, PartialOrd, Ord, Hash]
-);
-impl Copy for TxChecksum {}
+/// Checksum for transaction id data used by the LNPBP-5
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "tx_checksum:{_0:#}")]
+#[wrapper(FromStr, LowerHex, UpperHex, Octal)]
+pub struct TxChecksum(u64);
 
 impl From<Txid> for TxChecksum {
     fn from(txid: Txid) -> Self {

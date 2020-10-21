@@ -13,6 +13,7 @@
 
 //! Convenience metadata accessor methods for Genesis and state transitions.
 
+use amplify::Wrapper;
 #[cfg(feature = "serde")]
 use serde::{Deserializer, Serializer};
 use std::collections::{BTreeMap, BTreeSet};
@@ -25,12 +26,10 @@ use crate::rgb::schema;
 
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
-wrapper!(
-    Metadata,
-    MetadataInner,
-    doc = "Transition & genesis metadata fields",
-    derive = [Default, PartialEq]
-);
+/// Transition & genesis metadata fields
+#[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, Display, From)]
+#[display(Debug)]
+pub struct Metadata(MetadataInner);
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for Metadata {
@@ -161,11 +160,13 @@ impl Metadata {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{StrictDecode, StrictEncode};
+    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
     use amplify::Wrapper;
     use std::io;
 
     impl StrictEncode for Metadata {
+        type Error = Error;
+
         fn strict_encode<E: io::Write>(
             &self,
             e: E,
@@ -175,6 +176,8 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Metadata {
+        type Error = Error;
+
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
             Ok(Self::from_inner(<Self as Wrapper>::Inner::strict_decode(
                 d,

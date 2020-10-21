@@ -18,9 +18,9 @@ use bitcoin::secp256k1;
 use bitcoin::util::bip32::ChildNumber;
 use miniscript::descriptor::{DescriptorKeyParseError, DescriptorPublicKey};
 use miniscript::{MiniscriptKey, ToPublicKey};
+use std::hash::{Hash, Hasher};
 
 use crate::SECP256K1;
-use std::hash::{Hash, Hasher};
 
 /// Errors related to extended descriptor parsing
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error)]

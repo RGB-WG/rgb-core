@@ -86,12 +86,10 @@ impl Container for TxoutContainer {
     }
 }
 
-wrapper!(
-    TxoutCommitment,
-    TxOut,
-    doc = "[bitcoin::TxOut] containing LNPBP-2 commitment",
-    derive = [PartialEq, Eq, Hash]
-);
+/// [bitcoin::TxOut] containing LNPBP-2 commitment
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Default, Debug, Display, From)]
+#[display(Debug)]
+pub struct TxoutCommitment(TxOut);
 
 impl<MSG> EmbedCommitVerify<MSG> for TxoutCommitment
 where

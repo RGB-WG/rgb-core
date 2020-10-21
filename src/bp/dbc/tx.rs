@@ -124,12 +124,10 @@ impl Container for TxContainer {
     }
 }
 
-wrapper!(
-    TxCommitment,
-    Transaction,
-    doc = "[bitcoin::Transaction] containing LNPBP-3 commitment",
-    derive = [PartialEq, Eq, Hash]
-);
+/// [bitcoin::Transaction] containing LNPBP-3 commitment
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Display, From)]
+#[display(Debug)]
+pub struct TxCommitment(Transaction);
 
 impl<MSG> EmbedCommitVerify<MSG> for TxCommitment
 where
@@ -144,10 +142,8 @@ where
     ) -> Result<Self, Self::Error> {
         let mut tx = container.tx.clone();
 
-        let txout_commitment = TxoutCommitment::embed_commit(
-            &mut container.txout_container.clone(),
-            msg,
-        )?;
+        let txout_commitment =
+            TxoutCommitment::embed_commit(&mut container.txout_container, msg)?;
         tx.output[container.vout()] = txout_commitment.into_inner();
 
         container.tweaking_factor = container.txout_container.tweaking_factor;

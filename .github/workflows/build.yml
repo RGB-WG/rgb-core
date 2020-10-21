@@ -39,10 +39,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev
-      - name: Install rust nightly
+      - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Feature ${{matrix.feature}}
         uses: actions-rs/cargo@v1
@@ -65,10 +65,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install rust nightly
+      - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Feature ${{matrix.feature}}
         uses: actions-rs/cargo@v1
@@ -80,40 +80,41 @@ jobs:
         with:
           command: build
           args: --features=${{matrix.feature}}
-# Uncomment this once the library will support non-nightly only rust compiler
-#  toolchains:
-#    runs-on: ubuntu-latest
-#    strategy:
-#      matrix:
-#        toolchain: [ nightly, beta, stable, 1.46.0 ]
-#    steps:
-#      - uses: actions/checkout@v2
-#      - name: Install rust ${{matrix.toolchain}}
-#        uses: actions-rs/toolchain@v1
-#        with:
-#          toolchain: ${{matrix.toolchain}}
-#          override: true
-#      - name: All features
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: build
-#          args: --workspace --all-targets --all-features
+  toolchains:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain: [ nightly, beta, stable, 1.41.1 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install -y libzmq3-dev libssl-dev
+      - name: Install rust ${{matrix.toolchain}}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{matrix.toolchain}}
+          override: true
+      - name: All features
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --workspace --all-targets --all-features
   dependency:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install latest nightly
+      - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Create dependency
         run: |
           cargo new dep_test
+          cp contrib/depCargo.toml dep_test/Cargo.toml
           cd dep_test
-          printf 'lnpbp = { path = ".." }\nlnpbp_derive = { path = "../derive" }\n\n[workspace]' >> Cargo.toml
       - name: Build dependency
         uses: actions-rs/cargo@v1
         with:

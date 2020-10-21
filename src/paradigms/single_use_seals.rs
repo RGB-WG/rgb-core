@@ -153,7 +153,7 @@ where
     /// Publication id that may be used for referencing publication of
     /// witness data in the medium. By default set `()`, so [SealMedium]
     /// may not implement  publication id and related functions
-    type PublicationId = ();
+    type PublicationId;
 
     /// Error type that contains reasons of medium access failure
     type Error: std::error::Error;
@@ -212,7 +212,7 @@ where
     /// Publication id that may be used for referencing publication of
     /// witness data in the medium. By default set `()`, so [SealMedium]
     /// may not implement  publication id and related functions
-    type PublicationId = ();
+    type PublicationId;
 
     /// Error type that contains reasons of medium access failure
     type Error: std::error::Error;

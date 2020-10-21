@@ -125,6 +125,11 @@ impl Bipolar for Transcoder {
 #[display(Debug)]
 pub struct NoEncryption;
 
+/// Impossible error type
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display(Debug)]
+pub struct NoError;
+
 impl Encrypt for NoEncryption {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
         buffer.borrow().to_vec()
@@ -132,7 +137,7 @@ impl Encrypt for NoEncryption {
 }
 
 impl Decrypt for NoEncryption {
-    type Error = !;
+    type Error = NoError;
     fn decrypt(
         &mut self,
         buffer: impl Borrow<[u8]>,

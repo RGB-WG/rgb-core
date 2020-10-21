@@ -22,7 +22,6 @@ use crate::paradigms::strict_encoding::{
     self, strict_decode, strict_encode, StrictDecode, StrictEncode,
 };
 use bitcoin_hashes::core::cmp::Ordering;
-use bitcoin_hashes::core::option::NoneError;
 
 /// P2P network magic number: prefix identifying network on which node operates
 pub type P2pMagicNumber = u32;
@@ -54,16 +53,16 @@ pub const P2P_MAGIC_SIGNET: P2pMagicNumber = 0x40CF030A;
 #[repr(u32)]
 pub enum P2pNetworkId {
     /// Bitcoin magic number for mainnet P2P communications
-    Mainnet = P2P_MAGIC_MAINNET,
+    Mainnet,
 
     /// Bitcoin magic number for testnet P2P communications
-    Testnet = P2P_MAGIC_TESTNET,
+    Testnet,
 
     /// Bitcoin magic number for regtest P2P communications
-    Regtest = P2P_MAGIC_REGTEST,
+    Regtest,
 
     /// Bitcoin magic number for signet P2P communications
-    Signet = P2P_MAGIC_SIGNET,
+    Signet,
 
     /// Other magic number, implying some unknown network
     Other(P2pMagicNumber),
@@ -145,19 +144,23 @@ impl From<bitcoin::Network> for P2pNetworkId {
             bitcoin::Network::Bitcoin => P2pNetworkId::Mainnet,
             bitcoin::Network::Testnet => P2pNetworkId::Testnet,
             bitcoin::Network::Regtest => P2pNetworkId::Regtest,
-            bitcoin::Network::Signet => P2pNetworkId::Signet,
         }
     }
 }
 
+/// Indicates that [`bitcoin::Network`] does not has a correspondense for a
+/// given [`P2pNetworkId`] variant
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display(Debug)]
+pub struct ConversionImpossibleError;
+
 impl TryFrom<P2pNetworkId> for bitcoin::Network {
-    type Error = NoneError;
+    type Error = ConversionImpossibleError;
     fn try_from(bn: P2pNetworkId) -> Result<Self, Self::Error> {
         Ok(match bn {
             P2pNetworkId::Mainnet => bitcoin::Network::Bitcoin,
             P2pNetworkId::Testnet => bitcoin::Network::Testnet,
             P2pNetworkId::Regtest => bitcoin::Network::Regtest,
-            P2pNetworkId::Signet => bitcoin::Network::Signet,
             P2pNetworkId::Other(magic) if magic == P2P_MAGIC_MAINNET => {
                 bitcoin::Network::Bitcoin
             }
@@ -167,10 +170,7 @@ impl TryFrom<P2pNetworkId> for bitcoin::Network {
             P2pNetworkId::Other(magic) if magic == P2P_MAGIC_REGTEST => {
                 bitcoin::Network::Regtest
             }
-            P2pNetworkId::Other(magic) if magic == P2P_MAGIC_SIGNET => {
-                bitcoin::Network::Signet
-            }
-            _ => Err(NoneError)?,
+            _ => Err(ConversionImpossibleError)?,
         })
     }
 }
@@ -780,20 +780,19 @@ impl From<bitcoin::Network> for Chain {
             bitcoin::Network::Regtest => {
                 Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)
             }
-            bitcoin::Network::Signet => Chain::Signet,
         }
     }
 }
 
 impl TryFrom<Chain> for bitcoin::Network {
-    type Error = NoneError;
+    type Error = ConversionImpossibleError;
     fn try_from(chain: Chain) -> Result<Self, Self::Error> {
         bitcoin::Network::try_from(&chain)
     }
 }
 
 impl TryFrom<&Chain> for bitcoin::Network {
-    type Error = NoneError;
+    type Error = ConversionImpossibleError;
     fn try_from(chain: &Chain) -> Result<Self, Self::Error> {
         Ok(match chain {
             Chain::Mainnet => bitcoin::Network::Bitcoin,
@@ -803,13 +802,7 @@ impl TryFrom<&Chain> for bitcoin::Network {
             {
                 bitcoin::Network::Regtest
             }
-            Chain::Signet => bitcoin::Network::Signet,
-            Chain::SignetCustom(hash)
-                if hash == &CHAIN_PARAMS_SIGNET.genesis_hash =>
-            {
-                bitcoin::Network::Signet
-            }
-            _ => Err(NoneError)?,
+            _ => Err(ConversionImpossibleError)?,
         })
     }
 }
@@ -855,7 +848,7 @@ impl Display for Chain {
                 write!(f, "liquidv1")
             }
             Chain::Other(params) => {
-                write!(f, "other:0x{}", strict_encode(params)?.to_hex())
+                write!(f, "other:{}", strict_encode(params)?.to_hex())
             }
         }
     }
@@ -914,19 +907,23 @@ impl FromStr for Chain {
                 Ok(Chain::LiquidV1)
             }
             s => {
-                if let Some(hash) = s.strip_prefix("regtest:") {
-                    Ok(Chain::Regtest(BlockHash::from_hex(hash)?))
-                } else if let Some(hash) = s.strip_prefix("signet:") {
-                    Ok(Chain::SignetCustom(BlockHash::from_hex(hash)?))
-                } else if let Some(hex) =
-                    s.strip_prefix("other:").and_then(|s| s.strip_prefix("0x"))
-                {
-                    Ok(Chain::Other(strict_decode(
-                        &Vec::from_hex(hex)
+                let mut parts = s.split(':');
+                let prefix =
+                    parts.next().ok_or(ParseError::WrongNetworkName)?;
+                let data = parts.next().ok_or(ParseError::WrongNetworkName)?;
+                parts
+                    .next()
+                    .map_or(Ok(()), |_| Err(ParseError::WrongNetworkName))?;
+                match prefix {
+                    "regtest" => Ok(Chain::Regtest(BlockHash::from_hex(data)?)),
+                    "signet" => {
+                        Ok(Chain::SignetCustom(BlockHash::from_hex(data)?))
+                    }
+                    "other" => Ok(Chain::Other(strict_decode(
+                        &Vec::from_hex(data)
                             .map_err(|_| ParseError::ChainParamsEncoding)?,
-                    )?))
-                } else {
-                    Err(ParseError::WrongNetworkName)
+                    )?)),
+                    _ => Err(ParseError::WrongNetworkName),
                 }
             }
         }
@@ -954,7 +951,6 @@ mod test {
         assert_eq!(P2P_MAGIC_MAINNET, bitcoin::Network::Bitcoin.magic());
         assert_eq!(P2P_MAGIC_TESTNET, bitcoin::Network::Testnet.magic());
         assert_eq!(P2P_MAGIC_REGTEST, bitcoin::Network::Regtest.magic());
-        assert_eq!(P2P_MAGIC_SIGNET, bitcoin::Network::Signet.magic());
 
         let other = P2pNetworkId::Other(u32::from_le_bytes(random_bytes));
 
@@ -1055,10 +1051,6 @@ mod test {
             P2pNetworkId::from(bitcoin::Network::Regtest),
             P2pNetworkId::Regtest
         );
-        assert_eq!(
-            P2pNetworkId::from(bitcoin::Network::Signet),
-            P2pNetworkId::Signet
-        );
 
         assert_eq!(
             bitcoin::Network::try_from(P2pNetworkId::Mainnet).unwrap(),
@@ -1071,10 +1063,6 @@ mod test {
         assert_eq!(
             bitcoin::Network::try_from(P2pNetworkId::Regtest).unwrap(),
             bitcoin::Network::Regtest
-        );
-        assert_eq!(
-            bitcoin::Network::try_from(P2pNetworkId::Signet).unwrap(),
-            bitcoin::Network::Signet
         );
 
         assert_eq!(
@@ -1092,15 +1080,10 @@ mod test {
                 .unwrap(),
             bitcoin::Network::Regtest
         );
-        assert_eq!(
-            bitcoin::Network::try_from(P2pNetworkId::Other(P2P_MAGIC_SIGNET))
-                .unwrap(),
-            bitcoin::Network::Signet
-        );
     }
 
     #[test]
-    #[should_panic = "NoneError"]
+    #[should_panic = "ConversionImpossibleError"]
     fn test_p2p_network_id_other() {
         bitcoin::Network::try_from(P2pNetworkId::Other(0xA1A2A3A4)).unwrap();
     }
@@ -1452,7 +1435,6 @@ mod test {
             Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash),
             Chain::from(bitcoin::Network::Regtest)
         );
-        assert_eq!(Chain::Signet, Chain::from(bitcoin::Network::Signet));
 
         assert_eq!(
             bitcoin::Network::try_from(Chain::Mainnet).unwrap(),
@@ -1463,10 +1445,6 @@ mod test {
             bitcoin::Network::Testnet
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chain::Signet).unwrap(),
-            bitcoin::Network::Signet
-        );
-        assert_eq!(
             bitcoin::Network::try_from(Chain::Regtest(
                 CHAIN_PARAMS_REGTEST.genesis_hash
             ))
@@ -1474,35 +1452,28 @@ mod test {
             bitcoin::Network::Regtest
         );
         assert_eq!(
-            bitcoin::Network::try_from(Chain::SignetCustom(
-                CHAIN_PARAMS_SIGNET.genesis_hash
-            ))
-            .unwrap(),
-            bitcoin::Network::Signet
-        );
-        assert_eq!(
             bitcoin::Network::try_from(Chain::Regtest(
                 CHAIN_PARAMS_SIGNET.genesis_hash
             ))
             .unwrap_err(),
-            NoneError
+            ConversionImpossibleError
         );
         assert_eq!(
             bitcoin::Network::try_from(Chain::SignetCustom(
                 CHAIN_PARAMS_REGTEST.genesis_hash
             ))
             .unwrap_err(),
-            NoneError
+            ConversionImpossibleError
         );
         assert_eq!(
             bitcoin::Network::try_from(Chain::Regtest(random_hash))
                 .unwrap_err(),
-            NoneError
+            ConversionImpossibleError
         );
         assert_eq!(
             bitcoin::Network::try_from(Chain::SignetCustom(random_hash))
                 .unwrap_err(),
-            NoneError
+            ConversionImpossibleError
         );
     }
 
@@ -1556,7 +1527,7 @@ mod test {
 
         let mut custom_params = CHAIN_PARAMS_MAINNET.clone();
         custom_params.genesis_hash = custom_hash;
-        assert_eq!(format!("{}", Chain::Other(custom_params.clone())), "other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001");
+        assert_eq!(format!("{}", Chain::Other(custom_params.clone())), "other:0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001");
 
         assert_eq!(Chain::from_str("bitcoin").unwrap(), Chain::Mainnet);
         assert_eq!(Chain::from_str("testnet").unwrap(), Chain::Testnet3);
@@ -1592,7 +1563,7 @@ mod test {
             ParseError::WrongNetworkName
         );
         assert_eq!(
-            Chain::from_str("other:0x0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001").unwrap(),
+            Chain::from_str("other:0e1b741ef47d9c526fd4a3a67b421ed924feb5a31deb485eb9a67e19495269a20700626974636f696ef9beb4d904006d61696e020062638d208c20b4b2070010eb090000220200000000000003004254430700426974636f696e07007361746f73686900e1f505000000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000000001").unwrap(),
             Chain::Other(custom_params)
         );
     }

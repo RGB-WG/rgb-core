@@ -27,7 +27,7 @@ pub trait UnsignedInteger:
 }
 
 impl UnsignedInteger for u8 {
-    const MAX: Self = std::u8::MAX;
+    const MAX: Self = core::u8::MAX;
 
     #[inline]
     fn bits() -> Bits {
@@ -35,7 +35,7 @@ impl UnsignedInteger for u8 {
     }
 }
 impl UnsignedInteger for u16 {
-    const MAX: Self = std::u16::MAX;
+    const MAX: Self = core::u16::MAX;
 
     #[inline]
     fn bits() -> Bits {
@@ -43,7 +43,7 @@ impl UnsignedInteger for u16 {
     }
 }
 impl UnsignedInteger for u32 {
-    const MAX: Self = std::u32::MAX;
+    const MAX: Self = core::u32::MAX;
 
     #[inline]
     fn bits() -> Bits {
@@ -51,7 +51,7 @@ impl UnsignedInteger for u32 {
     }
 }
 impl UnsignedInteger for u64 {
-    const MAX: Self = std::u64::MAX;
+    const MAX: Self = core::u64::MAX;
 
     #[inline]
     fn bits() -> Bits {
@@ -115,11 +115,11 @@ pub enum Bits {
 impl Bits {
     pub fn max_value(&self) -> u128 {
         match *self {
-            Bits::Bit8 => std::u8::MAX as u128,
-            Bits::Bit16 => std::u16::MAX as u128,
-            Bits::Bit32 => std::u32::MAX as u128,
-            Bits::Bit64 => std::u64::MAX as u128,
-            //Bits::Bit128 => std::u128::MAX as u128,
+            Bits::Bit8 => core::u8::MAX as u128,
+            Bits::Bit16 => core::u16::MAX as u128,
+            Bits::Bit32 => core::u32::MAX as u128,
+            Bits::Bit64 => core::u64::MAX as u128,
+            //Bits::Bit128 => core::u128::MAX as u128,
         }
     }
 
@@ -170,7 +170,7 @@ impl Occurences {
     pub fn max_value(&self) -> u16 {
         match self {
             Occurences::Once | Occurences::NoneOrOnce => 1,
-            Occurences::NoneOrMore | Occurences::OnceOrMore => u16::MAX,
+            Occurences::NoneOrMore | Occurences::OnceOrMore => core::u16::MAX,
             Occurences::OnceOrUpTo(max) | Occurences::NoneOrUpTo(max) => *max,
             Occurences::Exactly(val) => *val,
             Occurences::Range(range) => *range.end(),
@@ -179,7 +179,7 @@ impl Occurences {
 
     pub fn check(&self, count: u16) -> Result<(), OccurrencesError> {
         let orig_count = count;
-        if count > u16::MAX.into() {
+        if count > core::u16::MAX.into() {
             Err(OccurrencesError {
                 min: self.min_value().into(),
                 max: self.max_value().into(),
@@ -348,8 +348,8 @@ mod strict_encoding {
             let (min, max) = match self {
                 Occurences::NoneOrOnce => (0, 1),
                 Occurences::Once => (1, 1),
-                Occurences::NoneOrMore => (0, std::u16::MAX.into()),
-                Occurences::OnceOrMore => (1, std::u16::MAX.into()),
+                Occurences::NoneOrMore => (0, core::u16::MAX.into()),
+                Occurences::OnceOrMore => (1, core::u16::MAX.into()),
                 Occurences::NoneOrUpTo(max) => (0, *max),
                 Occurences::OnceOrUpTo(max) => (1, *max),
                 Occurences::Exactly(val) => (*val, *val),
@@ -369,8 +369,8 @@ mod strict_encoding {
             Ok(match (min, max) {
                 (0, 1) => Occurences::NoneOrOnce,
                 (1, 1) => Occurences::Once,
-                (0, max) if max == ::std::u16::MAX => Occurences::NoneOrMore,
-                (1, max) if max == ::std::u16::MAX => Occurences::OnceOrMore,
+                (0, max) if max == ::core::u16::MAX => Occurences::NoneOrMore,
+                (1, max) if max == ::core::u16::MAX => Occurences::OnceOrMore,
                 (0, max) if max > 0 => Occurences::NoneOrUpTo(max),
                 (1, max) if max > 0 => Occurences::OnceOrUpTo(max),
                 (min, max) if min == max => Occurences::Exactly(min),
@@ -437,7 +437,7 @@ mod test {
     #[test]
     fn test_once_or_up_to_none_large() {
         let occurence: Occurences = Occurences::OnceOrMore;
-        occurence.check(u16::MAX).unwrap();
+        occurence.check(core::u16::MAX).unwrap();
     }
     #[test]
     #[should_panic(
@@ -475,7 +475,7 @@ mod test {
     #[test]
     fn test_none_or_up_to_none_large() {
         let occurence: Occurences = Occurences::NoneOrMore;
-        occurence.check(u16::MAX).unwrap();
+        occurence.check(core::u16::MAX).unwrap();
     }
     #[test]
     fn test_none_or_up_to_42_zero() {
@@ -575,10 +575,10 @@ mod test {
         assert_eq!(bit32, Bits::Bit32);
         assert_eq!(bit64, Bits::Bit64);
 
-        assert_eq!(bit8.max_value(), u8::MAX as u128);
-        assert_eq!(bit16.max_value(), u16::MAX as u128);
-        assert_eq!(bit32.max_value(), u32::MAX as u128);
-        assert_eq!(bit64.max_value(), u64::MAX as u128);
+        assert_eq!(bit8.max_value(), core::u8::MAX as u128);
+        assert_eq!(bit16.max_value(), core::u16::MAX as u128);
+        assert_eq!(bit32.max_value(), core::u32::MAX as u128);
+        assert_eq!(bit64.max_value(), core::u64::MAX as u128);
 
         assert_eq!(bit8.bit_len(), 8 as usize);
         assert_eq!(bit8.byte_len(), 1 as usize);
@@ -695,18 +695,18 @@ mod test {
 
     #[test]
     fn test_unsigned() {
-        let u8_unsigned = u8::MAX;
-        let u16_unsigned = u16::MAX;
-        let u32_unsigned = u32::MAX;
-        let u64_unsigned = u64::MAX;
+        let u8_unsigned = core::u8::MAX;
+        let u16_unsigned = core::u16::MAX;
+        let u32_unsigned = core::u32::MAX;
+        let u64_unsigned = core::u64::MAX;
 
-        assert_eq!(u8_unsigned.as_u64(), u8::MAX as u64);
+        assert_eq!(u8_unsigned.as_u64(), core::u8::MAX as u64);
         assert_eq!(u8::bits(), Bits::Bit8);
-        assert_eq!(u16_unsigned.as_u64(), u16::MAX as u64);
+        assert_eq!(u16_unsigned.as_u64(), core::u16::MAX as u64);
         assert_eq!(u16::bits(), Bits::Bit16);
-        assert_eq!(u32_unsigned.as_u64(), u32::MAX as u64);
+        assert_eq!(u32_unsigned.as_u64(), core::u32::MAX as u64);
         assert_eq!(u32::bits(), Bits::Bit32);
-        assert_eq!(u64_unsigned.as_u64(), u64::MAX as u64);
+        assert_eq!(u64_unsigned.as_u64(), core::u64::MAX as u64);
         assert_eq!(u64::bits(), Bits::Bit64);
     }
 }

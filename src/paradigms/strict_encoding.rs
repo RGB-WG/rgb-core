@@ -30,7 +30,7 @@ pub use bitcoin::consensus::encode::{ReadExt, WriteExt};
 /// from [paradigms::commit_verify] module.
 pub trait StrictEncode {
     /// Implementation-dependent error type
-    type Error: std::error::Error + From<Error> = Error;
+    type Error: std::error::Error + From<Error>;
 
     /// Encode with the given [std::io::Writer] instance; must return result
     /// with either amount of bytes encoded – or implementation-specific
@@ -48,7 +48,7 @@ pub trait StrictEncode {
 /// provided commitment.
 pub trait StrictDecode: Sized {
     /// Implementation-dependent error type
-    type Error: std::error::Error + From<Error> = Error;
+    type Error: std::error::Error + From<Error>;
 
     /// Decode with the given [std::io::Reader] instance; must either
     /// construct an instance or return implementation-specific error type.
@@ -509,7 +509,7 @@ mod number_little_endian {
             &self,
             mut e: E,
         ) -> Result<usize, Error> {
-            if *self > std::u16::MAX as usize {
+            if *self > core::u16::MAX as usize {
                 Err(Error::ExceedMaxItems(*self))?;
             }
             let size = *self as u16;
@@ -989,7 +989,7 @@ pub mod test {
             $( assert_eq!($enum::from_u8($val).unwrap(), $item); )+
             let mut set = ::std::collections::HashSet::new();
             $( set.insert($val); )+
-            for x in 0..=u8::MAX {
+            for x in 0..=core::u8::MAX {
                 if !set.contains(&x) {
                     assert_eq!($enum::from_u8(x), None);
                     let decoded: Result<$enum, _> = $crate::strict_encoding::strict_decode(&[x]);

@@ -108,4 +108,3 @@ hash_newtype!(
     32,
     doc = "Blind version of transaction outpoint"
 );
-impl_hashencode!(OutpointHash);

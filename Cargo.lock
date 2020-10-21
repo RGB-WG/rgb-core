@@ -21,10 +21,21 @@ version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "147a917ced31ff0d8cccbd059746752279f326dae624e0b2fadc66be4a24a1ef"
 dependencies = [
- "async-trait",
+ "parse_arg",
+ "serde 1.0.117",
+ "torut",
+]
+
+[[package]]
+name = "amplify"
+version = "2.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8bf1e0bf054f0630d4908aa8ca684ef30ad1dcaea805c8bfe8cf2f76b747835"
+dependencies = [
  "ed25519-dalek",
  "parse_arg",
  "serde 1.0.117",
+ "stringly_conversions",
  "torut",
 ]
 
@@ -34,9 +45,19 @@ version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7efe513fdba3fd0cb0f9020f185dea8c80df9c8641e464dbccc2f55d5611e92"
 dependencies = [
- "amplify",
+ "amplify 1.2.1",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
+]
+
+[[package]]
+name = "amplify_derive"
+version = "2.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1baaff0d88e99bd790c44b4b27eaa0ae07e9c3b0527e026236d1d8ba840ecf65"
+dependencies = [
+ "quote 1.0.7",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -69,7 +90,7 @@ checksum = "b246867b8b3b6ae56035f1eb1ed557c1d8eae97f0d53696138a50fa0e3a3b8c0"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -118,8 +139,9 @@ checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 
 [[package]]
 name = "bitcoin"
-version = "0.25.0"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?tag=lnpbp-v0.1.0-rc1#dc06d451c01ef7b22509f0eb4db1f817e4e83daa"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "302fba01c5210a0321cc459dbe7f6b4fc21dffe77241c1690bce129814fa11fc"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -129,17 +151,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hashes"
-version = "0.9.0"
-source = "git+https://github.com/LNP-BP/bitcoin_hashes?tag=lnpbp-v0.1.0-rc1#7269ef478004a6059377bbd0e8b3ffd1839de55c"
-dependencies = [
- "serde 1.0.117",
-]
-
-[[package]]
-name = "bitcoin_num"
-version = "0.2.3"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "125b6a0228ba7c5f2462f6481db417fff24c4646cf77ee0d44202fd87dbd584a"
+checksum = "4d7f47af3cbd7f41c5d9207d10c76aede44087f7c6be090aab6bd431a9daae28"
 dependencies = [
  "serde 1.0.117",
 ]
@@ -239,7 +253,7 @@ dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -317,7 +331,7 @@ dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
  "strsim 0.9.3",
- "syn 1.0.44",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -328,7 +342,7 @@ checksum = "d9b5a2f4ac4969822c62224815d069952656cadc7084fdca9751e6d959189b72"
 dependencies = [
  "darling_core",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -681,21 +695,20 @@ checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "lnpbp"
-version = "0.1.0-rc.2"
+version = "0.1.0"
 dependencies = [
- "amplify",
- "amplify_derive",
+ "amplify 2.0.6",
+ "amplify_derive 2.0.6",
  "async-trait",
  "bech32",
  "bitcoin",
  "bitcoin_hashes",
- "bitcoin_num",
  "deflate",
  "ed25519-dalek",
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
- "lnpbp_derive",
+ "lnpbp_derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "miniscript",
  "num-derive",
  "num-traits 0.2.12",
@@ -709,26 +722,37 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.1.0-rc.2"
+version = "0.1.0"
 dependencies = [
- "amplify",
+ "amplify 2.0.6",
  "lnpbp",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
+]
+
+[[package]]
+name = "lnpbp_derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8a7977c9c4d47f996d38b345dbc2c9cb34ce92948c375307242fa2531b5b951"
+dependencies = [
+ "amplify 2.0.6",
+ "quote 1.0.7",
+ "syn 1.0.45",
 ]
 
 [[package]]
 name = "lnpbp_services"
 version = "0.1.0-rc.2"
 dependencies = [
- "amplify",
- "amplify_derive",
+ "amplify 1.2.1",
+ "amplify_derive 1.2.1",
  "clap",
  "config",
  "dotenv",
  "env_logger",
  "lnpbp",
- "lnpbp_derive",
+ "lnpbp_derive 0.1.0",
  "log",
  "serde 1.0.117",
  "serde_with",
@@ -771,8 +795,9 @@ dependencies = [
 
 [[package]]
 name = "miniscript"
-version = "2.0.0"
-source = "git+https://github.com/LNP-BP/rust-miniscript?tag=lnpbp-v0.1.0-rc1#ba436de1b8a5953d5050dbc31fa4642e740e4438"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4f8542804cd816cad1aaea64e3e2e326e401269ad6dc6661d2f8be7b3f76e46"
 dependencies = [
  "bitcoin",
  "serde 1.0.117",
@@ -878,7 +903,7 @@ checksum = "6f09b9841adb6b5e1f89ef7087ea636e0fd94b2851f887c1e3eb5d5f8228fab3"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -977,6 +1002,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14248cc8eced350e20122a291613de29e4fa129ba2731818c4cdbb44fccd3e55"
 
 [[package]]
+name = "paste"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0520af26d4cf99643dbbe093a61507922b57232d9978d8491fdc8f7b44573c8c"
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -984,9 +1015,9 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "pin-project-lite"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e555d9e657502182ac97b539fb3dae8b79cda19e3e4f8ffb5e8de4f18df93c95"
+checksum = "c917123afa01924fc84bb20c4c03f004d9c38e5127e3c039bbf7f4b9c76a2f6b"
 
 [[package]]
 name = "pkg-config"
@@ -1009,7 +1040,7 @@ dependencies = [
  "proc-macro-error-attr",
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
  "version_check",
 ]
 
@@ -1357,7 +1388,7 @@ checksum = "cbd1ae72adb44aab48f325a02444a5fc079349a8d804c1fc922aed3f7454c74e"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -1369,6 +1400,16 @@ dependencies = [
  "itoa",
  "ryu",
  "serde 1.0.117",
+]
+
+[[package]]
+name = "serde_str_helpers"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b6009251ec4a3826c297b8a7baade19d73a642a89759d107826ca9ac944cc4a"
+dependencies = [
+ "serde 1.0.117",
+ "serde_derive",
 ]
 
 [[package]]
@@ -1400,7 +1441,7 @@ dependencies = [
  "darling",
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -1488,6 +1529,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "stringly_conversions"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff63080f492dd4d289ffcaed8d7ece38adfb423db910eb342c0e04d409536a7a"
+dependencies = [
+ "paste",
+ "serde_str_helpers",
+]
+
+[[package]]
 name = "strsim"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1524,9 +1575,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.44"
+version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e03e57e4fcbfe7749842d53e24ccb9aa12b7252dbe5e91d2acad31834c8b8fdd"
+checksum = "ea9c5432ff16d6152371f808fb5a871cd67368171b09bb21b43df8e4a47a3556"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
@@ -1553,7 +1604,7 @@ checksum = "b834f2d66f734cb897113e34aaff2f1ab4719ca946f9a7358dba8f8064148701"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
  "unicode-xid 0.2.1",
 ]
 
@@ -1622,7 +1673,7 @@ checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -1845,7 +1896,7 @@ checksum = "c3f369ddb18862aba61aa49bf31e74d29f0f162dec753063200e1dc084345d16"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.44",
+ "syn 1.0.45",
  "synstructure 0.12.4",
 ]
 

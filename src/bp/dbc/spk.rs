@@ -122,6 +122,8 @@ pub(super) mod strict_encoding {
     impl_enum_strict_encoding!(EncodingTag);
 
     impl StrictEncode for ScriptEncodeData {
+        type Error = Error;
+
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -141,6 +143,8 @@ pub(super) mod strict_encoding {
     }
 
     impl StrictDecode for ScriptEncodeData {
+        type Error = Error;
+
         fn strict_decode<D: io::Read>(
             mut d: D,
         ) -> Result<Self, strict_encoding::Error> {
@@ -243,8 +247,8 @@ impl Container for SpkContainer {
                 ));
                 Comp::Bare
             }
-            Descr::Pk(_) => Comp::PubkeyHash,
-            Descr::Pkh(_) => Comp::PublicKey,
+            Descr::Pk(_) => Comp::PublicKey,
+            Descr::Pkh(_) => Comp::PubkeyHash,
             Descr::Return(_) => Comp::OpReturn,
             Descr::Wpkh(_) => Comp::WPubkeyHash,
             Descr::Wsh(_) => Comp::WScriptHash,
@@ -314,12 +318,23 @@ impl Container for SpkContainer {
     }
 }
 
-wrapper!(
-    SpkCommitment,
-    PubkeyScript,
-    doc = "[`PubkeyScript`] containing LNPBP-2 commitment",
-    derive = [PartialEq, Eq, Hash]
-);
+/// [`PubkeyScript`] containing LNPBP-2 commitment
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[display("{_0}", alt = "{_0:#}")]
+#[wrapper(LowerHex, UpperHex)]
+pub struct SpkCommitment(PubkeyScript);
 
 impl<MSG> EmbedCommitVerify<MSG> for SpkCommitment
 where
@@ -405,8 +420,11 @@ where
                         pubkey.to_script_pubkey(Strategy::WitnessScriptHash)
                     }
                     OpReturn => {
-                        Script::new_op_return(&pubkey.serialize().to_vec())
-                            .into()
+                        let ser = pubkey.serialize();
+                        if ser[0] != 0x02 {
+                            Err(Error::InvalidOpReturnKey)?
+                        }
+                        Script::new_op_return(&ser).into()
                     }
                     _ => Err(Error::InvalidProofStructure)?,
                 }
