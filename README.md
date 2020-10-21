@@ -4,6 +4,10 @@
 ![Tests](https://github.com/LNP-BP/rust-lnpbp/workflows/Tests/badge.svg)
 ![Lints](https://github.com/LNP-BP/rust-lnpbp/workflows/Lints/badge.svg)
 [![codecov](https://codecov.io/gh/LNP-BP/rust-lnpbp/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/rust-lnpbp)
+
+[![crates.io](https://meritbadge.herokuapp.com/lnpbp)](https://crates.io/crates/lnpbp)
+[![Docs](https://docs.rs/lnpbp/badge.svg)](https://docs.rs/lnpbp)
+[![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 This is LNP/BP Core Library: a rust library implementing LNP/BP specifications 
@@ -115,6 +119,8 @@ brew cargo
 ```
 
 ### Clone and compile library
+
+Minimum supported rust compiler version (MSRV): 1.41.1
 
 ```shell script
 git clone https://github.com/lnp-bp/rust-lnpbp

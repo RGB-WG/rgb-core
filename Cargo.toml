@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp"
-version = "0.1.0-rc.2"
+version = "0.1.0"
 license = "MIT"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP Core Library implementing LNPBP specifications & standards"
@@ -9,6 +9,7 @@ homepage = "https://github.com/LNP-BP"
 keywords = ["bitcoin", "lightning", "lnp-bp", "layer-3", "cryptography"]
 readme = "README.md"
 edition = "2018"
+exclude = [".github", "derive", "contrib"]
 
 [lib]
 name = "lnpbp"
@@ -35,7 +36,7 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # -----------------------------------------
 amplify = { version = "~2.0.6", features = ["stringly_conversions"] }
 amplify_derive = "~2.0.6"
-lnpbp_derive = { path = "derive" }
+lnpbp_derive = "~0.1.0"
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.25.1", features = ["rand"] }
