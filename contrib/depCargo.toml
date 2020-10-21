@@ -3,12 +3,4 @@
 lnpbp = { path = "..", features = ["all"] }
 lnpbp_derive = { path = "../derive" }
 
-[patch.crates-io]
-# We need this b/c of breaking change in tagged hash type generation
-bitcoin_hashes = { git = "https://github.com/LNP-BP/bitcoin_hashes", tag = "lnpbp-v0.1.0-rc1" }
-bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", tag = "lnpbp-v0.1.0-rc1" }
-# We need custom branches here just to depend on the same bitcoin master and do
-# not have secp256k1 version conflict
-miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", tag = "lnpbp-v0.1.0-rc1" }
-
 [workspace]

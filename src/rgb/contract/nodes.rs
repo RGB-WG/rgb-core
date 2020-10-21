@@ -14,7 +14,7 @@
 use std::collections::BTreeSet;
 
 use amplify::AsAny;
-use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
+use bitcoin::hashes::Hash;
 
 use super::{
     Assignments, AutoConceal, OwnedRights, ParentOwnedRights,
@@ -35,35 +35,34 @@ use crate::rgb::{schema, seal, Metadata, SchemaId, SimplicityScript};
 /// allowed valencies types
 pub type PublicRights = BTreeSet<PublicRightType>;
 
-lazy_static! {
-    static ref MIDSTATE_NODE_ID: [u8; 32] = {
-        let hash = sha256::Hash::hash(b"rgb:node");
-        let mut engine = sha256::Hash::engine();
-        engine.input(&hash[..]);
-        engine.input(&hash[..]);
-        engine.midstate().0
-    };
-}
+static MIDSTATE_NODE_ID: [u8; 32] = [
+    0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc,
+    0xbd, 0x5a, 0x58, 0x55, 0x6a, 0xe2, 0x16, 0xa5, 0xee, 0xb7, 0x3c, 0x1,
+    0xe0, 0x86, 0x91, 0x22, 0x43, 0x12, 0x9f,
+];
 
-tagged_hash!(
+sha256t_hash_newtype!(
     NodeId,
     NodeIdTag,
     MIDSTATE_NODE_ID,
+    64,
     doc = "Unique node (genesis, extensions & state transition) identifier \
-           equivalent to the commitment hash"
+           equivalent to the commitment hash",
+    false
 );
 
 impl CommitEncodeWithStrategy for NodeId {
     type Strategy = commit_strategy::UsingStrict;
 }
 
-// TODO: (new) display in a reverse format
-tagged_hash!(
+sha256t_hash_newtype!(
     ContractId,
     ContractIdTag,
     MIDSTATE_NODE_ID,
+    64,
     doc = "Unique contract identifier equivalent to the contract genesis \
-           commitment hash"
+           commitment hash",
+    true
 );
 
 impl CommitEncodeWithStrategy for ContractId {
@@ -651,13 +650,16 @@ mod strict_encoding {
 
 #[cfg(test)]
 mod test {
+    use amplify::Wrapper;
+    use bitcoin_hashes::hex::{FromHex, ToHex};
+    use std::io::Write;
+
     use super::*;
     use crate::bp::chain::{Chain, GENESIS_HASH_MAINNET};
+    use crate::bp::tagged_hash;
     use crate::commit_verify::CommitVerify;
     use crate::paradigms::strict_encoding::{test::*, StrictDecode};
     use crate::strict_encoding::{strict_encode, StrictEncode};
-    use bitcoin_hashes::hex::{FromHex, ToHex};
-    use std::io::Write;
 
     static TRANSITION: [u8; 2364] = [
         0xa, 0x0, 0x1, 0x0, 0xd, 0x0, 0x15, 0x0, 0x0, 0x2, 0x0, 0x3, 0x1, 0x2,
@@ -1063,6 +1065,12 @@ mod test {
         0x0, 0x2, 0x0, 0x3, 0x0, 0x5, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5,
     ];
 
+    #[test]
+    fn test_node_id_midstate() {
+        let midstate = tagged_hash::Midstate::with(b"rgb:node");
+        assert_eq!(midstate.into_inner(), MIDSTATE_NODE_ID);
+    }
+
     // Making sure that <https://github.com/LNP-BP/LNPBPs/issues/58>
     // is fulfilled and we do not occasionally commit to all chain
     // parameters (which may vary and change with time) in RGB contract id
@@ -1140,11 +1148,11 @@ mod test {
         // Typeid/Nodeid test
         assert_eq!(
             genesis.node_id().to_hex(),
-            "d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15"
+            "150fac8310ed05413019094911dc1025801e1303bdd96c2bb926aede2a8420d0"
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "94628edd6cb9f20206c0d05bfc6847d881f21d87c5d3d3f7f26af9c3fcab4fd4"
+            "d44fabfcc3f96af2f7d3d3c5871df281d84768fc5bd0c00602f2b96cdd8e6294"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1158,7 +1166,7 @@ mod test {
         let assignments = ancestor_trn
             .get(
                 &NodeId::from_hex(
-                    "060ef58d940a75e43d139d55a5e4d3264dc9eb4f773bffc5729019e47ed27ef5",
+                    "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06",
                 )
                 .unwrap(),
             )
@@ -1355,12 +1363,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15")
+            NodeId::from_hex("150fac8310ed05413019094911dc1025801e1303bdd96c2bb926aede2a8420d0")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("94628edd6cb9f20206c0d05bfc6847d881f21d87c5d3d3f7f26af9c3fcab4fd4")
+            NodeId::from_hex("d44fabfcc3f96af2f7d3d3c5871df281d84768fc5bd0c00602f2b96cdd8e6294")
                 .unwrap()
         );
 
@@ -1369,12 +1377,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("978e5928309838e4ef1aa6206f4fa4a297ae454108baf74940949af8ace89aec")
+            NodeId::from_hex("ec9ae8acf89a944049f7ba084145ae97a2a44f6f20a61aefe438983028598e97")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("4e53133b0581f0b69c0c3da9a84ec0e8acacd050862797682e42f36de5584215")
+            NodeId::from_hex("154258e56df3422e6897278650d0acace8c04ea8a93d0c9cb6f081053b13534e")
                 .unwrap()
         );
     }
@@ -1396,7 +1404,7 @@ mod test {
         );
         assert_eq!(
             schemaid,
-            SchemaId::from_hex("8eafd3360d65258952f4d9575eac1b1f18ee185129718293b6d7622b1edd1f20")
+            SchemaId::from_hex("201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e")
                 .unwrap()
         );
         assert_eq!(chain, &bp::chain::Chain::Mainnet);

@@ -94,8 +94,9 @@ checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 
 [[package]]
 name = "bitcoin"
-version = "0.25.0"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?tag=lnpbp-v0.1.0-rc1#dc06d451c01ef7b22509f0eb4db1f817e4e83daa"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "302fba01c5210a0321cc459dbe7f6b4fc21dffe77241c1690bce129814fa11fc"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -105,8 +106,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hashes"
-version = "0.9.0"
-source = "git+https://github.com/LNP-BP/bitcoin_hashes?tag=lnpbp-v0.1.0-rc1#7269ef478004a6059377bbd0e8b3ffd1839de55c"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d7f47af3cbd7f41c5d9207d10c76aede44087f7c6be090aab6bd431a9daae28"
 dependencies = [
  "serde",
 ]
@@ -582,8 +584,9 @@ dependencies = [
 
 [[package]]
 name = "miniscript"
-version = "2.0.0"
-source = "git+https://github.com/LNP-BP/rust-miniscript?tag=lnpbp-v0.1.0-rc1#ba436de1b8a5953d5050dbc31fa4642e740e4438"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4f8542804cd816cad1aaea64e3e2e326e401269ad6dc6661d2f8be7b3f76e46"
 dependencies = [
  "bitcoin",
  "serde",
@@ -732,9 +735,9 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "pin-project-lite"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e555d9e657502182ac97b539fb3dae8b79cda19e3e4f8ffb5e8de4f18df93c95"
+checksum = "c917123afa01924fc84bb20c4c03f004d9c38e5127e3c039bbf7f4b9c76a2f6b"
 
 [[package]]
 name = "pkg-config"
