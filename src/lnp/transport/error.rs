@@ -18,6 +18,4 @@ pub enum Error {
     #[from(std::io::Error)]
     SocketError,
     RequiresLocalSocket,
-    #[from(!)]
-    UnreachableError,
 }
