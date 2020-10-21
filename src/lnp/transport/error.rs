@@ -18,4 +18,7 @@ pub enum Error {
     #[from(std::io::Error)]
     SocketError,
     RequiresLocalSocket,
+    // TODO: (v0.2) Make session-specific error type and move there
+    #[from(crate::lnp::session::NoError)]
+    EncodingError,
 }

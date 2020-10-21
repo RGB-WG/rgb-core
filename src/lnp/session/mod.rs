@@ -29,7 +29,7 @@ pub use node_addr::NodeAddr;
 pub use node_locator::NodeLocator;
 pub use session::{Inbound, Outbound, Session, SessionTrait};
 pub use transcoders::{
-    Decrypt, DecryptionError, Encrypt, NoEncryption, Transcode,
+    Decrypt, DecryptionError, Encrypt, NoEncryption, NoError, Transcode,
 };
 
 pub const MAX_TRANSPORT_FRAME_SIZE: usize = 65569;
