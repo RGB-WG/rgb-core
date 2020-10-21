@@ -80,24 +80,25 @@ jobs:
         with:
           command: build
           args: --features=${{matrix.feature}}
-# Uncomment this once the library will support non-nightly rust compiler
-#  toolchains:
-#    runs-on: ubuntu-latest
-#    strategy:
-#      matrix:
-#        toolchain: [ nightly, beta, stable, 1.46.0 ]
-#    steps:
-#      - uses: actions/checkout@v2
-#      - name: Install rust ${{matrix.toolchain}}
-#        uses: actions-rs/toolchain@v1
-#        with:
-#          toolchain: ${{matrix.toolchain}}
-#          override: true
-#      - name: All features
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: build
-#          args: --workspace --all-targets --all-features
+  toolchains:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain: [ nightly, beta, stable ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install -y libzmq3-dev libssl-dev
+      - name: Install rust ${{matrix.toolchain}}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{matrix.toolchain}}
+          override: true
+      - name: All features
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --workspace --all-targets --all-features
   dependency:
     runs-on: ubuntu-latest
     steps:
