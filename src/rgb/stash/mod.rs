@@ -16,7 +16,7 @@ mod consignment;
 mod disclosure;
 mod stash;
 
-pub use anchor::{Anchor, AnchorId};
+pub use anchor::{Anchor, AnchorId, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK};
 pub use consignment::{Consignment, ConsignmentEndpoints, TransitionData};
 pub use disclosure::Disclosure;
 pub use stash::Stash;
