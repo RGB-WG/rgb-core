@@ -55,7 +55,6 @@ extern crate serde_crate as serde;
 // Bitcoin-specific imports. We make them public while we use custom versions
 // of the libs so downstream dependencies can use them directly from this lib
 // TODO: Refactor re-exported bitcoin and hashes functionality
-#[macro_use]
 pub extern crate bitcoin;
 #[macro_use]
 pub extern crate bitcoin_hashes;

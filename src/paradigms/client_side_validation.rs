@@ -229,7 +229,6 @@ hash_newtype!(
     32,
     doc = "A hash of a arbitrary Merkle tree branch or root"
 );
-impl_hashencode!(MerkleNode);
 
 impl strict_encoding::Strategy for MerkleNode {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
