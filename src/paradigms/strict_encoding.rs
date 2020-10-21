@@ -30,7 +30,7 @@ pub use bitcoin::consensus::encode::{ReadExt, WriteExt};
 /// from [paradigms::commit_verify] module.
 pub trait StrictEncode {
     /// Implementation-dependent error type
-    type Error: std::error::Error + From<Error> = Error;
+    type Error: std::error::Error + From<Error>;
 
     /// Encode with the given [std::io::Writer] instance; must return result
     /// with either amount of bytes encoded – or implementation-specific
@@ -48,7 +48,7 @@ pub trait StrictEncode {
 /// provided commitment.
 pub trait StrictDecode: Sized {
     /// Implementation-dependent error type
-    type Error: std::error::Error + From<Error> = Error;
+    type Error: std::error::Error + From<Error>;
 
     /// Decode with the given [std::io::Reader] instance; must either
     /// construct an instance or return implementation-specific error type.

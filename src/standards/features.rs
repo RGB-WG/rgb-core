@@ -24,7 +24,7 @@ use std::io;
 use std::ops::{BitAnd, BitOr, BitXor};
 use std::str::FromStr;
 
-use crate::paradigms::strict_encoding::StrictDecode;
+use crate::paradigms::strict_encoding::{Error, StrictDecode};
 use crate::strict_encoding::StrictEncode;
 
 /// A single feature flag, represented by it's number inside feature vector
@@ -238,12 +238,16 @@ impl TryFrom<&[u8]> for FlagVec {
 }
 
 impl StrictEncode for FlagVec {
+    type Error = Error;
+    #[inline]
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
         self.shrunk().0.strict_encode(e)
     }
 }
 
 impl StrictDecode for FlagVec {
+    type Error = Error;
+    #[inline]
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
         Ok(Self(StrictDecode::strict_decode(d)?))
     }

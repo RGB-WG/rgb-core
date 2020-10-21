@@ -160,11 +160,13 @@ impl Metadata {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{StrictDecode, StrictEncode};
+    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
     use amplify::Wrapper;
     use std::io;
 
     impl StrictEncode for Metadata {
+        type Error = Error;
+
         fn strict_encode<E: io::Write>(
             &self,
             e: E,
@@ -174,6 +176,8 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Metadata {
+        type Error = Error;
+
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
             Ok(Self::from_inner(<Self as Wrapper>::Inner::strict_decode(
                 d,

@@ -597,7 +597,7 @@ fn strict_encode_inner_struct(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::StrictEncode for #ident_name #ty_generics #where_clause {
-            #error_type_def
+            type Error = #error_type_def;
 
             #[inline]
             fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
@@ -661,7 +661,7 @@ fn strict_decode_inner_struct(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::StrictDecode for #ident_name #ty_generics #where_clause {
-            #error_type_def
+            type Error = #error_type_def;
 
             #[inline]
             fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, Self::Error> {
@@ -675,19 +675,21 @@ fn get_strict_error(
     input: &DeriveInput,
     data: &DataStruct,
 ) -> Result<TokenStream2> {
+    let import = get_strict_crate(input, data)?;
+
     let name = "strict_error";
     let example = "#[strict_error(ErrorType)]";
     let mut strict_error: Option<Ident> = None;
 
     let list = match attr_list(&input.attrs, name, example)? {
         Some(x) => x,
-        None => return Ok(quote! {}),
+        None => return Ok(quote! { #import::Error }),
     };
     let strict_error = attr_nested_one_arg(list.into_iter(), name, example)?;
 
     Ok(match strict_error {
-        Some(ident) => quote! { type Error = #ident; },
-        None => quote! {},
+        Some(ident) => quote! { #ident },
+        None => quote! { #import::Error },
     })
 }
 
