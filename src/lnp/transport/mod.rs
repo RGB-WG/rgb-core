@@ -53,8 +53,9 @@ pub enum Error {
 
     RequiresLocalSocket,
 
-    #[from(!)]
-    Unreachable,
+    // TODO: (v0.2) Make session-specific error type and move there
+    #[from(crate::lnp::session::NoError)]
+    EncodingError,
 
     /// The provided frame size ({_0}) exceeds frame size limit of
     /// MAX_FRAME_SIZE bytes

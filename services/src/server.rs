@@ -80,7 +80,7 @@ where
 {
     type ErrorType = rpc::Error;
 
-    fn try_run_loop(mut self) -> Result<!, Self::ErrorType> {
+    fn try_run_loop(mut self) -> Result<(), Self::ErrorType> {
         loop {
             match self.run() {
                 Ok(_) => debug!("API request processing complete"),

@@ -17,17 +17,6 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "147a917ced31ff0d8cccbd059746752279f326dae624e0b2fadc66be4a24a1ef"
-dependencies = [
- "parse_arg",
- "serde 1.0.117",
- "torut",
-]
-
-[[package]]
-name = "amplify"
 version = "2.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8bf1e0bf054f0630d4908aa8ca684ef30ad1dcaea805c8bfe8cf2f76b747835"
@@ -37,17 +26,6 @@ dependencies = [
  "serde 1.0.117",
  "stringly_conversions",
  "torut",
-]
-
-[[package]]
-name = "amplify_derive"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7efe513fdba3fd0cb0f9020f185dea8c80df9c8641e464dbccc2f55d5611e92"
-dependencies = [
- "amplify 1.2.1",
- "quote 1.0.7",
- "syn 1.0.45",
 ]
 
 [[package]]
@@ -695,10 +673,10 @@ checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "lnpbp"
-version = "0.1.0"
+version = "0.2.0-alpha.1"
 dependencies = [
- "amplify 2.0.6",
- "amplify_derive 2.0.6",
+ "amplify",
+ "amplify_derive",
  "async-trait",
  "bech32",
  "bitcoin",
@@ -708,7 +686,7 @@ dependencies = [
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
- "lnpbp_derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp_derive 0.1.0",
  "miniscript",
  "num-derive",
  "num-traits 0.2.12",
@@ -723,36 +701,36 @@ dependencies = [
 [[package]]
 name = "lnpbp_derive"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8a7977c9c4d47f996d38b345dbc2c9cb34ce92948c375307242fa2531b5b951"
 dependencies = [
- "amplify 2.0.6",
- "lnpbp",
+ "amplify",
  "quote 1.0.7",
  "syn 1.0.45",
 ]
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8a7977c9c4d47f996d38b345dbc2c9cb34ce92948c375307242fa2531b5b951"
+version = "0.2.0-alpha.1"
 dependencies = [
- "amplify 2.0.6",
+ "amplify",
+ "lnpbp",
  "quote 1.0.7",
  "syn 1.0.45",
 ]
 
 [[package]]
 name = "lnpbp_services"
-version = "0.1.0-rc.2"
+version = "0.2.0-alpha.1"
 dependencies = [
- "amplify 1.2.1",
- "amplify_derive 1.2.1",
+ "amplify",
+ "amplify_derive",
  "clap",
  "config",
  "dotenv",
  "env_logger",
  "lnpbp",
- "lnpbp_derive 0.1.0",
+ "lnpbp_derive 0.2.0-alpha.1",
  "log",
  "serde 1.0.117",
  "serde_with",
