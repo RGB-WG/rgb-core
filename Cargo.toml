@@ -96,7 +96,7 @@ bitcoin = { version = "~0.25.0", features = ["rand"] }
 # Listings
 # --------
 #   By default we use tokio-enhanced LNP with Tor support and URL support
-default = ["lnp", "tokio", "tor", "url"]
+default = ["lnp", "rgb", "tor", "url"]
 all = [
        # Library components
        "lnp", "rgb",
