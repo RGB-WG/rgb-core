@@ -210,7 +210,7 @@ impl Unmarshaller {
         // BOLT-2 is checked during `read_exact` call below: if the length
         // exceeds the number of bytes left in the message it will return
         // a error
-        if len > LNP_MSG_MAX_LEN {
+        if len > crate::lnp::LNP_MSG_MAX_LEN {
             Err(Error::TlvRecordInvalidLen)?;
         }
 

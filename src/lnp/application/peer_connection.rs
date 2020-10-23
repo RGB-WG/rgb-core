@@ -15,38 +15,36 @@
 //! with it. Relies on transport layer (BOLT-8-based) protocol.
 
 use bitcoin::secp256k1;
-#[cfg(feature = "tokio")]
 use std::sync::Arc;
+#[cfg(not(feature = "tokio"))]
+use std::sync::Mutex;
 #[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
 use crate::lnp::presentation::Message;
-use crate::lnp::session::{Connection, ConnectionError, NodeAddr};
-#[cfg(feature = "tokio")]
-use crate::lnp::session::{ConnectionInput, ConnectionOutput};
+use crate::lnp::session::{
+    Connection, ConnectionError, ConnectionInput, ConnectionOutput, NodeAddr,
+};
 
-pub struct Peer {
-    pub node: NodeAddr,
-    #[allow(dead_code)]
+pub struct PeerConnection {
+    pub remote_peer: NodeAddr,
     connection: Connection,
     awaiting_pong: bool,
 }
 
-#[cfg(feature = "tokio")]
-pub struct PeerInput {
-    pub node: NodeAddr,
+pub struct PeerConnectionInput {
+    pub remote_peer: NodeAddr,
     pub connection: ConnectionInput,
     awaiting_pong: Arc<Mutex<bool>>,
 }
 
-#[cfg(feature = "tokio")]
-pub struct PeerOutput {
-    pub node: NodeAddr,
+pub struct PeerConnectionOutput {
+    pub remote_peer: NodeAddr,
     pub connection: ConnectionOutput,
     awaiting_pong: Arc<Mutex<bool>>,
 }
 
-impl Peer {
+impl PeerConnection {
     #[cfg(feature = "lightning")]
     pub async fn new_outbound(
         node: NodeAddr,
@@ -65,7 +63,7 @@ impl Peer {
         let connection =
             node.connect(private_key, ephemeral_private_key).await?;
         Ok(Self {
-            node,
+            remote_peer: node,
             connection,
             awaiting_pong: false,
         })
@@ -79,18 +77,17 @@ impl Peer {
         Ok(())
     }
 
-    #[cfg(feature = "tokio")]
-    pub fn split(self) -> (PeerInput, PeerOutput) {
+    pub fn split(self) -> (PeerConnectionInput, PeerConnectionOutput) {
         let (input, output) = self.connection.split();
         let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
         (
-            PeerInput {
-                node: self.node.clone(),
+            PeerConnectionInput {
+                remote_peer: self.remote_peer.clone(),
                 connection: input,
                 awaiting_pong: awaiting_pong.clone(),
             },
-            PeerOutput {
-                node: self.node,
+            PeerConnectionOutput {
+                remote_peer: self.remote_peer,
                 connection: output,
                 awaiting_pong,
             },

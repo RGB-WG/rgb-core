@@ -13,6 +13,7 @@
 
 use std::collections::HashMap;
 
+use lnpbp::lnp::application::rpc_connection::Api;
 use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::transport::zmqsocket::{ApiType, SocketLocator};
 use lnpbp::lnp::{
@@ -22,28 +23,26 @@ use lnpbp::lnp::{
 
 use crate::rpc;
 
-pub struct RpcClient<Endpoints, Api>
+pub struct RpcClient<E, A>
 where
-    Api: rpc::Api,
-    Endpoints: rpc::EndpointTypes,
+    A: Api,
+    E: rpc::EndpointTypes,
 {
-    sessions: HashMap<
-        Endpoints,
-        Session<NoEncryption, transport::zmqsocket::Connection>,
-    >,
-    unmarshaller: Unmarshaller<Api::Reply>,
+    sessions:
+        HashMap<E, Session<NoEncryption, transport::zmqsocket::Connection>>,
+    unmarshaller: Unmarshaller<A::Reply>,
 }
 
-impl<Endpoints, Api> RpcClient<Endpoints, Api>
+impl<E, A> RpcClient<E, A>
 where
-    Api: rpc::Api,
-    Endpoints: rpc::EndpointTypes,
+    A: Api,
+    E: rpc::EndpointTypes,
 {
     pub fn init(
-        endpoints: HashMap<Endpoints, SocketLocator>,
+        endpoints: HashMap<E, SocketLocator>,
         context: &zmq::Context,
     ) -> Result<Self, transport::Error> {
-        let mut sessions: HashMap<Endpoints, Session<_, _>> = none!();
+        let mut sessions: HashMap<E, Session<_, _>> = none!();
         for (service, endpoint) in endpoints {
             sessions.insert(
                 service,
@@ -55,7 +54,7 @@ where
                 )?,
             );
         }
-        let unmarshaller = Api::Reply::create_unmarshaller();
+        let unmarshaller = A::Reply::create_unmarshaller();
         Ok(Self {
             sessions,
             unmarshaller,
@@ -64,9 +63,9 @@ where
 
     pub fn request(
         &mut self,
-        endpoint: Endpoints,
-        request: Api::Request,
-    ) -> Result<Api::Reply, rpc::Error> {
+        endpoint: E,
+        request: A::Request,
+    ) -> Result<A::Reply, rpc::Error> {
         let data = request.encode()?;
         let connection = self
             .sessions

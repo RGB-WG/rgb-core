@@ -15,30 +15,10 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use lnpbp::lnp;
+use lnpbp::lnp::application::rpc_connection::Api;
 
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;
-
-/// Marker trait for LNP RPC requests
-pub trait Request:
-    Clone + Debug + Display + lnp::TypedEnum + lnp::CreateUnmarshaller
-{
-}
-
-/// Marker trait for LNP RPC replies
-pub trait Reply:
-    Clone + Debug + Display + lnp::TypedEnum + lnp::CreateUnmarshaller
-{
-}
-
-/// RPC API pair, connecting [`Request`] type with [`Reply`]
-pub trait Api {
-    /// Requests supported by RPC API
-    type Request: Request;
-
-    /// Replies supported by RPC API
-    type Reply: Reply;
-}
 
 /// Marker traits for endpoint identifiers lists
 pub trait EndpointTypes: Copy + Eq + Hash + Display {}

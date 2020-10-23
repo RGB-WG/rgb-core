@@ -11,86 +11,83 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::{AsAny, Bipolar};
+use amplify::Bipolar;
 use core::borrow::Borrow;
 
 use super::{Decrypt, Encrypt, NodeLocator, Transcode};
 use crate::lnp::session::NoEncryption;
-use crate::lnp::transport::zmqsocket::{
-    ApiType as ZmqType, Connection, SocketLocator,
-};
 use crate::lnp::transport::{
-    self, AsReceiver, AsSender, Duplex, Error, RecvFrame, SendFrame,
+    self, zmqsocket, AsReceiver, AsSender, Duplex, RecvFrame, SendFrame,
 };
 
-pub trait SessionTrait: Bipolar + AsAny {}
-
-pub struct Session<T, S>
+pub struct Session<Transcoder, Transport>
 where
-    T: Transcode,
-    S: Duplex,
+    Transcoder: Transcode,
+    Transport: transport::Duplex,
 {
-    transcoder: T,
-    stream: S,
+    transcoder: Transcoder,
+    transport: Transport,
 }
 
-pub struct Inbound<D, I>
+pub struct SessionInput<Decryptor, Input>
 where
-    D: Decrypt,
-    I: AsReceiver,
+    Decryptor: Decrypt,
+    Input: AsReceiver,
 {
-    pub(self) decryptor: D,
-    pub(self) input: I,
+    pub(self) decryptor: Decryptor,
+    pub(self) input: Input,
 }
 
-pub struct Outbound<E, O>
+pub struct SessionOutput<Encryptor, Output>
 where
-    E: Encrypt,
-    O: AsSender,
+    Encryptor: Encrypt,
+    Output: AsSender,
 {
-    pub(self) encryptor: E,
-    pub(self) output: O,
+    pub(self) encryptor: Encryptor,
+    pub(self) output: Output,
 }
 
-impl<T, S> Session<T, S>
+impl<Trascoder, Transport> Session<Trascoder, Transport>
 where
-    T: Transcode,
-    S: Duplex,
+    Trascoder: Transcode,
+    Transport: transport::Duplex,
 {
-    pub fn new(_node_locator: NodeLocator) -> Result<Self, Error> {
+    pub fn new(_node_locator: NodeLocator) -> Result<Self, transport::Error> {
         unimplemented!()
     }
 }
 
-impl Session<NoEncryption, transport::zmqsocket::Connection> {
+impl Session<NoEncryption, zmqsocket::Connection> {
     pub fn new_zmq_unencrypted(
-        zmq_type: ZmqType,
+        zmq_type: zmqsocket::ApiType,
         context: &zmq::Context,
-        remote: SocketLocator,
-        local: Option<SocketLocator>,
-    ) -> Result<Self, Error> {
+        remote: zmqsocket::SocketLocator,
+        local: Option<zmqsocket::SocketLocator>,
+    ) -> Result<Self, transport::Error> {
         Ok(Self {
             transcoder: NoEncryption,
-            stream: Connection::new(zmq_type, context, remote, local)?,
+            transport: zmqsocket::Connection::new(
+                zmq_type, context, remote, local,
+            )?,
         })
     }
 
     pub fn as_socket(&self) -> &zmq::Socket {
-        &self.stream.as_socket()
+        &self.transport.as_socket()
     }
 }
 
-impl<T, S> Bipolar for Session<T, S>
+impl<Transcoder, Transport> Bipolar for Session<Transcoder, Transport>
 where
-    T: Transcode,
-    T::Left: Decrypt,
-    T::Right: Encrypt,
-    S: Duplex,
-    S::Left: AsReceiver,
-    S::Right: AsSender,
+    Transcoder: Transcode,
+    Transcoder::Left: Decrypt,
+    Transcoder::Right: Encrypt,
+    Transport: Duplex,
+    Transport::Left: AsReceiver,
+    Transport::Right: AsSender,
 {
-    type Left = Inbound<T::Left, S::Left>;
-    type Right = Outbound<T::Right, S::Right>;
+    type Left = SessionInput<Transcoder::Left, Transport::Left>;
+    type Right = SessionOutput<Transcoder::Right, Transport::Right>;
 
     fn join(_left: Self::Left, _right: Self::Right) -> Self {
         unimplemented!()
@@ -101,23 +98,23 @@ where
     }
 }
 
-impl<T, S> Session<T, S>
+impl<Transcoder, Transport> Session<Transcoder, Transport>
 where
-    T: Transcode,
-    S: Duplex,
+    Transcoder: Transcode,
+    Transport: Duplex,
     // TODO: (new) Use session-level error type
-    Error: From<T::Error>,
+    transport::Error: From<Transcoder::Error>,
 {
-    pub fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
-        let reader = self.stream.as_receiver();
+    pub fn recv_raw_message(&mut self) -> Result<Vec<u8>, transport::Error> {
+        let reader = self.transport.as_receiver();
         Ok(self.transcoder.decrypt(reader.recv_frame()?)?)
     }
 
     pub fn send_raw_message(
         &mut self,
         raw: impl Borrow<[u8]>,
-    ) -> Result<usize, Error> {
-        let writer = self.stream.as_sender();
+    ) -> Result<usize, transport::Error> {
+        let writer = self.transport.as_sender();
         Ok(writer.send_frame(self.transcoder.encrypt(raw))?)
     }
 }

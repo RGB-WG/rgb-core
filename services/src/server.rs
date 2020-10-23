@@ -13,6 +13,7 @@
 
 use std::collections::HashMap;
 
+use lnpbp::lnp::application::rpc_connection::Api;
 use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::transport::zmqsocket::{ApiType, SocketLocator};
 use lnpbp::lnp::{
@@ -23,34 +24,32 @@ use lnpbp::lnp::{
 use crate::node::TryService;
 use crate::rpc;
 
-pub struct RpcServer<Endpoints, Api, Handler>
+pub struct RpcServer<E, A, H>
 where
-    Api: rpc::Api,
-    <Api as rpc::Api>::Reply: From<Handler::Error>,
-    Endpoints: rpc::EndpointTypes,
-    Handler: rpc::Handler<Endpoints, Api = Api>,
+    A: Api,
+    A::Reply: From<H::Error>,
+    E: rpc::EndpointTypes,
+    H: rpc::Handler<E, Api = A>,
 {
-    sessions: HashMap<
-        Endpoints,
-        Session<NoEncryption, transport::zmqsocket::Connection>,
-    >,
-    unmarshaller: Unmarshaller<Api::Request>,
-    handler: Handler,
+    sessions:
+        HashMap<E, Session<NoEncryption, transport::zmqsocket::Connection>>,
+    unmarshaller: Unmarshaller<A::Request>,
+    handler: H,
 }
 
-impl<Endpoints, Api, Handler> RpcServer<Endpoints, Api, Handler>
+impl<E, A, H> RpcServer<E, A, H>
 where
-    Api: rpc::Api,
-    <Api as rpc::Api>::Reply: From<Handler::Error>,
-    Endpoints: rpc::EndpointTypes,
-    Handler: rpc::Handler<Endpoints, Api = Api>,
+    A: Api,
+    A::Reply: From<H::Error>,
+    E: rpc::EndpointTypes,
+    H: rpc::Handler<E, Api = A>,
 {
     pub fn init(
-        endpoints: HashMap<Endpoints, SocketLocator>,
+        endpoints: HashMap<E, SocketLocator>,
         context: &zmq::Context,
-        handler: Handler,
+        handler: H,
     ) -> Result<Self, transport::Error> {
-        let mut sessions: HashMap<Endpoints, Session<_, _>> = none!();
+        let mut sessions: HashMap<E, Session<_, _>> = none!();
         for (service, endpoint) in endpoints {
             sessions.insert(
                 service,
@@ -62,7 +61,7 @@ where
                 )?,
             );
         }
-        let unmarshaller = Api::Request::create_unmarshaller();
+        let unmarshaller = A::Request::create_unmarshaller();
         Ok(Self {
             sessions,
             unmarshaller,
@@ -71,12 +70,12 @@ where
     }
 }
 
-impl<Endpoints, Api, Handler> TryService for RpcServer<Endpoints, Api, Handler>
+impl<E, A, H> TryService for RpcServer<E, A, H>
 where
-    Api: rpc::Api,
-    <Api as rpc::Api>::Reply: From<Handler::Error>,
-    Endpoints: rpc::EndpointTypes,
-    Handler: rpc::Handler<Endpoints, Api = Api>,
+    A: Api,
+    A::Reply: From<H::Error>,
+    E: rpc::EndpointTypes,
+    H: rpc::Handler<E, Api = A>,
 {
     type ErrorType = rpc::Error;
 
@@ -93,12 +92,12 @@ where
     }
 }
 
-impl<Endpoints, Api, Handler> RpcServer<Endpoints, Api, Handler>
+impl<E, A, H> RpcServer<E, A, H>
 where
-    Api: rpc::Api,
-    <Api as rpc::Api>::Reply: From<Handler::Error>,
-    Endpoints: rpc::EndpointTypes,
-    Handler: rpc::Handler<Endpoints, Api = Api>,
+    A: Api,
+    A::Reply: From<H::Error>,
+    E: rpc::EndpointTypes,
+    H: rpc::Handler<E, Api = A>,
 {
     fn run(&mut self) -> Result<(), rpc::Error> {
         let mut index = vec![];

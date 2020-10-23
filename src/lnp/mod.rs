@@ -19,14 +19,17 @@ pub mod presentation;
 mod session;
 pub mod transport;
 
+pub use application::{
+    channel, PeerConnection, PeerConnectionInput, PeerConnectionOutput,
+};
 pub use presentation::message::{Type, TypedEnum, Unmarshaller};
 pub use presentation::{
     tlv, CreateUnmarshaller, Message, UnknownTypeError, Unmarshall,
     UnmarshallFn,
 };
 pub use session::{
-    ConnectionError, Decrypt, Encrypt, Inbound, LocalNode, NoEncryption,
-    NodeAddr, NodeEndpoint, NodeLocator, Outbound, Session, SessionTrait,
+    ConnectionError, Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr,
+    NodeEndpoint, NodeLocator, Session, SessionInput, SessionOutput,
     ToNodeAddr, Transcode,
 };
 pub use transport::{ftcp, websocket, zmqsocket};
