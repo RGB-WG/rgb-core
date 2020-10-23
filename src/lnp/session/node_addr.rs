@@ -19,7 +19,7 @@ use std::str::FromStr;
 use amplify::internet::InetSocketAddr;
 use bitcoin::secp256k1;
 
-use super::{node_locator, Connection, ConnectionError, NodeLocator};
+use super::{node_locator, NodeLocator};
 use crate::lnp::transport::{zmqsocket, LocalAddr, RemoteAddr};
 use crate::lnp::UrlScheme;
 
@@ -37,6 +37,30 @@ pub enum NodeEndpoint {
     /// encryption
     #[display("{_0}", alt = "{_0:#}")]
     Remote(NodeAddr),
+}
+
+impl From<NodeAddr> for NodeEndpoint {
+    fn from(addr: NodeAddr) -> Self {
+        NodeEndpoint::Remote(addr)
+    }
+}
+
+impl From<LocalAddr> for NodeEndpoint {
+    fn from(addr: LocalAddr) -> Self {
+        NodeEndpoint::Local(addr)
+    }
+}
+
+impl From<NodeLocator> for NodeEndpoint {
+    fn from(locator: NodeLocator) -> Self {
+        NodeAddr::try_from(locator.clone())
+            .map(|addr| NodeEndpoint::Remote(addr))
+            .unwrap_or_else(|_| {
+                NodeEndpoint::Local(LocalAddr::try_from(locator).expect(
+                    "NodeLocator must convert to either NodeAddr or LocalAddr",
+                ))
+            })
+    }
 }
 
 /// Full node address at the session-level including node encryption/id key
@@ -60,26 +84,6 @@ pub struct NodeAddr {
 
 impl_try_from_stringly_standard!(NodeAddr);
 impl_into_stringly_standard!(NodeAddr);
-
-impl NodeAddr {
-    #[cfg(not(feature = "lightning"))]
-    pub async fn connect(
-        &self,
-        private_key: &secp256k1::SecretKey,
-        ephemeral_private_key: &secp256k1::SecretKey,
-    ) -> Result<Connection, ConnectionError> {
-        unimplemented!()
-    }
-
-    #[cfg(feature = "lightning")]
-    pub async fn connect(
-        &self,
-        private_key: &secp256k1::SecretKey,
-        ephemeral_private_key: &secp256k1::SecretKey,
-    ) -> Result<Connection, ConnectionError> {
-        Connection::new(self, private_key, ephemeral_private_key).await
-    }
-}
 
 impl fmt::Display for NodeAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -223,8 +227,74 @@ impl From<NodeAddr> for RemoteAddr {
 
 // TODO: (future) Re-implement with const generics once this rust language
 //       feature will be stabilized and released
+
 /// Trait allowing generic function arguments for application-level
-/// implementations knowning default protocol port
+/// implementations knowing default protocol port
+pub trait ToNodeEndpoint {
+    /// Constructs [`NodeEndpoint`] from an internal data with a default port
+    /// put in place when the port details were not given is such structures
+    /// as [`NodeLocator`]
+    ///
+    /// # Returns
+    /// * `None`, if string conversion fails with [`ParseError`]
+    /// * `Some(`[`NodeEndpoint`]`)` otherwise
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint>;
+}
+
+impl ToNodeEndpoint for NodeEndpoint {
+    #[inline]
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+        Some(self.clone())
+    }
+}
+
+impl ToNodeEndpoint for NodeAddr {
+    #[inline]
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+        Some(self.clone().into())
+    }
+}
+
+impl ToNodeEndpoint for LocalAddr {
+    #[inline]
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+        Some(self.clone().into())
+    }
+}
+
+impl ToNodeEndpoint for NodeLocator {
+    #[inline]
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+        self.with_port(default_port).try_into().ok()
+    }
+}
+
+impl ToNodeEndpoint for String {
+    #[inline]
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+        self.as_str().to_node_endpoint(default_port)
+    }
+}
+
+impl ToNodeEndpoint for &str {
+    #[inline]
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+        NodeEndpoint::try_from(NodeLocator::from_str(&self).ok()?).ok()
+    }
+}
+
+impl<T> ToNodeEndpoint for &T
+where
+    T: ToNodeEndpoint,
+{
+    #[inline]
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+        self.clone().to_node_endpoint(default_port)
+    }
+}
+
+/// Trait allowing generic function arguments for application-level
+/// implementations knowing default protocol port
 pub trait ToNodeAddr {
     /// Constructs [`NodeAddr`] from an internal data with a default port put
     /// in place when the port details were not given is such structures as
@@ -240,26 +310,44 @@ pub trait ToNodeAddr {
     fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr>;
 }
 
-impl ToNodeAddr for NodeLocator {
-    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
-        self.with_port(default_port).try_into().ok()
-    }
-}
-
 impl ToNodeAddr for NodeAddr {
+    #[inline]
     fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
         Some(self.clone())
     }
 }
 
-impl ToNodeAddr for String {
+impl ToNodeAddr for NodeLocator {
+    #[inline]
     fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
-        NodeAddr::from_str(self.as_str()).ok()
+        self.with_port(default_port).try_into().ok()
+    }
+}
+
+impl ToNodeAddr for String {
+    #[inline]
+    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
+        self.as_str().to_node_addr(default_port)
     }
 }
 
 impl ToNodeAddr for &str {
+    #[inline]
     fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
-        NodeAddr::from_str(&self).ok()
+        NodeAddr::from_str(&self)
+            .or_else(|_| {
+                NodeAddr::from_str(&format!("{}:{}", self, default_port))
+            })
+            .ok()
+    }
+}
+
+impl<T> ToNodeAddr for &T
+where
+    T: ToNodeAddr,
+{
+    #[inline]
+    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
+        self.clone().to_node_addr(default_port)
     }
 }

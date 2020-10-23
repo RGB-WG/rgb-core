@@ -11,22 +11,23 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::fmt::{self, Display, Formatter};
+
 use bitcoin::secp256k1;
 #[cfg(feature = "keygen")]
 use bitcoin::secp256k1::rand::thread_rng;
 
 use crate::SECP256K1;
 
-//use super::{NodeAddr, NodeLocator, Session, SessionTrait};
-
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display(Debug)]
+/// Local node private keys
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct LocalNode {
     private_key: secp256k1::SecretKey,
     ephemeral_private_key: secp256k1::SecretKey,
 }
 
 impl LocalNode {
+    /// Constructs new set of private key by using random number generator
     #[cfg(feature = "keygen")]
     pub fn new() -> Self {
         let mut rng = thread_rng();
@@ -53,26 +54,8 @@ impl LocalNode {
     }
 }
 
-/*
-impl LocalNode {
-    pub fn connect(&self, remote: NodeLocator) -> impl SessionTrait {}
-
-    pub fn connect_native(&self, remote: &NodeAddr) -> Session<Transcoder, TcpConnection> {}
-    pub fn connect_ipc(
-        &self,
-        socket_addr: PathBuf,
-        connection_type: ZmqType,
-    ) -> Session<NoEncryption, ZmqConnection> {
+impl Display for LocalNode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "LocalNode({})", self.node_id())
     }
-    pub fn connect_inproc(
-        &self,
-        name: String,
-        context: zmq::Context,
-        connection_type: ZmqType,
-    ) -> Session<NoEncryption, ZmqConnection> {
-    }
-
-    pub fn bind_native(&self, local: InetSocketAddr) -> Bind<TcpListener> {}
 }
-
- */

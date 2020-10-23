@@ -20,7 +20,7 @@ use core::fmt::{Display, Formatter};
 #[cfg(feature = "url")]
 use core::str::FromStr;
 use std::hash::{Hash, Hasher};
-use std::net::{AddrParseError, IpAddr};
+use std::net::{AddrParseError, IpAddr, SocketAddr};
 use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
@@ -28,7 +28,7 @@ use url::Url;
 use amplify::internet::InetAddr;
 use bitcoin::secp256k1;
 
-use crate::lnp::transport::zmqsocket;
+use crate::lnp::transport::{zmqsocket, LocalAddr};
 use crate::lnp::UrlScheme;
 
 /// Universal Node Locator for LNP protocol
@@ -403,6 +403,9 @@ impl UrlScheme for NodeLocator {
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum ParseError {
+    /// The provided protocol can't be used for a [`LocalAddr`]
+    UnsupportedForLocalAddr,
+
     /// Can't parse URL from the given string
     MalformedUrl,
 
@@ -540,7 +543,7 @@ impl FromStr for NodeLocator {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut s = s.to_string();
-        if vec!["lnp:", "lnpu:", "lnpz:", "lnpws:", "lnpt:"]
+        if vec!["lnp:", "lnpu:", "lnpz:", "lnpws:", "lnpt:", "lnph:"]
             .into_iter()
             .find(|p| s.starts_with(*p))
             .is_none()
@@ -657,6 +660,31 @@ impl From<&NodeLocator> for Url {
     fn from(locator: &NodeLocator) -> Self {
         Url::parse(&locator.to_url_string())
             .expect("Internal URL construction error")
+    }
+}
+
+impl TryFrom<NodeLocator> for LocalAddr {
+    type Error = ParseError;
+
+    fn try_from(value: NodeLocator) -> Result<Self, Self::Error> {
+        Ok(match value {
+            NodeLocator::Posix(path) => LocalAddr::Posix(path),
+            #[cfg(feature = "zmq")]
+            NodeLocator::ZmqIpc(path, ..) => {
+                LocalAddr::Zmq(zmqsocket::SocketLocator::Ipc(path))
+            }
+            #[cfg(feature = "zmq")]
+            NodeLocator::ZmqInproc(name, ..) => {
+                LocalAddr::Zmq(zmqsocket::SocketLocator::Inproc(name))
+            }
+            #[cfg(feature = "zmq")]
+            NodeLocator::ZmqTcpUnencrypted(_, ip, Some(port)) => {
+                LocalAddr::Zmq(zmqsocket::SocketLocator::Tcp(SocketAddr::new(
+                    ip, port,
+                )))
+            }
+            _ => Err(ParseError::UnsupportedForLocalAddr)?,
+        })
     }
 }
 

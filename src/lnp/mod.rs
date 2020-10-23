@@ -30,7 +30,7 @@ pub use presentation::{
 pub use session::{
     ConnectionError, Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr,
     NodeEndpoint, NodeLocator, Session, SessionInput, SessionOutput,
-    ToNodeAddr, Transcode,
+    ToNodeAddr, ToNodeEndpoint, Transcode,
 };
 pub use transport::{ftcp, websocket, zmqsocket};
 

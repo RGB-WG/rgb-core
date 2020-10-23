@@ -14,7 +14,6 @@
 //! BOLT-1. Manages state of the remote peer and handles direct communications
 //! with it. Relies on transport layer (BOLT-8-based) protocol.
 
-use bitcoin::secp256k1;
 use std::sync::Arc;
 #[cfg(not(feature = "tokio"))]
 use std::sync::Mutex;
@@ -23,7 +22,8 @@ use tokio::sync::Mutex;
 
 use crate::lnp::presentation::Message;
 use crate::lnp::session::{
-    Connection, ConnectionError, ConnectionInput, ConnectionOutput, NodeAddr,
+    Connection, ConnectionError, ConnectionInput, ConnectionOutput, LocalNode,
+    NodeAddr, ToNodeEndpoint,
 };
 
 pub struct PeerConnection {
@@ -45,28 +45,18 @@ pub struct PeerConnectionOutput {
 }
 
 impl PeerConnection {
-    #[cfg(feature = "lightning")]
     pub async fn new_outbound(
-        node: NodeAddr,
-        private_key: &secp256k1::SecretKey,
-        ephemeral_private_key: &secp256k1::SecretKey,
+        remote: impl ToNodeEndpoint,
+        local: LocalNode,
     ) -> Result<Self, ConnectionError> {
         unimplemented!()
-    }
-
-    #[cfg(not(feature = "lightning"))]
-    pub async fn new_outbound(
-        node: NodeAddr,
-        private_key: &secp256k1::SecretKey,
-        ephemeral_private_key: &secp256k1::SecretKey,
-    ) -> Result<Self, ConnectionError> {
-        let connection =
+        /*let connection =
             node.connect(private_key, ephemeral_private_key).await?;
         Ok(Self {
             remote_peer: node,
             connection,
             awaiting_pong: false,
-        })
+        })*/
     }
 
     pub async fn send(

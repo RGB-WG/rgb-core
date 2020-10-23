@@ -23,6 +23,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+#[cfg(feature = "zmq")]
 use super::zmqsocket;
 use crate::lnp::UrlScheme;
 
@@ -69,7 +70,8 @@ pub enum FramingProtocol {
     Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From,
 )]
 #[display(doc_comments)]
-/// Error parsing [`FramingProtocol`] from string
+/// Error parsing transport-level address types ([`FramingProtocol`],
+/// [`LocalAddr`], [`RemoteAddr`]) from string
 pub enum ParseError {
     /// Unknown string protocol representation
     UnknownProtocol,
@@ -105,7 +107,7 @@ pub enum LocalAddr {
 
     /// Local node operating as a separate **process** or **threads** connected
     /// with unencrypted POSIX file I/O (like in c-lightning)
-    #[display("{_0:?}", alt = "lnp://{_0:?}")]
+    #[display("{_0:?}", alt = "lnp:{_0:?}")]
     Posix(PathBuf),
 }
 
@@ -136,7 +138,7 @@ pub enum RemoteAddr {
 
     /// End-to-end encryption over web connection: think of this as LN protocol
     /// streamed over HTTP
-    #[display("{_0}", alt = "lnphttp://{_0}")]
+    #[display("{_0}", alt = "lnph://{_0}")]
     Http(InetSocketAddr),
 
     /// End-to-end ecnruption over web connection: think of this as LN protocol
@@ -148,13 +150,15 @@ pub enum RemoteAddr {
     /// SMTP connection: asynchronous end-to-end-over SMTP information transfer
     /// which is useful for ultra-low bandwidth non-real-time connections like
     /// satellite networks
-    #[display("{_0}", alt = "lnpsmtp://{_0}")]
+    #[display("{_0}", alt = "lnpm://{_0}")]
     Smtp(InetSocketAddr),
 }
 
 impl UrlScheme for LocalAddr {
     fn url_scheme(&self) -> &'static str {
         match self {
+            #[cfg(feature = "zmq")]
+            LocalAddr::Zmq(zmqsocket::SocketLocator::Tcp(..)) => "lnpz://",
             #[cfg(feature = "zmq")]
             LocalAddr::Zmq(_) => "lnpz:",
             LocalAddr::Posix(_) => "lnp:",
@@ -169,8 +173,8 @@ impl UrlScheme for RemoteAddr {
             #[cfg(feature = "zmq")]
             RemoteAddr::Zmq(_) => "lnpz://",
             RemoteAddr::Ftcp(_) => "lnp://",
-            RemoteAddr::Smtp(_) => "lnpsmtp://",
-            RemoteAddr::Http(_) => "lnphttp://",
+            RemoteAddr::Smtp(_) => "lnpm://",
+            RemoteAddr::Http(_) => "lnph://",
             #[cfg(feature = "websocket")]
             RemoteAddr::Websocket(_) => "lnpws://",
         }

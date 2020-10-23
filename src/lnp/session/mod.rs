@@ -26,7 +26,7 @@ pub use connection::{Connection, ConnectionError};
 #[cfg(feature = "tokio")]
 pub use connection::{ConnectionInput, ConnectionOutput};
 pub use local_node::LocalNode;
-pub use node_addr::{NodeAddr, NodeEndpoint, ToNodeAddr};
+pub use node_addr::{NodeAddr, NodeEndpoint, ToNodeAddr, ToNodeEndpoint};
 pub use node_locator::NodeLocator;
 pub use session::{Session, SessionInput, SessionOutput};
 pub use transcoders::{
