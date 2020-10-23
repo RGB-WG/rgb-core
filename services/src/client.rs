@@ -69,12 +69,12 @@ where
         request: A::Request,
     ) -> Result<A::Reply, rpc::Error> {
         let data = request.encode()?;
-        let connection = self
+        let session = self
             .sessions
             .get_mut(&endpoint)
             .ok_or(rpc::Error::UnknownEndpoint(endpoint.to_string()))?;
-        connection.send_raw_message(data)?;
-        let raw = connection.recv_raw_message()?;
+        session.send_raw_message(data)?;
+        let raw = session.recv_raw_message()?;
         let reply = self.unmarshaller.unmarshall(&raw)?;
         Ok((&*reply).clone())
     }

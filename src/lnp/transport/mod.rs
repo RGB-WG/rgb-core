@@ -91,29 +91,12 @@ pub trait AsSender {
 ///
 /// Any type implementing both [`AsReceiver`] and [`AsSender`], plust providing
 /// [`Bipolar`] trait implementation has a blanket implementation of this trait
-pub trait Connection
-where
-    Self: AsReceiver
-        + AsSender
-        + Bipolar<
-            Left = <Self as AsReceiver>::Receiver,
-            Right = <Self as AsSender>::Sender,
-        >,
-{
-}
+pub trait Connection {}
 
-/// Blanket implementation of [`Duplex`] trait for all types implementing both
-/// [`AsReceiver`] and [`AsSender`] plus supporting split into sending and
+/// Blanket implementation of [`Connection`] trait for all types implementing
+/// both [`AsReceiver`] and [`AsSender`] plus supporting split into sending and
 /// reading halt-types with [`Bipolar`] trait implementation.
-impl<T> Connection for T where
-    T: AsReceiver
-        + AsSender
-        + Bipolar<
-            Left = <T as AsReceiver>::Receiver,
-            Right = <T as AsSender>::Sender,
-        >
-{
-}
+impl<T> Connection for T where T: AsReceiver + AsSender + Bipolar {}
 
 /// Frame receiving type which is able to parse raw data (streamed or framed by
 /// an underlying overlaid protocol such as ZMQ, HTTP, Websocket).

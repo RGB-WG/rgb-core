@@ -126,6 +126,8 @@ pub enum RemoteAddr {
     #[display("{_0}", alt = "lnp://{_0}")]
     Ftcp(InetSocketAddr),
 
+    // TODO: (new) consider removing and converting `RemoteAddr` into
+    //       encryption-only type
     /// POSIX socket
     #[display("{_0:?}", alt = "lnp:{_0:?}")]
     Posix(PathBuf),

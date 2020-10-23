@@ -331,6 +331,25 @@ impl Bipolar for Connection {
     }
 }
 
+// We need this implementation due to bipolar nature of the connection, which,
+// when split, returns naked WrappedSocket objects, which must be `AsReceiver`/
+// `AsSender` by themselves
+impl AsReceiver for WrappedSocket {
+    type Receiver = Self;
+
+    fn as_receiver(&mut self) -> &mut Self::Receiver {
+        self
+    }
+}
+
+impl AsSender for WrappedSocket {
+    type Sender = Self;
+
+    fn as_sender(&mut self) -> &mut Self::Sender {
+        self
+    }
+}
+
 impl RecvFrame for WrappedSocket {
     #[inline]
     fn recv_frame(&mut self) -> Result<Vec<u8>, Error> {

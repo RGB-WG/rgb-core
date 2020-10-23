@@ -11,11 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Bipolar;
 use std::fmt::{Debug, Display};
 
 use crate::lnp::presentation::{self, message};
-use crate::lnp::session::{self, Session, ToNodeAddr};
-use crate::lnp::transport;
+use crate::lnp::session::{Decrypt, Encrypt, Session, ToNodeAddr, Transcode};
+use crate::lnp::transport::{
+    AsReceiver, AsSender, Connection, RecvFrame, SendFrame,
+};
 
 /// Marker trait for LNP RPC requests
 pub trait Request:
@@ -38,21 +41,29 @@ pub trait Api {
     type Reply: Reply;
 }
 
-pub struct RpcConnection<A, Ts, Tp>
+pub struct RpcConnection<A, T, C>
 where
     A: Api,
-    Ts: session::Transcode,
-    Tp: transport::Connection,
+    T: Transcode,
+    T::Left: Decrypt,
+    T::Right: Encrypt,
+    C: Connection + AsReceiver + AsSender + Bipolar,
+    C::Left: RecvFrame,
+    C::Right: SendFrame,
 {
     api: A,
-    session: Session<Ts, Tp>,
+    session: Session<T, C>,
 }
 
-impl<A, Ts, Tp> RpcConnection<A, Ts, Tp>
+impl<A, T, C> RpcConnection<A, T, C>
 where
     A: Api,
-    Ts: session::Transcode,
-    Tp: transport::Connection,
+    T: Transcode,
+    T::Left: Decrypt,
+    T::Right: Encrypt,
+    C: Connection + AsReceiver + AsSender + Bipolar,
+    C::Left: RecvFrame,
+    C::Right: SendFrame,
 {
     pub fn new(remote: impl ToNodeAddr) -> Result<Self, presentation::Error> {
         unimplemented!()
