@@ -42,6 +42,7 @@ where
         endpoints: HashMap<E, SocketLocator>,
         context: &zmq::Context,
     ) -> Result<Self, transport::Error> {
+        /*
         let mut sessions: HashMap<E, Session<_, _>> = none!();
         for (service, endpoint) in endpoints {
             sessions.insert(
@@ -58,7 +59,8 @@ where
         Ok(Self {
             sessions,
             unmarshaller,
-        })
+        })*/
+        unimplemented!()
     }
 
     pub fn request(

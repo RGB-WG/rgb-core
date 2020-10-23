@@ -42,7 +42,7 @@ pub struct RpcConnection<A, Ts, Tp>
 where
     A: Api,
     Ts: session::Transcode,
-    Tp: transport::Duplex,
+    Tp: transport::Connection,
 {
     api: A,
     session: Session<Ts, Tp>,
@@ -52,7 +52,7 @@ impl<A, Ts, Tp> RpcConnection<A, Ts, Tp>
 where
     A: Api,
     Ts: session::Transcode,
-    Tp: transport::Duplex,
+    Tp: transport::Connection,
 {
     pub fn new(remote: impl ToNodeAddr) -> Result<Self, presentation::Error> {
         unimplemented!()

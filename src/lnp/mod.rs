@@ -28,11 +28,11 @@ pub use presentation::{
     UnmarshallFn,
 };
 pub use session::{
-    ConnectionError, Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr,
-    NodeEndpoint, NodeLocator, Session, SessionInput, SessionOutput,
-    ToNodeAddr, ToNodeEndpoint, Transcode,
+    Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr, NodeEndpoint,
+    NodeLocator, Session, SessionInput, SessionOutput, ToNodeAddr,
+    ToNodeEndpoint, Transcode,
 };
-pub use transport::{ftcp, websocket, zmqsocket};
+pub use transport::{ftcp, websocket, zmqsocket, Connection};
 
 pub const LNP_MSG_MAX_LEN: usize = core::u64::MAX as usize;
 

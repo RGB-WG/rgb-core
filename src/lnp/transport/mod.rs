@@ -91,7 +91,7 @@ pub trait AsSender {
 ///
 /// Any type implementing both [`AsReceiver`] and [`AsSender`], plust providing
 /// [`Bipolar`] trait implementation has a blanket implementation of this trait
-pub trait Duplex
+pub trait Connection
 where
     Self: AsReceiver
         + AsSender
@@ -105,7 +105,7 @@ where
 /// Blanket implementation of [`Duplex`] trait for all types implementing both
 /// [`AsReceiver`] and [`AsSender`] plus supporting split into sending and
 /// reading halt-types with [`Bipolar`] trait implementation.
-impl<T> Duplex for T where
+impl<T> Connection for T where
     T: AsReceiver
         + AsSender
         + Bipolar<

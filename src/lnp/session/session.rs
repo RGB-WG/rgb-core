@@ -14,50 +14,41 @@
 use amplify::Bipolar;
 use core::borrow::Borrow;
 
-use super::{Decrypt, Encrypt, NodeLocator, Transcode};
+use super::{Decrypt, Encrypt, Transcode};
 use crate::lnp::session::NoEncryption;
 use crate::lnp::transport::{
-    self, zmqsocket, AsReceiver, AsSender, Duplex, RecvFrame, SendFrame,
+    zmqsocket, AsReceiver, AsSender, Connection, Error, RecvFrame, SendFrame,
 };
 
-pub struct Session<Transcoder, Transport>
+pub struct Session<T, C>
 where
-    Transcoder: Transcode,
-    Transport: transport::Duplex,
+    T: Transcode,
+    C: Connection,
 {
-    transcoder: Transcoder,
-    transport: Transport,
+    transcoder: T,
+    transport: C,
 }
 
-pub struct SessionInput<Decryptor, Input>
+pub struct SessionInput<D, R>
 where
-    Decryptor: Decrypt,
-    Input: AsReceiver,
+    D: Decrypt,
+    R: AsReceiver,
 {
-    pub(self) decryptor: Decryptor,
-    pub(self) input: Input,
+    pub(self) decryptor: D,
+    pub(self) input: R,
 }
 
-pub struct SessionOutput<Encryptor, Output>
+pub struct SessionOutput<E, S>
 where
-    Encryptor: Encrypt,
-    Output: AsSender,
+    E: Encrypt,
+    S: AsSender,
 {
-    pub(self) encryptor: Encryptor,
-    pub(self) output: Output,
-}
-
-impl<Trascoder, Transport> Session<Trascoder, Transport>
-where
-    Trascoder: Transcode,
-    Transport: transport::Duplex,
-{
-    pub fn new(_node_locator: NodeLocator) -> Result<Self, transport::Error> {
-        unimplemented!()
-    }
+    pub(self) encryptor: E,
+    pub(self) output: S,
 }
 
 impl Session<NoEncryption, zmqsocket::Connection> {
+    /*
     pub fn new_zmq_unencrypted(
         zmq_type: zmqsocket::ApiType,
         context: &zmq::Context,
@@ -71,23 +62,24 @@ impl Session<NoEncryption, zmqsocket::Connection> {
             )?,
         })
     }
+     */
 
     pub fn as_socket(&self) -> &zmq::Socket {
         &self.transport.as_socket()
     }
 }
 
-impl<Transcoder, Transport> Bipolar for Session<Transcoder, Transport>
+impl<T, C> Bipolar for Session<T, C>
 where
-    Transcoder: Transcode,
-    Transcoder::Left: Decrypt,
-    Transcoder::Right: Encrypt,
-    Transport: Duplex,
-    Transport::Left: AsReceiver,
-    Transport::Right: AsSender,
+    T: Transcode,
+    T::Left: Decrypt,
+    T::Right: Encrypt,
+    C: Connection,
+    C::Left: AsReceiver,
+    C::Right: AsSender,
 {
-    type Left = SessionInput<Transcoder::Left, Transport::Left>;
-    type Right = SessionOutput<Transcoder::Right, Transport::Right>;
+    type Left = SessionInput<T::Left, C::Left>;
+    type Right = SessionOutput<T::Right, C::Right>;
 
     fn join(_left: Self::Left, _right: Self::Right) -> Self {
         unimplemented!()
@@ -98,14 +90,14 @@ where
     }
 }
 
-impl<Transcoder, Transport> Session<Transcoder, Transport>
+impl<T, C> Session<T, C>
 where
-    Transcoder: Transcode,
-    Transport: Duplex,
+    T: Transcode,
+    C: Connection,
     // TODO: (new) Use session-level error type
-    transport::Error: From<Transcoder::Error>,
+    Error: From<T::Error>,
 {
-    pub fn recv_raw_message(&mut self) -> Result<Vec<u8>, transport::Error> {
+    pub fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
         let reader = self.transport.as_receiver();
         Ok(self.transcoder.decrypt(reader.recv_frame()?)?)
     }
@@ -113,7 +105,7 @@ where
     pub fn send_raw_message(
         &mut self,
         raw: impl Borrow<[u8]>,
-    ) -> Result<usize, transport::Error> {
+    ) -> Result<usize, Error> {
         let writer = self.transport.as_sender();
         Ok(writer.send_frame(self.transcoder.encrypt(raw))?)
     }

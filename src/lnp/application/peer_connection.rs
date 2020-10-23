@@ -20,43 +20,39 @@ use std::sync::Mutex;
 #[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
-use crate::lnp::presentation::Message;
-use crate::lnp::session::{
-    Connection, ConnectionError, ConnectionInput, ConnectionOutput, LocalNode,
-    NodeAddr, ToNodeEndpoint,
-};
+//use crate::lnp::presentation::Message;
+use crate::lnp::session::NodeAddr;
 
 pub struct PeerConnection {
     pub remote_peer: NodeAddr,
-    connection: Connection,
     awaiting_pong: bool,
 }
 
 pub struct PeerConnectionInput {
     pub remote_peer: NodeAddr,
-    pub connection: ConnectionInput,
     awaiting_pong: Arc<Mutex<bool>>,
 }
 
 pub struct PeerConnectionOutput {
     pub remote_peer: NodeAddr,
-    pub connection: ConnectionOutput,
     awaiting_pong: Arc<Mutex<bool>>,
 }
 
+/*
 impl PeerConnection {
-    pub async fn new_outbound(
+    pub async fn with(
         remote: impl ToNodeEndpoint,
         local: LocalNode,
     ) -> Result<Self, ConnectionError> {
+        let endpoint = remote.to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT);
         unimplemented!()
-        /*let connection =
+        let connection =
             node.connect(private_key, ephemeral_private_key).await?;
         Ok(Self {
             remote_peer: node,
             connection,
             awaiting_pong: false,
-        })*/
+        })
     }
 
     pub async fn send(
@@ -84,3 +80,4 @@ impl PeerConnection {
         )
     }
 }
+*/

@@ -14,7 +14,6 @@
 //! BOLT-8 related structures and functions covering Lightning network
 //! transport layer
 
-mod connection;
 mod local_node;
 pub mod node_addr;
 pub mod node_locator;
@@ -22,9 +21,6 @@ mod noise;
 mod session;
 mod transcoders;
 
-pub use connection::{Connection, ConnectionError};
-#[cfg(feature = "tokio")]
-pub use connection::{ConnectionInput, ConnectionOutput};
 pub use local_node::LocalNode;
 pub use node_addr::{NodeAddr, NodeEndpoint, ToNodeAddr, ToNodeEndpoint};
 pub use node_locator::NodeLocator;

@@ -225,6 +225,12 @@ impl From<NodeAddr> for RemoteAddr {
     }
 }
 
+/*
+impl NodeAddr {
+    pub fn connect() -> Session {}
+}
+ */
+
 // TODO: (future) Re-implement with const generics once this rust language
 //       feature will be stabilized and released
 
@@ -289,7 +295,7 @@ where
 {
     #[inline]
     fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
-        self.clone().to_node_endpoint(default_port)
+        (*self).to_node_endpoint(default_port)
     }
 }
 
@@ -348,6 +354,6 @@ where
 {
     #[inline]
     fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
-        self.clone().to_node_addr(default_port)
+        (*self).to_node_addr(default_port)
     }
 }
