@@ -667,6 +667,7 @@ mod test {
     use super::*;
     use crate::lnp::session::{node_addr, NodeAddr};
     use crate::lnp::transport::RemoteAddr;
+    use std::net::SocketAddr;
 
     #[test]
     fn test_native() {
@@ -948,11 +949,14 @@ mod test {
 
         assert_eq!(
             NodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::Error::NoPort)
         );
         assert_eq!(
             NodeAddr::try_from(locator_with_port.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Ok(NodeAddr {
+                node_id: pubkey1,
+                remote_addr: RemoteAddr::Zmq(SocketAddr::new(inet1, 24))
+            })
         );
 
         assert_eq!(
