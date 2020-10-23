@@ -20,7 +20,7 @@ use crate::lnp::transport::zmqsocket::{
     ApiType as ZmqType, Connection, SocketLocator,
 };
 use crate::lnp::transport::{
-    self, Duplex, Error, Receiver, RecvFrame, SendFrame, Sender,
+    self, AsReceiver, AsSender, Duplex, Error, RecvFrame, SendFrame,
 };
 
 pub trait SessionTrait: Bipolar + AsAny {}
@@ -37,7 +37,7 @@ where
 pub struct Inbound<D, I>
 where
     D: Decrypt,
-    I: Receiver,
+    I: AsReceiver,
 {
     pub(self) decryptor: D,
     pub(self) input: I,
@@ -46,7 +46,7 @@ where
 pub struct Outbound<E, O>
 where
     E: Encrypt,
-    O: Sender,
+    O: AsSender,
 {
     pub(self) encryptor: E,
     pub(self) output: O,
@@ -86,8 +86,8 @@ where
     T::Left: Decrypt,
     T::Right: Encrypt,
     S: Duplex,
-    S::Left: Receiver,
-    S::Right: Sender,
+    S::Left: AsReceiver,
+    S::Right: AsSender,
 {
     type Left = Inbound<T::Left, S::Left>;
     type Right = Outbound<T::Right, S::Right>;
@@ -105,10 +105,11 @@ impl<T, S> Session<T, S>
 where
     T: Transcode,
     S: Duplex,
+    // TODO: (new) Use session-level error type
     Error: From<T::Error>,
 {
     pub fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
-        let reader = self.stream.receiver();
+        let reader = self.stream.as_receiver();
         Ok(self.transcoder.decrypt(reader.recv_frame()?)?)
     }
 
@@ -116,7 +117,7 @@ where
         &mut self,
         raw: impl Borrow<[u8]>,
     ) -> Result<usize, Error> {
-        let writer = self.stream.sender();
+        let writer = self.stream.as_sender();
         Ok(writer.send_frame(self.transcoder.encrypt(raw))?)
     }
 }

@@ -26,10 +26,19 @@ pub use presentation::{
 };
 pub use session::{
     ConnectionError, Decrypt, Encrypt, Inbound, LocalNode, NoEncryption,
-    NodeAddr, NodeLocator, Outbound, Session, SessionTrait, Transcode,
+    NodeAddr, NodeEndpoint, NodeLocator, Outbound, Session, SessionTrait,
+    ToNodeAddr, Transcode,
 };
 pub use transport::{ftcp, websocket, zmqsocket};
 
 pub const LNP_MSG_MAX_LEN: usize = core::u64::MAX as usize;
 
 pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;
+
+/// Trait used by different address types (transport-, session- and
+/// presentation-based) for getting scheme part of the URL
+pub trait UrlScheme {
+    /// Returns full URL scheme string (i.e. including `:` or `://` parts)
+    /// corresponding to the provided address
+    fn url_scheme(&self) -> &'static str;
+}

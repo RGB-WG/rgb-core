@@ -130,6 +130,13 @@ pub struct NoEncryption;
 #[display(Debug)]
 pub struct NoError;
 
+// TODO: (new) change to session error once it will be introduced
+impl From<NoError> for crate::lnp::transport::Error {
+    fn from(_: NoError) -> Self {
+        panic!("NoError can't happen!")
+    }
+}
+
 impl Encrypt for NoEncryption {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
         buffer.borrow().to_vec()

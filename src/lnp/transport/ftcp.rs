@@ -57,3 +57,6 @@ impl SendFrame for std::net::TcpStream {
         Ok(data.len())
     }
 }
+
+// TODO: (v1) Do Async... implementations for FTCP based on
+//       tokio::net::TcpStream

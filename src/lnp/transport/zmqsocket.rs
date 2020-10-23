@@ -14,7 +14,6 @@
 use amplify::Bipolar;
 #[cfg(feature = "url")]
 use core::convert::TryFrom;
-use core::fmt::{self, Display, Formatter};
 #[cfg(feature = "url")]
 use core::str::FromStr;
 use std::net::SocketAddr;
@@ -22,7 +21,7 @@ use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
 
-use super::{Duplex, Error, Receiver, RecvFrame, SendFrame, Sender};
+use super::{AsReceiver, AsSender, Error, RecvFrame, SendFrame};
 
 /// API type for node-to-node communications used by ZeroMQ
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
@@ -119,32 +118,30 @@ impl FromStr for ApiType {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", tag = "type")
 )]
 pub enum SocketLocator {
+    #[display("{_0}", alt = "inproc://{_0}")]
     Inproc(String),
+
+    #[display("{_0:?}", alt = "ipc://{_0:?}")]
     Ipc(PathBuf),
+
+    #[display("{_0}", alt = "tcp://{_0}")]
     Tcp(SocketAddr),
 }
 
-impl Display for SocketLocator {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl SocketLocator {
+    pub fn url_scheme(&self) -> &'static str {
         match self {
-            SocketLocator::Inproc(name) => {
-                write!(f, "inproc://{}", name)?;
-            }
-            SocketLocator::Ipc(path) => {
-                write!(f, "ipc://{}", path.display())?;
-            }
-            SocketLocator::Tcp(socket_addr) => {
-                write!(f, "tcp://{}:{}", socket_addr.ip(), socket_addr.port())?;
-            }
+            SocketLocator::Inproc(_) => "inproc://",
+            SocketLocator::Ipc(_) => "ipc://",
+            SocketLocator::Tcp(_) => "tcp://",
         }
-        Ok(())
     }
 }
 
@@ -200,20 +197,15 @@ impl TryFrom<Url> for SocketLocator {
     }
 }
 
-pub struct ConnectionInput {
+pub struct WrappedSocket {
     api_type: ApiType,
-    input: zmq::Socket,
-}
-
-pub struct ConnectionOutput {
-    api_type: ApiType,
-    output: zmq::Socket,
+    socket: zmq::Socket,
 }
 
 pub struct Connection {
     api_type: ApiType,
-    input: ConnectionInput,
-    output: Option<ConnectionOutput>,
+    input: WrappedSocket,
+    output: Option<WrappedSocket>,
 }
 
 impl Connection {
@@ -250,10 +242,10 @@ impl Connection {
             }
             (_, _) => None,
         }
-        .map(|s| ConnectionOutput::from_zmq_socket(api_type, s));
+        .map(|s| WrappedSocket::from_zmq_socket(api_type, s));
         Ok(Self {
             api_type,
-            input: ConnectionInput::from_zmq_socket(api_type, socket),
+            input: WrappedSocket::from_zmq_socket(api_type, socket),
             output,
         })
     }
@@ -264,91 +256,41 @@ impl Connection {
     }
 }
 
-impl ConnectionInput {
+impl WrappedSocket {
     #[inline]
     fn from_zmq_socket(api_type: ApiType, socket: zmq::Socket) -> Self {
-        Self {
-            api_type,
-            input: socket,
-        }
+        Self { api_type, socket }
     }
 
     #[inline]
     pub(crate) fn as_socket(&self) -> &zmq::Socket {
-        &self.input
+        &self.socket
     }
 }
 
-impl ConnectionOutput {
-    #[inline]
-    fn from_zmq_socket(api_type: ApiType, socket: zmq::Socket) -> Self {
-        Self {
-            api_type,
-            output: socket,
-        }
-    }
+impl AsReceiver for Connection {
+    type Receiver = WrappedSocket;
 
     #[inline]
-    pub(crate) fn as_socket(&self) -> &zmq::Socket {
-        &self.output
-    }
-}
-
-impl Receiver for ConnectionInput {
-    type Recv = zmq::Socket;
-
-    #[inline]
-    fn receiver(&mut self) -> &mut Self::Recv {
+    fn as_receiver(&mut self) -> &mut Self::Receiver {
         &mut self.input
     }
 }
 
-impl Sender for ConnectionInput {
-    type Send = zmq::Socket;
+impl AsSender for Connection {
+    type Sender = WrappedSocket;
 
-    #[inline]
-    fn sender(&mut self) -> &mut Self::Send {
-        &mut self.input
-    }
-}
-
-impl Sender for ConnectionOutput {
-    type Send = zmq::Socket;
-
-    #[inline]
-    fn sender(&mut self) -> &mut Self::Send {
-        &mut self.output
-    }
-}
-
-impl Receiver for Connection {
-    type Recv = zmq::Socket;
-
-    #[inline]
-    fn receiver(&mut self) -> &mut Self::Recv {
-        self.input.receiver()
-    }
-}
-
-impl Sender for Connection {
-    type Send = zmq::Socket;
-
-    fn sender(&mut self) -> &mut Self::Send {
+    fn as_sender(&mut self) -> &mut Self::Sender {
         match self.output {
-            None => self.input.sender(),
-            Some(ref mut output) => output.sender(),
+            None => &mut self.input,
+            Some(ref mut output) => output,
         }
     }
-}
-
-impl Duplex for Connection {
-    type Receiver = ConnectionInput;
-    type Sender = ConnectionOutput;
 }
 
 impl Bipolar for Connection {
-    type Left = <Self as Duplex>::Receiver;
-    type Right = <Self as Duplex>::Sender;
+    type Left = <Self as AsReceiver>::Receiver;
+    type Right = <Self as AsSender>::Sender;
 
     fn join(input: Self::Left, output: Self::Right) -> Self {
         // We panic here because this is a program architecture design
@@ -389,10 +331,10 @@ impl Bipolar for Connection {
     }
 }
 
-impl RecvFrame for zmq::Socket {
+impl RecvFrame for WrappedSocket {
     #[inline]
     fn recv_frame(&mut self) -> Result<Vec<u8>, Error> {
-        let data = self.recv_bytes(0)?;
+        let data = self.socket.recv_bytes(0)?;
         let len = data.len();
         if len > super::MAX_FRAME_SIZE as usize {
             return Err(Error::OversizedFrame(len));
@@ -401,15 +343,16 @@ impl RecvFrame for zmq::Socket {
     }
 
     fn recv_raw(&mut self, len: usize) -> Result<Vec<u8>, Error> {
-        Ok(self.recv_bytes(0)?)
+        Ok(self.socket.recv_bytes(0)?)
     }
 
-    fn recv_addr(&mut self) -> Result<(Vec<u8>, Vec<u8>), Error> {
+    fn recv_from(&mut self) -> Result<(Vec<u8>, Vec<u8>), Error> {
+        // TODO: (v1) add support for multipeer connectivity with ZMQ
         unimplemented!()
     }
 }
 
-impl SendFrame for zmq::Socket {
+impl SendFrame for WrappedSocket {
     #[inline]
     fn send_frame(&mut self, data: impl AsRef<[u8]>) -> Result<usize, Error> {
         let data = data.as_ref();
@@ -417,21 +360,22 @@ impl SendFrame for zmq::Socket {
         if len > super::MAX_FRAME_SIZE as usize {
             return Err(Error::OversizedFrame(len));
         }
-        self.send(data, 0)?;
+        self.socket.send(data, 0)?;
         Ok(len)
     }
 
     fn send_raw(&mut self, data: impl AsRef<[u8]>) -> Result<usize, Error> {
         let data = data.as_ref();
-        self.send(data, 0)?;
+        self.socket.send(data, 0)?;
         Ok(data.len())
     }
 
-    fn send_addr(
+    fn send_to(
         &mut self,
         dest: impl AsRef<[u8]>,
         data: impl AsRef<[u8]>,
     ) -> Result<usize, Error> {
+        // TODO: (v1) add support for multipeer connectivity with ZMQ
         unimplemented!()
     }
 }

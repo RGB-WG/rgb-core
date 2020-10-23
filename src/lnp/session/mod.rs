@@ -16,17 +16,17 @@
 
 mod connection;
 mod local_node;
-mod node_addr;
-mod node_locator;
+pub mod node_addr;
+pub mod node_locator;
+mod noise;
 mod session;
 mod transcoders;
-mod noise;
 
 pub use connection::{Connection, ConnectionError};
 #[cfg(feature = "tokio")]
 pub use connection::{ConnectionInput, ConnectionOutput};
 pub use local_node::LocalNode;
-pub use node_addr::NodeAddr;
+pub use node_addr::{NodeAddr, NodeEndpoint, ToNodeAddr};
 pub use node_locator::NodeLocator;
 pub use session::{Inbound, Outbound, Session, SessionTrait};
 pub use transcoders::{
