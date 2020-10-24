@@ -27,6 +27,8 @@ pub mod websocket;
 pub mod zmqsocket;
 
 pub use addr::{FramingProtocol, LocalAddr, RemoteAddr};
+#[cfg(feature = "zmq")]
+pub use zmqsocket::ZMQ_CONTEXT;
 
 use amplify::Bipolar;
 

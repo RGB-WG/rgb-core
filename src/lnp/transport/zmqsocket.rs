@@ -23,6 +23,10 @@ use url::Url;
 
 use super::{AsReceiver, AsSender, Error, RecvFrame, SendFrame};
 
+lazy_static! {
+    pub static ref ZMQ_CONTEXT: zmq::Context = zmq::Context::new();
+}
+
 /// API type for node-to-node communications used by ZeroMQ
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
 #[repr(u8)]
@@ -209,31 +213,30 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(
+    pub fn with(
         api_type: ApiType,
-        context: &zmq::Context,
-        remote: SocketLocator,
+        remote: &SocketLocator,
         local: Option<SocketLocator>,
     ) -> Result<Self, Error> {
-        let socket = context.socket(api_type.socket_type())?;
-        let endpoint = format!("{}", remote);
+        let socket = ZMQ_CONTEXT.socket(api_type.socket_type())?;
+        let endpoint = remote.to_string();
         match api_type {
             ApiType::PeerListening | ApiType::Server | ApiType::Publish => {
-                socket.bind(endpoint.as_str())?
+                socket.bind(&endpoint)?
             }
             ApiType::PeerConnecting | ApiType::Client | ApiType::Subscribe => {
-                socket.connect(endpoint.as_str())?
+                socket.connect(&endpoint)?
             }
         }
         let output = match (api_type, local) {
             (ApiType::PeerListening, Some(local)) => {
-                let socket = context.socket(zmq::SocketType::PUSH)?;
-                socket.connect(format!("{}", local).as_str())?;
+                let socket = ZMQ_CONTEXT.socket(zmq::SocketType::PUSH)?;
+                socket.connect(&local.to_string())?;
                 Some(socket)
             }
             (ApiType::PeerConnecting, Some(local)) => {
-                let socket = context.socket(zmq::SocketType::PULL)?;
-                socket.bind(format!("{}", local).as_str())?;
+                let socket = ZMQ_CONTEXT.socket(zmq::SocketType::PULL)?;
+                socket.bind(&local.to_string())?;
                 Some(socket)
             }
             (ApiType::PeerListening, None)
@@ -328,25 +331,6 @@ impl Bipolar for Connection {
                 self.api_type
             ));
         }
-    }
-}
-
-// We need this implementation due to bipolar nature of the connection, which,
-// when split, returns naked WrappedSocket objects, which must be `AsReceiver`/
-// `AsSender` by themselves
-impl AsReceiver for WrappedSocket {
-    type Receiver = Self;
-
-    fn as_receiver(&mut self) -> &mut Self::Receiver {
-        self
-    }
-}
-
-impl AsSender for WrappedSocket {
-    type Sender = Self;
-
-    fn as_sender(&mut self) -> &mut Self::Sender {
-        self
     }
 }
 

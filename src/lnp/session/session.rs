@@ -11,16 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::Bipolar;
+use amplify::{internet::InetSocketAddr, Bipolar};
 use core::borrow::Borrow;
 
 use super::{Decrypt, Encrypt, Transcode};
-use crate::lnp::session::{LocalNode, NoEncryption, NodeAddr};
+use crate::lnp::session::NoEncryption;
 use crate::lnp::transport::{
     ftcp, zmqsocket, AsReceiver, AsSender, Connection, Error, RecvFrame,
-    RemoteAddr, SendFrame,
+    SendFrame,
 };
-use amplify::internet::InetSocketAddr;
 
 pub struct Session<T, C>
 where
@@ -107,7 +106,7 @@ where
 }
 
 impl Session<NoEncryption, ftcp::Connection> {
-    pub(self) fn with_ftcp_unencrypted(
+    pub fn with_ftcp_unencrypted(
         socket_addr: InetSocketAddr,
     ) -> Result<Self, Error> {
         unimplemented!()
@@ -115,21 +114,16 @@ impl Session<NoEncryption, ftcp::Connection> {
 }
 
 impl Session<NoEncryption, zmqsocket::Connection> {
-    /*
     pub fn with_zmq_unencrypted(
         zmq_type: zmqsocket::ApiType,
-        context: &zmq::Context,
-        remote: zmqsocket::SocketLocator,
+        remote: &zmqsocket::SocketLocator,
         local: Option<zmqsocket::SocketLocator>,
-    ) -> Result<Self, transport::Error> {
+    ) -> Result<Self, Error> {
         Ok(Self {
             transcoder: NoEncryption,
-            transport: zmqsocket::Connection::new(
-                zmq_type, context, remote, local,
-            )?,
+            connection: zmqsocket::Connection::with(zmq_type, remote, local)?,
         })
     }
-     */
 
     pub fn as_socket(&self) -> &zmq::Socket {
         &self.connection.as_socket()
@@ -158,25 +152,5 @@ where
     ) -> Result<usize, Error> {
         let writer = self.connection.as_sender();
         Ok(writer.send_frame(self.transcoder.encrypt(raw))?)
-    }
-}
-
-impl NodeAddr {
-    pub fn connect(
-        &self,
-        local: LocalNode,
-    ) -> Result<Box<dyn Connection>, Error> {
-        Ok(match self.remote_addr {
-            RemoteAddr::Ftcp(inet) => {
-                Box::new(Session::with_ftcp_unencrypted(inet)?)
-            }
-            RemoteAddr::Posix(_) => unimplemented!(),
-            #[cfg(feature = "zmq")]
-            RemoteAddr::Zmq(_) => unimplemented!(),
-            RemoteAddr::Http(_) => unimplemented!(),
-            #[cfg(feature = "websocket")]
-            RemoteAddr::Websocket(_) => unimplemented!(),
-            RemoteAddr::Smtp(_) => unimplemented!(),
-        })
     }
 }

@@ -46,18 +46,15 @@ where
 {
     pub fn init(
         endpoints: HashMap<E, SocketLocator>,
-        context: &zmq::Context,
         handler: H,
     ) -> Result<Self, transport::Error> {
-        /*
         let mut sessions: HashMap<E, Session<_, _>> = none!();
         for (service, endpoint) in endpoints {
             sessions.insert(
                 service,
-                Session::new_zmq_unencrypted(
+                Session::with_zmq_unencrypted(
                     ApiType::Server,
-                    &context,
-                    endpoint,
+                    &endpoint,
                     None,
                 )?,
             );
@@ -68,8 +65,6 @@ where
             unmarshaller,
             handler,
         })
-         */
-        unimplemented!()
     }
 }
 

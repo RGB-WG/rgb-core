@@ -11,14 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::Bipolar;
 use std::fmt::{Debug, Display};
 
 use crate::lnp::presentation::{self, message};
-use crate::lnp::session::{Decrypt, Encrypt, Session, ToNodeAddr, Transcode};
-use crate::lnp::transport::{
-    AsReceiver, AsSender, Connection, RecvFrame, SendFrame,
-};
+use crate::lnp::session::Connect;
+use crate::lnp::transport::Connection;
+use crate::lnp::{LocalNode, ToNodeEndpoint};
 
 /// Marker trait for LNP RPC requests
 pub trait Request:
@@ -41,31 +39,28 @@ pub trait Api {
     type Reply: Reply;
 }
 
-pub struct RpcConnection<A, T, C>
+pub struct RpcConnection<A>
 where
     A: Api,
-    T: Transcode,
-    T::Left: Decrypt,
-    T::Right: Encrypt,
-    C: Connection + AsReceiver + AsSender + Bipolar,
-    C::Left: RecvFrame,
-    C::Right: SendFrame,
 {
     api: A,
-    session: Session<T, C>,
+    session: Box<dyn Connection>,
 }
 
-impl<A, T, C> RpcConnection<A, T, C>
+impl<A> RpcConnection<A>
 where
     A: Api,
-    T: Transcode,
-    T::Left: Decrypt,
-    T::Right: Encrypt,
-    C: Connection + AsReceiver + AsSender + Bipolar,
-    C::Left: RecvFrame,
-    C::Right: SendFrame,
 {
-    pub fn new(remote: impl ToNodeAddr) -> Result<Self, presentation::Error> {
-        unimplemented!()
+    pub fn new(
+        api: A,
+        remote: impl ToNodeEndpoint,
+        local: &LocalNode,
+        default_port: u16,
+    ) -> Result<Self, presentation::Error> {
+        let endpoint = remote
+            .to_node_endpoint(default_port)
+            .ok_or(presentation::Error::InvalidEndpoint)?;
+        let session = endpoint.connect(local)?;
+        Ok(Self { api, session })
     }
 }

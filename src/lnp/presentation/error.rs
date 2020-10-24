@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use crate::lnp::transport;
 use crate::strict_encoding;
 
 #[cfg(feature = "lightning")]
@@ -23,6 +24,9 @@ use lightning::ln::msgs::DecodeError;
 #[non_exhaustive]
 #[repr(u16)]
 pub enum Error {
+    /// Invalid connection endpoint data
+    InvalidEndpoint,
+
     /// I/O error while decoding LNP message; probably socket error or out of
     /// memory
     #[from(std::io::Error)]
@@ -65,6 +69,10 @@ pub enum Error {
 
     /// Invalid length of TLV record inside LNP message
     TlvRecordInvalidLen,
+
+    /// Transport-level error
+    #[from(transport::Error)]
+    TransportError,
 }
 
 #[cfg(feature = "lightning")]
