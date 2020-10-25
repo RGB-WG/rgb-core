@@ -17,8 +17,7 @@ use core::borrow::Borrow;
 use super::{Decrypt, Encrypt, Transcode};
 use crate::lnp::session::NoEncryption;
 use crate::lnp::transport::{
-    ftcp, zmqsocket, AsReceiver, AsSender, Connection, Error, RecvFrame,
-    SendFrame,
+    ftcp, zmqsocket, AsReceiver, AsSender, Duplex, Error, RecvFrame, SendFrame,
 };
 
 pub struct Session<T, C>
@@ -26,7 +25,7 @@ where
     T: Transcode,
     T::Left: Decrypt,
     T::Right: Encrypt,
-    C: Connection + AsReceiver + AsSender + Bipolar,
+    C: Duplex + AsReceiver + AsSender + Bipolar,
     C::Left: RecvFrame,
     C::Right: SendFrame,
 {
@@ -57,7 +56,7 @@ where
     T: Transcode,
     T::Left: Decrypt,
     T::Right: Encrypt,
-    C: Connection + AsReceiver + AsSender + Bipolar,
+    C: Duplex + AsReceiver + AsSender + Bipolar,
     C::Left: RecvFrame,
     C::Right: SendFrame,
 {
@@ -73,7 +72,7 @@ where
     T: Transcode,
     T::Left: Decrypt,
     T::Right: Encrypt,
-    C: Connection + AsReceiver + AsSender + Bipolar,
+    C: Duplex + AsReceiver + AsSender + Bipolar,
     C::Left: RecvFrame,
     C::Right: SendFrame,
 {
@@ -89,7 +88,7 @@ where
     T: Transcode,
     T::Left: Decrypt,
     T::Right: Encrypt,
-    C: Connection + AsReceiver + AsSender + Bipolar,
+    C: Duplex + AsReceiver + AsSender + Bipolar,
     C::Left: RecvFrame,
     C::Right: SendFrame,
 {
@@ -135,7 +134,7 @@ where
     T: Transcode,
     T::Left: Decrypt,
     T::Right: Encrypt,
-    C: Connection + AsReceiver + AsSender + Bipolar,
+    C: Duplex + AsReceiver + AsSender + Bipolar,
     C::Left: RecvFrame,
     C::Right: SendFrame,
     // TODO: (new) Use session-level error type

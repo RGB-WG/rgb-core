@@ -30,8 +30,6 @@ pub use addr::{FramingProtocol, LocalAddr, RemoteAddr};
 #[cfg(feature = "zmq")]
 pub use zmqsocket::ZMQ_CONTEXT;
 
-use amplify::Bipolar;
-
 /// Maximum size of the transport frame; chosen in compliance with LN specs
 pub const MAX_FRAME_SIZE: usize =
     FRAME_PREFIX_SIZE + MAX_FRAME_PAYLOAD_SIZE + GRAME_SUFFIX_SIZE;
@@ -103,12 +101,9 @@ pub trait AsSender {
 ///
 /// Any type implementing both [`AsReceiver`] and [`AsSender`], plust providing
 /// [`Bipolar`] trait implementation has a blanket implementation of this trait
-pub trait Connection {}
+pub trait Duplex {}
 
-/// Blanket implementation of [`Connection`] trait for all types implementing
-/// both [`AsReceiver`] and [`AsSender`] plus supporting split into sending and
-/// reading halt-types with [`Bipolar`] trait implementation.
-impl<T> Connection for T where T: AsReceiver + AsSender + Bipolar {}
+impl<T> Duplex for T where T: AsReceiver + AsSender {}
 
 /// Frame receiving type which is able to parse raw data (streamed or framed by
 /// an underlying overlaid protocol such as ZMQ, HTTP, Websocket).

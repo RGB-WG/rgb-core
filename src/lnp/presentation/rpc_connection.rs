@@ -15,7 +15,7 @@ use std::fmt::{Debug, Display};
 
 use super::{payload, CreateUnmarshaller, Error};
 use crate::lnp::session::Connect;
-use crate::lnp::transport::Connection;
+use crate::lnp::transport::Duplex;
 use crate::lnp::{LocalNode, ToNodeEndpoint};
 
 /// Marker trait for LNP RPC requests
@@ -44,7 +44,7 @@ where
     A: Api,
 {
     api: A,
-    session: Box<dyn Connection>,
+    session: Box<dyn Duplex>,
 }
 
 impl<A> RpcConnection<A>

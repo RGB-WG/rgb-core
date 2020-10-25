@@ -32,7 +32,7 @@ pub use session::{
     ToNodeEndpoint, Transcode,
 };
 pub use transport::{
-    ftcp, websocket, zmqsocket, Connection, LocalAddr, RemoteAddr,
+    ftcp, websocket, zmqsocket, Duplex, LocalAddr, RemoteAddr,
 };
 
 pub const LNP_MSG_MAX_LEN: usize = core::u64::MAX as usize;

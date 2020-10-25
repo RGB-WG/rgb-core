@@ -13,16 +13,16 @@
 
 use crate::lnp::transport::Error;
 use crate::lnp::{
-    zmqsocket, Connection, LocalAddr, LocalNode, NodeAddr, NodeEndpoint,
+    zmqsocket, Duplex, LocalAddr, LocalNode, NodeAddr, NodeEndpoint,
     RemoteAddr, Session,
 };
 
 pub trait Connect {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Connection>, Error>;
+    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Duplex>, Error>;
 }
 
 impl Connect for LocalAddr {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Connection>, Error> {
+    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Duplex>, Error> {
         Ok(Box::new(match self {
             LocalAddr::Zmq(locator) => Session::with_zmq_unencrypted(
                 zmqsocket::ApiType::Client,
@@ -35,11 +35,11 @@ impl Connect for LocalAddr {
 }
 
 impl Connect for NodeAddr {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Connection>, Error> {
+    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Duplex>, Error> {
         Ok(match self.remote_addr {
             RemoteAddr::Ftcp(inet) => {
                 Box::new(Session::with_ftcp_unencrypted(inet)?)
-                    as Box<dyn Connection>
+                    as Box<dyn Duplex>
             }
             RemoteAddr::Posix(_) => unimplemented!(),
             #[cfg(feature = "zmq")]
@@ -59,7 +59,7 @@ impl Connect for NodeAddr {
 }
 
 impl Connect for NodeEndpoint {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Connection>, Error> {
+    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Duplex>, Error> {
         match self {
             NodeEndpoint::Local(addr) => addr.connect(local),
             NodeEndpoint::Remote(addr) => addr.connect(local),

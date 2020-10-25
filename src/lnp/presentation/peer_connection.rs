@@ -23,7 +23,7 @@ use tokio::sync::Mutex;
 
 use super::{Error, Payload};
 use crate::lnp::session::{Connect, LocalNode, NodeEndpoint, ToNodeEndpoint};
-use crate::lnp::transport::Connection;
+use crate::lnp::transport::Duplex;
 //#[cfg(feature = "async")]
 //use crate::lnp::transport::{AsyncRecvFrame, AsyncSendFrame};
 //#[cfg(not(feature = "async"))]
@@ -33,7 +33,7 @@ use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 pub struct PeerConnection {
     remote_peer: NodeEndpoint,
     awaiting_pong: bool,
-    session: Box<dyn Connection>,
+    session: Box<dyn Duplex>,
 }
 
 pub struct PeerReceiver {
@@ -81,25 +81,26 @@ impl Bipolar for PeerConnection {
 
     fn join(left: Self::Left, right: Self::Right) -> Self {
         unimplemented!()
-        /*
-            let (input, output) = self.session.split();
-            let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
-            (
-                PeerReceiver {
-                    remote_peer: self.remote_peer.clone(),
-                    receiver: input,
-                    awaiting_pong: awaiting_pong.clone(),
-                },
-                PeerSender {
-                    remote_peer: self.remote_peer,
-                    sender: output,
-                    awaiting_pong,
-                },
-            )
-        */
     }
 
     fn split(self) -> (Self::Left, Self::Right) {
         unimplemented!()
+        /*
+        let session = self.session.as_mut();
+        let (input, output) = session.dyn_split();
+        let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
+        (
+            PeerReceiver {
+                remote_peer: self.remote_peer.clone(),
+                receiver: input,
+                awaiting_pong: awaiting_pong.clone(),
+            },
+            PeerSender {
+                remote_peer: self.remote_peer.clone(),
+                sender: output,
+                awaiting_pong,
+            },
+        )
+         */
     }
 }
