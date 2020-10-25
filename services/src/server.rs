@@ -27,7 +27,8 @@ use crate::rpc;
 pub struct RpcServer<E, A, H>
 where
     A: Api,
-    A::Reply: From<H::Error>,
+    H::Error: Into<rpc::Failure>,
+    A::Reply: From<rpc::Failure>,
     E: rpc::EndpointTypes,
     H: rpc::Handler<E, Api = A>,
 {
@@ -40,7 +41,8 @@ where
 impl<E, A, H> RpcServer<E, A, H>
 where
     A: Api,
-    A::Reply: From<H::Error>,
+    H::Error: Into<rpc::Failure>,
+    A::Reply: From<rpc::Failure>,
     E: rpc::EndpointTypes,
     H: rpc::Handler<E, Api = A>,
 {
@@ -71,7 +73,8 @@ where
 impl<E, A, H> TryService for RpcServer<E, A, H>
 where
     A: Api,
-    A::Reply: From<H::Error>,
+    H::Error: Into<rpc::Failure>,
+    A::Reply: From<rpc::Failure>,
     E: rpc::EndpointTypes,
     H: rpc::Handler<E, Api = A>,
 {
@@ -93,7 +96,8 @@ where
 impl<E, A, H> RpcServer<E, A, H>
 where
     A: Api,
-    A::Reply: From<H::Error>,
+    H::Error: Into<rpc::Failure>,
+    A::Reply: From<rpc::Failure>,
     E: rpc::EndpointTypes,
     H: rpc::Handler<E, Api = A>,
 {
@@ -142,7 +146,7 @@ where
             let reply = self
                 .handler
                 .handle(endpoint, request.clone())
-                .unwrap_or_else(Into::into);
+                .unwrap_or_else(|err| A::Reply::from(err.into()));
             trace!("Preparing ZMQ RPC reply: {:?}", reply);
             let data = reply.encode()?;
             session.send_raw_message(data)?;

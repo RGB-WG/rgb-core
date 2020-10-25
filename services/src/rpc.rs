@@ -96,7 +96,6 @@ pub trait Handler<Endpoints>
 where
     Self: Sized,
     Endpoints: EndpointTypes,
-    <Self::Api as Api>::Reply: From<Self::Error>,
 {
     type Api: Api;
     type Error: crate::error::Error + Into<Failure>;
