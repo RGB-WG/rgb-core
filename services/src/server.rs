@@ -13,8 +13,8 @@
 
 use std::collections::HashMap;
 
-use lnpbp::lnp::application::rpc_connection::Api;
 use lnpbp::lnp::presentation::Encode;
+use lnpbp::lnp::rpc_connection::Api;
 use lnpbp::lnp::transport::zmqsocket::{ApiType, SocketLocator};
 use lnpbp::lnp::{
     transport, CreateUnmarshaller, NoEncryption, Session, TypedEnum,

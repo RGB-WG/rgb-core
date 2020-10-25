@@ -19,13 +19,12 @@ pub mod presentation;
 mod session;
 pub mod transport;
 
-pub use application::{
-    channel, PeerConnection, PeerConnectionInput, PeerConnectionOutput,
-};
+pub use application::channel;
 pub use presentation::message::{Type, TypedEnum, Unmarshaller};
 pub use presentation::{
-    tlv, CreateUnmarshaller, Message, UnknownTypeError, Unmarshall,
-    UnmarshallFn,
+    rpc_connection, tlv, CreateUnmarshaller, Message, PeerConnection,
+    PeerConnectionInput, PeerConnectionOutput, RpcConnection, UnknownTypeError,
+    Unmarshall, UnmarshallFn,
 };
 pub use session::{
     Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr, NodeEndpoint,

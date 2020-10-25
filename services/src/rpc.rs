@@ -15,7 +15,7 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use lnpbp::lnp;
-use lnpbp::lnp::application::rpc_connection::Api;
+use lnpbp::lnp::rpc_connection::Api;
 
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;

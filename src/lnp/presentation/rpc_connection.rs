@@ -13,20 +13,20 @@
 
 use std::fmt::{Debug, Display};
 
-use crate::lnp::presentation::{self, message};
+use super::{message, CreateUnmarshaller, Error};
 use crate::lnp::session::Connect;
 use crate::lnp::transport::Connection;
 use crate::lnp::{LocalNode, ToNodeEndpoint};
 
 /// Marker trait for LNP RPC requests
 pub trait Request:
-    Debug + Display + message::TypedEnum + presentation::CreateUnmarshaller
+    Debug + Display + message::TypedEnum + CreateUnmarshaller
 {
 }
 
 /// Marker trait for LNP RPC replies
 pub trait Reply:
-    Debug + Display + message::TypedEnum + presentation::CreateUnmarshaller
+    Debug + Display + message::TypedEnum + CreateUnmarshaller
 {
 }
 
@@ -51,15 +51,15 @@ impl<A> RpcConnection<A>
 where
     A: Api,
 {
-    pub fn new(
+    pub fn with(
         api: A,
         remote: impl ToNodeEndpoint,
         local: &LocalNode,
         default_port: u16,
-    ) -> Result<Self, presentation::Error> {
+    ) -> Result<Self, Error> {
         let endpoint = remote
             .to_node_endpoint(default_port)
-            .ok_or(presentation::Error::InvalidEndpoint)?;
+            .ok_or(Error::InvalidEndpoint)?;
         let session = endpoint.connect(local)?;
         Ok(Self { api, session })
     }

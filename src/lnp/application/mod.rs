@@ -12,9 +12,3 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 pub mod channel;
-mod peer_connection;
-pub mod rpc_connection;
-
-pub use peer_connection::{
-    PeerConnection, PeerConnectionInput, PeerConnectionOutput,
-};

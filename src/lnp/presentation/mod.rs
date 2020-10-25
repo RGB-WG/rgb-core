@@ -14,7 +14,14 @@
 mod encoding;
 mod error;
 pub mod message;
+mod peer_connection;
+pub mod rpc_connection;
 pub mod tlv;
+
+pub use peer_connection::{
+    PeerConnection, PeerConnectionInput, PeerConnectionOutput,
+};
+pub use rpc_connection::RpcConnection;
 
 pub use encoding::{
     CreateUnmarshaller, Decode, Encode, Unmarshall, UnmarshallFn,
