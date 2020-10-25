@@ -17,11 +17,11 @@ use core::convert::TryFrom;
 #[cfg(feature = "url")]
 use core::str::FromStr;
 use std::net::SocketAddr;
-use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
 
 use super::{AsReceiver, AsSender, Error, RecvFrame, SendFrame};
+use crate::lnp::UrlScheme;
 
 lazy_static! {
     pub static ref ZMQ_CONTEXT: zmq::Context = zmq::Context::new();
@@ -129,23 +129,29 @@ impl FromStr for ApiType {
     serde(crate = "serde_crate", tag = "type")
 )]
 pub enum SocketLocator {
-    #[display("{_0}", alt = "{_0}")]
+    #[display("{_0}", alt = "inproc://{_0}")]
     Inproc(String),
 
-    #[display("{_0:?}", alt = "lnpz:{_0:?}")]
-    Ipc(PathBuf),
+    #[display("lnpz:{_0}", alt = "ipc://{_0}")]
+    Ipc(String),
 
-    #[display("{_0}", alt = "lnpz://{_0}")]
+    #[display("lnpz://{_0}", alt = "tcp://{_0}")]
     Tcp(SocketAddr),
 }
 
-impl SocketLocator {
-    pub fn url_scheme(&self) -> &'static str {
+impl UrlScheme for SocketLocator {
+    fn url_scheme(&self) -> &'static str {
         match self {
             SocketLocator::Inproc(_) => "",
             SocketLocator::Ipc(_) => "lnpz:",
             SocketLocator::Tcp(_) => "lnpz://",
         }
+    }
+}
+
+impl SocketLocator {
+    pub fn zmq_socket_string(&self) -> String {
+        format!("{:#}", self)
     }
 }
 
@@ -189,7 +195,7 @@ impl TryFrom<Url> for SocketLocator {
                         url.port().ok_or(UrlError::PortRequired)?,
                     )))
                 } else {
-                    Ok(SocketLocator::Ipc(PathBuf::from(url.path())))
+                    Ok(SocketLocator::Ipc(url.path().to_owned()))
                 }
             }
             "tcp" => Err(UrlError::UnknownScheme(s!(
@@ -224,7 +230,7 @@ impl Connection {
         local: Option<SocketLocator>,
     ) -> Result<Self, Error> {
         let socket = ZMQ_CONTEXT.socket(api_type.socket_type())?;
-        let endpoint = remote.to_string();
+        let endpoint = remote.zmq_socket_string();
         match api_type {
             ApiType::PeerListening | ApiType::Server | ApiType::Publish => {
                 socket.bind(&endpoint)?

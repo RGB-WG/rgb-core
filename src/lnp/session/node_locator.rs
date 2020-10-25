@@ -21,7 +21,6 @@ use core::fmt::{Display, Formatter};
 use core::str::FromStr;
 use std::hash::{Hash, Hasher};
 use std::net::{AddrParseError, IpAddr, SocketAddr};
-use std::path::PathBuf;
 #[cfg(feature = "url")]
 use url::Url;
 
@@ -68,7 +67,7 @@ pub enum NodeLocator {
     ///
     /// # URL Scheme
     /// lnp:<file-path>
-    Posix(PathBuf),
+    Posix(String),
 
     /// Local (for inter-process communication based on POSIX sockets)
     /// connection without encryption. Relies on ZMQ IPC sockets internally;
@@ -77,7 +76,7 @@ pub enum NodeLocator {
     /// # URL Schema
     /// lnpz:<file-path>?api=<p2p|rpc|sub>
     #[cfg(feature = "zmq")]
-    ZmqIpc(PathBuf, zmqsocket::ApiType),
+    ZmqIpc(String, zmqsocket::ApiType),
 
     /// LNP protocol supports in-process communications (between threads of the
     /// same process using Mutex'es and other sync managing routines) without
@@ -226,13 +225,13 @@ impl NodeLocator {
                 format!("{}://{}@{}{}", self.url_scheme(), pubkey, ip, p)
             }
             NodeLocator::Posix(path) => {
-                format!("{}:{}", self.url_scheme(), path.to_str().unwrap())
+                format!("{}:{}", self.url_scheme(), path)
             }
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqIpc(path, zmq_type) => format!(
                 "{}:{}?api={}",
                 self.url_scheme(),
-                path.to_str().unwrap(),
+                path,
                 zmq_type.api_name()
             ),
             #[cfg(feature = "zmq")]
@@ -303,20 +302,12 @@ impl NodeLocator {
             NodeLocator::Udp(pubkey, ip, port) => {
                 (Some(*pubkey), Some(InetAddr::from(*ip)), *port, None, None)
             }
-            NodeLocator::Posix(path) => (
-                None,
-                None,
-                None,
-                path.to_str().map(ToString::to_string),
-                None,
-            ),
-            NodeLocator::ZmqIpc(path, api) => (
-                None,
-                None,
-                None,
-                path.to_str().map(ToString::to_string),
-                Some(*api),
-            ),
+            NodeLocator::Posix(path) => {
+                (None, None, None, Some(path.clone()), None)
+            }
+            NodeLocator::ZmqIpc(path, api) => {
+                (None, None, None, Some(path.clone()), Some(*api))
+            }
             NodeLocator::ZmqInproc(name, api) => {
                 (None, None, None, Some(name.clone()), Some(*api))
             }
@@ -630,8 +621,7 @@ impl TryFrom<Url> for NodeLocator {
                             Err(ParseError::InprocRequireZmqContext)?
                         }
                         // TODO: Check path data validity
-                        let path = PathBuf::from(url.path());
-                        NodeLocator::ZmqIpc(path, zmq_type)
+                        NodeLocator::ZmqIpc(url.path().to_string(), zmq_type)
                     }
                 })
             }

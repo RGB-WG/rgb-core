@@ -20,7 +20,6 @@
 
 use amplify::internet::InetSocketAddr;
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 #[cfg(feature = "zmq")]
@@ -107,8 +106,8 @@ pub enum LocalAddr {
 
     /// Local node operating as a separate **process** or **threads** connected
     /// with unencrypted POSIX file I/O (like in c-lightning)
-    #[display("{_0:?}", alt = "lnp:{_0:?}")]
-    Posix(PathBuf),
+    #[display("{_0}", alt = "lnp:{_0}")]
+    Posix(String),
 }
 
 /// Represents a connection to a generic remote peer operating with LNP protocol
@@ -129,8 +128,8 @@ pub enum RemoteAddr {
     // TODO: (new) consider removing and converting `RemoteAddr` into
     //       encryption-only type
     /// POSIX socket
-    #[display("{_0:?}", alt = "lnp:{_0:?}")]
-    Posix(PathBuf),
+    #[display("{_0}", alt = "lnp:{_0}")]
+    Posix(String),
 
     /// Microservices connected using ZeroMQ protocol remotely. Can be used
     /// only with TCP-based ZMQ; for other types use [`LocalAddr::Zmq`]
