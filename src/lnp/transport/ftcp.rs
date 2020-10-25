@@ -100,8 +100,7 @@ impl RecvFrame for std::net::TcpStream {
 }
 
 impl SendFrame for std::net::TcpStream {
-    fn send_frame(&mut self, data: impl AsRef<[u8]>) -> Result<usize, Error> {
-        let data = data.as_ref();
+    fn send_frame(&mut self, data: &[u8]) -> Result<usize, Error> {
         let len = data.len();
         if len > super::MAX_FRAME_SIZE {
             return Err(Error::OversizedFrame(len));
@@ -110,8 +109,7 @@ impl SendFrame for std::net::TcpStream {
         Ok(len)
     }
 
-    fn send_raw(&mut self, data: impl AsRef<[u8]>) -> Result<usize, Error> {
-        let data = data.as_ref();
+    fn send_raw(&mut self, data: &[u8]) -> Result<usize, Error> {
         self.write_all(data)?;
         Ok(data.len())
     }

@@ -151,6 +151,6 @@ where
         raw: impl Borrow<[u8]>,
     ) -> Result<usize, Error> {
         let writer = self.connection.as_sender();
-        Ok(writer.send_frame(self.transcoder.encrypt(raw))?)
+        Ok(writer.send_frame(&self.transcoder.encrypt(raw))?)
     }
 }

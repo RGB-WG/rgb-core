@@ -24,9 +24,9 @@ use tokio::sync::Mutex;
 use super::{Error, Payload};
 use crate::lnp::session::{Connect, LocalNode, NodeEndpoint, ToNodeEndpoint};
 use crate::lnp::transport::Connection;
-#[cfg(feature = "tokio")]
-use crate::lnp::transport::{AsyncRecvFrame, AsyncSendFrame};
-#[cfg(not(feature = "tokio"))]
+//#[cfg(feature = "async")]
+//use crate::lnp::transport::{AsyncRecvFrame, AsyncSendFrame};
+//#[cfg(not(feature = "async"))]
 use crate::lnp::transport::{RecvFrame, SendFrame};
 use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 
@@ -39,19 +39,19 @@ pub struct PeerConnection {
 pub struct PeerReceiver {
     remote_peer: NodeEndpoint,
     awaiting_pong: Arc<Mutex<bool>>,
-    #[cfg(not(feature = "tokio"))]
+    //#[cfg(not(feature = "async"))]
     receiver: Box<dyn RecvFrame>,
-    #[cfg(feature = "tokio")]
-    receiver: Box<dyn AsyncRecvFrame>,
+    /* #[cfg(feature = "async")]
+     * receiver: Box<dyn AsyncRecvFrame>, */
 }
 
 pub struct PeerSender {
     remote_peer: NodeEndpoint,
     awaiting_pong: Arc<Mutex<bool>>,
-    #[cfg(not(feature = "tokio"))]
-    sender: Box<dyn RecvFrame>,
-    #[cfg(feature = "tokio")]
-    sender: Box<dyn AsyncSendFrame>,
+    //#[cfg(not(feature = "async"))]
+    sender: Box<dyn SendFrame>,
+    /* #[cfg(feature = "async")]
+     * sender: Box<dyn AsyncSendFrame>, */
 }
 
 impl PeerConnection {

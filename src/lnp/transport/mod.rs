@@ -180,7 +180,9 @@ pub trait SendFrame {
     ///   [`MAX_FRAME_SIZE`]
     ///
     /// [`MAX_FRAME_SIZE`]: super::MAX_FRAME_SIZE
-    fn send_frame(&mut self, frame: impl AsRef<[u8]>) -> Result<usize, Error>;
+    // We can't use `impl AsRev<[u8]>` here since with it the trait can't be
+    // made into an object
+    fn send_frame(&mut self, frame: &[u8]) -> Result<usize, Error>;
 
     /// Sends a single frame of data structured as a byte string. The frame must
     /// already contain LNP framing prefix with size data.
@@ -199,8 +201,7 @@ pub trait SendFrame {
     ///   type
     ///
     /// [`MAX_FRAME_SIZE`]: super::MAX_FRAME_SIZE
-    fn send_raw(&mut self, raw_frame: impl AsRef<[u8]>)
-        -> Result<usize, Error>;
+    fn send_raw(&mut self, raw_frame: &[u8]) -> Result<usize, Error>;
 
     /// Sends a single frame of data structured as a byte string to a specific
     /// receiver with `remote_id`. Function works like [`RecvFrame::recv_frame`]
@@ -230,8 +231,8 @@ pub trait SendFrame {
     #[allow(dead_code)]
     fn send_to(
         &mut self,
-        remote_id: impl AsRef<[u8]>,
-        frame: impl AsRef<[u8]>,
+        remote_id: &[u8],
+        frame: &[u8],
     ) -> Result<usize, Error> {
         // We panic here because this is a program architecture design
         // error and developer must be notified about it; the program using

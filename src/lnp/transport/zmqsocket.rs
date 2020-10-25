@@ -368,8 +368,7 @@ impl RecvFrame for WrappedSocket {
 
 impl SendFrame for WrappedSocket {
     #[inline]
-    fn send_frame(&mut self, data: impl AsRef<[u8]>) -> Result<usize, Error> {
-        let data = data.as_ref();
+    fn send_frame(&mut self, data: &[u8]) -> Result<usize, Error> {
         let len = data.len();
         if len > super::MAX_FRAME_SIZE as usize {
             return Err(Error::OversizedFrame(len));
@@ -378,17 +377,12 @@ impl SendFrame for WrappedSocket {
         Ok(len)
     }
 
-    fn send_raw(&mut self, data: impl AsRef<[u8]>) -> Result<usize, Error> {
-        let data = data.as_ref();
+    fn send_raw(&mut self, data: &[u8]) -> Result<usize, Error> {
         self.socket.send(data, 0)?;
         Ok(data.len())
     }
 
-    fn send_to(
-        &mut self,
-        dest: impl AsRef<[u8]>,
-        data: impl AsRef<[u8]>,
-    ) -> Result<usize, Error> {
+    fn send_to(&mut self, dest: &[u8], data: &[u8]) -> Result<usize, Error> {
         // TODO: (v1) add support for multipeer connectivity with ZMQ
         unimplemented!()
     }
