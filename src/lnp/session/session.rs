@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::{internet::InetSocketAddr, Bipolar};
+use core::any::Any;
 
 use super::{Decrypt, Encrypt, Transcode};
 use crate::lnp::session::NoEncryption;
@@ -23,9 +24,13 @@ use crate::lnp::transport::{
 // to avoid `where Self: Input + Output` and generic parameters, unlike with
 // `Transcode`
 pub trait Session {
-    fn split(self) -> (Box<dyn Input>, Box<dyn Output>);
     fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error>;
     fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error>;
+    fn into_any(self: Box<Self>) -> Box<dyn Any>;
+}
+
+pub trait Split {
+    fn split(self) -> (Box<dyn Input>, Box<dyn Output>);
 }
 
 pub trait Input {
@@ -45,8 +50,8 @@ where
     C::Left: RecvFrame,
     C::Right: SendFrame,
 {
-    transcoder: T,
-    connection: C,
+    pub(self) transcoder: T,
+    pub(self) connection: C,
 }
 
 pub struct RawInput<D, R>
@@ -69,6 +74,33 @@ where
 
 impl<T, C> Session for Raw<T, C>
 where
+    T: Transcode + 'static,
+    T::Left: Decrypt,
+    T::Right: Encrypt,
+    C: Duplex + Bipolar + 'static,
+    C::Left: RecvFrame,
+    C::Right: SendFrame,
+    Error: From<T::Error> + From<<T::Left as Decrypt>::Error>,
+{
+    #[inline]
+    fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
+        let reader = self.connection.as_receiver();
+        Ok(self.transcoder.decrypt(reader.recv_frame()?)?)
+    }
+
+    #[inline]
+    fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error> {
+        let writer = self.connection.as_sender();
+        Ok(writer.send_frame(&self.transcoder.encrypt(raw))?)
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
+
+impl<T, C> Split for Raw<T, C>
+where
     T: Transcode,
     T::Left: Decrypt + 'static,
     T::Right: Encrypt + 'static,
@@ -77,15 +109,6 @@ where
     C::Right: SendFrame + 'static,
     Error: From<T::Error> + From<<T::Left as Decrypt>::Error>,
 {
-    fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
-        let reader = self.connection.as_receiver();
-        Ok(self.transcoder.decrypt(reader.recv_frame()?)?)
-    }
-    fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error> {
-        let writer = self.connection.as_sender();
-        Ok(writer.send_frame(&self.transcoder.encrypt(raw))?)
-    }
-
     #[inline]
     fn split(self) -> (Box<dyn Input>, Box<dyn Output>) {
         let (decryptor, encryptor) = self.transcoder.split();

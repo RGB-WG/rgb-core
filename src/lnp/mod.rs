@@ -28,7 +28,7 @@ pub use presentation::{
 };
 pub use session::{
     Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr, NodeEndpoint,
-    NodeLocator, Session, ToNodeAddr, ToNodeEndpoint, Transcode,
+    NodeLocator, Session, Split, ToNodeAddr, ToNodeEndpoint, Transcode,
 };
 pub use transport::{
     ftcp, websocket, zmqsocket, Duplex, LocalAddr, RemoteAddr,

@@ -23,8 +23,10 @@ use tokio::sync::Mutex;
 
 use super::{Error, Payload};
 use crate::lnp::session::{
-    self, Connect, LocalNode, NodeEndpoint, Session, ToNodeEndpoint,
+    self, Connect, LocalNode, NoEncryption, NodeEndpoint, Session, Split,
+    ToNodeEndpoint,
 };
+use crate::lnp::transport::{ftcp, zmqsocket};
 use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 
 pub struct PeerConnection {
@@ -81,10 +83,28 @@ impl Bipolar for PeerConnection {
     }
 
     fn split(self) -> (Self::Left, Self::Right) {
-        unimplemented!()
-        /*
-        let session = self.session.as_mut();
-        let (input, output) = session.dyn_split();
+        let session = self.session.into_any();
+        let (input, output) = if let Some(_) = session
+            .downcast_ref::<session::Raw<NoEncryption, ftcp::Connection>>()
+        {
+            let session = session
+                .downcast::<session::Raw<NoEncryption, ftcp::Connection>>()
+                .expect(
+                    "Must not fail; we just ensured that with downcast_ref",
+                );
+            (*session).split()
+        } else if let Some(_) = session
+            .downcast_ref::<session::Raw<NoEncryption, zmqsocket::Connection>>()
+        {
+            let session = session
+                .downcast::<session::Raw<NoEncryption, ftcp::Connection>>()
+                .expect(
+                    "Must not fail; we just ensured that with downcast_ref",
+                );
+            (*session).split()
+        } else {
+            panic!("Impossible to split this type of Session")
+        };
         let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
         (
             PeerReceiver {
@@ -98,6 +118,5 @@ impl Bipolar for PeerConnection {
                 awaiting_pong,
             },
         )
-         */
     }
 }
