@@ -14,7 +14,7 @@
 //! BOLT-8 related structures and functions covering Lightning network
 //! transport layer
 
-mod connect;
+mod init;
 mod local_node;
 pub mod node_addr;
 pub mod node_locator;
@@ -22,7 +22,7 @@ mod noise;
 mod session;
 mod transcoders;
 
-pub use connect::Connect;
+pub use init::{Accept, Connect};
 pub use local_node::LocalNode;
 pub use node_addr::{NodeAddr, NodeEndpoint, ToNodeAddr, ToNodeEndpoint};
 pub use node_locator::NodeLocator;

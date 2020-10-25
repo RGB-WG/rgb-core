@@ -14,9 +14,12 @@
 //! Framed TCP protocol: reads & writes frames (corresponding to LNP messages)
 //! from TCP stream
 
+use amplify::internet::InetSocketAddr;
 use amplify::Bipolar;
 use bitcoin::consensus::encode::ReadExt;
+use core::convert::TryFrom;
 use std::io::{Read, Write};
+use std::net::SocketAddr;
 
 use super::{Duplex, Error, RecvFrame, SendFrame};
 
@@ -25,24 +28,62 @@ use super::{Duplex, Error, RecvFrame, SendFrame};
 /// We need this wrapper structure since we can't implement foreign traits, such
 /// as Bipolar, for a foreign type.
 #[derive(Debug)]
-pub struct Connection(std::net::TcpStream);
+pub struct Connection {
+    pub(self) stream: std::net::TcpStream,
+    pub(self) remote_addr: InetSocketAddr,
+}
+
+impl Connection {
+    pub fn with(
+        stream: std::net::TcpStream,
+        remote_addr: InetSocketAddr,
+    ) -> Self {
+        Self {
+            stream,
+            remote_addr,
+        }
+    }
+
+    pub fn connect(inet_addr: InetSocketAddr) -> Result<Self, Error> {
+        if let Ok(socket_addr) = SocketAddr::try_from(inet_addr) {
+            Ok(Self::with(
+                std::net::TcpStream::connect(socket_addr)?,
+                inet_addr,
+            ))
+        } else {
+            Err(Error::TorNotSupportedYet)
+        }
+    }
+
+    pub fn accept(inet_addr: InetSocketAddr) -> Result<Self, Error> {
+        if let Ok(socket_addr) = SocketAddr::try_from(inet_addr) {
+            let listener = std::net::TcpListener::bind(socket_addr)?;
+            let (stream, remote_addr) = listener.accept()?;
+            Ok(Self::with(stream, remote_addr.into()))
+        } else {
+            Err(Error::TorNotSupportedYet)
+        }
+    }
+}
 
 impl Duplex for Connection {
     #[inline]
     fn as_receiver(&mut self) -> &mut dyn RecvFrame {
-        &mut self.0
+        &mut self.stream
     }
 
     #[inline]
     fn as_sender(&mut self) -> &mut dyn SendFrame {
-        &mut self.0
+        &mut self.stream
     }
 
     #[inline]
     fn split(self) -> (Box<dyn RecvFrame>, Box<dyn SendFrame>) {
         (
-            Box::new(self.0.try_clone().expect("Error cloning TCP socket")),
-            Box::new(self.0),
+            Box::new(
+                self.stream.try_clone().expect("Error cloning TCP socket"),
+            ),
+            Box::new(self.stream),
         )
     }
 }
@@ -69,13 +110,18 @@ impl Bipolar for Connection {
             right.as_raw_socket(),
             "Two independent TCP sockets can't be joined"
         );
-        Self(left)
+        Self {
+            stream: left,
+            // TODO: (v1) Replace with remote address, wbich will require
+            //       creation of TcpSocket wrapper type
+            remote_addr: Default::default(),
+        }
     }
 
     fn split(self) -> (Self::Left, Self::Right) {
         (
-            self.0.try_clone().expect("TcpStream cloning failed"),
-            self.0,
+            self.stream.try_clone().expect("TcpStream cloning failed"),
+            self.stream,
         )
     }
 }

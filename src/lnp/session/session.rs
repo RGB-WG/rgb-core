@@ -121,10 +121,22 @@ where
 }
 
 impl Raw<NoEncryption, ftcp::Connection> {
-    pub fn with_ftcp_unencrypted(
+    pub fn connect_ftcp_unencrypted(
         socket_addr: InetSocketAddr,
     ) -> Result<Self, Error> {
-        unimplemented!()
+        Ok(Self {
+            transcoder: NoEncryption,
+            connection: ftcp::Connection::connect(socket_addr)?,
+        })
+    }
+
+    pub fn accept_ftcp_unencrypted(
+        socket_addr: InetSocketAddr,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            transcoder: NoEncryption,
+            connection: ftcp::Connection::accept(socket_addr)?,
+        })
     }
 }
 

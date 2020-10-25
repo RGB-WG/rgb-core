@@ -60,6 +60,9 @@ pub enum Error {
     /// The provided frame size ({_0}) exceeds frame size limit of
     /// MAX_FRAME_SIZE bytes
     OversizedFrame(usize),
+
+    /// Connections over Tor protocol are not yet supported
+    TorNotSupportedYet,
 }
 
 impl From<zmq::Error> for Error {

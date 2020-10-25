@@ -18,7 +18,11 @@ use crate::lnp::{
 };
 
 pub trait Connect {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error>;
+    fn connect(&self, node: &LocalNode) -> Result<Box<dyn Session>, Error>;
+}
+
+pub trait Accept {
+    fn accept(&self, node: &LocalNode) -> Result<Box<dyn Session>, Error>;
 }
 
 impl Connect for LocalAddr {
@@ -34,11 +38,50 @@ impl Connect for LocalAddr {
     }
 }
 
+impl Accept for LocalAddr {
+    fn accept(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
+        Ok(Box::new(match self {
+            LocalAddr::Zmq(locator) => session::Raw::with_zmq_unencrypted(
+                zmqsocket::ApiType::Client,
+                locator,
+                None,
+            )?,
+            LocalAddr::Posix(_) => unimplemented!(),
+        }))
+    }
+}
+
 impl Connect for NodeAddr {
     fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(match self.remote_addr {
             RemoteAddr::Ftcp(inet) => {
-                Box::new(session::Raw::with_ftcp_unencrypted(inet)?)
+                Box::new(session::Raw::connect_ftcp_unencrypted(inet)?)
+                    as Box<dyn Session>
+            }
+            RemoteAddr::Posix(_) => unimplemented!(),
+            #[cfg(feature = "zmq")]
+            // TODO: (v0.3) pass specific ZMQ API type using additional
+            //       `RemoteAddr` field
+            RemoteAddr::Zmq(socket) => {
+                Box::new(session::Raw::with_zmq_unencrypted(
+                    zmqsocket::ApiType::Client,
+                    &zmqsocket::SocketLocator::Tcp(socket),
+                    None,
+                )?)
+            }
+            RemoteAddr::Http(_) => unimplemented!(),
+            #[cfg(feature = "websocket")]
+            RemoteAddr::Websocket(_) => unimplemented!(),
+            RemoteAddr::Smtp(_) => unimplemented!(),
+        })
+    }
+}
+
+impl Accept for NodeAddr {
+    fn accept(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
+        Ok(match self.remote_addr {
+            RemoteAddr::Ftcp(inet) => {
+                Box::new(session::Raw::accept_ftcp_unencrypted(inet)?)
                     as Box<dyn Session>
             }
             RemoteAddr::Posix(_) => unimplemented!(),
@@ -65,6 +108,15 @@ impl Connect for NodeEndpoint {
         match self {
             NodeEndpoint::Local(addr) => addr.connect(local),
             NodeEndpoint::Remote(addr) => addr.connect(local),
+        }
+    }
+}
+
+impl Accept for NodeEndpoint {
+    fn accept(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
+        match self {
+            NodeEndpoint::Local(addr) => addr.accept(local),
+            NodeEndpoint::Remote(addr) => addr.accept(local),
         }
     }
 }

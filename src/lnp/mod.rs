@@ -27,8 +27,9 @@ pub use presentation::{
     UnmarshallFn,
 };
 pub use session::{
-    Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr, NodeEndpoint,
-    NodeLocator, Session, Split, ToNodeAddr, ToNodeEndpoint, Transcode,
+    Accept, Connect, Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr,
+    NodeEndpoint, NodeLocator, Session, Split, ToNodeAddr, ToNodeEndpoint,
+    Transcode,
 };
 pub use transport::{
     ftcp, websocket, zmqsocket, Duplex, LocalAddr, RemoteAddr,

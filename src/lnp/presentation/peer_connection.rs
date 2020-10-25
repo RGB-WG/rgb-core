@@ -23,8 +23,8 @@ use tokio::sync::Mutex;
 
 use super::{Error, Payload};
 use crate::lnp::session::{
-    self, Connect, LocalNode, NoEncryption, NodeEndpoint, Session, Split,
-    ToNodeEndpoint,
+    self, Accept, Connect, LocalNode, NoEncryption, NodeEndpoint, Session,
+    Split, ToNodeEndpoint,
 };
 use crate::lnp::transport::{ftcp, zmqsocket};
 use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
@@ -54,7 +54,7 @@ pub struct PeerSender {
 }
 
 impl PeerConnection {
-    pub async fn with(
+    pub fn connect(
         remote: impl ToNodeEndpoint,
         local: &LocalNode,
     ) -> Result<Self, Error> {
@@ -69,7 +69,22 @@ impl PeerConnection {
         })
     }
 
-    pub async fn send(&self, msg: Payload) -> Result<(), Error> {
+    pub fn accept(
+        remote: impl ToNodeEndpoint,
+        local: &LocalNode,
+    ) -> Result<Self, Error> {
+        let endpoint = remote
+            .to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT)
+            .ok_or(Error::InvalidEndpoint)?;
+        let session = endpoint.accept(local)?;
+        Ok(Self {
+            remote_peer: endpoint,
+            session,
+            awaiting_pong: false,
+        })
+    }
+
+    pub fn send(&self, msg: Payload) -> Result<(), Error> {
         unimplemented!()
     }
 }

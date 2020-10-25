@@ -50,7 +50,7 @@ impl<A> RpcConnection<A>
 where
     A: Api,
 {
-    pub fn with(
+    pub fn connect(
         api: A,
         remote: impl ToNodeEndpoint,
         local: &LocalNode,
@@ -60,6 +60,19 @@ where
             .to_node_endpoint(default_port)
             .ok_or(Error::InvalidEndpoint)?;
         let session = endpoint.connect(local)?;
+        Ok(Self { api, session })
+    }
+
+    pub fn accept(
+        api: A,
+        addr: impl ToNodeEndpoint,
+        node: &LocalNode,
+        default_port: u16,
+    ) -> Result<Self, Error> {
+        let endpoint = addr
+            .to_node_endpoint(default_port)
+            .ok_or(Error::InvalidEndpoint)?;
+        let session = endpoint.connect(node)?;
         Ok(Self { api, session })
     }
 }
