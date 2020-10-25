@@ -13,7 +13,7 @@
 
 mod encoding;
 mod error;
-pub mod message;
+pub mod payload;
 mod peer_connection;
 pub mod rpc_connection;
 pub mod tlv;
@@ -27,7 +27,7 @@ pub use encoding::{
     CreateUnmarshaller, Decode, Encode, Unmarshall, UnmarshallFn,
 };
 pub use error::{Error, UnknownTypeError};
-pub use message::Message;
+pub use payload::Payload;
 
 use amplify::Wrapper;
 use core::ops::Rem;

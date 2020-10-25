@@ -13,20 +13,20 @@
 
 use std::fmt::{Debug, Display};
 
-use super::{message, CreateUnmarshaller, Error};
+use super::{payload, CreateUnmarshaller, Error};
 use crate::lnp::session::Connect;
 use crate::lnp::transport::Connection;
 use crate::lnp::{LocalNode, ToNodeEndpoint};
 
 /// Marker trait for LNP RPC requests
 pub trait Request:
-    Debug + Display + message::TypedEnum + CreateUnmarshaller
+    Debug + Display + payload::TypedEnum + CreateUnmarshaller
 {
 }
 
 /// Marker trait for LNP RPC replies
 pub trait Reply:
-    Debug + Display + message::TypedEnum + CreateUnmarshaller
+    Debug + Display + payload::TypedEnum + CreateUnmarshaller
 {
 }
 

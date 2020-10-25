@@ -43,52 +43,52 @@ use crate::strict_encoding::{StrictDecode, StrictEncode};
 )]
 #[display(inner)]
 #[wrapper(LowerHex, UpperHex, Octal, FromStr)]
-pub struct Type(u16);
+pub struct TypeId(u16);
 
-impl EvenOdd for Type {}
+impl EvenOdd for TypeId {}
 
 #[derive(Clone, Debug, Display)]
 #[display(Debug)]
-pub struct Payload(Vec<Arc<dyn Any>>);
+pub struct Source(Vec<Arc<dyn Any>>);
 
-pub trait Message: AsAny {
-    fn get_type(&self) -> Type;
+pub trait Extract: AsAny {
+    fn get_type(&self) -> TypeId;
 
     fn to_type<T>(&self) -> T
     where
         Self: Sized,
-        Type: Into<T>,
+        TypeId: Into<T>,
     {
         self.get_type().into()
     }
 
-    fn try_to_type<T>(&self) -> Result<T, <Type as TryInto<T>>::Error>
+    fn try_to_type<T>(&self) -> Result<T, <TypeId as TryInto<T>>::Error>
     where
         Self: Sized,
-        Type: TryInto<T>,
+        TypeId: TryInto<T>,
     {
         self.get_type().try_into()
     }
 
-    fn get_payload(&self) -> Payload;
+    fn get_payload(&self) -> Source;
 
     fn get_tlvs(&self) -> tlv::Stream;
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, AsAny)]
 #[display(Debug)]
-pub struct RawMessage {
-    pub type_id: Type,
+pub struct Payload {
+    pub type_id: TypeId,
     pub payload: Vec<u8>,
 }
 
-impl Message for RawMessage {
-    fn get_type(&self) -> Type {
+impl Extract for Payload {
+    fn get_type(&self) -> TypeId {
         self.type_id
     }
 
-    fn get_payload(&self) -> Payload {
-        Payload(vec![Arc::new(self.payload.clone())])
+    fn get_payload(&self) -> Source {
+        Source(vec![Arc::new(self.payload.clone())])
     }
 
     fn get_tlvs(&self) -> tlv::Stream {
@@ -96,7 +96,7 @@ impl Message for RawMessage {
     }
 }
 
-impl Encode for RawMessage {
+impl Encode for Payload {
     type Error = Error;
 
     fn encode(&self) -> Result<Vec<u8>, Self::Error> {
@@ -112,7 +112,7 @@ impl Encode for RawMessage {
 
 pub trait EncodeRaw
 where
-    RawMessage: From<Self>,
+    Payload: From<Self>,
     Self: Sized + Clone,
 {
 }
@@ -120,12 +120,12 @@ where
 impl<T> Encode for T
 where
     T: EncodeRaw,
-    RawMessage: From<T>,
+    Payload: From<T>,
 {
     type Error = Error;
 
     fn encode(&self) -> Result<Vec<u8>, Self::Error> {
-        RawMessage::from(self.clone()).encode()
+        Payload::from(self.clone()).encode()
     }
 }
 
@@ -134,21 +134,21 @@ where
     Self: Sized + Clone,
 {
     fn try_from_type(
-        type_id: Type,
+        type_id: TypeId,
         data: &dyn Any,
     ) -> Result<Self, UnknownTypeError>;
-    fn get_type(&self) -> Type;
+    fn get_type(&self) -> TypeId;
     fn get_payload(&self) -> Vec<u8>;
 }
 
 impl<T> EncodeRaw for T where T: TypedEnum {}
 
-impl<T> From<T> for RawMessage
+impl<T> From<T> for Payload
 where
     T: TypedEnum,
 {
     fn from(msg: T) -> Self {
-        RawMessage {
+        Payload {
             type_id: msg.get_type(),
             payload: msg.get_payload(),
         }
@@ -159,7 +159,7 @@ pub struct Unmarshaller<T>
 where
     T: TypedEnum,
 {
-    known_types: BTreeMap<Type, UnmarshallFn<Error>>,
+    known_types: BTreeMap<TypeId, UnmarshallFn<Error>>,
     _phantom: PhantomData<T>,
 }
 
@@ -176,7 +176,7 @@ where
     ) -> Result<Self::Data, Self::Error> {
         let mut reader = io::Cursor::new(data.borrow());
         let type_id =
-            Type(u16::strict_decode(&mut reader).map_err(|_| Error::NoData)?);
+            TypeId(u16::strict_decode(&mut reader).map_err(|_| Error::NoData)?);
         match self.known_types.get(&type_id) {
             None if type_id.is_even() => Err(Error::MessageEvenType),
             None => {
@@ -184,7 +184,7 @@ where
                 reader.read_to_end(&mut payload)?;
                 Ok(Arc::new(T::try_from_type(
                     type_id,
-                    &RawMessage { type_id, payload },
+                    &Payload { type_id, payload },
                 )?))
             }
             Some(parser) => parser(&mut reader).and_then(|data| {
@@ -202,7 +202,7 @@ where
         Self {
             known_types: known_types
                 .into_iter()
-                .map(|(t, f)| (Type(t), f))
+                .map(|(t, f)| (TypeId(t), f))
                 .collect(),
             _phantom: PhantomData,
         }

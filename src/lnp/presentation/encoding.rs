@@ -16,7 +16,7 @@ use core::borrow::Borrow;
 use std::io;
 use std::sync::Arc;
 
-use super::message;
+use super::payload;
 
 pub trait Encode {
     type Error: std::error::Error;
@@ -43,6 +43,6 @@ pub trait Unmarshall {
 pub type UnmarshallFn<E> =
     fn(reader: &mut dyn io::Read) -> Result<Arc<dyn Any>, E>;
 
-pub trait CreateUnmarshaller: Sized + message::TypedEnum {
-    fn create_unmarshaller() -> message::Unmarshaller<Self>;
+pub trait CreateUnmarshaller: Sized + payload::TypedEnum {
+    fn create_unmarshaller() -> payload::Unmarshaller<Self>;
 }

@@ -20,9 +20,9 @@ mod session;
 pub mod transport;
 
 pub use application::channel;
-pub use presentation::message::{Type, TypedEnum, Unmarshaller};
+pub use presentation::payload::{TypeId, TypedEnum, Unmarshaller};
 pub use presentation::{
-    rpc_connection, tlv, CreateUnmarshaller, Message, PeerConnection,
+    payload, rpc_connection, tlv, CreateUnmarshaller, Payload, PeerConnection,
     PeerConnectionInput, PeerConnectionOutput, RpcConnection, UnknownTypeError,
     Unmarshall, UnmarshallFn,
 };
