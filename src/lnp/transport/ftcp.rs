@@ -78,7 +78,9 @@ impl Bipolar for Connection {
 
 impl RecvFrame for std::net::TcpStream {
     fn recv_frame(&mut self) -> Result<Vec<u8>, Error> {
-        let len16 = self.read_u16().map_err(|_| Error::SocketError)?;
+        let len16 = self.read_u16().map_err(|_| {
+            Error::SocketError(s!("Unable to read frame length"))
+        })?;
         let len = len16 as usize;
         let mut buf: Vec<u8> = vec![
             0u8;
