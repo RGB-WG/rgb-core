@@ -14,70 +14,92 @@
 //! BOLT-1. Manages state of the remote peer and handles direct communications
 //! with it. Relies on transport layer (BOLT-8-based) protocol.
 
+use amplify::Bipolar;
 use std::sync::Arc;
 #[cfg(not(feature = "tokio"))]
 use std::sync::Mutex;
 #[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
-//use crate::lnp::presentation::Message;
-use crate::lnp::session::NodeAddr;
+use super::{Error, Payload};
+use crate::lnp::session::{Connect, LocalNode, NodeEndpoint, ToNodeEndpoint};
+use crate::lnp::transport::Connection;
+#[cfg(feature = "tokio")]
+use crate::lnp::transport::{AsyncRecvFrame, AsyncSendFrame};
+#[cfg(not(feature = "tokio"))]
+use crate::lnp::transport::{RecvFrame, SendFrame};
+use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 
 pub struct PeerConnection {
-    pub remote_peer: NodeAddr,
+    remote_peer: NodeEndpoint,
     awaiting_pong: bool,
+    session: Box<dyn Connection>,
 }
 
-pub struct PeerConnectionInput {
-    pub remote_peer: NodeAddr,
+pub struct PeerReceiver {
+    remote_peer: NodeEndpoint,
     awaiting_pong: Arc<Mutex<bool>>,
+    #[cfg(not(feature = "tokio"))]
+    receiver: Box<dyn RecvFrame>,
+    #[cfg(feature = "tokio")]
+    receiver: Box<dyn AsyncRecvFrame>,
 }
 
-pub struct PeerConnectionOutput {
-    pub remote_peer: NodeAddr,
+pub struct PeerSender {
+    remote_peer: NodeEndpoint,
     awaiting_pong: Arc<Mutex<bool>>,
+    #[cfg(not(feature = "tokio"))]
+    sender: Box<dyn RecvFrame>,
+    #[cfg(feature = "tokio")]
+    sender: Box<dyn AsyncSendFrame>,
 }
 
-/*
 impl PeerConnection {
     pub async fn with(
         remote: impl ToNodeEndpoint,
-        local: LocalNode,
-    ) -> Result<Self, ConnectionError> {
-        let endpoint = remote.to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT);
-        unimplemented!()
-        let connection =
-            node.connect(private_key, ephemeral_private_key).await?;
+        local: &LocalNode,
+    ) -> Result<Self, Error> {
+        let endpoint = remote
+            .to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT)
+            .ok_or(Error::InvalidEndpoint)?;
+        let session = endpoint.connect(local)?;
         Ok(Self {
-            remote_peer: node,
-            connection,
+            remote_peer: endpoint,
+            session,
             awaiting_pong: false,
         })
     }
 
-    pub async fn send(
-        &self,
-        _msg: &dyn Message,
-    ) -> Result<(), ConnectionError> {
-        // TODO: Implement
-        Ok(())
-    }
-
-    pub fn split(self) -> (PeerConnectionInput, PeerConnectionOutput) {
-        let (input, output) = self.connection.split();
-        let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
-        (
-            PeerConnectionInput {
-                remote_peer: self.remote_peer.clone(),
-                connection: input,
-                awaiting_pong: awaiting_pong.clone(),
-            },
-            PeerConnectionOutput {
-                remote_peer: self.remote_peer,
-                connection: output,
-                awaiting_pong,
-            },
-        )
+    pub async fn send(&self, msg: Payload) -> Result<(), Error> {
+        unimplemented!()
     }
 }
-*/
+
+impl Bipolar for PeerConnection {
+    type Left = PeerReceiver;
+    type Right = PeerSender;
+
+    fn join(left: Self::Left, right: Self::Right) -> Self {
+        unimplemented!()
+        /*
+            let (input, output) = self.session.split();
+            let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
+            (
+                PeerReceiver {
+                    remote_peer: self.remote_peer.clone(),
+                    receiver: input,
+                    awaiting_pong: awaiting_pong.clone(),
+                },
+                PeerSender {
+                    remote_peer: self.remote_peer,
+                    sender: output,
+                    awaiting_pong,
+                },
+            )
+        */
+    }
+
+    fn split(self) -> (Self::Left, Self::Right) {
+        unimplemented!()
+    }
+}

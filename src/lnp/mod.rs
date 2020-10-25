@@ -23,8 +23,8 @@ pub use application::channel;
 pub use presentation::payload::{TypeId, TypedEnum, Unmarshaller};
 pub use presentation::{
     payload, rpc_connection, tlv, CreateUnmarshaller, Payload, PeerConnection,
-    PeerConnectionInput, PeerConnectionOutput, RpcConnection, UnknownTypeError,
-    Unmarshall, UnmarshallFn,
+    PeerReceiver, PeerSender, RpcConnection, UnknownTypeError, Unmarshall,
+    UnmarshallFn,
 };
 pub use session::{
     Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr, NodeEndpoint,

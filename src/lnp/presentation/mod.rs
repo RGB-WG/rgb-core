@@ -18,9 +18,7 @@ mod peer_connection;
 pub mod rpc_connection;
 pub mod tlv;
 
-pub use peer_connection::{
-    PeerConnection, PeerConnectionInput, PeerConnectionOutput,
-};
+pub use peer_connection::{PeerConnection, PeerReceiver, PeerSender};
 pub use rpc_connection::RpcConnection;
 
 pub use encoding::{

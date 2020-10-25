@@ -23,6 +23,9 @@
 )]
 // TODO: when we will be ready for the release #![deny(missing_docs)]
 // #![warn(missing_docs)]
+// This is required because of incomplete rust async implementation and can be
+// removed after async trait feature completion in rust compiler
+#![cfg_attr(feature = "async", allow(where_clauses_object_safety))]
 
 #[macro_use]
 extern crate amplify;
