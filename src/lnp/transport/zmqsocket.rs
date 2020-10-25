@@ -129,22 +129,22 @@ impl FromStr for ApiType {
     serde(crate = "serde_crate", tag = "type")
 )]
 pub enum SocketLocator {
-    #[display("{_0}", alt = "inproc://{_0}")]
+    #[display("{_0}", alt = "{_0}")]
     Inproc(String),
 
-    #[display("{_0:?}", alt = "ipc://{_0:?}")]
+    #[display("{_0:?}", alt = "lnpz:{_0:?}")]
     Ipc(PathBuf),
 
-    #[display("{_0}", alt = "tcp://{_0}")]
+    #[display("{_0}", alt = "lnpz://{_0}")]
     Tcp(SocketAddr),
 }
 
 impl SocketLocator {
     pub fn url_scheme(&self) -> &'static str {
         match self {
-            SocketLocator::Inproc(_) => "inproc://",
-            SocketLocator::Ipc(_) => "ipc://",
-            SocketLocator::Tcp(_) => "tcp://",
+            SocketLocator::Inproc(_) => "",
+            SocketLocator::Ipc(_) => "lnpz:",
+            SocketLocator::Tcp(_) => "lnpz://",
         }
     }
 }
@@ -179,22 +179,27 @@ impl TryFrom<Url> for SocketLocator {
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
         match url.scheme() {
-            "tcp" => Ok(SocketLocator::Tcp(SocketAddr::new(
-                url.host()
-                    .ok_or(UrlError::HostRequired)?
-                    .to_string()
-                    .parse()?,
-                url.port().ok_or(UrlError::PortRequired)?,
+            "lnpz" => {
+                if url.has_authority() {
+                    Ok(SocketLocator::Tcp(SocketAddr::new(
+                        url.host()
+                            .ok_or(UrlError::HostRequired)?
+                            .to_string()
+                            .parse()?,
+                        url.port().ok_or(UrlError::PortRequired)?,
+                    )))
+                } else {
+                    Ok(SocketLocator::Ipc(PathBuf::from(url.path())))
+                }
+            }
+            "tcp" => Err(UrlError::UnknownScheme(s!(
+                "'tcp://'; use 'lnpz://' instead"
             ))),
             "inproc" => Ok(SocketLocator::Inproc(
                 url.host().ok_or(UrlError::HostRequired)?.to_string(),
             )),
             "ipc" => {
-                if url.has_authority() {
-                    Err(UrlError::UnexpectedAuthority)
-                } else {
-                    Ok(SocketLocator::Ipc(PathBuf::from(url.path())))
-                }
+                Err(UrlError::UnknownScheme(s!("'ipc:'; use 'lnpz:' instead")))
             }
             unknown => Err(UrlError::UnknownScheme(unknown.to_string())),
         }
