@@ -1140,21 +1140,17 @@ mod test {
     #[test]
     fn test_zmq_ipc() {
         let locator1 = NodeLocator::ZmqIpc(
-            PathBuf::from_str("./socket1").unwrap(),
+            s!("./socket1"),
             zmqsocket::ApiType::PeerListening,
         );
-        let locator2 = NodeLocator::ZmqIpc(
-            PathBuf::from_str("./socket2").unwrap(),
-            zmqsocket::ApiType::Client,
-        );
+        let locator2 =
+            NodeLocator::ZmqIpc(s!("./socket2"), zmqsocket::ApiType::Client);
         let locator3 = NodeLocator::ZmqIpc(
-            PathBuf::from_str("./socket1").unwrap(),
+            s!("./socket1"),
             zmqsocket::ApiType::PeerConnecting,
         );
-        let locator4 = NodeLocator::ZmqIpc(
-            PathBuf::from_str("./socket2").unwrap(),
-            zmqsocket::ApiType::Server,
-        );
+        let locator4 =
+            NodeLocator::ZmqIpc(s!("./socket2"), zmqsocket::ApiType::Server);
 
         assert_ne!(locator1, locator2);
         assert_ne!(locator2, locator4);

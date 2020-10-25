@@ -449,7 +449,7 @@ fn lnp_api_inner_enum(
     Ok(quote! { mod __lnp_implementaiton {
         use super::#ident_name;
         use ::amplify::Wrapper;
-        use ::lnpbp::lnp::{Type, TypedEnum, UnknownTypeError, UnmarshallFn, Unmarshaller, CreateUnmarshaller};
+        use ::lnpbp::lnp::{TypeId, TypedEnum, UnknownTypeError, UnmarshallFn, Unmarshaller, CreateUnmarshaller};
         #encode_use
         #decode_use
 
@@ -468,7 +468,7 @@ fn lnp_api_inner_enum(
         }
 
         impl TypedEnum for #ident_name {
-            fn try_from_type(type_id: Type, data: &dyn ::core::any::Any) -> Result<Self, UnknownTypeError> {
+            fn try_from_type(type_id: TypeId, data: &dyn ::core::any::Any) -> Result<Self, UnknownTypeError> {
                 use ::amplify::Wrapper;
 
                 const ERR: &'static str = "Internal API parsing inconsistency";
@@ -481,8 +481,8 @@ fn lnp_api_inner_enum(
                 })
             }
 
-            fn get_type(&self) -> Type {
-                Type::from_inner(match self {
+            fn get_type(&self) -> TypeId {
+                TypeId::from_inner(match self {
                     #get_type
                 })
             }
