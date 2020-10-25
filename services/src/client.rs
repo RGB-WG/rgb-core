@@ -15,8 +15,11 @@ use std::collections::HashMap;
 
 use lnpbp::lnp::application::rpc_connection::Api;
 use lnpbp::lnp::presentation::Encode;
-use lnpbp::lnp::transport::zmqsocket::SocketLocator;
-use lnpbp::lnp::{transport, NoEncryption, Session, Unmarshall, Unmarshaller};
+use lnpbp::lnp::transport::zmqsocket::{ApiType, SocketLocator};
+use lnpbp::lnp::{
+    transport, CreateUnmarshaller, NoEncryption, Session, Unmarshall,
+    Unmarshaller,
+};
 
 use crate::rpc;
 
@@ -37,17 +40,14 @@ where
 {
     pub fn init(
         endpoints: HashMap<E, SocketLocator>,
-        context: &zmq::Context,
     ) -> Result<Self, transport::Error> {
-        /*
         let mut sessions: HashMap<E, Session<_, _>> = none!();
         for (service, endpoint) in endpoints {
             sessions.insert(
                 service,
-                Session::new_zmq_unencrypted(
+                Session::with_zmq_unencrypted(
                     ApiType::Client,
-                    &context,
-                    endpoint,
+                    &endpoint,
                     None,
                 )?,
             );
@@ -56,8 +56,7 @@ where
         Ok(Self {
             sessions,
             unmarshaller,
-        })*/
-        unimplemented!()
+        })
     }
 
     pub fn request(

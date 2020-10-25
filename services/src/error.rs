@@ -25,10 +25,7 @@ use tokio::task::JoinError;
 use lnpbp::lnp;
 
 /// Marker trait with all requirements common to LNP/BP service errors
-pub trait Error:
-    std::error::Error + Sized + Clone + Hash + Debug + Display
-{
-}
+pub trait Error: std::error::Error + Sized + Clone + Debug + Display {}
 
 /// Error happening during config initiliaztion
 #[cfg(any(feature = "node", feature = "shell"))]
