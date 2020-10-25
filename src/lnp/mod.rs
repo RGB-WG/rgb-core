@@ -16,7 +16,7 @@
 
 pub mod application;
 pub mod presentation;
-mod session;
+pub mod session;
 pub mod transport;
 
 pub use application::channel;
@@ -28,8 +28,7 @@ pub use presentation::{
 };
 pub use session::{
     Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr, NodeEndpoint,
-    NodeLocator, Session, SessionInput, SessionOutput, ToNodeAddr,
-    ToNodeEndpoint, Transcode,
+    NodeLocator, Session, ToNodeAddr, ToNodeEndpoint, Transcode,
 };
 pub use transport::{
     ftcp, websocket, zmqsocket, Duplex, LocalAddr, RemoteAddr,

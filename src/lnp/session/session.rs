@@ -12,20 +12,36 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::{internet::InetSocketAddr, Bipolar};
-use core::borrow::Borrow;
 
 use super::{Decrypt, Encrypt, Transcode};
 use crate::lnp::session::NoEncryption;
 use crate::lnp::transport::{
-    ftcp, zmqsocket, AsReceiver, AsSender, Duplex, Error, RecvFrame, SendFrame,
+    ftcp, zmqsocket, Duplex, Error, RecvFrame, SendFrame,
 };
 
-pub struct Session<T, C>
+// Generics prevents us from using session as `&dyn` reference, so we have
+// to avoid `where Self: Input + Output` and generic parameters, unlike with
+// `Transcode`
+pub trait Session {
+    fn split(self) -> (Box<dyn Input>, Box<dyn Output>);
+    fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error>;
+    fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error>;
+}
+
+pub trait Input {
+    fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error>;
+}
+
+pub trait Output {
+    fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error>;
+}
+
+pub struct Raw<T, C>
 where
     T: Transcode,
     T::Left: Decrypt,
     T::Right: Encrypt,
-    C: Duplex + AsReceiver + AsSender + Bipolar,
+    C: Duplex + Bipolar,
     C::Left: RecvFrame,
     C::Right: SendFrame,
 {
@@ -33,7 +49,7 @@ where
     connection: C,
 }
 
-pub struct SessionInput<D, R>
+pub struct RawInput<D, R>
 where
     D: Decrypt,
     R: RecvFrame,
@@ -42,7 +58,7 @@ where
     pub(self) input: R,
 }
 
-pub struct SessionOutput<E, S>
+pub struct RawOutput<E, S>
 where
     E: Encrypt,
     S: SendFrame,
@@ -51,60 +67,37 @@ where
     pub(self) output: S,
 }
 
-impl<T, C> AsReceiver for Session<T, C>
+impl<T, C> Session for Raw<T, C>
 where
     T: Transcode,
-    T::Left: Decrypt,
-    T::Right: Encrypt,
-    C: Duplex + AsReceiver + AsSender + Bipolar,
-    C::Left: RecvFrame,
-    C::Right: SendFrame,
+    T::Left: Decrypt + 'static,
+    T::Right: Encrypt + 'static,
+    C: Duplex + Bipolar,
+    C::Left: RecvFrame + 'static,
+    C::Right: SendFrame + 'static,
+    Error: From<T::Error> + From<<T::Left as Decrypt>::Error>,
 {
-    type Receiver = C::Receiver;
+    fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
+        let reader = self.connection.as_receiver();
+        Ok(self.transcoder.decrypt(reader.recv_frame()?)?)
+    }
+    fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error> {
+        let writer = self.connection.as_sender();
+        Ok(writer.send_frame(&self.transcoder.encrypt(raw))?)
+    }
 
-    fn as_receiver(&mut self) -> &mut Self::Receiver {
-        self.connection.as_receiver()
+    #[inline]
+    fn split(self) -> (Box<dyn Input>, Box<dyn Output>) {
+        let (decryptor, encryptor) = self.transcoder.split();
+        let (input, output) = Bipolar::split(self.connection);
+        (
+            Box::new(RawInput { decryptor, input }),
+            Box::new(RawOutput { encryptor, output }),
+        )
     }
 }
 
-impl<T, C> AsSender for Session<T, C>
-where
-    T: Transcode,
-    T::Left: Decrypt,
-    T::Right: Encrypt,
-    C: Duplex + AsReceiver + AsSender + Bipolar,
-    C::Left: RecvFrame,
-    C::Right: SendFrame,
-{
-    type Sender = C::Sender;
-
-    fn as_sender(&mut self) -> &mut Self::Sender {
-        self.connection.as_sender()
-    }
-}
-
-impl<T, C> Bipolar for Session<T, C>
-where
-    T: Transcode,
-    T::Left: Decrypt,
-    T::Right: Encrypt,
-    C: Duplex + AsReceiver + AsSender + Bipolar,
-    C::Left: RecvFrame,
-    C::Right: SendFrame,
-{
-    type Left = SessionInput<T::Left, C::Left>;
-    type Right = SessionOutput<T::Right, C::Right>;
-
-    fn join(_left: Self::Left, _right: Self::Right) -> Self {
-        unimplemented!()
-    }
-
-    fn split(self) -> (Self::Left, Self::Right) {
-        unimplemented!()
-    }
-}
-
-impl Session<NoEncryption, ftcp::Connection> {
+impl Raw<NoEncryption, ftcp::Connection> {
     pub fn with_ftcp_unencrypted(
         socket_addr: InetSocketAddr,
     ) -> Result<Self, Error> {
@@ -112,7 +105,7 @@ impl Session<NoEncryption, ftcp::Connection> {
     }
 }
 
-impl Session<NoEncryption, zmqsocket::Connection> {
+impl Raw<NoEncryption, zmqsocket::Connection> {
     pub fn with_zmq_unencrypted(
         zmq_type: zmqsocket::ApiType,
         remote: &zmqsocket::SocketLocator,
@@ -129,27 +122,25 @@ impl Session<NoEncryption, zmqsocket::Connection> {
     }
 }
 
-impl<T, C> Session<T, C>
+impl<T, C> Input for RawInput<T, C>
 where
-    T: Transcode,
-    T::Left: Decrypt,
-    T::Right: Encrypt,
-    C: Duplex + AsReceiver + AsSender + Bipolar,
-    C::Left: RecvFrame,
-    C::Right: SendFrame,
+    T: Decrypt,
+    C: RecvFrame,
     // TODO: (new) Use session-level error type
     Error: From<T::Error>,
 {
-    pub fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
-        let reader = self.connection.as_receiver();
-        Ok(self.transcoder.decrypt(reader.recv_frame()?)?)
+    fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
+        Ok(self.decryptor.decrypt(self.input.recv_frame()?)?)
     }
+}
 
-    pub fn send_raw_message(
-        &mut self,
-        raw: impl Borrow<[u8]>,
-    ) -> Result<usize, Error> {
-        let writer = self.connection.as_sender();
-        Ok(writer.send_frame(&self.transcoder.encrypt(raw))?)
+impl<T, C> Output for RawOutput<T, C>
+where
+    T: Encrypt,
+    C: SendFrame,
+    // TODO: (new) Use session-level error type
+{
+    fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error> {
+        Ok(self.output.send_frame(&self.encryptor.encrypt(raw))?)
     }
 }

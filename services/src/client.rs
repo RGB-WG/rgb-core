@@ -17,7 +17,7 @@ use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Api;
 use lnpbp::lnp::transport::zmqsocket::{ApiType, SocketLocator};
 use lnpbp::lnp::{
-    transport, CreateUnmarshaller, NoEncryption, Session, Unmarshall,
+    session, transport, CreateUnmarshaller, NoEncryption, Session, Unmarshall,
     Unmarshaller,
 };
 
@@ -28,8 +28,10 @@ where
     A: Api,
     E: rpc::EndpointTypes,
 {
-    sessions:
-        HashMap<E, Session<NoEncryption, transport::zmqsocket::Connection>>,
+    sessions: HashMap<
+        E,
+        session::Raw<NoEncryption, transport::zmqsocket::Connection>,
+    >,
     unmarshaller: Unmarshaller<A::Reply>,
 }
 
@@ -41,11 +43,11 @@ where
     pub fn init(
         endpoints: HashMap<E, SocketLocator>,
     ) -> Result<Self, transport::Error> {
-        let mut sessions: HashMap<E, Session<_, _>> = none!();
+        let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
         for (service, endpoint) in endpoints {
             sessions.insert(
                 service,
-                Session::with_zmq_unencrypted(
+                session::Raw::with_zmq_unencrypted(
                     ApiType::Client,
                     &endpoint,
                     None,
@@ -69,7 +71,7 @@ where
             .sessions
             .get_mut(&endpoint)
             .ok_or(rpc::Error::UnknownEndpoint(endpoint.to_string()))?;
-        session.send_raw_message(data)?;
+        session.send_raw_message(&data)?;
         let raw = session.recv_raw_message()?;
         let reply = self.unmarshaller.unmarshall(&raw)?;
         Ok((&*reply).clone())

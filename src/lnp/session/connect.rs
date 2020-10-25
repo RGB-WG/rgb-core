@@ -13,18 +13,18 @@
 
 use crate::lnp::transport::Error;
 use crate::lnp::{
-    zmqsocket, Duplex, LocalAddr, LocalNode, NodeAddr, NodeEndpoint,
+    session, zmqsocket, LocalAddr, LocalNode, NodeAddr, NodeEndpoint,
     RemoteAddr, Session,
 };
 
 pub trait Connect {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Duplex>, Error>;
+    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error>;
 }
 
 impl Connect for LocalAddr {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Duplex>, Error> {
+    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(Box::new(match self {
-            LocalAddr::Zmq(locator) => Session::with_zmq_unencrypted(
+            LocalAddr::Zmq(locator) => session::Raw::with_zmq_unencrypted(
                 zmqsocket::ApiType::Client,
                 locator,
                 None,
@@ -35,21 +35,23 @@ impl Connect for LocalAddr {
 }
 
 impl Connect for NodeAddr {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Duplex>, Error> {
+    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(match self.remote_addr {
             RemoteAddr::Ftcp(inet) => {
-                Box::new(Session::with_ftcp_unencrypted(inet)?)
-                    as Box<dyn Duplex>
+                Box::new(session::Raw::with_ftcp_unencrypted(inet)?)
+                    as Box<dyn Session>
             }
             RemoteAddr::Posix(_) => unimplemented!(),
             #[cfg(feature = "zmq")]
             // TODO: (v0.3) pass specific ZMQ API type using additional
             //       `RemoteAddr` field
-            RemoteAddr::Zmq(socket) => Box::new(Session::with_zmq_unencrypted(
-                zmqsocket::ApiType::Client,
-                &zmqsocket::SocketLocator::Tcp(socket),
-                None,
-            )?),
+            RemoteAddr::Zmq(socket) => {
+                Box::new(session::Raw::with_zmq_unencrypted(
+                    zmqsocket::ApiType::Client,
+                    &zmqsocket::SocketLocator::Tcp(socket),
+                    None,
+                )?)
+            }
             RemoteAddr::Http(_) => unimplemented!(),
             #[cfg(feature = "websocket")]
             RemoteAddr::Websocket(_) => unimplemented!(),
@@ -59,7 +61,7 @@ impl Connect for NodeAddr {
 }
 
 impl Connect for NodeEndpoint {
-    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Duplex>, Error> {
+    fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         match self {
             NodeEndpoint::Local(addr) => addr.connect(local),
             NodeEndpoint::Remote(addr) => addr.connect(local),

@@ -20,7 +20,7 @@ use std::net::SocketAddr;
 #[cfg(feature = "url")]
 use url::Url;
 
-use super::{AsReceiver, AsSender, Error, RecvFrame, SendFrame};
+use super::{Duplex, Error, RecvFrame, SendFrame};
 use crate::lnp::UrlScheme;
 
 lazy_static! {
@@ -282,29 +282,42 @@ impl WrappedSocket {
     }
 }
 
-impl AsReceiver for Connection {
-    type Receiver = WrappedSocket;
-
+impl Duplex for Connection {
     #[inline]
-    fn as_receiver(&mut self) -> &mut Self::Receiver {
+    fn as_receiver(&mut self) -> &mut dyn RecvFrame {
         &mut self.input
     }
-}
 
-impl AsSender for Connection {
-    type Sender = WrappedSocket;
+    #[inline]
+    fn as_sender(&mut self) -> &mut dyn SendFrame {
+        self.output.as_mut().unwrap_or(&mut self.input)
+    }
 
-    fn as_sender(&mut self) -> &mut Self::Sender {
-        match self.output {
-            None => &mut self.input,
-            Some(ref mut output) => output,
+    fn split(self) -> (Box<dyn RecvFrame>, Box<dyn SendFrame>) {
+        if self.api_type == ApiType::PeerConnecting
+            || self.api_type == ApiType::PeerListening
+        {
+            (
+                Box::new(self.input),
+                Box::new(self.output.expect(
+                    "Splittable types always have output part present",
+                )),
+            )
+        } else {
+            // We panic here because this is a program architecture design
+            // error and developer must be notified about it; the program using
+            // this pattern can't work
+            panic!(format!(
+                "Split operation is impossible for ZMQ stream type {}",
+                self.api_type
+            ));
         }
     }
 }
 
 impl Bipolar for Connection {
-    type Left = <Self as AsReceiver>::Receiver;
-    type Right = <Self as AsSender>::Sender;
+    type Left = WrappedSocket;
+    type Right = WrappedSocket;
 
     fn join(input: Self::Left, output: Self::Right) -> Self {
         // We panic here because this is a program architecture design

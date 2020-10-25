@@ -74,26 +74,6 @@ impl From<std::io::Error> for Error {
     }
 }
 
-/// Trait for types that can provide a concrete implementation of frame parser
-/// implementing [`RecvFrame`]
-pub trait AsReceiver {
-    /// Concrete type implementing [`RecvFrame`]
-    type Receiver: RecvFrame;
-
-    /// Returns reference to an internal frame parser
-    fn as_receiver(&mut self) -> &mut Self::Receiver;
-}
-
-/// Trait for types that can provide a concrete implementation of frame composer
-/// implementing [`SendFrame`]
-pub trait AsSender {
-    /// Concrete type implementing [`SendFrame`]
-    type Sender: SendFrame;
-
-    /// Returns reference to an internal frame composer
-    fn as_sender(&mut self) -> &mut Self::Sender;
-}
-
 /// Marker trait for types that can provide a concrete implementation for both
 /// frame parser implementing [`RecvFrame`] and frame composer implementing
 /// [`SendFrame`]. These types must also implement [`Bipolar`], i.e. they must
@@ -101,9 +81,11 @@ pub trait AsSender {
 ///
 /// Any type implementing both [`AsReceiver`] and [`AsSender`], plust providing
 /// [`Bipolar`] trait implementation has a blanket implementation of this trait
-pub trait Duplex {}
-
-impl<T> Duplex for T where T: AsReceiver + AsSender {}
+pub trait Duplex {
+    fn as_receiver(&mut self) -> &mut dyn RecvFrame;
+    fn as_sender(&mut self) -> &mut dyn SendFrame;
+    fn split(self) -> (Box<dyn RecvFrame>, Box<dyn SendFrame>);
+}
 
 /// Frame receiving type which is able to parse raw data (streamed or framed by
 /// an underlying overlaid protocol such as ZMQ, HTTP, Websocket).

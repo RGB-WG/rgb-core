@@ -22,25 +22,22 @@ use std::sync::Mutex;
 use tokio::sync::Mutex;
 
 use super::{Error, Payload};
-use crate::lnp::session::{Connect, LocalNode, NodeEndpoint, ToNodeEndpoint};
-use crate::lnp::transport::Duplex;
-//#[cfg(feature = "async")]
-//use crate::lnp::transport::{AsyncRecvFrame, AsyncSendFrame};
-//#[cfg(not(feature = "async"))]
-use crate::lnp::transport::{RecvFrame, SendFrame};
+use crate::lnp::session::{
+    self, Connect, LocalNode, NodeEndpoint, Session, ToNodeEndpoint,
+};
 use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 
 pub struct PeerConnection {
     remote_peer: NodeEndpoint,
     awaiting_pong: bool,
-    session: Box<dyn Duplex>,
+    session: Box<dyn Session>,
 }
 
 pub struct PeerReceiver {
     remote_peer: NodeEndpoint,
     awaiting_pong: Arc<Mutex<bool>>,
     //#[cfg(not(feature = "async"))]
-    receiver: Box<dyn RecvFrame>,
+    receiver: Box<dyn session::Input>,
     /* #[cfg(feature = "async")]
      * receiver: Box<dyn AsyncRecvFrame>, */
 }
@@ -49,7 +46,7 @@ pub struct PeerSender {
     remote_peer: NodeEndpoint,
     awaiting_pong: Arc<Mutex<bool>>,
     //#[cfg(not(feature = "async"))]
-    sender: Box<dyn SendFrame>,
+    sender: Box<dyn session::Output>,
     /* #[cfg(feature = "async")]
      * sender: Box<dyn AsyncSendFrame>, */
 }

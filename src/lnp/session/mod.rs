@@ -26,7 +26,7 @@ pub use connect::Connect;
 pub use local_node::LocalNode;
 pub use node_addr::{NodeAddr, NodeEndpoint, ToNodeAddr, ToNodeEndpoint};
 pub use node_locator::NodeLocator;
-pub use session::{Session, SessionInput, SessionOutput};
+pub use session::{Input, Output, Raw, RawInput, RawOutput, Session};
 pub use transcoders::{
     Decrypt, DecryptionError, Encrypt, NoEncryption, NoError, Transcode,
 };

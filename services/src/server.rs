@@ -17,7 +17,7 @@ use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Api;
 use lnpbp::lnp::transport::zmqsocket::{ApiType, SocketLocator};
 use lnpbp::lnp::{
-    transport, CreateUnmarshaller, NoEncryption, Session, TypedEnum,
+    session, transport, CreateUnmarshaller, NoEncryption, Session, TypedEnum,
     Unmarshall, Unmarshaller,
 };
 
@@ -32,8 +32,10 @@ where
     E: rpc::EndpointTypes,
     H: rpc::Handler<E, Api = A>,
 {
-    sessions:
-        HashMap<E, Session<NoEncryption, transport::zmqsocket::Connection>>,
+    sessions: HashMap<
+        E,
+        session::Raw<NoEncryption, transport::zmqsocket::Connection>,
+    >,
     unmarshaller: Unmarshaller<A::Request>,
     handler: H,
 }
@@ -50,11 +52,11 @@ where
         endpoints: HashMap<E, SocketLocator>,
         handler: H,
     ) -> Result<Self, transport::Error> {
-        let mut sessions: HashMap<E, Session<_, _>> = none!();
+        let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
         for (service, endpoint) in endpoints {
             sessions.insert(
                 service,
-                Session::with_zmq_unencrypted(
+                session::Raw::with_zmq_unencrypted(
                     ApiType::Server,
                     &endpoint,
                     None,
@@ -149,7 +151,7 @@ where
                 .unwrap_or_else(|err| A::Reply::from(err.into()));
             trace!("Preparing ZMQ RPC reply: {:?}", reply);
             let data = reply.encode()?;
-            session.send_raw_message(data)?;
+            session.send_raw_message(&data)?;
         }
 
         Ok(())

@@ -18,7 +18,7 @@ use amplify::Bipolar;
 use bitcoin::consensus::encode::ReadExt;
 use std::io::{Read, Write};
 
-use super::{AsReceiver, AsSender, Error, RecvFrame, SendFrame};
+use super::{Duplex, Error, RecvFrame, SendFrame};
 
 /// Wraps TcpStream
 ///
@@ -27,19 +27,23 @@ use super::{AsReceiver, AsSender, Error, RecvFrame, SendFrame};
 #[derive(Debug)]
 pub struct Connection(std::net::TcpStream);
 
-impl AsReceiver for Connection {
-    type Receiver = std::net::TcpStream;
-
-    fn as_receiver(&mut self) -> &mut Self::Receiver {
+impl Duplex for Connection {
+    #[inline]
+    fn as_receiver(&mut self) -> &mut dyn RecvFrame {
         &mut self.0
     }
-}
 
-impl AsSender for Connection {
-    type Sender = std::net::TcpStream;
-
-    fn as_sender(&mut self) -> &mut Self::Sender {
+    #[inline]
+    fn as_sender(&mut self) -> &mut dyn SendFrame {
         &mut self.0
+    }
+
+    #[inline]
+    fn split(self) -> (Box<dyn RecvFrame>, Box<dyn SendFrame>) {
+        (
+            Box::new(self.0.try_clone().expect("Error cloning TCP socket")),
+            Box::new(self.0),
+        )
     }
 }
 
