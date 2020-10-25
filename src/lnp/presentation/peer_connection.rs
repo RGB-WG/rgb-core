@@ -23,20 +23,18 @@ use tokio::sync::Mutex;
 
 use super::{Error, Payload};
 use crate::lnp::session::{
-    self, Accept, Connect, LocalNode, NoEncryption, NodeEndpoint, Session,
-    Split, ToNodeEndpoint,
+    self, Accept, Connect, LocalNode, NoEncryption, Session, Split,
+    ToNodeEndpoint,
 };
 use crate::lnp::transport::{ftcp, zmqsocket};
 use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
 
 pub struct PeerConnection {
-    remote_peer: NodeEndpoint,
     awaiting_pong: bool,
     session: Box<dyn Session>,
 }
 
 pub struct PeerReceiver {
-    remote_peer: NodeEndpoint,
     awaiting_pong: Arc<Mutex<bool>>,
     //#[cfg(not(feature = "async"))]
     receiver: Box<dyn session::Input>,
@@ -45,7 +43,6 @@ pub struct PeerReceiver {
 }
 
 pub struct PeerSender {
-    remote_peer: NodeEndpoint,
     awaiting_pong: Arc<Mutex<bool>>,
     //#[cfg(not(feature = "async"))]
     sender: Box<dyn session::Output>,
@@ -54,12 +51,8 @@ pub struct PeerSender {
 }
 
 impl PeerConnection {
-    pub fn with(
-        session: impl Session + 'static,
-        remote_peer: NodeEndpoint,
-    ) -> Self {
+    pub fn with(session: impl Session + 'static) -> Self {
         Self {
-            remote_peer,
             awaiting_pong: false,
             session: Box::new(session),
         }
@@ -74,7 +67,6 @@ impl PeerConnection {
             .ok_or(Error::InvalidEndpoint)?;
         let session = endpoint.connect(local)?;
         Ok(Self {
-            remote_peer: endpoint,
             session,
             awaiting_pong: false,
         })
@@ -89,7 +81,6 @@ impl PeerConnection {
             .ok_or(Error::InvalidEndpoint)?;
         let session = endpoint.accept(local)?;
         Ok(Self {
-            remote_peer: endpoint,
             session,
             awaiting_pong: false,
         })
@@ -134,12 +125,10 @@ impl Bipolar for PeerConnection {
         let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
         (
             PeerReceiver {
-                remote_peer: self.remote_peer.clone(),
                 receiver: input,
                 awaiting_pong: awaiting_pong.clone(),
             },
             PeerSender {
-                remote_peer: self.remote_peer.clone(),
                 sender: output,
                 awaiting_pong,
             },
