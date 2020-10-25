@@ -54,6 +54,17 @@ pub struct PeerSender {
 }
 
 impl PeerConnection {
+    pub fn with(
+        session: impl Session + 'static,
+        remote_peer: NodeEndpoint,
+    ) -> Self {
+        Self {
+            remote_peer,
+            awaiting_pong: false,
+            session: Box::new(session),
+        }
+    }
+
     pub fn connect(
         remote: impl ToNodeEndpoint,
         local: &LocalNode,

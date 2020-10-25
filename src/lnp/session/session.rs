@@ -121,6 +121,16 @@ where
 }
 
 impl Raw<NoEncryption, ftcp::Connection> {
+    pub fn with_ftcp_unencrypted(
+        stream: std::net::TcpStream,
+        socket_addr: InetSocketAddr,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            transcoder: NoEncryption,
+            connection: ftcp::Connection::with(stream, socket_addr),
+        })
+    }
+
     pub fn connect_ftcp_unencrypted(
         socket_addr: InetSocketAddr,
     ) -> Result<Self, Error> {
