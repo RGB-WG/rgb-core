@@ -19,11 +19,13 @@ pub mod presentation;
 pub mod session;
 pub mod transport;
 
-pub use application::channel;
+pub use application::{
+    channel, rpc_connection, PeerConnection, PeerReceiver, PeerSender,
+    RpcConnection,
+};
 pub use presentation::payload::{TypeId, TypedEnum, Unmarshaller};
 pub use presentation::{
-    payload, rpc_connection, tlv, CreateUnmarshaller, Payload, PeerConnection,
-    PeerReceiver, PeerSender, RpcConnection, UnknownTypeError, Unmarshall,
+    payload, tlv, CreateUnmarshaller, Payload, UnknownTypeError, Unmarshall,
     UnmarshallFn,
 };
 pub use session::{

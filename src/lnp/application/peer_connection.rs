@@ -21,7 +21,7 @@ use std::sync::Mutex;
 #[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
-use super::{Error, Payload};
+use crate::lnp::presentation::{Error, Payload};
 use crate::lnp::session::{
     self, Accept, Connect, LocalNode, NoEncryption, Session, Split,
     ToNodeEndpoint,

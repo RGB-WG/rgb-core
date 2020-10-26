@@ -13,7 +13,7 @@
 
 use std::fmt::{Debug, Display};
 
-use super::{payload, CreateUnmarshaller, Error};
+use crate::lnp::presentation::{payload, CreateUnmarshaller, Error};
 use crate::lnp::session::{Connect, Session};
 use crate::lnp::{LocalNode, ToNodeEndpoint};
 
