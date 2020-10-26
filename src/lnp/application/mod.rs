@@ -11,4 +11,33 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Wrapper;
+
 pub mod channel;
+mod features;
+pub mod message;
+mod peer_connection;
+pub mod rpc_connection;
+
+pub use features::{FeatureContext, FeatureFlag, Features};
+pub use message::Messages;
+pub use peer_connection::{PeerConnection, PeerReceiver, PeerSender};
+pub use rpc_connection::RpcConnection;
+
+/// Lightning network channel Id
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Debug,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct ChannelId([u8; 32]);

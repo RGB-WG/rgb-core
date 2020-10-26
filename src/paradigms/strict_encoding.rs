@@ -585,6 +585,26 @@ mod byte_strings {
         }
     }
 
+    impl StrictEncode for [u8; 32] {
+        type Error = Error;
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
+            e.write_all(self)?;
+            Ok(self.len())
+        }
+    }
+
+    impl StrictDecode for [u8; 32] {
+        type Error = Error;
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            let mut ret = [0u8; 32];
+            d.read_exact(&mut ret)?;
+            Ok(ret)
+        }
+    }
+
     impl StrictEncode for Box<[u8]> {
         type Error = Error;
         fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
