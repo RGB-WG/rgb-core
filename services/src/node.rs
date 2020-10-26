@@ -49,14 +49,3 @@ pub trait TryService: Sized {
     /// [`TryService::ErrorType`] or never return.
     fn try_run_loop(self) -> Result<(), Self::ErrorType>;
 }
-
-/// Marker trait that can be implemented for data structures used by `Clap` or
-/// by any other form of API handling.
-pub trait Exec {
-    /// Runtime context data type, that is provided for execution context.
-    type Runtime: Sized;
-    /// Error type that may result from the execution
-    type Error: Error;
-    /// Main execution routine
-    fn exec(&self, runtime: &mut Self::Runtime) -> Result<(), Self::Error>;
-}

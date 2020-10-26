@@ -16,6 +16,8 @@
 
 use std::env;
 
+use crate::error::Error;
+
 /// Represents desired logging verbodity level
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]
@@ -78,4 +80,15 @@ impl LogLevel {
         }
         env_logger::init();
     }
+}
+
+/// Marker trait that can be implemented for data structures used by `Clap` or
+/// by any other form of API handling.
+pub trait Exec {
+    /// Runtime context data type, that is provided for execution context.
+    type Runtime: Sized;
+    /// Error type that may result from the execution
+    type Error: Error;
+    /// Main execution routine
+    fn exec(&self, runtime: &mut Self::Runtime) -> Result<(), Self::Error>;
 }
