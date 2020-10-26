@@ -30,7 +30,7 @@ pub trait Session {
 }
 
 pub trait Split {
-    fn split(self) -> (Box<dyn Input>, Box<dyn Output>);
+    fn split(self) -> (Box<dyn Input + Send>, Box<dyn Output + Send>);
 }
 
 pub trait Input {
@@ -102,15 +102,15 @@ where
 impl<T, C> Split for Raw<T, C>
 where
     T: Transcode,
-    T::Left: Decrypt + 'static,
-    T::Right: Encrypt + 'static,
+    T::Left: Decrypt + Send + 'static,
+    T::Right: Encrypt + Send + 'static,
     C: Duplex + Bipolar,
-    C::Left: RecvFrame + 'static,
-    C::Right: SendFrame + 'static,
+    C::Left: RecvFrame + Send + 'static,
+    C::Right: SendFrame + Send + 'static,
     Error: From<T::Error> + From<<T::Left as Decrypt>::Error>,
 {
     #[inline]
-    fn split(self) -> (Box<dyn Input>, Box<dyn Output>) {
+    fn split(self) -> (Box<dyn Input + Send>, Box<dyn Output + Send>) {
         let (decryptor, encryptor) = self.transcoder.split();
         let (input, output) = Bipolar::split(self.connection);
         (

@@ -301,7 +301,7 @@ impl Duplex for Connection {
         self.output.as_mut().unwrap_or(&mut self.input)
     }
 
-    fn split(self) -> (Box<dyn RecvFrame>, Box<dyn SendFrame>) {
+    fn split(self) -> (Box<dyn RecvFrame + Send>, Box<dyn SendFrame + Send>) {
         if self.api_type == ApiType::PeerConnecting
             || self.api_type == ApiType::PeerListening
         {

@@ -37,7 +37,7 @@ pub struct PeerConnection {
 pub struct PeerReceiver {
     awaiting_pong: Arc<Mutex<bool>>,
     //#[cfg(not(feature = "async"))]
-    receiver: Box<dyn session::Input>,
+    receiver: Box<dyn session::Input + Send>,
     /* #[cfg(feature = "async")]
      * receiver: Box<dyn AsyncRecvFrame>, */
 }
@@ -45,7 +45,7 @@ pub struct PeerReceiver {
 pub struct PeerSender {
     awaiting_pong: Arc<Mutex<bool>>,
     //#[cfg(not(feature = "async"))]
-    sender: Box<dyn session::Output>,
+    sender: Box<dyn session::Output + Send>,
     /* #[cfg(feature = "async")]
      * sender: Box<dyn AsyncSendFrame>, */
 }

@@ -80,7 +80,7 @@ impl Duplex for Connection {
     }
 
     #[inline]
-    fn split(self) -> (Box<dyn RecvFrame>, Box<dyn SendFrame>) {
+    fn split(self) -> (Box<dyn RecvFrame + Send>, Box<dyn SendFrame + Send>) {
         (
             Box::new(
                 self.stream.try_clone().expect("Error cloning TCP socket"),

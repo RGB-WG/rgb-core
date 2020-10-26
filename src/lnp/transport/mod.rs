@@ -87,7 +87,7 @@ impl From<std::io::Error> for Error {
 pub trait Duplex {
     fn as_receiver(&mut self) -> &mut dyn RecvFrame;
     fn as_sender(&mut self) -> &mut dyn SendFrame;
-    fn split(self) -> (Box<dyn RecvFrame>, Box<dyn SendFrame>);
+    fn split(self) -> (Box<dyn RecvFrame + Send>, Box<dyn SendFrame + Send>);
 }
 
 /// Frame receiving type which is able to parse raw data (streamed or framed by
