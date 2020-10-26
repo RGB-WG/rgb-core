@@ -21,12 +21,12 @@ pub mod transport;
 
 pub use application::{
     channel, rpc_connection, PeerConnection, PeerReceiver, PeerSender,
-    RpcConnection,
+    RecvMessage, RpcConnection, SendMessage,
 };
-pub use presentation::payload::{TypeId, TypedEnum, Unmarshaller};
+pub use presentation::payload::{TypeId, TypedEnum};
 pub use presentation::{
     payload, tlv, CreateUnmarshaller, Payload, UnknownTypeError, Unmarshall,
-    UnmarshallFn,
+    UnmarshallFn, Unmarshaller,
 };
 pub use session::{
     Accept, Connect, Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr,

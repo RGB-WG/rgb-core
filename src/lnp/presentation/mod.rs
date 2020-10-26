@@ -20,7 +20,7 @@ pub use encoding::{
     CreateUnmarshaller, Decode, Encode, Unmarshall, UnmarshallFn,
 };
 pub use error::{Error, UnknownTypeError};
-pub use payload::Payload;
+pub use payload::{Payload, Unmarshaller};
 
 use amplify::Wrapper;
 use core::ops::Rem;

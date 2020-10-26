@@ -21,7 +21,9 @@ pub mod rpc_connection;
 
 pub use features::{FeatureContext, FeatureFlag, Features};
 pub use message::Messages;
-pub use peer_connection::{PeerConnection, PeerReceiver, PeerSender};
+pub use peer_connection::{
+    PeerConnection, PeerReceiver, PeerSender, RecvMessage, SendMessage,
+};
 pub use rpc_connection::RpcConnection;
 
 /// Lightning network channel Id
