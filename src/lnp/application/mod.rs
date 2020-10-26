@@ -20,7 +20,7 @@ mod peer_connection;
 pub mod rpc_connection;
 
 pub use features::{FeatureContext, FeatureFlag, Features};
-pub use message::Messages;
+pub use message::{Messages, LNPWP_UNMARSHALLER};
 pub use peer_connection::{
     PeerConnection, PeerReceiver, PeerSender, RecvMessage, SendMessage,
 };

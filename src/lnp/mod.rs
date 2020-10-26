@@ -21,7 +21,7 @@ pub mod transport;
 
 pub use application::{
     channel, rpc_connection, PeerConnection, PeerReceiver, PeerSender,
-    RecvMessage, RpcConnection, SendMessage,
+    RecvMessage, RpcConnection, SendMessage, LNPWP_UNMARSHALLER,
 };
 pub use presentation::payload::{TypeId, TypedEnum};
 pub use presentation::{

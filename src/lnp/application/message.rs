@@ -13,9 +13,19 @@
 
 use std::collections::{BTreeMap, HashSet};
 use std::fmt::{self, Display, Formatter};
+use std::io;
 
 use super::{ChannelId, Features};
 use crate::bp::chain::AssetId;
+use crate::lnp::presentation::{
+    CreateUnmarshaller, Encode, Unmarshall, Unmarshaller,
+};
+use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+
+lazy_static! {
+    pub static ref LNPWP_UNMARSHALLER: Unmarshaller<Messages> =
+        Messages::create_unmarshaller();
+}
 
 #[derive(Clone, Debug, Display, LnpApi)]
 #[lnp_api(encoding = "strict")]
@@ -52,6 +62,36 @@ pub enum Messages {
     #[lnp_api(type = 19)]
     #[display("pong()")]
     Pong,
+}
+
+impl StrictEncode for Messages {
+    type Error = strict_encoding::Error;
+
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
+        self.encode()
+            .expect("Memory encoders does not fail")
+            .strict_encode(e)
+    }
+}
+
+impl StrictDecode for Messages {
+    type Error = strict_encoding::Error;
+
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
+        Ok((&*LNPWP_UNMARSHALLER
+            .unmarshall(&Vec::<u8>::strict_decode(d)?)
+            .map_err(|err| {
+                strict_encoding::Error::UnsupportedDataStructure(
+                    "can't unmarshall LNPWP message",
+                )
+            })?)
+            .clone())
+    }
 }
 
 /// For simplicity of diagnosis, it's often useful to tell a peer that something

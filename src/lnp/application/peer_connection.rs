@@ -22,15 +22,13 @@ use std::sync::Mutex;
 use tokio::sync::Mutex;
 
 use crate::lnp::application::Messages;
-use crate::lnp::presentation::{
-    CreateUnmarshaller, Encode, Error, Unmarshall, Unmarshaller,
-};
+use crate::lnp::presentation::{Encode, Error, Unmarshall};
 use crate::lnp::session::{
     self, Accept, Connect, LocalNode, NoEncryption, Session, Split,
     ToNodeEndpoint,
 };
 use crate::lnp::transport::{ftcp, zmqsocket};
-use crate::lnp::LIGHTNING_P2P_DEFAULT_PORT;
+use crate::lnp::{LIGHTNING_P2P_DEFAULT_PORT, LNPWP_UNMARSHALLER};
 
 pub trait RecvMessage {
     fn recv_message(&mut self) -> Result<Messages, Error>;
@@ -42,13 +40,11 @@ pub trait SendMessage {
 
 pub struct PeerConnection {
     awaiting_pong: bool,
-    unmarshaller: Unmarshaller<Messages>,
     session: Box<dyn Session>,
 }
 
 pub struct PeerReceiver {
     awaiting_pong: Arc<Mutex<bool>>,
-    unmarshaller: Unmarshaller<Messages>,
     //#[cfg(not(feature = "async"))]
     receiver: Box<dyn session::Input + Send>,
     /* #[cfg(feature = "async")]
@@ -65,10 +61,8 @@ pub struct PeerSender {
 
 impl PeerConnection {
     pub fn with(session: impl Session + 'static) -> Self {
-        let unmarshaller = Messages::create_unmarshaller();
         Self {
             awaiting_pong: false,
-            unmarshaller,
             session: Box::new(session),
         }
     }
@@ -77,7 +71,6 @@ impl PeerConnection {
         remote: impl ToNodeEndpoint,
         local: &LocalNode,
     ) -> Result<Self, Error> {
-        let unmarshaller = Messages::create_unmarshaller();
         let endpoint = remote
             .to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT)
             .ok_or(Error::InvalidEndpoint)?;
@@ -85,7 +78,6 @@ impl PeerConnection {
         Ok(Self {
             session,
             awaiting_pong: false,
-            unmarshaller,
         })
     }
 
@@ -93,7 +85,6 @@ impl PeerConnection {
         remote: impl ToNodeEndpoint,
         local: &LocalNode,
     ) -> Result<Self, Error> {
-        let unmarshaller = Messages::create_unmarshaller();
         let endpoint = remote
             .to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT)
             .ok_or(Error::InvalidEndpoint)?;
@@ -101,7 +92,6 @@ impl PeerConnection {
         Ok(Self {
             session,
             awaiting_pong: false,
-            unmarshaller,
         })
     }
 }
@@ -109,7 +99,7 @@ impl PeerConnection {
 impl RecvMessage for PeerConnection {
     fn recv_message(&mut self) -> Result<Messages, Error> {
         let payload = self.session.recv_raw_message()?;
-        Ok((&*self.unmarshaller.unmarshall(&payload)?).clone())
+        Ok((&*LNPWP_UNMARSHALLER.unmarshall(&payload)?).clone())
     }
 }
 
@@ -122,7 +112,7 @@ impl SendMessage for PeerConnection {
 impl RecvMessage for PeerReceiver {
     fn recv_message(&mut self) -> Result<Messages, Error> {
         let payload = self.receiver.recv_raw_message()?;
-        Ok((&*self.unmarshaller.unmarshall(&payload)?).clone())
+        Ok((&*LNPWP_UNMARSHALLER.unmarshall(&payload)?).clone())
     }
 }
 
@@ -168,7 +158,6 @@ impl Bipolar for PeerConnection {
             PeerReceiver {
                 receiver: input,
                 awaiting_pong: awaiting_pong.clone(),
-                unmarshaller: self.unmarshaller,
             },
             PeerSender {
                 sender: output,
