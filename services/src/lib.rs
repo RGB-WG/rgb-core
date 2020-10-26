@@ -53,6 +53,8 @@ pub mod error;
 pub mod format;
 #[cfg(feature = "node")]
 pub mod node;
+#[cfg(feature = "server")]
+pub mod peer;
 #[cfg(any(feature = "client", feature = "node"))]
 pub mod rpc;
 #[cfg(feature = "server")]
