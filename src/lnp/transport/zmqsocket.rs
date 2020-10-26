@@ -264,6 +264,14 @@ impl Connection {
         })
     }
 
+    pub fn from_zmq_socket(api_type: ApiType, socket: zmq::Socket) -> Self {
+        Self {
+            api_type,
+            input: WrappedSocket::from_zmq_socket(api_type, socket),
+            output: None,
+        }
+    }
+
     #[inline]
     pub(crate) fn as_socket(&self) -> &zmq::Socket {
         &self.input.as_socket()

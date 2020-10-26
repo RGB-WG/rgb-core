@@ -162,6 +162,16 @@ impl Raw<NoEncryption, zmqsocket::Connection> {
         })
     }
 
+    pub fn from_pair_socket(socket: zmq::Socket) -> Self {
+        Self {
+            transcoder: NoEncryption,
+            connection: zmqsocket::Connection::from_zmq_socket(
+                zmqsocket::ApiType::Publish,
+                socket,
+            ),
+        }
+    }
+
     pub fn as_socket(&self) -> &zmq::Socket {
         &self.connection.as_socket()
     }

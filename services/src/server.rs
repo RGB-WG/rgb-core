@@ -24,7 +24,12 @@ use lnpbp::lnp::{
 use crate::node::TryService;
 use crate::rpc;
 
-pub struct RpcServer<E, A, H>
+pub enum EndpointCarrier {
+    Address(SocketLocator),
+    Socket(zmq::Socket),
+}
+
+pub struct RpcZmqServer<E, A, H>
 where
     A: Api,
     H::Error: Into<rpc::Failure>,
@@ -40,7 +45,7 @@ where
     handler: H,
 }
 
-impl<E, A, H> RpcServer<E, A, H>
+impl<E, A, H> RpcZmqServer<E, A, H>
 where
     A: Api,
     H::Error: Into<rpc::Failure>,
@@ -49,18 +54,25 @@ where
     H: rpc::Handler<E, Api = A>,
 {
     pub fn init(
-        endpoints: HashMap<E, SocketLocator>,
+        endpoints: HashMap<E, EndpointCarrier>,
         handler: H,
     ) -> Result<Self, transport::Error> {
         let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
         for (service, endpoint) in endpoints {
             sessions.insert(
                 service,
-                session::Raw::with_zmq_unencrypted(
-                    ApiType::Server,
-                    &endpoint,
-                    None,
-                )?,
+                match endpoint {
+                    EndpointCarrier::Address(addr) => {
+                        session::Raw::with_zmq_unencrypted(
+                            ApiType::Server,
+                            &addr,
+                            None,
+                        )?
+                    }
+                    EndpointCarrier::Socket(socket) => {
+                        session::Raw::from_pair_socket(socket)
+                    }
+                },
             );
         }
         let unmarshaller = A::Request::create_unmarshaller();
@@ -72,7 +84,7 @@ where
     }
 }
 
-impl<E, A, H> TryService for RpcServer<E, A, H>
+impl<E, A, H> TryService for RpcZmqServer<E, A, H>
 where
     A: Api,
     H::Error: Into<rpc::Failure>,
@@ -95,7 +107,7 @@ where
     }
 }
 
-impl<E, A, H> RpcServer<E, A, H>
+impl<E, A, H> RpcZmqServer<E, A, H>
 where
     A: Api,
     H::Error: Into<rpc::Failure>,

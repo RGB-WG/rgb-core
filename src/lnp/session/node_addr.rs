@@ -225,12 +225,6 @@ impl From<NodeAddr> for RemoteAddr {
     }
 }
 
-/*
-impl NodeAddr {
-    pub fn connect() -> Session {}
-}
- */
-
 // TODO: (future) Re-implement with const generics once this rust language
 //       feature will be stabilized and released
 
