@@ -1,6 +1,17 @@
 Change Log
 ==========
 
+v0.2.0-alpha.1
+--------------
+
+This is alpha release with some major refactoring in LNP mod adding support for 
+LN and Internet2 protocols.
+
+- Refactoring of LNP protocol stack; introduction of Internet2 architacture
+- Services crate implementing common client/server and other node architecture 
+  patterns
+- Basic implementation of core Lightning network data structures
+
 v0.1.0
 ------
 
