@@ -63,6 +63,21 @@ impl From<NodeLocator> for NodeEndpoint {
     }
 }
 
+impl TryFrom<NodeEndpoint> for zmqsocket::SocketLocator {
+    type Error = Error;
+
+    fn try_from(value: NodeEndpoint) -> Result<Self, Self::Error> {
+        Ok(match value {
+            NodeEndpoint::Local(LocalAddr::Zmq(locator)) => locator,
+            NodeEndpoint::Remote(NodeAddr {
+                node_id,
+                remote_addr: RemoteAddr::Zmq(addr),
+            }) => zmqsocket::SocketLocator::Tcp(addr),
+            _ => Err(Error::UnsupportedType)?,
+        })
+    }
+}
+
 /// Full node address at the session-level including node encryption/id key
 /// information and full [`RemoteAddr`] with transport protocol & complete
 /// connection point specification.
