@@ -71,7 +71,7 @@ pub enum Error {
 
 #[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
 #[cfg_attr(test, derive(Default))]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 pub struct Anchor {
     pub txid: Txid,
     pub commitment: MultimsgCommitment,

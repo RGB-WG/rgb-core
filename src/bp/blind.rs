@@ -34,7 +34,7 @@ use crate::commit_verify::CommitVerify;
     StrictEncode,
     StrictDecode,
 )]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

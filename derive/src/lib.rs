@@ -186,7 +186,7 @@ fn attr_nested_one_named_value(
 // LNP API Derive
 // ==============
 
-#[proc_macro_derive(LnpApi, attributes(lnp_api))]
+#[proc_macro_derive(LnpApi, attributes(lnp_api, lnpbp_crate))]
 pub fn derive_lnp_api(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     lnp_api_inner(derive_input)
@@ -201,15 +201,19 @@ enum EncodingSrategy {
 }
 
 impl EncodingSrategy {
-    pub fn encode_fn(&self, span: Span) -> TokenStream2 {
+    pub fn encode_fn(&self, span: Span, import: &TokenStream2) -> TokenStream2 {
         match self {
-            Self::Strict => quote_spanned!(span => strict_encode),
-            Self::Bitcoin => quote_spanned!(span => consensus_encode),
+            Self::Strict => {
+                quote_spanned!(span => #import::strict_encoding::strict_encode)
+            }
+            Self::Bitcoin => {
+                quote_spanned!(span => #import::bitcoin::consensus::encode::consensus_encode)
+            }
             Self::Lightning => unimplemented!(),
         }
     }
 
-    pub fn decode_fn(&self, span: Span) -> TokenStream2 {
+    pub fn decode_fn(&self, span: Span, import: &TokenStream2) -> TokenStream2 {
         match self {
             Self::Strict => quote_spanned!(span => strict_decode),
             Self::Bitcoin => quote_spanned!(span => consensus_decode),
@@ -217,13 +221,13 @@ impl EncodingSrategy {
         }
     }
 
-    pub fn encode_use(&self) -> TokenStream2 {
+    pub fn encode_use(&self, import: &TokenStream2) -> TokenStream2 {
         match self {
             Self::Strict => quote!(
-                use ::lnpbp::strict_encoding::strict_encode;
+                use #import::strict_encoding::strict_encode;
             ),
             Self::Bitcoin => quote!(
-                use ::lnpbp::bitcoin::consensus::encode::{
+                use #import::bitcoin::consensus::encode::{
                     consensus_encode, Encode,
                 };
             ),
@@ -231,13 +235,13 @@ impl EncodingSrategy {
         }
     }
 
-    pub fn decode_use(&self) -> TokenStream2 {
+    pub fn decode_use(&self, import: &TokenStream2) -> TokenStream2 {
         match self {
             Self::Strict => quote!(
-                use ::lnpbp::strict_encoding::StrictDecode;
+                use #import::strict_encoding::StrictDecode;
             ),
             Self::Bitcoin => quote!(
-                use ::lnpbp::bitcoin::consensus::encode::Decode;
+                use #import::bitcoin::consensus::encode::Decode;
             ),
             Self::Lightning => unimplemented!(),
         }
@@ -293,6 +297,7 @@ fn lnp_api_inner_enum(
         Some(x) => x,
         None => vec![],
     };
+    let import = get_lnpbp_crate(input)?;
     let global_encoding = EncodingSrategy::try_from(
         attr_nested_one_named_value(
             global_params.into_iter(),
@@ -345,11 +350,11 @@ fn lnp_api_inner_enum(
         });
 
         unmarshaller.push(quote_spanned! { v.span() =>
-            map.insert(Self::#type_const, Self::#type_snake as UnmarshallFn<_>);
+            map.insert(Self::#type_const, Self::#type_snake as #import::lnp::UnmarshallFn<_>);
         });
 
         let unmarshall_empty = quote_spanned! { v.span() =>
-            fn #type_snake(_: &mut dyn ::std::io::Read) -> Result<::std::sync::Arc<dyn ::core::any::Any>, ::lnpbp::lnp::presentation::Error> {
+            fn #type_snake(_: &mut dyn ::std::io::Read) -> Result<::std::sync::Arc<dyn ::core::any::Any>, #import::lnp::presentation::Error> {
                 struct NoData;
                 Ok(::std::sync::Arc::new(NoData))
             }
@@ -378,11 +383,14 @@ fn lnp_api_inner_enum(
                         &quote!(#payload).to_string().replacen("<", "::<", 1),
                     )
                     .expect("Internal error");
-                    let encode_fn = global_encoding.encode_fn(f.span());
-                    let decode_fn = global_encoding.decode_fn(f.span());
+                    let encode_fn =
+                        global_encoding.encode_fn(f.span(), &import);
+                    let decode_fn =
+                        global_encoding.decode_fn(f.span(), &import);
 
                     unmarshall_fn.push(quote_spanned! { v.span() =>
-                        fn #type_snake(mut reader: &mut dyn ::std::io::Read) -> Result<::std::sync::Arc<dyn ::core::any::Any>, ::lnpbp::lnp::presentation::Error> {
+                        fn #type_snake(mut reader: &mut dyn ::std::io::Read) -> Result<::std::sync::Arc<dyn ::core::any::Any>, #import::lnp::presentation::Error> {
+                            use #import::strict_encoding::StrictDecode;
                             Ok(::std::sync::Arc::new(#payload_fisheye::#decode_fn(&mut reader)?))
                         }
                     });
@@ -443,21 +451,15 @@ fn lnp_api_inner_enum(
     let from_type = quote! { #( #from_type )* };
     let get_type = quote! { #( #get_type )* };
     let get_payload = quote! { #( #get_payload )* };
-    let encode_use = global_encoding.encode_use();
-    let decode_use = global_encoding.decode_use();
+    let encode_use = global_encoding.encode_use(&import);
+    let decode_use = global_encoding.decode_use(&import);
 
-    Ok(quote! { mod __lnp_implementaiton {
-        use super::#ident_name;
-        use ::amplify::Wrapper;
-        use ::lnpbp::lnp::{TypeId, TypedEnum, UnknownTypeError, UnmarshallFn, Unmarshaller, CreateUnmarshaller};
-        #encode_use
-        #decode_use
-
-        impl CreateUnmarshaller for #ident_name {
-            fn create_unmarshaller() -> Unmarshaller<Self> {
+    Ok(quote! {
+        impl #import::lnp::CreateUnmarshaller for #ident_name {
+            fn create_unmarshaller() -> #import::lnp::Unmarshaller<Self> {
                 let mut map = ::std::collections::BTreeMap::new();
                 #unmarshaller
-                Unmarshaller::new(map)
+                #import::lnp::Unmarshaller::new(map)
             }
         }
 
@@ -467,8 +469,8 @@ fn lnp_api_inner_enum(
             #unmarshall_fn
         }
 
-        impl TypedEnum for #ident_name {
-            fn try_from_type(type_id: TypeId, data: &dyn ::core::any::Any) -> Result<Self, UnknownTypeError> {
+        impl #import::lnp::TypedEnum for #ident_name {
+            fn try_from_type(type_id: #import::lnp::TypeId, data: &dyn ::core::any::Any) -> Result<Self, #import::lnp::UnknownTypeError> {
                 use ::amplify::Wrapper;
 
                 const ERR: &'static str = "Internal API parsing inconsistency";
@@ -477,12 +479,13 @@ fn lnp_api_inner_enum(
                     // Here we receive odd-numbered messages. However, in terms of RPC,
                     // there is no "upstream processor", so we return error (but do not
                     // break connection).
-                    _ => Err(UnknownTypeError)?,
+                    _ => Err(#import::lnp::UnknownTypeError)?,
                 })
             }
 
-            fn get_type(&self) -> TypeId {
-                TypeId::from_inner(match self {
+            fn get_type(&self) -> #import::lnp::TypeId {
+                use ::amplify::Wrapper;
+                #import::lnp::TypeId::from_inner(match self {
                     #get_type
                 })
             }
@@ -494,13 +497,13 @@ fn lnp_api_inner_enum(
                 }
             }
         }
-    } })
+    })
 }
 
 // Strict Encode/Decode Derives
 // ============================
 
-#[proc_macro_derive(StrictEncode, attributes(strict_error, strict_crate))]
+#[proc_macro_derive(StrictEncode, attributes(strict_error, lnpbp_crate))]
 pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     strict_encode_inner(derive_input)
@@ -508,7 +511,7 @@ pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(StrictDecode, attributes(strict_error, strict_crate))]
+#[proc_macro_derive(StrictDecode, attributes(strict_error, lnpbp_crate))]
 pub fn derive_strict_decode(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     strict_decode_inner(derive_input)
@@ -555,7 +558,7 @@ fn strict_encode_inner_struct(
     let ident_name = &input.ident;
 
     let error_type_def = get_strict_error(input, data)?;
-    let import = get_strict_crate(input, data)?;
+    let import = get_lnpbp_crate(input)?;
 
     let recurse = match data.fields {
         Fields::Named(ref fields) => fields
@@ -596,11 +599,13 @@ fn strict_encode_inner_struct(
 
     Ok(quote! {
         #[allow(unused_qualifications)]
-        impl #impl_generics #import::StrictEncode for #ident_name #ty_generics #where_clause {
+        impl #impl_generics #import::strict_encoding::StrictEncode for #ident_name #ty_generics #where_clause {
             type Error = #error_type_def;
 
             #[inline]
             fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+                use #import::strict_encoding::StrictEncode;
+
                 #inner
             }
         }
@@ -616,7 +621,7 @@ fn strict_decode_inner_struct(
     let ident_name = &input.ident;
 
     let error_type_def = get_strict_error(input, data)?;
-    let import = get_strict_crate(input, data)?;
+    let import = get_lnpbp_crate(input)?;
 
     let inner = match data.fields {
         Fields::Named(ref fields) => {
@@ -626,7 +631,7 @@ fn strict_decode_inner_struct(
                 .map(|f| {
                     let name = &f.ident;
                     quote_spanned! { f.span() =>
-                        #name: #import::StrictDecode::strict_decode(&mut d)?,
+                        #name: #import::strict_encoding::StrictDecode::strict_decode(&mut d)?,
                     }
                 })
                 .collect();
@@ -642,7 +647,7 @@ fn strict_decode_inner_struct(
                 .iter()
                 .map(|f| {
                     quote_spanned! { f.span() =>
-                        #import::StrictDecode::strict_decode(&mut d)?,
+                        #import::strict_encoding::StrictDecode::strict_decode(&mut d)?,
                     }
                 })
                 .collect();
@@ -660,11 +665,13 @@ fn strict_decode_inner_struct(
 
     Ok(quote! {
         #[allow(unused_qualifications)]
-        impl #impl_generics #import::StrictDecode for #ident_name #ty_generics #where_clause {
+        impl #impl_generics #import::strict_encoding::StrictDecode for #ident_name #ty_generics #where_clause {
             type Error = #error_type_def;
 
             #[inline]
             fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, Self::Error> {
+                use #import::strict_encoding::StrictDecode;
+
                 Ok(#inner)
             }
         }
@@ -675,7 +682,7 @@ fn get_strict_error(
     input: &DeriveInput,
     data: &DataStruct,
 ) -> Result<TokenStream2> {
-    let import = get_strict_crate(input, data)?;
+    let import = get_lnpbp_crate(input)?;
 
     let name = "strict_error";
     let example = "#[strict_error(ErrorType)]";
@@ -683,23 +690,20 @@ fn get_strict_error(
 
     let list = match attr_list(&input.attrs, name, example)? {
         Some(x) => x,
-        None => return Ok(quote! { #import::Error }),
+        None => return Ok(quote! { #import::strict_encoding::Error }),
     };
     let strict_error = attr_nested_one_arg(list.into_iter(), name, example)?;
 
     Ok(match strict_error {
         Some(ident) => quote! { #ident },
-        None => quote! { #import::Error },
+        None => quote! { #import::strict_encoding::Error },
     })
 }
 
-fn get_strict_crate(
-    input: &DeriveInput,
-    data: &DataStruct,
-) -> Result<TokenStream2> {
-    let name = "strict_crate";
-    let example = "#[strict_crate(lnpbp_other_name)]";
-    let default = quote! { ::lnpbp::strict_encoding };
+fn get_lnpbp_crate(input: &DeriveInput) -> Result<TokenStream2> {
+    let name = "lnpbp_crate";
+    let example = "#[lnpbp_crate(lnpbp_crate_name)]";
+    let default = quote! { ::lnpbp };
 
     let list = match attr_list(&input.attrs, name, example)? {
         Some(x) => x,
@@ -708,7 +712,7 @@ fn get_strict_crate(
     let strict_crate = attr_nested_one_arg(list.into_iter(), name, example)?;
 
     Ok(match strict_crate {
-        Some(ident) => quote! { #ident::strict_encoding },
+        Some(ident) => quote! { #ident },
         None => return Ok(default),
     })
 }

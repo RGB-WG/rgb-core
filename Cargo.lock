@@ -728,7 +728,7 @@ dependencies = [
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
- "lnpbp_derive 0.1.0",
+ "lnpbp_derive",
  "miniscript",
  "num-derive",
  "num-traits 0.2.12",
@@ -738,17 +738,6 @@ dependencies = [
  "torut",
  "url",
  "zmq",
-]
-
-[[package]]
-name = "lnpbp_derive"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8a7977c9c4d47f996d38b345dbc2c9cb34ce92948c375307242fa2531b5b951"
-dependencies = [
- "amplify",
- "quote 1.0.7",
- "syn 1.0.45",
 ]
 
 [[package]]
@@ -772,7 +761,7 @@ dependencies = [
  "dotenv",
  "env_logger",
  "lnpbp",
- "lnpbp_derive 0.2.0-alpha.1",
+ "lnpbp_derive",
  "log",
  "serde 1.0.117",
  "serde_with",

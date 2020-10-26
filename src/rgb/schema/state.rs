@@ -24,7 +24,7 @@ use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct StateSchema {
     pub format: StateFormat,

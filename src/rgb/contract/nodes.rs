@@ -180,7 +180,7 @@ pub struct Genesis {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
@@ -199,7 +199,7 @@ pub struct Extension {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,

@@ -110,7 +110,7 @@ impl Ord for Revealed {
 }
 
 #[derive(Clone, Debug, Display, AsAny, StrictEncode, StrictDecode)]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

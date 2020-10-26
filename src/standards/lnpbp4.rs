@@ -39,7 +39,7 @@ pub struct TooManyMessagesError;
     StrictEncode,
     StrictDecode,
 )]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct MultimsgCommitmentItem {
     pub protocol: Option<sha256::Hash>,
@@ -68,7 +68,7 @@ impl MultimsgCommitmentItem {
     StrictEncode,
     StrictDecode,
 )]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct MultimsgCommitment {
     pub commitments: Vec<MultimsgCommitmentItem>,

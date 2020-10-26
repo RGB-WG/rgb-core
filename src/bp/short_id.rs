@@ -383,7 +383,7 @@ impl Descriptor {
     StrictEncode,
     StrictDecode,
 )]
-#[strict_crate(crate)]
+#[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct ShortId(u64);
 
