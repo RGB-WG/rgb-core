@@ -18,6 +18,7 @@ use amplify::internet::InetSocketAddr;
 use amplify::Bipolar;
 use bitcoin::consensus::encode::ReadExt;
 use core::convert::TryFrom;
+use core::time::Duration;
 use std::io::{Read, Write};
 use std::net::SocketAddr;
 
@@ -46,10 +47,10 @@ impl Connection {
 
     pub fn connect(inet_addr: InetSocketAddr) -> Result<Self, Error> {
         if let Ok(socket_addr) = SocketAddr::try_from(inet_addr) {
-            Ok(Self::with(
-                std::net::TcpStream::connect(socket_addr)?,
-                inet_addr,
-            ))
+            let stream = std::net::TcpStream::connect(socket_addr)?;
+            // NB: This is how we handle ping-pong cycles
+            stream.set_read_timeout(Some(Duration::from_secs(30)))?;
+            Ok(Self::with(stream, inet_addr))
         } else {
             Err(Error::TorNotSupportedYet)
         }
@@ -61,6 +62,8 @@ impl Connection {
         if let Ok(socket_addr) = SocketAddr::try_from(inet_addr) {
             let listener = std::net::TcpListener::bind(socket_addr)?;
             let (stream, remote_addr) = listener.accept()?;
+            // NB: This is how we handle ping-pong cycles
+            stream.set_read_timeout(Some(Duration::from_secs(30)))?;
             Ok(Self::with(stream, remote_addr.into()))
         } else {
             Err(Error::TorNotSupportedYet)

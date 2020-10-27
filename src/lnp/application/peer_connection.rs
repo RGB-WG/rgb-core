@@ -15,11 +15,6 @@
 //! with it. Relies on transport layer (BOLT-8-based) protocol.
 
 use amplify::Bipolar;
-use std::sync::Arc;
-#[cfg(not(feature = "tokio"))]
-use std::sync::Mutex;
-#[cfg(feature = "tokio")]
-use tokio::sync::Mutex;
 
 use crate::lnp::application::Messages;
 use crate::lnp::presentation::{Encode, Error, Unmarshall};
@@ -39,12 +34,10 @@ pub trait SendMessage {
 }
 
 pub struct PeerConnection {
-    awaiting_pong: bool,
     session: Box<dyn Session>,
 }
 
 pub struct PeerReceiver {
-    awaiting_pong: Arc<Mutex<bool>>,
     //#[cfg(not(feature = "async"))]
     receiver: Box<dyn session::Input + Send>,
     /* #[cfg(feature = "async")]
@@ -52,7 +45,6 @@ pub struct PeerReceiver {
 }
 
 pub struct PeerSender {
-    awaiting_pong: Arc<Mutex<bool>>,
     //#[cfg(not(feature = "async"))]
     sender: Box<dyn session::Output + Send>,
     /* #[cfg(feature = "async")]
@@ -62,7 +54,6 @@ pub struct PeerSender {
 impl PeerConnection {
     pub fn with(session: impl Session + 'static) -> Self {
         Self {
-            awaiting_pong: false,
             session: Box::new(session),
         }
     }
@@ -75,10 +66,7 @@ impl PeerConnection {
             .to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT)
             .ok_or(Error::InvalidEndpoint)?;
         let session = endpoint.connect(local)?;
-        Ok(Self {
-            session,
-            awaiting_pong: false,
-        })
+        Ok(Self { session })
     }
 
     pub fn accept(
@@ -89,10 +77,7 @@ impl PeerConnection {
             .to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT)
             .ok_or(Error::InvalidEndpoint)?;
         let session = endpoint.accept(local)?;
-        Ok(Self {
-            session,
-            awaiting_pong: false,
-        })
+        Ok(Self { session })
     }
 }
 
@@ -153,16 +138,9 @@ impl Bipolar for PeerConnection {
         } else {
             panic!("Impossible to split this type of Session")
         };
-        let awaiting_pong = Arc::new(Mutex::new(self.awaiting_pong));
         (
-            PeerReceiver {
-                receiver: input,
-                awaiting_pong: awaiting_pong.clone(),
-            },
-            PeerSender {
-                sender: output,
-                awaiting_pong,
-            },
+            PeerReceiver { receiver: input },
+            PeerSender { sender: output },
         )
     }
 }
