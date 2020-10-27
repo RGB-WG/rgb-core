@@ -69,6 +69,12 @@ pub enum Error {
     /// MAX_FRAME_SIZE bytes
     OversizedFrame(usize),
 
+    /// Frame size {_0} is less than minimal (34 bytes)
+    FrameTooSmall(usize),
+
+    /// Frame payload length is not equal to the actual frame payload provided
+    InvalidLength,
+
     /// Connections over Tor protocol are not yet supported
     TorNotSupportedYet,
 

@@ -199,3 +199,33 @@ where
         Ok(self.output.send_frame(&self.encryptor.encrypt(raw))?)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_zmq_no_encryption() {
+        let locator = zmqsocket::SocketLocator::Inproc(s!("test"));
+        let mut rx = Raw::with_zmq_unencrypted(
+            zmqsocket::ApiType::Server,
+            &locator,
+            None,
+        )
+        .unwrap();
+        let mut tx = Raw::with_zmq_unencrypted(
+            zmqsocket::ApiType::Client,
+            &locator,
+            None,
+        )
+        .unwrap();
+
+        let msg = b"Some message";
+        tx.send_raw_message(msg).unwrap();
+        assert_eq!(rx.recv_raw_message().unwrap(), msg);
+
+        let msg = b"";
+        rx.send_raw_message(msg).unwrap();
+        assert_eq!(tx.recv_raw_message().unwrap(), msg);
+    }
+}

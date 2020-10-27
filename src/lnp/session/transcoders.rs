@@ -14,7 +14,9 @@
 use amplify::Bipolar;
 use std::borrow::Borrow;
 
-use crate::lnp::transport::{FRAME_PREFIX_SIZE, FRAME_SUFFIX_SIZE};
+use crate::lnp::transport::{
+    Error, FRAME_PREFIX_SIZE, FRAME_SUFFIX_SIZE, MAX_FRAME_SIZE,
+};
 #[cfg(feature = "lightning")]
 use lightning::ln::peers::{
     encryption::{Decryptor, Encryptor},
@@ -126,18 +128,6 @@ impl Bipolar for Transcoder {
 #[display(Debug)]
 pub struct NoEncryption;
 
-/// Impossible error type
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
-#[display(Debug)]
-// TODO: (v0.2) Add session-level errors
-pub struct NoError;
-
-impl From<NoError> for crate::lnp::transport::Error {
-    fn from(_: NoError) -> Self {
-        panic!("NoError can't happen!")
-    }
-}
-
 impl Encrypt for NoEncryption {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
         let mut data = vec![];
@@ -153,15 +143,26 @@ impl Encrypt for NoEncryption {
 }
 
 impl Decrypt for NoEncryption {
-    type Error = NoError;
+    type Error = Error;
     fn decrypt(
         &mut self,
         buffer: impl Borrow<[u8]>,
     ) -> Result<Vec<u8>, Self::Error> {
-        // TODO: (v0.2) check for message length to be equal to the length
-        //       from the frame
         let buffer = buffer.borrow();
-        let len = buffer.len() - FRAME_SUFFIX_SIZE;
+        let len = buffer.len();
+        if len < FRAME_PREFIX_SIZE + FRAME_SUFFIX_SIZE {
+            return Err(Error::FrameTooSmall(len));
+        }
+        if len > MAX_FRAME_SIZE {
+            return Err(Error::OversizedFrame(len));
+        }
+        let len = len - FRAME_SUFFIX_SIZE;
+        let mut len_buf = [0u8; 2];
+        len_buf.copy_from_slice(&buffer[0..2]);
+        let data_len = u16::from_le_bytes(len_buf);
+        if data_len != (len - FRAME_PREFIX_SIZE) as u16 {
+            return Err(Error::InvalidLength);
+        }
         Ok(buffer[FRAME_PREFIX_SIZE..len].to_vec())
     }
 }
@@ -181,5 +182,38 @@ impl Bipolar for NoEncryption {
 
     fn split(self) -> (Self::Left, Self::Right) {
         (self.clone(), self)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_no_encryption() {
+        let transcoder = NoEncryption;
+        let (mut encoder, mut decoder) = transcoder.split();
+        let frame = encoder.encrypt([]);
+        assert_eq!(frame, vec![0u8; FRAME_PREFIX_SIZE + FRAME_SUFFIX_SIZE]);
+        let data = decoder.decrypt(frame).unwrap();
+        assert_eq!(data, Vec::<u8>::new());
+
+        let data = b"Some message";
+        let frame = encoder.encrypt(*data);
+        assert_eq!(
+            frame,
+            vec![
+                12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 111,
+                109, 101, 32, 109, 101, 115, 115, 97, 103, 101, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            ]
+        );
+        let decrypted = decoder.decrypt(frame.as_ref()).unwrap();
+        assert_eq!(decrypted, data);
+
+        assert_eq!(
+            decoder.decrypt(&frame[2..]).unwrap_err(),
+            Error::InvalidLength
+        );
     }
 }

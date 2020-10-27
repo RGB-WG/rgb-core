@@ -28,5 +28,5 @@ pub use node_addr::{NodeAddr, NodeEndpoint, ToNodeAddr, ToNodeEndpoint};
 pub use node_locator::NodeLocator;
 pub use session::{Input, Output, Raw, RawInput, RawOutput, Session, Split};
 pub use transcoders::{
-    Decrypt, DecryptionError, Encrypt, NoEncryption, NoError, Transcode,
+    Decrypt, DecryptionError, Encrypt, NoEncryption, Transcode,
 };
