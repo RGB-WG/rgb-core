@@ -26,6 +26,8 @@ pub use peer_connection::{
 };
 pub use rpc_connection::RpcConnection;
 
+use bitcoin::hashes::{sha256, Hmac};
+
 /// Lightning network channel Id
 #[derive(
     Wrapper,
@@ -43,3 +45,86 @@ pub use rpc_connection::RpcConnection;
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct ChannelId([u8; 32]);
+
+/// Lightning network temporary channel Id
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Debug,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct TempChannelId([u8; 32]);
+
+/// HTLC payment hash
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Debug,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct PaymentHash([u8; 32]);
+
+/// HTLC payment preimage
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Debug,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct PaymentPreimage([u8; 32]);
+
+/// Payment secret use to authenticate sender to the receiver and tie MPP HTLCs
+/// together
+#[derive(
+    Wrapper,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Debug,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct PaymentSecret([u8; 32]);
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct OnionPacket {
+    pub version: u8,
+    pub public_key: bitcoin::secp256k1::PublicKey,
+    pub hop_data: Vec<u8>, //[u8; 20 * 65],
+    pub hmac: Hmac<sha256::Hash>,
+}

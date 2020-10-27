@@ -15,8 +15,13 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
-use super::{ChannelId, Features};
+use bitcoin::hashes::sha256;
+use bitcoin::secp256k1::{PublicKey, Signature};
+use bitcoin::{Script, Txid};
+
+use super::{ChannelId, Features, OnionPacket, TempChannelId};
 use crate::bp::chain::AssetId;
+use crate::lnp::application::{PaymentHash, PaymentPreimage};
 use crate::lnp::presentation::{
     CreateUnmarshaller, Encode, Unmarshall, Unmarshaller,
 };
@@ -37,13 +42,13 @@ pub enum Messages {
     /// Once authentication is complete, the first message reveals the features
     /// supported or required by this node, even if this is a reconnection.
     #[lnp_api(type = 16)]
-    #[display("init({_0})")]
+    #[display(inner)]
     Init(Init),
 
     /// For simplicity of diagnosis, it's often useful to tell a peer that
     /// something is incorrect.
     #[lnp_api(type = 17)]
-    #[display("error({_0})")]
+    #[display(inner)]
     Error(Error),
 
     /// In order to allow for the existence of long-lived TCP connections, at
@@ -51,8 +56,8 @@ pub enum Messages {
     /// at the application level. Such messages also allow obfuscation of
     /// traffic patterns.
     #[lnp_api(type = 18)]
-    #[display("ping()")]
-    Ping,
+    #[display(inner)]
+    Ping(Ping),
 
     /// The pong message is to be sent whenever a ping message is received. It
     /// serves as a reply and also serves to keep the connection alive, while
@@ -61,37 +66,108 @@ pub enum Messages {
     /// bytes to be included within the data payload of the pong message.
     #[lnp_api(type = 19)]
     #[display("pong()")]
-    Pong,
+    Pong(Vec<u8>),
+
+    // Part II: Channel management protocol
+    // ====================================
+    //
+    // 1. Channel establishment
+    // ------------------------
+    #[lnp_api(type = 32)]
+    #[display("open_channel({_0})")]
+    OpenChannel(OpenChannel),
+
+    #[lnp_api(type = 33)]
+    #[display("accept_channel({_0})")]
+    AcceptChannel(AcceptChannel),
+
+    #[lnp_api(type = 34)]
+    #[display("funding_created({_0})")]
+    FundingCreated(FundingCreated),
+
+    #[lnp_api(type = 35)]
+    #[display("funding_signed({_0})")]
+    FundingSigned(FundingSigned),
+
+    #[lnp_api(type = 36)]
+    #[display("funding_locked({_0})")]
+    FundingLocked(FundingLocked),
+
+    #[lnp_api(type = 38)]
+    #[display("shutdown({_0})")]
+    Shutdown(Shutdown),
+
+    #[lnp_api(type = 39)]
+    #[display("closing_signed({_0})")]
+    ClosingSigned(ClosingSigned),
+
+    // 2. Normal operations
+    // --------------------
+    #[lnp_api(type = 128)]
+    #[display("update_add_htlc({_0})")]
+    UpdateAddHtlc(UpdateAddHtlc),
+
+    #[lnp_api(type = 130)]
+    #[display("update_fulfill_htlc({_0})")]
+    UpdateFulfillHtlc(UpdateFulfillHtlc),
+
+    #[lnp_api(type = 131)]
+    #[display("update_fail_htlc({_0})")]
+    UpdateFailHtlc(UpdateFailHtlc),
+
+    #[lnp_api(type = 135)]
+    #[display("update_fail_malformed_htlc({_0})")]
+    UpdateFailMalformedHtlc(UpdateFailMalformedHtlc),
+
+    #[lnp_api(type = 132)]
+    #[display("commitment_signed({_0})")]
+    CommitmentSigned(CommitmentSigned),
+
+    #[lnp_api(type = 133)]
+    #[display("revoke_and_ack({_0})")]
+    RevokeAndAck(RevokeAndAck),
+
+    #[lnp_api(type = 134)]
+    #[display("update_fee({_0})")]
+    UpdateFee(UpdateFee),
+
+    #[lnp_api(type = 136)]
+    #[display("channel_reestablish({_0})")]
+    ChannelReestablish(ChannelReestablish),
 }
 
-impl StrictEncode for Messages {
-    type Error = strict_encoding::Error;
-
-    fn strict_encode<E: io::Write>(
-        &self,
-        e: E,
-    ) -> Result<usize, strict_encoding::Error> {
-        self.encode()
-            .expect("Memory encoders does not fail")
-            .strict_encode(e)
-    }
+/// Once authentication is complete, the first message reveals the features
+/// supported or required by this node, even if this is a reconnection.
+///
+/// # Specification
+/// <https://github.com/lightningnetwork/lightning-rfc/blob/master/01-messaging.md#the-init-message>
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(
+    "init({global_features}, {local_features}, {assets:#?}), {unknown_tlvs:#?}"
+)]
+pub struct Init {
+    pub global_features: Features,
+    pub local_features: Features,
+    // #[lnpwp(tlv=1)]
+    pub assets: HashSet<AssetId>,
+    // #[lpwpw(unknown_tlvs)]
+    pub unknown_tlvs: BTreeMap<u64, Vec<u8>>,
 }
 
-impl StrictDecode for Messages {
-    type Error = strict_encoding::Error;
-
-    fn strict_decode<D: io::Read>(
-        d: D,
-    ) -> Result<Self, strict_encoding::Error> {
-        Ok((&*LNPWP_UNMARSHALLER
-            .unmarshall(&Vec::<u8>::strict_decode(d)?)
-            .map_err(|err| {
-                strict_encoding::Error::UnsupportedDataStructure(
-                    "can't unmarshall LNPWP message",
-                )
-            })?)
-            .clone())
-    }
+/// In order to allow for the existence of long-lived TCP connections, at
+/// times it may be required that both ends keep alive the TCP connection
+/// at the application level. Such messages also allow obfuscation of
+/// traffic patterns.
+///
+/// # Specification
+/// <https://github.com/lightningnetwork/lightning-rfc/blob/master/01-messaging.md#the-ping-and-pong-messages>
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct Ping {
+    pub ignored: Vec<u8>,
+    pub pong_size: u16,
 }
 
 /// For simplicity of diagnosis, it's often useful to tell a peer that something
@@ -128,19 +204,373 @@ impl Display for Error {
     }
 }
 
-/// Once authentication is complete, the first message reveals the features
-/// supported or required by this node, even if this is a reconnection.
-///
-/// # Specification
-/// <https://github.com/lightningnetwork/lightning-rfc/blob/master/01-messaging.md#the-init-message>
-#[derive(
-    Clone, PartialEq, Debug, Display, Error, StrictEncode, StrictDecode,
-)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
-pub struct Init {
-    pub global_features: Features,
-    pub local_features: Features,
-    pub assets: HashSet<AssetId>,
+pub struct OpenChannel {
+    /// The genesis hash of the blockchain where the channel is to be opened
+    pub chain_hash: AssetId,
+
+    /// A temporary channel ID, until the funding outpoint is announced
+    pub temporary_channel_id: TempChannelId,
+
+    /// The channel value
+    pub funding_satoshis: u64,
+
+    /// The amount to push to the counterparty as part of the open, in
+    /// milli-satoshi
+    pub push_msat: u64,
+
+    /// The threshold below which outputs on transactions broadcast by sender
+    /// will be omitted
+    pub dust_limit_satoshis: u64,
+
+    /// The maximum inbound HTLC value in flight towards sender, in
+    /// milli-satoshi
+    pub max_htlc_value_in_flight_msat: u64,
+
+    /// The minimum value unencumbered by HTLCs for the counterparty to keep
+    /// in the channel
+    pub channel_reserve_satoshis: u64,
+
+    /// The minimum HTLC size incoming to sender, in milli-satoshi
+    pub htlc_minimum_msat: u64,
+
+    /// The fee rate per 1000-weight of sender generated transactions, until
+    /// updated by update_fee
+    pub feerate_per_kw: u32,
+
+    /// The number of blocks which the counterparty will have to wait to claim
+    /// on-chain funds if they broadcast a commitment transaction
+    pub to_self_delay: u16,
+
+    /// The maximum number of inbound HTLCs towards sender
+    pub max_accepted_htlcs: u16,
+
+    /// The sender's key controlling the funding transaction
+    pub funding_pubkey: PublicKey,
+
+    /// Used to derive a revocation key for transactions broadcast by
+    /// counterparty
+    pub revocation_basepoint: PublicKey,
+
+    /// A payment key to sender for transactions broadcast by counterparty
+    pub payment_point: PublicKey,
+
+    /// Used to derive a payment key to sender for transactions broadcast by
+    /// sender
+    pub delayed_payment_basepoint: PublicKey,
+
+    /// Used to derive an HTLC payment key to sender
+    pub htlc_basepoint: PublicKey,
+
+    /// The first to-be-broadcast-by-sender transaction's per commitment point
+    pub first_per_commitment_point: PublicKey,
+
+    /// Channel flags
+    pub channel_flags: u8,
+
+    /// Optionally, a request to pre-set the to-sender output's scriptPubkey
+    /// for when we collaboratively close
+    // #[lnpwp(tlv=0)]
+    pub shutdown_scriptpubkey: Option<Script>,
+
+    // #[lpwpw(unknown_tlvs)]
     pub unknown_tlvs: BTreeMap<u64, Vec<u8>>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct AcceptChannel {
+    /// A temporary channel ID, until the funding outpoint is announced
+    pub temporary_channel_id: TempChannelId,
+
+    /// The threshold below which outputs on transactions broadcast by sender
+    /// will be omitted
+    pub dust_limit_satoshis: u64,
+
+    /// The maximum inbound HTLC value in flight towards sender, in
+    /// milli-satoshi
+    pub max_htlc_value_in_flight_msat: u64,
+
+    /// The minimum value unencumbered by HTLCs for the counterparty to keep in
+    /// the channel
+    pub channel_reserve_satoshis: u64,
+
+    /// The minimum HTLC size incoming to sender, in milli-satoshi
+    pub htlc_minimum_msat: u64,
+
+    /// Minimum depth of the funding transaction before the channel is
+    /// considered open
+    pub minimum_depth: u32,
+
+    /// The number of blocks which the counterparty will have to wait to claim
+    /// on-chain funds if they broadcast a commitment transaction
+    pub to_self_delay: u16,
+
+    /// The maximum number of inbound HTLCs towards sender
+    pub max_accepted_htlcs: u16,
+
+    /// The sender's key controlling the funding transaction
+    pub funding_pubkey: PublicKey,
+
+    /// Used to derive a revocation key for transactions broadcast by
+    /// counterparty
+    pub revocation_basepoint: PublicKey,
+
+    /// A payment key to sender for transactions broadcast by counterparty
+    pub payment_point: PublicKey,
+
+    /// Used to derive a payment key to sender for transactions broadcast by
+    /// sender
+    pub delayed_payment_basepoint: PublicKey,
+
+    /// Used to derive an HTLC payment key to sender for transactions broadcast
+    /// by counterparty
+    pub htlc_basepoint: PublicKey,
+
+    /// The first to-be-broadcast-by-sender transaction's per commitment point
+    pub first_per_commitment_point: PublicKey,
+
+    /// Optionally, a request to pre-set the to-sender output's scriptPubkey
+    /// for when we collaboratively close
+    // #[lnpwp(tlv=0)]
+    pub shutdown_scriptpubkey: Option<Script>,
+
+    // #[lpwpw(unknown_tlvs)]
+    pub unknown_tlvs: BTreeMap<u64, Vec<u8>>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct FundingCreated {
+    /// A temporary channel ID, until the funding is established
+    pub temporary_channel_id: TempChannelId,
+
+    /// The funding transaction ID
+    pub funding_txid: Txid,
+
+    /// The specific output index funding this channel
+    pub funding_output_index: u16,
+
+    /// The signature of the channel initiator (funder) on the funding
+    /// transaction
+    pub signature: Signature,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct FundingSigned {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The signature of the channel acceptor on the funding transaction
+    pub signature: Signature,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct FundingLocked {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The per-commitment point of the second commitment transaction
+    pub next_per_commitment_point: PublicKey,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct Shutdown {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The destination of this peer's funds on closing.
+    /// Must be in one of these forms: p2pkh, p2sh, p2wpkh, p2wsh.
+    pub scriptpubkey: Script,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct ClosingSigned {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The proposed total fee for the closing transaction
+    pub fee_satoshis: u64,
+
+    /// A signature on the closing transaction
+    pub signature: Signature,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct UpdateAddHtlc {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The HTLC ID
+    pub htlc_id: u64,
+
+    /// The HTLC value in milli-satoshi
+    pub amount_msat: u64,
+
+    /// The payment hash, the pre-image of which controls HTLC redemption
+    pub payment_hash: PaymentHash,
+
+    /// The expiry height of the HTLC
+    pub cltv_expiry: u32,
+
+    /// An obfuscated list of hops and instructions for each hop along the
+    /// path. It commits to the HTLC by setting the payment_hash as associated
+    /// data, i.e. includes the payment_hash in the computation of HMACs. This
+    /// prevents replay attacks that would reuse a previous
+    /// onion_routing_packet with a different payment_hash.
+    pub onion_routing_packet: OnionPacket,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct UpdateFulfillHtlc {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The HTLC ID
+    pub htlc_id: u64,
+
+    /// The pre-image of the payment hash, allowing HTLC redemption
+    pub payment_preimage: PaymentPreimage,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct UpdateFailHtlc {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The HTLC ID
+    pub htlc_id: u64,
+
+    /// The reason field is an opaque encrypted blob for the benefit of the
+    /// original HTLC initiator, as defined in BOLT #4; however, there's a
+    /// special malformed failure variant for the case where the peer couldn't
+    /// parse it: in this case the current node instead takes action,
+    /// encrypting it into a update_fail_htlc for relaying.
+    pub reason: Vec<u8>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct UpdateFailMalformedHtlc {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The HTLC ID
+    pub htlc_id: u64,
+
+    /// SHA256 hash of onion data
+    pub sha256_of_onion: sha256::Hash,
+
+    /// The failure code
+    pub failure_code: u16,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct CommitmentSigned {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// A signature on the commitment transaction
+    pub signature: Signature,
+
+    /// Signatures on the HTLC transactions
+    pub htlc_signatures: Vec<Signature>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct RevokeAndAck {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The secret corresponding to the per-commitment point
+    pub per_commitment_secret: [u8; 32],
+
+    /// The next sender-broadcast commitment transaction's per-commitment point
+    pub next_per_commitment_point: PublicKey,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct UpdateFee {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// Fee rate per 1000-weight of the transaction
+    pub feerate_per_kw: u32,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct ChannelReestablish {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// The next commitment number for the sender
+    pub next_commitment_number: u64,
+
+    /// The next commitment number for the recipient
+    pub next_revocation_number: u64,
+
+    /// Proof that the sender knows the per-commitment secret of a specific
+    /// commitment transaction belonging to the recipient
+    pub your_last_per_commitment_secret: [u8; 32],
+
+    /// The sender's per-commitment point for their current commitment
+    /// transaction
+    pub my_current_per_commitment_point: PublicKey,
+}
+
+impl StrictEncode for Messages {
+    type Error = strict_encoding::Error;
+
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
+        self.encode()
+            .expect("Memory encoders does not fail")
+            .strict_encode(e)
+    }
+}
+
+impl StrictDecode for Messages {
+    type Error = strict_encoding::Error;
+
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
+        Ok((&*LNPWP_UNMARSHALLER
+            .unmarshall(&Vec::<u8>::strict_decode(d)?)
+            .map_err(|err| {
+                strict_encoding::Error::UnsupportedDataStructure(
+                    "can't unmarshall LNPWP message",
+                )
+            })?)
+            .clone())
+    }
 }
