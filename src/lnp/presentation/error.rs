@@ -70,9 +70,9 @@ pub enum Error {
     /// Invalid length of TLV record inside LNP message
     TlvRecordInvalidLen,
 
-    /// Transport-level error
+    /// {_0}
     #[from]
-    TransportError(transport::Error),
+    Transport(transport::Error),
 }
 
 impl From<std::io::Error> for Error {
@@ -98,7 +98,7 @@ impl From<Error> for u8 {
             Error::TlvStreamDuplicateItem => 11,
             Error::TlvRecordEvenType => 12,
             Error::TlvRecordInvalidLen => 13,
-            Error::TransportError(_) => 14,
+            Error::Transport(_) => 14,
         }
     }
 }

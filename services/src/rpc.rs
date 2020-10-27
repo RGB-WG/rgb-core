@@ -54,16 +54,24 @@ pub enum Error {
 
     /// Error on LNP protocol transport level:
     /// {_0}
-    #[from]
-    PresentationError(lnp::presentation::Error),
+    Presentation(lnp::presentation::Error),
 
     /// Error in LNP message serialization or structure:
     /// {_0}
     #[from]
-    TransportError(lnp::transport::Error),
+    Transport(lnp::transport::Error),
 
     /// The provided RPC endpoint {_0} is unknown
     UnknownEndpoint(String),
+}
+
+impl From<lnp::presentation::Error> for Error {
+    fn from(err: lnp::presentation::Error) -> Self {
+        match err {
+            lnp::presentation::Error::Transport(err) => Error::Transport(err),
+            err => Error::Presentation(err),
+        }
+    }
 }
 
 impl From<lnp::presentation::Error> for Failure {

@@ -50,12 +50,12 @@ where
     type ErrorType = H::Error;
 
     fn try_run_loop(mut self) -> Result<(), Self::ErrorType> {
-        debug!("Entering event loop of the sender service");
+        trace!("Entering event loop of the sender service");
         loop {
             match self.run() {
-                Ok(_) => debug!("Peer message processing complete"),
+                Ok(_) => trace!("Peer message processing complete"),
                 Err(err) => {
-                    error!("Error processing peer message: {}", err);
+                    trace!("Peer connection generated {:?}", err);
                     self.handler.handle_err(err)?;
                 }
             }
@@ -68,7 +68,7 @@ where
     H: Handler,
 {
     fn run(&mut self) -> Result<(), H::Error> {
-        debug!("Awaiting for peer messages...");
+        trace!("Awaiting for peer messages...");
         let msg = self.receiver.recv_message()?;
         debug!("Processing message {}", msg);
         trace!("Message details: {:?}", msg);
