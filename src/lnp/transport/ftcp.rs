@@ -143,7 +143,7 @@ impl RecvFrame for std::net::TcpStream {
         let mut buf: Vec<u8> = vec![
             0u8;
             len + super::FRAME_PREFIX_SIZE
-                + super::GRAME_SUFFIX_SIZE
+                + super::FRAME_SUFFIX_SIZE
         ];
         buf[0..2].copy_from_slice(&len16.to_be_bytes());
         self.read_exact(&mut buf[2..])?;

@@ -33,14 +33,14 @@ pub use zmqsocket::ZMQ_CONTEXT;
 
 /// Maximum size of the transport frame; chosen in compliance with LN specs
 pub const MAX_FRAME_SIZE: usize =
-    FRAME_PREFIX_SIZE + MAX_FRAME_PAYLOAD_SIZE + GRAME_SUFFIX_SIZE;
+    FRAME_PREFIX_SIZE + MAX_FRAME_PAYLOAD_SIZE + FRAME_SUFFIX_SIZE;
 
 /// Size of the frame prefix which is not included into payload size, consisting
 /// of the 2-bytes message size data and 16-byte MAC of the payload length
 pub const FRAME_PREFIX_SIZE: usize = 2 + 16;
 
 /// Size of the frame suffix represented by a 16-byte MAC of the frame payload
-pub const GRAME_SUFFIX_SIZE: usize = 16;
+pub const FRAME_SUFFIX_SIZE: usize = 16;
 
 /// Maximum size of the frame payload which may be expressed by two bytes
 pub const MAX_FRAME_PAYLOAD_SIZE: usize = 0xFFFF;

@@ -14,6 +14,7 @@
 use amplify::Bipolar;
 use std::borrow::Borrow;
 
+use crate::lnp::transport::{FRAME_PREFIX_SIZE, FRAME_SUFFIX_SIZE};
 #[cfg(feature = "lightning")]
 use lightning::ln::peers::{
     encryption::{Decryptor, Encryptor},
@@ -128,9 +129,9 @@ pub struct NoEncryption;
 /// Impossible error type
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
 #[display(Debug)]
+// TODO: (v0.2) Add session-level errors
 pub struct NoError;
 
-// TODO: (new) change to session error once it will be introduced
 impl From<NoError> for crate::lnp::transport::Error {
     fn from(_: NoError) -> Self {
         panic!("NoError can't happen!")
@@ -139,7 +140,15 @@ impl From<NoError> for crate::lnp::transport::Error {
 
 impl Encrypt for NoEncryption {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
-        buffer.borrow().to_vec()
+        let mut data = vec![];
+        let buffer = buffer.borrow().to_vec();
+        // TODO: (v0.2) check for length value to fit u16
+        let len = buffer.len() as u16;
+        data.extend(&len.to_le_bytes());
+        data.extend(&[0u8; FRAME_PREFIX_SIZE - 2]);
+        data.extend(buffer);
+        data.extend(&[0u8; FRAME_SUFFIX_SIZE]);
+        data
     }
 }
 
@@ -149,7 +158,11 @@ impl Decrypt for NoEncryption {
         &mut self,
         buffer: impl Borrow<[u8]>,
     ) -> Result<Vec<u8>, Self::Error> {
-        Ok(buffer.borrow().to_vec())
+        // TODO: (v0.2) check for message length to be equal to the length
+        //       from the frame
+        let buffer = buffer.borrow();
+        let len = buffer.len() - FRAME_SUFFIX_SIZE;
+        Ok(buffer[FRAME_PREFIX_SIZE..len].to_vec())
     }
 }
 
