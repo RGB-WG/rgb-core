@@ -714,7 +714,7 @@ checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "lnpbp"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -728,37 +728,7 @@ dependencies = [
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
- "lnpbp_derive 0.2.0-alpha.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "miniscript",
- "num-derive",
- "num-traits 0.2.12",
- "serde 1.0.117",
- "serde_with",
- "tokio",
- "torut",
- "url",
- "zmq",
-]
-
-[[package]]
-name = "lnpbp"
-version = "0.2.0-alpha.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c558071a3fd4013c729c3e25f5cedf3b9cfc63d3d34c8a5040746c7d12d5f59e"
-dependencies = [
- "amplify",
- "amplify_derive",
- "async-trait",
- "bech32",
- "bitcoin",
- "bitcoin_hashes",
- "chacha20poly1305",
- "deflate",
- "ed25519-dalek",
- "grin_secp256k1zkp",
- "inflate",
- "lazy_static",
- "lnpbp_derive 0.2.0-alpha.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp_derive",
  "miniscript",
  "num-derive",
  "num-traits 0.2.12",
@@ -772,28 +742,17 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "amplify",
- "lnpbp 0.2.0-alpha.1",
- "quote 1.0.7",
- "syn 1.0.45",
-]
-
-[[package]]
-name = "lnpbp_derive"
-version = "0.2.0-alpha.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "558da02dc8c744401e868358062a2e33e33e74e8d71396c1f47dbd1d8de683df"
-dependencies = [
- "amplify",
+ "lnpbp",
  "quote 1.0.7",
  "syn 1.0.45",
 ]
 
 [[package]]
 name = "lnpbp_services"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -801,8 +760,8 @@ dependencies = [
  "config",
  "dotenv",
  "env_logger",
- "lnpbp 0.2.0-alpha.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "lnpbp_derive 0.2.0-alpha.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp",
+ "lnpbp_derive",
  "log",
  "serde 1.0.117",
  "serde_with",

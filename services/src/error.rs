@@ -86,6 +86,7 @@ where
 
     /// ZeroMQ socket error:
     /// {_0}
+    #[cfg(feature = "zmq")]
     #[from]
     Zmq(zmq::Error),
 

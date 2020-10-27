@@ -104,7 +104,7 @@ impl Encode for Payload {
         self.type_id
             .to_inner()
             .strict_encode(&mut e)
-            .map_err(|_| Error::Io)?;
+            .expect("Memory encoders do not fail");
         e.write(&self.payload)?;
         Ok(e.into_inner())
     }

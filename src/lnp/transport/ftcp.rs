@@ -130,8 +130,11 @@ impl Bipolar for Connection {
 
 impl RecvFrame for std::net::TcpStream {
     fn recv_frame(&mut self) -> Result<Vec<u8>, Error> {
-        let len16 = self.read_u16().map_err(|_| {
-            Error::SocketError(s!("Unable to read frame length"))
+        let len16 = self.read_u16().map_err(|err| match err {
+            bitcoin::consensus::encode::Error::Io(err) => Error::from(err),
+            _ => unreachable!(
+                "`bitcoin::consensus::encode::read_u16` may fail only with I/O error"
+            ),
         })?;
         let len = len16 as usize;
         let mut buf: Vec<u8> = vec![

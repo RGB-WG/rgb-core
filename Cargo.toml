@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 license = "MIT"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP Core Library implementing LNPBP specifications & standards"
@@ -37,7 +37,7 @@ crate-type = ["dylib", "rlib", "staticlib"]
 chacha20poly1305 = "~0.7.0"
 amplify = { version = "~2.0.6", features = ["stringly_conversions"] }
 amplify_derive = "~2.0.6"
-lnpbp_derive = "~0.2.0-alpha.1"
+lnpbp_derive = { path = "./derive" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.25.1", features = ["rand"] }

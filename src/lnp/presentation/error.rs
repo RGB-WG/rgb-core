@@ -29,8 +29,8 @@ pub enum Error {
 
     /// I/O error while decoding LNP message; probably socket error or out of
     /// memory
-    #[from(std::io::Error)]
-    Io = 1,
+    #[from]
+    Io(std::io::ErrorKind),
 
     /// LNP message contains no data
     NoData,
@@ -71,8 +71,36 @@ pub enum Error {
     TlvRecordInvalidLen,
 
     /// Transport-level error
-    #[from(transport::Error)]
-    TransportError,
+    #[from]
+    TransportError(transport::Error),
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::Io(err.kind())
+    }
+}
+
+impl From<Error> for u8 {
+    fn from(err: Error) -> Self {
+        match err {
+            Error::InvalidEndpoint => 0,
+            Error::Io(_) => 1,
+            Error::NoData => 2,
+            Error::NoEncoder => 3,
+            Error::UnknownProtocolVersion => 4,
+            Error::EncodingError => 5,
+            Error::UnknownDataType => 6,
+            Error::InvalidValue => 7,
+            Error::MessageEvenType => 8,
+            Error::BadLengthDescriptor => 9,
+            Error::TlvStreamWrongOrder => 10,
+            Error::TlvStreamDuplicateItem => 11,
+            Error::TlvRecordEvenType => 12,
+            Error::TlvRecordInvalidLen => 13,
+            Error::TransportError(_) => 14,
+        }
+    }
 }
 
 #[cfg(feature = "lightning")]

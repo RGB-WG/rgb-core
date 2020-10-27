@@ -69,7 +69,7 @@ pub enum Error {
 impl From<lnp::presentation::Error> for Failure {
     fn from(err: lnp::presentation::Error) -> Self {
         Failure {
-            code: err as u16,
+            code: u8::from(err) as u16,
             info: err.to_string(),
         }
     }

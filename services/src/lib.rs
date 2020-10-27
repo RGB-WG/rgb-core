@@ -53,11 +53,11 @@ pub mod error;
 pub mod format;
 #[cfg(feature = "node")]
 pub mod node;
-#[cfg(feature = "server")]
+#[cfg(feature = "node")]
 pub mod peer;
 #[cfg(any(feature = "client", feature = "node"))]
 pub mod rpc;
-#[cfg(feature = "server")]
+#[cfg(feature = "node")]
 pub mod server;
 #[cfg(feature = "shell")]
 pub mod shell;
