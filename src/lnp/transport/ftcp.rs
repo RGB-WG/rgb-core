@@ -16,7 +16,6 @@
 
 use amplify::internet::InetSocketAddr;
 use amplify::Bipolar;
-use bitcoin::consensus::encode::ReadExt;
 use core::convert::TryFrom;
 use core::time::Duration;
 use std::io::{Read, Write};
@@ -133,19 +132,15 @@ impl Bipolar for Connection {
 
 impl RecvFrame for std::net::TcpStream {
     fn recv_frame(&mut self) -> Result<Vec<u8>, Error> {
-        let len16 = self.read_u16().map_err(|err| match err {
-            bitcoin::consensus::encode::Error::Io(err) => Error::from(err),
-            _ => unreachable!(
-                "`bitcoin::consensus::encode::read_u16` may fail only with I/O error"
-            ),
-        })?;
-        let len = len16 as usize;
+        let mut len_buf = [0u8; 2];
+        self.read_exact(&mut len_buf)?;
+        let len = u16::from_be_bytes(len_buf) as usize;
         let mut buf: Vec<u8> = vec![
             0u8;
             len + super::FRAME_PREFIX_SIZE
                 + super::FRAME_SUFFIX_SIZE
         ];
-        buf[0..2].copy_from_slice(&len16.to_be_bytes());
+        buf[0..2].copy_from_slice(&len_buf);
         self.read_exact(&mut buf[2..])?;
         Ok(buf)
     }

@@ -134,7 +134,7 @@ impl Encrypt for NoEncryption {
         let buffer = buffer.borrow().to_vec();
         // TODO: (v0.2) check for length value to fit u16
         let len = buffer.len() as u16;
-        data.extend(&len.to_le_bytes());
+        data.extend(&len.to_be_bytes());
         data.extend(&[0u8; FRAME_PREFIX_SIZE - 2]);
         data.extend(buffer);
         data.extend(&[0u8; FRAME_SUFFIX_SIZE]);
@@ -149,17 +149,17 @@ impl Decrypt for NoEncryption {
         buffer: impl Borrow<[u8]>,
     ) -> Result<Vec<u8>, Self::Error> {
         let buffer = buffer.borrow();
-        let len = buffer.len();
-        if len < FRAME_PREFIX_SIZE + FRAME_SUFFIX_SIZE {
-            return Err(Error::FrameTooSmall(len));
+        let frame_len = buffer.len();
+        if frame_len < FRAME_PREFIX_SIZE + FRAME_SUFFIX_SIZE {
+            return Err(Error::FrameTooSmall(frame_len));
         }
-        if len > MAX_FRAME_SIZE {
-            return Err(Error::OversizedFrame(len));
+        if frame_len > MAX_FRAME_SIZE {
+            return Err(Error::OversizedFrame(frame_len));
         }
-        let len = len - FRAME_SUFFIX_SIZE;
         let mut len_buf = [0u8; 2];
         len_buf.copy_from_slice(&buffer[0..2]);
-        let data_len = u16::from_le_bytes(len_buf);
+        let data_len = u16::from_be_bytes(len_buf);
+        let len = frame_len - FRAME_SUFFIX_SIZE;
         if data_len != (len - FRAME_PREFIX_SIZE) as u16 {
             return Err(Error::InvalidLength);
         }
@@ -203,7 +203,7 @@ mod test {
         assert_eq!(
             frame,
             vec![
-                12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 111,
+                0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 111,
                 109, 101, 32, 109, 101, 115, 115, 97, 103, 101, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             ]
