@@ -42,6 +42,8 @@ where
         addr: Self::Address,
         request: Self::Request,
     ) -> Result<(), Self::Error>;
+
+    fn handle_err(&mut self, error: rpc::Error) -> Result<(), Self::Error>;
 }
 
 pub struct Senders<E>(
@@ -173,7 +175,7 @@ where
                 Ok(_) => debug!("ESB request processing complete"),
                 Err(err) => {
                     error!("Error processing ESB request: {}", err);
-                    Err(err)?;
+                    self.handler.handle_err(err)?;
                 }
             }
         }

@@ -125,4 +125,6 @@ where
         endpoint: Endpoints,
         request: <Self::Api as Api>::Request,
     ) -> Result<<Self::Api as Api>::Reply, Self::Error>;
+
+    fn handle_err(&mut self, error: Error) -> Result<(), Error>;
 }

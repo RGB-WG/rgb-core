@@ -99,7 +99,7 @@ where
                 Ok(_) => debug!("API request processing complete"),
                 Err(err) => {
                     error!("Error processing API request: {}", err);
-                    Err(err)?;
+                    self.handler.handle_err(err)?;
                 }
             }
         }
