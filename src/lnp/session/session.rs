@@ -236,11 +236,13 @@ mod test {
             zmqsocket::ApiType::Server,
             &locator,
             None,
+            None,
         )
         .unwrap();
         let mut tx = Raw::with_zmq_unencrypted(
             zmqsocket::ApiType::Client,
             &locator,
+            None,
             None,
         )
         .unwrap();

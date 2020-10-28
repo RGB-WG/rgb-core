@@ -1,6 +1,14 @@
 Change Log
 ==========
 
+v0.2.0-alpha.2
+--------------
+
+- Enterprise system bus service type with peer addressing
+- Complete set of LN peer messages from BOLT-1 and BOLT-2
+- Improved logging and error handling
+- Improved LNP node address conversions
+
 v0.2.0-alpha.1
 --------------
 
