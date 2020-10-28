@@ -66,9 +66,10 @@ where
         request: R,
     ) -> Result<(), rpc::Error>
     where
-        A: AsRef<[u8]> + From<Vec<u8>>,
+        A: AsRef<[u8]> + From<Vec<u8>> + Display + Debug,
         R: Request,
     {
+        trace!("Sending {} to {} via {}", request, addr, endpoint);
         let data = request.encode()?;
         let session = self
             .0

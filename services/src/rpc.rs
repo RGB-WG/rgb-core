@@ -60,7 +60,7 @@ pub enum Error {
     /// ZeroMQ socket error:
     /// {_0}
     #[from]
-    Zmq(zmq::Error),
+    Zmq(i32),
 
     /// Error on LNP protocol transport level:
     /// {_0}
@@ -68,11 +68,26 @@ pub enum Error {
 
     /// Error in LNP message serialization or structure:
     /// {_0}
-    #[from]
     Transport(lnp::transport::Error),
 
     /// The provided RPC endpoint {_0} is unknown
     UnknownEndpoint(String),
+}
+
+#[cfg(feature = "zmq")]
+impl From<zmq::Error> for Error {
+    fn from(err: zmq::Error) -> Self {
+        Error::Zmq(err.to_raw())
+    }
+}
+
+impl From<lnp::transport::Error> for Error {
+    fn from(err: lnp::transport::Error) -> Self {
+        match err {
+            lnp::transport::Error::Zmq(err) => Error::Zmq(err),
+            err => Error::Transport(err),
+        }
+    }
 }
 
 impl From<lnp::presentation::Error> for Error {
