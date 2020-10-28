@@ -27,6 +27,7 @@ pub use peer_connection::{
 pub use rpc_connection::RpcConnection;
 
 use bitcoin::hashes::{sha256, Hmac};
+use bitcoin_hashes::hex::{Error, FromHex};
 
 /// Lightning network channel Id
 #[derive(
@@ -46,6 +47,17 @@ use bitcoin::hashes::{sha256, Hmac};
 #[display(Debug)]
 pub struct ChannelId([u8; 32]);
 
+impl FromHex for ChannelId {
+    fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Result<u8, Error>>
+            + ExactSizeIterator
+            + DoubleEndedIterator,
+    {
+        Ok(ChannelId(slice32_from_byte_iter(iter)?))
+    }
+}
+
 /// Lightning network temporary channel Id
 #[derive(
     Wrapper,
@@ -63,6 +75,17 @@ pub struct ChannelId([u8; 32]);
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct TempChannelId([u8; 32]);
+
+impl FromHex for TempChannelId {
+    fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Result<u8, Error>>
+            + ExactSizeIterator
+            + DoubleEndedIterator,
+    {
+        Ok(TempChannelId(slice32_from_byte_iter(iter)?))
+    }
+}
 
 /// HTLC payment hash
 #[derive(
@@ -82,6 +105,17 @@ pub struct TempChannelId([u8; 32]);
 #[display(Debug)]
 pub struct PaymentHash([u8; 32]);
 
+impl FromHex for PaymentHash {
+    fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Result<u8, Error>>
+            + ExactSizeIterator
+            + DoubleEndedIterator,
+    {
+        Ok(PaymentHash(slice32_from_byte_iter(iter)?))
+    }
+}
+
 /// HTLC payment preimage
 #[derive(
     Wrapper,
@@ -99,6 +133,17 @@ pub struct PaymentHash([u8; 32]);
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct PaymentPreimage([u8; 32]);
+
+impl FromHex for PaymentPreimage {
+    fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Result<u8, Error>>
+            + ExactSizeIterator
+            + DoubleEndedIterator,
+    {
+        Ok(PaymentPreimage(slice32_from_byte_iter(iter)?))
+    }
+}
 
 /// Payment secret use to authenticate sender to the receiver and tie MPP HTLCs
 /// together
@@ -119,6 +164,17 @@ pub struct PaymentPreimage([u8; 32]);
 #[display(Debug)]
 pub struct PaymentSecret([u8; 32]);
 
+impl FromHex for PaymentSecret {
+    fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Result<u8, Error>>
+            + ExactSizeIterator
+            + DoubleEndedIterator,
+    {
+        Ok(PaymentSecret(slice32_from_byte_iter(iter)?))
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
@@ -127,4 +183,19 @@ pub struct OnionPacket {
     pub public_key: bitcoin::secp256k1::PublicKey,
     pub hop_data: Vec<u8>, //[u8; 20 * 65],
     pub hmac: Hmac<sha256::Hash>,
+}
+
+fn slice32_from_byte_iter<I>(iter: I) -> Result<[u8; 32], Error>
+where
+    I: Iterator<Item = Result<u8, Error>>
+        + ExactSizeIterator
+        + DoubleEndedIterator,
+{
+    let vec = Vec::<u8>::from_byte_iter(iter)?;
+    if vec.len() != 32 {
+        return Err(Error::InvalidLength(32, vec.len()));
+    }
+    let mut id = [0u8; 32];
+    id.copy_from_slice(&vec);
+    Ok(id)
 }
