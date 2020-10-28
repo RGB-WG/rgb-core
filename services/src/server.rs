@@ -62,6 +62,7 @@ where
                             zmqsocket::ApiType::Server,
                             &addr,
                             None,
+                            None,
                         )?
                     }
                     rpc::EndpointCarrier::Socket(socket) => {

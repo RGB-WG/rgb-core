@@ -238,8 +238,12 @@ impl Connection {
         api_type: ApiType,
         remote: &SocketLocator,
         local: Option<SocketLocator>,
+        identity: Option<impl AsRef<[u8]>>,
     ) -> Result<Self, Error> {
         let socket = ZMQ_CONTEXT.socket(api_type.socket_type())?;
+        if let Some(identity) = identity {
+            socket.set_identity(identity.as_ref())?;
+        }
         let endpoint = remote.zmq_socket_string();
         match api_type {
             ApiType::PeerListening

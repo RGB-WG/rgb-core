@@ -51,6 +51,7 @@ where
                     ApiType::Client,
                     &endpoint,
                     None,
+                    None,
                 )?,
             );
         }

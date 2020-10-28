@@ -155,10 +155,13 @@ impl Raw<NoEncryption, zmqsocket::Connection> {
         zmq_type: zmqsocket::ApiType,
         remote: &zmqsocket::SocketLocator,
         local: Option<zmqsocket::SocketLocator>,
+        identity: Option<&[u8]>,
     ) -> Result<Self, Error> {
         Ok(Self {
             transcoder: NoEncryption,
-            connection: zmqsocket::Connection::with(zmq_type, remote, local)?,
+            connection: zmqsocket::Connection::with(
+                zmq_type, remote, local, identity,
+            )?,
         })
     }
 

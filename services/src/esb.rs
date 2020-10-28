@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::HashMap;
+use std::fmt::{Debug, Display};
 
 use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Request;
@@ -31,7 +32,7 @@ where
     rpc::Error: From<Self::Error>,
 {
     type Request: Request;
-    type Address: AsRef<[u8]> + From<Vec<u8>>;
+    type Address: AsRef<[u8]> + From<Vec<u8>> + Display + Debug;
     type Error: std::error::Error;
 
     fn handle(
@@ -101,27 +102,34 @@ where
     ) -> Result<Self, transport::Error> {
         let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
         for (service, endpoint) in endpoints {
-            sessions.insert(
-                service,
-                match endpoint {
-                    rpc::EndpointCarrier::Address(addr) => {
-                        let session = session::Raw::with_zmq_unencrypted(
-                            zmqsocket::ApiType::Esb,
-                            &addr,
-                            None,
-                        )?;
-                        session.as_socket().set_identity(identity.as_ref())?;
-                        session
-                    }
-                    rpc::EndpointCarrier::Socket(socket) => {
-                        socket.set_identity(identity.as_ref())?;
-                        session::Raw::from_pair_socket(
-                            zmqsocket::ApiType::Esb,
-                            socket,
-                        )
-                    }
-                },
+            trace!(
+                "Creating session for {} endpoint with identity '{}'",
+                &endpoint,
+                &identity
             );
+            let session = match endpoint {
+                rpc::EndpointCarrier::Address(addr) => {
+                    let session = session::Raw::with_zmq_unencrypted(
+                        zmqsocket::ApiType::Esb,
+                        &addr,
+                        None,
+                        Some(identity.as_ref()),
+                    )?;
+                    session
+                }
+                rpc::EndpointCarrier::Socket(socket) => {
+                    session::Raw::from_pair_socket(
+                        zmqsocket::ApiType::Esb,
+                        socket,
+                    )
+                }
+            };
+            session.as_socket().set_router_mandatory(true)?;
+            trace!(
+                "ZMQ socket identity set to '{}'",
+                String::from_utf8_lossy(&session.as_socket().get_identity()?)
+            );
+            sessions.insert(service, session);
         }
         let unmarshaller = R::create_unmarshaller();
         Ok(Self {
@@ -137,6 +145,12 @@ where
         addr: H::Address,
         request: R,
     ) -> Result<(), rpc::Error> {
+        trace!(
+            "Sending request {} to endpoint {}, target service identity '{}'",
+            request,
+            endpoint,
+            addr
+        );
         self.sessions.send_to(endpoint, addr, request)
     }
 }

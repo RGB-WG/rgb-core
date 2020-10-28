@@ -32,6 +32,7 @@ impl Connect for LocalAddr {
                 zmqsocket::ApiType::Client,
                 locator,
                 None,
+                None,
             )?,
             LocalAddr::Posix(_) => unimplemented!(),
         }))
@@ -44,6 +45,7 @@ impl Accept for LocalAddr {
             LocalAddr::Zmq(locator) => session::Raw::with_zmq_unencrypted(
                 zmqsocket::ApiType::Client,
                 locator,
+                None,
                 None,
             )?,
             LocalAddr::Posix(_) => unimplemented!(),
@@ -66,6 +68,7 @@ impl Connect for NodeAddr {
                 Box::new(session::Raw::with_zmq_unencrypted(
                     zmqsocket::ApiType::Client,
                     &zmqsocket::SocketLocator::Tcp(socket),
+                    None,
                     None,
                 )?)
             }
@@ -92,6 +95,7 @@ impl Accept for NodeAddr {
                 Box::new(session::Raw::with_zmq_unencrypted(
                     zmqsocket::ApiType::Client,
                     &zmqsocket::SocketLocator::Tcp(socket),
+                    None,
                     None,
                 )?)
             }

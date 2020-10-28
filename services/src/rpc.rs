@@ -21,8 +21,12 @@ use lnpbp::lnp::zmqsocket::SocketLocator;
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;
 
+#[derive(Display)]
 pub enum EndpointCarrier {
+    #[display("address({_0})")]
     Address(SocketLocator),
+
+    #[display("socket(...)")]
     Socket(zmq::Socket),
 }
 
