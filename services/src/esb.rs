@@ -63,6 +63,7 @@ where
     rpc::Error: From<H::Error>,
 {
     pub fn init(
+        identity: H::Address,
         endpoints: HashMap<E, rpc::EndpointCarrier>,
         handler: H,
     ) -> Result<Self, transport::Error> {
@@ -72,13 +73,16 @@ where
                 service,
                 match endpoint {
                     rpc::EndpointCarrier::Address(addr) => {
-                        session::Raw::with_zmq_unencrypted(
+                        let session = session::Raw::with_zmq_unencrypted(
                             zmqsocket::ApiType::Esb,
                             &addr,
                             None,
-                        )?
+                        )?;
+                        session.as_socket().set_identity(identity.as_ref())?;
+                        session
                     }
                     rpc::EndpointCarrier::Socket(socket) => {
+                        socket.set_identity(identity.as_ref())?;
                         session::Raw::from_pair_socket(
                             zmqsocket::ApiType::Esb,
                             socket,
