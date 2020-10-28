@@ -78,7 +78,10 @@ pub enum ApiType {
     /// may communicate directly with each other in asynchronous mode.
     /// Represents [`zmq::SocketType::ROUTER`] socket
     #[display("esb")]
-    Esb = 6,
+    EsbService = 6,
+
+    #[display("esb")]
+    EsbClient = 7,
 }
 
 /// Unknown [`ApiType`] string
@@ -96,7 +99,8 @@ impl ApiType {
             ApiType::Server => zmq::REP,
             ApiType::Publish => zmq::PUB,
             ApiType::Subscribe => zmq::SUB,
-            ApiType::Esb => zmq::ROUTER,
+            ApiType::EsbService => zmq::ROUTER,
+            ApiType::EsbClient => zmq::ROUTER,
         }
     }
 
@@ -107,7 +111,7 @@ impl ApiType {
             ApiType::PeerListening | ApiType::PeerConnecting => s!("p2p"),
             ApiType::Client | ApiType::Server => s!("rpc"),
             ApiType::Publish | ApiType::Subscribe => s!("sub"),
-            ApiType::Esb => s!("esb"),
+            ApiType::EsbService | ApiType::EsbClient => s!("esb"),
         }
     }
 }
@@ -124,7 +128,8 @@ impl FromStr for ApiType {
             ApiType::Server,
             ApiType::Publish,
             ApiType::Subscribe,
-            ApiType::Esb,
+            ApiType::EsbService,
+            ApiType::EsbClient,
         ]
         .into_iter()
         .find(|api| api.to_string() == s)
@@ -249,10 +254,11 @@ impl Connection {
             ApiType::PeerListening
             | ApiType::Server
             | ApiType::Publish
-            | ApiType::Esb => socket.bind(&endpoint)?,
-            ApiType::PeerConnecting | ApiType::Client | ApiType::Subscribe => {
-                socket.connect(&endpoint)?
-            }
+            | ApiType::EsbService => socket.bind(&endpoint)?,
+            ApiType::PeerConnecting
+            | ApiType::Client
+            | ApiType::Subscribe
+            | ApiType::EsbClient => socket.connect(&endpoint)?,
         }
         let output = match (api_type, local) {
             (ApiType::PeerListening, Some(local)) => {

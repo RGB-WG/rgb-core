@@ -99,36 +99,38 @@ where
         identity: H::Address,
         endpoints: HashMap<E, rpc::EndpointCarrier>,
         handler: H,
+        api_type: zmqsocket::ApiType,
     ) -> Result<Self, transport::Error> {
         let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
         for (service, endpoint) in endpoints {
-            trace!(
-                "Creating session for {} endpoint with identity '{}'",
-                &endpoint,
-                &identity
-            );
             let session = match endpoint {
                 rpc::EndpointCarrier::Address(addr) => {
+                    trace!(
+                        "Creating session for {} endpoint at {} with identity '{}'",
+                        &service,
+                        &addr,
+                        &identity
+                    );
                     let session = session::Raw::with_zmq_unencrypted(
-                        zmqsocket::ApiType::Esb,
+                        api_type,
                         &addr,
                         None,
                         Some(identity.as_ref()),
                     )?;
+                    session.as_socket().set_router_mandatory(true)?;
+                    trace!(
+                        "ZMQ socket identity set to '{}'",
+                        String::from_utf8_lossy(
+                            &session.as_socket().get_identity()?
+                        )
+                    );
                     session
                 }
                 rpc::EndpointCarrier::Socket(socket) => {
-                    session::Raw::from_pair_socket(
-                        zmqsocket::ApiType::Esb,
-                        socket,
-                    )
+                    trace!("Creating session for {} endpoint", &service,);
+                    session::Raw::from_pair_socket(api_type, socket)
                 }
             };
-            session.as_socket().set_router_mandatory(true)?;
-            trace!(
-                "ZMQ socket identity set to '{}'",
-                String::from_utf8_lossy(&session.as_socket().get_identity()?)
-            );
             sessions.insert(service, session);
         }
         let unmarshaller = R::create_unmarshaller();
