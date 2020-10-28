@@ -27,6 +27,7 @@ pub trait Handler<Endpoints>
 where
     Self: Sized,
     Endpoints: rpc::EndpointTypes,
+    rpc::Error: From<Self::Error>,
 {
     type Request: Request;
     type Address: AsRef<[u8]> + From<Vec<u8>>;
@@ -34,28 +35,58 @@ where
 
     fn handle(
         &mut self,
+        sessions: &mut Senders<Endpoints>,
         endpoint: Endpoints,
         addr: Self::Address,
         request: Self::Request,
     ) -> Result<(), Self::Error>;
 }
 
-pub struct EsbController<E, R, H>
+pub struct Senders<E>(
+    pub(self)  HashMap<
+        E,
+        session::Raw<NoEncryption, transport::zmqsocket::Connection>,
+    >,
+)
+where
+    E: rpc::EndpointTypes;
+
+impl<E> Senders<E>
+where
+    E: rpc::EndpointTypes,
+{
+    pub fn send_to<A, R>(
+        &mut self,
+        endpoint: E,
+        addr: A,
+        request: R,
+    ) -> Result<(), rpc::Error>
+    where
+        A: AsRef<[u8]> + From<Vec<u8>>,
+        R: Request,
+    {
+        let data = request.encode()?;
+        let session = self
+            .0
+            .get_mut(&endpoint)
+            .ok_or(rpc::Error::UnknownEndpoint(endpoint.to_string()))?;
+        Ok(session.send_addr_message(addr, data)?)
+    }
+}
+
+pub struct Controller<E, R, H>
 where
     R: Request,
     E: rpc::EndpointTypes,
     H: Handler<E, Request = R>,
     rpc::Error: From<H::Error>,
 {
-    sessions: HashMap<
-        E,
-        session::Raw<NoEncryption, transport::zmqsocket::Connection>,
-    >,
+    sessions: Senders<E>,
     unmarshaller: Unmarshaller<R>,
     handler: H,
 }
 
-impl<E, R, H> EsbController<E, R, H>
+impl<E, R, H> Controller<E, R, H>
 where
     R: Request,
     E: rpc::EndpointTypes,
@@ -93,7 +124,7 @@ where
         }
         let unmarshaller = R::create_unmarshaller();
         Ok(Self {
-            sessions,
+            sessions: Senders(sessions),
             unmarshaller,
             handler,
         })
@@ -105,16 +136,11 @@ where
         addr: H::Address,
         request: R,
     ) -> Result<(), rpc::Error> {
-        let data = request.encode()?;
-        let session = self
-            .sessions
-            .get_mut(&endpoint)
-            .ok_or(rpc::Error::UnknownEndpoint(endpoint.to_string()))?;
-        Ok(session.send_addr_message(addr, data)?)
+        self.sessions.send_to(endpoint, addr, request)
     }
 }
 
-impl<E, R, H> TryService for EsbController<E, R, H>
+impl<E, R, H> TryService for Controller<E, R, H>
 where
     R: Request,
     E: rpc::EndpointTypes,
@@ -136,7 +162,7 @@ where
     }
 }
 
-impl<E, R, H> EsbController<E, R, H>
+impl<E, R, H> Controller<E, R, H>
 where
     R: Request,
     E: rpc::EndpointTypes,
@@ -147,6 +173,7 @@ where
         let mut index = vec![];
         let mut items = self
             .sessions
+            .0
             .iter()
             .map(|(endpoint, session)| {
                 index.push(endpoint);
@@ -171,8 +198,9 @@ where
         trace!("Received request from {} sockets...", endpoints.len());
 
         for endpoint in endpoints {
-            let session = &mut self
+            let session = self
                 .sessions
+                .0
                 .get_mut(&endpoint)
                 .expect("must exist, just indexed");
 
@@ -186,6 +214,7 @@ where
             );
 
             self.handler.handle(
+                &mut self.sessions,
                 endpoint,
                 H::Address::from(addr),
                 request.clone(),
