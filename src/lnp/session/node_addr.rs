@@ -39,6 +39,14 @@ pub enum NodeEndpoint {
     Remote(NodeAddr),
 }
 
+impl FromStr for NodeEndpoint {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(NodeLocator::from_str(s)?.into())
+    }
+}
+
 impl From<NodeAddr> for NodeEndpoint {
     fn from(addr: NodeAddr) -> Self {
         NodeEndpoint::Remote(addr)
