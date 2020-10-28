@@ -30,6 +30,7 @@ lazy_static! {
 /// API type for node-to-node communications used by ZeroMQ
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
 #[repr(u8)]
+#[non_exhaustive]
 pub enum ApiType {
     /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ
     /// sockets. Each node can send unordered set of messages and does not
@@ -72,6 +73,12 @@ pub enum ApiType {
     /// This part represents subscriber part ([`zmq::SocketType::SUB`])
     #[display("sub")]
     Subscribe = 5,
+
+    /// Message bus: each message has a receiver and sender, and multiple peers
+    /// may communicate directly with each other in asynchronous mode.
+    /// Represents [`zmq::SocketType::ROUTER`] socket
+    #[display("esb")]
+    Esb = 6,
 }
 
 /// Unknown [`ApiType`] string
@@ -89,6 +96,7 @@ impl ApiType {
             ApiType::Server => zmq::REP,
             ApiType::Publish => zmq::PUB,
             ApiType::Subscribe => zmq::SUB,
+            ApiType::Esb => zmq::ROUTER,
         }
     }
 
@@ -99,6 +107,7 @@ impl ApiType {
             ApiType::PeerListening | ApiType::PeerConnecting => s!("p2p"),
             ApiType::Client | ApiType::Server => s!("rpc"),
             ApiType::Publish | ApiType::Subscribe => s!("sub"),
+            ApiType::Esb => s!("esb"),
         }
     }
 }
@@ -115,6 +124,7 @@ impl FromStr for ApiType {
             ApiType::Server,
             ApiType::Publish,
             ApiType::Subscribe,
+            ApiType::Esb,
         ]
         .into_iter()
         .find(|api| api.to_string() == s)
@@ -232,9 +242,10 @@ impl Connection {
         let socket = ZMQ_CONTEXT.socket(api_type.socket_type())?;
         let endpoint = remote.zmq_socket_string();
         match api_type {
-            ApiType::PeerListening | ApiType::Server | ApiType::Publish => {
-                socket.bind(&endpoint)?
-            }
+            ApiType::PeerListening
+            | ApiType::Server
+            | ApiType::Publish
+            | ApiType::Esb => socket.bind(&endpoint)?,
             ApiType::PeerConnecting | ApiType::Client | ApiType::Subscribe => {
                 socket.connect(&endpoint)?
             }

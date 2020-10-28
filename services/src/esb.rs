@@ -14,39 +14,53 @@
 use std::collections::HashMap;
 
 use lnpbp::lnp::presentation::Encode;
-use lnpbp::lnp::rpc_connection::Api;
+use lnpbp::lnp::rpc_connection::Request;
 use lnpbp::lnp::transport::zmqsocket;
-use lnpbp::lnp::{
-    session, transport, CreateUnmarshaller, NoEncryption, Session, TypedEnum,
-    Unmarshall, Unmarshaller,
-};
+use lnpbp::lnp::{session, transport, NoEncryption, Unmarshall, Unmarshaller};
 
 use crate::node::TryService;
 use crate::rpc;
 
-pub struct RpcZmqServer<E, A, H>
+/// Trait for types handling specific set of ESB RPC API requests structured as
+/// a single type implementing [`Request`].
+pub trait Handler<Endpoints>
 where
-    A: Api,
-    H::Error: Into<rpc::Failure>,
-    A::Reply: From<rpc::Failure>,
+    Self: Sized,
+    Endpoints: rpc::EndpointTypes,
+{
+    type Request: Request;
+    type Address: AsRef<[u8]> + From<Vec<u8>>;
+    type Error: std::error::Error;
+
+    fn handle(
+        &mut self,
+        endpoint: Endpoints,
+        addr: Self::Address,
+        request: Self::Request,
+    ) -> Result<(), Self::Error>;
+}
+
+pub struct EsbController<E, R, H>
+where
+    R: Request,
     E: rpc::EndpointTypes,
-    H: rpc::Handler<E, Api = A>,
+    H: Handler<E, Request = R>,
+    rpc::Error: From<H::Error>,
 {
     sessions: HashMap<
         E,
         session::Raw<NoEncryption, transport::zmqsocket::Connection>,
     >,
-    unmarshaller: Unmarshaller<A::Request>,
+    unmarshaller: Unmarshaller<R>,
     handler: H,
 }
 
-impl<E, A, H> RpcZmqServer<E, A, H>
+impl<E, R, H> EsbController<E, R, H>
 where
-    A: Api,
-    H::Error: Into<rpc::Failure>,
-    A::Reply: From<rpc::Failure>,
+    R: Request,
     E: rpc::EndpointTypes,
-    H: rpc::Handler<E, Api = A>,
+    H: Handler<E, Request = R>,
+    rpc::Error: From<H::Error>,
 {
     pub fn init(
         endpoints: HashMap<E, rpc::EndpointCarrier>,
@@ -59,45 +73,58 @@ where
                 match endpoint {
                     rpc::EndpointCarrier::Address(addr) => {
                         session::Raw::with_zmq_unencrypted(
-                            zmqsocket::ApiType::Server,
+                            zmqsocket::ApiType::Esb,
                             &addr,
                             None,
                         )?
                     }
                     rpc::EndpointCarrier::Socket(socket) => {
                         session::Raw::from_pair_socket(
-                            zmqsocket::ApiType::Server,
+                            zmqsocket::ApiType::Esb,
                             socket,
                         )
                     }
                 },
             );
         }
-        let unmarshaller = A::Request::create_unmarshaller();
+        let unmarshaller = R::create_unmarshaller();
         Ok(Self {
             sessions,
             unmarshaller,
             handler,
         })
     }
+
+    pub fn send_to(
+        &mut self,
+        endpoint: E,
+        addr: H::Address,
+        request: R,
+    ) -> Result<(), rpc::Error> {
+        let data = request.encode()?;
+        let session = self
+            .sessions
+            .get_mut(&endpoint)
+            .ok_or(rpc::Error::UnknownEndpoint(endpoint.to_string()))?;
+        Ok(session.send_addr_message(addr, data)?)
+    }
 }
 
-impl<E, A, H> TryService for RpcZmqServer<E, A, H>
+impl<E, R, H> TryService for EsbController<E, R, H>
 where
-    A: Api,
-    H::Error: Into<rpc::Failure>,
-    A::Reply: From<rpc::Failure>,
+    R: Request,
     E: rpc::EndpointTypes,
-    H: rpc::Handler<E, Api = A>,
+    H: Handler<E, Request = R>,
+    rpc::Error: From<H::Error>,
 {
     type ErrorType = rpc::Error;
 
     fn try_run_loop(mut self) -> Result<(), Self::ErrorType> {
         loop {
             match self.run() {
-                Ok(_) => debug!("API request processing complete"),
+                Ok(_) => debug!("ESB request processing complete"),
                 Err(err) => {
-                    error!("Error processing API request: {}", err);
+                    error!("Error processing ESB request: {}", err);
                     Err(err)?;
                 }
             }
@@ -105,13 +132,12 @@ where
     }
 }
 
-impl<E, A, H> RpcZmqServer<E, A, H>
+impl<E, R, H> EsbController<E, R, H>
 where
-    A: Api,
-    H::Error: Into<rpc::Failure>,
-    A::Reply: From<rpc::Failure>,
+    R: Request,
     E: rpc::EndpointTypes,
-    H: rpc::Handler<E, Api = A>,
+    H: Handler<E, Request = R>,
+    rpc::Error: From<H::Error>,
 {
     fn run(&mut self) -> Result<(), rpc::Error> {
         let mut index = vec![];
@@ -124,7 +150,7 @@ where
             })
             .collect::<Vec<_>>();
 
-        trace!("Awaiting for ZMQ RPC request in {} sockets...", items.len());
+        trace!("Awaiting for ESB RPC request in {} sockets...", items.len());
         let _ = zmq::poll(&mut items, -1)?;
 
         let endpoints = items
@@ -146,22 +172,20 @@ where
                 .get_mut(&endpoint)
                 .expect("must exist, just indexed");
 
-            let raw = session.recv_raw_message()?;
-            trace!("Got {} bytes over ZMQ RPC from {}", raw.len(), endpoint);
+            let (addr, raw) = session.recv_addr_message()?;
+            trace!("Got {} bytes over ESB RPC from {}", raw.len(), endpoint);
 
             let request = &*self.unmarshaller.unmarshall(&raw)?;
             debug!(
-                "Unmarshalled ZMQ RPC request {:?}, processing ...",
+                "Unmarshalled ESB RPC request {:?}, processing ...",
                 request.get_type()
             );
 
-            let reply = self
-                .handler
-                .handle(endpoint, request.clone())
-                .unwrap_or_else(|err| A::Reply::from(err.into()));
-            trace!("Preparing ZMQ RPC reply: {:?}", reply);
-            let data = reply.encode()?;
-            session.send_raw_message(&data)?;
+            self.handler.handle(
+                endpoint,
+                H::Address::from(addr),
+                request.clone(),
+            )?;
         }
 
         Ok(())

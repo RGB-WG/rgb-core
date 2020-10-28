@@ -49,6 +49,8 @@ extern crate log;
 #[cfg(feature = "client")]
 pub mod client;
 pub mod error;
+#[cfg(any(feature = "client", feature = "node"))]
+pub mod esb;
 #[cfg(feature = "cli")]
 pub mod format;
 #[cfg(feature = "node")]

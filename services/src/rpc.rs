@@ -16,9 +16,15 @@ use std::hash::Hash;
 
 use lnpbp::lnp;
 use lnpbp::lnp::rpc_connection::Api;
+use lnpbp::lnp::zmqsocket::SocketLocator;
 
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;
+
+pub enum EndpointCarrier {
+    Address(SocketLocator),
+    Socket(zmq::Socket),
+}
 
 /// Marker traits for endpoint identifiers lists
 pub trait EndpointTypes: Copy + Eq + Hash + Display {}

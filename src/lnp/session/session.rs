@@ -162,14 +162,36 @@ impl Raw<NoEncryption, zmqsocket::Connection> {
         })
     }
 
-    pub fn from_pair_socket(socket: zmq::Socket) -> Self {
+    pub fn from_pair_socket(
+        zmq_type: zmqsocket::ApiType,
+        socket: zmq::Socket,
+    ) -> Self {
         Self {
             transcoder: NoEncryption,
             connection: zmqsocket::Connection::from_zmq_socket(
-                zmqsocket::ApiType::Publish,
-                socket,
+                zmq_type, socket,
             ),
         }
+    }
+
+    pub fn recv_addr_message(&mut self) -> Result<(Vec<u8>, Vec<u8>), Error> {
+        let mut multipart = self.as_socket().recv_multipart(0)?.into_iter();
+        let addr = multipart.next().ok_or(zmq::Error::EPROTO)?;
+        let msg = self
+            .transcoder
+            .decrypt(multipart.next().ok_or(zmq::Error::EPROTO)?)?;
+        Ok((addr, msg))
+    }
+
+    pub fn send_addr_message(
+        &mut self,
+        addr: impl AsRef<[u8]>,
+        raw: impl AsRef<[u8]>,
+    ) -> Result<(), Error> {
+        let encrypted = self.transcoder.encrypt(raw.as_ref());
+        self.as_socket()
+            .send_multipart(&[addr.as_ref(), &encrypted], 0)?;
+        Ok(())
     }
 
     pub fn as_socket(&self) -> &zmq::Socket {

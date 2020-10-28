@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::io;
 
@@ -25,7 +25,7 @@ use tokio::task::JoinError;
 use lnpbp::lnp;
 
 /// Marker trait with all requirements common to LNP/BP service errors
-pub trait Error: std::error::Error + Sized + Clone + Debug + Display {}
+pub trait Error: std::error::Error + Sized + Clone {}
 
 /// Error happening during config initiliaztion
 #[cfg(any(feature = "node", feature = "shell"))]
