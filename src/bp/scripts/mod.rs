@@ -13,8 +13,8 @@
 
 pub mod descriptor;
 mod pubkey_parser;
-mod script_pubkey;
-mod types;
+pub mod script_pubkey;
+pub mod types;
 
 //pub use error::Error;
 pub use pubkey_parser::PubkeyParseError;

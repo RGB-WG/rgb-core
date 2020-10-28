@@ -13,14 +13,14 @@
 
 pub mod digests;
 mod error;
-mod keyset;
-mod lockscript;
-mod pubkey;
-mod spk;
-mod taproot;
-mod tx;
-mod txout;
-mod types;
+pub mod keyset;
+pub mod lockscript;
+pub mod pubkey;
+pub mod spk;
+pub mod taproot;
+pub mod tx;
+pub mod txout;
+pub mod types;
 
 pub use error::Error;
 pub use keyset::{KeysetCommitment, KeysetContainer};

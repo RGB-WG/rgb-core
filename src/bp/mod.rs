@@ -21,7 +21,7 @@ pub mod dbc;
 pub mod psbt;
 pub mod resolvers;
 pub mod scripts;
-mod seals;
+pub mod seals;
 pub mod short_id;
 mod strict_encoding;
 pub mod tagged_hash;

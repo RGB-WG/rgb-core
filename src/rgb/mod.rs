@@ -12,9 +12,9 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 pub mod bech32;
-mod contract;
+pub mod contract;
 pub mod schema;
-mod stash;
+pub mod stash;
 pub mod validation;
 pub mod vm;
 
