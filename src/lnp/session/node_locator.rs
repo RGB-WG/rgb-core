@@ -433,6 +433,7 @@ pub enum ParseError {
     /// - `rpc`
     /// - `p2p`
     /// - `sub`
+    /// - `esb`
     InvalidZmqType(String),
 
     /// No ZMQ API type information for URL scheme that requires one.
@@ -601,6 +602,7 @@ impl TryFrom<Url> for NodeLocator {
                     "p2p" => Ok(zmqsocket::ApiType::PeerConnecting),
                     "rpc" => Ok(zmqsocket::ApiType::Client),
                     "sub" => Ok(zmqsocket::ApiType::Subscribe),
+                    "esb" => Ok(zmqsocket::ApiType::EsbService),
                     unknown => {
                         Err(ParseError::InvalidZmqType(unknown.to_string()))
                     }
