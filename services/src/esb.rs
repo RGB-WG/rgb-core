@@ -18,6 +18,7 @@ use lnpbp::lnp::rpc_connection::Request;
 use lnpbp::lnp::transport::zmqsocket;
 use lnpbp::lnp::{session, transport, NoEncryption, Unmarshall, Unmarshaller};
 
+#[cfg(feature = "node")]
 use crate::node::TryService;
 use crate::rpc;
 
@@ -140,6 +141,7 @@ where
     }
 }
 
+#[cfg(feature = "node")]
 impl<E, R, H> TryService for Controller<E, R, H>
 where
     R: Request,

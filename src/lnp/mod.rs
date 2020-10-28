@@ -23,7 +23,7 @@ pub use application::{
     channel, message, rpc_connection, ChannelId, FeatureContext, FeatureFlag,
     Features, Messages, OnionPacket, PaymentHash, PaymentPreimage,
     PaymentSecret, PeerConnection, PeerReceiver, PeerSender, RecvMessage,
-    RpcConnection, SendMessage, LNPWP_UNMARSHALLER,
+    RpcConnection, SendMessage, TempChannelId, LNPWP_UNMARSHALLER,
 };
 pub use presentation::payload::{TypeId, TypedEnum};
 pub use presentation::{

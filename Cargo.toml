@@ -9,7 +9,7 @@ homepage = "https://github.com/LNP-BP"
 keywords = ["bitcoin", "lightning", "lnp-bp", "layer-3", "cryptography"]
 readme = "README.md"
 edition = "2018"
-exclude = [".github", "derive", "contrib"]
+exclude = [".github", "derive", "contrib", "services"]
 
 [lib]
 name = "lnpbp"
