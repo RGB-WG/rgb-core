@@ -21,12 +21,12 @@ use lnpbp::lnp::{
     Unmarshaller,
 };
 
-use crate::rpc;
+use super::{EndpointTypes, Error};
 
 pub struct RpcClient<E, A>
 where
     A: Api,
-    E: rpc::EndpointTypes,
+    E: EndpointTypes,
 {
     sessions: HashMap<
         E,
@@ -38,7 +38,7 @@ where
 impl<E, A> RpcClient<E, A>
 where
     A: Api,
-    E: rpc::EndpointTypes,
+    E: EndpointTypes,
 {
     pub fn init(
         endpoints: HashMap<E, SocketLocator>,
@@ -66,12 +66,12 @@ where
         &mut self,
         endpoint: E,
         request: A::Request,
-    ) -> Result<A::Reply, rpc::Error> {
+    ) -> Result<A::Reply, Error> {
         let data = request.encode()?;
         let session = self
             .sessions
             .get_mut(&endpoint)
-            .ok_or(rpc::Error::UnknownEndpoint(endpoint.to_string()))?;
+            .ok_or(Error::UnknownEndpoint(endpoint.to_string()))?;
         session.send_raw_message(&data)?;
         let raw = session.recv_raw_message()?;
         let reply = self.unmarshaller.unmarshall(&raw)?;

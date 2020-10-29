@@ -12,71 +12,15 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
-use std::hash::Hash;
 
 use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Request;
 use lnpbp::lnp::transport::zmqsocket;
-use lnpbp::lnp::{
-    presentation, session, transport, NoEncryption, Session, Unmarshall,
-    Unmarshaller,
-};
+use lnpbp::lnp::{session, NoEncryption, Session, Unmarshall, Unmarshaller};
 
+use super::{BusId, Error, ServiceAddress};
 #[cfg(feature = "node")]
 use crate::node::TryService;
-
-/// Marker traits for service bus identifiers
-pub trait BusId: Copy + Eq + Hash + Display {}
-
-/// Marker traits for service bus identifiers
-pub trait ServiceAddress:
-    Clone
-    + Eq
-    + Hash
-    + Debug
-    + Display
-    + AsRef<[u8]>
-    + Into<Vec<u8>>
-    + From<Vec<u8>>
-{
-}
-
-/// Errors happening with RPC APIs
-#[derive(Clone, Debug, Display, Error, From)]
-#[display(doc_comments)]
-pub enum Error {
-    /// Unexpected server response
-    UnexpectedServerResponse,
-
-    /// Message serialization or structure error: {_0}
-    Presentation(presentation::Error),
-
-    /// Transport-level protocol error: {_0}
-    #[from]
-    Transport(transport::Error),
-
-    /// The provided service bus id {_0} is unknown
-    UnknownBusId(String),
-
-    /// {_0}
-    ServiceError(String),
-}
-
-impl From<zmq::Error> for Error {
-    fn from(err: zmq::Error) -> Self {
-        Error::Transport(transport::Error::from(err))
-    }
-}
-
-impl From<presentation::Error> for Error {
-    fn from(err: presentation::Error) -> Self {
-        match err {
-            presentation::Error::Transport(err) => err.into(),
-            err => Error::Presentation(err),
-        }
-    }
-}
 
 /// Trait for types handling specific set of ESB RPC API requests structured as
 /// a single type implementing [`Request`].

@@ -21,16 +21,39 @@ use lnpbp::lnp::{
     Unmarshall, Unmarshaller,
 };
 
+use super::{EndpointTypes, Error, Failure};
 use crate::node::TryService;
-use crate::rpc;
 
-pub struct RpcZmqServer<E, A, H>
+/// Trait for types handling specific set of RPC API requests structured as a
+/// single type implementing [`Request`]. They must return a corresponding reply
+/// type implementing [`Reply`]. This request/replu pair is structured as an
+/// [`Api`] trait provided in form of associated type parameter
+pub trait Handler<Endpoints>
+where
+    Self: Sized,
+    Endpoints: EndpointTypes,
+{
+    type Api: Api;
+    type Error: crate::error::Error + Into<Failure>;
+
+    /// Function that processes specific request and returns either response or
+    /// a error that can be converted into a failure response
+    fn handle(
+        &mut self,
+        endpoint: Endpoints,
+        request: <Self::Api as Api>::Request,
+    ) -> Result<<Self::Api as Api>::Reply, Self::Error>;
+
+    fn handle_err(&mut self, error: Error) -> Result<(), Error>;
+}
+
+pub struct RpcServer<E, A, H>
 where
     A: Api,
-    H::Error: Into<rpc::Failure>,
-    A::Reply: From<rpc::Failure>,
-    E: rpc::EndpointTypes,
-    H: rpc::Handler<E, Api = A>,
+    H::Error: Into<Failure>,
+    A::Reply: From<Failure>,
+    E: EndpointTypes,
+    H: Handler<E, Api = A>,
 {
     sessions: HashMap<
         E,
@@ -40,13 +63,13 @@ where
     handler: H,
 }
 
-impl<E, A, H> RpcZmqServer<E, A, H>
+impl<E, A, H> RpcServer<E, A, H>
 where
     A: Api,
-    H::Error: Into<rpc::Failure>,
-    A::Reply: From<rpc::Failure>,
-    E: rpc::EndpointTypes,
-    H: rpc::Handler<E, Api = A>,
+    H::Error: Into<Failure>,
+    A::Reply: From<Failure>,
+    E: EndpointTypes,
+    H: Handler<E, Api = A>,
 {
     pub fn init(
         endpoints: HashMap<E, zmqsocket::Carrier>,
@@ -83,15 +106,15 @@ where
     }
 }
 
-impl<E, A, H> TryService for RpcZmqServer<E, A, H>
+impl<E, A, H> TryService for RpcServer<E, A, H>
 where
     A: Api,
-    H::Error: Into<rpc::Failure>,
-    A::Reply: From<rpc::Failure>,
-    E: rpc::EndpointTypes,
-    H: rpc::Handler<E, Api = A>,
+    H::Error: Into<Failure>,
+    A::Reply: From<Failure>,
+    E: EndpointTypes,
+    H: Handler<E, Api = A>,
 {
-    type ErrorType = rpc::Error;
+    type ErrorType = Error;
 
     fn try_run_loop(mut self) -> Result<(), Self::ErrorType> {
         loop {
@@ -106,15 +129,15 @@ where
     }
 }
 
-impl<E, A, H> RpcZmqServer<E, A, H>
+impl<E, A, H> RpcServer<E, A, H>
 where
     A: Api,
-    H::Error: Into<rpc::Failure>,
-    A::Reply: From<rpc::Failure>,
-    E: rpc::EndpointTypes,
-    H: rpc::Handler<E, Api = A>,
+    H::Error: Into<Failure>,
+    A::Reply: From<Failure>,
+    E: EndpointTypes,
+    H: Handler<E, Api = A>,
 {
-    fn run(&mut self) -> Result<(), rpc::Error> {
+    fn run(&mut self) -> Result<(), Error> {
         let mut index = vec![];
         let mut items = self
             .sessions

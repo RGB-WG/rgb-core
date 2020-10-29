@@ -46,8 +46,6 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 
-#[cfg(feature = "client")]
-pub mod client;
 pub mod error;
 #[cfg(any(feature = "client", feature = "node"))]
 pub mod esb;
@@ -59,7 +57,5 @@ pub mod node;
 pub mod peer;
 #[cfg(any(feature = "client", feature = "node"))]
 pub mod rpc;
-#[cfg(feature = "node")]
-pub mod server;
 #[cfg(feature = "shell")]
 pub mod shell;

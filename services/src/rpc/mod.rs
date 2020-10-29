@@ -11,11 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[cfg(feature = "client")]
+pub mod client;
+#[cfg(feature = "node")]
+pub mod server;
+
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use lnpbp::lnp;
-use lnpbp::lnp::rpc_connection::Api;
 
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;
@@ -93,27 +97,4 @@ where
             info: err.to_string(),
         }
     }
-}
-
-/// Trait for types handling specific set of RPC API requests structured as a
-/// single type implementing [`Request`]. They must return a corresponding reply
-/// type implementing [`Reply`]. This request/replu pair is structured as an
-/// [`Api`] trait provided in form of associated type parameter
-pub trait Handler<Endpoints>
-where
-    Self: Sized,
-    Endpoints: EndpointTypes,
-{
-    type Api: Api;
-    type Error: crate::error::Error + Into<Failure>;
-
-    /// Function that processes specific request and returns either response or
-    /// a error that can be converted into a failure response
-    fn handle(
-        &mut self,
-        endpoint: Endpoints,
-        request: <Self::Api as Api>::Request,
-    ) -> Result<<Self::Api as Api>::Reply, Self::Error>;
-
-    fn handle_err(&mut self, error: Error) -> Result<(), Error>;
 }
