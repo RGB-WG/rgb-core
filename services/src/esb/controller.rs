@@ -200,7 +200,6 @@ where
                     None,
                     Some(self.handler.identity().as_ref()),
                 )?;
-                session.as_socket().set_router_mandatory(true)?;
                 session
             }
             zmqsocket::Carrier::Socket(socket) => {
@@ -208,6 +207,9 @@ where
                 session::Raw::from_zmq_socket_unencrypted(self.api_type, socket)
             }
         };
+        if !config.queued {
+            session.as_socket().set_router_mandatory(true)?;
+        }
         let router = match config.router {
             Some(router) if router == self.handler.identity() => None,
             router => router,

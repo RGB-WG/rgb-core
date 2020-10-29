@@ -28,6 +28,9 @@ where
 {
     pub carrier: zmqsocket::Carrier,
     pub router: Option<A>,
+    /// Indicates whether the messages must be queued, or the send function
+    /// must fail immediatelly if the remote point is not avaliable
+    pub queued: bool,
 }
 
 impl<A> BusConfig<A>
@@ -41,6 +44,7 @@ where
         Self {
             carrier: zmqsocket::Carrier::Locator(locator),
             router,
+            queued: false,
         }
     }
 
@@ -48,6 +52,7 @@ where
         Self {
             carrier: zmqsocket::Carrier::Socket(socket),
             router,
+            queued: false,
         }
     }
 }
