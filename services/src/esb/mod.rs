@@ -59,14 +59,7 @@ where
 
 /// Marker traits for service bus identifiers
 pub trait ServiceAddress:
-    Clone
-    + Eq
-    + Hash
-    + Debug
-    + Display
-    + AsRef<[u8]>
-    + Into<Vec<u8>>
-    + From<Vec<u8>>
+    Clone + Eq + Hash + Debug + Display + Into<Vec<u8>> + From<Vec<u8>>
 {
 }
 

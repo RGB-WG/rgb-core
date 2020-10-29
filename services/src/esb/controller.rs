@@ -78,7 +78,7 @@ where
                     source,
                     dest,
                 );
-                &dest
+                dest.clone()
             }
             Some(ref router) if &source == router => {
                 trace!(
@@ -87,7 +87,7 @@ where
                     source,
                     dest,
                 );
-                &dest
+                dest.clone()
             }
             Some(ref router) => {
                 trace!(
@@ -97,13 +97,13 @@ where
                     dest,
                     router,
                 );
-                router
+                router.clone()
             }
         };
         self.session.send_routed_message(
-            source.as_ref(),
-            router.as_ref(),
-            dest.as_ref(),
+            &source.into(),
+            &router.into(),
+            &dest.into(),
             &data,
         )?;
         Ok(())
@@ -199,7 +199,7 @@ where
                     self.api_type,
                     &locator,
                     None,
-                    Some(self.handler.identity().as_ref()),
+                    Some(&self.handler.identity().into()),
                 )?;
                 session
             }
