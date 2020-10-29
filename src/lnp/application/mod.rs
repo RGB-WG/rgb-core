@@ -52,6 +52,19 @@ use std::fmt::{self, Formatter, LowerHex, UpperHex};
 #[display(LowerHex)]
 pub struct Slice32([u8; 32]);
 
+impl Slice32 {
+    #[cfg(feature = "keygen")]
+    pub fn random() -> Self {
+        use bitcoin::secp256k1::{self, rand};
+
+        let mut entropy = [0u8; 32];
+        entropy.copy_from_slice(
+            &secp256k1::SecretKey::new(&mut rand::thread_rng())[..],
+        );
+        Slice32::from_inner(entropy)
+    }
+}
+
 impl FromHex for Slice32 {
     fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
     where
@@ -182,6 +195,13 @@ impl FromHex for TempChannelId {
     }
 }
 
+impl TempChannelId {
+    #[cfg(feature = "keygen")]
+    pub fn random() -> Self {
+        TempChannelId::from_inner(Slice32::random())
+    }
+}
+
 /// HTLC payment hash
 #[derive(
     Wrapper,
@@ -235,6 +255,13 @@ impl FromHex for PaymentHash {
 #[wrapper(LowerHex, UpperHex)]
 pub struct PaymentPreimage(Slice32);
 
+impl PaymentPreimage {
+    #[cfg(feature = "keygen")]
+    pub fn random() -> Self {
+        PaymentPreimage::from_inner(Slice32::random())
+    }
+}
+
 impl FromHex for PaymentPreimage {
     fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
     where
@@ -267,6 +294,13 @@ impl FromHex for PaymentPreimage {
 #[display(LowerHex)]
 #[wrapper(LowerHex, UpperHex)]
 pub struct PaymentSecret(Slice32);
+
+impl PaymentSecret {
+    #[cfg(feature = "keygen")]
+    pub fn random() -> Self {
+        PaymentSecret::from_inner(Slice32::random())
+    }
+}
 
 impl FromHex for PaymentSecret {
     fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
