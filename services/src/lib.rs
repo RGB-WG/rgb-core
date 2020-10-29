@@ -26,11 +26,11 @@
     //missing_docs
 )]
 
-#[macro_use]
+#[cfg_attr(any(feature = "client", feature = "node"), macro_use)]
 extern crate amplify;
 #[macro_use]
 extern crate amplify_derive;
-#[macro_use]
+#[cfg_attr(any(feature = "client", feature = "node"), macro_use)]
 extern crate lnpbp_derive;
 
 #[cfg(feature = "serde")]

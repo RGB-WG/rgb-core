@@ -13,6 +13,7 @@
 
 use std::fmt::Debug;
 use std::hash::Hash;
+#[cfg(any(feature = "node", feature = "shell"))]
 use std::io;
 
 #[cfg(any(feature = "client", feature = "node"))]
@@ -22,6 +23,7 @@ use settings::ConfigError;
 #[cfg(feature = "tokio")]
 use tokio::task::JoinError;
 
+#[cfg(any(feature = "node", feature = "shell"))]
 use lnpbp::lnp;
 
 /// Marker trait with all requirements common to LNP/BP service errors
