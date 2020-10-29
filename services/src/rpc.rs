@@ -16,19 +16,9 @@ use std::hash::Hash;
 
 use lnpbp::lnp;
 use lnpbp::lnp::rpc_connection::Api;
-use lnpbp::lnp::zmqsocket::SocketLocator;
 
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;
-
-#[derive(Display)]
-pub enum EndpointCarrier {
-    #[display("address({_0})")]
-    Address(SocketLocator),
-
-    #[display("socket(...)")]
-    Socket(zmq::Socket),
-}
 
 /// Marker traits for endpoint identifiers lists
 pub trait EndpointTypes: Copy + Eq + Hash + Display {}
@@ -53,47 +43,31 @@ pub enum Error {
     /// Unexpected server response
     UnexpectedServerResponse,
 
-    #[from]
     /// {_0}
+    #[from]
     ServerFailure(Failure),
 
-    /// ZeroMQ socket error:
-    /// {_0}
-    #[from]
-    Zmq(i32),
-
-    /// Error on LNP protocol transport level:
-    /// {_0}
+    /// Message serialization or structure error: {_0}
     Presentation(lnp::presentation::Error),
 
-    /// Error in LNP message serialization or structure:
-    /// {_0}
+    /// Transport-level protocol error: {_0}
+    #[from]
     Transport(lnp::transport::Error),
 
     /// The provided RPC endpoint {_0} is unknown
     UnknownEndpoint(String),
 }
 
-#[cfg(feature = "zmq")]
 impl From<zmq::Error> for Error {
     fn from(err: zmq::Error) -> Self {
-        Error::Zmq(err.to_raw())
-    }
-}
-
-impl From<lnp::transport::Error> for Error {
-    fn from(err: lnp::transport::Error) -> Self {
-        match err {
-            lnp::transport::Error::Zmq(err) => Error::Zmq(err),
-            err => Error::Transport(err),
-        }
+        Error::Transport(lnp::transport::Error::from(err))
     }
 }
 
 impl From<lnp::presentation::Error> for Error {
     fn from(err: lnp::presentation::Error) -> Self {
         match err {
-            lnp::presentation::Error::Transport(err) => Error::Transport(err),
+            lnp::presentation::Error::Transport(err) => err.into(),
             err => Error::Presentation(err),
         }
     }

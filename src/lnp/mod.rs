@@ -36,7 +36,7 @@ pub use session::{
     Transcode,
 };
 pub use transport::{
-    ftcp, websocket, zmqsocket, Duplex, LocalAddr, RemoteAddr,
+    ftcp, websocket, zmqsocket, Duplex, LocalAddr, RemoteAddr, RoutedFrame,
 };
 
 pub const LNP_MSG_MAX_LEN: usize = core::u64::MAX as usize;

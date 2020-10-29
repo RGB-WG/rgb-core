@@ -17,7 +17,7 @@ use core::any::Any;
 use super::{Decrypt, Encrypt, Transcode};
 use crate::lnp::session::NoEncryption;
 use crate::lnp::transport::{
-    ftcp, zmqsocket, Duplex, Error, RecvFrame, SendFrame,
+    ftcp, zmqsocket, Duplex, Error, RecvFrame, RoutedFrame, SendFrame,
 };
 
 // Generics prevents us from using session as `&dyn` reference, so we have
@@ -26,6 +26,23 @@ use crate::lnp::transport::{
 pub trait Session {
     fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error>;
     fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error>;
+    fn recv_routed_message(&mut self) -> Result<RoutedFrame, Error> {
+        // We panic here because this is a program architecture design
+        // error and developer must be notified about it; the program using
+        // this pattern can't work
+        panic!("Multipeer sockets are not possible with the chosen transport")
+    }
+    fn send_routed_message(
+        &mut self,
+        route: &[u8],
+        address: &[u8],
+        raw: &[u8],
+    ) -> Result<usize, Error> {
+        // We panic here because this is a program architecture design
+        // error and developer must be notified about it; the program using
+        // this pattern can't work
+        panic!("Multipeer sockets are not possible with the chosen transport")
+    }
     fn into_any(self: Box<Self>) -> Box<dyn Any>;
 }
 
@@ -35,10 +52,27 @@ pub trait Split {
 
 pub trait Input {
     fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error>;
+    fn recv_routed_message(&mut self) -> Result<RoutedFrame, Error> {
+        // We panic here because this is a program architecture design
+        // error and developer must be notified about it; the program using
+        // this pattern can't work
+        panic!("Multipeer sockets are not possible with the chosen transport")
+    }
 }
 
 pub trait Output {
     fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error>;
+    fn send_routed_message(
+        &mut self,
+        route: &[u8],
+        address: &[u8],
+        raw: &[u8],
+    ) -> Result<usize, Error> {
+        // We panic here because this is a program architecture design
+        // error and developer must be notified about it; the program using
+        // this pattern can't work
+        panic!("Multipeer sockets are not possible with the chosen transport")
+    }
 }
 
 pub struct Raw<T, C>
@@ -165,7 +199,7 @@ impl Raw<NoEncryption, zmqsocket::Connection> {
         })
     }
 
-    pub fn from_pair_socket(
+    pub fn from_zmq_socket_unencrypted(
         zmq_type: zmqsocket::ApiType,
         socket: zmq::Socket,
     ) -> Self {
@@ -176,27 +210,14 @@ impl Raw<NoEncryption, zmqsocket::Connection> {
             ),
         }
     }
+}
 
-    pub fn recv_addr_message(&mut self) -> Result<(Vec<u8>, Vec<u8>), Error> {
-        let mut multipart = self.as_socket().recv_multipart(0)?.into_iter();
-        let addr = multipart.next().ok_or(zmq::Error::EPROTO)?;
-        let msg = self
-            .transcoder
-            .decrypt(multipart.next().ok_or(zmq::Error::EPROTO)?)?;
-        Ok((addr, msg))
-    }
-
-    pub fn send_addr_message(
-        &mut self,
-        addr: impl AsRef<[u8]>,
-        raw: impl AsRef<[u8]>,
-    ) -> Result<(), Error> {
-        let encrypted = self.transcoder.encrypt(raw.as_ref());
-        self.as_socket()
-            .send_multipart(&[addr.as_ref(), &encrypted], 0)?;
-        Ok(())
-    }
-
+impl<T> Raw<T, zmqsocket::Connection>
+where
+    T: Transcode,
+    T::Left: Decrypt + Send + 'static,
+    T::Right: Encrypt + Send + 'static,
+{
     pub fn as_socket(&self) -> &zmq::Socket {
         &self.connection.as_socket()
     }
@@ -212,16 +233,29 @@ where
     fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error> {
         Ok(self.decryptor.decrypt(self.input.recv_frame()?)?)
     }
+    fn recv_routed_message(&mut self) -> Result<RoutedFrame, Error> {
+        let mut routed_frame = self.input.recv_routed()?;
+        routed_frame.msg = self.decryptor.decrypt(routed_frame.msg)?;
+        Ok(routed_frame)
+    }
 }
 
 impl<T, C> Output for RawOutput<T, C>
 where
     T: Encrypt,
     C: SendFrame,
-    // TODO: (new) Use session-level error type
 {
     fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error> {
         Ok(self.output.send_frame(&self.encryptor.encrypt(raw))?)
+    }
+    fn send_routed_message(
+        &mut self,
+        route: &[u8],
+        address: &[u8],
+        raw: &[u8],
+    ) -> Result<usize, Error> {
+        let encrypted = self.encryptor.encrypt(raw);
+        Ok(self.output.send_routed(route, address, &encrypted)?)
     }
 }
 

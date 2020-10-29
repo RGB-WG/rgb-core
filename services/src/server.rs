@@ -49,7 +49,7 @@ where
     H: rpc::Handler<E, Api = A>,
 {
     pub fn init(
-        endpoints: HashMap<E, rpc::EndpointCarrier>,
+        endpoints: HashMap<E, zmqsocket::Carrier>,
         handler: H,
     ) -> Result<Self, transport::Error> {
         let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
@@ -57,16 +57,16 @@ where
             sessions.insert(
                 service,
                 match endpoint {
-                    rpc::EndpointCarrier::Address(addr) => {
+                    zmqsocket::Carrier::Locator(locator) => {
                         session::Raw::with_zmq_unencrypted(
                             zmqsocket::ApiType::Server,
-                            &addr,
+                            &locator,
                             None,
                             None,
                         )?
                     }
-                    rpc::EndpointCarrier::Socket(socket) => {
-                        session::Raw::from_pair_socket(
+                    zmqsocket::Carrier::Socket(socket) => {
+                        session::Raw::from_zmq_socket_unencrypted(
                             zmqsocket::ApiType::Server,
                             socket,
                         )

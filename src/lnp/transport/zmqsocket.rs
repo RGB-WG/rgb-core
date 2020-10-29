@@ -11,16 +11,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::Bipolar;
+use amplify::{Bipolar, Wrapper};
 #[cfg(feature = "url")]
 use core::convert::TryFrom;
 #[cfg(feature = "url")]
 use core::str::FromStr;
+use std::fmt::{self, Debug, Display, Formatter};
 use std::net::SocketAddr;
 #[cfg(feature = "url")]
 use url::Url;
 
-use super::{Duplex, Error, RecvFrame, SendFrame};
+use super::{Duplex, RecvFrame, RoutedFrame, SendFrame};
+use crate::lnp::transport;
 use crate::lnp::UrlScheme;
 
 lazy_static! {
@@ -170,6 +172,65 @@ impl SocketLocator {
     }
 }
 
+#[derive(Display)]
+pub enum Carrier {
+    #[display(inner)]
+    Locator(SocketLocator),
+
+    #[display("zmq_socket(..)")]
+    Socket(zmq::Socket),
+}
+
+#[derive(
+    Wrapper, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error, From,
+)]
+pub struct Error(i32);
+
+impl From<zmq::Error> for Error {
+    #[inline]
+    fn from(err: zmq::Error) -> Self {
+        Self(err.to_raw())
+    }
+}
+
+impl From<Error> for zmq::Error {
+    #[inline]
+    fn from(err: Error) -> Self {
+        zmq::Error::from_raw(err.into_inner())
+    }
+}
+
+impl From<zmq::Error> for transport::Error {
+    #[inline]
+    fn from(err: zmq::Error) -> Self {
+        match err {
+            zmq::Error::EHOSTUNREACH => transport::Error::ServiceOffline,
+            err => transport::Error::Zmq(err.into()),
+        }
+    }
+}
+
+impl From<Error> for transport::Error {
+    #[inline]
+    fn from(err: Error) -> Self {
+        transport::Error::from(zmq::Error::from(err))
+    }
+}
+
+impl Debug for Error {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Debug::fmt(&zmq::Error::from(*self), f)
+    }
+}
+
+impl Display for Error {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&zmq::Error::from(*self), f)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
 #[display(Debug)]
 pub enum UrlError {
@@ -244,7 +305,7 @@ impl Connection {
         remote: &SocketLocator,
         local: Option<SocketLocator>,
         identity: Option<impl AsRef<[u8]>>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, transport::Error> {
         let socket = ZMQ_CONTEXT.socket(api_type.socket_type())?;
         if let Some(identity) = identity {
             socket.set_identity(identity.as_ref())?;
@@ -273,7 +334,7 @@ impl Connection {
             }
             (ApiType::PeerListening, None)
             | (ApiType::PeerConnecting, None) => {
-                Err(Error::RequiresLocalSocket)?
+                Err(transport::Error::RequiresLocalSocket)?
             }
             (_, _) => None,
         }
@@ -389,43 +450,70 @@ impl Bipolar for Connection {
 
 impl RecvFrame for WrappedSocket {
     #[inline]
-    fn recv_frame(&mut self) -> Result<Vec<u8>, Error> {
+    fn recv_frame(&mut self) -> Result<Vec<u8>, transport::Error> {
         let data = self.socket.recv_bytes(0)?;
         let len = data.len();
         if len > super::MAX_FRAME_SIZE as usize {
-            return Err(Error::OversizedFrame(len));
+            return Err(transport::Error::OversizedFrame(len));
         }
         Ok(data)
     }
 
-    fn recv_raw(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+    fn recv_raw(&mut self, len: usize) -> Result<Vec<u8>, transport::Error> {
         Ok(self.socket.recv_bytes(0)?)
     }
 
-    fn recv_from(&mut self) -> Result<(Vec<u8>, Vec<u8>), Error> {
-        // TODO: (v1) add support for multipeer connectivity with ZMQ
-        unimplemented!()
+    fn recv_routed(&mut self) -> Result<RoutedFrame, transport::Error> {
+        let mut multipart = self.socket.recv_multipart(0)?.into_iter();
+        let src = multipart.next().ok_or(transport::Error::FrameBroken(
+            "zero frame parts in ZMQ multipart routed frame",
+        ))?;
+        let dst = multipart.next().ok_or(transport::Error::FrameBroken(
+            "no destination part ZMQ multipart routed frame",
+        ))?;
+        let msg = multipart.next().ok_or(transport::Error::FrameBroken(
+            "no message part in ZMQ multipart routed frame",
+        ))?;
+        if multipart.count() > 0 {
+            Err(transport::Error::FrameBroken(
+                "excessive parts in ZMQ multipart routed frame",
+            ))?
+        }
+        let len = msg.len();
+        if len > super::MAX_FRAME_SIZE as usize {
+            Err(transport::Error::OversizedFrame(len))?
+        }
+        Ok(RoutedFrame { src, dst, msg })
     }
 }
 
 impl SendFrame for WrappedSocket {
     #[inline]
-    fn send_frame(&mut self, data: &[u8]) -> Result<usize, Error> {
+    fn send_frame(&mut self, data: &[u8]) -> Result<usize, transport::Error> {
         let len = data.len();
         if len > super::MAX_FRAME_SIZE as usize {
-            return Err(Error::OversizedFrame(len));
+            return Err(transport::Error::OversizedFrame(len));
         }
         self.socket.send(data, 0)?;
         Ok(len)
     }
 
-    fn send_raw(&mut self, data: &[u8]) -> Result<usize, Error> {
+    fn send_raw(&mut self, data: &[u8]) -> Result<usize, transport::Error> {
         self.socket.send(data, 0)?;
         Ok(data.len())
     }
 
-    fn send_to(&mut self, dest: &[u8], data: &[u8]) -> Result<usize, Error> {
-        // TODO: (v1) add support for multipeer connectivity with ZMQ
-        unimplemented!()
+    fn send_routed(
+        &mut self,
+        route: &[u8],
+        address: &[u8],
+        data: &[u8],
+    ) -> Result<usize, transport::Error> {
+        let len = data.len();
+        if len > super::MAX_FRAME_SIZE as usize {
+            return Err(transport::Error::OversizedFrame(len));
+        }
+        self.socket.send_multipart(&[route, address, data], 0)?;
+        Ok(data.len())
     }
 }

@@ -56,9 +56,10 @@ pub enum Error {
 
     /// ZMQ socket error, type {_0}
     #[cfg(feature = "zmq")]
-    // zmq::Error do not provide Hash impl, so we have to store only it's raw
-    // representation
-    Zmq(i32),
+    Zmq(zmqsocket::Error),
+
+    /// Service is offline or not responding
+    ServiceOffline,
 
     /// The function requires that the connecting socket must be present on the
     /// the same machine, i.e. it should be a raw POSIX socket or IPC & Inproc
@@ -72,6 +73,9 @@ pub enum Error {
     /// Frame size {_0} is less than minimal (34 bytes)
     FrameTooSmall(usize),
 
+    /// Frame structure broken: {_0}
+    FrameBroken(&'static str),
+
     /// Frame payload length is not equal to the actual frame payload provided
     InvalidLength,
 
@@ -82,13 +86,6 @@ pub enum Error {
     TimedOut,
 }
 
-#[cfg(feature = "zmq")]
-impl From<zmq::Error> for Error {
-    fn from(err: zmq::Error) -> Self {
-        Error::Zmq(err.to_raw())
-    }
-}
-
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
         match err.kind() {
@@ -96,6 +93,13 @@ impl From<std::io::Error> for Error {
             kind => Error::SocketIo(kind),
         }
     }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RoutedFrame {
+    pub src: Vec<u8>,
+    pub dst: Vec<u8>,
+    pub msg: Vec<u8>,
 }
 
 /// Marker trait for types that can provide a concrete implementation for both
@@ -151,7 +155,7 @@ pub trait RecvFrame {
     /// not support multipeer sockets and [`RecFrame::recv_frame`] must be
     /// used instead (currently only ZMQ-based connections support this
     /// operation)
-    fn recv_from(&mut self) -> Result<(Vec<u8>, Vec<u8>), Error> {
+    fn recv_routed(&mut self) -> Result<RoutedFrame, Error> {
         // We panic here because this is a program architecture design
         // error and developer must be notified about it; the program using
         // this pattern can't work
@@ -230,10 +234,11 @@ pub trait SendFrame {
     ///
     /// [`MAX_FRAME_SIZE`]: super::MAX_FRAME_SIZE
     #[allow(dead_code)]
-    fn send_to(
+    fn send_routed(
         &mut self,
-        remote_id: &[u8],
-        frame: &[u8],
+        route: &[u8],
+        address: &[u8],
+        data: &[u8],
     ) -> Result<usize, Error> {
         // We panic here because this is a program architecture design
         // error and developer must be notified about it; the program using
