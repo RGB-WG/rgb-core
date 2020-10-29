@@ -90,6 +90,8 @@ where
     type Address: ServiceAddress;
     type Error: std::error::Error;
 
+    fn identity(&self) -> Self::Address;
+
     fn handle(
         &mut self,
         senders: &mut Senders<B>,
@@ -148,7 +150,6 @@ where
     H: Handler<B, Request = R>,
     Error: From<H::Error>,
 {
-    identity: H::Address,
     senders: Senders<B>,
     unmarshaller: Unmarshaller<R>,
     handler: H,
@@ -162,7 +163,6 @@ where
     Error: From<H::Error>,
 {
     pub fn init(
-        identity: H::Address,
         service_bus: HashMap<B, zmqsocket::Carrier>,
         router: H::Address,
         handler: H,
@@ -176,13 +176,13 @@ where
                         "Creating session for {} service located at {} with identity '{}'",
                         &service,
                         &locator,
-                        &identity
+                        handler.identity()
                     );
                     let session = session::Raw::with_zmq_unencrypted(
                         api_type,
                         &locator,
                         None,
-                        Some(identity.as_ref()),
+                        Some(handler.identity().as_ref()),
                     )?;
                     session.as_socket().set_router_mandatory(true)?;
                     session
@@ -201,7 +201,6 @@ where
         };
 
         Ok(Self {
-            identity,
             senders,
             unmarshaller,
             handler,
@@ -211,11 +210,11 @@ where
     pub fn send_to(
         &mut self,
         endpoint: B,
-        source: H::Address,
         dest: H::Address,
         request: R,
     ) -> Result<(), Error> {
-        self.senders.send_to(endpoint, source, dest, request)
+        self.senders
+            .send_to(endpoint, self.handler.identity(), dest, request)
     }
 }
 
@@ -293,7 +292,7 @@ where
             let source = H::Address::from(routed_frame.src);
             let dest = H::Address::from(routed_frame.dst);
 
-            if dest == self.identity {
+            if dest == self.handler.identity() {
                 // We are the destination
                 debug!("ESB request from {}: {}", source, request);
 

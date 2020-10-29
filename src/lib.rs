@@ -19,10 +19,10 @@
     non_snake_case,
     unused_mut,
     unused_imports,
-    dead_code
+    dead_code,
+    //missing_docs
 )]
 // TODO: when we will be ready for the release #![deny(missing_docs)]
-// #![warn(missing_docs)]
 // This is required because of incomplete rust async implementation and can be
 // removed after async trait feature completion in rust compiler
 #![cfg_attr(feature = "async", allow(where_clauses_object_safety))]
