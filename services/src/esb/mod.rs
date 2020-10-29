@@ -12,15 +12,45 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 mod controller;
-pub use controller::{Controller, Handler, Senders};
+pub use controller::{Controller, Handler, SenderList};
 
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
-use lnpbp::lnp::{presentation, transport};
+use lnpbp::lnp::{presentation, transport, zmqsocket};
 
 /// Marker traits for service bus identifiers
 pub trait BusId: Copy + Eq + Hash + Display {}
+
+pub struct BusConfig<A>
+where
+    A: ServiceAddress,
+{
+    pub carrier: zmqsocket::Carrier,
+    pub router: Option<A>,
+}
+
+impl<A> BusConfig<A>
+where
+    A: ServiceAddress,
+{
+    pub fn with_locator(
+        locator: zmqsocket::SocketLocator,
+        router: Option<A>,
+    ) -> Self {
+        Self {
+            carrier: zmqsocket::Carrier::Locator(locator),
+            router,
+        }
+    }
+
+    pub fn with_socket(socket: zmq::Socket, router: Option<A>) -> Self {
+        Self {
+            carrier: zmqsocket::Carrier::Socket(socket),
+            router,
+        }
+    }
+}
 
 /// Marker traits for service bus identifiers
 pub trait ServiceAddress:

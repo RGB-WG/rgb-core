@@ -19,6 +19,7 @@ use lnpbp::lnp::transport::zmqsocket;
 use lnpbp::lnp::{session, NoEncryption, Session, Unmarshall, Unmarshaller};
 
 use super::{BusId, Error, ServiceAddress};
+use crate::esb::BusConfig;
 #[cfg(feature = "node")]
 use crate::node::TryService;
 
@@ -38,7 +39,7 @@ where
 
     fn handle(
         &mut self,
-        senders: &mut Senders<B, Self::Address>,
+        senders: &mut SenderList<B, Self::Address>,
         bus_id: B,
         source: Self::Address,
         request: Self::Request,
@@ -47,21 +48,82 @@ where
     fn handle_err(&mut self, error: Error) -> Result<(), Error>;
 }
 
-pub struct Senders<B, A>
+struct Sender<A>
 where
-    B: BusId,
     A: ServiceAddress,
 {
-    pub(self) sessions:
-        HashMap<B, session::Raw<NoEncryption, zmqsocket::Connection>>,
+    pub(self) session: session::Raw<NoEncryption, zmqsocket::Connection>,
     pub(self) router: Option<A>,
 }
 
-impl<B, A> Senders<B, A>
+impl<A> Sender<A>
+where
+    A: ServiceAddress,
+{
+    pub(self) fn send_to<R>(
+        &mut self,
+        source: A,
+        dest: A,
+        request: R,
+    ) -> Result<(), Error>
+    where
+        R: Request,
+    {
+        let data = request.encode()?;
+        let router = match self.router {
+            None => {
+                trace!(
+                    "Routing: sending {} from {} to {} directly",
+                    request,
+                    source,
+                    dest,
+                );
+                &dest
+            }
+            Some(ref router) if &source == router => {
+                trace!(
+                    "Routing: sending {} from {} to {}",
+                    request,
+                    source,
+                    dest,
+                );
+                &dest
+            }
+            Some(ref router) => {
+                trace!(
+                    "Routing: sending {} from {} to {} via {}",
+                    request,
+                    source,
+                    dest,
+                    router,
+                );
+                router
+            }
+        };
+        self.session.send_routed_message(
+            source.as_ref(),
+            router.as_ref(),
+            dest.as_ref(),
+            &data,
+        )?;
+        Ok(())
+    }
+}
+
+pub struct SenderList<B, A>(pub(self) HashMap<B, Sender<A>>)
+where
+    B: BusId,
+    A: ServiceAddress;
+
+impl<B, A> SenderList<B, A>
 where
     B: BusId,
     A: ServiceAddress,
 {
+    pub fn new() -> Self {
+        Self(Default::default())
+    }
+
     pub fn send_to<R>(
         &mut self,
         bus_id: B,
@@ -72,52 +134,11 @@ where
     where
         R: Request,
     {
-        let data = request.encode()?;
         let session = self
-            .sessions
+            .0
             .get_mut(&bus_id)
             .ok_or(Error::UnknownBusId(bus_id.to_string()))?;
-        let router = match self.router {
-            None => {
-                trace!(
-                    "Sending {} from {} to {} directly using {} service bus",
-                    request,
-                    source,
-                    dest,
-                    bus_id
-                );
-                &dest
-            }
-            Some(ref router) if &source == router => {
-                trace!(
-                    "Sending {} from {} to {} using {} service bus",
-                    request,
-                    source,
-                    dest,
-                    bus_id,
-                );
-                &dest
-            }
-            Some(ref router) => {
-                trace!(
-                    "Sending {} from {} to {} via {} using {} service bus",
-                    request,
-                    source,
-                    dest,
-                    router,
-                    bus_id,
-                );
-                router
-            }
-        };
-        session.send_routed_message(
-            source.as_ref(),
-            router.as_ref(),
-            dest.as_ref(),
-            &data,
-        )?;
-
-        Ok(())
+        session.send_to(source, dest, request)
     }
 }
 
@@ -128,7 +149,7 @@ where
     H: Handler<B, Request = R>,
     Error: From<H::Error>,
 {
-    senders: Senders<B, H::Address>,
+    senders: SenderList<B, H::Address>,
     unmarshaller: Unmarshaller<R>,
     handler: H,
 }
@@ -141,13 +162,12 @@ where
     Error: From<H::Error>,
 {
     pub fn with(
-        service_bus: HashMap<B, zmqsocket::Carrier>,
-        router: H::Address,
+        service_bus: HashMap<B, BusConfig<H::Address>>,
         handler: H,
         api_type: zmqsocket::ApiType,
     ) -> Result<Self, Error> {
-        let mut sessions: HashMap<B, session::Raw<_, _>> = none!();
-        for (service, carrier) in service_bus {
+        let mut senders = SenderList::new();
+        for (service, BusConfig { carrier, router }) in service_bus {
             let session = match carrier {
                 zmqsocket::Carrier::Locator(locator) => {
                     debug!(
@@ -170,15 +190,13 @@ where
                     session::Raw::from_zmq_socket_unencrypted(api_type, socket)
                 }
             };
-            sessions.insert(service, session);
+            let router = match router {
+                Some(router) if router == handler.identity() => None,
+                router => router,
+            };
+            senders.0.insert(service, Sender { session, router });
         }
         let unmarshaller = R::create_unmarshaller();
-        let router = if router == handler.identity() {
-            None
-        } else {
-            Some(router)
-        };
-        let senders = Senders { sessions, router };
 
         Ok(Self {
             senders,
@@ -232,11 +250,14 @@ where
         let mut index = vec![];
         let mut items = self
             .senders
-            .sessions
+            .0
             .iter()
-            .map(|(service, session)| {
+            .map(|(service, sender)| {
                 index.push(service);
-                session.as_socket().as_poll_item(zmq::POLLIN | zmq::POLLERR)
+                sender
+                    .session
+                    .as_socket()
+                    .as_poll_item(zmq::POLLIN | zmq::POLLERR)
             })
             .collect::<Vec<_>>();
 
@@ -263,13 +284,13 @@ where
         );
 
         for bus_id in service_buses {
-            let session = self
+            let sender = self
                 .senders
-                .sessions
+                .0
                 .get_mut(&bus_id)
                 .expect("must exist, just indexed");
 
-            let routed_frame = session.recv_routed_message()?;
+            let routed_frame = sender.session.recv_routed_message()?;
             let request =
                 (&*self.unmarshaller.unmarshall(&routed_frame.msg)?).clone();
             let source = H::Address::from(routed_frame.src);
