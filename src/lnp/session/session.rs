@@ -26,24 +26,14 @@ use crate::lnp::transport::{
 pub trait Session {
     fn recv_raw_message(&mut self) -> Result<Vec<u8>, Error>;
     fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error>;
-    fn recv_routed_message(&mut self) -> Result<RoutedFrame, Error> {
-        // We panic here because this is a program architecture design
-        // error and developer must be notified about it; the program using
-        // this pattern can't work
-        panic!("Multipeer sockets are not possible with the chosen transport")
-    }
+    fn recv_routed_message(&mut self) -> Result<RoutedFrame, Error>;
     fn send_routed_message(
         &mut self,
         source: &[u8],
         route: &[u8],
         dest: &[u8],
         raw: &[u8],
-    ) -> Result<usize, Error> {
-        // We panic here because this is a program architecture design
-        // error and developer must be notified about it; the program using
-        // this pattern can't work
-        panic!("Multipeer sockets are not possible with the chosen transport")
-    }
+    ) -> Result<usize, Error>;
     fn into_any(self: Box<Self>) -> Box<dyn Any>;
 }
 
@@ -130,6 +120,32 @@ where
         Ok(writer.send_frame(&self.transcoder.encrypt(raw))?)
     }
 
+    #[inline]
+    fn recv_routed_message(&mut self) -> Result<RoutedFrame, Error> {
+        let reader = self.connection.as_receiver();
+        let mut routed_frame = reader.recv_routed()?;
+        routed_frame.msg = self.transcoder.decrypt(routed_frame.msg)?;
+        Ok(routed_frame)
+    }
+
+    #[inline]
+    fn send_routed_message(
+        &mut self,
+        source: &[u8],
+        route: &[u8],
+        dest: &[u8],
+        raw: &[u8],
+    ) -> Result<usize, Error> {
+        let writer = self.connection.as_sender();
+        Ok(writer.send_routed(
+            source,
+            route,
+            dest,
+            &self.transcoder.encrypt(raw),
+        )?)
+    }
+
+    #[inline]
     fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
