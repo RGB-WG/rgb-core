@@ -312,7 +312,10 @@ where
 
             if dest == self.handler.identity() {
                 // We are the destination
-                debug!("ESB request from {}: {}", source, request);
+                debug!(
+                    "ESB request {} from {} forwarded to processing",
+                    request, source
+                );
 
                 self.handler.handle(
                     &mut self.senders,
@@ -322,7 +325,10 @@ where
                 )?;
             } else {
                 // Need to route
-                debug!("ESB request routed from {} to {}", source, dest);
+                debug!(
+                    "ESB request {} will be routed from {} to {}",
+                    request, source, dest
+                );
 
                 self.senders.send_to(bus_id, source, dest, request)?
             }
