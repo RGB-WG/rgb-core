@@ -34,8 +34,9 @@ pub trait Session {
     }
     fn send_routed_message(
         &mut self,
+        source: &[u8],
         route: &[u8],
-        address: &[u8],
+        dest: &[u8],
         raw: &[u8],
     ) -> Result<usize, Error> {
         // We panic here because this is a program architecture design
@@ -64,8 +65,9 @@ pub trait Output {
     fn send_raw_message(&mut self, raw: &[u8]) -> Result<usize, Error>;
     fn send_routed_message(
         &mut self,
+        source: &[u8],
         route: &[u8],
-        address: &[u8],
+        dest: &[u8],
         raw: &[u8],
     ) -> Result<usize, Error> {
         // We panic here because this is a program architecture design
@@ -250,12 +252,13 @@ where
     }
     fn send_routed_message(
         &mut self,
+        source: &[u8],
         route: &[u8],
-        address: &[u8],
+        dest: &[u8],
         raw: &[u8],
     ) -> Result<usize, Error> {
         let encrypted = self.encryptor.encrypt(raw);
-        Ok(self.output.send_routed(route, address, &encrypted)?)
+        Ok(self.output.send_routed(source, route, dest, &encrypted)?)
     }
 }
 

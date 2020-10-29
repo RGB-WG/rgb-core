@@ -31,7 +31,14 @@ pub trait BusId: Copy + Eq + Hash + Display {}
 
 /// Marker traits for service bus identifiers
 pub trait ServiceAddress:
-    Copy + Eq + Hash + Debug + Display + AsRef<[u8]> + Into<Vec<u8>> + From<Vec<u8>>
+    Clone
+    + Eq
+    + Hash
+    + Debug
+    + Display
+    + AsRef<[u8]>
+    + Into<Vec<u8>>
+    + From<Vec<u8>>
 {
 }
 
@@ -110,6 +117,7 @@ where
     pub fn send_to<A, R>(
         &mut self,
         bus_id: B,
+        source: A,
         dest: A,
         request: R,
     ) -> Result<(), Error>
@@ -124,6 +132,7 @@ where
             .get_mut(&bus_id)
             .ok_or(Error::UnknownBusId(bus_id.to_string()))?;
         session.send_routed_message(
+            source.as_ref(),
             self.router.as_ref(),
             dest.as_ref(),
             &data,
@@ -158,7 +167,7 @@ where
         router: H::Address,
         handler: H,
         api_type: zmqsocket::ApiType,
-    ) -> Result<Self, transport::Error> {
+    ) -> Result<Self, Error> {
         let mut sessions: HashMap<B, session::Raw<_, _>> = none!();
         for (service, carrier) in service_bus {
             let session = match carrier {
@@ -202,10 +211,11 @@ where
     pub fn send_to(
         &mut self,
         endpoint: B,
+        source: H::Address,
         dest: H::Address,
         request: R,
     ) -> Result<(), Error> {
-        self.senders.send_to(endpoint, dest, request)
+        self.senders.send_to(endpoint, source, dest, request)
     }
 }
 
@@ -297,7 +307,7 @@ where
                 // Need to route
                 debug!("ESB request routed from {} to {}", source, dest);
 
-                self.senders.send_to(bus_id, dest, request)?
+                self.senders.send_to(bus_id, source, dest, request)?
             }
         }
 

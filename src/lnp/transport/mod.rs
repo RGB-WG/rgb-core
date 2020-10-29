@@ -97,8 +97,13 @@ impl From<std::io::Error> for Error {
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RoutedFrame {
+    /// Previous hop where we received message from during the routing
+    pub hop: Vec<u8>,
+    /// Originator of the message
     pub src: Vec<u8>,
+    /// Destination of the message
     pub dst: Vec<u8>,
+    /// Message itself
     pub msg: Vec<u8>,
 }
 
@@ -236,6 +241,7 @@ pub trait SendFrame {
     #[allow(dead_code)]
     fn send_routed(
         &mut self,
+        source: &[u8],
         route: &[u8],
         address: &[u8],
         data: &[u8],

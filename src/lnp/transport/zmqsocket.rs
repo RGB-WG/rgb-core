@@ -465,8 +465,12 @@ impl RecvFrame for WrappedSocket {
 
     fn recv_routed(&mut self) -> Result<RoutedFrame, transport::Error> {
         let mut multipart = self.socket.recv_multipart(0)?.into_iter();
-        let src = multipart.next().ok_or(transport::Error::FrameBroken(
+        // Skipping previous hop data since we do not need them
+        let hop = multipart.next().ok_or(transport::Error::FrameBroken(
             "zero frame parts in ZMQ multipart routed frame",
+        ))?;
+        let src = multipart.next().ok_or(transport::Error::FrameBroken(
+            "no source part ZMQ multipart routed frame",
         ))?;
         let dst = multipart.next().ok_or(transport::Error::FrameBroken(
             "no destination part ZMQ multipart routed frame",
@@ -483,7 +487,7 @@ impl RecvFrame for WrappedSocket {
         if len > super::MAX_FRAME_SIZE as usize {
             Err(transport::Error::OversizedFrame(len))?
         }
-        Ok(RoutedFrame { src, dst, msg })
+        Ok(RoutedFrame { hop, src, dst, msg })
     }
 }
 
@@ -505,15 +509,17 @@ impl SendFrame for WrappedSocket {
 
     fn send_routed(
         &mut self,
+        source: &[u8],
         route: &[u8],
-        address: &[u8],
+        dest: &[u8],
         data: &[u8],
     ) -> Result<usize, transport::Error> {
         let len = data.len();
         if len > super::MAX_FRAME_SIZE as usize {
             return Err(transport::Error::OversizedFrame(len));
         }
-        self.socket.send_multipart(&[route, address, data], 0)?;
+        self.socket
+            .send_multipart(&[route, source, dest, data], 0)?;
         Ok(data.len())
     }
 }
