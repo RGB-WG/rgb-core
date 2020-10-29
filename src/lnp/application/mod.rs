@@ -155,6 +155,12 @@ impl FromHex for ChannelId {
 #[wrapper(LowerHex, UpperHex)]
 pub struct TempChannelId(Slice32);
 
+impl From<TempChannelId> for ChannelId {
+    fn from(temp: TempChannelId) -> Self {
+        Self(temp.into_inner())
+    }
+}
+
 impl FromHex for TempChannelId {
     fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
     where
