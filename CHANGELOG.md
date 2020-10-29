@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v0.2.0-alpha.3
+--------------
+
+- Improvements to the ESB and RPC service architectures
+- Improvements to debug logging and displaying of LN messages and service 
+  information
+
 v0.2.0-alpha.2
 --------------
 

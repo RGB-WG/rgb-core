@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp_services"
-version = "0.2.0-beta.1"
+version = "0.2.0-alpha.3"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP support crate for devloping microservices"
@@ -14,8 +14,8 @@ edition = "2018"
 # LNP/BP libraries
 amplify = "~2.0.6"
 amplify_derive = "~2.0.6"
-lnpbp = { path = ".." }
-lnpbp_derive = "~0.2.0-alpha.2"
+lnpbp = "~0.2.0-alpha.3"
+lnpbp_derive = "~0.2.0-alpha.3"
 # Serialization & parsing
 serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
 serde_with = { version = "~1.5.1", optional = true, features = ["hex"] }
