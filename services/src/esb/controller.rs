@@ -152,6 +152,7 @@ where
     senders: SenderList<B, H::Address>,
     unmarshaller: Unmarshaller<R>,
     handler: H,
+    api_type: zmqsocket::ApiType,
 }
 
 impl<B, R, H> Controller<B, R, H>
@@ -166,43 +167,53 @@ where
         handler: H,
         api_type: zmqsocket::ApiType,
     ) -> Result<Self, Error> {
-        let mut senders = SenderList::new();
-        for (service, BusConfig { carrier, router }) in service_bus {
-            let session = match carrier {
-                zmqsocket::Carrier::Locator(locator) => {
-                    debug!(
-                        "Creating ESB session for service {} located at {} with identity '{}'",
-                        &service,
-                        &locator,
-                        handler.identity()
-                    );
-                    let session = session::Raw::with_zmq_unencrypted(
-                        api_type,
-                        &locator,
-                        None,
-                        Some(handler.identity().as_ref()),
-                    )?;
-                    session.as_socket().set_router_mandatory(true)?;
-                    session
-                }
-                zmqsocket::Carrier::Socket(socket) => {
-                    debug!("Creating ESB session for service {}", &service);
-                    session::Raw::from_zmq_socket_unencrypted(api_type, socket)
-                }
-            };
-            let router = match router {
-                Some(router) if router == handler.identity() => None,
-                router => router,
-            };
-            senders.0.insert(service, Sender { session, router });
-        }
+        let senders = SenderList::new();
         let unmarshaller = R::create_unmarshaller();
-
-        Ok(Self {
+        let mut me = Self {
             senders,
             unmarshaller,
             handler,
-        })
+            api_type,
+        };
+        for (id, config) in service_bus {
+            me.add_service_bus(id, config)?;
+        }
+        Ok(me)
+    }
+
+    pub fn add_service_bus(
+        &mut self,
+        id: B,
+        config: BusConfig<H::Address>,
+    ) -> Result<(), Error> {
+        let session = match config.carrier {
+            zmqsocket::Carrier::Locator(locator) => {
+                debug!(
+                    "Creating ESB session for service {} located at {} with identity '{}'",
+                    &id,
+                    &locator,
+                    self.handler.identity()
+                );
+                let session = session::Raw::with_zmq_unencrypted(
+                    self.api_type,
+                    &locator,
+                    None,
+                    Some(self.handler.identity().as_ref()),
+                )?;
+                session.as_socket().set_router_mandatory(true)?;
+                session
+            }
+            zmqsocket::Carrier::Socket(socket) => {
+                debug!("Creating ESB session for service {}", &id);
+                session::Raw::from_zmq_socket_unencrypted(self.api_type, socket)
+            }
+        };
+        let router = match config.router {
+            Some(router) if router == self.handler.identity() => None,
+            router => router,
+        };
+        self.senders.0.insert(id, Sender { session, router });
+        Ok(())
     }
 
     pub fn send_to(
