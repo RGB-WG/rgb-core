@@ -42,13 +42,13 @@ pub enum Messages {
     /// Once authentication is complete, the first message reveals the features
     /// supported or required by this node, even if this is a reconnection.
     #[lnp_api(type = 16)]
-    #[display(inner)]
+    #[display("init(...)")]
     Init(Init),
 
     /// For simplicity of diagnosis, it's often useful to tell a peer that
     /// something is incorrect.
     #[lnp_api(type = 17)]
-    #[display(inner)]
+    #[display("error(...)")]
     Error(Error),
 
     /// In order to allow for the existence of long-lived TCP connections, at
@@ -56,7 +56,7 @@ pub enum Messages {
     /// at the application level. Such messages also allow obfuscation of
     /// traffic patterns.
     #[lnp_api(type = 18)]
-    #[display(inner)]
+    #[display("ping(...)")]
     Ping(Ping),
 
     /// The pong message is to be sent whenever a ping message is received. It
@@ -65,7 +65,7 @@ pub enum Messages {
     /// Within the received ping message, the sender will specify the number of
     /// bytes to be included within the data payload of the pong message.
     #[lnp_api(type = 19)]
-    #[display("pong()")]
+    #[display("pong(...)")]
     Pong(Vec<u8>),
 
     // Part II: Channel management protocol
@@ -74,65 +74,65 @@ pub enum Messages {
     // 1. Channel establishment
     // ------------------------
     #[lnp_api(type = 32)]
-    #[display("open_channel({_0})")]
+    #[display("open_channel(...)")]
     OpenChannel(OpenChannel),
 
     #[lnp_api(type = 33)]
-    #[display("accept_channel({_0})")]
+    #[display("accept_channel(...)")]
     AcceptChannel(AcceptChannel),
 
     #[lnp_api(type = 34)]
-    #[display("funding_created({_0})")]
+    #[display("funding_created(...)")]
     FundingCreated(FundingCreated),
 
     #[lnp_api(type = 35)]
-    #[display("funding_signed({_0})")]
+    #[display("funding_signed(...)")]
     FundingSigned(FundingSigned),
 
     #[lnp_api(type = 36)]
-    #[display("funding_locked({_0})")]
+    #[display("funding_locked(...)")]
     FundingLocked(FundingLocked),
 
     #[lnp_api(type = 38)]
-    #[display("shutdown({_0})")]
+    #[display("shutdown(...)")]
     Shutdown(Shutdown),
 
     #[lnp_api(type = 39)]
-    #[display("closing_signed({_0})")]
+    #[display("closing_signed(...)")]
     ClosingSigned(ClosingSigned),
 
     // 2. Normal operations
     // --------------------
     #[lnp_api(type = 128)]
-    #[display("update_add_htlc({_0})")]
+    #[display("update_add_htlc(...)")]
     UpdateAddHtlc(UpdateAddHtlc),
 
     #[lnp_api(type = 130)]
-    #[display("update_fulfill_htlc({_0})")]
+    #[display("update_fulfill_htlc(...)")]
     UpdateFulfillHtlc(UpdateFulfillHtlc),
 
     #[lnp_api(type = 131)]
-    #[display("update_fail_htlc({_0})")]
+    #[display("update_fail_htlc(...)")]
     UpdateFailHtlc(UpdateFailHtlc),
 
     #[lnp_api(type = 135)]
-    #[display("update_fail_malformed_htlc({_0})")]
+    #[display("update_fail_malformed_htlc(...)")]
     UpdateFailMalformedHtlc(UpdateFailMalformedHtlc),
 
     #[lnp_api(type = 132)]
-    #[display("commitment_signed({_0})")]
+    #[display("commitment_signed(...)")]
     CommitmentSigned(CommitmentSigned),
 
     #[lnp_api(type = 133)]
-    #[display("revoke_and_ack({_0})")]
+    #[display("revoke_and_ack(...)")]
     RevokeAndAck(RevokeAndAck),
 
     #[lnp_api(type = 134)]
-    #[display("update_fee({_0})")]
+    #[display("update_fee(...)")]
     UpdateFee(UpdateFee),
 
     #[lnp_api(type = 136)]
-    #[display("channel_reestablish({_0})")]
+    #[display("channel_reestablish(...)")]
     ChannelReestablish(ChannelReestablish),
 }
 

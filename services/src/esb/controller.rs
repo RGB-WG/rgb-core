@@ -54,7 +54,7 @@ where
 {
     pub(self) sessions:
         HashMap<B, session::Raw<NoEncryption, zmqsocket::Connection>>,
-    pub(self) router: A,
+    pub(self) router: Option<A>,
 }
 
 impl<B, A> Senders<B, A>
@@ -72,24 +72,51 @@ where
     where
         R: Request,
     {
-        trace!(
-            "Sending {} to {} via {} using {} service bus",
-            request,
-            dest,
-            bus_id,
-            self.router
-        );
         let data = request.encode()?;
         let session = self
             .sessions
             .get_mut(&bus_id)
             .ok_or(Error::UnknownBusId(bus_id.to_string()))?;
+        let router = match self.router {
+            None => {
+                trace!(
+                    "Sending {} from {} to {} directly using {} service bus",
+                    request,
+                    source,
+                    dest,
+                    bus_id
+                );
+                &dest
+            }
+            Some(ref router) if &source == router => {
+                trace!(
+                    "Sending {} from {} to {} using {} service bus",
+                    request,
+                    source,
+                    dest,
+                    bus_id,
+                );
+                &dest
+            }
+            Some(ref router) => {
+                trace!(
+                    "Sending {} from {} to {} via {} using {} service bus",
+                    request,
+                    source,
+                    dest,
+                    router,
+                    bus_id,
+                );
+                router
+            }
+        };
         session.send_routed_message(
             source.as_ref(),
-            self.router.as_ref(),
+            router.as_ref(),
             dest.as_ref(),
             &data,
         )?;
+
         Ok(())
     }
 }
@@ -146,6 +173,11 @@ where
             sessions.insert(service, session);
         }
         let unmarshaller = R::create_unmarshaller();
+        let router = if router == handler.identity() {
+            None
+        } else {
+            Some(router)
+        };
         let senders = Senders { sessions, router };
 
         Ok(Self {
