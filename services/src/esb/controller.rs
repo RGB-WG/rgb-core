@@ -38,7 +38,7 @@ where
 
     fn handle(
         &mut self,
-        senders: &mut Senders<B>,
+        senders: &mut Senders<B, Self::Address>,
         bus_id: B,
         source: Self::Address,
         request: Self::Request,
@@ -47,20 +47,22 @@ where
     fn handle_err(&mut self, error: Error) -> Result<(), Error>;
 }
 
-pub struct Senders<B>
+pub struct Senders<B, A>
 where
     B: BusId,
+    A: ServiceAddress,
 {
     pub(self) sessions:
         HashMap<B, session::Raw<NoEncryption, zmqsocket::Connection>>,
-    pub(self) router: Vec<u8>,
+    pub(self) router: A,
 }
 
-impl<B> Senders<B>
+impl<B, A> Senders<B, A>
 where
     B: BusId,
+    A: ServiceAddress,
 {
-    pub fn send_to<A, R>(
+    pub fn send_to<R>(
         &mut self,
         bus_id: B,
         source: A,
@@ -68,10 +70,15 @@ where
         request: R,
     ) -> Result<(), Error>
     where
-        A: ServiceAddress,
         R: Request,
     {
-        trace!("Sending {} to {} via {}", request, dest, bus_id);
+        trace!(
+            "Sending {} to {} via {} using {} service bus",
+            request,
+            dest,
+            bus_id,
+            self.router
+        );
         let data = request.encode()?;
         let session = self
             .sessions
@@ -94,7 +101,7 @@ where
     H: Handler<B, Request = R>,
     Error: From<H::Error>,
 {
-    senders: Senders<B>,
+    senders: Senders<B, H::Address>,
     unmarshaller: Unmarshaller<R>,
     handler: H,
 }
@@ -106,7 +113,7 @@ where
     H: Handler<B, Request = R>,
     Error: From<H::Error>,
 {
-    pub fn init(
+    pub fn with(
         service_bus: HashMap<B, zmqsocket::Carrier>,
         router: H::Address,
         handler: H,
@@ -117,7 +124,7 @@ where
             let session = match carrier {
                 zmqsocket::Carrier::Locator(locator) => {
                     debug!(
-                        "Creating session for {} service located at {} with identity '{}'",
+                        "Creating ESB session for service {} located at {} with identity '{}'",
                         &service,
                         &locator,
                         handler.identity()
@@ -132,17 +139,14 @@ where
                     session
                 }
                 zmqsocket::Carrier::Socket(socket) => {
-                    debug!("Creating session for {} service", &service);
+                    debug!("Creating ESB session for service {}", &service);
                     session::Raw::from_zmq_socket_unencrypted(api_type, socket)
                 }
             };
             sessions.insert(service, session);
         }
         let unmarshaller = R::create_unmarshaller();
-        let senders = Senders {
-            sessions,
-            router: router.into(),
-        };
+        let senders = Senders { sessions, router };
 
         Ok(Self {
             senders,
@@ -153,12 +157,12 @@ where
 
     pub fn send_to(
         &mut self,
-        endpoint: B,
+        bus_id: B,
         dest: H::Address,
         request: R,
     ) -> Result<(), Error> {
         self.senders
-            .send_to(endpoint, self.handler.identity(), dest, request)
+            .send_to(bus_id, self.handler.identity(), dest, request)
     }
 }
 
@@ -204,7 +208,10 @@ where
             })
             .collect::<Vec<_>>();
 
-        trace!("Awaiting for ESB request from {} services...", items.len());
+        trace!(
+            "Awaiting for ESB request from {} service buses...",
+            items.len()
+        );
         let _ = zmq::poll(&mut items, -1)?;
 
         let service_buses = items
@@ -219,7 +226,7 @@ where
             })
             .collect::<Vec<_>>();
         trace!(
-            "Received ESB request from {} services...",
+            "Received ESB request from {} service busses...",
             service_buses.len()
         );
 

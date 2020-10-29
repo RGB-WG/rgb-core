@@ -39,17 +39,17 @@ pub trait ServiceAddress:
 #[derive(Clone, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum Error {
-    /// Unexpected server response
+    /// unexpected server response
     UnexpectedServerResponse,
 
-    /// Message serialization or structure error: {_0}
+    /// message serialization or structure error: {_0}
     Presentation(presentation::Error),
 
-    /// Transport-level protocol error: {_0}
+    /// transport-level protocol error: {_0}
     #[from]
     Transport(transport::Error),
 
-    /// The provided service bus id {_0} is unknown
+    /// provided service bus id {_0} is unknown
     UnknownBusId(String),
 
     /// {_0}

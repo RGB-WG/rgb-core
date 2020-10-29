@@ -24,7 +24,7 @@ use lightning::ln::msgs::DecodeError;
 #[non_exhaustive]
 #[repr(u16)]
 pub enum Error {
-    /// Invalid connection endpoint data
+    /// invalid connection endpoint data
     InvalidEndpoint,
 
     /// I/O error while decoding LNP message; probably socket error or out of
@@ -32,42 +32,42 @@ pub enum Error {
     #[from]
     Io(std::io::ErrorKind),
 
-    /// LNP message contains no data
+    /// message contains no data
     NoData,
 
-    /// Unknown encoder for encoding LNP message
+    /// unknown encoder for encoding LNP message
     NoEncoder,
 
-    /// Unknown LNP protocol version
+    /// unknown LNP protocol version
     UnknownProtocolVersion,
 
-    /// Error in strict encoded data in LNP message
+    /// error in strict encoded data in LMP message
     #[from(strict_encoding::Error)]
     EncodingError,
 
-    /// Unknown data type in LNP message
+    /// unknown data type in LMP message
     #[from(UnknownTypeError)]
     UnknownDataType,
 
-    /// Invalid value in LNP message
+    /// invalid value in LMP message
     InvalidValue,
 
-    /// LNP message with unknown even value
+    /// LMP message with unknown even value
     MessageEvenType,
 
-    /// Bad length descriptor in LNP message
+    /// bad length descriptor in LNP message
     BadLengthDescriptor,
 
-    /// Wrong order of TLV types inside LNP message
+    /// wrong order of TLV types inside LNP message
     TlvStreamWrongOrder,
 
-    /// Duplicated TLV type item inside LNP message
+    /// duplicated TLV type item inside LNP message
     TlvStreamDuplicateItem,
 
-    /// Found unknown even TLV record type inside LNP message
+    /// found unknown even TLV record type inside LNP message
     TlvRecordEvenType,
 
-    /// Invalid length of TLV record inside LNP message
+    /// invalid length of TLV record inside LNP message
     TlvRecordInvalidLen,
 
     /// {_0}

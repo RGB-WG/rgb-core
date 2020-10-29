@@ -17,21 +17,21 @@ use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Api;
 use lnpbp::lnp::transport::zmqsocket;
 use lnpbp::lnp::{
-    session, transport, CreateUnmarshaller, NoEncryption, Session, TypedEnum,
-    Unmarshall, Unmarshaller,
+    session, transport, CreateUnmarshaller, NoEncryption, Session, Unmarshall,
+    Unmarshaller,
 };
 
-use super::{EndpointTypes, Error, Failure};
+use super::{EndpointId, Error, Failure};
 use crate::node::TryService;
 
 /// Trait for types handling specific set of RPC API requests structured as a
 /// single type implementing [`Request`]. They must return a corresponding reply
 /// type implementing [`Reply`]. This request/replu pair is structured as an
 /// [`Api`] trait provided in form of associated type parameter
-pub trait Handler<Endpoints>
+pub trait Handler<E>
 where
     Self: Sized,
-    Endpoints: EndpointTypes,
+    E: EndpointId,
 {
     type Api: Api;
     type Error: crate::error::Error + Into<Failure>;
@@ -40,7 +40,7 @@ where
     /// a error that can be converted into a failure response
     fn handle(
         &mut self,
-        endpoint: Endpoints,
+        endpoint: E,
         request: <Self::Api as Api>::Request,
     ) -> Result<<Self::Api as Api>::Reply, Self::Error>;
 
@@ -52,7 +52,7 @@ where
     A: Api,
     H::Error: Into<Failure>,
     A::Reply: From<Failure>,
-    E: EndpointTypes,
+    E: EndpointId,
     H: Handler<E, Api = A>,
 {
     sessions: HashMap<
@@ -68,19 +68,24 @@ where
     A: Api,
     H::Error: Into<Failure>,
     A::Reply: From<Failure>,
-    E: EndpointTypes,
+    E: EndpointId,
     H: Handler<E, Api = A>,
 {
-    pub fn init(
+    pub fn with(
         endpoints: HashMap<E, zmqsocket::Carrier>,
         handler: H,
     ) -> Result<Self, transport::Error> {
         let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
-        for (service, endpoint) in endpoints {
+        for (endpoint, carrier) in endpoints {
             sessions.insert(
-                service,
-                match endpoint {
+                endpoint,
+                match carrier {
                     zmqsocket::Carrier::Locator(locator) => {
+                        debug!(
+                            "Creating RPC session for endpoint {} located at {}",
+                            &endpoint,
+                            &locator
+                        );
                         session::Raw::with_zmq_unencrypted(
                             zmqsocket::ApiType::Server,
                             &locator,
@@ -89,6 +94,10 @@ where
                         )?
                     }
                     zmqsocket::Carrier::Socket(socket) => {
+                        debug!(
+                            "Creating RPC session for endpoint {}",
+                            &endpoint
+                        );
                         session::Raw::from_zmq_socket_unencrypted(
                             zmqsocket::ApiType::Server,
                             socket,
@@ -111,7 +120,7 @@ where
     A: Api,
     H::Error: Into<Failure>,
     A::Reply: From<Failure>,
-    E: EndpointTypes,
+    E: EndpointId,
     H: Handler<E, Api = A>,
 {
     type ErrorType = Error;
@@ -119,9 +128,9 @@ where
     fn try_run_loop(mut self) -> Result<(), Self::ErrorType> {
         loop {
             match self.run() {
-                Ok(_) => debug!("API request processing complete"),
+                Ok(_) => debug!("RPC request processing complete"),
                 Err(err) => {
-                    error!("Error processing API request: {}", err);
+                    error!("RPC request processing error: {}", err);
                     self.handler.handle_err(err)?;
                 }
             }
@@ -134,7 +143,7 @@ where
     A: Api,
     H::Error: Into<Failure>,
     A::Reply: From<Failure>,
-    E: EndpointTypes,
+    E: EndpointId,
     H: Handler<E, Api = A>,
 {
     fn run(&mut self) -> Result<(), Error> {
@@ -148,7 +157,7 @@ where
             })
             .collect::<Vec<_>>();
 
-        trace!("Awaiting for ZMQ RPC request in {} sockets...", items.len());
+        trace!("Awaiting for RPC request from {} endpoints...", items.len());
         let _ = zmq::poll(&mut items, -1)?;
 
         let endpoints = items
@@ -162,7 +171,7 @@ where
                 }
             })
             .collect::<Vec<_>>();
-        trace!("Received request from {} sockets...", endpoints.len());
+        trace!("Received RPC request from {} endpoints...", endpoints.len());
 
         for endpoint in endpoints {
             let session = &mut self
@@ -171,19 +180,14 @@ where
                 .expect("must exist, just indexed");
 
             let raw = session.recv_raw_message()?;
-            trace!("Got {} bytes over ZMQ RPC from {}", raw.len(), endpoint);
-
             let request = &*self.unmarshaller.unmarshall(&raw)?;
-            debug!(
-                "Unmarshalled ZMQ RPC request {:?}, processing ...",
-                request.get_type()
-            );
 
+            debug!("RPC: got request {}", request);
             let reply = self
                 .handler
                 .handle(endpoint, request.clone())
                 .unwrap_or_else(|err| A::Reply::from(err.into()));
-            trace!("Preparing ZMQ RPC reply: {:?}", reply);
+            debug!("RPC: replying with {:?}", reply);
             let data = reply.encode()?;
             session.send_raw_message(&data)?;
         }

@@ -58,31 +58,31 @@ pub enum Error {
     #[cfg(feature = "zmq")]
     Zmq(zmqsocket::Error),
 
-    /// Service is offline or not responding
+    /// service is offline or not responding
     ServiceOffline,
 
-    /// The function requires that the connecting socket must be present on the
+    /// the function requires that the connecting socket must be present on the
     /// the same machine, i.e. it should be a raw POSIX socket or IPC & Inproc
     /// ZMQ socket
     RequiresLocalSocket,
 
-    /// The provided frame size ({_0}) exceeds frame size limit of
+    /// the provided frame size ({_0}) exceeds frame size limit of
     /// MAX_FRAME_SIZE bytes
     OversizedFrame(usize),
 
-    /// Frame size {_0} is less than minimal (34 bytes)
+    /// frame size {_0} is less than minimal (34 bytes)
     FrameTooSmall(usize),
 
-    /// Frame structure broken: {_0}
+    /// frame structure broken: {_0}
     FrameBroken(&'static str),
 
-    /// Frame payload length is not equal to the actual frame payload provided
+    /// frame payload length is not equal to the actual frame payload provided
     InvalidLength,
 
-    /// Connections over Tor protocol are not yet supported
+    /// connections over Tor protocol are not yet supported
     TorNotSupportedYet,
 
-    /// Read or write attempt exceeded socket timeout
+    /// read or write attempt exceeded socket timeout
     TimedOut,
 }
 

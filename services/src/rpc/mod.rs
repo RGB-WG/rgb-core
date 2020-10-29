@@ -25,7 +25,7 @@ use lnpbp::lnp;
 use crate::error::RuntimeError;
 
 /// Marker traits for endpoint identifiers lists
-pub trait EndpointTypes: Copy + Eq + Hash + Display {}
+pub trait EndpointId: Copy + Eq + Hash + Display {}
 
 /// Information about server-side failure returned through RPC API
 #[derive(
@@ -44,21 +44,21 @@ pub struct Failure {
 #[derive(Clone, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum Error {
-    /// Unexpected server response
+    /// unexpected server response
     UnexpectedServerResponse,
 
     /// {_0}
     #[from]
     ServerFailure(Failure),
 
-    /// Message serialization or structure error: {_0}
+    /// message serialization or structure error: {_0}
     Presentation(lnp::presentation::Error),
 
-    /// Transport-level protocol error: {_0}
+    /// transport-level protocol error: {_0}
     #[from]
     Transport(lnp::transport::Error),
 
-    /// The provided RPC endpoint {_0} is unknown
+    /// provided RPC endpoint {_0} is unknown
     UnknownEndpoint(String),
 }
 

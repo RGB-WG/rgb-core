@@ -21,12 +21,12 @@ use lnpbp::lnp::{
     Unmarshaller,
 };
 
-use super::{EndpointTypes, Error};
+use super::{EndpointId, Error};
 
 pub struct RpcClient<E, A>
 where
     A: Api,
-    E: EndpointTypes,
+    E: EndpointId,
 {
     sessions: HashMap<
         E,
@@ -38,9 +38,9 @@ where
 impl<E, A> RpcClient<E, A>
 where
     A: Api,
-    E: EndpointTypes,
+    E: EndpointId,
 {
-    pub fn init(
+    pub fn with(
         endpoints: HashMap<E, SocketLocator>,
     ) -> Result<Self, transport::Error> {
         let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
