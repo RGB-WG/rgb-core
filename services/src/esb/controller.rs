@@ -142,6 +142,7 @@ where
     }
 }
 
+#[derive(Getters)]
 pub struct Controller<B, R, H>
 where
     R: Request,
