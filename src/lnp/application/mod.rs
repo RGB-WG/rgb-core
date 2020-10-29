@@ -72,7 +72,12 @@ impl FromHex for Slice32 {
 impl LowerHex for Slice32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
-            write!(f, "0x{}", self.0.to_hex())
+            write!(
+                f,
+                "{}..{}",
+                self.0[..4].to_hex(),
+                self.0[(self.0.len() - 4)..].to_hex()
+            )
         } else {
             f.write_str(&self.0.to_hex())
         }
@@ -82,7 +87,12 @@ impl LowerHex for Slice32 {
 impl UpperHex for Slice32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
-            write!(f, "0x{}", self.0.to_hex().to_ascii_uppercase())
+            write!(
+                f,
+                "{}..{}",
+                self.0[..4].to_hex().to_ascii_uppercase(),
+                self.0[(self.0.len() - 4)..].to_hex().to_ascii_uppercase()
+            )
         } else {
             f.write_str(&self.0.to_hex().to_ascii_uppercase())
         }
