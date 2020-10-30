@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Api;
-use lnpbp::lnp::transport::zmqsocket::{ApiType, ZmqAddr};
+use lnpbp::lnp::transport::zmqsocket::{ZmqAddr, ZmqType};
 use lnpbp::lnp::{
     session, transport, CreateUnmarshaller, NoEncryption, Session, Unmarshall,
     Unmarshaller,
@@ -48,7 +48,7 @@ where
             sessions.insert(
                 service,
                 session::Raw::with_zmq_unencrypted(
-                    ApiType::Client,
+                    ZmqType::Req,
                     &endpoint,
                     None,
                     None,

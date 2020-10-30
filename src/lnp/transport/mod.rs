@@ -31,7 +31,7 @@ pub use socket_addr::{
 };
 use tokio::io::ErrorKind;
 #[cfg(feature = "zmq")]
-pub use zmqsocket::{ZmqAddr, ZMQ_CONTEXT};
+pub use zmqsocket::{ZmqAddr, ZmqType, ZMQ_CONTEXT};
 
 /// Maximum size of the transport frame; chosen in compliance with LN specs
 pub const MAX_FRAME_SIZE: usize =

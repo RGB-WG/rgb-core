@@ -153,7 +153,7 @@ where
     senders: SenderList<B, H::Address>,
     unmarshaller: Unmarshaller<R>,
     handler: H,
-    api_type: zmqsocket::ApiType,
+    api_type: zmqsocket::ZmqType,
 }
 
 impl<B, R, H> Controller<B, R, H>
@@ -166,7 +166,7 @@ where
     pub fn with(
         service_bus: HashMap<B, BusConfig<H::Address>>,
         handler: H,
-        api_type: zmqsocket::ApiType,
+        api_type: zmqsocket::ZmqType,
     ) -> Result<Self, Error> {
         let senders = SenderList::new();
         let unmarshaller = R::create_unmarshaller();

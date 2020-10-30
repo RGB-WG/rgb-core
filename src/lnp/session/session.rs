@@ -204,7 +204,7 @@ impl Raw<NoEncryption, ftcp::Connection> {
 
 impl Raw<NoEncryption, zmqsocket::Connection> {
     pub fn with_zmq_unencrypted(
-        zmq_type: zmqsocket::ApiType,
+        zmq_type: zmqsocket::ZmqType,
         remote: &zmqsocket::ZmqAddr,
         local: Option<zmqsocket::ZmqAddr>,
         identity: Option<&[u8]>,
@@ -218,7 +218,7 @@ impl Raw<NoEncryption, zmqsocket::Connection> {
     }
 
     pub fn from_zmq_socket_unencrypted(
-        zmq_type: zmqsocket::ApiType,
+        zmq_type: zmqsocket::ZmqType,
         socket: zmq::Socket,
     ) -> Self {
         Self {
@@ -286,14 +286,14 @@ mod test {
     fn test_zmq_no_encryption() {
         let locator = zmqsocket::ZmqAddr::Inproc(s!("test"));
         let mut rx = Raw::with_zmq_unencrypted(
-            zmqsocket::ApiType::Server,
+            zmqsocket::ZmqType::Rep,
             &locator,
             None,
             None,
         )
         .unwrap();
         let mut tx = Raw::with_zmq_unencrypted(
-            zmqsocket::ApiType::Client,
+            zmqsocket::ZmqType::Req,
             &locator,
             None,
             None,

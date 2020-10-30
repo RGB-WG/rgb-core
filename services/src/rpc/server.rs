@@ -87,7 +87,7 @@ where
                             &locator
                         );
                         session::Raw::with_zmq_unencrypted(
-                            zmqsocket::ApiType::Server,
+                            zmqsocket::ZmqType::Rep,
                             &locator,
                             None,
                             None,
@@ -99,7 +99,7 @@ where
                             &endpoint
                         );
                         session::Raw::from_zmq_socket_unencrypted(
-                            zmqsocket::ApiType::Server,
+                            zmqsocket::ZmqType::Rep,
                             socket,
                         )
                     }

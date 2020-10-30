@@ -30,7 +30,7 @@ impl Connect for LocalSocketAddr {
         Ok(Box::new(match self {
             LocalSocketAddr::Zmq(locator) => {
                 session::Raw::with_zmq_unencrypted(
-                    zmqsocket::ApiType::Client,
+                    zmqsocket::ZmqType::Req,
                     locator,
                     None,
                     None,
@@ -46,7 +46,7 @@ impl Accept for LocalSocketAddr {
         Ok(Box::new(match self {
             LocalSocketAddr::Zmq(locator) => {
                 session::Raw::with_zmq_unencrypted(
-                    zmqsocket::ApiType::Client,
+                    zmqsocket::ZmqType::Req,
                     locator,
                     None,
                     None,
@@ -69,7 +69,7 @@ impl Connect for RemoteNodeAddr {
             //       `RemoteAddr` field
             RemoteSocketAddr::Zmq(socket) => {
                 Box::new(session::Raw::with_zmq_unencrypted(
-                    zmqsocket::ApiType::Client,
+                    zmqsocket::ZmqType::Req,
                     &zmqsocket::ZmqAddr::Tcp(socket),
                     None,
                     None,
@@ -95,7 +95,7 @@ impl Accept for RemoteNodeAddr {
             //       `RemoteAddr` field
             RemoteSocketAddr::Zmq(socket) => {
                 Box::new(session::Raw::with_zmq_unencrypted(
-                    zmqsocket::ApiType::Client,
+                    zmqsocket::ZmqType::Req,
                     &zmqsocket::ZmqAddr::Tcp(socket),
                     None,
                     None,

@@ -76,7 +76,7 @@ pub enum NodeLocator {
     /// # URL Schema
     /// lnpz:<file-path>?api=<p2p|rpc|sub>
     #[cfg(feature = "zmq")]
-    ZmqIpc(String, zmqsocket::ApiType),
+    ZmqIpc(String, zmqsocket::ZmqType),
 
     /// LNP protocol supports in-process communications (between threads of the
     /// same process using Mutex'es and other sync managing routines) without
@@ -86,7 +86,7 @@ pub enum NodeLocator {
     /// object, which can't be encoded as a string (context object is taken
     /// from a global variable).
     #[cfg(feature = "zmq")]
-    ZmqInproc(String, zmqsocket::ApiType),
+    ZmqInproc(String, zmqsocket::ZmqType),
 
     /// SHOULD be used only for DMZ area connections; otherwise
     /// [`NodeLocator::Native`] or [`NodeLocator::Websocket`] connection
@@ -97,7 +97,7 @@ pub enum NodeLocator {
     #[cfg(feature = "zmq")]
     ZmqTcpEncrypted(
         secp256k1::PublicKey,
-        zmqsocket::ApiType,
+        zmqsocket::ZmqType,
         IpAddr,
         Option<u16>,
     ),
@@ -109,7 +109,7 @@ pub enum NodeLocator {
     /// # URL Schema
     /// lnpz://<ip>[:<port>]/?api=<p2p|rpc|sub>
     #[cfg(feature = "zmq")]
-    ZmqTcpUnencrypted(zmqsocket::ApiType, IpAddr, Option<u16>),
+    ZmqTcpUnencrypted(zmqsocket::ZmqType, IpAddr, Option<u16>),
 
     /// # URL Scheme
     /// lnph://<node-id>@<ip>|<onion>[:<port>]
@@ -133,12 +133,12 @@ impl PartialEq for NodeLocator {
     fn eq(&self, other: &Self) -> bool {
         use NodeLocator::*;
 
-        fn api_eq(a: &zmqsocket::ApiType, b: &zmqsocket::ApiType) -> bool {
+        fn api_eq(a: &zmqsocket::ZmqType, b: &zmqsocket::ZmqType) -> bool {
             a == b
-                || (*a == zmqsocket::ApiType::PeerListening
-                    && *b == zmqsocket::ApiType::PeerConnecting)
-                || (*b == zmqsocket::ApiType::PeerListening
-                    && *a == zmqsocket::ApiType::PeerConnecting)
+                || (*a == zmqsocket::ZmqType::Pull
+                    && *b == zmqsocket::ZmqType::Push)
+                || (*b == zmqsocket::ZmqType::Pull
+                    && *a == zmqsocket::ZmqType::Push)
         }
 
         match (self, other) {
@@ -293,7 +293,7 @@ impl NodeLocator {
         Option<InetAddr>,
         Option<u16>,
         Option<String>, /* file or named socket */
-        Option<zmqsocket::ApiType>,
+        Option<zmqsocket::ZmqType>,
     ) {
         match self {
             NodeLocator::Native(pubkey, inet, port) => {
@@ -367,7 +367,7 @@ impl NodeLocator {
     /// Returns [`zmqsocket::ApiType`] for the given locator, if any, or
     /// [`Option::None`] otherwise
     #[inline]
-    pub fn api_type(&self) -> Option<zmqsocket::ApiType> {
+    pub fn api_type(&self) -> Option<zmqsocket::ZmqType> {
         self.components().4
     }
 }
@@ -600,10 +600,10 @@ impl TryFrom<Url> for NodeLocator {
                     .to_ascii_lowercase()
                     .as_str()
                 {
-                    "p2p" => Ok(zmqsocket::ApiType::PeerConnecting),
-                    "rpc" => Ok(zmqsocket::ApiType::Client),
-                    "sub" => Ok(zmqsocket::ApiType::Subscribe),
-                    "esb" => Ok(zmqsocket::ApiType::EsbService),
+                    "p2p" => Ok(zmqsocket::ZmqType::Push),
+                    "rpc" => Ok(zmqsocket::ZmqType::Req),
+                    "sub" => Ok(zmqsocket::ZmqType::Sub),
+                    "esb" => Ok(zmqsocket::ZmqType::RouterBind),
                     unknown => {
                         Err(ParseError::InvalidZmqType(unknown.to_string()))
                     }
@@ -927,25 +927,25 @@ mod test {
         let inet2 = IpAddr::from_str("127.0.0.2").unwrap();
         let locator1 = NodeLocator::ZmqTcpEncrypted(
             pubkey1,
-            zmqsocket::ApiType::PeerListening,
+            zmqsocket::ZmqType::Pull,
             inet1,
             None,
         );
         let locator2 = NodeLocator::ZmqTcpEncrypted(
             pubkey2,
-            zmqsocket::ApiType::Client,
+            zmqsocket::ZmqType::Req,
             inet2,
             None,
         );
         let locator3 = NodeLocator::ZmqTcpEncrypted(
             pubkey1,
-            zmqsocket::ApiType::PeerConnecting,
+            zmqsocket::ZmqType::Push,
             inet1,
             None,
         );
         let locator4 = NodeLocator::ZmqTcpEncrypted(
             pubkey2,
-            zmqsocket::ApiType::Server,
+            zmqsocket::ZmqType::Rep,
             inet2,
             None,
         );
@@ -959,10 +959,7 @@ mod test {
         assert_eq!(locator1.url_scheme(), "lnpz");
         assert_eq!(locator1.node_id(), Some(pubkey1));
         assert_eq!(locator1.port(), None);
-        assert_eq!(
-            locator1.api_type(),
-            Some(zmqsocket::ApiType::PeerListening)
-        );
+        assert_eq!(locator1.api_type(), Some(zmqsocket::ZmqType::Pull));
         assert_eq!(locator1.inet_addr(), Some(InetAddr::from(inet1)));
         assert_eq!(locator1.socket_name(), None);
         let locator_with_port = locator1.with_port(24);
@@ -1016,22 +1013,22 @@ mod test {
         let inet1 = IpAddr::from_str("127.0.0.1").unwrap();
         let inet2 = IpAddr::from_str("127.0.0.2").unwrap();
         let locator1 = NodeLocator::ZmqTcpUnencrypted(
-            zmqsocket::ApiType::PeerListening,
+            zmqsocket::ZmqType::Pull,
             inet1,
             None,
         );
         let locator2 = NodeLocator::ZmqTcpUnencrypted(
-            zmqsocket::ApiType::Client,
+            zmqsocket::ZmqType::Req,
             inet2,
             None,
         );
         let locator3 = NodeLocator::ZmqTcpUnencrypted(
-            zmqsocket::ApiType::PeerConnecting,
+            zmqsocket::ZmqType::Push,
             inet1,
             None,
         );
         let locator4 = NodeLocator::ZmqTcpUnencrypted(
-            zmqsocket::ApiType::Server,
+            zmqsocket::ZmqType::Rep,
             inet2,
             None,
         );
@@ -1045,10 +1042,7 @@ mod test {
         assert_eq!(locator1.url_scheme(), "lnpz");
         assert_eq!(locator1.node_id(), None);
         assert_eq!(locator1.port(), None);
-        assert_eq!(
-            locator1.api_type(),
-            Some(zmqsocket::ApiType::PeerListening)
-        );
+        assert_eq!(locator1.api_type(), Some(zmqsocket::ZmqType::Pull));
         assert_eq!(locator1.inet_addr(), Some(InetAddr::from(inet1)));
         let locator_with_port = locator1.with_port(24);
         assert_eq!(locator_with_port.port(), Some(24));
@@ -1081,22 +1075,16 @@ mod test {
     #[cfg(feature = "zmq")]
     #[test]
     fn test_zmq_inproc() {
-        let locator1 = NodeLocator::ZmqInproc(
-            s!("socket1"),
-            zmqsocket::ApiType::PeerListening,
-        );
-        let locator1_1 = NodeLocator::ZmqInproc(
-            s!("socket1"),
-            zmqsocket::ApiType::PeerListening,
-        );
+        let locator1 =
+            NodeLocator::ZmqInproc(s!("socket1"), zmqsocket::ZmqType::Pull);
+        let locator1_1 =
+            NodeLocator::ZmqInproc(s!("socket1"), zmqsocket::ZmqType::Pull);
         let locator2 =
-            NodeLocator::ZmqInproc(s!("socket2"), zmqsocket::ApiType::Client);
-        let locator3 = NodeLocator::ZmqInproc(
-            s!("socket1"),
-            zmqsocket::ApiType::PeerConnecting,
-        );
+            NodeLocator::ZmqInproc(s!("socket2"), zmqsocket::ZmqType::Req);
+        let locator3 =
+            NodeLocator::ZmqInproc(s!("socket1"), zmqsocket::ZmqType::Push);
         let locator4 =
-            NodeLocator::ZmqInproc(s!("socket2"), zmqsocket::ApiType::Server);
+            NodeLocator::ZmqInproc(s!("socket2"), zmqsocket::ZmqType::Rep);
 
         assert_eq!(locator1, locator1_1);
         assert_ne!(locator1, locator2);
@@ -1108,10 +1096,7 @@ mod test {
         assert_eq!(locator1.url_scheme(), "lnpz");
         assert_eq!(locator1.node_id(), None);
         assert_eq!(locator1.port(), None);
-        assert_eq!(
-            locator1.api_type(),
-            Some(zmqsocket::ApiType::PeerListening)
-        );
+        assert_eq!(locator1.api_type(), Some(zmqsocket::ZmqType::Pull));
         assert_eq!(locator1.inet_addr(), None);
         assert_eq!(locator1.socket_name(), Some(s!("socket1")));
         let locator_with_port = locator1.with_port(24);
@@ -1142,18 +1127,14 @@ mod test {
     #[cfg(feature = "zmq")]
     #[test]
     fn test_zmq_ipc() {
-        let locator1 = NodeLocator::ZmqIpc(
-            s!("./socket1"),
-            zmqsocket::ApiType::PeerListening,
-        );
+        let locator1 =
+            NodeLocator::ZmqIpc(s!("./socket1"), zmqsocket::ZmqType::Pull);
         let locator2 =
-            NodeLocator::ZmqIpc(s!("./socket2"), zmqsocket::ApiType::Client);
-        let locator3 = NodeLocator::ZmqIpc(
-            s!("./socket1"),
-            zmqsocket::ApiType::PeerConnecting,
-        );
+            NodeLocator::ZmqIpc(s!("./socket2"), zmqsocket::ZmqType::Req);
+        let locator3 =
+            NodeLocator::ZmqIpc(s!("./socket1"), zmqsocket::ZmqType::Push);
         let locator4 =
-            NodeLocator::ZmqIpc(s!("./socket2"), zmqsocket::ApiType::Server);
+            NodeLocator::ZmqIpc(s!("./socket2"), zmqsocket::ZmqType::Rep);
 
         assert_ne!(locator1, locator2);
         assert_ne!(locator2, locator4);
@@ -1164,10 +1145,7 @@ mod test {
         assert_eq!(locator1.url_scheme(), "lnpz");
         assert_eq!(locator1.node_id(), None);
         assert_eq!(locator1.port(), None);
-        assert_eq!(
-            locator1.api_type(),
-            Some(zmqsocket::ApiType::PeerListening)
-        );
+        assert_eq!(locator1.api_type(), Some(zmqsocket::ZmqType::Pull));
         assert_eq!(locator1.inet_addr(), None);
         assert_eq!(locator1.socket_name(), Some(s!("./socket1")));
         let locator_with_port = locator1.with_port(24);

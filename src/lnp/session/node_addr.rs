@@ -20,7 +20,9 @@ use amplify::internet::InetSocketAddr;
 use bitcoin::secp256k1;
 
 use super::{node_locator, NodeLocator};
-use crate::lnp::transport::{zmqsocket, LocalSocketAddr, RemoteSocketAddr};
+use crate::lnp::transport::{LocalSocketAddr, RemoteSocketAddr};
+#[cfg(feature = "zmq")]
+use crate::lnp::zmqsocket::{ZmqAddr, ZmqType};
 use crate::lnp::UrlScheme;
 
 /// Node endpoint which can be represent by either some local address without
@@ -71,7 +73,8 @@ impl From<NodeLocator> for NodeAddr {
     }
 }
 
-impl TryFrom<NodeAddr> for zmqsocket::ZmqAddr {
+#[cfg(feature = "zmq")]
+impl TryFrom<NodeAddr> for ZmqAddr {
     type Error = Error;
 
     fn try_from(value: NodeAddr) -> Result<Self, Self::Error> {
@@ -80,7 +83,7 @@ impl TryFrom<NodeAddr> for zmqsocket::ZmqAddr {
             NodeAddr::Remote(RemoteNodeAddr {
                 node_id,
                 remote_addr: RemoteSocketAddr::Zmq(addr),
-            }) => zmqsocket::ZmqAddr::Tcp(addr),
+            }) => ZmqAddr::Tcp(addr),
             _ => Err(Error::UnsupportedType)?,
         })
     }
@@ -227,7 +230,7 @@ impl From<RemoteNodeAddr> for NodeLocator {
             #[cfg(feature = "zmq")]
             RemoteSocketAddr::Zmq(addr) => NodeLocator::ZmqTcpEncrypted(
                 node_addr.node_id,
-                zmqsocket::ApiType::Server,
+                ZmqType::Rep,
                 InetSocketAddr::from(addr)
                     .address
                     .try_into()
