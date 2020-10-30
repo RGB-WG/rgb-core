@@ -19,8 +19,7 @@ use amplify::Bipolar;
 use crate::lnp::application::Messages;
 use crate::lnp::presentation::{Encode, Error, Unmarshall};
 use crate::lnp::session::{
-    self, Accept, Connect, LocalNode, NoEncryption, Session, Split,
-    ToNodeEndpoint,
+    self, Accept, Connect, LocalNode, NoEncryption, Session, Split, ToNodeAddr,
 };
 use crate::lnp::transport::{ftcp, zmqsocket};
 use crate::lnp::{LIGHTNING_P2P_DEFAULT_PORT, LNPWP_UNMARSHALLER};
@@ -59,7 +58,7 @@ impl PeerConnection {
     }
 
     pub fn connect(
-        remote: impl ToNodeEndpoint,
+        remote: impl ToNodeAddr,
         local: &LocalNode,
     ) -> Result<Self, Error> {
         let endpoint = remote
@@ -70,7 +69,7 @@ impl PeerConnection {
     }
 
     pub fn accept(
-        remote: impl ToNodeEndpoint,
+        remote: impl ToNodeAddr,
         local: &LocalNode,
     ) -> Result<Self, Error> {
         let endpoint = remote

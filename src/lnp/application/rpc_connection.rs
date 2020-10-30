@@ -15,7 +15,7 @@ use std::fmt::{Debug, Display};
 
 use crate::lnp::presentation::{payload, CreateUnmarshaller, Error};
 use crate::lnp::session::{Connect, Session};
-use crate::lnp::{LocalNode, ToNodeEndpoint};
+use crate::lnp::{LocalNode, ToNodeAddr};
 
 /// Marker trait for LNP RPC requests
 pub trait Request:
@@ -52,7 +52,7 @@ where
 {
     pub fn connect(
         api: A,
-        remote: impl ToNodeEndpoint,
+        remote: impl ToNodeAddr,
         local: &LocalNode,
         default_port: u16,
     ) -> Result<Self, Error> {
@@ -65,7 +65,7 @@ where
 
     pub fn accept(
         api: A,
-        addr: impl ToNodeEndpoint,
+        addr: impl ToNodeAddr,
         node: &LocalNode,
         default_port: u16,
     ) -> Result<Self, Error> {

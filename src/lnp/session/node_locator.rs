@@ -686,7 +686,7 @@ mod test {
     use amplify::internet::InetSocketAddr;
 
     use super::*;
-    use crate::lnp::session::{node_addr, NodeAddr};
+    use crate::lnp::session::{node_addr, RemoteNodeAddr};
     use crate::lnp::transport::RemoteSocketAddr;
     use std::net::SocketAddr;
 
@@ -720,7 +720,7 @@ mod test {
             address: inet1,
             port: 24,
         };
-        let node_addr = NodeAddr {
+        let node_addr = RemoteNodeAddr {
             node_id: pubkey1,
             remote_addr: RemoteSocketAddr::Ftcp(socket_addr),
         };
@@ -728,11 +728,11 @@ mod test {
         assert_eq!(l, locator_with_port);
         assert_ne!(l, locator1);
         assert_eq!(
-            NodeAddr::try_from(locator1.clone()),
+            RemoteNodeAddr::try_from(locator1.clone()),
             Err(node_addr::Error::NoPort)
         );
         assert_eq!(
-            NodeAddr::try_from(locator_with_port.clone()),
+            RemoteNodeAddr::try_from(locator_with_port.clone()),
             Ok(node_addr)
         );
 
@@ -818,11 +818,11 @@ mod test {
         assert_eq!(locator_with_port.port(), Some(24));
 
         assert_eq!(
-            NodeAddr::try_from(locator1.clone()),
+            RemoteNodeAddr::try_from(locator1.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
         assert_eq!(
-            NodeAddr::try_from(locator_with_port.clone()),
+            RemoteNodeAddr::try_from(locator_with_port.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
 
@@ -880,11 +880,11 @@ mod test {
         assert_eq!(locator_with_port.port(), Some(24));
 
         assert_eq!(
-            NodeAddr::try_from(locator1.clone()),
+            RemoteNodeAddr::try_from(locator1.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
         assert_eq!(
-            NodeAddr::try_from(locator_with_port.clone()),
+            RemoteNodeAddr::try_from(locator_with_port.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
 
@@ -969,12 +969,12 @@ mod test {
         assert_eq!(locator_with_port.port(), Some(24));
 
         assert_eq!(
-            NodeAddr::try_from(locator1.clone()),
+            RemoteNodeAddr::try_from(locator1.clone()),
             Err(node_addr::Error::NoPort)
         );
         assert_eq!(
-            NodeAddr::try_from(locator_with_port.clone()),
-            Ok(NodeAddr {
+            RemoteNodeAddr::try_from(locator_with_port.clone()),
+            Ok(RemoteNodeAddr {
                 node_id: pubkey1,
                 remote_addr: RemoteSocketAddr::Zmq(SocketAddr::new(inet1, 24))
             })
@@ -1054,11 +1054,11 @@ mod test {
         assert_eq!(locator_with_port.port(), Some(24));
 
         assert_eq!(
-            NodeAddr::try_from(locator1.clone()),
+            RemoteNodeAddr::try_from(locator1.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
         assert_eq!(
-            NodeAddr::try_from(locator_with_port.clone()),
+            RemoteNodeAddr::try_from(locator_with_port.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
 
@@ -1118,11 +1118,11 @@ mod test {
         assert_eq!(locator_with_port.port(), None);
 
         assert_eq!(
-            NodeAddr::try_from(locator1.clone()),
+            RemoteNodeAddr::try_from(locator1.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
         assert_eq!(
-            NodeAddr::try_from(locator_with_port.clone()),
+            RemoteNodeAddr::try_from(locator_with_port.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
 
@@ -1174,11 +1174,11 @@ mod test {
         assert_eq!(locator_with_port.port(), None);
 
         assert_eq!(
-            NodeAddr::try_from(locator1.clone()),
+            RemoteNodeAddr::try_from(locator1.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
         assert_eq!(
-            NodeAddr::try_from(locator_with_port.clone()),
+            RemoteNodeAddr::try_from(locator_with_port.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
 
@@ -1220,11 +1220,11 @@ mod test {
         assert_eq!(locator_with_port.port(), None);
 
         assert_eq!(
-            NodeAddr::try_from(locator1.clone()),
+            RemoteNodeAddr::try_from(locator1.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
         assert_eq!(
-            NodeAddr::try_from(locator_with_port.clone()),
+            RemoteNodeAddr::try_from(locator_with_port.clone()),
             Err(node_addr::Error::UnsupportedType)
         );
 

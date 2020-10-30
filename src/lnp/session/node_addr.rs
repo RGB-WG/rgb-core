@@ -26,20 +26,20 @@ use crate::lnp::UrlScheme;
 /// Node endpoint which can be represent by either some local address without
 /// encryption information (i.e. node public key) or remote node address
 /// containing node public key
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-pub enum NodeEndpoint {
-    /// Local node using plain transport protocol [`LocalAddr`] information and
-    /// no encryption
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+pub enum NodeAddr {
+    /// Local node using plain transport protocol [`LocalSocketAddr`]
+    /// information and no encryption
     #[display("{_0}", alt = "{_0:#}")]
     Local(LocalSocketAddr),
 
     /// Remote node required to have a node public key used for ID and
     /// encryption
     #[display("{_0}", alt = "{_0:#}")]
-    Remote(NodeAddr),
+    Remote(RemoteNodeAddr),
 }
 
-impl FromStr for NodeEndpoint {
+impl FromStr for NodeAddr {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -47,37 +47,37 @@ impl FromStr for NodeEndpoint {
     }
 }
 
-impl From<NodeAddr> for NodeEndpoint {
-    fn from(addr: NodeAddr) -> Self {
-        NodeEndpoint::Remote(addr)
+impl From<RemoteNodeAddr> for NodeAddr {
+    fn from(addr: RemoteNodeAddr) -> Self {
+        NodeAddr::Remote(addr)
     }
 }
 
-impl From<LocalSocketAddr> for NodeEndpoint {
+impl From<LocalSocketAddr> for NodeAddr {
     fn from(addr: LocalSocketAddr) -> Self {
-        NodeEndpoint::Local(addr)
+        NodeAddr::Local(addr)
     }
 }
 
-impl From<NodeLocator> for NodeEndpoint {
+impl From<NodeLocator> for NodeAddr {
     fn from(locator: NodeLocator) -> Self {
-        NodeAddr::try_from(locator.clone())
-            .map(|addr| NodeEndpoint::Remote(addr))
+        RemoteNodeAddr::try_from(locator.clone())
+            .map(|addr| NodeAddr::Remote(addr))
             .unwrap_or_else(|_| {
-                NodeEndpoint::Local(LocalSocketAddr::try_from(locator).expect(
+                NodeAddr::Local(LocalSocketAddr::try_from(locator).expect(
                     "NodeLocator must convert to either NodeAddr or LocalAddr",
                 ))
             })
     }
 }
 
-impl TryFrom<NodeEndpoint> for zmqsocket::ZmqAddr {
+impl TryFrom<NodeAddr> for zmqsocket::ZmqAddr {
     type Error = Error;
 
-    fn try_from(value: NodeEndpoint) -> Result<Self, Self::Error> {
+    fn try_from(value: NodeAddr) -> Result<Self, Self::Error> {
         Ok(match value {
-            NodeEndpoint::Local(LocalSocketAddr::Zmq(locator)) => locator,
-            NodeEndpoint::Remote(NodeAddr {
+            NodeAddr::Local(LocalSocketAddr::Zmq(locator)) => locator,
+            NodeAddr::Remote(RemoteNodeAddr {
                 node_id,
                 remote_addr: RemoteSocketAddr::Zmq(addr),
             }) => zmqsocket::ZmqAddr::Tcp(addr),
@@ -90,13 +90,13 @@ impl TryFrom<NodeEndpoint> for zmqsocket::ZmqAddr {
 /// information and full [`RemoteAddr`] with transport protocol & complete
 /// connection point specification.
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-pub struct NodeAddr {
+pub struct RemoteNodeAddr {
     /// Node public key, used both as an ID and encryption key for per-session
     /// ECDH
     pub node_id: secp256k1::PublicKey,
@@ -108,7 +108,7 @@ pub struct NodeAddr {
 impl_try_from_stringly_standard!(NodeAddr);
 impl_into_stringly_standard!(NodeAddr);
 
-impl fmt::Display for NodeAddr {
+impl fmt::Display for RemoteNodeAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -166,7 +166,7 @@ pub enum Error {
     UnsupportedType,
 }
 
-impl FromStr for NodeAddr {
+impl FromStr for RemoteNodeAddr {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -174,7 +174,7 @@ impl FromStr for NodeAddr {
     }
 }
 
-impl TryFrom<NodeLocator> for NodeAddr {
+impl TryFrom<NodeLocator> for RemoteNodeAddr {
     type Error = Error;
 
     fn try_from(locator: NodeLocator) -> Result<Self, Self::Error> {
@@ -184,16 +184,18 @@ impl TryFrom<NodeLocator> for NodeAddr {
             NodeLocator::Websocket(.., None) => Err(Error::NoPort),
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqTcpEncrypted(.., None) => Err(Error::NoPort),
-            NodeLocator::Native(pubkey, address, Some(port)) => Ok(NodeAddr {
-                node_id: pubkey,
-                remote_addr: RemoteSocketAddr::Ftcp(InetSocketAddr {
-                    address,
-                    port,
-                }),
-            }),
+            NodeLocator::Native(pubkey, address, Some(port)) => {
+                Ok(RemoteNodeAddr {
+                    node_id: pubkey,
+                    remote_addr: RemoteSocketAddr::Ftcp(InetSocketAddr {
+                        address,
+                        port,
+                    }),
+                })
+            }
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqTcpEncrypted(pubkey, api, ip, Some(port)) => {
-                Ok(NodeAddr {
+                Ok(RemoteNodeAddr {
                     node_id: pubkey,
                     remote_addr: RemoteSocketAddr::Zmq(SocketAddr::new(
                         ip, port,
@@ -201,19 +203,21 @@ impl TryFrom<NodeLocator> for NodeAddr {
                 })
             }
             #[cfg(feature = "websocket")]
-            NodeLocator::Websocket(pubkey, addr, Some(port)) => Ok(NodeAddr {
-                node_id: pubkey,
-                remote_addr: RemoteSocketAddr::Websocket(InetSocketAddr::new(
-                    addr, port,
-                )),
-            }),
+            NodeLocator::Websocket(pubkey, addr, Some(port)) => {
+                Ok(RemoteNodeAddr {
+                    node_id: pubkey,
+                    remote_addr: RemoteSocketAddr::Websocket(
+                        InetSocketAddr::new(addr, port),
+                    ),
+                })
+            }
             _ => Err(Error::UnsupportedType),
         }
     }
 }
 
-impl From<NodeAddr> for NodeLocator {
-    fn from(node_addr: NodeAddr) -> NodeLocator {
+impl From<RemoteNodeAddr> for NodeLocator {
+    fn from(node_addr: RemoteNodeAddr) -> NodeLocator {
         match node_addr.remote_addr {
             RemoteSocketAddr::Ftcp(addr) => NodeLocator::Native(
                 node_addr.node_id,
@@ -248,8 +252,8 @@ impl From<NodeAddr> for NodeLocator {
     }
 }
 
-impl From<NodeAddr> for RemoteSocketAddr {
-    fn from(addr: NodeAddr) -> RemoteSocketAddr {
+impl From<RemoteNodeAddr> for RemoteSocketAddr {
+    fn from(addr: RemoteNodeAddr) -> RemoteSocketAddr {
         addr.remote_addr
     }
 }
@@ -259,7 +263,7 @@ impl From<NodeAddr> for RemoteSocketAddr {
 
 /// Trait allowing generic function arguments for application-level
 /// implementations knowing default protocol port
-pub trait ToNodeEndpoint {
+pub trait ToNodeAddr {
     /// Constructs [`NodeEndpoint`] from an internal data with a default port
     /// put in place when the port details were not given is such structures
     /// as [`NodeLocator`]
@@ -267,64 +271,64 @@ pub trait ToNodeEndpoint {
     /// # Returns
     /// * `None`, if string conversion fails with [`ParseError`]
     /// * `Some(`[`NodeEndpoint`]`)` otherwise
-    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint>;
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeAddr>;
 }
 
-impl ToNodeEndpoint for NodeEndpoint {
+impl ToNodeAddr for NodeAddr {
     #[inline]
-    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeAddr> {
         Some(self.clone())
     }
 }
 
-impl ToNodeEndpoint for NodeAddr {
+impl ToNodeAddr for RemoteNodeAddr {
     #[inline]
-    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeAddr> {
         Some(self.clone().into())
     }
 }
 
-impl ToNodeEndpoint for LocalSocketAddr {
+impl ToNodeAddr for LocalSocketAddr {
     #[inline]
-    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeAddr> {
         Some(self.clone().into())
     }
 }
 
-impl ToNodeEndpoint for NodeLocator {
+impl ToNodeAddr for NodeLocator {
     #[inline]
-    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeAddr> {
         self.with_port(default_port).try_into().ok()
     }
 }
 
-impl ToNodeEndpoint for String {
+impl ToNodeAddr for String {
     #[inline]
-    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeAddr> {
         self.as_str().to_node_endpoint(default_port)
     }
 }
 
-impl ToNodeEndpoint for &str {
+impl ToNodeAddr for &str {
     #[inline]
-    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
-        NodeEndpoint::try_from(NodeLocator::from_str(&self).ok()?).ok()
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeAddr> {
+        NodeAddr::try_from(NodeLocator::from_str(&self).ok()?).ok()
     }
 }
 
-impl<T> ToNodeEndpoint for &T
+impl<T> ToNodeAddr for &T
 where
-    T: ToNodeEndpoint,
+    T: ToNodeAddr,
 {
     #[inline]
-    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
+    fn to_node_endpoint(&self, default_port: u16) -> Option<NodeAddr> {
         (*self).to_node_endpoint(default_port)
     }
 }
 
 /// Trait allowing generic function arguments for application-level
 /// implementations knowing default protocol port
-pub trait ToNodeAddr {
+pub trait ToRemoteNodeAddr {
     /// Constructs [`NodeAddr`] from an internal data with a default port put
     /// in place when the port details were not given is such structures as
     /// [`NodeLocator`]
@@ -336,47 +340,47 @@ pub trait ToNodeAddr {
     ///   [`ConversionError::UnsupportedType`] or when string conversion fails
     ///   with [`ParseError`].
     /// * `Some(`[`NodeAddr`]`)` otherwise
-    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr>;
+    fn to_node_addr(&self, default_port: u16) -> Option<RemoteNodeAddr>;
 }
 
-impl ToNodeAddr for NodeAddr {
+impl ToRemoteNodeAddr for RemoteNodeAddr {
     #[inline]
-    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
+    fn to_node_addr(&self, default_port: u16) -> Option<RemoteNodeAddr> {
         Some(self.clone())
     }
 }
 
-impl ToNodeAddr for NodeLocator {
+impl ToRemoteNodeAddr for NodeLocator {
     #[inline]
-    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
+    fn to_node_addr(&self, default_port: u16) -> Option<RemoteNodeAddr> {
         self.with_port(default_port).try_into().ok()
     }
 }
 
-impl ToNodeAddr for String {
+impl ToRemoteNodeAddr for String {
     #[inline]
-    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
+    fn to_node_addr(&self, default_port: u16) -> Option<RemoteNodeAddr> {
         self.as_str().to_node_addr(default_port)
     }
 }
 
-impl ToNodeAddr for &str {
+impl ToRemoteNodeAddr for &str {
     #[inline]
-    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
-        NodeAddr::from_str(&self)
+    fn to_node_addr(&self, default_port: u16) -> Option<RemoteNodeAddr> {
+        RemoteNodeAddr::from_str(&self)
             .or_else(|_| {
-                NodeAddr::from_str(&format!("{}:{}", self, default_port))
+                RemoteNodeAddr::from_str(&format!("{}:{}", self, default_port))
             })
             .ok()
     }
 }
 
-impl<T> ToNodeAddr for &T
+impl<T> ToRemoteNodeAddr for &T
 where
-    T: ToNodeAddr,
+    T: ToRemoteNodeAddr,
 {
     #[inline]
-    fn to_node_addr(&self, default_port: u16) -> Option<NodeAddr> {
+    fn to_node_addr(&self, default_port: u16) -> Option<RemoteNodeAddr> {
         (*self).to_node_addr(default_port)
     }
 }

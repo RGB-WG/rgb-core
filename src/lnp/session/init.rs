@@ -13,7 +13,7 @@
 
 use crate::lnp::transport::Error;
 use crate::lnp::{
-    session, zmqsocket, LocalNode, LocalSocketAddr, NodeAddr, NodeEndpoint,
+    session, zmqsocket, LocalNode, LocalSocketAddr, NodeAddr, RemoteNodeAddr,
     RemoteSocketAddr, Session,
 };
 
@@ -57,7 +57,7 @@ impl Accept for LocalSocketAddr {
     }
 }
 
-impl Connect for NodeAddr {
+impl Connect for RemoteNodeAddr {
     fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(match self.remote_addr {
             RemoteSocketAddr::Ftcp(inet) => {
@@ -83,7 +83,7 @@ impl Connect for NodeAddr {
     }
 }
 
-impl Accept for NodeAddr {
+impl Accept for RemoteNodeAddr {
     fn accept(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(match self.remote_addr {
             RemoteSocketAddr::Ftcp(inet) => {
@@ -109,20 +109,20 @@ impl Accept for NodeAddr {
     }
 }
 
-impl Connect for NodeEndpoint {
+impl Connect for NodeAddr {
     fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         match self {
-            NodeEndpoint::Local(addr) => addr.connect(local),
-            NodeEndpoint::Remote(addr) => addr.connect(local),
+            NodeAddr::Local(addr) => addr.connect(local),
+            NodeAddr::Remote(addr) => addr.connect(local),
         }
     }
 }
 
-impl Accept for NodeEndpoint {
+impl Accept for NodeAddr {
     fn accept(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         match self {
-            NodeEndpoint::Local(addr) => addr.accept(local),
-            NodeEndpoint::Remote(addr) => addr.accept(local),
+            NodeAddr::Local(addr) => addr.accept(local),
+            NodeAddr::Remote(addr) => addr.accept(local),
         }
     }
 }

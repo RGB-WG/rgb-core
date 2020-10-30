@@ -32,7 +32,7 @@ pub use presentation::{
 };
 pub use session::{
     Accept, Connect, Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr,
-    NodeEndpoint, NodeLocator, Session, Split, ToNodeAddr, ToNodeEndpoint,
+    NodeLocator, RemoteNodeAddr, Session, Split, ToNodeAddr, ToRemoteNodeAddr,
     Transcode,
 };
 pub use transport::{

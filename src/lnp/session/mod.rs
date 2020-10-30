@@ -24,7 +24,7 @@ mod transcoders;
 
 pub use init::{Accept, Connect};
 pub use local_node::LocalNode;
-pub use node_addr::{NodeAddr, NodeEndpoint, ToNodeAddr, ToNodeEndpoint};
+pub use node_addr::{NodeAddr, RemoteNodeAddr, ToNodeAddr, ToRemoteNodeAddr};
 pub use node_locator::NodeLocator;
 pub use session::{Input, Output, Raw, RawInput, RawOutput, Session, Split};
 pub use transcoders::{
