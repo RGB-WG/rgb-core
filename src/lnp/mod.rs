@@ -32,8 +32,8 @@ pub use presentation::{
 };
 pub use session::{
     Accept, Connect, Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr,
-    NodeLocator, RemoteNodeAddr, Session, Split, ToNodeAddr, ToRemoteNodeAddr,
-    Transcode,
+    PartialNodeAddr, RemoteNodeAddr, Session, Split, ToNodeAddr,
+    ToRemoteNodeAddr, Transcode,
 };
 pub use transport::{
     ftcp, websocket, zmqsocket, Duplex, FramingProtocol, LocalSocketAddr,
@@ -45,7 +45,7 @@ pub const LNP_MSG_MAX_LEN: usize = core::u64::MAX as usize;
 pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;
 
 #[cfg(feature = "zmq")]
-pub use transport::{ZmqAddr, ZmqType, ZMQ_CONTEXT};
+pub use transport::{ZmqSocketAddr, ZmqType, ZMQ_CONTEXT};
 
 /// Trait used by different address types (transport-, session- and
 /// presentation-based) for getting scheme part of the URL

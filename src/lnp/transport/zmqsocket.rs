@@ -147,7 +147,7 @@ impl FromStr for ZmqType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", tag = "type")
 )]
-pub enum ZmqAddr {
+pub enum ZmqSocketAddr {
     #[display("{_0}", alt = "inproc://{_0}")]
     Inproc(String),
 
@@ -158,17 +158,17 @@ pub enum ZmqAddr {
     Tcp(SocketAddr),
 }
 
-impl UrlScheme for ZmqAddr {
+impl UrlScheme for ZmqSocketAddr {
     fn url_scheme(&self) -> &'static str {
         match self {
-            ZmqAddr::Inproc(_) => "",
-            ZmqAddr::Ipc(_) => "lnpz:",
-            ZmqAddr::Tcp(_) => "lnpz://",
+            ZmqSocketAddr::Inproc(_) => "",
+            ZmqSocketAddr::Ipc(_) => "lnpz:",
+            ZmqSocketAddr::Tcp(_) => "lnpz://",
         }
     }
 }
 
-impl ZmqAddr {
+impl ZmqSocketAddr {
     pub fn zmq_socket_string(&self) -> String {
         format!("{:#}", self)
     }
@@ -177,7 +177,7 @@ impl ZmqAddr {
 #[derive(Display)]
 pub enum Carrier {
     #[display(inner)]
-    Locator(ZmqAddr),
+    Locator(ZmqSocketAddr),
 
     #[display("zmq_socket(..)")]
     Socket(zmq::Socket),
@@ -234,7 +234,7 @@ impl Display for Error {
 }
 
 #[cfg(feature = "url")]
-impl FromStr for ZmqAddr {
+impl FromStr for ZmqSocketAddr {
     type Err = AddrError;
 
     #[inline]
@@ -245,14 +245,14 @@ impl FromStr for ZmqAddr {
 }
 
 #[cfg(feature = "url")]
-impl TryFrom<Url> for ZmqAddr {
+impl TryFrom<Url> for ZmqSocketAddr {
     type Error = AddrError;
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
         match url.scheme() {
             "lnpz" => {
                 if url.has_authority() {
-                    Ok(ZmqAddr::Tcp(SocketAddr::new(
+                    Ok(ZmqSocketAddr::Tcp(SocketAddr::new(
                         url.host()
                             .ok_or(AddrError::HostRequired)?
                             .to_string()
@@ -260,13 +260,13 @@ impl TryFrom<Url> for ZmqAddr {
                         url.port().ok_or(AddrError::PortRequired)?,
                     )))
                 } else {
-                    Ok(ZmqAddr::Ipc(url.path().to_owned()))
+                    Ok(ZmqSocketAddr::Ipc(url.path().to_owned()))
                 }
             }
             "tcp" => Err(AddrError::UnknownUrlScheme(s!(
                 "'tcp://'; use 'lnpz://' instead"
             ))),
-            "inproc" => Ok(ZmqAddr::Inproc(
+            "inproc" => Ok(ZmqSocketAddr::Inproc(
                 url.host_str().ok_or(AddrError::HostRequired)?.to_owned(),
             )),
             "ipc" => Err(AddrError::UnknownUrlScheme(s!(
@@ -291,8 +291,8 @@ pub struct Connection {
 impl Connection {
     pub fn with(
         api_type: ZmqType,
-        remote: &ZmqAddr,
-        local: Option<ZmqAddr>,
+        remote: &ZmqSocketAddr,
+        local: Option<ZmqSocketAddr>,
         identity: Option<impl AsRef<[u8]>>,
     ) -> Result<Self, transport::Error> {
         let socket = ZMQ_CONTEXT.socket(api_type.socket_type())?;

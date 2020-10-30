@@ -70,7 +70,7 @@ impl Connect for RemoteNodeAddr {
             RemoteSocketAddr::Zmq(socket) => {
                 Box::new(session::Raw::with_zmq_unencrypted(
                     zmqsocket::ZmqType::Req,
-                    &zmqsocket::ZmqAddr::Tcp(socket),
+                    &zmqsocket::ZmqSocketAddr::Tcp(socket),
                     None,
                     None,
                 )?)
@@ -96,7 +96,7 @@ impl Accept for RemoteNodeAddr {
             RemoteSocketAddr::Zmq(socket) => {
                 Box::new(session::Raw::with_zmq_unencrypted(
                     zmqsocket::ZmqType::Req,
-                    &zmqsocket::ZmqAddr::Tcp(socket),
+                    &zmqsocket::ZmqSocketAddr::Tcp(socket),
                     None,
                     None,
                 )?)

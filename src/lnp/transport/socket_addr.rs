@@ -95,7 +95,7 @@ pub enum LocalSocketAddr {
     /// Microservices connected using ZeroMQ protocol locally
     #[cfg(feature = "zmq")]
     #[display("{_0}", alt = "lnpz://{_0}")]
-    Zmq(zmqsocket::ZmqAddr),
+    Zmq(zmqsocket::ZmqSocketAddr),
 
     /// Local node operating as a separate **process** or **threads** connected
     /// with unencrypted POSIX file I/O (like in c-lightning)
@@ -176,7 +176,9 @@ impl TryFrom<Url> for LocalSocketAddr {
                 LocalSocketAddr::Posix(url.path().to_owned())
             }
             #[cfg(feature = "zmq")]
-            "lnpz" => LocalSocketAddr::Zmq(zmqsocket::ZmqAddr::try_from(url)?),
+            "lnpz" => {
+                LocalSocketAddr::Zmq(zmqsocket::ZmqSocketAddr::try_from(url)?)
+            }
             "lnph" | "lnpws" | "lnpm" => {
                 Err(AddrError::Unsupported("for local socket address"))?
             }
@@ -211,7 +213,9 @@ impl UrlScheme for LocalSocketAddr {
     fn url_scheme(&self) -> &'static str {
         match self {
             #[cfg(feature = "zmq")]
-            LocalSocketAddr::Zmq(zmqsocket::ZmqAddr::Tcp(..)) => "lnpz://",
+            LocalSocketAddr::Zmq(zmqsocket::ZmqSocketAddr::Tcp(..)) => {
+                "lnpz://"
+            }
             #[cfg(feature = "zmq")]
             LocalSocketAddr::Zmq(_) => "lnpz:",
             LocalSocketAddr::Posix(_) => "lnp:",

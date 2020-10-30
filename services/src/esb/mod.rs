@@ -38,7 +38,7 @@ where
     A: ServiceAddress,
 {
     pub fn with_locator(
-        locator: zmqsocket::ZmqAddr,
+        locator: zmqsocket::ZmqSocketAddr,
         router: Option<A>,
     ) -> Self {
         Self {

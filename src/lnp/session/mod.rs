@@ -17,15 +17,15 @@
 mod init;
 mod local_node;
 pub mod node_addr;
-pub mod node_locator;
 mod noise;
 mod session;
 mod transcoders;
 
 pub use init::{Accept, Connect};
 pub use local_node::LocalNode;
-pub use node_addr::{NodeAddr, RemoteNodeAddr, ToNodeAddr, ToRemoteNodeAddr};
-pub use node_locator::NodeLocator;
+pub use node_addr::{
+    NodeAddr, PartialNodeAddr, RemoteNodeAddr, ToNodeAddr, ToRemoteNodeAddr,
+};
 pub use session::{Input, Output, Raw, RawInput, RawOutput, Session, Split};
 pub use transcoders::{
     Decrypt, DecryptionError, Encrypt, NoEncryption, Transcode,
