@@ -21,7 +21,7 @@ use std::net::SocketAddr;
 #[cfg(feature = "url")]
 use url::Url;
 
-use super::{Duplex, RecvFrame, RoutedFrame, SendFrame};
+use super::{Duplex, RecvFrame, RoutedFrame, SendFrame, SocketAddrError};
 use crate::lnp::transport;
 use crate::lnp::UrlScheme;
 
@@ -139,13 +139,13 @@ impl FromStr for ApiType {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", tag = "type")
 )]
-pub enum SocketLocator {
+pub enum ZmqAddr {
     #[display("{_0}", alt = "inproc://{_0}")]
     Inproc(String),
 
@@ -156,17 +156,17 @@ pub enum SocketLocator {
     Tcp(SocketAddr),
 }
 
-impl UrlScheme for SocketLocator {
+impl UrlScheme for ZmqAddr {
     fn url_scheme(&self) -> &'static str {
         match self {
-            SocketLocator::Inproc(_) => "",
-            SocketLocator::Ipc(_) => "lnpz:",
-            SocketLocator::Tcp(_) => "lnpz://",
+            ZmqAddr::Inproc(_) => "",
+            ZmqAddr::Ipc(_) => "lnpz:",
+            ZmqAddr::Tcp(_) => "lnpz://",
         }
     }
 }
 
-impl SocketLocator {
+impl ZmqAddr {
     pub fn zmq_socket_string(&self) -> String {
         format!("{:#}", self)
     }
@@ -175,7 +175,7 @@ impl SocketLocator {
 #[derive(Display)]
 pub enum Carrier {
     #[display(inner)]
-    Locator(SocketLocator),
+    Locator(ZmqAddr),
 
     #[display("zmq_socket(..)")]
     Socket(zmq::Socket),
@@ -231,22 +231,9 @@ impl Display for Error {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
-#[display(Debug)]
-pub enum UrlError {
-    UnknownScheme(String),
-    HostRequired,
-    PortRequired,
-    UnexpectedAuthority,
-    #[cfg_attr(feature = "url", from(url::ParseError))]
-    MalformedUrl,
-    #[from(std::net::AddrParseError)]
-    MalformedIp,
-}
-
 #[cfg(feature = "url")]
-impl FromStr for SocketLocator {
-    type Err = UrlError;
+impl FromStr for ZmqAddr {
+    type Err = SocketAddrError;
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -256,34 +243,38 @@ impl FromStr for SocketLocator {
 }
 
 #[cfg(feature = "url")]
-impl TryFrom<Url> for SocketLocator {
-    type Error = UrlError;
+impl TryFrom<Url> for ZmqAddr {
+    type Error = SocketAddrError;
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
         match url.scheme() {
             "lnpz" => {
                 if url.has_authority() {
-                    Ok(SocketLocator::Tcp(SocketAddr::new(
+                    Ok(ZmqAddr::Tcp(SocketAddr::new(
                         url.host()
-                            .ok_or(UrlError::HostRequired)?
+                            .ok_or(SocketAddrError::UnexpectedHost)?
                             .to_string()
                             .parse()?,
-                        url.port().ok_or(UrlError::PortRequired)?,
+                        url.port().ok_or(SocketAddrError::PortRequired)?,
                     )))
                 } else {
-                    Ok(SocketLocator::Ipc(url.path().to_owned()))
+                    Ok(ZmqAddr::Ipc(url.path().to_owned()))
                 }
             }
-            "tcp" => Err(UrlError::UnknownScheme(s!(
+            "tcp" => Err(SocketAddrError::UnknownUrlScheme(s!(
                 "'tcp://'; use 'lnpz://' instead"
             ))),
-            "inproc" => Ok(SocketLocator::Inproc(
-                url.host().ok_or(UrlError::HostRequired)?.to_string(),
+            "inproc" => Ok(ZmqAddr::Inproc(
+                url.host_str()
+                    .ok_or(SocketAddrError::HostRequired)?
+                    .to_owned(),
             )),
-            "ipc" => {
-                Err(UrlError::UnknownScheme(s!("'ipc:'; use 'lnpz:' instead")))
+            "ipc" => Err(SocketAddrError::UnknownUrlScheme(s!(
+                "'ipc:'; use 'lnpz:' instead"
+            ))),
+            unknown => {
+                Err(SocketAddrError::UnknownUrlScheme(unknown.to_owned()))
             }
-            unknown => Err(UrlError::UnknownScheme(unknown.to_string())),
         }
     }
 }
@@ -302,8 +293,8 @@ pub struct Connection {
 impl Connection {
     pub fn with(
         api_type: ApiType,
-        remote: &SocketLocator,
-        local: Option<SocketLocator>,
+        remote: &ZmqAddr,
+        local: Option<ZmqAddr>,
         identity: Option<impl AsRef<[u8]>>,
     ) -> Result<Self, transport::Error> {
         let socket = ZMQ_CONTEXT.socket(api_type.socket_type())?;

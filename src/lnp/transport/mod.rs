@@ -20,16 +20,18 @@
 //! integrates with ZMQ such that the upper level can abstract for a particular
 //! transport protocol used.
 
-mod addr;
 pub mod ftcp;
+pub mod socket_addr;
 pub mod websocket;
 #[cfg(feature = "zmq")]
 pub mod zmqsocket;
 
-pub use addr::{FramingProtocol, LocalAddr, RemoteAddr};
+pub use socket_addr::{
+    FramingProtocol, LocalSocketAddr, RemoteSocketAddr, SocketAddrError,
+};
 use tokio::io::ErrorKind;
 #[cfg(feature = "zmq")]
-pub use zmqsocket::ZMQ_CONTEXT;
+pub use zmqsocket::{ZmqAddr, ZMQ_CONTEXT};
 
 /// Maximum size of the transport frame; chosen in compliance with LN specs
 pub const MAX_FRAME_SIZE: usize =

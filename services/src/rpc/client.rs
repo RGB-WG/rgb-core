@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Api;
-use lnpbp::lnp::transport::zmqsocket::{ApiType, SocketLocator};
+use lnpbp::lnp::transport::zmqsocket::{ApiType, ZmqAddr};
 use lnpbp::lnp::{
     session, transport, CreateUnmarshaller, NoEncryption, Session, Unmarshall,
     Unmarshaller,
@@ -41,7 +41,7 @@ where
     E: EndpointId,
 {
     pub fn with(
-        endpoints: HashMap<E, SocketLocator>,
+        endpoints: HashMap<E, ZmqAddr>,
     ) -> Result<Self, transport::Error> {
         let mut sessions: HashMap<E, session::Raw<_, _>> = none!();
         for (service, endpoint) in endpoints {

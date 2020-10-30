@@ -85,25 +85,25 @@ pub enum ScriptPubkeyContent {
     #[display("script({_0})", alt = "script({_0:#})")]
     Bare(PubkeyScript),
 
-    #[display("pk({_0:x})")]
+    #[display("pk({_0})")]
     Pk(bitcoin::PublicKey),
 
-    #[display("pkh({_0:x})")]
+    #[display("pkh({_0})")]
     Pkh(PubkeyHash),
 
-    #[display("sh({_0:x})")]
+    #[display("sh({_0})")]
     Sh(ScriptHash),
 
     #[display("script(OP_RETURN {_0:?})")]
     Return(Vec<Vec<u8>>),
 
-    #[display("wpkh({_0:x})")]
+    #[display("wpkh({_0})")]
     Wpkh(WPubkeyHash),
 
-    #[display("wsh({_0:x})")]
+    #[display("wsh({_0})")]
     Wsh(WScriptHash),
 
-    #[display("tr({_0:x})")]
+    #[display("tr({_0})")]
     Taproot(secp256k1::PublicKey),
 }
 

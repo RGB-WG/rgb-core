@@ -13,8 +13,8 @@
 
 use crate::lnp::transport::Error;
 use crate::lnp::{
-    session, zmqsocket, LocalAddr, LocalNode, NodeAddr, NodeEndpoint,
-    RemoteAddr, Session,
+    session, zmqsocket, LocalNode, LocalSocketAddr, NodeAddr, NodeEndpoint,
+    RemoteSocketAddr, Session,
 };
 
 pub trait Connect {
@@ -25,30 +25,34 @@ pub trait Accept {
     fn accept(&self, node: &LocalNode) -> Result<Box<dyn Session>, Error>;
 }
 
-impl Connect for LocalAddr {
+impl Connect for LocalSocketAddr {
     fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(Box::new(match self {
-            LocalAddr::Zmq(locator) => session::Raw::with_zmq_unencrypted(
-                zmqsocket::ApiType::Client,
-                locator,
-                None,
-                None,
-            )?,
-            LocalAddr::Posix(_) => unimplemented!(),
+            LocalSocketAddr::Zmq(locator) => {
+                session::Raw::with_zmq_unencrypted(
+                    zmqsocket::ApiType::Client,
+                    locator,
+                    None,
+                    None,
+                )?
+            }
+            LocalSocketAddr::Posix(_) => unimplemented!(),
         }))
     }
 }
 
-impl Accept for LocalAddr {
+impl Accept for LocalSocketAddr {
     fn accept(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(Box::new(match self {
-            LocalAddr::Zmq(locator) => session::Raw::with_zmq_unencrypted(
-                zmqsocket::ApiType::Client,
-                locator,
-                None,
-                None,
-            )?,
-            LocalAddr::Posix(_) => unimplemented!(),
+            LocalSocketAddr::Zmq(locator) => {
+                session::Raw::with_zmq_unencrypted(
+                    zmqsocket::ApiType::Client,
+                    locator,
+                    None,
+                    None,
+                )?
+            }
+            LocalSocketAddr::Posix(_) => unimplemented!(),
         }))
     }
 }
@@ -56,26 +60,25 @@ impl Accept for LocalAddr {
 impl Connect for NodeAddr {
     fn connect(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(match self.remote_addr {
-            RemoteAddr::Ftcp(inet) => {
+            RemoteSocketAddr::Ftcp(inet) => {
                 Box::new(session::Raw::connect_ftcp_unencrypted(inet)?)
                     as Box<dyn Session>
             }
-            RemoteAddr::Posix(_) => unimplemented!(),
             #[cfg(feature = "zmq")]
             // TODO: (v0.3) pass specific ZMQ API type using additional
             //       `RemoteAddr` field
-            RemoteAddr::Zmq(socket) => {
+            RemoteSocketAddr::Zmq(socket) => {
                 Box::new(session::Raw::with_zmq_unencrypted(
                     zmqsocket::ApiType::Client,
-                    &zmqsocket::SocketLocator::Tcp(socket),
+                    &zmqsocket::ZmqAddr::Tcp(socket),
                     None,
                     None,
                 )?)
             }
-            RemoteAddr::Http(_) => unimplemented!(),
+            RemoteSocketAddr::Http(_) => unimplemented!(),
             #[cfg(feature = "websocket")]
-            RemoteAddr::Websocket(_) => unimplemented!(),
-            RemoteAddr::Smtp(_) => unimplemented!(),
+            RemoteSocketAddr::Websocket(_) => unimplemented!(),
+            RemoteSocketAddr::Smtp(_) => unimplemented!(),
         })
     }
 }
@@ -83,26 +86,25 @@ impl Connect for NodeAddr {
 impl Accept for NodeAddr {
     fn accept(&self, local: &LocalNode) -> Result<Box<dyn Session>, Error> {
         Ok(match self.remote_addr {
-            RemoteAddr::Ftcp(inet) => {
+            RemoteSocketAddr::Ftcp(inet) => {
                 Box::new(session::Raw::accept_ftcp_unencrypted(inet)?)
                     as Box<dyn Session>
             }
-            RemoteAddr::Posix(_) => unimplemented!(),
             #[cfg(feature = "zmq")]
             // TODO: (v0.3) pass specific ZMQ API type using additional
             //       `RemoteAddr` field
-            RemoteAddr::Zmq(socket) => {
+            RemoteSocketAddr::Zmq(socket) => {
                 Box::new(session::Raw::with_zmq_unencrypted(
                     zmqsocket::ApiType::Client,
-                    &zmqsocket::SocketLocator::Tcp(socket),
+                    &zmqsocket::ZmqAddr::Tcp(socket),
                     None,
                     None,
                 )?)
             }
-            RemoteAddr::Http(_) => unimplemented!(),
+            RemoteSocketAddr::Http(_) => unimplemented!(),
             #[cfg(feature = "websocket")]
-            RemoteAddr::Websocket(_) => unimplemented!(),
-            RemoteAddr::Smtp(_) => unimplemented!(),
+            RemoteSocketAddr::Websocket(_) => unimplemented!(),
+            RemoteSocketAddr::Smtp(_) => unimplemented!(),
         })
     }
 }

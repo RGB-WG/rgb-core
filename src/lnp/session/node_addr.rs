@@ -20,7 +20,7 @@ use amplify::internet::InetSocketAddr;
 use bitcoin::secp256k1;
 
 use super::{node_locator, NodeLocator};
-use crate::lnp::transport::{zmqsocket, LocalAddr, RemoteAddr};
+use crate::lnp::transport::{zmqsocket, LocalSocketAddr, RemoteSocketAddr};
 use crate::lnp::UrlScheme;
 
 /// Node endpoint which can be represent by either some local address without
@@ -31,7 +31,7 @@ pub enum NodeEndpoint {
     /// Local node using plain transport protocol [`LocalAddr`] information and
     /// no encryption
     #[display("{_0}", alt = "{_0:#}")]
-    Local(LocalAddr),
+    Local(LocalSocketAddr),
 
     /// Remote node required to have a node public key used for ID and
     /// encryption
@@ -53,8 +53,8 @@ impl From<NodeAddr> for NodeEndpoint {
     }
 }
 
-impl From<LocalAddr> for NodeEndpoint {
-    fn from(addr: LocalAddr) -> Self {
+impl From<LocalSocketAddr> for NodeEndpoint {
+    fn from(addr: LocalSocketAddr) -> Self {
         NodeEndpoint::Local(addr)
     }
 }
@@ -64,23 +64,23 @@ impl From<NodeLocator> for NodeEndpoint {
         NodeAddr::try_from(locator.clone())
             .map(|addr| NodeEndpoint::Remote(addr))
             .unwrap_or_else(|_| {
-                NodeEndpoint::Local(LocalAddr::try_from(locator).expect(
+                NodeEndpoint::Local(LocalSocketAddr::try_from(locator).expect(
                     "NodeLocator must convert to either NodeAddr or LocalAddr",
                 ))
             })
     }
 }
 
-impl TryFrom<NodeEndpoint> for zmqsocket::SocketLocator {
+impl TryFrom<NodeEndpoint> for zmqsocket::ZmqAddr {
     type Error = Error;
 
     fn try_from(value: NodeEndpoint) -> Result<Self, Self::Error> {
         Ok(match value {
-            NodeEndpoint::Local(LocalAddr::Zmq(locator)) => locator,
+            NodeEndpoint::Local(LocalSocketAddr::Zmq(locator)) => locator,
             NodeEndpoint::Remote(NodeAddr {
                 node_id,
-                remote_addr: RemoteAddr::Zmq(addr),
-            }) => zmqsocket::SocketLocator::Tcp(addr),
+                remote_addr: RemoteSocketAddr::Zmq(addr),
+            }) => zmqsocket::ZmqAddr::Tcp(addr),
             _ => Err(Error::UnsupportedType)?,
         })
     }
@@ -102,7 +102,7 @@ pub struct NodeAddr {
     pub node_id: secp256k1::PublicKey,
 
     /// Full remote peer address including port information
-    pub remote_addr: RemoteAddr,
+    pub remote_addr: RemoteSocketAddr,
 }
 
 impl_try_from_stringly_standard!(NodeAddr);
@@ -186,19 +186,24 @@ impl TryFrom<NodeLocator> for NodeAddr {
             NodeLocator::ZmqTcpEncrypted(.., None) => Err(Error::NoPort),
             NodeLocator::Native(pubkey, address, Some(port)) => Ok(NodeAddr {
                 node_id: pubkey,
-                remote_addr: RemoteAddr::Ftcp(InetSocketAddr { address, port }),
+                remote_addr: RemoteSocketAddr::Ftcp(InetSocketAddr {
+                    address,
+                    port,
+                }),
             }),
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqTcpEncrypted(pubkey, api, ip, Some(port)) => {
                 Ok(NodeAddr {
                     node_id: pubkey,
-                    remote_addr: RemoteAddr::Zmq(SocketAddr::new(ip, port)),
+                    remote_addr: RemoteSocketAddr::Zmq(SocketAddr::new(
+                        ip, port,
+                    )),
                 })
             }
             #[cfg(feature = "websocket")]
             NodeLocator::Websocket(pubkey, addr, Some(port)) => Ok(NodeAddr {
                 node_id: pubkey,
-                remote_addr: RemoteAddr::Websocket(InetSocketAddr::new(
+                remote_addr: RemoteSocketAddr::Websocket(InetSocketAddr::new(
                     addr, port,
                 )),
             }),
@@ -210,14 +215,13 @@ impl TryFrom<NodeLocator> for NodeAddr {
 impl From<NodeAddr> for NodeLocator {
     fn from(node_addr: NodeAddr) -> NodeLocator {
         match node_addr.remote_addr {
-            RemoteAddr::Ftcp(addr) => NodeLocator::Native(
+            RemoteSocketAddr::Ftcp(addr) => NodeLocator::Native(
                 node_addr.node_id,
                 addr.address,
                 Some(addr.port),
             ),
-            RemoteAddr::Posix(path) => NodeLocator::Posix(path),
             #[cfg(feature = "zmq")]
-            RemoteAddr::Zmq(addr) => NodeLocator::ZmqTcpEncrypted(
+            RemoteSocketAddr::Zmq(addr) => NodeLocator::ZmqTcpEncrypted(
                 node_addr.node_id,
                 zmqsocket::ApiType::Server,
                 InetSocketAddr::from(addr)
@@ -226,24 +230,26 @@ impl From<NodeAddr> for NodeLocator {
                     .expect("Conversion from just generated type can't fail"),
                 Some(addr.port()),
             ),
-            RemoteAddr::Http(addr) => NodeLocator::Http(
+            RemoteSocketAddr::Http(addr) => NodeLocator::Http(
                 node_addr.node_id,
                 addr.address,
                 Some(addr.port),
             ),
             #[cfg(feature = "websocket")]
-            RemoteAddr::Websocket(addr) => NodeLocator::Websocket(
+            RemoteSocketAddr::Websocket(addr) => NodeLocator::Websocket(
                 node_addr.node_id,
                 addr.address,
                 Some(addr.port),
             ),
-            RemoteAddr::Smtp(addr) => NodeLocator::Text(node_addr.node_id),
+            RemoteSocketAddr::Smtp(addr) => {
+                NodeLocator::Text(node_addr.node_id)
+            }
         }
     }
 }
 
-impl From<NodeAddr> for RemoteAddr {
-    fn from(addr: NodeAddr) -> RemoteAddr {
+impl From<NodeAddr> for RemoteSocketAddr {
+    fn from(addr: NodeAddr) -> RemoteSocketAddr {
         addr.remote_addr
     }
 }
@@ -278,7 +284,7 @@ impl ToNodeEndpoint for NodeAddr {
     }
 }
 
-impl ToNodeEndpoint for LocalAddr {
+impl ToNodeEndpoint for LocalSocketAddr {
     #[inline]
     fn to_node_endpoint(&self, default_port: u16) -> Option<NodeEndpoint> {
         Some(self.clone().into())

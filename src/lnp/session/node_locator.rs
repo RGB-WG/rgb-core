@@ -20,14 +20,14 @@ use core::fmt::{Display, Formatter};
 #[cfg(feature = "url")]
 use core::str::FromStr;
 use std::hash::{Hash, Hasher};
-use std::net::{AddrParseError, IpAddr, SocketAddr};
+use std::net::{IpAddr, SocketAddr};
 #[cfg(feature = "url")]
 use url::Url;
 
 use amplify::internet::InetAddr;
 use bitcoin::secp256k1;
 
-use crate::lnp::transport::{zmqsocket, LocalAddr};
+use crate::lnp::transport::{zmqsocket, LocalSocketAddr};
 use crate::lnp::UrlScheme;
 
 /// Universal Node Locator for LNP protocol
@@ -426,7 +426,8 @@ pub enum ParseError {
     PortPresent,
 
     /// Invalid IP information
-    #[from(AddrParseError)]
+    #[from(std::net::AddrParseError)]
+    #[from(amplify::internet::AddrParseError)]
     InvalidIp,
 
     /// Unsupported ZMQ API type ({_0}). List of supported APIs:
@@ -655,23 +656,23 @@ impl From<&NodeLocator> for Url {
     }
 }
 
-impl TryFrom<NodeLocator> for LocalAddr {
+impl TryFrom<NodeLocator> for LocalSocketAddr {
     type Error = ParseError;
 
     fn try_from(value: NodeLocator) -> Result<Self, Self::Error> {
         Ok(match value {
-            NodeLocator::Posix(path) => LocalAddr::Posix(path),
+            NodeLocator::Posix(path) => LocalSocketAddr::Posix(path),
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqIpc(path, ..) => {
-                LocalAddr::Zmq(zmqsocket::SocketLocator::Ipc(path))
+                LocalSocketAddr::Zmq(zmqsocket::ZmqAddr::Ipc(path))
             }
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqInproc(name, ..) => {
-                LocalAddr::Zmq(zmqsocket::SocketLocator::Inproc(name))
+                LocalSocketAddr::Zmq(zmqsocket::ZmqAddr::Inproc(name))
             }
             #[cfg(feature = "zmq")]
             NodeLocator::ZmqTcpUnencrypted(_, ip, Some(port)) => {
-                LocalAddr::Zmq(zmqsocket::SocketLocator::Tcp(SocketAddr::new(
+                LocalSocketAddr::Zmq(zmqsocket::ZmqAddr::Tcp(SocketAddr::new(
                     ip, port,
                 )))
             }
@@ -686,7 +687,7 @@ mod test {
 
     use super::*;
     use crate::lnp::session::{node_addr, NodeAddr};
-    use crate::lnp::transport::RemoteAddr;
+    use crate::lnp::transport::RemoteSocketAddr;
     use std::net::SocketAddr;
 
     #[test]
@@ -721,7 +722,7 @@ mod test {
         };
         let node_addr = NodeAddr {
             node_id: pubkey1,
-            remote_addr: RemoteAddr::Ftcp(socket_addr),
+            remote_addr: RemoteSocketAddr::Ftcp(socket_addr),
         };
         let l = NodeLocator::from(node_addr.clone());
         assert_eq!(l, locator_with_port);
@@ -975,7 +976,7 @@ mod test {
             NodeAddr::try_from(locator_with_port.clone()),
             Ok(NodeAddr {
                 node_id: pubkey1,
-                remote_addr: RemoteAddr::Zmq(SocketAddr::new(inet1, 24))
+                remote_addr: RemoteSocketAddr::Zmq(SocketAddr::new(inet1, 24))
             })
         );
 
