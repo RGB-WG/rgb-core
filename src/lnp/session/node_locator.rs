@@ -28,7 +28,7 @@ use amplify::internet::InetAddr;
 use bitcoin::secp256k1;
 
 use crate::lnp::transport::{zmqsocket, LocalSocketAddr};
-use crate::lnp::UrlScheme;
+use crate::lnp::{AddrError, UrlScheme};
 
 /// Universal Node Locator for LNP protocol
 /// (from [LNPBP-19](https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0019.md))
@@ -390,61 +390,6 @@ impl UrlScheme for NodeLocator {
     }
 }
 
-/// Errors from parting string data into [`NodeLocator`] type
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
-#[display(doc_comments)]
-pub enum ParseError {
-    /// The provided protocol can't be used for a [`LocalAddr`]
-    UnsupportedForLocalAddr,
-
-    /// Can't parse URL from the given string
-    MalformedUrl,
-
-    /// The provided URL scheme {_0} was not recognized
-    UnknownUrlScheme(String),
-
-    /// No host information found in URL, while it is required for the given
-    /// schema
-    HostRequired,
-
-    /// Invalid public key data representing node id
-    #[from(secp256k1::Error)]
-    InvalidPubkey,
-
-    /// Unrecognized host information ({_0}).
-    /// NB: DNS addressing is not used since it is considered insecure in terms
-    ///     of censorship resistance, so you need to provide it in a form of
-    ///     either IPv4, IPv6 address or Tor v2, v3 address (no `.onion`
-    /// suffix)
-    #[from]
-    InvalidHost(String),
-
-    /// Used schema must not contain information about host
-    HostPresent,
-
-    /// Used schema must not contain information about port
-    PortPresent,
-
-    /// Invalid IP information
-    #[from(std::net::AddrParseError)]
-    #[from(amplify::internet::AddrParseError)]
-    InvalidIp,
-
-    /// Unsupported ZMQ API type ({_0}). List of supported APIs:
-    /// - `rpc`
-    /// - `p2p`
-    /// - `sub`
-    /// - `esb`
-    InvalidZmqType(String),
-
-    /// No ZMQ API type information for URL scheme that requires one.
-    ApiTypeRequired,
-
-    /// Creation of `Inproc` ZMQ locator requires ZMQ context, while no context
-    /// is provided.
-    InprocRequireZmqContext,
-}
-
 impl Display for NodeLocator {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         if f.alternate() {
@@ -532,7 +477,7 @@ impl Debug for NodeLocator {
 
 #[cfg(feature = "url")]
 impl FromStr for NodeLocator {
-    type Err = ParseError;
+    type Err = AddrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut s = s.to_string();
@@ -543,44 +488,39 @@ impl FromStr for NodeLocator {
         {
             s = format!("lnp://{}", s);
         }
-        Url::from_str(&s)
-            .map_err(|_| ParseError::MalformedUrl)?
-            .try_into()
+        Url::from_str(&s)?.try_into()
     }
 }
 
 #[cfg(feature = "url")]
 impl TryFrom<Url> for NodeLocator {
-    type Error = ParseError;
+    type Error = AddrError;
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
         let pubkey = secp256k1::PublicKey::from_str(url.username());
         let host = url.host_str();
-        let ip = host.map(|host| {
-            host.parse::<IpAddr>()
-                .map_err(|_| ParseError::InvalidHost(host.to_string()))
-        });
+        let ip = host.map(IpAddr::from_str).transpose()?;
         let port = url.port();
         match url.scheme() {
             "lnp" => Ok(NodeLocator::Native(
                 pubkey?,
-                host.ok_or(ParseError::HostRequired)?.parse::<InetAddr>()?,
+                host.ok_or(AddrError::HostRequired)?.parse::<InetAddr>()?,
                 port,
             )),
             "lnpu" => Ok(NodeLocator::Udp(
                 pubkey?,
-                ip.ok_or(ParseError::HostRequired)??,
+                ip.ok_or(AddrError::HostRequired)?,
                 port,
             )),
             "lnph" => Ok(NodeLocator::Http(
                 pubkey?,
-                host.ok_or(ParseError::HostRequired)?.parse::<InetAddr>()?,
+                host.ok_or(AddrError::HostRequired)?.parse::<InetAddr>()?,
                 port,
             )),
             #[cfg(feature = "websockets")]
             "lnpws" => Ok(NodeLocator::Websocket(
                 pubkey?,
-                host.ok_or(ParseError::HostRequired)?.parse::<InetAddr>()?,
+                host.ok_or(AddrError::HostRequired)?.parse::<InetAddr>()?,
                 port,
             )),
             #[cfg(feature = "zmq")]
@@ -596,7 +536,7 @@ impl TryFrom<Url> for NodeLocator {
                             }
                         },
                     )
-                    .ok_or(ParseError::ApiTypeRequired)?
+                    .ok_or(AddrError::ZmqTypeRequired)?
                     .to_ascii_lowercase()
                     .as_str()
                 {
@@ -605,23 +545,22 @@ impl TryFrom<Url> for NodeLocator {
                     "sub" => Ok(zmqsocket::ZmqType::Sub),
                     "esb" => Ok(zmqsocket::ZmqType::RouterBind),
                     unknown => {
-                        Err(ParseError::InvalidZmqType(unknown.to_string()))
+                        Err(AddrError::InvalidZmqType(unknown.to_string()))
                     }
                 }?;
                 Ok(match (ip, pubkey) {
-                    (Some(Err(_)), _) => Err(ParseError::InvalidIp)?,
                     (_, Err(_)) if !url.username().is_empty() => {
-                        Err(ParseError::InvalidIp)?
+                        Err(AddrError::InvalidPubkey)?
                     }
-                    (Some(Ok(ip)), Ok(pubkey)) => {
+                    (Some(ip), Ok(pubkey)) => {
                         NodeLocator::ZmqTcpEncrypted(pubkey, zmq_type, ip, port)
                     }
-                    (Some(Ok(ip)), _) => {
+                    (Some(ip), _) => {
                         NodeLocator::ZmqTcpUnencrypted(zmq_type, ip, port)
                     }
                     (None, _) => {
                         if url.path().is_empty() {
-                            Err(ParseError::InprocRequireZmqContext)?
+                            Err(AddrError::ZmqContextRequired)?
                         }
                         // TODO: Check path data validity
                         NodeLocator::ZmqIpc(url.path().to_string(), zmq_type)
@@ -631,19 +570,19 @@ impl TryFrom<Url> for NodeLocator {
             "lnpt" => {
                 // In this URL scheme we must not use IP address
                 if let Ok(pubkey) = pubkey {
-                    Err(ParseError::HostPresent)?
+                    Err(AddrError::UnexpectedHost)?
                 }
                 // In this URL scheme we must not use IP address
                 if let Some(port) = port {
-                    Err(ParseError::PortPresent)?
+                    Err(AddrError::UnexpectedPort)?
                 }
                 if let Some(host) = host {
                     Ok(NodeLocator::Text(secp256k1::PublicKey::from_str(host)?))
                 } else {
-                    Err(ParseError::InvalidPubkey)?
+                    Err(AddrError::InvalidPubkey)?
                 }
             }
-            unknown => Err(ParseError::UnknownUrlScheme(unknown.to_string())),
+            unknown => Err(AddrError::UnknownUrlScheme(unknown.to_string())),
         }
     }
 }
@@ -657,7 +596,7 @@ impl From<&NodeLocator> for Url {
 }
 
 impl TryFrom<NodeLocator> for LocalSocketAddr {
-    type Error = ParseError;
+    type Error = AddrError;
 
     fn try_from(value: NodeLocator) -> Result<Self, Self::Error> {
         Ok(match value {
@@ -676,7 +615,7 @@ impl TryFrom<NodeLocator> for LocalSocketAddr {
                     ip, port,
                 )))
             }
-            _ => Err(ParseError::UnsupportedForLocalAddr)?,
+            _ => Err(AddrError::Unsupported("local socket address"))?,
         })
     }
 }
@@ -729,7 +668,7 @@ mod test {
         assert_ne!(l, locator1);
         assert_eq!(
             RemoteNodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::NoPort)
+            Err(node_addr::AddrError::NoPort)
         );
         assert_eq!(
             RemoteNodeAddr::try_from(locator_with_port.clone()),
@@ -819,11 +758,11 @@ mod test {
 
         assert_eq!(
             RemoteNodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
         assert_eq!(
             RemoteNodeAddr::try_from(locator_with_port.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
 
         assert_eq!(
@@ -881,11 +820,11 @@ mod test {
 
         assert_eq!(
             RemoteNodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
         assert_eq!(
             RemoteNodeAddr::try_from(locator_with_port.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
 
         assert_eq!(
@@ -967,7 +906,7 @@ mod test {
 
         assert_eq!(
             RemoteNodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::NoPort)
+            Err(node_addr::AddrError::NoPort)
         );
         assert_eq!(
             RemoteNodeAddr::try_from(locator_with_port.clone()),
@@ -1049,11 +988,11 @@ mod test {
 
         assert_eq!(
             RemoteNodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
         assert_eq!(
             RemoteNodeAddr::try_from(locator_with_port.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
 
         assert_eq!(locator1.to_url_string(), "lnpz://127.0.0.1/?api=p2p");
@@ -1104,11 +1043,11 @@ mod test {
 
         assert_eq!(
             RemoteNodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
         assert_eq!(
             RemoteNodeAddr::try_from(locator_with_port.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
 
         assert_eq!(locator1.to_url_string(), "lnpz:?api=p2p#socket1");
@@ -1119,7 +1058,7 @@ mod test {
         {
             assert_eq!(
                 NodeLocator::from_str("lnpz:?api=p2p#socket1").unwrap_err(),
-                ParseError::InprocRequireZmqContext
+                AddrError::ZmqContextRequired
             );
         }
     }
@@ -1153,11 +1092,11 @@ mod test {
 
         assert_eq!(
             RemoteNodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
         assert_eq!(
             RemoteNodeAddr::try_from(locator_with_port.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
 
         assert_eq!(locator1.to_url_string(), "lnpz:./socket1?api=p2p");
@@ -1199,11 +1138,11 @@ mod test {
 
         assert_eq!(
             RemoteNodeAddr::try_from(locator1.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
         assert_eq!(
             RemoteNodeAddr::try_from(locator_with_port.clone()),
-            Err(node_addr::Error::UnsupportedType)
+            Err(node_addr::AddrError::UnsupportedType)
         );
 
         assert_eq!(
@@ -1227,13 +1166,13 @@ mod test {
                 NodeLocator::from_str(
                     "lnpt://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af@127.0.01"
                 ).unwrap_err(),
-                ParseError::HostPresent
+                AddrError::HostPresent
             );
             assert_eq!(
                 NodeLocator::from_str(
                     "lnpt://022e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af:1323"
                 ).unwrap_err(),
-                ParseError::PortPresent
+                AddrError::PortPresent
             );
         }
     }

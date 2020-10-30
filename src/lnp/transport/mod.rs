@@ -26,9 +26,7 @@ pub mod websocket;
 #[cfg(feature = "zmq")]
 pub mod zmqsocket;
 
-pub use socket_addr::{
-    FramingProtocol, LocalSocketAddr, RemoteSocketAddr, SocketAddrError,
-};
+pub use socket_addr::{FramingProtocol, LocalSocketAddr, RemoteSocketAddr};
 use tokio::io::ErrorKind;
 #[cfg(feature = "zmq")]
 pub use zmqsocket::{ZmqAddr, ZmqType, ZMQ_CONTEXT};

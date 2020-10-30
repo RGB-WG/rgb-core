@@ -37,7 +37,7 @@ pub use session::{
 };
 pub use transport::{
     ftcp, websocket, zmqsocket, Duplex, FramingProtocol, LocalSocketAddr,
-    RemoteSocketAddr, RoutedFrame, SocketAddrError,
+    RemoteSocketAddr, RoutedFrame,
 };
 
 pub const LNP_MSG_MAX_LEN: usize = core::u64::MAX as usize;
@@ -53,4 +53,83 @@ pub trait UrlScheme {
     /// Returns full URL scheme string (i.e. including `:` or `://` parts)
     /// corresponding to the provided address
     fn url_scheme(&self) -> &'static str;
+}
+
+use amplify::internet::NoOnionSupportError;
+
+/// Error extracting transport-level address types ([`FramingProtocol`],
+/// [`LocalAddr`], [`RemoteAddr`]) and session-level node types ([`NodeAddr`],
+/// [`RemoteNodeAddr`]) from string, URLs and other data types
+#[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum AddrError {
+    /// Unknown protocol name in URL scheme ({_0})
+    UnknownProtocol(String),
+
+    /// The provided URL scheme {_0} was not recognized
+    UnknownUrlScheme(String),
+
+    /// Can't parse URL from the given string
+    #[cfg(feature = "url")]
+    #[from]
+    MalformedUrl(url::ParseError),
+
+    /// Malformed IP address.
+    /// NB: DNS addressing is not used since it is considered insecure in terms
+    ///     of censorship resistance, so you need to provide it in a form of
+    ///     either IPv4 or IPv6 address. If you need Tor support use other
+    ///     protocol type supporting Tor.
+    #[from]
+    MalformedIpAddr(std::net::AddrParseError),
+
+    /// Malformed IP or Onion address.
+    /// NB: DNS addressing is not used since it is considered insecure in terms
+    ///     of censorship resistance, so you need to provide it in a form of
+    ///     either IPv4, IPv6 address or Tor v2, v3 address (w/o `.onion`
+    ///     suffix)
+    #[from]
+    MalformedInetAddr(amplify::internet::AddrParseError),
+
+    /// Invalid public key data representing node id
+    #[from(bitcoin::secp256k1::Error)]
+    InvalidPubkey,
+
+    /// No host information found in URL, while it is required for the given
+    /// scheme
+    HostRequired,
+
+    /// No port information found in URL, while it is required for the given
+    /// scheme
+    PortRequired,
+
+    /// Unexpected URL authority data (part before '@' in URL) which must be
+    /// omitted
+    UnexpectedAuthority,
+
+    /// Used scheme must not contain information about host
+    UnexpectedHost,
+
+    /// Used scheme must not contain information about port
+    UnexpectedPort,
+
+    /// Unsupported ZMQ API type ({_0}). List of supported APIs:
+    /// - `rpc`
+    /// - `p2p`
+    /// - `sub`
+    /// - `esb`
+    InvalidZmqType(String),
+
+    /// No ZMQ API type information for URL scheme that requires one.
+    ZmqTypeRequired,
+
+    /// `Inproc` ZMQ type requires ZMQ context which exsits only in runtime and
+    /// can't be persisted. This, it can't be provided through this type.
+    ZmqContextRequired,
+
+    /// The provided protocol can't be used for {_0}
+    Unsupported(&'static str),
+
+    /// Onion addresses are not supported by this socket type
+    #[from(NoOnionSupportError)]
+    NoOnionSupport,
 }

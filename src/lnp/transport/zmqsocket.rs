@@ -21,9 +21,8 @@ use std::net::SocketAddr;
 #[cfg(feature = "url")]
 use url::Url;
 
-use super::{Duplex, RecvFrame, RoutedFrame, SendFrame, SocketAddrError};
-use crate::lnp::transport;
-use crate::lnp::UrlScheme;
+use super::{Duplex, RecvFrame, RoutedFrame, SendFrame};
+use crate::lnp::{transport, AddrError, UrlScheme};
 
 lazy_static! {
     pub static ref ZMQ_CONTEXT: zmq::Context = zmq::Context::new();
@@ -236,7 +235,7 @@ impl Display for Error {
 
 #[cfg(feature = "url")]
 impl FromStr for ZmqAddr {
-    type Err = SocketAddrError;
+    type Err = AddrError;
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -247,7 +246,7 @@ impl FromStr for ZmqAddr {
 
 #[cfg(feature = "url")]
 impl TryFrom<Url> for ZmqAddr {
-    type Error = SocketAddrError;
+    type Error = AddrError;
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
         match url.scheme() {
@@ -255,29 +254,25 @@ impl TryFrom<Url> for ZmqAddr {
                 if url.has_authority() {
                     Ok(ZmqAddr::Tcp(SocketAddr::new(
                         url.host()
-                            .ok_or(SocketAddrError::UnexpectedHost)?
+                            .ok_or(AddrError::HostRequired)?
                             .to_string()
                             .parse()?,
-                        url.port().ok_or(SocketAddrError::PortRequired)?,
+                        url.port().ok_or(AddrError::PortRequired)?,
                     )))
                 } else {
                     Ok(ZmqAddr::Ipc(url.path().to_owned()))
                 }
             }
-            "tcp" => Err(SocketAddrError::UnknownUrlScheme(s!(
+            "tcp" => Err(AddrError::UnknownUrlScheme(s!(
                 "'tcp://'; use 'lnpz://' instead"
             ))),
             "inproc" => Ok(ZmqAddr::Inproc(
-                url.host_str()
-                    .ok_or(SocketAddrError::HostRequired)?
-                    .to_owned(),
+                url.host_str().ok_or(AddrError::HostRequired)?.to_owned(),
             )),
-            "ipc" => Err(SocketAddrError::UnknownUrlScheme(s!(
+            "ipc" => Err(AddrError::UnknownUrlScheme(s!(
                 "'ipc:'; use 'lnpz:' instead"
             ))),
-            unknown => {
-                Err(SocketAddrError::UnknownUrlScheme(unknown.to_owned()))
-            }
+            unknown => Err(AddrError::UnknownUrlScheme(unknown.to_owned())),
         }
     }
 }

@@ -19,13 +19,13 @@ use std::str::FromStr;
 use amplify::internet::InetSocketAddr;
 use bitcoin::secp256k1;
 
-use super::{node_locator, NodeLocator};
+use super::NodeLocator;
 use crate::lnp::transport::{LocalSocketAddr, RemoteSocketAddr};
 #[cfg(feature = "zmq")]
 use crate::lnp::zmqsocket::{ZmqAddr, ZmqType};
-use crate::lnp::UrlScheme;
+use crate::lnp::{AddrError, UrlScheme};
 
-/// Node endpoint which can be represent by either some local address without
+/// Node address which can be represent by either some local address without
 /// encryption information (i.e. node public key) or remote node address
 /// containing node public key
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
@@ -42,7 +42,7 @@ pub enum NodeAddr {
 }
 
 impl FromStr for NodeAddr {
-    type Err = Error;
+    type Err = AddrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(NodeLocator::from_str(s)?.into())
@@ -75,7 +75,7 @@ impl From<NodeLocator> for NodeAddr {
 
 #[cfg(feature = "zmq")]
 impl TryFrom<NodeAddr> for ZmqAddr {
-    type Error = Error;
+    type Error = AddrError;
 
     fn try_from(value: NodeAddr) -> Result<Self, Self::Error> {
         Ok(match value {
@@ -84,14 +84,18 @@ impl TryFrom<NodeAddr> for ZmqAddr {
                 node_id,
                 remote_addr: RemoteSocketAddr::Zmq(addr),
             }) => ZmqAddr::Tcp(addr),
-            _ => Err(Error::UnsupportedType)?,
+            _ => Err(AddrError::Unsupported("ZMQ socket"))?,
         })
     }
 }
 
-/// Full node address at the session-level including node encryption/id key
-/// information and full [`RemoteAddr`] with transport protocol & complete
+/// Remote node address at the session-level including node encryption/id key
+/// information and full [`RemoteSocketAddr`] with transport protocol & complete
 /// connection point specification.
+///
+/// Node address must be given as in form of
+/// `<node_id>@<node_inet_addr>[:<port>]`, where <node_inet_addr> may be
+/// IPv4, IPv6, Onion v2 or v3 address
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(
@@ -123,54 +127,8 @@ impl fmt::Display for RemoteNodeAddr {
     }
 }
 
-/// Error representing:
-/// * error parsing [`NodeAddr`] from string representation, which must be in
-///   `<node_id>@<node_inet_addr>[:<port>]` format, where <node_inet_addr> may
-///   be IPv4, IPv6 or TOR v2, v3 address
-/// * error converting [`NodeLocator`] to [`NodeAddr`]
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
-#[display(doc_comments)]
-pub enum Error {
-    /// Node id can't be decoded from the given information. Node id must be a
-    /// valid Secp256k1 public key in a compact form
-    #[from(bitcoin::secp256k1::Error)]
-    WrongNodeId,
-
-    /// Node address must be given as in form of
-    /// `<node_id>@<node_inet_addr>[:<port>]`, where <node_inet_addr> may be
-    /// IPv4, IPv6 or TORv3 address
-    NoNodeId,
-
-    /// The provided node address is incorrect; it must be IPv4, IPv6 or TOR
-    /// v2, v3 address
-    #[from]
-    WrongInetAddr(String),
-
-    /// Port information can't be decoded; it must be a 16-bit unsigned integer
-    /// literal
-    #[from(std::num::ParseIntError)]
-    WrongPort,
-
-    /// Nointerned address specified after node public key
-    MissedInetAddr,
-
-    /// Can't read string as a proper node address: it must be in
-    /// `<node_id>@<node_inet_addr>[:<port>]` format, where <node_inet_addr>
-    /// may be IPv4, IPv6 or Tor v3, v2 address (no `.onion` suffix)
-    #[from]
-    Parse(node_locator::ParseError),
-
-    /// No port information is provided; use [`NodeLocator::with_port`] method
-    /// before calling the conversion
-    NoPort,
-
-    /// Node locator of the given type can't be represented as [`NodeAddr`].
-    /// Only [`NodeLocator::Native`] addresses can be converted.
-    UnsupportedType,
-}
-
 impl FromStr for RemoteNodeAddr {
-    type Err = Error;
+    type Err = AddrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         NodeLocator::from_str(s)?.try_into()
@@ -178,15 +136,17 @@ impl FromStr for RemoteNodeAddr {
 }
 
 impl TryFrom<NodeLocator> for RemoteNodeAddr {
-    type Error = Error;
+    type Error = AddrError;
 
     fn try_from(locator: NodeLocator) -> Result<Self, Self::Error> {
         match locator {
-            NodeLocator::Native(.., None) => Err(Error::NoPort),
+            NodeLocator::Native(.., None) => Err(AddrError::PortRequired),
             #[cfg(feature = "websocket")]
-            NodeLocator::Websocket(.., None) => Err(Error::NoPort),
+            NodeLocator::Websocket(.., None) => Err(AddrError::HostRequired),
             #[cfg(feature = "zmq")]
-            NodeLocator::ZmqTcpEncrypted(.., None) => Err(Error::NoPort),
+            NodeLocator::ZmqTcpEncrypted(.., None) => {
+                Err(AddrError::PortRequired)
+            }
             NodeLocator::Native(pubkey, address, Some(port)) => {
                 Ok(RemoteNodeAddr {
                     node_id: pubkey,
@@ -214,7 +174,7 @@ impl TryFrom<NodeLocator> for RemoteNodeAddr {
                     ),
                 })
             }
-            _ => Err(Error::UnsupportedType),
+            _ => Err(AddrError::Unsupported("NodeLocator")),
         }
     }
 }

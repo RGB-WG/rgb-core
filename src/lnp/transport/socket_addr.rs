@@ -18,7 +18,7 @@
 //! structures like [`NodeLocator`](lnp::NodeLocator) and
 //! [`NodeAddress`](lnp::NodeAddr)).
 
-use amplify::internet::{InetAddr, InetSocketAddr, NoOnionSupportError};
+use amplify::internet::{InetAddr, InetSocketAddr};
 #[cfg(feature = "url")]
 use std::convert::{TryFrom, TryInto};
 use std::net::SocketAddr;
@@ -28,7 +28,7 @@ use url::{self, Url};
 
 #[cfg(feature = "zmq")]
 use super::zmqsocket;
-use crate::lnp::UrlScheme;
+use crate::lnp::{AddrError, UrlScheme};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
 #[cfg_attr(
@@ -69,66 +69,8 @@ pub enum FramingProtocol {
     Smtp,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
-#[display(doc_comments)]
-/// Error parsing transport-level address types ([`FramingProtocol`],
-/// [`LocalAddr`], [`RemoteAddr`]) from string
-pub enum SocketAddrError {
-    /// Unknown protocol name in URL scheme ({_0})
-    UnknownProtocol(String),
-
-    /// The provided URL scheme {_0} was not recognized
-    UnknownUrlScheme(String),
-
-    /// Can't parse URL from the given string
-    #[cfg(feature = "url")]
-    #[from]
-    MalformedUrl(url::ParseError),
-
-    /// Malformed IP or Onion address
-    /// NB: DNS addressing is not used since it is considered insecure in terms
-    ///     of censorship resistance, so you need to provide it in a form of
-    ///     either IPv4, IPv6 address or Tor v2, v3 address (w/o `.onion`
-    ///     suffix)
-    #[from(std::net::AddrParseError)]
-    #[from(amplify::internet::AddrParseError)]
-    MalformedIp,
-
-    /// No host information found in URL, while it is required for the given
-    /// scheme
-    HostRequired,
-
-    /// No port information found in URL, while it is required for the given
-    /// scheme
-    PortRequired,
-
-    /// Unexpected URL authority data (part before '@' in URL) which must be
-    /// omitted
-    UnexpectedAuthority,
-
-    /// Used scheme must not contain information about host
-    UnexpectedHost,
-
-    /// Used scheme must not contain information about port
-    UnexpectedPort,
-
-    /// Unsupported ZMQ API type ({_0}). List of supported APIs:
-    /// - `rpc`
-    /// - `p2p`
-    /// - `sub`
-    /// - `esb`
-    InvalidZmqType(String),
-
-    /// No ZMQ API type information for URL scheme that requires one.
-    ZmqTypeRequired,
-
-    /// Onion addresses are not supported by this socket type
-    #[from(NoOnionSupportError)]
-    NoOnionSupport,
-}
-
 impl FromStr for FramingProtocol {
-    type Err = SocketAddrError;
+    type Err = AddrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
@@ -141,7 +83,7 @@ impl FromStr for FramingProtocol {
             #[cfg(feature = "websocket")]
             "ws" | "wss" | "websocket" => Ok(FramingProtocol::Websocket),
             "smtp" => Ok(FramingProtocol::Smtp),
-            other => Err(SocketAddrError::UnknownProtocol(other.to_owned())),
+            other => Err(AddrError::UnknownProtocol(other.to_owned())),
         }
     }
 }
@@ -202,7 +144,7 @@ pub enum RemoteSocketAddr {
 
 #[cfg(feature = "url")]
 impl FromStr for LocalSocketAddr {
-    type Err = SocketAddrError;
+    type Err = AddrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Url::parse(s)?.try_into()
@@ -211,7 +153,7 @@ impl FromStr for LocalSocketAddr {
 
 #[cfg(feature = "url")]
 impl FromStr for RemoteSocketAddr {
-    type Err = SocketAddrError;
+    type Err = AddrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Url::parse(s)?.try_into()
@@ -219,38 +161,38 @@ impl FromStr for RemoteSocketAddr {
 }
 
 impl TryFrom<Url> for LocalSocketAddr {
-    type Error = SocketAddrError;
+    type Error = AddrError;
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
         Ok(match url.scheme() {
             "lnp" => {
                 if url.host().is_some() {
-                    Err(SocketAddrError::UnexpectedHost)?
+                    Err(AddrError::UnexpectedHost)?
                 } else if url.has_authority() {
-                    Err(SocketAddrError::UnexpectedAuthority)?
+                    Err(AddrError::UnexpectedAuthority)?
                 } else if url.port().is_some() {
-                    Err(SocketAddrError::UnexpectedPort)?
+                    Err(AddrError::UnexpectedPort)?
                 }
                 LocalSocketAddr::Posix(url.path().to_owned())
             }
             #[cfg(feature = "zmq")]
             "lnpz" => LocalSocketAddr::Zmq(zmqsocket::ZmqAddr::try_from(url)?),
-            other => Err(SocketAddrError::UnknownUrlScheme(other.to_owned()))?,
+            "lnph" | "lnpws" | "lnpm" => {
+                Err(AddrError::Unsupported("for local socket address"))?
+            }
+            other => Err(AddrError::UnknownUrlScheme(other.to_owned()))?,
         })
     }
 }
 
 #[cfg(feature = "url")]
 impl TryFrom<Url> for RemoteSocketAddr {
-    type Error = SocketAddrError;
+    type Error = AddrError;
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
-        let host = url
-            .host_str()
-            .ok_or(SocketAddrError::HostRequired)?
-            .to_owned();
+        let host = url.host_str().ok_or(AddrError::HostRequired)?.to_owned();
         let inet_addr = host.parse::<InetAddr>()?;
-        let port = url.port().ok_or(SocketAddrError::PortRequired)?;
+        let port = url.port().ok_or(AddrError::PortRequired)?;
         let inet_socket_addr = InetSocketAddr::new(inet_addr, port);
         Ok(match url.scheme() {
             "lnp" => RemoteSocketAddr::Ftcp(inet_socket_addr),
@@ -260,7 +202,7 @@ impl TryFrom<Url> for RemoteSocketAddr {
             #[cfg(feature = "websocket")]
             "lnpws" => RemoteSocketAddr::Websocket(inet_socket_addr),
             "lnpm" => RemoteSocketAddr::Smtp(inet_socket_addr),
-            other => Err(SocketAddrError::UnknownUrlScheme(other.to_owned()))?,
+            other => Err(AddrError::UnknownUrlScheme(other.to_owned()))?,
         })
     }
 }
