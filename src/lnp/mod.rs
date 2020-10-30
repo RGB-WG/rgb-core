@@ -49,10 +49,15 @@ pub use transport::{ZmqSocketAddr, ZmqType, ZMQ_CONTEXT};
 
 /// Trait used by different address types (transport-, session- and
 /// presentation-based) for getting scheme part of the URL
-pub trait UrlScheme {
+pub trait UrlString {
     /// Returns full URL scheme string (i.e. including `:` or `://` parts)
     /// corresponding to the provided address
     fn url_scheme(&self) -> &'static str;
+
+    /// Returns URL string representation for a given node or socket address. If
+    /// you need full URL address, please use [`Url::from()`] instead (this
+    /// will require `url` feature for LNP/BP Core Library).
+    fn to_url_string(&self) -> String;
 }
 
 use amplify::internet::NoOnionSupportError;

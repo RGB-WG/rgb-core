@@ -28,7 +28,7 @@ use url::{self, Url};
 
 #[cfg(feature = "zmq")]
 use super::zmqsocket;
-use crate::lnp::{AddrError, UrlScheme};
+use crate::lnp::{AddrError, UrlString};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
 #[cfg_attr(
@@ -160,6 +160,42 @@ impl FromStr for RemoteSocketAddr {
     }
 }
 
+impl UrlString for LocalSocketAddr {
+    fn url_scheme(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "zmq")]
+            LocalSocketAddr::Zmq(zmqsocket::ZmqSocketAddr::Tcp(..)) => {
+                "lnpz://"
+            }
+            #[cfg(feature = "zmq")]
+            LocalSocketAddr::Zmq(_) => "lnpz:",
+            LocalSocketAddr::Posix(_) => "lnp:",
+        }
+    }
+
+    fn to_url_string(&self) -> String {
+        format!("{:#}", self)
+    }
+}
+
+impl UrlString for RemoteSocketAddr {
+    fn url_scheme(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "zmq")]
+            RemoteSocketAddr::Zmq(_) => "lnpz://",
+            RemoteSocketAddr::Ftcp(_) => "lnp://",
+            RemoteSocketAddr::Smtp(_) => "lnpm://",
+            RemoteSocketAddr::Http(_) => "lnph://",
+            #[cfg(feature = "websocket")]
+            RemoteSocketAddr::Websocket(_) => "lnpws://",
+        }
+    }
+
+    fn to_url_string(&self) -> String {
+        format!("{:#}", self)
+    }
+}
+
 impl TryFrom<Url> for LocalSocketAddr {
     type Error = AddrError;
 
@@ -206,33 +242,5 @@ impl TryFrom<Url> for RemoteSocketAddr {
             "lnpm" => RemoteSocketAddr::Smtp(inet_socket_addr),
             other => Err(AddrError::UnknownUrlScheme(other.to_owned()))?,
         })
-    }
-}
-
-impl UrlScheme for LocalSocketAddr {
-    fn url_scheme(&self) -> &'static str {
-        match self {
-            #[cfg(feature = "zmq")]
-            LocalSocketAddr::Zmq(zmqsocket::ZmqSocketAddr::Tcp(..)) => {
-                "lnpz://"
-            }
-            #[cfg(feature = "zmq")]
-            LocalSocketAddr::Zmq(_) => "lnpz:",
-            LocalSocketAddr::Posix(_) => "lnp:",
-        }
-    }
-}
-
-impl UrlScheme for RemoteSocketAddr {
-    fn url_scheme(&self) -> &'static str {
-        match self {
-            #[cfg(feature = "zmq")]
-            RemoteSocketAddr::Zmq(_) => "lnpz://",
-            RemoteSocketAddr::Ftcp(_) => "lnp://",
-            RemoteSocketAddr::Smtp(_) => "lnpm://",
-            RemoteSocketAddr::Http(_) => "lnph://",
-            #[cfg(feature = "websocket")]
-            RemoteSocketAddr::Websocket(_) => "lnpws://",
-        }
     }
 }

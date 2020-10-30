@@ -22,7 +22,7 @@ use std::net::SocketAddr;
 use url::Url;
 
 use super::{Duplex, RecvFrame, RoutedFrame, SendFrame};
-use crate::lnp::{transport, AddrError, UrlScheme};
+use crate::lnp::{transport, AddrError, UrlString};
 
 lazy_static! {
     pub static ref ZMQ_CONTEXT: zmq::Context = zmq::Context::new();
@@ -148,23 +148,27 @@ impl FromStr for ZmqType {
     serde(crate = "serde_crate", tag = "type")
 )]
 pub enum ZmqSocketAddr {
-    #[display("{_0}", alt = "inproc://{_0}")]
+    #[display("inproc://{_0}", alt = "zmq:{_0}")]
     Inproc(String),
 
-    #[display("lnpz:{_0}", alt = "ipc://{_0}")]
+    #[display("ipc://{_0}", alt = "lnpz:{_0}")]
     Ipc(String),
 
-    #[display("lnpz://{_0}", alt = "tcp://{_0}")]
+    #[display("tcp://{_0}", alt = "lnpz://{_0}")]
     Tcp(SocketAddr),
 }
 
-impl UrlScheme for ZmqSocketAddr {
+impl UrlString for ZmqSocketAddr {
     fn url_scheme(&self) -> &'static str {
         match self {
-            ZmqSocketAddr::Inproc(_) => "",
+            ZmqSocketAddr::Inproc(_) => "zmq:",
             ZmqSocketAddr::Ipc(_) => "lnpz:",
             ZmqSocketAddr::Tcp(_) => "lnpz://",
         }
+    }
+
+    fn to_url_string(&self) -> String {
+        format!("{:#}", self)
     }
 }
 

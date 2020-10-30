@@ -62,7 +62,7 @@ impl PeerConnection {
         local: &LocalNode,
     ) -> Result<Self, Error> {
         let endpoint = remote
-            .to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT)
+            .to_node_addr(LIGHTNING_P2P_DEFAULT_PORT)
             .ok_or(Error::InvalidEndpoint)?;
         let session = endpoint.connect(local)?;
         Ok(Self { session })
@@ -73,7 +73,7 @@ impl PeerConnection {
         local: &LocalNode,
     ) -> Result<Self, Error> {
         let endpoint = remote
-            .to_node_endpoint(LIGHTNING_P2P_DEFAULT_PORT)
+            .to_node_addr(LIGHTNING_P2P_DEFAULT_PORT)
             .ok_or(Error::InvalidEndpoint)?;
         let session = endpoint.accept(local)?;
         Ok(Self { session })
