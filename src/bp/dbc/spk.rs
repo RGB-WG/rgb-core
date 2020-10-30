@@ -56,7 +56,7 @@ pub enum ScriptEncodeMethod {
 /// deteministic bitcoin commitment given only the transaction source, its
 /// fee and protocol-specific constants. It is a part of the [`Proof`] data.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display(Debug)]
+#[display(doc_comments)]
 #[non_exhaustive]
 pub enum ScriptEncodeData {
     /// Public key. Since we keep the original public key as a part of a proof,

@@ -57,16 +57,26 @@ sha256t_hash_newtype!(
 );
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Error {
+    /// Details of output #{_0} are required, but were not provided in PSBT
     NoRequiredOutputInformation(usize),
+
+    /// Explicit public key must be given for output number #{_0}
     NoRequiredPubkey(usize),
+
+    /// Unable to estimate fee: {_0}
     #[from]
     FeeEstimationError(FeeError),
+
+    /// Incorrect public key data: {_0}
     #[from(secp256k1::Error)]
     WrongPubkeyData,
+
+    /// Too many state transitions for commitment; can't fit into a single
+    /// anchor
     #[from(TooManyMessagesError)]
-    TooManyContracts,
+    SizeLimit,
 }
 
 #[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]

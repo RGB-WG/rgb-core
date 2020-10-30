@@ -14,13 +14,24 @@
 use crate::bp::dbc;
 
 #[derive(Clone, PartialEq, Debug, Display, From, Error)]
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Error {
+    /// Invalid seal definition
     InvalidSealDefinition,
+
+    /// Transaction output is already spent
     SpentTxout,
+
+    /// Unable to access commitment publication medium
     MediumAccessError,
+
+    /// Error in commitment: {_0}
     CommitmentError(dbc::Error),
+
+    /// Error from transaction resolver
     ResolverError,
+
+    /// Resolver probably lies and can't be trusted
     ResolverLying,
 }
 

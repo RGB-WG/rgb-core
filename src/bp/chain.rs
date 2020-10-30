@@ -856,7 +856,7 @@ impl Display for Chain {
 
 /// Chain data parse errors
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Display, Error, From)]
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum ParseError {
     /// The provided string does not matches any known chain; chain parameters
     /// can't be guessed. Please use `other:0x<hex_encoded_parameters>` for

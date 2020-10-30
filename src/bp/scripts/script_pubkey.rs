@@ -80,16 +80,30 @@ pub enum ScriptPubkeyFormat {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyContent {
+    #[display("script({_0})", alt = "script({_0:#})")]
     Bare(PubkeyScript),
+
+    #[display("pk({_0:x})")]
     Pk(bitcoin::PublicKey),
+
+    #[display("pkh({_0:x})")]
     Pkh(PubkeyHash),
+
+    #[display("sh({_0:x})")]
     Sh(ScriptHash),
+
+    #[display("script(OP_RETURN {_0:?})")]
     Return(Vec<Vec<u8>>),
+
+    #[display("wpkh({_0:x})")]
     Wpkh(WPubkeyHash),
+
+    #[display("wsh({_0:x})")]
     Wsh(WScriptHash),
+
+    #[display("tr({_0:x})")]
     Taproot(secp256k1::PublicKey),
 }
 
@@ -112,7 +126,7 @@ pub enum ScriptPubkeyTemplate {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Display, Debug, From, Error)]
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Error {
     /// Can't deserealized public key from bitcoin script push op code
     InvalidKeyData,

@@ -18,9 +18,13 @@
 //! structures like [`NodeLocator`](lnp::NodeLocator) and
 //! [`NodeAddress`](lnp::NodeAddr)).
 
-use amplify::internet::InetSocketAddr;
-use std::net::SocketAddr;
+use amplify::internet::{InetAddr, InetSocketAddr};
+#[cfg(feature = "url")]
+use std::convert::TryFrom;
+use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
+#[cfg(feature = "url")]
+use url::{self, Url};
 
 #[cfg(feature = "zmq")]
 use super::zmqsocket;
@@ -71,13 +75,52 @@ pub enum FramingProtocol {
 #[display(doc_comments)]
 /// Error parsing transport-level address types ([`FramingProtocol`],
 /// [`LocalAddr`], [`RemoteAddr`]) from string
-pub enum ParseError {
-    /// Unknown string protocol representation
-    UnknownProtocol,
+pub enum SocketAddrError {
+    /// Unknown protocol name in URL scheme ({_0})
+    UnknownProtocol(String),
+
+    /// The provided URL scheme {_0} was not recognized
+    UnknownUrlScheme(String),
+
+    /// Can't parse URL from the given string
+    #[cfg(feature = "url")]
+    #[from]
+    MalformedUrl(url::ParseError),
+
+    /// Unrecognized host information ({_0}).
+    /// NB: DNS addressing is not used since it is considered insecure in terms
+    ///     of censorship resistance, so you need to provide it in a form of
+    ///     either IPv4, IPv6 address or Tor v2, v3 address (no `.onion`
+    /// suffix)
+    InvalidHost(String),
+
+    /// No host information found in URL, while it is required for the given
+    /// scheme
+    HostRequired,
+
+    /// No port information found in URL, while it is required for the given
+    /// scheme
+    PortRequired,
+
+    /// Used schema must not contain information about host
+    HostPresent,
+
+    /// Used schema must not contain information about port
+    PortPresent,
+
+    /// Unsupported ZMQ API type ({_0}). List of supported APIs:
+    /// - `rpc`
+    /// - `p2p`
+    /// - `sub`
+    /// - `esb`
+    InvalidZmqType(String),
+
+    /// No ZMQ API type information for URL scheme that requires one.
+    ZmqTypeRequired,
 }
 
 impl FromStr for FramingProtocol {
-    type Err = ParseError;
+    type Err = SocketAddrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
@@ -90,15 +133,15 @@ impl FromStr for FramingProtocol {
             #[cfg(feature = "websocket")]
             "ws" | "wss" | "websocket" => Ok(FramingProtocol::Websocket),
             "smtp" => Ok(FramingProtocol::Smtp),
-            _ => Err(ParseError::UnknownProtocol),
+            other => Err(SocketAddrError::UnknownProtocol(other.to_owned())),
         }
     }
 }
 
 /// Represents a connection that requires the other peer to be present on the
 /// same machine as a connecting peer
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-pub enum LocalAddr {
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+pub enum LocalSocketAddr {
     /// Microservices connected using ZeroMQ protocol locally
     #[cfg(feature = "zmq")]
     #[display("{_0}", alt = "lnpz://{_0}")]
@@ -112,24 +155,18 @@ pub enum LocalAddr {
 
 /// Represents a connection to a generic remote peer operating with LNP protocol
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
 #[non_exhaustive]
-pub enum RemoteAddr {
+pub enum RemoteSocketAddr {
     /// Framed TCP socket connection, that may be served either over plain IP,
     /// IPSec or Tor v2 and v3
     #[display("{_0}", alt = "lnp://{_0}")]
     Ftcp(InetSocketAddr),
-
-    // TODO: (new) consider removing and converting `RemoteAddr` into
-    //       encryption-only type
-    /// POSIX socket
-    #[display("{_0}", alt = "lnp:{_0}")]
-    Posix(String),
 
     /// Microservices connected using ZeroMQ protocol remotely. Can be used
     /// only with TCP-based ZMQ; for other types use [`LocalAddr::Zmq`]
@@ -155,29 +192,75 @@ pub enum RemoteAddr {
     Smtp(InetSocketAddr),
 }
 
-impl UrlScheme for LocalAddr {
+#[cfg(feature = "url")]
+impl FromStr for LocalSocketAddr {
+    type Err = SocketAddrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        unimplemented!()
+    }
+}
+
+#[cfg(feature = "url")]
+impl FromStr for RemoteSocketAddr {
+    type Err = SocketAddrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        unimplemented!()
+    }
+}
+
+#[cfg(feature = "url")]
+impl TryFrom<Url> for RemoteSocketAddr {
+    type Error = SocketAddrError;
+
+    fn try_from(url: Url) -> Result<Self, Self::Error> {
+        let pubkey = secp256k1::PublicKey::from_str(url.username());
+        let host = url
+            .host_str()
+            .ok_or(SocketAddrError::HostRequired)?
+            .to_owned();
+        let inet_addr = host
+            .parse::<InetAddr>()
+            .map_err(|_| SocketAddrError::InvalidHost(host))?;
+        let port = url.port().ok_or(SocketAddrError::PortRequired)?;
+        Ok(match url.scheme() {
+            "lnp" => RemoteSocketAddr::Ftcp(),
+            #[cfg(feature = "zmq")]
+            "lnpz" => {}
+            "lnph" => {}
+            #[cfg(feature = "websocket")]
+            "lnpws" => {}
+            "lnpm" => {}
+            other => Err(SocketAddrError::UnknownUrlScheme(other.to_owned()))?,
+        })
+    }
+}
+
+impl UrlScheme for LocalSocketAddr {
     fn url_scheme(&self) -> &'static str {
         match self {
             #[cfg(feature = "zmq")]
-            LocalAddr::Zmq(zmqsocket::SocketLocator::Tcp(..)) => "lnpz://",
+            LocalSocketAddr::Zmq(zmqsocket::SocketLocator::Tcp(..)) => {
+                "lnpz://"
+            }
             #[cfg(feature = "zmq")]
-            LocalAddr::Zmq(_) => "lnpz:",
-            LocalAddr::Posix(_) => "lnp:",
+            LocalSocketAddr::Zmq(_) => "lnpz:",
+            LocalSocketAddr::Posix(_) => "lnp:",
         }
     }
 }
 
-impl UrlScheme for RemoteAddr {
+impl UrlScheme for RemoteSocketAddr {
     fn url_scheme(&self) -> &'static str {
         match self {
-            RemoteAddr::Posix(_) => "lnp:",
             #[cfg(feature = "zmq")]
-            RemoteAddr::Zmq(_) => "lnpz://",
-            RemoteAddr::Ftcp(_) => "lnp://",
-            RemoteAddr::Smtp(_) => "lnpm://",
-            RemoteAddr::Http(_) => "lnph://",
+            RemoteSocketAddr::Zmq(_) => "lnpz://",
+            RemoteSocketAddr::Ftcp(_) => "lnp://",
+            RemoteSocketAddr::Smtp(_) => "lnpm://",
+            RemoteSocketAddr::Http(_) => "lnph://",
             #[cfg(feature = "websocket")]
-            RemoteAddr::Websocket(_) => "lnpws://",
+            RemoteSocketAddr::Websocket(_) => "lnpws://",
         }
     }
 }

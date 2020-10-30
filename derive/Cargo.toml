@@ -16,7 +16,7 @@ proc-macro = true
 [dependencies]
 quote = "~1.0.7"
 syn = "~1.0.31"
-amplify = "~2.0.6"
+amplify = "~2.1.1"
 
 [dev-dependencies]
 lnpbp = { path = ".." }

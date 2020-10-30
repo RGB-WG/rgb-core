@@ -131,6 +131,7 @@ impl Status {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+// TODO: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
 pub enum Failure {
     SchemaUnknown(SchemaId),
@@ -236,6 +237,7 @@ pub enum Failure {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+// TODO: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
     EndpointTransitionNotFound(NodeId),
@@ -245,6 +247,7 @@ pub enum Warning {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+// TODO: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {
     UncheckableConfidentialStateData(NodeId, usize),

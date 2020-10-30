@@ -455,7 +455,7 @@ pub enum Strategy {
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
 )]
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum StrategyError {
     /// For P2SH scripts we need to know whether it is created for the
     /// witness-containing spending transaction input, i.e. whether its redeem
