@@ -29,6 +29,7 @@ pub use rpc_connection::RpcConnection;
 use bitcoin::hashes::hex::{Error, FromHex, ToHex};
 use bitcoin::hashes::{sha256, Hmac};
 use std::fmt::{self, Formatter, LowerHex, UpperHex};
+use std::str::FromStr;
 
 // TODO: (new) Move type to rust-amplify
 /// Wrapper type for all slice-based 256-bit types implementing many important
@@ -62,6 +63,14 @@ impl Slice32 {
             &secp256k1::SecretKey::new(&mut rand::thread_rng())[..],
         );
         Slice32::from_inner(entropy)
+    }
+}
+
+impl FromStr for Slice32 {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex(s)
     }
 }
 
@@ -143,7 +152,7 @@ where
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct ChannelId(Slice32);
 
 impl FromHex for ChannelId {
@@ -175,7 +184,7 @@ impl FromHex for ChannelId {
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct TempChannelId(Slice32);
 
 impl From<TempChannelId> for ChannelId {
@@ -220,7 +229,7 @@ impl TempChannelId {
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct PaymentHash(Slice32);
 
 impl FromHex for PaymentHash {
@@ -252,7 +261,7 @@ impl FromHex for PaymentHash {
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct PaymentPreimage(Slice32);
 
 impl PaymentPreimage {
@@ -292,7 +301,7 @@ impl FromHex for PaymentPreimage {
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct PaymentSecret(Slice32);
 
 impl PaymentSecret {
