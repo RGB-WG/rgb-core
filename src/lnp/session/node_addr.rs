@@ -13,7 +13,6 @@
 
 use core::convert::{TryFrom, TryInto};
 use core::fmt::{self, Debug, Display, Formatter};
-use std::hash::{Hash, Hasher};
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 #[cfg(feature = "url")]
@@ -313,7 +312,7 @@ where
 ///
 /// NB: DNS addressing is not used since it is considered insecure in terms of
 ///     censorship resistance.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[non_exhaustive]
 pub enum PartialNodeAddr {
     /// Native Lightning network connection: uses end-to-end encryption and
@@ -393,59 +392,6 @@ pub enum PartialNodeAddr {
     /// # URL Scheme
     /// lnpt://<node-id>@
     Text(secp256k1::PublicKey),
-}
-
-impl PartialEq for PartialNodeAddr {
-    fn eq(&self, other: &Self) -> bool {
-        use PartialNodeAddr::*;
-
-        fn api_eq(a: &ZmqType, b: &ZmqType) -> bool {
-            a == b
-                || (*a == ZmqType::Pull && *b == ZmqType::Push)
-                || (*b == ZmqType::Pull && *a == ZmqType::Push)
-        }
-
-        match (self, other) {
-            (Native(a1, a2, a3), Native(b1, b2, b3)) => {
-                a1 == b1 && a2 == b2 && a3 == b3
-            }
-            (Udp(a1, a2, a3), Udp(b1, b2, b3)) => {
-                a1 == b1 && a2 == b2 && a3 == b3
-            }
-            #[cfg(feature = "websockets")]
-            (Websocket(a1, a2, a3), Websocket(b1, b2, b3)) => {
-                a1 == b1 && a2 == b2 && a3 == b3
-            }
-            #[cfg(feature = "zmq")]
-            (ZmqIpc(a1, a2), ZmqIpc(b1, b2)) => a1 == b1 && api_eq(a2, b2),
-            #[cfg(feature = "zmq")]
-            (ZmqInproc(a1, a2), ZmqInproc(b1, b2)) => {
-                a1 == b1 && api_eq(a2, b2)
-            }
-            #[cfg(feature = "zmq")]
-            (ZmqTcpUnencrypted(a1, a2, a3), ZmqTcpUnencrypted(b1, b2, b3)) => {
-                api_eq(a1, b1) && a2 == b2 && a3 == b3
-            }
-            #[cfg(feature = "zmq")]
-            (
-                ZmqTcpEncrypted(a1, a2, a3, a4),
-                ZmqTcpEncrypted(b1, b2, b3, b4),
-            ) => a1 == b1 && api_eq(a2, b2) && a3 == b3 && a4 == b4,
-            (Http(a1, a2, a3), Http(b1, b2, b3)) => {
-                a1 == b1 && a2 == b2 && a3 == b3
-            }
-            (Text(pubkey1), Text(pubkey2)) => pubkey1 == pubkey2,
-            (_, _) => false,
-        }
-    }
-}
-
-impl Eq for PartialNodeAddr {}
-
-impl Hash for PartialNodeAddr {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(self.to_url_string().as_bytes());
-    }
 }
 
 impl PartialNodeAddr {
@@ -597,62 +543,6 @@ impl Display for PartialNodeAddr {
             #[cfg(not(feature = "url"))]
             {
                 f.write_str(&self.to_url_string())
-            }
-        }
-    }
-}
-
-impl Debug for PartialNodeAddr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
-        match self {
-            PartialNodeAddr::Native(pubkey, inet, port) => writeln!(
-                f,
-                "NodeLocator::Native({:?}, {:?}, {:?})",
-                pubkey, inet, port
-            ),
-            PartialNodeAddr::Udp(pubkey, ip, port) => writeln!(
-                f,
-                "NodeLocator::Udp({:?}, {:?}, {:?})",
-                pubkey, ip, port
-            ),
-            PartialNodeAddr::Posix(file) => {
-                writeln!(f, "NodeLocator::Posix({:?})", file)
-            }
-            PartialNodeAddr::ZmqIpc(file, api) => {
-                writeln!(f, "NodeLocator::Ipc({:?}, {:?})", file, api)
-            }
-            PartialNodeAddr::ZmqInproc(name, api) => writeln!(
-                f,
-                "NodeLocator::Inproc({:?}, <zmq::Context>, {:?})",
-                name, api
-            ),
-            #[cfg(feature = "zmq")]
-            PartialNodeAddr::ZmqTcpEncrypted(pubkey, api, ip, port) => {
-                writeln!(
-                    f,
-                    "NodeLocator::ZmqEncrypted({:?}, {:?}, {:?}, {:?})",
-                    pubkey, api, ip, port
-                )
-            }
-            #[cfg(feature = "zmq")]
-            PartialNodeAddr::ZmqTcpUnencrypted(api, ip, port) => writeln!(
-                f,
-                "NodeLocator::ZmqUnencrypted({:?}, {:?}, {:?})",
-                api, ip, port
-            ),
-            PartialNodeAddr::Http(pubkey, inet, port) => writeln!(
-                f,
-                "NodeLocator::Http({:?}, {:?}, {:?})",
-                pubkey, inet, port
-            ),
-            #[cfg(feature = "websockets")]
-            PartialNodeAddr::Websocket(pubkey, ip, port) => writeln!(
-                f,
-                "NodeLocator::Websocket({:?}, {:?}, {:?})",
-                pubkey, ip, port
-            ),
-            PartialNodeAddr::Text(pubkey) => {
-                writeln!(f, "NodeLocator::Text({:?})", pubkey)
             }
         }
     }
