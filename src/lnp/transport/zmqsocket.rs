@@ -141,7 +141,19 @@ impl FromStr for ZmqType {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

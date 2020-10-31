@@ -30,7 +30,10 @@ use url::{self, Url};
 use super::zmqsocket;
 use crate::lnp::{AddrError, UrlString};
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -90,7 +93,19 @@ impl FromStr for FramingProtocol {
 
 /// Represents a connection that requires the other peer to be present on the
 /// same machine as a connecting peer
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 pub enum LocalSocketAddr {
     /// Microservices connected using ZeroMQ protocol locally
     #[cfg(feature = "zmq")]
@@ -105,7 +120,10 @@ pub enum LocalSocketAddr {
 
 /// Represents a connection to a generic remote peer operating with LNP protocol
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(
+    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

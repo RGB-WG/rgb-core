@@ -991,6 +991,149 @@ mod compositional_types {
     }
 }
 
+mod internet_types {
+    use super::*;
+
+    use amplify::internet::{InetAddr, InetSocketAddr, InetSocketAddrExt};
+    use std::convert::TryFrom;
+    use std::net::{IpAddr, SocketAddr};
+
+    impl StrictEncode for IpAddr {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
+            Ok(e.write(&InetAddr::from(*self).to_uniform_encoding())?)
+        }
+    }
+
+    impl StrictEncode for SocketAddr {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
+            Ok(e.write(&InetSocketAddr::from(*self).to_uniform_encoding())?)
+        }
+    }
+
+    impl StrictEncode for InetAddr {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
+            Ok(e.write(&self.to_uniform_encoding())?)
+        }
+    }
+
+    impl StrictEncode for InetSocketAddr {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
+            Ok(e.write(&self.to_uniform_encoding())?)
+        }
+    }
+
+    impl StrictEncode for InetSocketAddrExt {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Self::Error> {
+            Ok(e.write(&self.to_uniform_encoding())?)
+        }
+    }
+
+    impl StrictDecode for IpAddr {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let mut buf = [0u8; InetAddr::UNIFORM_ADDR_LEN];
+            d.read_exact(&mut buf)?;
+            let res = InetAddr::from_uniform_encoding(&buf)
+                .map(IpAddr::try_from)
+                .ok_or(Error::DataIntegrityError(s!(
+                    "InetAddr uniform encoding failure"
+                )))?;
+            Ok(res.map_err(|_| {
+                Error::DataIntegrityError(s!(
+                    "Found Onion address when IP address was expected"
+                ))
+            })?)
+        }
+    }
+
+    impl StrictDecode for SocketAddr {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let mut buf = [0u8; InetSocketAddr::UNIFORM_ADDR_LEN];
+            d.read_exact(&mut buf)?;
+            let res = InetSocketAddr::from_uniform_encoding(&buf)
+                .map(SocketAddr::try_from)
+                .ok_or(Error::DataIntegrityError(s!(
+                    "InetSocketAddr uniform encoding failure"
+                )))?;
+            Ok(res.map_err(|_| {
+                Error::DataIntegrityError(s!(
+                    "Found Onion address when IP address was expected"
+                ))
+            })?)
+        }
+    }
+
+    impl StrictDecode for InetAddr {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
+            d.read_exact(&mut buf)?;
+            Ok(Self::from_uniform_encoding(&buf).ok_or(
+                Error::DataIntegrityError(s!(
+                    "InetAddr uniform encoding failure"
+                )),
+            )?)
+        }
+    }
+
+    impl StrictDecode for InetSocketAddr {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
+            d.read_exact(&mut buf)?;
+            Ok(Self::from_uniform_encoding(&buf).ok_or(
+                Error::DataIntegrityError(s!(
+                    "InetSocketAddr uniform encoding failure"
+                )),
+            )?)
+        }
+    }
+
+    impl StrictDecode for InetSocketAddrExt {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
+            d.read_exact(&mut buf)?;
+            Ok(Self::from_uniform_encoding(&buf).ok_or(
+                Error::DataIntegrityError(s!(
+                    "InetSocketAddrExt uniform encoding failure"
+                )),
+            )?)
+        }
+    }
+}
+
 #[cfg(test)]
 #[macro_use]
 pub mod test {
