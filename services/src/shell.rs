@@ -14,13 +14,13 @@
 //! Traits and structures simplifying creation of executable files, either for
 //! daemons or command-line tools
 
+use log::LevelFilter;
 use std::env;
 
 use crate::error::Error;
 
 /// Represents desired logging verbodity level
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Display)]
-#[display(Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -30,23 +30,28 @@ pub enum LogLevel {
     /// Report only errors to `stderr` and normat program output to stdin
     /// (if it is not directed to a file). Corresponds to zero verbosity
     /// flags.
+    #[display("error")]
     Error = 0,
 
     /// Report warning messages and errors, plus standard program output.
     /// Corresponds to a single `-v` verbosity flag.
+    #[display("warn")]
     Warn,
 
     /// Report genetic information messages, warnings and errors.
     /// Corresponds to a double `-vv` verbosity flag.
+    #[display("info")]
     Info,
 
     /// Report debugging information and all non-trace messages, including
     /// general information, warnings and errors.
     /// Corresponds to triple `-vvv` verbosity flag.
+    #[display("debug")]
     Debug,
 
     /// Print all possible messages including tracing information.
     /// Corresponds to quadruple `-vvvv` verbosity flag.
+    #[display("trace")]
     Trace,
 }
 
@@ -75,6 +80,7 @@ impl LogLevel {
 
     /// Applies log level to the system
     pub fn apply(&self) {
+        log::set_max_level(LevelFilter::Trace);
         if env::var("RUST_LOG").is_err() {
             env::set_var("RUST_LOG", self.to_string());
         }

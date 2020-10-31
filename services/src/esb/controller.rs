@@ -39,7 +39,7 @@ where
 
     fn on_ready(
         &mut self,
-        senders: &mut SenderList<B, Self::Address>,
+        _senders: &mut SenderList<B, Self::Address>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
