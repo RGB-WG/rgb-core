@@ -522,10 +522,7 @@ pub fn derive_strict_decode(input: TokenStream) -> TokenStream {
 fn strict_encode_inner(input: DeriveInput) -> Result<TokenStream2> {
     match input.data {
         Data::Struct(ref data) => strict_encode_inner_struct(&input, data),
-        Data::Enum(ref data) => Err(Error::new_spanned(
-            &input,
-            "Deriving StrictEncode is not supported in enums yet",
-        )),
+        Data::Enum(ref data) => strict_encode_inner_enum(&input, data),
         //strict_encode_inner_enum(&input, &data),
         Data::Union(_) => Err(Error::new_spanned(
             &input,
@@ -537,10 +534,7 @@ fn strict_encode_inner(input: DeriveInput) -> Result<TokenStream2> {
 fn strict_decode_inner(input: DeriveInput) -> Result<TokenStream2> {
     match input.data {
         Data::Struct(ref data) => strict_decode_inner_struct(&input, data),
-        Data::Enum(ref data) => Err(Error::new_spanned(
-            &input,
-            "Deriving StrictDecode is not supported in enums yet",
-        )),
+        Data::Enum(ref data) => strict_decode_inner_enum(&input, data),
         //strict_encode_inner_enum(&input, &data),
         Data::Union(_) => Err(Error::new_spanned(
             &input,
@@ -557,7 +551,7 @@ fn strict_encode_inner_struct(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input, data)?;
+    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let recurse = match data.fields {
@@ -620,7 +614,7 @@ fn strict_decode_inner_struct(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input, data)?;
+    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let inner = match data.fields {
@@ -678,10 +672,177 @@ fn strict_decode_inner_struct(
     })
 }
 
-fn get_strict_error(
+fn strict_encode_inner_enum(
     input: &DeriveInput,
-    data: &DataStruct,
+    data: &DataEnum,
 ) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
+    let ident_name = &input.ident;
+
+    let error_type_def = get_strict_error(input)?;
+    let import = get_lnpbp_crate(input)?;
+
+    let mut inner: Vec<TokenStream2> = none!();
+    for (idx, variant) in data.variants.iter().enumerate() {
+        let code = match variant.fields {
+            Fields::Named(ref fields) => {
+                let ident = &variant.ident;
+                let f = fields
+                    .named
+                    .iter()
+                    .map(|f| {
+                        f.ident.as_ref().expect("named fields are always named")
+                    })
+                    .collect::<Vec<_>>();
+                quote_spanned! { fields.span() =>
+                    Self::#ident { #( #f ),* } => {
+                        len += #idx.strict_encode(&mut e)?;
+                        #( len += #f.strict_encode(&mut e)?; )*
+                    }
+                }
+            }
+            Fields::Unnamed(ref fields) => {
+                let ident = &variant.ident;
+                let f = fields
+                    .unnamed
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| {
+                        Ident::new(&format!("_{}", i), variant.span())
+                    })
+                    .collect::<Vec<_>>();
+                quote_spanned! { fields.span() =>
+                    Self::#ident ( #( #f ),* ) => {
+                        len += #idx.strict_encode(&mut e)?;
+                        #( len += #f.strict_encode(&mut e)?; )*
+                    }
+                }
+            }
+            Fields::Unit => {
+                let ident = &variant.ident;
+                quote_spanned! { variant.span() =>
+                    Self::#ident => {
+                        len += #idx.strict_encode(&mut e)?;
+                    }
+                }
+            }
+        };
+        inner.push(code);
+    }
+
+    let inner = match inner.len() {
+        0 => quote! { Ok(0) },
+        _ => quote! {
+            let mut len = 0;
+            match self {
+                #( #inner )*
+            }
+            Ok(len)
+        },
+    };
+
+    Ok(quote! {
+        #[allow(unused_qualifications)]
+        impl #impl_generics #import::strict_encoding::StrictEncode for #ident_name #ty_generics #where_clause {
+            type Error = #error_type_def;
+
+            #[inline]
+            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+                use #import::strict_encoding::StrictEncode;
+
+                #inner
+            }
+        }
+    })
+}
+
+fn strict_decode_inner_enum(
+    input: &DeriveInput,
+    data: &DataEnum,
+) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
+    let ident_name = &input.ident;
+
+    let error_type_def = get_strict_error(input)?;
+    let import = get_lnpbp_crate(input)?;
+
+    let mut inner: Vec<TokenStream2> = none!();
+    for (idx, variant) in data.variants.iter().enumerate() {
+        let idx = idx as u8;
+        let code = match variant.fields {
+            Fields::Named(ref fields) => {
+                let ident = &variant.ident;
+                let f = fields
+                    .named
+                    .iter()
+                    .map(|f| {
+                        f.ident.as_ref().expect("named fields are always named")
+                    })
+                    .collect::<Vec<_>>();
+                quote_spanned! { fields.span() =>
+                    #idx => {
+                        Self::#ident {
+                            #( #f: StrictDecode::strict_decode(&mut d)?, )*
+                        }
+                    }
+                }
+            }
+            Fields::Unnamed(ref fields) => {
+                let ident = &variant.ident;
+                let f = fields
+                    .unnamed
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| Index::from(i))
+                    .collect::<Vec<_>>();
+                quote_spanned! { fields.span() =>
+                    #idx => {
+                        Self::#ident {
+                            #( #f: StrictDecode::strict_decode(&mut d)?, )*
+                        }
+                    }
+                }
+            }
+            Fields::Unit => {
+                let ident = &variant.ident;
+                quote_spanned! { variant.span() =>
+                    #idx => {
+                        Self::#ident
+                    }
+                }
+            }
+        };
+        inner.push(code);
+    }
+
+    let inner = match inner.len() {
+        0 => quote! { Ok(0) },
+        _ => quote! {
+            match u8::strict_decode(&mut d)? {
+                #( #inner )*
+                other => Err(#import::strict_encoding::Error::EnumValueNotKnown(stringify!(#ident_name).to_owned(), other))?
+            }
+        },
+    };
+
+    Ok(quote! {
+        #[allow(unused_qualifications)]
+        impl #impl_generics #import::strict_encoding::StrictDecode for #ident_name #ty_generics #where_clause {
+            type Error = #error_type_def;
+
+            #[inline]
+            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, Self::Error> {
+                use #import::strict_encoding::StrictDecode;
+
+                Ok(#inner)
+            }
+        }
+    })
+}
+
+fn get_strict_error(input: &DeriveInput) -> Result<TokenStream2> {
     let import = get_lnpbp_crate(input)?;
 
     let name = "strict_error";
