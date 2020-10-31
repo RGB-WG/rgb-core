@@ -37,6 +37,13 @@ where
 
     fn identity(&self) -> Self::Address;
 
+    fn on_ready(
+        &mut self,
+        senders: &mut SenderList<B, Self::Address>,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
     fn handle(
         &mut self,
         senders: &mut SenderList<B, Self::Address>,
@@ -241,6 +248,7 @@ where
     type ErrorType = Error;
 
     fn try_run_loop(mut self) -> Result<(), Self::ErrorType> {
+        self.handler.on_ready(&mut self.senders)?;
         loop {
             match self.run() {
                 Ok(_) => debug!("ESB request processing complete"),

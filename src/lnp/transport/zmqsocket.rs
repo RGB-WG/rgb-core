@@ -186,7 +186,7 @@ impl UrlString for ZmqSocketAddr {
 
 impl ZmqSocketAddr {
     pub fn zmq_socket_string(&self) -> String {
-        format!("{:#}", self)
+        format!("{:}", self)
     }
 }
 
@@ -344,12 +344,12 @@ impl Connection {
         let output = match (api_type, local) {
             (ZmqType::Pull, Some(local)) => {
                 let socket = ZMQ_CONTEXT.socket(zmq::SocketType::PUSH)?;
-                socket.connect(&local.to_string())?;
+                socket.connect(&local.zmq_socket_string())?;
                 Some(socket)
             }
             (ZmqType::Push, Some(local)) => {
                 let socket = ZMQ_CONTEXT.socket(zmq::SocketType::PULL)?;
-                socket.bind(&local.to_string())?;
+                socket.bind(&local.zmq_socket_string())?;
                 Some(socket)
             }
             (ZmqType::Pull, None) | (ZmqType::Push, None) => {
