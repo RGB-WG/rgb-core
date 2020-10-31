@@ -685,6 +685,7 @@ fn strict_encode_inner_enum(
 
     let mut inner: Vec<TokenStream2> = none!();
     for (idx, variant) in data.variants.iter().enumerate() {
+        let idx = idx as u8;
         let code = match variant.fields {
             Fields::Named(ref fields) => {
                 let ident = &variant.ident;
