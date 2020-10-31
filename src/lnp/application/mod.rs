@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::Wrapper;
+pub extern crate lightning_invoice as invoice;
 
 pub mod channel;
 mod features;
@@ -26,10 +26,34 @@ pub use peer_connection::{
 };
 pub use rpc_connection::RpcConnection;
 
+use amplify::Wrapper;
+use std::fmt::{self, Formatter, LowerHex, UpperHex};
+use std::io;
+use std::str::FromStr;
+
 use bitcoin::hashes::hex::{Error, FromHex, ToHex};
 use bitcoin::hashes::{sha256, Hmac};
-use std::fmt::{self, Formatter, LowerHex, UpperHex};
-use std::str::FromStr;
+use invoice::Invoice;
+
+use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+
+impl StrictEncode for Invoice {
+    type Error = strict_encoding::Error;
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        self.to_string().strict_encode(e)
+    }
+}
+
+impl StrictDecode for Invoice {
+    type Error = strict_encoding::Error;
+    #[inline]
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        Self::from_str(&String::strict_decode(d)?).map_err(|e| {
+            strict_encoding::Error::DataIntegrityError(e.to_string())
+        })
+    }
+}
 
 // TODO: (new) Move type to rust-amplify
 /// Wrapper type for all slice-based 256-bit types implementing many important
