@@ -14,6 +14,12 @@
 //! Module that systematizes all Lightning network-related APIs from the
 //! `lightning` library into layered & modular design
 
+pub extern crate lightning_invoice as invoice;
+
+pub use invoice::{
+    Invoice, InvoiceBuilder, InvoiceDescription, SignedRawInvoice,
+};
+
 pub mod application;
 pub mod presentation;
 pub mod session;

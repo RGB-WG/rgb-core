@@ -16,7 +16,7 @@ use amplify::Wrapper;
 pub mod channel;
 mod features;
 pub mod message;
-mod peer_connection;
+pub mod peer_connection;
 pub mod rpc_connection;
 
 pub use features::{FeatureContext, FeatureFlag, Features};

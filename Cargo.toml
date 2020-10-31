@@ -44,6 +44,7 @@ bitcoin = { version = "~0.25.1", features = ["rand"] }
 bitcoin_hashes = "~0.9.3" # we need macro from here
 miniscript = "~3.0.0"
 bech32 = "~0.7.2"
+lightning-invoice = { version = "~0.3.0", optional = true }
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
 #   a part of Tor address)
 ed25519-dalek = { version = "~1.0.0", optional = true }
@@ -108,7 +109,7 @@ all = [
        "tor", "url", "websockets", "vendored_openssl"]
 # High-level library components
 # -----------------------------
-lnp = ["async", "zmq"]
+lnp = ["async", "zmq", "lightning-invoice"]
 rgb = ["bulletproofs", "ed25519-dalek", "deflate", "inflate"]
 # Exposing core rust componens
 # ----------------------------
