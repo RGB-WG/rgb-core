@@ -29,7 +29,10 @@ use crate::lnp::{AddrError, UrlString};
 /// Node address which can be represent by either some local address without
 /// encryption information (i.e. node public key) or remote node address
 /// containing node public key
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(
+    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 #[display(inner)]
 pub enum NodeAddr {
     /// Local node using plain transport protocol [`LocalSocketAddr`]
@@ -65,6 +68,22 @@ impl UrlString for NodeAddr {
     }
 }
 
+#[cfg(feature = "url")]
+impl From<NodeAddr> for Url {
+    fn from(addr: NodeAddr) -> Self {
+        Url::from(&addr)
+    }
+}
+
+#[cfg(feature = "url")]
+impl From<&NodeAddr> for Url {
+    fn from(addr: &NodeAddr) -> Self {
+        Url::parse(&addr.to_url_string())
+            .expect("Parsing URL string must not fail")
+    }
+}
+
+#[cfg(feature = "url")]
 impl TryFrom<Url> for NodeAddr {
     type Error = AddrError;
 
@@ -109,7 +128,8 @@ impl TryFrom<NodeAddr> for ZmqSocketAddr {
 /// `<node_id>@<node_inet_addr>[:<port>]`, where <node_inet_addr> may be
 /// IPv4, IPv6, Onion v2 or v3 address
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -161,6 +181,22 @@ impl UrlString for RemoteNodeAddr {
     }
 }
 
+#[cfg(feature = "url")]
+impl From<RemoteNodeAddr> for Url {
+    fn from(addr: RemoteNodeAddr) -> Self {
+        Url::from(&addr)
+    }
+}
+
+#[cfg(feature = "url")]
+impl From<&RemoteNodeAddr> for Url {
+    fn from(addr: &RemoteNodeAddr) -> Self {
+        Url::parse(&addr.to_url_string())
+            .expect("Parsing URL string must not fail")
+    }
+}
+
+#[cfg(feature = "url")]
 impl TryFrom<Url> for RemoteNodeAddr {
     type Error = AddrError;
 
@@ -651,6 +687,21 @@ impl UrlString for PartialNodeAddr {
 }
 
 #[cfg(feature = "url")]
+impl From<PartialNodeAddr> for Url {
+    fn from(addr: PartialNodeAddr) -> Self {
+        Url::from(&addr)
+    }
+}
+
+#[cfg(feature = "url")]
+impl From<&PartialNodeAddr> for Url {
+    fn from(addr: &PartialNodeAddr) -> Self {
+        Url::parse(&addr.to_url_string())
+            .expect("Parsing URL string must not fail")
+    }
+}
+
+#[cfg(feature = "url")]
 impl TryFrom<Url> for PartialNodeAddr {
     type Error = AddrError;
 
@@ -747,14 +798,6 @@ impl TryFrom<Url> for PartialNodeAddr {
             }
             unknown => Err(AddrError::UnknownUrlScheme(unknown.to_string())),
         }
-    }
-}
-
-#[cfg(feature = "url")]
-impl From<&PartialNodeAddr> for Url {
-    fn from(locator: &PartialNodeAddr) -> Self {
-        Url::parse(&locator.to_url_string())
-            .expect("Internal URL construction error")
     }
 }
 

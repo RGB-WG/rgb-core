@@ -261,6 +261,21 @@ impl FromStr for ZmqSocketAddr {
 }
 
 #[cfg(feature = "url")]
+impl From<ZmqSocketAddr> for Url {
+    fn from(addr: ZmqSocketAddr) -> Self {
+        Url::from(&addr)
+    }
+}
+
+#[cfg(feature = "url")]
+impl From<&ZmqSocketAddr> for Url {
+    fn from(addr: &ZmqSocketAddr) -> Self {
+        Url::parse(&addr.to_url_string())
+            .expect("Parsing URL string must not fail")
+    }
+}
+
+#[cfg(feature = "url")]
 impl TryFrom<Url> for ZmqSocketAddr {
     type Error = AddrError;
 
