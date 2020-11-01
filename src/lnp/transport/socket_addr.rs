@@ -18,10 +18,10 @@
 //! structures like [`NodeLocator`](lnp::NodeLocator) and
 //! [`NodeAddress`](lnp::NodeAddr)).
 
-use amplify::internet::{InetAddr, InetSocketAddr};
+use amplify::internet::{InetAddr, InetSocketAddr, NoOnionSupportError};
 #[cfg(feature = "url")]
 use std::convert::{TryFrom, TryInto};
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 #[cfg(feature = "url")]
 use url::{self, Url};
@@ -158,6 +158,51 @@ pub enum RemoteSocketAddr {
     /// satellite networks
     #[display("{_0}", alt = "lnpm://{_0}")]
     Smtp(InetSocketAddr),
+}
+impl RemoteSocketAddr {
+    pub fn with_ip_addr(proto: FramingProtocol, ip: IpAddr, port: u16) -> Self {
+        let addr = SocketAddr::new(ip, port);
+        Self::with_socket_addr(proto, addr)
+    }
+
+    pub fn with_socket_addr(proto: FramingProtocol, addr: SocketAddr) -> Self {
+        match proto {
+            FramingProtocol::FramedRaw => Self::Ftcp(addr.into()),
+            #[cfg(feature = "zmq")]
+            FramingProtocol::Zmtp => Self::Zmq(addr.into()),
+            FramingProtocol::Http => Self::Http(addr.into()),
+            #[cfg(feature = "websocket")]
+            FramingProtocol::Websocket => Self::Websocket(addr.into()),
+            FramingProtocol::Smtp => Self::Smtp(addr.into()),
+        }
+    }
+
+    pub fn with_inet_addr(
+        proto: FramingProtocol,
+        addr: InetSocketAddr,
+    ) -> Result<Self, NoOnionSupportError> {
+        Ok(match proto {
+            FramingProtocol::FramedRaw => Self::Ftcp(addr),
+            #[cfg(feature = "zmq")]
+            FramingProtocol::Zmtp => Self::Zmq(addr.try_into()?),
+            FramingProtocol::Http => Self::Http(addr),
+            #[cfg(feature = "websocket")]
+            FramingProtocol::Websocket => Self::Websocket(addr),
+            FramingProtocol::Smtp => Self::Smtp(addr),
+        })
+    }
+
+    pub fn framing_protocol(&self) -> FramingProtocol {
+        match self {
+            RemoteSocketAddr::Ftcp(_) => FramingProtocol::FramedRaw,
+            #[cfg(feature = "zmq")]
+            RemoteSocketAddr::Zmq(_) => FramingProtocol::Zmtp,
+            RemoteSocketAddr::Http(_) => FramingProtocol::Http,
+            #[cfg(feature = "websocket")]
+            RemoteSocketAddr::Websocket(_) => FramingProtocol::Websocket,
+            RemoteSocketAddr::Smtp(_) => FramingProtocol::Smtp,
+        }
+    }
 }
 
 #[cfg(feature = "url")]
