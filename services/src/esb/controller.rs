@@ -235,6 +235,29 @@ where
         self.senders
             .send_to(bus_id, self.handler.identity(), dest, request)
     }
+
+    #[cfg(not(feature = "node"))]
+    pub fn recv_poll(
+        &mut self,
+    ) -> Result<Vec<(B, H::Address, H::Request)>, Error> {
+        let mut vec = vec![];
+        for bus_id in self.poll()? {
+            let sender = self
+                .senders
+                .0
+                .get_mut(&bus_id)
+                .expect("must exist, just indexed");
+
+            let routed_frame = sender.session.recv_routed_message()?;
+            let request =
+                (&*self.unmarshaller.unmarshall(&routed_frame.msg)?).clone();
+            let source = H::Address::from(routed_frame.src);
+
+            vec.push((bus_id, source, request));
+        }
+
+        Ok(vec)
+    }
 }
 
 #[cfg(feature = "node")]
@@ -268,44 +291,9 @@ where
     H: Handler<B, Request = R>,
     Error: From<H::Error>,
 {
+    #[cfg(feature = "node")]
     fn run(&mut self) -> Result<(), Error> {
-        let mut index = vec![];
-        let mut items = self
-            .senders
-            .0
-            .iter()
-            .map(|(service, sender)| {
-                index.push(service);
-                sender
-                    .session
-                    .as_socket()
-                    .as_poll_item(zmq::POLLIN | zmq::POLLERR)
-            })
-            .collect::<Vec<_>>();
-
-        trace!(
-            "Awaiting for ESB request from {} service buses...",
-            items.len()
-        );
-        let _ = zmq::poll(&mut items, -1)?;
-
-        let service_buses = items
-            .iter()
-            .enumerate()
-            .filter_map(|(i, item)| {
-                if item.get_revents().is_empty() {
-                    None
-                } else {
-                    Some(*index[i])
-                }
-            })
-            .collect::<Vec<_>>();
-        trace!(
-            "Received ESB request from {} service busses...",
-            service_buses.len()
-        );
-
-        for bus_id in service_buses {
+        for bus_id in self.poll()? {
             let sender = self
                 .senders
                 .0
@@ -343,5 +331,46 @@ where
         }
 
         Ok(())
+    }
+
+    fn poll(&mut self) -> Result<Vec<B>, Error> {
+        let mut index = vec![];
+        let mut items = self
+            .senders
+            .0
+            .iter()
+            .map(|(service, sender)| {
+                index.push(service);
+                sender
+                    .session
+                    .as_socket()
+                    .as_poll_item(zmq::POLLIN | zmq::POLLERR)
+            })
+            .collect::<Vec<_>>();
+
+        trace!(
+            "Awaiting for ESB request from {} service buses...",
+            items.len()
+        );
+        let _ = zmq::poll(&mut items, -1)?;
+
+        let service_buses = items
+            .iter()
+            .enumerate()
+            .filter_map(|(i, item)| {
+                if item.get_revents().is_empty() {
+                    None
+                } else {
+                    Some(*index[i])
+                }
+            })
+            .collect::<Vec<_>>();
+
+        trace!(
+            "Received ESB request from {} service busses...",
+            service_buses.len()
+        );
+
+        Ok(service_buses)
     }
 }

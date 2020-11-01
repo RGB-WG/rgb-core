@@ -16,8 +16,6 @@ use std::hash::Hash;
 #[cfg(any(feature = "node", feature = "shell"))]
 use std::io;
 
-#[cfg(any(feature = "client", feature = "node"))]
-use crate::rpc;
 #[cfg(feature = "shell")]
 use settings::ConfigError;
 #[cfg(feature = "tokio")]
@@ -25,6 +23,9 @@ use tokio::task::JoinError;
 
 #[cfg(any(feature = "node", feature = "shell"))]
 use lnpbp::lnp;
+
+#[cfg(feature = "node")]
+use crate::rpc;
 
 /// Marker trait with all requirements common to LNP/BP service errors
 pub trait Error: std::error::Error + Sized + Clone {}
@@ -146,7 +147,6 @@ where
 
     /// RPC error during communications with the remote peer:
     /// {_0}
-    #[cfg(any(feature = "client", feature = "node"))]
     #[from]
     Rpc(rpc::Error),
 
