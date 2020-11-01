@@ -17,8 +17,8 @@ use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Api;
 use lnpbp::lnp::transport::zmqsocket;
 use lnpbp::lnp::{
-    session, transport, CreateUnmarshaller, NoEncryption, Session, Unmarshall,
-    Unmarshaller,
+    session, transport, CreateUnmarshaller, PlainTranscoder, Session,
+    Unmarshall, Unmarshaller,
 };
 
 use super::{EndpointId, Error, Failure};
@@ -57,7 +57,7 @@ where
 {
     sessions: HashMap<
         E,
-        session::Raw<NoEncryption, transport::zmqsocket::Connection>,
+        session::Raw<PlainTranscoder, transport::zmqsocket::Connection>,
     >,
     unmarshaller: Unmarshaller<A::Request>,
     handler: H,

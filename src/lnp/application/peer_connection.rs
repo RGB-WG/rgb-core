@@ -19,7 +19,8 @@ use amplify::Bipolar;
 use crate::lnp::application::Messages;
 use crate::lnp::presentation::{Encode, Error, Unmarshall};
 use crate::lnp::session::{
-    self, Accept, Connect, LocalNode, NoEncryption, Session, Split, ToNodeAddr,
+    self, Accept, Connect, LocalNode, PlainTranscoder, Session, Split,
+    ToNodeAddr,
 };
 use crate::lnp::transport::{ftcp, zmqsocket};
 use crate::lnp::{LIGHTNING_P2P_DEFAULT_PORT, LNPWP_UNMARSHALLER};
@@ -117,19 +118,19 @@ impl Bipolar for PeerConnection {
     fn split(self) -> (Self::Left, Self::Right) {
         let session = self.session.into_any();
         let (input, output) = if let Some(_) = session
-            .downcast_ref::<session::Raw<NoEncryption, ftcp::Connection>>()
+            .downcast_ref::<session::Raw<PlainTranscoder, ftcp::Connection>>()
         {
             let session = session
-                .downcast::<session::Raw<NoEncryption, ftcp::Connection>>()
+                .downcast::<session::Raw<PlainTranscoder, ftcp::Connection>>()
                 .expect(
                     "Must not fail; we just ensured that with downcast_ref",
                 );
             (*session).split()
         } else if let Some(_) = session
-            .downcast_ref::<session::Raw<NoEncryption, zmqsocket::Connection>>()
+            .downcast_ref::<session::Raw<PlainTranscoder, zmqsocket::Connection>>()
         {
             let session = session
-                .downcast::<session::Raw<NoEncryption, ftcp::Connection>>()
+                .downcast::<session::Raw<PlainTranscoder, ftcp::Connection>>()
                 .expect(
                     "Must not fail; we just ensured that with downcast_ref",
                 );

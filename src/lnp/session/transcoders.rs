@@ -126,9 +126,9 @@ impl Bipolar for Transcoder {
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display(Debug)]
-pub struct NoEncryption;
+pub struct PlainTranscoder;
 
-impl Encrypt for NoEncryption {
+impl Encrypt for PlainTranscoder {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
         let mut data = vec![];
         let buffer = buffer.borrow().to_vec();
@@ -142,7 +142,7 @@ impl Encrypt for NoEncryption {
     }
 }
 
-impl Decrypt for NoEncryption {
+impl Decrypt for PlainTranscoder {
     type Error = Error;
     fn decrypt(
         &mut self,
@@ -167,17 +167,17 @@ impl Decrypt for NoEncryption {
     }
 }
 
-impl Transcode for NoEncryption {
+impl Transcode for PlainTranscoder {
     type Encryptor = Self;
     type Decryptor = Self;
 }
 
-impl Bipolar for NoEncryption {
+impl Bipolar for PlainTranscoder {
     type Left = <Self as Transcode>::Encryptor;
     type Right = <Self as Transcode>::Decryptor;
 
     fn join(encryptor: Self::Left, _decryptor: Self::Right) -> Self {
-        encryptor as NoEncryption
+        encryptor as PlainTranscoder
     }
 
     fn split(self) -> (Self::Left, Self::Right) {
@@ -191,7 +191,7 @@ mod test {
 
     #[test]
     fn test_no_encryption() {
-        let transcoder = NoEncryption;
+        let transcoder = PlainTranscoder;
         let (mut encoder, mut decoder) = transcoder.split();
         let frame = encoder.encrypt([]);
         assert_eq!(frame, vec![0u8; FRAME_PREFIX_SIZE + FRAME_SUFFIX_SIZE]);

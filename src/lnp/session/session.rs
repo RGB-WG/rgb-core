@@ -15,7 +15,7 @@ use amplify::{internet::InetSocketAddr, Bipolar};
 use core::any::Any;
 
 use super::{Decrypt, Encrypt, Transcode};
-use crate::lnp::session::NoEncryption;
+use crate::lnp::session::PlainTranscoder;
 use crate::lnp::transport::{
     ftcp, zmqsocket, Duplex, Error, RecvFrame, RoutedFrame, SendFrame,
 };
@@ -172,13 +172,13 @@ where
     }
 }
 
-impl Raw<NoEncryption, ftcp::Connection> {
+impl Raw<PlainTranscoder, ftcp::Connection> {
     pub fn with_ftcp_unencrypted(
         stream: std::net::TcpStream,
         socket_addr: InetSocketAddr,
     ) -> Result<Self, Error> {
         Ok(Self {
-            transcoder: NoEncryption,
+            transcoder: PlainTranscoder,
             connection: ftcp::Connection::with(stream, socket_addr),
         })
     }
@@ -187,7 +187,7 @@ impl Raw<NoEncryption, ftcp::Connection> {
         socket_addr: InetSocketAddr,
     ) -> Result<Self, Error> {
         Ok(Self {
-            transcoder: NoEncryption,
+            transcoder: PlainTranscoder,
             connection: ftcp::Connection::connect(socket_addr)?,
         })
     }
@@ -196,13 +196,13 @@ impl Raw<NoEncryption, ftcp::Connection> {
         socket_addr: InetSocketAddr,
     ) -> Result<Self, Error> {
         Ok(Self {
-            transcoder: NoEncryption,
+            transcoder: PlainTranscoder,
             connection: ftcp::Connection::accept(socket_addr)?,
         })
     }
 }
 
-impl Raw<NoEncryption, zmqsocket::Connection> {
+impl Raw<PlainTranscoder, zmqsocket::Connection> {
     pub fn with_zmq_unencrypted(
         zmq_type: zmqsocket::ZmqType,
         remote: &zmqsocket::ZmqSocketAddr,
@@ -210,7 +210,7 @@ impl Raw<NoEncryption, zmqsocket::Connection> {
         identity: Option<&[u8]>,
     ) -> Result<Self, Error> {
         Ok(Self {
-            transcoder: NoEncryption,
+            transcoder: PlainTranscoder,
             connection: zmqsocket::Connection::with(
                 zmq_type, remote, local, identity,
             )?,
@@ -222,7 +222,7 @@ impl Raw<NoEncryption, zmqsocket::Connection> {
         socket: zmq::Socket,
     ) -> Self {
         Self {
-            transcoder: NoEncryption,
+            transcoder: PlainTranscoder,
             connection: zmqsocket::Connection::from_zmq_socket(
                 zmq_type, socket,
             ),
