@@ -1,3 +1,16 @@
+// LNP/BP Core Library implementing LNPBP specifications & standards
+// Written in 2020 by
+//     Rajarshi Maitra
+//
+// To the extent possible under law, the author(s) have dedicated all
+// copyright and related and neighboring rights to this software to
+// the public domain worldwide. This software is distributed without
+// any warranty.
+//
+// You should have received a copy of the MIT License
+// along with this software.
+// If not, see <https://opensource.org/licenses/MIT>.
+
 use bitcoin::secp256k1;
 
 use bitcoin::secp256k1::{PublicKey, SecretKey};
@@ -8,7 +21,7 @@ use super::act::{
     Act, ActBuilder, ACT_ONE_LENGTH, ACT_THREE_LENGTH, ACT_TWO_LENGTH,
     EMPTY_ACT_ONE, EMPTY_ACT_THREE, EMPTY_ACT_TWO,
 };
-use super::conduit::{Conduit, SymmetricKey};
+use super::conduit::{NoiseTranscoder, SymmetricKey};
 use super::{chacha, hkdf};
 
 // Alias type to help differentiate between temporary key and chaining key when
@@ -41,7 +54,7 @@ pub enum HandshakeState {
     ResponderAwaitingActOne(ResponderAwaitingActOneState),
     InitiatorAwaitingActTwo(InitiatorAwaitingActTwoState),
     ResponderAwaitingActThree(ResponderAwaitingActThreeState),
-    Complete(Option<(Conduit, PublicKey)>),
+    Complete(Option<(NoiseTranscoder, PublicKey)>),
 }
 
 // Enum dispatch for state machine. Single public interface can statically
@@ -405,7 +418,8 @@ impl InitiatorAwaitingActTwoState {
 
         // 7. rn = 0, sn = 0
         // - done by Conduit
-        let conduit = Conduit::new(sending_key, receiving_key, chaining_key);
+        let conduit =
+            NoiseTranscoder::new(sending_key, receiving_key, chaining_key);
 
         // 8. Send m = 0 || c || t
         act_three[0] = 0;
@@ -505,11 +519,11 @@ impl ResponderAwaitingActThreeState {
         // 10. rn = 0, sn = 0
         // - done by Conduit
         let mut conduit =
-            Conduit::new(sending_key, receiving_key, chaining_key);
+            NoiseTranscoder::new(sending_key, receiving_key, chaining_key);
 
         // Any remaining data in the read buffer would be encrypted, so transfer
         // ownership to the Conduit for future use.
-        conduit.read(&input[bytes_read..]);
+        conduit.read_buf(&input[bytes_read..]);
 
         Ok((
             None,

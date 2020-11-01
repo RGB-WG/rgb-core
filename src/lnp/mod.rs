@@ -31,16 +31,16 @@ pub use presentation::{
     UnmarshallFn, Unmarshaller,
 };
 pub use session::{
-    Accept, Connect, Decrypt, Encrypt, LocalNode, NoEncryption, NodeAddr,
-    PartialNodeAddr, RemoteNodeAddr, Session, Split, ToNodeAddr,
-    ToRemoteNodeAddr, Transcode,
+    Accept, Connect, Decrypt, Encrypt, LocalNode, NodeAddr, NoiseDecryptor,
+    NoiseEncryptor, NoiseTranscoder, PartialNodeAddr, PlainTranscoder,
+    RemoteNodeAddr, Session, Split, ToNodeAddr, ToRemoteNodeAddr, Transcode,
 };
 pub use transport::{
     ftcp, websocket, zmqsocket, Duplex, FramingProtocol, LocalSocketAddr,
     RemoteSocketAddr, RoutedFrame,
 };
 
-pub const LNP_MSG_MAX_LEN: usize = core::u64::MAX as usize;
+pub const LNP_MSG_MAX_LEN: usize = core::u16::MAX as usize;
 
 pub const LIGHTNING_P2P_DEFAULT_PORT: u16 = 9735;
 

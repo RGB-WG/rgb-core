@@ -1,17 +1,25 @@
-use super::{chacha, hkdf};
-use crate::lnp::session::transcoders::{Decrypt, Encrypt, Transcode};
-use amplify::Bipolar;
+// LNP/BP Core Library implementing LNPBP specifications & standards
+// Written in 2020 by
+//     Rajarshi Maitra
+//
+// To the extent possible under law, the author(s) have dedicated all
+// copyright and related and neighboring rights to this software to
+// the public domain worldwide. This software is distributed without
+// any warranty.
+//
+// You should have received a copy of the MIT License
+// along with this software.
+// If not, see <https://opensource.org/licenses/MIT>.
 
-use super::handshake::HandshakeError;
+use amplify::Bipolar;
 use chacha20poly1305::aead::Error;
 use std::borrow::Borrow;
 
-pub type SymmetricKey = [u8; 32];
+use super::handshake::HandshakeError;
+use super::{chacha, hkdf};
+use crate::lnp::session::transcoders::{Decrypt, Encrypt, Transcode};
 
-/// Maximum Lightning message data length according to
-/// [BOLT-8](https://github.com/lightningnetwork/lightning-rfc/blob/v1.0/08-transport.md#lightning-message-specification)
-/// and [BOLT-1](https://github.com/lightningnetwork/lightning-rfc/blob/master/01-messaging.md#lightning-message-format):
-const LN_MAX_MSG_LEN: usize = ::std::u16::MAX as usize; // Must be equal to 65535
+pub type SymmetricKey = [u8; 32];
 
 const MESSAGE_LENGTH_HEADER_SIZE: usize = 2;
 const TAGGED_MESSAGE_LENGTH_HEADER_SIZE: usize =
@@ -19,18 +27,14 @@ const TAGGED_MESSAGE_LENGTH_HEADER_SIZE: usize =
 
 const KEY_ROTATION_INDEX: u32 = 1000;
 
-pub struct Encryptor {
+pub struct NoiseEncryptor {
     sending_key: SymmetricKey,
     sending_chaining_key: SymmetricKey,
     sending_nonce: u32,
 }
 
-impl Encryptor {
-    pub fn encrypt(&mut self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
-        if buffer.len() > LN_MAX_MSG_LEN {
-            panic!("Attempted to encrypt message longer than 65535 bytes!");
-        }
-
+impl NoiseEncryptor {
+    pub fn encrypt_buf(&mut self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
         let length = buffer.len() as u16;
         let length_bytes = length.to_be_bytes();
 
@@ -63,7 +67,7 @@ impl Encryptor {
     }
 
     fn increment_nonce(&mut self) {
-        Conduit::increment_nonce(
+        NoiseTranscoder::increment_nonce(
             &mut self.sending_nonce,
             &mut self.sending_chaining_key,
             &mut self.sending_key,
@@ -71,16 +75,16 @@ impl Encryptor {
     }
 }
 
-impl Encrypt for Encryptor {
+impl Encrypt for NoiseEncryptor {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
-        match self.encrypt(buffer.borrow()) {
+        match self.encrypt_buf(buffer.borrow()) {
             Ok(values) => return values,
             Err(_) => return Vec::new(),
         }
     }
 }
 
-pub struct Decryptor {
+pub struct NoiseDecryptor {
     receiving_key: SymmetricKey,
     receiving_chaining_key: SymmetricKey,
     receiving_nonce: u32,
@@ -91,8 +95,8 @@ pub struct Decryptor {
                      * iteration after failure */
 }
 
-impl Decryptor {
-    pub fn read(&mut self, data: &[u8]) {
+impl NoiseDecryptor {
+    pub fn read_buf(&mut self, data: &[u8]) {
         let read_buffer = self.read_buffer.get_or_insert(Vec::new());
         read_buffer.extend_from_slice(data);
     }
@@ -116,19 +120,13 @@ impl Decryptor {
             read_buffer.extend_from_slice(data);
         }
 
-        if read_buffer.len() > LN_MAX_MSG_LEN + 16 {
-            panic!(
-                "Attempted to decrypt message longer than 65535 + 16 bytes!"
-            );
-        }
-
-        let (current_message, offset) = self.decrypt(&read_buffer[..])?;
+        let (current_message, offset) = self.decrypt_buf(&read_buffer[..])?;
         read_buffer.drain(..offset); // drain the read buffer
         self.read_buffer = Some(read_buffer); // assign the new value to the built-in buffer
         Ok(current_message)
     }
 
-    fn decrypt(
+    fn decrypt_buf(
         &mut self,
         buffer: &[u8],
     ) -> Result<(Option<Vec<u8>>, usize), Error> {
@@ -189,7 +187,7 @@ impl Decryptor {
     }
 
     fn increment_nonce(&mut self) {
-        Conduit::increment_nonce(
+        NoiseTranscoder::increment_nonce(
             &mut self.receiving_nonce,
             &mut self.receiving_chaining_key,
             &mut self.receiving_key,
@@ -208,7 +206,7 @@ impl Decryptor {
     }
 }
 
-impl Iterator for Decryptor {
+impl Iterator for NoiseDecryptor {
     type Item = Result<Option<Vec<u8>>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -227,7 +225,7 @@ impl Iterator for Decryptor {
     }
 }
 
-impl Decrypt for Decryptor {
+impl Decrypt for NoiseDecryptor {
     type Error = HandshakeError;
     fn decrypt(
         &mut self,
@@ -246,25 +244,25 @@ impl Decrypt for Decryptor {
 /// Automatically handles key rotation.
 /// For decryption, it is recommended to call `decrypt_message_stream` for
 /// automatic buffering.
-pub struct Conduit {
-    pub encryptor: Encryptor,
-    pub decryptor: Decryptor,
+pub struct NoiseTranscoder {
+    pub encryptor: NoiseEncryptor,
+    pub decryptor: NoiseDecryptor,
 }
 
-impl Conduit {
+impl NoiseTranscoder {
     /// Instantiate a new Conduit with specified sending and receiving keys
     pub fn new(
         sending_key: SymmetricKey,
         receiving_key: SymmetricKey,
         chaining_key: SymmetricKey,
     ) -> Self {
-        Conduit {
-            encryptor: Encryptor {
+        NoiseTranscoder {
+            encryptor: NoiseEncryptor {
                 sending_key,
                 sending_chaining_key: chaining_key,
                 sending_nonce: 0,
             },
-            decryptor: Decryptor {
+            decryptor: NoiseDecryptor {
                 receiving_key,
                 receiving_chaining_key: chaining_key,
                 receiving_nonce: 0,
@@ -276,12 +274,12 @@ impl Conduit {
     }
 
     /// Encrypt data to be sent to peer
-    pub fn encrypt(&mut self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
-        Ok(self.encryptor.encrypt(buffer)?)
+    pub fn encrypt_buf(&mut self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
+        Ok(self.encryptor.encrypt_buf(buffer)?)
     }
 
-    pub fn read(&mut self, data: &[u8]) {
-        self.decryptor.read(data)
+    pub fn read_buf(&mut self, data: &[u8]) {
+        self.decryptor.read_buf(data)
     }
 
     /// Decrypt a single message. If data containing more than one message has
@@ -315,16 +313,16 @@ impl Conduit {
     }
 }
 
-impl Encrypt for Conduit {
+impl Encrypt for NoiseTranscoder {
     fn encrypt(&mut self, buffer: impl Borrow<[u8]>) -> Vec<u8> {
-        match self.encrypt(buffer.borrow()) {
+        match self.encrypt_buf(buffer.borrow()) {
             Ok(values) => return values,
             Err(_) => return Vec::new(),
         }
     }
 }
 
-impl Decrypt for Conduit {
+impl Decrypt for NoiseTranscoder {
     type Error = HandshakeError;
     fn decrypt(
         &mut self,
@@ -338,19 +336,19 @@ impl Decrypt for Conduit {
     }
 }
 
-impl Transcode for Conduit {
-    type Encryptor = Encryptor;
-    type Decryptor = Decryptor;
+impl Transcode for NoiseTranscoder {
+    type Encryptor = NoiseEncryptor;
+    type Decryptor = NoiseDecryptor;
 }
 
-impl Bipolar for Conduit {
+impl Bipolar for NoiseTranscoder {
     type Left = <Self as Transcode>::Encryptor;
     type Right = <Self as Transcode>::Decryptor;
 
     fn join(encryptor: Self::Left, decryptor: Self::Right) -> Self {
         Self {
-            encryptor: encryptor,
-            decryptor: decryptor,
+            encryptor,
+            decryptor,
         }
     }
 
@@ -362,9 +360,10 @@ impl Bipolar for Conduit {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lnp::LNP_MSG_MAX_LEN;
     use bitcoin_hashes::hex::FromHex;
 
-    fn setup_peers() -> (Conduit, Conduit) {
+    fn setup_peers() -> (NoiseTranscoder, NoiseTranscoder) {
         let chaining_key_vec = Vec::<u8>::from_hex(
             "919219dbb2920afa8db80f9a51787a840bcf111ed8d588caf9ab4be716e42b01",
         )
@@ -387,9 +386,9 @@ mod tests {
         receiving_key.copy_from_slice(&receiving_key_vec);
 
         let connected_peer =
-            Conduit::new(sending_key, receiving_key, chaining_key);
+            NoiseTranscoder::new(sending_key, receiving_key, chaining_key);
         let remote_peer =
-            Conduit::new(receiving_key, sending_key, chaining_key);
+            NoiseTranscoder::new(receiving_key, sending_key, chaining_key);
 
         (connected_peer, remote_peer)
     }
@@ -399,7 +398,7 @@ mod tests {
         let (mut connected_peer, mut remote_peer) = setup_peers();
 
         let message: Vec<u8> = vec![];
-        let encrypted_message = connected_peer.encrypt(&message).unwrap();
+        let encrypted_message = connected_peer.encrypt_buf(&message).unwrap();
         assert_eq!(encrypted_message.len(), 2 + 16 + 16);
 
         let decrypted_message = remote_peer
@@ -414,12 +413,12 @@ mod tests {
         let (mut connected_peer, _remote_peer) = setup_peers();
         let message = Vec::<u8>::from_hex("68656c6c6f").unwrap();
 
-        let encrypted_message = connected_peer.encrypt(&message).unwrap();
+        let encrypted_message = connected_peer.encrypt_buf(&message).unwrap();
         assert_eq!(encrypted_message, Vec::<u8>::from_hex("cf2b30ddf0cf3f80e7c35a6e6730b59fe802473180f396d88a8fb0db8cbcf25d2f214cf9ea1d95").unwrap());
 
         // the second time the same message is encrypted, the ciphertext should
         // be different
-        let encrypted_message = connected_peer.encrypt(&message).unwrap();
+        let encrypted_message = connected_peer.encrypt_buf(&message).unwrap();
         assert_eq!(encrypted_message, Vec::<u8>::from_hex("72887022101f0b6753e0c7de21657d35a4cb2a1f5cde2650528bbc8f837d0f0d7ad833b1a256a1").unwrap());
     }
 
@@ -432,7 +431,8 @@ mod tests {
         let mut encrypted_messages: Vec<Vec<u8>> = Vec::new();
 
         for _ in 0..1002 {
-            let encrypted_message = connected_peer.encrypt(&message).unwrap();
+            let encrypted_message =
+                connected_peer.encrypt_buf(&message).unwrap();
             encrypted_messages.push(encrypted_message);
         }
 
@@ -450,7 +450,8 @@ mod tests {
         let mut encrypted_messages: Vec<Vec<u8>> = Vec::new();
 
         for _ in 0..1002 {
-            let encrypted_message = connected_peer.encrypt(&message).unwrap();
+            let encrypted_message =
+                connected_peer.encrypt_buf(&message).unwrap();
             encrypted_messages.push(encrypted_message);
         }
 
@@ -479,7 +480,7 @@ mod tests {
     #[test]
     fn decryption_failure_errors() {
         let (mut connected_peer, mut remote_peer) = setup_peers();
-        let encrypted = remote_peer.encrypt(&[1]).unwrap();
+        let encrypted = remote_peer.encrypt_buf(&[1]).unwrap();
 
         connected_peer.decryptor.receiving_key = [0; 32];
         assert_eq!(
@@ -503,8 +504,8 @@ mod tests {
     #[test]
     fn decryptor_iterator_one_item_valid() {
         let (mut connected_peer, mut remote_peer) = setup_peers();
-        let encrypted = remote_peer.encrypt(&[1]).unwrap();
-        connected_peer.read(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[1]).unwrap();
+        connected_peer.read_buf(&encrypted);
 
         assert_eq!(connected_peer.decryptor.next(), Some(Ok(Some(vec![1]))));
         assert_eq!(connected_peer.decryptor.next(), None);
@@ -514,8 +515,8 @@ mod tests {
     #[test]
     fn decryptor_iterator_error() {
         let (mut connected_peer, mut remote_peer) = setup_peers();
-        let encrypted = remote_peer.encrypt(&[1]).unwrap();
-        connected_peer.read(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[1]).unwrap();
+        connected_peer.read_buf(&encrypted);
 
         connected_peer.decryptor.receiving_key = [0; 32];
         assert_eq!(
@@ -529,10 +530,10 @@ mod tests {
     #[test]
     fn decryptor_iterator_error_after_success() {
         let (mut connected_peer, mut remote_peer) = setup_peers();
-        let encrypted = remote_peer.encrypt(&[1]).unwrap();
-        connected_peer.read(&encrypted);
-        let encrypted = remote_peer.encrypt(&[2]).unwrap();
-        connected_peer.read(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[1]).unwrap();
+        connected_peer.read_buf(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[2]).unwrap();
+        connected_peer.read_buf(&encrypted);
 
         assert_eq!(connected_peer.decryptor.next(), Some(Ok(Some(vec![1]))));
         connected_peer.decryptor.receiving_key = [0; 32];
@@ -548,12 +549,12 @@ mod tests {
     #[test]
     fn decryptor_iterator_next_after_error_returns_none() {
         let (mut connected_peer, mut remote_peer) = setup_peers();
-        let encrypted = remote_peer.encrypt(&[1]).unwrap();
-        connected_peer.read(&encrypted);
-        let encrypted = remote_peer.encrypt(&[2]).unwrap();
-        connected_peer.read(&encrypted);
-        let encrypted = remote_peer.encrypt(&[3]).unwrap();
-        connected_peer.read(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[1]).unwrap();
+        connected_peer.read_buf(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[2]).unwrap();
+        connected_peer.read_buf(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[3]).unwrap();
+        connected_peer.read_buf(&encrypted);
 
         // Get one valid value
         assert_eq!(connected_peer.decryptor.next(), Some(Ok(Some(vec![1]))));
@@ -577,10 +578,10 @@ mod tests {
     #[test]
     fn decryptor_iterator_read_next_after_error_returns_none() {
         let (mut connected_peer, mut remote_peer) = setup_peers();
-        let encrypted = remote_peer.encrypt(&[1]).unwrap();
-        connected_peer.read(&encrypted);
-        let encrypted = remote_peer.encrypt(&[2]).unwrap();
-        connected_peer.read(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[1]).unwrap();
+        connected_peer.read_buf(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[2]).unwrap();
+        connected_peer.read_buf(&encrypted);
 
         // Get one valid value
         assert_eq!(connected_peer.decryptor.next(), Some(Ok(Some(vec![1]))));
@@ -595,36 +596,15 @@ mod tests {
 
         // Restore the receiving key, do a read and ensure None is returned
         // (poisoned)
-        let encrypted = remote_peer.encrypt(&[3]).unwrap();
-        connected_peer.read(&encrypted);
+        let encrypted = remote_peer.encrypt_buf(&[3]).unwrap();
+        connected_peer.read_buf(&encrypted);
         connected_peer.decryptor.receiving_key = valid_receiving_key;
         assert_eq!(connected_peer.decryptor.next(), None);
     }
 
     #[test]
     fn max_msg_len_limit_value() {
-        assert_eq!(LN_MAX_MSG_LEN, 65535);
-        assert_eq!(LN_MAX_MSG_LEN, ::std::u16::MAX as usize);
-    }
-    #[test]
-    #[should_panic(
-        expected = "Attempted to encrypt message longer than 65535 bytes!"
-    )]
-    fn max_message_len_encryption() {
-        let (mut connected_peer, _) = setup_peers();
-        let msg = [4u8; LN_MAX_MSG_LEN + 1];
-        connected_peer.encrypt(&msg).unwrap();
-    }
-
-    #[test]
-    #[should_panic(
-        expected = "Attempted to decrypt message longer than 65535 + 16 bytes!"
-    )]
-    fn max_message_len_decryption() {
-        let (mut connected_peer, _) = setup_peers();
-
-        // MSG should not exceed LN_MAX_MSG_LEN + 16
-        let msg = [4u8; LN_MAX_MSG_LEN + 17];
-        connected_peer.decrypt_single_message(Some(&msg)).unwrap();
+        assert_eq!(LNP_MSG_MAX_LEN, 65535);
+        assert_eq!(LNP_MSG_MAX_LEN, ::std::u16::MAX as usize);
     }
 }

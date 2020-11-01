@@ -26,7 +26,8 @@ pub use local_node::LocalNode;
 pub use node_addr::{
     NodeAddr, PartialNodeAddr, RemoteNodeAddr, ToNodeAddr, ToRemoteNodeAddr,
 };
+pub use noise::{NoiseDecryptor, NoiseEncryptor, NoiseTranscoder};
 pub use session::{Input, Output, Raw, RawInput, RawOutput, Session, Split};
 pub use transcoders::{
-    Decrypt, DecryptionError, Encrypt, NoEncryption, Transcode,
+    Decrypt, DecryptionError, Encrypt, PlainTranscoder, Transcode,
 };

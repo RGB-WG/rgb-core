@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Request;
 use lnpbp::lnp::transport::zmqsocket;
-use lnpbp::lnp::{session, NoEncryption, Session, Unmarshall, Unmarshaller};
+use lnpbp::lnp::{session, PlainTranscoder, Session, Unmarshall, Unmarshaller};
 
 use super::{BusId, Error, ServiceAddress};
 use crate::esb::BusConfig;
@@ -59,7 +59,7 @@ struct Sender<A>
 where
     A: ServiceAddress,
 {
-    pub(self) session: session::Raw<NoEncryption, zmqsocket::Connection>,
+    pub(self) session: session::Raw<PlainTranscoder, zmqsocket::Connection>,
     pub(self) router: Option<A>,
 }
 
