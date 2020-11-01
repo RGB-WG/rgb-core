@@ -109,12 +109,12 @@ impl FromStr for FramingProtocol {
 pub enum LocalSocketAddr {
     /// Microservices connected using ZeroMQ protocol locally
     #[cfg(feature = "zmq")]
-    #[display("{_0}", alt = "lnpz://{_0}")]
+    #[display("{0}", alt = "lnpz://{0}")]
     Zmq(zmqsocket::ZmqSocketAddr),
 
     /// Local node operating as a separate **process** or **threads** connected
     /// with unencrypted POSIX file I/O (like in c-lightning)
-    #[display("{_0}", alt = "lnp:{_0}")]
+    #[display("{0}", alt = "lnp:{0}")]
     Posix(String),
 }
 
@@ -133,30 +133,30 @@ pub enum LocalSocketAddr {
 pub enum RemoteSocketAddr {
     /// Framed TCP socket connection, that may be served either over plain IP,
     /// IPSec or Tor v2 and v3
-    #[display("{_0}", alt = "lnp://{_0}")]
+    #[display("{0}", alt = "lnp://{0}")]
     Ftcp(InetSocketAddr),
 
     /// Microservices connected using ZeroMQ protocol remotely. Can be used
     /// only with TCP-based ZMQ; for other types use [`LocalAddr::Zmq`]
     #[cfg(feature = "zmq")]
-    #[display("{_0}", alt = "lnpz://{_0}")]
+    #[display("{0}", alt = "lnpz://{0}")]
     Zmq(SocketAddr),
 
     /// End-to-end encryption over web connection: think of this as LN protocol
     /// streamed over HTTP
-    #[display("{_0}", alt = "lnph://{_0}")]
+    #[display("{0}", alt = "lnph://{0}")]
     Http(InetSocketAddr),
 
     /// End-to-end ecnruption over web connection: think of this as LN protocol
     /// streamed over Websocket
     #[cfg(feature = "websocket")]
-    #[display("{_0}", alt = "lnpws://{_0}")]
+    #[display("{0}", alt = "lnpws://{0}")]
     Websocket(InetSocketAddr),
 
     /// SMTP connection: asynchronous end-to-end-over SMTP information transfer
     /// which is useful for ultra-low bandwidth non-real-time connections like
     /// satellite networks
-    #[display("{_0}", alt = "lnpm://{_0}")]
+    #[display("{0}", alt = "lnpm://{0}")]
     Smtp(InetSocketAddr),
 }
 impl RemoteSocketAddr {

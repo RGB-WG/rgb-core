@@ -160,13 +160,13 @@ impl FromStr for ZmqType {
     serde(crate = "serde_crate", tag = "type")
 )]
 pub enum ZmqSocketAddr {
-    #[display("inproc://{_0}", alt = "zmq:{_0}")]
+    #[display("inproc://{0}", alt = "zmq:{0}")]
     Inproc(String),
 
-    #[display("ipc://{_0}", alt = "lnpz:{_0}")]
+    #[display("ipc://{0}", alt = "lnpz:{0}")]
     Ipc(String),
 
-    #[display("tcp://{_0}", alt = "lnpz://{_0}")]
+    #[display("tcp://{0}", alt = "lnpz://{0}")]
     Tcp(SocketAddr),
 }
 

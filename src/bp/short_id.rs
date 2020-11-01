@@ -46,7 +46,7 @@ pub enum Error {
     Display,
     From,
 )]
-#[display("{_0}", alt = "block_checksum:{_0:#}")]
+#[display("{0}", alt = "block_checksum:{_0:#}")]
 #[wrapper(FromStr, LowerHex, UpperHex, Octal)]
 pub struct BlockChecksum(u8);
 
@@ -75,7 +75,7 @@ impl From<BlockHash> for BlockChecksum {
     Display,
     From,
 )]
-#[display("{_0}", alt = "tx_checksum:{_0:#}")]
+#[display("{0}", alt = "tx_checksum:{_0:#}")]
 #[wrapper(FromStr, LowerHex, UpperHex, Octal)]
 pub struct TxChecksum(u64);
 

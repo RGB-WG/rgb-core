@@ -55,7 +55,6 @@ impl StrictDecode for Invoice {
     }
 }
 
-// TODO: (new) Move type to rust-amplify
 /// Wrapper type for all slice-based 256-bit types implementing many important
 /// traits, so types based on it can simply derive their implementations
 #[derive(

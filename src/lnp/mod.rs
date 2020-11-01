@@ -71,10 +71,10 @@ use amplify::internet::NoOnionSupportError;
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum AddrError {
-    /// Unknown protocol name in URL scheme ({_0})
+    /// Unknown protocol name in URL scheme ({0})
     UnknownProtocol(String),
 
-    /// The provided URL scheme {_0} was not recognized
+    /// The provided URL scheme {0} was not recognized
     UnknownUrlScheme(String),
 
     /// Can't parse URL from the given string
@@ -120,7 +120,7 @@ pub enum AddrError {
     /// Used scheme must not contain information about port
     UnexpectedPort,
 
-    /// Unsupported ZMQ API type ({_0}). List of supported APIs:
+    /// Unsupported ZMQ API type ({0}). List of supported APIs:
     /// - `rpc`
     /// - `p2p`
     /// - `sub`
@@ -134,7 +134,7 @@ pub enum AddrError {
     /// can't be persisted. This, it can't be provided through this type.
     ZmqContextRequired,
 
-    /// The provided protocol can't be used for {_0}
+    /// The provided protocol can't be used for {0}
     Unsupported(&'static str),
 
     /// Onion addresses are not supported by this socket type

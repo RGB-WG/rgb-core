@@ -26,20 +26,20 @@ use crate::SECP256K1;
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum ParseError {
-    /// Wrong key format: "{_0}"
+    /// Wrong key format: "{0}"
     /// It must be in a form of miniscript descriptor public key, optionally
     /// followed by `+` sign and hex-encoded representation of a tweaking
     /// factor.
     WrongFormat(String),
 
     /// Provided tweaking factor can't be converted into a valid Secp256k1
-    /// curve point ({_0})
+    /// curve point ({0})
     WrongTweakFormat(String),
 
     // TODO: (new) Once miniscript will do a better descriptor parse errors,
     //       change this
     /// Miniscript returned public key string parsing error:
-    /// {_0}
+    /// {0}
     Other(String),
 }
 
@@ -211,7 +211,7 @@ impl ToPublicKey for PubkeyWithTweak {
 )]
 pub enum PubkeyExtended {
     /// Public key or extended public key without tweaking factor information
-    #[display("{_0}")]
+    #[display(inner)]
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::rust::display_fromstr")
@@ -219,7 +219,7 @@ pub enum PubkeyExtended {
     Native(DescriptorPublicKey),
 
     /// Public key or extended public key with tweaking information
-    #[display("{_0}")]
+    #[display(inner)]
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::rust::display_fromstr")

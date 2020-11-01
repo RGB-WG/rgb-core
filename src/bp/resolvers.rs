@@ -21,17 +21,17 @@ use bitcoin::{TxOut, Txid};
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum MatchError {
-    /// No `witness_utxo` and `non_witness_utxo` is provided for input {_0}
+    /// No `witness_utxo` and `non_witness_utxo` is provided for input {0}
     NoInputTx(usize),
 
-    /// Provided `non_witness_utxo` {_1} does not match transaction input {_0}
+    /// Provided `non_witness_utxo` {_1} does not match transaction input {0}
     NoTxidMatch(usize, Txid),
 
     /// Number of transaction inputs does not match number of the provided PSBT
-    /// input data for input {_0}
+    /// input data for input {0}
     UnmatchingInputNumber(usize),
 
-    /// Transaciton has less than {_0} inputs
+    /// Transaciton has less than {0} inputs
     WrongInputNo(usize),
 }
 

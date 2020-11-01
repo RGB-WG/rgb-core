@@ -332,7 +332,7 @@ impl Container for SpkContainer {
     Display,
     From,
 )]
-#[display("{_0}", alt = "{_0:#}")]
+#[display(inner)]
 #[wrapper(LowerHex, UpperHex)]
 pub struct SpkCommitment(PubkeyScript);
 

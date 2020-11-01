@@ -25,7 +25,7 @@ pub enum Error {
     /// Unable to access commitment publication medium
     MediumAccessError,
 
-    /// Error in commitment: {_0}
+    /// Error in commitment: {0}
     CommitmentError(dbc::Error),
 
     /// Error from transaction resolver

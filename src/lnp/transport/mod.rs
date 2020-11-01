@@ -54,7 +54,7 @@ pub enum Error {
     #[from]
     SocketIo(std::io::ErrorKind),
 
-    /// ZMQ socket error, type {_0}
+    /// ZMQ socket error, type {0}
     #[cfg(feature = "zmq")]
     Zmq(zmqsocket::Error),
 
@@ -66,14 +66,14 @@ pub enum Error {
     /// ZMQ socket
     RequiresLocalSocket,
 
-    /// the provided frame size ({_0}) exceeds frame size limit of
+    /// the provided frame size ({0}) exceeds frame size limit of
     /// MAX_FRAME_SIZE bytes
     OversizedFrame(usize),
 
-    /// frame size {_0} is less than minimal (34 bytes)
+    /// frame size {0} is less than minimal (34 bytes)
     FrameTooSmall(usize),
 
-    /// frame structure broken: {_0}
+    /// frame structure broken: {0}
     FrameBroken(&'static str),
 
     /// frame payload length is not equal to the actual frame payload provided

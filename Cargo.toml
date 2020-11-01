@@ -35,8 +35,8 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
 chacha20poly1305 = "~0.7.0"
-amplify = { version = "~2.1.2", features = ["stringly_conversions"] }
-amplify_derive = "~2.1.1"
+amplify = { version = "~2.2.1", features = ["stringly_conversions"] }
+amplify_derive = "~2.2.1"
 lnpbp_derive = { path = "derive" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------

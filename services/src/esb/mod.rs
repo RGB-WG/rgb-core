@@ -70,17 +70,17 @@ pub enum Error {
     /// unexpected server response
     UnexpectedServerResponse,
 
-    /// message serialization or structure error: {_0}
+    /// message serialization or structure error: {0}
     Presentation(presentation::Error),
 
-    /// transport-level protocol error: {_0}
+    /// transport-level protocol error: {0}
     #[from]
     Transport(transport::Error),
 
-    /// provided service bus id {_0} is unknown
+    /// provided service bus id {0} is unknown
     UnknownBusId(String),
 
-    /// {_0}
+    /// {0}
     ServiceError(String),
 }
 

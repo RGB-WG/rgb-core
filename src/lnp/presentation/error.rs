@@ -70,7 +70,7 @@ pub enum Error {
     /// invalid length of TLV record inside LNP message
     TlvRecordInvalidLen,
 
-    /// {_0}
+    /// {0}
     #[from]
     Transport(transport::Error),
 }

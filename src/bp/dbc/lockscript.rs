@@ -113,7 +113,7 @@ impl Container for LockscriptContainer {
     Display,
     From,
 )]
-#[display("{_0}", alt = "{_0:#}")]
+#[display(inner)]
 #[wrapper(LowerHex, UpperHex)]
 pub struct LockscriptCommitment(LockScript);
 
