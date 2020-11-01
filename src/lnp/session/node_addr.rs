@@ -29,6 +29,12 @@ use crate::lnp::{AddrError, UrlString};
 /// Node address which can be represent by either some local address without
 /// encryption information (i.e. node public key) or remote node address
 /// containing node public key
+#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]

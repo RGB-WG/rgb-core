@@ -57,6 +57,10 @@ impl LocalNode {
 
 impl Display for LocalNode {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "LocalNode({})", self.node_id())
+        if f.alternate() {
+            write!(f, "LocalNode({:#})", self.node_id())
+        } else {
+            write!(f, "{}", self.node_id())
+        }
     }
 }

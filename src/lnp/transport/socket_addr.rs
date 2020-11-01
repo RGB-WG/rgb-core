@@ -93,6 +93,12 @@ impl FromStr for FramingProtocol {
 
 /// Represents a connection that requires the other peer to be present on the
 /// same machine as a connecting peer
+#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]
@@ -111,15 +117,15 @@ pub enum LocalSocketAddr {
 
 /// Represents a connection to a generic remote peer operating with LNP protocol
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
-#[derive(
-    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
-)]
-#[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
+#[derive(
+    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 #[non_exhaustive]
 pub enum RemoteSocketAddr {
     /// Framed TCP socket connection, that may be served either over plain IP,
