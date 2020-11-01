@@ -236,7 +236,6 @@ where
             .send_to(bus_id, self.handler.identity(), dest, request)
     }
 
-    #[cfg(not(feature = "node"))]
     pub fn recv_poll(
         &mut self,
     ) -> Result<Vec<(B, H::Address, H::Request)>, Error> {
