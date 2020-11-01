@@ -34,6 +34,7 @@ use invoice::Invoice;
 use std::io;
 use std::str::FromStr;
 
+use self::invoice::ParseOrSemanticError;
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 impl StrictEncode for Invoice {
@@ -49,7 +50,14 @@ impl StrictDecode for Invoice {
     #[inline]
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
         Self::from_str(&String::strict_decode(d)?).map_err(|e| {
-            strict_encoding::Error::DataIntegrityError(e.to_string())
+            // TODO: (v0.3) this can be improved once PR got merged:
+            //       <https://github.com/rust-bitcoin/rust-lightning-invoice/pull/43>
+            strict_encoding::Error::DataIntegrityError(match e {
+                ParseOrSemanticError::ParseError(err) => err.to_string(),
+                ParseOrSemanticError::SemanticError(err) => {
+                    s!("Lightning invoice semantic error")
+                }
+            })
         })
     }
 }

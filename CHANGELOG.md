@@ -1,6 +1,24 @@
 Change Log
 ==========
 
+v0.2.0-beta.1
+-------------
+
+### LNP/BP Core Library
+- LN messaging & LNPWP: Lightning network peer wire protocol (BOLT-1pt2, BOLT-2)
+- BOLT-8 noise encryptor and handshake implementation
+- Improvements to LN-specific data types
+- LNP socket and node addressing large-scale refactoring
+- More serde and strict encoding implementations for data types across the 
+  library
+
+### LNP/BP Derivation Library
+- Implementation of strict derive macros for enums
+
+### LNP/BP Services Library
+- Debugging and display logging improvements with LNP/BP Services library
+- ESB functionality improvements in LNP/BP Services libraru
+
 v0.2.0-alpha.3
 --------------
 
