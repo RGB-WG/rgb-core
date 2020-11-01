@@ -94,16 +94,7 @@ impl FromStr for FramingProtocol {
 /// Represents a connection that requires the other peer to be present on the
 /// same machine as a connecting peer
 #[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode,
+    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[lnpbp_crate(crate)]
 pub enum LocalSocketAddr {

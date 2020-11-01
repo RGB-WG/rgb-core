@@ -29,7 +29,7 @@ lazy_static! {
 }
 
 /// API type for node-to-node communications used by ZeroMQ
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum ZmqType {
@@ -142,16 +142,7 @@ impl FromStr for ZmqType {
 }
 
 #[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode,
+    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[lnpbp_crate(crate)]
 #[cfg_attr(
