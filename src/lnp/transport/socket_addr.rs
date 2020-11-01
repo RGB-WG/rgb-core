@@ -123,7 +123,7 @@ pub enum LocalSocketAddr {
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+    Clone, Copy, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[lnpbp_crate(crate)]
 #[non_exhaustive]
