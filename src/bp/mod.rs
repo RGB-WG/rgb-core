@@ -11,8 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::hashes::{sha256d, Hash};
-
 #[allow(unused_variables)]
 pub mod bip32;
 pub mod blind;
@@ -37,13 +35,7 @@ pub use scripts::{
 pub use seals::TxoutSeal;
 pub use short_id::ShortId;
 
-hash_newtype!(HashLock, sha256d::Hash, 32, doc = "Hashed locks in HTLC");
-hash_newtype!(
-    HashPreimage,
-    sha256d::Hash,
-    32,
-    doc = "Pre-images for hashed locks in HTLC"
-);
+// TODO: (v0.2) Move hash-lock types from LNP mod
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]

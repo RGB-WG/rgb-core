@@ -34,7 +34,6 @@ crate-type = ["dylib", "rlib", "staticlib"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-chacha20poly1305 = "~0.7.0"
 amplify = { version = "~2.2.1", features = ["stringly_conversions"] }
 amplify_derive = "~2.2.1"
 lnpbp_derive = { path = "derive" }
@@ -45,6 +44,7 @@ bitcoin_hashes = "~0.9.3" # we need macro from here
 miniscript = "~3.0.0"
 bech32 = "~0.7.2"
 lightning-invoice = { version = "~0.3.0", optional = true }
+chacha20poly1305 = "~0.7.0"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
 #   a part of Tor address)
 ed25519-dalek = { version = "~1.0.0", optional = true }
@@ -69,6 +69,7 @@ url = { version = "~2.1.1", optional = true }
 #    Used in RGB data Bech32 encodings
 deflate = { version = "~0.8.6", optional = true }
 inflate = { version = "~0.4.5", optional = true }
+chrono = "~0.4.19"
 # Temporary-needed dependencies:
 # ------------------------------
 # 1. We are of no control of what's happening in Grin and would like to prevent

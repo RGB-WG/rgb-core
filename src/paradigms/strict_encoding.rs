@@ -447,9 +447,12 @@ pub use strategies::Strategy;
 
 /// Taking implementation of little-endian integer encoding
 mod number_little_endian {
-    use super::{strategies, Error, Strategy, StrictDecode, StrictEncode};
     use bitcoin::util::uint::{Uint128, Uint256};
+    use chrono::NaiveDateTime;
+    use core::time::Duration;
     use std::io;
+
+    use super::{strategies, Error, Strategy, StrictDecode, StrictEncode};
 
     impl Strategy for u8 {
         type Strategy = strategies::BitcoinConsensus;
@@ -502,6 +505,47 @@ mod number_little_endian {
             }
         }
     }
+
+    /*
+    impl StrictEncode for u128 {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
+            e.write_u128(*self)?;
+            Ok(core::mem::size_of::<u128>())
+        }
+    }
+
+    impl StrictDecode for u128 {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(d.read_u128()?)
+        }
+    }
+
+    impl StrictEncode for i128 {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            mut e: E,
+        ) -> Result<usize, Error> {
+            e.write_i128(*self)?;
+            Ok(core::mem::size_of::<i128>())
+        }
+    }
+
+    impl StrictDecode for i128 {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(d.read_i128()?)
+        }
+    }*/
 
     impl StrictEncode for usize {
         type Error = Error;
@@ -561,6 +605,47 @@ mod number_little_endian {
             let mut buf: [u8; 8] = [0; 8];
             d.read_exact(&mut buf)?;
             Ok(Self::from_le_bytes(buf))
+        }
+    }
+
+    impl StrictEncode for Duration {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, Self::Error> {
+            (self.as_secs(), self.subsec_nanos()).strict_encode(e)
+        }
+    }
+
+    impl StrictDecode for Duration {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            Ok(Self::new(
+                u64::strict_decode(&mut d)?,
+                u32::strict_decode(&mut d)?,
+            ))
+        }
+    }
+
+    impl StrictEncode for NaiveDateTime {
+        type Error = Error;
+        #[inline]
+        fn strict_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, Self::Error> {
+            self.timestamp().strict_encode(e)
+        }
+    }
+
+    impl StrictDecode for NaiveDateTime {
+        type Error = Error;
+        #[inline]
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            Ok(Self::from_timestamp(i64::strict_decode(d)?, 0))
         }
     }
 }
