@@ -245,24 +245,24 @@ where
 #[derive(Clone, PartialEq, Debug, Display, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
-    /// Bech32 string parse error: {_0}
+    /// Bech32 string parse error: {0}
     #[from]
     Bech32Error(::bech32::Error),
 
-    /// Payload data parse error: {_0}
+    /// Payload data parse error: {0}
     #[from]
     WrongData(strict_encoding::Error),
 
     /// Requested object type does not match used Bech32 HRP
     WrongType,
 
-    /// Provided raw data use unknown encoding version {_0}
+    /// Provided raw data use unknown encoding version {0}
     UnknownRawDataEncoding(u8),
 
     /// Can not encode raw data with DEFLATE algorithm
     DeflateEncoding,
 
-    /// Error inflating compressed data from payload: {_0}
+    /// Error inflating compressed data from payload: {0}
     InflateError(String),
 }
 

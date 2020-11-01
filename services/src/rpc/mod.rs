@@ -31,7 +31,7 @@ pub trait EndpointId: Copy + Eq + Hash + Display {}
 #[derive(
     Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]
-#[display("Server returned failure #{code}: {info})")]
+#[display("Server returned failure #{code}: {info})", alt = "#{code}: {info}")]
 pub struct Failure {
     /// Failure #{}
     pub code: u16,
@@ -47,18 +47,18 @@ pub enum Error {
     /// unexpected server response
     UnexpectedServerResponse,
 
-    /// {_0}
+    /// {0}
     #[from]
     ServerFailure(Failure),
 
-    /// message serialization or structure error: {_0}
+    /// message serialization or structure error: {0}
     Presentation(lnp::presentation::Error),
 
-    /// transport-level protocol error: {_0}
+    /// transport-level protocol error: {0}
     #[from]
     Transport(lnp::transport::Error),
 
-    /// provided RPC endpoint {_0} is unknown
+    /// provided RPC endpoint {0} is unknown
     UnknownEndpoint(String),
 }
 

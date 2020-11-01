@@ -89,7 +89,7 @@ impl Container for KeysetContainer {
 /// Public key committed to some message plus a sum of other public keys via
 /// LNPBP2-based tweaking procedure
 #[derive(Wrapper, Clone, Copy, PartialEq, Eq, Hash, Debug, Display, From)]
-#[display("{_0}", alt = "{_0:#}*")]
+#[display("{0}", alt = "{_0:#}*")]
 #[wrapper(FromStr, LowerHex)]
 pub struct KeysetCommitment(secp256k1::PublicKey);
 

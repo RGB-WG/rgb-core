@@ -59,17 +59,17 @@ sha256t_hash_newtype!(
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
-    /// Details of output #{_0} are required, but were not provided in PSBT
+    /// Details of output #{0} are required, but were not provided in PSBT
     NoRequiredOutputInformation(usize),
 
-    /// Explicit public key must be given for output number #{_0}
+    /// Explicit public key must be given for output number #{0}
     NoRequiredPubkey(usize),
 
-    /// Unable to estimate fee: {_0}
+    /// Unable to estimate fee: {0}
     #[from]
     FeeEstimationError(FeeError),
 
-    /// Incorrect public key data: {_0}
+    /// Incorrect public key data: {0}
     #[from(secp256k1::Error)]
     WrongPubkeyData,
 

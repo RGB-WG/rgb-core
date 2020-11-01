@@ -16,8 +16,6 @@ use std::hash::Hash;
 #[cfg(any(feature = "node", feature = "shell"))]
 use std::io;
 
-#[cfg(any(feature = "client", feature = "node"))]
-use crate::rpc;
 #[cfg(feature = "shell")]
 use settings::ConfigError;
 #[cfg(feature = "tokio")]
@@ -25,6 +23,9 @@ use tokio::task::JoinError;
 
 #[cfg(any(feature = "node", feature = "shell"))]
 use lnpbp::lnp;
+
+#[cfg(feature = "node")]
+use crate::rpc;
 
 /// Marker trait with all requirements common to LNP/BP service errors
 pub trait Error: std::error::Error + Sized + Clone {}
@@ -36,11 +37,11 @@ pub trait Error: std::error::Error + Sized + Clone {}
 #[non_exhaustive] // All feature-gated enum types must be non-exhaustive
 pub enum ConfigInitError {
     /// I/O error during config file processing:
-    /// {_0}
+    /// {0}
     Io(String),
 
     /// Unable to parse TOML format of the config file:
-    /// {_0}
+    /// {0}
     #[cfg(feature = "toml")]
     #[from]
     Toml(toml::ser::Error),
@@ -65,46 +66,46 @@ where
     AppLevelError: Error,
 {
     /// Configuration file error:
-    /// {_0}
+    /// {0}
     #[cfg(feature = "shell")] // `node` may have no shell, so we feature-gate this
     #[from]
     Config(ConfigError),
 
     /// Error during initialization of the configuration file:
-    /// {_0}
+    /// {0}
     #[from]
     ConfigInit(ConfigInitError),
 
     /// Attempt to use Tor service while it's not yet supported
     TorNotYetSupported,
 
-    /// General I/O error: {_0}
+    /// General I/O error: {0}
     Io(String),
 
     /// Command-line argument parse error reported by Clap:
-    /// {_0}
+    /// {0}
     #[from]
     ArgParse(String),
 
     /// ZeroMQ socket error:
-    /// {_0}
+    /// {0}
     #[cfg(feature = "zmq")]
     #[from]
     Zmq(zmq::Error),
 
     /// Error reported by tokio multithreading library:
-    /// {_0}
+    /// {0}
     #[cfg(feature = "tokio")] // `cli` most likely be a single-threaded
     #[from]
     Multithread(JoinError),
 
     /// Error connecting to LNP service:
-    /// {_0}
+    /// {0}
     #[from]
     Transport(lnp::transport::Error),
 
     /// Application-level error:
-    /// {_0}
+    /// {0}
     #[from]
     AppLevel(AppLevelError),
 }
@@ -140,18 +141,17 @@ where
     AppLevelError: Error,
 {
     /// Error with ZMQ socket:
-    /// {_0}
+    /// {0}
     #[from]
     Zmq(zmq::Error),
 
     /// RPC error during communications with the remote peer:
-    /// {_0}
-    #[cfg(any(feature = "client", feature = "node"))]
+    /// {0}
     #[from]
     Rpc(rpc::Error),
 
     /// Application-level runtime error:
-    /// {_0}
+    /// {0}
     #[from]
     AppLevel(AppLevelError),
 }

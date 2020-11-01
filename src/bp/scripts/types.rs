@@ -124,7 +124,7 @@ use crate::strict_encoding;
     Display,
     From,
 )]
-#[display("{_0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct LockScript(Script);
 
@@ -146,7 +146,7 @@ impl strict_encoding::Strategy for LockScript {
     Display,
     From,
 )]
-#[display("{_0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct PubkeyScript(Script);
 
@@ -164,7 +164,7 @@ pub struct PubkeyScript(Script);
     Display,
     From,
 )]
-#[display("{_0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct SigScript(Script);
 
@@ -200,7 +200,7 @@ impl Display for Witness {
     Display,
     From,
 )]
-#[display("{_0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct RedeemScript(Script);
 
@@ -233,7 +233,7 @@ impl From<LockScript> for RedeemScript {
     Display,
     From,
 )]
-#[display("{_0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct WitnessScript(Script);
 
@@ -263,7 +263,7 @@ impl From<LockScript> for WitnessScript {
     Display,
     From,
 )]
-#[display("{_0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct TapScript(Script);
 

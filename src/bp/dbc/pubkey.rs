@@ -89,7 +89,7 @@ impl Container for PubkeyContainer {
 
 /// Public key committed to some message via LNPBP1-based tweaking procedure
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Display, From)]
-#[display("{_0}", alt = "{_0:#}*")]
+#[display("{0}", alt = "{_0:#}*")]
 #[wrapper(FromStr, LowerHex)]
 pub struct PubkeyCommitment(secp256k1::PublicKey);
 

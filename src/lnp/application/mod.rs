@@ -11,12 +11,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::Wrapper;
+pub extern crate lightning_invoice as invoice;
 
 pub mod channel;
 mod features;
 pub mod message;
-mod peer_connection;
+pub mod peer_connection;
 pub mod rpc_connection;
 
 pub use features::{FeatureContext, FeatureFlag, Features};
@@ -26,11 +26,35 @@ pub use peer_connection::{
 };
 pub use rpc_connection::RpcConnection;
 
+use amplify::Wrapper;
+use std::fmt::{self, Formatter, LowerHex, UpperHex};
+use std::io;
+use std::str::FromStr;
+
 use bitcoin::hashes::hex::{Error, FromHex, ToHex};
 use bitcoin::hashes::{sha256, Hmac};
-use std::fmt::{self, Formatter, LowerHex, UpperHex};
+use invoice::Invoice;
 
-// TODO: (new) Move type to rust-amplify
+use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+
+impl StrictEncode for Invoice {
+    type Error = strict_encoding::Error;
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        self.to_string().strict_encode(e)
+    }
+}
+
+impl StrictDecode for Invoice {
+    type Error = strict_encoding::Error;
+    #[inline]
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        Self::from_str(&String::strict_decode(d)?).map_err(|e| {
+            strict_encoding::Error::DataIntegrityError(e.to_string())
+        })
+    }
+}
+
 /// Wrapper type for all slice-based 256-bit types implementing many important
 /// traits, so types based on it can simply derive their implementations
 #[derive(
@@ -62,6 +86,14 @@ impl Slice32 {
             &secp256k1::SecretKey::new(&mut rand::thread_rng())[..],
         );
         Slice32::from_inner(entropy)
+    }
+}
+
+impl FromStr for Slice32 {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex(s)
     }
 }
 
@@ -143,7 +175,7 @@ where
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct ChannelId(Slice32);
 
 impl FromHex for ChannelId {
@@ -175,7 +207,7 @@ impl FromHex for ChannelId {
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct TempChannelId(Slice32);
 
 impl From<TempChannelId> for ChannelId {
@@ -220,7 +252,7 @@ impl TempChannelId {
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct PaymentHash(Slice32);
 
 impl FromHex for PaymentHash {
@@ -252,7 +284,7 @@ impl FromHex for PaymentHash {
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct PaymentPreimage(Slice32);
 
 impl PaymentPreimage {
@@ -292,7 +324,7 @@ impl FromHex for PaymentPreimage {
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
-#[wrapper(LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct PaymentSecret(Slice32);
 
 impl PaymentSecret {
