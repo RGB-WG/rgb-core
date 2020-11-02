@@ -88,14 +88,16 @@ impl HandshakeState {
         input: &[u8],
     ) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
         match self {
-            HandshakeState::InitiatorStarting(state) => state.next(input),
+            HandshakeState::InitiatorStarting(state) => state.next(),
             HandshakeState::ResponderAwaitingActOne(state) => state.next(input),
             HandshakeState::InitiatorAwaitingActTwo(state) => state.next(input),
             HandshakeState::ResponderAwaitingActThree(state) => {
                 state.next(input)
             }
             HandshakeState::Complete(_conduit) => {
-                panic!("no acts left to process")
+                Err(HandshakeError::General(String::from(
+                    "Handshake State is Complete, nothing to process ",
+                )))
             }
         }
     }
@@ -165,21 +167,15 @@ impl InitiatorStartingState {
         }
     }
 
-    // Implementation to transition into next state. May transition to the same
-    // state in the event there are not yet enough bytes to move forward
-    // with the handshake.
-
-    // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-one (sender)
-    pub fn next(
-        self,
-        input: &[u8],
-    ) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
-        if input.len() > 0 {
-            return Err(HandshakeError::General(
-                "first call for initiator must be empty".to_string(),
-            ));
-        }
-
+    // Implementation to transition into Next state which is
+    // `InitiatorAwaitingActTwo`. May transition to the same state in the
+    // event there are not yet enough bytes or inconsistent bytes to move
+    // forward with the handshake. https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-one (sender)
+    //
+    // PR Comment: This function took an empty byte to be compatible with
+    // IHandshake trait in mother implementation which we are not using
+    // anymore. So we can get rid of the the length check.
+    pub fn next(self) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
         let initiator_static_private_key = self.initiator_static_private_key;
         let initiator_static_public_key = self.initiator_static_public_key;
         let initiator_ephemeral_private_key =
@@ -249,9 +245,9 @@ impl ResponderAwaitingActOneState {
         let mut act_one_builder = self.act_one_builder;
         let bytes_read = act_one_builder.fill(input);
 
-        // Any payload that is not fully consumed by the builder indicates a bad
-        // peer since responder data is required to generate act3 (so it
-        // can't come before we transition)
+        // Payload should exactly fill 50 bytes in this stage.
+        // If a act3 response is received which is 66 bytes, or any other
+        // garbage data that would indicate a bad peer connection.
         if bytes_read < input.len() {
             return Err(HandshakeError::General(
                 "Act One too large".to_string(),
@@ -765,18 +761,8 @@ mod test {
         assert_matches!(awaiting_act_two_state, InitiatorAwaitingActTwo(_));
     }
 
-    // Initiator::Starting -> AwaitingActTwo (extra bytes in argument)
-    #[test]
-    fn starting_to_awaiting_act_two_extra_bytes() {
-        let test_ctx = TestCtx::new();
-
-        assert_eq!(
-            test_ctx.initiator.next(&[1]).err().unwrap(),
-            HandshakeError::General(String::from(
-                "first call for initiator must be empty"
-            ))
-        );
-    }
+    //PR Comment: We have removed the requirement of empty bytes
+    // in next() call of InitiatorStartingState. So this test is not needed.
 
     // Responder::AwaitingActOne -> AwaitingActThree
     // RFC test vector: transport-responder successful handshake
@@ -1099,7 +1085,7 @@ mod test {
 
     // Initiator::Complete -> Error
     #[test]
-    #[should_panic(expected = "no acts left to process")]
+    #[should_panic(expected = "nothing to process")]
     fn initiator_complete_next_fail() {
         let test_ctx = TestCtx::new();
         let (act1, awaiting_act_two_state) =
@@ -1114,7 +1100,7 @@ mod test {
 
     // Initiator::Complete -> Error
     #[test]
-    #[should_panic(expected = "no acts left to process")]
+    #[should_panic(expected = "nothing to process")]
     fn responder_complete_next_fail() {
         let test_ctx = TestCtx::new();
         let (act1, awaiting_act_two_state) =
