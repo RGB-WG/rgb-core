@@ -37,54 +37,54 @@ pub enum ZmqType {
     /// sockets. Each node can send unordered set of messages and does not
     /// wait for a response.
     /// This part represents listening socket ([`zmq::SocketType::PULL`])
-    #[display("p2p-listen")]
+    #[display("PULL")]
     Pull = 0,
 
     /// Pure peer-to-peer communications done with PUSH/PULL pair of ZMQ
     /// sockets. Each node can send unordered set of messages and does not
     /// wait for a response.
     /// This part represents connected socket ([`zmq::SocketType::PUSH`])
-    #[display("p2p-connect")]
+    #[display("PUSH")]
     Push = 1,
 
     /// Remote procedure call communications done with REQ/REP pair of ZMQ
     /// sockets. Two roles: client and server; client sends requests and awaits
     /// for client responses.
     /// This part represents client-size socket ([`zmq::SocketType::REQ`])
-    #[display("rpc-client")]
+    #[display("REQ")]
     Req = 2,
 
     /// Remote procedure call communications done with REQ/REP pair of ZMQ
     /// sockets. Two roles: client and server; client sends requests and awaits
     /// for client responses.
     /// This part represents client-size socket ([`zmq::SocketType::REP`])
-    #[display("rpc-server")]
+    #[display("REP")]
     Rep = 3,
 
     /// Subscription API done with SUB/PUB pair of ZMQ sockets. Two roles:
     /// publisher (server) and subscriber (client); subscriber awaits for
     /// messages from publisher and does not communicates back.
     /// This part represents publisher part ([`zmq::SocketType::PUB`])
-    #[display("pub")]
+    #[display("PUB")]
     Pub = 4,
 
     /// Subscription API done with SUB/PUB pair of ZMQ sockets. Two roles:
     /// publisher (server) and subscriber (client); subscriber awaits for
     /// messages from publisher and does not communicates back.
     /// This part represents subscriber part ([`zmq::SocketType::SUB`])
-    #[display("sub")]
+    #[display("SUB")]
     Sub = 5,
 
     /// Message bus: each message has a receiver and sender, and multiple peers
     /// may communicate directly with each other in asynchronous mode.
     /// Represents [`zmq::SocketType::ROUTER`] socket which is bind to
-    #[display("esb")]
+    #[display("ROUTER(bind)")]
     RouterBind = 6,
 
     /// Message bus: each message has a receiver and sender, and multiple peers
     /// may communicate directly with each other in asynchronous mode.
     /// Represents [`zmq::SocketType::ROUTER`] socket wich is connected to
-    #[display("esb")]
+    #[display("ROUTER(connect)")]
     RouterConnect = 7,
 }
 

@@ -182,7 +182,6 @@ impl Bech32 {
         Ok(match u8::strict_decode(&mut reader)? {
             Self::RAW_DATA_ENCODING_PLAIN => T::strict_decode(&mut reader)?,
             Self::RAW_DATA_ENCODING_DEFLATE => {
-                println!("{:#x?}", reader);
                 let decoded = inflate::inflate_bytes(&mut reader)
                     .map_err(|e| Error::InflateError(e))?;
                 T::strict_decode(&decoded[..])?
@@ -423,7 +422,6 @@ impl FromStr for Bech32 {
         let data = Vec::<u8>::from_base32(&data)?;
 
         use bitcoin::hashes::hex::ToHex;
-        println!("{}", data.to_hex());
 
         Ok(match hrp {
             x if x == Self::HRP_PEDERSEN => {

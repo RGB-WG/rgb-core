@@ -48,9 +48,9 @@ embedded = ["client", "node"]
 cli = ["shell", "client"]
 # Required for all apps that can be launched from command-line shell as binaries
 # (i.e. both servers and cli)
-shell = ["dotenv", "clap", "settings", "log", "env_logger", "amplify/parse_arg", "serde"]
+shell = ["dotenv", "clap", "settings", "amplify/parse_arg", "serde"]
 # Besides server node can be run as a part of mobile app
 # and other types of clients; thus `server` != `node`.
 # This feature results in building with features not required for CLI
-node = ["serde", "lnpbp/keygen", "tokio", "zmq"]
+node = ["serde", "lnpbp/keygen", "tokio", "zmq", "log", "env_logger"]
 serde = ["serde_crate", "serde_with", "amplify/serde", "lnpbp/serde", "toml"]

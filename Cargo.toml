@@ -92,6 +92,14 @@ torut = { version = "~0.1.6", features = ["v2", "v3"] }
 miniscript = { version = "~3.0.0", features = ["compiler"] }
 bitcoin = { version = "~0.25.0", features = ["rand"] }
 
+[target.'cfg(target_os="android")'.dependencies]
+zmq = { version = "~0.9", features = ["vendored"] }
+
+[target.'cfg(target_os="android")'.patch.crates-io]
+# Use this for Android builds
+# Remove this once https://github.com/jean-airoldie/zeromq-src-rs/pull/15 got merged
+zeromq-src = { git = "https://github.com/LNP-BP/zeromq-src-rs", branch = "fix/cmake" }
+
 # Features
 # ========
 [features]

@@ -110,12 +110,12 @@ The library is based on other projects:
 
 On Debian, run
 ```shell script
-sudo apt-get install cargo libzmq3-dev
+sudo apt-get install cargo libssl-dev libzmq3-dev pkg-cofig
 ```
 
 On Mac OS, run
 ```shell script
-brew cargo
+brew cargo pkg-config zmq
 ```
 
 ### Clone and compile library
@@ -125,7 +125,7 @@ Minimum supported rust compiler version (MSRV): 1.41.1
 ```shell script
 git clone https://github.com/lnp-bp/rust-lnpbp
 cd rust-lnpbp
-cargo build --release --features vendored_openssl
+cargo build --release --all-features
 ```
 
 The library can be found in `target/release` directory.
@@ -145,8 +145,9 @@ Add these lines to your `Cargo.toml` file at the very end of the `[dependecies]`
 section:
 
 ```toml
-lnpbp = "~0.1.0"
-lnpbp_derive = "~0.1.0"
+lnpbp = "~0.2.0"
+lnpbp_derive = "~0.2.0"
+lnpbp_services = "~0.2.0"
 ```
 
 
