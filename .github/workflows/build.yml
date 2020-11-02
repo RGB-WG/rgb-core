@@ -11,11 +11,10 @@ env:
 
 jobs:
   features:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
         feature:
           # Library components, one by one
           - rgb
@@ -39,12 +38,8 @@ jobs:
           - rgb,lnp,tokio,websockets,url,async,keygen
     steps:
       - uses: actions/checkout@v2
-      - name: Install linux dependencies
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev
-      - name: Install macos dependencies
-        if: matrix.os == 'macos-latest'
-        run: brew install pkg-config zmq
       - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
@@ -60,23 +55,47 @@ jobs:
         with:
           command: build
           args: --features=${{ matrix.feature }}
-  tor:
+  platforms:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ ubuntu-18.04, ubuntu-20.04, macos-10.15, macos-11.0 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install linux dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo apt-get install -y libzmq3-dev
+      - name: Install macos dependencies
+        if: startsWith(matrix.os, 'macos')
+        run: brew install pkg-config zmq
+      - name: Install rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Build with no defaults
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --no-default-features --all-features
+      - name: Build with defaults
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all-features
+  tor:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
         feature:
           - tor
           - tor,url
     steps:
       - uses: actions/checkout@v2
-      - name: Install linux dependencies
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install macos dependencies
-        if: matrix.os == 'macos-latest'
-        run: brew install pkg-config zmq
       - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
@@ -93,20 +112,15 @@ jobs:
           command: build
           args: --features=${{ matrix.feature }}
   toolchains:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
         toolchain: [ nightly, beta, stable, 1.41.1 ]
     steps:
       - uses: actions/checkout@v2
-      - name: Install linux dependencies
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install macos dependencies
-        if: matrix.os == 'macos-latest'
-        run: brew install pkg-config zmq
       - name: Install rust ${{ matrix.toolchain }}
         uses: actions-rs/toolchain@v1
         with:
@@ -118,19 +132,11 @@ jobs:
           command: build
           args: --workspace --all-targets --all-features
   dependency:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest, macos-latest ]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install linux dependencies
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install dependencies
         run: sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install macos dependencies
-        if: matrix.os == 'macos-latest'
-        run: brew install pkg-config zmq
       - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
