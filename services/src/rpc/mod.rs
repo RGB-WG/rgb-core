@@ -93,7 +93,16 @@ where
 {
     fn from(err: RuntimeError<E>) -> Self {
         Failure {
-            code: 1000,
+            code: 100,
+            info: err.to_string(),
+        }
+    }
+}
+
+impl From<lnp::ChannelNegotiationError> for Failure {
+    fn from(err: lnp::ChannelNegotiationError) -> Self {
+        Failure {
+            code: 1000, // Error from LN
             info: err.to_string(),
         }
     }
