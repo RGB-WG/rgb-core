@@ -150,6 +150,10 @@ impl strict_encoding::Strategy for LockScript {
 #[wrapper(LowerHex, UpperHex)]
 pub struct PubkeyScript(Script);
 
+impl strict_encoding::Strategy for PubkeyScript {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
+
 /// A content of `sigScript` from a transaction input
 #[derive(
     Wrapper,
@@ -168,12 +172,20 @@ pub struct PubkeyScript(Script);
 #[wrapper(LowerHex, UpperHex)]
 pub struct SigScript(Script);
 
+impl strict_encoding::Strategy for SigScript {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
+
 /// A content of the `witness` field from a transaction input according to
 /// BIP-141
 #[derive(
     Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From,
 )]
 pub struct Witness(Vec<Vec<u8>>);
+
+impl strict_encoding::Strategy for Witness {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
 
 impl Display for Witness {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -203,6 +215,10 @@ impl Display for Witness {
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct RedeemScript(Script);
+
+impl strict_encoding::Strategy for RedeemScript {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
 
 impl RedeemScript {
     pub fn script_hash(&self) -> ScriptHash {
@@ -237,6 +253,10 @@ impl From<LockScript> for RedeemScript {
 #[wrapper(LowerHex, UpperHex)]
 pub struct WitnessScript(Script);
 
+impl strict_encoding::Strategy for WitnessScript {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
+
 impl WitnessScript {
     pub fn script_hash(&self) -> WScriptHash {
         self.as_inner().wscript_hash()
@@ -266,6 +286,10 @@ impl From<LockScript> for WitnessScript {
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct TapScript(Script);
+
+impl strict_encoding::Strategy for TapScript {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
 
 /// Version of the WitnessProgram: first byte of `scriptPubkey` in
 /// transaction output for transactions starting with opcodes ranging from 0
@@ -397,6 +421,10 @@ impl From<WitnessVersion> for opcodes::All {
     Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From,
 )]
 pub struct WitnessProgram(Vec<u8>);
+
+impl strict_encoding::Strategy for WitnessProgram {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
 
 impl Display for WitnessProgram {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
