@@ -107,6 +107,7 @@ use bitcoin::{
     secp256k1, Address, ScriptHash, WPubkeyHash, WScriptHash,
 };
 
+use super::ScriptPubkeyContent;
 use crate::bp::Chain;
 use crate::strict_encoding;
 
@@ -270,11 +271,20 @@ impl WitnessScript {
     pub fn script_hash(&self) -> WScriptHash {
         self.as_inner().wscript_hash()
     }
+    pub fn to_p2wsh(&self) -> PubkeyScript {
+        ScriptPubkeyContent::Wsh(self.script_hash()).into()
+    }
 }
 
 impl From<LockScript> for WitnessScript {
     fn from(lock_script: LockScript) -> Self {
         WitnessScript(lock_script.to_inner())
+    }
+}
+
+impl From<WitnessScript> for LockScript {
+    fn from(witness_script: WitnessScript) -> Self {
+        LockScript(witness_script.to_inner())
     }
 }
 

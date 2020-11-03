@@ -25,6 +25,8 @@ use crate::bp::chain::AssetId;
 use crate::lnp::message::{AcceptChannel, OpenChannel};
 use crate::SECP256K1_PUBKEY_DUMB;
 
+pub use super::tx::ScriptGenerators;
+
 pub type AssetsBalance = BTreeMap<AssetId, u64>;
 
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
@@ -298,6 +300,12 @@ impl FromHex for PaymentHash {
             + DoubleEndedIterator,
     {
         Ok(Self(Slice32::from_byte_iter(iter)?))
+    }
+}
+
+impl AsRef<[u8]> for PaymentHash {
+    fn as_ref(&self) -> &[u8] {
+        self.as_inner().as_ref()
     }
 }
 
