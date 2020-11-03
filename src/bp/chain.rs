@@ -188,6 +188,12 @@ impl strict_encoding::Strategy for AssetId {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 
+impl From<BlockHash> for AssetId {
+    fn from(block_hash: BlockHash) -> Self {
+        AssetId::from_inner(block_hash.into_inner())
+    }
+}
+
 /// Genesis block hash for bitcoin mainnet
 pub(crate) const GENESIS_HASH_MAINNET: &[u8] = &[
     0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72, 0xc1, 0xa6, 0xa2, 0x46,

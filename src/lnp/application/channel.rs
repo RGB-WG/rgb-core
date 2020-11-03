@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::{DumbDefault, ToYamlString, Wrapper};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::{self, Formatter, LowerHex, UpperHex};
 use std::str::FromStr;
 
@@ -25,7 +25,7 @@ use crate::bp::chain::AssetId;
 use crate::lnp::message::{AcceptChannel, OpenChannel};
 use crate::SECP256K1_PUBKEY_DUMB;
 
-pub type AssetsBalance = HashMap<AssetId, u64>;
+pub type AssetsBalance = BTreeMap<AssetId, u64>;
 
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
@@ -230,6 +230,12 @@ pub struct TempChannelId(Slice32);
 impl From<TempChannelId> for ChannelId {
     fn from(temp: TempChannelId) -> Self {
         Self(temp.into_inner())
+    }
+}
+
+impl From<ChannelId> for TempChannelId {
+    fn from(id: ChannelId) -> Self {
+        Self(id.into_inner())
     }
 }
 
