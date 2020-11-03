@@ -164,6 +164,18 @@ impl PubkeyScript {
     }
 }
 
+impl From<WPubkeyHash> for PubkeyScript {
+    fn from(wpkh: WPubkeyHash) -> Self {
+        Script::new_v0_wpkh(&wpkh).into()
+    }
+}
+
+impl From<PubkeyScript> for Script {
+    fn from(pks: PubkeyScript) -> Self {
+        pks.into_inner()
+    }
+}
+
 /// A content of `sigScript` from a transaction input
 #[derive(
     Wrapper,

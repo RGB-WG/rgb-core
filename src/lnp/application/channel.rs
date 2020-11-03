@@ -25,7 +25,7 @@ use crate::bp::chain::AssetId;
 use crate::lnp::message::{AcceptChannel, OpenChannel};
 use crate::SECP256K1_PUBKEY_DUMB;
 
-pub use super::tx::ScriptGenerators;
+pub use super::tx::{ScriptGenerators, TxGenerators};
 
 pub type AssetsBalance = BTreeMap<AssetId, u64>;
 
