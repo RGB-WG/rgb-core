@@ -20,7 +20,8 @@ pub mod peer_connection;
 pub mod rpc_connection;
 
 pub use channel::{
-    ChannelId, ChannelState, OnionPacket, PaymentHash, PaymentPreimage,
+    AssetsBalance, ChannelId, ChannelKeys, ChannelNegotiationError,
+    ChannelParams, ChannelState, OnionPacket, PaymentHash, PaymentPreimage,
     PaymentSecret, Slice32, TempChannelId,
 };
 pub use features::{FeatureContext, FeatureFlag, Features};

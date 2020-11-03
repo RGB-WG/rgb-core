@@ -421,8 +421,6 @@ impl FromStr for Bech32 {
         let (hrp, data) = bech32::decode(&s)?;
         let data = Vec::<u8>::from_base32(&data)?;
 
-        use bitcoin::hashes::hex::ToHex;
-
         Ok(match hrp {
             x if x == Self::HRP_PEDERSEN => {
                 Self::PedersenCommitment(strict_decode(&data)?)

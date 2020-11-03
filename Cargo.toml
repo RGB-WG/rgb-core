@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp"
-version = "0.2.0-beta.1"
+version = "0.2.0-beta.2"
 license = "MIT"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP Core Library implementing LNPBP specifications & standards"
@@ -30,13 +30,13 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # Once the library is stable consider upgrading tilde requirements to strict
 # equivalence requirements (with '=' sign) since even dependencies patching will
 # not introduce risk of breaking the consensus and even security updates must
-# be done manualy after through testing
+# be done manually after through testing
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = { version = "~2.2.1", features = ["stringly_conversions"] }
-amplify_derive = "~2.2.1"
-lnpbp_derive = "=0.2.0-beta.1"
+amplify = { version = "~2.3.0-rc.1", features = ["stringly_conversions"] }
+amplify_derive = "~2.2.2"
+lnpbp_derive = { path = "derive" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.25.1", features = ["rand"] }
