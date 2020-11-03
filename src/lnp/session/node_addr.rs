@@ -36,7 +36,16 @@ use crate::lnp::{AddrError, UrlString};
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
 )]
 #[lnpbp_crate(crate)]
 #[display(inner)]
@@ -134,7 +143,17 @@ impl TryFrom<NodeAddr> for ZmqSocketAddr {
 /// `<node_id>@<node_inet_addr>[:<port>]`, where <node_inet_addr> may be
 /// IPv4, IPv6, Onion v2 or v3 address
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
-#[derive(Clone, PartialEq, Eq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
+)]
 #[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",

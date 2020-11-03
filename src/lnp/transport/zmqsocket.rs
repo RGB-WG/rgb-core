@@ -23,6 +23,7 @@ use url::Url;
 
 use super::{Duplex, RecvFrame, RoutedFrame, SendFrame};
 use crate::lnp::{transport, AddrError, UrlString};
+use bitcoin_hashes::core::cmp::Ordering;
 
 lazy_static! {
     pub static ref ZMQ_CONTEXT: zmq::Context = zmq::Context::new();
@@ -159,6 +160,20 @@ pub enum ZmqSocketAddr {
 
     #[display("tcp://{0}", alt = "lnpz://{0}")]
     Tcp(SocketAddr),
+}
+
+// Fake implementation required to use socket addresses with StrictEncode
+// BTreeMaps
+impl PartialOrd for ZmqSocketAddr {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.to_string().partial_cmp(&other.to_string())
+    }
+}
+
+impl Ord for ZmqSocketAddr {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_string().cmp(&other.to_string())
+    }
 }
 
 impl UrlString for ZmqSocketAddr {

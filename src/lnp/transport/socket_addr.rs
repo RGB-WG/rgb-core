@@ -29,6 +29,7 @@ use url::{self, Url};
 #[cfg(feature = "zmq")]
 use super::zmqsocket;
 use crate::lnp::{AddrError, UrlString};
+use bitcoin_hashes::core::cmp::Ordering;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
@@ -100,7 +101,16 @@ impl FromStr for FramingProtocol {
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
 )]
 #[lnpbp_crate(crate)]
 pub enum LocalSocketAddr {
@@ -156,6 +166,21 @@ pub enum RemoteSocketAddr {
     #[display("{0}", alt = "lnpm://{0}")]
     Smtp(InetSocketAddr),
 }
+
+// Fake implementation required to use node addresses with StrictEncode
+// BTreeMaps
+impl PartialOrd for RemoteSocketAddr {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.to_string().partial_cmp(&other.to_string())
+    }
+}
+
+impl Ord for RemoteSocketAddr {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_string().cmp(&other.to_string())
+    }
+}
+
 impl RemoteSocketAddr {
     pub fn with_ip_addr(proto: FramingProtocol, ip: IpAddr, port: u16) -> Self {
         let addr = SocketAddr::new(ip, port);
