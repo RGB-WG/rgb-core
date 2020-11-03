@@ -12,8 +12,8 @@ edition = "2018"
 
 [dependencies]
 # LNP/BP libraries
-amplify = "~2.3.0-rc.1"
-amplify_derive = "~2.2.2"
+amplify = "~2.3.0"
+amplify_derive = "~2.3.0"
 lnpbp = { path = ".." }
 lnpbp_derive = { path = "../derive" }
 # Serialization & parsing
