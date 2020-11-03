@@ -23,7 +23,8 @@ pub use application::invoice::{
     Invoice, InvoiceBuilder, InvoiceDescription, SignedRawInvoice,
 };
 pub use application::{
-    channel, message, rpc_connection, ChannelId, ChannelState, FeatureContext,
+    channel, message, rpc_connection, AssetsBalance, ChannelId, ChannelKeys,
+    ChannelNegotiationError, ChannelParams, ChannelState, FeatureContext,
     FeatureFlag, Features, Messages, OnionPacket, PaymentHash, PaymentPreimage,
     PaymentSecret, PeerConnection, PeerReceiver, PeerSender, RecvMessage,
     RpcConnection, SendMessage, TempChannelId, LNPWP_UNMARSHALLER,
