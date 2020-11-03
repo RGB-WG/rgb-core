@@ -425,7 +425,9 @@ pub enum ChannelNegotiationError {
     RemoteDustExceedsLocalReserve(u64, u64),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, Default, StrictEncode, StrictDecode,
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Display, Serialize, Deserialize),

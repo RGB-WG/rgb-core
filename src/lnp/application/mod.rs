@@ -18,6 +18,7 @@ mod features;
 pub mod message;
 pub mod peer_connection;
 pub mod rpc_connection;
+mod tx;
 
 pub use channel::{
     AssetsBalance, ChannelId, ChannelKeys, ChannelNegotiationError,
