@@ -21,6 +21,7 @@ impl PubkeyScript {
         pubkey1: secp256k1::PublicKey,
         pubkey2: secp256k1::PublicKey,
     ) -> Self {
+        // TODO: (v0.2) Make sure that miniscript does lexicographic ordering
         let lock = Terminal::Multi(
             2,
             vec![

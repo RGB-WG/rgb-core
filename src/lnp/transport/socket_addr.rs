@@ -227,6 +227,20 @@ impl RemoteSocketAddr {
     }
 }
 
+impl From<RemoteSocketAddr> for InetSocketAddr {
+    fn from(rsa: RemoteSocketAddr) -> Self {
+        match rsa {
+            RemoteSocketAddr::Ftcp(inet) => inet,
+            #[cfg(feature = "zmq")]
+            RemoteSocketAddr::Zmq(sa) => sa.into(),
+            RemoteSocketAddr::Http(inet) => inet,
+            #[cfg(feature = "websocket")]
+            RemoteSocketAddr::Websocket(inet) => inet,
+            RemoteSocketAddr::Smtp(inet) => inet,
+        }
+    }
+}
+
 #[cfg(feature = "url")]
 impl FromStr for LocalSocketAddr {
     type Err = AddrError;
