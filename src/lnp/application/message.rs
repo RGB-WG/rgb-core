@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::DumbDefault;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 use std::io;
@@ -26,6 +27,7 @@ use crate::lnp::presentation::{
     CreateUnmarshaller, Encode, Unmarshall, Unmarshaller,
 };
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+use crate::SECP256K1_PUBKEY_DUMB;
 
 lazy_static! {
     pub static ref LNPWP_UNMARSHALLER: Unmarshaller<Messages> =
@@ -572,5 +574,32 @@ impl StrictDecode for Messages {
                 )
             })?)
             .clone())
+    }
+}
+
+impl DumbDefault for OpenChannel {
+    fn dumb_default() -> Self {
+        OpenChannel {
+            chain_hash: none!(),
+            temporary_channel_id: TempChannelId::dumb_default(),
+            funding_satoshis: 0,
+            push_msat: 0,
+            dust_limit_satoshis: 0,
+            max_htlc_value_in_flight_msat: 0,
+            channel_reserve_satoshis: 0,
+            htlc_minimum_msat: 0,
+            feerate_per_kw: 0,
+            to_self_delay: 0,
+            max_accepted_htlcs: 0,
+            funding_pubkey: *SECP256K1_PUBKEY_DUMB,
+            revocation_basepoint: *SECP256K1_PUBKEY_DUMB,
+            payment_point: *SECP256K1_PUBKEY_DUMB,
+            delayed_payment_basepoint: *SECP256K1_PUBKEY_DUMB,
+            htlc_basepoint: *SECP256K1_PUBKEY_DUMB,
+            first_per_commitment_point: *SECP256K1_PUBKEY_DUMB,
+            channel_flags: 0,
+            shutdown_scriptpubkey: None,
+            unknown_tlvs: none!(),
+        }
     }
 }

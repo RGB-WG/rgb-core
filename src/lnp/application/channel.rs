@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::{ToYamlString, Wrapper};
+use amplify::{DumbDefault, ToYamlString, Wrapper};
 use std::collections::HashMap;
 use std::fmt::{self, Formatter, LowerHex, UpperHex};
 use std::str::FromStr;
@@ -23,6 +23,7 @@ use bitcoin::Script;
 
 use crate::bp::chain::AssetId;
 use crate::lnp::message::{AcceptChannel, OpenChannel};
+use crate::SECP256K1_PUBKEY_DUMB;
 
 pub type AssetsBalance = HashMap<AssetId, u64>;
 
@@ -84,6 +85,7 @@ impl Default for ChannelState {
     Hash,
     Debug,
     Display,
+    Default,
     From,
     StrictEncode,
     StrictDecode,
@@ -246,6 +248,12 @@ impl TempChannelId {
     #[cfg(feature = "keygen")]
     pub fn random() -> Self {
         TempChannelId::from_inner(Slice32::random())
+    }
+}
+
+impl DumbDefault for TempChannelId {
+    fn dumb_default() -> Self {
+        Self(Default::default())
     }
 }
 
@@ -564,6 +572,20 @@ impl From<&AcceptChannel> for ChannelKeys {
             htlc_basepoint: msg.htlc_basepoint,
             first_per_commitment_point: msg.first_per_commitment_point,
             shutdown_scriptpubkey: msg.shutdown_scriptpubkey.clone(),
+        }
+    }
+}
+
+impl DumbDefault for ChannelKeys {
+    fn dumb_default() -> Self {
+        Self {
+            funding_pubkey: *SECP256K1_PUBKEY_DUMB,
+            revocation_basepoint: *SECP256K1_PUBKEY_DUMB,
+            payment_point: *SECP256K1_PUBKEY_DUMB,
+            delayed_payment_basepoint: *SECP256K1_PUBKEY_DUMB,
+            htlc_basepoint: *SECP256K1_PUBKEY_DUMB,
+            first_per_commitment_point: *SECP256K1_PUBKEY_DUMB,
+            shutdown_scriptpubkey: None,
         }
     }
 }

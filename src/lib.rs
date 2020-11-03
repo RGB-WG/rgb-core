@@ -83,5 +83,9 @@ pub use standards::{features, lnpbp1, lnpbp2, lnpbp3, lnpbp4};
 
 lazy_static! {
     /// Global Secp256k1 context object
-    pub static ref SECP256K1: bitcoin::secp256k1::Secp256k1<bitcoin::secp256k1::All> = bitcoin::secp256k1::Secp256k1::new();
+    pub static ref SECP256K1: bitcoin::secp256k1::Secp256k1<bitcoin::secp256k1::All> =
+        bitcoin::secp256k1::Secp256k1::new();
+
+    pub static ref SECP256K1_PUBKEY_DUMB: bitcoin::secp256k1::PublicKey =
+        bitcoin::secp256k1::PublicKey::from_secret_key(&SECP256K1, &bitcoin::secp256k1::key::ONE_KEY);
 }
