@@ -97,14 +97,17 @@
 //! ```
 
 use amplify::Wrapper;
+use core::convert::TryFrom;
+use std::convert::TryInto;
+use std::fmt::{self, Display, Formatter};
+
 use bitcoin::{
     blockdata::{opcodes, opcodes::All, script::*},
     hashes::hex::ToHex,
-    secp256k1, ScriptHash, WPubkeyHash, WScriptHash,
+    secp256k1, Address, ScriptHash, WPubkeyHash, WScriptHash,
 };
-use core::convert::TryFrom;
-use std::fmt::{self, Display, Formatter};
 
+use crate::bp::Chain;
 use crate::strict_encoding;
 
 /// Script which knowledge is required for spending some specific transaction
@@ -152,6 +155,12 @@ pub struct PubkeyScript(Script);
 
 impl strict_encoding::Strategy for PubkeyScript {
     type Strategy = strict_encoding::strategies::Wrapped;
+}
+
+impl PubkeyScript {
+    pub fn address(&self, chain: Chain) -> Option<Address> {
+        Address::from_script(self.as_inner(), chain.try_into().ok()?)
+    }
 }
 
 /// A content of `sigScript` from a transaction input
@@ -286,6 +295,8 @@ impl From<LockScript> for WitnessScript {
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct TapScript(Script);
+
+// TODO: (v1.0) Add address generation impl once Taproot will be out
 
 impl strict_encoding::Strategy for TapScript {
     type Strategy = strict_encoding::strategies::Wrapped;

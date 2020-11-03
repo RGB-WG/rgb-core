@@ -25,11 +25,11 @@ impl PubkeyScript {
             2,
             vec![
                 bitcoin::PublicKey {
-                    compressed: false,
+                    compressed: true,
                     key: pubkey1,
                 },
                 bitcoin::PublicKey {
-                    compressed: false,
+                    compressed: true,
                     key: pubkey2,
                 },
             ],
