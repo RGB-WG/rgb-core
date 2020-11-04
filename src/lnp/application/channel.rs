@@ -17,9 +17,9 @@ use std::fmt::{self, Formatter, LowerHex, UpperHex};
 use std::str::FromStr;
 
 use bitcoin::hashes::hex::{Error, FromHex, ToHex};
-use bitcoin::hashes::{sha256, Hmac};
+use bitcoin::hashes::{sha256, Hash, Hmac};
 use bitcoin::secp256k1::{self, PublicKey};
-use bitcoin::Script;
+use bitcoin::{OutPoint, Script};
 
 use crate::bp::chain::AssetId;
 use crate::lnp::message::{AcceptChannel, OpenChannel};
@@ -182,6 +182,7 @@ impl UpperHex for Slice32 {
     Hash,
     Debug,
     Display,
+    Default,
     From,
     StrictEncode,
     StrictDecode,
@@ -199,6 +200,16 @@ impl FromHex for ChannelId {
             + DoubleEndedIterator,
     {
         Ok(Self(Slice32::from_byte_iter(iter)?))
+    }
+}
+
+impl ChannelId {
+    pub fn with(funding_outpoint: OutPoint) -> Self {
+        let mut slice = funding_outpoint.txid.into_inner();
+        let vout = funding_outpoint.vout.to_be_bytes();
+        slice[30] ^= vout[0];
+        slice[31] ^= vout[1];
+        ChannelId::from_inner(Slice32::from_inner(slice))
     }
 }
 
