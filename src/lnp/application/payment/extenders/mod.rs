@@ -11,18 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod channel;
-pub mod invoice;
-mod tx;
-mod types;
+pub mod dlc;
+pub mod lightspeed;
 
-mod constructors;
-mod extenders;
-mod modifiers;
+// LN feature-flag based extensions
+pub mod anchor_out;
+pub mod shutdown;
 
-pub use invoice::Invoice;
-pub use types::{AssetsBalance, ChannelId, Lifecycle, TempChannelId};
-
-pub use constructors::{bolt3, eltoo, taproot};
-pub use extenders::{anchor_out, dlc, htlc, lightspeed, ptlc, shutdown};
-pub use modifiers::{bip96, rgb};
+// Payment protocols
+pub mod htlc;
+pub mod ptlc;
