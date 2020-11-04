@@ -210,3 +210,15 @@ impl TxGraph {
         )
     }
 }
+
+pub trait History {
+    type State;
+    type Error: std::error::Error;
+
+    fn height(&self) -> usize;
+    fn get(&self, height: usize) -> Result<Self::State, Self::Error>;
+    fn top(&self) -> Result<Self::State, Self::Error>;
+    fn bottom(&self) -> Result<Self::State, Self::Error>;
+    fn dig(&self) -> Result<Self::State, Self::Error>;
+    fn push(&mut self, state: Self::State) -> Result<&mut Self, Self::Error>;
+}

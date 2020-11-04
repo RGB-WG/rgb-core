@@ -14,6 +14,7 @@
 pub mod channel;
 pub mod invoice;
 mod tx;
+mod types;
 
-pub use channel::{AssetsBalance, ChannelId, Keyset, Lifecycle, TempChannelId};
 pub use invoice::Invoice;
+pub use types::{AssetsBalance, ChannelId, Lifecycle, TempChannelId};
