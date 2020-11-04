@@ -11,11 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::convert::TryFrom;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use super::channel;
 use crate::lnp::application::Messages;
+use crate::strict_encoding;
 
 /// Marker trait for creating extension nomenclatures, defining order in which
 /// extensions are applied to the channel transaction structure.
@@ -33,26 +35,30 @@ where
         + Hash
         + Debug
         + Display
-        + From<u16>
+        + Default
+        + TryFrom<u16, Error = strict_encoding::Error>
         + Into<u16>,
 {
 }
 
 pub trait Extension {
-    /// These are extension configuration data, like the data that are the part
-    /// of the channel parameters negotiatied between peeers or preconfigured
-    /// parameters from the configuration file
-    type ExtensionState: channel::State;
+    type Identity: Nomenclature;
+
+    fn identity(&self) -> Self::Identity;
 
     /// Updates extension state from the data takend from the message received
     /// from the remote peer
     fn update_from_peer(
         &mut self,
-        data: Messages,
+        data: &Messages,
     ) -> Result<(), channel::Error>;
 
     /// Returns extension state for persistence & backups
-    fn extension_state(&self) -> Self::ExtensionState;
+    ///
+    /// These are extension configuration data, like the data that are the part
+    /// of the channel parameters negotiatied between peeers or preconfigured
+    /// parameters from the configuration file
+    fn extension_state(&self) -> Box<dyn channel::State>;
 }
 
 pub trait RoutingExtension: Extension {}
@@ -60,12 +66,11 @@ pub trait RoutingExtension: Extension {}
 pub trait GossipExtension: Extension {}
 
 pub trait ChannelExtension: Extension {
+    /// Returns channel state for persistence & backups.
+    ///
     /// These are channel-specific data generated from channel operations,
-    /// including client-valudated data
-    type ChannelState: channel::State;
-
-    /// Returns channel state for persistence & backups
-    fn channel_state(&self) -> Self::ChannelState;
+    /// including client-validated data
+    fn channel_state(&self) -> Box<dyn channel::State>;
 
     /// Applies state to the channel transaction graph
     fn apply(

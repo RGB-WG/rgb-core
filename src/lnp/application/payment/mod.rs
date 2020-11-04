@@ -20,7 +20,9 @@ mod extenders;
 mod modifiers;
 
 pub use invoice::Invoice;
-pub use types::{AssetsBalance, ChannelId, Lifecycle, TempChannelId};
+pub use types::{
+    AssetsBalance, ChannelId, ExtensionId, Lifecycle, TempChannelId,
+};
 
 pub use constructors::{bolt3, eltoo, taproot, Bolt3};
 pub use extenders::{

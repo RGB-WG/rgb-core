@@ -52,9 +52,12 @@ Self: Clone
 {
 }
 
-/// Channel data in fact is a data of all it's extensions
-pub type ChannelData<N> = BTreeMap<N, Box<dyn State>>;
-impl<N> State for ChannelData<N> where N: extension::Nomenclature {}
+/// Channel state is a sum of the state from all its extensions
+pub type IntegralState<N> = BTreeMap<N, Box<dyn State>>;
+impl<N> State for IntegralState<N> where N: extension::Nomenclature {}
+
+pub type ExtensionQueue<N> =
+    BTreeMap<N, Box<dyn ChannelExtension<Identity = N>>>;
 
 /// Channel operates as a three sets of extensions, where each set is applied
 /// to construct the transaction graph and the state in a strict order one after
@@ -67,54 +70,88 @@ where
 {
     /// Constructor extensions constructs base transaction graph. There could
     /// be only a single extension of this type
-    constructor: Box<
-        dyn ChannelExtension<
-            ExtensionState = ChannelData<N>,
-            ChannelState = ChannelData<N>,
-        >,
-    >,
+    constructor: Box<dyn ChannelExtension<Identity = N>>,
 
     /// Extender extensions adds additional outputs to the transaction graph
     /// and the state data associated with these outputs, like HTLCs, PTLCs,
     /// anchored outputs, DLC-specific outs etc
-    extenders: BTreeMap<
-        N,
-        Box<
-            dyn ChannelExtension<
-                ExtensionState = ChannelData<N>,
-                ChannelState = ChannelData<N>,
-            >,
-        >,
-    >,
+    extenders: ExtensionQueue<N>,
 
     /// Modifier extensions do not change number of outputs, but may change
     /// their ordering or tweak individual inputs, outputs and public keys.
     /// These extensions may include: BIP96 lexicographic ordering, RGB, Liquid
-    modifiers: BTreeMap<
-        N,
-        Box<
-            dyn ChannelExtension<
-                ExtensionState = ChannelData<N>,
-                ChannelState = ChannelData<N>,
-            >,
+    modifiers: ExtensionQueue<N>,
+}
+
+impl<N> Channel<N>
+where
+    N: extension::Nomenclature,
+{
+    pub fn with(
+        constructor: impl ChannelExtension<Identity = N> + 'static,
+        extenders: impl IntoIterator<
+            Item = impl ChannelExtension<Identity = N> + 'static,
         >,
-    >,
+        modifiers: impl IntoIterator<
+            Item = impl ChannelExtension<Identity = N> + 'static,
+        >,
+    ) -> Self {
+        Self {
+            constructor: Box::new(constructor),
+            extenders: extenders.into_iter().fold(
+                ExtensionQueue::<N>::new(),
+                |mut queue, e| {
+                    queue.insert(e.identity(), Box::new(e));
+                    queue
+                },
+            ),
+            modifiers: modifiers.into_iter().fold(
+                ExtensionQueue::<N>::new(),
+                |mut queue, e| {
+                    queue.insert(e.identity(), Box::new(e));
+                    queue
+                },
+            ),
+        }
+    }
 }
 
 /// Channel is the extension to itself :) so it receives the same input as any
 /// other extension and just forwards it to them
 impl<N> Extension for Channel<N>
 where
-    N: extension::Nomenclature,
+    N: 'static + extension::Nomenclature,
 {
-    type ExtensionState = ChannelData<N>;
+    type Identity = N;
 
-    fn update_from_peer(&mut self, data: Messages) -> Result<(), Error> {
-        unimplemented!()
+    fn identity(&self) -> Self::Identity {
+        N::default()
     }
 
-    fn extension_state(&self) -> Self::ExtensionState {
-        unimplemented!()
+    fn update_from_peer(&mut self, data: &Messages) -> Result<(), Error> {
+        self.constructor.update_from_peer(data)?;
+        self.extenders
+            .iter_mut()
+            .try_for_each(|(_, e)| e.update_from_peer(data))?;
+        self.modifiers
+            .iter_mut()
+            .try_for_each(|(_, e)| e.update_from_peer(data))?;
+        Ok(())
+    }
+
+    fn extension_state(&self) -> Box<dyn State> {
+        let mut data = IntegralState::<N>::new();
+        data.insert(
+            self.constructor.identity(),
+            self.constructor.extension_state(),
+        );
+        self.extenders.iter().for_each(|(id, e)| {
+            data.insert(*id, e.extension_state());
+        });
+        self.modifiers.iter().for_each(|(id, e)| {
+            data.insert(*id, e.extension_state());
+        });
+        Box::new(data)
     }
 }
 
@@ -122,16 +159,32 @@ where
 /// other extension and just forwards it to them
 impl<N> ChannelExtension for Channel<N>
 where
-    N: extension::Nomenclature,
+    N: 'static + extension::Nomenclature,
 {
-    type ChannelState = ChannelData<N>;
-
-    fn channel_state(&self) -> Self::ChannelState {
-        unimplemented!()
+    fn channel_state(&self) -> Box<dyn State> {
+        let mut data = IntegralState::<N>::new();
+        data.insert(
+            self.constructor.identity(),
+            self.constructor.extension_state(),
+        );
+        self.extenders.iter().for_each(|(id, e)| {
+            data.insert(*id, e.extension_state());
+        });
+        self.modifiers.iter().for_each(|(id, e)| {
+            data.insert(*id, e.extension_state());
+        });
+        Box::new(data)
     }
 
     fn apply(&mut self, tx_graph: &mut TxGraph) -> Result<(), Error> {
-        unimplemented!()
+        self.constructor.apply(tx_graph)?;
+        self.extenders
+            .iter_mut()
+            .try_for_each(|(_, e)| e.apply(tx_graph))?;
+        self.modifiers
+            .iter_mut()
+            .try_for_each(|(_, e)| e.apply(tx_graph))?;
+        Ok(())
     }
 }
 

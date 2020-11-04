@@ -13,6 +13,7 @@
 
 use amplify::{DumbDefault, Wrapper};
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 use std::fmt::Debug;
 
 use bitcoin::hashes::hex::{Error, FromHex};
@@ -21,9 +22,72 @@ use bitcoin::OutPoint;
 
 use crate::bp::chain::AssetId;
 use crate::bp::Slice32;
+use crate::lnp::application::extension;
+use crate::strict_encoding::{self, strict_decode, strict_encode};
 
 /// Shorthand for representing asset - amount pairs
 pub type AssetsBalance = BTreeMap<AssetId, u64>;
+
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub enum ExtensionId {
+    /// The channel itself
+    Channel,
+
+    Bolt3,
+    Eltoo,
+    Taproot,
+
+    Htlc,
+    Ptlc,
+    ShutdownScript,
+    AnchorOut,
+    Dlc,
+    Lightspeed,
+
+    Bip96,
+    Rgb,
+}
+
+impl Default for ExtensionId {
+    fn default() -> Self {
+        ExtensionId::Channel
+    }
+}
+
+impl From<ExtensionId> for u16 {
+    fn from(id: ExtensionId) -> Self {
+        let mut buf = [0u8; 2];
+        buf.copy_from_slice(
+            &strict_encode(&id)
+                .expect("Enum in-memory strict encoding can't fail"),
+        );
+        u16::from_be_bytes(buf)
+    }
+}
+
+impl TryFrom<u16> for ExtensionId {
+    type Error = strict_encoding::Error;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        strict_decode(&value.to_be_bytes())
+    }
+}
+
+impl extension::Nomenclature for ExtensionId {}
 
 #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(

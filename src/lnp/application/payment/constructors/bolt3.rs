@@ -17,33 +17,34 @@ use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::{OutPoint, Transaction, TxIn, TxOut};
 
 use crate::bp::{IntoPk, LexOrder, LockScript, PubkeyScript, WitnessScript};
+use crate::lnp::application::payment::ExtensionId;
 use crate::lnp::application::{channel, ChannelExtension, Extension, Messages};
-
-impl channel::State for () {}
 
 pub struct Bolt3 {}
 
 impl Bolt3 {}
 
 impl Extension for Bolt3 {
-    type ExtensionState = ();
+    type Identity = ExtensionId;
+
+    fn identity(&self) -> Self::Identity {
+        ExtensionId::Bolt3
+    }
 
     fn update_from_peer(
         &mut self,
-        data: Messages,
+        data: &Messages,
     ) -> Result<(), channel::Error> {
         unimplemented!()
     }
 
-    fn extension_state(&self) -> Self::ExtensionState {
+    fn extension_state(&self) -> Box<dyn channel::State> {
         unimplemented!()
     }
 }
 
 impl ChannelExtension for Bolt3 {
-    type ChannelState = ();
-
-    fn channel_state(&self) -> Self::ChannelState {
+    fn channel_state(&self) -> Box<dyn channel::State> {
         unimplemented!()
     }
 

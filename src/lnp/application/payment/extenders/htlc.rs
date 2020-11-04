@@ -20,6 +20,7 @@ use crate::bp::{
     chain::AssetId, HashLock, HashPreimage, IntoPk, LockScript, PubkeyScript,
     WitnessScript,
 };
+use crate::lnp::application::payment::ExtensionId;
 use crate::lnp::application::{channel, ChannelExtension, Extension, Messages};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -48,24 +49,26 @@ impl channel::State for HtlcState {}
 pub struct Htlc {}
 
 impl Extension for Htlc {
-    type ExtensionState = ();
+    type Identity = ExtensionId;
+
+    fn identity(&self) -> Self::Identity {
+        ExtensionId::Htlc
+    }
 
     fn update_from_peer(
         &mut self,
-        data: Messages,
+        data: &Messages,
     ) -> Result<(), channel::Error> {
         unimplemented!()
     }
 
-    fn extension_state(&self) -> Self::ExtensionState {
+    fn extension_state(&self) -> Box<dyn channel::State> {
         unimplemented!()
     }
 }
 
 impl ChannelExtension for Htlc {
-    type ChannelState = ();
-
-    fn channel_state(&self) -> Self::ChannelState {
+    fn channel_state(&self) -> Box<dyn channel::State> {
         unimplemented!()
     }
 
