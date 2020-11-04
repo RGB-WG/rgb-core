@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin::blockdata::{opcodes::all::*, script};
-use bitcoin::secp256k1;
+use bitcoin::secp256k1::PublicKey;
 use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::{OutPoint, Transaction, TxIn, TxOut};
 
@@ -39,14 +39,14 @@ pub struct HtlcSecret {
     pub asset_id: Option<AssetId>,
 }
 
-pub struct HtlcState {
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct Htlc {
     offered_htlc: Vec<HtlcKnown>,
     received_htlc: Vec<HtlcSecret>,
     resolved_htlc: Vec<HtlcKnown>,
 }
-impl channel::State for HtlcState {}
 
-pub struct Htlc {}
+impl channel::State for Htlc {}
 
 impl Extension for Htlc {
     type Identity = ExtensionId;
@@ -57,19 +57,29 @@ impl Extension for Htlc {
 
     fn update_from_peer(
         &mut self,
-        data: &Messages,
+        message: &Messages,
     ) -> Result<(), channel::Error> {
-        unimplemented!()
+        match message {
+            Messages::UpdateAddHtlc(_) => {}
+            Messages::UpdateFulfillHtlc(_) => {}
+            Messages::UpdateFailHtlc(_) => {}
+            Messages::UpdateFailMalformedHtlc(_) => {}
+            Messages::CommitmentSigned(_) => {}
+            Messages::RevokeAndAck(_) => {}
+            Messages::ChannelReestablish(_) => {}
+            _ => {}
+        }
+        Ok(())
     }
 
     fn extension_state(&self) -> Box<dyn channel::State> {
-        unimplemented!()
+        Box::new(self.clone())
     }
 }
 
 impl ChannelExtension for Htlc {
     fn channel_state(&self) -> Box<dyn channel::State> {
-        unimplemented!()
+        Box::new(self.clone())
     }
 
     fn apply(
@@ -83,25 +93,25 @@ impl ChannelExtension for Htlc {
 pub trait ScriptGenerators {
     fn ln_offered_htlc(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         payment_hash: HashLock,
     ) -> Self;
 
     fn ln_received_htlc(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         cltv_expiry: u32,
         payment_hash: HashLock,
     ) -> Self;
 
     fn ln_htlc_output(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_delayedpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_delayedpubkey: PublicKey,
         to_self_delay: u16,
     ) -> Self;
 }
@@ -109,9 +119,9 @@ pub trait ScriptGenerators {
 impl ScriptGenerators for LockScript {
     fn ln_offered_htlc(
         _: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         payment_hash: HashLock,
     ) -> Self {
         script::Builder::new()
@@ -147,9 +157,9 @@ impl ScriptGenerators for LockScript {
 
     fn ln_received_htlc(
         _: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         cltv_expiry: u32,
         payment_hash: HashLock,
     ) -> Self {
@@ -189,8 +199,8 @@ impl ScriptGenerators for LockScript {
 
     fn ln_htlc_output(
         _: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_delayedpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_delayedpubkey: PublicKey,
         to_self_delay: u16,
     ) -> Self {
         script::Builder::new()
@@ -212,9 +222,9 @@ impl ScriptGenerators for WitnessScript {
     #[inline]
     fn ln_offered_htlc(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         payment_hash: HashLock,
     ) -> Self {
         LockScript::ln_offered_htlc(
@@ -230,9 +240,9 @@ impl ScriptGenerators for WitnessScript {
     #[inline]
     fn ln_received_htlc(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         cltv_expiry: u32,
         payment_hash: HashLock,
     ) -> Self {
@@ -250,8 +260,8 @@ impl ScriptGenerators for WitnessScript {
     #[inline]
     fn ln_htlc_output(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_delayedpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_delayedpubkey: PublicKey,
         to_self_delay: u16,
     ) -> Self {
         LockScript::ln_htlc_output(
@@ -268,9 +278,9 @@ impl ScriptGenerators for PubkeyScript {
     #[inline]
     fn ln_offered_htlc(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         payment_hash: HashLock,
     ) -> Self {
         WitnessScript::ln_offered_htlc(
@@ -286,9 +296,9 @@ impl ScriptGenerators for PubkeyScript {
     #[inline]
     fn ln_received_htlc(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         cltv_expiry: u32,
         payment_hash: HashLock,
     ) -> Self {
@@ -306,8 +316,8 @@ impl ScriptGenerators for PubkeyScript {
     #[inline]
     fn ln_htlc_output(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_delayedpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_delayedpubkey: PublicKey,
         to_self_delay: u16,
     ) -> Self {
         WitnessScript::ln_htlc_output(
@@ -324,9 +334,9 @@ impl ScriptGenerators for TxOut {
     #[inline]
     fn ln_offered_htlc(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         payment_hash: HashLock,
     ) -> Self {
         TxOut {
@@ -345,9 +355,9 @@ impl ScriptGenerators for TxOut {
     #[inline]
     fn ln_received_htlc(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_htlcpubkey: secp256k1::PublicKey,
-        remote_htlcpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_htlcpubkey: PublicKey,
+        remote_htlcpubkey: PublicKey,
         cltv_expiry: u32,
         payment_hash: HashLock,
     ) -> Self {
@@ -368,8 +378,8 @@ impl ScriptGenerators for TxOut {
     #[inline]
     fn ln_htlc_output(
         amount: u64,
-        revocationpubkey: secp256k1::PublicKey,
-        local_delayedpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_delayedpubkey: PublicKey,
         to_self_delay: u16,
     ) -> Self {
         TxOut {
@@ -390,8 +400,8 @@ pub trait TxGenerators {
         amount: u64,
         outpoint: OutPoint,
         cltv_expiry: u32,
-        revocationpubkey: secp256k1::PublicKey,
-        local_delayedpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_delayedpubkey: PublicKey,
         to_self_delay: u16,
     ) -> Self;
 }
@@ -403,8 +413,8 @@ impl TxGenerators for Transaction {
         amount: u64,
         outpoint: OutPoint,
         cltv_expiry: u32,
-        revocationpubkey: secp256k1::PublicKey,
-        local_delayedpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_delayedpubkey: PublicKey,
         to_self_delay: u16,
     ) -> Self {
         Transaction {
@@ -431,8 +441,8 @@ impl TxGenerators for Psbt {
         amount: u64,
         outpoint: OutPoint,
         cltv_expiry: u32,
-        revocationpubkey: secp256k1::PublicKey,
-        local_delayedpubkey: secp256k1::PublicKey,
+        revocationpubkey: PublicKey,
+        local_delayedpubkey: PublicKey,
         to_self_delay: u16,
     ) -> Self {
         Psbt::from_unsigned_tx(Transaction::ln_htlc(

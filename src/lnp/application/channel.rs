@@ -43,14 +43,9 @@ pub enum Error {
 }
 
 /// Marker trait for any data that can be used as a part of the channel state
-pub trait State
-/*where
-Self: Clone
-    + Debug
-    + StrictEncode<Error = strict_encoding::Error>
-    + StrictDecode<Error = strict_encoding::Error>,*/
-{
-}
+pub trait State {}
+// Allow empty state
+impl State for () {}
 
 /// Channel state is a sum of the state from all its extensions
 pub type IntegralState<N> = BTreeMap<N, Box<dyn State>>;
@@ -191,6 +186,9 @@ where
 pub trait TxRole: Clone + From<u16> + Into<u16> {}
 pub trait TxIndex: Clone + From<u64> + Into<u64> {}
 
+impl TxRole for u16 {}
+impl TxIndex for u64 {}
+
 #[derive(Getters, Clone, PartialEq, StrictEncode, StrictDecode)]
 #[lnpbp_crate(crate)]
 #[cfg_attr(
@@ -261,6 +259,73 @@ impl TxGraph {
             "PSBT construction fails only if script_sig and witness are not \
                 empty; which is not the case here",
         )
+    }
+
+    pub fn iter(&self) -> GraphIter {
+        GraphIter::with(self)
+    }
+
+    pub fn vec_mut(&mut self) -> Vec<(u16, u64, &mut Psbt)> {
+        let vec = self
+            .graph
+            .iter_mut()
+            .flat_map(|(role, map)| {
+                map.iter_mut().map(move |(index, tx)| (*role, *index, tx))
+            })
+            .collect::<Vec<_>>();
+        vec
+    }
+}
+
+impl Default for TxGraph {
+    fn default() -> Self {
+        Self {
+            funding_parties: 0,
+            funding_threshold: 0,
+            funding_tx: Psbt::from_unsigned_tx(Transaction {
+                version: 2,
+                lock_time: 0,
+                input: none!(),
+                output: none!(),
+            })
+            .expect(""),
+            funding_outpoint: none!(),
+            cmt_version: 2,
+            cmt_locktime: 0,
+            cmt_sequence: 0,
+            cmt_outs: none!(),
+            graph: empty!(),
+        }
+    }
+}
+
+pub struct GraphIter<'a> {
+    graph: &'a TxGraph,
+    curr_role: u16,
+    curr_index: u64,
+}
+
+impl<'a> GraphIter<'a> {
+    fn with(graph: &'a TxGraph) -> Self {
+        Self {
+            graph,
+            curr_role: 0,
+            curr_index: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for GraphIter<'a> {
+    type Item = (u16, u64, &'a Psbt);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let tx = self.graph.tx(self.curr_role, self.curr_index).or_else(|| {
+            self.curr_role += 1;
+            self.curr_index = 0;
+            self.graph.tx(self.curr_role, self.curr_index)
+        });
+        self.curr_index += 1;
+        tx.map(|tx| (self.curr_role, self.curr_index, tx))
     }
 }
 
