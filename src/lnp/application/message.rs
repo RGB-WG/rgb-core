@@ -146,11 +146,6 @@ pub enum Messages {
     #[lnp_api(type = 57156)]
     #[display("assign_funds(...)")]
     AssignFunds(AssignFunds),
-
-    #[cfg(feature = "rgb")]
-    #[lnp_api(type = 57158)]
-    #[display("switch_asset(...)")]
-    SwitchAsset(SwitchAsset),
 }
 
 /// Once authentication is complete, the first message reveals the features
@@ -450,6 +445,10 @@ pub struct UpdateAddHtlc {
     /// prevents replay attacks that would reuse a previous
     /// onion_routing_packet with a different payment_hash.
     pub onion_routing_packet: OnionPacket,
+
+    /// RGB Extension: TLV
+    #[cfg(feature = "rgb")]
+    pub asset_id: Option<AssetId>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
@@ -572,18 +571,6 @@ pub struct AssignFunds {
 
     /// Consignment
     pub consignment: Consignment,
-}
-
-#[cfg(feature = "rgb")]
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
-#[lnpbp_crate(crate)]
-#[display(Debug)]
-pub struct SwitchAsset {
-    /// The channel ID
-    pub channel_id: ChannelId,
-
-    /// Consignment
-    pub asset_id: AssetId,
 }
 
 impl StrictEncode for Messages {
