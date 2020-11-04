@@ -53,6 +53,10 @@ impl LocalNode {
     pub fn node_id(&self) -> secp256k1::PublicKey {
         secp256k1::PublicKey::from_secret_key(&SECP256K1, &self.private_key)
     }
+
+    pub fn sign(&self, message: &secp256k1::Message) -> secp256k1::Signature {
+        SECP256K1.sign(message, &self.private_key)
+    }
 }
 
 impl Display for LocalNode {

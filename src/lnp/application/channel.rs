@@ -554,7 +554,7 @@ impl ChannelParams {
 pub struct ChannelKeys {
     pub funding_pubkey: PublicKey,
     pub revocation_basepoint: PublicKey,
-    pub payment_point: PublicKey,
+    pub payment_basepoint: PublicKey,
     pub delayed_payment_basepoint: PublicKey,
     pub htlc_basepoint: PublicKey,
     pub first_per_commitment_point: PublicKey,
@@ -569,7 +569,7 @@ impl From<&OpenChannel> for ChannelKeys {
         Self {
             funding_pubkey: msg.funding_pubkey,
             revocation_basepoint: msg.revocation_basepoint,
-            payment_point: msg.payment_point,
+            payment_basepoint: msg.payment_point,
             delayed_payment_basepoint: msg.delayed_payment_basepoint,
             htlc_basepoint: msg.htlc_basepoint,
             first_per_commitment_point: msg.first_per_commitment_point,
@@ -583,7 +583,7 @@ impl From<&AcceptChannel> for ChannelKeys {
         Self {
             funding_pubkey: msg.funding_pubkey,
             revocation_basepoint: msg.revocation_basepoint,
-            payment_point: msg.payment_point,
+            payment_basepoint: msg.payment_point,
             delayed_payment_basepoint: msg.delayed_payment_basepoint,
             htlc_basepoint: msg.htlc_basepoint,
             first_per_commitment_point: msg.first_per_commitment_point,
@@ -597,7 +597,7 @@ impl DumbDefault for ChannelKeys {
         Self {
             funding_pubkey: *SECP256K1_PUBKEY_DUMB,
             revocation_basepoint: *SECP256K1_PUBKEY_DUMB,
-            payment_point: *SECP256K1_PUBKEY_DUMB,
+            payment_basepoint: *SECP256K1_PUBKEY_DUMB,
             delayed_payment_basepoint: *SECP256K1_PUBKEY_DUMB,
             htlc_basepoint: *SECP256K1_PUBKEY_DUMB,
             first_per_commitment_point: *SECP256K1_PUBKEY_DUMB,
