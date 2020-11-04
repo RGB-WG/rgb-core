@@ -19,15 +19,11 @@ pub mod presentation;
 pub mod session;
 pub mod transport;
 
-pub use application::invoice::{
-    Invoice, InvoiceBuilder, InvoiceDescription, SignedRawInvoice,
-};
 pub use application::{
-    channel, message, rpc_connection, AssetsBalance, ChannelId, ChannelKeys,
-    ChannelNegotiationError, ChannelParams, ChannelState, FeatureContext,
-    FeatureFlag, Features, Messages, OnionPacket, PeerConnection, PeerReceiver,
-    PeerSender, RecvMessage, RpcConnection, SendMessage, TempChannelId,
-    LNPWP_UNMARSHALLER,
+    channel, factories, message, payment, prometheus, rpc_connection, storm,
+    FeatureContext, FeatureFlag, Features, Messages, OnionPacket,
+    PeerConnection, PeerReceiver, PeerSender, RecvMessage, RpcConnection,
+    SendMessage, LNPWP_UNMARSHALLER,
 };
 pub use presentation::payload::{TypeId, TypedEnum};
 pub use presentation::{

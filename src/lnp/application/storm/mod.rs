@@ -10,18 +10,3 @@
 // You should have received a copy of the MIT License
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
-
-use std::fmt::Debug;
-
-use crate::strict_encoding::{self, StrictDecode, StrictEncode};
-
-/// Marker trait for any data that can be used as a part of the channel state
-pub trait StateData
-where
-    Self: Clone
-        + PartialEq
-        + Debug
-        + StrictEncode<Error = strict_encoding::Error>
-        + StrictDecode<Error = strict_encoding::Error>,
-{
-}

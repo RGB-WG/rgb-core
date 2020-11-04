@@ -11,17 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::fmt::Debug;
+pub mod channel;
+pub mod invoice;
+mod tx;
 
-use crate::strict_encoding::{self, StrictDecode, StrictEncode};
-
-/// Marker trait for any data that can be used as a part of the channel state
-pub trait StateData
-where
-    Self: Clone
-        + PartialEq
-        + Debug
-        + StrictEncode<Error = strict_encoding::Error>
-        + StrictDecode<Error = strict_encoding::Error>,
-{
-}
+pub use channel::{AssetsBalance, ChannelId, Keyset, Lifecycle, TempChannelId};
+pub use invoice::Invoice;

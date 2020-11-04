@@ -20,7 +20,8 @@ use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1::{PublicKey, Signature};
 use bitcoin::{Script, Txid};
 
-use super::{ChannelId, Features, TempChannelId};
+use super::payment::{ChannelId, TempChannelId};
+use super::Features;
 use crate::bp::chain::AssetId;
 use crate::bp::{HashLock, HashPreimage};
 use crate::lnp::presentation::{

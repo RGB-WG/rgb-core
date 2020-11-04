@@ -13,19 +13,16 @@
 
 pub mod channel;
 // pub mod extensions;
+pub mod factories;
 mod features;
-pub mod invoice;
 pub mod message;
+pub mod payment;
 pub mod peer_connection;
+pub mod prometheus;
 pub mod rpc_connection;
-mod tx;
+pub mod storm;
 
-pub use channel::{
-    AssetsBalance, ChannelId, ChannelKeys, ChannelNegotiationError,
-    ChannelParams, ChannelState, TempChannelId,
-};
 pub use features::{FeatureContext, FeatureFlag, Features};
-pub use invoice::Invoice;
 pub use message::{Messages, OnionPacket, LNPWP_UNMARSHALLER};
 pub use peer_connection::{
     PeerConnection, PeerReceiver, PeerSender, RecvMessage, SendMessage,

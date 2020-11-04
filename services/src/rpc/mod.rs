@@ -20,6 +20,7 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use lnpbp::lnp;
+use lnpbp::lnp::payment;
 
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;
@@ -99,8 +100,8 @@ where
     }
 }
 
-impl From<lnp::ChannelNegotiationError> for Failure {
-    fn from(err: lnp::ChannelNegotiationError) -> Self {
+impl From<payment::channel::NegotiationError> for Failure {
+    fn from(err: payment::channel::NegotiationError) -> Self {
         Failure {
             code: 1000, // Error from LN
             info: err.to_string(),
