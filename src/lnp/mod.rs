@@ -25,9 +25,9 @@ pub use application::invoice::{
 pub use application::{
     channel, message, rpc_connection, AssetsBalance, ChannelId, ChannelKeys,
     ChannelNegotiationError, ChannelParams, ChannelState, FeatureContext,
-    FeatureFlag, Features, Messages, OnionPacket, PaymentHash, PaymentPreimage,
-    PaymentSecret, PeerConnection, PeerReceiver, PeerSender, RecvMessage,
-    RpcConnection, SendMessage, TempChannelId, LNPWP_UNMARSHALLER,
+    FeatureFlag, Features, Messages, OnionPacket, PeerConnection, PeerReceiver,
+    PeerSender, RecvMessage, RpcConnection, SendMessage, TempChannelId,
+    LNPWP_UNMARSHALLER,
 };
 pub use presentation::payload::{TypeId, TypedEnum};
 pub use presentation::{

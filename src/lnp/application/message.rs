@@ -22,7 +22,7 @@ use bitcoin::{Script, Txid};
 
 use super::{ChannelId, Features, OnionPacket, TempChannelId};
 use crate::bp::chain::AssetId;
-use crate::lnp::application::{PaymentHash, PaymentPreimage};
+use crate::bp::{HashLock, HashPreimage};
 use crate::lnp::presentation::{
     CreateUnmarshaller, Encode, Unmarshall, Unmarshaller,
 };
@@ -434,7 +434,7 @@ pub struct UpdateAddHtlc {
     pub amount_msat: u64,
 
     /// The payment hash, the pre-image of which controls HTLC redemption
-    pub payment_hash: PaymentHash,
+    pub payment_hash: HashLock,
 
     /// The expiry height of the HTLC
     pub cltv_expiry: u32,
@@ -462,7 +462,7 @@ pub struct UpdateFulfillHtlc {
     pub htlc_id: u64,
 
     /// The pre-image of the payment hash, allowing HTLC redemption
-    pub payment_preimage: PaymentPreimage,
+    pub payment_preimage: HashPreimage,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]

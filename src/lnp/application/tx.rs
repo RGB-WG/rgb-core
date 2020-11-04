@@ -16,8 +16,7 @@ use bitcoin::secp256k1;
 use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::{OutPoint, Transaction, TxIn, TxOut};
 
-use crate::bp::{LexOrder, LockScript, PubkeyScript, WitnessScript};
-use crate::lnp::PaymentHash;
+use crate::bp::{HashLock, LexOrder, LockScript, PubkeyScript, WitnessScript};
 
 macro_rules! to_bitcoin_pk {
     ($pk:ident) => {
@@ -61,7 +60,7 @@ pub trait ScriptGenerators {
         revocationpubkey: secp256k1::PublicKey,
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self;
 
     fn ln_received_htlc(
@@ -70,7 +69,7 @@ pub trait ScriptGenerators {
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
         cltv_expiry: u32,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self;
 
     fn ln_htlc_output(
@@ -142,7 +141,7 @@ impl ScriptGenerators for LockScript {
         revocationpubkey: secp256k1::PublicKey,
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self {
         let revocationpubkey = to_bitcoin_pk!(revocationpubkey);
         let remote_htlcpubkey = to_bitcoin_pk!(remote_htlcpubkey);
@@ -184,7 +183,7 @@ impl ScriptGenerators for LockScript {
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
         cltv_expiry: u32,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self {
         let revocationpubkey = to_bitcoin_pk!(revocationpubkey);
         let remote_htlcpubkey = to_bitcoin_pk!(remote_htlcpubkey);
@@ -292,7 +291,7 @@ impl ScriptGenerators for WitnessScript {
         revocationpubkey: secp256k1::PublicKey,
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self {
         LockScript::ln_offered_htlc(
             amount,
@@ -311,7 +310,7 @@ impl ScriptGenerators for WitnessScript {
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
         cltv_expiry: u32,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self {
         LockScript::ln_received_htlc(
             amount,
@@ -390,7 +389,7 @@ impl ScriptGenerators for PubkeyScript {
         revocationpubkey: secp256k1::PublicKey,
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self {
         WitnessScript::ln_offered_htlc(
             amount,
@@ -409,7 +408,7 @@ impl ScriptGenerators for PubkeyScript {
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
         cltv_expiry: u32,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self {
         WitnessScript::ln_received_htlc(
             amount,
@@ -502,7 +501,7 @@ impl ScriptGenerators for TxOut {
         revocationpubkey: secp256k1::PublicKey,
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self {
         TxOut {
             value: amount,
@@ -524,7 +523,7 @@ impl ScriptGenerators for TxOut {
         local_htlcpubkey: secp256k1::PublicKey,
         remote_htlcpubkey: secp256k1::PublicKey,
         cltv_expiry: u32,
-        payment_hash: PaymentHash,
+        payment_hash: HashLock,
     ) -> Self {
         TxOut {
             value: amount,

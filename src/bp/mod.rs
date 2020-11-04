@@ -16,6 +16,7 @@ pub mod bip32;
 pub mod blind;
 pub mod chain;
 pub mod dbc;
+pub mod hlc;
 pub mod lex_order;
 pub mod psbt;
 pub mod resolvers;
@@ -28,6 +29,7 @@ pub mod tagged_hash;
 
 pub use bip32::{DerivationInfo, DerivationTemplate};
 pub use chain::{Chain, P2pNetworkId};
+pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
 pub use psbt::Psbt;
 pub use scripts::{
