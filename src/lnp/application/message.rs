@@ -29,6 +29,9 @@ use crate::lnp::presentation::{
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 use crate::SECP256K1_PUBKEY_DUMB;
 
+#[cfg(feature = "rgb")]
+use crate::rgb::Consignment;
+
 lazy_static! {
     pub static ref LNPWP_UNMARSHALLER: Unmarshaller<Messages> =
         Messages::create_unmarshaller();
@@ -136,6 +139,18 @@ pub enum Messages {
     #[lnp_api(type = 136)]
     #[display("channel_reestablish(...)")]
     ChannelReestablish(ChannelReestablish),
+
+    // 3. RGB
+    // ------
+    #[cfg(feature = "rgb")]
+    #[lnp_api(type = 57156)]
+    #[display("assign_funds(...)")]
+    AssignFunds(AssignFunds),
+
+    #[cfg(feature = "rgb")]
+    #[lnp_api(type = 57158)]
+    #[display("switch_asset(...)")]
+    SwitchAsset(SwitchAsset),
 }
 
 /// Once authentication is complete, the first message reveals the features
@@ -545,6 +560,30 @@ pub struct ChannelReestablish {
     /// The sender's per-commitment point for their current commitment
     /// transaction
     pub my_current_per_commitment_point: PublicKey,
+}
+
+#[cfg(feature = "rgb")]
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct AssignFunds {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// Consignment
+    pub consignment: Consignment,
+}
+
+#[cfg(feature = "rgb")]
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct SwitchAsset {
+    /// The channel ID
+    pub channel_id: ChannelId,
+
+    /// Consignment
+    pub asset_id: AssetId,
 }
 
 impl StrictEncode for Messages {
