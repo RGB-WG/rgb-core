@@ -35,7 +35,7 @@ pub type ParentOwnedRights =
 pub type ParentPublicRights =
     BTreeMap<NodeId, BTreeSet<schema::PublicRightType>>;
 
-#[derive(Clone, Debug, Display, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]
 #[cfg_attr(
     feature = "serde",

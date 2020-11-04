@@ -157,7 +157,7 @@ pub trait Node: AsAny {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -173,7 +173,7 @@ pub struct Genesis {
 }
 
 #[derive(
-    Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode, AsAny,
+    Clone, PartialEq, Eq, Debug, Default, StrictEncode, StrictDecode, AsAny,
 )]
 #[cfg_attr(
     feature = "serde",
@@ -192,7 +192,7 @@ pub struct Extension {
 }
 
 #[derive(
-    Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode, AsAny,
+    Clone, PartialEq, Eq, Debug, Default, StrictEncode, StrictDecode, AsAny,
 )]
 #[cfg_attr(
     feature = "serde",

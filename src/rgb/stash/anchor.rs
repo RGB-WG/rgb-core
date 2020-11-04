@@ -79,7 +79,7 @@ pub enum Error {
     SizeLimit,
 }
 
-#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, StrictEncode, StrictDecode)]
 #[cfg_attr(test, derive(Default))]
 #[lnpbp_crate(crate)]
 pub struct Anchor {

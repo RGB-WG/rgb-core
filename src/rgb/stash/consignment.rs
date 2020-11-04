@@ -28,7 +28,7 @@ pub type ExtensionData = Vec<Extension>;
 
 pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
 
-#[derive(Clone, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct Consignment {
