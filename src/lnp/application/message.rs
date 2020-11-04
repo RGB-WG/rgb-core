@@ -16,11 +16,11 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
-use bitcoin::hashes::sha256;
+use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1::{PublicKey, Signature};
 use bitcoin::{Script, Txid};
 
-use super::{ChannelId, Features, OnionPacket, TempChannelId};
+use super::{ChannelId, Features, TempChannelId};
 use crate::bp::chain::AssetId;
 use crate::bp::{HashLock, HashPreimage};
 use crate::lnp::presentation::{
@@ -626,6 +626,27 @@ impl DumbDefault for OpenChannel {
             channel_flags: 0,
             shutdown_scriptpubkey: None,
             unknown_tlvs: none!(),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
+#[display(Debug)]
+pub struct OnionPacket {
+    pub version: u8,
+    pub public_key: bitcoin::secp256k1::PublicKey,
+    pub hop_data: Vec<u8>, //[u8; 20 * 65],
+    pub hmac: Hmac<sha256::Hash>,
+}
+
+impl DumbDefault for OnionPacket {
+    fn dumb_default() -> Self {
+        OnionPacket {
+            version: 0,
+            public_key: *SECP256K1_PUBKEY_DUMB,
+            hop_data: empty!(),
+            hmac: zero!(),
         }
     }
 }

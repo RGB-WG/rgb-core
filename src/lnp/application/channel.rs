@@ -15,7 +15,7 @@ use amplify::{DumbDefault, ToYamlString, Wrapper};
 use std::collections::BTreeMap;
 
 use bitcoin::hashes::hex::{Error, FromHex};
-use bitcoin::hashes::{sha256, Hash, Hmac};
+use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::PublicKey;
 use bitcoin::{OutPoint, Script};
 
@@ -381,27 +381,6 @@ impl DumbDefault for ChannelKeys {
             htlc_basepoint: *SECP256K1_PUBKEY_DUMB,
             first_per_commitment_point: *SECP256K1_PUBKEY_DUMB,
             shutdown_scriptpubkey: None,
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
-#[lnpbp_crate(crate)]
-#[display(Debug)]
-pub struct OnionPacket {
-    pub version: u8,
-    pub public_key: bitcoin::secp256k1::PublicKey,
-    pub hop_data: Vec<u8>, //[u8; 20 * 65],
-    pub hmac: Hmac<sha256::Hash>,
-}
-
-impl DumbDefault for OnionPacket {
-    fn dumb_default() -> Self {
-        OnionPacket {
-            version: 0,
-            public_key: *SECP256K1_PUBKEY_DUMB,
-            hop_data: empty!(),
-            hmac: zero!(),
         }
     }
 }
