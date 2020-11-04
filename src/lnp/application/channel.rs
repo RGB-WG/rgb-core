@@ -303,6 +303,13 @@ impl DumbDefault for TempChannelId {
 #[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct PaymentHash(Slice32);
 
+impl From<PaymentPreimage> for PaymentHash {
+    fn from(preimage: PaymentPreimage) -> Self {
+        let hash = sha256::Hash::hash(preimage.as_ref());
+        Self::from_inner(Slice32::from_inner(hash.into_inner()))
+    }
+}
+
 impl FromHex for PaymentHash {
     fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
     where
@@ -362,6 +369,18 @@ impl FromHex for PaymentPreimage {
             + DoubleEndedIterator,
     {
         Ok(Self(Slice32::from_byte_iter(iter)?))
+    }
+}
+
+impl DumbDefault for PaymentPreimage {
+    fn dumb_default() -> Self {
+        Self(Default::default())
+    }
+}
+
+impl AsRef<[u8]> for PaymentPreimage {
+    fn as_ref(&self) -> &[u8] {
+        self.as_inner().as_ref()
     }
 }
 
@@ -625,4 +644,15 @@ pub struct OnionPacket {
     pub public_key: bitcoin::secp256k1::PublicKey,
     pub hop_data: Vec<u8>, //[u8; 20 * 65],
     pub hmac: Hmac<sha256::Hash>,
+}
+
+impl DumbDefault for OnionPacket {
+    fn dumb_default() -> Self {
+        OnionPacket {
+            version: 0,
+            public_key: *SECP256K1_PUBKEY_DUMB,
+            hop_data: empty!(),
+            hmac: zero!(),
+        }
+    }
 }
