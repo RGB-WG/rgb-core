@@ -22,8 +22,6 @@ use bitcoin::OutPoint;
 use crate::bp::chain::AssetId;
 use crate::bp::Slice32;
 
-pub use super::tx::{ScriptGenerators, TxGenerators};
-
 /// Shorthand for representing asset - amount pairs
 pub type AssetsBalance = BTreeMap<AssetId, u64>;
 

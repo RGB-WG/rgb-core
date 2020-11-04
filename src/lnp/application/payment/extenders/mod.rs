@@ -21,3 +21,5 @@ pub mod shutdown;
 // Payment protocols
 pub mod htlc;
 pub mod ptlc;
+
+pub use htlc::Htlc;

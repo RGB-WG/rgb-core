@@ -22,6 +22,9 @@ pub mod prometheus;
 pub mod rpc_connection;
 pub mod storm;
 
+pub use extension::{
+    ChannelExtension, Extension, GossipExtension, RoutingExtension,
+};
 pub use features::{FeatureContext, FeatureFlag, Features};
 pub use message::{Messages, OnionPacket, LNPWP_UNMARSHALLER};
 pub use peer_connection::{

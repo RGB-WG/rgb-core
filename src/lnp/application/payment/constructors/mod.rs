@@ -14,3 +14,5 @@
 pub mod bolt3;
 pub mod eltoo;
 pub mod taproot;
+
+pub use bolt3::Bolt3;

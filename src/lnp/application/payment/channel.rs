@@ -20,8 +20,6 @@ use bitcoin::Script;
 use crate::lnp::message::{AcceptChannel, OpenChannel};
 use crate::SECP256K1_PUBKEY_DUMB;
 
-pub use super::tx::{ScriptGenerators, TxGenerators};
-
 #[derive(
     Clone,
     Copy,

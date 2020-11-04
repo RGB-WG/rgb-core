@@ -13,7 +13,6 @@
 
 pub mod channel;
 pub mod invoice;
-mod tx;
 mod types;
 
 mod constructors;
@@ -23,6 +22,6 @@ mod modifiers;
 pub use invoice::Invoice;
 pub use types::{AssetsBalance, ChannelId, Lifecycle, TempChannelId};
 
-pub use constructors::{bolt3, eltoo, taproot};
-pub use extenders::{anchor_out, dlc, htlc, lightspeed, ptlc, shutdown};
+pub use constructors::{bolt3, eltoo, taproot, Bolt3};
+pub use extenders::{anchor_out, dlc, htlc, lightspeed, ptlc, shutdown, Htlc};
 pub use modifiers::{bip96, rgb};

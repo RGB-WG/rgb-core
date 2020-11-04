@@ -42,7 +42,28 @@ pub use seals::TxoutSeal;
 pub use short_id::ShortId;
 pub use slice32::Slice32;
 
-// TODO: (v0.2) Move hash-lock types from LNP mod
+use bitcoin::secp256k1;
+
+pub trait IntoPk {
+    fn into_pk(self) -> bitcoin::PublicKey;
+    fn into_legacy_pk(self) -> bitcoin::PublicKey;
+}
+
+impl IntoPk for secp256k1::PublicKey {
+    fn into_pk(self) -> bitcoin::PublicKey {
+        ::bitcoin::PublicKey {
+            compressed: true,
+            key: self,
+        }
+    }
+
+    fn into_legacy_pk(self) -> bitcoin::PublicKey {
+        ::bitcoin::PublicKey {
+            compressed: true,
+            key: self,
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]
