@@ -23,5 +23,7 @@ pub use invoice::Invoice;
 pub use types::{AssetsBalance, ChannelId, Lifecycle, TempChannelId};
 
 pub use constructors::{bolt3, eltoo, taproot, Bolt3};
-pub use extenders::{anchor_out, dlc, htlc, lightspeed, ptlc, shutdown, Htlc};
+pub use extenders::{
+    anchor_out, dlc, htlc, lightspeed, ptlc, shutdown_script, Htlc,
+};
 pub use modifiers::{bip96, rgb};

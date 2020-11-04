@@ -20,7 +20,7 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use lnpbp::lnp;
-use lnpbp::lnp::payment;
+use lnpbp::lnp::application::payment;
 
 #[cfg(feature = "node")]
 use crate::error::RuntimeError;

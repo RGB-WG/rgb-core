@@ -11,5 +11,5 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod bip96;
-pub mod rgb;
+pub mod bip96; // Lexicographic ordering
+pub mod rgb; // RGB itself!

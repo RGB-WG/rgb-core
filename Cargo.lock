@@ -788,7 +788,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.2.0-beta.1"
+version = "0.2.0-beta.2"
 dependencies = [
  "amplify",
  "lnpbp",
@@ -798,7 +798,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_services"
-version = "0.2.0-beta.1"
+version = "0.2.0-beta.2"
 dependencies = [
  "amplify",
  "amplify_derive",

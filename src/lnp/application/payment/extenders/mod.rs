@@ -11,15 +11,17 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod dlc;
-pub mod lightspeed;
-
 // LN feature-flag based extensions
 pub mod anchor_out;
-pub mod shutdown;
+pub mod shutdown_script;
 
 // Payment protocols
 pub mod htlc;
 pub mod ptlc;
+
+// Genetic protocols on top of LN payment channel with their own tx graphs added
+// to the channel tx graph
+pub mod dlc;
+pub mod lightspeed;
 
 pub use htlc::Htlc;

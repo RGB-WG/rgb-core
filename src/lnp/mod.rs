@@ -19,11 +19,11 @@ pub mod presentation;
 pub mod session;
 pub mod transport;
 
+pub use application::payment::{ChannelId, TempChannelId};
 pub use application::{
-    channel, factories, message, payment, prometheus, rpc_connection, storm,
-    FeatureContext, FeatureFlag, Features, Messages, OnionPacket,
-    PeerConnection, PeerReceiver, PeerSender, RecvMessage, RpcConnection,
-    SendMessage, LNPWP_UNMARSHALLER,
+    channel, factories, message, rpc_connection, FeatureContext, FeatureFlag,
+    Features, Messages, OnionPacket, PeerConnection, PeerReceiver, PeerSender,
+    RecvMessage, RpcConnection, SendMessage, LNPWP_UNMARSHALLER,
 };
 pub use presentation::payload::{TypeId, TypedEnum};
 pub use presentation::{
