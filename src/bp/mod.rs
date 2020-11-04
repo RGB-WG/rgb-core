@@ -22,6 +22,7 @@ pub mod resolvers;
 pub mod scripts;
 pub mod seals;
 pub mod short_id;
+mod slice32;
 mod strict_encoding;
 pub mod tagged_hash;
 
@@ -36,6 +37,7 @@ pub use scripts::{
 };
 pub use seals::TxoutSeal;
 pub use short_id::ShortId;
+pub use slice32::Slice32;
 
 // TODO: (v0.2) Move hash-lock types from LNP mod
 

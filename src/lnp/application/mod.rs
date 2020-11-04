@@ -23,7 +23,7 @@ mod tx;
 pub use channel::{
     AssetsBalance, ChannelId, ChannelKeys, ChannelNegotiationError,
     ChannelParams, ChannelState, OnionPacket, PaymentHash, PaymentPreimage,
-    PaymentSecret, Slice32, TempChannelId,
+    PaymentSecret, TempChannelId,
 };
 pub use features::{FeatureContext, FeatureFlag, Features};
 pub use message::{Messages, LNPWP_UNMARSHALLER};
