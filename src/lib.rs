@@ -53,8 +53,10 @@ extern crate serde_crate as serde;
 // of the libs so downstream dependencies can use them directly from this lib
 // TODO: Refactor re-exported bitcoin and hashes functionality
 pub extern crate bitcoin;
+pub use bitcoin::secp256k1;
 #[macro_use]
-pub extern crate bitcoin_hashes;
+pub extern crate bitcoin_hashes as hashes;
+pub use hashes::hex;
 pub extern crate miniscript;
 #[cfg(feature = "grin_secp256k1zkp")]
 pub extern crate secp256k1zkp;

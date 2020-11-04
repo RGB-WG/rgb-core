@@ -29,6 +29,7 @@ pub mod tagged_hash;
 pub use bip32::{DerivationInfo, DerivationTemplate};
 pub use chain::{Chain, P2pNetworkId};
 pub use lex_order::LexOrder;
+pub use psbt::Psbt;
 pub use scripts::{
     GenerateScripts, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
     ScriptPubkeyContent, ScriptPubkeyFormat, ScriptPubkeyStructure,

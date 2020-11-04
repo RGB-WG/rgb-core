@@ -14,12 +14,14 @@
 //! PSBT extensions, including implementation of different
 //! [`crate::bp::resolvers`] and enhancements related to key management
 
-use bitcoin::util::psbt::{raw, Map, PartiallySignedTransaction};
+pub use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
+pub use bitcoin::util::psbt::{raw, Error, Global, Input, Map, Output};
+
 use bitcoin::TxOut;
 
 use super::resolvers::{Fee, FeeError, InputPreviousTxo, MatchError};
 use crate::strict_encoding::{
-    strict_decode, strict_encode, Error, StrictDecode, StrictEncode,
+    self, strict_decode, strict_encode, StrictDecode, StrictEncode,
 };
 
 fn proprietary_key(
@@ -43,9 +45,9 @@ pub trait ProprietaryKeyMap {
         vendor: Vec<u8>,
         subtype: impl Into<u8>,
         key: Vec<u8>,
-    ) -> Option<Result<T, Error>>
+    ) -> Option<Result<T, strict_encoding::Error>>
     where
-        T: StrictDecode<Error = Error>;
+        T: StrictDecode<Error = strict_encoding::Error>;
 
     fn insert_proprietary_key(
         &mut self,
@@ -65,9 +67,9 @@ where
         vendor: Vec<u8>,
         subtype: impl Into<u8>,
         key: Vec<u8>,
-    ) -> Option<Result<T, Error>>
+    ) -> Option<Result<T, strict_encoding::Error>>
     where
-        T: StrictDecode<Error = Error>,
+        T: StrictDecode<Error = strict_encoding::Error>,
     {
         let key = proprietary_key(vendor, subtype, key);
         self.get_pairs().ok()?.iter().find_map(|pair| {
@@ -95,7 +97,7 @@ where
     }
 }
 
-impl InputPreviousTxo for PartiallySignedTransaction {
+impl InputPreviousTxo for Psbt {
     fn input_previous_txo(&self, index: usize) -> Result<&TxOut, MatchError> {
         if let (Some(input), Some(txin)) = (
             self.inputs.get(index),
@@ -129,7 +131,7 @@ impl InputPreviousTxo for PartiallySignedTransaction {
     }
 }
 
-impl Fee for PartiallySignedTransaction {
+impl Fee for Psbt {
     fn fee(&self) -> Result<u64, FeeError> {
         let mut input_sum = 0;
         for index in 0..self.global.unsigned_tx.input.len() {
