@@ -18,7 +18,7 @@ use std::io;
 
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1::{PublicKey, Signature};
-use bitcoin::{Script, Txid};
+use bitcoin::{OutPoint, Script, Txid};
 
 use super::payment::{ChannelId, TempChannelId};
 use super::Features;
@@ -572,6 +572,12 @@ pub struct AssignFunds {
 
     /// Consignment
     pub consignment: Consignment,
+
+    /// Outpoint containing assignments
+    pub outpoint: OutPoint,
+
+    /// Blinding factor to decode concealed outpoint
+    pub blinding: u64,
 }
 
 impl StrictEncode for Messages {
