@@ -114,12 +114,14 @@ impl extension::Nomenclature for ExtensionId {}
 #[repr(u8)]
 pub enum Lifecycle {
     Initial,
-    Proposed,                 // Got or sent `open_channel`
-    Accepted,                 // Got or sent `accept_channel`
+    Proposed,                 // Sent or got `open_channel`
+    Accepted,                 // Sent or got `accept_channel`
     Funding,                  // One party signed funding tx
     Signed,                   // Other peer signed funding tx
     Funded,                   // Funding tx is published but not mined
-    Locked,                   // Funding tx mined
+    Locked,                   // Funding tx mining confirmed by one peer
+    Active,                   // Both peers confirmed lock, channel active
+    Reestablishing,           // Reestablishing connectivity
     Shutdown,                 // Shutdown proposed but not yet accepted
     Closing { round: usize }, // Shutdown agreed, exchanging `closing_signed`
     Closed,                   // Cooperative closing
