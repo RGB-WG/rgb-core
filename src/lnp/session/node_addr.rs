@@ -944,6 +944,26 @@ impl From<RemoteNodeAddr> for PartialNodeAddr {
     }
 }
 
+#[cfg(feature = "zmq")]
+impl TryFrom<PartialNodeAddr> for ZmqSocketAddr {
+    type Error = AddrError;
+
+    fn try_from(socket_addr: PartialNodeAddr) -> Result<Self, Self::Error> {
+        Ok(match socket_addr {
+            PartialNodeAddr::ZmqIpc(path, ty) => {
+                ZmqSocketAddr::Ipc(path)
+            }
+            PartialNodeAddr::ZmqTcpUnencrypted(_, ip, Some(port)) |
+            PartialNodeAddr::ZmqTcpEncrypted(_, _, ip, Some(port)) => {
+                ZmqSocketAddr::Tcp(SocketAddr::new(ip, port))
+            }
+            _ => Err(AddrError::Unsupported(
+                "Provided partial address can't be converted into a valid ZMQ socket"
+            ))?
+        })
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
