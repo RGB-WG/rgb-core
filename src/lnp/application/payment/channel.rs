@@ -11,7 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::{DumbDefault, ToYamlString};
+use amplify::DumbDefault;
+#[cfg(feature = "serde")]
+use amplify::ToYamlString;
 use std::fmt::Debug;
 
 use bitcoin::secp256k1::PublicKey;

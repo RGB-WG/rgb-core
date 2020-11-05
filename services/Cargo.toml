@@ -12,7 +12,7 @@ edition = "2018"
 
 [dependencies]
 # LNP/BP libraries
-amplify = "~2.3.0"
+amplify = "~2.3.1"
 amplify_derive = "~2.3.0"
 lnpbp = { path = ".." }
 lnpbp_derive = { path = "../derive" }

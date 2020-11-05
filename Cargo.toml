@@ -34,7 +34,7 @@ crate-type = ["dylib", "rlib", "staticlib"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = { version = "~2.3.0", features = ["stringly_conversions"] }
+amplify = { version = "~2.3.1", features = ["stringly_conversions"] }
 amplify_derive = "~2.3.0"
 lnpbp_derive = { path = "derive" }
 # Dependencies on core rust-bitcoin ecosystem projects
