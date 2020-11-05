@@ -11,12 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::Wrapper;
 use std::fmt::{self, Formatter, LowerHex, UpperHex};
 use std::str::FromStr;
 
 use bitcoin::hashes::hex::{Error, FromHex, ToHex};
-use bitcoin::secp256k1;
 
 /// Wrapper type for all slice-based 256-bit types implementing many important
 /// traits, so types based on it can simply derive their implementations
@@ -49,11 +47,12 @@ pub struct Slice32([u8; 32]);
 impl Slice32 {
     #[cfg(feature = "keygen")]
     pub fn random() -> Self {
+        use amplify::Wrapper;
         use bitcoin::secp256k1::rand;
 
         let mut entropy = [0u8; 32];
         entropy.copy_from_slice(
-            &secp256k1::SecretKey::new(&mut rand::thread_rng())[..],
+            &bitcoin::secp256k1::SecretKey::new(&mut rand::thread_rng())[..],
         );
         Slice32::from_inner(entropy)
     }

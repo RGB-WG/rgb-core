@@ -40,7 +40,7 @@ zmq = { version = "~0.9.2", optional = true }
 # Server is a standalone application that runs daemon
 server = ["node", "shell"]
 # Feature is required for any applications that talks to daemon processes
-client = ["zmq"]
+client = ["zmq", "log", "env_logger"]
 # Embedded is an app that contains ndoe in itself and that talks to it through
 # integration layer
 embedded = ["client", "node"]
