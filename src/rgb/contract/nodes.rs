@@ -65,6 +65,12 @@ sha256t_hash_newtype!(
     true
 );
 
+impl From<ContractId> for crate::bp::chain::AssetId {
+    fn from(id: ContractId) -> Self {
+        Self::from_inner(id.into_inner())
+    }
+}
+
 impl CommitEncodeWithStrategy for ContractId {
     type Strategy = commit_strategy::UsingStrict;
 }
