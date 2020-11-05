@@ -40,7 +40,7 @@ extern crate serde_crate as serde;
 extern crate serde_with;
 
 #[cfg(feature = "clap")]
-#[macro_use]
+#[cfg_attr(feature = "cli", macro_use)]
 extern crate clap;
 #[cfg(feature = "log")]
 #[macro_use]

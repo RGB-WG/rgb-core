@@ -41,6 +41,12 @@ do
     cargo check --verbose --features="$feature" --all-targets
 done
 
+# Check that we can build services with different features
+for feature in "server client embedded cli server,serde client,serde"
+do
+    cargo check --manifest-path services/Cargo.toml --verbose --features="$feature"
+done
+
 # Fuzz if told to
 if [ "$DO_FUZZ" = true ]
 then

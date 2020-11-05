@@ -48,13 +48,39 @@ jobs:
       - name: Feature ${{ matrix.feature }}
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: check
           args: --no-default-features --features=${{ matrix.feature }}
       - name: Defaults + ${{ matrix.feature }}
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: check
           args: --features=${{ matrix.feature }}
+  services:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        feature:
+          - server
+          - client
+          - embedded
+          - cli
+          - server,serde
+          - client,serde
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install -y libzmq3-dev
+      - name: Install rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Feature ${{ matrix.feature }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --manifest-path services/Cargo.toml --features=${{ matrix.feature }}
   platforms:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -74,15 +100,15 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Build with no defaults
+      - name: Build with no features
         uses: actions-rs/cargo@v1
         with:
-          command: build
-          args: --no-default-features --all-features
+          command: check
+          args: --no-default-features
       - name: Build with defaults
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: check
           args: --all-features
   tor:
     runs-on: ubuntu-latest
@@ -104,12 +130,12 @@ jobs:
       - name: Feature ${{ matrix.feature }}
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: check
           args: --no-default-features --features=${{ matrix.feature }}
       - name: Defaults + ${{ matrix.feature }}
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: check
           args: --features=${{ matrix.feature }}
   toolchains:
     runs-on: ubuntu-latest
@@ -129,7 +155,7 @@ jobs:
       - name: All features
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: check
           args: --workspace --all-targets --all-features
   dependency:
     runs-on: ubuntu-latest
@@ -150,7 +176,7 @@ jobs:
       - name: Build dependency
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: check
           args: --verbose
       - name: Clean up
         run: |

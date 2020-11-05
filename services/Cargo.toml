@@ -40,12 +40,13 @@ zmq = { version = "~0.9.2", optional = true }
 # Server is a standalone application that runs daemon
 server = ["node", "shell"]
 # Feature is required for any applications that talks to daemon processes
+# TODO: Consider converting this list of feature into non-optional dependecies
 client = ["zmq", "log", "env_logger"]
 # Embedded is an app that contains ndoe in itself and that talks to it through
 # integration layer
 embedded = ["client", "node"]
 # Command-line application feature
-cli = ["shell", "client"]
+cli = ["shell", "client", "serde"]
 # Required for all apps that can be launched from command-line shell as binaries
 # (i.e. both servers and cli)
 shell = ["dotenv", "clap", "settings", "amplify/parse_arg", "serde",
@@ -55,3 +56,5 @@ shell = ["dotenv", "clap", "settings", "amplify/parse_arg", "serde",
 # This feature results in building with features not required for CLI
 node = ["serde", "lnpbp/keygen", "tokio", "zmq", "log", "env_logger"]
 serde = ["serde_crate", "serde_with", "amplify/serde", "lnpbp/serde", "toml"]
+# TODO: Consider adding "rpc" feature which will be replacement for
+#       any("node", "client") and will hold the features common for both
