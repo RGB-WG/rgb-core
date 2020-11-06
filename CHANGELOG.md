@@ -1,6 +1,20 @@
 Change Log
 ==========
 
+v0.2.0-beta.2
+-------------
+
+### LNP module
+- Noise handshake
+- Abstract state channels
+- Payment channels
+- Channel extensibility framework
+- BOLT3 transaction structure for payment channels
+- Additional LN peer messages supporting RGB
+
+### BP module
+- Lexicographic orderings (BIP96) for transactions, PSBTs, inputs and outputs
+
 v0.2.0-beta.1
 -------------
 
