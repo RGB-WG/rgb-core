@@ -186,6 +186,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NDK_VERSION: 20.1.5948944
+      ANDROID_CLI_ZIP: commandlinetools-linux-6858069_latest.zip
+      ANDROID_CLI_SHA256: 87f6dcf41d4e642e37ba03cb2e387a542aa0bd73cb689a9e7152aad40a6e7a08
     steps:
       - uses: actions/checkout@v2
       - name: Install rust
@@ -196,14 +198,6 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install -y libpcre3-dev libssl-dev
-          wget -nv https://freefr.dl.sourceforge.net/project/swig/swig/swig-4.0.1/swig-4.0.1.tar.gz
-          tar xf swig-4.0.1.tar.gz
-          cd swig-4.0.1 && ./configure && make -j4 && sudo make install
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features --release
       - name: set environment variables
         run: |
           ANDROID_SDK_ROOT="$GITHUB_WORKSPACE/sdk"
@@ -213,11 +207,13 @@ jobs:
           echo "PATH=$PATH:$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
       - name: Install NDK
         run: |
-          wget -nv https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
-          unzip commandlinetools-linux-6609375_latest.zip
-          mkdir $ANDROID_SDK_ROOT && mv tools $ANDROID_SDK_ROOT/
-          yes 2>/dev/null | $ANDROID_SDK_ROOT/tools/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
-            "platform-tools" "build-tools;29.0.3" "platforms;android-29" "ndk;$NDK_VERSION" "cmake;3.10.2.4988404" |grep -v '\[='; true
+          wget -nv https://dl.google.com/android/repository/$ANDROID_CLI_ZIP
+          echo "$ANDROID_CLI_SHA256  $ANDROID_CLI_ZIP" > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          unzip $ANDROID_CLI_ZIP
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools && mv cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/3.0
+          yes 2>/dev/null | $ANDROID_SDK_ROOT/cmdline-tools/3.0/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
+            "build-tools;29.0.3" "platforms;android-29" "ndk;$NDK_VERSION" |grep -v '\[='; true
       - name: Add rust targets
         run: |
           rustup target add aarch64-linux-android x86_64-linux-android armv7-linux-androideabi i686-linux-android
@@ -229,7 +225,7 @@ jobs:
           export CXX="aarch64-linux-android21-clang++"
           export CXXFLAGS="$CFLAGS -nostdlib++ -I$NDK_HOME/sources/cxx-stl/llvm-libc++/include"
           export LDFLAGS="--sysroot=$NDK_HOME/platforms/android-21/arch-arm64"
-          cargo check --all-features --release --target=aarch64-linux-android
+          cargo check --all-features --target=aarch64-linux-android
       - name: Build for x86_64-linux-android
         run: |
           export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android26-clang"
@@ -238,41 +234,4 @@ jobs:
           export CXX="x86_64-linux-android21-clang++"
           export CXXFLAGS="$CFLAGS -nostdlib++ -I$NDK_HOME/sources/cxx-stl/llvm-libc++/include"
           export LDFLAGS="--sysroot=$NDK_HOME/platforms/android-21/arch-x86_64"
-          cargo check --all-features --release --target=x86_64-linux-android
-      - name: Build for armv7-linux-androideabi
-        run: |
-          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi26-clang"
-          export CC="armv7a-linux-androideabi21-clang"
-          export CFLAGS="--sysroot=$NDK_HOME/sysroot -I$NDK_HOME/sysroot/usr/include -I$NDK_HOME/sysroot/usr/include/arm-linux-androideabi"
-          export CXX="armv7a-linux-androideabi21-clang++"
-          export CXXFLAGS="$CFLAGS -nostdlib++ -I$NDK_HOME/sources/cxx-stl/llvm-libc++/include"
-          export LDFLAGS="--sysroot=$NDK_HOME/platforms/android-21/arch-arm -L$NDK_HOME/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a"
-          cargo check --all-features --release --target=armv7-linux-androideabi
-      - name: Build for i686-linux-android
-        run: |
-          export CARGO_TARGET_I686_LINUX_ANDROID_LINKER="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android26-clang"
-          export CC="i686-linux-android21-clang"
-          export CFLAGS="--sysroot=$NDK_HOME/sysroot -I$NDK_HOME/sysroot/usr/include -I$NDK_HOME/sysroot/usr/include/i686-linux-android"
-          export CXX="i686-linux-android21-clang++"
-          export CXXFLAGS="$CFLAGS -nostdlib++ -I$NDK_HOME/sources/cxx-stl/llvm-libc++/include"
-          export LDFLAGS="--sysroot=$NDK_HOME/platforms/android-21/arch-x86"
-          cargo check --all-features --release --target=i686-linux-android
-  ios:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Dependencies and targets
-        run: |
-          brew install zmq
-          rustup target add aarch64-apple-ios x86_64-apple-ios
-          cargo install cargo-lipo
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: lipo
-          args: --all-features --release
+          cargo check --all-features --target=x86_64-linux-android
