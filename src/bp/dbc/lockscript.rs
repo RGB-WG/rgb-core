@@ -23,7 +23,6 @@
 //! private key modifications (tweaks) inside all the existing types of Bitcoin
 //! transaction output and arbitrary complex Bitcoin scripts.
 
-use amplify::Wrapper;
 use bitcoin::hashes::{hash160, sha256, Hmac};
 use bitcoin::secp256k1;
 use bitcoin::PubkeyHash;

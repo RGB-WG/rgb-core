@@ -14,7 +14,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use amplify::internet::InetSocketAddr;
+use amplify::internet::{AddrParseError, InetSocketAddr};
 use bitcoin::secp256k1;
 
 use super::{Connection, ConnectionError};
@@ -82,7 +82,7 @@ pub enum ParseError {
     /// The provided node address is incorrect; it must be IPv4, IPv6 or TOR
     /// v2, v3 address
     #[from]
-    WrongInetAddr(String),
+    WrongInetAddr(AddrParseError),
 
     /// Port information can't be decoded; it must be a 16-bit unsigned integer
     /// literal

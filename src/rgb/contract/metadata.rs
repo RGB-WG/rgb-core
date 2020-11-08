@@ -13,7 +13,6 @@
 
 //! Convenience metadata accessor methods for Genesis and state transitions.
 
-use amplify::Wrapper;
 #[cfg(feature = "serde")]
 use serde::{Deserializer, Serializer};
 use std::collections::{BTreeMap, BTreeSet};

@@ -357,6 +357,7 @@ pub enum ParseError {
     ///     either IPv4, IPv6 address or Tor v2, v3 address (no `.onion`
     /// suffix)
     #[from]
+    #[from(amplify::internet::AddrParseError)]
     InvalidHost(String),
 
     /// Used schema must not contain information about host
