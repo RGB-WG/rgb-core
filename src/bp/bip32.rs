@@ -19,9 +19,34 @@ use std::str::FromStr;
 
 use bitcoin::secp256k1;
 use bitcoin::util::bip32::{
-    self, ChainCode, ChildNumber, DerivationPath, ExtendedPrivKey,
+    self, ChainCode, ChildNumber, DerivationPath, Error, ExtendedPrivKey,
     ExtendedPubKey, Fingerprint,
 };
+
+/// Trait that allows possibly failable conversion from a type into a
+/// derivation path
+pub trait IntoDerivationPath {
+    /// Convers a given type into a [`DerivationPath`] with possible error
+    fn into_derivation_path(self) -> Result<DerivationPath, Error>;
+}
+
+impl IntoDerivationPath for DerivationPath {
+    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
+        Ok(self)
+    }
+}
+
+impl IntoDerivationPath for String {
+    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
+        self.parse()
+    }
+}
+
+impl<'a> IntoDerivationPath for &'a str {
+    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
+        self.parse()
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum DerivationStep {
