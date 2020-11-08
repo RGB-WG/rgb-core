@@ -14,6 +14,7 @@
 use core::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
+use std::io;
 use std::iter::FromIterator;
 use std::str::FromStr;
 
@@ -23,6 +24,8 @@ use bitcoin::util::bip32::{
     ExtendedPubKey, Fingerprint,
 };
 use bitcoin::Network;
+
+use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 /// Magical version bytes for xpub: bitcoin mainnet public key for P2PKH or P2SH
 pub const VERSION_MAGIC_XPUB: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
@@ -219,7 +222,13 @@ pub struct DefaultResolver;
 
 /// SLIP 132-defined key applications defining types of scriptPubkey descriptors
 /// in which they can be used
+#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub enum KeyApplication {
     /// xprv/xpub: keys that can be used for P2PKH and multisig P2SH
     /// scriptPubkey descriptors.
@@ -237,40 +246,34 @@ pub enum KeyApplication {
     SegWitLegacyMultisig,
 }
 
-#[cfg(feature = "serde")]
-impl serde::Serialize for KeyApplication {
-    fn serialize<S>(
-        &self,
-        serializer: S,
-    ) -> Result<<S as serde::Serializer>::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
+impl StrictEncode for KeyApplication {
+    type Error = strict_encoding::Error;
+
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+        let val = match self {
             KeyApplication::Legacy => 0u8,
             KeyApplication::SegWitLegacySinglesig => 1u8,
             KeyApplication::SegWitLegacyMultisig => 2u8,
             KeyApplication::SegWitV0Singlesig => 3u8,
             KeyApplication::SegWitV0Miltisig => 4u8,
-        }
-        .serialize(serializer)
+        };
+        val.strict_encode(e)
     }
 }
 
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for KeyApplication {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(match u8::deserialize(deserializer)? {
+impl StrictDecode for KeyApplication {
+    type Error = strict_encoding::Error;
+
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        Ok(match u8::strict_decode(d)? {
             0 => KeyApplication::Legacy,
             1 => KeyApplication::SegWitLegacySinglesig,
             2 => KeyApplication::SegWitLegacyMultisig,
             3 => KeyApplication::SegWitV0Singlesig,
             4 => KeyApplication::SegWitV0Miltisig,
-            _ => Err(serde::de::Error::custom(
-                "unknown variant code for `KeyApplication`",
+            other => Err(strict_encoding::Error::EnumValueNotKnown(
+                s!("KeyApplication"),
+                other,
             ))?,
         })
     }
