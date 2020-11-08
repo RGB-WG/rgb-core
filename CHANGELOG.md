@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+v0.1.2
+------
+
+- Migrated BIP32 helper types and traits from yet not accepted rust-bitcoin PRs
+- Upgraded to amplify v2.3
+
 v0.1.0
 ------
 

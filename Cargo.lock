@@ -521,7 +521,7 @@ checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "lnpbp"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -534,7 +534,7 @@ dependencies = [
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
- "lnpbp_derive",
+ "lnpbp_derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "miniscript",
  "num-derive",
  "num-traits",
@@ -548,10 +548,21 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "amplify",
  "lnpbp",
+ "quote 1.0.7",
+ "syn 1.0.45",
+]
+
+[[package]]
+name = "lnpbp_derive"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64b70143946117a8f44fcc22686877a64500297ed6a9e60c74361a6400062935"
+dependencies = [
+ "amplify",
  "quote 1.0.7",
  "syn 1.0.45",
 ]
