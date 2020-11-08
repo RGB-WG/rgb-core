@@ -276,6 +276,27 @@ impl<'de> serde::Deserialize<'de> for KeyApplication {
     }
 }
 
+/// Error for an unknown enum representation; either string or numeric
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[display(Debug)]
+pub struct EnumReprError;
+
+impl FromStr for KeyApplication {
+    type Err = EnumReprError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
+            "pkh" => KeyApplication::Legacy,
+            "sh" => KeyApplication::Legacy,
+            "wpkh" => KeyApplication::SegWitV0Singlesig,
+            "wsh" => KeyApplication::SegWitV0Miltisig,
+            "wpkh-sh" => KeyApplication::SegWitLegacySinglesig,
+            "wsh-sh" => KeyApplication::SegWitLegacyMultisig,
+            _ => Err(EnumReprError)?,
+        })
+    }
+}
+
 impl KeyVersion {
     /// Tries to construct [KeyVersion] object from a byte slice. If byte slice
     /// length is not equal to 4, returns `None`
