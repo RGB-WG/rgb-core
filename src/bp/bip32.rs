@@ -639,6 +639,25 @@ impl VersionResolver for DefaultResolver {
     }
 }
 
+/// Extension trait allowing to add more methods to [`DerivationPath`] type
+pub trait DerivationPathMaster {
+    fn master() -> Self;
+    fn is_master(&self) -> bool;
+}
+
+impl DerivationPathMaster for DerivationPath {
+    /// Returns derivation path for a master key (i.e. empty derivation path)
+    fn master() -> DerivationPath {
+        vec![].into()
+    }
+
+    /// Returns whether derivation path represents master key (i.e. it's length
+    /// is empty). True for `m` path.
+    fn is_master(&self) -> bool {
+        self.into_iter().len() == 0
+    }
+}
+
 /// Trait that allows possibly failable conversion from a type into a
 /// derivation path
 pub trait IntoDerivationPath {
@@ -649,6 +668,18 @@ pub trait IntoDerivationPath {
 impl IntoDerivationPath for DerivationPath {
     fn into_derivation_path(self) -> Result<DerivationPath, Error> {
         Ok(self)
+    }
+}
+
+impl IntoDerivationPath for Vec<ChildNumber> {
+    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
+        Ok(self.into())
+    }
+}
+
+impl<'a> IntoDerivationPath for &'a [ChildNumber] {
+    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
+        Ok(self.into())
     }
 }
 
