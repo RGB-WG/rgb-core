@@ -55,7 +55,7 @@ impl Connection {
         }
     }
 
-    // TODO: (v0.2) Transform into bind method + special Listener object wuth
+    // TODO: (v0.2) Transform into bind method + special Listener object with
     //       accept method
     pub fn accept(inet_addr: InetSocketAddr) -> Result<Self, Error> {
         if let Ok(socket_addr) = SocketAddr::try_from(inet_addr) {
