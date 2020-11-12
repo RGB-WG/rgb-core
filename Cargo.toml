@@ -91,7 +91,7 @@ torut = { version = "~0.1.6", features = ["v2", "v3"] }
 zmq = { version = "~0.9", features = ["vendored"] }
 
 [target.'cfg(target_os="ios")'.dependencies]
-zeromq-src = { git = "https://github.com/LNP-BP/zeromq-src-rs", branch = "fix/cmake" }
+zeromq-src = { version = "~0.1", git = "https://github.com/LNP-BP/zeromq-src-rs", branch = "fix/cmake" }
 
 [target.'cfg(target_os="windows")'.dependencies]
 openssl = { features = ["vendored"] }
