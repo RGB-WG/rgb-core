@@ -235,3 +235,21 @@ jobs:
           export CXXFLAGS="$CFLAGS -nostdlib++ -I$NDK_HOME/sources/cxx-stl/llvm-libc++/include"
           export LDFLAGS="--sysroot=$NDK_HOME/platforms/android-21/arch-x86_64"
           cargo check --all-features --target=x86_64-linux-android
+      - name: Build for armv7-linux-androideabi
+        run: |
+          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi26-clang"
+          export CC="armv7a-linux-androideabi21-clang"
+          export CFLAGS="--sysroot=$NDK_HOME/sysroot -I$NDK_HOME/sysroot/usr/include -I$NDK_HOME/sysroot/usr/include/arm-linux-androideabi"
+          export CXX="armv7a-linux-androideabi21-clang++"
+          export CXXFLAGS="$CFLAGS -nostdlib++ -I$NDK_HOME/sources/cxx-stl/llvm-libc++/include"
+          export LDFLAGS="--sysroot=$NDK_HOME/platforms/android-21/arch-arm -L$NDK_HOME/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a"
+          cargo check --all-features --target=armv7-linux-androideabi
+      - name: Build for i686-linux-android
+        run: |
+          export CARGO_TARGET_I686_LINUX_ANDROID_LINKER="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android26-clang"
+          export CC="i686-linux-android21-clang"
+          export CFLAGS="--sysroot=$NDK_HOME/sysroot -I$NDK_HOME/sysroot/usr/include -I$NDK_HOME/sysroot/usr/include/i686-linux-android"
+          export CXX="i686-linux-android21-clang++"
+          export CXXFLAGS="$CFLAGS -nostdlib++ -I$NDK_HOME/sources/cxx-stl/llvm-libc++/include"
+          export LDFLAGS="--sysroot=$NDK_HOME/platforms/android-21/arch-x86"
+          cargo check --all-features --target=i686-linux-android
