@@ -36,8 +36,8 @@ pub mod prelude {
         SimplicityScript, TransitionAbi, TransitionAction,
     };
     pub use stash::{
-        Anchor, AnchorId, Consignment, ConsignmentEndpoints, Disclosure, Stash,
-        TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK,
+        Anchor, AnchorId, Consignment, ConsignmentEndpoints, Disclosure,
+        ExtensionData, Stash, TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK,
     };
     pub use validation::{Validator, Validity};
     pub use vm::VirtualMachine;
