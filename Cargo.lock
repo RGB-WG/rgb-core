@@ -303,9 +303,9 @@ dependencies = [
 
 [[package]]
 name = "cmake"
-version = "0.1.44"
+version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e56268c17a6248366d66d4a47a3381369d068cce8409bb1716ed77ea32163bb"
+checksum = "49f97562167906afc51aa3fd7e6c83c10a5c96d33bd18f98a4c06a1413134caa"
 dependencies = [
  "cc",
 ]
@@ -814,6 +814,7 @@ dependencies = [
  "tokio",
  "torut",
  "url",
+ "zeromq-src 0.1.10+4.3.2 (git+https://github.com/LNP-BP/zeromq-src-rs?branch=fix/cmake)",
  "zmq",
 ]
 
@@ -2073,6 +2074,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "zeromq-src"
+version = "0.1.10+4.3.2"
+source = "git+https://github.com/LNP-BP/zeromq-src-rs?branch=fix/cmake#e95a4e68136a6897d61c936622933bf259ebdd7f"
+dependencies = [
+ "cmake",
+]
+
+[[package]]
 name = "zmq"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2092,5 +2101,5 @@ checksum = "d33a2c51dde24d5b451a2ed4b488266df221a5eaee2ee519933dc46b9a9b3648"
 dependencies = [
  "libc",
  "metadeps",
- "zeromq-src",
+ "zeromq-src 0.1.10+4.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
