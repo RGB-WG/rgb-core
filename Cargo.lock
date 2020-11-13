@@ -809,6 +809,7 @@ dependencies = [
  "miniscript",
  "num-derive",
  "num-traits 0.2.14",
+ "openssl",
  "serde 1.0.117",
  "serde_with",
  "tokio",

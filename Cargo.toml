@@ -93,6 +93,9 @@ zmq = { version = "~0.9", features = ["vendored"] }
 [target.'cfg(target_os="ios")'.dependencies]
 zeromq-src = { git = "https://github.com/LNP-BP/zeromq-src-rs", branch = "fix/cmake" }
 
+[target.'cfg(target_os="windows")'.dependencies]
+openssl = { features = ["vendored"] }
+
 [patch.crates-io]
 # required to build on 32-bit architectures
 # see also https://github.com/LNP-BP/rgb-node/issues/4
