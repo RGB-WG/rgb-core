@@ -41,18 +41,18 @@ pub enum Error {
     /// unknown LNP protocol version
     UnknownProtocolVersion,
 
-    /// error in strict encoded data in LMP message
+    /// error in strict encoded data in LNP message
     #[from(strict_encoding::Error)]
     EncodingError,
 
-    /// unknown data type in LMP message
+    /// unknown data type in LNP message
     #[from(UnknownTypeError)]
     UnknownDataType,
 
-    /// invalid value in LMP message
+    /// invalid value in LNP message
     InvalidValue,
 
-    /// LMP message with unknown even value
+    /// LNP message with unknown even value
     MessageEvenType,
 
     /// bad length descriptor in LNP message
