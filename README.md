@@ -110,7 +110,7 @@ The library is based on other projects:
 
 On Debian, run
 ```shell script
-sudo apt-get install cargo libssl-dev libzmq3-dev pkg-cofig
+sudo apt-get install cargo libssl-dev libzmq3-dev pkg-config
 ```
 
 On Mac OS, run
