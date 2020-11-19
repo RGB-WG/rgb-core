@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
-        run: sudo apt-get install -y libzmq3-dev
+        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev
       - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
-        run: sudo apt-get install -y libzmq3-dev
+        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev
       - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
@@ -91,7 +91,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install linux dependencies
         if: startsWith(matrix.os, 'ubuntu')
-        run: sudo apt-get install -y libzmq3-dev
+        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev
       - name: Install macos dependencies
         if: startsWith(matrix.os, 'macos')
         run: brew install pkg-config zmq
@@ -121,7 +121,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
-        run: sudo apt-get install -y libzmq3-dev libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev libssl-dev
       - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
@@ -146,7 +146,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
-        run: sudo apt-get install -y libzmq3-dev libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev libssl-dev
       - name: Install rust ${{ matrix.toolchain }}
         uses: actions-rs/toolchain@v1
         with:
@@ -162,7 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
-        run: sudo apt-get install -y libzmq3-dev libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev libssl-dev
       - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
@@ -197,6 +197,7 @@ jobs:
           override: true
       - name: Install dependencies
         run: |
+          sudo apt-get update
           sudo apt-get install -y libpcre3-dev libssl-dev
       - name: set environment variables
         run: |
