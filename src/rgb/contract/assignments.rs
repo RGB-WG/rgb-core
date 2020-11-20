@@ -1900,7 +1900,7 @@ mod test {
         // Conceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
         // Assignments
-        hash_type.conceal_except(&Vec::<seal::Confidential>::new());
+        assert_eq!(2, hash_type.conceal_all());
 
         // Precomputed values of revealed seals in 2 ConfidentialState type
         // Assignments
