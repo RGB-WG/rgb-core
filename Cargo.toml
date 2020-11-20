@@ -94,7 +94,7 @@ zmq = { version = "~0.9", features = ["vendored"] }
 zeromq-src = { version = "~0.1", git = "https://github.com/LNP-BP/zeromq-src-rs", branch = "fix/cmake" }
 
 [target.'cfg(target_os="windows")'.dependencies]
-openssl = { features = ["vendored"] }
+openssl = { version = "~0.10", features = ["vendored"] }
 
 [patch.crates-io]
 # required to build on 32-bit architectures
