@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::cmp::Ord;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use super::seal;
 
@@ -22,21 +23,72 @@ pub trait AutoConceal {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize;
 }
 
-// TODO: Do an auto implementation for and other collection types
-
 impl<T> AutoConceal for Vec<T>
+where
+    T: AutoConceal,
+{
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        let count = self
+            .iter_mut()
+            .fold(0usize, |sum, item| sum + item.conceal_except(seals));
+        count
+    }
+}
+
+impl<T> AutoConceal for BTreeSet<T>
 where
     T: AutoConceal + Ord + Clone,
 {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         let mut count = 0;
-        let mut new_self = Vec::<T>::new();
+        let mut new_self = BTreeSet::<T>::new();
         for item in self.iter() {
             let mut new_item = item.clone();
             count += new_item.conceal_except(seals);
-            new_self.push(new_item);
+            new_self.insert(new_item);
         }
         *self = new_self;
+        count
+    }
+}
+
+impl<K, V> AutoConceal for BTreeMap<K, V>
+where
+    V: AutoConceal,
+{
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        let count = self
+            .iter_mut()
+            .fold(0usize, |sum, item| sum + item.1.conceal_except(seals));
+        count
+    }
+}
+
+impl<T> AutoConceal for HashSet<T>
+where
+    T: AutoConceal + Ord + Clone + std::hash::Hash,
+{
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        let mut count = 0;
+        let mut new_self = HashSet::<T>::new();
+        for item in self.iter() {
+            let mut new_item = item.clone();
+            count += new_item.conceal_except(seals);
+            new_self.insert(new_item);
+        }
+        *self = new_self;
+        count
+    }
+}
+
+impl<K, V> AutoConceal for HashMap<K, V>
+where
+    V: AutoConceal,
+{
+    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        let count = self
+            .iter_mut()
+            .fold(0usize, |sum, item| sum + item.1.conceal_except(seals));
         count
     }
 }
