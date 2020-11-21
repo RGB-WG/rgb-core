@@ -88,13 +88,15 @@ async-trait = { version = "~0.1.30", optional = true }
 torut = { version = "~0.1.6", features = ["v2", "v3"] }
 
 [target.'cfg(target_os="android")'.dependencies]
+cc = { version = "=1.0.41" }
+socket2 = { version = "=0.3.15" }
 zmq = { version = "~0.9", features = ["vendored"] }
 
 [target.'cfg(target_os="ios")'.dependencies]
-zeromq-src = { git = "https://github.com/LNP-BP/zeromq-src-rs", branch = "fix/cmake" }
+zeromq-src = { version = "~0.1", git = "https://github.com/LNP-BP/zeromq-src-rs", branch = "fix/cmake" }
 
 [target.'cfg(target_os="windows")'.dependencies]
-openssl = { features = ["vendored"] }
+openssl = { version = "~0.10", features = ["vendored"] }
 
 [patch.crates-io]
 # required to build on 32-bit architectures
