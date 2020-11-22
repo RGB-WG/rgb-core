@@ -28,10 +28,8 @@ where
     T: AutoConceal,
 {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
-        let count = self
-            .iter_mut()
-            .fold(0usize, |sum, item| sum + item.conceal_except(seals));
-        count
+        self.iter_mut()
+            .fold(0usize, |sum, item| sum + item.conceal_except(seals))
     }
 }
 
@@ -57,10 +55,8 @@ where
     V: AutoConceal,
 {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
-        let count = self
-            .iter_mut()
-            .fold(0usize, |sum, item| sum + item.1.conceal_except(seals));
-        count
+        self.iter_mut()
+            .fold(0usize, |sum, item| sum + item.1.conceal_except(seals))
     }
 }
 
@@ -86,9 +82,7 @@ where
     V: AutoConceal,
 {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
-        let count = self
-            .iter_mut()
-            .fold(0usize, |sum, item| sum + item.1.conceal_except(seals));
-        count
+        self.iter_mut()
+            .fold(0usize, |sum, item| sum + item.1.conceal_except(seals))
     }
 }
