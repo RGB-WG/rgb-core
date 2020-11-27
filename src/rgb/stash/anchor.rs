@@ -32,6 +32,7 @@ use crate::client_side_validation::{
 use crate::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
 use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
 use crate::rgb::{ContractId, NodeId};
+use crate::strict_encoding::{strategies, Strategy};
 
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
 pub const PSBT_OUT_TWEAK: u8 = 0x2;
@@ -55,6 +56,10 @@ sha256t_hash_newtype!(
     doc = "Unique anchor identifier equivalent to the anchor commitment hash",
     false
 );
+
+impl Strategy for AnchorId {
+    type Strategy = strategies::HashFixedBytes;
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
 #[display(doc_comments)]
