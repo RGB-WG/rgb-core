@@ -780,7 +780,7 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lightning-invoice",
- "lnpbp_derive 0.2.0-beta.2",
+ "lnpbp_derive 0.2.0-beta.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "miniscript",
  "num-derive",
  "num-traits 0.2.14",
@@ -797,14 +797,40 @@ dependencies = [
 ]
 
 [[package]]
-name = "lnpbp_derive"
-version = "0.2.0-beta.2"
+name = "lnpbp"
+version = "0.2.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6633b058816646fffaa4c218bcb26bd9aa7972d5c03be26022e0f9f9b8edd004"
+checksum = "42be0d7b543571cc4bb5f345b003f362c85a44ae5d195ae0613fa6e3a5f87c30"
 dependencies = [
  "amplify",
- "quote 1.0.7",
- "syn 1.0.53",
+ "amplify_derive",
+ "async-trait",
+ "bech32",
+ "bitcoin",
+ "bitcoin_hashes",
+ "cc",
+ "chacha20poly1305",
+ "chrono",
+ "deflate",
+ "ed25519-dalek",
+ "grin_secp256k1zkp",
+ "inflate",
+ "lazy_static",
+ "lightning-invoice",
+ "lnpbp_derive 0.2.0-beta.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "miniscript",
+ "num-derive",
+ "num-traits 0.2.14",
+ "openssl",
+ "serde 1.0.117",
+ "serde_with",
+ "serde_with_macros",
+ "socket2",
+ "tokio 0.2.23",
+ "torut",
+ "url",
+ "zeromq-src 0.1.10+4.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zmq",
 ]
 
 [[package]]
@@ -812,7 +838,18 @@ name = "lnpbp_derive"
 version = "0.2.0-beta.3"
 dependencies = [
  "amplify",
- "lnpbp",
+ "lnpbp 0.2.0-beta.3",
+ "quote 1.0.7",
+ "syn 1.0.53",
+]
+
+[[package]]
+name = "lnpbp_derive"
+version = "0.2.0-beta.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1dbc3371ec613de05537bf9466a9351e12f1af3e5d2323bab85e0b0656ae621d"
+dependencies = [
+ "amplify",
  "quote 1.0.7",
  "syn 1.0.53",
 ]
@@ -827,8 +864,8 @@ dependencies = [
  "config",
  "dotenv",
  "env_logger",
- "lnpbp",
- "lnpbp_derive 0.2.0-beta.3",
+ "lnpbp 0.2.0-beta.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp_derive 0.2.0-beta.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "serde 1.0.117",
  "serde_with",

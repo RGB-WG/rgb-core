@@ -1,6 +1,15 @@
 Change Log
 ==========
 
+v0.3.0-beta.3
+-------------
+- Multiple BIP-32 improvements on top of rust-bitcoin functionality
+- Better CI
+- Android/iOS/Windows/MacOs build fixes
+- AchorId strict encoding
+- Fixed issue with broken `serde_with` macro (pinned older version in Cargo.toml)
+- More collection types supporting `AutoConceal`
+
 v0.2.0-beta.2
 -------------
 
