@@ -142,7 +142,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [ nightly, beta, stable, 1.41.1 ]
+        toolchain: [ nightly, beta, stable, 1.45.0 ]
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
@@ -157,6 +157,26 @@ jobs:
         with:
           command: check
           args: --workspace --all-targets --all-features
+  toolchains-old:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [ 1.41.1 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev libssl-dev
+      - name: Install rust ${{ matrix.toolchain }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          override: true
+      - name: Custom features
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --workspace --all-targets --features=rgb,lnp,websockets,url,keygen,serde
   dependency:
     runs-on: ubuntu-latest
     steps:

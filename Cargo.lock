@@ -716,7 +716,7 @@ checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "lnpbp"
-version = "0.2.0-beta.5"
+version = "0.2.0-rc.1+1"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -733,7 +733,7 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lightning-invoice",
- "lnpbp_derive 0.2.0-beta.4",
+ "lnpbp_derive 0.2.0-rc.1+1 (registry+https://github.com/rust-lang/crates.io-index)",
  "miniscript",
  "num-derive",
  "num-traits 0.2.14",
@@ -750,29 +750,66 @@ dependencies = [
 ]
 
 [[package]]
-name = "lnpbp_derive"
-version = "0.2.0-beta.4"
+name = "lnpbp"
+version = "0.2.0-rc.1+1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "012ed466b7086e494aa8c8f3545d60ecf21a67f569c953cf2bdd480b8e6ca053"
+checksum = "48ff58b1a6203ab26bc09a123f4880626da0793810fcb8f87a246925f6672183"
 dependencies = [
  "amplify",
+ "amplify_derive",
+ "async-trait",
+ "bech32",
+ "bitcoin",
+ "bitcoin_hashes",
+ "cc",
+ "chacha20poly1305",
+ "chrono",
+ "deflate",
+ "ed25519-dalek",
+ "grin_secp256k1zkp",
+ "inflate",
+ "lazy_static",
+ "lightning-invoice",
+ "lnpbp_derive 0.2.0-rc.1+1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "miniscript",
+ "num-derive",
+ "num-traits 0.2.14",
+ "openssl",
+ "serde 1.0.117",
+ "serde_with",
+ "serde_with_macros",
+ "socket2",
+ "tokio",
+ "torut",
+ "url",
+ "zeromq-src 0.1.10+4.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zmq",
+]
+
+[[package]]
+name = "lnpbp_derive"
+version = "0.2.0-rc.1+1"
+dependencies = [
+ "amplify",
+ "lnpbp 0.2.0-rc.1+1",
  "quote 1.0.7",
  "syn 1.0.53",
 ]
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.2.0-beta.5"
+version = "0.2.0-rc.1+1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "018c0a20452e07f3f12705234ff4351445706cb515a308e9f62e3e0f6a964d05"
 dependencies = [
  "amplify",
- "lnpbp",
  "quote 1.0.7",
  "syn 1.0.53",
 ]
 
 [[package]]
 name = "lnpbp_services"
-version = "0.2.0-beta.5"
+version = "0.2.0-rc.1"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -780,8 +817,8 @@ dependencies = [
  "config",
  "dotenv",
  "env_logger",
- "lnpbp",
- "lnpbp_derive 0.2.0-beta.4",
+ "lnpbp 0.2.0-rc.1+1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp_derive 0.2.0-rc.1+1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "serde 1.0.117",
  "serde_with",

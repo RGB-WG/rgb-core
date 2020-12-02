@@ -1,7 +1,13 @@
 Change Log
 ==========
 
-v0.3.0-beta.3
+v0.2.0-rc.1
+-----------
+- Fix for the broken tokio upstream dependency breaking issue
+- Fix for zero-balance overflow in case of empty arguments
+- Eq implementation for Schema object
+
+v0.2.0-beta.3
 -------------
 - Multiple BIP-32 improvements on top of rust-bitcoin functionality
 - Better CI
