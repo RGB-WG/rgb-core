@@ -45,7 +45,7 @@ sha256t_hash_newtype!(
     false
 );
 
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -89,6 +89,14 @@ impl ConsensusCommit for Schema {
 impl CommitEncodeWithStrategy for Schema {
     type Strategy = commit_strategy::UsingStrict;
 }
+
+impl PartialEq for Schema {
+    fn eq(&self, other: &Self) -> bool {
+        self.schema_id() == other.schema_id()
+    }
+}
+
+impl Eq for Schema {}
 
 mod strict_encoding {
     use super::*;
