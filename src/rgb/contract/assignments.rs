@@ -54,6 +54,10 @@ impl Assignments {
         allocations_ours: Vec<(SealDefinition, AtomicValue)>,
         allocations_theirs: Vec<(seal::Confidential, AtomicValue)>,
     ) -> Self {
+        if allocations_ours.len() + allocations_theirs.len() == 0 {
+            return Self::DiscreteFiniteField(vec![]);
+        }
+
         // Generate random blinding factors
         let mut rng = bitcoin::secp256k1::rand::thread_rng();
         // We will compute the last blinding factors from all others so they
