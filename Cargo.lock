@@ -780,7 +780,7 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lightning-invoice",
- "lnpbp_derive 0.2.0-beta.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp_derive",
  "miniscript",
  "num-derive",
  "num-traits 0.2.14",
@@ -788,7 +788,6 @@ dependencies = [
  "serde 1.0.117",
  "serde_with",
  "serde_with_macros",
- "socket2",
  "tokio 0.2.23",
  "torut",
  "url",
@@ -797,59 +796,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "lnpbp"
-version = "0.2.0-beta.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42be0d7b543571cc4bb5f345b003f362c85a44ae5d195ae0613fa6e3a5f87c30"
-dependencies = [
- "amplify",
- "amplify_derive",
- "async-trait",
- "bech32",
- "bitcoin",
- "bitcoin_hashes",
- "cc",
- "chacha20poly1305",
- "chrono",
- "deflate",
- "ed25519-dalek",
- "grin_secp256k1zkp",
- "inflate",
- "lazy_static",
- "lightning-invoice",
- "lnpbp_derive 0.2.0-beta.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "miniscript",
- "num-derive",
- "num-traits 0.2.14",
- "openssl",
- "serde 1.0.117",
- "serde_with",
- "serde_with_macros",
- "socket2",
- "tokio 0.2.23",
- "torut",
- "url",
- "zeromq-src 0.1.10+4.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "zmq",
-]
-
-[[package]]
 name = "lnpbp_derive"
 version = "0.2.0-beta.3"
 dependencies = [
  "amplify",
- "lnpbp 0.2.0-beta.3",
- "quote 1.0.7",
- "syn 1.0.53",
-]
-
-[[package]]
-name = "lnpbp_derive"
-version = "0.2.0-beta.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dbc3371ec613de05537bf9466a9351e12f1af3e5d2323bab85e0b0656ae621d"
-dependencies = [
- "amplify",
+ "lnpbp",
  "quote 1.0.7",
  "syn 1.0.53",
 ]
@@ -864,8 +815,8 @@ dependencies = [
  "config",
  "dotenv",
  "env_logger",
- "lnpbp 0.2.0-beta.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "lnpbp_derive 0.2.0-beta.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp",
+ "lnpbp_derive",
  "log",
  "serde 1.0.117",
  "serde_with",
@@ -918,9 +869,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "0.6.22"
+version = "0.6.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fce347092656428bc8eaf6201042cb551b8d67855af7374542a92a0fbfcac430"
+checksum = "4afd66f5b91bf2a3bc13fad0e21caedac168ca4c707504e75585648ae80e4cc4"
 dependencies = [
  "cfg-if 0.1.10",
  "fuchsia-zircon",
@@ -943,7 +894,7 @@ checksum = "0840c1c50fd55e521b247f949c241c9997709f23bd7f023b9762cd561e935656"
 dependencies = [
  "log",
  "mio",
- "miow 0.3.5",
+ "miow 0.3.6",
  "winapi 0.3.9",
 ]
 
@@ -972,9 +923,9 @@ dependencies = [
 
 [[package]]
 name = "miow"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07b88fb9795d4d36d62a012dfbf49a8f5cf12751f36d31a9dbe66d528e58979e"
+checksum = "5a33c1b55807fbed163481b5ba66db4b2fa6cde694a5027be10fb724206c5897"
 dependencies = [
  "socket2",
  "winapi 0.3.9",
@@ -1661,11 +1612,11 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
 name = "socket2"
-version = "0.3.15"
+version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1fa70dc5c8104ec096f4fe7ede7a221d35ae13dcd19ba1ad9a81d2cab9a1c44"
+checksum = "2c29947abdee2a218277abeca306f25789c938e500ea5a9d4b12a5a504466902"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "libc",
  "redox_syscall",
  "winapi 0.3.9",
@@ -1836,9 +1787,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dfe2523e6fa84ddf5e688151d4e5fddc51678de9752c6512a24714c23818d61"
+checksum = "a12a3eb39ee2c231be64487f1fcbe726c8f2514876a55480a5ab8559fc374252"
 dependencies = [
  "autocfg 1.0.1",
  "bytes 0.6.0",
@@ -1891,7 +1842,7 @@ dependencies = [
  "sha1",
  "sha2 0.8.2",
  "sha3",
- "tokio 0.3.4",
+ "tokio 0.3.5",
 ]
 
 [[package]]
