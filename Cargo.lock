@@ -763,7 +763,7 @@ checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "lnpbp"
-version = "0.2.0-beta.3"
+version = "0.2.0-beta.4"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -780,7 +780,7 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lightning-invoice",
- "lnpbp_derive",
+ "lnpbp_derive 0.2.0-beta.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "miniscript",
  "num-derive",
  "num-traits 0.2.14",
@@ -796,18 +796,65 @@ dependencies = [
 ]
 
 [[package]]
-name = "lnpbp_derive"
-version = "0.2.0-beta.3"
+name = "lnpbp"
+version = "0.2.0-beta.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b5f4c049389c31a9e4413e7ce3f6b4570c42cb74efd6f1a9765ed4df7f5f96d"
 dependencies = [
  "amplify",
- "lnpbp",
+ "amplify_derive",
+ "async-trait",
+ "bech32",
+ "bitcoin",
+ "bitcoin_hashes",
+ "cc",
+ "chacha20poly1305",
+ "chrono",
+ "deflate",
+ "ed25519-dalek",
+ "grin_secp256k1zkp",
+ "inflate",
+ "lazy_static",
+ "lightning-invoice",
+ "lnpbp_derive 0.2.0-beta.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "miniscript",
+ "num-derive",
+ "num-traits 0.2.14",
+ "openssl",
+ "serde 1.0.117",
+ "serde_with",
+ "serde_with_macros",
+ "tokio 0.2.23",
+ "torut",
+ "url",
+ "zeromq-src 0.1.10+4.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zmq",
+]
+
+[[package]]
+name = "lnpbp_derive"
+version = "0.2.0-beta.4"
+dependencies = [
+ "amplify",
+ "lnpbp 0.2.0-beta.4",
+ "quote 1.0.7",
+ "syn 1.0.53",
+]
+
+[[package]]
+name = "lnpbp_derive"
+version = "0.2.0-beta.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "012ed466b7086e494aa8c8f3545d60ecf21a67f569c953cf2bdd480b8e6ca053"
+dependencies = [
+ "amplify",
  "quote 1.0.7",
  "syn 1.0.53",
 ]
 
 [[package]]
 name = "lnpbp_services"
-version = "0.2.0-beta.3"
+version = "0.2.0-beta.4"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -815,8 +862,8 @@ dependencies = [
  "config",
  "dotenv",
  "env_logger",
- "lnpbp",
- "lnpbp_derive",
+ "lnpbp 0.2.0-beta.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp_derive 0.2.0-beta.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "serde 1.0.117",
  "serde_with",
