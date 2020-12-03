@@ -62,8 +62,8 @@ impl Assignments {
         let mut rng = bitcoin::secp256k1::rand::thread_rng();
         // We will compute the last blinding factors from all others so they
         // sum up to 0, so we need to generate only n - 1 random factors
-        let count = allocations_theirs.len() + allocations_ours.len() - 1;
-        let mut blinding_factors = Vec::<_>::with_capacity(count + 1);
+        let count = allocations_theirs.len() + allocations_ours.len();
+        let mut blinding_factors = Vec::<_>::with_capacity(count);
         for _ in 0..count {
             blinding_factors
                 .push(value::BlindingFactor::new(&SECP256K1_ZKP, &mut rng));
@@ -76,12 +76,14 @@ impl Assignments {
             blinding_inputs.push(secp256k1zkp::key::ONE_KEY);
         }
 
-        // remove one output blinding factor and replace it with the correction
-        // factor
-        let blinding_correction = SECP256K1_ZKP
-            .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
-            .expect("SECP256K1_ZKP failure has negligible probability");
-        blinding_factors.push(blinding_correction);
+        // the last blinding factor must be a correction value
+        if !blinding_factors.is_empty() {
+            blinding_factors.pop();
+            let blinding_correction = SECP256K1_ZKP
+                .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
+                .expect("SECP256K1_ZKP failure has negligible probability");
+            blinding_factors.push(blinding_correction);
+        }
 
         let mut blinding_iter = blinding_factors.into_iter();
         let mut set: Vec<OwnedState<_>> = allocations_ours
