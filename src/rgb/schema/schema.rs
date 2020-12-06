@@ -14,16 +14,19 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
-use bitcoin::hashes::Hash;
+use bitcoin::hashes::{sha256, sha256t};
 
 use super::{
     vm, DataFormat, ExtensionSchema, GenesisSchema, OwnedRightType,
     PublicRightType, SimplicityScript, StateSchema, TransitionSchema,
 };
+use crate::bp::TaggedHash;
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };
+use crate::commit_verify::CommitVerify;
 use crate::features;
+use crate::rgb::ToBech32;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = usize;
@@ -36,14 +39,50 @@ static MIDSTATE_SHEMA_ID: [u8; 32] = [
     0x28, 0x90, 0x74, 0x8f, 0x26, 0x75, 0x8e, 0xea,
 ];
 
-sha256t_hash_newtype!(
-    SchemaId,
-    SchemaIdTag,
-    MIDSTATE_SHEMA_ID,
-    64,
-    doc = "Commitment-based schema identifier used for committing to the schema type",
-    false
-);
+/// Tag used for [`SchemaId`] hash type
+pub struct SchemaIdTag;
+
+impl sha256t::Tag for SchemaIdTag {
+    #[inline]
+    fn engine() -> sha256::HashEngine {
+        let midstate = sha256::Midstate::from_inner(MIDSTATE_SHEMA_ID);
+        sha256::HashEngine::from_midstate(midstate, 64)
+    }
+}
+
+/// Commitment-based schema identifier used for committing to the schema type
+#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+#[derive(
+    Wrapper,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Display,
+    From,
+)]
+#[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[display(SchemaId::to_bech32_string)]
+pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
+
+impl<MSG> CommitVerify<MSG> for SchemaId
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> SchemaId {
+        SchemaId::hash(msg)
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 #[cfg_attr(
@@ -106,7 +145,7 @@ mod strict_encoding {
 
     // TODO: Use derive macros and generalized `tagged_hash!` in the future
     impl Strategy for SchemaId {
-        type Strategy = strategies::HashFixedBytes;
+        type Strategy = strategies::Wrapped;
     }
 
     impl StrictEncode for Schema {

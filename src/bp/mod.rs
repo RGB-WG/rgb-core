@@ -41,6 +41,7 @@ pub use scripts::{
 pub use seals::TxoutSeal;
 pub use short_id::ShortId;
 pub use slice32::Slice32;
+pub use tagged_hash::TaggedHash;
 
 use bitcoin::secp256k1;
 

@@ -13,7 +13,7 @@
 
 use std::io;
 
-use bitcoin::hashes::{hash160, hmac, sha256, sha256d, sha512, Hash};
+use bitcoin::hashes::{hash160, hmac, sha256, sha256d, sha256t, sha512, Hash};
 use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{
     secp256k1, util::bip32, BlockHash, OutPoint, Script, Transaction, TxIn,
@@ -43,6 +43,12 @@ impl strict_encoding::Strategy for sha256::Hash {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 impl strict_encoding::Strategy for sha256d::Hash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl<T> strict_encoding::Strategy for sha256t::Hash<T>
+where
+    T: sha256t::Tag,
+{
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 impl strict_encoding::Strategy for sha512::Hash {

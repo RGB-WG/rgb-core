@@ -1087,24 +1087,22 @@ mod _validation {
 
 #[cfg(test)]
 mod test {
+    use bitcoin::blockdata::transaction::OutPoint;
+    use bitcoin::hashes::{hex::FromHex, sha256};
+    use secp256k1zkp::rand::thread_rng;
+    use std::collections::BTreeMap;
+
     use super::*;
     use crate::bp::blind::OutpointReveal;
-    use crate::paradigms::client_side_validation::Conceal;
-    use crate::rgb::contract::data;
-    use crate::rgb::contract::data::Revealed;
-    use crate::rgb::contract::value;
-    use crate::rgb::contract::NodeId;
+    use crate::bp::TaggedHash;
+    use crate::client_side_validation::Conceal;
+    use crate::rgb::contract::data::{self, Revealed};
+    use crate::rgb::contract::{value, NodeId};
     use crate::rgb::validation::{Failure, Validity};
     use crate::rgb::{
         DeclarativeStrategy, HashStrategy, OwnedState, PedersenStrategy,
     };
-    use crate::strict_encoding::{test::*, StrictDecode};
-    use bitcoin::blockdata::transaction::OutPoint;
-    use bitcoin_hashes::{hex::FromHex, sha256};
-    use secp256k1zkp::rand::thread_rng;
-    use std::collections::BTreeMap;
-
-    use crate::paradigms::strict_encoding::strict_encode;
+    use crate::strict_encoding::{strict_encode, test::*, StrictDecode};
 
     // Txids to generate seals
     static TXID_VEC: [&str; 4] = [

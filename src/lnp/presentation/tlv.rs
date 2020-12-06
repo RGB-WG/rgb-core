@@ -11,7 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::Wrapper;
 use core::any::Any;
 use core::borrow::Borrow;
 use std::collections::BTreeMap;

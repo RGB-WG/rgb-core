@@ -170,12 +170,6 @@ impl From<WPubkeyHash> for PubkeyScript {
     }
 }
 
-impl From<PubkeyScript> for Script {
-    fn from(pks: PubkeyScript) -> Self {
-        pks.into_inner()
-    }
-}
-
 /// A content of `sigScript` from a transaction input
 #[derive(
     Wrapper,

@@ -13,7 +13,6 @@
 
 //! # LNPBP-2 related
 
-use amplify::Wrapper;
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 use std::collections::BTreeSet;

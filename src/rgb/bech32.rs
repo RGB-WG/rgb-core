@@ -560,6 +560,22 @@ impl FromStr for Disclosure {
     }
 }
 
+impl FromStr for ContractId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Bech32::from_str(s)?.try_into()
+    }
+}
+
+impl FromStr for SchemaId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Bech32::from_str(s)?.try_into()
+    }
+}
+
 // TODO: Enable after removal of the default `Display` and `FromStr`
 //       implementations for hash-derived types
 /*
@@ -568,40 +584,6 @@ impl FromStr for seal::Confidential {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Bech32::from_str(s).try_into()
-    }
-}
-
-impl FromStr for ContractId {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s).try_into()
-    }
-}
-
-impl FromStr for SchemaId {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s).try_into()
-    }
-}
-
-impl Display for seal::Confidential {
-    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
-        Bech32::Outpoint(self.clone()).fmt(f)
-    }
-}
-
-impl Display for ContractId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
-        Bech32::ContractId(self.clone()).fmt(f)
-    }
-}
-
-impl Display for SchemaId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
-        Bech32::SchemaId(self.clone()).fmt(f)
     }
 }
  */

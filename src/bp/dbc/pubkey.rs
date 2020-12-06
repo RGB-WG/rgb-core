@@ -26,7 +26,6 @@
 //! keys, not their wrapped bitcoin counterparts `bitcoin::PublickKey` and
 //! `bitcoin::PrivateKey`.
 
-use amplify::Wrapper;
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
 

@@ -61,10 +61,10 @@ fn attr_named_value(
                     }
                     Meta::List(_) => {
                         return proc_macro_err!(
-                            attr,
-                            "must have form `name=value`, not `name(value)`",
-                            example
-                        )
+                        attr,
+                        "must have form `name=\"value\"`, not `name(value)`",
+                        example
+                    )
                     }
                     Meta::NameValue(name_val) => return Ok(Some(name_val.lit)),
                 },
@@ -100,7 +100,7 @@ fn attr_list<'a>(
                     Meta::NameValue(_) => {
                         return proc_macro_err!(
                             attr,
-                            "unexpected name=value argument",
+                            "unexpected `name=\"value\"` argument",
                             example
                         )
                     }
