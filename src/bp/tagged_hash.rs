@@ -14,7 +14,8 @@
 //! Bitcoin tagged hash helper types.
 
 use amplify::Wrapper;
-use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
+use bitcoin::hashes::hex::FromHex;
+use bitcoin::hashes::{hex, sha256, sha256t, Hash, HashEngine};
 
 /// Helper class for tests and creation of tagged hashes with dynamically-
 /// defined tags. Do not use in all other cases; utilize
@@ -37,11 +38,18 @@ impl Midstate {
     }
 }
 
-pub trait TaggedHash<'a, H>
+pub trait TaggedHash<'a, T>
 where
-    Self: Wrapper<Inner = sha256t::Hash<H>>,
-    H: 'a + sha256t::Tag,
+    Self: Wrapper<Inner = sha256t::Hash<T>>,
+    T: 'a + sha256t::Tag,
 {
+    fn hash(msg: impl AsRef<[u8]>) -> Self
+    where
+        Self: Sized,
+    {
+        Self::from_inner(sha256t::Hash::hash(msg.as_ref()))
+    }
+
     fn from_hash<X>(hash: X) -> Self
     where
         Self: Sized,
@@ -53,11 +61,18 @@ where
     fn as_slice(&'a self) -> &'a [u8; 32] {
         self.as_inner().as_inner()
     }
+
+    fn from_hex(hex: &str) -> Result<Self, hex::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Self::from_inner(sha256t::Hash::from_hex(hex)?))
+    }
 }
 
-impl<'a, T, H> TaggedHash<'a, H> for T
+impl<'a, U, T> TaggedHash<'a, T> for U
 where
-    T: Wrapper<Inner = sha256t::Hash<H>>,
-    H: 'a + sha256t::Tag,
+    U: Wrapper<Inner = sha256t::Hash<T>>,
+    T: 'a + sha256t::Tag,
 {
 }

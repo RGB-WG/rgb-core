@@ -22,9 +22,9 @@ use super::{
 };
 use crate::bp::{self, TaggedHash};
 use crate::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
+    commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
 };
-use crate::paradigms::client_side_validation::CommitEncode;
+use crate::commit_verify::CommitVerify;
 use crate::rgb::schema::{
     ExtensionType, FieldType, NodeType, OwnedRightType, PublicRightType,
     TransitionType,
@@ -43,29 +43,45 @@ static MIDSTATE_NODE_ID: [u8; 32] = [
     0xe0, 0x86, 0x91, 0x22, 0x43, 0x12, 0x9f,
 ];
 
-sha256t_hash_newtype!(
-    NodeId,
-    NodeIdTag,
-    MIDSTATE_NODE_ID,
-    64,
-    doc = "Unique node (genesis, extensions & state transition) identifier \
-           equivalent to the commitment hash",
-    false
-);
+/// Tag used for [`NodeId`] and [`ContractId`] hash types
+pub struct NodeIdTag;
 
-impl CommitEncodeWithStrategy for NodeId {
-    type Strategy = commit_strategy::UsingStrict;
-}
-
-/// Tag used for [`ContractId`] hash type
-pub struct ContractIdTag;
-
-impl sha256t::Tag for ContractIdTag {
+impl sha256t::Tag for NodeIdTag {
     #[inline]
     fn engine() -> sha256::HashEngine {
         let midstate = sha256::Midstate::from_inner(MIDSTATE_NODE_ID);
         sha256::HashEngine::from_midstate(midstate, 64)
     }
+}
+
+/// Unique node (genesis, extensions & state transition) identifier equivalent
+/// to the commitment hash
+#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+#[derive(
+    Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From,
+)]
+#[wrapper(
+    Debug, Display, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull
+)]
+pub struct NodeId(sha256t::Hash<NodeIdTag>);
+
+impl<MSG> CommitVerify<MSG> for NodeId
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> NodeId {
+        NodeId::hash(msg)
+    }
+}
+
+impl CommitEncodeWithStrategy for NodeId {
+    type Strategy = commit_strategy::UsingStrict;
 }
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -90,7 +106,7 @@ impl sha256t::Tag for ContractIdTag {
 )]
 #[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(ContractId::to_bech32_string)]
-pub struct ContractId(sha256t::Hash<ContractIdTag>);
+pub struct ContractId(sha256t::Hash<NodeIdTag>);
 
 impl From<ContractId> for crate::bp::chain::AssetId {
     fn from(id: ContractId) -> Self {
@@ -305,7 +321,7 @@ impl Node for Genesis {
 
     #[inline]
     fn contract_id(&self) -> Option<ContractId> {
-        Some(ContractId::from_hash(self.node_id()))
+        Some(ContractId::from_inner(self.node_id().into_inner()))
     }
 
     #[inline]
@@ -530,7 +546,7 @@ impl Genesis {
 
     #[inline]
     pub fn contract_id(&self) -> ContractId {
-        ContractId::from_hash(self.node_id())
+        ContractId::from_inner(self.node_id().into_inner())
     }
 
     #[inline]
@@ -595,7 +611,7 @@ mod strict_encoding {
     use std::io;
 
     impl Strategy for NodeId {
-        type Strategy = strategies::HashFixedBytes;
+        type Strategy = strategies::Wrapped;
     }
 
     impl Strategy for ContractId {
@@ -688,15 +704,16 @@ mod strict_encoding {
 #[cfg(test)]
 mod test {
     use amplify::Wrapper;
-    use bitcoin_hashes::hex::{FromHex, ToHex};
+    use bitcoin_hashes::hex::ToHex;
     use std::io::Write;
 
     use super::*;
     use crate::bp::chain::{Chain, GENESIS_HASH_MAINNET};
     use crate::bp::tagged_hash;
     use crate::commit_verify::CommitVerify;
-    use crate::paradigms::strict_encoding::{test::*, StrictDecode};
-    use crate::strict_encoding::{strict_encode, StrictEncode};
+    use crate::strict_encoding::{
+        strict_encode, test::*, StrictDecode, StrictEncode,
+    };
 
     static TRANSITION: [u8; 2364] = include!("../../../test/transition.in");
     static GENESIS: [u8; 2462] = include!("../../../test/genesis.in");
@@ -784,11 +801,11 @@ mod test {
         // Typeid/Nodeid test
         assert_eq!(
             genesis.node_id().to_hex(),
-            "150fac8310ed05413019094911dc1025801e1303bdd96c2bb926aede2a8420d0"
+            "d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15"
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "d44fabfcc3f96af2f7d3d3c5871df281d84768fc5bd0c00602f2b96cdd8e6294"
+            "94628edd6cb9f20206c0d05bfc6847d881f21d87c5d3d3f7f26af9c3fcab4fd4"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -802,7 +819,7 @@ mod test {
         let assignments = ancestor_trn
             .get(
                 &NodeId::from_hex(
-                    "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06",
+                    "060ef58d940a75e43d139d55a5e4d3264dc9eb4f773bffc5729019e47ed27ef5",
                 )
                 .unwrap(),
             )
@@ -999,12 +1016,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("150fac8310ed05413019094911dc1025801e1303bdd96c2bb926aede2a8420d0")
+            NodeId::from_hex("d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("d44fabfcc3f96af2f7d3d3c5871df281d84768fc5bd0c00602f2b96cdd8e6294")
+            NodeId::from_hex("94628edd6cb9f20206c0d05bfc6847d881f21d87c5d3d3f7f26af9c3fcab4fd4")
                 .unwrap()
         );
 
@@ -1013,12 +1030,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("ec9ae8acf89a944049f7ba084145ae97a2a44f6f20a61aefe438983028598e97")
+            NodeId::from_hex("978e5928309838e4ef1aa6206f4fa4a297ae454108baf74940949af8ace89aec")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("154258e56df3422e6897278650d0acace8c04ea8a93d0c9cb6f081053b13534e")
+            NodeId::from_hex("4e53133b0581f0b69c0c3da9a84ec0e8acacd050862797682e42f36de5584215")
                 .unwrap()
         );
     }
@@ -1040,7 +1057,7 @@ mod test {
         );
         assert_eq!(
             schemaid,
-            SchemaId::from_hex("201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e")
+            SchemaId::from_hex("8eafd3360d65258952f4d9575eac1b1f18ee185129718293b6d7622b1edd1f20")
                 .unwrap()
         );
         assert_eq!(chain, &bp::chain::Chain::Mainnet);

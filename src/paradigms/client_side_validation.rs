@@ -192,8 +192,7 @@ pub trait Conceal {
 }
 
 pub trait ConsensusCommit: Sized + CommitEncode {
-    type Commitment: commit_verify::CommitVerify<Vec<u8>>
-        + bitcoin::hashes::Hash;
+    type Commitment: commit_verify::CommitVerify<Vec<u8>>;
 
     #[inline]
     fn consensus_commit(self) -> Self::Commitment {

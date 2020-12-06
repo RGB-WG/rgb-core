@@ -12,16 +12,88 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use crate::commit_verify::CommitVerify;
-use bitcoin::hashes::Hash;
+use bitcoin::hashes::{
+    hash160, ripemd160, sha1, sha256, sha256d, sha256t, sha512, siphash24, Hash,
+};
 
-impl<HT, MSG> CommitVerify<MSG> for HT
+impl<MSG> CommitVerify<MSG> for sha1::Hash
 where
-    HT: Hash,
     MSG: AsRef<[u8]>,
 {
     #[inline]
-    fn commit(msg: &MSG) -> HT {
-        From::from(<HT as Hash>::hash(msg.as_ref()))
+    fn commit(msg: &MSG) -> sha1::Hash {
+        sha1::Hash::hash(msg.as_ref())
+    }
+}
+
+impl<MSG> CommitVerify<MSG> for ripemd160::Hash
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> ripemd160::Hash {
+        ripemd160::Hash::hash(msg.as_ref())
+    }
+}
+
+impl<MSG> CommitVerify<MSG> for hash160::Hash
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> hash160::Hash {
+        hash160::Hash::hash(msg.as_ref())
+    }
+}
+
+impl<MSG> CommitVerify<MSG> for sha256::Hash
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> sha256::Hash {
+        sha256::Hash::hash(msg.as_ref())
+    }
+}
+
+impl<MSG> CommitVerify<MSG> for sha256d::Hash
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> sha256d::Hash {
+        sha256d::Hash::hash(msg.as_ref())
+    }
+}
+
+impl<MSG, T> CommitVerify<MSG> for sha256t::Hash<T>
+where
+    MSG: AsRef<[u8]>,
+    T: sha256t::Tag,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> sha256t::Hash<T> {
+        sha256t::Hash::hash(msg.as_ref())
+    }
+}
+
+impl<MSG> CommitVerify<MSG> for siphash24::Hash
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> siphash24::Hash {
+        siphash24::Hash::hash(msg.as_ref())
+    }
+}
+
+impl<MSG> CommitVerify<MSG> for sha512::Hash
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> sha512::Hash {
+        sha512::Hash::hash(msg.as_ref())
     }
 }
 

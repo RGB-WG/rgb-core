@@ -14,11 +14,11 @@
 use std::collections::{BTreeMap, HashMap};
 
 use amplify::Wrapper;
+use bitcoin::hashes::{sha256, sha256t, Hash};
 use bitcoin::secp256k1;
 use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::util::uint::Uint256;
 use bitcoin::{Transaction, Txid};
-use bitcoin_hashes::{sha256, Hash};
 
 use crate::bp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
@@ -49,17 +49,44 @@ static MIDSTATE_ANCHOR_ID: [u8; 32] = [
     0x45, 0xe4, 0x28, 0x45, 0x47, 0xbf, 0xe9,
 ];
 
-sha256t_hash_newtype!(
-    AnchorId,
-    AnchorIdTag,
-    MIDSTATE_ANCHOR_ID,
-    64,
-    doc = "Unique anchor identifier equivalent to the anchor commitment hash",
-    false
-);
+/// Tag used for [`AnchorId`] hash type
+pub struct AnchorIdTag;
+
+impl sha256t::Tag for AnchorIdTag {
+    #[inline]
+    fn engine() -> sha256::HashEngine {
+        let midstate = sha256::Midstate::from_inner(MIDSTATE_ANCHOR_ID);
+        sha256::HashEngine::from_midstate(midstate, 64)
+    }
+}
+
+/// Unique anchor identifier equivalent to the anchor commitment hash
+#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+#[derive(
+    Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From,
+)]
+#[wrapper(
+    Debug, Display, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull
+)]
+pub struct AnchorId(sha256t::Hash<AnchorIdTag>);
+
+impl<MSG> CommitVerify<MSG> for AnchorId
+where
+    MSG: AsRef<[u8]>,
+{
+    #[inline]
+    fn commit(msg: &MSG) -> AnchorId {
+        AnchorId::hash(msg)
+    }
+}
 
 impl Strategy for AnchorId {
-    type Strategy = strategies::HashFixedBytes;
+    type Strategy = strategies::Wrapped;
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
@@ -115,7 +142,7 @@ impl Anchor {
                 let vout = vout.low_u64() as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
                     sha256::Hash::from_inner(*contract_id.as_slice()),
-                    sha256::Hash::from_inner(node_id.into_inner()),
+                    sha256::Hash::from_inner(*node_id.as_slice()),
                 );
                 data
             },
@@ -227,7 +254,8 @@ impl Anchor {
             .get(pos)
             .expect("Index modulo length can't exceed array length")
             .commitment
-            == sha256::Hash::from_inner(node_id.into_inner())
+            == sha256::Hash::from_slice(&node_id[..])
+                .expect("TaggedHashes type is broken")
     }
 
     pub fn verify(
