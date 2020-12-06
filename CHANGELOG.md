@@ -1,6 +1,11 @@
 Change Log
 ==========
 
+v0.2.0-rc.2
+-----------
+- New tagged hash implementation defaulting to Bech32 encoding for ContractId
+- Using amplify and amplify_derive v2.4
+
 v0.2.0-rc.1
 -----------
 - Fix for the broken tokio upstream dependency breaking issue
