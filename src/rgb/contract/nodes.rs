@@ -13,14 +13,14 @@
 
 use std::collections::BTreeSet;
 
-use amplify::AsAny;
-use bitcoin::hashes::Hash;
+use amplify::{AsAny, Wrapper};
+use bitcoin::hashes::{sha256, sha256t, Hash};
 
 use super::{
     Assignments, AutoConceal, OwnedRights, ParentOwnedRights,
     ParentPublicRights,
 };
-use crate::bp;
+use crate::bp::{self, TaggedHash};
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };
@@ -29,7 +29,9 @@ use crate::rgb::schema::{
     ExtensionType, FieldType, NodeType, OwnedRightType, PublicRightType,
     TransitionType,
 };
-use crate::rgb::{schema, seal, Metadata, SchemaId, SimplicityScript};
+use crate::rgb::{
+    schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32,
+};
 
 /// Holds definition of valencies for contract nodes, which is a set of
 /// allowed valencies types
@@ -55,19 +57,44 @@ impl CommitEncodeWithStrategy for NodeId {
     type Strategy = commit_strategy::UsingStrict;
 }
 
-sha256t_hash_newtype!(
-    ContractId,
-    ContractIdTag,
-    MIDSTATE_NODE_ID,
-    64,
-    doc = "Unique contract identifier equivalent to the contract genesis \
-           commitment hash",
-    true
-);
+/// Tag used for [`ContractId`] hash type
+pub struct ContractIdTag;
+
+impl sha256t::Tag for ContractIdTag {
+    #[inline]
+    fn engine() -> sha256::HashEngine {
+        let midstate = sha256::Midstate::from_inner(MIDSTATE_NODE_ID);
+        sha256::HashEngine::from_midstate(midstate, 64)
+    }
+}
+
+/// Unique contract identifier equivalent to the contract genesis commitment
+#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+#[derive(
+    Wrapper,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Display,
+    From,
+)]
+#[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[display(ContractId::to_bech32_string)]
+pub struct ContractId(sha256t::Hash<ContractIdTag>);
 
 impl From<ContractId> for crate::bp::chain::AssetId {
     fn from(id: ContractId) -> Self {
-        Self::from_inner(id.into_inner())
+        Self::from_inner(id.into_inner().into_inner())
     }
 }
 
@@ -278,7 +305,7 @@ impl Node for Genesis {
 
     #[inline]
     fn contract_id(&self) -> Option<ContractId> {
-        Some(ContractId::from_inner(self.node_id().into_inner()))
+        Some(ContractId::from_hash(self.node_id()))
     }
 
     #[inline]
@@ -503,7 +530,7 @@ impl Genesis {
 
     #[inline]
     pub fn contract_id(&self) -> ContractId {
-        ContractId::from_inner(self.node_id().into_inner())
+        ContractId::from_hash(self.node_id())
     }
 
     #[inline]
@@ -572,7 +599,7 @@ mod strict_encoding {
     }
 
     impl Strategy for ContractId {
-        type Strategy = strategies::HashFixedBytes;
+        type Strategy = strategies::Wrapped;
     }
 
     // ![CONSENSUS-CRITICAL]: Commit encode is different for genesis from strict

@@ -14,7 +14,7 @@
 //! Bitcoin tagged hash helper types.
 
 use amplify::Wrapper;
-use bitcoin::hashes::{sha256, Hash, HashEngine};
+use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
 
 /// Helper class for tests and creation of tagged hashes with dynamically-
 /// defined tags. Do not use in all other cases; utilize
@@ -35,4 +35,29 @@ impl Midstate {
         engine.input(&tag_hash[..]);
         Self::from_inner(engine.midstate().into_inner())
     }
+}
+
+pub trait TaggedHash<'a, H>
+where
+    Self: Wrapper<Inner = sha256t::Hash<H>>,
+    H: 'a + sha256t::Tag,
+{
+    fn from_hash<X>(hash: X) -> Self
+    where
+        Self: Sized,
+        X: Hash<Inner = [u8; 32]>,
+    {
+        Self::from_inner(sha256t::Hash::from_inner(hash.into_inner()))
+    }
+
+    fn as_slice(&'a self) -> &'a [u8; 32] {
+        self.as_inner().as_inner()
+    }
+}
+
+impl<'a, T, H> TaggedHash<'a, H> for T
+where
+    T: Wrapper<Inner = sha256t::Hash<H>>,
+    H: 'a + sha256t::Tag,
+{
 }

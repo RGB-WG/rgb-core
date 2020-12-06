@@ -11,7 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::Wrapper;
 use bitcoin::{BlockHash, Txid};
 use std::{
     convert::{TryFrom, TryInto},

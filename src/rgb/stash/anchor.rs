@@ -26,6 +26,7 @@ use crate::bp::dbc::{
 };
 use crate::bp::psbt::ProprietaryKeyMap;
 use crate::bp::resolvers::{Fee, FeeError};
+use crate::bp::TaggedHash;
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };
@@ -109,11 +110,11 @@ impl Anchor {
         let per_output_sources = transitions.into_iter().fold(
             HashMap::<usize, BTreeMap<sha256::Hash, sha256::Hash>>::new(),
             |mut data, (contract_id, node_id)| {
-                let id = Uint256::from_be_bytes(contract_id.into_inner());
+                let id = Uint256::from_be_bytes(*contract_id.as_slice());
                 let vout = id % Uint256::from_u64(num_outs).unwrap();
                 let vout = vout.low_u64() as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
-                    sha256::Hash::from_inner(contract_id.into_inner()),
+                    sha256::Hash::from_inner(*contract_id.as_slice()),
                     sha256::Hash::from_inner(node_id.into_inner()),
                 );
                 data
@@ -203,7 +204,7 @@ impl Anchor {
                 });
 
             multimsg.iter().for_each(|(id, _)| {
-                let contract_id = ContractId::from_inner(id.into_inner());
+                let contract_id = ContractId::from_hash(*id);
                 contract_anchor_map.insert(contract_id, anchors.len());
             });
             anchors.push(Anchor {
@@ -217,7 +218,7 @@ impl Anchor {
     }
 
     pub fn validate(&self, contract_id: &ContractId, node_id: &NodeId) -> bool {
-        let id = Uint256::from_be_bytes(contract_id.into_inner());
+        let id = Uint256::from_be_bytes(*contract_id.as_slice());
         let len = Uint256::from_u64(self.commitment.commitments.len() as u64)
             .unwrap();
         let pos = (id % len).low_u64() as usize;
@@ -235,7 +236,7 @@ impl Anchor {
         tx: &Transaction,
         fee: u64,
     ) -> bool {
-        let id = Uint256::from_be_bytes(contract_id.into_inner());
+        let id = Uint256::from_be_bytes(*contract_id.as_slice());
         let protocol_factor =
             id % Uint256::from_u64(tx.output.len() as u64).unwrap();
         let protocol_factor = protocol_factor.low_u64() as u32;
