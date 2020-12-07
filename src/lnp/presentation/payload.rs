@@ -22,7 +22,8 @@ use std::sync::Arc;
 
 use super::tlv;
 use super::{
-    Encode, Error, EvenOdd, UnknownTypeError, Unmarshall, UnmarshallFn,
+    encoding, Encode, Error, EvenOdd, UnknownTypeError, Unmarshall,
+    UnmarshallFn,
 };
 use crate::strict_encoding::{StrictDecode, StrictEncode};
 
@@ -97,9 +98,7 @@ impl Extract for Payload {
 }
 
 impl Encode for Payload {
-    type Error = Error;
-
-    fn encode(&self) -> Result<Vec<u8>, Self::Error> {
+    fn encode(&self) -> Result<Vec<u8>, encoding::Error> {
         let mut e = io::Cursor::new(vec![]);
         self.type_id
             .to_inner()
@@ -122,9 +121,7 @@ where
     T: EncodeRaw,
     Payload: From<T>,
 {
-    type Error = Error;
-
-    fn encode(&self) -> Result<Vec<u8>, Self::Error> {
+    fn encode(&self) -> Result<Vec<u8>, encoding::Error> {
         Payload::from(self.clone()).encode()
     }
 }
@@ -181,7 +178,9 @@ where
             None if type_id.is_even() => Err(Error::MessageEvenType),
             None => {
                 let mut payload = Vec::new();
-                reader.read_to_end(&mut payload)?;
+                reader
+                    .read_to_end(&mut payload)
+                    .map_err(|e| Error::LightningEncoding(e.into()))?;
                 Ok(Arc::new(T::try_from_type(
                     type_id,
                     &Payload { type_id, payload },

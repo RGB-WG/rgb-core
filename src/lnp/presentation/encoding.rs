@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::IoError;
 use core::any::Any;
 use core::borrow::Borrow;
 use std::io;
@@ -18,17 +19,30 @@ use std::sync::Arc;
 
 use super::payload;
 
-pub trait Encode {
-    type Error: std::error::Error;
-    fn encode(&self) -> Result<Vec<u8>, Self::Error>;
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum Error {
+    /// I/O error
+    #[from(io::Error)]
+    #[from(io::ErrorKind)]
+    #[display(inner)]
+    Io(IoError),
+
+    /// decoded BigSize is not canonical
+    BigSizeNotCanonical,
+
+    /// unexpected EOF while decoding BigSize value
+    BigSizeEof,
 }
 
-pub trait Decode
-where
-    Self: Sized,
-{
-    type Error: std::error::Error;
-    fn decode(data: &dyn Borrow<[u8]>) -> Result<Self, Self::Error>;
+pub trait Encode {
+    fn encode(&self) -> Result<Vec<u8>, Error>;
+}
+
+pub trait Decode {
+    fn decode(data: &dyn Borrow<[u8]>) -> Result<Self, Error>
+    where
+        Self: Sized;
 }
 
 pub trait Unmarshall {

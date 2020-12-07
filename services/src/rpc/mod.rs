@@ -48,11 +48,13 @@ pub enum Error {
     /// unexpected server response
     UnexpectedServerResponse,
 
-    /// {0}
+    /// Server failure
     #[from]
+    #[display(inner)]
     ServerFailure(Failure),
 
     /// message serialization or structure error: {0}
+    #[from(lnp::presentation::encoding::Error)]
     Presentation(lnp::presentation::Error),
 
     /// transport-level protocol error: {0}
@@ -81,8 +83,8 @@ impl From<lnp::presentation::Error> for Error {
 impl From<lnp::presentation::Error> for Failure {
     fn from(err: lnp::presentation::Error) -> Self {
         Failure {
-            code: u8::from(err) as u16,
             info: err.to_string(),
+            code: u8::from(err) as u16,
         }
     }
 }

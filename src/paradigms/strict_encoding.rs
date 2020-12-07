@@ -91,10 +91,11 @@ where
 }
 
 /// Possible errors during strict encoding and decoding process
-#[derive(Clone, PartialEq, Eq, Debug, From, Error)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, From, Error)]
 pub enum Error {
     /// I/O Error
-    Io(io::ErrorKind),
+    #[from(io::Error)]
+    Io(IoError),
 
     /// UTF8 Conversion Error
     #[from(std::str::Utf8Error)]
@@ -113,7 +114,6 @@ pub enum Error {
     /// `Error::WrongOptionalEncoding`.
     WrongOptionalEncoding(u8),
 
-    // TODO: (new) replace all `String` in errors with `&'static str`
     /// Enums are encoded as a `u8`-based values; the provided enum has
     /// underlying primitive type that does not fit into `u8` value
     EnumValueOverflow(String),
@@ -144,12 +144,6 @@ pub enum Error {
 impl From<Error> for fmt::Error {
     fn from(_: Error) -> Self {
         fmt::Error
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Self::Io(err.kind())
     }
 }
 
@@ -436,13 +430,14 @@ pub mod strategies {
         #[inline]
         fn from(e: bitcoin::consensus::encode::Error) -> Self {
             if let bitcoin::consensus::encode::Error::Io(err) = e {
-                Error::Io(err.kind())
+                err.into()
             } else {
                 Error::DataIntegrityError(e.to_string())
             }
         }
     }
 }
+use amplify::IoError;
 pub use strategies::Strategy;
 
 /// Taking implementation of little-endian integer encoding
