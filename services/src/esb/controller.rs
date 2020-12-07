@@ -76,7 +76,7 @@ where
     where
         R: Request,
     {
-        let data = request.encode()?;
+        let data = request.serialize()?;
         let router = match self.router {
             None => {
                 trace!(

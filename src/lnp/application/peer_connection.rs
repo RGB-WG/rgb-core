@@ -90,7 +90,7 @@ impl RecvMessage for PeerConnection {
 
 impl SendMessage for PeerConnection {
     fn send_message(&mut self, message: Messages) -> Result<usize, Error> {
-        Ok(self.session.send_raw_message(&message.encode()?)?)
+        Ok(self.session.send_raw_message(&message.serialize()?)?)
     }
 }
 
@@ -103,7 +103,7 @@ impl RecvMessage for PeerReceiver {
 
 impl SendMessage for PeerSender {
     fn send_message(&mut self, message: Messages) -> Result<usize, Error> {
-        Ok(self.sender.send_raw_message(&message.encode()?)?)
+        Ok(self.sender.send_raw_message(&message.serialize()?)?)
     }
 }
 

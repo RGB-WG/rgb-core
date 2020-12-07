@@ -188,7 +188,7 @@ where
                 .handle(endpoint, request.clone())
                 .unwrap_or_else(|err| A::Reply::from(err.into()));
             debug!("RPC: replying with {:?}", reply);
-            let data = reply.encode()?;
+            let data = reply.serialize()?;
             session.send_raw_message(&data)?;
         }
 

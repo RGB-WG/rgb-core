@@ -580,6 +580,9 @@ pub struct AssignFunds {
     pub blinding: u64,
 }
 
+// TODO: Remove strict encoding implementation for Messages and replace it with
+//       lightning-specific one
+
 impl StrictEncode for Messages {
     type Error = strict_encoding::Error;
 
@@ -587,7 +590,7 @@ impl StrictEncode for Messages {
         &self,
         e: E,
     ) -> Result<usize, strict_encoding::Error> {
-        self.encode()
+        self.serialize()
             .expect("Memory encoders does not fail")
             .strict_encode(e)
     }

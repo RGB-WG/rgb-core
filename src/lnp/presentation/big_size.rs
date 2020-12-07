@@ -13,7 +13,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::borrow::Borrow;
+use bitcoin::consensus::ReadExt;
+use std::io;
 
 use super::encoding::{Decode, Encode, Error};
 
@@ -33,38 +34,36 @@ use super::encoding::{Decode, Encode, Error};
 pub struct BigSize(pub u64);
 
 impl Encode for BigSize {
-    fn encode(&self) -> Result<Vec<u8>, Error> {
-        match self.0 {
-            0..=0xFC => Ok(vec![self.0 as u8]),
+    fn encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        let vec = match self.0 {
+            0..=0xFC => vec![self.0 as u8],
             0xFD..=0xFFFF => {
                 let mut result = (self.0 as u16).to_be_bytes().to_vec();
                 result.insert(0, 0xFDu8);
-                Ok(result)
+                result
             }
             0x10000..=0xFFFFFFFF => {
                 let mut result = (self.0 as u32).to_be_bytes().to_vec();
                 result.insert(0, 0xFEu8);
-                Ok(result)
+                result
             }
             _ => {
                 let mut result = (self.0 as u64).to_be_bytes().to_vec();
                 result.insert(0, 0xFF);
-                Ok(result)
+                result
             }
-        }
+        };
+        e.write(&vec)?;
+        Ok(vec.len())
     }
 }
 
 impl Decode for BigSize {
-    fn decode(data: &dyn Borrow<[u8]>) -> Result<Self, Error> {
-        let data = data.borrow().to_vec();
-        match data[0] {
+    fn decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        match d.read_u8().map_err(|_| Error::BigSizeEof)? {
             0xFFu8 => {
-                if data.len() < 9 {
-                    return Err(Error::BigSizeEof);
-                }
                 let mut x = [0u8; 8];
-                x.copy_from_slice(&data[1..]);
+                d.read_exact(&mut x).map_err(|_| Error::BigSizeEof)?;
                 let value = u64::from_be_bytes(x);
                 if value < 0x100000000 {
                     Err(Error::BigSizeNotCanonical)
@@ -73,11 +72,8 @@ impl Decode for BigSize {
                 }
             }
             0xFEu8 => {
-                if data.len() < 5 {
-                    return Err(Error::BigSizeEof);
-                }
                 let mut x = [0u8; 4];
-                x.copy_from_slice(&data[1..]);
+                d.read_exact(&mut x).map_err(|_| Error::BigSizeEof)?;
                 let value = u32::from_be_bytes(x);
                 if value < 0x10000 {
                     Err(Error::BigSizeNotCanonical)
@@ -86,11 +82,8 @@ impl Decode for BigSize {
                 }
             }
             0xFDu8 => {
-                if data.len() < 3 {
-                    return Err(Error::BigSizeEof);
-                }
                 let mut x = [0u8; 2];
-                x.copy_from_slice(&data[1..]);
+                d.read_exact(&mut x).map_err(|_| Error::BigSizeEof)?;
                 let value = u16::from_be_bytes(x);
                 if value < 0xFD {
                     Err(Error::BigSizeNotCanonical)
@@ -98,7 +91,7 @@ impl Decode for BigSize {
                     Ok(BigSize(value as u64))
                 }
             }
-            _ => Ok(BigSize(data[0] as u64)),
+            small => Ok(BigSize(small as u64)),
         }
     }
 }
@@ -114,11 +107,11 @@ mod test {
     fn test_runner(value: u64, bytes: &[u8]) {
         let bigsize = BigSize(value);
 
-        let encoded_bigsize = bigsize.encode().unwrap();
+        let encoded_bigsize = bigsize.serialize().unwrap();
 
         assert_eq!(encoded_bigsize, bytes);
 
-        let decoded_bigsize = BigSize::decode(&encoded_bigsize).unwrap();
+        let decoded_bigsize = BigSize::deserialize(&encoded_bigsize).unwrap();
 
         assert_eq!(decoded_bigsize, bigsize);
     }
@@ -144,19 +137,19 @@ mod test {
     #[should_panic(expected = "BigSizeNotCanonical")]
     #[test]
     fn test_canonical_value_error_1() {
-        BigSize::decode(&[0xfd, 0x00, 0xfc]).unwrap();
+        BigSize::deserialize(&[0xfd, 0x00, 0xfc]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeNotCanonical")]
     #[test]
     fn test_canonical_value_error_2() {
-        BigSize::decode(&[0xfe, 0x00, 0x00, 0xff, 0xff]).unwrap();
+        BigSize::deserialize(&[0xfe, 0x00, 0x00, 0xff, 0xff]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeNotCanonical")]
     #[test]
     fn test_canonical_value_error_3() {
-        BigSize::decode(&[
+        BigSize::deserialize(&[
             0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
         ])
         .unwrap();
@@ -165,36 +158,36 @@ mod test {
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_1() {
-        BigSize::decode(&[0xfd, 0x00]).unwrap();
+        BigSize::deserialize(&[0xfd, 0x00]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_2() {
-        BigSize::decode(&[0xfe, 0xff, 0xff]).unwrap();
+        BigSize::deserialize(&[0xfe, 0xff, 0xff]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_3() {
-        BigSize::decode(&[0xff, 0xff, 0xff, 0xff, 0xff]).unwrap();
+        BigSize::deserialize(&[0xff, 0xff, 0xff, 0xff, 0xff]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_4() {
-        BigSize::decode(&[0xfd]).unwrap();
+        BigSize::deserialize(&[0xfd]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_5() {
-        BigSize::decode(&[0xfe]).unwrap();
+        BigSize::deserialize(&[0xfe]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_6() {
-        BigSize::decode(&[0xff]).unwrap();
+        BigSize::deserialize(&[0xff]).unwrap();
     }
 }

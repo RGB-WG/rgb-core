@@ -33,16 +33,40 @@ pub enum Error {
 
     /// unexpected EOF while decoding BigSize value
     BigSizeEof,
+
+    /// Returned by the convenience method [`Decode::deserialize()`] if not all
+    /// provided data were consumed during decoding process
+    DataNotEntirelyConsumed,
 }
 
+/// Lightning-network specific encoding as defined in BOLT-1, 2, 3...
 pub trait Encode {
-    fn encode(&self) -> Result<Vec<u8>, Error>;
+    fn encode<E: io::Write>(&self, e: E) -> Result<usize, Error>;
+    fn serialize(&self) -> Result<Vec<u8>, Error> {
+        let mut encoder = io::Cursor::new(vec![]);
+        self.encode(&mut encoder)?;
+        Ok(encoder.into_inner())
+    }
 }
 
-pub trait Decode {
-    fn decode(data: &dyn Borrow<[u8]>) -> Result<Self, Error>
-    where
-        Self: Sized;
+/// Lightning-network specific encoding as defined in BOLT-1, 2, 3...
+pub trait Decode
+where
+    Self: Sized,
+{
+    fn decode<D: io::Read>(d: D) -> Result<Self, Error>;
+    fn deserialize(data: &dyn AsRef<[u8]>) -> Result<Self, Error> {
+        let mut decoder = io::Cursor::new(data);
+        let rv = Self::decode(&mut decoder)?;
+        let consumed = decoder.position() as usize;
+
+        // Fail if data are not consumed entirely.
+        if consumed == data.as_ref().len() {
+            Ok(rv)
+        } else {
+            Err(Error::DataNotEntirelyConsumed)?
+        }
+    }
 }
 
 pub trait Unmarshall {

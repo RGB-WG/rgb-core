@@ -67,7 +67,7 @@ where
         endpoint: E,
         request: A::Request,
     ) -> Result<A::Reply, Error> {
-        let data = request.encode()?;
+        let data = request.serialize()?;
         let session = self
             .sessions
             .get_mut(&endpoint)

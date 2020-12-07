@@ -17,7 +17,7 @@ use core::borrow::Borrow;
 use core::convert::TryInto;
 use core::marker::PhantomData;
 use std::collections::BTreeMap;
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::sync::Arc;
 
 use super::tlv;
@@ -98,14 +98,13 @@ impl Extract for Payload {
 }
 
 impl Encode for Payload {
-    fn encode(&self) -> Result<Vec<u8>, encoding::Error> {
-        let mut e = io::Cursor::new(vec![]);
-        self.type_id
+    fn encode<E: io::Write>(&self, mut e: E) -> Result<usize, encoding::Error> {
+        Ok(self
+            .type_id
             .to_inner()
             .strict_encode(&mut e)
-            .expect("Memory encoders do not fail");
-        e.write(&self.payload)?;
-        Ok(e.into_inner())
+            .map_err(|_| encoding::Error::DataNotEntirelyConsumed)?
+            + e.write(&self.payload)?)
     }
 }
 
@@ -121,8 +120,8 @@ where
     T: EncodeRaw,
     Payload: From<T>,
 {
-    fn encode(&self) -> Result<Vec<u8>, encoding::Error> {
-        Payload::from(self.clone()).encode()
+    fn encode<E: io::Write>(&self, e: E) -> Result<usize, encoding::Error> {
+        Payload::from(self.clone()).encode(e)
     }
 }
 
