@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::DumbDefault;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
@@ -156,16 +156,14 @@ pub enum Messages {
     Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
 )]
 #[lnpbp_crate(crate)]
-#[display(
-    "init({global_features}, {local_features}, {assets:#?}), {unknown_tlvs:#?}"
-)]
+#[display("init({global_features}, {local_features}, {assets:#?})")]
 pub struct Init {
     pub global_features: Features,
     pub local_features: Features,
-    // #[lnpwp(tlv=1)]
+    #[tlv(type = 1)]
     pub assets: HashSet<AssetId>,
-    // #[lpwpw(unknown_tlvs)]
-    pub unknown_tlvs: BTreeMap<u64, Vec<u8>>,
+    // #[tlv(unknown)]
+    // pub unknown_tlvs: BTreeMap<tlv::Type, tlv::RawRecord>,
 }
 
 /// In order to allow for the existence of long-lived TCP connections, at
