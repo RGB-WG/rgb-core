@@ -25,6 +25,8 @@ use lightning::{
 
 use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
 
+pub type Map = BTreeMap<Type, RawRecord>;
+
 /// TLV type field value
 #[derive(
     Wrapper,

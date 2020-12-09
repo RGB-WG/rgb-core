@@ -96,12 +96,10 @@ mod strict_encoding {
     use std::io;
 
     impl StrictEncode for Revealed {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(match self {
                 Revealed::TxOutpoint(outpoint) => {
                     strict_encode_list!(e; 0u8, outpoint)
@@ -114,9 +112,7 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Revealed {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = u8::strict_decode(&mut d)?;
             Ok(match format {
                 0u8 => Revealed::TxOutpoint(OutpointReveal::strict_decode(d)?),

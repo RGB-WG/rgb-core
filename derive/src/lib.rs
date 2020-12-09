@@ -201,15 +201,35 @@ enum EncodingSrategy {
 }
 
 impl EncodingSrategy {
-    pub fn encode_fn(&self, span: Span, import: &TokenStream2) -> TokenStream2 {
+    pub fn serialize_fn(
+        &self,
+        span: Span,
+        import: &TokenStream2,
+    ) -> TokenStream2 {
         match self {
             Self::Strict => {
-                quote_spanned!(span => #import::strict_encoding::strict_encode)
+                quote_spanned!(span => #import::strict_encoding::strict_serialize(obj).expect(ERR))
             }
             Self::Bitcoin => {
-                quote_spanned!(span => #import::bitcoin::consensus::encode::consensus_encode)
+                quote_spanned!(span => #import::bitcoin::consensus::encode::consensus_encode(obj))
             }
-            Self::Lightning => unimplemented!(),
+            Self::Lightning => {
+                quote_spanned!(span => #import::lightning_encoding::lightning_serialize(obj))
+            }
+        }
+    }
+
+    pub fn encode_fn(&self) -> TokenStream2 {
+        match self {
+            Self::Strict => {
+                quote!(strict_encode)
+            }
+            Self::Bitcoin => {
+                quote!(consensus_encode)
+            }
+            Self::Lightning => {
+                quote!(lightning_encode)
+            }
         }
     }
 
@@ -217,21 +237,21 @@ impl EncodingSrategy {
         match self {
             Self::Strict => quote_spanned!(span => strict_decode),
             Self::Bitcoin => quote_spanned!(span => consensus_decode),
-            Self::Lightning => unimplemented!(),
+            Self::Lightning => quote_spanned!(span => lightning_decode),
         }
     }
 
     pub fn encode_use(&self, import: &TokenStream2) -> TokenStream2 {
         match self {
             Self::Strict => quote!(
-                use #import::strict_encoding::strict_encode;
+                use #import::strict_encoding::StrictEncode;
             ),
             Self::Bitcoin => quote!(
-                use #import::bitcoin::consensus::encode::{
-                    consensus_encode, Encode,
-                };
+                use #import::bitcoin::consensus::encode::Encode;
             ),
-            Self::Lightning => unimplemented!(),
+            Self::Lightning => quote!(
+                use #import::lightning_encoding::LightningEncode;
+            ),
         }
     }
 
@@ -243,7 +263,9 @@ impl EncodingSrategy {
             Self::Bitcoin => quote!(
                 use #import::bitcoin::consensus::encode::Decode;
             ),
-            Self::Lightning => unimplemented!(),
+            Self::Lightning => quote!(
+                use #import::lightning_encoding::LightningDecode;
+            ),
         }
     }
 }
@@ -306,6 +328,9 @@ fn lnp_api_inner_enum(
         )?
         .lit,
     )?;
+    let encode_use = global_encoding.encode_use(&import);
+    let decode_use = global_encoding.decode_use(&import);
+    let encode_fn = global_encoding.encode_fn();
 
     let example = "#[lnp_api(type=1000)]";
     let mut msg_const = vec![];
@@ -383,14 +408,14 @@ fn lnp_api_inner_enum(
                         &quote!(#payload).to_string().replacen("<", "::<", 1),
                     )
                     .expect("Internal error");
-                    let encode_fn =
-                        global_encoding.encode_fn(f.span(), &import);
+                    let serialize_fn =
+                        global_encoding.serialize_fn(f.span(), &import);
                     let decode_fn =
                         global_encoding.decode_fn(f.span(), &import);
 
                     unmarshall_fn.push(quote_spanned! { v.span() =>
                         fn #type_snake(mut reader: &mut dyn ::std::io::Read) -> Result<::std::sync::Arc<dyn ::core::any::Any>, #import::lnp::presentation::Error> {
-                            use #import::strict_encoding::StrictDecode;
+                            #decode_use
                             Ok(::std::sync::Arc::new(#payload_fisheye::#decode_fn(&mut reader)?))
                         }
                     });
@@ -402,7 +427,7 @@ fn lnp_api_inner_enum(
                     });
 
                     get_payload.push(quote_spanned! { v.span() =>
-                        Self::#type_name(a) => #encode_fn(a).expect(ERR),
+                        Self::#type_name(obj) => #serialize_fn,
                     });
 
                     get_type.push(quote_spanned! { v.span() =>
@@ -451,8 +476,6 @@ fn lnp_api_inner_enum(
     let from_type = quote! { #( #from_type )* };
     let get_type = quote! { #( #get_type )* };
     let get_payload = quote! { #( #get_payload )* };
-    let encode_use = global_encoding.encode_use(&import);
-    let decode_use = global_encoding.decode_use(&import);
 
     Ok(quote! {
         impl #import::lnp::CreateUnmarshaller for #ident_name {
@@ -496,6 +519,14 @@ fn lnp_api_inner_enum(
                     #get_payload
                 }
             }
+
+            fn serialize(&self) -> Vec<u8> {
+                #encode_use
+                let mut e = vec![];
+                let _ = self.get_type().#encode_fn(&mut e);
+                let _ = self.get_payload().#encode_fn(&mut e);
+                e
+            }
         }
     })
 }
@@ -503,7 +534,7 @@ fn lnp_api_inner_enum(
 // Strict Encode/Decode Derives
 // ============================
 
-#[proc_macro_derive(StrictEncode, attributes(strict_error, lnpbp_crate))]
+#[proc_macro_derive(StrictEncode, attributes(lnpbp_crate))]
 pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     strict_encode_inner(derive_input)
@@ -511,7 +542,7 @@ pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(StrictDecode, attributes(strict_error, lnpbp_crate))]
+#[proc_macro_derive(StrictDecode, attributes(lnpbp_crate))]
 pub fn derive_strict_decode(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     strict_decode_inner(derive_input)
@@ -551,7 +582,6 @@ fn strict_encode_inner_struct(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let recurse = match data.fields {
@@ -594,10 +624,8 @@ fn strict_encode_inner_struct(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::strict_encoding::StrictEncode for #ident_name #ty_generics #where_clause {
-            type Error = #error_type_def;
-
             #[inline]
-            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictEncode;
 
                 #inner
@@ -614,7 +642,6 @@ fn strict_decode_inner_struct(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let inner = match data.fields {
@@ -660,10 +687,8 @@ fn strict_decode_inner_struct(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::strict_encoding::StrictDecode for #ident_name #ty_generics #where_clause {
-            type Error = #error_type_def;
-
             #[inline]
-            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictDecode;
 
                 Ok(#inner)
@@ -680,7 +705,6 @@ fn strict_encode_inner_enum(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let mut inner: Vec<TokenStream2> = none!();
@@ -746,10 +770,8 @@ fn strict_encode_inner_enum(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::strict_encoding::StrictEncode for #ident_name #ty_generics #where_clause {
-            type Error = #error_type_def;
-
             #[inline]
-            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictEncode;
 
                 #inner
@@ -766,7 +788,6 @@ fn strict_decode_inner_enum(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let mut inner: Vec<TokenStream2> = none!();
@@ -831,10 +852,8 @@ fn strict_decode_inner_enum(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::strict_encoding::StrictDecode for #ident_name #ty_generics #where_clause {
-            type Error = #error_type_def;
-
             #[inline]
-            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictDecode;
 
                 Ok(#inner)
@@ -843,22 +862,173 @@ fn strict_decode_inner_enum(
     })
 }
 
-fn get_strict_error(input: &DeriveInput) -> Result<TokenStream2> {
+// Lightning Encode/Decode Derives
+// ============================
+
+#[proc_macro_derive(LightningEncode, attributes(lnpbp_crate))]
+pub fn derive_lightning_encode(input: TokenStream) -> TokenStream {
+    let derive_input = parse_macro_input!(input as DeriveInput);
+    lightning_encode_inner(derive_input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_derive(LightningDecode, attributes(lnpbp_crate))]
+pub fn derive_lightning_decode(input: TokenStream) -> TokenStream {
+    let derive_input = parse_macro_input!(input as DeriveInput);
+    lightning_decode_inner(derive_input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+fn lightning_encode_inner(input: DeriveInput) -> Result<TokenStream2> {
+    match input.data {
+        Data::Struct(ref data) => lightning_encode_inner_struct(&input, data),
+        Data::Enum(ref data) => Err(Error::new_spanned(
+            &input,
+            "Deriving LightningEncode is not supported in enums",
+        )),
+        Data::Union(_) => Err(Error::new_spanned(
+            &input,
+            "Deriving LightningEncode is not supported in unions",
+        )),
+    }
+}
+
+fn lightning_decode_inner(input: DeriveInput) -> Result<TokenStream2> {
+    match input.data {
+        Data::Struct(ref data) => lightning_decode_inner_struct(&input, data),
+        Data::Enum(ref data) => Err(Error::new_spanned(
+            &input,
+            "Deriving LightningDecode is not supported in enums",
+        )),
+        Data::Union(_) => Err(Error::new_spanned(
+            &input,
+            "Deriving LightningDecode is not supported in unions",
+        )),
+    }
+}
+
+fn lightning_encode_inner_struct(
+    input: &DeriveInput,
+    data: &DataStruct,
+) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
+    let ident_name = &input.ident;
+
     let import = get_lnpbp_crate(input)?;
 
-    let name = "strict_error";
-    let example = "#[strict_error(ErrorType)]";
-    let mut strict_error: Option<Ident> = None;
-
-    let list = match attr_list(&input.attrs, name, example)? {
-        Some(x) => x,
-        None => return Ok(quote! { #import::strict_encoding::Error }),
+    let recurse = match data.fields {
+        Fields::Named(ref fields) => fields
+            .named
+            .iter()
+            .map(|f| {
+                let name = &f.ident;
+                quote_spanned! { f.span() =>
+                    len += self.#name.lightning_encode(&mut e)?;
+                }
+            })
+            .collect(),
+        Fields::Unnamed(ref fields) => fields
+            .unnamed
+            .iter()
+            .enumerate()
+            .map(|(i, f)| {
+                let index = Index::from(i);
+                quote_spanned! { f.span() =>
+                    len += self.#index.lightning_encode(&mut e)?;
+                }
+            })
+            .collect(),
+        Fields::Unit => {
+            // Nothing to do here
+            vec![]
+        }
     };
-    let strict_error = attr_nested_one_arg(list.into_iter(), name, example)?;
 
-    Ok(match strict_error {
-        Some(ident) => quote! { #ident },
-        None => quote! { #import::strict_encoding::Error },
+    let inner = match recurse.len() {
+        0 => quote! { Ok(0) },
+        _ => quote! {
+            let mut len = 0;
+            #( #recurse )*
+            Ok(len)
+        },
+    };
+
+    Ok(quote! {
+        #[allow(unused_qualifications)]
+        impl #impl_generics #import::lightning_encoding::LightningEncode for #ident_name #ty_generics #where_clause {
+            #[inline]
+            fn lightning_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, ::std::io::Error> {
+                use #import::lightning_encoding::LightningEncode;
+
+                #inner
+            }
+        }
+    })
+}
+
+fn lightning_decode_inner_struct(
+    input: &DeriveInput,
+    data: &DataStruct,
+) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
+    let ident_name = &input.ident;
+
+    let import = get_lnpbp_crate(input)?;
+
+    let inner = match data.fields {
+        Fields::Named(ref fields) => {
+            let recurse: Vec<TokenStream2> = fields
+                .named
+                .iter()
+                .map(|f| {
+                    let name = &f.ident;
+                    quote_spanned! { f.span() =>
+                        #name: #import::lightning_encoding::LightningDecode::lightning_decode(&mut d)?,
+                    }
+                })
+                .collect();
+            quote! {
+                Self {
+                    #( #recurse )*
+                }
+            }
+        }
+        Fields::Unnamed(ref fields) => {
+            let recurse: Vec<TokenStream2> = fields
+                .unnamed
+                .iter()
+                .map(|f| {
+                    quote_spanned! { f.span() =>
+                        #import::lightning_encoding::LightningDecode::lightning_decode(&mut d)?,
+                    }
+                })
+                .collect();
+            quote! {
+                Self (
+                    #( #recurse )*
+                )
+            }
+        }
+        Fields::Unit => {
+            // Nothing to do here
+            quote! { Self() }
+        }
+    };
+
+    Ok(quote! {
+        #[allow(unused_qualifications)]
+        impl #impl_generics #import::lightning_encoding::LightningDecode for #ident_name #ty_generics #where_clause {
+            #[inline]
+            fn lightning_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, #import::lightning_encoding::Error> {
+                use #import::lightning_encoding::LightningDecode;
+
+                Ok(#inner)
+            }
+        }
     })
 }
 

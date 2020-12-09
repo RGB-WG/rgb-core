@@ -22,17 +22,20 @@ use self::invoice::ParseOrSemanticError;
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 impl StrictEncode for Invoice {
-    type Error = strict_encoding::Error;
     #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
         self.to_string().strict_encode(e)
     }
 }
 
 impl StrictDecode for Invoice {
-    type Error = strict_encoding::Error;
     #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Self::from_str(&String::strict_decode(d)?).map_err(|e| {
             // TODO: (v0.3) this can be improved once PR got merged:
             //       <https://github.com/rust-bitcoin/rust-lightning-invoice/pull/43>

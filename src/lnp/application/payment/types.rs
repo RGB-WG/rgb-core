@@ -23,7 +23,7 @@ use bitcoin::OutPoint;
 use crate::bp::chain::AssetId;
 use crate::bp::Slice32;
 use crate::lnp::application::extension;
-use crate::strict_encoding::{self, strict_decode, strict_encode};
+use crate::strict_encoding::{self, strict_deserialize, strict_serialize};
 
 /// Shorthand for representing asset - amount pairs
 pub type AssetsBalance = BTreeMap<AssetId, u64>;
@@ -72,7 +72,7 @@ impl From<ExtensionId> for u16 {
     fn from(id: ExtensionId) -> Self {
         let mut buf = [0u8; 2];
         buf.copy_from_slice(
-            &strict_encode(&id)
+            &strict_serialize(&id)
                 .expect("Enum in-memory strict encoding can't fail"),
         );
         u16::from_be_bytes(buf)
@@ -83,7 +83,7 @@ impl TryFrom<u16> for ExtensionId {
     type Error = strict_encoding::Error;
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
-        strict_decode(&value.to_be_bytes())
+        strict_deserialize(&value.to_be_bytes())
     }
 }
 
@@ -156,6 +156,8 @@ impl Default for Lifecycle {
     From,
     StrictEncode,
     StrictDecode,
+    LightningEncode,
+    LightningDecode,
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
@@ -204,6 +206,8 @@ impl ChannelId {
     From,
     StrictEncode,
     StrictDecode,
+    LightningEncode,
+    LightningDecode,
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]

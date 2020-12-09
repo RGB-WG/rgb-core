@@ -605,7 +605,7 @@ impl Transition {
 mod strict_encoding {
     use super::*;
     use crate::strict_encoding::{
-        strategies, strict_decode, strict_encode, Error, Strategy,
+        strategies, strict_deserialize, strict_serialize, Error, Strategy,
         StrictDecode, StrictEncode,
     };
     use std::io;
@@ -639,13 +639,11 @@ mod strict_encoding {
     }
 
     impl StrictEncode for Genesis {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
         ) -> Result<usize, Error> {
-            let chain_params = strict_encode(&self.chain)?;
+            let chain_params = strict_serialize(&self.chain)?;
             Ok(strict_encode_list!(e;
                 self.schema_id,
                 // ![NETWORK-CRITICAL]: Chain params fields may update, so we
@@ -667,8 +665,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Genesis {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let schema_id = SchemaId::strict_decode(&mut d)?;
             let chain_params_no = usize::strict_decode(&mut d)?;
@@ -680,7 +676,7 @@ mod strict_encoding {
                 ))?
             }
             let chain_data = Vec::<u8>::strict_decode(&mut d)?;
-            let chain = strict_decode(&chain_data)?;
+            let chain = strict_deserialize(&chain_data)?;
             for _ in 1..chain_params_no {
                 // Ignoring the rest of chain parameters
                 let _ = Vec::<u8>::strict_decode(&mut d)?;
@@ -712,7 +708,7 @@ mod test {
     use crate::bp::tagged_hash;
     use crate::commit_verify::CommitVerify;
     use crate::strict_encoding::{
-        strict_encode, test::*, StrictDecode, StrictEncode,
+        strict_serialize, test::*, StrictDecode, StrictEncode,
     };
 
     static TRANSITION: [u8; 2364] = include!("../../../test/transition.in");
@@ -738,7 +734,7 @@ mod test {
             script: Default::default(),
         };
         assert_ne!(
-            strict_encode(&genesis).unwrap(),
+            strict_serialize(&genesis).unwrap(),
             genesis.clone().consensus_commit().to_vec()
         );
 

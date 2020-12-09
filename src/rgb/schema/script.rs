@@ -210,8 +210,6 @@ mod strict_encoding {
     impl_enum_strict_encoding!(StandardProcedure);
 
     impl StrictEncode for Procedure {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -228,8 +226,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Procedure {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             Ok(match u8::strict_decode(&mut d)? {
                 0u8 => Self::Simplicity {
@@ -249,7 +245,7 @@ mod strict_encoding {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::strict_encoding::strict_encode;
+        use crate::strict_encoding::strict_serialize;
 
         #[test]
         fn test_basics() {
@@ -272,28 +268,28 @@ mod strict_encoding {
             // Test Procedures
             assert_eq!(
                 vec![0xFF, 0x01],
-                strict_encode(&Procedure::Embedded(
+                strict_serialize(&Procedure::Embedded(
                     StandardProcedure::NoInflationBySum
                 ))
                 .unwrap()
             );
             assert_eq!(
                 vec![0xFF, 0x2],
-                strict_encode(&Procedure::Embedded(
+                strict_serialize(&Procedure::Embedded(
                     StandardProcedure::FungibleInflation
                 ))
                 .unwrap()
             );
             assert_eq!(
                 vec![0xFF, 0x10],
-                strict_encode(&Procedure::Embedded(
+                strict_serialize(&Procedure::Embedded(
                     StandardProcedure::ProofOfBurn
                 ))
                 .unwrap()
             );
             assert_eq!(
                 vec![0x00, 0x58, 0x00, 0x00, 0x00],
-                strict_encode(&Procedure::Simplicity {
+                strict_serialize(&Procedure::Simplicity {
                     abi_table_index: 88
                 })
                 .unwrap()
@@ -307,7 +303,7 @@ mod strict_encoding {
             );
             assert_eq!(
                 vec![0x01, 0x00, 0x00, 0xff, 0x01],
-                strict_encode(&trans_abi).unwrap()
+                strict_serialize(&trans_abi).unwrap()
             );
 
             let mut assignment_abi = AssignmentAbi::new();
@@ -319,7 +315,7 @@ mod strict_encoding {
             );
             assert_eq!(
                 vec![0x01, 0x00, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x00],
-                strict_encode(&assignment_abi).unwrap()
+                strict_serialize(&assignment_abi).unwrap()
             );
         }
     }

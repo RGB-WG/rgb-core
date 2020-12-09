@@ -260,20 +260,16 @@ mod strict_encoding {
         use super::*;
 
         impl StrictEncode for BlindingFactor {
-            type Error = Error;
-
             fn strict_encode<E: io::Write>(
                 &self,
                 e: E,
-            ) -> Result<usize, Self::Error> {
+            ) -> Result<usize, Error> {
                 self.0.as_ref().strict_encode(e)
             }
         }
 
         impl StrictDecode for BlindingFactor {
-            type Error = Error;
-
-            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
                 let secp =
                     secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
                 let data = Vec::<u8>::strict_decode(d)?;
@@ -286,22 +282,18 @@ mod strict_encoding {
         }
 
         impl StrictEncode for secp256k1zkp::pedersen::Commitment {
-            type Error = Error;
-
             #[inline]
             fn strict_encode<E: io::Write>(
                 &self,
                 e: E,
-            ) -> Result<usize, Self::Error> {
+            ) -> Result<usize, Error> {
                 self.0.as_ref().strict_encode(e)
             }
         }
 
         impl StrictDecode for secp256k1zkp::pedersen::Commitment {
-            type Error = Error;
-
             #[inline]
-            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
                 let data = Vec::<u8>::strict_decode(d)?;
                 if data.len()
                     != secp256k1zkp::constants::PEDERSEN_COMMITMENT_SIZE
@@ -316,22 +308,18 @@ mod strict_encoding {
         }
 
         impl StrictEncode for secp256k1zkp::pedersen::RangeProof {
-            type Error = Error;
-
             #[inline]
             fn strict_encode<E: io::Write>(
                 &self,
                 e: E,
-            ) -> Result<usize, Self::Error> {
+            ) -> Result<usize, Error> {
                 self.proof[..self.plen].as_ref().strict_encode(e)
             }
         }
 
         impl StrictDecode for secp256k1zkp::pedersen::RangeProof {
-            type Error = Error;
-
             #[inline]
-            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
                 use secp256k1zkp::constants::MAX_PROOF_SIZE;
                 let data = Vec::<u8>::strict_decode(d)?;
                 match data.len() {
@@ -353,12 +341,10 @@ mod strict_encoding {
     }
 
     impl StrictEncode for Revealed {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(
                 strict_encode_list!(e; EncodingTag::U64, self.value, self.blinding),
             )
@@ -366,9 +352,7 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Revealed {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = EncodingTag::strict_decode(&mut d)?;
             Ok(match format {
                 EncodingTag::U64 => Self {

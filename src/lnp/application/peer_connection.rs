@@ -17,7 +17,7 @@
 use amplify::Bipolar;
 
 use crate::lnp::application::Messages;
-use crate::lnp::presentation::{Encode, Error, Unmarshall};
+use crate::lnp::presentation::{Error, LightningEncode, Unmarshall};
 use crate::lnp::session::{
     self, Accept, Connect, LocalNode, PlainTranscoder, Session, Split,
     ToNodeAddr,
@@ -90,7 +90,9 @@ impl RecvMessage for PeerConnection {
 
 impl SendMessage for PeerConnection {
     fn send_message(&mut self, message: Messages) -> Result<usize, Error> {
-        Ok(self.session.send_raw_message(&message.encode()?)?)
+        Ok(self
+            .session
+            .send_raw_message(&message.lightning_serialize())?)
     }
 }
 
@@ -103,7 +105,9 @@ impl RecvMessage for PeerReceiver {
 
 impl SendMessage for PeerSender {
     fn send_message(&mut self, message: Messages) -> Result<usize, Error> {
-        Ok(self.sender.send_raw_message(&message.encode()?)?)
+        Ok(self
+            .sender
+            .send_raw_message(&message.lightning_serialize())?)
     }
 }
 

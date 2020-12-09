@@ -25,7 +25,7 @@ use crate::rgb::{
     Transition,
 };
 use crate::strict_encoding::{
-    self, strict_decode, strict_encode, StrictDecode, StrictEncode,
+    self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
 };
 
 /// Bech32 representation of generic RGB data, that can be generated from
@@ -153,7 +153,7 @@ impl Bech32 {
     /// data
     #[allow(dead_code)]
     pub(self) fn plain_encode(
-        obj: &impl StrictEncode<Error = strict_encoding::Error>,
+        obj: &impl StrictEncode,
     ) -> Result<Vec<u8>, Error> {
         // We initialize writer with a version byte, indicating plain
         // algorithm used
@@ -164,7 +164,7 @@ impl Bech32 {
 
     /// Encoder for v1 of raw data encoding algorithm. Uses deflate
     pub(self) fn deflate_encode(
-        obj: &impl StrictEncode<Error = strict_encoding::Error>,
+        obj: &impl StrictEncode,
     ) -> Result<Vec<u8>, Error> {
         // We initialize writer with a version byte, indicating deflation
         // algorithm used
@@ -176,7 +176,7 @@ impl Bech32 {
 
     pub(self) fn raw_decode<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
     where
-        T: StrictDecode<Error = strict_encoding::Error>,
+        T: StrictDecode,
     {
         let mut reader = data.as_ref();
         Ok(match u8::strict_decode(&mut reader)? {
@@ -423,25 +423,25 @@ impl FromStr for Bech32 {
 
         Ok(match hrp {
             x if x == Self::HRP_PEDERSEN => {
-                Self::PedersenCommitment(strict_decode(&data)?)
+                Self::PedersenCommitment(strict_deserialize(&data)?)
             }
             x if x == Self::HRP_BULLETPROOF => {
-                Self::Bulletproof(strict_decode(&data)?)
+                Self::Bulletproof(strict_deserialize(&data)?)
             }
             x if x == Self::HRP_CURVE25519OPK => {
-                Self::Curve25519Pk(strict_decode(&data)?)
+                Self::Curve25519Pk(strict_deserialize(&data)?)
             }
             x if x == Self::HRP_ED25519OSIGN => {
-                Self::Ed25519Sign(strict_decode(&data)?)
+                Self::Ed25519Sign(strict_deserialize(&data)?)
             }
             x if x == Self::HRP_OUTPOINT => {
-                Self::BlindedUtxo(strict_decode(&data)?)
+                Self::BlindedUtxo(strict_deserialize(&data)?)
             }
             x if x == Self::HRP_SCHEMA_ID => {
-                Self::SchemaId(strict_decode(&data)?)
+                Self::SchemaId(strict_deserialize(&data)?)
             }
             x if x == Self::HRP_CONTRACT_ID => {
-                Self::ContractId(strict_decode(&data)?)
+                Self::ContractId(strict_deserialize(&data)?)
             }
             x if x == Self::HRP_SCHEMA => {
                 Self::Schema(Bech32::raw_decode(&data)?)
@@ -470,21 +470,25 @@ impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
             Self::PedersenCommitment(obj) => {
-                (Self::HRP_PEDERSEN, strict_encode(obj)?)
+                (Self::HRP_PEDERSEN, strict_serialize(obj)?)
             }
             Self::Bulletproof(obj) => {
-                (Self::HRP_BULLETPROOF, strict_encode(obj)?)
+                (Self::HRP_BULLETPROOF, strict_serialize(obj)?)
             }
             Self::Curve25519Pk(obj) => {
-                (Self::HRP_CURVE25519OPK, strict_encode(obj)?)
+                (Self::HRP_CURVE25519OPK, strict_serialize(obj)?)
             }
             Self::Ed25519Sign(obj) => {
-                (Self::HRP_ED25519OSIGN, strict_encode(obj)?)
+                (Self::HRP_ED25519OSIGN, strict_serialize(obj)?)
             }
-            Self::BlindedUtxo(obj) => (Self::HRP_OUTPOINT, strict_encode(obj)?),
-            Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_encode(obj)?),
+            Self::BlindedUtxo(obj) => {
+                (Self::HRP_OUTPOINT, strict_serialize(obj)?)
+            }
+            Self::SchemaId(obj) => {
+                (Self::HRP_SCHEMA_ID, strict_serialize(obj)?)
+            }
             Self::ContractId(obj) => {
-                (Self::HRP_CONTRACT_ID, strict_encode(obj)?)
+                (Self::HRP_CONTRACT_ID, strict_serialize(obj)?)
             }
             Self::Schema(obj) => {
                 (Self::HRP_SCHEMA, Bech32::deflate_encode(obj)?)

@@ -17,14 +17,14 @@ use core::borrow::Borrow;
 use core::convert::TryInto;
 use core::marker::PhantomData;
 use std::collections::BTreeMap;
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::sync::Arc;
 
 use super::tlv;
 use super::{
-    Encode, Error, EvenOdd, UnknownTypeError, Unmarshall, UnmarshallFn,
+    Error, EvenOdd, LightningEncode, UnknownTypeError, Unmarshall, UnmarshallFn,
 };
-use crate::strict_encoding::{StrictDecode, StrictEncode};
+use crate::strict_encoding::StrictDecode;
 
 /// Message type field value
 #[derive(
@@ -96,36 +96,13 @@ impl Extract for Payload {
     }
 }
 
-impl Encode for Payload {
-    type Error = Error;
-
-    fn encode(&self) -> Result<Vec<u8>, Self::Error> {
-        let mut e = io::Cursor::new(vec![]);
-        self.type_id
-            .to_inner()
-            .strict_encode(&mut e)
-            .expect("Memory encoders do not fail");
-        e.write(&self.payload)?;
-        Ok(e.into_inner())
-    }
-}
-
-pub trait EncodeRaw
-where
-    Payload: From<Self>,
-    Self: Sized + Clone,
-{
-}
-
-impl<T> Encode for T
-where
-    T: EncodeRaw,
-    Payload: From<T>,
-{
-    type Error = Error;
-
-    fn encode(&self) -> Result<Vec<u8>, Self::Error> {
-        Payload::from(self.clone()).encode()
+impl LightningEncode for Payload {
+    fn lightning_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, io::Error> {
+        Ok(self.type_id.to_inner().lightning_encode(&mut e)?
+            + e.write(&self.payload)?)
     }
 }
 
@@ -139,9 +116,8 @@ where
     ) -> Result<Self, UnknownTypeError>;
     fn get_type(&self) -> TypeId;
     fn get_payload(&self) -> Vec<u8>;
+    fn serialize(&self) -> Vec<u8>;
 }
-
-impl<T> EncodeRaw for T where T: TypedEnum {}
 
 impl<T> From<T> for Payload
 where
@@ -181,7 +157,9 @@ where
             None if type_id.is_even() => Err(Error::MessageEvenType),
             None => {
                 let mut payload = Vec::new();
-                reader.read_to_end(&mut payload)?;
+                reader
+                    .read_to_end(&mut payload)
+                    .map_err(|e| Error::LightningEncoding(e.into()))?;
                 Ok(Arc::new(T::try_from_type(
                     type_id,
                     &Payload { type_id, payload },

@@ -193,12 +193,10 @@ mod strict_encoding {
     impl_enum_strict_encoding!(StateType);
 
     impl StrictEncode for StateFormat {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(match self {
                 StateFormat::Declarative => {
                     StateType::Declarative.strict_encode(e)?
@@ -214,9 +212,7 @@ mod strict_encoding {
     }
 
     impl StrictDecode for StateFormat {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = StateType::strict_decode(&mut d)?;
             Ok(match format {
                 StateType::Declarative => StateFormat::Declarative,
@@ -255,12 +251,7 @@ mod strict_encoding {
     impl_enum_strict_encoding!(EncodingTag);
 
     impl StrictEncode for DiscreteFiniteFieldFormat {
-        type Error = Error;
-
-        fn strict_encode<E: io::Write>(
-            &self,
-            e: E,
-        ) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             match self {
                 // Today we support only a single format of confidential data,
                 // but tomorrow there might be more
@@ -273,9 +264,7 @@ mod strict_encoding {
     }
 
     impl StrictDecode for DiscreteFiniteFieldFormat {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = EncodingTag::strict_decode(&mut d)?;
             match format {
                 EncodingTag::Unsigned => {
@@ -314,8 +303,6 @@ mod strict_encoding {
     }
 
     impl StrictEncode for DataFormat {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -600,8 +587,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for DataFormat {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = EncodingTag::strict_decode(&mut d)?;
             Ok(match format {
@@ -775,9 +760,6 @@ mod _validation {
     use crate::rgb::{
         data, validation, DeclarativeStrategy, HashStrategy, NodeId,
         OwnedState, PedersenStrategy, StateTypes,
-    };
-    use crate::strict_encoding::{
-        Error as EncodingError, StrictDecode, StrictEncode,
     };
 
     fn range_check<T, U>(
@@ -986,10 +968,6 @@ mod _validation {
             STATE::Confidential: PartialEq + Eq,
             STATE::Confidential:
                 From<<STATE::Revealed as Conceal>::Confidential>,
-            EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-                + From<<STATE::Confidential as StrictDecode>::Error>
-                + From<<STATE::Revealed as StrictEncode>::Error>
-                + From<<STATE::Revealed as StrictDecode>::Error>,
         {
             let mut status = validation::Status::new();
             match data {
@@ -1102,7 +1080,7 @@ mod test {
     use crate::rgb::{
         DeclarativeStrategy, HashStrategy, OwnedState, PedersenStrategy,
     };
-    use crate::strict_encoding::{strict_encode, test::*, StrictDecode};
+    use crate::strict_encoding::{strict_serialize, test::*, StrictDecode};
 
     // Txids to generate seals
     static TXID_VEC: [&str; 4] = [
@@ -1163,7 +1141,7 @@ mod test {
     #[should_panic(expected = "ValueOutOfRange")]
     fn test_garbage_data_format2() {
         let format = DataFormat::Float(Bits::Bit16, 0.0, core::f32::MAX as f64);
-        strict_encode(&format).unwrap();
+        strict_serialize(&format).unwrap();
     }
 
     #[test]

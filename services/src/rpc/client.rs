@@ -13,12 +13,11 @@
 
 use std::collections::HashMap;
 
-use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Api;
 use lnpbp::lnp::transport::zmqsocket::{ZmqSocketAddr, ZmqType};
 use lnpbp::lnp::{
     session, transport, CreateUnmarshaller, PlainTranscoder, Session,
-    Unmarshall, Unmarshaller,
+    TypedEnum, Unmarshall, Unmarshaller,
 };
 
 use super::{EndpointId, Error};
@@ -67,7 +66,7 @@ where
         endpoint: E,
         request: A::Request,
     ) -> Result<A::Reply, Error> {
-        let data = request.encode()?;
+        let data = request.serialize();
         let session = self
             .sessions
             .get_mut(&endpoint)

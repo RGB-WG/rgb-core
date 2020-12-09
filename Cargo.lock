@@ -726,7 +726,7 @@ checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "lnpbp"
-version = "0.2.0"
+version = "0.3.0-alpha.1"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -761,7 +761,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.2.0"
+version = "0.3.0-alpha.1"
 dependencies = [
  "amplify",
  "lnpbp",
@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_services"
-version = "0.2.0"
+version = "0.3.0-alpha.1"
 dependencies = [
  "amplify",
  "amplify_derive",

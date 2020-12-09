@@ -76,6 +76,7 @@ pub mod lnp;
 #[cfg(feature = "rgb")]
 pub mod rgb;
 
+pub use lnp::presentation::encoding as lightning_encoding;
 pub use paradigms::{
     client_side_validation, commit_verify, single_use_seals, strict_encoding,
 };

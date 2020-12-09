@@ -24,10 +24,8 @@ use super::payment::{ChannelId, TempChannelId};
 use super::Features;
 use crate::bp::chain::AssetId;
 use crate::bp::{HashLock, HashPreimage};
-use crate::lnp::presentation::{
-    CreateUnmarshaller, Encode, Unmarshall, Unmarshaller,
-};
-use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+use crate::lightning_encoding::{self, LightningDecode, LightningEncode};
+use crate::lnp::{CreateUnmarshaller, Payload, Unmarshall, Unmarshaller};
 use crate::SECP256K1_PUBKEY_DUMB;
 
 #[cfg(feature = "rgb")]
@@ -39,7 +37,7 @@ lazy_static! {
 }
 
 #[derive(Clone, Debug, Display, LnpApi)]
-#[lnp_api(encoding = "strict")]
+#[lnp_api(encoding = "lightning")]
 #[lnpbp_crate(crate)]
 #[non_exhaustive]
 pub enum Messages {
@@ -154,7 +152,9 @@ pub enum Messages {
 ///
 /// # Specification
 /// <https://github.com/lightningnetwork/lightning-rfc/blob/master/01-messaging.md#the-init-message>
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(
     "init({global_features}, {local_features}, {assets:#?}), {unknown_tlvs:#?}"
@@ -175,7 +175,9 @@ pub struct Init {
 ///
 /// # Specification
 /// <https://github.com/lightningnetwork/lightning-rfc/blob/master/01-messaging.md#the-ping-and-pong-messages>
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct Ping {
@@ -188,7 +190,7 @@ pub struct Ping {
 ///
 /// # Specification
 /// <https://github.com/lightningnetwork/lightning-rfc/blob/master/01-messaging.md#the-error-message>
-#[derive(Clone, PartialEq, Debug, Error, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Debug, Error, LightningEncode, LightningDecode)]
 #[lnpbp_crate(crate)]
 pub struct Error {
     /// The channel is referred to by channel_id, unless channel_id is 0 (i.e.
@@ -217,7 +219,9 @@ impl Display for Error {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct OpenChannel {
@@ -282,17 +286,19 @@ pub struct OpenChannel {
 
     /// Channel flags
     pub channel_flags: u8,
+    /* TODO: Uncomment once TLVs derivation will be implemented
+     * /// Optionally, a request to pre-set the to-sender output's
+     * scriptPubkey /// for when we collaboratively close
+     * #[lnpwp(tlv=0)]
+     * pub shutdown_scriptpubkey: Option<Script>, */
 
-    /// Optionally, a request to pre-set the to-sender output's scriptPubkey
-    /// for when we collaboratively close
-    // #[lnpwp(tlv=0)]
-    pub shutdown_scriptpubkey: Option<Script>,
-
-    // #[lpwpw(unknown_tlvs)]
-    pub unknown_tlvs: BTreeMap<u64, Vec<u8>>,
+    /* #[lpwpw(unknown_tlvs)]
+     * pub unknown_tlvs: BTreeMap<u64, Vec<u8>>, */
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct AcceptChannel {
@@ -345,17 +351,18 @@ pub struct AcceptChannel {
 
     /// The first to-be-broadcast-by-sender transaction's per commitment point
     pub first_per_commitment_point: PublicKey,
-
-    /// Optionally, a request to pre-set the to-sender output's scriptPubkey
-    /// for when we collaboratively close
-    // #[lnpwp(tlv=0)]
-    pub shutdown_scriptpubkey: Option<Script>,
-
-    // #[lpwpw(unknown_tlvs)]
-    pub unknown_tlvs: BTreeMap<u64, Vec<u8>>,
+    /* TODO: Uncomment once TLVs derivation will be implemented
+     * /// Optionally, a request to pre-set the to-sender output's
+     * scriptPubkey /// for when we collaboratively close
+     * #[lnpwp(tlv=0)]
+     * pub shutdown_scriptpubkey: Option<Script>,
+     * #[lpwpw(unknown_tlvs)]
+     * pub unknown_tlvs: BTreeMap<u64, Vec<u8>>, */
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct FundingCreated {
@@ -373,7 +380,9 @@ pub struct FundingCreated {
     pub signature: Signature,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct FundingSigned {
@@ -384,7 +393,9 @@ pub struct FundingSigned {
     pub signature: Signature,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct FundingLocked {
@@ -395,7 +406,9 @@ pub struct FundingLocked {
     pub next_per_commitment_point: PublicKey,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct Shutdown {
@@ -407,7 +420,9 @@ pub struct Shutdown {
     pub scriptpubkey: Script,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct ClosingSigned {
@@ -421,7 +436,9 @@ pub struct ClosingSigned {
     pub signature: Signature,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct UpdateAddHtlc {
@@ -452,7 +469,9 @@ pub struct UpdateAddHtlc {
     pub asset_id: Option<AssetId>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct UpdateFulfillHtlc {
@@ -466,7 +485,9 @@ pub struct UpdateFulfillHtlc {
     pub payment_preimage: HashPreimage,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct UpdateFailHtlc {
@@ -484,7 +505,9 @@ pub struct UpdateFailHtlc {
     pub reason: Vec<u8>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct UpdateFailMalformedHtlc {
@@ -501,7 +524,9 @@ pub struct UpdateFailMalformedHtlc {
     pub failure_code: u16,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct CommitmentSigned {
@@ -515,7 +540,9 @@ pub struct CommitmentSigned {
     pub htlc_signatures: Vec<Signature>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct RevokeAndAck {
@@ -529,7 +556,9 @@ pub struct RevokeAndAck {
     pub next_per_commitment_point: PublicKey,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct UpdateFee {
@@ -540,7 +569,9 @@ pub struct UpdateFee {
     pub feerate_per_kw: u32,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct ChannelReestablish {
@@ -563,7 +594,9 @@ pub struct ChannelReestablish {
 }
 
 #[cfg(feature = "rgb")]
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct AssignFunds {
@@ -580,31 +613,22 @@ pub struct AssignFunds {
     pub blinding: u64,
 }
 
-impl StrictEncode for Messages {
-    type Error = strict_encoding::Error;
-
-    fn strict_encode<E: io::Write>(
-        &self,
-        e: E,
-    ) -> Result<usize, strict_encoding::Error> {
-        self.encode()
-            .expect("Memory encoders does not fail")
-            .strict_encode(e)
+impl LightningEncode for Messages {
+    fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, io::Error> {
+        Payload::from(self.clone()).lightning_encode(e)
     }
 }
 
-impl StrictDecode for Messages {
-    type Error = strict_encoding::Error;
-
-    fn strict_decode<D: io::Read>(
+impl LightningDecode for Messages {
+    fn lightning_decode<D: io::Read>(
         d: D,
-    ) -> Result<Self, strict_encoding::Error> {
+    ) -> Result<Self, lightning_encoding::Error> {
         Ok((&*LNPWP_UNMARSHALLER
-            .unmarshall(&Vec::<u8>::strict_decode(d)?)
+            .unmarshall(&Vec::<u8>::lightning_decode(d)?)
             .map_err(|err| {
-                strict_encoding::Error::UnsupportedDataStructure(
-                    "can't unmarshall LNPWP message",
-                )
+                lightning_encoding::Error::DataIntegrityError(s!(
+                    "can't unmarshall LMP message"
+                ))
             })?)
             .clone())
     }
@@ -631,13 +655,15 @@ impl DumbDefault for OpenChannel {
             htlc_basepoint: *SECP256K1_PUBKEY_DUMB,
             first_per_commitment_point: *SECP256K1_PUBKEY_DUMB,
             channel_flags: 0,
-            shutdown_scriptpubkey: None,
-            unknown_tlvs: none!(),
+            /* shutdown_scriptpubkey: None,
+             * unknown_tlvs: none!(), */
         }
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, LightningEncode, LightningDecode,
+)]
 #[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct OnionPacket {

@@ -238,17 +238,15 @@ impl TryFrom<&[u8]> for FlagVec {
 }
 
 impl StrictEncode for FlagVec {
-    type Error = Error;
     #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
         self.shrunk().0.strict_encode(e)
     }
 }
 
 impl StrictDecode for FlagVec {
-    type Error = Error;
     #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
         Ok(Self(StrictDecode::strict_decode(d)?))
     }
 }

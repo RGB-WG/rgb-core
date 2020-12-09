@@ -11,8 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::IoError;
 use core::ops::Range;
-use std::fmt::{self, Display, Formatter};
+use std::fmt;
 use std::io;
 
 /// Re-exporting extended read and write functions from bitcoin consensus
@@ -29,13 +30,17 @@ pub use bitcoin::consensus::encode::{ReadExt, WriteExt};
 /// utilize [CommitVerify], [TryCommitVerify] and [EmbedCommitVerify] traits  
 /// from [paradigms::commit_verify] module.
 pub trait StrictEncode {
-    /// Implementation-dependent error type
-    type Error: std::error::Error + From<Error>;
-
     /// Encode with the given [std::io::Writer] instance; must return result
     /// with either amount of bytes encoded – or implementation-specific
     /// error type.
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error>;
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error>;
+
+    /// Serializes data as a byte array using [`strict_encode()`] function
+    fn strict_serialize(&self) -> Result<Vec<u8>, Error> {
+        let mut e = vec![];
+        let _ = self.strict_encode(&mut e)?;
+        Ok(e)
+    }
 }
 
 /// Binary decoding according to the strict rules that usually apply to
@@ -47,22 +52,22 @@ pub trait StrictEncode {
 /// commitment procedure for the revealed message and verify it against the
 /// provided commitment.
 pub trait StrictDecode: Sized {
-    /// Implementation-dependent error type
-    type Error: std::error::Error + From<Error>;
-
     /// Decode with the given [std::io::Reader] instance; must either
     /// construct an instance or return implementation-specific error type.
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error>;
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error>;
+
+    /// Tries to deserialize byte array into the current type using
+    /// [`strict_decode()`]
+    fn strict_deserialize(data: impl AsRef<[u8]>) -> Result<Self, Error> {
+        Self::strict_decode(data.as_ref())
+    }
 }
 
 /// Convenience method for strict encoding of data structures implementing
-/// [StrictEncode] into a byte vector. To support this method a
-/// type must implement `From<strict_encode::Error>` for an error type
-/// provided as the associated type [StrictDecode::Error].
-pub fn strict_encode<T>(data: &T) -> Result<Vec<u8>, T::Error>
+/// [StrictEncode] into a byte vector.
+pub fn strict_serialize<T>(data: &T) -> Result<Vec<u8>, Error>
 where
     T: StrictEncode,
-    T::Error: std::error::Error + From<Error>,
 {
     let mut encoder = io::Cursor::new(vec![]);
     data.strict_encode(&mut encoder)?;
@@ -70,13 +75,10 @@ where
 }
 
 /// Convenience method for strict decoding of data structures implementing
-/// [StrictDecode] from any byt data source. To support this method a
-/// type must implement `From<strict_encode::Error>` for an error type
-/// provided as the associated type [StrictDecode::Error].
-pub fn strict_decode<T>(data: &impl AsRef<[u8]>) -> Result<T, T::Error>
+/// [StrictDecode] from any byt data source.
+pub fn strict_deserialize<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
 where
     T: StrictDecode,
-    T::Error: std::error::Error + From<Error>,
 {
     let mut decoder = io::Cursor::new(data);
     let rv = T::strict_decode(&mut decoder)?;
@@ -91,17 +93,20 @@ where
 }
 
 /// Possible errors during strict encoding and decoding process
-#[derive(Clone, PartialEq, Eq, Debug, From, Error)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, From, Error)]
+#[display(doc_comments)]
 pub enum Error {
-    /// I/O Error
-    Io(io::ErrorKind),
+    /// I/O error during data strict encoding: {0}
+    #[from(io::Error)]
+    #[from(io::ErrorKind)]
+    Io(IoError),
 
-    /// UTF8 Conversion Error
+    /// String data are not in valid UTF-8 encoding
     #[from(std::str::Utf8Error)]
     #[from(std::string::FromUtf8Error)]
     Utf8Conversion,
 
-    /// A collection (slice, vector or other type) has more items than
+    /// A collection (slice, vector or other type) has more items ({0}) than
     /// 2^16 (i.e. maximum value which may be held by `u16` `size`
     /// representation according to the LNPBP-6 spec)
     ExceedMaxItems(usize),
@@ -111,104 +116,48 @@ pub enum Error {
     /// `Optional::Some`). For decoding an attempt to read `Option` from a
     /// encoded non-0 or non-1 length Vec will result in
     /// `Error::WrongOptionalEncoding`.
+    #[display(
+        "Invalid value {0} met as an optional type byte, which must be \
+               equal to either 0 (no value) or 1"
+    )]
     WrongOptionalEncoding(u8),
 
-    // TODO: (new) replace all `String` in errors with `&'static str`
-    /// Enums are encoded as a `u8`-based values; the provided enum has
+    /// Enums are encoded as a `u8`-based values; the provided enum `{0}` has
     /// underlying primitive type that does not fit into `u8` value
     EnumValueOverflow(String),
 
-    /// An unsupported value for enum encountered during decode operation
+    /// An unsupported value `{0}` for enum `{0}` encountered during decode
+    /// operation
     EnumValueNotKnown(String, u8),
 
     /// The data are correct, however their structure indicate that they were
     /// created with the future software version which has functional absent in
-    /// the current implementation
+    /// the current implementation.
+    /// More details from error source: {0}
     UnsupportedDataStructure(&'static str),
 
-    /// Found a value during decoding operation that does not fits into
-    /// the supported range
+    /// Decoding resulted in value `{2}` for type `{0}` that exceeds the
+    /// supported range {1:#?}
     ValueOutOfRange(&'static str, Range<u128>, u128),
 
-    /// A repeated value found during set collection deserialization
+    /// A repeated value for `{0}` found during set collection deserialization
     RepeatedValue(String),
 
-    /// Returned by the convenience method [strict_decode] if not all
+    /// Returned by the convenience method [`strict_decode()`] if not all
     /// provided data were consumed during decoding process
+    #[display(
+        "Data were not consumed entirely during strict decoding procedure"
+    )]
     DataNotEntirelyConsumed,
 
-    /// Convenience type never for data structures using StrictDecode
+    /// Data integrity problem during strict decoding operation: {0}
     DataIntegrityError(String),
 }
 
 impl From<Error> for fmt::Error {
+    #[inline]
     fn from(_: Error) -> Self {
         fmt::Error
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Self::Io(err.kind())
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        use Error::*;
-        match self {
-            Io(kind) => write!(f, "I/O error: {:?}", kind),
-            Utf8Conversion => write!(f, "String data are not in valid UTF-8 encoding"),
-            ExceedMaxItems(size) => write!(
-                f,
-                "A collection (slice, vector or other type) has {} items, which \
-                exceeds maximum allowed value for `u16` type representing \
-                collection size according to LNPBP-6 spec)",
-                size
-            ),
-            WrongOptionalEncoding(significator) => write!(
-                f,
-                "Invalid value {} met as a significator byte, which must be \
-                equal to either 0 (no value) or 1",
-                significator
-            ),
-            EnumValueOverflow(enum_name) => write!(
-                f,
-                "Enums are encoded as a `u8`-based values; the provided enum {} \
-                has underlying primitive type that does not fit into `u8` value",
-                enum_name
-            ),
-            EnumValueNotKnown(enum_name, value) => write!(
-                f,
-                "An unsupported value {} for enum {} encountered during decode \
-                operation",
-                value, enum_name
-            ),
-            UnsupportedDataStructure(details) => write!(
-                f,
-                "The data are correct, however their structure indicate that \
-                 they were created with the future software version which has  \
-                 functional absent in the current implementation. Here is more \
-                 details: {}",
-                details
-            ),
-            ValueOutOfRange(data_type, range, value) => write!(
-                f,
-                "Decoding resulted in value {} for type {} that exceeds the \
-                supported range {:#?}",
-                value, data_type, range
-            ),
-            RepeatedValue(value) => write!(
-                f,
-                "A repeated value {} found during set collection deserialization",
-                value
-            ),
-            DataNotEntirelyConsumed => write!(
-                f,
-                "Data were not consumed entirely during strict decoding procedure"
-            ),
-            DataIntegrityError(str) => write!(f, "Data integrity error: {}", str),
-        }
     }
 }
 
@@ -251,13 +200,11 @@ macro_rules! strict_decode_self {
 macro_rules! impl_enum_strict_encoding {
     ($type:ty) => {
         impl $crate::strict_encoding::StrictEncode for $type {
-            type Error = $crate::strict_encoding::Error;
-
             #[inline]
             fn strict_encode<E: ::std::io::Write>(
                 &self,
                 e: E,
-            ) -> Result<usize, Self::Error> {
+            ) -> Result<usize, $crate::strict_encoding::Error> {
                 use ::num_traits::ToPrimitive;
 
                 match self.to_u8() {
@@ -272,12 +219,10 @@ macro_rules! impl_enum_strict_encoding {
         }
 
         impl $crate::strict_encoding::StrictDecode for $type {
-            type Error = $crate::strict_encoding::Error;
-
             #[inline]
             fn strict_decode<D: ::std::io::Read>(
                 d: D,
-            ) -> Result<Self, Self::Error> {
+            ) -> Result<Self, $crate::strict_encoding::Error> {
                 use ::num_traits::FromPrimitive;
 
                 let value = u8::strict_decode(d)?;
@@ -315,13 +260,8 @@ pub mod strategies {
         T: Strategy + Clone,
         amplify::Holder<T, <T as Strategy>::Strategy>: StrictEncode,
     {
-        type Error = <amplify::Holder<T, T::Strategy> as StrictEncode>::Error;
-
         #[inline]
-        fn strict_encode<E: io::Write>(
-            &self,
-            e: E,
-        ) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             amplify::Holder::new(self.clone()).strict_encode(e)
         }
     }
@@ -331,10 +271,8 @@ pub mod strategies {
         T: Strategy,
         amplify::Holder<T, <T as Strategy>::Strategy>: StrictDecode,
     {
-        type Error = <amplify::Holder<T, T::Strategy> as StrictDecode>::Error;
-
         #[inline]
-        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             Ok(amplify::Holder::strict_decode(d)?.into_inner())
         }
     }
@@ -344,13 +282,8 @@ pub mod strategies {
         T: Wrapper,
         T::Inner: StrictEncode,
     {
-        type Error = <T::Inner as StrictEncode>::Error;
-
         #[inline]
-        fn strict_encode<E: io::Write>(
-            &self,
-            e: E,
-        ) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             Ok(self.as_inner().to_inner().strict_encode(e)?)
         }
     }
@@ -360,10 +293,8 @@ pub mod strategies {
         T: Wrapper,
         T::Inner: StrictDecode,
     {
-        type Error = <T::Inner as StrictDecode>::Error;
-
         #[inline]
-        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             Ok(Self::new(T::from_inner(T::Inner::strict_decode(d)?)))
         }
     }
@@ -372,13 +303,11 @@ pub mod strategies {
     where
         T: bitcoin::hashes::Hash,
     {
-        type Error = Error;
-
         #[inline]
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             e.write_all(&self.as_inner()[..])?;
             Ok(T::LEN)
         }
@@ -388,10 +317,8 @@ pub mod strategies {
     where
         T: bitcoin::hashes::Hash,
     {
-        type Error = Error;
-
         #[inline]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut buf = vec![0u8; T::LEN];
             d.read_exact(&mut buf)?;
             Ok(Self::new(T::from_slice(&buf)?))
@@ -402,13 +329,8 @@ pub mod strategies {
     where
         T: bitcoin::consensus::Encodable,
     {
-        type Error = Error;
-
         #[inline]
-        fn strict_encode<E: io::Write>(
-            &self,
-            e: E,
-        ) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             self.as_inner().consensus_encode(e).map_err(Error::from)
         }
     }
@@ -417,10 +339,8 @@ pub mod strategies {
     where
         T: bitcoin::consensus::Decodable,
     {
-        type Error = Error;
-
         #[inline]
-        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             Ok(Self::new(T::consensus_decode(d).map_err(Error::from)?))
         }
     }
@@ -436,7 +356,7 @@ pub mod strategies {
         #[inline]
         fn from(e: bitcoin::consensus::encode::Error) -> Self {
             if let bitcoin::consensus::encode::Error::Io(err) = e {
-                Error::Io(err.kind())
+                err.into()
             } else {
                 Error::DataIntegrityError(e.to_string())
             }
@@ -486,7 +406,6 @@ mod number_little_endian {
     }
 
     impl StrictEncode for bool {
-        type Error = Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -496,7 +415,6 @@ mod number_little_endian {
     }
 
     impl StrictDecode for bool {
-        type Error = Error;
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             match u8::strict_decode(&mut d)? {
                 0 => Ok(false),
@@ -548,7 +466,6 @@ mod number_little_endian {
     }*/
 
     impl StrictEncode for usize {
-        type Error = Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -562,14 +479,12 @@ mod number_little_endian {
     }
 
     impl StrictDecode for usize {
-        type Error = Error;
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             u16::strict_decode(&mut d).map(|val| val as usize)
         }
     }
 
     impl StrictEncode for f32 {
-        type Error = Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -580,7 +495,6 @@ mod number_little_endian {
     }
 
     impl StrictDecode for f32 {
-        type Error = Error;
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut buf: [u8; 4] = [0; 4];
             d.read_exact(&mut buf)?;
@@ -589,7 +503,6 @@ mod number_little_endian {
     }
 
     impl StrictEncode for f64 {
-        type Error = Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -600,7 +513,6 @@ mod number_little_endian {
     }
 
     impl StrictDecode for f64 {
-        type Error = Error;
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut buf: [u8; 8] = [0; 8];
             d.read_exact(&mut buf)?;
@@ -609,20 +521,15 @@ mod number_little_endian {
     }
 
     impl StrictEncode for Duration {
-        type Error = Error;
         #[inline]
-        fn strict_encode<E: io::Write>(
-            &self,
-            e: E,
-        ) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             (self.as_secs(), self.subsec_nanos()).strict_encode(e)
         }
     }
 
     impl StrictDecode for Duration {
-        type Error = Error;
         #[inline]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             Ok(Self::new(
                 u64::strict_decode(&mut d)?,
                 u32::strict_decode(&mut d)?,
@@ -631,20 +538,15 @@ mod number_little_endian {
     }
 
     impl StrictEncode for NaiveDateTime {
-        type Error = Error;
         #[inline]
-        fn strict_encode<E: io::Write>(
-            &self,
-            e: E,
-        ) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             self.timestamp().strict_encode(e)
         }
     }
 
     impl StrictDecode for NaiveDateTime {
-        type Error = Error;
         #[inline]
-        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             Ok(Self::from_timestamp(i64::strict_decode(d)?, 0))
         }
     }
@@ -656,7 +558,6 @@ mod byte_strings {
     use std::ops::Deref;
 
     impl StrictEncode for &[u8] {
-        type Error = Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -671,7 +572,6 @@ mod byte_strings {
     }
 
     impl StrictEncode for [u8; 32] {
-        type Error = Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -682,7 +582,6 @@ mod byte_strings {
     }
 
     impl StrictDecode for [u8; 32] {
-        type Error = Error;
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut ret = [0u8; 32];
             d.read_exact(&mut ret)?;
@@ -691,14 +590,12 @@ mod byte_strings {
     }
 
     impl StrictEncode for Box<[u8]> {
-        type Error = Error;
         fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             self.deref().strict_encode(e)
         }
     }
 
     impl StrictDecode for Box<[u8]> {
-        type Error = Error;
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let len = usize::strict_decode(&mut d)?;
             let mut ret = vec![0u8; len];
@@ -708,21 +605,18 @@ mod byte_strings {
     }
 
     impl StrictEncode for &str {
-        type Error = Error;
         fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             self.as_bytes().strict_encode(e)
         }
     }
 
     impl StrictEncode for String {
-        type Error = Error;
         fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             self.as_bytes().strict_encode(e)
         }
     }
 
     impl StrictDecode for String {
-        type Error = Error;
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             String::from_utf8(Vec::<u8>::strict_decode(d)?).map_err(Error::from)
         }
@@ -742,13 +636,11 @@ mod compositional_types {
     impl<T> StrictEncode for Option<T>
     where
         T: StrictEncode,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(match self {
                 None => strict_encode_list!(e; 0u8),
                 Some(val) => strict_encode_list!(e; 1u8, val),
@@ -764,10 +656,8 @@ mod compositional_types {
     impl<T> StrictDecode for Option<T>
     where
         T: StrictDecode,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let len = u8::strict_decode(&mut d)?;
             match len {
                 0 => Ok(None),
@@ -785,13 +675,11 @@ mod compositional_types {
     impl<T> StrictEncode for Vec<T>
     where
         T: StrictEncode,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             let len = self.len() as usize;
             let mut encoded = len.strict_encode(&mut e)?;
             for item in self {
@@ -812,10 +700,8 @@ mod compositional_types {
     impl<T> StrictDecode for Vec<T>
     where
         T: StrictDecode,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let len = usize::strict_decode(&mut d)?;
             let mut data = Vec::<T>::with_capacity(len as usize);
             for _ in 0..len {
@@ -833,13 +719,11 @@ mod compositional_types {
     impl<T> StrictEncode for HashSet<T>
     where
         T: StrictEncode + Eq + Ord + Hash + Debug,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             let len = self.len() as usize;
             let mut encoded = len.strict_encode(&mut e)?;
             let mut vec: Vec<&T> = self.iter().collect();
@@ -858,10 +742,8 @@ mod compositional_types {
     impl<T> StrictDecode for HashSet<T>
     where
         T: StrictDecode + Eq + Ord + Hash + Debug,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let len = usize::strict_decode(&mut d)?;
             let mut data = HashSet::<T>::with_capacity(len as usize);
             for _ in 0..len {
@@ -884,13 +766,11 @@ mod compositional_types {
     impl<T> StrictEncode for BTreeSet<T>
     where
         T: StrictEncode + Eq + Ord + Debug,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             let len = self.len() as usize;
             let mut encoded = len.strict_encode(&mut e)?;
             let mut vec: Vec<&T> = self.iter().collect();
@@ -909,10 +789,8 @@ mod compositional_types {
     impl<T> StrictDecode for BTreeSet<T>
     where
         T: StrictDecode + Eq + Ord + Debug,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let len = usize::strict_decode(&mut d)?;
             let mut data = BTreeSet::<T>::new();
             for _ in 0..len {
@@ -940,13 +818,11 @@ mod compositional_types {
     impl<T> StrictEncode for HashMap<usize, T>
     where
         T: StrictEncode + Clone,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             let ordered: BTreeMap<usize, T> =
                 self.iter().map(|(key, val)| (*key, val.clone())).collect();
             ordered.strict_encode(&mut e)
@@ -966,10 +842,8 @@ mod compositional_types {
     impl<T> StrictDecode for HashMap<usize, T>
     where
         T: StrictDecode + Clone,
-        T::Error: From<Error>,
     {
-        type Error = T::Error;
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let map: HashMap<usize, T> =
                 BTreeMap::<usize, T>::strict_decode(&mut d)?
                     .iter()
@@ -992,14 +866,11 @@ mod compositional_types {
     where
         K: StrictEncode + Ord + Clone,
         V: StrictEncode + Clone,
-        K::Error: From<Error>,
-        V::Error: From<Error> + From<K::Error>,
     {
-        type Error = V::Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             let len = self.len() as usize;
             let encoded = len.strict_encode(&mut e)?;
 
@@ -1024,11 +895,8 @@ mod compositional_types {
     where
         K: StrictDecode + Ord + Clone,
         V: StrictDecode + Clone,
-        K::Error: From<Error>,
-        V::Error: From<Error> + From<K::Error>,
     {
-        type Error = V::Error;
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let len = usize::strict_decode(&mut d)?;
             let mut map = BTreeMap::<K, V>::new();
             for _ in 0..len {
@@ -1046,14 +914,11 @@ mod compositional_types {
     where
         K: StrictEncode + Clone,
         V: StrictEncode + Clone,
-        K::Error: From<Error>,
-        V::Error: From<Error> + From<K::Error>,
     {
-        type Error = V::Error;
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(self.0.strict_encode(&mut e)? + self.1.strict_encode(&mut e)?)
         }
     }
@@ -1064,11 +929,8 @@ mod compositional_types {
     where
         K: StrictDecode + Clone,
         V: StrictDecode + Clone,
-        K::Error: From<Error>,
-        V::Error: From<Error> + From<K::Error>,
     {
-        type Error = V::Error;
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let a = K::strict_decode(&mut d)?;
             let b = V::strict_decode(&mut d)?;
             Ok((a, b))
@@ -1084,64 +946,58 @@ mod internet_types {
     use std::net::{IpAddr, SocketAddr};
 
     impl StrictEncode for IpAddr {
-        type Error = Error;
         #[inline]
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(e.write(&InetAddr::from(*self).to_uniform_encoding())?)
         }
     }
 
     impl StrictEncode for SocketAddr {
-        type Error = Error;
         #[inline]
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(e.write(&InetSocketAddr::from(*self).to_uniform_encoding())?)
         }
     }
 
     impl StrictEncode for InetAddr {
-        type Error = Error;
         #[inline]
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(e.write(&self.to_uniform_encoding())?)
         }
     }
 
     impl StrictEncode for InetSocketAddr {
-        type Error = Error;
         #[inline]
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(e.write(&self.to_uniform_encoding())?)
         }
     }
 
     impl StrictEncode for InetSocketAddrExt {
-        type Error = Error;
         #[inline]
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(e.write(&self.to_uniform_encoding())?)
         }
     }
 
     impl StrictDecode for IpAddr {
-        type Error = Error;
         #[inline]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut buf = [0u8; InetAddr::UNIFORM_ADDR_LEN];
             d.read_exact(&mut buf)?;
             let res = InetAddr::from_uniform_encoding(&buf)
@@ -1158,9 +1014,8 @@ mod internet_types {
     }
 
     impl StrictDecode for SocketAddr {
-        type Error = Error;
         #[inline]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut buf = [0u8; InetSocketAddr::UNIFORM_ADDR_LEN];
             d.read_exact(&mut buf)?;
             let res = InetSocketAddr::from_uniform_encoding(&buf)
@@ -1177,9 +1032,8 @@ mod internet_types {
     }
 
     impl StrictDecode for InetAddr {
-        type Error = Error;
         #[inline]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
             d.read_exact(&mut buf)?;
             Ok(Self::from_uniform_encoding(&buf).ok_or(
@@ -1191,9 +1045,8 @@ mod internet_types {
     }
 
     impl StrictDecode for InetSocketAddr {
-        type Error = Error;
         #[inline]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
             d.read_exact(&mut buf)?;
             Ok(Self::from_uniform_encoding(&buf).ok_or(
@@ -1205,9 +1058,8 @@ mod internet_types {
     }
 
     impl StrictDecode for InetSocketAddrExt {
-        type Error = Error;
         #[inline]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let mut buf = [0u8; Self::UNIFORM_ADDR_LEN];
             d.read_exact(&mut buf)?;
             Ok(Self::from_uniform_encoding(&buf).ok_or(
@@ -1240,7 +1092,7 @@ pub mod test {
             for x in 0..=core::u8::MAX {
                 if !set.contains(&x) {
                     assert_eq!($enum::from_u8(x), None);
-                    let decoded: Result<$enum, _> = $crate::strict_encoding::strict_decode(&[x]);
+                    let decoded: Result<$enum, _> = $crate::strict_encoding::strict_deserialize(&[x]);
                     assert_eq!(decoded.unwrap_err(), $crate::strict_encoding::Error::EnumValueNotKnown(stringify!($enum).to_string(), x));
                 }
             }
@@ -1253,8 +1105,8 @@ pub mod test {
                     assert!(a < b);
                 }
             }
-            $( assert_eq!($crate::strict_encoding::strict_encode(&$item).unwrap(), &[$val]); )+
-            $( assert_eq!($item, $crate::strict_encoding::strict_decode(&[$val]).unwrap()); )+
+            $( assert_eq!($crate::strict_encoding::strict_serialize(&$item).unwrap(), &[$val]); )+
+            $( assert_eq!($item, $crate::strict_encoding::strict_deserialize(&[$val]).unwrap()); )+
         } };
     }
 
@@ -1352,8 +1204,8 @@ pub mod test {
     #[test]
     fn test_encode_decode() {
         gen_strings().into_iter().for_each(|s| {
-            let r = strict_encode(&s).unwrap();
-            let p: String = strict_decode(&r).unwrap();
+            let r = strict_serialize(&s).unwrap();
+            let p: String = strict_deserialize(&r).unwrap();
             assert_eq!(s, p);
         })
     }
@@ -1362,17 +1214,17 @@ pub mod test {
     #[should_panic(expected = "DataNotEntirelyConsumed")]
     fn test_consumation() {
         gen_strings().into_iter().for_each(|s| {
-            let mut r = strict_encode(&s).unwrap();
+            let mut r = strict_serialize(&s).unwrap();
             r.extend_from_slice("data".as_ref());
-            let _: String = strict_decode(&r).unwrap();
+            let _: String = strict_deserialize(&r).unwrap();
         })
     }
 
     #[test]
     fn test_error_propagation() {
         gen_strings().into_iter().for_each(|s| {
-            let r = strict_encode(&s).unwrap();
-            let p: Result<String, _> = strict_decode(&r[..1].to_vec());
+            let r = strict_serialize(&s).unwrap();
+            let p: Result<String, _> = strict_deserialize(&r[..1].to_vec());
             assert!(p.is_err());
         })
     }
@@ -1395,12 +1247,12 @@ pub mod test {
         let byte_fe = &[0xFEu8][..];
         let byte_ff = &[0xFFu8][..];
 
-        assert_eq!(strict_encode(&zero).unwrap(), byte_0);
-        assert_eq!(strict_encode(&one).unwrap(), byte_1);
-        assert_eq!(strict_encode(&thirteen).unwrap(), byte_13);
-        assert_eq!(strict_encode(&confusing).unwrap(), byte_ef);
-        assert_eq!(strict_encode(&nearly_full).unwrap(), byte_fe);
-        assert_eq!(strict_encode(&full).unwrap(), byte_ff);
+        assert_eq!(strict_serialize(&zero).unwrap(), byte_0);
+        assert_eq!(strict_serialize(&one).unwrap(), byte_1);
+        assert_eq!(strict_serialize(&thirteen).unwrap(), byte_13);
+        assert_eq!(strict_serialize(&confusing).unwrap(), byte_ef);
+        assert_eq!(strict_serialize(&nearly_full).unwrap(), byte_fe);
+        assert_eq!(strict_serialize(&full).unwrap(), byte_ff);
 
         assert_eq!(u8::strict_decode(byte_0).unwrap(), zero);
         assert_eq!(u8::strict_decode(byte_1).unwrap(), one);
@@ -1423,8 +1275,8 @@ pub mod test {
 
         let two_zero_bytes = &vec![0u8][..];
 
-        assert_eq!(strict_encode(&o1).unwrap(), two_zero_bytes);
-        assert_eq!(strict_encode(&o2).unwrap(), two_zero_bytes);
+        assert_eq!(strict_serialize(&o1).unwrap(), two_zero_bytes);
+        assert_eq!(strict_serialize(&o2).unwrap(), two_zero_bytes);
 
         assert_eq!(Option::<u8>::strict_decode(two_zero_bytes).unwrap(), None);
         assert_eq!(Option::<u64>::strict_decode(two_zero_bytes).unwrap(), None);
@@ -1457,14 +1309,14 @@ pub mod test {
             1u8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8,
         ][..];
 
-        assert_eq!(strict_encode(&o1).unwrap(), byte_0);
-        assert_eq!(strict_encode(&o2).unwrap(), byte_13);
-        assert_eq!(strict_encode(&o3).unwrap(), byte_255);
-        assert_eq!(strict_encode(&o4).unwrap(), qword_13);
-        assert_eq!(strict_encode(&o5).unwrap(), qword_256);
-        assert_eq!(strict_encode(&o6).unwrap(), qword_max);
-        assert_eq!(strict_encode(&o7).unwrap(), word_13);
-        assert!(strict_encode(&o8).err().is_some());
+        assert_eq!(strict_serialize(&o1).unwrap(), byte_0);
+        assert_eq!(strict_serialize(&o2).unwrap(), byte_13);
+        assert_eq!(strict_serialize(&o3).unwrap(), byte_255);
+        assert_eq!(strict_serialize(&o4).unwrap(), qword_13);
+        assert_eq!(strict_serialize(&o5).unwrap(), qword_256);
+        assert_eq!(strict_serialize(&o6).unwrap(), qword_max);
+        assert_eq!(strict_serialize(&o7).unwrap(), word_13);
+        assert!(strict_serialize(&o8).err().is_some());
 
         assert_eq!(Option::<u8>::strict_decode(byte_0).unwrap(), Some(0));
         assert_eq!(Option::<u8>::strict_decode(byte_13).unwrap(), Some(13));
@@ -1522,10 +1374,10 @@ pub mod test {
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ][..];
 
-        assert_eq!(strict_encode(&v1).unwrap(), s1);
-        assert_eq!(strict_encode(&v2).unwrap(), s2);
-        assert_eq!(strict_encode(&v3).unwrap(), s3);
-        assert!(strict_encode(&v4).err().is_some());
+        assert_eq!(strict_serialize(&v1).unwrap(), s1);
+        assert_eq!(strict_serialize(&v2).unwrap(), s2);
+        assert_eq!(strict_serialize(&v3).unwrap(), s3);
+        assert!(strict_serialize(&v4).err().is_some());
 
         assert_eq!(Vec::<u8>::strict_decode(s1).unwrap(), v1);
         assert_eq!(Vec::<u8>::strict_decode(s2).unwrap(), v2);

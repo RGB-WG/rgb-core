@@ -215,8 +215,6 @@ mod strict_encoding {
     use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl StrictEncode for GenesisSchema {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -233,8 +231,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for GenesisSchema {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let me = Self {
                 metadata: MetadataStructure::strict_decode(&mut d)?,
@@ -255,8 +251,6 @@ mod strict_encoding {
     }
 
     impl StrictEncode for ExtensionSchema {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -274,8 +268,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for ExtensionSchema {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let me = Self {
                 metadata: MetadataStructure::strict_decode(&mut d)?,
@@ -297,8 +289,6 @@ mod strict_encoding {
     }
 
     impl StrictEncode for TransitionSchema {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -316,8 +306,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for TransitionSchema {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let me = Self {
                 metadata: MetadataStructure::strict_decode(&mut d)?,

@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::{convert::TryFrom, fmt, io, str::FromStr};
 
@@ -18,10 +19,10 @@ use bitcoin::hashes::hex::{self, FromHex, ToHex};
 use bitcoin::hashes::{sha256d, Hash};
 use bitcoin::BlockHash;
 
-use crate::paradigms::strict_encoding::{
-    self, strict_decode, strict_encode, StrictDecode, StrictEncode,
+use crate::lightning_encoding;
+use crate::strict_encoding::{
+    self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
 };
-use bitcoin_hashes::core::cmp::Ordering;
 
 /// P2P network magic number: prefix identifying network on which node operates
 pub type P2pMagicNumber = u32;
@@ -91,19 +92,20 @@ impl P2pNetworkId {
 }
 
 impl StrictEncode for P2pNetworkId {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
         Ok(self.as_magic().strict_encode(e)?)
     }
 }
 
 impl StrictDecode for P2pNetworkId {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Ok(Self::from_magic(u32::strict_decode(d)?))
     }
 }
@@ -186,6 +188,9 @@ hash_newtype!(
 );
 impl strict_encoding::Strategy for AssetId {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl lightning_encoding::Strategy for AssetId {
+    type Strategy = lightning_encoding::strategies::AsBitcoinHash;
 }
 
 impl From<BlockHash> for AssetId {
@@ -515,13 +520,11 @@ impl PartialEq for AssetParams {
 impl Eq for AssetParams {}
 
 impl StrictEncode for AssetParams {
-    type Error = strict_encoding::Error;
-
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
         mut e: E,
-    ) -> Result<usize, Self::Error> {
+    ) -> Result<usize, strict_encoding::Error> {
         Ok(strict_encode_list!(e;
             self.ticker,
             self.unit_of_accounting,
@@ -534,10 +537,10 @@ impl StrictEncode for AssetParams {
 }
 
 impl StrictDecode for AssetParams {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        mut d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Ok(strict_decode_self!(d;
             ticker,
             unit_of_accounting,
@@ -743,19 +746,20 @@ impl Chain {
 }
 
 impl StrictEncode for Chain {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
         Ok(self.chain_params().strict_encode(e)?)
     }
 }
 
 impl StrictDecode for Chain {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Ok(Self::from(ChainParams::strict_decode(d)?))
     }
 }
@@ -854,7 +858,7 @@ impl Display for Chain {
                 write!(f, "liquidv1")
             }
             Chain::Other(params) => {
-                write!(f, "other:{}", strict_encode(params)?.to_hex())
+                write!(f, "other:{}", strict_serialize(params)?.to_hex())
             }
         }
     }
@@ -925,7 +929,7 @@ impl FromStr for Chain {
                     "signet" => {
                         Ok(Chain::SignetCustom(BlockHash::from_hex(data)?))
                     }
-                    "other" => Ok(Chain::Other(strict_decode(
+                    "other" => Ok(Chain::Other(strict_deserialize(
                         &Vec::from_hex(data)
                             .map_err(|_| ParseError::ChainParamsEncoding)?,
                     )?)),

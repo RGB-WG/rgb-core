@@ -24,9 +24,7 @@ use crate::bp::blind::OutpointReveal;
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
-use crate::strict_encoding::{
-    Error as EncodingError, StrictDecode, StrictEncode,
-};
+use crate::strict_encoding::{StrictDecode, StrictEncode};
 
 pub type OwnedRights = BTreeMap<schema::OwnedRightType, Assignments>;
 
@@ -398,21 +396,12 @@ impl CommitEncodeWithStrategy for Assignments {
 }
 
 pub trait ConfidentialState:
-    StrictEncode<Error = EncodingError>
-    + StrictDecode<Error = EncodingError>
-    + Debug
-    + Clone
-    + AsAny
+    StrictEncode + StrictDecode + Debug + Clone + AsAny
 {
 }
 
 pub trait RevealedState:
-    StrictEncode<Error = EncodingError>
-    + StrictDecode<Error = EncodingError>
-    + Debug
-    + Conceal
-    + Clone
-    + AsAny
+    StrictEncode + StrictDecode + Debug + Conceal + Clone + AsAny
 {
 }
 
@@ -534,10 +523,6 @@ where
     // state must have it
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
     Confidential {
         seal_definition: seal::Confidential,
@@ -566,10 +551,6 @@ where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.seal_definition_confidential()
@@ -582,10 +563,6 @@ where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.seal_definition_confidential()
@@ -598,10 +575,6 @@ where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
     fn eq(&self, other: &Self) -> bool {
         self.seal_definition_confidential()
@@ -616,10 +589,6 @@ where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
 }
 
@@ -628,10 +597,6 @@ where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
     pub fn seal_definition_confidential(&self) -> seal::Confidential {
         match self {
@@ -741,10 +706,6 @@ where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
     type Confidential = OwnedState<STATE>;
 
@@ -777,10 +738,6 @@ where
     STATE::Confidential: PartialEq + Eq,
     <STATE as StateTypes>::Confidential:
         From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
@@ -823,10 +780,6 @@ where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-    EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-        + From<<STATE::Confidential as StrictDecode>::Error>
-        + From<<STATE::Revealed as StrictEncode>::Error>
-        + From<<STATE::Revealed as StrictDecode>::Error>,
 {
     type Strategy = commit_strategy::UsingConceal;
 }
@@ -838,12 +791,10 @@ mod strict_encoding {
     use std::io;
 
     impl StrictEncode for Assignments {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(match self {
                 Assignments::Declarative(tree) => {
                     strict_encode_list!(e; schema::StateType::Declarative, tree)
@@ -859,9 +810,7 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Assignments {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
                 schema::StateType::Declarative => {
@@ -888,17 +837,11 @@ mod strict_encoding {
         STATE: StateTypes,
         STATE::Confidential: PartialEq + Eq,
         STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-        EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-            + From<<STATE::Confidential as StrictDecode>::Error>
-            + From<<STATE::Revealed as StrictEncode>::Error>
-            + From<<STATE::Revealed as StrictDecode>::Error>,
     {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(match self {
                 OwnedState::Confidential {
                     seal_definition,
@@ -933,14 +876,8 @@ mod strict_encoding {
         STATE: StateTypes,
         STATE::Confidential: PartialEq + Eq,
         STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
-        EncodingError: From<<STATE::Confidential as StrictEncode>::Error>
-            + From<<STATE::Confidential as StrictDecode>::Error>
-            + From<<STATE::Revealed as StrictEncode>::Error>
-            + From<<STATE::Revealed as StrictDecode>::Error>,
     {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = u8::strict_decode(&mut d)?;
             Ok(match format {
                 0u8 => OwnedState::Confidential {
