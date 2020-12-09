@@ -92,7 +92,6 @@ pub trait CreateUnmarshaller: Sized + payload::TypedEnum {
 
 /// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
 pub mod strategies {
-    use std::convert::TryFrom;
     use std::io;
 
     use super::{Error, LightningDecode, LightningEncode};
@@ -134,16 +133,16 @@ pub mod strategies {
 
     impl<T> LightningEncode for amplify::Holder<T, StrictEncoding>
     where
-        T: StrictEncode<Error = strict_encoding::Error>,
+        T: StrictEncode,
     {
         #[inline]
         fn lightning_encode<E: io::Write>(
             &self,
             e: E,
         ) -> Result<usize, io::Error> {
-            self.as_inner().strict_encode(e).map_err(|err| {
-                io::Error::try_from(err)
-                    .expect("Encoders may fail with I/O type errors only")
+            self.as_inner().strict_encode(e).map_err(|err| match err {
+                strict_encoding::Error::Io(io_err) => io_err.into(),
+                _ => io::Error::from(io::ErrorKind::InvalidData),
             })
         }
     }
@@ -174,7 +173,7 @@ pub mod strategies {
 
     impl<T> LightningDecode for amplify::Holder<T, StrictEncoding>
     where
-        T: StrictDecode<Error = strict_encoding::Error>,
+        T: StrictDecode,
     {
         #[inline]
         fn lightning_decode<D: io::Read>(d: D) -> Result<Self, Error> {

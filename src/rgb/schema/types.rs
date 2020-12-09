@@ -339,8 +339,6 @@ mod strict_encoding {
     impl_enum_strict_encoding!(elliptic_curve::PointSerialization);
 
     impl StrictEncode for Occurences {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -360,8 +358,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Occurences {
-        type Error = Error;
-
         #[allow(unused_comparisons)]
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let min = u16::strict_decode(&mut d)?;

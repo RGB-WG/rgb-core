@@ -153,7 +153,7 @@ impl Bech32 {
     /// data
     #[allow(dead_code)]
     pub(self) fn plain_encode(
-        obj: &impl StrictEncode<Error = strict_encoding::Error>,
+        obj: &impl StrictEncode,
     ) -> Result<Vec<u8>, Error> {
         // We initialize writer with a version byte, indicating plain
         // algorithm used
@@ -164,7 +164,7 @@ impl Bech32 {
 
     /// Encoder for v1 of raw data encoding algorithm. Uses deflate
     pub(self) fn deflate_encode(
-        obj: &impl StrictEncode<Error = strict_encoding::Error>,
+        obj: &impl StrictEncode,
     ) -> Result<Vec<u8>, Error> {
         // We initialize writer with a version byte, indicating deflation
         // algorithm used
@@ -176,7 +176,7 @@ impl Bech32 {
 
     pub(self) fn raw_decode<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
     where
-        T: StrictDecode<Error = strict_encoding::Error>,
+        T: StrictDecode,
     {
         let mut reader = data.as_ref();
         Ok(match u8::strict_decode(&mut reader)? {

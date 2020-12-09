@@ -122,8 +122,6 @@ pub(super) mod strict_encoding {
     impl_enum_strict_encoding!(EncodingTag);
 
     impl StrictEncode for ScriptEncodeData {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -143,8 +141,6 @@ pub(super) mod strict_encoding {
     }
 
     impl StrictDecode for ScriptEncodeData {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(
             mut d: D,
         ) -> Result<Self, strict_encoding::Error> {

@@ -559,7 +559,6 @@ fn strict_encode_inner_struct(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let recurse = match data.fields {
@@ -602,10 +601,8 @@ fn strict_encode_inner_struct(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::strict_encoding::StrictEncode for #ident_name #ty_generics #where_clause {
-            type Error = #error_type_def;
-
             #[inline]
-            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictEncode;
 
                 #inner
@@ -622,7 +619,6 @@ fn strict_decode_inner_struct(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let inner = match data.fields {
@@ -668,10 +664,8 @@ fn strict_decode_inner_struct(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::strict_encoding::StrictDecode for #ident_name #ty_generics #where_clause {
-            type Error = #error_type_def;
-
             #[inline]
-            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictDecode;
 
                 Ok(#inner)
@@ -688,7 +682,6 @@ fn strict_encode_inner_enum(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let mut inner: Vec<TokenStream2> = none!();
@@ -754,10 +747,8 @@ fn strict_encode_inner_enum(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::strict_encoding::StrictEncode for #ident_name #ty_generics #where_clause {
-            type Error = #error_type_def;
-
             #[inline]
-            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, Self::Error> {
+            fn strict_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictEncode;
 
                 #inner
@@ -774,7 +765,6 @@ fn strict_decode_inner_enum(
         input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let error_type_def = get_strict_error(input)?;
     let import = get_lnpbp_crate(input)?;
 
     let mut inner: Vec<TokenStream2> = none!();
@@ -839,34 +829,13 @@ fn strict_decode_inner_enum(
     Ok(quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #import::strict_encoding::StrictDecode for #ident_name #ty_generics #where_clause {
-            type Error = #error_type_def;
-
             #[inline]
-            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, Self::Error> {
+            fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictDecode;
 
                 Ok(#inner)
             }
         }
-    })
-}
-
-fn get_strict_error(input: &DeriveInput) -> Result<TokenStream2> {
-    let import = get_lnpbp_crate(input)?;
-
-    let name = "strict_error";
-    let example = "#[strict_error(ErrorType)]";
-    let mut strict_error: Option<Ident> = None;
-
-    let list = match attr_list(&input.attrs, name, example)? {
-        Some(x) => x,
-        None => return Ok(quote! { #import::strict_encoding::Error }),
-    };
-    let strict_error = attr_nested_one_arg(list.into_iter(), name, example)?;
-
-    Ok(match strict_error {
-        Some(ident) => quote! { #ident },
-        None => quote! { #import::strict_encoding::Error },
     })
 }
 

@@ -247,9 +247,10 @@ pub enum KeyApplication {
 }
 
 impl StrictEncode for KeyApplication {
-    type Error = strict_encoding::Error;
-
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
         let val = match self {
             KeyApplication::Legacy => 0u8,
             KeyApplication::SegWitLegacySinglesig => 1u8,
@@ -262,9 +263,9 @@ impl StrictEncode for KeyApplication {
 }
 
 impl StrictDecode for KeyApplication {
-    type Error = strict_encoding::Error;
-
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Ok(match u8::strict_decode(d)? {
             0 => KeyApplication::Legacy,
             1 => KeyApplication::SegWitLegacySinglesig,

@@ -639,8 +639,6 @@ mod strict_encoding {
     }
 
     impl StrictEncode for Genesis {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -667,8 +665,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Genesis {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let schema_id = SchemaId::strict_decode(&mut d)?;
             let chain_params_no = usize::strict_decode(&mut d)?;

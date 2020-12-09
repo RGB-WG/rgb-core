@@ -327,29 +327,22 @@ pub(super) mod strict_encoding {
     impl_enum_strict_encoding!(EncodingTag);
 
     impl StrictEncode for Void {
-        type Error = Error;
-        fn strict_encode<E: io::Write>(
-            &self,
-            _: E,
-        ) -> Result<usize, Self::Error> {
+        fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, Error> {
             Ok(0)
         }
     }
 
     impl StrictDecode for Void {
-        type Error = Error;
-        fn strict_decode<D: io::Read>(_: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(_: D) -> Result<Self, Error> {
             Ok(Void)
         }
     }
 
     impl StrictEncode for Revealed {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(match self {
                 Revealed::U8(val) => {
                     strict_encode_list!(e; EncodingTag::U8, val)
@@ -429,9 +422,7 @@ pub(super) mod strict_encoding {
     }
 
     impl StrictDecode for Revealed {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = EncodingTag::strict_decode(&mut d)?;
             Ok(match format {
                 EncodingTag::U8 => Revealed::U8(u8::strict_decode(&mut d)?),

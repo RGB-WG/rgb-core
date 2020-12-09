@@ -149,12 +149,10 @@ mod strict_encoding {
     }
 
     impl StrictEncode for Schema {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
-        ) -> Result<usize, Self::Error> {
+        ) -> Result<usize, Error> {
             Ok(strict_encode_list!(e;
                 self.rgb_features,
                 self.root_id,
@@ -171,9 +169,7 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Schema {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let me = Self {
                 rgb_features: features::FlagVec::strict_decode(&mut d)?,
                 root_id: SchemaId::strict_decode(&mut d)?,

@@ -590,8 +590,6 @@ impl LightningEncode for Messages {
 }
 
 impl StrictEncode for Messages {
-    type Error = strict_encoding::Error;
-
     fn strict_encode<E: io::Write>(
         &self,
         e: E,
@@ -601,8 +599,6 @@ impl StrictEncode for Messages {
 }
 
 impl StrictDecode for Messages {
-    type Error = strict_encoding::Error;
-
     fn strict_decode<D: io::Read>(
         d: D,
     ) -> Result<Self, strict_encoding::Error> {

@@ -210,8 +210,6 @@ mod strict_encoding {
     impl_enum_strict_encoding!(StandardProcedure);
 
     impl StrictEncode for Procedure {
-        type Error = Error;
-
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
@@ -228,8 +226,6 @@ mod strict_encoding {
     }
 
     impl StrictDecode for Procedure {
-        type Error = Error;
-
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             Ok(match u8::strict_decode(&mut d)? {
                 0u8 => Self::Simplicity {

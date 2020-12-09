@@ -20,9 +20,7 @@ pub use bitcoin::util::psbt::{raw, Error, Global, Input, Map, Output};
 use bitcoin::TxOut;
 
 use super::resolvers::{Fee, FeeError, InputPreviousTxo, MatchError};
-use crate::strict_encoding::{
-    self, strict_decode, strict_encode, StrictDecode, StrictEncode,
-};
+use crate::strict_encoding::{self, strict_encode, StrictDecode, StrictEncode};
 
 fn proprietary_key(
     vendor: Vec<u8>,
@@ -47,7 +45,7 @@ pub trait ProprietaryKeyMap {
         key: Vec<u8>,
     ) -> Option<Result<T, strict_encoding::Error>>
     where
-        T: StrictDecode<Error = strict_encoding::Error>;
+        T: StrictDecode;
 
     fn insert_proprietary_key(
         &mut self,
@@ -69,12 +67,12 @@ where
         key: Vec<u8>,
     ) -> Option<Result<T, strict_encoding::Error>>
     where
-        T: StrictDecode<Error = strict_encoding::Error>,
+        T: StrictDecode,
     {
         let key = proprietary_key(vendor, subtype, key);
         self.get_pairs().ok()?.iter().find_map(|pair| {
             if pair.key == key {
-                Some(strict_decode(&pair.value))
+                Some(T::strict_deserialize(&pair.value))
             } else {
                 None
             }

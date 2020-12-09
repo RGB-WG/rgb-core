@@ -113,17 +113,18 @@ pub struct Features {
 }
 
 impl StrictEncode for Features {
-    type Error = strict_encoding::Error;
-
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
         Ok(0)
     }
 }
 
 impl StrictDecode for Features {
-    type Error = strict_encoding::Error;
-
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Ok(none!())
     }
 }

@@ -81,8 +81,6 @@ impl strict_encoding::Strategy for PartiallySignedTransaction {
 }
 
 impl StrictEncode for Script {
-    type Error = Error;
-
     #[inline]
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
         Ok(self.to_bytes().strict_encode(e)?)
@@ -90,18 +88,14 @@ impl StrictEncode for Script {
 }
 
 impl StrictDecode for Script {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
         Ok(Self::from(Vec::<u8>::strict_decode(d)?))
     }
 }
 
 #[cfg(feature = "ed25519-dalek")]
 impl StrictEncode for ed25519_dalek::PublicKey {
-    type Error = Error;
-
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.as_bytes()[..])?)
     }
@@ -109,9 +103,7 @@ impl StrictEncode for ed25519_dalek::PublicKey {
 
 #[cfg(feature = "ed25519-dalek")]
 impl StrictDecode for ed25519_dalek::PublicKey {
-    type Error = Error;
-
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; ed25519_dalek::PUBLIC_KEY_LENGTH];
         d.read_exact(&mut buf)?;
         Ok(Self::from_bytes(&buf).map_err(|_| {
@@ -124,8 +116,6 @@ impl StrictDecode for ed25519_dalek::PublicKey {
 
 #[cfg(feature = "ed25519-dalek")]
 impl StrictEncode for ed25519_dalek::Signature {
-    type Error = Error;
-
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.as_bytes())?)
     }
@@ -133,9 +123,7 @@ impl StrictEncode for ed25519_dalek::Signature {
 
 #[cfg(feature = "ed25519-dalek")]
 impl StrictDecode for ed25519_dalek::Signature {
-    type Error = Error;
-
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; ed25519_dalek::SIGNATURE_LENGTH];
         d.read_exact(&mut buf)?;
         Ok(Self::from_bytes(&buf).map_err(|_| {
@@ -147,8 +135,6 @@ impl StrictDecode for ed25519_dalek::Signature {
 }
 
 impl StrictEncode for secp256k1::SecretKey {
-    type Error = Error;
-
     #[inline]
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self[..])?)
@@ -156,10 +142,8 @@ impl StrictEncode for secp256k1::SecretKey {
 }
 
 impl StrictDecode for secp256k1::SecretKey {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; secp256k1::constants::SECRET_KEY_SIZE];
         d.read_exact(&mut buf)?;
         Ok(Self::from_slice(&buf).map_err(|_| {
@@ -169,8 +153,6 @@ impl StrictDecode for secp256k1::SecretKey {
 }
 
 impl StrictEncode for secp256k1::PublicKey {
-    type Error = Error;
-
     #[inline]
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.serialize())?)
@@ -178,10 +160,8 @@ impl StrictEncode for secp256k1::PublicKey {
 }
 
 impl StrictDecode for secp256k1::PublicKey {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
         d.read_exact(&mut buf)?;
         Ok(Self::from_slice(&buf).map_err(|_| {
@@ -191,22 +171,15 @@ impl StrictDecode for secp256k1::PublicKey {
 }
 
 impl StrictEncode for secp256k1::Signature {
-    type Error = Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.serialize_compact())?)
     }
 }
 
 impl StrictDecode for secp256k1::Signature {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; secp256k1::constants::COMPACT_SIGNATURE_SIZE];
         d.read_exact(&mut buf)?;
         Ok(Self::from_compact(&buf).map_err(|_| {
@@ -218,13 +191,8 @@ impl StrictDecode for secp256k1::Signature {
 }
 
 impl StrictEncode for bitcoin::PublicKey {
-    type Error = Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(if self.compressed {
             e.write(&self.key.serialize())?
         } else {
@@ -234,10 +202,8 @@ impl StrictEncode for bitcoin::PublicKey {
 }
 
 impl StrictDecode for bitcoin::PublicKey {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let marker = u8::strict_decode(&mut d)?;
         match marker {
             0x04 => {
@@ -265,22 +231,15 @@ impl StrictDecode for bitcoin::PublicKey {
 }
 
 impl StrictEncode for bitcoin::Network {
-    type Error = Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(self.magic().strict_encode(&mut e)?)
     }
 }
 
 impl StrictDecode for bitcoin::Network {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let magic = u32::strict_decode(&mut d)?;
         Ok(Self::from_magic(magic).ok_or(Error::ValueOutOfRange(
             "bitcoin::Network",
@@ -291,13 +250,8 @@ impl StrictDecode for bitcoin::Network {
 }
 
 impl StrictEncode for bip32::ChildNumber {
-    type Error = Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         let (t, index) = match self {
             bip32::ChildNumber::Normal { index } => (0u8, index),
             bip32::ChildNumber::Hardened { index } => (1u8, index),
@@ -307,9 +261,7 @@ impl StrictEncode for bip32::ChildNumber {
 }
 
 impl StrictDecode for bip32::ChildNumber {
-    type Error = Error;
-
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let t = u8::strict_decode(&mut d)?;
         let index = u32::strict_decode(&mut d)?;
         Ok(match t {
@@ -324,13 +276,8 @@ impl StrictDecode for bip32::ChildNumber {
 }
 
 impl StrictEncode for bip32::DerivationPath {
-    type Error = Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         let buf: Vec<bip32::ChildNumber> =
             self.into_iter().map(bip32::ChildNumber::clone).collect();
         Ok(buf.strict_encode(&mut e)?)
@@ -338,10 +285,8 @@ impl StrictEncode for bip32::DerivationPath {
 }
 
 impl StrictDecode for bip32::DerivationPath {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         Ok(Self::from(Vec::<bip32::ChildNumber>::strict_decode(
             &mut d,
         )?))
@@ -349,22 +294,15 @@ impl StrictDecode for bip32::DerivationPath {
 }
 
 impl StrictEncode for bip32::ChainCode {
-    type Error = Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(self.as_bytes())?)
     }
 }
 
 impl StrictDecode for bip32::ChainCode {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; 32];
         d.read_exact(&mut buf)?;
         Ok(Self::from(&buf[..]))
@@ -372,22 +310,15 @@ impl StrictDecode for bip32::ChainCode {
 }
 
 impl StrictEncode for bip32::Fingerprint {
-    type Error = Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(self.as_bytes())?)
     }
 }
 
 impl StrictDecode for bip32::Fingerprint {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; 4];
         d.read_exact(&mut buf)?;
         Ok(Self::from(&buf[..]))
@@ -395,21 +326,14 @@ impl StrictDecode for bip32::Fingerprint {
 }
 
 impl StrictEncode for bip32::ExtendedPubKey {
-    type Error = Error;
-
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.encode())?)
     }
 }
 
 impl StrictDecode for bip32::ExtendedPubKey {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; 78];
         d.read_exact(&mut buf)?;
         Ok(bip32::ExtendedPubKey::decode(&buf).map_err(|_| {
@@ -421,22 +345,15 @@ impl StrictDecode for bip32::ExtendedPubKey {
 }
 
 impl StrictEncode for bip32::ExtendedPrivKey {
-    type Error = Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         Ok(e.write(&self.encode())?)
     }
 }
 
 impl StrictDecode for bip32::ExtendedPrivKey {
-    type Error = Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut buf = [0u8; 78];
         d.read_exact(&mut buf)?;
         Ok(bip32::ExtendedPrivKey::decode(&buf).map_err(|_| {

@@ -91,19 +91,20 @@ impl P2pNetworkId {
 }
 
 impl StrictEncode for P2pNetworkId {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
         Ok(self.as_magic().strict_encode(e)?)
     }
 }
 
 impl StrictDecode for P2pNetworkId {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Ok(Self::from_magic(u32::strict_decode(d)?))
     }
 }
@@ -515,13 +516,11 @@ impl PartialEq for AssetParams {
 impl Eq for AssetParams {}
 
 impl StrictEncode for AssetParams {
-    type Error = strict_encoding::Error;
-
     #[inline]
     fn strict_encode<E: io::Write>(
         &self,
         mut e: E,
-    ) -> Result<usize, Self::Error> {
+    ) -> Result<usize, strict_encoding::Error> {
         Ok(strict_encode_list!(e;
             self.ticker,
             self.unit_of_accounting,
@@ -534,10 +533,10 @@ impl StrictEncode for AssetParams {
 }
 
 impl StrictDecode for AssetParams {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        mut d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Ok(strict_decode_self!(d;
             ticker,
             unit_of_accounting,
@@ -743,19 +742,20 @@ impl Chain {
 }
 
 impl StrictEncode for Chain {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Self::Error> {
+    fn strict_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, strict_encoding::Error> {
         Ok(self.chain_params().strict_encode(e)?)
     }
 }
 
 impl StrictDecode for Chain {
-    type Error = strict_encoding::Error;
-
     #[inline]
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
         Ok(Self::from(ChainParams::strict_decode(d)?))
     }
 }

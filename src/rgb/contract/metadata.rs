@@ -22,6 +22,7 @@ use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy,
 };
 use crate::rgb::schema;
+use crate::strict_encoding;
 
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
@@ -29,6 +30,10 @@ type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 #[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, Display, From)]
 #[display(Debug)]
 pub struct Metadata(MetadataInner);
+
+impl strict_encoding::Strategy for Metadata {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for Metadata {
@@ -154,34 +159,6 @@ impl Metadata {
                 set.into_iter().filter_map(data::Revealed::string).collect()
             })
             .unwrap_or_default()
-    }
-}
-
-mod strict_encoding {
-    use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
-    use amplify::Wrapper;
-    use std::io;
-
-    impl StrictEncode for Metadata {
-        type Error = Error;
-
-        fn strict_encode<E: io::Write>(
-            &self,
-            e: E,
-        ) -> Result<usize, Self::Error> {
-            self.to_inner().strict_encode(e)
-        }
-    }
-
-    impl StrictDecode for Metadata {
-        type Error = Error;
-
-        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Self::Error> {
-            Ok(Self::from_inner(<Self as Wrapper>::Inner::strict_decode(
-                d,
-            )?))
-        }
     }
 }
 
