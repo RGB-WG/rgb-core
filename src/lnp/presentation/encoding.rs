@@ -18,7 +18,6 @@ use std::io;
 use std::sync::Arc;
 
 use super::payload;
-use crate::strict_encoding;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -39,18 +38,19 @@ pub enum Error {
     /// provided data were consumed during decoding process
     DataNotEntirelyConsumed,
 
-    /// Errors from underlying strict encoding
+    /// Convenience type never for data structures using StrictDecode
     #[display(inner)]
-    StrictEncoding(strict_encoding::Error),
+    DataIntegrityError(String),
 }
 
 /// Lightning-network specific encoding as defined in BOLT-1, 2, 3...
 pub trait LightningEncode {
-    fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, Error>;
-    fn lightning_serialize(&self) -> Result<Vec<u8>, Error> {
-        let mut encoder = io::Cursor::new(vec![]);
-        self.lightning_encode(&mut encoder)?;
-        Ok(encoder.into_inner())
+    fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, io::Error>;
+    fn lightning_serialize(&self) -> Vec<u8> {
+        let mut encoder = vec![];
+        self.lightning_encode(&mut encoder)
+            .expect("Memory encoders can't fail");
+        encoder
     }
 }
 
@@ -92,6 +92,7 @@ pub trait CreateUnmarshaller: Sized + payload::TypedEnum {
 
 /// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
 pub mod strategies {
+    use std::convert::TryFrom;
     use std::io;
 
     use super::{Error, LightningDecode, LightningEncode};
@@ -112,7 +113,10 @@ pub mod strategies {
         amplify::Holder<T, <T as Strategy>::Strategy>: LightningEncode,
     {
         #[inline]
-        fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        fn lightning_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, io::Error> {
             amplify::Holder::new(self.clone()).lightning_encode(e)
         }
     }
@@ -133,8 +137,14 @@ pub mod strategies {
         T: StrictEncode<Error = strict_encoding::Error>,
     {
         #[inline]
-        fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-            self.as_inner().strict_encode(e).map_err(Error::from)
+        fn lightning_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, io::Error> {
+            self.as_inner().strict_encode(e).map_err(|err| {
+                io::Error::try_from(err)
+                    .expect("Encoders may fail with I/O type errors only")
+            })
         }
     }
 
@@ -154,7 +164,10 @@ pub mod strategies {
         T: Copy,
     {
         #[inline]
-        fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        fn lightning_encode<E: io::Write>(
+            &self,
+            e: E,
+        ) -> Result<usize, io::Error> {
             (*self.as_inner()).into().lightning_encode(e)
         }
     }
@@ -171,11 +184,16 @@ pub mod strategies {
 
     impl From<strict_encoding::Error> for Error {
         #[inline]
-        fn from(e: strict_encoding::Error) -> Self {
-            if let strict_encoding::Error::Io(err) = e {
-                Error::Io(err)
-            } else {
-                Error::StrictEncoding(e)
+        fn from(err: strict_encoding::Error) -> Self {
+            match err {
+                strict_encoding::Error::Io(io_err) => Error::Io(io_err),
+                strict_encoding::Error::DataNotEntirelyConsumed => {
+                    Error::DataNotEntirelyConsumed
+                }
+                strict_encoding::Error::DataIntegrityError(msg) => {
+                    Error::DataIntegrityError(msg)
+                }
+                other => Error::DataIntegrityError(other.to_string()),
             }
         }
     }

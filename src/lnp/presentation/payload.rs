@@ -22,8 +22,7 @@ use std::sync::Arc;
 
 use super::tlv;
 use super::{
-    encoding, Error, EvenOdd, LightningEncode, UnknownTypeError, Unmarshall,
-    UnmarshallFn,
+    Error, EvenOdd, LightningEncode, UnknownTypeError, Unmarshall, UnmarshallFn,
 };
 use crate::strict_encoding::StrictDecode;
 
@@ -101,7 +100,7 @@ impl LightningEncode for Payload {
     fn lightning_encode<E: io::Write>(
         &self,
         mut e: E,
-    ) -> Result<usize, encoding::Error> {
+    ) -> Result<usize, io::Error> {
         Ok(self.type_id.to_inner().lightning_encode(&mut e)?
             + e.write(&self.payload)?)
     }

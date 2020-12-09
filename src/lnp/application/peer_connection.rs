@@ -92,7 +92,7 @@ impl SendMessage for PeerConnection {
     fn send_message(&mut self, message: Messages) -> Result<usize, Error> {
         Ok(self
             .session
-            .send_raw_message(&message.lightning_serialize()?)?)
+            .send_raw_message(&message.lightning_serialize())?)
     }
 }
 
@@ -107,7 +107,7 @@ impl SendMessage for PeerSender {
     fn send_message(&mut self, message: Messages) -> Result<usize, Error> {
         Ok(self
             .sender
-            .send_raw_message(&message.lightning_serialize()?)?)
+            .send_raw_message(&message.lightning_serialize())?)
     }
 }
 

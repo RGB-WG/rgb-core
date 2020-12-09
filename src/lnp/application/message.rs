@@ -25,8 +25,7 @@ use super::Features;
 use crate::bp::chain::AssetId;
 use crate::bp::{HashLock, HashPreimage};
 use crate::lnp::presentation::{
-    encoding, CreateUnmarshaller, LightningEncode, Payload, Unmarshall,
-    Unmarshaller,
+    CreateUnmarshaller, LightningEncode, Payload, Unmarshall, Unmarshaller,
 };
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 use crate::SECP256K1_PUBKEY_DUMB;
@@ -585,10 +584,7 @@ pub struct AssignFunds {
 //       lightning-specific one
 
 impl LightningEncode for Messages {
-    fn lightning_encode<E: io::Write>(
-        &self,
-        e: E,
-    ) -> Result<usize, encoding::Error> {
+    fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, io::Error> {
         Payload::from(self.clone()).lightning_encode(e)
     }
 }
@@ -600,9 +596,7 @@ impl StrictEncode for Messages {
         &self,
         e: E,
     ) -> Result<usize, strict_encoding::Error> {
-        self.lightning_serialize()
-            .expect("Memory encoders does not fail")
-            .strict_encode(e)
+        self.lightning_serialize().strict_encode(e)
     }
 }
 

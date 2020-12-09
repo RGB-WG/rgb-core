@@ -86,7 +86,10 @@ impl From<BigSize> for u32 {
 }
 
 impl LightningEncode for BigSize {
-    fn lightning_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+    fn lightning_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, io::Error> {
         let vec = match self.0 {
             0..=0xFC => vec![self.0 as u8],
             0xFD..=0xFFFF => {

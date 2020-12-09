@@ -13,6 +13,7 @@
 
 use amplify::IoError;
 use core::ops::Range;
+use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
@@ -142,7 +143,20 @@ pub enum Error {
     DataIntegrityError(String),
 }
 
+impl TryFrom<Error> for io::Error {
+    type Error = Error;
+
+    #[inline]
+    fn try_from(err: Error) -> Result<Self, Self::Error> {
+        match err {
+            Error::Io(io_err) => Ok(io_err.into()),
+            x => Err(x),
+        }
+    }
+}
+
 impl From<Error> for fmt::Error {
+    #[inline]
     fn from(_: Error) -> Self {
         fmt::Error
     }
