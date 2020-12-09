@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::{convert::TryFrom, fmt, io, str::FromStr};
 
@@ -18,10 +19,10 @@ use bitcoin::hashes::hex::{self, FromHex, ToHex};
 use bitcoin::hashes::{sha256d, Hash};
 use bitcoin::BlockHash;
 
-use crate::paradigms::strict_encoding::{
+use crate::lightning_encoding;
+use crate::strict_encoding::{
     self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
 };
-use bitcoin_hashes::core::cmp::Ordering;
 
 /// P2P network magic number: prefix identifying network on which node operates
 pub type P2pMagicNumber = u32;
@@ -187,6 +188,9 @@ hash_newtype!(
 );
 impl strict_encoding::Strategy for AssetId {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl lightning_encoding::Strategy for AssetId {
+    type Strategy = lightning_encoding::strategies::AsBitcoinHash;
 }
 
 impl From<BlockHash> for AssetId {

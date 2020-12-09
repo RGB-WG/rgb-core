@@ -14,8 +14,9 @@
 use std::collections::HashSet;
 use std::io;
 
-use crate::paradigms::strict_encoding::{self, StrictDecode, StrictEncode};
+use crate::lightning_encoding::{self, LightningDecode, LightningEncode};
 use crate::standards::features::FlagVec;
+use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
 /// Some features don't make sense on a per-channels or per-node basis, so each
 /// feature defines how it is presented in those contexts. Some features may be
@@ -112,6 +113,8 @@ pub struct Features {
     pub unknown: FlagVec,
 }
 
+/// TODO: Implement proper strict encoding for Features
+
 impl StrictEncode for Features {
     fn strict_encode<E: io::Write>(
         &self,
@@ -125,6 +128,23 @@ impl StrictDecode for Features {
     fn strict_decode<D: io::Read>(
         d: D,
     ) -> Result<Self, strict_encoding::Error> {
+        Ok(none!())
+    }
+}
+
+impl LightningEncode for Features {
+    fn lightning_encode<E: io::Write>(
+        &self,
+        e: E,
+    ) -> Result<usize, std::io::Error> {
+        Ok(0)
+    }
+}
+
+impl LightningDecode for Features {
+    fn lightning_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, lightning_encoding::Error> {
         Ok(none!())
     }
 }

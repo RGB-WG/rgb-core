@@ -214,7 +214,7 @@ impl EncodingSrategy {
                 quote_spanned!(span => #import::bitcoin::consensus::encode::consensus_encode(obj))
             }
             Self::Lightning => {
-                quote_spanned!(span => #import::lnp::encoding::lightning_serialize(obj))
+                quote_spanned!(span => #import::lightning_encoding::lightning_serialize(obj))
             }
         }
     }
@@ -250,7 +250,7 @@ impl EncodingSrategy {
                 use #import::bitcoin::consensus::encode::Encode;
             ),
             Self::Lightning => quote!(
-                use #import::lnp::encoding::LightningEncode;
+                use #import::lightning_encoding::LightningEncode;
             ),
         }
     }
@@ -264,7 +264,7 @@ impl EncodingSrategy {
                 use #import::bitcoin::consensus::encode::Decode;
             ),
             Self::Lightning => quote!(
-                use #import::lnp::encoding::LightningDecode;
+                use #import::lightning_encoding::LightningDecode;
             ),
         }
     }
@@ -534,7 +534,7 @@ fn lnp_api_inner_enum(
 // Strict Encode/Decode Derives
 // ============================
 
-#[proc_macro_derive(StrictEncode, attributes(strict_error, lnpbp_crate))]
+#[proc_macro_derive(StrictEncode, attributes(lnpbp_crate))]
 pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     strict_encode_inner(derive_input)
@@ -542,7 +542,7 @@ pub fn derive_strict_encode(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(StrictDecode, attributes(strict_error, lnpbp_crate))]
+#[proc_macro_derive(StrictDecode, attributes(lnpbp_crate))]
 pub fn derive_strict_decode(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     strict_decode_inner(derive_input)
@@ -855,6 +855,176 @@ fn strict_decode_inner_enum(
             #[inline]
             fn strict_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, #import::strict_encoding::Error> {
                 use #import::strict_encoding::StrictDecode;
+
+                Ok(#inner)
+            }
+        }
+    })
+}
+
+// Lightning Encode/Decode Derives
+// ============================
+
+#[proc_macro_derive(LightningEncode, attributes(lnpbp_crate))]
+pub fn derive_lightning_encode(input: TokenStream) -> TokenStream {
+    let derive_input = parse_macro_input!(input as DeriveInput);
+    lightning_encode_inner(derive_input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_derive(LightningDecode, attributes(lnpbp_crate))]
+pub fn derive_lightning_decode(input: TokenStream) -> TokenStream {
+    let derive_input = parse_macro_input!(input as DeriveInput);
+    lightning_decode_inner(derive_input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+fn lightning_encode_inner(input: DeriveInput) -> Result<TokenStream2> {
+    match input.data {
+        Data::Struct(ref data) => lightning_encode_inner_struct(&input, data),
+        Data::Enum(ref data) => Err(Error::new_spanned(
+            &input,
+            "Deriving LightningEncode is not supported in enums",
+        )),
+        Data::Union(_) => Err(Error::new_spanned(
+            &input,
+            "Deriving LightningEncode is not supported in unions",
+        )),
+    }
+}
+
+fn lightning_decode_inner(input: DeriveInput) -> Result<TokenStream2> {
+    match input.data {
+        Data::Struct(ref data) => lightning_decode_inner_struct(&input, data),
+        Data::Enum(ref data) => Err(Error::new_spanned(
+            &input,
+            "Deriving LightningDecode is not supported in enums",
+        )),
+        Data::Union(_) => Err(Error::new_spanned(
+            &input,
+            "Deriving LightningDecode is not supported in unions",
+        )),
+    }
+}
+
+fn lightning_encode_inner_struct(
+    input: &DeriveInput,
+    data: &DataStruct,
+) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
+    let ident_name = &input.ident;
+
+    let import = get_lnpbp_crate(input)?;
+
+    let recurse = match data.fields {
+        Fields::Named(ref fields) => fields
+            .named
+            .iter()
+            .map(|f| {
+                let name = &f.ident;
+                quote_spanned! { f.span() =>
+                    len += self.#name.lightning_encode(&mut e)?;
+                }
+            })
+            .collect(),
+        Fields::Unnamed(ref fields) => fields
+            .unnamed
+            .iter()
+            .enumerate()
+            .map(|(i, f)| {
+                let index = Index::from(i);
+                quote_spanned! { f.span() =>
+                    len += self.#index.lightning_encode(&mut e)?;
+                }
+            })
+            .collect(),
+        Fields::Unit => {
+            // Nothing to do here
+            vec![]
+        }
+    };
+
+    let inner = match recurse.len() {
+        0 => quote! { Ok(0) },
+        _ => quote! {
+            let mut len = 0;
+            #( #recurse )*
+            Ok(len)
+        },
+    };
+
+    Ok(quote! {
+        #[allow(unused_qualifications)]
+        impl #impl_generics #import::lightning_encoding::LightningEncode for #ident_name #ty_generics #where_clause {
+            #[inline]
+            fn lightning_encode<E: ::std::io::Write>(&self, mut e: E) -> Result<usize, ::std::io::Error> {
+                use #import::lightning_encoding::LightningEncode;
+
+                #inner
+            }
+        }
+    })
+}
+
+fn lightning_decode_inner_struct(
+    input: &DeriveInput,
+    data: &DataStruct,
+) -> Result<TokenStream2> {
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
+    let ident_name = &input.ident;
+
+    let import = get_lnpbp_crate(input)?;
+
+    let inner = match data.fields {
+        Fields::Named(ref fields) => {
+            let recurse: Vec<TokenStream2> = fields
+                .named
+                .iter()
+                .map(|f| {
+                    let name = &f.ident;
+                    quote_spanned! { f.span() =>
+                        #name: #import::lightning_encoding::LightningDecode::lightning_decode(&mut d)?,
+                    }
+                })
+                .collect();
+            quote! {
+                Self {
+                    #( #recurse )*
+                }
+            }
+        }
+        Fields::Unnamed(ref fields) => {
+            let recurse: Vec<TokenStream2> = fields
+                .unnamed
+                .iter()
+                .map(|f| {
+                    quote_spanned! { f.span() =>
+                        #import::lightning_encoding::LightningDecode::lightning_decode(&mut d)?,
+                    }
+                })
+                .collect();
+            quote! {
+                Self (
+                    #( #recurse )*
+                )
+            }
+        }
+        Fields::Unit => {
+            // Nothing to do here
+            quote! { Self() }
+        }
+    };
+
+    Ok(quote! {
+        #[allow(unused_qualifications)]
+        impl #impl_generics #import::lightning_encoding::LightningDecode for #ident_name #ty_generics #where_clause {
+            #[inline]
+            fn lightning_decode<D: ::std::io::Read>(mut d: D) -> Result<Self, #import::lightning_encoding::Error> {
+                use #import::lightning_encoding::LightningDecode;
 
                 Ok(#inner)
             }

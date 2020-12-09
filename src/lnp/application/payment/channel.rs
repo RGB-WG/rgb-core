@@ -17,7 +17,6 @@ use amplify::ToYamlString;
 use std::fmt::Debug;
 
 use bitcoin::secp256k1::PublicKey;
-use bitcoin::Script;
 
 use crate::lnp::message::{AcceptChannel, OpenChannel};
 use crate::SECP256K1_PUBKEY_DUMB;
@@ -174,7 +173,8 @@ pub struct Keyset {
     pub delayed_payment_basepoint: PublicKey,
     pub htlc_basepoint: PublicKey,
     pub first_per_commitment_point: PublicKey,
-    pub shutdown_scriptpubkey: Option<Script>,
+    // TODO: Return shutdown scriptpubkey once TLV support will be added
+    // pub shutdown_scriptpubkey: Option<Script>,
 }
 
 #[cfg(feature = "serde")]
@@ -189,7 +189,7 @@ impl From<&OpenChannel> for Keyset {
             delayed_payment_basepoint: msg.delayed_payment_basepoint,
             htlc_basepoint: msg.htlc_basepoint,
             first_per_commitment_point: msg.first_per_commitment_point,
-            shutdown_scriptpubkey: msg.shutdown_scriptpubkey.clone(),
+            // shutdown_scriptpubkey: msg.shutdown_scriptpubkey.clone(),
         }
     }
 }
@@ -203,7 +203,7 @@ impl From<&AcceptChannel> for Keyset {
             delayed_payment_basepoint: msg.delayed_payment_basepoint,
             htlc_basepoint: msg.htlc_basepoint,
             first_per_commitment_point: msg.first_per_commitment_point,
-            shutdown_scriptpubkey: msg.shutdown_scriptpubkey.clone(),
+            // shutdown_scriptpubkey: msg.shutdown_scriptpubkey.clone(),
         }
     }
 }
@@ -217,7 +217,7 @@ impl DumbDefault for Keyset {
             delayed_payment_basepoint: *SECP256K1_PUBKEY_DUMB,
             htlc_basepoint: *SECP256K1_PUBKEY_DUMB,
             first_per_commitment_point: *SECP256K1_PUBKEY_DUMB,
-            shutdown_scriptpubkey: None,
+            // shutdown_scriptpubkey: None,
         }
     }
 }

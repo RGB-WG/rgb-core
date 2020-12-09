@@ -156,6 +156,8 @@ impl Default for Lifecycle {
     From,
     StrictEncode,
     StrictDecode,
+    LightningEncode,
+    LightningDecode,
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
@@ -204,6 +206,8 @@ impl ChannelId {
     From,
     StrictEncode,
     StrictDecode,
+    LightningEncode,
+    LightningDecode,
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]

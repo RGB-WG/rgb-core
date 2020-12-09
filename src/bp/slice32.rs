@@ -39,6 +39,8 @@ use bitcoin::hashes::hex::{Error, FromHex, ToHex};
     From,
     StrictEncode,
     StrictDecode,
+    LightningEncode,
+    LightningDecode,
 )]
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
