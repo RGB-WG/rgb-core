@@ -87,7 +87,9 @@ impl Container for TxoutContainer {
 }
 
 /// [bitcoin::TxOut] containing LNPBP-2 commitment
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Default, Debug, Display, From)]
+#[derive(
+    Wrapper, Clone, PartialEq, Eq, Hash, Default, Debug, Display, From,
+)]
 #[display(Debug)]
 pub struct TxoutCommitment(TxOut);
 
