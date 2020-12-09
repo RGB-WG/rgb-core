@@ -147,6 +147,16 @@ pub mod strategies {
         }
     }
 
+    impl<T> LightningDecode for amplify::Holder<T, StrictEncoding>
+    where
+        T: StrictDecode,
+    {
+        #[inline]
+        fn lightning_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+            Ok(Self::new(T::strict_decode(d)?))
+        }
+    }
+
     impl<T> LightningDecode for amplify::Holder<T, AsBigSize>
     where
         T: From<BigSize>,
@@ -168,16 +178,6 @@ pub mod strategies {
             e: E,
         ) -> Result<usize, io::Error> {
             (*self.as_inner()).into().lightning_encode(e)
-        }
-    }
-
-    impl<T> LightningDecode for amplify::Holder<T, StrictEncoding>
-    where
-        T: StrictDecode,
-    {
-        #[inline]
-        fn lightning_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-            Ok(Self::new(T::strict_decode(d)?))
         }
     }
 
@@ -212,5 +212,166 @@ pub mod strategies {
     impl Strategy for u64 {
         type Strategy = AsBigSize;
     }
+
+    impl Strategy for usize {
+        type Strategy = AsBigSize;
+    }
 }
 pub use strategies::Strategy;
+
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+impl<T> LightningEncode for Vec<T>
+where
+    T: LightningEncode,
+{
+    fn lightning_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, io::Error> {
+        let len = self.len().lightning_encode(&mut e)?;
+        self.iter()
+            .try_fold(len, |len, item| Ok(len + item.lightning_encode(&mut e)?))
+    }
+}
+
+impl<T> LightningDecode for Vec<T>
+where
+    T: LightningDecode,
+{
+    fn lightning_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let count = usize::lightning_decode(&mut d)?;
+        let mut vec = Vec::with_capacity(count);
+        for _ in 0..count {
+            vec.push(T::lightning_decode(&mut d)?)
+        }
+        Ok(vec)
+    }
+}
+
+impl<T> LightningEncode for HashSet<T>
+where
+    T: LightningEncode,
+{
+    fn lightning_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, io::Error> {
+        let len = self.len().lightning_encode(&mut e)?;
+        self.iter()
+            .try_fold(len, |len, item| Ok(len + item.lightning_encode(&mut e)?))
+    }
+}
+
+impl<T> LightningDecode for HashSet<T>
+where
+    T: LightningDecode + Eq + std::hash::Hash,
+{
+    fn lightning_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let count = usize::lightning_decode(&mut d)?;
+        let mut set = HashSet::with_capacity(count);
+        for _ in 0..count {
+            set.insert(T::lightning_decode(&mut d)?);
+        }
+        Ok(set)
+    }
+}
+
+impl<K, V> LightningEncode for HashMap<K, V>
+where
+    K: LightningEncode,
+    V: LightningEncode,
+{
+    fn lightning_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, io::Error> {
+        let len = self.len().lightning_encode(&mut e)?;
+        self.iter().try_fold(len, |len, (k, v)| {
+            Ok(len
+                + k.lightning_encode(&mut e)?
+                + v.lightning_encode(&mut e)?)
+        })
+    }
+}
+
+impl<K, V> LightningDecode for HashMap<K, V>
+where
+    K: LightningDecode + Eq + std::hash::Hash,
+    V: LightningDecode,
+{
+    fn lightning_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let count = usize::lightning_decode(&mut d)?;
+        let mut set = HashMap::with_capacity(count);
+        for _ in 0..count {
+            set.insert(
+                K::lightning_decode(&mut d)?,
+                V::lightning_decode(&mut d)?,
+            );
+        }
+        Ok(set)
+    }
+}
+
+impl<T> LightningEncode for BTreeSet<T>
+where
+    T: LightningEncode,
+{
+    fn lightning_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, io::Error> {
+        let len = self.len().lightning_encode(&mut e)?;
+        self.iter()
+            .try_fold(len, |len, item| Ok(len + item.lightning_encode(&mut e)?))
+    }
+}
+
+impl<T> LightningDecode for BTreeSet<T>
+where
+    T: LightningDecode + Ord,
+{
+    fn lightning_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let count = usize::lightning_decode(&mut d)?;
+        let mut set = BTreeSet::new();
+        for _ in 0..count {
+            set.insert(T::lightning_decode(&mut d)?);
+        }
+        Ok(set)
+    }
+}
+
+impl<K, V> LightningEncode for BTreeMap<K, V>
+where
+    K: LightningEncode,
+    V: LightningEncode,
+{
+    fn lightning_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, io::Error> {
+        let len = self.len().lightning_encode(&mut e)?;
+        self.iter().try_fold(len, |len, (k, v)| {
+            Ok(len
+                + k.lightning_encode(&mut e)?
+                + v.lightning_encode(&mut e)?)
+        })
+    }
+}
+
+impl<K, V> LightningDecode for BTreeMap<K, V>
+where
+    K: LightningDecode + Ord,
+    V: LightningDecode,
+{
+    fn lightning_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        let count = usize::lightning_decode(&mut d)?;
+        let mut set = BTreeMap::new();
+        for _ in 0..count {
+            set.insert(
+                K::lightning_decode(&mut d)?,
+                V::lightning_decode(&mut d)?,
+            );
+        }
+        Ok(set)
+    }
+}

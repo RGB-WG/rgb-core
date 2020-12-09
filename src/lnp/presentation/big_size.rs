@@ -67,6 +67,12 @@ use super::encoding::{Error, LightningDecode, LightningEncode};
 #[from(u64)]
 pub struct BigSize(u64);
 
+impl From<usize> for BigSize {
+    fn from(val: usize) -> Self {
+        (val as u64).into()
+    }
+}
+
 impl From<BigSize> for u8 {
     fn from(big_size: BigSize) -> Self {
         big_size.into_inner() as u8
@@ -82,6 +88,12 @@ impl From<BigSize> for u16 {
 impl From<BigSize> for u32 {
     fn from(big_size: BigSize) -> Self {
         big_size.into_inner() as u32
+    }
+}
+
+impl From<BigSize> for usize {
+    fn from(big_size: BigSize) -> Self {
+        big_size.into_inner() as usize
     }
 }
 
