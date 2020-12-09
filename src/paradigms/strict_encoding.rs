@@ -14,7 +14,7 @@
 use amplify::IoError;
 use core::ops::Range;
 use std::convert::TryFrom;
-use std::fmt::{self, Display, Formatter};
+use std::fmt;
 use std::io;
 
 /// Re-exporting extended read and write functions from bitcoin consensus
@@ -93,18 +93,20 @@ where
 }
 
 /// Possible errors during strict encoding and decoding process
-#[derive(Clone, PartialEq, Eq, Hash, Debug, From, Error)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, From, Error)]
+#[display(doc_comments)]
 pub enum Error {
-    /// I/O Error
+    /// I/O error during data strict encoding: {0}
     #[from(io::Error)]
+    #[from(io::ErrorKind)]
     Io(IoError),
 
-    /// UTF8 Conversion Error
+    /// String data are not in valid UTF-8 encoding
     #[from(std::str::Utf8Error)]
     #[from(std::string::FromUtf8Error)]
     Utf8Conversion,
 
-    /// A collection (slice, vector or other type) has more items than
+    /// A collection (slice, vector or other type) has more items ({0}) than
     /// 2^16 (i.e. maximum value which may be held by `u16` `size`
     /// representation according to the LNPBP-6 spec)
     ExceedMaxItems(usize),
@@ -114,32 +116,41 @@ pub enum Error {
     /// `Optional::Some`). For decoding an attempt to read `Option` from a
     /// encoded non-0 or non-1 length Vec will result in
     /// `Error::WrongOptionalEncoding`.
+    #[display(
+        "Invalid value {0} met as an optional type byte, which must be \
+               equal to either 0 (no value) or 1"
+    )]
     WrongOptionalEncoding(u8),
 
-    /// Enums are encoded as a `u8`-based values; the provided enum has
+    /// Enums are encoded as a `u8`-based values; the provided enum `{0}` has
     /// underlying primitive type that does not fit into `u8` value
     EnumValueOverflow(String),
 
-    /// An unsupported value for enum encountered during decode operation
+    /// An unsupported value `{0}` for enum `{0}` encountered during decode
+    /// operation
     EnumValueNotKnown(String, u8),
 
     /// The data are correct, however their structure indicate that they were
     /// created with the future software version which has functional absent in
-    /// the current implementation
+    /// the current implementation.
+    /// More details from error source: {0}
     UnsupportedDataStructure(&'static str),
 
-    /// Found a value during decoding operation that does not fits into
-    /// the supported range
+    /// Decoding resulted in value `{2}` for type `{0}` that exceeds the
+    /// supported range {1:#?}
     ValueOutOfRange(&'static str, Range<u128>, u128),
 
-    /// A repeated value found during set collection deserialization
+    /// A repeated value for `{0}` found during set collection deserialization
     RepeatedValue(String),
 
-    /// Returned by the convenience method [strict_decode] if not all
+    /// Returned by the convenience method [`strict_decode()`] if not all
     /// provided data were consumed during decoding process
+    #[display(
+        "Data were not consumed entirely during strict decoding procedure"
+    )]
     DataNotEntirelyConsumed,
 
-    /// Convenience type never for data structures using StrictDecode
+    /// Data integrity problem during strict decoding operation: {0}
     DataIntegrityError(String),
 }
 
@@ -159,65 +170,6 @@ impl From<Error> for fmt::Error {
     #[inline]
     fn from(_: Error) -> Self {
         fmt::Error
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        use Error::*;
-        match self {
-            Io(kind) => write!(f, "I/O error: {:?}", kind),
-            Utf8Conversion => write!(f, "String data are not in valid UTF-8 encoding"),
-            ExceedMaxItems(size) => write!(
-                f,
-                "A collection (slice, vector or other type) has {} items, which \
-                exceeds maximum allowed value for `u16` type representing \
-                collection size according to LNPBP-6 spec)",
-                size
-            ),
-            WrongOptionalEncoding(significator) => write!(
-                f,
-                "Invalid value {} met as a significator byte, which must be \
-                equal to either 0 (no value) or 1",
-                significator
-            ),
-            EnumValueOverflow(enum_name) => write!(
-                f,
-                "Enums are encoded as a `u8`-based values; the provided enum {} \
-                has underlying primitive type that does not fit into `u8` value",
-                enum_name
-            ),
-            EnumValueNotKnown(enum_name, value) => write!(
-                f,
-                "An unsupported value {} for enum {} encountered during decode \
-                operation",
-                value, enum_name
-            ),
-            UnsupportedDataStructure(details) => write!(
-                f,
-                "The data are correct, however their structure indicate that \
-                 they were created with the future software version which has  \
-                 functional absent in the current implementation. Here is more \
-                 details: {}",
-                details
-            ),
-            ValueOutOfRange(data_type, range, value) => write!(
-                f,
-                "Decoding resulted in value {} for type {} that exceeds the \
-                supported range {:#?}",
-                value, data_type, range
-            ),
-            RepeatedValue(value) => write!(
-                f,
-                "A repeated value {} found during set collection deserialization",
-                value
-            ),
-            DataNotEntirelyConsumed => write!(
-                f,
-                "Data were not consumed entirely during strict decoding procedure"
-            ),
-            DataIntegrityError(str) => write!(f, "Data integrity error: {}", str),
-        }
     }
 }
 
