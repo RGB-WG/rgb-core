@@ -20,7 +20,9 @@ pub use bitcoin::util::psbt::{raw, Error, Global, Input, Map, Output};
 use bitcoin::TxOut;
 
 use super::resolvers::{Fee, FeeError, InputPreviousTxo, MatchError};
-use crate::strict_encoding::{self, strict_encode, StrictDecode, StrictEncode};
+use crate::strict_encoding::{
+    self, strict_serialize, StrictDecode, StrictEncode,
+};
 
 fn proprietary_key(
     vendor: Vec<u8>,
@@ -88,7 +90,7 @@ where
     ) -> bool {
         let key = proprietary_key(vendor, subtype, key);
         let value =
-            strict_encode(value).expect("Memory encoders does not fail");
+            strict_serialize(value).expect("Memory encoders does not fail");
         self.insert_pair(raw::Pair { key, value })
             .map(|_| true)
             .unwrap_or(false)

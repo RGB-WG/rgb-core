@@ -69,7 +69,7 @@ pub mod commit_strategy {
         fn commit_encode<E: io::Write>(self, e: E) -> usize {
             let mut engine = H::engine();
             engine
-                .input(&strict_encoding::strict_encode(&self.into_inner()).expect(
+                .input(&strict_encoding::strict_serialize(&self.into_inner()).expect(
                     "Strict encoding of hash strategy-based commitment data must not fail",
                 ));
             let hash = H::from_engine(engine);

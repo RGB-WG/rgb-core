@@ -19,7 +19,7 @@ use bitcoin::hashes::{sha256d, Hash};
 use bitcoin::BlockHash;
 
 use crate::paradigms::strict_encoding::{
-    self, strict_decode, strict_encode, StrictDecode, StrictEncode,
+    self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
 };
 use bitcoin_hashes::core::cmp::Ordering;
 
@@ -854,7 +854,7 @@ impl Display for Chain {
                 write!(f, "liquidv1")
             }
             Chain::Other(params) => {
-                write!(f, "other:{}", strict_encode(params)?.to_hex())
+                write!(f, "other:{}", strict_serialize(params)?.to_hex())
             }
         }
     }
@@ -925,7 +925,7 @@ impl FromStr for Chain {
                     "signet" => {
                         Ok(Chain::SignetCustom(BlockHash::from_hex(data)?))
                     }
-                    "other" => Ok(Chain::Other(strict_decode(
+                    "other" => Ok(Chain::Other(strict_deserialize(
                         &Vec::from_hex(data)
                             .map_err(|_| ParseError::ChainParamsEncoding)?,
                     )?)),

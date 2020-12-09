@@ -24,7 +24,7 @@ use super::{ConfidentialState, RevealedState};
 use crate::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
-use crate::strict_encoding::strict_encode;
+use crate::strict_encoding::strict_serialize;
 use bitcoin::util::psbt::PartiallySignedTransaction;
 
 /// Struct using for storing Void (i.e. absent) state
@@ -119,7 +119,7 @@ impl Conceal for Revealed {
 
     fn conceal(&self) -> Self::Confidential {
         Confidential::hash(
-            &strict_encode(self)
+            &strict_serialize(self)
                 .expect("Encoding of predefined data types must not fail"),
         )
     }
@@ -130,9 +130,9 @@ impl CommitEncodeWithStrategy for Revealed {
 
 impl PartialEq for Revealed {
     fn eq(&self, other: &Self) -> bool {
-        let some = strict_encode(self)
+        let some = strict_serialize(self)
             .expect("Encoding of predefined data types must not fail");
-        let other = strict_encode(other)
+        let other = strict_serialize(other)
             .expect("Encoding of predefined data types must not fail");
         some.eq(&other)
     }
@@ -142,9 +142,9 @@ impl Eq for Revealed {}
 
 impl PartialOrd for Revealed {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let some = strict_encode(self)
+        let some = strict_serialize(self)
             .expect("Encoding of predefined data types must not fail");
-        let other = strict_encode(other)
+        let other = strict_serialize(other)
             .expect("Encoding of predefined data types must not fail");
         some.partial_cmp(&other)
     }
@@ -153,9 +153,9 @@ impl PartialOrd for Revealed {
 impl Ord for Revealed {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or_else(|| {
-            let some = strict_encode(self)
+            let some = strict_serialize(self)
                 .expect("Encoding of predefined data types must not fail");
-            let other = strict_encode(other)
+            let other = strict_serialize(other)
                 .expect("Encoding of predefined data types must not fail");
             some.cmp(&other)
         })

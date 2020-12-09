@@ -60,7 +60,7 @@ where
     Self: Sized,
 {
     fn lightning_decode<D: io::Read>(d: D) -> Result<Self, Error>;
-    fn lightning_deserialize(data: &dyn AsRef<[u8]>) -> Result<Self, Error> {
+    fn lightning_deserialize(data: &impl AsRef<[u8]>) -> Result<Self, Error> {
         let mut decoder = io::Cursor::new(data);
         let rv = Self::lightning_decode(&mut decoder)?;
         let consumed = decoder.position() as usize;
@@ -72,6 +72,20 @@ where
             Err(Error::DataNotEntirelyConsumed)?
         }
     }
+}
+
+pub fn lightning_serialize<T>(data: &T) -> Vec<u8>
+where
+    T: LightningEncode,
+{
+    data.lightning_serialize()
+}
+
+pub fn lightning_deserialize<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
+where
+    T: LightningDecode,
+{
+    T::lightning_deserialize(data)
 }
 
 pub trait Unmarshall {

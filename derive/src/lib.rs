@@ -201,15 +201,35 @@ enum EncodingSrategy {
 }
 
 impl EncodingSrategy {
-    pub fn encode_fn(&self, span: Span, import: &TokenStream2) -> TokenStream2 {
+    pub fn serialize_fn(
+        &self,
+        span: Span,
+        import: &TokenStream2,
+    ) -> TokenStream2 {
         match self {
             Self::Strict => {
-                quote_spanned!(span => #import::strict_encoding::strict_encode)
+                quote_spanned!(span => #import::strict_encoding::strict_serialize(obj).expect(ERR))
             }
             Self::Bitcoin => {
-                quote_spanned!(span => #import::bitcoin::consensus::encode::consensus_encode)
+                quote_spanned!(span => #import::bitcoin::consensus::encode::consensus_encode(obj))
             }
-            Self::Lightning => unimplemented!(),
+            Self::Lightning => {
+                quote_spanned!(span => #import::lnp::encoding::lightning_serialize(obj))
+            }
+        }
+    }
+
+    pub fn encode_fn(&self) -> TokenStream2 {
+        match self {
+            Self::Strict => {
+                quote!(strict_encode)
+            }
+            Self::Bitcoin => {
+                quote!(consensus_encode)
+            }
+            Self::Lightning => {
+                quote!(lightning_encode)
+            }
         }
     }
 
@@ -217,21 +237,21 @@ impl EncodingSrategy {
         match self {
             Self::Strict => quote_spanned!(span => strict_decode),
             Self::Bitcoin => quote_spanned!(span => consensus_decode),
-            Self::Lightning => unimplemented!(),
+            Self::Lightning => quote_spanned!(span => lightning_decode),
         }
     }
 
     pub fn encode_use(&self, import: &TokenStream2) -> TokenStream2 {
         match self {
             Self::Strict => quote!(
-                use #import::strict_encoding::strict_encode;
+                use #import::strict_encoding::StrictEncode;
             ),
             Self::Bitcoin => quote!(
-                use #import::bitcoin::consensus::encode::{
-                    consensus_encode, Encode,
-                };
+                use #import::bitcoin::consensus::encode::Encode;
             ),
-            Self::Lightning => unimplemented!(),
+            Self::Lightning => quote!(
+                use #import::lnp::encoding::LightningEncode;
+            ),
         }
     }
 
@@ -243,7 +263,9 @@ impl EncodingSrategy {
             Self::Bitcoin => quote!(
                 use #import::bitcoin::consensus::encode::Decode;
             ),
-            Self::Lightning => unimplemented!(),
+            Self::Lightning => quote!(
+                use #import::lnp::encoding::LightningDecode;
+            ),
         }
     }
 }
@@ -306,6 +328,9 @@ fn lnp_api_inner_enum(
         )?
         .lit,
     )?;
+    let encode_use = global_encoding.encode_use(&import);
+    let decode_use = global_encoding.decode_use(&import);
+    let encode_fn = global_encoding.encode_fn();
 
     let example = "#[lnp_api(type=1000)]";
     let mut msg_const = vec![];
@@ -383,14 +408,14 @@ fn lnp_api_inner_enum(
                         &quote!(#payload).to_string().replacen("<", "::<", 1),
                     )
                     .expect("Internal error");
-                    let encode_fn =
-                        global_encoding.encode_fn(f.span(), &import);
+                    let serialize_fn =
+                        global_encoding.serialize_fn(f.span(), &import);
                     let decode_fn =
                         global_encoding.decode_fn(f.span(), &import);
 
                     unmarshall_fn.push(quote_spanned! { v.span() =>
                         fn #type_snake(mut reader: &mut dyn ::std::io::Read) -> Result<::std::sync::Arc<dyn ::core::any::Any>, #import::lnp::presentation::Error> {
-                            use #import::strict_encoding::StrictDecode;
+                            #decode_use
                             Ok(::std::sync::Arc::new(#payload_fisheye::#decode_fn(&mut reader)?))
                         }
                     });
@@ -402,7 +427,7 @@ fn lnp_api_inner_enum(
                     });
 
                     get_payload.push(quote_spanned! { v.span() =>
-                        Self::#type_name(a) => #encode_fn(a).expect(ERR),
+                        Self::#type_name(obj) => #serialize_fn,
                     });
 
                     get_type.push(quote_spanned! { v.span() =>
@@ -451,8 +476,6 @@ fn lnp_api_inner_enum(
     let from_type = quote! { #( #from_type )* };
     let get_type = quote! { #( #get_type )* };
     let get_payload = quote! { #( #get_payload )* };
-    let encode_use = global_encoding.encode_use(&import);
-    let decode_use = global_encoding.decode_use(&import);
 
     Ok(quote! {
         impl #import::lnp::CreateUnmarshaller for #ident_name {
@@ -498,10 +521,10 @@ fn lnp_api_inner_enum(
             }
 
             fn serialize(&self) -> Vec<u8> {
-                use #import::strict_encoding::StrictEncode;
+                #encode_use
                 let mut e = vec![];
-                let _ = self.get_type().strict_encode(&mut e);
-                let _ = self.get_payload().strict_encode(&mut e);
+                let _ = self.get_type().#encode_fn(&mut e);
+                let _ = self.get_payload().#encode_fn(&mut e);
                 e
             }
         }

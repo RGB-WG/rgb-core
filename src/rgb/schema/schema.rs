@@ -988,7 +988,7 @@ pub(crate) mod test {
     #[test]
     fn test_schema_encoding_decoding() {
         let schema = schema();
-        let encoded = strict_encode(&schema).unwrap();
+        let encoded = strict_serialize(&schema).unwrap();
         let encoded_standard: Vec<u8> = vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 4, 16, 0, 1, 0, 4,

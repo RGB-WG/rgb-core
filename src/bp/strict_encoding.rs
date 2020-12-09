@@ -703,15 +703,15 @@ pub(crate) mod test {
             consensus::deserialize(&tx_legacy2_bytes).unwrap();
 
         assert_eq!(
-            strict_encoding::strict_encode(&tx_segwit).unwrap(),
+            strict_encoding::strict_serialize(&tx_segwit).unwrap(),
             tx_segwit_bytes
         );
         assert_eq!(
-            strict_encoding::strict_encode(&tx_legacy1).unwrap(),
+            strict_encoding::strict_serialize(&tx_legacy1).unwrap(),
             tx_legacy1_bytes
         );
         assert_eq!(
-            strict_encoding::strict_encode(&tx_legacy2).unwrap(),
+            strict_encoding::strict_serialize(&tx_legacy2).unwrap(),
             tx_legacy2_bytes
         );
         test_suite(&tx_segwit, &tx_segwit_bytes, tx_segwit_bytes.len());
@@ -729,7 +729,10 @@ pub(crate) mod test {
             0711c06c7f3e097c9447c52ffffffff"
         ).unwrap();
         let txin: TxIn = consensus::deserialize(&txin_bytes).unwrap();
-        assert_eq!(strict_encoding::strict_encode(&txin).unwrap(), txin_bytes);
+        assert_eq!(
+            strict_encoding::strict_serialize(&txin).unwrap(),
+            txin_bytes
+        );
         test_suite(&txin, &txin_bytes, txin_bytes.len());
     }
 
@@ -750,11 +753,11 @@ pub(crate) mod test {
             consensus::deserialize(&txout_legacy_bytes).unwrap();
 
         assert_eq!(
-            strict_encoding::strict_encode(&txout_segwit).unwrap(),
+            strict_encoding::strict_serialize(&txout_segwit).unwrap(),
             txout_segwit_bytes
         );
         assert_eq!(
-            strict_encoding::strict_encode(&txout_legacy).unwrap(),
+            strict_encoding::strict_serialize(&txout_legacy).unwrap(),
             txout_legacy_bytes
         );
         test_suite(
@@ -794,7 +797,10 @@ pub(crate) mod test {
         let psbt: PartiallySignedTransaction =
             consensus::deserialize(&psbt_bytes).unwrap();
 
-        assert_eq!(strict_encoding::strict_encode(&psbt).unwrap(), psbt_bytes);
+        assert_eq!(
+            strict_encoding::strict_serialize(&psbt).unwrap(),
+            psbt_bytes
+        );
         test_suite(&psbt, &psbt_bytes, psbt_bytes.len());
     }
 

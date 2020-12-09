@@ -64,10 +64,8 @@ pub trait StrictDecode: Sized {
 }
 
 /// Convenience method for strict encoding of data structures implementing
-/// [StrictEncode] into a byte vector. To support this method a
-/// type must implement `From<strict_encode::Error>` for an error type
-/// provided as the associated type [StrictDecode::Error].
-pub fn strict_encode<T>(data: &T) -> Result<Vec<u8>, Error>
+/// [StrictEncode] into a byte vector.
+pub fn strict_serialize<T>(data: &T) -> Result<Vec<u8>, Error>
 where
     T: StrictEncode,
 {
@@ -77,10 +75,8 @@ where
 }
 
 /// Convenience method for strict decoding of data structures implementing
-/// [StrictDecode] from any byt data source. To support this method a
-/// type must implement `From<strict_encode::Error>` for an error type
-/// provided as the associated type [StrictDecode::Error].
-pub fn strict_decode<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
+/// [StrictDecode] from any byt data source.
+pub fn strict_deserialize<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
 where
     T: StrictDecode,
 {
@@ -1208,8 +1204,8 @@ pub mod test {
     #[test]
     fn test_encode_decode() {
         gen_strings().into_iter().for_each(|s| {
-            let r = strict_encode(&s).unwrap();
-            let p: String = strict_decode(&r).unwrap();
+            let r = strict_serialize(&s).unwrap();
+            let p: String = strict_deserialize(&r).unwrap();
             assert_eq!(s, p);
         })
     }
@@ -1218,17 +1214,17 @@ pub mod test {
     #[should_panic(expected = "DataNotEntirelyConsumed")]
     fn test_consumation() {
         gen_strings().into_iter().for_each(|s| {
-            let mut r = strict_encode(&s).unwrap();
+            let mut r = strict_serialize(&s).unwrap();
             r.extend_from_slice("data".as_ref());
-            let _: String = strict_decode(&r).unwrap();
+            let _: String = strict_deserialize(&r).unwrap();
         })
     }
 
     #[test]
     fn test_error_propagation() {
         gen_strings().into_iter().for_each(|s| {
-            let r = strict_encode(&s).unwrap();
-            let p: Result<String, _> = strict_decode(&r[..1].to_vec());
+            let r = strict_serialize(&s).unwrap();
+            let p: Result<String, _> = strict_deserialize(&r[..1].to_vec());
             assert!(p.is_err());
         })
     }
@@ -1251,12 +1247,12 @@ pub mod test {
         let byte_fe = &[0xFEu8][..];
         let byte_ff = &[0xFFu8][..];
 
-        assert_eq!(strict_encode(&zero).unwrap(), byte_0);
-        assert_eq!(strict_encode(&one).unwrap(), byte_1);
-        assert_eq!(strict_encode(&thirteen).unwrap(), byte_13);
-        assert_eq!(strict_encode(&confusing).unwrap(), byte_ef);
-        assert_eq!(strict_encode(&nearly_full).unwrap(), byte_fe);
-        assert_eq!(strict_encode(&full).unwrap(), byte_ff);
+        assert_eq!(strict_serialize(&zero).unwrap(), byte_0);
+        assert_eq!(strict_serialize(&one).unwrap(), byte_1);
+        assert_eq!(strict_serialize(&thirteen).unwrap(), byte_13);
+        assert_eq!(strict_serialize(&confusing).unwrap(), byte_ef);
+        assert_eq!(strict_serialize(&nearly_full).unwrap(), byte_fe);
+        assert_eq!(strict_serialize(&full).unwrap(), byte_ff);
 
         assert_eq!(u8::strict_decode(byte_0).unwrap(), zero);
         assert_eq!(u8::strict_decode(byte_1).unwrap(), one);
@@ -1279,8 +1275,8 @@ pub mod test {
 
         let two_zero_bytes = &vec![0u8][..];
 
-        assert_eq!(strict_encode(&o1).unwrap(), two_zero_bytes);
-        assert_eq!(strict_encode(&o2).unwrap(), two_zero_bytes);
+        assert_eq!(strict_serialize(&o1).unwrap(), two_zero_bytes);
+        assert_eq!(strict_serialize(&o2).unwrap(), two_zero_bytes);
 
         assert_eq!(Option::<u8>::strict_decode(two_zero_bytes).unwrap(), None);
         assert_eq!(Option::<u64>::strict_decode(two_zero_bytes).unwrap(), None);
@@ -1313,14 +1309,14 @@ pub mod test {
             1u8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8,
         ][..];
 
-        assert_eq!(strict_encode(&o1).unwrap(), byte_0);
-        assert_eq!(strict_encode(&o2).unwrap(), byte_13);
-        assert_eq!(strict_encode(&o3).unwrap(), byte_255);
-        assert_eq!(strict_encode(&o4).unwrap(), qword_13);
-        assert_eq!(strict_encode(&o5).unwrap(), qword_256);
-        assert_eq!(strict_encode(&o6).unwrap(), qword_max);
-        assert_eq!(strict_encode(&o7).unwrap(), word_13);
-        assert!(strict_encode(&o8).err().is_some());
+        assert_eq!(strict_serialize(&o1).unwrap(), byte_0);
+        assert_eq!(strict_serialize(&o2).unwrap(), byte_13);
+        assert_eq!(strict_serialize(&o3).unwrap(), byte_255);
+        assert_eq!(strict_serialize(&o4).unwrap(), qword_13);
+        assert_eq!(strict_serialize(&o5).unwrap(), qword_256);
+        assert_eq!(strict_serialize(&o6).unwrap(), qword_max);
+        assert_eq!(strict_serialize(&o7).unwrap(), word_13);
+        assert!(strict_serialize(&o8).err().is_some());
 
         assert_eq!(Option::<u8>::strict_decode(byte_0).unwrap(), Some(0));
         assert_eq!(Option::<u8>::strict_decode(byte_13).unwrap(), Some(13));
@@ -1378,10 +1374,10 @@ pub mod test {
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ][..];
 
-        assert_eq!(strict_encode(&v1).unwrap(), s1);
-        assert_eq!(strict_encode(&v2).unwrap(), s2);
-        assert_eq!(strict_encode(&v3).unwrap(), s3);
-        assert!(strict_encode(&v4).err().is_some());
+        assert_eq!(strict_serialize(&v1).unwrap(), s1);
+        assert_eq!(strict_serialize(&v2).unwrap(), s2);
+        assert_eq!(strict_serialize(&v3).unwrap(), s3);
+        assert!(strict_serialize(&v4).err().is_some());
 
         assert_eq!(Vec::<u8>::strict_decode(s1).unwrap(), v1);
         assert_eq!(Vec::<u8>::strict_decode(s2).unwrap(), v2);

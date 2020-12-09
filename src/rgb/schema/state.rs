@@ -1080,7 +1080,7 @@ mod test {
     use crate::rgb::{
         DeclarativeStrategy, HashStrategy, OwnedState, PedersenStrategy,
     };
-    use crate::strict_encoding::{strict_encode, test::*, StrictDecode};
+    use crate::strict_encoding::{strict_serialize, test::*, StrictDecode};
 
     // Txids to generate seals
     static TXID_VEC: [&str; 4] = [
@@ -1141,7 +1141,7 @@ mod test {
     #[should_panic(expected = "ValueOutOfRange")]
     fn test_garbage_data_format2() {
         let format = DataFormat::Float(Bits::Bit16, 0.0, core::f32::MAX as f64);
-        strict_encode(&format).unwrap();
+        strict_serialize(&format).unwrap();
     }
 
     #[test]
