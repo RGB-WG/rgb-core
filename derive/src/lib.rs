@@ -496,6 +496,14 @@ fn lnp_api_inner_enum(
                     #get_payload
                 }
             }
+
+            fn serialize(&self) -> Vec<u8> {
+                use #import::strict_encoding::StrictEncode;
+                let mut e = vec![];
+                let _ = self.get_type().strict_encode(&mut e);
+                let _ = self.get_payload().strict_encode(&mut e);
+                e
+            }
         }
     })
 }

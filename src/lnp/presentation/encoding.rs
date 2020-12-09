@@ -18,6 +18,7 @@ use std::io;
 use std::sync::Arc;
 
 use super::payload;
+use crate::strict_encoding;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -37,6 +38,10 @@ pub enum Error {
     /// Returned by the convenience method [`Decode::deserialize()`] if not all
     /// provided data were consumed during decoding process
     DataNotEntirelyConsumed,
+
+    /// Errors from underlying strict encoding
+    #[display(inner)]
+    StrictEncoding(strict_encoding::Error),
 }
 
 /// Lightning-network specific encoding as defined in BOLT-1, 2, 3...
@@ -84,3 +89,111 @@ pub type UnmarshallFn<E> =
 pub trait CreateUnmarshaller: Sized + payload::TypedEnum {
     fn create_unmarshaller() -> payload::Unmarshaller<Self>;
 }
+
+/// Implemented after concept by Martin Habovštiak <martin.habovstiak@gmail.com>
+pub mod strategies {
+    use std::io;
+
+    use super::{Decode, Encode, Error};
+    use crate::lnp::presentation::BigSize;
+    use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+
+    // Defining strategies:
+    pub struct StrictEncoding;
+    pub struct AsBigSize;
+
+    pub trait Strategy {
+        type Strategy;
+    }
+
+    impl<T> Encode for T
+    where
+        T: Strategy + Clone,
+        amplify::Holder<T, <T as Strategy>::Strategy>: Encode,
+    {
+        #[inline]
+        fn encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+            amplify::Holder::new(self.clone()).encode(e)
+        }
+    }
+
+    impl<T> Decode for T
+    where
+        T: Strategy,
+        amplify::Holder<T, <T as Strategy>::Strategy>: Decode,
+    {
+        #[inline]
+        fn decode<D: io::Read>(d: D) -> Result<Self, Error> {
+            Ok(amplify::Holder::decode(d)?.into_inner())
+        }
+    }
+
+    impl<T> Encode for amplify::Holder<T, StrictEncoding>
+    where
+        T: StrictEncode<Error = strict_encoding::Error>,
+    {
+        #[inline]
+        fn encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+            self.as_inner().strict_encode(e).map_err(Error::from)
+        }
+    }
+
+    impl<T> Decode for amplify::Holder<T, AsBigSize>
+    where
+        T: From<BigSize>,
+    {
+        #[inline]
+        fn decode<D: io::Read>(d: D) -> Result<Self, Error> {
+            Ok(Self::new(T::from(BigSize::decode(d)?)))
+        }
+    }
+
+    impl<T> Encode for amplify::Holder<T, AsBigSize>
+    where
+        T: Into<BigSize>,
+        T: Copy,
+    {
+        #[inline]
+        fn encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+            (*self.as_inner()).into().encode(e)
+        }
+    }
+
+    impl<T> Decode for amplify::Holder<T, StrictEncoding>
+    where
+        T: StrictDecode<Error = strict_encoding::Error>,
+    {
+        #[inline]
+        fn decode<D: io::Read>(d: D) -> Result<Self, Error> {
+            Ok(Self::new(T::strict_decode(d)?))
+        }
+    }
+
+    impl From<strict_encoding::Error> for Error {
+        #[inline]
+        fn from(e: strict_encoding::Error) -> Self {
+            if let strict_encoding::Error::Io(err) = e {
+                Error::Io(err)
+            } else {
+                Error::StrictEncoding(e)
+            }
+        }
+    }
+
+    impl Strategy for u8 {
+        type Strategy = AsBigSize;
+    }
+
+    impl Strategy for u16 {
+        type Strategy = AsBigSize;
+    }
+
+    impl Strategy for u32 {
+        type Strategy = AsBigSize;
+    }
+
+    impl Strategy for u64 {
+        type Strategy = AsBigSize;
+    }
+}
+pub use strategies::Strategy;

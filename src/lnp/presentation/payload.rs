@@ -25,7 +25,7 @@ use super::{
     encoding, Encode, Error, EvenOdd, UnknownTypeError, Unmarshall,
     UnmarshallFn,
 };
-use crate::strict_encoding::{StrictDecode, StrictEncode};
+use crate::strict_encoding::StrictDecode;
 
 /// Message type field value
 #[derive(
@@ -99,29 +99,7 @@ impl Extract for Payload {
 
 impl Encode for Payload {
     fn encode<E: io::Write>(&self, mut e: E) -> Result<usize, encoding::Error> {
-        Ok(self
-            .type_id
-            .to_inner()
-            .strict_encode(&mut e)
-            .map_err(|_| encoding::Error::DataNotEntirelyConsumed)?
-            + e.write(&self.payload)?)
-    }
-}
-
-pub trait EncodeRaw
-where
-    Payload: From<Self>,
-    Self: Sized + Clone,
-{
-}
-
-impl<T> Encode for T
-where
-    T: EncodeRaw,
-    Payload: From<T>,
-{
-    fn encode<E: io::Write>(&self, e: E) -> Result<usize, encoding::Error> {
-        Payload::from(self.clone()).encode(e)
+        Ok(self.type_id.to_inner().encode(&mut e)? + e.write(&self.payload)?)
     }
 }
 
@@ -135,9 +113,8 @@ where
     ) -> Result<Self, UnknownTypeError>;
     fn get_type(&self) -> TypeId;
     fn get_payload(&self) -> Vec<u8>;
+    fn serialize(&self) -> Vec<u8>;
 }
-
-impl<T> EncodeRaw for T where T: TypedEnum {}
 
 impl<T> From<T> for Payload
 where

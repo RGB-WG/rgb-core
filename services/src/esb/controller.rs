@@ -13,7 +13,6 @@
 
 use std::collections::HashMap;
 
-use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Request;
 use lnpbp::lnp::transport::zmqsocket;
 use lnpbp::lnp::{session, PlainTranscoder, Session, Unmarshall, Unmarshaller};
@@ -76,7 +75,7 @@ where
     where
         R: Request,
     {
-        let data = request.serialize()?;
+        let data = request.serialize();
         let router = match self.router {
             None => {
                 trace!(

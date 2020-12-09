@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::IoError;
 use core::ops::Range;
 use std::fmt::{self, Display, Formatter};
 use std::io;
@@ -437,7 +438,6 @@ pub mod strategies {
         }
     }
 }
-use amplify::IoError;
 pub use strategies::Strategy;
 
 /// Taking implementation of little-endian integer encoding

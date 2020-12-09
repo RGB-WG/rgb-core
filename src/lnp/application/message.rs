@@ -25,7 +25,7 @@ use super::Features;
 use crate::bp::chain::AssetId;
 use crate::bp::{HashLock, HashPreimage};
 use crate::lnp::presentation::{
-    CreateUnmarshaller, Encode, Unmarshall, Unmarshaller,
+    encoding, CreateUnmarshaller, Encode, Payload, Unmarshall, Unmarshaller,
 };
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 use crate::SECP256K1_PUBKEY_DUMB;
@@ -582,6 +582,12 @@ pub struct AssignFunds {
 
 // TODO: Remove strict encoding implementation for Messages and replace it with
 //       lightning-specific one
+
+impl Encode for Messages {
+    fn encode<E: io::Write>(&self, e: E) -> Result<usize, encoding::Error> {
+        Payload::from(self.clone()).encode(e)
+    }
+}
 
 impl StrictEncode for Messages {
     type Error = strict_encoding::Error;

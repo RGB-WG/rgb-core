@@ -13,6 +13,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Wrapper;
 use bitcoin::consensus::ReadExt;
 use std::io;
 
@@ -30,8 +31,59 @@ use super::encoding::{Decode, Encode, Error};
 /// for at deserialization-time. Thus, if you're looking for an example of a
 /// variable-length integer to use for your own project, move along, this is a
 /// rather poor design.
-#[derive(Debug, PartialEq)]
-pub struct BigSize(pub u64);
+#[derive(Wrapper, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, From)]
+#[wrapper(
+    FromStr,
+    Display,
+    Debug,
+    Octal,
+    LowerHex,
+    UpperHex,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    Shl,
+    Shr,
+    Not,
+    BitAnd,
+    BitOr,
+    BitXor,
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
+    RemAssign,
+    ShlAssign,
+    ShrAssign,
+    BitAndAssign,
+    BitOrAssign,
+    BitXorAssign
+)]
+#[from(u8)]
+#[from(u16)]
+#[from(u32)]
+#[from(u64)]
+pub struct BigSize(u64);
+
+impl From<BigSize> for u8 {
+    fn from(big_size: BigSize) -> Self {
+        big_size.into_inner() as u8
+    }
+}
+
+impl From<BigSize> for u16 {
+    fn from(big_size: BigSize) -> Self {
+        big_size.into_inner() as u16
+    }
+}
+
+impl From<BigSize> for u32 {
+    fn from(big_size: BigSize) -> Self {
+        big_size.into_inner() as u32
+    }
+}
 
 impl Encode for BigSize {
     fn encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {

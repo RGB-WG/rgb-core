@@ -13,12 +13,11 @@
 
 use std::collections::HashMap;
 
-use lnpbp::lnp::presentation::Encode;
 use lnpbp::lnp::rpc_connection::Api;
 use lnpbp::lnp::transport::zmqsocket;
 use lnpbp::lnp::{
     session, transport, CreateUnmarshaller, PlainTranscoder, Session,
-    Unmarshall, Unmarshaller,
+    TypedEnum, Unmarshall, Unmarshaller,
 };
 
 use super::{EndpointId, Error, Failure};
@@ -188,7 +187,7 @@ where
                 .handle(endpoint, request.clone())
                 .unwrap_or_else(|err| A::Reply::from(err.into()));
             debug!("RPC: replying with {:?}", reply);
-            let data = reply.serialize()?;
+            let data = reply.serialize();
             session.send_raw_message(&data)?;
         }
 
