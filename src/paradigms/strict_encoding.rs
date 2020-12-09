@@ -1092,7 +1092,7 @@ pub mod test {
             for x in 0..=core::u8::MAX {
                 if !set.contains(&x) {
                     assert_eq!($enum::from_u8(x), None);
-                    let decoded: Result<$enum, _> = $crate::strict_encoding::strict_decode(&[x]);
+                    let decoded: Result<$enum, _> = $crate::strict_encoding::strict_deserialize(&[x]);
                     assert_eq!(decoded.unwrap_err(), $crate::strict_encoding::Error::EnumValueNotKnown(stringify!($enum).to_string(), x));
                 }
             }
@@ -1105,8 +1105,8 @@ pub mod test {
                     assert!(a < b);
                 }
             }
-            $( assert_eq!($crate::strict_encoding::strict_encode(&$item).unwrap(), &[$val]); )+
-            $( assert_eq!($item, $crate::strict_encoding::strict_decode(&[$val]).unwrap()); )+
+            $( assert_eq!($crate::strict_encoding::strict_serialize(&$item).unwrap(), &[$val]); )+
+            $( assert_eq!($item, $crate::strict_encoding::strict_deserialize(&[$val]).unwrap()); )+
         } };
     }
 

@@ -174,7 +174,7 @@ mod test {
     fn test_runner(value: u64, bytes: &[u8]) {
         let bigsize = BigSize(value);
 
-        let encoded_bigsize = bigsize.lightning_serialize().unwrap();
+        let encoded_bigsize = bigsize.lightning_serialize();
 
         assert_eq!(encoded_bigsize, bytes);
 
