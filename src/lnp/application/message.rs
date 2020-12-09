@@ -286,14 +286,14 @@ pub struct OpenChannel {
 
     /// Channel flags
     pub channel_flags: u8,
-    // TODO: Uncomment once TLVs derivation will be implemented
-    // /// Optionally, a request to pre-set the to-sender output's scriptPubkey
-    // /// for when we collaboratively close
-    // #[lnpwp(tlv=0)]
-    // pub shutdown_scriptpubkey: Option<Script>,
+    /* TODO: Uncomment once TLVs derivation will be implemented
+     * /// Optionally, a request to pre-set the to-sender output's
+     * scriptPubkey /// for when we collaboratively close
+     * #[lnpwp(tlv=0)]
+     * pub shutdown_scriptpubkey: Option<Script>, */
 
-    // #[lpwpw(unknown_tlvs)]
-    // pub unknown_tlvs: BTreeMap<u64, Vec<u8>>,
+    /* #[lpwpw(unknown_tlvs)]
+     * pub unknown_tlvs: BTreeMap<u64, Vec<u8>>, */
 }
 
 #[derive(
@@ -351,13 +351,13 @@ pub struct AcceptChannel {
 
     /// The first to-be-broadcast-by-sender transaction's per commitment point
     pub first_per_commitment_point: PublicKey,
-    // TODO: Uncomment once TLVs derivation will be implemented
-    // /// Optionally, a request to pre-set the to-sender output's scriptPubkey
-    // /// for when we collaboratively close
-    // #[lnpwp(tlv=0)]
-    // pub shutdown_scriptpubkey: Option<Script>,
-    // #[lpwpw(unknown_tlvs)]
-    // pub unknown_tlvs: BTreeMap<u64, Vec<u8>>,
+    /* TODO: Uncomment once TLVs derivation will be implemented
+     * /// Optionally, a request to pre-set the to-sender output's
+     * scriptPubkey /// for when we collaboratively close
+     * #[lnpwp(tlv=0)]
+     * pub shutdown_scriptpubkey: Option<Script>,
+     * #[lpwpw(unknown_tlvs)]
+     * pub unknown_tlvs: BTreeMap<u64, Vec<u8>>, */
 }
 
 #[derive(
@@ -655,8 +655,8 @@ impl DumbDefault for OpenChannel {
             htlc_basepoint: *SECP256K1_PUBKEY_DUMB,
             first_per_commitment_point: *SECP256K1_PUBKEY_DUMB,
             channel_flags: 0,
-            // shutdown_scriptpubkey: None,
-            // unknown_tlvs: none!(),
+            /* shutdown_scriptpubkey: None,
+             * unknown_tlvs: none!(), */
         }
     }
 }

@@ -173,8 +173,8 @@ pub struct Keyset {
     pub delayed_payment_basepoint: PublicKey,
     pub htlc_basepoint: PublicKey,
     pub first_per_commitment_point: PublicKey,
-    // TODO: Return shutdown scriptpubkey once TLV support will be added
-    // pub shutdown_scriptpubkey: Option<Script>,
+    /* TODO: Return shutdown scriptpubkey once TLV support will be added
+     * pub shutdown_scriptpubkey: Option<Script>, */
 }
 
 #[cfg(feature = "serde")]
