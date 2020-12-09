@@ -13,7 +13,6 @@
 
 #![recursion_limit = "256"]
 #![cfg_attr(test, deny(warnings))]
-#![allow(unused)]
 
 #[macro_use]
 extern crate amplify;
@@ -24,8 +23,6 @@ extern crate syn;
 
 #[macro_use]
 mod util;
-#[macro_use]
-mod util_old;
 
 mod lightning_encoding;
 mod lnp_api;

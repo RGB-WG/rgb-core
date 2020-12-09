@@ -12,20 +12,21 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::convert::TryFrom;
-use syn::export::{Span, ToTokens, TokenStream, TokenStream2};
+use syn::export::{Span, TokenStream2};
 use syn::spanned::Spanned;
 use syn::{
-    Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields,
-    Ident, Index, Lit, Member, Meta, MetaNameValue, NestedMeta, Path, Result,
-    Type, TypeSlice, Variant,
+    Data, DataEnum, DeriveInput, Error, Fields, Ident, Lit, Path, Result,
 };
 
-use crate::util::get_lnpbp_crate;
-use crate::util_old::*;
+use crate::util::{attr_list, get_lnpbp_crate, nested_one_named_value};
+
+const NAME: &'static str = "lnp_api";
+const EXAMPLE: &'static str =
+    "#[lnp_api(encoding=\"strict|bitcoin|lightning\")]";
 
 pub(crate) fn inner(input: DeriveInput) -> Result<TokenStream2> {
     match input.data {
-        Data::Struct(ref data) => Err(Error::new_spanned(
+        Data::Struct(_) => Err(Error::new_spanned(
             &input,
             "Deriving LnpApi can be done only with enums, not with structs",
         )),
@@ -39,24 +40,15 @@ pub(crate) fn inner(input: DeriveInput) -> Result<TokenStream2> {
 }
 
 fn inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream2> {
-    let (impl_generics, ty_generics, where_clause) =
-        input.generics.split_for_impl();
     let ident_name = &input.ident;
 
-    let name = "lnp_api";
-    let example = "#[lnp_api(encoding=\"strict|bitcoin|lightning\")]";
-    let global_params = match attr_list(&input.attrs, name, example)? {
-        Some(x) => x,
-        None => vec![],
-    };
+    let global_params = attr_list(&input.attrs, NAME, EXAMPLE)?
+        .ok_or(attr_err!(input, "encoding type must be specified"))?;
     let import = get_lnpbp_crate(input);
     let global_encoding = EncodingSrategy::try_from(
-        attr_nested_one_named_value(
-            global_params.into_iter(),
-            "encoding",
-            example,
-        )?
-        .lit,
+        nested_one_named_value(&global_params, "encoding", EXAMPLE)?
+            .ok_or(attr_err!(input, "encoding must be specified"))?
+            .lit,
     )?;
     let encode_use = global_encoding.encode_use(&import);
     let decode_use = global_encoding.decode_use(&import);
@@ -80,15 +72,14 @@ fn inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream2> {
             ),
             ))?;
 
-        let type_lit: Lit =
-            attr_nested_one_named_value(meta.into_iter(), "type", example)?.lit;
+        let type_lit: Lit = nested_one_named_value(&meta, "type", EXAMPLE)?
+            .ok_or(attr_err!(v, "type must be specified"))?
+            .lit;
         let type_id: u16 = match type_lit {
-            Lit::Int(i) => i.base10_parse().or_else(|_| {
-                proc_macro_err!(i, "`type` must be an integer", example)
-            })?,
-            _ => {
-                proc_macro_err!(type_lit, "`type` must be an integer", example)?
-            }
+            Lit::Int(i) => i
+                .base10_parse()
+                .or_else(|_| Err(attr_err!(i, "`type` must be an integer")))?,
+            _ => err!(type_lit, "`type` must be an integer"),
         };
         let type_name = &v.ident;
         let type_snake = Ident::new(
@@ -117,20 +108,18 @@ fn inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream2> {
 
         match &v.fields {
             Fields::Named(_) => {
-                return proc_macro_err!(
-                v,
-                "LNP API does not support requests represented by named enums",
-                example
-            )
+                err!(
+                    v,
+                    "LNP API does not support requests represented by named enums"
+                )
             }
             Fields::Unnamed(args) => {
                 let fields = &args.unnamed;
                 if fields.len() > 1 {
-                    return proc_macro_err!(
+                    err!(
                         v,
-                        "each LNP API message enum variant must contain not more than a single argument",
-                        example
-                    );
+                        "each LNP API message enum variant must contain not more than a single argument"     
+                   );
                 }
                 if let Some(f) = fields.first() {
                     let payload = &f.ty;
@@ -140,8 +129,7 @@ fn inner_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream2> {
                     .expect("Internal error");
                     let serialize_fn =
                         global_encoding.serialize_fn(f.span(), &import);
-                    let decode_fn =
-                        global_encoding.decode_fn(f.span(), &import);
+                    let decode_fn = global_encoding.decode_fn(f.span());
 
                     unmarshall_fn.push(quote_spanned! { v.span() =>
                         fn #type_snake(mut reader: &mut dyn ::std::io::Read) -> Result<::std::sync::Arc<dyn ::core::any::Any>, #import::lnp::presentation::Error> {
@@ -296,7 +284,7 @@ impl EncodingSrategy {
         }
     }
 
-    pub fn decode_fn(&self, span: Span, import: &Path) -> TokenStream2 {
+    pub fn decode_fn(&self, span: Span) -> TokenStream2 {
         match self {
             Self::Strict => quote_spanned!(span => strict_decode),
             Self::Bitcoin => quote_spanned!(span => consensus_decode),

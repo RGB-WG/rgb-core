@@ -11,22 +11,16 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use core::convert::TryFrom;
-use syn::export::{Span, ToTokens, TokenStream, TokenStream2};
+use syn::export::TokenStream2;
 use syn::spanned::Spanned;
-use syn::{
-    Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields,
-    Ident, Index, Lit, Member, Meta, MetaNameValue, NestedMeta, Path, Result,
-    Type, TypeSlice, Variant,
-};
+use syn::{Data, DataStruct, DeriveInput, Error, Fields, Index, Result};
 
 use crate::util::get_lnpbp_crate;
-use crate::util_old::*;
 
 pub(crate) fn encode_inner(input: DeriveInput) -> Result<TokenStream2> {
     match input.data {
         Data::Struct(ref data) => encode_inner_struct(&input, data),
-        Data::Enum(ref data) => Err(Error::new_spanned(
+        Data::Enum(_) => Err(Error::new_spanned(
             &input,
             "Deriving LightningEncode is not supported in enums",
         )),
@@ -40,7 +34,7 @@ pub(crate) fn encode_inner(input: DeriveInput) -> Result<TokenStream2> {
 pub(crate) fn decode_inner(input: DeriveInput) -> Result<TokenStream2> {
     match input.data {
         Data::Struct(ref data) => decode_inner_struct(&input, data),
-        Data::Enum(ref data) => Err(Error::new_spanned(
+        Data::Enum(_) => Err(Error::new_spanned(
             &input,
             "Deriving LightningDecode is not supported in enums",
         )),

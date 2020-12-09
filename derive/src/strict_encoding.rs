@@ -11,17 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use core::convert::TryFrom;
-use syn::export::{Span, ToTokens, TokenStream, TokenStream2};
+use syn::export::TokenStream2;
 use syn::spanned::Spanned;
 use syn::{
-    Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields,
-    Ident, Index, Lit, Member, Meta, MetaNameValue, NestedMeta, Path, Result,
-    Type, TypeSlice, Variant,
+    Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Ident, Index,
+    Result,
 };
 
 use crate::util::get_lnpbp_crate;
-use crate::util_old::*;
 
 pub(crate) fn encode_inner(input: DeriveInput) -> Result<TokenStream2> {
     match input.data {
