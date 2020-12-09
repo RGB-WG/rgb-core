@@ -11,19 +11,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::Wrapper;
 use core::any::Any;
 use core::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::io;
 use std::sync::Arc;
 
-#[cfg(feature = "lightning")]
-use lightning::{
-    ln::msgs::DecodeError,
-    util::ser::{BigSize, Readable},
-};
-
-use super::{Error, EvenOdd, Unmarshall, UnmarshallFn};
+use super::{BigSize, Error, EvenOdd, Unmarshall, UnmarshallFn};
+use crate::lightning_encoding::{self, LightningDecode};
 
 pub type Map = BTreeMap<Type, RawRecord>;
 
@@ -48,19 +44,8 @@ pub struct Type(u64);
 
 /// Unknown TLV record represented by raw bytes
 #[derive(
-    Wrapper,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Debug,
-    Display,
-    From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From,
 )]
-#[display(Debug)]
 pub struct RawRecord(Vec<u8>);
 
 impl EvenOdd for Type {}
@@ -100,17 +85,6 @@ impl Unmarshall for Unmarshaller {
     type Data = Stream;
     type Error = Error;
 
-    // TODO: (v0.2.0) Right now TLV implementation uses BigInt from lightning
-    //       library. It has to be re-implemented in order to get TLVs working
-    #[cfg(not(feature = "lightning"))]
-    fn unmarshall(
-        &self,
-        data: &dyn Borrow<[u8]>,
-    ) -> Result<Stream, Self::Error> {
-        unimplemented!()
-    }
-
-    #[cfg(feature = "lightning")]
     fn unmarshall(
         &self,
         data: &dyn Borrow<[u8]>,
@@ -119,15 +93,17 @@ impl Unmarshall for Unmarshaller {
         let mut tlv = Stream::new();
         let mut prev_type_id = Type(0);
         loop {
-            match BigSize::read(&mut reader).map(|big_size| Type(big_size.0)) {
+            match BigSize::lightning_decode(&mut reader)
+                .map(|big_size| Type(big_size.into_inner()))
+            {
                 // if zero bytes remain before parsing a type
                 // MUST stop parsing the tlv_stream
-                Err(DecodeError::ShortRead) => break Ok(tlv),
+                Err(lightning_encoding::Error::BigSizeEof) => break Ok(tlv),
 
                 // The following rule is handled by BigSize type:
                 // if a type or length is not minimally encoded
                 // MUST fail to parse the tlv_stream.
-                Err(err) => break Err(Error::from(err)),
+                Err(err) => break Err(err.into()),
 
                 // if decoded types are not monotonically-increasing
                 // MUST fail to parse the tlv_stream.
@@ -144,35 +120,34 @@ impl Unmarshall for Unmarshaller {
                 }
 
                 Ok(type_id) => {
-                    let rec = if let Some(parser) =
-                        self.known_types.get(&type_id)
-                    {
-                        // if type is known:
-                        // MUST decode the next length bytes using the known
-                        // encoding for type.
-                        // The rest of rules MUST be supported by the parser:
-                        // - if length is not exactly equal to that required for
-                        //   the known encoding for type MUST fail to parse the
-                        //   tlv_stream.
-                        // - if variable-length fields within the known encoding
-                        //   for type are not minimal MUST fail to parse the
-                        //   tlv_stream.
-                        parser(&mut reader)?
-                    }
-                    // otherwise, if type is unknown:
-                    // if type is even:
-                    // MUST fail to parse the tlv_stream.
-                    else if type_id.is_even() {
-                        break Err(Error::TlvRecordEvenType);
-                    }
-                    // otherwise, if type is odd:
-                    // MUST discard the next length bytes.
-                    else {
-                        // Here we are actually not discarding the bytes but
-                        // rather store them for an upstream users of the
-                        // library which may know the meaning of the bytes
-                        (self.raw_parser)(&mut reader)?
-                    };
+                    let rec =
+                        if let Some(parser) = self.known_types.get(&type_id) {
+                            // if type is known:
+                            // MUST decode the next length bytes using the known
+                            // encoding for type.
+                            // The rest of rules MUST be supported by the parser:
+                            // - if length is not exactly equal to that required for
+                            //   the known encoding for type MUST fail to parse the
+                            //   tlv_stream.
+                            // - if variable-length fields within the known encoding
+                            //   for type are not minimal MUST fail to parse the
+                            //   tlv_stream.
+                            parser(&mut reader)?
+                        }
+                        // otherwise, if type is unknown:
+                        // if type is even:
+                        // MUST fail to parse the tlv_stream.
+                        else if type_id.is_even() {
+                            break Err(Error::TlvRecordEvenType);
+                        }
+                        // otherwise, if type is odd:
+                        // MUST discard the next length bytes.
+                        else {
+                            // Here we are actually not discarding the bytes but
+                            // rather store them for an upstream users of the
+                            // library which may know the meaning of the bytes
+                            (self.raw_parser)(&mut reader)?
+                        };
                     tlv.insert(type_id, rec);
                     prev_type_id = type_id;
                 }
@@ -189,18 +164,10 @@ impl Unmarshaller {
         }
     }
 
-    // TODO: (v0.2.0) Right now TLV implementation uses BigInt from lightning
-    //       library. It has to be re-implemented in order to get TLVs working
-    #[cfg(not(feature = "lightning"))]
-    fn raw_parser(reader: &mut dyn io::Read) -> Result<Arc<dyn Any>, Error> {
-        unimplemented!()
-    }
-
-    #[cfg(feature = "lightning")]
     fn raw_parser(
         mut reader: &mut dyn io::Read,
     ) -> Result<Arc<dyn Any>, Error> {
-        let len = BigSize::read(&mut reader)?.0 as usize;
+        let len = BigSize::lightning_decode(&mut reader)?.into_inner() as usize;
 
         // if length exceeds the number of bytes remaining in the message
         // MUST fail to parse the tlv_stream
