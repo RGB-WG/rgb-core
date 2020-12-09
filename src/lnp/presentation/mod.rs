@@ -19,7 +19,8 @@ pub mod tlv;
 
 pub use big_size::BigSize;
 pub use encoding::{
-    CreateUnmarshaller, Decode, Encode, Unmarshall, UnmarshallFn,
+    CreateUnmarshaller, LightningDecode, LightningEncode, Unmarshall,
+    UnmarshallFn,
 };
 pub use error::{Error, UnknownTypeError};
 pub use payload::{Payload, Unmarshaller};

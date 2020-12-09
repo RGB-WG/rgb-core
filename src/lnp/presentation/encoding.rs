@@ -45,24 +45,24 @@ pub enum Error {
 }
 
 /// Lightning-network specific encoding as defined in BOLT-1, 2, 3...
-pub trait Encode {
-    fn encode<E: io::Write>(&self, e: E) -> Result<usize, Error>;
-    fn serialize(&self) -> Result<Vec<u8>, Error> {
+pub trait LightningEncode {
+    fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, Error>;
+    fn lightning_serialize(&self) -> Result<Vec<u8>, Error> {
         let mut encoder = io::Cursor::new(vec![]);
-        self.encode(&mut encoder)?;
+        self.lightning_encode(&mut encoder)?;
         Ok(encoder.into_inner())
     }
 }
 
 /// Lightning-network specific encoding as defined in BOLT-1, 2, 3...
-pub trait Decode
+pub trait LightningDecode
 where
     Self: Sized,
 {
-    fn decode<D: io::Read>(d: D) -> Result<Self, Error>;
-    fn deserialize(data: &dyn AsRef<[u8]>) -> Result<Self, Error> {
+    fn lightning_decode<D: io::Read>(d: D) -> Result<Self, Error>;
+    fn lightning_deserialize(data: &dyn AsRef<[u8]>) -> Result<Self, Error> {
         let mut decoder = io::Cursor::new(data);
-        let rv = Self::decode(&mut decoder)?;
+        let rv = Self::lightning_decode(&mut decoder)?;
         let consumed = decoder.position() as usize;
 
         // Fail if data are not consumed entirely.
@@ -94,7 +94,7 @@ pub trait CreateUnmarshaller: Sized + payload::TypedEnum {
 pub mod strategies {
     use std::io;
 
-    use super::{Decode, Encode, Error};
+    use super::{Error, LightningDecode, LightningEncode};
     use crate::lnp::presentation::BigSize;
     use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
@@ -106,65 +106,65 @@ pub mod strategies {
         type Strategy;
     }
 
-    impl<T> Encode for T
+    impl<T> LightningEncode for T
     where
         T: Strategy + Clone,
-        amplify::Holder<T, <T as Strategy>::Strategy>: Encode,
+        amplify::Holder<T, <T as Strategy>::Strategy>: LightningEncode,
     {
         #[inline]
-        fn encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-            amplify::Holder::new(self.clone()).encode(e)
+        fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+            amplify::Holder::new(self.clone()).lightning_encode(e)
         }
     }
 
-    impl<T> Decode for T
+    impl<T> LightningDecode for T
     where
         T: Strategy,
-        amplify::Holder<T, <T as Strategy>::Strategy>: Decode,
+        amplify::Holder<T, <T as Strategy>::Strategy>: LightningDecode,
     {
         #[inline]
-        fn decode<D: io::Read>(d: D) -> Result<Self, Error> {
-            Ok(amplify::Holder::decode(d)?.into_inner())
+        fn lightning_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+            Ok(amplify::Holder::lightning_decode(d)?.into_inner())
         }
     }
 
-    impl<T> Encode for amplify::Holder<T, StrictEncoding>
+    impl<T> LightningEncode for amplify::Holder<T, StrictEncoding>
     where
         T: StrictEncode<Error = strict_encoding::Error>,
     {
         #[inline]
-        fn encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
             self.as_inner().strict_encode(e).map_err(Error::from)
         }
     }
 
-    impl<T> Decode for amplify::Holder<T, AsBigSize>
+    impl<T> LightningDecode for amplify::Holder<T, AsBigSize>
     where
         T: From<BigSize>,
     {
         #[inline]
-        fn decode<D: io::Read>(d: D) -> Result<Self, Error> {
-            Ok(Self::new(T::from(BigSize::decode(d)?)))
+        fn lightning_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+            Ok(Self::new(T::from(BigSize::lightning_decode(d)?)))
         }
     }
 
-    impl<T> Encode for amplify::Holder<T, AsBigSize>
+    impl<T> LightningEncode for amplify::Holder<T, AsBigSize>
     where
         T: Into<BigSize>,
         T: Copy,
     {
         #[inline]
-        fn encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-            (*self.as_inner()).into().encode(e)
+        fn lightning_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+            (*self.as_inner()).into().lightning_encode(e)
         }
     }
 
-    impl<T> Decode for amplify::Holder<T, StrictEncoding>
+    impl<T> LightningDecode for amplify::Holder<T, StrictEncoding>
     where
         T: StrictDecode<Error = strict_encoding::Error>,
     {
         #[inline]
-        fn decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        fn lightning_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             Ok(Self::new(T::strict_decode(d)?))
         }
     }

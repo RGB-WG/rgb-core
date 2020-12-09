@@ -17,7 +17,7 @@ use amplify::Wrapper;
 use bitcoin::consensus::ReadExt;
 use std::io;
 
-use super::encoding::{Decode, Encode, Error};
+use super::encoding::{Error, LightningDecode, LightningEncode};
 
 /// Lightning TLV uses a custom variable-length integer called BigSize. It is
 /// similar to Bitcoin's variable-length integers except that it is serialized
@@ -85,8 +85,8 @@ impl From<BigSize> for u32 {
     }
 }
 
-impl Encode for BigSize {
-    fn encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+impl LightningEncode for BigSize {
+    fn lightning_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
         let vec = match self.0 {
             0..=0xFC => vec![self.0 as u8],
             0xFD..=0xFFFF => {
@@ -110,8 +110,8 @@ impl Encode for BigSize {
     }
 }
 
-impl Decode for BigSize {
-    fn decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+impl LightningDecode for BigSize {
+    fn lightning_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         match d.read_u8().map_err(|_| Error::BigSizeEof)? {
             0xFFu8 => {
                 let mut x = [0u8; 8];
@@ -159,11 +159,12 @@ mod test {
     fn test_runner(value: u64, bytes: &[u8]) {
         let bigsize = BigSize(value);
 
-        let encoded_bigsize = bigsize.serialize().unwrap();
+        let encoded_bigsize = bigsize.lightning_serialize().unwrap();
 
         assert_eq!(encoded_bigsize, bytes);
 
-        let decoded_bigsize = BigSize::deserialize(&encoded_bigsize).unwrap();
+        let decoded_bigsize =
+            BigSize::lightning_deserialize(&encoded_bigsize).unwrap();
 
         assert_eq!(decoded_bigsize, bigsize);
     }
@@ -189,19 +190,20 @@ mod test {
     #[should_panic(expected = "BigSizeNotCanonical")]
     #[test]
     fn test_canonical_value_error_1() {
-        BigSize::deserialize(&[0xfd, 0x00, 0xfc]).unwrap();
+        BigSize::lightning_deserialize(&[0xfd, 0x00, 0xfc]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeNotCanonical")]
     #[test]
     fn test_canonical_value_error_2() {
-        BigSize::deserialize(&[0xfe, 0x00, 0x00, 0xff, 0xff]).unwrap();
+        BigSize::lightning_deserialize(&[0xfe, 0x00, 0x00, 0xff, 0xff])
+            .unwrap();
     }
 
     #[should_panic(expected = "BigSizeNotCanonical")]
     #[test]
     fn test_canonical_value_error_3() {
-        BigSize::deserialize(&[
+        BigSize::lightning_deserialize(&[
             0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
         ])
         .unwrap();
@@ -210,36 +212,37 @@ mod test {
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_1() {
-        BigSize::deserialize(&[0xfd, 0x00]).unwrap();
+        BigSize::lightning_deserialize(&[0xfd, 0x00]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_2() {
-        BigSize::deserialize(&[0xfe, 0xff, 0xff]).unwrap();
+        BigSize::lightning_deserialize(&[0xfe, 0xff, 0xff]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_3() {
-        BigSize::deserialize(&[0xff, 0xff, 0xff, 0xff, 0xff]).unwrap();
+        BigSize::lightning_deserialize(&[0xff, 0xff, 0xff, 0xff, 0xff])
+            .unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_4() {
-        BigSize::deserialize(&[0xfd]).unwrap();
+        BigSize::lightning_deserialize(&[0xfd]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_5() {
-        BigSize::deserialize(&[0xfe]).unwrap();
+        BigSize::lightning_deserialize(&[0xfe]).unwrap();
     }
 
     #[should_panic(expected = "BigSizeEof")]
     #[test]
     fn test_eof_error_6() {
-        BigSize::deserialize(&[0xff]).unwrap();
+        BigSize::lightning_deserialize(&[0xff]).unwrap();
     }
 }
