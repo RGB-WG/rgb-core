@@ -1,6 +1,16 @@
 Change Log
 ==========
 
+v0.2.0
+------
+No changes since RC2
+
+### Changes since v0.1
+- Epic: refactoring of LNP protocols and services crate
+- Epic: initial implementation of generalized lightning network
+- Epic: lightning network specific encodings and derives
+- CI covering different mobile & desktop targets
+
 v0.2.0-rc.2
 -----------
 - New tagged hash implementation defaulting to Bech32 encoding for ContractId
