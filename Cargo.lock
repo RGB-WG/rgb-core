@@ -749,6 +749,7 @@ dependencies = [
  "num-traits 0.2.14",
  "openssl",
  "serde 1.0.117",
+ "serde_json",
  "serde_with",
  "serde_with_macros",
  "socket2",

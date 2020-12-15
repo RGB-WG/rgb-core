@@ -90,8 +90,8 @@ pub enum Revealed {
     #[cfg_attr(
         feature = "serde",
         serde(
-            serialize_with = "crate::rgb::bech32::to_bech32",
-            deserialize_with = "crate::rgb::bech32::from_bech32"
+            serialize_with = "crate::rgb::bech32::to_bech32_str",
+            deserialize_with = "crate::rgb::bech32::from_bech32_str"
         )
     )]
     Curve25519Pubkey(ed25519_dalek::PublicKey),
@@ -100,8 +100,8 @@ pub enum Revealed {
     #[cfg_attr(
         feature = "serde",
         serde(
-            serialize_with = "crate::rgb::bech32::to_bech32",
-            deserialize_with = "crate::rgb::bech32::from_bech32"
+            serialize_with = "crate::rgb::bech32::to_bech32_str",
+            deserialize_with = "crate::rgb::bech32::from_bech32_str"
         )
     )]
     Ed25519Signature(ed25519_dalek::Signature),
