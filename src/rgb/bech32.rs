@@ -31,78 +31,166 @@ use crate::strict_encoding::{
 /// Bech32 representation of generic RGB data, that can be generated from
 /// some string basing on Bech32 HRP value.
 #[derive(Clone, Debug, From)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", untagged)
+)]
 pub enum Bech32 {
     /// Pedersen commitment
     ///
     /// HRP: `pedersen`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     PedersenCommitment(secp256k1zkp::pedersen::Commitment),
 
     /// Bulletproofs
     ///
     /// HRP: `bulletproof`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Bulletproof(secp256k1zkp::pedersen::RangeProof),
 
     /// Curve25519 public key
     ///
     /// HRP: `curve25519pk`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Curve25519Pk(ed25519_dalek::PublicKey),
 
     /// Ed25519 signature
     ///
     /// HRP: `ed25519sign`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Ed25519Sign(ed25519_dalek::Signature),
 
     /// Blinded UTXO for assigning RGB state to.
     ///
     /// HRP: `utxob`
     #[from]
-    // TODO: (new) Remove it once invoice implementation will be completed
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     BlindedUtxo(seal::Confidential),
 
     /// RGB Schema ID (hash of the schema data).
     ///
     /// HRP: `sch`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     SchemaId(SchemaId),
 
     /// RGB Schema raw data (hash of the genesis).
     ///
     /// HRP: `schema`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Schema(Schema),
 
     /// RGB Contract ID (hash of the genesis).
     ///
     /// HRP: `rgb`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     ContractId(ContractId),
 
     /// RGB Contract genesis raw data
     ///
     /// HRP: `genesis`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Genesis(Genesis),
 
     /// Raw data of state transition under some RGB contract
     ///
     /// HRP: `transition`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Transition(Transition),
 
     /// Raw data of state extension under some RGB contract
     ///
     /// HRP: `statex`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Extension(Extension),
 
     /// Anchor data for some dterministic bitcoin commitment
     ///
     /// HRP: `anchor`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Anchor(Anchor),
 
     /// Disclosure data revealing some specific confidential information about
@@ -110,6 +198,13 @@ pub enum Bech32 {
     ///
     /// HRP: `disclosure`
     #[from]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
+    )]
     Disclosure(Disclosure),
 
     /// Binary data for unknown Bech32 HRPs
@@ -626,7 +721,7 @@ impl Display for Disclosure {
 
 /// Serializes type to a Bech32 string.
 #[cfg(feature = "serde")]
-pub fn to_bech32<T, S>(buffer: &T, serializer: S) -> Result<S::Ok, S::Error>
+pub fn to_bech32_str<T, S>(buffer: &T, serializer: S) -> Result<S::Ok, S::Error>
 where
     T: ToBech32,
     S: Serializer,
@@ -636,7 +731,7 @@ where
 
 /// Deserializes a Bech32 to a `Vec<u8>`.
 #[cfg(feature = "serde")]
-pub fn from_bech32<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+pub fn from_bech32_str<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
     T: FromBech32,
     D: Deserializer<'de>,

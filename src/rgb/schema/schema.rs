@@ -26,6 +26,8 @@ use crate::client_side_validation::{
 };
 use crate::commit_verify::CommitVerify;
 use crate::features;
+#[cfg(feature = "serde")]
+use crate::rgb::Bech32;
 use crate::rgb::ToBech32;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -51,11 +53,10 @@ impl sha256t::Tag for SchemaIdTag {
 }
 
 /// Commitment-based schema identifier used for committing to the schema type
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", try_from = "Bech32", into = "Bech32")
 )]
 #[derive(
     Wrapper,
