@@ -726,7 +726,7 @@ checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "lnpbp"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -749,6 +749,7 @@ dependencies = [
  "num-traits 0.2.14",
  "openssl",
  "serde 1.0.117",
+ "serde_json",
  "serde_with",
  "serde_with_macros",
  "socket2",

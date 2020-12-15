@@ -30,7 +30,7 @@ use crate::rgb::schema::{
     TransitionType,
 };
 use crate::rgb::{
-    schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32,
+    schema, seal, Bech32, Metadata, SchemaId, SimplicityScript, ToBech32,
 };
 
 /// Holds definition of valencies for contract nodes, which is a set of
@@ -56,7 +56,6 @@ impl sha256t::Tag for NodeIdTag {
 
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -85,11 +84,10 @@ impl CommitEncodeWithStrategy for NodeId {
 }
 
 /// Unique contract identifier equivalent to the contract genesis commitment
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", try_from = "Bech32", into = "Bech32")
 )]
 #[derive(
     Wrapper,
@@ -1037,6 +1035,20 @@ mod test {
             transition.clone().consensus_commit(),
             NodeId::from_hex("4e53133b0581f0b69c0c3da9a84ec0e8acacd050862797682e42f36de5584215")
                 .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_id_serde() {
+        let genesis: Genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
+        let contract_id = genesis.contract_id();
+        assert_eq!(
+            contract_id.to_string(),
+            "rgb1z586eqcsa5z5zvqep9y3rhqsykqpuycrhhvkc2aey6hdu25yyrgqv0a28q"
+        );
+        assert_eq!(
+            serde_json::to_string(&contract_id).unwrap(),
+            "\"rgb1z586eqcsa5z5zvqep9y3rhqsykqpuycrhhvkc2aey6hdu25yyrgqv0a28q\""
         );
     }
 
