@@ -1,8 +1,8 @@
 Change Log
 ==========
 
-v0.2.1
-------
+v0.2.1, v0.2.2
+--------------
 - Fixing serde to use Bech32 encoding for ContractId and SchemaId types
 
 v0.2.0

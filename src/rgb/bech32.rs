@@ -41,9 +41,12 @@ pub enum Bech32 {
     ///
     /// HRP: `pedersen`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     PedersenCommitment(secp256k1zkp::pedersen::Commitment),
 
@@ -51,9 +54,12 @@ pub enum Bech32 {
     ///
     /// HRP: `bulletproof`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Bulletproof(secp256k1zkp::pedersen::RangeProof),
 
@@ -61,9 +67,12 @@ pub enum Bech32 {
     ///
     /// HRP: `curve25519pk`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Curve25519Pk(ed25519_dalek::PublicKey),
 
@@ -71,9 +80,12 @@ pub enum Bech32 {
     ///
     /// HRP: `ed25519sign`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Ed25519Sign(ed25519_dalek::Signature),
 
@@ -81,9 +93,12 @@ pub enum Bech32 {
     ///
     /// HRP: `utxob`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     BlindedUtxo(seal::Confidential),
 
@@ -91,9 +106,12 @@ pub enum Bech32 {
     ///
     /// HRP: `sch`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     SchemaId(SchemaId),
 
@@ -101,9 +119,12 @@ pub enum Bech32 {
     ///
     /// HRP: `schema`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Schema(Schema),
 
@@ -111,9 +132,12 @@ pub enum Bech32 {
     ///
     /// HRP: `rgb`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     ContractId(ContractId),
 
@@ -121,9 +145,12 @@ pub enum Bech32 {
     ///
     /// HRP: `genesis`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Genesis(Genesis),
 
@@ -131,9 +158,12 @@ pub enum Bech32 {
     ///
     /// HRP: `transition`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Transition(Transition),
 
@@ -141,9 +171,12 @@ pub enum Bech32 {
     ///
     /// HRP: `statex`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Extension(Extension),
 
@@ -151,9 +184,12 @@ pub enum Bech32 {
     ///
     /// HRP: `anchor`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Anchor(Anchor),
 
@@ -162,9 +198,12 @@ pub enum Bech32 {
     ///
     /// HRP: `disclosure`
     #[from]
-    #[serde(
-        serialize_with = "to_bech32_str",
-        deserialize_with = "from_bech32_str"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "to_bech32_str",
+            deserialize_with = "from_bech32_str"
+        )
     )]
     Disclosure(Disclosure),
 

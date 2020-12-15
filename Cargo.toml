@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp"
-version = "0.2.1"
+version = "0.2.2"
 license = "MIT"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP Core Library implementing LNPBP specifications & standards"

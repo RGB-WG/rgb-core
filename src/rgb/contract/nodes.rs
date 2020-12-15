@@ -29,8 +29,10 @@ use crate::rgb::schema::{
     ExtensionType, FieldType, NodeType, OwnedRightType, PublicRightType,
     TransitionType,
 };
+#[cfg(feature = "serde")]
+use crate::rgb::Bech32;
 use crate::rgb::{
-    schema, seal, Bech32, Metadata, SchemaId, SimplicityScript, ToBech32,
+    schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32,
 };
 
 /// Holds definition of valencies for contract nodes, which is a set of

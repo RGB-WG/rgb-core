@@ -26,7 +26,9 @@ use crate::client_side_validation::{
 };
 use crate::commit_verify::CommitVerify;
 use crate::features;
-use crate::rgb::{Bech32, ToBech32};
+#[cfg(feature = "serde")]
+use crate::rgb::Bech32;
+use crate::rgb::ToBech32;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = usize;
