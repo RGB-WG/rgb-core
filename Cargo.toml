@@ -87,7 +87,7 @@ num-derive = "~0.3.0"
 # 3. Once async traits will get to rust compiler, this one will be also not
 #    needed
 async-trait = { version = "~0.1.30", optional = true }
-torut = { version = "~0.1.6", features = ["v2", "v3"] }
+torut = { version = "~0.1.7", features = ["v2", "v3"] }
 
 [dev-dependencies]
 serde_json = "~1.0.60"
