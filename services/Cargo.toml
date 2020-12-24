@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp_services"
-version = "0.2.0"
+version = "0.2.1"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP support crate for devloping microservices"

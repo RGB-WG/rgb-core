@@ -16,6 +16,7 @@
 
 use log::LevelFilter;
 use std::env;
+use std::str::FromStr;
 
 use crate::error::Error;
 
@@ -53,6 +54,27 @@ pub enum LogLevel {
     /// Corresponds to quadruple `-vvvv` verbosity flag.
     #[display("trace")]
     Trace,
+}
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Error)]
+#[display(doc_comments)]
+/// Unrecognized value `{0}` for log level type; allowed values are
+/// `error`, `warn`, `info`, `debug`, `trace`
+pub struct LogLevelParseError(String);
+
+impl FromStr for LogLevel {
+    type Err = LogLevelParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "error" | "errors" => LogLevel::Error,
+            "warn" | "warning" | "warnings" => LogLevel::Warn,
+            "info" => LogLevel::Info,
+            "debug" => LogLevel::Debug,
+            "trace" | "tracing" => LogLevel::Trace,
+            other => Err(LogLevelParseError(other.to_owned()))?,
+        })
+    }
 }
 
 impl LogLevel {
