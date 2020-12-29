@@ -66,7 +66,7 @@ impl FromStr for LogLevel {
     type Err = LogLevelParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
+        Ok(match s.to_lowercase().as_ref() {
             "error" | "errors" => LogLevel::Error,
             "warn" | "warning" | "warnings" => LogLevel::Warn,
             "info" => LogLevel::Info,

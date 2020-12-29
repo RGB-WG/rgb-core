@@ -12,8 +12,10 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 /// Formats representing generic binary data input or output
-#[derive(Copy, Clone, Debug, Display)]
+#[derive(Copy, Clone, Debug, Display, Serialize, Deserialize)]
+#[serde(crate = "serde_crate")]
 #[cfg_attr(feature = "clap", derive(Clap))]
+#[non_exhaustive]
 pub enum BinaryData {
     /// Raw/binary file with data
     #[display("bin")]
@@ -37,8 +39,10 @@ pub enum BinaryData {
 /// supporting LNP/BP strict encoding, bitcoin consensus encoding
 /// (`bitcoin::consensus::encode`) or other bitcoin-specific binary encodings
 /// (BIP-32 specific encodings, PSBT encoding)
-#[derive(Copy, Clone, Debug, Display)]
+#[derive(Copy, Clone, Debug, Display, Serialize, Deserialize)]
+#[serde(crate = "serde_crate")]
 #[cfg_attr(feature = "clap", derive(Clap))]
+#[non_exhaustive]
 pub enum StructuredData {
     /// JSON
     #[display("json")]
@@ -70,8 +74,10 @@ pub enum StructuredData {
 }
 
 /// Representation formats for bitcoin script data
-#[derive(Copy, Clone, Debug, Display)]
+#[derive(Copy, Clone, Debug, Display, Serialize, Deserialize)]
+#[serde(crate = "serde_crate")]
 #[cfg_attr(feature = "clap", derive(Clap))]
+#[non_exhaustive]
 pub enum BitcoinScript {
     /// Binary script source encoded as hexadecimal string
     #[display("hex")]
@@ -88,4 +94,23 @@ pub enum BitcoinScript {
     /// String with assembler opcodes
     #[display("asm")]
     Assembler,
+}
+
+#[derive(
+    Copy, Clone, PartialEq, Eq, Hash, Debug, Display, Serialize, Deserialize,
+)]
+#[serde(crate = "serde_crate")]
+#[non_exhaustive]
+pub enum FileStorage {
+    #[display("strict-encoded")]
+    StrictEncoded,
+
+    #[display("yaml")]
+    Yaml,
+
+    #[display("toml")]
+    Toml,
+
+    #[display("json")]
+    Json,
 }
