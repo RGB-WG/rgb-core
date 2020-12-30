@@ -23,6 +23,52 @@ use core::convert::TryFrom;
 
 use super::types::*;
 
+/// Descriptor category specifies way how the `scriptPubkey` is structured
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename = "lowercase")
+)]
+#[derive(
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    Hash,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+#[non_exhaustive]
+pub enum DescriptorCategory {
+    /// Bare descriptors: `pk` and bare scripts, including `OP_RETURN`s
+    #[display("bare")]
+    Bare,
+
+    /// Hash-based descriptors: `pkh` for public key hashes and BIP-16 `sh` for
+    /// P2SH scripts
+    #[display("hashed")]
+    Hashed,
+
+    /// SegWit descriptors for legacy wallets defined in BIP 141 as P2SH nested
+    /// types <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#P2WPKH_nested_in_BIP16_P2SH>:
+    /// `sh(wpkh)` and `sh(wsh)`
+    #[display("nested")]
+    Nested,
+
+    /// Native SegWit descriptors: `wpkh` for public keys and `wsh` for scripts
+    #[display("segwit")]
+    SegWit,
+
+    /// Netive Taproot descriptors: `taproot`
+    #[display("taproot")]
+    Taproot,
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[non_exhaustive]
 pub enum CompactDescriptor {
