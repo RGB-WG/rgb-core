@@ -35,7 +35,7 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
 amplify = { version = "2.4", features = ["stringly_conversions"] }
-amplify_derive = "2.4.1"
+amplify_derive = "2.4.2"
 lnpbp_derive = { version = ">=0.3.0-alpha.1", path = "./derive" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
@@ -87,7 +87,7 @@ num-derive = "~0.3.0"
 # 3. Once async traits will get to rust compiler, this one will be also not
 #    needed
 async-trait = { version = "~0.1.30", optional = true }
-torut = { version = "~0.1.7", features = ["v2", "v3"] }
+torut = { version = "~0.1.6", features = ["v2", "v3"] }
 
 [dev-dependencies]
 serde_json = "~1.0.60"
