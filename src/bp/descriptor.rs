@@ -32,6 +32,7 @@ use miniscript::{MiniscriptKey, NullCtx, ToPublicKey};
 use super::{LockScript, PubkeyScript, TapScript};
 use crate::bp::bip32::DerivationComponentsCtx;
 use crate::bp::DerivationComponents;
+use bitcoin::util::bip32::ChildNumber;
 
 /// Descriptor category specifies way how the `scriptPubkey` is structured
 #[cfg_attr(
@@ -79,7 +80,8 @@ pub enum DescriptorCategory {
     Taproot,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
 #[non_exhaustive]
 pub enum CompactDescriptor {
     #[display("bare({0})", alt = "bare({_0:#})")]
@@ -104,7 +106,8 @@ pub enum CompactDescriptor {
     Taproot(secp256k1::PublicKey),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+#[lnpbp_crate(crate)]
 #[non_exhaustive]
 pub enum ExpandedDescriptor {
     #[display("bare({0})", alt = "bare({_0:#})")]
@@ -200,8 +203,21 @@ impl From<CompactDescriptor> for PubkeyScript {
     }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 #[display(inner)]
+#[non_exhaustive]
 pub enum PubkeyPlaceholder {
     /// Single known public key
     Pubkey(DescriptorSinglePub),
@@ -209,6 +225,17 @@ pub enum PubkeyPlaceholder {
     /// Public key range with deterministic derivation that can be derived
     /// from a known extended public key without private key
     XPubDerivable(DerivationComponents),
+}
+
+impl PubkeyPlaceholder {
+    pub fn count(&self) -> u32 {
+        match self {
+            PubkeyPlaceholder::Pubkey(_) => 1,
+            PubkeyPlaceholder::XPubDerivable(ref components) => {
+                components.count()
+            }
+        }
+    }
 }
 
 impl MiniscriptKey for PubkeyPlaceholder {
@@ -242,6 +269,26 @@ where
         hash: &Self::Hash,
         to_pk_ctx: DerivationComponentsCtx<'secp, C>,
     ) -> hash160::Hash {
+        hash.to_public_key(to_pk_ctx).to_pubkeyhash()
+    }
+}
+
+impl ToPublicKey<NullCtx> for PubkeyPlaceholder {
+    fn to_public_key(&self, to_pk_ctx: NullCtx) -> bitcoin::PublicKey {
+        match self {
+            PubkeyPlaceholder::Pubkey(ref pkd) => {
+                pkd.key.to_public_key(to_pk_ctx)
+            }
+            PubkeyPlaceholder::XPubDerivable(ref dc) => {
+                dc.to_public_key(DerivationComponentsCtx::new(
+                    &*crate::SECP256K1,
+                    ChildNumber::Normal { index: 0 },
+                ))
+            }
+        }
+    }
+
+    fn hash_to_hash160(hash: &Self::Hash, to_pk_ctx: NullCtx) -> hash160::Hash {
         hash.to_public_key(to_pk_ctx).to_pubkeyhash()
     }
 }

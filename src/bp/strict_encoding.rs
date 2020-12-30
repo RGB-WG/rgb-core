@@ -16,17 +16,22 @@ use std::io;
 use bitcoin::hashes::{hash160, hmac, sha256, sha256d, sha256t, sha512, Hash};
 use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::{
-    secp256k1, util::bip32, BlockHash, OutPoint, Script, Transaction, TxIn,
-    TxOut, Txid, XpubIdentifier,
+    secp256k1, util::bip32, BlockHash, OutPoint, PubkeyHash, Script,
+    ScriptHash, SigHash, Transaction, TxIn, TxOut, Txid, WPubkeyHash,
+    WScriptHash, Wtxid, XpubIdentifier,
 };
 #[cfg(feature = "ed25519-dalek")]
 use ed25519_dalek::ed25519::signature::Signature;
+use miniscript::descriptor::DescriptorSinglePub;
 
 use super::bip32::{Decode, Encode};
 use super::blind::OutpointHash;
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 
 impl strict_encoding::Strategy for Txid {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for Wtxid {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 impl strict_encoding::Strategy for BlockHash {
@@ -36,6 +41,21 @@ impl strict_encoding::Strategy for OutpointHash {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 impl strict_encoding::Strategy for XpubIdentifier {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for PubkeyHash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for WPubkeyHash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for ScriptHash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for WScriptHash {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+impl strict_encoding::Strategy for SigHash {
     type Strategy = strict_encoding::strategies::HashFixedBytes;
 }
 
@@ -361,6 +381,20 @@ impl StrictDecode for bip32::ExtendedPrivKey {
                 "Extended privkey integrity is broken".to_string(),
             )
         })?)
+    }
+}
+
+impl StrictEncode for DescriptorSinglePub {
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+        Ok(strict_encode_list!(e; self.key, self.origin))
+    }
+}
+
+impl StrictDecode for DescriptorSinglePub {
+    #[inline]
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+        Ok(strict_decode_self!(d; key, origin))
     }
 }
 
