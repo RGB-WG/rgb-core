@@ -16,11 +16,21 @@ use std::str::FromStr;
 use bitcoin::hashes::hash160;
 use bitcoin::secp256k1;
 use bitcoin::util::bip32::ChildNumber;
-use miniscript::descriptor::{DescriptorKeyParseError, DescriptorPublicKey};
-use miniscript::{MiniscriptKey, ToPublicKey};
+use miniscript::descriptor::{
+    DescriptorKeyParseError, DescriptorPublicKey, DescriptorPublicKeyCtx,
+};
+use miniscript::{MiniscriptKey, NullCtx, ToPublicKey};
 use std::hash::{Hash, Hasher};
 
 use crate::SECP256K1;
+
+lazy_static! {
+    static ref DESCRIPTOR_CTX: DescriptorPublicKeyCtx<'static, bitcoin::secp256k1::All> =
+        DescriptorPublicKeyCtx::new(
+            &SECP256K1,
+            ChildNumber::Normal { index: 0 }
+        );
+}
 
 /// Errors related to extended descriptor parsing
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error)]
@@ -165,10 +175,10 @@ impl MaybeTweakPair for PubkeyWithTweak {
         let mut pk = match index {
             Some(index) => {
                 dpk.derive(ChildNumber::Normal { index })
-                    .to_public_key()
+                    .to_public_key(*DESCRIPTOR_CTX)
                     .key
             }
-            None => dpk.to_public_key().key,
+            None => dpk.to_public_key(*DESCRIPTOR_CTX).key,
         };
         pk.add_exp_assign(&SECP256K1, &self.tweak[..]).expect(
             "Tweaking with secret key can fail with negligible probability",
@@ -185,16 +195,16 @@ impl MiniscriptKey for PubkeyWithTweak {
     }
 }
 
-impl ToPublicKey for PubkeyWithTweak {
-    fn to_public_key(&self) -> bitcoin::PublicKey {
+impl ToPublicKey<NullCtx> for PubkeyWithTweak {
+    fn to_public_key(&self, _: NullCtx) -> bitcoin::PublicKey {
         bitcoin::PublicKey {
             compressed: true,
             key: self.to_tweaked_public_key(None),
         }
     }
 
-    fn hash_to_hash160(hash: &Self::Hash) -> hash160::Hash {
-        hash.to_public_key().to_pubkeyhash()
+    fn hash_to_hash160(hash: &Self::Hash, _: NullCtx) -> hash160::Hash {
+        hash.to_public_key(NullCtx).to_pubkeyhash()
     }
 }
 
@@ -303,7 +313,7 @@ impl PubkeyExtended {
             PubkeyExtended::Native(_) => {
                 self.clone()
                     .into_descriptor_public_key()
-                    .to_public_key()
+                    .to_public_key(*DESCRIPTOR_CTX)
                     .key
             }
             PubkeyExtended::Tweaked(tpk) => tpk.to_tweaked_public_key(index),
@@ -319,16 +329,16 @@ impl MiniscriptKey for PubkeyExtended {
     }
 }
 
-impl ToPublicKey for PubkeyExtended {
-    fn to_public_key(&self) -> bitcoin::PublicKey {
+impl ToPublicKey<NullCtx> for PubkeyExtended {
+    fn to_public_key(&self, _: NullCtx) -> bitcoin::PublicKey {
         bitcoin::PublicKey {
             compressed: true,
             key: self.to_tweaked_public_key(None),
         }
     }
 
-    fn hash_to_hash160(hash: &Self::Hash) -> hash160::Hash {
-        hash.to_public_key().to_pubkeyhash()
+    fn hash_to_hash160(hash: &Self::Hash, ctx: NullCtx) -> hash160::Hash {
+        hash.to_public_key(ctx).to_pubkeyhash()
     }
 }
 
@@ -357,13 +367,16 @@ mod test {
 
             assert_eq!(pk.to_pubkeyhash(), pk);
             assert_eq!(
-                pk.to_public_key(),
-                pk.as_descriptor_public_key().to_public_key()
+                pk.to_public_key(NullCtx),
+                pk.as_descriptor_public_key().to_public_key(*DESCRIPTOR_CTX)
             );
 
             assert_eq!(pk.has_tweak(), false);
             assert_eq!(pk.as_tweaking_factor(), None);
-            assert_eq!(pk.to_tweaked_public_key(None), pk.to_public_key().key);
+            assert_eq!(
+                pk.to_tweaked_public_key(None),
+                pk.to_public_key(NullCtx).key
+            );
             assert_eq!(pk.into_tweaking_factor(), None);
         }
 
@@ -372,12 +385,18 @@ mod test {
             assert_eq!(pk.has_tweak(), true);
 
             assert_eq!(pk.to_pubkeyhash(), pk);
-            assert_eq!(pk.to_public_key().key, pk.to_tweaked_public_key(None));
+            assert_eq!(
+                pk.to_public_key(NullCtx).key,
+                pk.to_tweaked_public_key(None)
+            );
 
             assert_eq!(pk.as_tweaking_factor().unwrap(), &tweak);
             assert_ne!(
                 pk.to_tweaked_public_key(None),
-                pk.clone().into_descriptor_public_key().to_public_key().key
+                pk.clone()
+                    .into_descriptor_public_key()
+                    .to_public_key(*DESCRIPTOR_CTX)
+                    .key
             );
             assert_eq!(pk.into_tweaking_factor().unwrap(), tweak);
         }

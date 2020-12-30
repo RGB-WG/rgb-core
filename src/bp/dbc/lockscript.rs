@@ -241,7 +241,7 @@ where
 mod test {
     use bitcoin::hashes::{hash160, sha256, Hash};
     use bitcoin::secp256k1;
-    use miniscript::{Miniscript, Segwitv0};
+    use miniscript::{Miniscript, NullCtx, Segwitv0};
     use std::str::FromStr;
 
     use super::super::Error;
@@ -249,7 +249,7 @@ mod test {
     use crate::SECP256K1;
 
     macro_rules! ms_str {
-        ($($arg:tt)*) => (Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str(&format!($($arg)*)).unwrap())
+        ($($arg:tt)*) => (Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str_insane(&format!($($arg)*)).unwrap())
     }
 
     macro_rules! policy_str {
@@ -304,7 +304,7 @@ mod test {
         ];
 
         ms.into_iter()
-            .map(|ms: Miniscript<_, _>| LockScript::from(ms.encode()))
+            .map(|ms: Miniscript<_, _>| LockScript::from(ms.encode(NullCtx)))
             .for_each(|ls| {
                 assert_eq!(
                     LockscriptCommitment::embed_commit(
@@ -338,7 +338,7 @@ mod test {
         ];
 
         ms.into_iter()
-            .map(|ms| LockScript::from(ms.encode()))
+            .map(|ms| LockScript::from(ms.encode(NullCtx)))
             .for_each(|ls| {
                 assert_eq!(
                     LockscriptCommitment::embed_commit(
@@ -369,7 +369,7 @@ mod test {
         ];
 
         ms.into_iter()
-            .map(|ms| LockScript::from(ms.encode()))
+            .map(|ms| LockScript::from(ms.encode(NullCtx)))
             .for_each(|ls| {
                 assert_eq!(
                     LockscriptCommitment::embed_commit(
@@ -403,7 +403,7 @@ mod test {
         ];
 
         ms.into_iter()
-            .map(|ms| LockScript::from(ms.encode()))
+            .map(|ms| LockScript::from(ms.encode(NullCtx)))
             .enumerate()
             .for_each(|(idx, ls)| {
                 let container = LockscriptContainer {
@@ -435,7 +435,7 @@ mod test {
         ];
 
         ms.into_iter()
-            .map(|ms| LockScript::from(ms.encode()))
+            .map(|ms| LockScript::from(ms.encode(NullCtx)))
             .enumerate()
             .for_each(|(idx, ls)| {
                 let container = LockscriptContainer {
@@ -475,7 +475,7 @@ mod test {
         .collect();
 
         ms.into_iter()
-            .map(|ms| LockScript::from(ms.encode()))
+            .map(|ms| LockScript::from(ms.encode(NullCtx)))
             .for_each(|ls| {
                 let container = LockscriptContainer {
                     script: ls,
@@ -510,7 +510,7 @@ mod test {
         .unwrap();
 
         let container = LockscriptContainer {
-            script: LockScript::from(ms.encode()),
+            script: LockScript::from(ms.encode(NullCtx)),
             pubkey: keys[1].key,
             tag,
             tweaking_factor: None,

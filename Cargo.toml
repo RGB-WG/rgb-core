@@ -43,7 +43,7 @@ bitcoin = { version = "~0.25.1", features = ["rand"] }
 bitcoin_hashes = "~0.9.3" # we need macro from here
 # <https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0002.md#deterministic-public-key-extraction-from-bitcoin-script>
 # We have to fix version of miniscript as required by LNPBP-2 specification
-miniscript = { version = "~3.0.0", features = ["compiler"] }
+miniscript = { version = "~4.0.0", features = ["compiler"] }
 bech32 = "~0.7.2"
 lightning-invoice = { version = "~0.3.0", optional = true }
 chacha20poly1305 = "~0.7.0"

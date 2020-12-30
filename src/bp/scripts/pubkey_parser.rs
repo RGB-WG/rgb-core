@@ -18,7 +18,7 @@ use std::iter::FromIterator;
 
 use bitcoin::{hashes::hash160, secp256k1, PubkeyHash};
 use miniscript::miniscript::iter::PkPkh;
-use miniscript::{Miniscript, MiniscriptKey, Segwitv0};
+use miniscript::{Miniscript, MiniscriptKey, NullCtx, Segwitv0};
 
 use super::LockScript;
 
@@ -67,7 +67,7 @@ impl LockScript {
         &self,
     ) -> Result<(Vec<secp256k1::PublicKey>, Vec<PubkeyHash>), PubkeyParseError>
     {
-        Miniscript::<_, Segwitv0>::parse(&*self.clone())?
+        Miniscript::<_, Segwitv0>::parse_insane(&*self.clone())?
             .iter_pk_pkh()
             .try_fold(
                 (Vec::<secp256k1::PublicKey>::new(), Vec::<PubkeyHash>::new()),
@@ -87,7 +87,7 @@ impl LockScript {
     pub fn extract_pubkeys(
         &self,
     ) -> Result<Vec<secp256k1::PublicKey>, PubkeyParseError> {
-        Miniscript::<_, Segwitv0>::parse(&*self.clone())?
+        Miniscript::<_, Segwitv0>::parse_insane(&*self.clone())?
             .iter_pk_pkh()
             .try_fold(Vec::<secp256k1::PublicKey>::new(), |mut keys, item| {
                 match item {
@@ -108,19 +108,19 @@ impl LockScript {
         &self,
         processor: impl Fn(&secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
     ) -> Result<Self, PubkeyParseError> {
-        let result = Miniscript::<_, Segwitv0>::parse(&*self.clone())?
+        let result = Miniscript::<_, Segwitv0>::parse_insane(&*self.clone())?
             .translate_pk(
-                &mut |pk| {
-                    Ok(processor(&pk.key)
-                        .map(|key| bitcoin::PublicKey {
-                            compressed: true,
-                            key,
-                        })
-                        .unwrap_or(pk.clone()))
-                },
-                &mut |hash| Err(PubkeyParseError::PubkeyHash(hash.clone())),
-            )?;
-        Ok(LockScript::from(result.encode()))
+            &mut |pk| {
+                Ok(processor(&pk.key)
+                    .map(|key| bitcoin::PublicKey {
+                        compressed: true,
+                        key,
+                    })
+                    .unwrap_or(pk.clone()))
+            },
+            &mut |hash| Err(PubkeyParseError::PubkeyHash(hash.clone())),
+        )?;
+        Ok(LockScript::from(result.encode(NullCtx)))
     }
 
     /// Replaces public kes and public key hashes using provided matching
@@ -132,7 +132,7 @@ impl LockScript {
         ) -> Option<secp256k1::PublicKey>,
         hash_processor: impl Fn(&hash160::Hash) -> Option<hash160::Hash>,
     ) -> Result<Self, PubkeyParseError> {
-        let result = Miniscript::<_, Segwitv0>::parse(&*self.clone())?
+        let result = Miniscript::<_, Segwitv0>::parse_insane(&*self.clone())?
             .translate_pk(
                 &mut |pk| -> Result<_, PubkeyParseError> {
                     Ok(key_processor(&pk.key)
@@ -145,7 +145,7 @@ impl LockScript {
                 &mut |hash| Ok(hash_processor(hash).unwrap_or(hash.clone())),
             )
             .expect("Miniscript translation must not fail unless miniscript library is broken");
-        Ok(LockScript::from(result.encode()))
+        Ok(LockScript::from(result.encode(NullCtx)))
     }
 }
 
@@ -160,11 +160,11 @@ pub(crate) mod test {
     use std::str::FromStr;
 
     macro_rules! ms_str {
-        ($($arg:tt)*) => (LockScript::from(Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str(&format!($($arg)*)).unwrap().encode()))
+        ($($arg:tt)*) => (LockScript::from(Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str_insane(&format!($($arg)*)).unwrap().encode(NullCtx)))
     }
 
     macro_rules! policy_str {
-        ($($arg:tt)*) => (LockScript::from(miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap().compile::<Segwitv0>().unwrap().encode()))
+        ($($arg:tt)*) => (LockScript::from(miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap().compile::<Segwitv0>().unwrap().encode(NullCtx)))
     }
 
     pub(crate) fn gen_pubkeys_and_hashes(
@@ -293,10 +293,10 @@ pub(crate) mod test {
                 keys[0],
                 keys[1],
                 keys[3],
-                keys[3],
+                keys[5],
                 keys[4]
             ),
-            vec![keys[3], keys[4], keys[0], keys[1], keys[3]]
+            vec![keys[5], keys[4], keys[0], keys[1], keys[3]]
                 .iter()
                 .map(|pk| pk.key)
                 .collect(),

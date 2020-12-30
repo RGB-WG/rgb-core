@@ -824,9 +824,9 @@ dependencies = [
 
 [[package]]
 name = "miniscript"
-version = "3.0.0"
+version = "4.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4f8542804cd816cad1aaea64e3e2e326e401269ad6dc6661d2f8be7b3f76e46"
+checksum = "74ff4ece4ff5498718a232e92d53273903609c739052f5edf2a1a42c59586348"
 dependencies = [
  "bitcoin",
  "serde 1.0.117",
