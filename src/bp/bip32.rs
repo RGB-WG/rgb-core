@@ -1001,7 +1001,7 @@ pub struct DerivationComponents {
 impl DerivationComponents {
     pub fn count(&self) -> u32 {
         match self.index_ranges {
-            None => u32::MAX,
+            None => ::core::u32::MAX,
             Some(ref ranges) => {
                 ranges.iter().fold(0u32, |sum, range| sum + range.count())
             }
@@ -1053,10 +1053,7 @@ impl Display for DerivationComponents {
             f,
             "[{}]{}/",
             self.master_xpub.fingerprint(),
-            self.derivation_path()
-                .to_string()
-                .strip_prefix("m")
-                .unwrap_or(&self.derivation_path().to_string())
+            self.derivation_path().to_string().trim_start_matches("m")
         )?;
         if let Some(_) = self.index_ranges {
             f.write_str(&self.index_ranges_string())
