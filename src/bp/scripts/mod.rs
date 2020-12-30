@@ -11,15 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod descriptor;
 mod pubkey_parser;
 pub mod tweak;
 pub mod types;
 
-//pub use error::Error;
-pub use descriptor::{CompactDescriptor, Error, ExpandedDescriptor};
 pub use pubkey_parser::PubkeyParseError;
 pub use types::{
     GenerateScripts, LockScript, PubkeyScript, RedeemScript, ScriptSet,
-    Strategy, Witness, WitnessProgram, WitnessScript, WitnessVersion,
+    SigScript, Strategy, TapScript, Witness, WitnessProgram, WitnessScript,
+    WitnessVersion,
 };

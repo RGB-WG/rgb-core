@@ -107,8 +107,7 @@ use bitcoin::{
     secp256k1, Address, ScriptHash, WPubkeyHash, WScriptHash,
 };
 
-use super::CompactDescriptor;
-use crate::bp::Chain;
+use crate::bp::{Chain, CompactDescriptor};
 use crate::strict_encoding;
 
 /// Script which knowledge is required for spending some specific transaction

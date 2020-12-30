@@ -21,7 +21,7 @@
 use bitcoin::{blockdata::script::*, hash_types::*, hashes::Hash, secp256k1};
 use core::convert::TryFrom;
 
-use super::types::*;
+use super::{LockScript, PubkeyScript, TapScript};
 
 /// Descriptor category specifies way how the `scriptPubkey` is structured
 #[cfg_attr(

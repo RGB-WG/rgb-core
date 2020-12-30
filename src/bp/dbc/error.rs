@@ -58,11 +58,11 @@ pub enum Error {
     LockscriptKeyNotFound,
 }
 
-impl From<bp::scripts::Error> for Error {
-    fn from(err: bp::scripts::Error) -> Self {
+impl From<bp::descriptor::Error> for Error {
+    fn from(err: bp::descriptor::Error) -> Self {
         match err {
-            bp::scripts::Error::InvalidKeyData => Error::InvalidKeyData,
-            bp::scripts::Error::UnsupportedWitnessVersion => {
+            bp::descriptor::Error::InvalidKeyData => Error::InvalidKeyData,
+            bp::descriptor::Error::UnsupportedWitnessVersion => {
                 Error::UnsupportedWitnessVersion
             }
         }

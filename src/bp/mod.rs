@@ -16,6 +16,7 @@ pub mod bip32;
 pub mod blind;
 pub mod chain;
 pub mod dbc;
+pub mod descriptor;
 pub mod hlc;
 pub mod lex_order;
 pub mod psbt;
@@ -29,13 +30,16 @@ pub mod tagged_hash;
 
 pub use bip32::{DerivationInfo, DerivationTemplate};
 pub use chain::{Chain, P2pNetworkId};
+pub use descriptor::{
+    CompactDescriptor, DescriptorCategory, ExpandedDescriptor,
+};
 pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
 pub use psbt::Psbt;
 pub use scripts::{
-    CompactDescriptor, ExpandedDescriptor, GenerateScripts, LockScript,
-    PubkeyParseError, PubkeyScript, RedeemScript, ScriptSet, Strategy, Witness,
-    WitnessProgram, WitnessScript, WitnessVersion,
+    GenerateScripts, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
+    ScriptSet, SigScript, Strategy, TapScript, Witness, WitnessProgram,
+    WitnessScript, WitnessVersion,
 };
 pub use seals::TxoutSeal;
 pub use short_id::ShortId;
