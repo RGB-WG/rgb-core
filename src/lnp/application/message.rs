@@ -162,8 +162,8 @@ pub struct Init {
     pub local_features: Features,
     #[tlv(type = 1)]
     pub assets: HashSet<AssetId>,
-    // #[tlv(unknown)]
-    // pub unknown_tlvs: BTreeMap<tlv::Type, tlv::RawRecord>,
+    /* #[tlv(unknown)]
+     * pub unknown_tlvs: BTreeMap<tlv::Type, tlv::RawRecord>, */
 }
 
 /// In order to allow for the existence of long-lived TCP connections, at

@@ -120,34 +120,35 @@ impl Unmarshall for Unmarshaller {
                 }
 
                 Ok(type_id) => {
-                    let rec =
-                        if let Some(parser) = self.known_types.get(&type_id) {
-                            // if type is known:
-                            // MUST decode the next length bytes using the known
-                            // encoding for type.
-                            // The rest of rules MUST be supported by the parser:
-                            // - if length is not exactly equal to that required for
-                            //   the known encoding for type MUST fail to parse the
-                            //   tlv_stream.
-                            // - if variable-length fields within the known encoding
-                            //   for type are not minimal MUST fail to parse the
-                            //   tlv_stream.
-                            parser(&mut reader)?
-                        }
-                        // otherwise, if type is unknown:
-                        // if type is even:
-                        // MUST fail to parse the tlv_stream.
-                        else if type_id.is_even() {
-                            break Err(Error::TlvRecordEvenType);
-                        }
-                        // otherwise, if type is odd:
-                        // MUST discard the next length bytes.
-                        else {
-                            // Here we are actually not discarding the bytes but
-                            // rather store them for an upstream users of the
-                            // library which may know the meaning of the bytes
-                            (self.raw_parser)(&mut reader)?
-                        };
+                    let rec = if let Some(parser) =
+                        self.known_types.get(&type_id)
+                    {
+                        // if type is known:
+                        // MUST decode the next length bytes using the known
+                        // encoding for type.
+                        // The rest of rules MUST be supported by the parser:
+                        // - if length is not exactly equal to that required for
+                        //   the known encoding for type MUST fail to parse the
+                        //   tlv_stream.
+                        // - if variable-length fields within the known encoding
+                        //   for type are not minimal MUST fail to parse the
+                        //   tlv_stream.
+                        parser(&mut reader)?
+                    }
+                    // otherwise, if type is unknown:
+                    // if type is even:
+                    // MUST fail to parse the tlv_stream.
+                    else if type_id.is_even() {
+                        break Err(Error::TlvRecordEvenType);
+                    }
+                    // otherwise, if type is odd:
+                    // MUST discard the next length bytes.
+                    else {
+                        // Here we are actually not discarding the bytes but
+                        // rather store them for an upstream users of the
+                        // library which may know the meaning of the bytes
+                        (self.raw_parser)(&mut reader)?
+                    };
                     tlv.insert(type_id, rec);
                     prev_type_id = type_id;
                 }

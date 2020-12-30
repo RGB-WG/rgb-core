@@ -12,12 +12,14 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::cmp::Ordering;
+use core::ops::RangeInclusive;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 use std::iter::FromIterator;
 use std::str::FromStr;
 
+use amplify::Wrapper;
 use bitcoin::secp256k1;
 use bitcoin::util::bip32::{
     self, ChainCode, ChildNumber, DerivationPath, Error, ExtendedPrivKey,
@@ -662,7 +664,7 @@ impl DerivationPathMaster for DerivationPath {
 /// Trait that allows possibly failable conversion from a type into a
 /// derivation path
 pub trait IntoDerivationPath {
-    /// Convers a given type into a [`DerivationPath`] with possible error
+    /// Converts a given type into a [`DerivationPath`] with possible error
     fn into_derivation_path(self) -> Result<DerivationPath, Error>;
 }
 
@@ -945,5 +947,188 @@ impl Decode for ExtendedPubKey {
                 |e| bitcoin::util::bip32::Error::CannotDeriveFromHardenedKey,
             )?,
         })
+    }
+}
+
+pub trait HardenedNormalSplit {
+    fn hardened_normal_split(&self) -> (DerivationPath, Vec<u32>);
+}
+
+impl HardenedNormalSplit for DerivationPath {
+    fn hardened_normal_split(&self) -> (DerivationPath, Vec<u32>) {
+        let mut terminal_path = vec![];
+        let branch_path = self
+            .into_iter()
+            .rev()
+            .by_ref()
+            .skip_while(|child| {
+                if let ChildNumber::Normal { index } = child {
+                    terminal_path.push(index);
+                    true
+                } else {
+                    false
+                }
+            })
+            .cloned()
+            .collect::<DerivationPath>();
+        let branch_path = branch_path.into_iter().rev().cloned().collect();
+        let terminal_path = terminal_path.into_iter().rev().cloned().collect();
+        (branch_path, terminal_path)
+    }
+}
+
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+// master_xpub/branch_path=branch_xpub/terminal_path/index_ranges
+pub struct DerivationComponents {
+    pub master_xpub: ExtendedPubKey,
+    pub branch_path: DerivationPath,
+    pub branch_xpub: ExtendedPubKey,
+    pub terminal_path: Vec<u32>,
+    pub index_ranges: Option<Vec<DerivationRange>>,
+}
+
+impl DerivationComponents {
+    pub fn count(&self) -> u32 {
+        match self.index_ranges {
+            None => u32::MAX,
+            Some(ref ranges) => {
+                ranges.iter().fold(0u32, |sum, range| sum + range.count())
+            }
+        }
+    }
+
+    pub fn derivation_path(&self) -> DerivationPath {
+        self.branch_path.extend(self.terminal_path())
+    }
+
+    pub fn terminal_path(&self) -> DerivationPath {
+        DerivationPath::from_iter(
+            self.terminal_path
+                .iter()
+                .map(|i| ChildNumber::Normal { index: *i }),
+        )
+    }
+
+    pub fn index_ranges_string(&self) -> String {
+        self.index_ranges
+            .as_ref()
+            .map(|ranges| {
+                ranges
+                    .iter()
+                    .map(DerivationRange::to_string)
+                    .collect::<Vec<_>>()
+                    .join(",")
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn child(&self, child: u32) -> ExtendedPubKey {
+        let derivation = self
+            .terminal_path()
+            .into_child(ChildNumber::Normal { index: child });
+        self.branch_xpub
+            .derive_pub(&crate::SECP256K1, &derivation)
+            .expect("Non-hardened derivation does not fail")
+    }
+
+    pub fn public_key(&self, index: u32) -> bitcoin::PublicKey {
+        self.child(index).public_key
+    }
+}
+
+impl Display for DerivationComponents {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[{}]{}/",
+            self.master_xpub.fingerprint(),
+            self.derivation_path()
+                .to_string()
+                .strip_prefix("m")
+                .unwrap_or(&self.derivation_path().to_string())
+        )?;
+        if let Some(_) = self.index_ranges {
+            f.write_str(&self.index_ranges_string())
+        } else {
+            f.write_str("*")
+        }
+    }
+}
+
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
+pub struct DerivationRange(RangeInclusive<u32>);
+
+impl PartialOrd for DerivationRange {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match self.start().partial_cmp(&other.start()) {
+            Some(Ordering::Equal) => self.end().partial_cmp(&other.end()),
+            other => other,
+        }
+    }
+}
+
+impl Ord for DerivationRange {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.start().cmp(&other.start()) {
+            Ordering::Equal => self.end().cmp(&other.end()),
+            other => other,
+        }
+    }
+}
+
+impl DerivationRange {
+    pub fn count(&self) -> u32 {
+        let inner = self.as_inner();
+        inner.end() - inner.start() + 1
+    }
+
+    pub fn start(&self) -> u32 {
+        *self.as_inner().start()
+    }
+
+    pub fn end(&self) -> u32 {
+        *self.as_inner().end()
+    }
+}
+
+impl Display for DerivationRange {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let inner = self.as_inner();
+        if inner.start() == inner.end() {
+            write!(f, "{}", inner.start())
+        } else {
+            write!(f, "{}-{}", inner.start(), inner.end())
+        }
+    }
+}
+
+impl StrictEncode for DerivationRange {
+    fn strict_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, strict_encoding::Error> {
+        Ok(strict_encode_list!(e; self.start(), self.end()))
+    }
+}
+
+impl StrictDecode for DerivationRange {
+    fn strict_decode<D: io::Read>(
+        mut d: D,
+    ) -> Result<Self, strict_encoding::Error> {
+        Ok(Self::from_inner(RangeInclusive::new(
+            u32::strict_decode(&mut d)?,
+            u32::strict_decode(&mut d)?,
+        )))
     }
 }
