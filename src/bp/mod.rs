@@ -28,7 +28,10 @@ mod slice32;
 mod strict_encoding;
 pub mod tagged_hash;
 
-pub use bip32::{DerivationInfo, DerivationTemplate};
+pub use bip32::{
+    DerivationComponents, DerivationInfo, DerivationPathMaster,
+    DerivationRange, DerivationTemplate, HardenedNormalSplit,
+};
 pub use chain::{Chain, P2pNetworkId};
 pub use descriptor::{
     CompactDescriptor, DescriptorCategory, ExpandedDescriptor,
