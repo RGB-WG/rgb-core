@@ -22,7 +22,7 @@ use super::{
     PubkeyCommitment, PubkeyContainer, TaprootCommitment, TaprootContainer,
 };
 use crate::bp::{
-    GenerateScripts, LockScript, PubkeyScript, ScriptPubkeyContent, Strategy,
+    CompactDescriptor, GenerateScripts, LockScript, PubkeyScript, Strategy,
 };
 use crate::commit_verify::EmbedCommitVerify;
 
@@ -199,8 +199,8 @@ impl Container for SpkContainer {
         supplement: &Self::Supplement,
         host: &Self::Host,
     ) -> Result<Self, Error> {
+        use CompactDescriptor as Descr;
         use ScriptEncodeMethod as Comp;
-        use ScriptPubkeyContent as Descr;
 
         let (lockscript, _) = match &proof.source {
             ScriptEncodeData::SinglePubkey => (None, None),
@@ -209,7 +209,7 @@ impl Container for SpkContainer {
         };
 
         let mut proof = proof.clone();
-        let method = match ScriptPubkeyContent::try_from(host.clone())? {
+        let method = match CompactDescriptor::try_from(host.clone())? {
             Descr::Sh(script_hash) => {
                 let script = Script::new_p2sh(&script_hash);
                 if let Some(lockscript) = lockscript {

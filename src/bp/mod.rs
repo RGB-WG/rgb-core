@@ -33,10 +33,9 @@ pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
 pub use psbt::Psbt;
 pub use scripts::{
-    GenerateScripts, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
-    ScriptPubkeyContent, ScriptPubkeyFormat, ScriptPubkeyStructure,
-    ScriptPubkeyTemplate, ScriptSet, Strategy, Witness, WitnessProgram,
-    WitnessScript, WitnessVersion,
+    CompactDescriptor, ExpandedDescriptor, GenerateScripts, LockScript,
+    PubkeyParseError, PubkeyScript, RedeemScript, ScriptSet, Strategy, Witness,
+    WitnessProgram, WitnessScript, WitnessVersion,
 };
 pub use seals::TxoutSeal;
 pub use short_id::ShortId;

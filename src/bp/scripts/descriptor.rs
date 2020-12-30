@@ -23,55 +23,9 @@ use core::convert::TryFrom;
 
 use super::types::*;
 
-/// Enum defining standard and providing all required data for script pubkey
-/// serialization. This enum is not designed for wallets; it covers only
-/// BIPs and Bitcoin Core extra-wallet parts.
-///
-/// If you need enum without attached data (like for functions detecting
-/// type of the script pubkey) check [ScriptPubkeyFormat].
-pub enum ScriptPubkeyStructure {
-    /// Initial standard used by Bitcoin Core (also codenamed "P2PK")
-    /// that uses uncompressed public key serialization followed with
-    /// `OP_CHECKSIG` code
-    KeyChecksig(bitcoin::PublicKey),
-
-    /// Script pubkey serialization according to widely accepted standard
-    KeyHash(PubkeyHash),
-
-    /// Script pubkey serialization according to BIP-16
-    ScriptHash(ScriptHash),
-
-    /// Segwit script pubkey serialization according to BIP-141
-    /// <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#Witness_program>
-    Witness(WitnessVersion, WitnessProgram),
-
-    /// Custom (i.e. non-standard) output with arbitrary script
-    Custom(Script),
-}
-
-pub enum ScriptPubkeyFormat {
-    /// Initial standard used by Bitcoin Core (also codenamed "P2PK")
-    /// that uses uncompressed public key serialization followed with
-    /// `OP_CHECKSIG` code
-    KeyChecksig,
-
-    /// Script pubkey serialization according to widely accepted standard
-    KeyHash,
-
-    /// Script pubkey serialization according to BIP-16
-    ScriptHash,
-
-    /// Segwit script pubkey serialization according to BIP-141
-    /// <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#Witness_program>
-    Witness,
-
-    /// Custom (i.e. non-standard) output with arbitrary script
-    Custom,
-}
-
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[non_exhaustive]
-pub enum ScriptPubkeyContent {
+pub enum CompactDescriptor {
     #[display("bare({0})", alt = "bare({_0:#})")]
     Bare(PubkeyScript),
 
@@ -96,7 +50,7 @@ pub enum ScriptPubkeyContent {
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[non_exhaustive]
-pub enum ScriptPubkeyTemplate {
+pub enum ExpandedDescriptor {
     #[display("bare({0})", alt = "bare({_0:#})")]
     Bare(PubkeyScript),
 
@@ -134,11 +88,11 @@ pub enum Error {
     UnsupportedWitnessVersion,
 }
 
-impl TryFrom<PubkeyScript> for ScriptPubkeyContent {
+impl TryFrom<PubkeyScript> for CompactDescriptor {
     type Error = Error;
     fn try_from(script_pubkey: PubkeyScript) -> Result<Self, Self::Error> {
         use bitcoin::blockdata::opcodes::all::*;
-        use ScriptPubkeyContent::*;
+        use CompactDescriptor::*;
 
         let script = &*script_pubkey;
         let p = script.as_bytes();
@@ -174,9 +128,9 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyContent {
     }
 }
 
-impl From<ScriptPubkeyContent> for PubkeyScript {
-    fn from(spkt: ScriptPubkeyContent) -> PubkeyScript {
-        use ScriptPubkeyContent::*;
+impl From<CompactDescriptor> for PubkeyScript {
+    fn from(spkt: CompactDescriptor) -> PubkeyScript {
+        use CompactDescriptor::*;
 
         PubkeyScript::from(match spkt {
             Bare(script) => (*script).clone(),
@@ -187,28 +141,5 @@ impl From<ScriptPubkeyContent> for PubkeyScript {
             Wsh(wscript_hash) => Script::new_v0_wsh(&wscript_hash),
             Taproot(_) => unimplemented!(),
         })
-    }
-}
-
-impl From<ScriptPubkeyContent> for ScriptPubkeyStructure {
-    fn from(descr: ScriptPubkeyContent) -> Self {
-        use ScriptPubkeyContent::*;
-        use ScriptPubkeyStructure as PkStruct;
-        match descr {
-            Bare(script) => PkStruct::Custom((*script).clone()),
-            Pk(pubkey) => PkStruct::KeyChecksig(pubkey),
-            Pkh(hash) => PkStruct::KeyHash(hash),
-            Sh(hash) => PkStruct::ScriptHash(hash),
-            Wpkh(hash) => {
-                PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into())
-            }
-            Wsh(hash) => {
-                PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into())
-            }
-            Taproot(pubkey) => PkStruct::Witness(
-                WitnessVersion::V1,
-                pubkey.serialize().to_vec().into(),
-            ),
-        }
     }
 }
