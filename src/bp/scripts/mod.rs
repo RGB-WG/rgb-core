@@ -11,9 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-pub mod descriptor;
 mod pubkey_parser;
 pub mod script_pubkey;
+pub mod tweak;
 pub mod types;
 
 //pub use error::Error;

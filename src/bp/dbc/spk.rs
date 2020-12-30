@@ -47,13 +47,13 @@ pub enum ScriptEncodeMethod {
     WScriptHash,
     ShWPubkeyHash,
     ShWScriptHash,
-    TapRoot,
+    Taproot,
     OpReturn,
     Bare,
 }
 
 /// Structure keeping the minimum of information (bytewise) required to verify
-/// deteministic bitcoin commitment given only the transaction source, its
+/// deterministic bitcoin commitment given only the transaction source, its
 /// fee and protocol-specific constants. It is a part of the [`Proof`] data.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[display(doc_comments)]
@@ -248,7 +248,7 @@ impl Container for SpkContainer {
             Descr::Return(_) => Comp::OpReturn,
             Descr::Wpkh(_) => Comp::WPubkeyHash,
             Descr::Wsh(_) => Comp::WScriptHash,
-            Descr::Taproot(_) => Comp::TapRoot,
+            Descr::Taproot(_) => Comp::Taproot,
         };
         let proof = proof;
 
@@ -272,7 +272,7 @@ impl Container for SpkContainer {
                     Err(Error::InvalidProofStructure)?
                 }
             }
-            Comp::TapRoot => {
+            Comp::Taproot => {
                 if let ScriptEncodeData::Taproot(_) = proof.source {
                 } else {
                     Err(Error::InvalidProofStructure)?
@@ -377,7 +377,7 @@ where
             } else if let ScriptEncodeData::Taproot(taproot_hash) =
                 container.source
             {
-                if container.method != TapRoot {
+                if container.method != Taproot {
                     Err(Error::InvalidProofStructure)?
                 }
                 let mut taproot_container = TaprootContainer {

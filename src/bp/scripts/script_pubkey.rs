@@ -82,7 +82,7 @@ pub enum ScriptPubkeyFormat {
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[non_exhaustive]
 pub enum ScriptPubkeyContent {
-    #[display("script({0})", alt = "script({_0:#})")]
+    #[display("bare({0})", alt = "bare({_0:#})")]
     Bare(PubkeyScript),
 
     #[display("pk({0})")]
@@ -94,7 +94,7 @@ pub enum ScriptPubkeyContent {
     #[display("sh({0})")]
     Sh(ScriptHash),
 
-    #[display("script(OP_RETURN {_0:?})")]
+    #[display("bare(OP_RETURN {_0:?})")]
     Return(Vec<Vec<u8>>),
 
     #[display("wpkh({0})")]
@@ -108,20 +108,36 @@ pub enum ScriptPubkeyContent {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display(Debug)]
 #[non_exhaustive]
 pub enum ScriptPubkeyTemplate {
+    #[display("bare({0})", alt = "bare({_0:#})")]
     Bare(PubkeyScript),
+
+    #[display("pk({0})")]
     Pk(bitcoin::PublicKey),
+
+    #[display("pkh({0})")]
     Pkh(bitcoin::PublicKey),
+
+    #[display("sh({0})")]
     Sh(LockScript),
+
+    #[display("bare(OP_RETURN {_0:?})")]
     Return(Vec<Vec<u8>>),
-    #[allow(non_camel_case_types)]
+
+    #[display("sh(wpkh({0}))", alt = "sh(wpkh({_0:#}))")]
     ShWpkh(bitcoin::PublicKey),
-    #[allow(non_camel_case_types)]
+
+    #[display("sh(wsh({0}))")]
     ShWsh(LockScript),
+
+    #[display("wpkh({0})")]
     Wpkh(bitcoin::PublicKey),
+
+    #[display("wsh({0})")]
     Wsh(LockScript),
+
+    #[display("tr({0})")]
     Taproot(secp256k1::PublicKey, TapScript),
 }
 
