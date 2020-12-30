@@ -18,10 +18,20 @@
 //! TxOut -> PubkeyScript -> Descriptor -> Structure -> Format
 //! ```
 
-use bitcoin::{blockdata::script::*, hash_types::*, hashes::Hash, secp256k1};
 use core::convert::TryFrom;
+use std::str::FromStr;
+
+use bitcoin;
+use bitcoin::blockdata::script::Script;
+use bitcoin::hash_types::{PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
+use bitcoin::hashes::{hash160, Hash};
+use bitcoin::secp256k1;
+use miniscript::descriptor::{DescriptorKeyParseError, DescriptorSinglePub};
+use miniscript::{MiniscriptKey, NullCtx, ToPublicKey};
 
 use super::{LockScript, PubkeyScript, TapScript};
+use crate::bp::bip32::DerivationComponentsCtx;
+use crate::bp::DerivationComponents;
 
 /// Descriptor category specifies way how the `scriptPubkey` is structured
 #[cfg_attr(
@@ -187,5 +197,59 @@ impl From<CompactDescriptor> for PubkeyScript {
             Wsh(wscript_hash) => Script::new_v0_wsh(&wscript_hash),
             Taproot(_) => unimplemented!(),
         })
+    }
+}
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display(inner)]
+pub enum PubkeyPlaceholder {
+    /// Single known public key
+    Pubkey(DescriptorSinglePub),
+
+    /// Public key range with deterministic derivation that can be derived
+    /// from a known extended public key without private key
+    XPubDerivable(DerivationComponents),
+}
+
+impl MiniscriptKey for PubkeyPlaceholder {
+    type Hash = Self;
+
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
+}
+
+impl<'secp, C> ToPublicKey<DerivationComponentsCtx<'secp, C>>
+    for PubkeyPlaceholder
+where
+    C: 'secp + secp256k1::Verification,
+{
+    fn to_public_key(
+        &self,
+        to_pk_ctx: DerivationComponentsCtx<'secp, C>,
+    ) -> bitcoin::PublicKey {
+        match self {
+            PubkeyPlaceholder::Pubkey(ref pkd) => {
+                pkd.key.to_public_key(NullCtx)
+            }
+            PubkeyPlaceholder::XPubDerivable(ref dc) => {
+                dc.to_public_key(to_pk_ctx)
+            }
+        }
+    }
+
+    fn hash_to_hash160(
+        hash: &Self::Hash,
+        to_pk_ctx: DerivationComponentsCtx<'secp, C>,
+    ) -> hash160::Hash {
+        hash.to_public_key(to_pk_ctx).to_pubkeyhash()
+    }
+}
+
+impl FromStr for PubkeyPlaceholder {
+    type Err = DescriptorKeyParseError;
+
+    fn from_str(_s: &str) -> Result<Self, Self::Err> {
+        unimplemented!()
     }
 }

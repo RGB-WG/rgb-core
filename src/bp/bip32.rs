@@ -20,14 +20,17 @@ use std::iter::FromIterator;
 use std::str::FromStr;
 
 use amplify::Wrapper;
-use bitcoin::secp256k1;
+use bitcoin::hashes::hash160;
 use bitcoin::util::bip32::{
     self, ChainCode, ChildNumber, DerivationPath, Error, ExtendedPrivKey,
     ExtendedPubKey, Fingerprint,
 };
 use bitcoin::Network;
+use bitcoin::{secp256k1, PublicKey};
+use miniscript::{DescriptorPublicKeyCtx, MiniscriptKey, ToPublicKey};
 
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
+use miniscript::descriptor::DescriptorKeyParseError;
 
 /// Magical version bytes for xpub: bitcoin mainnet public key for P2PKH or P2SH
 pub const VERSION_MAGIC_XPUB: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
@@ -686,6 +689,27 @@ impl<'a> IntoDerivationPath for &'a [ChildNumber] {
     }
 }
 
+impl IntoDerivationPath for Vec<u32> {
+    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
+        Ok(self
+            .into_iter()
+            .map(ChildNumber::from)
+            .collect::<Vec<_>>()
+            .into())
+    }
+}
+
+impl<'a> IntoDerivationPath for &'a [u32] {
+    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
+        Ok(self
+            .into_iter()
+            .cloned()
+            .map(ChildNumber::from)
+            .collect::<Vec<_>>()
+            .into())
+    }
+}
+
 impl IntoDerivationPath for String {
     fn into_derivation_path(self) -> Result<DerivationPath, Error> {
         self.parse()
@@ -1049,17 +1073,120 @@ impl DerivationComponents {
 
 impl Display for DerivationComponents {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[{}]{}/",
-            self.master_xpub.fingerprint(),
-            self.derivation_path().to_string().trim_start_matches("m")
+        if f.alternate() {
+            write!(f, "[{}]/", self.master_xpub.fingerprint())?;
+        } else {
+            write!(f, "[{}]/", self.master_xpub)?;
+        }
+        f.write_str(
+            self.derivation_path().to_string().trim_start_matches("m"),
         )?;
         if let Some(_) = self.index_ranges {
             f.write_str(&self.index_ranges_string())
         } else {
             f.write_str("*")
         }
+    }
+}
+
+impl FromStr for DerivationComponents {
+    type Err = DescriptorKeyParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        unimplemented!()
+    }
+}
+
+impl MiniscriptKey for DerivationComponents {
+    type Hash = Self;
+
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
+}
+
+/// Context information for deriving a public key from [`DerivationComponents`]
+#[derive(Debug)]
+pub struct DerivationComponentsCtx<'secp, C>
+where
+    C: 'secp + secp256k1::Verification,
+{
+    /// The underlying secp context
+    pub secp_ctx: &'secp secp256k1::Secp256k1<C>,
+    /// The child_number in case the descriptor is wildcard
+    /// If the DescriptorPublicKey is not wildcard this field is not used.
+    pub child_number: bip32::ChildNumber,
+}
+
+impl<'secp, C> From<DerivationComponentsCtx<'secp, C>>
+    for DescriptorPublicKeyCtx<'secp, C>
+where
+    C: 'secp + secp256k1::Verification,
+{
+    fn from(dc: DerivationComponentsCtx<'secp, C>) -> Self {
+        DescriptorPublicKeyCtx::new(dc.secp_ctx, dc.child_number)
+    }
+}
+
+impl<'secp, C> Clone for DerivationComponentsCtx<'secp, C>
+where
+    C: 'secp + secp256k1::Verification,
+{
+    fn clone(&self) -> Self {
+        Self {
+            secp_ctx: &self.secp_ctx,
+            child_number: self.child_number.clone(),
+        }
+    }
+}
+
+impl<'secp, C> Copy for DerivationComponentsCtx<'secp, C> where
+    C: 'secp + secp256k1::Verification
+{
+}
+
+impl<'secp, C> DerivationComponentsCtx<'secp, C>
+where
+    C: 'secp + secp256k1::Verification,
+{
+    /// Create a new context
+    pub fn new(
+        secp_ctx: &'secp secp256k1::Secp256k1<C>,
+        child_number: bip32::ChildNumber,
+    ) -> Self {
+        Self {
+            secp_ctx: secp_ctx,
+            child_number: child_number,
+        }
+    }
+}
+
+impl<'secp, C> ToPublicKey<DerivationComponentsCtx<'secp, C>>
+    for DerivationComponents
+where
+    C: 'secp + secp256k1::Verification,
+{
+    fn to_public_key(
+        &self,
+        to_pk_ctx: DerivationComponentsCtx<'secp, C>,
+    ) -> PublicKey {
+        let derivation_path = self
+            .terminal_path
+            .clone()
+            .into_derivation_path()
+            .expect("does not fail for vec/slices")
+            .into_child(to_pk_ctx.child_number);
+        self.branch_xpub
+            .derive_pub(to_pk_ctx.secp_ctx, &derivation_path)
+            .expect("unhardened derivation does not fail")
+            .public_key
+    }
+
+    fn hash_to_hash160(
+        hash: &Self::Hash,
+        to_pk_ctx: DerivationComponentsCtx<'secp, C>,
+    ) -> hash160::Hash {
+        hash.to_public_key(to_pk_ctx).to_pubkeyhash()
     }
 }
 
