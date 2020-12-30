@@ -237,6 +237,9 @@ impl Container for SpkContainer {
                     }
                 }
             }
+            Descr::Bare(script) if script.as_inner().is_op_return() => {
+                Comp::OpReturn
+            }
             Descr::Bare(script) => {
                 proof.source = ScriptEncodeData::LockScript(LockScript::from(
                     script.to_inner(),
@@ -245,7 +248,6 @@ impl Container for SpkContainer {
             }
             Descr::Pk(_) => Comp::PublicKey,
             Descr::Pkh(_) => Comp::PubkeyHash,
-            Descr::Return(_) => Comp::OpReturn,
             Descr::Wpkh(_) => Comp::WPubkeyHash,
             Descr::Wsh(_) => Comp::WScriptHash,
             Descr::Taproot(_) => Comp::Taproot,

@@ -45,12 +45,6 @@ pub enum ScriptPubkeyStructure {
     /// <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#Witness_program>
     Witness(WitnessVersion, WitnessProgram),
 
-    /// Outputs containing OP_RETURN serialized according to
-    /// [Bitcoin Core-defined rules](https://github.com/bitcoin/bitcoin/blob/master/doc/release-notes/release-notes-0.12.0.md#relay-any-sequence-of-pushdatas-in-op_return-outputs-now-allowed)
-    /// as initial OP_RETURN code with any combination of data pushes and
-    /// numeric constant opcodes (OP_1 to OP_16)
-    OpReturn(Vec<Vec<u8>>),
-
     /// Custom (i.e. non-standard) output with arbitrary script
     Custom(Script),
 }
@@ -71,10 +65,6 @@ pub enum ScriptPubkeyFormat {
     /// <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#Witness_program>
     Witness,
 
-    /// Outputs containing OP_RETURN serialized according to
-    /// [Bitcoin Core-defined rules](https://github.com/bitcoin/bitcoin/blob/master/doc/release-notes/release-notes-0.12.0.md#relay-any-sequence-of-pushdatas-in-op_return-outputs-now-allowed)
-    OpReturn,
-
     /// Custom (i.e. non-standard) output with arbitrary script
     Custom,
 }
@@ -93,9 +83,6 @@ pub enum ScriptPubkeyContent {
 
     #[display("sh({0})")]
     Sh(ScriptHash),
-
-    #[display("bare(OP_RETURN {_0:?})")]
-    Return(Vec<Vec<u8>>),
 
     #[display("wpkh({0})")]
     Wpkh(WPubkeyHash),
@@ -121,9 +108,6 @@ pub enum ScriptPubkeyTemplate {
 
     #[display("sh({0})")]
     Sh(LockScript),
-
-    #[display("bare(OP_RETURN {_0:?})")]
-    Return(Vec<Vec<u8>>),
 
     #[display("sh(wpkh({0}))", alt = "sh(wpkh({_0:#}))")]
     ShWpkh(bitcoin::PublicKey),
@@ -161,38 +145,30 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyContent {
         Ok(match script {
             s if s.is_p2pk() => {
                 let key = match p[0].into() {
-                    OP_PUSHBYTES_65 => bitcoin::PublicKey::from_slice(&p[1..66]),
-                    OP_PUSHBYTES_33 => bitcoin::PublicKey::from_slice(&p[1..34]),
+                    OP_PUSHBYTES_65 => {
+                        bitcoin::PublicKey::from_slice(&p[1..66])
+                    }
+                    OP_PUSHBYTES_33 => {
+                        bitcoin::PublicKey::from_slice(&p[1..34])
+                    }
                     _ => panic!("Reading hash from fixed slice failed"),
                 }
                 .map_err(|_| Error::InvalidKeyData)?;
                 Pk(key)
             }
-            s if s.is_p2pkh() => Pkh(
-                PubkeyHash::from_slice(&p[2..23]).expect("Reading hash from fixed slice failed"),
-            ),
-            s if s.is_p2sh() => Sh(
-                ScriptHash::from_slice(&p[1..22]).expect("Reading hash from fixed slice failed"),
-            ),
+            s if s.is_p2pkh() => Pkh(PubkeyHash::from_slice(&p[2..23])
+                .expect("Reading hash from fixed slice failed")),
+            s if s.is_p2sh() => Sh(ScriptHash::from_slice(&p[1..22])
+                .expect("Reading hash from fixed slice failed")),
             s if s.is_v0_p2wpkh() => Wpkh(
-                WPubkeyHash::from_slice(&p[2..23]).expect("Reading hash from fixed slice failed"),
+                WPubkeyHash::from_slice(&p[2..23])
+                    .expect("Reading hash from fixed slice failed"),
             ),
-            s if s.is_v0_p2wsh() => Wsh(
-                WScriptHash::from_slice(&p[2..34]).expect("Reading hash from fixed slice failed"),
-            ),
-            s if s.is_witness_program() => Err(Error::UnsupportedWitnessVersion)?,
-            s if s.is_op_return() => Return(
-                Script::from(p[1..].to_vec())
-                    .instructions()
-                    .map(|instr| {
-                        if let Ok(Instruction::PushBytes(data)) = instr {
-                            data.to_vec()
-                        } else {
-                            panic!("Rust bitcoin library broken in script parsing functionality")
-                        }
-                    })
-                    .collect(),
-            ),
+            s if s.is_v0_p2wsh() => Wsh(WScriptHash::from_slice(&p[2..34])
+                .expect("Reading hash from fixed slice failed")),
+            s if s.is_witness_program() => {
+                Err(Error::UnsupportedWitnessVersion)?
+            }
             _ => Bare(script_pubkey),
         })
     }
@@ -207,12 +183,6 @@ impl From<ScriptPubkeyContent> for PubkeyScript {
             Pk(pubkey) => Script::new_p2pk(&pubkey),
             Pkh(pubkey_hash) => Script::new_p2pkh(&pubkey_hash),
             Sh(script_hash) => Script::new_p2sh(&script_hash),
-            Return(data) => {
-                if data.len() > 1 {
-                    panic!("Underlying rust bitcoin library does not support multiple data in OP_RETURN")
-                }
-                Script::new_op_return(&data[0])
-            }
             Wpkh(wpubkey_hash) => Script::new_v0_wpkh(&wpubkey_hash),
             Wsh(wscript_hash) => Script::new_v0_wsh(&wscript_hash),
             Taproot(_) => unimplemented!(),
@@ -229,7 +199,6 @@ impl From<ScriptPubkeyContent> for ScriptPubkeyStructure {
             Pk(pubkey) => PkStruct::KeyChecksig(pubkey),
             Pkh(hash) => PkStruct::KeyHash(hash),
             Sh(hash) => PkStruct::ScriptHash(hash),
-            Return(data) => PkStruct::OpReturn(data),
             Wpkh(hash) => {
                 PkStruct::Witness(WitnessVersion::V0, hash.to_vec().into())
             }
