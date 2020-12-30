@@ -19,6 +19,7 @@
 //! ```
 
 use core::convert::TryFrom;
+use regex::Regex;
 use std::str::FromStr;
 
 use bitcoin;
@@ -26,13 +27,13 @@ use bitcoin::blockdata::script::Script;
 use bitcoin::hash_types::{PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin::hashes::{hash160, Hash};
 use bitcoin::secp256k1;
-use miniscript::descriptor::{DescriptorKeyParseError, DescriptorSinglePub};
+use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
+use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{MiniscriptKey, NullCtx, ToPublicKey};
 
 use super::{LockScript, PubkeyScript, TapScript};
-use crate::bp::bip32::DerivationComponentsCtx;
+use crate::bp::bip32::{ComponentsParseError, DerivationComponentsCtx};
 use crate::bp::DerivationComponents;
-use bitcoin::util::bip32::ChildNumber;
 
 /// Descriptor category specifies way how the `scriptPubkey` is structured
 #[cfg_attr(
@@ -294,9 +295,55 @@ impl ToPublicKey<NullCtx> for PubkeyPlaceholder {
 }
 
 impl FromStr for PubkeyPlaceholder {
-    type Err = DescriptorKeyParseError;
+    type Err = ComponentsParseError;
 
-    fn from_str(_s: &str) -> Result<Self, Self::Err> {
-        unimplemented!()
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        static ERR: &'static str =
+            "wrong build-in pubkey placeholder regex parsing syntax";
+
+        lazy_static! {
+            static ref RE_PUBKEY: Regex = Regex::new(
+                r"(?x)^
+                (\[
+                    (?P<fingerprint>[0-9A-Fa-f]{8})      # Fingerprint
+                    (?P<deviation>(/[0-9]{1,10}[h']?)+)  # Derivation path
+                \])?
+                (?P<pubkey>0[2-3][0-9A-Fa-f]{64}) |      # Compressed pubkey
+                (?P<pubkey_long>04[0-9A-Fa-f]{128})      # Non-compressed pubkey
+                $",
+            )
+            .expect(ERR);
+        }
+        if let Some(caps) = RE_PUBKEY.captures(s) {
+            let origin = if let Some((fp, deriv)) =
+                caps.name("fingerprint").map(|fp| {
+                    (fp.as_str(), caps.name("derivation").expect(ERR).as_str())
+                }) {
+                let fp = fp
+                    .parse::<Fingerprint>()
+                    .map_err(|err| ComponentsParseError(err.to_string()))?;
+                let deriv = format!("m/{}", deriv)
+                    .parse::<DerivationPath>()
+                    .map_err(|err| ComponentsParseError(err.to_string()))?;
+                Some((fp, deriv))
+            } else {
+                None
+            };
+            let key = bitcoin::PublicKey::from_str(
+                caps.name("pubkey")
+                    .or(caps.name("pubkey_long"))
+                    .expect(ERR)
+                    .as_str(),
+            )
+            .map_err(|err| ComponentsParseError(err.to_string()))?;
+            Ok(PubkeyPlaceholder::Pubkey(DescriptorSinglePub {
+                origin,
+                key,
+            }))
+        } else {
+            Ok(PubkeyPlaceholder::XPubDerivable(
+                DerivationComponents::from_str(s)?,
+            ))
+        }
     }
 }

@@ -73,6 +73,7 @@ url = { version = "~2.1.1", optional = true }
 deflate = { version = "~0.8.6", optional = true }
 inflate = { version = "~0.4.5", optional = true }
 chrono = "~0.4.19"
+regex = "1"
 # Temporary-needed dependencies:
 # ------------------------------
 # 1. We are of no control of what's happening in Grin and would like to prevent

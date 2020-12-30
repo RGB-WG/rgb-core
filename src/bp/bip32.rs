@@ -13,6 +13,7 @@
 
 use core::cmp::Ordering;
 use core::ops::RangeInclusive;
+use regex::Regex;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::io;
@@ -30,7 +31,6 @@ use bitcoin::{secp256k1, PublicKey};
 use miniscript::{DescriptorPublicKeyCtx, MiniscriptKey, ToPublicKey};
 
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
-use miniscript::descriptor::DescriptorKeyParseError;
 
 /// Magical version bytes for xpub: bitcoin mainnet public key for P2PKH or P2SH
 pub const VERSION_MAGIC_XPUB: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
@@ -1013,7 +1013,7 @@ impl HardenedNormalSplit for DerivationPath {
     StrictDecode,
 )]
 #[lnpbp_crate(crate)]
-// master_xpub/branch_path=branch_xpub/terminal_path/index_ranges
+// [master_xpub]/branch_path=[branch_xpub]/terminal_path/index_ranges
 pub struct DerivationComponents {
     pub master_xpub: ExtendedPubKey,
     pub branch_path: DerivationPath,
@@ -1078,9 +1078,13 @@ impl Display for DerivationComponents {
         } else {
             write!(f, "[{}]/", self.master_xpub)?;
         }
-        f.write_str(
-            self.derivation_path().to_string().trim_start_matches("m"),
-        )?;
+        f.write_str(self.branch_path.to_string().trim_start_matches("m"))?;
+        if f.alternate() {
+            f.write_str("/")?;
+        } else {
+            write!(f, "=[{}]/", self.branch_xpub)?;
+        }
+        f.write_str(self.terminal_path().to_string().trim_start_matches("m"))?;
         if let Some(_) = self.index_ranges {
             f.write_str(&self.index_ranges_string())
         } else {
@@ -1089,11 +1093,125 @@ impl Display for DerivationComponents {
     }
 }
 
+#[derive(
+    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
+)]
+#[display(inner)]
+pub struct ComponentsParseError(pub String);
+
 impl FromStr for DerivationComponents {
-    type Err = DescriptorKeyParseError;
+    type Err = ComponentsParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        unimplemented!()
+        lazy_static! {
+            static ref RE_DERIVATION: Regex = Regex::new(
+                r"(?x)^
+                \[(?P<xpub>[xyztuvXYZTUV]pub[1-9A-HJ-NP-Za-km-z]{107,108})\]
+                (?P<deriv>(/[0-9]{1,10}[h']?)+)
+                (/(?P<range>\*|([0-9]{1,10}([,-][0-9]{1,10})*)))?
+                $",
+            )
+            .expect("Regexp expression for `DerivationComponents` is broken");
+        }
+
+        let mut split = s.split('=');
+        let (branch, terminal) = match (split.next(), split.next(), split.next()) {
+            (Some(branch), Some(terminal), None) => (Some(branch), terminal),
+            (Some(terminal), None, None) => (None, terminal),
+            (None, None, None) => unreachable!(),
+            _ => Err(ComponentsParseError(s!("Derivation components string must contain at most two parts separated by `=`")))?
+        };
+
+        let caps = if let Some(caps) = RE_DERIVATION.captures(terminal) {
+            caps
+        } else {
+            Err(ComponentsParseError(s!(
+                "Wrong composition of derivation components data"
+            )))?
+        };
+
+        let branch_xpub = ExtendedPubKey::from_str(
+            caps.name("xpub").expect("regexp engine is broken").as_str(),
+        )
+        .map_err(|err| ComponentsParseError(err.to_string()))?;
+        let terminal_path = caps
+            .name("deriv")
+            .expect("regexp engine is broken")
+            .as_str();
+        let terminal_path =
+            DerivationPath::from_str(&format!("m/{}", terminal_path))
+                .map_err(|err| ComponentsParseError(err.to_string()))?;
+        let (prefix, terminal_path) = terminal_path.hardened_normal_split();
+        if !prefix.as_ref().is_empty() {
+            Err(ComponentsParseError(s!(
+                "Terminal derivation path must not contain hardened keys"
+            )))?;
+        }
+        let index_ranges = caps.name("range").and_then(|range| {
+            let range = range.as_str();
+            if range == "*" {
+                return None;
+            } else {
+                Some(
+                    range
+                        .split(',')
+                        .map(|item| {
+                            let mut split = item.split('-');
+                            let (start, end) =
+                                match (split.next(), split.next()) {
+                                    (Some(start), Some(end)) => (
+                                        start
+                                            .parse()
+                                            .expect("regexp engine is broken"),
+                                        end.parse()
+                                            .expect("regexp engine is broken"),
+                                    ),
+                                    (Some(start), None) => {
+                                        let idx: u32 = start
+                                            .parse()
+                                            .expect("regexp engine is broken");
+                                        (idx, idx)
+                                    }
+                                    _ => unreachable!(),
+                                };
+                            DerivationRange::from_inner(RangeInclusive::new(
+                                start, end,
+                            ))
+                        })
+                        .collect(),
+                )
+            }
+        });
+
+        let (master_xpub, branch_path) = if let Some(caps) =
+            branch.and_then(|branch| RE_DERIVATION.captures(branch))
+        {
+            let master_xpub = ExtendedPubKey::from_str(
+                caps.name("xpub").expect("regexp engine is broken").as_str(),
+            )
+            .map_err(|err| ComponentsParseError(err.to_string()))?;
+            let branch_path = caps
+                .name("deriv")
+                .expect("regexp engine is broken")
+                .as_str();
+            let branch_path =
+                DerivationPath::from_str(&format!("m/{}", branch_path))
+                    .map_err(|err| ComponentsParseError(err.to_string()))?;
+            (master_xpub, branch_path)
+        } else {
+            (
+                branch_xpub.clone(),
+                DerivationPath::from(Vec::<ChildNumber>::new()),
+            )
+        };
+
+        Ok(DerivationComponents {
+            master_xpub,
+            branch_path,
+            branch_xpub,
+            terminal_path,
+            index_ranges,
+        })
     }
 }
 
