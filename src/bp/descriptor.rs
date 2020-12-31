@@ -20,6 +20,8 @@
 
 use core::convert::TryFrom;
 use regex::Regex;
+use std::collections::HashSet;
+use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin;
@@ -29,7 +31,9 @@ use bitcoin::hashes::{hash160, Hash};
 use bitcoin::secp256k1;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use miniscript::descriptor::DescriptorSinglePub;
-use miniscript::{MiniscriptKey, NullCtx, ToPublicKey};
+use miniscript::{
+    policy, Miniscript, MiniscriptKey, NullCtx, Segwitv0, ToPublicKey,
+};
 
 use super::{LockScript, PubkeyScript, TapScript};
 use crate::bp::bip32::{ComponentsParseError, DerivationComponentsCtx};
@@ -346,4 +350,103 @@ impl FromStr for PubkeyPlaceholder {
             ))
         }
     }
+}
+
+/// Allows creating templates for native bitcoin scripts with embedded
+/// key generator templates. May be useful for creating descriptors in
+/// situations where target script can't be deterministically represented by
+/// miniscript, for instance for Lightning network-specific transaction outputs
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Display)]
+#[display(inner)]
+pub enum OpcodeTemplate<Pk>
+where
+    Pk: MiniscriptKey,
+{
+    /// Normal script command (OP_CODE)
+    OpCode(u8),
+
+    /// Binary data (follows push commands)
+    Data(Box<[u8]>),
+
+    /// Key template
+    Key(Pk),
+}
+
+/// Allows creating templates for native bitcoin scripts with embedded
+/// key generator templates. May be useful for creating descriptors in
+/// situations where target script can't be deterministically represented by
+/// miniscript, for instance for Lightning network-specific transaction outputs
+#[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
+pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
+where
+    Pk: MiniscriptKey;
+
+impl<Pk> Display for ScriptTemplate<Pk>
+where
+    Pk: MiniscriptKey,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for instruction in &self.0 {
+            Display::fmt(instruction, f)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[non_exhaustive]
+pub enum MiniscriptContextType {
+    #[display("nocheck")]
+    NoChecks,
+
+    #[display("bare")]
+    Bare,
+
+    #[display("legacy")]
+    Legacy,
+
+    #[display("segwit")]
+    Segwit,
+
+    #[display("taproot")]
+    Taproot,
+}
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Display)]
+#[non_exhaustive]
+#[display(inner)]
+pub enum ScriptConstruction {
+    ScriptTemplate(ScriptTemplate<PubkeyPlaceholder>),
+
+    #[display("{ms}")]
+    Miniscript {
+        ms: Miniscript<PubkeyPlaceholder, Segwitv0>,
+        context: MiniscriptContextType,
+    },
+
+    ConcretePolicy(policy::Concrete<PubkeyPlaceholder>),
+
+    SemanticPolicy(policy::Semantic<PubkeyPlaceholder>),
+}
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
+pub struct ScriptSource {
+    pub data: ScriptConstruction,
+    pub source: Option<String>,
+    pub tweak_target: Option<PubkeyPlaceholder>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+#[non_exhaustive]
+pub enum DescriptorTemplate {
+    SingleSig(PubkeyPlaceholder),
+
+    MultiSig(u8, Vec<PubkeyPlaceholder>),
+
+    OrderedMultiSig(u8, HashSet<PubkeyPlaceholder>),
+
+    Scripted(ScriptSource),
+
+    TaprootBranched(HashSet<PubkeyPlaceholder>, ScriptSource),
 }

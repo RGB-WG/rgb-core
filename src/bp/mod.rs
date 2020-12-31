@@ -35,6 +35,7 @@ pub use bip32::{
 pub use chain::{Chain, P2pNetworkId};
 pub use descriptor::{
     CompactDescriptor, DescriptorCategory, ExpandedDescriptor,
+    PubkeyPlaceholder,
 };
 pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
