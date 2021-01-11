@@ -45,6 +45,7 @@ use super::{
 use crate::bp::bip32::{
     ComponentsParseError, DerivationComponentsCtx, UnhardenedIndex,
 };
+use crate::strict_encoding::{StrictDecode, StrictEncode};
 
 /// Descriptor category specifies way how the `scriptPubkey` is structured
 #[cfg_attr(
@@ -472,11 +473,23 @@ impl FromStr for SingleSig {
 /// key generator templates. May be useful for creating descriptors in
 /// situations where target script can't be deterministically represented by
 /// miniscript, for instance for Lightning network-specific transaction outputs
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Debug,
+    Hash,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 #[display(inner)]
 pub enum OpcodeTemplate<Pk>
 where
-    Pk: MiniscriptKey,
+    Pk: MiniscriptKey + StrictEncode + StrictDecode,
 {
     /// Normal script command (OP_CODE)
     OpCode(u8),
@@ -491,7 +504,9 @@ where
 impl<Pk> OpcodeTemplate<Pk>
 where
     Pk: MiniscriptKey
-        + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>,
+        + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>
+        + StrictEncode
+        + StrictDecode,
 {
     fn translate_pk(
         &self,
@@ -514,15 +529,28 @@ where
 /// key generator templates. May be useful for creating descriptors in
 /// situations where target script can't be deterministically represented by
 /// miniscript, for instance for Lightning network-specific transaction outputs
-#[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[derive(
+    Wrapper,
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
 #[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
+#[lnpbp_crate(crate)]
 pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
 where
-    Pk: MiniscriptKey;
+    Pk: MiniscriptKey + StrictEncode + StrictDecode;
 
 impl<Pk> Display for ScriptTemplate<Pk>
 where
-    Pk: MiniscriptKey,
+    Pk: MiniscriptKey + StrictEncode + StrictDecode,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for instruction in &self.0 {
@@ -535,6 +563,8 @@ where
 impl<Pk> ScriptTemplate<Pk>
 where
     Pk: MiniscriptKey
+        + StrictEncode
+        + StrictDecode
         + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>,
 {
     fn translate_pk(
@@ -565,9 +595,20 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
     }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Display)]
+#[derive(
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
 #[non_exhaustive]
 #[display(inner)]
+#[lnpbp_crate(crate)]
 pub enum ScriptConstruction {
     ScriptTemplate(ScriptTemplate<SingleSig>),
 
@@ -576,14 +617,28 @@ pub enum ScriptConstruction {
     MiniscriptPolicy(policy::Concrete<SingleSig>),
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
+#[derive(
+    Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 pub struct ScriptSource {
     pub script: ScriptConstruction,
     pub source: Option<String>,
     pub tweak_target: Option<SingleSig>,
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 pub struct MultiSig {
     pub threshold: Option<u8>,
     pub pubkeys: Vec<SingleSig>,
@@ -618,16 +673,30 @@ impl MultiSig {
     }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
+#[derive(
+    Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 pub struct MuSigBranched {
     pub extra_keys: Vec<SingleSig>,
     pub tapscript: ScriptConstruction,
     pub source: Option<String>,
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Display)]
+#[derive(
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
 #[non_exhaustive]
 #[display(inner)]
+#[lnpbp_crate(crate)]
 pub enum Template {
     SingleSig(SingleSig),
 
@@ -779,7 +848,20 @@ impl DeriveLockScript for Template {
     }
 }
 
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Default,
+    StrictEncode,
+    StrictDecode,
+)]
+#[lnpbp_crate(crate)]
 pub struct Variants {
     pub bare: bool,
     pub hashed: bool,
@@ -839,8 +921,19 @@ impl Variants {
     }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Display)]
+#[derive(
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
 #[display("{variants}({template})")]
+#[lnpbp_crate(crate)]
 pub struct Generator {
     pub template: Template,
     pub variants: Variants,

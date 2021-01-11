@@ -11,7 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::fmt::Display;
 use std::io;
+use std::str::FromStr;
 
 use bitcoin::hashes::{hash160, hmac, sha256, sha256d, sha256t, sha512, Hash};
 use bitcoin::util::psbt::PartiallySignedTransaction;
@@ -23,6 +25,7 @@ use bitcoin::{
 #[cfg(feature = "ed25519-dalek")]
 use ed25519_dalek::ed25519::signature::Signature;
 use miniscript::descriptor::DescriptorSinglePub;
+use miniscript::{policy, Miniscript, MiniscriptKey};
 
 use super::bip32::{Decode, Encode};
 use super::blind::OutpointHash;
@@ -395,6 +398,52 @@ impl StrictDecode for DescriptorSinglePub {
     #[inline]
     fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         Ok(strict_decode_self!(d; key, origin))
+    }
+}
+
+impl<Pk> StrictEncode for policy::Concrete<Pk>
+where
+    Pk: MiniscriptKey,
+{
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        self.to_string().strict_encode(e)
+    }
+}
+
+impl<Pk> StrictDecode for policy::Concrete<Pk>
+where
+    Pk: MiniscriptKey,
+    <Pk as FromStr>::Err: Display,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+{
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        String::strict_decode(d)?.parse().map_err(|_| {
+            Error::DataIntegrityError(s!("Unparsable miniscript policy string"))
+        })
+    }
+}
+
+impl<Pk, Ctx> StrictEncode for Miniscript<Pk, Ctx>
+where
+    Pk: MiniscriptKey,
+    Ctx: miniscript::ScriptContext,
+{
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        self.to_string().strict_encode(e)
+    }
+}
+
+impl<Pk, Ctx> StrictDecode for Miniscript<Pk, Ctx>
+where
+    Pk: MiniscriptKey,
+    <Pk as FromStr>::Err: Display,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+    Ctx: miniscript::ScriptContext,
+{
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        String::strict_decode(d)?.parse().map_err(|_| {
+            Error::DataIntegrityError(s!("Unparsable miniscript string"))
+        })
     }
 }
 
