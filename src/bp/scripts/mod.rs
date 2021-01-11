@@ -17,7 +17,7 @@ pub mod types;
 
 pub use pubkey_parser::PubkeyParseError;
 pub use types::{
-    GenerateScripts, LockScript, PubkeyScript, RedeemScript, ScriptSet,
-    SigScript, Strategy, TapScript, Witness, WitnessProgram, WitnessScript,
-    WitnessVersion,
+    LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript,
+    ToLockScript, ToPubkeyScript, ToScripts, Witness, WitnessProgram,
+    WitnessScript, WitnessVersion,
 };

@@ -21,9 +21,7 @@ use super::{
     Container, Error, LockscriptCommitment, LockscriptContainer, Proof,
     PubkeyCommitment, PubkeyContainer, TaprootCommitment, TaprootContainer,
 };
-use crate::bp::{
-    CompactDescriptor, GenerateScripts, LockScript, PubkeyScript, Strategy,
-};
+use crate::bp::{descriptor, LockScript, PubkeyScript, ToPubkeyScript};
 use crate::commit_verify::EmbedCommitVerify;
 
 /// Enum defining how given `scriptPubkey` is constructed from the script data
@@ -199,9 +197,6 @@ impl Container for SpkContainer {
         supplement: &Self::Supplement,
         host: &Self::Host,
     ) -> Result<Self, Error> {
-        use CompactDescriptor as Descr;
-        use ScriptEncodeMethod as Comp;
-
         let (lockscript, _) = match &proof.source {
             ScriptEncodeData::SinglePubkey => (None, None),
             ScriptEncodeData::LockScript(script) => (Some(script), None),
@@ -209,72 +204,75 @@ impl Container for SpkContainer {
         };
 
         let mut proof = proof.clone();
-        let method = match CompactDescriptor::try_from(host.clone())? {
-            Descr::Sh(script_hash) => {
+        let method = match descriptor::Compact::try_from(host.clone())? {
+            descriptor::Compact::Sh(script_hash) => {
                 let script = Script::new_p2sh(&script_hash);
                 if let Some(lockscript) = lockscript {
-                    if *lockscript.to_script_pubkey(Strategy::LegacyHashed)
+                    if *lockscript
+                        .to_pubkey_script(descriptor::Category::Hashed)
                         == script
                     {
-                        Comp::ScriptHash
+                        ScriptEncodeMethod::ScriptHash
                     } else if *lockscript
-                        .to_script_pubkey(Strategy::WitnessScriptHash)
+                        .to_pubkey_script(descriptor::Category::Nested)
                         == script
                     {
-                        Comp::ShWScriptHash
+                        ScriptEncodeMethod::ShWScriptHash
                     } else {
                         Err(Error::InvalidProofStructure)?
                     }
                 } else {
                     if *proof
                         .pubkey
-                        .to_script_pubkey(Strategy::WitnessScriptHash)
+                        .to_pubkey_script(descriptor::Category::Nested)
                         == script
                     {
-                        Comp::ShWPubkeyHash
+                        ScriptEncodeMethod::ShWPubkeyHash
                     } else {
                         Err(Error::InvalidProofStructure)?
                     }
                 }
             }
-            Descr::Bare(script) if script.as_inner().is_op_return() => {
-                Comp::OpReturn
+            descriptor::Compact::Bare(script)
+                if script.as_inner().is_op_return() =>
+            {
+                ScriptEncodeMethod::OpReturn
             }
-            Descr::Bare(script) => {
+            descriptor::Compact::Bare(script) => {
                 proof.source = ScriptEncodeData::LockScript(LockScript::from(
                     script.to_inner(),
                 ));
-                Comp::Bare
+                ScriptEncodeMethod::Bare
             }
-            Descr::Pk(_) => Comp::PublicKey,
-            Descr::Pkh(_) => Comp::PubkeyHash,
-            Descr::Wpkh(_) => Comp::WPubkeyHash,
-            Descr::Wsh(_) => Comp::WScriptHash,
-            Descr::Taproot(_) => Comp::Taproot,
+            descriptor::Compact::Pk(_) => ScriptEncodeMethod::PublicKey,
+            descriptor::Compact::Pkh(_) => ScriptEncodeMethod::PubkeyHash,
+            descriptor::Compact::Wpkh(_) => ScriptEncodeMethod::WPubkeyHash,
+            descriptor::Compact::Wsh(_) => ScriptEncodeMethod::WScriptHash,
+            descriptor::Compact::Taproot(_) => ScriptEncodeMethod::Taproot,
         };
         let proof = proof;
 
         match method {
-            Comp::PublicKey
-            | Comp::PubkeyHash
-            | Comp::WPubkeyHash
-            | Comp::ShWPubkeyHash
-            | Comp::OpReturn => {
+            ScriptEncodeMethod::PublicKey
+            | ScriptEncodeMethod::PubkeyHash
+            | ScriptEncodeMethod::WPubkeyHash
+            | ScriptEncodeMethod::ShWPubkeyHash
+            | ScriptEncodeMethod::OpReturn => {
                 if let ScriptEncodeData::SinglePubkey = proof.source {
                 } else {
                     Err(Error::InvalidProofStructure)?
                 }
             }
-            Comp::Bare
-            | Comp::ScriptHash
-            | Comp::WScriptHash
-            | Comp::ShWScriptHash => {
+            ScriptEncodeMethod::Bare
+            | ScriptEncodeMethod::ScriptHash
+            | ScriptEncodeMethod::WScriptHash
+            | ScriptEncodeMethod::ShWScriptHash => {
                 if let ScriptEncodeData::LockScript(_) = proof.source {
                 } else {
                     Err(Error::InvalidProofStructure)?
                 }
             }
-            Comp::Taproot => {
+            ScriptEncodeMethod::Taproot => {
                 if let ScriptEncodeData::Taproot(_) = proof.source {
                 } else {
                     Err(Error::InvalidProofStructure)?
@@ -364,16 +362,15 @@ where
                 container.tweaking_factor =
                     lockscript_container.tweaking_factor;
                 match container.method {
-                    Bare => lockscript.to_script_pubkey(Strategy::Exposed),
-                    ScriptHash => {
-                        lockscript.to_script_pubkey(Strategy::LegacyHashed)
+                    Bare => {
+                        lockscript.to_pubkey_script(descriptor::Category::Bare)
                     }
-                    WScriptHash => {
-                        lockscript.to_script_pubkey(Strategy::WitnessV0)
-                    }
-                    ShWScriptHash => {
-                        lockscript.to_script_pubkey(Strategy::WitnessScriptHash)
-                    }
+                    ScriptHash => lockscript
+                        .to_pubkey_script(descriptor::Category::Hashed),
+                    WScriptHash => lockscript
+                        .to_pubkey_script(descriptor::Category::SegWit),
+                    ShWScriptHash => lockscript
+                        .to_pubkey_script(descriptor::Category::Nested),
                     _ => Err(Error::InvalidProofStructure)?,
                 }
             } else if let ScriptEncodeData::Taproot(taproot_hash) =
@@ -409,13 +406,17 @@ where
                 )?;
                 container.tweaking_factor = pubkey_container.tweaking_factor;
                 match container.method {
-                    PublicKey => pubkey.to_script_pubkey(Strategy::Exposed),
-                    PubkeyHash => {
-                        pubkey.to_script_pubkey(Strategy::LegacyHashed)
+                    PublicKey => {
+                        pubkey.to_pubkey_script(descriptor::Category::Bare)
                     }
-                    WPubkeyHash => pubkey.to_script_pubkey(Strategy::WitnessV0),
+                    PubkeyHash => {
+                        pubkey.to_pubkey_script(descriptor::Category::Hashed)
+                    }
+                    WPubkeyHash => {
+                        pubkey.to_pubkey_script(descriptor::Category::SegWit)
+                    }
                     ShWScriptHash => {
-                        pubkey.to_script_pubkey(Strategy::WitnessScriptHash)
+                        pubkey.to_pubkey_script(descriptor::Category::Nested)
                     }
                     OpReturn => {
                         let ser = pubkey.serialize();

@@ -56,6 +56,11 @@ pub enum Error {
     /// the commitment/tweak was not found either in plain nor hash form in
     /// any of the script branches
     LockscriptKeyNotFound,
+
+    /// Policy compilation error
+    #[from]
+    #[display(inner)]
+    PolicyCompilation(miniscript::policy::compiler::CompilerError),
 }
 
 impl From<bp::descriptor::Error> for Error {
@@ -64,6 +69,9 @@ impl From<bp::descriptor::Error> for Error {
             bp::descriptor::Error::InvalidKeyData => Error::InvalidKeyData,
             bp::descriptor::Error::UnsupportedWitnessVersion => {
                 Error::UnsupportedWitnessVersion
+            }
+            bp::descriptor::Error::PolicyCompilation(err) => {
+                Error::PolicyCompilation(err)
             }
         }
     }

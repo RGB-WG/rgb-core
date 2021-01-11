@@ -33,17 +33,14 @@ pub use bip32::{
     DerivationRange, DerivationTemplate, HardenedNormalSplit,
 };
 pub use chain::{Chain, P2pNetworkId};
-pub use descriptor::{
-    CompactDescriptor, DescriptorCategory, ExpandedDescriptor,
-    PubkeyPlaceholder,
-};
+pub use descriptor::DeriveLockScript;
 pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
 pub use psbt::Psbt;
 pub use scripts::{
-    GenerateScripts, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
-    ScriptSet, SigScript, Strategy, TapScript, Witness, WitnessProgram,
-    WitnessScript, WitnessVersion,
+    LockScript, PubkeyParseError, PubkeyScript, RedeemScript, ScriptSet,
+    SigScript, TapScript, ToLockScript, ToPubkeyScript, ToScripts, Witness,
+    WitnessProgram, WitnessScript, WitnessVersion,
 };
 pub use seals::TxoutSeal;
 pub use short_id::ShortId;

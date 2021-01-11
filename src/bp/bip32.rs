@@ -91,6 +91,69 @@ pub const VERSION_MAGIC_VPUB_MULTISIG: [u8; 4] = [0x02, 0x57, 0x54, 0x83];
 /// multi-signature P2WSH
 pub const VERSION_MAGIC_VPRV_MULTISIG: [u8; 4] = [0x02, 0x57, 0x50, 0x48];
 
+/// Derivation path index is outside of the allowed range: 0..2^31 for
+/// unhardened derivation and 2^31..2^32 for hardened
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Debug,
+    Default,
+    Display,
+    Error,
+    From,
+)]
+#[display(doc_comments)]
+#[from(bitcoin::util::bip32::Error)]
+pub struct OutOfRangeError;
+
+/// Index for unhardened children derivation; ensures that the wrapped value
+/// < 2^31
+#[derive(
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Default, Display,
+)]
+#[display(inner)]
+pub struct UnhardenedIndex(u32);
+
+impl TryFrom<u32> for UnhardenedIndex {
+    type Error = OutOfRangeError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Ok(UnhardenedIndex(ChildNumber::from_normal_idx(value)?.into()))
+    }
+}
+
+impl From<UnhardenedIndex> for ChildNumber {
+    fn from(idx: UnhardenedIndex) -> Self {
+        ChildNumber::Normal { index: idx.0 }
+    }
+}
+
+/// Index for hardened children derivation; ensures that the wrapped value
+/// >= 2^31
+#[derive(
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Default, Display,
+)]
+#[display(inner)]
+pub struct HardenedIndex(u32);
+
+impl TryFrom<u32> for HardenedIndex {
+    type Error = OutOfRangeError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Ok(HardenedIndex(ChildNumber::from_hardened_idx(value)?.into()))
+    }
+}
+
+impl From<HardenedIndex> for ChildNumber {
+    fn from(idx: HardenedIndex) -> Self {
+        ChildNumber::Hardened { index: idx.0 }
+    }
+}
+
 /// Structure holding 4 verion bytes with magical numbers representing different
 /// versions of extended public and private keys according to BIP-32.
 /// Key version stores raw bytes without their check, interpretation or
@@ -285,9 +348,9 @@ impl StrictDecode for KeyApplication {
     }
 }
 
-/// Error for an unknown enum representation; either string or numeric
+/// Unknown string representation of [`KeyApplication`] enum
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
-#[display(Debug)]
+#[display(doc_comments)]
 pub struct EnumReprError;
 
 impl FromStr for KeyApplication {

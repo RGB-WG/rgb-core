@@ -18,26 +18,33 @@
 //! TxOut -> PubkeyScript -> Descriptor -> Structure -> Format
 //! ```
 
+use amplify::Wrapper;
 use core::convert::TryFrom;
 use regex::Regex;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin;
-use bitcoin::blockdata::script::Script;
+use bitcoin::blockdata::opcodes;
+use bitcoin::blockdata::script::{Builder, Script};
 use bitcoin::hash_types::{PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin::hashes::{hash160, Hash};
 use bitcoin::secp256k1;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use miniscript::descriptor::DescriptorSinglePub;
+use miniscript::policy::compiler::CompilerError;
 use miniscript::{
     policy, Miniscript, MiniscriptKey, NullCtx, Segwitv0, ToPublicKey,
 };
 
-use super::{LockScript, PubkeyScript, TapScript};
-use crate::bp::bip32::{ComponentsParseError, DerivationComponentsCtx};
-use crate::bp::DerivationComponents;
+use super::{
+    DerivationComponents, LockScript, PubkeyScript, TapScript, ToLockScript,
+    ToPubkeyScript, WitnessVersion,
+};
+use crate::bp::bip32::{
+    ComponentsParseError, DerivationComponentsCtx, UnhardenedIndex,
+};
 
 /// Descriptor category specifies way how the `scriptPubkey` is structured
 #[cfg_attr(
@@ -60,35 +67,134 @@ use crate::bp::DerivationComponents;
 )]
 #[lnpbp_crate(crate)]
 #[non_exhaustive]
-pub enum DescriptorCategory {
-    /// Bare descriptors: `pk` and bare scripts, including `OP_RETURN`s
+pub enum Category {
+    /// Bare descriptors: `pk` and bare scripts, including `OP_RETURN`s.
+    ///
+    /// The script or public key gets right into `scriptPubkey`, i.e. as
+    /// **P2PK** (for a public key) or as custom script (mostly used for
+    /// `OP_RETURN`)
     #[display("bare")]
     Bare,
 
     /// Hash-based descriptors: `pkh` for public key hashes and BIP-16 `sh` for
-    /// P2SH scripts
+    /// **P2SH** scripts.
+    ///
+    /// We hash public key or script and use non-SegWit `scriptPubkey`
+    /// encoding, i.e. **P2PKH** or **P2SH** with corresponding non-segwit
+    /// transaction input `sigScript` containing copy of [`LockScript`] in
+    /// `redeemScript` field
     #[display("hashed")]
     Hashed,
 
     /// SegWit descriptors for legacy wallets defined in BIP 141 as P2SH nested
     /// types <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#P2WPKH_nested_in_BIP16_P2SH>:
     /// `sh(wpkh)` and `sh(wsh)`
+    ///
+    /// Compatibility variant for SegWit outputs when the SegWit version and
+    /// program are encoded as [`RedeemScript`] in `sigScript` transaction
+    /// input field, while the original public key or [`WitnessScript`] are
+    /// stored in `witness`. `scriptPubkey` contains a normal **P2SH**
+    /// composed agains the `redeemScript` from `sigScript`
+    /// (**P2SH-P2WPKH** and **P2SH-P2WSH** variants).
+    ///
+    /// This type works with only with witness version v0, i.e. not applicable
+    /// for Taproot.
     #[display("nested")]
     Nested,
 
     /// Native SegWit descriptors: `wpkh` for public keys and `wsh` for scripts
+    ///
+    /// We produce either **P2WPKH** or **P2WSH** output and use witness field
+    /// in transaction input to store the original [`LockScript`] or the public
+    /// key
     #[display("segwit")]
     SegWit,
 
-    /// Netive Taproot descriptors: `taproot`
+    /// Native Taproot descriptors: `taproot`
     #[display("taproot")]
     Taproot,
+}
+
+/// Errors that happens during [`Category::deduce`] process
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
+#[display(doc_comments)]
+pub enum DeductionError {
+    /// For P2SH scripts we need to know whether it is created for the
+    /// witness-containing spending transaction input, i.e. whether its redeem
+    /// script will have a witness structure, or not. If this information was
+    /// not provided, this error is returned.
+    IncompleteInformation,
+
+    /// Here we support only version 0 and 1 of the witness, otherwise this
+    /// error is returned
+    UnsupportedWitnessVersion(WitnessVersion),
+}
+
+impl Category {
+    /// Deduction of [`Category`] from a `scriptPubkey` data and,
+    /// optionally, information about the presence of the witness for P2SH
+    /// `scriptPubkey`'s.
+    ///
+    /// # Arguments
+    ///
+    /// * `pubkey_script` - script from transaction output `scriptPubkey`
+    /// * `has_witness` - an optional `bool` with the following meaning:
+    ///     - `None`: witness presence must be determined from the
+    ///       `pubkey_script` value; don't use it for P2SH `scriptPubkey`s,
+    ///       otherwise the method will return
+    ///       [`DeductionError::IncompleteInformation`] error.
+    ///     - `Some(true)`: presence of a witness structure will be required in
+    ///       transaction input to spend the given `pubkey_script`, i.e. it was
+    ///       composed with P2SH-P2W*H scheme
+    ///     - `Some(false)`: if `scriptPubkey` is P2SH, it is a "normal" P2SH
+    ///       and was not created with P2SH-P2W*H scheme. The spending
+    ///       transaction input would not have `witness` structure.
+    ///
+    /// # Errors
+    ///
+    /// The function may [DeductionError] in the following cases
+    ///
+    /// * `IncompleteInformation`: the provided pubkey script (`pubkey_script`
+    ///   argument) is P2SH script, and `has_witness` argument was set to `None`
+    ///   (see explanation about the argument usage above).
+    /// * `UnsupportedWitnessVersion(WitnessVersion)`: the provided pubkey
+    ///   script has a witness version above 1.
+    pub fn deduce(
+        pubkey_script: &PubkeyScript,
+        has_witness: Option<bool>,
+    ) -> Result<Category, DeductionError> {
+        match pubkey_script.as_inner() {
+            p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(Category::SegWit),
+            p if p.is_witness_program() => {
+                const ERR: &'static str =
+                    "bitcoin::Script::is_witness_program is broken";
+                match WitnessVersion::try_from(
+                    p.instructions_minimal().next().expect(ERR).expect(ERR),
+                )
+                .expect(ERR)
+                {
+                    WitnessVersion::V0 => unreachable!(),
+                    WitnessVersion::V1 => Ok(Category::Taproot),
+                    ver => Err(DeductionError::UnsupportedWitnessVersion(ver)),
+                }
+            }
+            p if p.is_p2pkh() => Ok(Category::Hashed),
+            p if p.is_p2sh() => match has_witness {
+                None => Err(DeductionError::IncompleteInformation),
+                Some(true) => Ok(Category::Nested),
+                Some(false) => Ok(Category::Hashed),
+            },
+            _ => Ok(Category::Bare),
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[lnpbp_crate(crate)]
 #[non_exhaustive]
-pub enum CompactDescriptor {
+pub enum Compact {
     #[display("bare({0})", alt = "bare({_0:#})")]
     Bare(PubkeyScript),
 
@@ -114,7 +220,7 @@ pub enum CompactDescriptor {
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[lnpbp_crate(crate)]
 #[non_exhaustive]
-pub enum ExpandedDescriptor {
+pub enum Expanded {
     #[display("bare({0})", alt = "bare({_0:#})")]
     Bare(PubkeyScript),
 
@@ -143,20 +249,44 @@ pub enum ExpandedDescriptor {
     Taproot(secp256k1::PublicKey, TapScript),
 }
 
+impl From<Expanded> for PubkeyScript {
+    fn from(expanded: Expanded) -> PubkeyScript {
+        match expanded {
+            Expanded::Bare(pubkey_script) => pubkey_script,
+            Expanded::Pk(pk) => pk.to_pubkey_script(Category::Bare),
+            Expanded::Pkh(pk) => pk.to_pubkey_script(Category::Hashed),
+            Expanded::Sh(script) => script.to_pubkey_script(Category::Hashed),
+            Expanded::ShWpkh(pk) => pk.to_pubkey_script(Category::Nested),
+            Expanded::ShWsh(script) => {
+                script.to_pubkey_script(Category::Nested)
+            }
+            Expanded::Wpkh(pk) => pk.to_pubkey_script(Category::SegWit),
+            Expanded::Wsh(script) => script.to_pubkey_script(Category::SegWit),
+            Expanded::Taproot(..) => unimplemented!(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Display, Debug, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
     /// Can't deserealized public key from bitcoin script push op code
     InvalidKeyData,
+
     /// Wrong witness version, may be you need to upgrade used library version
     UnsupportedWitnessVersion,
+
+    /// Policy compilation error
+    #[from]
+    #[display(inner)]
+    PolicyCompilation(CompilerError),
 }
 
-impl TryFrom<PubkeyScript> for CompactDescriptor {
+impl TryFrom<PubkeyScript> for Compact {
     type Error = Error;
     fn try_from(script_pubkey: PubkeyScript) -> Result<Self, Self::Error> {
         use bitcoin::blockdata::opcodes::all::*;
-        use CompactDescriptor::*;
+        use Compact::*;
 
         let script = &*script_pubkey;
         let p = script.as_bytes();
@@ -192,9 +322,9 @@ impl TryFrom<PubkeyScript> for CompactDescriptor {
     }
 }
 
-impl From<CompactDescriptor> for PubkeyScript {
-    fn from(spkt: CompactDescriptor) -> PubkeyScript {
-        use CompactDescriptor::*;
+impl From<Compact> for PubkeyScript {
+    fn from(spkt: Compact) -> PubkeyScript {
+        use Compact::*;
 
         PubkeyScript::from(match spkt {
             Bare(script) => (*script).clone(),
@@ -223,7 +353,7 @@ impl From<CompactDescriptor> for PubkeyScript {
 #[lnpbp_crate(crate)]
 #[display(inner)]
 #[non_exhaustive]
-pub enum PubkeyPlaceholder {
+pub enum SingleSig {
     /// Single known public key
     Pubkey(DescriptorSinglePub),
 
@@ -232,18 +362,16 @@ pub enum PubkeyPlaceholder {
     XPubDerivable(DerivationComponents),
 }
 
-impl PubkeyPlaceholder {
+impl SingleSig {
     pub fn count(&self) -> u32 {
         match self {
-            PubkeyPlaceholder::Pubkey(_) => 1,
-            PubkeyPlaceholder::XPubDerivable(ref components) => {
-                components.count()
-            }
+            SingleSig::Pubkey(_) => 1,
+            SingleSig::XPubDerivable(ref components) => components.count(),
         }
     }
 }
 
-impl MiniscriptKey for PubkeyPlaceholder {
+impl MiniscriptKey for SingleSig {
     type Hash = Self;
 
     fn to_pubkeyhash(&self) -> Self::Hash {
@@ -251,8 +379,7 @@ impl MiniscriptKey for PubkeyPlaceholder {
     }
 }
 
-impl<'secp, C> ToPublicKey<DerivationComponentsCtx<'secp, C>>
-    for PubkeyPlaceholder
+impl<'secp, C> ToPublicKey<DerivationComponentsCtx<'secp, C>> for SingleSig
 where
     C: 'secp + secp256k1::Verification,
 {
@@ -261,12 +388,8 @@ where
         to_pk_ctx: DerivationComponentsCtx<'secp, C>,
     ) -> bitcoin::PublicKey {
         match self {
-            PubkeyPlaceholder::Pubkey(ref pkd) => {
-                pkd.key.to_public_key(NullCtx)
-            }
-            PubkeyPlaceholder::XPubDerivable(ref dc) => {
-                dc.to_public_key(to_pk_ctx)
-            }
+            SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key(NullCtx),
+            SingleSig::XPubDerivable(ref dc) => dc.to_public_key(to_pk_ctx),
         }
     }
 
@@ -278,13 +401,11 @@ where
     }
 }
 
-impl ToPublicKey<NullCtx> for PubkeyPlaceholder {
+impl ToPublicKey<NullCtx> for SingleSig {
     fn to_public_key(&self, to_pk_ctx: NullCtx) -> bitcoin::PublicKey {
         match self {
-            PubkeyPlaceholder::Pubkey(ref pkd) => {
-                pkd.key.to_public_key(to_pk_ctx)
-            }
-            PubkeyPlaceholder::XPubDerivable(ref dc) => {
+            SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key(to_pk_ctx),
+            SingleSig::XPubDerivable(ref dc) => {
                 dc.to_public_key(DerivationComponentsCtx::new(
                     &*crate::SECP256K1,
                     ChildNumber::Normal { index: 0 },
@@ -298,7 +419,7 @@ impl ToPublicKey<NullCtx> for PubkeyPlaceholder {
     }
 }
 
-impl FromStr for PubkeyPlaceholder {
+impl FromStr for SingleSig {
     type Err = ComponentsParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -340,14 +461,9 @@ impl FromStr for PubkeyPlaceholder {
                     .as_str(),
             )
             .map_err(|err| ComponentsParseError(err.to_string()))?;
-            Ok(PubkeyPlaceholder::Pubkey(DescriptorSinglePub {
-                origin,
-                key,
-            }))
+            Ok(SingleSig::Pubkey(DescriptorSinglePub { origin, key }))
         } else {
-            Ok(PubkeyPlaceholder::XPubDerivable(
-                DerivationComponents::from_str(s)?,
-            ))
+            Ok(SingleSig::XPubDerivable(DerivationComponents::from_str(s)?))
         }
     }
 }
@@ -372,6 +488,28 @@ where
     Key(Pk),
 }
 
+impl<Pk> OpcodeTemplate<Pk>
+where
+    Pk: MiniscriptKey
+        + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>,
+{
+    fn translate_pk(
+        &self,
+        child_index: UnhardenedIndex,
+    ) -> OpcodeTemplate<bitcoin::PublicKey> {
+        match self {
+            OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
+            OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
+            OpcodeTemplate::Key(key) => OpcodeTemplate::Key(key.to_public_key(
+                DerivationComponentsCtx {
+                    secp_ctx: &*crate::SECP256K1,
+                    child_number: child_index.into(),
+                },
+            )),
+        }
+    }
+}
+
 /// Allows creating templates for native bitcoin scripts with embedded
 /// key generator templates. May be useful for creating descriptors in
 /// situations where target script can't be deterministically represented by
@@ -394,59 +532,394 @@ where
     }
 }
 
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[non_exhaustive]
-pub enum MiniscriptContextType {
-    #[display("nocheck")]
-    NoChecks,
+impl<Pk> ScriptTemplate<Pk>
+where
+    Pk: MiniscriptKey
+        + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>,
+{
+    fn translate_pk(
+        &self,
+        child_index: UnhardenedIndex,
+    ) -> ScriptTemplate<bitcoin::PublicKey> {
+        self.0
+            .iter()
+            .map(|op| op.translate_pk(child_index))
+            .collect::<Vec<_>>()
+            .into()
+    }
+}
 
-    #[display("bare")]
-    Bare,
-
-    #[display("legacy")]
-    Legacy,
-
-    #[display("segwit")]
-    Segwit,
-
-    #[display("taproot")]
-    Taproot,
+impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
+    fn from(template: ScriptTemplate<bitcoin::PublicKey>) -> Self {
+        let mut builder = Builder::new();
+        for op in template.into_inner() {
+            builder = match op {
+                OpcodeTemplate::OpCode(code) => {
+                    builder.push_opcode(opcodes::All::from(code))
+                }
+                OpcodeTemplate::Data(data) => builder.push_slice(&data),
+                OpcodeTemplate::Key(key) => builder.push_key(&key),
+            };
+        }
+        builder.into_script()
+    }
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Display)]
 #[non_exhaustive]
 #[display(inner)]
 pub enum ScriptConstruction {
-    ScriptTemplate(ScriptTemplate<PubkeyPlaceholder>),
+    ScriptTemplate(ScriptTemplate<SingleSig>),
 
-    #[display("{ms}")]
-    Miniscript {
-        ms: Miniscript<PubkeyPlaceholder, Segwitv0>,
-        context: MiniscriptContextType,
-    },
+    Miniscript(Miniscript<SingleSig, Segwitv0>),
 
-    ConcretePolicy(policy::Concrete<PubkeyPlaceholder>),
-
-    SemanticPolicy(policy::Semantic<PubkeyPlaceholder>),
+    MiniscriptPolicy(policy::Concrete<SingleSig>),
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub struct ScriptSource {
-    pub data: ScriptConstruction,
+    pub script: ScriptConstruction,
     pub source: Option<String>,
-    pub tweak_target: Option<PubkeyPlaceholder>,
+    pub tweak_target: Option<SingleSig>,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub struct MultiSig {
+    pub threshold: Option<u8>,
+    pub pubkeys: Vec<SingleSig>,
+    pub reorder: bool,
+}
+
+impl MultiSig {
+    pub fn threshold(&self) -> usize {
+        self.threshold
+            .map(|t| t as usize)
+            .unwrap_or(self.pubkeys.len())
+    }
+
+    pub fn to_public_keys(
+        &self,
+        child_index: UnhardenedIndex,
+    ) -> Vec<bitcoin::PublicKey> {
+        let mut set = self
+            .pubkeys
+            .iter()
+            .map(|key| {
+                key.to_public_key(DerivationComponentsCtx {
+                    secp_ctx: &*crate::SECP256K1,
+                    child_number: child_index.into(),
+                })
+            })
+            .collect::<Vec<_>>();
+        if self.reorder {
+            set.sort();
+        }
+        set
+    }
+}
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
+pub struct MuSigBranched {
+    pub extra_keys: Vec<SingleSig>,
+    pub tapscript: ScriptConstruction,
+    pub source: Option<String>,
+}
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Display)]
 #[non_exhaustive]
-pub enum DescriptorTemplate {
-    SingleSig(PubkeyPlaceholder),
+#[display(inner)]
+pub enum Template {
+    SingleSig(SingleSig),
 
-    MultiSig(u8, Vec<PubkeyPlaceholder>),
-
-    OrderedMultiSig(u8, HashSet<PubkeyPlaceholder>),
+    MultiSig(MultiSig),
 
     Scripted(ScriptSource),
 
-    TaprootBranched(HashSet<PubkeyPlaceholder>, ScriptSource),
+    MuSigBranched(MuSigBranched),
+}
+
+impl Template {
+    pub fn is_singlesig(&self) -> bool {
+        match self {
+            Template::SingleSig(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn to_public_key(
+        &self,
+        child_index: UnhardenedIndex,
+    ) -> Option<bitcoin::PublicKey> {
+        match self {
+            Template::SingleSig(key) => {
+                Some(key.to_public_key(DerivationComponentsCtx {
+                    secp_ctx: &*crate::SECP256K1,
+                    child_number: child_index.into(),
+                }))
+            }
+            _ => None,
+        }
+    }
+}
+
+pub trait DeriveLockScript {
+    fn derive_lock_script(
+        &self,
+        child_index: UnhardenedIndex,
+        descr_category: Category,
+    ) -> Result<LockScript, Error>;
+}
+
+impl DeriveLockScript for SingleSig {
+    fn derive_lock_script(
+        &self,
+        child_index: UnhardenedIndex,
+        descr_category: Category,
+    ) -> Result<LockScript, Error> {
+        let pk = self.to_public_key(DerivationComponentsCtx {
+            secp_ctx: &*crate::SECP256K1,
+            child_number: child_index.into(),
+        });
+        Ok(pk.to_lock_script(descr_category))
+    }
+}
+
+impl DeriveLockScript for MultiSig {
+    fn derive_lock_script(
+        &self,
+        child_index: UnhardenedIndex,
+        descr_category: Category,
+    ) -> Result<LockScript, Error> {
+        let ctx = DerivationComponentsCtx {
+            secp_ctx: &*crate::SECP256K1,
+            child_number: child_index.into(),
+        };
+        match descr_category {
+            Category::SegWit | Category::Nested => {
+                let ms = Miniscript::<_, miniscript::Segwitv0>::from_ast(
+                    miniscript::Terminal::Multi(
+                        self.threshold(),
+                        self.pubkeys.clone(),
+                    ),
+                )
+                .expect("miniscript is unable to produce mutisig");
+                Ok(ms.encode(ctx).into())
+            }
+            Category::Taproot => unimplemented!(),
+            _ => {
+                let ms = Miniscript::<_, miniscript::Legacy>::from_ast(
+                    miniscript::Terminal::Multi(
+                        self.threshold(),
+                        self.pubkeys.clone(),
+                    ),
+                )
+                .expect("miniscript is unable to produce mutisig");
+                Ok(ms.encode(ctx).into())
+            }
+        }
+    }
+}
+
+impl DeriveLockScript for ScriptSource {
+    fn derive_lock_script(
+        &self,
+        child_index: UnhardenedIndex,
+        _: Category,
+    ) -> Result<LockScript, Error> {
+        let ms = match &self.script {
+            ScriptConstruction::Miniscript(ms) => ms.clone(),
+            ScriptConstruction::MiniscriptPolicy(policy) => policy.compile()?,
+            ScriptConstruction::ScriptTemplate(template) => {
+                return Ok(
+                    Script::from(template.translate_pk(child_index)).into()
+                )
+            }
+        };
+
+        Ok(ms
+            .encode(DerivationComponentsCtx {
+                secp_ctx: &*crate::SECP256K1,
+                child_number: child_index.into(),
+            })
+            .into())
+    }
+}
+
+impl DeriveLockScript for MuSigBranched {
+    fn derive_lock_script(
+        &self,
+        _child_index: UnhardenedIndex,
+        _descr_category: Category,
+    ) -> Result<LockScript, Error> {
+        // TODO: Implement after Taproot release
+        unimplemented!()
+    }
+}
+
+impl DeriveLockScript for Template {
+    fn derive_lock_script(
+        &self,
+        child_index: UnhardenedIndex,
+        descr_category: Category,
+    ) -> Result<LockScript, Error> {
+        match self {
+            Template::SingleSig(key) => {
+                key.derive_lock_script(child_index, descr_category)
+            }
+            Template::MultiSig(multisig) => {
+                multisig.derive_lock_script(child_index, descr_category)
+            }
+            Template::Scripted(scripted) => {
+                scripted.derive_lock_script(child_index, descr_category)
+            }
+            Template::MuSigBranched(musig) => {
+                musig.derive_lock_script(child_index, descr_category)
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
+pub struct Variants {
+    pub bare: bool,
+    pub hashed: bool,
+    pub nested: bool,
+    pub segwit: bool,
+    pub taproot: bool,
+}
+
+impl Display for Variants {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let mut comps = Vec::with_capacity(5);
+        if self.bare {
+            comps.push(if f.alternate() { "bare" } else { "b" });
+        }
+        if self.hashed {
+            comps.push(if f.alternate() { "hashed" } else { "h" });
+        }
+        if self.nested {
+            comps.push(if f.alternate() { "nested" } else { "n" });
+        }
+        if self.segwit {
+            comps.push(if f.alternate() { "segwit" } else { "s" });
+        }
+        if self.taproot {
+            comps.push(if f.alternate() { "taproot" } else { "t" });
+        }
+        f.write_str(&comps.join("|"))
+    }
+}
+
+impl FromStr for Variants {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut dv = Variants::default();
+        for item in s.split('|') {
+            match item.to_lowercase().as_str() {
+                "b" | "bare" => dv.bare = true,
+                "h" | "hashed" => dv.hashed = true,
+                "n" | "nested" => dv.nested = true,
+                "s" | "segwit" => dv.segwit = true,
+                "t" | "taproot" => dv.taproot = true,
+                _ => Err(())?,
+            }
+        }
+        Ok(dv)
+    }
+}
+
+impl Variants {
+    pub fn count(&self) -> u32 {
+        self.bare as u32
+            + self.hashed as u32
+            + self.nested as u32
+            + self.segwit as u32
+            + self.taproot as u32
+    }
+}
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Display)]
+#[display("{variants}({template})")]
+pub struct Generator {
+    pub template: Template,
+    pub variants: Variants,
+}
+
+impl Generator {
+    pub fn descriptors(
+        &self,
+        index: UnhardenedIndex,
+    ) -> Result<HashMap<Category, Expanded>, Error> {
+        let mut descriptors = HashMap::with_capacity(5);
+        let single = if let Template::SingleSig(_) = self.template {
+            Some(self.template.to_public_key(index).expect("Can't fail"))
+        } else {
+            None
+        };
+        if self.variants.bare {
+            let d = if let Some(pk) = single {
+                Expanded::Pk(pk)
+            } else {
+                Expanded::Bare(
+                    self.template
+                        .derive_lock_script(index, Category::Bare)?
+                        .into_inner()
+                        .into(),
+                )
+            };
+            descriptors.insert(Category::Bare, d);
+        }
+        if self.variants.hashed {
+            let d = if let Some(pk) = single {
+                Expanded::Pkh(pk)
+            } else {
+                Expanded::Sh(
+                    self.template
+                        .derive_lock_script(index, Category::Hashed)?,
+                )
+            };
+            descriptors.insert(Category::Hashed, d);
+        }
+        if self.variants.nested {
+            let d = if let Some(pk) = single {
+                Expanded::ShWpkh(pk)
+            } else {
+                Expanded::ShWsh(
+                    self.template
+                        .derive_lock_script(index, Category::Nested)?,
+                )
+            };
+            descriptors.insert(Category::Nested, d);
+        }
+        if self.variants.segwit {
+            let d = if let Some(pk) = single {
+                Expanded::Wpkh(pk)
+            } else {
+                Expanded::Wsh(
+                    self.template
+                        .derive_lock_script(index, Category::SegWit)?,
+                )
+            };
+            descriptors.insert(Category::SegWit, d);
+        }
+        /* TODO: Enable once Taproot will go live
+        if self.variants.taproot {
+            scripts.push(content.taproot());
+        }
+         */
+        Ok(descriptors)
+    }
+
+    #[inline]
+    pub fn pubkey_scripts(
+        &self,
+        index: UnhardenedIndex,
+    ) -> Result<HashMap<Category, Script>, Error> {
+        Ok(self
+            .descriptors(index)?
+            .into_iter()
+            .map(|(cat, descr)| (cat, PubkeyScript::from(descr).into()))
+            .collect())
+    }
 }
