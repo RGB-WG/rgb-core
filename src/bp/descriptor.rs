@@ -21,6 +21,8 @@
 use amplify::Wrapper;
 use core::convert::TryFrom;
 use regex::Regex;
+#[cfg(feature = "serde")]
+use serde_with::{hex::Hex, DisplayFromStr};
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -339,6 +341,12 @@ impl From<Compact> for PubkeyScript {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename = "lowercase")
+)]
 #[derive(
     Clone,
     Ord,
@@ -347,20 +355,36 @@ impl From<Compact> for PubkeyScript {
     PartialEq,
     Hash,
     Debug,
-    Display,
     StrictEncode,
     StrictDecode,
 )]
 #[lnpbp_crate(crate)]
-#[display(inner)]
 #[non_exhaustive]
 pub enum SingleSig {
     /// Single known public key
+    // TODO: Update serde serializer once miniscript will have Display/FromStr
+    #[cfg_attr(feature = "serde", serde(skip))]
     Pubkey(DescriptorSinglePub),
 
     /// Public key range with deterministic derivation that can be derived
     /// from a known extended public key without private key
-    XPubDerivable(DerivationComponents),
+    #[cfg_attr(feature = "serde", serde(rename = "xpub"))]
+    XPubDerivable(#[serde_as(as = "DisplayFromStr")] DerivationComponents),
+}
+
+impl Display for SingleSig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            SingleSig::Pubkey(pk) => {
+                if let Some((fp, path)) = &pk.origin {
+                    let path = path.to_string().replace("m/", "");
+                    write!(f, "[{}]/{}/", fp, path)?;
+                }
+                Display::fmt(&pk.key, f)
+            }
+            SingleSig::XPubDerivable(xpub) => Display::fmt(xpub, f),
+        }
+    }
 }
 
 impl SingleSig {
@@ -473,6 +497,12 @@ impl FromStr for SingleSig {
 /// key generator templates. May be useful for creating descriptors in
 /// situations where target script can't be deterministically represented by
 /// miniscript, for instance for Lightning network-specific transaction outputs
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename = "lowercase")
+)]
 #[derive(
     Clone,
     Ord,
@@ -486,19 +516,22 @@ impl FromStr for SingleSig {
     StrictDecode,
 )]
 #[lnpbp_crate(crate)]
-#[display(inner)]
 pub enum OpcodeTemplate<Pk>
 where
     Pk: MiniscriptKey + StrictEncode + StrictDecode,
+    <Pk as FromStr>::Err: Display,
 {
     /// Normal script command (OP_CODE)
+    #[display("opcode({0})")]
     OpCode(u8),
 
     /// Binary data (follows push commands)
-    Data(Box<[u8]>),
+    #[display("data({0:#x?})")]
+    Data(#[serde_as(as = "Hex")] Box<[u8]>),
 
     /// Key template
-    Key(Pk),
+    #[display("key({0})")]
+    Key(#[serde_as(as = "DisplayFromStr")] Pk),
 }
 
 impl<Pk> OpcodeTemplate<Pk>
@@ -507,6 +540,7 @@ where
         + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>
         + StrictEncode
         + StrictDecode,
+    <Pk as FromStr>::Err: Display,
 {
     fn translate_pk(
         &self,
@@ -529,6 +563,11 @@ where
 /// key generator templates. May be useful for creating descriptors in
 /// situations where target script can't be deterministically represented by
 /// miniscript, for instance for Lightning network-specific transaction outputs
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[derive(
     Wrapper,
     Clone,
@@ -546,11 +585,13 @@ where
 #[lnpbp_crate(crate)]
 pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
 where
-    Pk: MiniscriptKey + StrictEncode + StrictDecode;
+    Pk: MiniscriptKey + StrictEncode + StrictDecode,
+    <Pk as FromStr>::Err: Display;
 
 impl<Pk> Display for ScriptTemplate<Pk>
 where
     Pk: MiniscriptKey + StrictEncode + StrictDecode,
+    <Pk as FromStr>::Err: Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for instruction in &self.0 {
@@ -566,6 +607,7 @@ where
         + StrictEncode
         + StrictDecode
         + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>,
+    <Pk as FromStr>::Err: Display,
 {
     fn translate_pk(
         &self,
@@ -595,6 +637,12 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename = "lowercase")
+)]
 #[derive(
     Clone,
     Ord,
@@ -607,26 +655,58 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
     StrictDecode,
 )]
 #[non_exhaustive]
-#[display(inner)]
 #[lnpbp_crate(crate)]
 pub enum ScriptConstruction {
+    #[cfg_attr(feature = "serde", serde(rename = "script"))]
+    #[display(inner)]
     ScriptTemplate(ScriptTemplate<SingleSig>),
 
-    Miniscript(Miniscript<SingleSig, Segwitv0>),
+    #[display(inner)]
+    Miniscript(
+        #[serde_as(as = "DisplayFromStr")] Miniscript<SingleSig, Segwitv0>,
+    ),
 
-    MiniscriptPolicy(policy::Concrete<SingleSig>),
+    #[cfg_attr(feature = "serde", serde(rename = "policy"))]
+    #[display(inner)]
+    MiniscriptPolicy(
+        #[serde_as(as = "DisplayFromStr")] policy::Concrete<SingleSig>,
+    ),
 }
 
-#[derive(
-    Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
 )]
+#[derive(
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[display("{script}")]
 #[lnpbp_crate(crate)]
 pub struct ScriptSource {
     pub script: ScriptConstruction,
+
     pub source: Option<String>,
+
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub tweak_target: Option<SingleSig>,
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone,
     Ord,
@@ -641,8 +721,25 @@ pub struct ScriptSource {
 #[lnpbp_crate(crate)]
 pub struct MultiSig {
     pub threshold: Option<u8>,
+
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     pub pubkeys: Vec<SingleSig>,
+
     pub reorder: bool,
+}
+
+impl Display for MultiSig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{};", self.threshold())?;
+        f.write_str(
+            &self
+                .pubkeys
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        )
+    }
 }
 
 impl MultiSig {
@@ -673,16 +770,45 @@ impl MultiSig {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
 )]
 #[lnpbp_crate(crate)]
 pub struct MuSigBranched {
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     pub extra_keys: Vec<SingleSig>,
+
     pub tapscript: ScriptConstruction,
+
     pub source: Option<String>,
 }
 
+impl Display for MuSigBranched {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{};", self.tapscript)?;
+        f.write_str(
+            &self
+                .extra_keys
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        )
+    }
+}
+
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename = "lowercase")
+)]
 #[derive(
     Clone,
     Ord,
@@ -695,15 +821,19 @@ pub struct MuSigBranched {
     StrictDecode,
 )]
 #[non_exhaustive]
-#[display(inner)]
 #[lnpbp_crate(crate)]
 pub enum Template {
-    SingleSig(SingleSig),
+    #[display(inner)]
+    SingleSig(#[serde_as(as = "DisplayFromStr")] SingleSig),
 
+    #[display(inner)]
     MultiSig(MultiSig),
 
+    #[display(inner)]
     Scripted(ScriptSource),
 
+    #[cfg_attr(feature = "serde", serde(rename = "musig"))]
+    #[display(inner)]
     MuSigBranched(MuSigBranched),
 }
 
@@ -870,6 +1000,13 @@ pub struct Variants {
     pub taproot: bool,
 }
 
+#[derive(
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
+)]
+#[display(doc_comments)]
+/// Error parsing descriptor variants: unrecognized string
+pub struct VariantsParseError;
+
 impl Display for Variants {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut comps = Vec::with_capacity(5);
@@ -893,7 +1030,7 @@ impl Display for Variants {
 }
 
 impl FromStr for Variants {
-    type Err = ();
+    type Err = VariantsParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut dv = Variants::default();
@@ -904,7 +1041,7 @@ impl FromStr for Variants {
                 "n" | "nested" => dv.nested = true,
                 "s" | "segwit" => dv.segwit = true,
                 "t" | "taproot" => dv.taproot = true,
-                _ => Err(())?,
+                _ => Err(VariantsParseError)?,
             }
         }
         Ok(dv)
@@ -921,6 +1058,12 @@ impl Variants {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone,
     Ord,
@@ -936,6 +1079,8 @@ impl Variants {
 #[lnpbp_crate(crate)]
 pub struct Generator {
     pub template: Template,
+
+    #[serde_as(as = "DisplayFromStr")]
     pub variants: Variants,
 }
 
