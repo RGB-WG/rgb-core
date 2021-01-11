@@ -32,7 +32,7 @@ macro_rules! attr_err {
         attr_err!($attr.span(), NAME, $msg, EXAMPLE);
     };
     ($name:expr, $msg:tt, $example:tt) => {
-        attr_err!(::syn::export::Span::call_site(), $name, $msg, $example);
+        attr_err!(::proc_macro2::Span::call_site(), $name, $msg, $example);
     };
     ($attr:expr, $name:expr, $msg:tt, $example:tt) => {
         ::syn::Error::new(

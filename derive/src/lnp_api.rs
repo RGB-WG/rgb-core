@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use core::convert::TryFrom;
-use syn::export::{Span, TokenStream2};
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::spanned::Spanned;
 use syn::{
     Data, DataEnum, DeriveInput, Error, Fields, Ident, Lit, Path, Result,

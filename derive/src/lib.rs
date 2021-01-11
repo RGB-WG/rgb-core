@@ -20,6 +20,7 @@ extern crate amplify;
 extern crate quote;
 #[macro_use]
 extern crate syn;
+extern crate proc_macro;
 
 #[macro_use]
 mod util;
@@ -28,7 +29,7 @@ mod lightning_encoding;
 mod lnp_api;
 mod strict_encoding;
 
-use syn::export::TokenStream;
+use proc_macro::TokenStream;
 use syn::DeriveInput;
 
 #[proc_macro_derive(LnpApi, attributes(lnp_api, lnpbp_crate))]

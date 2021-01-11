@@ -15,7 +15,8 @@ proc-macro = true
 
 [dependencies]
 quote = "~1.0.7"
-syn = "~1.0.31"
+syn = "~1.0.58"
+proc-macro2 = "~1.0.24"
 amplify = "2.4"
 
 [dev-dependencies]
