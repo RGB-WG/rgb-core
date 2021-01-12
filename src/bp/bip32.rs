@@ -290,62 +290,45 @@ pub struct DefaultResolver;
 
 /// SLIP 132-defined key applications defining types of scriptPubkey descriptors
 /// in which they can be used
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
+#[derive(
+    Copy, Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode,
+)]
+#[lnpbp_crate(crate)]
+#[non_exhaustive]
 pub enum KeyApplication {
     /// xprv/xpub: keys that can be used for P2PKH and multisig P2SH
     /// scriptPubkey descriptors.
-    Legacy,
+    #[display("hashed")]
+    #[cfg_attr(feature = "serde", serde(rename = "hashed"))]
+    Hashed,
+
     /// zprv/zpub: keys that can be used for P2WPKH scriptPubkey descriptors
-    SegWitV0Singlesig,
-    /// yprv/ypub: keys that can be used for P2WPKH-in-P2SH scriptPubkey
-    /// descriptors
-    SegWitLegacySinglesig,
+    #[display("segwit")]
+    #[cfg_attr(feature = "serde", serde(rename = "segwit"))]
+    SegWit,
+
     /// Zprv/Zpub: keys that can be used for multisig P2WSH scriptPubkey
     /// descriptors
-    SegWitV0Miltisig,
+    #[display("segwit-multisig")]
+    #[cfg_attr(feature = "serde", serde(rename = "segwit-multisig"))]
+    SegWitMiltisig,
+
+    /// yprv/ypub: keys that can be used for P2WPKH-in-P2SH scriptPubkey
+    /// descriptors
+    #[display("nested")]
+    #[cfg_attr(feature = "serde", serde(rename = "nested"))]
+    Nested,
+
     /// Yprv/Ypub: keys that can be used for multisig P2WSH-in-P2SH
     /// scriptPubkey descriptors
-    SegWitLegacyMultisig,
-}
-
-impl StrictEncode for KeyApplication {
-    fn strict_encode<E: io::Write>(
-        &self,
-        e: E,
-    ) -> Result<usize, strict_encoding::Error> {
-        let val = match self {
-            KeyApplication::Legacy => 0u8,
-            KeyApplication::SegWitLegacySinglesig => 1u8,
-            KeyApplication::SegWitLegacyMultisig => 2u8,
-            KeyApplication::SegWitV0Singlesig => 3u8,
-            KeyApplication::SegWitV0Miltisig => 4u8,
-        };
-        val.strict_encode(e)
-    }
-}
-
-impl StrictDecode for KeyApplication {
-    fn strict_decode<D: io::Read>(
-        d: D,
-    ) -> Result<Self, strict_encoding::Error> {
-        Ok(match u8::strict_decode(d)? {
-            0 => KeyApplication::Legacy,
-            1 => KeyApplication::SegWitLegacySinglesig,
-            2 => KeyApplication::SegWitLegacyMultisig,
-            3 => KeyApplication::SegWitV0Singlesig,
-            4 => KeyApplication::SegWitV0Miltisig,
-            other => Err(strict_encoding::Error::EnumValueNotKnown(
-                s!("KeyApplication"),
-                other,
-            ))?,
-        })
-    }
+    #[display("nested-multisig")]
+    #[cfg_attr(feature = "serde", serde(rename = "nested-multisig"))]
+    NestedMultisig,
 }
 
 /// Unknown string representation of [`KeyApplication`] enum
@@ -358,12 +341,12 @@ impl FromStr for KeyApplication {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
-            "pkh" => KeyApplication::Legacy,
-            "sh" => KeyApplication::Legacy,
-            "wpkh" => KeyApplication::SegWitV0Singlesig,
-            "wsh" => KeyApplication::SegWitV0Miltisig,
-            "wpkh-sh" => KeyApplication::SegWitLegacySinglesig,
-            "wsh-sh" => KeyApplication::SegWitLegacyMultisig,
+            "pkh" => KeyApplication::Hashed,
+            "sh" => KeyApplication::Hashed,
+            "wpkh" => KeyApplication::SegWit,
+            "wsh" => KeyApplication::SegWitMiltisig,
+            "wpkh-sh" => KeyApplication::Nested,
+            "wsh-sh" => KeyApplication::NestedMultisig,
             _ => Err(EnumReprError)?,
         })
     }
@@ -428,64 +411,58 @@ impl VersionResolver for DefaultResolver {
         is_priv: bool,
     ) -> KeyVersion {
         match (network, applicable_for, is_priv) {
-            (Network::Bitcoin, KeyApplication::Legacy, false) => {
+            (Network::Bitcoin, KeyApplication::Hashed, false) => {
                 KeyVersion(VERSION_MAGIC_XPUB)
             }
-            (Network::Bitcoin, KeyApplication::Legacy, true) => {
+            (Network::Bitcoin, KeyApplication::Hashed, true) => {
                 KeyVersion(VERSION_MAGIC_XPRV)
             }
-            (
-                Network::Bitcoin,
-                KeyApplication::SegWitLegacySinglesig,
-                false,
-            ) => KeyVersion(VERSION_MAGIC_YPUB),
-            (Network::Bitcoin, KeyApplication::SegWitLegacySinglesig, true) => {
+            (Network::Bitcoin, KeyApplication::Nested, false) => {
+                KeyVersion(VERSION_MAGIC_YPUB)
+            }
+            (Network::Bitcoin, KeyApplication::Nested, true) => {
                 KeyVersion(VERSION_MAGIC_YPRV)
             }
-            (Network::Bitcoin, KeyApplication::SegWitV0Singlesig, false) => {
+            (Network::Bitcoin, KeyApplication::SegWit, false) => {
                 KeyVersion(VERSION_MAGIC_ZPUB)
             }
-            (Network::Bitcoin, KeyApplication::SegWitV0Singlesig, true) => {
+            (Network::Bitcoin, KeyApplication::SegWit, true) => {
                 KeyVersion(VERSION_MAGIC_ZPRV)
             }
-            (Network::Bitcoin, KeyApplication::SegWitLegacyMultisig, false) => {
+            (Network::Bitcoin, KeyApplication::NestedMultisig, false) => {
                 KeyVersion(VERSION_MAGIC_YPUB_MULTISIG)
             }
-            (Network::Bitcoin, KeyApplication::SegWitLegacyMultisig, true) => {
+            (Network::Bitcoin, KeyApplication::NestedMultisig, true) => {
                 KeyVersion(VERSION_MAGIC_YPRV_MULTISIG)
             }
-            (Network::Bitcoin, KeyApplication::SegWitV0Miltisig, false) => {
+            (Network::Bitcoin, KeyApplication::SegWitMiltisig, false) => {
                 KeyVersion(VERSION_MAGIC_ZPUB_MULTISIG)
             }
-            (Network::Bitcoin, KeyApplication::SegWitV0Miltisig, true) => {
+            (Network::Bitcoin, KeyApplication::SegWitMiltisig, true) => {
                 KeyVersion(VERSION_MAGIC_ZPRV_MULTISIG)
             }
-            (_, KeyApplication::Legacy, false) => {
+            (_, KeyApplication::Hashed, false) => {
                 KeyVersion(VERSION_MAGIC_TPUB)
             }
-            (_, KeyApplication::Legacy, true) => KeyVersion(VERSION_MAGIC_TPRV),
-            (_, KeyApplication::SegWitLegacySinglesig, false) => {
+            (_, KeyApplication::Hashed, true) => KeyVersion(VERSION_MAGIC_TPRV),
+            (_, KeyApplication::Nested, false) => {
                 KeyVersion(VERSION_MAGIC_UPUB)
             }
-            (_, KeyApplication::SegWitLegacySinglesig, true) => {
-                KeyVersion(VERSION_MAGIC_UPRV)
-            }
-            (_, KeyApplication::SegWitV0Singlesig, false) => {
+            (_, KeyApplication::Nested, true) => KeyVersion(VERSION_MAGIC_UPRV),
+            (_, KeyApplication::SegWit, false) => {
                 KeyVersion(VERSION_MAGIC_VPUB)
             }
-            (_, KeyApplication::SegWitV0Singlesig, true) => {
-                KeyVersion(VERSION_MAGIC_VPRV)
-            }
-            (_, KeyApplication::SegWitLegacyMultisig, false) => {
+            (_, KeyApplication::SegWit, true) => KeyVersion(VERSION_MAGIC_VPRV),
+            (_, KeyApplication::NestedMultisig, false) => {
                 KeyVersion(VERSION_MAGIC_UPUB_MULTISIG)
             }
-            (_, KeyApplication::SegWitLegacyMultisig, true) => {
+            (_, KeyApplication::NestedMultisig, true) => {
                 KeyVersion(VERSION_MAGIC_UPRV_MULTISIG)
             }
-            (_, KeyApplication::SegWitV0Miltisig, false) => {
+            (_, KeyApplication::SegWitMiltisig, false) => {
                 KeyVersion(VERSION_MAGIC_VPUB_MULTISIG)
             }
-            (_, KeyApplication::SegWitV0Miltisig, true) => {
+            (_, KeyApplication::SegWitMiltisig, true) => {
                 KeyVersion(VERSION_MAGIC_VPRV_MULTISIG)
             }
         }
@@ -550,24 +527,22 @@ impl VersionResolver for DefaultResolver {
     fn application(kv: &KeyVersion) -> Option<Self::Application> {
         match kv.as_bytes() {
             &VERSION_MAGIC_XPUB | &VERSION_MAGIC_XPRV | &VERSION_MAGIC_TPUB
-            | &VERSION_MAGIC_TPRV => Some(KeyApplication::Legacy),
+            | &VERSION_MAGIC_TPRV => Some(KeyApplication::Hashed),
             &VERSION_MAGIC_YPUB | &VERSION_MAGIC_YPRV | &VERSION_MAGIC_UPUB
-            | &VERSION_MAGIC_UPRV => {
-                Some(KeyApplication::SegWitLegacySinglesig)
-            }
+            | &VERSION_MAGIC_UPRV => Some(KeyApplication::Nested),
             &VERSION_MAGIC_YPUB_MULTISIG
             | &VERSION_MAGIC_YPRV_MULTISIG
             | &VERSION_MAGIC_UPUB_MULTISIG
             | &VERSION_MAGIC_UPRV_MULTISIG => {
-                Some(KeyApplication::SegWitLegacyMultisig)
+                Some(KeyApplication::NestedMultisig)
             }
             &VERSION_MAGIC_ZPUB | &VERSION_MAGIC_ZPRV | &VERSION_MAGIC_VPUB
-            | &VERSION_MAGIC_VPRV => Some(KeyApplication::SegWitV0Singlesig),
+            | &VERSION_MAGIC_VPRV => Some(KeyApplication::SegWit),
             &VERSION_MAGIC_ZPUB_MULTISIG
             | &VERSION_MAGIC_ZPRV_MULTISIG
             | &VERSION_MAGIC_VPUB_MULTISIG
             | &VERSION_MAGIC_VPRV_MULTISIG => {
-                Some(KeyApplication::SegWitV0Miltisig)
+                Some(KeyApplication::SegWitMiltisig)
             }
             _ => None,
         }
