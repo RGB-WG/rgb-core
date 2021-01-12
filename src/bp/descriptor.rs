@@ -22,7 +22,7 @@ use amplify::Wrapper;
 use core::convert::TryFrom;
 use regex::Regex;
 #[cfg(feature = "serde")]
-use serde_with::{hex::Hex, DisplayFromStr};
+use serde_with::{hex::Hex, As, DisplayFromStr};
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -345,7 +345,7 @@ impl From<Compact> for PubkeyScript {
     feature = "serde",
     serde_as,
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename = "lowercase")
+    serde(crate = "serde_crate", rename = "lowercase", untagged)
 )]
 #[derive(
     Clone,
@@ -362,14 +362,21 @@ impl From<Compact> for PubkeyScript {
 #[non_exhaustive]
 pub enum SingleSig {
     /// Single known public key
-    // TODO: Update serde serializer once miniscript will have Display/FromStr
     #[cfg_attr(feature = "serde", serde(skip))]
-    Pubkey(DescriptorSinglePub),
+    Pubkey(
+        // TODO: Update serde serializer once miniscript will have
+        // Display/FromStr #[cfg_attr(feature = "serde", serde(with =
+        // "As::<DisplayFromStr>"))]
+        DescriptorSinglePub,
+    ),
 
     /// Public key range with deterministic derivation that can be derived
     /// from a known extended public key without private key
     #[cfg_attr(feature = "serde", serde(rename = "xpub"))]
-    XPubDerivable(#[serde_as(as = "DisplayFromStr")] DerivationComponents),
+    XPubDerivable(
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+        DerivationComponents,
+    ),
 }
 
 impl Display for SingleSig {
@@ -527,11 +534,13 @@ where
 
     /// Binary data (follows push commands)
     #[display("data({0:#x?})")]
-    Data(#[serde_as(as = "Hex")] Box<[u8]>),
+    Data(#[cfg_attr(feature = "serde", serde(with = "As::<Hex>"))] Box<[u8]>),
 
     /// Key template
     #[display("key({0})")]
-    Key(#[serde_as(as = "DisplayFromStr")] Pk),
+    Key(
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Pk,
+    ),
 }
 
 impl<Pk> OpcodeTemplate<Pk>
@@ -663,13 +672,15 @@ pub enum ScriptConstruction {
 
     #[display(inner)]
     Miniscript(
-        #[serde_as(as = "DisplayFromStr")] Miniscript<SingleSig, Segwitv0>,
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+        Miniscript<SingleSig, Segwitv0>,
     ),
 
     #[cfg_attr(feature = "serde", serde(rename = "policy"))]
     #[display(inner)]
     MiniscriptPolicy(
-        #[serde_as(as = "DisplayFromStr")] policy::Concrete<SingleSig>,
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+        policy::Concrete<SingleSig>,
     ),
 }
 
@@ -697,7 +708,10 @@ pub struct ScriptSource {
 
     pub source: Option<String>,
 
-    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "As::<Option<DisplayFromStr>>")
+    )]
     pub tweak_target: Option<SingleSig>,
 }
 
@@ -722,7 +736,7 @@ pub struct ScriptSource {
 pub struct MultiSig {
     pub threshold: Option<u8>,
 
-    #[serde_as(as = "Vec<DisplayFromStr>")]
+    #[cfg_attr(feature = "serde", serde(with = "As::<Vec<DisplayFromStr>>"))]
     pub pubkeys: Vec<SingleSig>,
 
     pub reorder: bool,
@@ -781,7 +795,7 @@ impl MultiSig {
 )]
 #[lnpbp_crate(crate)]
 pub struct MuSigBranched {
-    #[serde_as(as = "Vec<DisplayFromStr>")]
+    #[cfg_attr(feature = "serde", serde(with = "As::<Vec<DisplayFromStr>>"))]
     pub extra_keys: Vec<SingleSig>,
 
     pub tapscript: ScriptConstruction,
@@ -824,7 +838,10 @@ impl Display for MuSigBranched {
 #[lnpbp_crate(crate)]
 pub enum Template {
     #[display(inner)]
-    SingleSig(#[serde_as(as = "DisplayFromStr")] SingleSig),
+    SingleSig(
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+        SingleSig,
+    ),
 
     #[display(inner)]
     MultiSig(MultiSig),
@@ -1080,7 +1097,7 @@ impl Variants {
 pub struct Generator {
     pub template: Template,
 
-    #[serde_as(as = "DisplayFromStr")]
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     pub variants: Variants,
 }
 
