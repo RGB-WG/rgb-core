@@ -13,6 +13,8 @@
 
 use core::convert::{TryFrom, TryInto};
 use core::fmt::{self, Debug, Display, Formatter};
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 #[cfg(feature = "url")]
@@ -29,9 +31,9 @@ use crate::lnp::{AddrError, UrlString};
 /// Node address which can be represent by either some local address without
 /// encryption information (i.e. node public key) or remote node address
 /// containing node public key
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
+    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
@@ -52,11 +54,17 @@ use crate::lnp::{AddrError, UrlString};
 pub enum NodeAddr {
     /// Local node using plain transport protocol [`LocalSocketAddr`]
     /// information and no encryption
-    Local(LocalSocketAddr),
+    Local(
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+        LocalSocketAddr,
+    ),
 
     /// Remote node required to have a node public key used for ID and
     /// encryption
-    Remote(RemoteNodeAddr),
+    Remote(
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+        RemoteNodeAddr,
+    ),
 }
 
 impl FromStr for NodeAddr {
@@ -142,7 +150,12 @@ impl TryFrom<NodeAddr> for ZmqSocketAddr {
 /// Node address must be given as in form of
 /// `<node_id>@<node_inet_addr>[:<port>]`, where <node_inet_addr> may be
 /// IPv4, IPv6, Onion v2 or v3 address
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone,
     PartialEq,
@@ -155,17 +168,13 @@ impl TryFrom<NodeAddr> for ZmqSocketAddr {
     StrictDecode,
 )]
 #[lnpbp_crate(crate)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
 pub struct RemoteNodeAddr {
     /// Node public key, used both as an ID and encryption key for per-session
     /// ECDH
     pub node_id: secp256k1::PublicKey,
 
     /// Full remote peer address including port information
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     pub remote_addr: RemoteSocketAddr,
 }
 

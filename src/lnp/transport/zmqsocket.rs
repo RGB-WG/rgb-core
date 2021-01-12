@@ -12,10 +12,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::{Bipolar, Wrapper};
+use core::cmp::Ordering;
 #[cfg(feature = "url")]
 use core::convert::TryFrom;
 #[cfg(feature = "url")]
 use core::str::FromStr;
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::net::SocketAddr;
 #[cfg(feature = "url")]
@@ -23,7 +26,6 @@ use url::Url;
 
 use super::{Duplex, RecvFrame, RoutedFrame, SendFrame};
 use crate::lnp::{transport, AddrError, UrlString};
-use bitcoin_hashes::core::cmp::Ordering;
 
 lazy_static! {
     pub static ref ZMQ_CONTEXT: zmq::Context = zmq::Context::new();
@@ -142,15 +144,16 @@ impl FromStr for ZmqType {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", tag = "type")
+)]
 #[derive(
     Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[lnpbp_crate(crate)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", tag = "type")
-)]
 pub enum ZmqSocketAddr {
     #[display("inproc://{0}", alt = "zmq:{0}")]
     Inproc(String),
@@ -159,7 +162,10 @@ pub enum ZmqSocketAddr {
     Ipc(String),
 
     #[display("tcp://{0}", alt = "lnpz://{0}")]
-    Tcp(SocketAddr),
+    Tcp(
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+        SocketAddr,
+    ),
 }
 
 // Fake implementation required to use socket addresses with StrictEncode

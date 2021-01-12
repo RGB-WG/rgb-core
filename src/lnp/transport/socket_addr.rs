@@ -19,6 +19,9 @@
 //! [`NodeAddress`](lnp::NodeAddr)).
 
 use amplify::internet::{InetAddr, InetSocketAddr, NoOnionSupportError};
+use core::cmp::Ordering;
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 #[cfg(feature = "url")]
 use std::convert::{TryFrom, TryInto};
 use std::net::{IpAddr, SocketAddr};
@@ -29,7 +32,6 @@ use url::{self, Url};
 #[cfg(feature = "zmq")]
 use super::zmqsocket;
 use crate::lnp::{AddrError, UrlString};
-use bitcoin_hashes::core::cmp::Ordering;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
@@ -94,9 +96,9 @@ impl FromStr for FramingProtocol {
 
 /// Represents a connection that requires the other peer to be present on the
 /// same machine as a connecting peer
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
+    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
@@ -117,7 +119,10 @@ pub enum LocalSocketAddr {
     /// Microservices connected using ZeroMQ protocol locally
     #[cfg(feature = "zmq")]
     #[display("{0}", alt = "lnpz://{0}")]
-    Zmq(zmqsocket::ZmqSocketAddr),
+    Zmq(
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+        zmqsocket::ZmqSocketAddr,
+    ),
 
     /// Local node operating as a separate **process** or **threads** connected
     /// with unencrypted POSIX file I/O (like in c-lightning)
@@ -126,7 +131,6 @@ pub enum LocalSocketAddr {
 }
 
 /// Represents a connection to a generic remote peer operating with LNP protocol
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
