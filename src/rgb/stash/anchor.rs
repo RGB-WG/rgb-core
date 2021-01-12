@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 use std::collections::{BTreeMap, HashMap};
 
 use amplify::Wrapper;
@@ -61,11 +63,11 @@ impl sha256t::Tag for AnchorIdTag {
 }
 
 /// Unique anchor identifier equivalent to the anchor commitment hash
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
+    serde_as,
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", transparent)
 )]
 #[derive(
     Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From,
@@ -73,7 +75,10 @@ impl sha256t::Tag for AnchorIdTag {
 #[wrapper(
     Debug, Display, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull
 )]
-pub struct AnchorId(sha256t::Hash<AnchorIdTag>);
+pub struct AnchorId(
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+    sha256t::Hash<AnchorIdTag>,
+);
 
 impl<MSG> CommitVerify<MSG> for AnchorId
 where
