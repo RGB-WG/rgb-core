@@ -12,6 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use amplify::{DumbDefault, Wrapper};
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
@@ -89,7 +91,6 @@ impl TryFrom<u16> for ExtensionId {
 
 impl extension::Nomenclature for ExtensionId {}
 
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -135,11 +136,11 @@ impl Default for Lifecycle {
 }
 
 /// Lightning network channel Id
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
+    serde_as,
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", transparent)
 )]
 #[derive(
     Wrapper,
@@ -162,7 +163,10 @@ impl Default for Lifecycle {
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-pub struct ChannelId(Slice32);
+pub struct ChannelId(
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+    Slice32,
+);
 
 impl FromHex for ChannelId {
     fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
@@ -186,11 +190,11 @@ impl ChannelId {
 }
 
 /// Lightning network temporary channel Id
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
+    serde_as,
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", transparent)
 )]
 #[derive(
     Wrapper,
@@ -212,7 +216,10 @@ impl ChannelId {
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-pub struct TempChannelId(Slice32);
+pub struct TempChannelId(
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+    Slice32,
+);
 
 impl From<TempChannelId> for ChannelId {
     fn from(temp: TempChannelId) -> Self {

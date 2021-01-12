@@ -14,6 +14,8 @@
 //! Hash-locked contract supporting data structures
 
 use amplify::{DumbDefault, Wrapper};
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 
 use bitcoin::hashes::hex::{Error, FromHex};
 use bitcoin::hashes::{sha256, Hash};
@@ -21,11 +23,11 @@ use bitcoin::hashes::{sha256, Hash};
 use super::Slice32;
 
 /// HTLC payment hash
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
+    serde_as,
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", transparent)
 )]
 #[derive(
     Wrapper,
@@ -45,7 +47,10 @@ use super::Slice32;
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-pub struct HashLock(Slice32);
+pub struct HashLock(
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+    Slice32,
+);
 
 impl From<HashPreimage> for HashLock {
     fn from(preimage: HashPreimage) -> Self {
@@ -72,11 +77,11 @@ impl AsRef<[u8]> for HashLock {
 }
 
 /// HTLC payment preimage
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
+    serde_as,
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", transparent)
 )]
 #[derive(
     Wrapper,
@@ -96,7 +101,10 @@ impl AsRef<[u8]> for HashLock {
 #[lnpbp_crate(crate)]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-pub struct HashPreimage(Slice32);
+pub struct HashPreimage(
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+    Slice32,
+);
 
 impl HashPreimage {
     #[cfg(feature = "keygen")]

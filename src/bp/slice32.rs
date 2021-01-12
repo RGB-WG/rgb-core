@@ -18,7 +18,6 @@ use bitcoin::hashes::hex::{Error, FromHex, ToHex};
 
 /// Wrapper type for all slice-based 256-bit types implementing many important
 /// traits, so types based on it can simply derive their implementations
-#[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
