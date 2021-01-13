@@ -14,8 +14,13 @@
 use std::fmt::Debug;
 use std::str::FromStr;
 
-use bitcoin::util::bip32::{ChildNumber, DerivationPath};
+use bitcoin::util::base58;
+use bitcoin::util::bip32::{
+    self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
+};
 use bitcoin::Network;
+
+use crate::bp::bip32::Decode;
 
 /// Magical version bytes for xpub: bitcoin mainnet public key for P2PKH or P2SH
 pub const VERSION_MAGIC_XPUB: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
@@ -76,17 +81,67 @@ pub const VERSION_MAGIC_VPUB_MULTISIG: [u8; 4] = [0x02, 0x57, 0x54, 0x83];
 /// multi-signature P2WSH
 pub const VERSION_MAGIC_VPRV_MULTISIG: [u8; 4] = [0x02, 0x57, 0x50, 0x48];
 
+/// Extended public and private key processing errors
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Display, From, Error)]
+#[display(doc_comments)]
+pub enum Error {
+    /// Error in BASE58 key encoding
+    #[from(base58::Error)]
+    Base58,
+
+    /// A pk->pk derivation was attempted on a hardened key
+    CannotDeriveFromHardenedKey,
+
+    /// A child number was provided ({0}) that was out of range
+    InvalidChildNumber(u32),
+
+    /// Invalid child number format.
+    InvalidChildNumberFormat,
+
+    /// Invalid derivation path format.
+    InvalidDerivationPathFormat,
+
+    /// Unrecognized or unsupported extended key prefix (please check SLIP 32
+    /// for possible values)
+    UnknownSlip32Prefix,
+
+    /// Failure in tust bitcoin library
+    InteralFailure,
+}
+
+impl From<bip32::Error> for Error {
+    fn from(err: bip32::Error) -> Self {
+        match err {
+            bip32::Error::CannotDeriveFromHardenedKey => {
+                Error::CannotDeriveFromHardenedKey
+            }
+            bip32::Error::InvalidChildNumber(no) => {
+                Error::InvalidChildNumber(no)
+            }
+            bip32::Error::InvalidChildNumberFormat => {
+                Error::InvalidChildNumberFormat
+            }
+            bip32::Error::InvalidDerivationPathFormat => {
+                Error::InvalidDerivationPathFormat
+            }
+            bip32::Error::Ecdsa(_) | bip32::Error::RngError(_) => {
+                Error::InteralFailure
+            }
+        }
+    }
+}
+
 /// Structure holding 4 version bytes with magical numbers representing
 /// different versions of extended public and private keys according to BIP-32.
 /// Key version stores raw bytes without their check, interpretation or
 /// verification; for these purposes special helpers structures implementing
-/// [VersionResolver] are used.
+/// [`VersionResolver`] are used.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct KeyVersion([u8; 4]);
 
 /// Trait which must be implemented by helpers which do construction,
 /// interpretation, verification and cross-conversion of extended public and
-/// private key version magic bytes from [KeyVersion]
+/// private key version magic bytes from [`KeyVersion`]
 pub trait VersionResolver:
     Copy + Clone + PartialEq + Eq + PartialOrd + Ord + std::hash::Hash + Debug
 {
@@ -97,7 +152,7 @@ pub trait VersionResolver:
     /// (types of scriptPubkey descriptors in which they can be used)
     type Application;
 
-    /// Constructor for [KeyVersion] with given network, application scope and
+    /// Constructor for [`KeyVersion`] with given network, application scope and
     /// key type (public or private)
     fn resolve(
         network: Self::Network,
@@ -249,10 +304,10 @@ pub enum KeyApplication {
 /// Unknown string representation of [`KeyApplication`] enum
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
 #[display(doc_comments)]
-pub struct EnumReprError;
+pub struct UnknownKeyApplicationError;
 
 impl FromStr for KeyApplication {
-    type Err = EnumReprError;
+    type Err = UnknownKeyApplicationError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
@@ -262,14 +317,14 @@ impl FromStr for KeyApplication {
             "wsh" => KeyApplication::SegWitMiltisig,
             "wpkh-sh" => KeyApplication::Nested,
             "wsh-sh" => KeyApplication::NestedMultisig,
-            _ => Err(EnumReprError)?,
+            _ => Err(UnknownKeyApplicationError)?,
         })
     }
 }
 
 impl KeyVersion {
-    /// Tries to construct [KeyVersion] object from a byte slice. If byte slice
-    /// length is not equal to 4, returns `None`
+    /// Tries to construct [`KeyVersion`] object from a byte slice. If byte
+    /// slice length is not equal to 4, returns `None`
     pub fn from_slice(version_slice: &[u8]) -> Option<KeyVersion> {
         if version_slice.len() != 4 {
             return None;
@@ -279,12 +334,12 @@ impl KeyVersion {
         Some(KeyVersion::from_bytes(bytes))
     }
 
-    /// Constructs [KeyVersion] from a fixed 4 bytes values
+    /// Constructs [`KeyVersion`] from a fixed 4 bytes values
     pub fn from_bytes(version_bytes: [u8; 4]) -> KeyVersion {
         KeyVersion(version_bytes)
     }
 
-    /// Constructs [KeyVersion from a `u32`-representation of the version
+    /// Constructs [`KeyVersion`] from a `u32`-representation of the version
     /// bytes (the representation must be in bing endian format)
     pub fn from_u32(version: u32) -> KeyVersion {
         KeyVersion(version.to_be_bytes())
@@ -595,5 +650,69 @@ impl VersionResolver for DefaultResolver {
             | &VERSION_MAGIC_VPRV_MULTISIG => Some(kv.clone()),
             _ => None,
         }
+    }
+}
+
+pub trait FromSlip32 {
+    fn from_slip32_str(s: &str) -> Result<Self, Error>
+    where
+        Self: Sized;
+}
+
+impl FromSlip32 for ExtendedPubKey {
+    fn from_slip32_str(s: &str) -> Result<Self, Error> {
+        let mut data = base58::from_check(s)?;
+
+        let mut prefix = [0u8; 4];
+        prefix.copy_from_slice(&data[0..4]);
+        let slice = match prefix {
+            VERSION_MAGIC_XPUB
+            | VERSION_MAGIC_YPUB
+            | VERSION_MAGIC_ZPUB
+            | VERSION_MAGIC_YPUB_MULTISIG
+            | VERSION_MAGIC_ZPUB_MULTISIG => VERSION_MAGIC_XPUB,
+
+            VERSION_MAGIC_TPUB
+            | VERSION_MAGIC_UPUB
+            | VERSION_MAGIC_VPUB
+            | VERSION_MAGIC_UPUB_MULTISIG
+            | VERSION_MAGIC_VPUB_MULTISIG => VERSION_MAGIC_TPUB,
+
+            _ => Err(Error::UnknownSlip32Prefix)?,
+        };
+        data[0..4].copy_from_slice(&slice);
+
+        let xpub = ExtendedPubKey::decode(&data)?;
+
+        Ok(xpub)
+    }
+}
+
+impl FromSlip32 for ExtendedPrivKey {
+    fn from_slip32_str(s: &str) -> Result<Self, Error> {
+        let mut data = base58::from_check(s)?;
+
+        let mut prefix = [0u8; 4];
+        prefix.copy_from_slice(&data[0..4]);
+        let slice = match prefix {
+            VERSION_MAGIC_XPRV
+            | VERSION_MAGIC_YPRV
+            | VERSION_MAGIC_ZPRV
+            | VERSION_MAGIC_YPRV_MULTISIG
+            | VERSION_MAGIC_ZPRV_MULTISIG => VERSION_MAGIC_XPRV,
+
+            VERSION_MAGIC_TPRV
+            | VERSION_MAGIC_UPRV
+            | VERSION_MAGIC_VPRV
+            | VERSION_MAGIC_UPRV_MULTISIG
+            | VERSION_MAGIC_VPRV_MULTISIG => VERSION_MAGIC_TPRV,
+
+            _ => Err(Error::UnknownSlip32Prefix)?,
+        };
+        data[0..4].copy_from_slice(&slice);
+
+        let xprv = ExtendedPrivKey::decode(&data)?;
+
+        Ok(xprv)
     }
 }
