@@ -25,6 +25,7 @@ pub mod scripts;
 pub mod seals;
 pub mod short_id;
 mod slice32;
+pub mod slip32;
 mod strict_encoding;
 pub mod tagged_hash;
 
