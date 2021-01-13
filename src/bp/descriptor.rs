@@ -1073,6 +1073,16 @@ impl Variants {
             + self.segwit as u32
             + self.taproot as u32
     }
+
+    pub fn has_match(&self, category: Category) -> bool {
+        match category {
+            Category::Bare => self.bare,
+            Category::Hashed => self.hashed,
+            Category::Nested => self.nested,
+            Category::SegWit => self.segwit,
+            Category::Taproot => self.taproot,
+        }
+    }
 }
 
 #[cfg_attr(
