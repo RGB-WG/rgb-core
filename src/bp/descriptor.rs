@@ -684,6 +684,13 @@ pub enum ScriptConstruction {
     ),
 }
 
+// TODO: Remove after <https://github.com/rust-bitcoin/rust-miniscript/pull/224>
+impl std::hash::Hash for ScriptConstruction {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state)
+    }
+}
+
 #[cfg_attr(
     feature = "serde",
     serde_as,
@@ -691,7 +698,15 @@ pub enum ScriptConstruction {
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
 )]
 #[lnpbp_crate(crate)]
 pub struct ScriptSource {
@@ -793,7 +808,15 @@ impl MultiSig {
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Debug,
+    Hash,
+    StrictEncode,
+    StrictDecode,
 )]
 #[lnpbp_crate(crate)]
 pub struct MuSigBranched {
@@ -831,6 +854,7 @@ impl Display for MuSigBranched {
     PartialOrd,
     Eq,
     PartialEq,
+    Hash,
     Debug,
     Display,
     StrictEncode,
