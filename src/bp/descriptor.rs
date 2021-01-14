@@ -691,17 +691,8 @@ pub enum ScriptConstruction {
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode,
+    Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
 )]
-#[display("{script}")]
 #[lnpbp_crate(crate)]
 pub struct ScriptSource {
     pub script: ScriptConstruction,
@@ -713,6 +704,16 @@ pub struct ScriptSource {
         serde(with = "As::<Option<DisplayFromStr>>")
     )]
     pub tweak_target: Option<SingleSig>,
+}
+
+impl Display for ScriptSource {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        if let Some(ref source) = self.source {
+            f.write_str(source)
+        } else {
+            Display::fmt(&self.script, f)
+        }
+    }
 }
 
 #[cfg_attr(
@@ -744,7 +745,7 @@ pub struct MultiSig {
 
 impl Display for MultiSig {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{};", self.threshold())?;
+        write!(f, "multi({},", self.threshold())?;
         f.write_str(
             &self
                 .pubkeys
@@ -752,7 +753,8 @@ impl Display for MultiSig {
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(","),
-        )
+        )?;
+        f.write_str(")")
     }
 }
 
