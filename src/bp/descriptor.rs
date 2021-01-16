@@ -31,13 +31,13 @@ use bitcoin;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::{Builder, Script};
 use bitcoin::hash_types::{PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
-use bitcoin::hashes::{hash160, Hash};
+use bitcoin::hashes::Hash;
 use bitcoin::secp256k1;
-use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
+use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::policy::compiler::CompilerError;
 use miniscript::{
-    policy, Miniscript, MiniscriptKey, NullCtx, Segwitv0, ToPublicKey,
+    policy, Miniscript, MiniscriptKey, Segwitv0, ToPublicKey, TranslatePk2,
 };
 
 use super::{
@@ -45,7 +45,7 @@ use super::{
     ToPubkeyScript, WitnessVersion,
 };
 use crate::bp::bip32::{
-    ComponentsParseError, DerivationComponentsCtx, UnhardenedIndex,
+    ComponentsParseError, DerivePublicKey, UnhardenedIndex,
 };
 use crate::strict_encoding::{StrictDecode, StrictEncode};
 
@@ -283,6 +283,9 @@ pub enum Error {
     #[from]
     #[display(inner)]
     PolicyCompilation(CompilerError),
+
+    /// An uncompressed key can't be used in a SegWit script context
+    UncompressedKeyInSegWitContext,
 }
 
 impl TryFrom<PubkeyScript> for Compact {
@@ -403,51 +406,25 @@ impl SingleSig {
     }
 }
 
+impl DerivePublicKey for SingleSig {
+    fn derive_public_key(
+        &self,
+        child_index: UnhardenedIndex,
+    ) -> bitcoin::PublicKey {
+        match self {
+            SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key(),
+            SingleSig::XPubDerivable(ref dc) => {
+                dc.derive_public_key(child_index)
+            }
+        }
+    }
+}
+
 impl MiniscriptKey for SingleSig {
     type Hash = Self;
 
     fn to_pubkeyhash(&self) -> Self::Hash {
         self.clone()
-    }
-}
-
-impl<'secp, C> ToPublicKey<DerivationComponentsCtx<'secp, C>> for SingleSig
-where
-    C: 'secp + secp256k1::Verification,
-{
-    fn to_public_key(
-        &self,
-        to_pk_ctx: DerivationComponentsCtx<'secp, C>,
-    ) -> bitcoin::PublicKey {
-        match self {
-            SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key(NullCtx),
-            SingleSig::XPubDerivable(ref dc) => dc.to_public_key(to_pk_ctx),
-        }
-    }
-
-    fn hash_to_hash160(
-        hash: &Self::Hash,
-        to_pk_ctx: DerivationComponentsCtx<'secp, C>,
-    ) -> hash160::Hash {
-        hash.to_public_key(to_pk_ctx).to_pubkeyhash()
-    }
-}
-
-impl ToPublicKey<NullCtx> for SingleSig {
-    fn to_public_key(&self, to_pk_ctx: NullCtx) -> bitcoin::PublicKey {
-        match self {
-            SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key(to_pk_ctx),
-            SingleSig::XPubDerivable(ref dc) => {
-                dc.to_public_key(DerivationComponentsCtx::new(
-                    &*crate::SECP256K1,
-                    ChildNumber::Normal { index: 0 },
-                ))
-            }
-        }
-    }
-
-    fn hash_to_hash160(hash: &Self::Hash, to_pk_ctx: NullCtx) -> hash160::Hash {
-        hash.to_public_key(to_pk_ctx).to_pubkeyhash()
     }
 }
 
@@ -525,7 +502,7 @@ impl FromStr for SingleSig {
 #[lnpbp_crate(crate)]
 pub enum OpcodeTemplate<Pk>
 where
-    Pk: MiniscriptKey + StrictEncode + StrictDecode,
+    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
     /// Normal script command (OP_CODE)
@@ -545,10 +522,7 @@ where
 
 impl<Pk> OpcodeTemplate<Pk>
 where
-    Pk: MiniscriptKey
-        + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>
-        + StrictEncode
-        + StrictDecode,
+    Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
     fn translate_pk(
@@ -558,12 +532,9 @@ where
         match self {
             OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
             OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
-            OpcodeTemplate::Key(key) => OpcodeTemplate::Key(key.to_public_key(
-                DerivationComponentsCtx {
-                    secp_ctx: &*crate::SECP256K1,
-                    child_number: child_index.into(),
-                },
-            )),
+            OpcodeTemplate::Key(key) => {
+                OpcodeTemplate::Key(key.derive_public_key(child_index))
+            }
         }
     }
 }
@@ -594,12 +565,12 @@ where
 #[lnpbp_crate(crate)]
 pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
 where
-    Pk: MiniscriptKey + StrictEncode + StrictDecode,
+    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display;
 
 impl<Pk> Display for ScriptTemplate<Pk>
 where
-    Pk: MiniscriptKey + StrictEncode + StrictDecode,
+    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -612,10 +583,7 @@ where
 
 impl<Pk> ScriptTemplate<Pk>
 where
-    Pk: MiniscriptKey
-        + StrictEncode
-        + StrictDecode
-        + ToPublicKey<DerivationComponentsCtx<'static, secp256k1::All>>,
+    Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
     fn translate_pk(
@@ -780,19 +748,14 @@ impl MultiSig {
             .unwrap_or(self.pubkeys.len())
     }
 
-    pub fn to_public_keys(
+    pub fn derive_public_keys(
         &self,
         child_index: UnhardenedIndex,
     ) -> Vec<bitcoin::PublicKey> {
         let mut set = self
             .pubkeys
             .iter()
-            .map(|key| {
-                key.to_public_key(DerivationComponentsCtx {
-                    secp_ctx: &*crate::SECP256K1,
-                    child_number: child_index.into(),
-                })
-            })
+            .map(|key| key.derive_public_key(child_index))
             .collect::<Vec<_>>();
         if self.reorder {
             set.sort();
@@ -888,16 +851,13 @@ impl Template {
         }
     }
 
-    pub fn to_public_key(
+    pub fn try_derive_public_key(
         &self,
         child_index: UnhardenedIndex,
     ) -> Option<bitcoin::PublicKey> {
         match self {
             Template::SingleSig(key) => {
-                Some(key.to_public_key(DerivationComponentsCtx {
-                    secp_ctx: &*crate::SECP256K1,
-                    child_number: child_index.into(),
-                }))
+                Some(key.derive_public_key(child_index))
             }
             _ => None,
         }
@@ -918,11 +878,9 @@ impl DeriveLockScript for SingleSig {
         child_index: UnhardenedIndex,
         descr_category: Category,
     ) -> Result<LockScript, Error> {
-        let pk = self.to_public_key(DerivationComponentsCtx {
-            secp_ctx: &*crate::SECP256K1,
-            child_number: child_index.into(),
-        });
-        Ok(pk.to_lock_script(descr_category))
+        Ok(self
+            .derive_public_key(child_index)
+            .to_lock_script(descr_category))
     }
 }
 
@@ -932,10 +890,6 @@ impl DeriveLockScript for MultiSig {
         child_index: UnhardenedIndex,
         descr_category: Category,
     ) -> Result<LockScript, Error> {
-        let ctx = DerivationComponentsCtx {
-            secp_ctx: &*crate::SECP256K1,
-            child_number: child_index.into(),
-        };
         match descr_category {
             Category::SegWit | Category::Nested => {
                 let ms = Miniscript::<_, miniscript::Segwitv0>::from_ast(
@@ -945,7 +899,13 @@ impl DeriveLockScript for MultiSig {
                     ),
                 )
                 .expect("miniscript is unable to produce mutisig");
-                Ok(ms.encode(ctx).into())
+                let ms = ms.translate_pk2(|pk| {
+                    if pk.is_uncompressed() {
+                        return Err(Error::UncompressedKeyInSegWitContext);
+                    }
+                    Ok(pk.derive_public_key(child_index))
+                })?;
+                Ok(ms.encode().into())
             }
             Category::Taproot => unimplemented!(),
             _ => {
@@ -956,7 +916,10 @@ impl DeriveLockScript for MultiSig {
                     ),
                 )
                 .expect("miniscript is unable to produce mutisig");
-                Ok(ms.encode(ctx).into())
+                let ms = ms.translate_pk2_infallible(|pk| {
+                    pk.derive_public_key(child_index)
+                });
+                Ok(ms.encode().into())
             }
         }
     }
@@ -978,12 +941,13 @@ impl DeriveLockScript for ScriptSource {
             }
         };
 
-        Ok(ms
-            .encode(DerivationComponentsCtx {
-                secp_ctx: &*crate::SECP256K1,
-                child_number: child_index.into(),
-            })
-            .into())
+        let ms = ms.translate_pk2(|pk| {
+            if pk.is_uncompressed() {
+                return Err(Error::UncompressedKeyInSegWitContext);
+            }
+            Ok(pk.derive_public_key(child_index))
+        })?;
+        Ok(ms.encode().into())
     }
 }
 
@@ -1144,7 +1108,11 @@ impl Generator {
     ) -> Result<HashMap<Category, Expanded>, Error> {
         let mut descriptors = HashMap::with_capacity(5);
         let single = if let Template::SingleSig(_) = self.template {
-            Some(self.template.to_public_key(index).expect("Can't fail"))
+            Some(
+                self.template
+                    .try_derive_public_key(index)
+                    .expect("Can't fail"),
+            )
         } else {
             None
         };

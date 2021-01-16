@@ -16,9 +16,9 @@
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
 
-use bitcoin::{hashes::hash160, secp256k1, PubkeyHash};
+use bitcoin::{hashes::hash160, PubkeyHash};
 use miniscript::miniscript::iter::PkPkh;
-use miniscript::{Miniscript, MiniscriptKey, NullCtx, Segwitv0};
+use miniscript::{Miniscript, TranslatePk, TranslatePk1};
 
 use super::LockScript;
 
@@ -27,7 +27,7 @@ use super::LockScript;
 #[display(doc_comments)]
 pub enum PubkeyParseError {
     /// Unexpected pubkey hash when enumerating in "keys only" mode
-    PubkeyHash(<bitcoin::PublicKey as MiniscriptKey>::Hash),
+    PubkeyHash(hash160::Hash),
 
     /// Miniscript-level error
     Miniscript(miniscript::Error),
@@ -42,39 +42,47 @@ impl From<miniscript::Error> for PubkeyParseError {
 impl LockScript {
     /// Returns set of unique public keys from the script; fails on public key
     /// hash
-    pub fn extract_pubkeyset(
+    pub fn extract_pubkeyset<Ctx>(
         &self,
-    ) -> Result<BTreeSet<secp256k1::PublicKey>, PubkeyParseError> {
-        Ok(BTreeSet::from_iter(self.extract_pubkeys()?))
+    ) -> Result<BTreeSet<bitcoin::PublicKey>, PubkeyParseError>
+    where
+        Ctx: miniscript::ScriptContext,
+    {
+        Ok(BTreeSet::from_iter(self.extract_pubkeys::<Ctx>()?))
     }
 
     /// Returns tuple of two sets: one for unique public keys and one for
     /// unique hash values, extracted from the script
-    pub fn extract_pubkey_hash_set(
+    pub fn extract_pubkey_hash_set<Ctx>(
         &self,
     ) -> Result<
-        (BTreeSet<secp256k1::PublicKey>, BTreeSet<PubkeyHash>),
+        (BTreeSet<bitcoin::PublicKey>, BTreeSet<PubkeyHash>),
         PubkeyParseError,
-    > {
-        let (keys, hashes) = self.extract_pubkeys_and_hashes()?;
+    >
+    where
+        Ctx: miniscript::ScriptContext,
+    {
+        let (keys, hashes) = self.extract_pubkeys_and_hashes::<Ctx>()?;
         Ok((BTreeSet::from_iter(keys), BTreeSet::from_iter(hashes)))
     }
 
     /// Returns tuple with two vectors: one for public keys and one for public
     /// key hashes present in the script; if any of the keys or hashes has more
     /// than a single occurrence it returns all occurrences for each of them
-    pub fn extract_pubkeys_and_hashes(
+    pub fn extract_pubkeys_and_hashes<Ctx>(
         &self,
-    ) -> Result<(Vec<secp256k1::PublicKey>, Vec<PubkeyHash>), PubkeyParseError>
+    ) -> Result<(Vec<bitcoin::PublicKey>, Vec<PubkeyHash>), PubkeyParseError>
+    where
+        Ctx: miniscript::ScriptContext,
     {
-        Miniscript::<_, Segwitv0>::parse_insane(&*self.clone())?
+        Miniscript::<bitcoin::PublicKey, Ctx>::parse_insane(&*self.clone())?
             .iter_pk_pkh()
             .try_fold(
-                (Vec::<secp256k1::PublicKey>::new(), Vec::<PubkeyHash>::new()),
+                (Vec::<bitcoin::PublicKey>::new(), Vec::<PubkeyHash>::new()),
                 |(mut keys, mut hashes), item| {
                     match item {
                         PkPkh::HashedPubkey(hash) => hashes.push(hash.into()),
-                        PkPkh::PlainPubkey(key) => keys.push(key.key),
+                        PkPkh::PlainPubkey(key) => keys.push(key),
                     }
                     Ok((keys, hashes))
                 },
@@ -84,18 +92,21 @@ impl LockScript {
     /// Returns all public keys found in the script; fails on public key hash.
     /// If the key present multiple times in the script it returns all
     /// occurrences.
-    pub fn extract_pubkeys(
+    pub fn extract_pubkeys<Ctx>(
         &self,
-    ) -> Result<Vec<secp256k1::PublicKey>, PubkeyParseError> {
-        Miniscript::<_, Segwitv0>::parse_insane(&*self.clone())?
+    ) -> Result<Vec<bitcoin::PublicKey>, PubkeyParseError>
+    where
+        Ctx: miniscript::ScriptContext,
+    {
+        Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?
             .iter_pk_pkh()
-            .try_fold(Vec::<secp256k1::PublicKey>::new(), |mut keys, item| {
+            .try_fold(Vec::<bitcoin::PublicKey>::new(), |mut keys, item| {
                 match item {
                     PkPkh::HashedPubkey(hash) => {
                         Err(PubkeyParseError::PubkeyHash(hash))
                     }
                     PkPkh::PlainPubkey(key) => {
-                        keys.push(key.key);
+                        keys.push(key);
                         Ok(keys)
                     }
                 }
@@ -104,48 +115,38 @@ impl LockScript {
 
     /// Replaces pubkeys using provided matching function; does not fail on
     /// public key hashes.
-    pub fn replace_pubkeys(
+    pub fn replace_pubkeys<Ctx, Fpk>(
         &self,
-        processor: impl Fn(&secp256k1::PublicKey) -> Option<secp256k1::PublicKey>,
-    ) -> Result<Self, PubkeyParseError> {
-        let result = Miniscript::<_, Segwitv0>::parse_insane(&*self.clone())?
-            .translate_pk(
-            &mut |pk| {
-                Ok(processor(&pk.key)
-                    .map(|key| bitcoin::PublicKey {
-                        compressed: true,
-                        key,
-                    })
-                    .unwrap_or(pk.clone()))
-            },
-            &mut |hash| Err(PubkeyParseError::PubkeyHash(hash.clone())),
-        )?;
-        Ok(LockScript::from(result.encode(NullCtx)))
+        processor: Fpk,
+    ) -> Result<Self, PubkeyParseError>
+    where
+        Ctx: miniscript::ScriptContext,
+        Fpk: Fn(&bitcoin::PublicKey) -> bitcoin::PublicKey,
+    {
+        let ms = Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?;
+        if let Some(hash) = ms.iter_pkh().collect::<Vec<_>>().first() {
+            return Err(PubkeyParseError::PubkeyHash(hash.clone()));
+        }
+        let result = ms.translate_pk1_infallible(processor);
+        Ok(LockScript::from(result.encode()))
     }
 
-    /// Replaces public kes and public key hashes using provided matching
+    /// Replaces public keys and public key hashes using provided matching
     /// functions.
-    pub fn replace_pubkeys_and_hashes(
+    pub fn replace_pubkeys_and_hashes<Ctx, Fpk, Fpkh>(
         &self,
-        key_processor: impl Fn(
-            &secp256k1::PublicKey,
-        ) -> Option<secp256k1::PublicKey>,
-        hash_processor: impl Fn(&hash160::Hash) -> Option<hash160::Hash>,
-    ) -> Result<Self, PubkeyParseError> {
-        let result = Miniscript::<_, Segwitv0>::parse_insane(&*self.clone())?
-            .translate_pk(
-                &mut |pk| -> Result<_, PubkeyParseError> {
-                    Ok(key_processor(&pk.key)
-                        .map(|key| bitcoin::PublicKey {
-                            compressed: true,
-                            key,
-                        })
-                        .unwrap_or(pk.clone()))
-                },
-                &mut |hash| Ok(hash_processor(hash).unwrap_or(hash.clone())),
-            )
-            .expect("Miniscript translation must not fail unless miniscript library is broken");
-        Ok(LockScript::from(result.encode(NullCtx)))
+        key_processor: Fpk,
+        hash_processor: Fpkh,
+    ) -> Result<Self, PubkeyParseError>
+    where
+        Ctx: miniscript::ScriptContext,
+        Fpk: Fn(&bitcoin::PublicKey) -> bitcoin::PublicKey,
+        Fpkh: Fn(&hash160::Hash) -> hash160::Hash,
+    {
+        let result =
+            Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?
+                .translate_pk_infallible(key_processor, hash_processor);
+        Ok(LockScript::from(result.encode()))
     }
 }
 
@@ -160,11 +161,11 @@ pub(crate) mod test {
     use std::str::FromStr;
 
     macro_rules! ms_str {
-        ($($arg:tt)*) => (LockScript::from(Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str_insane(&format!($($arg)*)).unwrap().encode(NullCtx)))
+        ($($arg:tt)*) => (LockScript::from(Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str_insane(&format!($($arg)*)).unwrap().encode()))
     }
 
     macro_rules! policy_str {
-        ($($arg:tt)*) => (LockScript::from(miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap().compile::<Segwitv0>().unwrap().encode(NullCtx)))
+        ($($arg:tt)*) => (LockScript::from(miniscript::policy::Concrete::<bitcoin::PublicKey>::from_str(&format!($($arg)*)).unwrap().compile::<Segwitv0>().unwrap().encode()))
     }
 
     pub(crate) fn gen_pubkeys_and_hashes(
@@ -190,23 +191,23 @@ pub(crate) mod test {
     }
 
     pub(crate) fn single_key_suite(
-        proc: fn(LockScript, secp256k1::PublicKey) -> (),
+        proc: fn(LockScript, bitcoin::PublicKey) -> (),
     ) {
         let (keys, _) = gen_pubkeys_and_hashes(6);
-        proc(ms_str!("c:pk_k({})", keys[1]), keys[1].key);
-        proc(ms_str!("c:pk_k({})", keys[2]), keys[2].key);
-        proc(ms_str!("c:pk_k({})", keys[3]), keys[3].key);
-        proc(ms_str!("c:pk_k({})", keys[0]), keys[0].key);
+        proc(ms_str!("c:pk_k({})", keys[1]), keys[1]);
+        proc(ms_str!("c:pk_k({})", keys[2]), keys[2]);
+        proc(ms_str!("c:pk_k({})", keys[3]), keys[3]);
+        proc(ms_str!("c:pk_k({})", keys[0]), keys[0]);
     }
 
     pub(crate) fn single_unmatched_key_suite(
-        proc: fn(LockScript, secp256k1::PublicKey) -> (),
+        proc: fn(LockScript, bitcoin::PublicKey) -> (),
     ) {
         let (keys, _) = gen_pubkeys_and_hashes(6);
-        proc(ms_str!("c:pk_k({})", keys[1]), keys[0].key);
-        proc(ms_str!("c:pk_k({})", keys[2]), keys[3].key);
-        proc(ms_str!("c:pk_k({})", keys[3]), keys[4].key);
-        proc(ms_str!("c:pk_k({})", keys[4]), keys[1].key);
+        proc(ms_str!("c:pk_k({})", keys[1]), keys[0]);
+        proc(ms_str!("c:pk_k({})", keys[2]), keys[3]);
+        proc(ms_str!("c:pk_k({})", keys[3]), keys[4]);
+        proc(ms_str!("c:pk_k({})", keys[4]), keys[1]);
     }
 
     pub(crate) fn single_keyhash_suite(proc: fn(LockScript, PubkeyHash) -> ()) {
@@ -228,12 +229,12 @@ pub(crate) mod test {
     }
 
     pub(crate) fn complex_keys_suite(
-        proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> (),
+        proc: fn(LockScript, Vec<bitcoin::PublicKey>) -> (),
     ) {
         let (keys, _) = gen_pubkeys_and_hashes(6);
         proc(
             policy_str!("thresh(2,pk({}),pk({}))", keys[0], keys[1]),
-            keys[..2].iter().map(|pk| pk.key).collect(),
+            keys[..2].to_vec(),
         );
         proc(
             policy_str!(
@@ -244,17 +245,17 @@ pub(crate) mod test {
                 keys[3],
                 keys[4]
             ),
-            keys[..5].iter().map(|pk| pk.key).collect(),
+            keys[..5].to_vec(),
         );
     }
 
     pub(crate) fn complex_unmatched_keys_suite(
-        proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> (),
+        proc: fn(LockScript, Vec<bitcoin::PublicKey>) -> (),
     ) {
         let (keys, _) = gen_pubkeys_and_hashes(10);
         proc(
             policy_str!("thresh(2,pk({}),pk({}))", keys[0], keys[1]),
-            keys[2..].iter().map(|pk| pk.key).collect(),
+            keys[..5].to_vec(),
         );
         proc(
             policy_str!(
@@ -265,12 +266,12 @@ pub(crate) mod test {
                 keys[3],
                 keys[4]
             ),
-            keys[2..7].iter().map(|pk| pk.key).collect(),
+            keys[..2].to_vec(),
         );
     }
 
     pub(crate) fn complex_suite(
-        proc: fn(LockScript, Vec<secp256k1::PublicKey>) -> (),
+        proc: fn(LockScript, Vec<bitcoin::PublicKey>) -> (),
     ) {
         let (keys, _) = gen_pubkeys_and_hashes(10);
         proc(
@@ -282,10 +283,7 @@ pub(crate) mod test {
                 keys[3],
                 keys[4]
             ),
-            vec![keys[3], keys[4], keys[0], keys[1], keys[2]]
-                .iter()
-                .map(|pk| pk.key)
-                .collect(),
+            vec![keys[3], keys[4], keys[0], keys[1], keys[2]],
         );
         proc(
             policy_str!(
@@ -296,19 +294,20 @@ pub(crate) mod test {
                 keys[5],
                 keys[4]
             ),
-            vec![keys[5], keys[4], keys[0], keys[1], keys[3]]
-                .iter()
-                .map(|pk| pk.key)
-                .collect(),
+            vec![keys[5], keys[4], keys[0], keys[1], keys[3]],
         );
     }
 
     #[test]
+    #[should_panic(expected = "Miniscript(AnalysisError(SiglessBranch))")]
     fn test_script_parse_no_key() {
         no_keys_or_hashes_suite(|lockscript| {
-            assert_eq!(lockscript.extract_pubkeys().unwrap(), vec![]);
             assert_eq!(
-                lockscript.extract_pubkey_hash_set().unwrap(),
+                lockscript.extract_pubkeys::<Segwitv0>().unwrap(),
+                vec![]
+            );
+            assert_eq!(
+                lockscript.extract_pubkey_hash_set::<Segwitv0>().unwrap(),
                 (BTreeSet::new(), BTreeSet::new())
             );
         })
@@ -317,16 +316,19 @@ pub(crate) mod test {
     #[test]
     fn test_script_parse_single_key() {
         single_key_suite(|lockscript, pubkey| {
-            let extract = lockscript.extract_pubkeys().unwrap();
+            let extract = lockscript.extract_pubkeys::<Segwitv0>().unwrap();
             assert_eq!(extract[0], pubkey);
             assert_eq!(
-                lockscript.extract_pubkey_hash_set().unwrap(),
+                lockscript.extract_pubkey_hash_set::<Segwitv0>().unwrap(),
                 (BTreeSet::from_iter(vec![pubkey]), BTreeSet::new())
             );
         });
 
         single_unmatched_key_suite(|lockscript, pubkey| {
-            assert_ne!(lockscript.extract_pubkeys().unwrap(), vec![pubkey]);
+            assert_ne!(
+                lockscript.extract_pubkeys::<Segwitv0>().unwrap(),
+                vec![pubkey]
+            );
         });
     }
 
@@ -334,20 +336,21 @@ pub(crate) mod test {
     fn test_script_parse_singlehash() {
         single_keyhash_suite(|lockscript, hash| {
             if let Err(PubkeyParseError::PubkeyHash(found_hash)) =
-                lockscript.extract_pubkeyset()
+                lockscript.extract_pubkeyset::<Segwitv0>()
             {
                 assert_eq!(hash, found_hash.into())
             } else {
                 panic!("extract_pubkeyset must return error")
             }
             assert_eq!(
-                lockscript.extract_pubkey_hash_set().unwrap(),
+                lockscript.extract_pubkey_hash_set::<Segwitv0>().unwrap(),
                 (BTreeSet::new(), BTreeSet::from_iter(vec![hash]))
             );
         });
 
         single_unmatched_keyhash_suite(|lockscript, hash| {
-            let (_, hashset) = lockscript.extract_pubkey_hash_set().unwrap();
+            let (_, hashset) =
+                lockscript.extract_pubkey_hash_set::<Segwitv0>().unwrap();
             assert_ne!(hashset, BTreeSet::from_iter(vec![hash]));
         });
     }
@@ -355,9 +358,12 @@ pub(crate) mod test {
     #[test]
     fn test_script_parse_complex_keys() {
         complex_keys_suite(|lockscript, keys| {
-            assert_eq!(lockscript.extract_pubkeys().unwrap(), keys.clone());
             assert_eq!(
-                lockscript.extract_pubkey_hash_set().unwrap(),
+                lockscript.extract_pubkeys::<Segwitv0>().unwrap(),
+                keys.clone()
+            );
+            assert_eq!(
+                lockscript.extract_pubkey_hash_set::<Segwitv0>().unwrap(),
                 (BTreeSet::from_iter(keys), BTreeSet::new())
             );
         });
@@ -366,7 +372,7 @@ pub(crate) mod test {
     #[test]
     fn test_script_parse_complex_unmatched_keys() {
         complex_unmatched_keys_suite(|lockscript, keys| {
-            let extract = lockscript.extract_pubkeys().unwrap();
+            let extract = lockscript.extract_pubkeys::<Segwitv0>().unwrap();
             assert_ne!(extract.len(), 0);
             assert_ne!(extract, keys);
         });
@@ -375,9 +381,12 @@ pub(crate) mod test {
     #[test]
     fn test_script_parse_complex_script() {
         complex_suite(|lockscript, keys| {
-            assert_eq!(lockscript.extract_pubkeys().unwrap(), keys.clone());
             assert_eq!(
-                lockscript.extract_pubkeyset().unwrap(),
+                lockscript.extract_pubkeys::<Segwitv0>().unwrap(),
+                keys.clone()
+            );
+            assert_eq!(
+                lockscript.extract_pubkeyset::<Segwitv0>().unwrap(),
                 BTreeSet::from_iter(keys)
             );
         });

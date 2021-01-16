@@ -27,7 +27,6 @@ use ed25519_dalek::ed25519::signature::Signature;
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{policy, Miniscript, MiniscriptKey};
 
-use super::bip32::{Decode, Encode};
 use super::blind::OutpointHash;
 use crate::strict_encoding::{self, Error, StrictDecode, StrictEncode};
 
@@ -403,7 +402,7 @@ impl StrictDecode for DescriptorSinglePub {
 
 impl<Pk> StrictEncode for policy::Concrete<Pk>
 where
-    Pk: MiniscriptKey,
+    Pk: MiniscriptKey + FromStr,
 {
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
         self.to_string().strict_encode(e)
@@ -412,8 +411,9 @@ where
 
 impl<Pk> StrictDecode for policy::Concrete<Pk>
 where
-    Pk: MiniscriptKey,
+    Pk: MiniscriptKey + FromStr,
     <Pk as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr,
     <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
 {
     fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
@@ -425,7 +425,7 @@ where
 
 impl<Pk, Ctx> StrictEncode for Miniscript<Pk, Ctx>
 where
-    Pk: MiniscriptKey,
+    Pk: MiniscriptKey + FromStr,
     Ctx: miniscript::ScriptContext,
 {
     fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
@@ -435,8 +435,9 @@ where
 
 impl<Pk, Ctx> StrictDecode for Miniscript<Pk, Ctx>
 where
-    Pk: MiniscriptKey,
+    Pk: MiniscriptKey + FromStr,
     <Pk as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr,
     <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
     Ctx: miniscript::ScriptContext,
 {

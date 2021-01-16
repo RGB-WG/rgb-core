@@ -146,6 +146,7 @@ impl From<bitcoin::Network> for P2pNetworkId {
             bitcoin::Network::Bitcoin => P2pNetworkId::Mainnet,
             bitcoin::Network::Testnet => P2pNetworkId::Testnet,
             bitcoin::Network::Regtest => P2pNetworkId::Regtest,
+            bitcoin::Network::Signet => P2pNetworkId::Signet,
         }
     }
 }
@@ -163,6 +164,7 @@ impl TryFrom<P2pNetworkId> for bitcoin::Network {
             P2pNetworkId::Mainnet => bitcoin::Network::Bitcoin,
             P2pNetworkId::Testnet => bitcoin::Network::Testnet,
             P2pNetworkId::Regtest => bitcoin::Network::Regtest,
+            P2pNetworkId::Signet => bitcoin::Network::Signet,
             P2pNetworkId::Other(magic) if magic == P2P_MAGIC_MAINNET => {
                 bitcoin::Network::Bitcoin
             }
@@ -790,6 +792,7 @@ impl From<bitcoin::Network> for Chain {
             bitcoin::Network::Regtest => {
                 Chain::Regtest(CHAIN_PARAMS_REGTEST.genesis_hash)
             }
+            bitcoin::Network::Signet => Chain::Signet,
         }
     }
 }

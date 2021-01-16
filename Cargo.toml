@@ -39,13 +39,13 @@ amplify_derive = "2.4.3"
 lnpbp_derive = { version = ">=0.3.0-alpha.1", path = "./derive" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
-bitcoin = { version = "~0.25.1", features = ["rand"] }
-bitcoin_hashes = "~0.9.3" # we need macro from here
+bitcoin = { version = "~0.26.0", features = ["rand"] }
+bitcoin_hashes = "~0.9.4" # we need macro from here
 # <https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0002.md#deterministic-public-key-extraction-from-bitcoin-script>
 # We have to fix version of miniscript as required by LNPBP-2 specification
-miniscript = { version = "~4.0.0", features = ["compiler"] }
+miniscript = { version = "~5.0.0", features = ["compiler"] }
 bech32 = "~0.7.2"
-lightning-invoice = { version = "~0.3.0", optional = true }
+lightning-invoice = { version = "~0.4.0", optional = true }
 chacha20poly1305 = "~0.7.0"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
 #   a part of Tor address)
@@ -109,7 +109,7 @@ openssl = { version = "~0.10", features = ["vendored"] }
 [patch.crates-io]
 # required to build on 32-bit architectures
 # see also https://github.com/LNP-BP/rgb-node/issues/4
-lightning-invoice = { git = "https://github.com/LNP-BP/rust-lightning-invoice", tag = "lnpbp-v0.1.0-beta-4", optional = true  }
+lightning-invoice = { git = "https://github.com/LNP-BP/rust-lightning-invoice", tag = "lnpbp-v0.3", optional = true  }
 
 # Features
 # ========

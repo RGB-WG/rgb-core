@@ -125,9 +125,9 @@ checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 
 [[package]]
 name = "bitcoin"
-version = "0.25.2"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aefc9be9f17185f4ebccae6575d342063f775924d57df0000edb1880c0fb7095"
+checksum = "1ec5f88a446d66e7474a3b8fa2e348320b574463fb78d799d90ba68f79f48e0e"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -706,8 +706,8 @@ checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
 
 [[package]]
 name = "lightning-invoice"
-version = "0.3.0"
-source = "git+https://github.com/LNP-BP/rust-lightning-invoice?tag=lnpbp-v0.1.0-beta-4#979dce954315a386528fd1ddbde1a27fa89f00c1"
+version = "0.4.0"
+source = "git+https://github.com/LNP-BP/rust-lightning-invoice?tag=lnpbp-v0.3#db6e52fa826d9e12c103911b878b83e98f687915"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -833,9 +833,9 @@ dependencies = [
 
 [[package]]
 name = "miniscript"
-version = "4.0.3"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74ff4ece4ff5498718a232e92d53273903609c739052f5edf2a1a42c59586348"
+checksum = "0ebf71c5e1499e9d4c5020e5260b3417f1a5a09ffafda707c34465b4da84e1eb"
 dependencies = [
  "bitcoin",
  "serde 1.0.118",
@@ -1286,9 +1286,9 @@ checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 
 [[package]]
 name = "secp256k1"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6179428c22c73ac0fbb7b5579a56353ce78ba29759b3b8575183336ea74cdfb"
+checksum = "fcfd0eece5bc8fca7ca07a0c17ffd334b028f72ffbe9dd8ec924a8c885753278"
 dependencies = [
  "rand 0.6.5",
  "secp256k1-sys",
@@ -1297,9 +1297,9 @@ dependencies = [
 
 [[package]]
 name = "secp256k1-sys"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11553d210db090930f4432bea123b31f70bbf693ace14504ea2a35e796c28dd2"
+checksum = "67e4b6455ee49f5901c8985b88f98fb0a0e1d90a6661f5a03f4888bd987dad29"
 dependencies = [
  "cc",
 ]

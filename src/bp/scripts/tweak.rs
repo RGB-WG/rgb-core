@@ -15,22 +15,11 @@ use std::str::FromStr;
 
 use bitcoin::hashes::hash160;
 use bitcoin::secp256k1;
-use bitcoin::util::bip32::ChildNumber;
-use miniscript::descriptor::{
-    DescriptorKeyParseError, DescriptorPublicKey, DescriptorPublicKeyCtx,
-};
-use miniscript::{MiniscriptKey, NullCtx, ToPublicKey};
+use miniscript::descriptor::{DescriptorKeyParseError, DescriptorPublicKey};
+use miniscript::{MiniscriptKey, ToPublicKey};
 use std::hash::{Hash, Hasher};
 
 use crate::SECP256K1;
-
-lazy_static! {
-    static ref DESCRIPTOR_CTX: DescriptorPublicKeyCtx<'static, bitcoin::secp256k1::All> =
-        DescriptorPublicKeyCtx::new(
-            &SECP256K1,
-            ChildNumber::Normal { index: 0 }
-        );
-}
 
 /// Errors related to extended descriptor parsing
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, Error)]
@@ -174,11 +163,16 @@ impl MaybeTweakPair for PubkeyWithTweak {
         let dpk = self.as_descriptor_public_key().clone();
         let mut pk = match index {
             Some(index) => {
-                dpk.derive(ChildNumber::Normal { index })
-                    .to_public_key(*DESCRIPTOR_CTX)
+                dpk.derive(index.into())
+                    .derive_public_key(&*SECP256K1)
+                    .expect("Function does not fail")
                     .key
             }
-            None => dpk.to_public_key(*DESCRIPTOR_CTX).key,
+            None => {
+                dpk.derive_public_key(&*SECP256K1)
+                    .expect("Function does not fail")
+                    .key
+            }
         };
         pk.add_exp_assign(&SECP256K1, &self.tweak[..]).expect(
             "Tweaking with secret key can fail with negligible probability",
@@ -195,16 +189,16 @@ impl MiniscriptKey for PubkeyWithTweak {
     }
 }
 
-impl ToPublicKey<NullCtx> for PubkeyWithTweak {
-    fn to_public_key(&self, _: NullCtx) -> bitcoin::PublicKey {
+impl ToPublicKey for PubkeyWithTweak {
+    fn to_public_key(&self) -> bitcoin::PublicKey {
         bitcoin::PublicKey {
             compressed: true,
             key: self.to_tweaked_public_key(None),
         }
     }
 
-    fn hash_to_hash160(hash: &Self::Hash, _: NullCtx) -> hash160::Hash {
-        hash.to_public_key(NullCtx).to_pubkeyhash()
+    fn hash_to_hash160(hash: &Self::Hash) -> hash160::Hash {
+        hash.to_public_key().to_pubkeyhash()
     }
 }
 
@@ -313,7 +307,8 @@ impl PubkeyExtended {
             PubkeyExtended::Native(_) => {
                 self.clone()
                     .into_descriptor_public_key()
-                    .to_public_key(*DESCRIPTOR_CTX)
+                    .derive_public_key(&*SECP256K1)
+                    .expect("Function does not fail")
                     .key
             }
             PubkeyExtended::Tweaked(tpk) => tpk.to_tweaked_public_key(index),
@@ -329,16 +324,16 @@ impl MiniscriptKey for PubkeyExtended {
     }
 }
 
-impl ToPublicKey<NullCtx> for PubkeyExtended {
-    fn to_public_key(&self, _: NullCtx) -> bitcoin::PublicKey {
+impl ToPublicKey for PubkeyExtended {
+    fn to_public_key(&self) -> bitcoin::PublicKey {
         bitcoin::PublicKey {
             compressed: true,
             key: self.to_tweaked_public_key(None),
         }
     }
 
-    fn hash_to_hash160(hash: &Self::Hash, ctx: NullCtx) -> hash160::Hash {
-        hash.to_public_key(ctx).to_pubkeyhash()
+    fn hash_to_hash160(hash: &Self::Hash) -> hash160::Hash {
+        hash.to_public_key().to_pubkeyhash()
     }
 }
 
@@ -350,7 +345,7 @@ mod test {
     #[test]
     fn test_success() {
         let dpk = vec![
-            "[d34db33f/44'/0'/0']xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL/1/*",
+            "[d34db33f/44'/0'/0']xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL/1",
             "xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL/1",
             "03f28773c2d975288bc7d1d205c3748651b075fbc6610e58cddeeddf8f19405aa8"
         ];
@@ -367,16 +362,15 @@ mod test {
 
             assert_eq!(pk.to_pubkeyhash(), pk);
             assert_eq!(
-                pk.to_public_key(NullCtx),
-                pk.as_descriptor_public_key().to_public_key(*DESCRIPTOR_CTX)
+                pk.to_public_key(),
+                pk.as_descriptor_public_key()
+                    .derive_public_key(&*SECP256K1)
+                    .unwrap()
             );
 
             assert_eq!(pk.has_tweak(), false);
             assert_eq!(pk.as_tweaking_factor(), None);
-            assert_eq!(
-                pk.to_tweaked_public_key(None),
-                pk.to_public_key(NullCtx).key
-            );
+            assert_eq!(pk.to_tweaked_public_key(None), pk.to_public_key().key);
             assert_eq!(pk.into_tweaking_factor(), None);
         }
 
@@ -385,17 +379,15 @@ mod test {
             assert_eq!(pk.has_tweak(), true);
 
             assert_eq!(pk.to_pubkeyhash(), pk);
-            assert_eq!(
-                pk.to_public_key(NullCtx).key,
-                pk.to_tweaked_public_key(None)
-            );
+            assert_eq!(pk.to_public_key().key, pk.to_tweaked_public_key(None));
 
             assert_eq!(pk.as_tweaking_factor().unwrap(), &tweak);
             assert_ne!(
                 pk.to_tweaked_public_key(None),
                 pk.clone()
                     .into_descriptor_public_key()
-                    .to_public_key(*DESCRIPTOR_CTX)
+                    .derive_public_key(&*SECP256K1)
+                    .unwrap()
                     .key
             );
             assert_eq!(pk.into_tweaking_factor().unwrap(), tweak);
