@@ -31,6 +31,10 @@ use miniscript::{DescriptorPublicKeyCtx, MiniscriptKey, ToPublicKey};
 
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
+/// Constant determining BIP32 boundary for u32 values after which index
+/// is treated as hardened
+pub const HARDENED_INDEX_BOUNDARY: u32 = 1 << 31;
+
 /// Derivation path index is outside of the allowed range: 0..2^31 for
 /// unhardened derivation and 2^31..2^32 for hardened
 #[derive(
@@ -48,7 +52,7 @@ use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 )]
 #[display(doc_comments)]
 #[from(bitcoin::util::bip32::Error)]
-pub struct OutOfRangeError;
+pub struct IndexOverflowError;
 
 /// Index for unhardened children derivation; ensures that the wrapped value
 /// < 2^31
@@ -74,6 +78,20 @@ impl UnhardenedIndex {
     pub fn into_u32(self) -> u32 {
         self.0
     }
+
+    pub fn try_increment(self) -> Result<Self, IndexOverflowError> {
+        if self.0 >= HARDENED_INDEX_BOUNDARY {
+            return Err(IndexOverflowError);
+        }
+        Ok(Self(self.0 + 1))
+    }
+
+    pub fn try_decrement(self) -> Result<Self, IndexOverflowError> {
+        if self.0 == 0 {
+            return Err(IndexOverflowError);
+        }
+        Ok(Self(self.0 - 1))
+    }
 }
 
 // TODO: Replace with `#[derive(Into)]` & `#[into(u32)]` once apmplify_derive
@@ -85,30 +103,33 @@ impl Into<u32> for UnhardenedIndex {
 }
 
 impl TryFrom<u32> for UnhardenedIndex {
-    type Error = OutOfRangeError;
+    type Error = IndexOverflowError;
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
-        Ok(UnhardenedIndex(ChildNumber::from_normal_idx(value)?.into()))
+        if value >= HARDENED_INDEX_BOUNDARY {
+            return Err(IndexOverflowError);
+        }
+        Ok(UnhardenedIndex(value))
     }
 }
 
 impl TryFrom<u64> for UnhardenedIndex {
-    type Error = OutOfRangeError;
+    type Error = IndexOverflowError;
 
     fn try_from(value: u64) -> Result<Self, Self::Error> {
-        if value > core::u32::MAX as u64 {
-            return Err(OutOfRangeError);
+        if value > ::core::u32::MAX as u64 {
+            return Err(IndexOverflowError);
         }
         (value as u32).try_into()
     }
 }
 
 impl TryFrom<usize> for UnhardenedIndex {
-    type Error = OutOfRangeError;
+    type Error = IndexOverflowError;
 
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        if value > core::u32::MAX as usize {
-            return Err(OutOfRangeError);
+        if value > ::core::u32::MAX as usize {
+            return Err(IndexOverflowError);
         }
         (value as u32).try_into()
     }
@@ -130,15 +151,15 @@ pub struct HardenedIndex(u32);
 
 impl HardenedIndex {
     pub fn zero() -> Self {
-        Self(1 << 31)
+        Self(HARDENED_INDEX_BOUNDARY)
     }
 
     pub fn one() -> Self {
-        Self((1 << 31) + 1)
+        Self(HARDENED_INDEX_BOUNDARY + 1)
     }
 
     pub fn from_ordinal(index: impl Into<u32>) -> Self {
-        Self(index.into() | (1 << 31))
+        Self(index.into() | HARDENED_INDEX_BOUNDARY)
     }
 
     pub fn into_u32(self) -> u32 {
@@ -146,7 +167,21 @@ impl HardenedIndex {
     }
 
     pub fn into_ordinal(self) -> u32 {
-        self.0 ^ (1 << 31)
+        self.0 ^ HARDENED_INDEX_BOUNDARY
+    }
+
+    pub fn try_increment(self) -> Result<Self, IndexOverflowError> {
+        if self.0 == ::core::u32::MAX {
+            return Err(IndexOverflowError);
+        }
+        Ok(Self(self.0 + 1))
+    }
+
+    pub fn try_decrement(self) -> Result<Self, IndexOverflowError> {
+        if self.0 <= HARDENED_INDEX_BOUNDARY {
+            return Err(IndexOverflowError);
+        }
+        Ok(Self(self.0 - 1))
     }
 }
 
@@ -160,39 +195,39 @@ impl Into<u32> for HardenedIndex {
 
 impl From<u8> for HardenedIndex {
     fn from(index: u8) -> Self {
-        Self(index as u32 | (1 << 31))
+        Self(index as u32 | HARDENED_INDEX_BOUNDARY)
     }
 }
 
 impl From<u16> for HardenedIndex {
     fn from(index: u16) -> Self {
-        Self(index as u32 | (1 << 31))
+        Self(index as u32 | HARDENED_INDEX_BOUNDARY)
     }
 }
 
 impl From<u32> for HardenedIndex {
     fn from(index: u32) -> Self {
-        Self(index as u32 | (1 << 31))
+        Self(index as u32 | HARDENED_INDEX_BOUNDARY)
     }
 }
 
 impl TryFrom<u64> for HardenedIndex {
-    type Error = OutOfRangeError;
+    type Error = IndexOverflowError;
 
     fn try_from(value: u64) -> Result<Self, Self::Error> {
-        if value > core::u32::MAX as u64 {
-            return Err(OutOfRangeError);
+        if value > ::core::u32::MAX as u64 {
+            return Err(IndexOverflowError);
         }
         Ok((value as u32).into())
     }
 }
 
 impl TryFrom<usize> for HardenedIndex {
-    type Error = OutOfRangeError;
+    type Error = IndexOverflowError;
 
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        if value > core::u32::MAX as usize {
-            return Err(OutOfRangeError);
+        if value > ::core::u32::MAX as usize {
+            return Err(IndexOverflowError);
         }
         Ok((value as u32).into())
     }
