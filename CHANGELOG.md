@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+v0.3.0-alpha.1
+--------------
+- Serde encoding fixes (proper use of `serde_as` for wrapped types)
+- BIP32 & descriptor enhancements
+- Miniscript 4.0 migration
+
 v0.2.1, v0.2.2
 --------------
 - Fixing serde to use Bech32 encoding for ContractId and SchemaId types
