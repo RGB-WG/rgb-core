@@ -26,7 +26,6 @@ use crate::bp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
     TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
-use crate::bp::psbt::ProprietaryKeyMap;
 use crate::bp::resolvers::{Fee, FeeError};
 use crate::bp::TaggedHash;
 use crate::client_side_validation::{
@@ -36,6 +35,7 @@ use crate::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
 use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
 use crate::rgb::{ContractId, NodeId};
 use crate::strict_encoding::{strategies, Strategy};
+use bitcoin::util::psbt::raw::ProprietaryKey;
 
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
 pub const PSBT_OUT_TWEAK: u8 = 0x2;
@@ -165,10 +165,17 @@ impl Anchor {
                 .clone();
             let tx_out = &tx.output[vout];
 
-            let pubkey = psbt_out
-                .proprietary_key(b"RGB".to_vec(), PSBT_OUT_PUBKEY, vec![])
-                .ok_or(Error::NoRequiredPubkey(vout))?
-                .map_err(|_| Error::WrongPubkeyData)?;
+            let pubkey = secp256k1::PublicKey::from_slice(
+                psbt_out
+                    .proprietary
+                    .get(&ProprietaryKey {
+                        prefix: b"RGB".to_vec(),
+                        subtype: PSBT_OUT_PUBKEY,
+                        key: vec![],
+                    })
+                    .ok_or(Error::NoRequiredPubkey(vout))?,
+            )
+            .map_err(|_| Error::WrongPubkeyData)?;
             // TODO: (new) Add support for Taproot parsing
             let source = match psbt_out
                 .redeem_script
@@ -225,14 +232,15 @@ impl Anchor {
             psbt.outputs
                 .get_mut(container.vout())
                 .map(|output| {
-                    output.insert_proprietary_key(
-                        b"RGB".to_vec(),
-                        PSBT_OUT_TWEAK,
-                        vec![],
-                        &container.tweaking_factor.expect(
+                    output.proprietary.insert(
+                        ProprietaryKey {
+                            prefix: b"RGB".to_vec(),
+                            subtype: PSBT_OUT_TWEAK,
+                            key: vec![]
+                        },
+                        container.tweaking_factor.expect(
                             "Tweaking factor always present after commitment procedure"
-                        )
-                    )
+                        )[..].to_vec())
                 });
 
             multimsg.iter().for_each(|(id, _)| {
