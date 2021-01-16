@@ -14,7 +14,7 @@
 use core::cmp::Ordering;
 use core::ops::RangeInclusive;
 use regex::Regex;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display, Formatter};
 use std::io;
 use std::iter::FromIterator;
@@ -53,16 +53,64 @@ pub struct OutOfRangeError;
 /// Index for unhardened children derivation; ensures that the wrapped value
 /// < 2^31
 #[derive(
-    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Default, Display,
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Default, Display, From,
 )]
 #[display(inner)]
-pub struct UnhardenedIndex(u32);
+pub struct UnhardenedIndex(
+    #[from(u8)]
+    #[from(u16)]
+    u32,
+);
+
+impl UnhardenedIndex {
+    pub fn zero() -> Self {
+        Self(0)
+    }
+
+    pub fn one() -> Self {
+        Self(1)
+    }
+
+    pub fn into_u32(self) -> u32 {
+        self.0
+    }
+}
+
+// TODO: Replace with `#[derive(Into)]` & `#[into(u32)]` once apmplify_derive
+//       will support into derivations
+impl Into<u32> for UnhardenedIndex {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
 
 impl TryFrom<u32> for UnhardenedIndex {
     type Error = OutOfRangeError;
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         Ok(UnhardenedIndex(ChildNumber::from_normal_idx(value)?.into()))
+    }
+}
+
+impl TryFrom<u64> for UnhardenedIndex {
+    type Error = OutOfRangeError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        if value > core::u32::MAX as u64 {
+            return Err(OutOfRangeError);
+        }
+        (value as u32).try_into()
+    }
+}
+
+impl TryFrom<usize> for UnhardenedIndex {
+    type Error = OutOfRangeError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        if value > core::u32::MAX as usize {
+            return Err(OutOfRangeError);
+        }
+        (value as u32).try_into()
     }
 }
 
@@ -77,20 +125,84 @@ impl From<UnhardenedIndex> for ChildNumber {
 #[derive(
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Default, Display,
 )]
-#[display(inner)]
+#[display("{0}'")]
 pub struct HardenedIndex(u32);
 
-impl TryFrom<u32> for HardenedIndex {
+impl HardenedIndex {
+    pub fn zero() -> Self {
+        Self(1 << 31)
+    }
+
+    pub fn one() -> Self {
+        Self((1 << 31) + 1)
+    }
+
+    pub fn from_ordinal(index: impl Into<u32>) -> Self {
+        Self(index.into() | (1 << 31))
+    }
+
+    pub fn into_u32(self) -> u32 {
+        self.0
+    }
+
+    pub fn into_ordinal(self) -> u32 {
+        self.0 ^ (1 << 31)
+    }
+}
+
+// TODO: Replace with `#[derive(Into)]` & `#[into(u32)]` once apmplify_derive
+//       will support into derivations
+impl Into<u32> for HardenedIndex {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+
+impl From<u8> for HardenedIndex {
+    fn from(index: u8) -> Self {
+        Self(index as u32 | (1 << 31))
+    }
+}
+
+impl From<u16> for HardenedIndex {
+    fn from(index: u16) -> Self {
+        Self(index as u32 | (1 << 31))
+    }
+}
+
+impl From<u32> for HardenedIndex {
+    fn from(index: u32) -> Self {
+        Self(index as u32 | (1 << 31))
+    }
+}
+
+impl TryFrom<u64> for HardenedIndex {
     type Error = OutOfRangeError;
 
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        Ok(HardenedIndex(ChildNumber::from_hardened_idx(value)?.into()))
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        if value > core::u32::MAX as u64 {
+            return Err(OutOfRangeError);
+        }
+        Ok((value as u32).into())
+    }
+}
+
+impl TryFrom<usize> for HardenedIndex {
+    type Error = OutOfRangeError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        if value > core::u32::MAX as usize {
+            return Err(OutOfRangeError);
+        }
+        Ok((value as u32).into())
     }
 }
 
 impl From<HardenedIndex> for ChildNumber {
-    fn from(idx: HardenedIndex) -> Self {
-        ChildNumber::Hardened { index: idx.0 }
+    fn from(index: HardenedIndex) -> Self {
+        ChildNumber::Hardened {
+            index: index.into_ordinal(),
+        }
     }
 }
 
