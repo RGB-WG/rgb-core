@@ -18,7 +18,7 @@ use std::io;
 
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1::{PublicKey, Signature};
-use bitcoin::{OutPoint, Script, Txid};
+use bitcoin::{Script, Txid};
 
 use super::payment::{ChannelId, TempChannelId};
 use super::Features;

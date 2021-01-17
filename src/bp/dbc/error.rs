@@ -61,6 +61,9 @@ pub enum Error {
     #[from]
     #[display(inner)]
     PolicyCompilation(miniscript::policy::compiler::CompilerError),
+
+    /// Deterministic bitcoin commitments require use of compressed public keys
+    UncompressedKey,
 }
 
 impl From<bp::descriptor::Error> for Error {
@@ -72,6 +75,9 @@ impl From<bp::descriptor::Error> for Error {
             }
             bp::descriptor::Error::PolicyCompilation(err) => {
                 Error::PolicyCompilation(err)
+            }
+            bp::descriptor::Error::UncompressedKeyInSegWitContext => {
+                Error::UncompressedKey
             }
         }
     }

@@ -21,13 +21,10 @@ use std::iter::FromIterator;
 use std::str::FromStr;
 
 use amplify::Wrapper;
-use bitcoin::hashes::hash160;
 use bitcoin::util::bip32::{
-    self, ChainCode, ChildNumber, DerivationPath, Error, ExtendedPrivKey,
-    ExtendedPubKey, Fingerprint,
+    self, ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint,
 };
-use bitcoin::{secp256k1, PublicKey};
-use miniscript::{DescriptorPublicKeyCtx, MiniscriptKey, ToPublicKey};
+use miniscript::MiniscriptKey;
 
 use crate::strict_encoding::{self, StrictDecode, StrictEncode};
 
@@ -241,6 +238,15 @@ impl From<HardenedIndex> for ChildNumber {
     }
 }
 
+/// Method-trait that can be implemented by all types able to derive a
+/// public key with a given path
+pub trait DerivePublicKey {
+    fn derive_public_key(
+        &self,
+        child_index: UnhardenedIndex,
+    ) -> bitcoin::PublicKey;
+}
+
 /// Extension trait allowing to add more methods to [`DerivationPath`] type
 pub trait DerivationPathMaster {
     fn master() -> Self;
@@ -257,64 +263,6 @@ impl DerivationPathMaster for DerivationPath {
     /// is empty). True for `m` path.
     fn is_master(&self) -> bool {
         self.into_iter().len() == 0
-    }
-}
-
-/// Trait that allows possibly failable conversion from a type into a
-/// derivation path
-pub trait IntoDerivationPath {
-    /// Converts a given type into a [`DerivationPath`] with possible error
-    fn into_derivation_path(self) -> Result<DerivationPath, Error>;
-}
-
-impl IntoDerivationPath for DerivationPath {
-    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
-        Ok(self)
-    }
-}
-
-impl IntoDerivationPath for Vec<ChildNumber> {
-    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
-        Ok(self.into())
-    }
-}
-
-impl<'a> IntoDerivationPath for &'a [ChildNumber] {
-    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
-        Ok(self.into())
-    }
-}
-
-impl IntoDerivationPath for Vec<u32> {
-    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
-        Ok(self
-            .into_iter()
-            .map(ChildNumber::from)
-            .collect::<Vec<_>>()
-            .into())
-    }
-}
-
-impl<'a> IntoDerivationPath for &'a [u32] {
-    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
-        Ok(self
-            .into_iter()
-            .cloned()
-            .map(ChildNumber::from)
-            .collect::<Vec<_>>()
-            .into())
-    }
-}
-
-impl IntoDerivationPath for String {
-    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
-        self.parse()
-    }
-}
-
-impl<'a> IntoDerivationPath for &'a str {
-    fn into_derivation_path(self) -> Result<DerivationPath, Error> {
-        self.parse()
     }
 }
 
@@ -441,135 +389,6 @@ pub struct DerivationInfo {
     pub derivation: DerivationTemplate,
 }
 
-pub trait Encode {
-    fn encode(&self) -> [u8; 78];
-}
-
-pub trait Decode: Sized {
-    fn decode(data: &[u8]) -> Result<Self, bitcoin::util::bip32::Error>;
-}
-
-impl Encode for ExtendedPrivKey {
-    /// Extended private key binary encoding according to BIP 32
-    fn encode(&self) -> [u8; 78] {
-        let mut ret = [0; 78];
-        ret[0..4].copy_from_slice(
-            &match self.network {
-                bitcoin::Network::Bitcoin => [0x04, 0x88, 0xAD, 0xE4],
-                bitcoin::Network::Testnet | bitcoin::Network::Regtest => {
-                    [0x04, 0x35, 0x83, 0x94]
-                }
-            }[..],
-        );
-        ret[4] = self.depth as u8;
-        ret[5..9].copy_from_slice(&self.parent_fingerprint[..]);
-        ret[9..13].copy_from_slice(&u32::from(self.child_number).to_be_bytes());
-        ret[13..45].copy_from_slice(&self.chain_code[..]);
-        ret[45] = 0;
-        ret[46..78].copy_from_slice(&self.private_key[..]);
-        ret
-    }
-}
-
-impl Encode for ExtendedPubKey {
-    /// Extended public key binary encoding according to BIP 32
-    fn encode(&self) -> [u8; 78] {
-        let mut ret = [0; 78];
-        ret[0..4].copy_from_slice(
-            &match self.network {
-                bitcoin::Network::Bitcoin => [0x04u8, 0x88, 0xB2, 0x1E],
-                bitcoin::Network::Testnet | bitcoin::Network::Regtest => {
-                    [0x04u8, 0x35, 0x87, 0xCF]
-                }
-            }[..],
-        );
-        ret[4] = self.depth as u8;
-        ret[5..9].copy_from_slice(&self.parent_fingerprint[..]);
-        ret[9..13].copy_from_slice(&u32::from(self.child_number).to_be_bytes());
-        ret[13..45].copy_from_slice(&self.chain_code[..]);
-        ret[45..78].copy_from_slice(&self.public_key.key.serialize()[..]);
-        ret
-    }
-}
-
-impl Decode for ExtendedPrivKey {
-    /// Decoding extended private key from binary data according to BIP 32
-    fn decode(
-        data: &[u8],
-    ) -> Result<ExtendedPrivKey, bitcoin::util::bip32::Error> {
-        if data.len() != 78 {
-            return Err(bitcoin::util::bip32::Error::InvalidChildNumberFormat);
-        }
-
-        let mut slice: [u8; 4] = [0u8; 4];
-        slice.copy_from_slice(&data[9..13]);
-        let cn_int: u32 = u32::from_be_bytes(slice);
-        let child_number: ChildNumber = ChildNumber::from(cn_int);
-
-        let network = if data[0..4] == [0x04u8, 0x88, 0xAD, 0xE4] {
-            bitcoin::Network::Bitcoin
-        } else if data[0..4] == [0x04u8, 0x35, 0x83, 0x94] {
-            bitcoin::Network::Testnet
-        } else {
-            return Err(
-                bitcoin::util::bip32::Error::CannotDeriveFromHardenedKey,
-            );
-        };
-
-        Ok(ExtendedPrivKey {
-            network,
-            depth: data[4],
-            parent_fingerprint: Fingerprint::from(&data[5..9]),
-            child_number,
-            chain_code: ChainCode::from(&data[13..45]),
-            private_key: bitcoin::PrivateKey {
-                compressed: true,
-                network,
-                key: secp256k1::SecretKey::from_slice(&data[46..78]).map_err(
-                    |e| {
-                        bitcoin::util::bip32::Error::CannotDeriveFromHardenedKey
-                    },
-                )?,
-            },
-        })
-    }
-}
-
-impl Decode for ExtendedPubKey {
-    /// Decoding extended public key from binary data according to BIP 32
-    fn decode(
-        data: &[u8],
-    ) -> Result<ExtendedPubKey, bitcoin::util::bip32::Error> {
-        if data.len() != 78 {
-            return Err(bitcoin::util::bip32::Error::InvalidChildNumberFormat);
-        }
-
-        let mut slice: [u8; 4] = [0u8; 4];
-        slice.copy_from_slice(&data[9..13]);
-        let cn_int: u32 = u32::from_be_bytes(slice);
-        let child_number: ChildNumber = ChildNumber::from(cn_int);
-
-        Ok(ExtendedPubKey {
-            network: if data[0..4] == [0x04u8, 0x88, 0xB2, 0x1E] {
-                bitcoin::Network::Bitcoin
-            } else if data[0..4] == [0x04u8, 0x35, 0x87, 0xCF] {
-                bitcoin::Network::Testnet
-            } else {
-                return Err(
-                    bitcoin::util::bip32::Error::CannotDeriveFromHardenedKey,
-                );
-            },
-            depth: data[4],
-            parent_fingerprint: Fingerprint::from(&data[5..9]),
-            child_number,
-            chain_code: ChainCode::from(&data[13..45]),
-            public_key: bitcoin::PublicKey::from_slice(&data[45..78]).map_err(
-                |e| bitcoin::util::bip32::Error::CannotDeriveFromHardenedKey,
-            )?,
-        })
-    }
-}
-
 pub trait HardenedNormalSplit {
     fn hardened_normal_split(&self) -> (DerivationPath, Vec<u32>);
 }
@@ -662,8 +481,11 @@ impl DerivationComponents {
             .expect("Non-hardened derivation does not fail")
     }
 
-    pub fn public_key(&self, index: u32) -> bitcoin::PublicKey {
-        self.child(index).public_key
+    pub fn derive_public_key(
+        &self,
+        child_index: UnhardenedIndex,
+    ) -> bitcoin::PublicKey {
+        self.child(child_index.into()).public_key
     }
 }
 
@@ -816,91 +638,6 @@ impl MiniscriptKey for DerivationComponents {
 
     fn to_pubkeyhash(&self) -> Self::Hash {
         self.clone()
-    }
-}
-
-/// Context information for deriving a public key from [`DerivationComponents`]
-#[derive(Debug)]
-pub struct DerivationComponentsCtx<'secp, C>
-where
-    C: 'secp + secp256k1::Verification,
-{
-    /// The underlying secp context
-    pub secp_ctx: &'secp secp256k1::Secp256k1<C>,
-    /// The child_number in case the descriptor is wildcard
-    /// If the DescriptorPublicKey is not wildcard this field is not used.
-    pub child_number: bip32::ChildNumber,
-}
-
-impl<'secp, C> From<DerivationComponentsCtx<'secp, C>>
-    for DescriptorPublicKeyCtx<'secp, C>
-where
-    C: 'secp + secp256k1::Verification,
-{
-    fn from(dc: DerivationComponentsCtx<'secp, C>) -> Self {
-        DescriptorPublicKeyCtx::new(dc.secp_ctx, dc.child_number)
-    }
-}
-
-impl<'secp, C> Clone for DerivationComponentsCtx<'secp, C>
-where
-    C: 'secp + secp256k1::Verification,
-{
-    fn clone(&self) -> Self {
-        Self {
-            secp_ctx: &self.secp_ctx,
-            child_number: self.child_number.clone(),
-        }
-    }
-}
-
-impl<'secp, C> Copy for DerivationComponentsCtx<'secp, C> where
-    C: 'secp + secp256k1::Verification
-{
-}
-
-impl<'secp, C> DerivationComponentsCtx<'secp, C>
-where
-    C: 'secp + secp256k1::Verification,
-{
-    /// Create a new context
-    pub fn new(
-        secp_ctx: &'secp secp256k1::Secp256k1<C>,
-        child_number: bip32::ChildNumber,
-    ) -> Self {
-        Self {
-            secp_ctx: secp_ctx,
-            child_number: child_number,
-        }
-    }
-}
-
-impl<'secp, C> ToPublicKey<DerivationComponentsCtx<'secp, C>>
-    for DerivationComponents
-where
-    C: 'secp + secp256k1::Verification,
-{
-    fn to_public_key(
-        &self,
-        to_pk_ctx: DerivationComponentsCtx<'secp, C>,
-    ) -> PublicKey {
-        let derivation_path = self
-            .terminal_path
-            .clone()
-            .into_derivation_path()
-            .expect("does not fail for vec/slices")
-            .into_child(to_pk_ctx.child_number);
-        self.branch_xpub
-            .derive_pub(to_pk_ctx.secp_ctx, &derivation_path)
-            .expect("unhardened derivation does not fail")
-            .public_key
-    }
-
-    fn hash_to_hash160(
-        hash: &Self::Hash,
-        to_pk_ctx: DerivationComponentsCtx<'secp, C>,
-    ) -> hash160::Hash {
-        hash.to_public_key(to_pk_ctx).to_pubkeyhash()
     }
 }
 

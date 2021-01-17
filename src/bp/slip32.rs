@@ -20,8 +20,6 @@ use bitcoin::util::bip32::{
 };
 use bitcoin::Network;
 
-use crate::bp::bip32::Decode;
-
 /// Magical version bytes for xpub: bitcoin mainnet public key for P2PKH or P2SH
 pub const VERSION_MAGIC_XPUB: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
 /// Magical version bytes for xprv: bitcoin mainnet private key for P2PKH or
@@ -82,12 +80,12 @@ pub const VERSION_MAGIC_VPUB_MULTISIG: [u8; 4] = [0x02, 0x57, 0x54, 0x83];
 pub const VERSION_MAGIC_VPRV_MULTISIG: [u8; 4] = [0x02, 0x57, 0x50, 0x48];
 
 /// Extended public and private key processing errors
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Display, From, Error)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
     /// Error in BASE58 key encoding
-    #[from(base58::Error)]
-    Base58,
+    #[from]
+    Base58(base58::Error),
 
     /// A pk->pk derivation was attempted on a hardened key
     CannotDeriveFromHardenedKey,
@@ -101,12 +99,18 @@ pub enum Error {
     /// Invalid derivation path format.
     InvalidDerivationPathFormat,
 
+    /// Unknown version magic bytes
+    UnknownVersion([u8; 4]),
+
+    /// Encoded extended key data has wrong length
+    WrongExtendedKeyLength(usize),
+
     /// Unrecognized or unsupported extended key prefix (please check SLIP 32
     /// for possible values)
     UnknownSlip32Prefix,
 
-    /// Failure in tust bitcoin library
-    InteralFailure,
+    /// Failure in rust bitcoin library
+    InternalFailure,
 }
 
 impl From<bip32::Error> for Error {
@@ -125,8 +129,13 @@ impl From<bip32::Error> for Error {
                 Error::InvalidDerivationPathFormat
             }
             bip32::Error::Ecdsa(_) | bip32::Error::RngError(_) => {
-                Error::InteralFailure
+                Error::InternalFailure
             }
+            bip32::Error::UnknownVersion(ver) => Error::UnknownVersion(ver),
+            bip32::Error::WrongExtendedKeyLength(len) => {
+                Error::WrongExtendedKeyLength(len)
+            }
+            bip32::Error::Base58(err) => Error::Base58(err),
         }
     }
 }

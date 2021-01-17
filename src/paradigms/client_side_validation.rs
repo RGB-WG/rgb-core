@@ -29,7 +29,7 @@ pub trait CommitEncodeWithStrategy {
 pub mod commit_strategy {
     use super::*;
     use bitcoin::hashes::Hash;
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, BTreeSet};
 
     // Defining strategies:
     pub struct UsingStrict;
@@ -175,9 +175,24 @@ pub mod commit_strategy {
     impl CommitEncodeWithStrategy for MerkleNode {
         type Strategy = UsingStrict;
     }
+
+    #[cfg(feature = "grin_secp256k1zkp")]
+    impl CommitEncodeWithStrategy for secp256k1zkp::pedersen::Commitment {
+        type Strategy = commit_strategy::UsingStrict;
+    }
+
+    #[cfg(feature = "grin_secp256k1zkp")]
+    impl CommitEncodeWithStrategy for secp256k1zkp::pedersen::RangeProof {
+        type Strategy = commit_strategy::UsingHash<sha256::Hash>;
+    }
+
     impl<K, V> CommitEncodeWithStrategy for BTreeMap<K, V> {
         type Strategy = Merklization;
     }
+    impl<T> CommitEncodeWithStrategy for BTreeSet<T> {
+        type Strategy = Merklization;
+    }
+
     impl<T> CommitEncodeWithStrategy for &T
     where
         T: CommitEncodeWithStrategy,
@@ -338,65 +353,3 @@ mod test {
     }
 }
 */
-
-#[cfg(test)]
-#[macro_use]
-pub mod test {
-    use super::*;
-    use strict_encoding::{StrictDecode, StrictEncode};
-
-    pub fn test_confidential<T>(data: &[u8], encoded: &[u8], commitment: &[u8])
-    where
-        T: Conceal + StrictDecode + StrictEncode + Clone + CommitEncode,
-        <T as Conceal>::Confidential: StrictDecode + StrictEncode + Eq,
-    {
-        // Create the Revealed Structure from data bytes
-        let revealed = T::strict_decode(data).unwrap();
-
-        // Conceal the Revealed structure into Confidential
-        let confidential = revealed.conceal();
-
-        // Strict_encode Confidential data
-        let mut confidential_encoded = vec![];
-        confidential
-            .strict_encode(&mut confidential_encoded)
-            .unwrap();
-
-        // strict_encode Revealed data
-        let mut revealed_encoded: Vec<u8> = vec![];
-        revealed.strict_encode(&mut revealed_encoded).unwrap();
-
-        // Assert encoded Confidential matches precomputed vector
-        assert_eq!(encoded, &confidential_encoded[..]);
-
-        // Assert encoded Confidential and Revealed are not equal
-        assert_ne!(confidential_encoded.to_vec(), revealed_encoded);
-
-        // commit_encode Revealed structure
-        let mut commit_encoded_revealed = vec![];
-        revealed.clone().commit_encode(&mut commit_encoded_revealed);
-
-        if encoded == commitment {
-            // Assert commit_encode and encoded Confidential matches
-            assert_eq!(commit_encoded_revealed, confidential_encoded);
-        } else {
-            // Assert commit_encode and encoded Confidential does not match
-            assert_ne!(commit_encoded_revealed, confidential_encoded);
-        }
-
-        // Assert commit_encode and precomputed Confidential matches
-        assert_eq!(commit_encoded_revealed, commitment);
-    }
-
-    // Macro to test confidential encoding
-    #[macro_export]
-    macro_rules! test_conf {
-        ($(($revealed:ident, $conf:ident, $T:ty)),*) => (
-            {
-                $(
-                    test_confidential::<$T>(&$revealed[..], &$conf[..], &$conf[..]);
-                )*
-            }
-        );
-    }
-}

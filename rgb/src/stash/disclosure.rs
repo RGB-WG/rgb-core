@@ -17,5 +17,4 @@
 // TODO: Implement disclosures
 
 #[derive(Clone, Debug, Default, PartialEq, StrictEncode, StrictDecode)]
-#[lnpbp_crate(crate)]
 pub struct Disclosure {}

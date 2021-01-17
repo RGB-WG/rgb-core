@@ -12,14 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 pub mod channel;
-pub mod invoice;
 mod types;
 
 mod constructors;
 mod extenders;
 mod modifiers;
 
-pub use invoice::Invoice;
 pub use types::{
     AssetsBalance, ChannelId, ExtensionId, Lifecycle, TempChannelId,
 };

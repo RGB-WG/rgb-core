@@ -212,7 +212,7 @@ impl NodeSchema for TransitionSchema {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl StrictEncode for GenesisSchema {
         fn strict_encode<E: io::Write>(
@@ -329,8 +329,8 @@ mod strict_encoding {
 
 mod _verify {
     use super::*;
-    use crate::rgb::schema::SchemaVerify;
-    use crate::rgb::validation;
+    use crate::schema::SchemaVerify;
+    use crate::validation;
     use num_traits::ToPrimitive;
 
     impl<T> SchemaVerify for T
@@ -447,10 +447,11 @@ mod _verify {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::rgb::schema::script::StandardProcedure;
-    use crate::rgb::schema::SchemaVerify;
-    use crate::rgb::validation::Failure;
-    use crate::strict_encoding::{test::*, StrictDecode};
+    use crate::schema::script::StandardProcedure;
+    use crate::schema::SchemaVerify;
+    use crate::validation::Failure;
+    use lnpbp::strict_encoding::StrictDecode;
+    use lnpbp::test_helpers::*;
 
     static GENESIS_SCHEMA: [u8; 69] = [
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,

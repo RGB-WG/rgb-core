@@ -16,24 +16,23 @@ use std::collections::BTreeSet;
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
 
+use lnpbp::bp::{self, TaggedHash};
+use lnpbp::client_side_validation::{
+    commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
+};
+use lnpbp::commit_verify::CommitVerify;
+
 use super::{
     Assignments, AutoConceal, OwnedRights, ParentOwnedRights,
     ParentPublicRights,
 };
-use crate::bp::{self, TaggedHash};
-use crate::client_side_validation::{
-    commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
-};
-use crate::commit_verify::CommitVerify;
-use crate::rgb::schema::{
+use crate::schema::{
     ExtensionType, FieldType, NodeType, OwnedRightType, PublicRightType,
     TransitionType,
 };
 #[cfg(feature = "serde")]
-use crate::rgb::Bech32;
-use crate::rgb::{
-    schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32,
-};
+use crate::Bech32;
+use crate::{schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32};
 
 /// Holds definition of valencies for contract nodes, which is a set of
 /// allowed valencies types
@@ -108,7 +107,7 @@ impl CommitEncodeWithStrategy for NodeId {
 #[display(ContractId::to_bech32_string)]
 pub struct ContractId(sha256t::Hash<NodeIdTag>);
 
-impl From<ContractId> for crate::bp::chain::AssetId {
+impl From<ContractId> for lnpbp::bp::chain::AssetId {
     fn from(id: ContractId) -> Self {
         Self::from_inner(id.into_inner().into_inner())
     }
@@ -229,7 +228,7 @@ pub struct Genesis {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[lnpbp_crate(crate)]
+
 pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
@@ -248,7 +247,7 @@ pub struct Extension {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[lnpbp_crate(crate)]
+
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
@@ -604,7 +603,7 @@ impl Transition {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{
+    use lnpbp::strict_encoding::{
         strategies, strict_deserialize, strict_serialize, Error, Strategy,
         StrictDecode, StrictEncode,
     };
@@ -700,16 +699,17 @@ mod strict_encoding {
 #[cfg(test)]
 mod test {
     use amplify::Wrapper;
-    use bitcoin_hashes::hex::ToHex;
+    use bitcoin::hashes::hex::ToHex;
     use std::io::Write;
 
     use super::*;
-    use crate::bp::chain::{Chain, GENESIS_HASH_MAINNET};
-    use crate::bp::tagged_hash;
-    use crate::commit_verify::CommitVerify;
-    use crate::strict_encoding::{
-        strict_serialize, test::*, StrictDecode, StrictEncode,
+    use lnpbp::bp::chain::{Chain, GENESIS_HASH_MAINNET};
+    use lnpbp::bp::tagged_hash;
+    use lnpbp::commit_verify::CommitVerify;
+    use lnpbp::strict_encoding::{
+        strict_serialize, StrictDecode, StrictEncode,
     };
+    use lnpbp::test_helpers::*;
 
     static TRANSITION: [u8; 2364] = include!("../../../test/transition.in");
     static GENESIS: [u8; 2462] = include!("../../../test/genesis.in");
@@ -1037,6 +1037,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "serde")]
     fn test_id_serde() {
         let genesis: Genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
         let contract_id = genesis.contract_id();

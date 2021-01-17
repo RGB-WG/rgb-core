@@ -15,27 +15,28 @@
 use serde_with::{As, DisplayFromStr};
 use std::collections::{BTreeMap, HashMap};
 
-use amplify::Wrapper;
+use amplify::{DumbDefault, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
 use bitcoin::secp256k1;
+use bitcoin::util::psbt::raw::ProprietaryKey;
 use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::util::uint::Uint256;
 use bitcoin::{Transaction, Txid};
 
-use crate::bp::dbc::{
+use lnpbp::bp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
     TxCommitment, TxContainer, TxSupplement, TxoutContainer,
 };
-use crate::bp::psbt::ProprietaryKeyMap;
-use crate::bp::resolvers::{Fee, FeeError};
-use crate::bp::TaggedHash;
-use crate::client_side_validation::{
+use lnpbp::bp::resolvers::{Fee, FeeError};
+use lnpbp::bp::TaggedHash;
+use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };
-use crate::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
-use crate::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
-use crate::rgb::{ContractId, NodeId};
-use crate::strict_encoding::{strategies, Strategy};
+use lnpbp::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
+use lnpbp::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
+use lnpbp::strict_encoding::{strategies, Strategy};
+
+use crate::{ContractId, NodeId};
 
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
 pub const PSBT_OUT_TWEAK: u8 = 0x2;
@@ -118,12 +119,20 @@ pub enum Error {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, StrictEncode, StrictDecode)]
-#[cfg_attr(test, derive(Default))]
-#[lnpbp_crate(crate)]
 pub struct Anchor {
     pub txid: Txid,
     pub commitment: MultimsgCommitment,
     pub proof: Proof,
+}
+
+impl DumbDefault for Anchor {
+    fn dumb_default() -> Self {
+        Self {
+            txid: Txid::default(),
+            proof: Proof::dumb_default(),
+            commitment: MultimsgCommitment::default(),
+        }
+    }
 }
 
 impl Anchor {
@@ -165,10 +174,17 @@ impl Anchor {
                 .clone();
             let tx_out = &tx.output[vout];
 
-            let pubkey = psbt_out
-                .proprietary_key(b"RGB".to_vec(), PSBT_OUT_PUBKEY, vec![])
-                .ok_or(Error::NoRequiredPubkey(vout))?
-                .map_err(|_| Error::WrongPubkeyData)?;
+            let pubkey = secp256k1::PublicKey::from_slice(
+                psbt_out
+                    .proprietary
+                    .get(&ProprietaryKey {
+                        prefix: b"RGB".to_vec(),
+                        subtype: PSBT_OUT_PUBKEY,
+                        key: vec![],
+                    })
+                    .ok_or(Error::NoRequiredPubkey(vout))?,
+            )
+            .map_err(|_| Error::WrongPubkeyData)?;
             // TODO: (new) Add support for Taproot parsing
             let source = match psbt_out
                 .redeem_script
@@ -225,14 +241,15 @@ impl Anchor {
             psbt.outputs
                 .get_mut(container.vout())
                 .map(|output| {
-                    output.insert_proprietary_key(
-                        b"RGB".to_vec(),
-                        PSBT_OUT_TWEAK,
-                        vec![],
-                        &container.tweaking_factor.expect(
+                    output.proprietary.insert(
+                        ProprietaryKey {
+                            prefix: b"RGB".to_vec(),
+                            subtype: PSBT_OUT_TWEAK,
+                            key: vec![]
+                        },
+                        container.tweaking_factor.expect(
                             "Tweaking factor always present after commitment procedure"
-                        )
-                    )
+                        )[..].to_vec())
                 });
 
             multimsg.iter().for_each(|(id, _)| {
@@ -328,7 +345,7 @@ mod test {
     use amplify::Wrapper;
 
     use super::*;
-    use crate::bp::tagged_hash;
+    use lnpbp::bp::tagged_hash;
 
     #[test]
     fn test_anchor_id_midstate() {

@@ -58,12 +58,14 @@ pub use bitcoin::secp256k1;
 pub extern crate bitcoin_hashes as hashes;
 pub use hashes::hex;
 pub extern crate miniscript;
-#[cfg(feature = "grin_secp256k1zkp")]
+#[cfg(feature = "bulletproofs")]
 pub extern crate secp256k1zkp;
 
 #[macro_use]
 extern crate lnpbp_derive;
 
+#[macro_use]
+pub mod test_helpers;
 #[macro_use]
 mod paradigms;
 mod standards;
@@ -73,8 +75,6 @@ pub mod bp;
 #[allow(dead_code, unused_variables)]
 // TODO: Remove attribute once LNP mod will be finalized
 pub mod lnp;
-#[cfg(feature = "rgb")]
-pub mod rgb;
 
 pub use lnp::presentation::encoding as lightning_encoding;
 pub use paradigms::{

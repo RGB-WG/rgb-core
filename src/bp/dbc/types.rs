@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use amplify::DumbDefault;
 use bitcoin::secp256k1;
 
 use super::{Error, ScriptEncodeData};
@@ -35,15 +36,14 @@ pub trait Container: Sized {
     Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[lnpbp_crate(crate)]
-#[display(Debug)]
+#[display("proof({pubkey}, {source}")]
 pub struct Proof {
     pub pubkey: secp256k1::PublicKey,
     pub source: ScriptEncodeData,
 }
 
-#[cfg(test)]
-impl Default for Proof {
-    fn default() -> Self {
+impl DumbDefault for Proof {
+    fn dumb_default() -> Self {
         use crate::SECP256K1;
         Proof {
             pubkey: secp256k1::PublicKey::from_secret_key(

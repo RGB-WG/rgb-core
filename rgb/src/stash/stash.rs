@@ -11,8 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::bp::blind::OutpointHash;
-use crate::rgb::{
+use lnpbp::bp::blind::OutpointHash;
+
+use crate::{
     Anchor, Consignment, ContractId, Disclosure, Extension, Genesis, Node,
     NodeId, SchemaId, Transition,
 };

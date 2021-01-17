@@ -41,7 +41,7 @@ pub use types::{
 pub(crate) use schema::test;
 
 mod verify {
-    use crate::rgb::validation;
+    use crate::validation;
 
     /// Trait used for internal schema validation against some root schema
     pub trait SchemaVerify {

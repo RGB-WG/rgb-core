@@ -13,9 +13,11 @@
 
 //! # LNPBP-2 related
 
+use std::collections::BTreeSet;
+
 use bitcoin::hashes::{sha256, Hmac};
 use bitcoin::secp256k1;
-use std::collections::BTreeSet;
+use miniscript::Segwitv0;
 
 use super::{Container, Error, Proof, ScriptEncodeData};
 use crate::commit_verify::EmbedCommitVerify;
@@ -54,7 +56,11 @@ impl Container for KeysetContainer {
         if let ScriptEncodeData::LockScript(ref script) = proof.source {
             Ok(Self {
                 pubkey: proof.pubkey,
-                keyset: script.extract_pubkeyset()?,
+                keyset: script
+                    .extract_pubkeyset::<Segwitv0>()?
+                    .into_iter()
+                    .map(|pk| pk.key)
+                    .collect(),
                 tag: supplement.clone(),
                 tweaking_factor: None,
             })
