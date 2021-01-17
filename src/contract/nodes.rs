@@ -711,8 +711,8 @@ mod test {
     };
     use lnpbp::test_helpers::*;
 
-    static TRANSITION: [u8; 2364] = include!("../../../test/transition.in");
-    static GENESIS: [u8; 2462] = include!("../../../test/genesis.in");
+    static TRANSITION: [u8; 2364] = include!("../../test/transition.in");
+    static GENESIS: [u8; 2462] = include!("../../test/genesis.in");
 
     #[test]
     fn test_node_id_midstate() {

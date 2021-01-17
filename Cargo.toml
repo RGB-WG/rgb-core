@@ -1,18 +1,18 @@
 [package]
-name = "lnpbp"
+name = "rgb-core"
 version = "0.3.0-alpha.2"
 license = "MIT"
-authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
-description = "LNP/BP Core Library implementing LNPBP specifications & standards"
+authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
+description = "RGB Core Library: private & scalable client-validated smart contracts for Bitcoin & Lightning"
 repository = "https://github.com/LNP-BP/rust-lnpbp"
 homepage = "https://github.com/LNP-BP"
-keywords = ["bitcoin", "lightning", "lnp-bp", "layer-3", "cryptography"]
+keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "lnp-bp"]
 readme = "README.md"
 edition = "2018"
-exclude = [".github", "derive", "contrib", "services"]
+exclude = [".github", "contrib"]
 
 [lib]
-name = "lnpbp"
+name = "rgb"
 path = "src/lib.rs"
 crate-type = ["dylib", "rlib", "staticlib"]
 
@@ -36,7 +36,8 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # -----------------------------------------
 amplify = { version = "2.4", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
-lnpbp_derive = { version = ">=0.3.0-alpha.2", path = "./derive" }
+lnpbp = { version = ">=0.3.0-alpha.2", path = "../../lnpbp/rust-lnpbp", features = ["bulletproofs", "ed25519-dalek"] }
+lnpbp_derive = { version = ">=0.3.0-alpha.2", path = "../../lnpbp/rust-lnpbp/derive" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.26.0", features = ["rand"] }
@@ -45,10 +46,9 @@ bitcoin_hashes = "~0.9.4" # we need macro from here
 # We have to fix version of miniscript as required by LNPBP-2 specification
 miniscript = { version = "~5.0.0", features = ["compiler"] }
 bech32 = "~0.7.2"
-chacha20poly1305 = "~0.7.0"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
 #   a part of Tor address)
-ed25519-dalek = { version = "~1.0.0", optional = true }
+ed25519-dalek = "~1.0.0"
 # Core rust projects
 # ------------------
 #   This strange naming is a workaround for cargo inability to define required
@@ -58,87 +58,32 @@ ed25519-dalek = { version = "~1.0.0", optional = true }
 serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
 serde_with = { version = "~1.5.1", features = ["hex"], optional = true }
 serde_with_macros = { version = "~1.2.0", optional = true } # Fix for the problem in 1.3.0
-tokio = { version = "~0.3.5", optional = true }
 lazy_static = "~1.4.0"
-# Networking deps
-# ---------------
-#   All these dependencies are used to provide support for networking URLs in
-#   `lnp` mod and are turned on only if `lbp`, `zmq` or `url` features are used
-zmq = { version = "~0.9.2", optional = true }
-url = { version = "~2.1.1", optional = true }
 # Serializtion
 # ------------
 #    Used in RGB data Bech32 encodings
+deflate = "~0.8.6"
+inflate = "~0.4.5"
 chrono = "~0.4.19"
 regex = "1"
 # Temporary-needed dependencies:
 # ------------------------------
-# 1. We need it for implementing strict encoding on it's types so they can be
-#    used in bulletproofs
-grin_secp256k1zkp = { version = "~0.7.10", optional = true }
+# 1. We are of no control of what's happening in Grin and would like to prevent
+#    updates w/o checking them manually. Should Elements Project secpk256k-zkp
+#    accept bulletproofs code, we will switch to it
+grin_secp256k1zkp = { version = "=0.7.10" }
 # 2. We use these to simplify enum strict encoding, but once the required
 #    functionality will become part of either amplify_derive or lnpbp_derive
 #    crates they should be removed
 num-traits = "~0.2.11"
 num-derive = "~0.3.0"
-# 2. Once async traits will get to rust compiler, this one will be also not
-#    needed
-async-trait = { version = "~0.1.30", optional = true }
-torut = { version = "~0.1.6", features = ["v2", "v3"] }
 
 [dev-dependencies]
 serde_json = "~1.0.60"
 
-[target.'cfg(target_os="android")'.dependencies]
-cc = { version = "=1.0.41" }
-# TODO: Find a soliton to a problem with breaking change in one of tokio
-#       dependencies
-socket2 = { version = "<=0.3.15" }
-zmq = { version = "~0.9", features = ["vendored"] }
-
-[target.'cfg(target_os="ios")'.dependencies]
-zeromq-src = { version = "~0.1", git = "https://github.com/LNP-BP/zeromq-src-rs", branch = "fix/cmake" }
-
-[target.'cfg(target_os="windows")'.dependencies]
-openssl = { version = "~0.10", features = ["vendored"] }
-
-# Features
-# ========
 [features]
-# Listings
-# --------
-#   By default we use LNP with Tor support and URL support
-default = ["lnp", "tor", "url"]
-all = [
-       # Library components
-       "lnp",
-       # Core rust
-       "serde", "tokio", "async",
-       # Cryptographic optionals
-       "keygen", "elgamal", "bulletproofs",
-       # Networking
-       "tor", "url", "websockets", "vendored_openssl"]
-# High-level library components
-# -----------------------------
-lnp = ["async", "zmq"]
-# Exposing core rust componens
-# ----------------------------
-#   These also include re-assembly of necessary features from dependencies
-async = ["async-trait", "tokio"]
-serde = ["serde_crate", "serde_with", "serde_with_macros", "amplify/serde",
+default = ["serde"]
+all = ["serde"]
+serde = ["serde_crate", "serde_with", "serde_with_macros",
+         "lnpbp/serde", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]
-# Optional cryptographic functionality
-# ------------------------------------
-bulletproofs = ["grin_secp256k1zkp"] # Auto-required and used only by RGB
-keygen = ["bitcoin/rand"]
-elgamal = [] # Provides ElGamal encryption module from this library
-# Networking
-# ----------
-websockets = [] # Used only by LNP
-tor = ["amplify/tor"] # Exposes dependency feature
-vendored_openssl = ["torut/vendored_openssl"]
-
-[workspace]
-members = [".", "derive", "services", "rgb"]
-default-members = [".", "derive", "services", "rgb"]
-exclude = ["dep_test"]

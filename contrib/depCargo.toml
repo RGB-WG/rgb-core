@@ -1,6 +1,5 @@
 # This is an add-on that must be added to any dependency using this library
 
-lnpbp = { path = "..", features = ["all"] }
-lnpbp_derive = { path = "../derive" }
+rgb = { path = "..", features = ["all"] }
 
 [workspace]

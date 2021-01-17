@@ -1,99 +1,39 @@
-# LNP/BP Core Library
+# RGB Core Library
 
-![Build](https://github.com/LNP-BP/rust-lnpbp/workflows/Build/badge.svg)
-![Tests](https://github.com/LNP-BP/rust-lnpbp/workflows/Tests/badge.svg)
-![Lints](https://github.com/LNP-BP/rust-lnpbp/workflows/Lints/badge.svg)
-[![codecov](https://codecov.io/gh/LNP-BP/rust-lnpbp/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/rust-lnpbp)
+![Build](https://github.com/rgb-org/rgb-core/workflows/Build/badge.svg)
+![Tests](https://github.com/rgb-org/rgb-core/workflows/Tests/badge.svg)
+![Lints](https://github.com/rgb-org/rgb-core/workflows/Lints/badge.svg)
+[![codecov](https://codecov.io/gh/rgb-org/rgb-core/branch/master/graph/badge.svg)](https://codecov.io/gh/rgb-org/rgb-core)
 
-[![crates.io](https://meritbadge.herokuapp.com/lnpbp)](https://crates.io/crates/lnpbp)
-[![Docs](https://docs.rs/lnpbp/badge.svg)](https://docs.rs/lnpbp)
+[![crates.io](https://meritbadge.herokuapp.com/lnpbp)](https://crates.io/crates/rgb-core)
+[![Docs](https://docs.rs/rgb-core/badge.svg)](https://docs.rs/rgb-core)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-This is LNP/BP Core Library: a rust library implementing LNP/BP specifications 
-<https://github.com/LNP-BP/LNPBPs>. It can be used to simplify development of
-layer 2 & 3 solutions on top of Lightning Network and Bitcoin blockchain. 
+Rust library implementing confidential & scalable client-validated smart 
+contracts for Bitcoin & Lightning.
 
 The current list of the projects based on the library include:
-* [RGB](https://github.com/LNP-BP/rgb-node): Confidential & scalable smart 
-  contracts for Bitcoin & Lightning
-* [Generalized Lightning Network](https://www.youtube.com/watch?v=YmmNsWS5wiM) 
-  and it's reference implementation named 
-  [LNP node](https://github.com/LNP-BP/lnp-node) enabling:
-  - RGB extensions
-  - DLC extensions
-  - [Lightspeed payments](https://github.com/LNP-BP/LNPBPs/issues/24)
-  - Multi-peer channels
-  - Faster lightning experiments (quicker adoption of eltoo, Taproot etc)
-* [LNP](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP%20Networking%20%26%20RGB%20Integration_final.pdf): 
-  Networking protocol for privacy-keeping and censorship-resistant applications,
-  operating in both P2P and RPC modes (currently used as a part of Lightning 
-  network, but our effort is to make it more generic and usable even outside of 
-  LN). All services, developed by LNP/BP Standards Association (see points
-  below) are made with LNP.
-* [BP node](https://github.com/LNP-BP/bp-node): Indexing service for bitcoin 
-  blockchain; more efficient & universal Electrum server replacement. In 
-  perspective - validating Bitcoin network node (using libbitcoinconsus)
-
-The planned projects:
-* Decentralized exchange for Lightning Network
-* Bifrost Node: P2P LNP/BP network infrastructural node running
-  - Decentralized exchange information workflows
-  - Watchtowers (RGB-enabled)
-  - DLC oracle provider
-  - Anonymous intermediate storage for client-validated data (like RGB 
-    consignments)
-  - Storm storage providers (see below)
-* [Storm](https://github.com/storm-org): Incentivised trustless storage and 
-  messaging protocol
-* [Prometheus](https://github.com/pandoracore/prometheus-spec): Decentralized 
-  trustless computing
-
-Potentially, with LNP/BP Core library you can simplify the development of
-* Discreet log contracts
-* Implement experimental lightning features
-* Do complex multi-threaded or elastic/dockerized client-service microservice 
-  architectures
+* [RGB Node](https://github.com/LNP-BP/rgb-node): standalone & embeddable node
+  for running RGB
+* [RGB SDK](https://github.com/LNP-BP/rgb-sdk): SDK for developing mobile, web,
+  desktop & server-side wallets and doing other forms of software integration 
+  with RGB Node
 
 To learn more about the technologies enabled by the library please check:
 * [RGB Technology Internals](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/)
-* [Networking with LNP](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP%20Networking%20%26%20RGB%20Integration_final.pdf)
 * [LNP/BP Nodes Initiative](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP-BP%20Nodes%20Initiative.pdf)
 
-The development of the library projects is supported by LNP/BP Standards 
-Association.
+The development of the library projects is supported by [LNP/BP Standards 
+Association](https://github.com/LNP-BP).
 
-## Library functionality
-
-The library provides the code for:
-
-* RGB: confidential smart contracts with client-side validation, with Lightning
-  network support
-* Improvements & utilities for Bitcoin protocol 
-* Deterministic commitments that can be embedded into for Bitcoin transactions 
-  and public keys (DBC)
-* Single-use seals
-* Client-side validation
-* Lightning networking protocol (LNP)
-* Generalized lightning network
-
-This code supports both Bitcoin blockchain and Lightning network.
-
-## Project structure
-
-The library is built as a single Rust crate with the following top-level mods:
-* paradigms: generic paradigms (API best practices) which are not bitcoin-specific
-* bp: Bitcoin protocol extensions external to [Bitcoin Core](https://github.com/bitcoin/bitcoin) 
-  functionality and existing [BIPs](http://github.com/bitcoin/bips). These may
-  also cover those of [LNPBP standards](https://github.com/lnp-bp/lnpbps) which 
-  are not specific for other layers.
-* lnp: Lightning Network protocol extensions: networking, generalized lightning 
-  channels and better layerization of
-  [BOLT specifications](https://github.com/lightningnetwork/lightning-rfc)
-* rgb: smart contracts for Bitcoin and Lightning network based client-side 
-  validation, deterministic bitcoin commitments and single-use seals.
-* standards: other LNPBPs standard implementation which does not fit into any of
-  the categories above
+Previously the code of the library was part of [LNP/BP Core Library](https://github.com/LNP-BP/rust-lnpbp)
+but later was extracted into a separate library in this repository via fork.
+The reasons for that were the facts that LNP/BP Core Lib has a lot of usage
+outside RGB project scope, and the overall dependencies & feature management
+complexity, compile times etc grow significantly. Another reason is the need for
+different review policies & security requirements (LNP/BP Core Lib may be more
+experimental than RGB).
 
 The library is based on other projects:
 * [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin)
@@ -103,6 +43,7 @@ The library is based on other projects:
   for Pedersen commitments and Bulletproofs used in confidential state inside 
   RGB protocols
 * [rust-miniscript](https://github.com/rust-bitcoin/rust-miniscript)
+* [rust-lnpbp](https://github.com/LNP-BP/rust-lnpbp) LNP/BP Core Library
 
 ## Install
 
@@ -120,12 +61,11 @@ brew cargo pkg-config zmq
 
 ### Clone and compile library
 
-Minimum supported rust compiler version (MSRV): 1.45 (if determined by tokio
-feature is used) and 1.41.1 (if used without tokio)
+Minimum supported rust compiler version (MSRV): 1.41.1 (if used without tokio)
 
 ```shell script
-git clone https://github.com/lnp-bp/rust-lnpbp
-cd rust-lnpbp
+git clone https://github.com/rgb-org/rgb-core
+cd rgb-core
 cargo build --release --all-features
 ```
 
@@ -146,9 +86,7 @@ Add these lines to your `Cargo.toml` file at the very end of the `[dependecies]`
 section:
 
 ```toml
-lnpbp = "~0.2.0"
-lnpbp_derive = "~0.2.0"
-lnpbp_services = "~0.2.0"
+rgb-core = "~0.3.0"
 ```
 
 

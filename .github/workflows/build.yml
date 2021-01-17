@@ -16,21 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         feature:
-          # Library components, one by one
-          - lnp
-          # Cryptographic optionals
-          - keygen
-          - elgamal
-          - bulletproofs
-          # Core rust optionals
           - serde
-          - tokio
-          - async
-          # Networking
-          - url
-          - websockets
-          # Full LNP strength, but without Serde
-          - lnp,websockets,url,tokio,async,keygen,bulletproofs
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
@@ -50,32 +36,6 @@ jobs:
         with:
           command: check
           args: --features=${{ matrix.feature }}
-  services:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature:
-          - server
-          - client
-          - embedded
-          - cli
-          - server,serde
-          - client,serde
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev
-      - name: Install rust stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Feature ${{ matrix.feature }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --manifest-path services/Cargo.toml --features=${{ matrix.feature }}
   platforms:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -105,39 +65,12 @@ jobs:
         with:
           command: check
           args: --all-features
-  tor:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature:
-          - tor
-          - tor,url
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install rust stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Feature ${{ matrix.feature }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --no-default-features --features=${{ matrix.feature }}
-      - name: Defaults + ${{ matrix.feature }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --features=${{ matrix.feature }}
   toolchains:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [ nightly, beta, stable, 1.45.0 ]
+        toolchain: [ nightly, beta, stable, 1.41.1 ]
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
@@ -152,26 +85,6 @@ jobs:
         with:
           command: check
           args: --workspace --all-targets --all-features
-  toolchains-old:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        toolchain: [ 1.41.1 ]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev libssl-dev
-      - name: Install rust ${{ matrix.toolchain }}
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.toolchain }}
-          override: true
-      - name: Custom features
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --workspace --all-targets --features=rgb,lnp,websockets,url,keygen,serde
   dependency:
     runs-on: ubuntu-latest
     steps:

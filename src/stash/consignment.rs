@@ -118,7 +118,7 @@ pub(crate) mod test {
     use crate::validation::TxResolver;
     use lnpbp::strict_encoding::StrictDecode;
 
-    static CONSIGNMENT: [u8; 1555] = include!("../../../test/consignment.in");
+    static CONSIGNMENT: [u8; 1555] = include!("../../test/consignment.in");
 
     pub(crate) fn consignment() -> Consignment {
         Consignment::strict_decode(&CONSIGNMENT[..]).unwrap()

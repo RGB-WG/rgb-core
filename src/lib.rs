@@ -1,5 +1,5 @@
 // LNP/BP Core Library implementing LNPBP specifications & standards
-// Written in 2019 by
+// Written in 2020 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
 // To the extent possible under law, the author(s) have dedicated all
@@ -22,26 +22,21 @@
     dead_code,
     //missing_docs
 )]
-// TODO: when we will be ready for the release #![deny(missing_docs)]
-// This is required because of incomplete rust async implementation and can be
-// removed after async trait feature completion in rust compiler
-#![cfg_attr(feature = "async", allow(where_clauses_object_safety))]
 
 #[macro_use]
 extern crate amplify;
 #[macro_use]
 extern crate amplify_derive;
 #[macro_use]
+extern crate lnpbp;
+#[macro_use]
+extern crate lnpbp_derive;
+#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate num_derive;
-
-extern crate chacha20poly1305;
-
-// Support for node & node clients development (include API helpers)
-#[cfg(feature = "async")]
 #[macro_use]
-extern crate async_trait;
+extern crate bitcoin_hashes;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -49,46 +44,39 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-// Bitcoin-specific imports. We make them public while we use custom versions
-// of the libs so downstream dependencies can use them directly from this lib
-// TODO: Refactor re-exported bitcoin and hashes functionality
-pub extern crate bitcoin;
-pub use bitcoin::secp256k1;
-#[macro_use]
-pub extern crate bitcoin_hashes as hashes;
-pub use hashes::hex;
-pub extern crate miniscript;
-#[cfg(feature = "bulletproofs")]
-pub extern crate secp256k1zkp;
+pub use lnpbp::secp256k1zkp;
 
-#[macro_use]
-extern crate lnpbp_derive;
+pub mod bech32;
+pub mod contract;
+pub mod schema;
+pub mod stash;
+pub mod validation;
+pub mod vm;
 
-#[macro_use]
-pub mod test_helpers;
-#[macro_use]
-mod paradigms;
-mod standards;
-#[macro_use]
-pub mod bp;
-#[cfg(feature = "lnp")]
-#[allow(dead_code, unused_variables)]
-// TODO: Remove attribute once LNP mod will be finalized
-pub mod lnp;
+pub mod prelude {
+    use super::*;
+    pub use super::{bech32, schema, vm};
 
-pub use lnp::presentation::encoding as lightning_encoding;
-pub use paradigms::{
-    client_side_validation, commit_verify, single_use_seals, strict_encoding,
-};
-#[cfg(feature = "elgamal")]
-pub use standards::elgamal;
-pub use standards::{features, lnpbp1, lnpbp2, lnpbp3, lnpbp4};
-
-lazy_static! {
-    /// Global Secp256k1 context object
-    pub static ref SECP256K1: bitcoin::secp256k1::Secp256k1<bitcoin::secp256k1::All> =
-        bitcoin::secp256k1::Secp256k1::new();
-
-    pub static ref SECP256K1_PUBKEY_DUMB: bitcoin::secp256k1::PublicKey =
-        bitcoin::secp256k1::PublicKey::from_secret_key(&SECP256K1, &bitcoin::secp256k1::key::ONE_KEY);
+    pub use super::bech32::{Bech32, FromBech32, ToBech32};
+    pub use contract::{
+        data, seal, value, Assignments, AtomicValue, AutoConceal,
+        ConfidentialState, ContractId, DeclarativeStrategy, Extension, Genesis,
+        HashStrategy, Metadata, NoDataError, Node, NodeId, OwnedRights,
+        OwnedState, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
+        RevealedState, SealDefinition, StateTypes, Transition,
+    };
+    pub use schema::{
+        script, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction,
+        ExtensionSchema, ExtensionType, GenesisAbi, GenesisAction,
+        PublicRightType, PublicRightsStructure, Schema, SchemaId,
+        SimplicityScript, TransitionAbi, TransitionAction,
+    };
+    pub use stash::{
+        Anchor, AnchorId, Consignment, ConsignmentEndpoints, Disclosure,
+        ExtensionData, Stash, TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK,
+    };
+    pub use validation::{Validator, Validity};
+    pub use vm::VirtualMachine;
 }
+
+pub use prelude::*;
