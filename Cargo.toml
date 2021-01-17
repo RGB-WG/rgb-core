@@ -4,8 +4,8 @@ version = "0.3.0-alpha.2"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "RGB Core Library: private & scalable client-validated smart contracts for Bitcoin & Lightning"
-repository = "https://github.com/LNP-BP/rust-lnpbp"
-homepage = "https://github.com/LNP-BP"
+repository = "https://github.com/rgb-org/rgb-core"
+homepage = "https://rgb.network"
 keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "lnp-bp"]
 readme = "README.md"
 edition = "2018"
@@ -36,8 +36,8 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # -----------------------------------------
 amplify = { version = "2.4", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
-lnpbp = { version = ">=0.3.0-alpha.2", path = "../../lnpbp/rust-lnpbp", features = ["bulletproofs", "ed25519-dalek"] }
-lnpbp_derive = { version = ">=0.3.0-alpha.2", path = "../../lnpbp/rust-lnpbp/derive" }
+lnpbp = { version = ">=0.3.0-alpha.2", features = ["bulletproofs", "ed25519-dalek"] }
+lnpbp_derive = { version = ">=0.3.0-alpha.2" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.26.0", features = ["rand"] }
