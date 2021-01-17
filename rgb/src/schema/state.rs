@@ -24,7 +24,6 @@ use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct StateSchema {
     pub format: StateFormat,
@@ -183,10 +182,10 @@ impl DataFormat {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
     use core::convert::TryFrom;
     use core::fmt::Debug;
     use core::ops::{Add, Bound, RangeBounds, RangeInclusive, Sub};
+    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
     use num_derive::{FromPrimitive, ToPrimitive};
     use num_traits::{Bounded, ToPrimitive};
 
@@ -756,11 +755,11 @@ mod _validation {
     use core::any::Any;
 
     use super::*;
-    use crate::client_side_validation::Conceal;
-    use crate::rgb::{
+    use crate::{
         data, validation, DeclarativeStrategy, HashStrategy, NodeId,
         OwnedState, PedersenStrategy, StateTypes,
     };
+    use lnpbp::client_side_validation::Conceal;
 
     fn range_check<T, U>(
         type_id: usize,
@@ -1065,22 +1064,24 @@ mod _validation {
 
 #[cfg(test)]
 mod test {
-    use bitcoin::blockdata::transaction::OutPoint;
-    use bitcoin::hashes::{hex::FromHex, sha256};
-    use secp256k1zkp::rand::thread_rng;
-    use std::collections::BTreeMap;
-
     use super::*;
-    use crate::bp::blind::OutpointReveal;
-    use crate::bp::TaggedHash;
-    use crate::client_side_validation::Conceal;
-    use crate::rgb::contract::data::{self, Revealed};
-    use crate::rgb::contract::{value, NodeId};
-    use crate::rgb::validation::{Failure, Validity};
-    use crate::rgb::{
+    use crate::contract::data::{self, Revealed};
+    use crate::contract::{value, NodeId};
+    use crate::validation::{Failure, Validity};
+    use crate::{
         DeclarativeStrategy, HashStrategy, OwnedState, PedersenStrategy,
     };
-    use crate::strict_encoding::{strict_serialize, test::*, StrictDecode};
+
+    use bitcoin::blockdata::transaction::OutPoint;
+    use bitcoin::hashes::{hex::FromHex, sha256};
+    use std::collections::BTreeMap;
+
+    use lnpbp::bp::blind::OutpointReveal;
+    use lnpbp::bp::TaggedHash;
+    use lnpbp::client_side_validation::Conceal;
+    use lnpbp::secp256k1zkp::rand::thread_rng;
+    use lnpbp::strict_encoding::{strict_serialize, StrictDecode};
+    use lnpbp::test_helpers::*;
 
     // Txids to generate seals
     static TXID_VEC: [&str; 4] = [
@@ -1488,7 +1489,7 @@ mod test {
 
         // Create Declerative Assignments
         let assignment_dec_rev = OwnedState::<DeclarativeStrategy>::Revealed {
-            seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
+            seal_definition: crate::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
             ),
             assigned_state: data::Void,
@@ -1496,17 +1497,16 @@ mod test {
 
         let assignment_dec_conf =
             OwnedState::<DeclarativeStrategy>::Confidential {
-                seal_definition:
-                    crate::rgb::contract::seal::Revealed::TxOutpoint(
-                        OutpointReveal::from(OutPoint::new(txid_vec[1], 2)),
-                    )
-                    .conceal(),
+                seal_definition: crate::contract::seal::Revealed::TxOutpoint(
+                    OutpointReveal::from(OutPoint::new(txid_vec[1], 2)),
+                )
+                .conceal(),
                 assigned_state: data::Void,
             };
 
         // Create Pedersan Assignments
         let assignment_ped_rev = OwnedState::<PedersenStrategy>::Revealed {
-            seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
+            seal_definition: crate::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
             ),
             assigned_state: value::Revealed::with_amount(10u64, &mut rng),
@@ -1514,11 +1514,10 @@ mod test {
 
         let assignment_ped_conf =
             OwnedState::<PedersenStrategy>::Confidential {
-                seal_definition:
-                    crate::rgb::contract::seal::Revealed::TxOutpoint(
-                        OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
-                    )
-                    .conceal(),
+                seal_definition: crate::contract::seal::Revealed::TxOutpoint(
+                    OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
+                )
+                .conceal(),
                 assigned_state: value::Revealed::with_amount(10u64, &mut rng)
                     .conceal(),
             };
@@ -1532,14 +1531,14 @@ mod test {
             .collect();
 
         let assignment_hash_rev = OwnedState::<HashStrategy>::Revealed {
-            seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
+            seal_definition: crate::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
             ),
             assigned_state: state_data_vec[0].clone(),
         };
 
         let assignment_hash_conf = OwnedState::<HashStrategy>::Confidential {
-            seal_definition: crate::rgb::contract::seal::Revealed::TxOutpoint(
+            seal_definition: crate::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
             )
             .conceal(),

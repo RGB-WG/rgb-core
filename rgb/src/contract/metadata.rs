@@ -17,12 +17,13 @@
 use serde::{Deserializer, Serializer};
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::data;
-use crate::client_side_validation::{
+use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy,
 };
-use crate::rgb::schema;
-use crate::strict_encoding;
+use lnpbp::strict_encoding;
+
+use super::data;
+use crate::schema;
 
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
@@ -72,10 +73,6 @@ impl IntoIterator for Metadata {
 }
 
 impl CommitEncodeWithStrategy for Metadata {
-    type Strategy = commit_strategy::Merklization;
-}
-
-impl CommitEncodeWithStrategy for BTreeSet<data::Revealed> {
     type Strategy = commit_strategy::Merklization;
 }
 
@@ -165,14 +162,14 @@ impl Metadata {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::amplify::Wrapper;
-    use crate::client_side_validation::{
+    use amplify::Wrapper;
+    use bitcoin::hashes::Hash;
+    use lnpbp::client_side_validation::{
         merklize, CommitEncode, Conceal, MerkleNode,
     };
-    use crate::strict_encoding::test::*;
-    use crate::strict_encoding::{StrictDecode, StrictEncode};
-    use bitcoin_hashes::Hash;
-    use secp256k1zkp::rand::{thread_rng, RngCore};
+    use lnpbp::secp256k1zkp::rand::{thread_rng, RngCore};
+    use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+    use lnpbp::test_helpers::*;
 
     // Hard coded sample metadata object as shown below
     // Metadata({13: {U8(2), U8(3), U16(2), U32(2), U32(3),

@@ -16,19 +16,20 @@ use std::io;
 
 use bitcoin::hashes::{sha256, sha256t};
 
+use lnpbp::bp::TaggedHash;
+use lnpbp::client_side_validation::{
+    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
+};
+use lnpbp::commit_verify::CommitVerify;
+use lnpbp::features;
+
 use super::{
     vm, DataFormat, ExtensionSchema, GenesisSchema, OwnedRightType,
     PublicRightType, SimplicityScript, StateSchema, TransitionSchema,
 };
-use crate::bp::TaggedHash;
-use crate::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
-};
-use crate::commit_verify::CommitVerify;
-use crate::features;
 #[cfg(feature = "serde")]
-use crate::rgb::Bech32;
-use crate::rgb::ToBech32;
+use crate::Bech32;
+use crate::ToBech32;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = usize;
@@ -140,7 +141,7 @@ impl Eq for Schema {}
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{
+    use lnpbp::strict_encoding::{
         strategies, Error, Strategy, StrictDecode, StrictEncode,
     };
 
@@ -195,17 +196,17 @@ mod strict_encoding {
 }
 
 mod _validation {
-    use super::*;
-
     use std::collections::BTreeSet;
 
-    use crate::client_side_validation::Conceal;
-    use crate::rgb::contract::nodes::PublicRights;
-    use crate::rgb::schema::{
+    use lnpbp::client_side_validation::Conceal;
+
+    use super::*;
+    use crate::contract::nodes::PublicRights;
+    use crate::schema::{
         script, MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
         SchemaVerify,
     };
-    use crate::rgb::{
+    use crate::{
         validation, AssignmentAction, Assignments, Metadata, Node, NodeId,
         OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
         StateTypes, VirtualMachine,
@@ -767,7 +768,7 @@ mod _validation {
                         }
                     })
                     .collect()
-            };
+            }
 
             for (type_id, indexes) in details {
                 match parent_node.owned_rights_by_type(*type_id) {
@@ -834,9 +835,9 @@ pub(crate) mod test {
     use amplify::Wrapper;
 
     use super::*;
-    use crate::bp::tagged_hash;
-    use crate::rgb::schema::*;
-    use crate::strict_encoding::*;
+    use crate::schema::*;
+    use lnpbp::bp::tagged_hash;
+    use lnpbp::strict_encoding::*;
 
     pub(crate) fn schema() -> Schema {
         const FIELD_TICKER: usize = 0;

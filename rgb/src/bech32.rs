@@ -15,17 +15,18 @@ use bech32::{self, FromBase32, ToBase32};
 use core::fmt::{Display, Formatter};
 use core::str::FromStr;
 use deflate::{write::DeflateEncoder, Compression};
-use std::convert::{TryFrom, TryInto};
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serializer};
+use std::convert::{TryFrom, TryInto};
 
-use crate::rgb::{
+use lnpbp::secp256k1zkp;
+use lnpbp::strict_encoding::{
+    self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
+};
+
+use crate::{
     seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
     Transition,
-};
-use crate::strict_encoding::{
-    self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
 };
 
 /// Bech32 representation of generic RGB data, that can be generated from
@@ -750,8 +751,9 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bp::blind::OutpointReveal;
-    use crate::client_side_validation::Conceal;
+    use amplify::DumbDefault;
+    use lnpbp::bp::blind::OutpointReveal;
+    use lnpbp::client_side_validation::Conceal;
 
     #[test]
     fn test_bech32_outpoint() {
@@ -837,7 +839,7 @@ mod test {
 
     #[test]
     fn test_bech32_anchor() {
-        let obj = Anchor::default();
+        let obj = Anchor::dumb_default();
         let bech32 = format!("{}", obj);
         assert_eq!(
             bech32,

@@ -558,9 +558,9 @@ dependencies = [
 
 [[package]]
 name = "grin_secp256k1zkp"
-version = "0.7.9"
+version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4c2e7431d1999f02112c2383c9d33e7a6212947abfba92c87ab7283ba667a8b"
+checksum = "daca5852d12dbd4df8b7b760eaad791d191ea546bf80c46b033bbcc650b35a5c"
 dependencies = [
  "arrayvec 0.3.25",
  "cc",
@@ -705,17 +705,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
 
 [[package]]
-name = "lightning-invoice"
-version = "0.4.0"
-source = "git+https://github.com/LNP-BP/rust-lightning-invoice?tag=lnpbp-v0.3#db6e52fa826d9e12c103911b878b83e98f687915"
-dependencies = [
- "bech32",
- "bitcoin_hashes",
- "num-traits 0.2.14",
- "secp256k1",
-]
-
-[[package]]
 name = "linked-hash-map"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -733,7 +722,7 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "lnpbp"
-version = "0.3.0-alpha.1"
+version = "0.3.0-alpha.2"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -744,12 +733,9 @@ dependencies = [
  "cc",
  "chacha20poly1305",
  "chrono",
- "deflate",
  "ed25519-dalek",
  "grin_secp256k1zkp",
- "inflate",
  "lazy_static",
- "lightning-invoice",
  "lnpbp_derive",
  "miniscript",
  "num-derive",
@@ -770,7 +756,7 @@ dependencies = [
 
 [[package]]
 name = "lnpbp_derive"
-version = "0.3.0-alpha.1"
+version = "0.3.0-alpha.2"
 dependencies = [
  "amplify",
  "lnpbp",
@@ -1256,6 +1242,33 @@ name = "regex-syntax"
 version = "0.6.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
+
+[[package]]
+name = "rgb"
+version = "0.3.0-alpha.2"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bech32",
+ "bitcoin",
+ "bitcoin_hashes",
+ "chrono",
+ "deflate",
+ "ed25519-dalek",
+ "grin_secp256k1zkp",
+ "inflate",
+ "lazy_static",
+ "lnpbp",
+ "lnpbp_derive",
+ "miniscript",
+ "num-derive",
+ "num-traits 0.2.14",
+ "regex",
+ "serde 1.0.118",
+ "serde_json",
+ "serde_with",
+ "serde_with_macros",
+]
 
 [[package]]
 name = "rust-ini"

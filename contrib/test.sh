@@ -3,10 +3,8 @@
 AS_DEPENDENCY=true
 DO_LINT=true
 
-# Library components, one by one
-FEATURES="rgb lnp"
-# ... and used together
-FEATURES="${FEATURES} rgb,lnp"
+# Library components
+FEATURES="lnp"
 # Cryptographic optionals
 FEATURES="${FEATURES} keygen bulletproofs elgamal"
 # Core rust optionals
@@ -15,9 +13,7 @@ FEATURES="${FEATURES} serde tokio async"
 FEATURES="${FEATURES} tor url websockets"
 FEATURES="${FEATURES} tor,url"
 # Full LNP strength, but without Serde
-FEATURES="${FEATURES} lnp,websockets,url,tokio,async,keygen"
-# Full library strength, but without Serde
-FEATURES="${FEATURES} rgb,lnp,tokio,websockets,url,async,keygen"
+FEATURES="${FEATURES} lnp,websockets,url,tokio,async,keygen,bulletproofs"
 
 if [ "$DO_COV" = true ]
 then

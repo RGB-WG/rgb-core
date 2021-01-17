@@ -156,6 +156,83 @@ impl StrictDecode for ed25519_dalek::Signature {
     }
 }
 
+#[cfg(feature = "grin_secp256k1zkp")]
+impl StrictEncode for secp256k1zkp::SecretKey {
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        self.0.as_ref().strict_encode(e)
+    }
+}
+
+#[cfg(feature = "grin_secp256k1zkp")]
+impl StrictDecode for secp256k1zkp::SecretKey {
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        let secp = secp256k1zkp::Secp256k1::with_caps(
+            secp256k1zkp::ContextFlag::Commit,
+        );
+        let data = Vec::<u8>::strict_decode(d)?;
+        Self::from_slice(&secp, &data).map_err(|_| {
+            Error::DataIntegrityError(
+                "Wrong private key data in pedersen commitment private key"
+                    .to_string(),
+            )
+        })
+    }
+}
+
+#[cfg(feature = "grin_secp256k1zkp")]
+impl StrictEncode for secp256k1zkp::pedersen::Commitment {
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        self.0.as_ref().strict_encode(e)
+    }
+}
+
+#[cfg(feature = "grin_secp256k1zkp")]
+impl StrictDecode for secp256k1zkp::pedersen::Commitment {
+    #[inline]
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        let data = Vec::<u8>::strict_decode(d)?;
+        if data.len() != secp256k1zkp::constants::PEDERSEN_COMMITMENT_SIZE {
+            Err(Error::DataIntegrityError(format!(
+                "Wrong size of Pedersen commitment: {}",
+                data.len()
+            )))?
+        }
+        Ok(Self::from_vec(data))
+    }
+}
+
+#[cfg(feature = "grin_secp256k1zkp")]
+impl StrictEncode for secp256k1zkp::pedersen::RangeProof {
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
+        self.proof[..self.plen].as_ref().strict_encode(e)
+    }
+}
+
+#[cfg(feature = "grin_secp256k1zkp")]
+impl StrictDecode for secp256k1zkp::pedersen::RangeProof {
+    #[inline]
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        use secp256k1zkp::constants::MAX_PROOF_SIZE;
+        let data = Vec::<u8>::strict_decode(d)?;
+        match data.len() {
+            len if len < MAX_PROOF_SIZE => {
+                let mut buf = [0; MAX_PROOF_SIZE];
+                buf[..len].copy_from_slice(&data);
+                Ok(Self {
+                    proof: buf,
+                    plen: len,
+                })
+            }
+            invalid_len => Err(Error::DataIntegrityError(format!(
+                "Wrong bulletproof data size: expected no more than {}, got {}",
+                MAX_PROOF_SIZE, invalid_len
+            ))),
+        }
+    }
+}
+
 impl StrictEncode for secp256k1::SecretKey {
     #[inline]
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
@@ -458,7 +535,7 @@ pub(crate) mod test {
 
     use super::*;
     use crate::bp::{blind::OutpointReveal, short_id, ShortId};
-    use crate::strict_encoding::test::test_suite;
+    use crate::test_helpers::test_suite;
 
     pub(crate) fn encode_decode<T: StrictEncode + StrictDecode>(
         object: &T,

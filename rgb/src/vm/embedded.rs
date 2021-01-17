@@ -13,9 +13,10 @@
 
 use core::any::Any;
 
+use lnpbp::client_side_validation::Conceal;
+
 use super::VirtualMachine;
-use crate::client_side_validation::Conceal;
-use crate::rgb::{
+use crate::{
     schema, schema::constants::*, script::StandardProcedure, value,
     Assignments, Metadata,
 };
@@ -104,7 +105,8 @@ impl Embedded {
                                 vec![
                                     value::Revealed {
                                         value: supply,
-                                        blinding: secp256k1zkp::key::ONE_KEY,
+                                        blinding:
+                                            lnpbp::secp256k1zkp::key::ONE_KEY,
                                     }
                                     .conceal()
                                     .commitment,

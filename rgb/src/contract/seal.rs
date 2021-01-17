@@ -11,13 +11,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::bp::blind::{OutpointHash, OutpointReveal};
-use crate::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, Conceal,
-};
-
 use bitcoin::{OutPoint, Txid};
 use core::convert::TryFrom;
+
+use lnpbp::bp::blind::{OutpointHash, OutpointReveal};
+use lnpbp::client_side_validation::{
+    commit_strategy, CommitEncodeWithStrategy, Conceal,
+};
 
 pub type Confidential = OutpointHash;
 
@@ -71,10 +71,6 @@ impl CommitEncodeWithStrategy for Revealed {
     type Strategy = commit_strategy::UsingConceal;
 }
 
-impl CommitEncodeWithStrategy for Confidential {
-    type Strategy = commit_strategy::UsingStrict;
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display, Error)]
 #[display(Debug)]
 pub struct WitnessVoutError;
@@ -92,7 +88,7 @@ impl TryFrom<Revealed> for OutPoint {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::io;
 
     impl StrictEncode for Revealed {
@@ -132,12 +128,11 @@ mod strict_encoding {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::client_side_validation::CommitEncode;
-    use crate::strict_encoding::test::*;
-    use crate::strict_encoding::{StrictDecode, StrictEncode};
-    use bitcoin_hashes::hex::FromHex;
-    use secp256k1zkp::rand::thread_rng;
-    use secp256k1zkp::rand::RngCore;
+    use bitcoin::hashes::hex::FromHex;
+    use lnpbp::client_side_validation::CommitEncode;
+    use lnpbp::secp256k1zkp::rand::{thread_rng, RngCore};
+    use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+    use lnpbp::test_helpers::*;
 
     // Hard coded TxOutpoint variant of a Revealed Seal
     // Constructed with following data

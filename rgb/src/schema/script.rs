@@ -200,7 +200,7 @@ pub enum StandardProcedure {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl_enum_strict_encoding!(GenesisAction);
     impl_enum_strict_encoding!(TransitionAction);
@@ -245,7 +245,7 @@ mod strict_encoding {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::strict_encoding::strict_serialize;
+        use lnpbp::strict_encoding::strict_serialize;
 
         #[test]
         fn test_basics() {

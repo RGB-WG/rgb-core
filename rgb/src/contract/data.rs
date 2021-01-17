@@ -17,15 +17,16 @@ use core::cmp::Ordering;
 use core::fmt::Debug;
 
 use bitcoin::hashes::{hash160, sha256, sha256d, sha512, Hash};
+use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::OutPoint;
 use bitcoin::{secp256k1, Transaction};
 
-use super::{ConfidentialState, RevealedState};
-use crate::client_side_validation::{
+use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
-use crate::strict_encoding::strict_serialize;
-use bitcoin::util::psbt::PartiallySignedTransaction;
+use lnpbp::strict_encoding::strict_serialize;
+
+use super::{ConfidentialState, RevealedState};
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, AsAny)]
@@ -90,8 +91,8 @@ pub enum Revealed {
     #[cfg_attr(
         feature = "serde",
         serde(
-            serialize_with = "crate::rgb::bech32::to_bech32_str",
-            deserialize_with = "crate::rgb::bech32::from_bech32_str"
+            serialize_with = "crate::bech32::to_bech32_str",
+            deserialize_with = "crate::bech32::from_bech32_str"
         )
     )]
     Curve25519Pubkey(ed25519_dalek::PublicKey),
@@ -100,8 +101,8 @@ pub enum Revealed {
     #[cfg_attr(
         feature = "serde",
         serde(
-            serialize_with = "crate::rgb::bech32::to_bech32_str",
-            deserialize_with = "crate::rgb::bech32::from_bech32_str"
+            serialize_with = "crate::bech32::to_bech32_str",
+            deserialize_with = "crate::bech32::from_bech32_str"
         )
     )]
     Ed25519Signature(ed25519_dalek::Signature),
@@ -269,9 +270,10 @@ impl Revealed {
     }
 }
 
-pub(super) mod strict_encoding {
+pub mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{
+
+    use lnpbp::strict_encoding::{
         strategies, Error, Strategy, StrictDecode, StrictEncode,
     };
     use std::io;
@@ -292,7 +294,7 @@ pub(super) mod strict_encoding {
         Debug,
     )]
     #[repr(u8)]
-    pub(in super::super) enum EncodingTag {
+    pub enum EncodingTag {
         U8 = 0b_0000_0000_u8,
         U16 = 0b_0000_0001_u8,
         U32 = 0b_0000_0010_u8,
@@ -486,7 +488,7 @@ pub(super) mod strict_encoding {
 
     #[cfg(test)]
     mod test {
-        use super::*;
+        use super::EncodingTag;
 
         #[test]
         fn test_enum_encodingtag_exhaustive() {
@@ -526,10 +528,11 @@ pub(super) mod strict_encoding {
 
 #[cfg(test)]
 mod test {
+    use super::super::test::test_confidential;
     use super::*;
-    use crate::client_side_validation::test::test_confidential;
-    use crate::strict_encoding::test::*;
-    use crate::strict_encoding::StrictDecode;
+
+    use lnpbp::strict_encoding::StrictDecode;
+    use lnpbp::test_helpers::*;
 
     // Hard coded test vectors
     static U_8: [u8; 2] = [0x0, 0x8];
@@ -794,7 +797,17 @@ mod test {
 
     #[test]
     fn test_conf1() {
-        test_conf!(
+        macro_rules! test_confidential {
+            ($(($revealed:ident, $conf:ident, $T:ty)),*) => (
+                {
+                    $(
+                        test_confidential::<$T>(&$revealed[..], &$conf[..], &$conf[..]);
+                    )*
+                }
+            );
+        }
+
+        test_confidential!(
             (U_8, U8_CONCEALED, Revealed),
             (U_16, U16_CONCEALED, Revealed),
             (U_32, U32_CONCEALED, Revealed),

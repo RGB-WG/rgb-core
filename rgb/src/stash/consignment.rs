@@ -15,9 +15,10 @@ use std::collections::BTreeSet;
 
 use bitcoin::Txid;
 
-use crate::bp;
-use crate::bp::blind::OutpointReveal;
-use crate::rgb::{
+use lnpbp::bp;
+use lnpbp::bp::blind::OutpointReveal;
+
+use crate::{
     validation, Anchor, Extension, Genesis, Node, NodeId, Schema, Transition,
     Validator,
 };
@@ -29,7 +30,6 @@ pub type ExtensionData = Vec<Extension>;
 pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
-#[lnpbp_crate(crate)]
 #[display(Debug)]
 pub struct Consignment {
     version: u16,
@@ -114,9 +114,9 @@ impl Consignment {
 #[cfg(test)]
 pub(crate) mod test {
     use super::*;
-    use crate::rgb::schema::test::schema;
-    use crate::rgb::validation::TxResolver;
-    use crate::strict_encoding::StrictDecode;
+    use crate::schema::test::schema;
+    use crate::validation::TxResolver;
+    use lnpbp::strict_encoding::StrictDecode;
 
     static CONSIGNMENT: [u8; 1555] = include!("../../../test/consignment.in");
 

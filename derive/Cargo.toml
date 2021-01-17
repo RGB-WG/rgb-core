@@ -1,6 +1,6 @@
 [package]
 name = "lnpbp_derive"
-version = "0.3.0-alpha.1"
+version = "0.3.0-alpha.2"
 license = "MIT"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "LNP/BP Core Library derive macros"

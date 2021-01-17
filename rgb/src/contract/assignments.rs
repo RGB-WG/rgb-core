@@ -16,15 +16,17 @@ use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use super::{
-    super::schema, data, seal, value, AtomicValue, AutoConceal, NoDataError,
-    NodeId, SealDefinition, SECP256K1_ZKP,
-};
-use crate::bp::blind::OutpointReveal;
-use crate::client_side_validation::{
+use lnpbp::bp::blind::OutpointReveal;
+use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
-use crate::strict_encoding::{StrictDecode, StrictEncode};
+use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+
+use super::{
+    data, seal, value, AtomicValue, AutoConceal, NoDataError, NodeId,
+    SealDefinition, SECP256K1_ZKP,
+};
+use crate::schema;
 
 pub type OwnedRights = BTreeMap<schema::OwnedRightType, Assignments>;
 
@@ -71,7 +73,7 @@ impl Assignments {
         let mut blinding_inputs: Vec<_> =
             inputs.iter().map(|inp| inp.blinding.clone()).collect();
         if blinding_inputs.is_empty() {
-            blinding_inputs.push(secp256k1zkp::key::ONE_KEY);
+            blinding_inputs.push(lnpbp::secp256k1zkp::key::ONE_KEY);
         }
 
         // the last blinding factor must be a correction value
@@ -786,8 +788,8 @@ where
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::Error;
     use data::strict_encoding::EncodingTag;
+    use lnpbp::strict_encoding::Error;
     use std::io;
 
     impl StrictEncode for Assignments {
@@ -907,23 +909,23 @@ mod strict_encoding {
 
 #[cfg(test)]
 mod test {
+    use super::data;
     use super::*;
-    use crate::bp::blind::OutpointReveal;
-    use crate::client_side_validation::{
+    use crate::contract::seal::Revealed;
+    use bitcoin::blockdata::transaction::OutPoint;
+    use bitcoin::hashes::{
+        hex::{FromHex, ToHex},
+        sha256, Hash, HashEngine,
+    };
+    use lnpbp::bp::blind::OutpointReveal;
+    use lnpbp::client_side_validation::{
         merklize, CommitEncode, Conceal, MerkleNode,
     };
-    use crate::rgb::contract::seal::Revealed;
-    use crate::rgb::data;
-    use crate::strict_encoding::test::*;
-    use bitcoin::blockdata::transaction::OutPoint;
-    use bitcoin_hashes::{
-        hex::{FromHex, ToHex},
-        sha256,
+    use lnpbp::secp256k1zkp::rand::{thread_rng, Rng, RngCore};
+    use lnpbp::secp256k1zkp::{
+        key::SecretKey, pedersen::Commitment, Secp256k1,
     };
-    use bitcoin_hashes::{Hash, HashEngine};
-    use secp256k1zkp::rand::RngCore;
-    use secp256k1zkp::rand::{thread_rng, Rng};
-    use secp256k1zkp::{key::SecretKey, pedersen::Commitment, Secp256k1};
+    use lnpbp::test_helpers::*;
 
     // Hard coded test vectors of Assignment Variants
     // Each Variant contains 4 types of Assignments

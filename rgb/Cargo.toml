@@ -1,0 +1,89 @@
+[package]
+name = "rgb"
+version = "0.3.0-alpha.2"
+license = "MIT"
+authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
+description = "RGB Core Library: coonfidential scalable smart contracts for bitcoin & LN"
+repository = "https://github.com/LNP-BP/rust-lnpbp"
+homepage = "https://github.com/LNP-BP"
+keywords = ["bitcoin", "lightning", "lnp-bp", "layer-3", "rgb"]
+readme = "README.md"
+edition = "2018"
+exclude = []
+
+[lib]
+name = "lnpbp"
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
+
+# Dependencies
+# ============
+#
+# Version policy
+# --------------
+# The policy in specifying dependencies versions are to use tilde requirements
+# according to
+# <https://doc.rust-lang.org/nightly/cargo/reference/specifying-dependencies.html?highlight=feature#tilde-requirements>
+# with full semver version specification (major, minor and patch components)
+# which means that we may upgrade for patches/bugfixes, but must not change
+# even the minor version of the package.
+# Once the library is stable consider upgrading tilde requirements to strict
+# equivalence requirements (with '=' sign) since even dependencies patching will
+# not introduce risk of breaking the consensus and even security updates must
+# be done manually after through testing
+[dependencies]
+# Dependencies on other LNP/BP repositories
+# -----------------------------------------
+amplify = { version = "2.4", features = ["stringly_conversions"] }
+amplify_derive = "2.4.3"
+lnpbp = { version = ">=0.3.0-alpha.2", path = "..", features = ["bulletproofs"] }
+lnpbp_derive = { version = ">=0.3.0-alpha.2", path = "../derive" }
+# Dependencies on core rust-bitcoin ecosystem projects
+# ----------------------------------------------------
+bitcoin = { version = "~0.26.0", features = ["rand"] }
+bitcoin_hashes = "~0.9.4" # we need macro from here
+# <https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0002.md#deterministic-public-key-extraction-from-bitcoin-script>
+# We have to fix version of miniscript as required by LNPBP-2 specification
+miniscript = { version = "~5.0.0", features = ["compiler"] }
+bech32 = "~0.7.2"
+#   Used only as a part of RGB for encoding Ed25519 key data (for instance as
+#   a part of Tor address)
+ed25519-dalek = "~1.0.0"
+# Core rust projects
+# ------------------
+#   This strange naming is a workaround for cargo inability to define required
+#   features for a dependency. See
+#   <https://github.com/rust-lang/api-guidelines/issues/180> for the explanation
+#   and references.
+serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
+serde_with = { version = "~1.5.1", features = ["hex"], optional = true }
+serde_with_macros = { version = "~1.2.0", optional = true } # Fix for the problem in 1.3.0
+lazy_static = "~1.4.0"
+# Serializtion
+# ------------
+#    Used in RGB data Bech32 encodings
+deflate = "~0.8.6"
+inflate = "~0.4.5"
+chrono = "~0.4.19"
+regex = "1"
+# Temporary-needed dependencies:
+# ------------------------------
+# 1. We are of no control of what's happening in Grin and would like to prevent
+#    updates w/o checking them manually. Should Elements Project secpk256k-zkp
+#    accept bulletproofs code, we will switch to it
+grin_secp256k1zkp = { version = "=0.7.10", optional = true }
+# 2. We use these to simplify enum strict encoding, but once the required
+#    functionality will become part of either amplify_derive or lnpbp_derive
+#    crates they should be removed
+num-traits = "~0.2.11"
+num-derive = "~0.3.0"
+
+[dev-dependencies]
+serde_json = "~1.0.60"
+
+[features]
+default = ["serde"]
+all = ["serde"]
+serde = ["serde_crate", "serde_with", "serde_with_macros",
+         "lnpbp/serde", "amplify/serde",
+         "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]

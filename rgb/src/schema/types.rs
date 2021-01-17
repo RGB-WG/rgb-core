@@ -325,12 +325,12 @@ pub mod elliptic_curve {
         Bip340,
     }
 }
-use bitcoin_hashes::core::ops::RangeInclusive;
+use bitcoin::hashes::core::ops::RangeInclusive;
 pub use elliptic_curve::EllipticCurve;
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl_enum_strict_encoding!(DigestAlgorithm);
     impl_enum_strict_encoding!(Bits);
@@ -380,7 +380,8 @@ mod strict_encoding {
 mod test {
     use super::Occurences;
     use super::*;
-    use crate::strict_encoding::{test::*, StrictDecode};
+    use lnpbp::strict_encoding::StrictDecode;
+    use lnpbp::test_helpers::*;
 
     static ONCE: [u8; 4] = [1, 0, 1, 0];
 

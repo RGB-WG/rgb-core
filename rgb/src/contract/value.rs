@@ -27,22 +27,21 @@ use std::io;
 
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
-use bitcoin::hashes::sha256;
-pub use secp256k1zkp::pedersen;
-use secp256k1zkp::rand::{Rng, RngCore};
-use secp256k1zkp::ContextFlag;
+pub use lnpbp::secp256k1zkp::pedersen;
+use lnpbp::secp256k1zkp::rand::{Rng, RngCore};
+use lnpbp::secp256k1zkp::{self};
 
-use super::{data, ConfidentialState, RevealedState, SECP256K1_ZKP};
-use crate::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, Conceal,
+use lnpbp::client_side_validation::{
+    commit_strategy, CommitEncode, CommitEncodeWithStrategy, Conceal,
 };
-use crate::commit_verify::CommitVerify;
-use crate::paradigms::client_side_validation::CommitEncode;
+use lnpbp::commit_verify::CommitVerify;
+
+use super::{ConfidentialState, RevealedState, SECP256K1_ZKP};
 
 pub type AtomicValue = u64;
 
 /// Proof for Pedersen commitment: a blinding key
-pub type BlindingFactor = secp256k1zkp::key::SecretKey;
+pub type BlindingFactor = lnpbp::secp256k1zkp::key::SecretKey;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, AsAny)]
 #[cfg_attr(
@@ -110,7 +109,6 @@ impl Ord for Revealed {
 }
 
 #[derive(Clone, Debug, Display, AsAny, StrictEncode, StrictDecode)]
-#[lnpbp_crate(crate)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -121,30 +119,22 @@ pub struct Confidential {
     #[cfg_attr(
         feature = "serde",
         serde(
-            serialize_with = "crate::rgb::bech32::to_bech32_str",
-            deserialize_with = "crate::rgb::bech32::from_bech32_str"
+            serialize_with = "crate::bech32::to_bech32_str",
+            deserialize_with = "crate::bech32::from_bech32_str"
         )
     )]
     pub commitment: pedersen::Commitment,
     #[cfg_attr(
         feature = "serde",
         serde(
-            serialize_with = "crate::rgb::bech32::to_bech32_str",
-            deserialize_with = "crate::rgb::bech32::from_bech32_str"
+            serialize_with = "crate::bech32::to_bech32_str",
+            deserialize_with = "crate::bech32::from_bech32_str"
         )
     )]
     pub bulletproof: pedersen::RangeProof,
 }
 
 impl ConfidentialState for Confidential {}
-
-impl CommitEncodeWithStrategy for pedersen::Commitment {
-    type Strategy = commit_strategy::UsingStrict;
-}
-
-impl CommitEncodeWithStrategy for pedersen::RangeProof {
-    type Strategy = commit_strategy::UsingHash<sha256::Hash>;
-}
 
 impl CommitEncode for Confidential {
     fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
@@ -252,93 +242,9 @@ impl Confidential {
 
 mod strict_encoding {
     use super::*;
-    use crate::strict_encoding::{Error, StrictDecode, StrictEncode};
-    use data::strict_encoding::EncodingTag;
+    use crate::data::strict_encoding::EncodingTag;
+    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::io;
-
-    mod zkp {
-        use super::*;
-
-        impl StrictEncode for BlindingFactor {
-            fn strict_encode<E: io::Write>(
-                &self,
-                e: E,
-            ) -> Result<usize, Error> {
-                self.0.as_ref().strict_encode(e)
-            }
-        }
-
-        impl StrictDecode for BlindingFactor {
-            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-                let secp =
-                    secp256k1zkp::Secp256k1::with_caps(ContextFlag::Commit);
-                let data = Vec::<u8>::strict_decode(d)?;
-                Self::from_slice(&secp, &data).map_err(|_| {
-                    Error::DataIntegrityError(
-                        "Wrong private key data in pedersen commitment private key".to_string(),
-                    )
-                })
-            }
-        }
-
-        impl StrictEncode for secp256k1zkp::pedersen::Commitment {
-            #[inline]
-            fn strict_encode<E: io::Write>(
-                &self,
-                e: E,
-            ) -> Result<usize, Error> {
-                self.0.as_ref().strict_encode(e)
-            }
-        }
-
-        impl StrictDecode for secp256k1zkp::pedersen::Commitment {
-            #[inline]
-            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-                let data = Vec::<u8>::strict_decode(d)?;
-                if data.len()
-                    != secp256k1zkp::constants::PEDERSEN_COMMITMENT_SIZE
-                {
-                    Err(Error::DataIntegrityError(format!(
-                        "Wrong size of Pedersen commitment: {}",
-                        data.len()
-                    )))?
-                }
-                Ok(Self::from_vec(data))
-            }
-        }
-
-        impl StrictEncode for secp256k1zkp::pedersen::RangeProof {
-            #[inline]
-            fn strict_encode<E: io::Write>(
-                &self,
-                e: E,
-            ) -> Result<usize, Error> {
-                self.proof[..self.plen].as_ref().strict_encode(e)
-            }
-        }
-
-        impl StrictDecode for secp256k1zkp::pedersen::RangeProof {
-            #[inline]
-            fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-                use secp256k1zkp::constants::MAX_PROOF_SIZE;
-                let data = Vec::<u8>::strict_decode(d)?;
-                match data.len() {
-                    len if len < MAX_PROOF_SIZE => {
-                        let mut buf = [0; MAX_PROOF_SIZE];
-                        buf[..len].copy_from_slice(&data);
-                        Ok(Self {
-                            proof: buf,
-                            plen: len,
-                        })
-                    }
-                    invalid_len => Err(Error::DataIntegrityError(format!(
-                        "Wrong bulletproof data size: expected no more than {}, got {}",
-                        MAX_PROOF_SIZE, invalid_len
-                    ))),
-                }
-            }
-        }
-    }
 
     impl StrictEncode for Revealed {
         fn strict_encode<E: io::Write>(
@@ -373,6 +279,7 @@ pub(crate) mod serde_helpers {
     //! Serde serialization helpers
 
     use bitcoin::hashes::hex::{FromHex, ToHex};
+    use lnpbp::secp256k1zkp;
     use serde::{Deserialize, Deserializer, Serializer};
 
     /// Serializes `buffer` to a lowercase hex string.
@@ -394,7 +301,7 @@ pub(crate) mod serde_helpers {
         use serde::de::Error;
         String::deserialize(deserializer).and_then(|string| {
             secp256k1zkp::SecretKey::from_slice(
-                &crate::rgb::contract::SECP256K1_ZKP,
+                &crate::contract::SECP256K1_ZKP,
                 &Vec::<u8>::from_hex(&string).map_err(|_| {
                     D::Error::custom("wrong hex data for SecretKey")
                 })?[..],
@@ -406,9 +313,10 @@ pub(crate) mod serde_helpers {
 
 #[cfg(test)]
 mod test {
+    use super::super::test::test_confidential;
     use super::*;
-    use crate::client_side_validation::test::*;
-    use crate::strict_encoding::{test::*, StrictDecode, StrictEncode};
+    use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+    use lnpbp::test_helpers::*;
 
     static AMOUNT_65: [u8; 43] = [
         0x3, 0x41, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0xa6, 0x2b,

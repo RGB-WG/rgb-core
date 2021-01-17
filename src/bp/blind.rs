@@ -15,7 +15,9 @@ use bitcoin::hashes::{sha256d, Hash, HashEngine};
 use bitcoin::secp256k1::rand::{thread_rng, RngCore};
 use bitcoin::{OutPoint, Txid};
 
-use crate::client_side_validation::Conceal;
+use crate::client_side_validation::{
+    commit_strategy, CommitEncodeWithStrategy, Conceal,
+};
 use crate::commit_verify::CommitVerify;
 
 /// Data required to generate or reveal the information about blinded
@@ -108,3 +110,7 @@ hash_newtype!(
     32,
     doc = "Blind version of transaction outpoint"
 );
+
+impl CommitEncodeWithStrategy for OutpointHash {
+    type Strategy = commit_strategy::UsingStrict;
+}
