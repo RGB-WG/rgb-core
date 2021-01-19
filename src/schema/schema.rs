@@ -16,12 +16,12 @@ use std::io;
 
 use bitcoin::hashes::{sha256, sha256t};
 
-use lnpbp::bp::TaggedHash;
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };
 use lnpbp::commit_verify::CommitVerify;
-use lnpbp::features;
+use lnpbp::TaggedHash;
+use wallet::features;
 
 use super::{
     vm, DataFormat, ExtensionSchema, GenesisSchema, OwnedRightType,
@@ -836,8 +836,8 @@ pub(crate) mod test {
 
     use super::*;
     use crate::schema::*;
-    use lnpbp::bp::tagged_hash;
     use lnpbp::strict_encoding::*;
+    use lnpbp::tagged_hash;
 
     pub(crate) fn schema() -> Schema {
         const FIELD_TICKER: usize = 0;

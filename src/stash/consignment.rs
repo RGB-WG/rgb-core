@@ -15,15 +15,14 @@ use std::collections::BTreeSet;
 
 use bitcoin::Txid;
 
-use lnpbp::bp;
-use lnpbp::bp::blind::OutpointReveal;
+use lnpbp::seals::{OutpointHash, OutpointReveal};
 
 use crate::{
     validation, Anchor, Extension, Genesis, Node, NodeId, Schema, Transition,
     Validator,
 };
 
-pub type ConsignmentEndpoints = Vec<(NodeId, bp::blind::OutpointHash)>;
+pub type ConsignmentEndpoints = Vec<(NodeId, OutpointHash)>;
 pub type TransitionData = Vec<(Anchor, Transition)>;
 pub type ExtensionData = Vec<Extension>;
 

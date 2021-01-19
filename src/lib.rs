@@ -28,9 +28,7 @@ extern crate amplify;
 #[macro_use]
 extern crate amplify_derive;
 #[macro_use]
-extern crate lnpbp;
-#[macro_use]
-extern crate lnpbp_derive;
+extern crate strict_encoding;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -44,7 +42,7 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-pub use lnpbp::secp256k1zkp;
+pub use secp256k1zkp;
 
 pub mod bech32;
 pub mod contract;

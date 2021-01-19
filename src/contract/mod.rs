@@ -31,11 +31,11 @@ pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
 pub use seal::SealDefinition;
 pub use value::AtomicValue;
 
-use lnpbp::secp256k1zkp::Secp256k1 as Secp256k1zkp;
+use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 lazy_static! {
     /// Secp256k1zpk context object
     pub(crate) static ref SECP256K1_ZKP: Secp256k1zkp =
-        Secp256k1zkp::with_caps(lnpbp::secp256k1zkp::ContextFlag::Commit);
+        Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
 }
 
 /// Error returned when the requested data does not exist

@@ -14,10 +14,10 @@
 use bitcoin::{OutPoint, Txid};
 use core::convert::TryFrom;
 
-use lnpbp::bp::blind::{OutpointHash, OutpointReveal};
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
+use lnpbp::seals::{OutpointHash, OutpointReveal};
 
 pub type Confidential = OutpointHash;
 
@@ -86,7 +86,7 @@ impl TryFrom<Revealed> for OutPoint {
     }
 }
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
     use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::io;
@@ -130,9 +130,8 @@ mod test {
     use super::*;
     use bitcoin::hashes::hex::FromHex;
     use lnpbp::client_side_validation::CommitEncode;
-    use lnpbp::secp256k1zkp::rand::{thread_rng, RngCore};
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
-    use lnpbp::test_helpers::*;
+    use secp256k1zkp::rand::{thread_rng, RngCore};
 
     // Hard coded TxOutpoint variant of a Revealed Seal
     // Constructed with following data

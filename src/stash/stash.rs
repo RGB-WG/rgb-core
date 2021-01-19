@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use lnpbp::bp::blind::OutpointHash;
+use lnpbp::seals::OutpointHash;
 
 use crate::{
     Anchor, Consignment, ContractId, Disclosure, Extension, Genesis, Node,

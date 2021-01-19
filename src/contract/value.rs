@@ -27,9 +27,9 @@ use std::io;
 
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
-pub use lnpbp::secp256k1zkp::pedersen;
-use lnpbp::secp256k1zkp::rand::{Rng, RngCore};
-use lnpbp::secp256k1zkp::{self};
+use secp256k1zkp;
+pub use secp256k1zkp::pedersen;
+use secp256k1zkp::rand::{Rng, RngCore};
 
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncode, CommitEncodeWithStrategy, Conceal,
@@ -41,7 +41,7 @@ use super::{ConfidentialState, RevealedState, SECP256K1_ZKP};
 pub type AtomicValue = u64;
 
 /// Proof for Pedersen commitment: a blinding key
-pub type BlindingFactor = lnpbp::secp256k1zkp::key::SecretKey;
+pub type BlindingFactor = secp256k1zkp::key::SecretKey;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, AsAny)]
 #[cfg_attr(
@@ -240,9 +240,9 @@ impl Confidential {
     }
 }
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
-    use crate::data::strict_encoding::EncodingTag;
+    use crate::data::_strict_encoding::EncodingTag;
     use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::io;
 
@@ -279,7 +279,7 @@ pub(crate) mod serde_helpers {
     //! Serde serialization helpers
 
     use bitcoin::hashes::hex::{FromHex, ToHex};
-    use lnpbp::secp256k1zkp;
+    use secp256k1zkp;
     use serde::{Deserialize, Deserializer, Serializer};
 
     /// Serializes `buffer` to a lowercase hex string.
@@ -316,7 +316,6 @@ mod test {
     use super::super::test::test_confidential;
     use super::*;
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
-    use lnpbp::test_helpers::*;
 
     static AMOUNT_65: [u8; 43] = [
         0x3, 0x41, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0xa6, 0x2b,

@@ -16,25 +16,25 @@ use serde_with::{As, DisplayFromStr};
 use std::collections::{BTreeMap, HashMap};
 
 use amplify::{DumbDefault, Wrapper};
-use bitcoin::hashes::{sha256, sha256t, Hash};
+use bitcoin::hashes::{sha256, sha256d, sha256t, Hash};
 use bitcoin::secp256k1;
 use bitcoin::util::psbt::raw::ProprietaryKey;
 use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::util::uint::Uint256;
 use bitcoin::{Transaction, Txid};
 
-use lnpbp::bp::dbc::{
-    self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
-    TxCommitment, TxContainer, TxSupplement, TxoutContainer,
-};
-use lnpbp::bp::resolvers::{Fee, FeeError};
-use lnpbp::bp::TaggedHash;
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
 };
 use lnpbp::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
-use lnpbp::lnpbp4::{MultimsgCommitment, TooManyMessagesError};
+use lnpbp::dbc::{
+    self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
+    TxCommitment, TxContainer, TxSupplement, TxoutContainer,
+};
+use lnpbp::lnpbp4::{MessageMap, MultimsgCommitment, TooManyMessagesError};
 use lnpbp::strict_encoding::{strategies, Strategy};
+use lnpbp::TaggedHash;
+use wallet::resolvers::{Fee, FeeError};
 
 use crate::{ContractId, NodeId};
 
@@ -149,14 +149,14 @@ impl Anchor {
         // assemble them in per-output-packs of ContractId: Transition
         // commitment type
         let per_output_sources = transitions.into_iter().fold(
-            HashMap::<usize, BTreeMap<sha256::Hash, sha256::Hash>>::new(),
+            HashMap::<usize, MessageMap>::new(),
             |mut data, (contract_id, node_id)| {
                 let id = Uint256::from_be_bytes(*contract_id.as_slice());
                 let vout = id % Uint256::from_u64(num_outs).unwrap();
                 let vout = vout.low_u64() as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
-                    sha256::Hash::from_inner(*contract_id.as_slice()),
-                    sha256::Hash::from_inner(*node_id.as_slice()),
+                    *contract_id.as_slice(),
+                    sha256d::Hash::from_inner(*node_id.as_slice()),
                 );
                 data
             },
@@ -253,7 +253,8 @@ impl Anchor {
                 });
 
             multimsg.iter().for_each(|(id, _)| {
-                let contract_id = ContractId::from_hash(*id);
+                let contract_id =
+                    ContractId::from_hash(sha256d::Hash::from_inner(*id));
                 contract_anchor_map.insert(contract_id, anchors.len());
             });
             anchors.push(Anchor {
@@ -276,7 +277,7 @@ impl Anchor {
             .get(pos)
             .expect("Index modulo length can't exceed array length")
             .commitment
-            == sha256::Hash::from_slice(&node_id[..])
+            == sha256d::Hash::from_slice(&node_id[..])
                 .expect("TaggedHashes type is broken")
     }
 
@@ -345,7 +346,7 @@ mod test {
     use amplify::Wrapper;
 
     use super::*;
-    use lnpbp::bp::tagged_hash;
+    use lnpbp::tagged_hash;
 
     #[test]
     fn test_anchor_id_midstate() {

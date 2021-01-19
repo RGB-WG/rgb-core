@@ -328,7 +328,7 @@ pub mod elliptic_curve {
 use bitcoin::hashes::core::ops::RangeInclusive;
 pub use elliptic_curve::EllipticCurve;
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
     use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
 
@@ -381,7 +381,7 @@ mod test {
     use super::Occurences;
     use super::*;
     use lnpbp::strict_encoding::StrictDecode;
-    use lnpbp::test_helpers::*;
+    use strict_encoding::test_helpers::*;
 
     static ONCE: [u8; 4] = [1, 0, 1, 0];
 

@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.3.0-alpha.2"
+version = "0.3.0-beta.1"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "RGB Core Library: private & scalable client-validated smart contracts for Bitcoin & Lightning"
@@ -34,10 +34,11 @@ crate-type = ["dylib", "rlib", "staticlib"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = { version = "2.4", features = ["stringly_conversions"] }
+amplify = { version = "3", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
-lnpbp = { version = ">=0.3.0-alpha.2", features = ["bulletproofs", "ed25519-dalek"] }
-lnpbp_derive = { version = ">=0.3.0-alpha.2" }
+lnpbp = { version = "0.3.0-beta.1", features = ["bulletproofs"] }
+strict_encoding = { version = "1.0.0-rc.6", features = ["crypto"] }
+descriptor-wallet = "0.3.0-rc.3"
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.26.0", features = ["rand"] }

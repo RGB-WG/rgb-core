@@ -16,10 +16,10 @@ use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use lnpbp::bp::blind::OutpointReveal;
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
+use lnpbp::seals::OutpointReveal;
 use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
@@ -73,7 +73,7 @@ impl Assignments {
         let mut blinding_inputs: Vec<_> =
             inputs.iter().map(|inp| inp.blinding.clone()).collect();
         if blinding_inputs.is_empty() {
-            blinding_inputs.push(lnpbp::secp256k1zkp::key::ONE_KEY);
+            blinding_inputs.push(secp256k1zkp::key::ONE_KEY);
         }
 
         // the last blinding factor must be a correction value
@@ -786,9 +786,9 @@ where
     type Strategy = commit_strategy::UsingConceal;
 }
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
-    use data::strict_encoding::EncodingTag;
+    use data::_strict_encoding::EncodingTag;
     use lnpbp::strict_encoding::Error;
     use std::io;
 
@@ -917,15 +917,12 @@ mod test {
         hex::{FromHex, ToHex},
         sha256, Hash, HashEngine,
     };
-    use lnpbp::bp::blind::OutpointReveal;
     use lnpbp::client_side_validation::{
         merklize, CommitEncode, Conceal, MerkleNode,
     };
-    use lnpbp::secp256k1zkp::rand::{thread_rng, Rng, RngCore};
-    use lnpbp::secp256k1zkp::{
-        key::SecretKey, pedersen::Commitment, Secp256k1,
-    };
-    use lnpbp::test_helpers::*;
+    use lnpbp::seals::OutpointReveal;
+    use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
+    use secp256k1zkp::{key::SecretKey, pedersen::Commitment, Secp256k1};
 
     // Hard coded test vectors of Assignment Variants
     // Each Variant contains 4 types of Assignments

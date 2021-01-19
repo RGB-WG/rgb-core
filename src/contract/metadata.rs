@@ -167,9 +167,8 @@ mod test {
     use lnpbp::client_side_validation::{
         merklize, CommitEncode, Conceal, MerkleNode,
     };
-    use lnpbp::secp256k1zkp::rand::{thread_rng, RngCore};
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
-    use lnpbp::test_helpers::*;
+    use secp256k1zkp::rand::{thread_rng, RngCore};
 
     // Hard coded sample metadata object as shown below
     // Metadata({13: {U8(2), U8(3), U16(2), U32(2), U32(3),

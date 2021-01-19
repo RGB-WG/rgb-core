@@ -19,10 +19,10 @@ use deflate::{write::DeflateEncoder, Compression};
 use serde::{Deserialize, Deserializer, Serializer};
 use std::convert::{TryFrom, TryInto};
 
-use lnpbp::secp256k1zkp;
 use lnpbp::strict_encoding::{
     self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
 };
+use secp256k1zkp;
 
 use crate::{
     seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
@@ -752,8 +752,8 @@ where
 mod test {
     use super::*;
     use amplify::DumbDefault;
-    use lnpbp::bp::blind::OutpointReveal;
     use lnpbp::client_side_validation::Conceal;
+    use lnpbp::seals::OutpointReveal;
 
     #[test]
     fn test_bech32_outpoint() {

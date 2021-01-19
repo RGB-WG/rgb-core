@@ -210,7 +210,7 @@ impl NodeSchema for TransitionSchema {
     }
 }
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
     use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
 
@@ -451,7 +451,6 @@ mod test {
     use crate::schema::SchemaVerify;
     use crate::validation::Failure;
     use lnpbp::strict_encoding::StrictDecode;
-    use lnpbp::test_helpers::*;
 
     static GENESIS_SCHEMA: [u8; 69] = [
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,

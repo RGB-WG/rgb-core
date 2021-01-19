@@ -16,11 +16,11 @@ use std::collections::BTreeSet;
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
 
-use lnpbp::bp::{self, TaggedHash};
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
 };
 use lnpbp::commit_verify::CommitVerify;
+use lnpbp::{Chain, TaggedHash};
 
 use super::{
     Assignments, AutoConceal, OwnedRights, ParentOwnedRights,
@@ -107,7 +107,7 @@ impl CommitEncodeWithStrategy for NodeId {
 #[display(ContractId::to_bech32_string)]
 pub struct ContractId(sha256t::Hash<NodeIdTag>);
 
-impl From<ContractId> for lnpbp::bp::chain::AssetId {
+impl From<ContractId> for lnpbp::chain::AssetId {
     fn from(id: ContractId) -> Self {
         Self::from_inner(id.into_inner().into_inner())
     }
@@ -213,7 +213,7 @@ pub trait Node: AsAny {
 )]
 pub struct Genesis {
     schema_id: SchemaId,
-    chain: bp::Chain,
+    chain: Chain,
     metadata: Metadata,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
@@ -527,7 +527,7 @@ impl Node for Transition {
 impl Genesis {
     pub fn with(
         schema_id: SchemaId,
-        chain: bp::Chain,
+        chain: Chain,
         metadata: Metadata,
         owned_rights: OwnedRights,
         public_rights: PublicRights,
@@ -554,7 +554,7 @@ impl Genesis {
     }
 
     #[inline]
-    pub fn chain(&self) -> &bp::Chain {
+    pub fn chain(&self) -> &Chain {
         &self.chain
     }
 }
@@ -601,7 +601,7 @@ impl Transition {
     }
 }
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
     use lnpbp::strict_encoding::{
         strategies, strict_deserialize, strict_serialize, Error, Strategy,
@@ -703,13 +703,12 @@ mod test {
     use std::io::Write;
 
     use super::*;
-    use lnpbp::bp::chain::{Chain, GENESIS_HASH_MAINNET};
-    use lnpbp::bp::tagged_hash;
+    use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
     use lnpbp::commit_verify::CommitVerify;
     use lnpbp::strict_encoding::{
         strict_serialize, StrictDecode, StrictEncode,
     };
-    use lnpbp::test_helpers::*;
+    use lnpbp::tagged_hash;
 
     static TRANSITION: [u8; 2364] = include!("../../test/transition.in");
     static GENESIS: [u8; 2462] = include!("../../test/genesis.in");
@@ -1071,6 +1070,6 @@ mod test {
             SchemaId::from_hex("8eafd3360d65258952f4d9575eac1b1f18ee185129718293b6d7622b1edd1f20")
                 .unwrap()
         );
-        assert_eq!(chain, &bp::chain::Chain::Mainnet);
+        assert_eq!(chain, &lnpbp::Chain::Mainnet);
     }
 }

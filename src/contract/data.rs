@@ -270,7 +270,7 @@ impl Revealed {
     }
 }
 
-pub mod strict_encoding {
+pub(super) mod _strict_encoding {
     use super::*;
 
     use lnpbp::strict_encoding::{
@@ -532,7 +532,6 @@ mod test {
     use super::*;
 
     use lnpbp::strict_encoding::StrictDecode;
-    use lnpbp::test_helpers::*;
 
     // Hard coded test vectors
     static U_8: [u8; 2] = [0x0, 0x8];

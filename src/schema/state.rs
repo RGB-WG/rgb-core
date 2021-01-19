@@ -180,7 +180,7 @@ impl DataFormat {
     }
 }
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
     use core::convert::TryFrom;
     use core::fmt::Debug;
@@ -1076,12 +1076,11 @@ mod test {
     use bitcoin::hashes::{hex::FromHex, sha256};
     use std::collections::BTreeMap;
 
-    use lnpbp::bp::blind::OutpointReveal;
-    use lnpbp::bp::TaggedHash;
     use lnpbp::client_side_validation::Conceal;
-    use lnpbp::secp256k1zkp::rand::thread_rng;
+    use lnpbp::seals::OutpointReveal;
     use lnpbp::strict_encoding::{strict_serialize, StrictDecode};
-    use lnpbp::test_helpers::*;
+    use lnpbp::TaggedHash;
+    use secp256k1zkp::rand::thread_rng;
 
     // Txids to generate seals
     static TXID_VEC: [&str; 4] = [
