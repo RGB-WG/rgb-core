@@ -137,9 +137,9 @@ dependencies = [
 
 [[package]]
 name = "client_side_validation"
-version = "1.0.0-rc.2+1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bb6b43b91362351ca42584b51964735f6eb922b773e5ff4717187da52a5e5d2"
+checksum = "bdfd8dba1ad3d1958eac41d2675f6802606917e61daa312ea5b68fd2f075e934"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -223,9 +223,9 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.3.0-rc.3+1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d50086c75274e19503e1a4566d425ecfb0a333d2aba74fe7e640b66f750305fa"
+checksum = "be824a9c51233ac02952d1557b76fe706231ae09209325a78128864db2b8c31b"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -372,9 +372,9 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "lnpbp"
-version = "0.3.0-beta.1+5"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61eaeee726a840a2855732b72af7716cac6d1b1f3c0531a36dc35f7fb6bc9e58"
+checksum = "2918519f7b03b2ae360e03ce944f2f13d315a26fa0eb01cc6fb68cad3dc88768"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -692,7 +692,7 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 
 [[package]]
 name = "rgb-core"
-version = "0.3.0-beta.1"
+version = "0.3.0-beta.2"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -752,18 +752,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.119"
+version = "1.0.120"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bdd36f49e35b61d49efd8aa7fc068fd295961fd2286d0b2ee9a4c7a14e99cc3"
+checksum = "166b2349061381baf54a58e4b13c89369feb0ef2eaa57198899e2312aac30aab"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.119"
+version = "1.0.120"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "552954ce79a059ddd5fd68c271592374bd15cab2274970380c000118aeffe1cd"
+checksum = "0ca2a8cb5805ce9e3b95435e3765b7b553cecc762d938d409434338386cb5775"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.8",
@@ -847,9 +847,9 @@ checksum = "0f0242b8e50dd9accdd56170e94ca1ebd223b098eb9c83539a6e367d0f36ae68"
 
 [[package]]
 name = "strict_encoding"
-version = "1.0.0-rc.6+2"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a93d1c502031b45fc99153227f54e8249db90b596b260fd4735eb782e506642c"
+checksum = "0956cfdd7fcd053c0492e4cb5b293ac341de971bb2ff043aa5efdb3b0a29ca49"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -863,9 +863,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding_derive"
-version = "1.0.0-rc.1"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f879c81dfff3bf07ad02d0c829598aacabc5692446eff4a5c771eb4ae59d235c"
+checksum = "89347dfd57ea3160e6de4d7b21b3236b8a40800c1760ebfcfe9d69e3634e8955"
 dependencies = [
  "amplify",
  "proc-macro2 1.0.24",

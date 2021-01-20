@@ -1,12 +1,13 @@
 [package]
 name = "rgb-core"
-version = "0.3.0-beta.1"
+version = "0.3.0-beta.2"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "RGB Core Library: private & scalable client-validated smart contracts for Bitcoin & Lightning"
 repository = "https://github.com/rgb-org/rgb-core"
 homepage = "https://rgb.network"
 keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "lnp-bp"]
+categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
 edition = "2018"
 exclude = [".github", "contrib"]
@@ -36,9 +37,9 @@ crate-type = ["dylib", "rlib", "staticlib"]
 # -----------------------------------------
 amplify = { version = "3", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
-lnpbp = { version = "0.3.0-beta.1", features = ["bulletproofs"] }
-strict_encoding = { version = "1.0.0-rc.6", features = ["crypto"] }
-descriptor-wallet = "0.3.0-rc.3"
+lnpbp = { version = "0.3", features = ["bulletproofs"] }
+strict_encoding = { version = "1", features = ["crypto"] }
+descriptor-wallet = "0.3"
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.26.0", features = ["rand"] }
@@ -66,7 +67,7 @@ lazy_static = "~1.4.0"
 deflate = "~0.8.6"
 inflate = "~0.4.5"
 chrono = "~0.4.19"
-regex = "1"
+regex = "~1.4.3"
 # Temporary-needed dependencies:
 # ------------------------------
 # 1. We are of no control of what's happening in Grin and would like to prevent
