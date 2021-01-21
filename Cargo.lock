@@ -754,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "rgb20"
-version = "0.3.0-beta.4"
+version = "0.3.0-rc.1"
 dependencies = [
  "amplify",
  "amplify_derive",

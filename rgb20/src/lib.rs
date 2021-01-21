@@ -50,4 +50,4 @@ pub use invoice::{
     Error as InvoiceError, Invoice, Outpoint, OutpointDescriptor,
 };
 pub use outcoins::{ConsealCoins, OutpointCoins, SealCoins};
-pub use processor::{issue, transfer};
+pub use processor::{issue, transfer, TransferError};
