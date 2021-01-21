@@ -131,6 +131,7 @@ dependencies = [
  "libc",
  "num-integer",
  "num-traits",
+ "serde",
  "time",
  "winapi",
 ]
@@ -753,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "rgb20"
-version = "0.3.0-beta.3"
+version = "0.3.0-beta.4"
 dependencies = [
  "amplify",
  "amplify_derive",

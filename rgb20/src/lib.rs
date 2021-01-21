@@ -32,9 +32,14 @@ extern crate lnpbp;
 #[macro_use]
 extern crate rgb;
 
+#[cfg(feature = "serde")]
+extern crate serde_crate as serde;
+#[cfg(feature = "serde")]
+extern crate serde_with;
+
 mod asset;
 mod invoice;
-mod outcoins;
+pub mod outcoins;
 mod processor;
 pub mod schema;
 
