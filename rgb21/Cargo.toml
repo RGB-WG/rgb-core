@@ -1,9 +1,27 @@
 [package]
 name = "rgb21"
-version = "0.1.0"
+version = "0.3.0-beta.3"
+license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
+description = "RGB-21 Library: non-fungible tokens (collectibles) for bitcoin & lightning"
+repository = "https://github.com/rgb-org/rgb-core"
+homepage = "https://rgb.network"
+keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "nft"]
+categories = ["cryptography::cryptocurrencies"]
+readme = "README.md"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "rgb21"
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
 
 [dependencies]
+amplify = "3"
+amplify_derive = "2.4.3"
+lnpbp = "0.3"
+rgb-core = { version = "0.3.0-beta.3", path = ".." }
+bitcoin = "0.26"
+serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
+serde_with = { version = "~1.5.1", features = ["hex"], optional = true }
+chrono = "0.4"

@@ -769,15 +769,45 @@ dependencies = [
 
 [[package]]
 name = "rgb21"
-version = "0.1.0"
+version = "0.3.0-beta.3"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bitcoin",
+ "chrono",
+ "lnpbp",
+ "rgb-core",
+ "serde",
+ "serde_with",
+]
 
 [[package]]
 name = "rgb22"
-version = "0.1.0"
+version = "0.3.0-beta.3"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bitcoin",
+ "chrono",
+ "lnpbp",
+ "rgb-core",
+ "serde",
+ "serde_with",
+]
 
 [[package]]
 name = "rgb23"
-version = "0.1.0"
+version = "0.3.0-beta.3"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bitcoin",
+ "chrono",
+ "lnpbp",
+ "rgb-core",
+ "serde",
+ "serde_with",
+]
 
 [[package]]
 name = "rustc-serialize"

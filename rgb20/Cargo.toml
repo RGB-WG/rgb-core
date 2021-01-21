@@ -10,10 +10,9 @@ keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "digital-assets"]
 categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
 edition = "2018"
-exclude = [".github", "contrib"]
 
 [lib]
-name = "rgb"
+name = "rgb20"
 path = "src/lib.rs"
 crate-type = ["rlib", "staticlib"]
 
@@ -27,4 +26,4 @@ serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], 
 serde_with = { version = "~1.5.1", features = ["hex"], optional = true }
 chrono = "0.4"
 regex = "1.4"
-url = "2.2"
+url = "2.1"
