@@ -35,13 +35,14 @@ extern crate rgb;
 mod asset;
 mod invoice;
 mod outcoins;
+mod processor;
 pub mod schema;
 
 pub use asset::{
-    AccountingAmount, AccountingValue, Allocation, Asset, Issue, Supply,
+    AccountingAmount, AccountingValue, Allocation, Asset, Error, Issue, Supply,
 };
 pub use invoice::{
     Error as InvoiceError, Invoice, Outpoint, OutpointDescriptor,
 };
 pub use outcoins::{ConsealCoins, OutpointCoins, SealCoins};
-pub use schema::Error;
+pub use processor::{issue, transfer};
