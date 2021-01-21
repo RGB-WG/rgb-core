@@ -173,6 +173,39 @@ pub struct Asset {
     known_allocations: BTreeMap<bitcoin::OutPoint, Vec<Allocation>>,
 }
 
+impl Asset {
+    #[inline]
+    pub fn with(
+        id: ContractId,
+        ticker: String,
+        name: String,
+        description: Option<String>,
+        supply: Supply,
+        chain: Chain,
+        fractional_bits: u8,
+        date: NaiveDateTime,
+        known_issues: Vec<Issue>,
+        known_inflation: BTreeMap<bitcoin::OutPoint, AccountingAmount>,
+        unknown_inflation: AccountingAmount,
+        known_allocations: BTreeMap<bitcoin::OutPoint, Vec<Allocation>>,
+    ) -> Asset {
+        Asset {
+            id,
+            ticker,
+            name,
+            description,
+            supply,
+            chain,
+            fractional_bits,
+            date,
+            known_issues,
+            known_inflation,
+            unknown_inflation,
+            known_allocations,
+        }
+    }
+}
+
 #[derive(
     Clone, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
@@ -184,7 +217,7 @@ pub struct Asset {
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Allocation {
-    // Unique primary key is `node_id` + `index`
+    /// Unique primary key is `node_id` + `index`
     node_id: NodeId,
     /// Index of the assignment of ownership right type within the node
     index: u16,
@@ -192,6 +225,23 @@ pub struct Allocation {
     /// `Asset::known_allocations`
     outpoint: bitcoin::OutPoint,
     value: value::Revealed,
+}
+
+impl Allocation {
+    #[inline]
+    pub fn with(
+        node_id: NodeId,
+        index: u16,
+        outpoint: bitcoin::OutPoint,
+        value: value::Revealed,
+    ) -> Allocation {
+        Allocation {
+            node_id,
+            index,
+            outpoint,
+            value,
+        }
+    }
 }
 
 #[derive(
@@ -215,20 +265,33 @@ pub struct Allocation {
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Supply {
-    // Sum of all issued amounts
+    /// Sum of all issued amounts
     known_circulating: AccountingAmount,
-    // Specifies if all issuances are known (i.e. there are data for issue
-    // state transitions for all already spent `inflation`
-    // single-use-seals). In this case `known_circulating` will be equal to
-    // `total_circulating`. The parameter is option since the fact that the
-    // UTXO is spend may be unknown without blockchain access
+    /// Specifies if all issuances are known (i.e. there are data for issue
+    /// state transitions for all already spent `inflation`
+    /// single-use-seals). In this case `known_circulating` will be equal to
+    /// `total_circulating`. The parameter is option since the fact that the
+    /// UTXO is spend may be unknown without blockchain access
     is_issued_known: Option<bool>,
-    // We always know total supply, b/c even for assets without defined cap the
-    // cap *de facto* equals to u64::MAX
+    /// We always know total supply, b/c even for assets without defined cap
+    /// the cap *de facto* equals to u64::MAX
     max_cap: AccountingAmount,
 }
 
 impl Supply {
+    #[inline]
+    pub fn with(
+        known_circulating: AccountingAmount,
+        is_issued_known: Option<bool>,
+        max_cap: AccountingAmount,
+    ) -> Supply {
+        Supply {
+            known_circulating,
+            is_issued_known,
+            max_cap,
+        }
+    }
+
     pub fn total_circulating(&self) -> Option<AccountingAmount> {
         if self.is_issued_known.unwrap_or(false) {
             Some(self.known_circulating)
@@ -276,16 +339,33 @@ pub struct Issue {
 }
 
 impl Issue {
+    pub fn with(
+        id: NodeId,
+        asset_id: ContractId,
+        amount: AccountingAmount,
+        origin: Option<bitcoin::OutPoint>,
+    ) -> Issue {
+        Issue {
+            id,
+            asset_id,
+            amount,
+            origin,
+        }
+    }
+
+    #[inline]
     pub fn is_primary(&self) -> bool {
         self.origin.is_none()
     }
 
+    #[inline]
     pub fn is_secondary(&self) -> bool {
         self.origin.is_some()
     }
 }
 
 impl Asset {
+    #[inline]
     pub fn add_issue(&self, _issue: Transition) -> Supply {
         unimplemented!()
     }
