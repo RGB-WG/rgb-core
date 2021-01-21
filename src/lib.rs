@@ -50,6 +50,8 @@ pub mod schema;
 pub mod stash;
 pub mod validation;
 pub mod vm;
+#[macro_use]
+mod macros;
 
 pub mod prelude {
     use super::*;
