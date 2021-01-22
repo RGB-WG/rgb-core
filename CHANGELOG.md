@@ -1,18 +1,20 @@
 Change Log
 ==========
 
-v0.3.0-alpha.2
---------------
+v0.3.0
+------
 - RGB Core Library is extracted and externalized from LNP/BP Core Library
-
-v0.3.0-alpha.1
---------------
 - Serde encoding fixes (proper use of `serde_as` for wrapped types)
 - BIP32 & descriptor enhancements
-- Miniscript 4.0 migration
+- Rust bitcoin 0.26 & Miniscript 5.0 migration
+- More robust PSBT processing
 
-v0.2.1, v0.2.2
---------------
+v0.2.2
+------
+- Fixed PSBT key serialization issue during commitment procedure
+
+v0.2.1
+------
 - Fixing serde to use Bech32 encoding for ContractId and SchemaId types
 
 v0.2.0
