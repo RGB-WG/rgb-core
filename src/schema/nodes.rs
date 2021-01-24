@@ -26,7 +26,20 @@ pub type MetadataStructure = BTreeMap<FieldType, Occurences>;
 pub type PublicRightsStructure = BTreeSet<PublicRightType>;
 pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurences>;
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[derive(
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[strict_encoding_crate(lnpbp::strict_encoding)]
 /// Node type: genesis, extensions and state transitions
 pub enum NodeType {
     /// Genesis node: single node per contract, defining contract and

@@ -43,7 +43,9 @@ pub enum Validity {
     Invalid,
 }
 
-#[derive(Clone, Debug, Display, Default)]
+#[derive(Clone, Debug, Display, Default, StrictEncode, StrictDecode)]
+#[strict_encoding_crate(lnpbp::strict_encoding)]
+// TODO: Display via YAML
 #[display(Debug)]
 pub struct Status {
     pub unresolved_txids: Vec<Txid>,
@@ -130,7 +132,10 @@ impl Status {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
+)]
+#[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
 pub enum Failure {
@@ -236,7 +241,10 @@ pub enum Failure {
     ScriptFailure(NodeId, u8),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
+)]
+#[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
@@ -246,7 +254,10 @@ pub enum Warning {
     ExcessiveTransition(NodeId),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+#[derive(
+    Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
+)]
+#[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {
