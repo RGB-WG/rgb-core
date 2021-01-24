@@ -29,6 +29,23 @@ use crate::{
     Transition,
 };
 
+// TODO: Move To/FromBech32Data into LNP/BP Core Library
+
+pub trait ToBech32Data {
+    fn to_bech32data(&self) -> String;
+}
+
+pub trait FromBech32Data {
+    fn from_bech32data(data: String) -> Vec<u8>;
+}
+
+impl ToBech32Data for Vec<u8> {
+    fn to_bech32data(&self) -> String {
+        ::bech32::encode("data", self.to_base32())
+            .expect("HRP is hardcoded and can't fail")
+    }
+}
+
 /// Bech32 representation of generic RGB data, that can be generated from
 /// some string basing on Bech32 HRP value.
 #[derive(Clone, Debug, From)]
