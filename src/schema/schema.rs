@@ -832,8 +832,6 @@ mod _validation {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use amplify::Wrapper;
-
     use super::*;
     use crate::schema::*;
     use lnpbp::strict_encoding::*;
@@ -984,7 +982,7 @@ pub(crate) mod test {
     #[test]
     fn test_schema_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:schema");
-        assert_eq!(midstate.into_inner(), MIDSTATE_SHEMA_ID);
+        assert_eq!(**midstate, MIDSTATE_SHEMA_ID);
     }
 
     #[test]

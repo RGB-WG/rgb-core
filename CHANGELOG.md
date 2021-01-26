@@ -1,6 +1,11 @@
 Change Log
 ==========
 
+v0.3.1
+------
+- Lightning encoding for RGB types used in lightning messages
+- Added missed StrictEncoding derives
+
 v0.3.0
 ------
 - RGB Core Library is extracted and externalized from LNP/BP Core Library

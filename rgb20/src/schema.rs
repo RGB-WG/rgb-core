@@ -438,8 +438,8 @@ impl Deref for HistoryProofFormat {
 #[cfg(test)]
 mod test {
     use super::*;
+    use lnpbp::bech32::Bech32DataString;
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
-    use rgb::bech32::ToBech32Data;
     use rgb::{FromBech32, ToBech32};
 
     #[test]
@@ -703,7 +703,7 @@ mod test {
             .strict_serialize()
             .expect("RGB-20 schema serialization failed");
 
-        let bech32data = data.to_bech32data();
+        let bech32data = data.bech32_data_string();
         println!("{}", bech32data);
 
         let schema20 = Schema::strict_deserialize(data)

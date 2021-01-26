@@ -698,7 +698,6 @@ mod _strict_encoding {
 
 #[cfg(test)]
 mod test {
-    use amplify::Wrapper;
     use bitcoin::hashes::hex::ToHex;
     use std::io::Write;
 
@@ -716,7 +715,7 @@ mod test {
     #[test]
     fn test_node_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:node");
-        assert_eq!(midstate.into_inner(), MIDSTATE_NODE_ID);
+        assert_eq!(**midstate, MIDSTATE_NODE_ID);
     }
 
     // Making sure that <https://github.com/LNP-BP/LNPBPs/issues/58>

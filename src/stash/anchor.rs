@@ -343,14 +343,12 @@ impl ConsensusCommit for Anchor {
 
 #[cfg(test)]
 mod test {
-    use amplify::Wrapper;
-
     use super::*;
     use lnpbp::tagged_hash;
 
     #[test]
     fn test_anchor_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:anchor");
-        assert_eq!(midstate.into_inner(), MIDSTATE_ANCHOR_ID);
+        assert_eq!(**midstate, MIDSTATE_ANCHOR_ID);
     }
 }
