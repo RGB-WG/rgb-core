@@ -12,10 +12,11 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::BTreeSet;
+use std::str::FromStr;
 
 use bitcoin::hashes::{sha256, sha256t};
 use bitcoin::Txid;
-use lnpbp::bech32::{self, ToBech32String};
+use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use lnpbp::client_side_validation::{
     commit_strategy, commit_verify::CommitVerify, CommitEncodeWithStrategy,
     ConsensusCommit,
@@ -94,6 +95,14 @@ impl bech32::Strategy for ConsignmentId {
     type Strategy = bech32::strategies::UsingStrictEncoding;
 }
 
+impl FromStr for ConsignmentId {
+    type Err = bech32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        ConsignmentId::from_bech32_str(s)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[display(Consignment::to_bech32_string)]
 pub struct Consignment {
@@ -119,6 +128,14 @@ impl ConsensusCommit for Consignment {
 impl bech32::Strategy for Consignment {
     const HRP: &'static str = "consignment";
     type Strategy = bech32::strategies::CompressedStrictEncoding;
+}
+
+impl FromStr for Consignment {
+    type Err = bech32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Consignment::from_bech32_str(s)
+    }
 }
 
 impl Consignment {
@@ -238,6 +255,7 @@ pub(crate) mod test {
 
     #[test]
     fn test_consignment_id_midstate() {
+        // TODO: Do the actual consignment verification testing
         let midstate = tagged_hash::Midstate::with(b"rgb:consignment");
         assert_eq!(**midstate, MIDSTATE_CONSIGNMENT_ID);
     }
@@ -245,11 +263,14 @@ pub(crate) mod test {
     #[test]
     fn test_consignment_bech32() {
         let consignment = consignment();
-        assert_eq!(
-            "id1shgyllf9v399wmsgryf7h8sxkuw2sqenfx6tsg9z3gfu69az8shs3nh86v",
-            consignment.id().to_string()
-        );
-        assert_eq!(
+
+        let bech32id =
+            "id1shgyllf9v399wmsgryf7h8sxkuw2sqenfx6tsg9z3gfu69az8shs3nh86v";
+        let id = consignment.id();
+        assert_eq!(bech32id, id.to_string());
+        assert_eq!(ConsignmentId::from_str(bech32id).unwrap(), id);
+
+        let bech32cs =
             "consignment1qxz4x7e563u3fll7vmjrjwx7j8rscr2e2602hdpz2wsmt6e\
         4n8gxg0fx3ldx5xrf6rqa4g434q8vnz3n3hghsxm09xjlyxynz8n8s4pjg70x8z735qnvnn\
         kga8k870nlm3enla77a77lw7l0hyq83d7avmmmh6777je8keckayc4zllhlxaf2tr8n84r2\
@@ -281,8 +302,9 @@ pub(crate) mod test {
         g699q50ekv2e9u2e94ny8tshgal5v9dejuwgz0x7g3amh9gt00halh9dcayl27yhksl66tk\
         tjt5gyfm8gls7k9ya4h4slf0deqlthrrxkjl6ekccnxt7yd9u6pxu99k4w9jvch3g0ldce8\
         ng9zlfgx6t95uakg2v0ezeke903q4vs09vdte39rqced0mw3ua9plkc8my2rnwef643cuj2\
-        lmwte6r4xlu6wkxmt0s3w07a5a0uqcz74flw",
-            consignment.to_string()
-        );
+        lmwte6r4xlu6wkxmt0s3w07a5a0uqcz74flw";
+
+        assert_eq!(bech32cs, consignment.to_string());
+        assert_eq!(Consignment::from_str(bech32cs).unwrap(), consignment);
     }
 }
