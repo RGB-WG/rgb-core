@@ -29,6 +29,8 @@ use crate::{
     Transition,
 };
 
+// TODO: Refactor bech32 into single style after `Consignment` & `ConsignmentId`
+
 /// Bech32 representation of generic RGB data, that can be generated from
 /// some string basing on Bech32 HRP value.
 #[derive(Clone, Debug, From)]

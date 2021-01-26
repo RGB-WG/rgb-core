@@ -420,9 +420,9 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "lnpbp"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26eeda552fc59f72a25581f2d69fd938e6a3ae3e0953bd17d043f324e5f0534a"
+checksum = "63aa11f5f04899dcd2ab0379709bb733ec880e1dfe8c0c5d5ca07549bf58b0f2"
 dependencies = [
  "amplify",
  "amplify_derive",

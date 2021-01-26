@@ -37,7 +37,7 @@ crate-type = ["rlib", "staticlib"]
 # -----------------------------------------
 amplify = { version = "3", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
-lnpbp = { version = "0.3.1", features = ["bulletproofs"] }
+lnpbp = { version = "0.3.2", features = ["bulletproofs", "zip"] }
 strict_encoding = { version = "1", features = ["crypto"] }
 lightning_encoding = "0.3.11"
 descriptor-wallet = "0.3"
