@@ -41,16 +41,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "amplify_derive_helpers"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9076b2ac55f9451a0b7f36921d1c7d3a4c8822c3cbf6ecb5eece6fab90c7fc22"
-dependencies = [
- "proc-macro2 1.0.24",
- "syn 1.0.60",
-]
-
-[[package]]
 name = "arrayvec"
 version = "0.3.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -234,40 +224,6 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76314d7029ed883018642059066735c3a21718ae42a120dfbf239e86936098dd"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bitcoin",
- "lazy_static",
- "lightning_encoding 0.3.11",
- "miniscript",
- "regex",
- "serde",
- "serde_with",
- "strict_encoding",
-]
-
-[[package]]
-name = "descriptor-wallet"
-version = "0.4.0-alpha.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50404f20ee9342951683a223b9d87ae49c5e51b5270a3d60fce15eb118070dbc"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bitcoin",
- "lazy_static",
- "lightning_encoding 0.4.0-alpha.2+1",
- "miniscript",
- "regex",
- "strict_encoding",
-]
-
-[[package]]
-name = "descriptor-wallet"
 version = "0.4.0-alpha.1"
 source = "git+https://github.com/LNP-BP/descriptor-wallet#771b85bb120f84db9fe082048d941e9bbfdb22a2"
 dependencies = [
@@ -275,7 +231,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "lazy_static",
- "lightning_encoding 0.4.0-alpha.1",
+ "lightning_encoding",
  "miniscript",
  "regex",
  "serde",
@@ -432,39 +388,13 @@ checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
 
 [[package]]
 name = "lightning_encoding"
-version = "0.3.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bff5b60ba947fb0194cb076a29968418d7b70af01781eb9973371a0efe6d3871"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bitcoin",
- "lightning_encoding_derive 0.3.12",
- "strict_encoding",
-]
-
-[[package]]
-name = "lightning_encoding"
 version = "0.4.0-alpha.1"
 source = "git+https://github.com/LNP-BP/lnp-core#f9761dfb53441a7b37d38a82c9db4179496035c4"
 dependencies = [
  "amplify",
  "amplify_derive",
  "bitcoin",
- "lightning_encoding_derive 0.3.12",
- "strict_encoding",
-]
-
-[[package]]
-name = "lightning_encoding"
-version = "0.4.0-alpha.2+1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ddd25c1dc1c9318c1521ebf042783d45ebe5f38e5fd07472cd6059b1eb4fa52"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bitcoin",
- "lightning_encoding_derive 0.4.0-alpha.1",
+ "lightning_encoding_derive",
  "strict_encoding",
 ]
 
@@ -481,48 +411,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "lightning_encoding_derive"
-version = "0.4.0-alpha.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b378884459b815f2fff39a160d94fb49ee3a201ae661a19a63ee637291937471"
-dependencies = [
- "amplify",
- "amplify_derive_helpers",
- "proc-macro2 1.0.24",
- "quote 1.0.8",
- "syn 1.0.60",
-]
-
-[[package]]
 name = "linked-hash-map"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
-
-[[package]]
-name = "lnpbp"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63aa11f5f04899dcd2ab0379709bb733ec880e1dfe8c0c5d5ca07549bf58b0f2"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bech32",
- "bitcoin",
- "bitcoin_hashes",
- "client_side_validation",
- "deflate",
- "descriptor-wallet 0.3.5",
- "inflate",
- "lazy_static",
- "lightning_encoding 0.3.11",
- "miniscript",
- "serde",
- "serde_with",
- "serde_with_macros",
- "strict_encoding",
- "strict_encoding_derive",
-]
 
 [[package]]
 name = "lnpbp"
@@ -536,10 +428,10 @@ dependencies = [
  "bitcoin_hashes",
  "client_side_validation",
  "deflate",
- "descriptor-wallet 0.4.0-alpha.1 (git+https://github.com/LNP-BP/descriptor-wallet)",
+ "descriptor-wallet",
  "inflate",
  "lazy_static",
- "lightning_encoding 0.4.0-alpha.1",
+ "lightning_encoding",
  "miniscript",
  "serde",
  "serde_with",
@@ -876,13 +768,13 @@ dependencies = [
  "bitcoin_hashes",
  "chrono",
  "deflate",
- "descriptor-wallet 0.4.0-alpha.1 (git+https://github.com/LNP-BP/descriptor-wallet)",
+ "descriptor-wallet",
  "ed25519-dalek",
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
- "lightning_encoding 0.4.0-alpha.1",
- "lnpbp 0.4.0-alpha.1",
+ "lightning_encoding",
+ "lnpbp",
  "miniscript",
  "num-derive",
  "num-traits",
@@ -897,7 +789,7 @@ dependencies = [
 [[package]]
 name = "rgb-core"
 version = "0.4.0-alpha.1+1"
-source = "git+https://github.com/rgb-org/rgb-core#d3e05347d1de9e48042336a8d89f1cb55c4e75fc"
+source = "git+https://github.com/rgb-org/rgb-core#eabb2eb133f89d8e61dd9b73b43aef561a2fce2f"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -906,13 +798,13 @@ dependencies = [
  "bitcoin_hashes",
  "chrono",
  "deflate",
- "descriptor-wallet 0.4.0-alpha.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "descriptor-wallet",
  "ed25519-dalek",
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
- "lightning_encoding 0.4.0-alpha.2+1",
- "lnpbp 0.3.2",
+ "lightning_encoding",
+ "lnpbp",
  "miniscript",
  "num-derive",
  "num-traits",
@@ -931,7 +823,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0-alpha.1",
+ "lnpbp",
  "regex",
  "rgb-core 0.4.0-alpha.1+1 (git+https://github.com/rgb-org/rgb-core)",
  "serde",
@@ -947,7 +839,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0-alpha.1",
+ "lnpbp",
  "rgb-core 0.4.0-alpha.1+1 (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",
@@ -961,7 +853,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0-alpha.1",
+ "lnpbp",
  "rgb-core 0.4.0-alpha.1+1 (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",
@@ -975,7 +867,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0-alpha.1",
+ "lnpbp",
  "rgb-core 0.4.0-alpha.1+1 (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",

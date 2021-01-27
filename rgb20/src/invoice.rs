@@ -46,13 +46,13 @@ pub enum Error {
 
 // TODO: Move RGB outpoints into LNP/BP Core library
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum OutpointDescriptor {
     Utxo(bitcoin::OutPoint),
     Address(bitcoin::Address),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize,),
@@ -63,7 +63,7 @@ pub enum Outpoint {
     Address(bitcoin::Address),
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct Invoice {
     pub contract_id: ContractId,
     pub outpoint: Outpoint,

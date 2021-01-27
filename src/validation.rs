@@ -308,7 +308,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         // Collect all endpoint transitions
         // This is pretty simple operation; it takes a lot of code because
         // we would like to detect any potential issues with the consignment
-        // structure and notify use about them (in form of generated warnings)
+        // structure and notify user about them (in form of generated warnings)
         let mut end_transitions = Vec::<&dyn Node>::new();
         for (node_id, outpoint_hash) in &consignment.endpoints {
             if let Some(node) = node_index.get(node_id) {
@@ -369,7 +369,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
     /// Validation procedure takes a schema object, resolver function
     /// returning transaction and its fee for a given transaction id, and
-    /// returns a validation object listing all detected falires, warnings and
+    /// returns a validation object listing all detected failures, warnings and
     /// additional information.
     ///
     /// When a failure detected, it not stopped; the failure is is logged into
