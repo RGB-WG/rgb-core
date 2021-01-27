@@ -145,15 +145,16 @@ impl Anchor {
         let tx = &mut psbt.global.unsigned_tx;
         let num_outs = tx.output.len() as u64;
 
+        // TODO: use enum instead of hardcoded value
+        let protocol_factor = 0;
+
         // Compute which transition commitments must go into which output and
         // assemble them in per-output-packs of ContractId: Transition
         // commitment type
         let per_output_sources = transitions.into_iter().fold(
             HashMap::<usize, MessageMap>::new(),
             |mut data, (contract_id, node_id)| {
-                let id = Uint256::from_be_bytes(*contract_id.as_slice());
-                let vout = id % Uint256::from_u64(num_outs).unwrap();
-                let vout = vout.low_u64() as usize;
+                let vout = ((fee + protocol_factor) % num_outs) as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
                     *contract_id.as_slice(),
                     sha256d::Hash::from_inner(*node_id.as_slice()),
@@ -211,7 +212,7 @@ impl Anchor {
             let mut container = TxContainer {
                 tx: tx.clone(),
                 fee,
-                protocol_factor: vout as u32,
+                protocol_factor: protocol_factor as u32,
                 txout_container: TxoutContainer {
                     value: tx_out.value,
                     script_container: SpkContainer {
