@@ -37,10 +37,10 @@ crate-type = ["rlib", "staticlib"]
 # -----------------------------------------
 amplify = { version = "3", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
-lnpbp = { version = "0.3.2", features = ["bulletproofs", "zip"] }
+lnpbp = { git = "https://github.com/LNP-BP/rust-lnpbp", features = ["bulletproofs", "zip"] }
 strict_encoding = { version = "1", features = ["crypto"] }
-lightning_encoding = "0.4.0-alpha.2"
-descriptor-wallet = "0.4.0-alpha.1"
+lightning_encoding = { git = "https://github.com/LNP-BP/lnp-core" }
+descriptor-wallet = { git = "https://github.com/LNP-BP/descriptor-wallet" }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.26.0", features = ["rand"] }

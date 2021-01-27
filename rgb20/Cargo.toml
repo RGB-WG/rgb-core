@@ -19,8 +19,8 @@ crate-type = ["rlib", "staticlib"]
 [dependencies]
 amplify = "3"
 amplify_derive = "2.4.3"
-lnpbp = "0.4.0-alpha.1"
-rgb-core = { version = "0.4.0-alpha.1", path = ".." }
+lnpbp = { git = "https://github.com/LNP-BP/rust-lnpbp" }
+rgb-core = { git = "https://github.com/rgb-org/rgb-core" }
 bitcoin = "0.26"
 serde_crate = { package = "serde", version = "~1.0.106", features = ["derive"], optional = true }
 serde_with = { version = "~1.5.1", features = ["hex"], optional = true }
