@@ -105,7 +105,8 @@ impl Embedded {
                                 vec![
                                     value::Revealed {
                                         value: supply,
-                                        blinding: secp256k1zkp::key::ONE_KEY,
+                                        blinding: secp256k1zkp::key::ONE_KEY
+                                            .into(),
                                     }
                                     .conceal()
                                     .commitment,

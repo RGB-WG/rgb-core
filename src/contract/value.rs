@@ -33,17 +33,67 @@ use secp256k1zkp;
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::rand::{Rng, RngCore};
 
+use amplify::Wrapper;
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncode, CommitEncodeWithStrategy, Conceal,
 };
 use lnpbp::commit_verify::CommitVerify;
+use wallet::Slice32;
 
 use super::{ConfidentialState, RevealedState, SECP256K1_ZKP};
+use bitcoin_hashes::hex::Error;
+use secp256k1zkp::SecretKey;
 
 pub type AtomicValue = u64;
 
 /// Proof for Pedersen commitment: a blinding key
-pub type BlindingFactor = secp256k1zkp::key::SecretKey;
+#[derive(
+    Wrapper,
+    Copy,
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
+#[display(LowerHex)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
+pub struct BlindingFactor(Slice32);
+
+impl AsRef<[u8]> for BlindingFactor {
+    fn as_ref(&self) -> &[u8] {
+        self.as_inner().as_ref()
+    }
+}
+
+impl From<secp256k1zkp::SecretKey> for BlindingFactor {
+    fn from(key: SecretKey) -> Self {
+        Self::from_inner(Slice32::from_inner(key.0))
+    }
+}
+
+impl From<BlindingFactor> for secp256k1zkp::SecretKey {
+    fn from(bf: BlindingFactor) -> Self {
+        SecretKey(bf.into_inner().into_inner())
+    }
+}
+
+impl FromHex for BlindingFactor {
+    fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Result<u8, Error>>
+            + ExactSizeIterator
+            + DoubleEndedIterator,
+    {
+        Slice32::from_byte_iter(iter).map(BlindingFactor::from_inner)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, AsAny)]
 #[cfg_attr(
@@ -101,11 +151,6 @@ pub enum RevealedParseError {
     #[from(std::num::ParseIntError)]
     AtomicInt,
 
-    /// Blinding factor provided as a part of RGB revealed value string
-    /// encoding is malformed
-    #[from(secp256k1zkp::Error)]
-    MalformedBlindingFactor,
-
     /// Error parsing Pedersen commitment inside RGB revealed value string
     /// representation. The commitment must be a hex-encoded
     #[from(bitcoin::hashes::hex::Error)]
@@ -120,10 +165,7 @@ impl FromStr for Revealed {
         match (split.next(), split.next(), split.next()) {
             (Some(v), Some(b), None) => Ok(Revealed {
                 value: v.parse()?,
-                blinding: BlindingFactor::from_slice(
-                    &SECP256K1_ZKP,
-                    &Vec::<u8>::from_hex(b)?,
-                )?,
+                blinding: BlindingFactor::from_hex(b)?,
             }),
             (None, ..) => Err(RevealedParseError::NoSeparator),
             (Some(_), None, _) => Err(RevealedParseError::NoBlindingFactor),
@@ -139,7 +181,10 @@ impl Revealed {
     ) -> Self {
         Self {
             value: amount,
-            blinding: BlindingFactor::new(&SECP256K1_ZKP, rng),
+            blinding: BlindingFactor::from(secp256k1zkp::SecretKey::new(
+                &SECP256K1_ZKP,
+                rng,
+            )),
         }
     }
 }
@@ -257,13 +302,13 @@ impl CommitVerify<Revealed> for Confidential {
         let value = revealed.value;
 
         let commitment = SECP256K1_ZKP
-            .commit(value, blinding.clone())
+            .commit(value, blinding.into())
             .expect("Internal inconsistency in Grin secp256k1zkp library Pedersen commitments");
         let bulletproof = SECP256K1_ZKP.bullet_proof(
             value,
-            blinding.clone(),
-            blinding.clone(),
-            blinding.clone(),
+            blinding.into(),
+            blinding.into(),
+            blinding.into(),
             None,
             None,
         );
@@ -349,8 +394,8 @@ mod _strict_encoding {
 pub(crate) mod serde_helpers {
     //! Serde serialization helpers
 
+    use super::BlindingFactor;
     use bitcoin::hashes::hex::{FromHex, ToHex};
-    use secp256k1zkp;
     use serde::{Deserialize, Deserializer, Serializer};
 
     /// Serializes `buffer` to a lowercase hex string.
@@ -363,21 +408,15 @@ pub(crate) mod serde_helpers {
     }
 
     /// Deserializes a lowercase hex string to a `Vec<u8>`.
-    pub fn from_hex<'de, D>(
-        deserializer: D,
-    ) -> Result<secp256k1zkp::SecretKey, D::Error>
+    pub fn from_hex<'de, D>(deserializer: D) -> Result<BlindingFactor, D::Error>
     where
         D: Deserializer<'de>,
     {
         use serde::de::Error;
         String::deserialize(deserializer).and_then(|string| {
-            secp256k1zkp::SecretKey::from_slice(
-                &crate::contract::SECP256K1_ZKP,
-                &Vec::<u8>::from_hex(&string).map_err(|_| {
-                    D::Error::custom("wrong hex data for SecretKey")
-                })?[..],
-            )
-            .map_err(|err| Error::custom(err.to_string()))
+            Ok(BlindingFactor::from_hex(&string).map_err(|_| {
+                D::Error::custom("wrong hex data for blinding factor")
+            })?)
         })
     }
 }
@@ -530,7 +569,7 @@ mod test {
         let mut blinding_factors = Vec::<_>::with_capacity(count + 1);
         for _ in 0..count {
             blinding_factors
-                .push(BlindingFactor::new(&SECP256K1_ZKP, &mut rng));
+                .push(secp256k1zkp::SecretKey::new(&SECP256K1_ZKP, &mut rng));
         }
 
         let positive_factors = blinding_factors[..positive.len()].to_vec();
@@ -552,7 +591,7 @@ mod test {
             .map(|(amount, blinding_factor)| {
                 Revealed {
                     value: amount,
-                    blinding: blinding_factor.clone(),
+                    blinding: blinding_factor.clone().into(),
                 }
                 .conceal()
                 .commitment
@@ -577,7 +616,7 @@ mod test {
                 .map(|(amount, blinding_factor)| {
                     Revealed {
                         value: amount,
-                        blinding: blinding_factor.clone(),
+                        blinding: blinding_factor.clone().into(),
                     }
                     .conceal()
                     .commitment

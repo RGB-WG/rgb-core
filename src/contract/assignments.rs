@@ -66,12 +66,12 @@ impl Assignments {
         let mut blinding_factors = Vec::<_>::with_capacity(count);
         for _ in 0..count {
             blinding_factors
-                .push(value::BlindingFactor::new(&SECP256K1_ZKP, &mut rng));
+                .push(secp256k1zkp::SecretKey::new(&SECP256K1_ZKP, &mut rng));
         }
 
         // We need the last factor to be equal to the difference
         let mut blinding_inputs: Vec<_> =
-            inputs.iter().map(|inp| inp.blinding.clone()).collect();
+            inputs.iter().map(|inp| inp.blinding.into()).collect();
         if blinding_inputs.is_empty() {
             blinding_inputs.push(secp256k1zkp::key::ONE_KEY);
         }
@@ -94,7 +94,8 @@ impl Assignments {
                     value: amount,
                     blinding: blinding_iter
                         .next()
-                        .expect("Internal inconsistency in `AssignmentsVariant::zero_balanced`"),
+                        .expect("Internal inconsistency in `AssignmentsVariant::zero_balanced`")
+                        .into(),
                 },
             })
             .collect();
@@ -107,7 +108,7 @@ impl Assignments {
                         value: amount,
                         blinding: blinding_iter.next().expect(
                             "Internal inconsistency in `AssignmentsVariant::zero_balanced`",
-                        ),
+                        ).into(),
                     },
                 }),
         );
@@ -922,7 +923,7 @@ mod test {
     };
     use lnpbp::seals::OutpointReveal;
     use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
-    use secp256k1zkp::{key::SecretKey, pedersen::Commitment, Secp256k1};
+    use secp256k1zkp::{pedersen::Commitment, Secp256k1, SecretKey};
 
     // Hard coded test vectors of Assignment Variants
     // Each Variant contains 4 types of Assignments
@@ -1716,11 +1717,11 @@ mod test {
 
         // Check blinding factor matches with precomputed values
         assert_eq!(
-            states[0].blinding,
+            SecretKey::from(states[0].blinding),
             SecretKey::from_slice(&Secp256k1::new(), &blind_1[..]).unwrap()
         );
         assert_eq!(
-            states[1].blinding,
+            SecretKey::from(states[1].blinding),
             SecretKey::from_slice(&Secp256k1::new(), &blind_2[..]).unwrap()
         );
 
