@@ -282,7 +282,7 @@ impl Allocation {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("circulating {known_circulating}, max {max_cap}")]
+#[display("circulating {known_circulating}, max {issue_limit}")]
 pub struct Supply {
     /// Sum of all issued amounts
     known_circulating: AtomicValue,
@@ -296,7 +296,7 @@ pub struct Supply {
 
     /// We always know total supply, b/c even for assets without defined cap
     /// the cap *de facto* equals to u64::MAX
-    max_cap: AtomicValue,
+    issue_limit: AtomicValue,
 }
 
 impl Supply {
@@ -304,12 +304,12 @@ impl Supply {
     pub fn with(
         known_circulating: AtomicValue,
         is_issued_known: Option<bool>,
-        max_cap: AtomicValue,
+        issue_limit: AtomicValue,
     ) -> Supply {
         Supply {
             known_circulating,
             is_issued_known,
-            max_cap,
+            issue_limit,
         }
     }
 
@@ -346,9 +346,6 @@ pub struct Issue {
     /// issuance (i.e. of `issue` type)
     id: NodeId,
 
-    /// Foreign key for linking to assets
-    asset_id: ContractId,
-
     /// In db we can store it as a simple u64 field converting it on read/write
     /// using `fractional_bits` parameter of the asset
     amount: AtomicValue,
@@ -366,16 +363,10 @@ pub struct Issue {
 impl Issue {
     pub fn with(
         id: NodeId,
-        asset_id: ContractId,
         amount: AtomicValue,
         origin: Option<bitcoin::OutPoint>,
     ) -> Issue {
-        Issue {
-            id,
-            asset_id,
-            amount,
-            origin,
-        }
+        Issue { id, amount, origin }
     }
 
     #[inline]
@@ -517,7 +508,6 @@ impl TryFrom<Genesis> for Asset {
         let node_id = NodeId::from_inner(genesis.contract_id().into_inner());
         let issue = Issue {
             id: genesis.node_id(),
-            asset_id: genesis.contract_id(),
             amount: supply.clone(),
             origin: None, // This is a primary issue, so no origin here
         };
@@ -565,7 +555,7 @@ impl TryFrom<Genesis> for Asset {
             supply: Supply {
                 known_circulating: supply,
                 is_issued_known: None,
-                max_cap: genesis
+                issue_limit: genesis
                     .owned_rights_by_type(*OwnedRightsType::Inflation)
                     .map(|assignments| {
                         assignments
