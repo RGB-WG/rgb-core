@@ -143,17 +143,18 @@ impl AddAssign for AccountingAmount {
     }
 }
 
-#[derive(
-    Clone, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
-)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[derive(
+    Clone, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[display(Debug)]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Asset {
+    genesis: String,
     id: ContractId, // This is a unique primary key
     ticker: String,
     name: String,
@@ -176,6 +177,7 @@ pub struct Asset {
 impl Asset {
     #[inline]
     pub fn with(
+        genesis: String,
         id: ContractId,
         ticker: String,
         name: String,
@@ -190,6 +192,7 @@ impl Asset {
         known_allocations: BTreeMap<bitcoin::OutPoint, Vec<Allocation>>,
     ) -> Asset {
         Asset {
+            genesis,
             id,
             ticker,
             name,
@@ -212,8 +215,8 @@ impl Asset {
 #[display(Debug)]
 #[cfg_attr(
     feature = "serde",
-    derive(Serialize, Deserialize,),
-    serde(crate = "serde_crate")
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Allocation {
@@ -260,8 +263,8 @@ impl Allocation {
 #[display(Debug)]
 #[cfg_attr(
     feature = "serde",
-    derive(Serialize, Deserialize,),
-    serde(crate = "serde_crate")
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Supply {
@@ -316,8 +319,8 @@ impl Supply {
 #[display(Debug)]
 #[cfg_attr(
     feature = "serde",
-    derive(Serialize, Deserialize,),
-    serde(crate = "serde_crate")
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Issue {
@@ -539,6 +542,7 @@ impl TryFrom<Genesis> for Asset {
                 });
         }
         Ok(Self {
+            genesis: genesis.to_string(),
             id: genesis.contract_id(),
             chain: genesis.chain().clone(),
             ticker: genesis_meta
