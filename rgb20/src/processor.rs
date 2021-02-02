@@ -153,7 +153,7 @@ pub fn transfer(
     // Computing sum of inputs
     let total_inputs = input_allocations
         .iter()
-        .fold(0u64, |acc, alloc| acc + alloc.value().value);
+        .fold(0u64, |acc, alloc| acc + alloc.confidential_amount().value);
 
     let metadata = type_map! {};
     let mut total_outputs = 0;
@@ -186,7 +186,7 @@ pub fn transfer(
 
     let input_amounts = input_allocations
         .iter()
-        .map(|alloc| alloc.value().clone())
+        .map(|alloc| alloc.confidential_amount().clone())
         .collect();
     let assignments = type_map! {
         OwnedRightsType::Assets =>

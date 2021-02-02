@@ -228,7 +228,7 @@ impl Asset {
     Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{value}@{node_id}#{index}={outpoint}")]
+#[display("{confidential_amount}@{node_id}/{index}={outpoint}")]
 pub struct Allocation {
     /// Unique primary key is `node_id` + `index`
     node_id: NodeId,
@@ -241,9 +241,9 @@ pub struct Allocation {
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     outpoint: bitcoin::OutPoint,
 
-    /// Revealed value consisting of an explicit atomic amount and Pedesen
-    /// commitment blinding factor
-    value: value::Revealed,
+    /// Revealed confidential amount consisting of an explicit atomic amount
+    /// and Pedesen commitment blinding factor
+    confidential_amount: value::Revealed,
 }
 
 impl Allocation {
@@ -258,7 +258,7 @@ impl Allocation {
             node_id,
             index,
             outpoint,
-            value,
+            confidential_amount: value,
         }
     }
 }
@@ -415,7 +415,7 @@ impl Asset {
             node_id,
             index,
             outpoint,
-            value,
+            confidential_amount: value,
         };
         if !self.known_allocations.contains(&new_allocation) {
             self.known_allocations.push(new_allocation);
@@ -436,7 +436,7 @@ impl Asset {
             node_id,
             index,
             outpoint,
-            value,
+            confidential_amount: value,
         };
         if let Some(index) = self
             .known_allocations
@@ -539,7 +539,7 @@ impl TryFrom<Genesis> for Asset {
                             node_id,
                             index: index as u16,
                             outpoint: outpoint_reveal.into(),
-                            value: assigned_state,
+                            confidential_amount: assigned_state,
                         })
                     }
                 });
