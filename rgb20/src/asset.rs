@@ -168,7 +168,6 @@ pub struct Asset {
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     chain: Chain,
     fractional_bits: u8,
-    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     date: NaiveDateTime,
     known_issues: Vec<Issue>,
     /// Specifies outpoints which when spent may indicate inflation happening
@@ -244,7 +243,6 @@ pub struct Allocation {
 
     /// Revealed value consisting of an explicit atomic amount and Pedesen
     /// commitment blinding factor
-    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     value: value::Revealed,
 }
 
