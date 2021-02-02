@@ -710,8 +710,8 @@ mod test {
     };
     use lnpbp::tagged_hash;
 
-    static TRANSITION: [u8; 2364] = include!("../../test/transition.in");
-    static GENESIS: [u8; 2462] = include!("../../test/genesis.in");
+    static TRANSITION: [u8; 2360] = include!("../../test/transition.in");
+    static GENESIS: [u8; 2458] = include!("../../test/genesis.in");
 
     #[test]
     fn test_node_id_midstate() {
@@ -796,11 +796,11 @@ mod test {
         // Typeid/Nodeid test
         assert_eq!(
             genesis.node_id().to_hex(),
-            "d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15"
+            "ed2fc66a9c6f8cd00b7c601fddea1f443eef427a87857551fd2e65307ba225ae"
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "94628edd6cb9f20206c0d05bfc6847d881f21d87c5d3d3f7f26af9c3fcab4fd4"
+            "679824db8f743ad33845dafdc80f6d4571c6ae7556f16547ca929d51f55645df"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1011,12 +1011,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15")
+            NodeId::from_hex("ed2fc66a9c6f8cd00b7c601fddea1f443eef427a87857551fd2e65307ba225ae")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("94628edd6cb9f20206c0d05bfc6847d881f21d87c5d3d3f7f26af9c3fcab4fd4")
+            NodeId::from_hex("679824db8f743ad33845dafdc80f6d4571c6ae7556f16547ca929d51f55645df")
                 .unwrap()
         );
 
@@ -1042,11 +1042,11 @@ mod test {
         let contract_id = genesis.contract_id();
         assert_eq!(
             contract_id.to_string(),
-            "rgb1z586eqcsa5z5zvqep9y3rhqsykqpuycrhhvkc2aey6hdu25yyrgqv0a28q"
+            "rgb14cj6y7esv5h065t4skrh5sh08ezpl6karas8cz7s33hec6kx9lksnlh39h"
         );
         assert_eq!(
             serde_json::to_string(&contract_id).unwrap(),
-            "\"rgb1z586eqcsa5z5zvqep9y3rhqsykqpuycrhhvkc2aey6hdu25yyrgqv0a28q\""
+            "\"rgb14cj6y7esv5h065t4skrh5sh08ezpl6karas8cz7s33hec6kx9lksnlh39h\""
         );
     }
 
@@ -1061,7 +1061,7 @@ mod test {
         assert_eq!(
             contractid,
             ContractId::from_hex(
-                "d020842adeae26b92b6cd9bd03131e802510dc11490919304105ed1083ac0f15"
+                "ed2fc66a9c6f8cd00b7c601fddea1f443eef427a87857551fd2e65307ba225ae"
             )
             .unwrap()
         );

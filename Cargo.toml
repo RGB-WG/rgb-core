@@ -93,5 +93,5 @@ serde = ["serde_crate", "serde_with", "serde_with_macros",
 
 [workspace]
 members = ["rgb20", "rgb21", "rgb22", "rgb23"]
-default-members = []
+default-members = ["rgb20"]
 exclude = ["dep_test"]

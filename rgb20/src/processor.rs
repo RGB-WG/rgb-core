@@ -74,7 +74,7 @@ pub fn issue(
         Assignments::zero_balanced(
             vec![value::Revealed {
                 value: issued_supply,
-                blinding: secp256k1zkp::key::ONE_KEY,
+                blinding: secp256k1zkp::key::ONE_KEY.into(),
             }],
             allocations,
             vec![],
@@ -144,10 +144,7 @@ pub fn transfer(
     // Collecting all input allocations
     let mut input_allocations = Vec::<Allocation>::new();
     for seal in &inputs {
-        let found = asset
-            .allocations(seal)
-            .ok_or(TransferError::UnknownInput(*seal))?
-            .clone();
+        let found = asset.allocations(seal).clone();
         if found.len() == 0 {
             Err(TransferError::UnknownInput(*seal))?
         }

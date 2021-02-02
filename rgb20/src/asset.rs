@@ -181,7 +181,6 @@ pub struct Asset {
     /// knowledge
     unknown_inflation: AtomicValue,
     /// Specifies outpoints controlling certain amounts of assets
-    #[cfg_attr(feature = "serde", serde(with = "As::<Vec<Allocation>>"))]
     known_allocations: Vec<Allocation>,
 }
 
@@ -220,13 +219,13 @@ impl Asset {
     }
 }
 
-#[derive(
-    Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
-)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[derive(
+    Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 #[display("{value}@{node_id}#{index}={outpoint}")]
@@ -401,7 +400,8 @@ impl Asset {
     pub fn allocations(&self, outpoint: &bitcoin::OutPoint) -> Vec<Allocation> {
         self.known_allocations
             .iter()
-            .filter(|a| a.outpoint == outpoint)
+            .filter(|a| a.outpoint == *outpoint)
+            .copied()
             .collect()
     }
 
@@ -418,10 +418,8 @@ impl Asset {
             outpoint,
             value,
         };
-        let allocations =
-            self.known_allocations.entry(outpoint).or_insert(vec![]);
-        if !allocations.contains(&new_allocation) {
-            allocations.push(new_allocation);
+        if !self.known_allocations.contains(&new_allocation) {
+            self.known_allocations.push(new_allocation);
             true
         } else {
             false
@@ -441,12 +439,12 @@ impl Asset {
             outpoint,
             value,
         };
-        let allocations =
-            self.known_allocations.entry(outpoint).or_insert(vec![]);
-        if let Some(index) =
-            allocations.iter().position(|a| *a == old_allocation)
+        if let Some(index) = self
+            .known_allocations
+            .iter()
+            .position(|a| *a == old_allocation)
         {
-            allocations.remove(index);
+            self.known_allocations.remove(index);
             true
         } else {
             false
@@ -524,7 +522,7 @@ impl TryFrom<Genesis> for Asset {
             amount: supply.clone(),
             origin: None, // This is a primary issue, so no origin here
         };
-        let mut known_allocations = empty!();
+        let mut known_allocations = Vec::<Allocation>::new();
         for assignment in genesis.owned_rights_by_type(*OwnedRightsType::Assets)
         {
             assignment
