@@ -710,8 +710,8 @@ mod test {
     };
     use lnpbp::tagged_hash;
 
-    static TRANSITION: [u8; 2360] = include!("../../test/transition.in");
-    static GENESIS: [u8; 2458] = include!("../../test/genesis.in");
+    static TRANSITION: [u8; 2356] = include!("../../test/transition.in");
+    static GENESIS: [u8; 2454] = include!("../../test/genesis.in");
 
     #[test]
     fn test_node_id_midstate() {
@@ -796,11 +796,11 @@ mod test {
         // Typeid/Nodeid test
         assert_eq!(
             genesis.node_id().to_hex(),
-            "ed2fc66a9c6f8cd00b7c601fddea1f443eef427a87857551fd2e65307ba225ae"
+            "a0ce4948074b2a864153de704a1ca45ceab7cd1cf6a73312963cfd2191f5c62c"
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "679824db8f743ad33845dafdc80f6d4571c6ae7556f16547ca929d51f55645df"
+            "72a375d75c925aee4e6c077b37cd85eb8a0d3a598d03c3ac038e31a46b145ac6"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1011,12 +1011,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("ed2fc66a9c6f8cd00b7c601fddea1f443eef427a87857551fd2e65307ba225ae")
+            NodeId::from_hex("a0ce4948074b2a864153de704a1ca45ceab7cd1cf6a73312963cfd2191f5c62c")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("679824db8f743ad33845dafdc80f6d4571c6ae7556f16547ca929d51f55645df")
+            NodeId::from_hex("72a375d75c925aee4e6c077b37cd85eb8a0d3a598d03c3ac038e31a46b145ac6")
                 .unwrap()
         );
 
@@ -1025,12 +1025,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("978e5928309838e4ef1aa6206f4fa4a297ae454108baf74940949af8ace89aec")
+            NodeId::from_hex("d1e766948a975d1587cf365f2dc67cdbc296311aa031fca36c6915aff42cc516")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("4e53133b0581f0b69c0c3da9a84ec0e8acacd050862797682e42f36de5584215")
+            NodeId::from_hex("0306cc6881cacd66ba1f842fb0b51481789d2580baf0089472ad207989e58670")
                 .unwrap()
         );
     }
@@ -1042,11 +1042,11 @@ mod test {
         let contract_id = genesis.contract_id();
         assert_eq!(
             contract_id.to_string(),
-            "rgb14cj6y7esv5h065t4skrh5sh08ezpl6karas8cz7s33hec6kx9lksnlh39h"
+            "rgb19nr0tyfpl57fvy3n5lmpendhafw2g8z2wr09xsvx9f9swjzfe6sq0zta7a"
         );
         assert_eq!(
             serde_json::to_string(&contract_id).unwrap(),
-            "\"rgb14cj6y7esv5h065t4skrh5sh08ezpl6karas8cz7s33hec6kx9lksnlh39h\""
+            "\"rgb19nr0tyfpl57fvy3n5lmpendhafw2g8z2wr09xsvx9f9swjzfe6sq0zta7a\""
         );
     }
 
@@ -1061,7 +1061,7 @@ mod test {
         assert_eq!(
             contractid,
             ContractId::from_hex(
-                "ed2fc66a9c6f8cd00b7c601fddea1f443eef427a87857551fd2e65307ba225ae"
+                "a0ce4948074b2a864153de704a1ca45ceab7cd1cf6a73312963cfd2191f5c62c"
             )
             .unwrap()
         );

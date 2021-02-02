@@ -224,7 +224,7 @@ pub(crate) mod test {
     use lnpbp::strict_encoding::StrictDecode;
     use lnpbp::tagged_hash;
 
-    static CONSIGNMENT: [u8; 1551] = include!("../../test/consignment.in");
+    static CONSIGNMENT: [u8; 1549] = include!("../../test/consignment.in");
 
     pub(crate) fn consignment() -> Consignment {
         Consignment::strict_decode(&CONSIGNMENT[..]).unwrap()
@@ -265,7 +265,7 @@ pub(crate) mod test {
         let consignment = consignment();
 
         let bech32id =
-            "id1s69p2mzyqnglfjwrelkup5q3tcn47zmhk9pvkp3ge2qye8jwqqsq3cjxwc";
+            "id10esx6u6e7yfmh86ngytsma5nk0pkxhuaa3yuqzgrcwnz2vknvduqt78j6u";
         let id = consignment.id();
         assert_eq!(bech32id, id.to_string());
         assert_eq!(ConsignmentId::from_str(bech32id).unwrap(), id);
