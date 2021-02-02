@@ -146,6 +146,7 @@ impl AddAssign for AccountingAmount {
     }
 }
 
+// TODO: Add support for renominations, burn & replacements
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

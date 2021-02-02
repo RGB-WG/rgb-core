@@ -101,7 +101,7 @@ impl FromHex for BlindingFactor {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[display("{value}#{blinding:x?}")]
+#[display("{value}#{blinding}")]
 pub struct Revealed {
     /// Original value in smallest indivisible units
     pub value: AtomicValue,
