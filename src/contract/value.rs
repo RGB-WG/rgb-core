@@ -24,9 +24,11 @@
 use core::cmp::Ordering;
 use core::ops::Add;
 use std::io;
+use std::str::FromStr;
 
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
+use bitcoin::hashes::hex::FromHex;
 use secp256k1zkp;
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::rand::{Rng, RngCore};
@@ -43,15 +45,18 @@ pub type AtomicValue = u64;
 /// Proof for Pedersen commitment: a blinding key
 pub type BlindingFactor = secp256k1zkp::key::SecretKey;
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, AsAny)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, AsAny)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[display(Debug)]
+#[display("{value}#{blinding:x?}")]
 pub struct Revealed {
+    /// Original value in smallest indivisible units
     pub value: AtomicValue,
+
+    /// Blinding factor used in Pedersen commitment
     #[cfg_attr(
         feature = "serde",
         serde(
@@ -60,6 +65,71 @@ pub struct Revealed {
         )
     )]
     pub blinding: BlindingFactor,
+}
+
+/// Error parsing RGB revealed value from string. The string must has form of
+/// `<value>#<hex_blinding_factor>`
+#[derive(
+    Copy,
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Display,
+    Error,
+    From,
+)]
+#[display(doc_comments)]
+pub enum RevealedParseError {
+    /// No `#` separator between value and blinding factor found while
+    /// parsing RGB revealed value
+    NoSeparator,
+
+    /// No blinding factor is present within RGB revealed value string
+    /// representation
+    NoBlindingFactor,
+
+    /// Extra component within RGB revealed value string representation
+    /// following value and blinding factor
+    ExtraComponent,
+
+    /// Error parsing atomic value representation of RGB revealed value, which
+    /// has to be an integer
+    #[from(std::num::ParseIntError)]
+    AtomicInt,
+
+    /// Blinding factor provided as a part of RGB revealed value string
+    /// encoding is malformed
+    #[from(secp256k1zkp::Error)]
+    MalformedBlindingFactor,
+
+    /// Error parsing Pedersen commitment inside RGB revealed value string
+    /// representation. The commitment must be a hex-encoded
+    #[from(bitcoin::hashes::hex::Error)]
+    PedersenHex,
+}
+
+impl FromStr for Revealed {
+    type Err = RevealedParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split('#');
+        match (split.next(), split.next(), split.next()) {
+            (Some(v), Some(b), None) => Ok(Revealed {
+                value: v.parse()?,
+                blinding: BlindingFactor::from_slice(
+                    &SECP256K1_ZKP,
+                    &Vec::<u8>::from_hex(b)?,
+                )?,
+            }),
+            (None, ..) => Err(RevealedParseError::NoSeparator),
+            (Some(_), None, _) => Err(RevealedParseError::NoBlindingFactor),
+            (_, _, Some(_)) => Err(RevealedParseError::ExtraComponent),
+        }
+    }
 }
 
 impl Revealed {
@@ -124,6 +194,7 @@ pub struct Confidential {
         )
     )]
     pub commitment: pedersen::Commitment,
+
     #[cfg_attr(
         feature = "serde",
         serde(

@@ -41,6 +41,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "amplify_derive_helpers"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9076b2ac55f9451a0b7f36921d1c7d3a4c8822c3cbf6ecb5eece6fab90c7fc22"
+dependencies = [
+ "proc-macro2 1.0.24",
+ "syn 1.0.60",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.3.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -225,7 +235,7 @@ dependencies = [
 [[package]]
 name = "descriptor-wallet"
 version = "0.4.0-alpha.1"
-source = "git+https://github.com/LNP-BP/descriptor-wallet#771b85bb120f84db9fe082048d941e9bbfdb22a2"
+source = "git+https://github.com/LNP-BP/descriptor-wallet#fcdcb290620bd8658413bdf1011ffca1949eafff"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -236,6 +246,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_with",
+ "slip132",
  "strict_encoding",
 ]
 
@@ -382,14 +393,14 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.82"
+version = "0.2.84"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
+checksum = "1cca32fa0182e8c0989459524dc356b8f2b5c10f1b9eb521b7d182c03cf8c5ff"
 
 [[package]]
 name = "lightning_encoding"
-version = "0.4.0-alpha.1"
-source = "git+https://github.com/LNP-BP/lnp-core#f9761dfb53441a7b37d38a82c9db4179496035c4"
+version = "0.4.0-alpha.2+1"
+source = "git+https://github.com/LNP-BP/lnp-core#7ae83f49c3e310a147e5e4fc52fc73d10daf54d3"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -400,11 +411,11 @@ dependencies = [
 
 [[package]]
 name = "lightning_encoding_derive"
-version = "0.3.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9c4b7e9c19325a2f965023c96621c4f6c921ec6d05433911e1a640bf71eff40"
+version = "0.4.0-alpha.1"
+source = "git+https://github.com/LNP-BP/lnp-core#7ae83f49c3e310a147e5e4fc52fc73d10daf54d3"
 dependencies = [
  "amplify",
+ "amplify_derive_helpers",
  "proc-macro2 1.0.24",
  "quote 1.0.8",
  "syn 1.0.60",
@@ -419,7 +430,7 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 [[package]]
 name = "lnpbp"
 version = "0.4.0-alpha.1"
-source = "git+https://github.com/LNP-BP/rust-lnpbp#cb6639920ccbe086c14da6f7def696ec15c7038c"
+source = "git+https://github.com/LNP-BP/rust-lnpbp#296c3fb5ad3951f79d34cc91e6682fa954645869"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -789,7 +800,7 @@ dependencies = [
 [[package]]
 name = "rgb-core"
 version = "0.4.0-alpha.1+1"
-source = "git+https://github.com/rgb-org/rgb-core#eabb2eb133f89d8e61dd9b73b43aef561a2fce2f"
+source = "git+https://github.com/rgb-org/rgb-core#30ee4c98c2722734c00e3b5676e69e79f62f3bec"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -983,9 +994,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.9.2"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e7aab86fe2149bad8c507606bdb3f4ef5e7b2380eb92350f56122cca72a42a8"
+checksum = "fa827a14b29ab7f44778d14a88d3cb76e949c45083f7dbfa507d0cb699dc12de"
 dependencies = [
  "block-buffer",
  "cfg-if",
@@ -1001,10 +1012,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f0242b8e50dd9accdd56170e94ca1ebd223b098eb9c83539a6e367d0f36ae68"
 
 [[package]]
-name = "strict_encoding"
-version = "1.0.4"
+name = "slip132"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08d73b9bc1fcceb3ae1d357920a29ac97c28114e16b48050f289bc142d25988e"
+checksum = "0ab4183952e25cf9b83e176438b2a0ee30844d89d32b0daf2e196c1ed0351eb1"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bitcoin",
+ "strict_encoding",
+]
+
+[[package]]
+name = "strict_encoding"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cfe176b9f4027623e26028c4ed336e41b479a07bc4a64b553fee14fcafc5168"
 dependencies = [
  "amplify",
  "amplify_derive",

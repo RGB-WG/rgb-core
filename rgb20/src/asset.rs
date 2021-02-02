@@ -14,6 +14,8 @@
 use chrono::NaiveDateTime;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 use std::ops::{Add, AddAssign};
@@ -27,6 +29,7 @@ use super::schema::{self, FieldType, OwnedRightsType};
 
 pub type AccountingValue = f64;
 
+/// Accounting amount keeping track of the asset precision
 #[derive(
     Clone,
     Copy,
@@ -39,13 +42,13 @@ pub type AccountingValue = f64;
     StrictEncode,
     StrictDecode,
 )]
-#[display(Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
+#[display("{0}~{1}")]
 pub struct AccountingAmount(AtomicValue, u8);
 
 impl AccountingAmount {
@@ -151,7 +154,7 @@ impl AddAssign for AccountingAmount {
 #[derive(
     Clone, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
-#[display(Debug)]
+#[display("{ticker} ({id})")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Asset {
     genesis: String,
@@ -159,19 +162,27 @@ pub struct Asset {
     ticker: String,
     name: String,
     description: Option<String>,
+    #[cfg_attr(feature = "serde", serde(flatten))]
     supply: Supply,
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     chain: Chain,
     fractional_bits: u8,
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     date: NaiveDateTime,
     known_issues: Vec<Issue>,
     /// Specifies outpoints which when spent may indicate inflation happening
     /// up to specific amount.
-    known_inflation: BTreeMap<bitcoin::OutPoint, AccountingAmount>,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "As::<BTreeMap<DisplayFromStr, DisplayFromStr>>")
+    )]
+    known_inflation: BTreeMap<bitcoin::OutPoint, AtomicValue>,
     /// Specifies max amount to which asset can be inflated without our
     /// knowledge
-    unknown_inflation: AccountingAmount,
+    unknown_inflation: AtomicValue,
     /// Specifies outpoints controlling certain amounts of assets
-    known_allocations: BTreeMap<bitcoin::OutPoint, Vec<Allocation>>,
+    #[cfg_attr(feature = "serde", serde(with = "As::<Vec<Allocation>>"))]
+    known_allocations: Vec<Allocation>,
 }
 
 impl Asset {
@@ -187,9 +198,9 @@ impl Asset {
         fractional_bits: u8,
         date: NaiveDateTime,
         known_issues: Vec<Issue>,
-        known_inflation: BTreeMap<bitcoin::OutPoint, AccountingAmount>,
-        unknown_inflation: AccountingAmount,
-        known_allocations: BTreeMap<bitcoin::OutPoint, Vec<Allocation>>,
+        known_inflation: BTreeMap<bitcoin::OutPoint, AtomicValue>,
+        unknown_inflation: AtomicValue,
+        known_allocations: Vec<Allocation>,
     ) -> Asset {
         Asset {
             genesis,
@@ -210,23 +221,30 @@ impl Asset {
 }
 
 #[derive(
-    Clone, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
+    Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
-#[display(Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
+#[display("{value}@{node_id}#{index}={outpoint}")]
 pub struct Allocation {
     /// Unique primary key is `node_id` + `index`
     node_id: NodeId,
+
     /// Index of the assignment of ownership right type within the node
     index: u16,
+
     /// Copy of the outpoint from corresponding entry in
-    /// `Asset::known_allocations`
+    /// [`Asset::known_allocations`]
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     outpoint: bitcoin::OutPoint,
+
+    /// Revealed value consisting of an explicit atomic amount and Pedesen
+    /// commitment blinding factor
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     value: value::Revealed,
 }
 
@@ -260,33 +278,35 @@ impl Allocation {
     StrictEncode,
     StrictDecode,
 )]
-#[display(Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
+#[display("circulating {known_circulating}, max {max_cap}")]
 pub struct Supply {
     /// Sum of all issued amounts
-    known_circulating: AccountingAmount,
+    known_circulating: AtomicValue,
+
     /// Specifies if all issuances are known (i.e. there are data for issue
     /// state transitions for all already spent `inflation`
     /// single-use-seals). In this case `known_circulating` will be equal to
     /// `total_circulating`. The parameter is option since the fact that the
     /// UTXO is spend may be unknown without blockchain access
     is_issued_known: Option<bool>,
+
     /// We always know total supply, b/c even for assets without defined cap
     /// the cap *de facto* equals to u64::MAX
-    max_cap: AccountingAmount,
+    max_cap: AtomicValue,
 }
 
 impl Supply {
     #[inline]
     pub fn with(
-        known_circulating: AccountingAmount,
+        known_circulating: AtomicValue,
         is_issued_known: Option<bool>,
-        max_cap: AccountingAmount,
+        max_cap: AtomicValue,
     ) -> Supply {
         Supply {
             known_circulating,
@@ -295,7 +315,7 @@ impl Supply {
         }
     }
 
-    pub fn total_circulating(&self) -> Option<AccountingAmount> {
+    pub fn total_circulating(&self) -> Option<AtomicValue> {
         if self.is_issued_known.unwrap_or(false) {
             Some(self.known_circulating)
         } else {
@@ -316,13 +336,13 @@ impl Supply {
     StrictEncode,
     StrictDecode,
 )]
-#[display(Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
+#[display("{id} -> {amount}")]
 pub struct Issue {
     /// Unique primary key; equals to the state transition id that performs
     /// issuance (i.e. of `issue` type)
@@ -333,11 +353,15 @@ pub struct Issue {
 
     /// In db we can store it as a simple u64 field converting it on read/write
     /// using `fractional_bits` parameter of the asset
-    amount: AccountingAmount,
+    amount: AtomicValue,
 
     /// Indicates transaction output which had an assigned inflation right and
     /// which spending produced this issue. `None` signifies that the issue
     /// was produced by genesis (i.e. it is a primary issue)
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "As::<Option<DisplayFromStr>>")
+    )]
     origin: Option<bitcoin::OutPoint>,
 }
 
@@ -345,7 +369,7 @@ impl Issue {
     pub fn with(
         id: NodeId,
         asset_id: ContractId,
-        amount: AccountingAmount,
+        amount: AtomicValue,
         origin: Option<bitcoin::OutPoint>,
     ) -> Issue {
         Issue {
@@ -374,11 +398,11 @@ impl Asset {
     }
 
     #[inline]
-    pub fn allocations(
-        &self,
-        seal: &bitcoin::OutPoint,
-    ) -> Option<&Vec<Allocation>> {
-        self.known_allocations.get(seal)
+    pub fn allocations(&self, outpoint: &bitcoin::OutPoint) -> Vec<Allocation> {
+        self.known_allocations
+            .iter()
+            .filter(|a| a.outpoint == outpoint)
+            .collect()
     }
 
     pub fn add_allocation(
@@ -456,15 +480,12 @@ impl TryFrom<Genesis> for Asset {
             .u8(*FieldType::Precision)
             .first()
             .ok_or(schema::Error::NotAllFieldsPresent)?;
-        let supply = AccountingAmount::from_fractioned_atomic_value(
-            fractional_bits,
-            *genesis_meta
-                .u64(*FieldType::IssuedSupply)
-                .first()
-                .ok_or(schema::Error::NotAllFieldsPresent)?,
-        );
+        let supply = *genesis_meta
+            .u64(*FieldType::IssuedSupply)
+            .first()
+            .ok_or(schema::Error::NotAllFieldsPresent)?;
         let mut known_inflation = BTreeMap::<_, _>::default();
-        let mut unknown_inflation = AccountingAmount::default();
+        let mut unknown_inflation = 0;
 
         for assignment in
             genesis.owned_rights_by_type(*OwnedRightsType::Inflation)
@@ -477,31 +498,20 @@ impl TryFrom<Genesis> for Asset {
                     } => {
                         known_inflation.insert(
                             seal_definition.try_into()?,
-                            AccountingAmount::from_fractioned_atomic_value(
-                                fractional_bits,
-                                assigned_state.u64().ok_or(
-                                    schema::Error::NotAllFieldsPresent,
-                                )?,
-                            ),
+                            assigned_state
+                                .u64()
+                                .ok_or(schema::Error::NotAllFieldsPresent)?,
                         );
                     }
                     OwnedState::ConfidentialSeal { assigned_state, .. } => {
-                        if unknown_inflation.atomic_value() < core::u64::MAX {
-                            unknown_inflation +=
-                                AccountingAmount::from_fractioned_atomic_value(
-                                    fractional_bits,
-                                    assigned_state.u64().ok_or(
-                                        schema::Error::NotAllFieldsPresent,
-                                    )?,
-                                )
+                        if unknown_inflation < core::u64::MAX {
+                            unknown_inflation += assigned_state
+                                .u64()
+                                .ok_or(schema::Error::NotAllFieldsPresent)?
                         };
                     }
                     _ => {
-                        unknown_inflation =
-                            AccountingAmount::from_fractioned_atomic_value(
-                                fractional_bits,
-                                core::u64::MAX,
-                            );
+                        unknown_inflation = core::u64::MAX;
                     }
                 }
             }
@@ -514,8 +524,7 @@ impl TryFrom<Genesis> for Asset {
             amount: supply.clone(),
             origin: None, // This is a primary issue, so no origin here
         };
-        let mut known_allocations =
-            BTreeMap::<bitcoin::OutPoint, Vec<Allocation>>::default();
+        let mut known_allocations = empty!();
         for assignment in genesis.owned_rights_by_type(*OwnedRightsType::Assets)
         {
             assignment
@@ -529,15 +538,12 @@ impl TryFrom<Genesis> for Asset {
                         assigned_state,
                     } = assign
                     {
-                        known_allocations
-                            .entry(outpoint_reveal.clone().into())
-                            .or_insert(vec![])
-                            .push(Allocation {
-                                node_id,
-                                index: index as u16,
-                                outpoint: outpoint_reveal.into(),
-                                value: assigned_state,
-                            })
+                        known_allocations.push(Allocation {
+                            node_id,
+                            index: index as u16,
+                            outpoint: outpoint_reveal.into(),
+                            value: assigned_state,
+                        })
                     }
                 });
         }
@@ -565,17 +571,14 @@ impl TryFrom<Genesis> for Asset {
                 max_cap: genesis
                     .owned_rights_by_type(*OwnedRightsType::Inflation)
                     .map(|assignments| {
-                        AccountingAmount::from_fractioned_atomic_value(
-                            fractional_bits,
-                            assignments
-                                .known_state_data()
-                                .into_iter()
-                                .map(|data| match data {
-                                    data::Revealed::U64(cap) => *cap,
-                                    _ => 0,
-                                })
-                                .sum(),
-                        )
+                        assignments
+                            .known_state_data()
+                            .into_iter()
+                            .map(|data| match data {
+                                data::Revealed::U64(cap) => *cap,
+                                _ => 0,
+                            })
+                            .sum()
                     })
                     .unwrap_or(supply),
             },
