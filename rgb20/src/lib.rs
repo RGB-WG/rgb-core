@@ -45,6 +45,7 @@ pub mod schema;
 
 pub use asset::{
     AccountingAmount, AccountingValue, Allocation, Asset, Error, Issue, Supply,
+    SupplyMeasure,
 };
 pub use invoice::{
     Error as InvoiceError, Invoice, Outpoint, OutpointDescriptor,

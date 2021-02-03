@@ -29,7 +29,7 @@ use super::schema::{self, FieldType, OwnedRightsType};
 
 pub type AccountingValue = f64;
 
-/// Accounting amount keeping track of the asset precision
+/// Accounting amount keeps track of the asset precision
 #[derive(
     Clone,
     Copy,
@@ -146,6 +146,15 @@ impl AddAssign for AccountingAmount {
     }
 }
 
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display(Debug)]
+#[repr(u8)]
+pub enum SupplyMeasure {
+    KnownCirculating = 0,
+    TotalCirculating = 1,
+    IssueLimit = 2,
+}
+
 // TODO: Add support for renominations, burn & replacements
 #[cfg_attr(
     feature = "serde",
@@ -177,9 +186,6 @@ pub struct Asset {
         serde(with = "As::<BTreeMap<DisplayFromStr, DisplayFromStr>>")
     )]
     known_inflation: BTreeMap<bitcoin::OutPoint, AtomicValue>,
-    /// Specifies max amount to which asset can be inflated without our
-    /// knowledge
-    unknown_inflation: AtomicValue,
     /// Specifies outpoints controlling certain amounts of assets
     known_allocations: Vec<Allocation>,
 }
@@ -198,7 +204,6 @@ impl Asset {
         date: NaiveDateTime,
         known_issues: Vec<Issue>,
         known_inflation: BTreeMap<bitcoin::OutPoint, AtomicValue>,
-        unknown_inflation: AtomicValue,
         known_allocations: Vec<Allocation>,
     ) -> Asset {
         Asset {
@@ -213,9 +218,26 @@ impl Asset {
             date,
             known_issues,
             known_inflation,
-            unknown_inflation,
             known_allocations,
         }
+    }
+
+    pub fn accounting_supply(self, measure: SupplyMeasure) -> AccountingValue {
+        let value = match measure {
+            SupplyMeasure::KnownCirculating => self.supply.known_circulating,
+            SupplyMeasure::TotalCirculating => {
+                match self.supply.total_circulating() {
+                    None => return AccountingValue::NAN,
+                    Some(supply) => supply,
+                }
+            }
+            SupplyMeasure::IssueLimit => self.supply.issue_limit,
+        };
+        AccountingAmount::from_fractioned_atomic_value(
+            self.fractional_bits,
+            value,
+        )
+        .accounting_value()
     }
 }
 
@@ -228,7 +250,7 @@ impl Asset {
     Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{confidential_amount}@{node_id}/{index}={outpoint}")]
+#[display("{confidential_amount}@{node_id}#{index}>{outpoint}")]
 pub struct Allocation {
     /// Unique primary key is `node_id` + `index`
     node_id: NodeId,
@@ -261,6 +283,11 @@ impl Allocation {
             confidential_amount: value,
         }
     }
+
+    #[inline]
+    pub fn value(&self) -> AtomicValue {
+        self.confidential_amount.value
+    }
 }
 
 #[derive(
@@ -269,6 +296,8 @@ impl Allocation {
     Getters,
     PartialEq,
     Eq,
+    PartialOrd,
+    Ord,
     Hash,
     Debug,
     Display,
@@ -313,6 +342,7 @@ impl Supply {
         }
     }
 
+    #[inline]
     pub fn total_circulating(&self) -> Option<AtomicValue> {
         if self.is_issued_known.unwrap_or(false) {
             Some(self.known_circulating)
@@ -473,7 +503,7 @@ impl TryFrom<Genesis> for Asset {
             .first()
             .ok_or(schema::Error::NotAllFieldsPresent)?;
         let mut known_inflation = BTreeMap::<_, _>::default();
-        let mut unknown_inflation = 0;
+        let mut issue_limit = 0;
 
         for assignment in
             genesis.owned_rights_by_type(*OwnedRightsType::Inflation)
@@ -492,14 +522,14 @@ impl TryFrom<Genesis> for Asset {
                         );
                     }
                     OwnedState::ConfidentialSeal { assigned_state, .. } => {
-                        if unknown_inflation < core::u64::MAX {
-                            unknown_inflation += assigned_state
+                        if issue_limit < core::u64::MAX {
+                            issue_limit += assigned_state
                                 .u64()
                                 .ok_or(schema::Error::NotAllFieldsPresent)?
                         };
                     }
                     _ => {
-                        unknown_inflation = core::u64::MAX;
+                        issue_limit = core::u64::MAX;
                     }
                 }
             }
@@ -555,19 +585,7 @@ impl TryFrom<Genesis> for Asset {
             supply: Supply {
                 known_circulating: supply,
                 is_issued_known: None,
-                issue_limit: genesis
-                    .owned_rights_by_type(*OwnedRightsType::Inflation)
-                    .map(|assignments| {
-                        assignments
-                            .known_state_data()
-                            .into_iter()
-                            .map(|data| match data {
-                                data::Revealed::U64(cap) => *cap,
-                                _ => 0,
-                            })
-                            .sum()
-                    })
-                    .unwrap_or(supply),
+                issue_limit,
             },
             fractional_bits,
             date: NaiveDateTime::from_timestamp(
@@ -578,7 +596,6 @@ impl TryFrom<Genesis> for Asset {
                 0,
             ),
             known_inflation,
-            unknown_inflation,
             known_issues: vec![issue],
             // we assume that each genesis allocation with revealed amount
             // and known seal (they are always revealed together) belongs to us
