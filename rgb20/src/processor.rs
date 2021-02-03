@@ -160,7 +160,7 @@ pub fn transfer(
     let allocations_ours = ours
         .into_iter()
         .map(|outcoins| {
-            let amount = AccountingAmount::transmutate(
+            let amount = AccountingAmount::transmutate_from(
                 *asset.fractional_bits(),
                 outcoins.coins,
             );
@@ -171,7 +171,7 @@ pub fn transfer(
     let allocations_theirs = theirs
         .into_iter()
         .map(|outcoincealed| {
-            let amount = AccountingAmount::transmutate(
+            let amount = AccountingAmount::transmutate_from(
                 *asset.fractional_bits(),
                 outcoincealed.coins,
             );

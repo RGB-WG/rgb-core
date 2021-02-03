@@ -53,7 +53,7 @@ pub struct AccountingAmount(AtomicValue, u8);
 
 impl AccountingAmount {
     #[inline]
-    pub fn transmutate(
+    pub fn transmutate_from(
         fractional_bits: u8,
         accounting_value: AccountingValue,
     ) -> AtomicValue {
@@ -62,6 +62,18 @@ impl AccountingAmount {
             accounting_value,
         )
         .atomic_value()
+    }
+
+    #[inline]
+    pub fn transmutate_into(
+        fractional_bits: u8,
+        atomic_value: AtomicValue,
+    ) -> AccountingValue {
+        AccountingAmount::from_fractioned_atomic_value(
+            fractional_bits,
+            atomic_value,
+        )
+        .accounting_value()
     }
 
     #[inline]
@@ -222,7 +234,7 @@ impl Asset {
         }
     }
 
-    pub fn accounting_supply(self, measure: SupplyMeasure) -> AccountingValue {
+    pub fn accounting_supply(&self, measure: SupplyMeasure) -> AccountingValue {
         let value = match measure {
             SupplyMeasure::KnownCirculating => self.supply.known_circulating,
             SupplyMeasure::TotalCirculating => {
@@ -233,11 +245,50 @@ impl Asset {
             }
             SupplyMeasure::IssueLimit => self.supply.issue_limit,
         };
-        AccountingAmount::from_fractioned_atomic_value(
-            self.fractional_bits,
-            value,
-        )
-        .accounting_value()
+        AccountingAmount::transmutate_into(self.fractional_bits, value)
+    }
+
+    #[inline]
+    pub fn known_atomic_value(&self) -> AtomicValue {
+        self.known_allocations.iter().map(Allocation::value).sum()
+    }
+
+    pub fn known_filtered_atomic_value<F>(&self, filter: F) -> AtomicValue
+    where
+        F: Fn(&Allocation) -> bool,
+    {
+        self.known_allocations
+            .iter()
+            .filter(|allocation| filter(*allocation))
+            .map(Allocation::value)
+            .sum()
+    }
+
+    pub fn known_accounting_value(&self) -> AccountingValue {
+        self.known_allocations
+            .iter()
+            .map(Allocation::value)
+            .map(|atomic| {
+                AccountingAmount::transmutate_into(self.fractional_bits, atomic)
+            })
+            .sum()
+    }
+
+    pub fn known_filtered_accounting_value<F>(
+        &self,
+        filter: F,
+    ) -> AccountingValue
+    where
+        F: Fn(&Allocation) -> bool,
+    {
+        self.known_allocations
+            .iter()
+            .filter(|allocation| filter(*allocation))
+            .map(Allocation::value)
+            .map(|atomic| {
+                AccountingAmount::transmutate_into(self.fractional_bits, atomic)
+            })
+            .sum()
     }
 }
 
