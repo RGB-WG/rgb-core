@@ -47,7 +47,7 @@ bitcoin = { version = "~0.26.0", features = ["rand"] }
 bitcoin_hashes = "~0.9.4" # we need macro from here
 # <https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0002.md#deterministic-public-key-extraction-from-bitcoin-script>
 # We have to fix version of miniscript as required by LNPBP-2 specification
-miniscript = { version = "~5.0.0", features = ["compiler"] }
+miniscript = { version = "5", features = ["compiler"] }
 bech32 = "~0.7.2"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
 #   a part of Tor address)
