@@ -29,7 +29,7 @@ use lnpbp::client_side_validation::{
 use lnpbp::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
 use lnpbp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
-    TxCommitment, TxContainer, TxSupplement, TxoutContainer,
+    TxCommitment, TxContainer, TxSupplement, TxoutCommitment, TxoutContainer,
 };
 use lnpbp::lnpbp4::{MessageMap, MultimsgCommitment, TooManyMessagesError};
 use lnpbp::strict_encoding::{strategies, Strategy};
@@ -153,7 +153,7 @@ impl Anchor {
             |mut data, (contract_id, node_id)| {
                 let id = Uint256::from_be_bytes(*contract_id.as_slice());
                 let vout = id % Uint256::from_u64(num_outs).unwrap();
-                let vout = vout.low_u64() as usize;
+                let vout = vout.low_u64() as usize + fee as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
                     *contract_id.as_slice(),
                     sha256d::Hash::from_inner(*node_id.as_slice()),
@@ -208,19 +208,13 @@ impl Anchor {
                 ScriptEncodeMethod::WPubkeyHash
             };
 
-            let mut container = TxContainer {
-                tx: tx.clone(),
-                fee,
-                protocol_factor: vout as u32,
-                txout_container: TxoutContainer {
-                    value: tx_out.value,
-                    script_container: SpkContainer {
-                        pubkey,
-                        method,
-                        source,
-                        tag: *LNPBP4_TAG,
-                        tweaking_factor: None,
-                    },
+            let mut container = TxoutContainer {
+                value: tx_out.value,
+                script_container: SpkContainer {
+                    pubkey,
+                    method,
+                    source,
+                    tag: *LNPBP4_TAG,
                     tweaking_factor: None,
                 },
                 tweaking_factor: None,
@@ -235,11 +229,12 @@ impl Anchor {
                 .collect();
             let mm_digest = sha256::Hash::commit(&mm_buffer);
             let commitment =
-                TxCommitment::embed_commit(&mut container, &mm_digest).unwrap();
+                TxoutCommitment::embed_commit(&mut container, &mm_digest)
+                    .unwrap();
 
-            *tx = commitment.into_inner().clone();
+            *(&mut tx.output[vout]) = commitment.into_inner().clone();
             psbt.outputs
-                .get_mut(container.vout())
+                .get_mut(vout)
                 .map(|output| {
                     output.proprietary.insert(
                         ProprietaryKey {
