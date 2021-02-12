@@ -153,7 +153,7 @@ impl Anchor {
             |mut data, (contract_id, node_id)| {
                 let id = Uint256::from_be_bytes(*contract_id.as_slice());
                 let vout = id % Uint256::from_u64(num_outs).unwrap();
-                let vout = vout.low_u64() as usize + fee as usize;
+                let vout = ((vout.low_u64() + fee as u64) % num_outs) as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
                     *contract_id.as_slice(),
                     sha256d::Hash::from_inner(*node_id.as_slice()),
