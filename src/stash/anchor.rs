@@ -339,11 +339,74 @@ impl ConsensusCommit for Anchor {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::contract::{Genesis, Node};
+    use bitcoin::consensus::deserialize;
+    use bitcoin::util::psbt::PartiallySignedTransaction;
+    use lnpbp::strict_encoding::StrictDecode;
     use lnpbp::tagged_hash;
+
+    static GENESIS: [u8; 2454] = include!("../../test/genesis.in");
+
+    static PSBT: [u8; 462] = include!("../../test/test_transaction.psbt");
 
     #[test]
     fn test_anchor_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:anchor");
         assert_eq!(**midstate, MIDSTATE_ANCHOR_ID);
+    }
+
+    #[test]
+    fn test_psbt() {
+        // Create some dummy NodeId and ContractId for the test
+        let genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
+
+        let contract_id = genesis.contract_id();
+
+        let node_id = genesis.node_id();
+
+        // Get the test psbt
+        let mut source_psbt: PartiallySignedTransaction =
+            deserialize(&PSBT[..]).unwrap();
+
+        // Modify test psbt to include Proprietary Key information
+        for output in &mut source_psbt.outputs.iter_mut() {
+            if let Some(key) = output.bip32_derivation.keys().next() {
+                let key = key.clone();
+                output.proprietary.insert(
+                    ProprietaryKey {
+                        prefix: b"RGB".to_vec(),
+                        subtype: PSBT_OUT_PUBKEY,
+                        key: vec![],
+                    },
+                    key.key.serialize().to_vec(),
+                );
+            }
+        }
+
+        // Copy witness psbt for future assertion
+        let mut witness_psbt = source_psbt.clone();
+
+        // Create the transition map for commitment
+        let mut map: BTreeMap<ContractId, NodeId> = BTreeMap::new();
+        map.insert(contract_id, node_id);
+
+        // Make commitment into witness psbt
+        Anchor::commit(map, &mut witness_psbt).unwrap();
+
+        // Check number of output remains same
+        assert_eq!(
+            source_psbt.global.unsigned_tx.output.len(),
+            witness_psbt.global.unsigned_tx.output.len()
+        );
+
+        // Check output values remains unchanged
+        assert_eq!(
+            source_psbt.global.unsigned_tx.output[0].value,
+            witness_psbt.global.unsigned_tx.output[0].value
+        );
+        assert_eq!(
+            source_psbt.global.unsigned_tx.output[1].value,
+            witness_psbt.global.unsigned_tx.output[1].value
+        );
     }
 }
