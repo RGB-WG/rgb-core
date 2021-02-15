@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::BTreeSet;
+use std::io;
 
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
@@ -274,8 +275,16 @@ impl CommitEncodeWithStrategy for Extension {
     type Strategy = commit_strategy::UsingStrict;
 }
 
-impl CommitEncodeWithStrategy for Transition {
-    type Strategy = commit_strategy::UsingStrict;
+impl CommitEncode for Transition {
+    fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
+        let mut len = self.transition_type.commit_encode(&mut e);
+        len += self.metadata.commit_encode(&mut e);
+        len += self.parent_owned_rights.commit_encode(&mut e);
+        len += self.owned_rights.commit_encode(&mut e);
+        len += self.public_rights.commit_encode(&mut e);
+        len += self.script.commit_encode(&mut e);
+        len
+    }
 }
 
 impl AutoConceal for Genesis {

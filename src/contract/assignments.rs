@@ -15,9 +15,10 @@ use amplify::AsAny;
 use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::io;
 
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, Conceal,
+    Conceal, CommitEncode,
 };
 use lnpbp::seals::OutpointReveal;
 use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
@@ -394,8 +395,43 @@ impl AutoConceal for Assignments {
     }
 }
 
-impl CommitEncodeWithStrategy for Assignments {
-    type Strategy = commit_strategy::UsingStrict;
+impl CommitEncode for Assignments {
+    fn commit_encode<E: io::Write>(self, e: E) -> usize {
+        fn vector_commit_encode<T, E>(v: Vec<T>, e: E) -> usize
+        where
+            T: CommitEncode,
+            E: io::Write,
+        {
+            use lnpbp::client_side_validation::{merklize, MerkleNode};
+            use crate::bitcoin_hashes::Hash;
+
+            merklize(
+                "",
+                &v
+                .into_iter()
+                .map(|item| {
+                    let mut encoder = io::Cursor::new(vec![]);
+                    item.commit_encode(&mut encoder);
+                    MerkleNode::hash(&encoder.into_inner())
+                })
+                .collect::<Vec<MerkleNode>>(),
+                0,
+            )
+            .commit_encode(e)
+        }
+
+        match self {
+            Assignments::Declarative(tree) => {
+                vector_commit_encode(tree, e)
+            }
+            Assignments::DiscreteFiniteField(tree) => {
+                vector_commit_encode(tree, e)
+            }
+            Assignments::CustomData(tree) => {
+                vector_commit_encode(tree, e)
+            }
+        }
+    }
 }
 
 pub trait ConfidentialState:
@@ -703,6 +739,34 @@ where
     }
 }
 
+impl<STATE> OwnedState<STATE>
+    where
+        Self: Clone,
+        STATE: StateTypes,
+        STATE::Confidential: PartialEq + Eq,
+        STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+{
+    pub fn conceal_seal(&self) -> Self {
+        match self {
+            OwnedState::Revealed {
+                seal_definition,
+                assigned_state,
+            } => Self::ConfidentialSeal {
+                seal_definition: seal_definition.conceal(),
+                assigned_state: assigned_state.clone(),
+            },
+            OwnedState::ConfidentialAmount {
+                seal_definition,
+                assigned_state,
+            } => Self::Confidential {
+                seal_definition: seal_definition.conceal(),
+                assigned_state: assigned_state.clone(),
+            },
+            _ => self.clone(),
+        }
+    }
+}
+
 impl<STATE> Conceal for OwnedState<STATE>
 where
     Self: Clone,
@@ -778,13 +842,37 @@ where
     }
 }
 
-impl<STATE> CommitEncodeWithStrategy for OwnedState<STATE>
+impl<STATE> CommitEncode for OwnedState<STATE>
 where
+    Self: Clone,
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Revealed: CommitEncode,
+    STATE::Confidential: CommitEncode,
 {
-    type Strategy = commit_strategy::UsingConceal;
+    fn commit_encode<E: io::Write>(mut self, mut e: E) -> usize {
+        self = self.conceal_seal().conceal();
+
+        match self {
+            OwnedState::Revealed {
+                seal_definition,
+                assigned_state,
+            } => seal_definition.commit_encode(&mut e) + assigned_state.commit_encode(&mut e),
+            OwnedState::ConfidentialSeal {
+                seal_definition,
+                assigned_state,
+            } => seal_definition.commit_encode(&mut e) + assigned_state.commit_encode(&mut e),
+            OwnedState::ConfidentialAmount {
+                seal_definition,
+                assigned_state,
+            } => seal_definition.commit_encode(&mut e) + assigned_state.commit_encode(&mut e),
+            OwnedState::Confidential {
+                seal_definition,
+                assigned_state,
+            } => seal_definition.commit_encode(&mut e) + assigned_state.commit_encode(&mut e),
+        }
+    }
 }
 
 mod _strict_encoding {
