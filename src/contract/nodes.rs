@@ -773,6 +773,7 @@ mod test {
             script: Default::default(),
         };
 
+        // Strict encode
         let mut encoder = vec![];
         transition
             .transition_type
@@ -791,13 +792,30 @@ mod test {
         transition.script.strict_encode(&mut encoder).unwrap();
 
         let mut encoder1 = vec![];
-        let mut encoder2 = vec![];
+        transition.clone().strict_encode(&mut encoder1).unwrap();
 
-        transition.clone().commit_encode(&mut encoder1);
-        transition.clone().strict_encode(&mut encoder2).unwrap();
-
-        assert_eq!(encoder1, encoder2);
         assert_eq!(encoder, encoder1);
+
+        // Commit encode
+        let transition2 = transition.clone();
+        let mut encoder2 = vec![];
+        transition2
+            .transition_type
+            .commit_encode(&mut encoder2);
+        transition2.metadata.commit_encode(&mut encoder2);
+        transition2
+            .parent_owned_rights
+            .commit_encode(&mut encoder2);
+        transition2.owned_rights.commit_encode(&mut encoder2);
+        transition2
+            .public_rights
+            .commit_encode(&mut encoder2);
+        transition2.script.commit_encode(&mut encoder2);
+
+        let mut encoder3 = vec![];
+        transition.clone().commit_encode(&mut encoder3);
+        
+        assert_eq!(encoder2, encoder3);
     }
 
     #[test]
@@ -818,7 +836,7 @@ mod test {
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "72a375d75c925aee4e6c077b37cd85eb8a0d3a598d03c3ac038e31a46b145ac6"
+            "e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1034,7 +1052,7 @@ mod test {
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("72a375d75c925aee4e6c077b37cd85eb8a0d3a598d03c3ac038e31a46b145ac6")
+            NodeId::from_hex("e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2")
                 .unwrap()
         );
 
@@ -1048,7 +1066,7 @@ mod test {
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("0306cc6881cacd66ba1f842fb0b51481789d2580baf0089472ad207989e58670")
+            NodeId::from_hex("e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2")
                 .unwrap()
         );
     }

@@ -2384,8 +2384,8 @@ mod test {
             .iter()
             .map(|item| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                item.0.strict_encode(&mut encoder).unwrap();
-                item.1.clone().strict_encode(&mut encoder).unwrap();
+                item.0.commit_encode(&mut encoder);
+                item.1.clone().commit_encode(&mut encoder);
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
@@ -2393,7 +2393,7 @@ mod test {
         let final_node = merklize("", &merkle_nodes[..], 0);
 
         let mut computed_encoding = vec![];
-        final_node.strict_encode(&mut computed_encoding).unwrap();
+        final_node.commit_encode(&mut computed_encoding);
 
         assert_eq!(original_encoding, computed_encoding);
     }
