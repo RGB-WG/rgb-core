@@ -15,6 +15,7 @@ use amplify::AsAny;
 use core::any::Any;
 use core::cmp::Ordering;
 use core::fmt::Debug;
+use std::io;
 
 use bitcoin::hashes::{hash160, sha256, sha256d, sha512, Hash};
 use bitcoin::util::psbt::PartiallySignedTransaction;
@@ -23,6 +24,7 @@ use bitcoin::{secp256k1, Transaction};
 
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
+    CommitEncode,
 };
 use lnpbp::strict_encoding::strict_serialize;
 
@@ -48,8 +50,8 @@ impl Conceal for Void {
         self.clone()
     }
 }
-impl CommitEncodeWithStrategy for Void {
-    type Strategy = commit_strategy::UsingConceal;
+impl CommitEncode for Void {
+    fn commit_encode<E: io::Write>(self, _e: E) -> usize {0}
 }
 
 #[derive(Clone, Debug, Display, AsAny)]
