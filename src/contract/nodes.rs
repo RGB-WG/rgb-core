@@ -271,8 +271,17 @@ impl ConsensusCommit for Transition {
     type Commitment = NodeId;
 }
 
-impl CommitEncodeWithStrategy for Extension {
-    type Strategy = commit_strategy::UsingStrict;
+impl CommitEncode for Extension {
+    fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
+        let mut len = self.extension_type.commit_encode(&mut e);
+        len += self.contract_id.commit_encode(&mut e);
+        len += self.metadata.commit_encode(&mut e);
+        len += self.parent_public_rights.commit_encode(&mut e);
+        len += self.owned_rights.commit_encode(&mut e);
+        len += self.public_rights.commit_encode(&mut e);
+        len += self.script.commit_encode(&mut e);
+        len
+    }
 }
 
 impl CommitEncode for Transition {
