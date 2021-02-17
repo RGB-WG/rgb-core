@@ -24,7 +24,7 @@ use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
     data, seal, value, AtomicValue, AutoConceal, NoDataError, NodeId,
-    SealDefinition, SealPrototype, SECP256K1_ZKP,
+    SealDefinition, SealEndpoint, SECP256K1_ZKP,
 };
 use crate::schema;
 
@@ -52,7 +52,7 @@ impl Assignments {
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
         allocations_ours: Vec<(SealDefinition, AtomicValue)>,
-        allocations_theirs: Vec<(SealPrototype, AtomicValue)>,
+        allocations_theirs: Vec<(SealEndpoint, AtomicValue)>,
     ) -> Self {
         if allocations_ours.len() + allocations_theirs.len() == 0 {
             return Self::DiscreteFiniteField(vec![]);
@@ -110,12 +110,12 @@ impl Assignments {
                         ).into(),
                     };
                     match seal_proto {
-                        SealPrototype::TxOutpoint(seal_definition) => OwnedState::ConfidentialSeal {
+                        SealEndpoint::TxOutpoint(seal_definition) => OwnedState::ConfidentialSeal {
                             seal_definition,
                             assigned_state,
                         },
-                        SealPrototype::WitnessVout(vout) => OwnedState::Revealed {
-                            seal_definition: SealDefinition::with_vout(vout, &mut rng),
+                        SealEndpoint::WitnessVout { vout, blinding } => OwnedState::Revealed {
+                            seal_definition: SealDefinition::WitnessVout { vout, blinding },
                             assigned_state
                         }
                     }
@@ -1252,10 +1252,10 @@ mod test {
             .zip(output_amounts[partition..].iter());
 
         // Create their allocations
-        let theirs: Vec<(SealPrototype, AtomicValue)> = zip_data2
+        let theirs: Vec<(SealEndpoint, AtomicValue)> = zip_data2
             .map(|(txid, amount)| {
                 (
-                    SealPrototype::TxOutpoint(
+                    SealEndpoint::TxOutpoint(
                         OutpointReveal::from(OutPoint::new(
                             *txid,
                             rng.gen_range(0, 10),

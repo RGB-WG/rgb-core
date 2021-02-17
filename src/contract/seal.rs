@@ -25,18 +25,38 @@ pub type Confidential = OutpointHash;
 /// Convenience type name useful for defining new seals
 pub type SealDefinition = Revealed;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, From, StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
-pub enum SealPrototype {
+/// Seal endpoint is required in situations where sender assigns state to the
+/// witness transaction output on behalf of receiver
+pub enum SealEndpoint {
     /// Seal that is concealed
+    #[from]
     TxOutpoint(OutpointHash),
     /// Seal contained within the witness transaction
-    WitnessVout(u32),
+    WitnessVout { vout: u32, blinding: u64 },
+}
+
+impl SealEndpoint {
+    pub fn with_vout(vout: u32, rng: &mut impl RngCore) -> SealEndpoint {
+        SealEndpoint::WitnessVout { vout, blinding: rng.next_u64() }
+    }
+}
+
+impl Conceal for SealEndpoint {
+    type Confidential = Confidential;
+
+    fn conceal(&self) -> Self::Confidential {
+        match *self {
+            SealEndpoint::TxOutpoint(hash) => hash,
+            SealEndpoint::WitnessVout { vout, blinding } => SealDefinition::WitnessVout { vout, blinding }.conceal()
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, From, StrictEncode, StrictDecode)]

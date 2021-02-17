@@ -16,12 +16,14 @@ use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
+use lnpbp::client_side_validation::Conceal;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
     schema, seal, Anchor, AnchorId, Assignments, Consignment, ContractId, Node,
     NodeId, Schema, SchemaId,
 };
+use crate::SealEndpoint;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
 #[display(Debug)]
@@ -249,8 +251,8 @@ pub enum Failure {
 #[display(Debug)]
 pub enum Warning {
     EndpointTransitionNotFound(NodeId),
-    EndpointDuplication(NodeId, seal::Confidential),
-    EndpointTransitionSealNotFound(NodeId, seal::Confidential),
+    EndpointDuplication(NodeId, SealEndpoint),
+    EndpointTransitionSealNotFound(NodeId, SealEndpoint),
     ExcessiveTransition(NodeId),
 }
 
@@ -310,10 +312,13 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         // we would like to detect any potential issues with the consignment
         // structure and notify user about them (in form of generated warnings)
         let mut end_transitions = Vec::<&dyn Node>::new();
-        for (node_id, outpoint_hash) in &consignment.endpoints {
+        for (node_id, seal_endpoint) in &consignment.endpoints {
             if let Some(node) = node_index.get(node_id) {
                 // Checking for endpoint definition duplicates
-                if node.all_seal_definitions().contains(&outpoint_hash) {
+                if node
+                    .all_seal_definitions()
+                    .contains(&seal_endpoint.conceal())
+                {
                     if end_transitions
                         .iter()
                         .filter(|n| n.node_id() == *node_id)
@@ -323,7 +328,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                     {
                         status.add_warning(Warning::EndpointDuplication(
                             *node_id,
-                            *outpoint_hash,
+                            *seal_endpoint,
                         ));
                     } else {
                         end_transitions.push(*node);
@@ -335,7 +340,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                     status.add_warning(
                         Warning::EndpointTransitionSealNotFound(
                             *node_id,
-                            *outpoint_hash,
+                            *seal_endpoint,
                         ),
                     );
                 }

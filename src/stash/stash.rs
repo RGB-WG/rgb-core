@@ -13,11 +13,9 @@
 
 use std::collections::BTreeSet;
 
-use lnpbp::seals::OutpointHash;
-
 use crate::{
     Anchor, Consignment, ContractId, Disclosure, Extension, Genesis, Node,
-    NodeId, SchemaId, Transition,
+    NodeId, SchemaId, SealEndpoint, Transition,
 };
 
 /// Top-level structure used by client wallets to manage all known RGB smart
@@ -75,7 +73,7 @@ pub trait Stash {
         contract_id: ContractId,
         node: &impl Node,
         anchor: Option<&Anchor>,
-        expose: &BTreeSet<OutpointHash>,
+        expose: &BTreeSet<SealEndpoint>,
     ) -> Result<Consignment, Self::Error>;
 
     /// When we have received data from other peer (which usually relate to our

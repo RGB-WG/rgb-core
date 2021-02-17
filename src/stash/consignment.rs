@@ -21,15 +21,15 @@ use lnpbp::client_side_validation::{
     commit_strategy, commit_verify::CommitVerify, CommitEncodeWithStrategy,
     ConsensusCommit,
 };
-use lnpbp::seals::{OutpointHash, OutpointReveal};
+use lnpbp::seals::OutpointReveal;
 use lnpbp::TaggedHash;
 
 use crate::{
-    validation, Anchor, Extension, Genesis, Node, NodeId, Schema, Transition,
-    Validator,
+    validation, Anchor, Extension, Genesis, Node, NodeId, Schema, SealEndpoint,
+    Transition, Validator,
 };
 
-pub type ConsignmentEndpoints = Vec<(NodeId, OutpointHash)>;
+pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
 pub type TransitionData = Vec<(Anchor, Transition)>;
 pub type ExtensionData = Vec<Extension>;
 
