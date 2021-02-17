@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::collections::BTreeSet;
+
 use lnpbp::seals::OutpointHash;
 
 use crate::{
@@ -73,7 +75,7 @@ pub trait Stash {
         contract_id: ContractId,
         node: &impl Node,
         anchor: Option<&Anchor>,
-        expose: &Vec<OutpointHash>,
+        expose: &BTreeSet<OutpointHash>,
     ) -> Result<Consignment, Self::Error>;
 
     /// When we have received data from other peer (which usually relate to our
