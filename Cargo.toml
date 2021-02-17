@@ -17,6 +17,10 @@ name = "rgb"
 path = "src/lib.rs"
 crate-type = ["rlib", "staticlib"]
 
+[[bin]]
+name = "rgb"
+required-features = ["cli", "serde"]
+
 # Dependencies
 # ============
 #
@@ -80,13 +84,18 @@ grin_secp256k1zkp = { version = "=0.7.10" }
 #    crates they should be removed
 num-traits = "~0.2.11"
 num-derive = "~0.3.0"
+# Optional features used only by a binary
+clap = { version = "3.0.0-beta.2", optional = true }
+serde_yaml = { version = "0.8", optional = true }
+serde_json = { version = "1", optional = true }
 
 [dev-dependencies]
 serde_json = "~1.0.60"
 
 [features]
-default = ["serde"]
-all = ["serde"]
+default = ["serde", "cli"]
+all = ["serde", "cli"]
+cli = ["clap", "serde_yaml", "serde_json"]
 serde = ["serde_crate", "serde_with", "serde_with_macros",
          "lnpbp/serde", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]

@@ -103,6 +103,11 @@ impl FromStr for ConsignmentId {
     }
 }
 
+#[cfg_attr(
+    all(feature = "cli", feature = "serde"),
+    derive(Serialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[display(Consignment::to_bech32_string)]
 pub struct Consignment {

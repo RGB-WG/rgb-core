@@ -62,6 +62,11 @@ pub type AtomicValue = u64;
     StrictEncode,
     StrictDecode,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct BlindingFactor(Slice32);
@@ -107,13 +112,6 @@ pub struct Revealed {
     pub value: AtomicValue,
 
     /// Blinding factor used in Pedersen commitment
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            serialize_with = "serde_helpers::to_hex",
-            deserialize_with = "serde_helpers::from_hex"
-        )
-    )]
     pub blinding: BlindingFactor,
 }
 
@@ -386,38 +384,6 @@ mod _strict_encoding {
                 ))?,
             })
         }
-    }
-}
-
-// TODO: Remove this once bitcion will adopt new bitcoin_num crate
-#[cfg(feature = "serde")]
-pub(crate) mod serde_helpers {
-    //! Serde serialization helpers
-
-    use super::BlindingFactor;
-    use bitcoin::hashes::hex::{FromHex, ToHex};
-    use serde::{Deserialize, Deserializer, Serializer};
-
-    /// Serializes `buffer` to a lowercase hex string.
-    pub fn to_hex<T, S>(buffer: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        T: AsRef<[u8]>,
-        S: Serializer,
-    {
-        serializer.serialize_str(&buffer.as_ref().to_hex())
-    }
-
-    /// Deserializes a lowercase hex string to a `Vec<u8>`.
-    pub fn from_hex<'de, D>(deserializer: D) -> Result<BlindingFactor, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        use serde::de::Error;
-        String::deserialize(deserializer).and_then(|string| {
-            Ok(BlindingFactor::from_hex(&string).map_err(|_| {
-                D::Error::custom("wrong hex data for blinding factor")
-            })?)
-        })
     }
 }
 

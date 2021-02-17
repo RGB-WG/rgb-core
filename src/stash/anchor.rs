@@ -118,6 +118,11 @@ pub enum Error {
     SizeLimit,
 }
 
+#[cfg_attr(
+    all(feature = "cli", feature = "serde"),
+    derive(Serialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(Clone, PartialEq, Eq, Debug, StrictEncode, StrictDecode)]
 pub struct Anchor {
     pub txid: Txid,
@@ -155,7 +160,7 @@ impl Anchor {
                 let vout = id % Uint256::from_u64(num_outs).unwrap();
                 let vout = ((vout.low_u64() + fee as u64) % num_outs) as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
-                    *contract_id.as_slice(),
+                    (*contract_id.as_slice()).into(),
                     sha256d::Hash::from_inner(*node_id.as_slice()),
                 );
                 data
@@ -249,7 +254,7 @@ impl Anchor {
 
             multimsg.iter().for_each(|(id, _)| {
                 let contract_id =
-                    ContractId::from_hash(sha256d::Hash::from_inner(*id));
+                    ContractId::from_hash(sha256d::Hash::from_inner(**id));
                 contract_anchor_map.insert(contract_id, anchors.len());
             });
             anchors.push(Anchor {
