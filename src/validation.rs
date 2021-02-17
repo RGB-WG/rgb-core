@@ -17,6 +17,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
 use lnpbp::client_side_validation::Conceal;
+use wallet::resolvers::TxResolver;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
@@ -24,17 +25,6 @@ use super::{
     NodeId, Schema, SchemaId,
 };
 use crate::SealEndpoint;
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
-#[display(Debug)]
-pub struct TxResolverError;
-
-pub trait TxResolver {
-    fn resolve(
-        &self,
-        txid: &Txid,
-    ) -> Result<Option<(Transaction, u64)>, TxResolverError>;
-}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -46,6 +36,11 @@ pub enum Validity {
 }
 
 #[derive(Clone, Debug, Display, Default, StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO: Display via YAML
 #[display(Debug)]
@@ -136,6 +131,11 @@ impl Status {
 
 #[derive(
     Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO: (v0.3) convert to detailed error description using doc_comments
@@ -246,6 +246,11 @@ pub enum Failure {
 #[derive(
     Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
@@ -258,6 +263,11 @@ pub enum Warning {
 
 #[derive(
     Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO: (v0.3) convert to detailed descriptions using doc_comments

@@ -39,6 +39,11 @@ pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurences>;
     StrictEncode,
     StrictDecode,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "snake_case")
+)]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 /// Node type: genesis, extensions and state transitions
 pub enum NodeType {

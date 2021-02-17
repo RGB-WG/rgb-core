@@ -95,7 +95,7 @@ serde_json = "~1.0.60"
 [features]
 default = ["serde", "cli"]
 all = ["serde", "cli"]
-cli = ["clap", "serde_yaml", "serde_json"]
+cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum"]
 serde = ["serde_crate", "serde_with", "serde_with_macros",
          "lnpbp/serde", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]

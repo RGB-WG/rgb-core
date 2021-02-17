@@ -216,6 +216,11 @@ impl Occurences {
     StrictEncode,
     StrictDecode,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 #[display(Debug)]
 pub struct OccurrencesError {

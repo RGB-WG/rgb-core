@@ -23,6 +23,7 @@ use lnpbp::client_side_validation::{
 };
 use lnpbp::seals::OutpointReveal;
 use lnpbp::TaggedHash;
+use wallet::resolvers::TxResolver;
 
 use crate::{
     validation, Anchor, Extension, Genesis, Node, NodeId, Schema, SealEndpoint,
@@ -185,7 +186,7 @@ impl Consignment {
         set
     }
 
-    pub fn validate<R: validation::TxResolver>(
+    pub fn validate<R: TxResolver>(
         &self,
         schema: &Schema,
         resolver: R,

@@ -25,8 +25,9 @@ use std::str::FromStr;
 
 use bitcoin::hashes::hex::{self, FromHex, ToHex};
 use lnpbp::client_side_validation::ConsensusCommit;
-use rgb::Consignment;
+use rgb::{Consignment, Schema};
 use strict_encoding::{StrictDecode, StrictEncode};
+use wallet::resolvers::ElectrumTxResolver;
 
 #[derive(Clap, Clone, Debug)]
 #[clap(
@@ -57,7 +58,7 @@ pub enum Command {
 #[clap(setting = AppSettings::ColoredHelp)]
 pub enum ConsignmentCommand {
     Convert {
-        /// Consignment data
+        /// Consignment data; if none are given reads from STDIN
         consignment: Option<String>,
 
         /// Formatting of the input data
@@ -67,6 +68,23 @@ pub enum ConsignmentCommand {
         /// Formatting for the output
         #[clap(short, long, default_value = "yaml")]
         output: Format,
+    },
+
+    Validate {
+        /// Consignment data; if none are given reads from STDIN
+        consignment: Option<String>,
+
+        /// Schema string (in a Bech32 format). Defaults to RGB20 schema if
+        /// omitted.
+        schema: Option<String>,
+
+        /// Formatting of the input data
+        #[clap(short, long, default_value = "bech32")]
+        input: Format,
+
+        /// Address for Electrum server
+        #[clap(default_value = "pandora.network:60001")]
+        electrum: String,
     },
 }
 
@@ -125,7 +143,39 @@ impl FromStr for Format {
     }
 }
 
-fn output_format<T>(data: T, format: Format) -> Result<(), String>
+fn input_read<T>(data: Option<String>, format: Format) -> Result<T, String>
+where
+    T: FromStr + StrictDecode + for<'de> serde::Deserialize<'de>,
+    <T as FromStr>::Err: ToString,
+{
+    let data = data.map(|d| d.as_bytes().to_vec()).ok_or(s!("")).or_else(
+        |_| -> Result<Vec<u8>, String> {
+            let mut buf = Vec::new();
+            io::stdin()
+                .read_to_end(&mut buf)
+                .as_ref()
+                .map_err(io::Error::to_string)?;
+            Ok(buf)
+        },
+    )?;
+    Ok(match format {
+        Format::Bech32 => T::from_str(&String::from_utf8_lossy(&data))
+            .map_err(|err| err.to_string())?,
+        Format::Yaml => serde_yaml::from_str(&String::from_utf8_lossy(&data))
+            .map_err(|err| err.to_string())?,
+        Format::Json => serde_json::from_str(&String::from_utf8_lossy(&data))
+            .map_err(|err| err.to_string())?,
+        Format::Hexadecimal => T::strict_deserialize(
+            Vec::<u8>::from_hex(&String::from_utf8_lossy(&data))
+                .as_ref()
+                .map_err(hex::Error::to_string)?,
+        )?,
+        Format::Binary => T::strict_deserialize(&data)?,
+        _ => panic!("Can't read data from {} format", format),
+    })
+}
+
+fn output_write<T>(data: T, format: Format) -> Result<(), String>
 where
     T: Debug + Display + Serialize + StrictEncode + ConsensusCommit,
     <T as ConsensusCommit>::Commitment: Display,
@@ -169,38 +219,36 @@ fn main() -> Result<(), String> {
                 input,
                 output,
             } => {
-                let data = consignment
-                    .map(|d| d.as_bytes().to_vec())
-                    .ok_or(s!(""))
-                    .or_else(|_| -> Result<Vec<u8>, String> {
-                        let mut buf = Vec::new();
-                        io::stdin()
-                            .read_to_end(&mut buf)
-                            .as_ref()
-                            .map_err(io::Error::to_string)?;
-                        Ok(buf)
-                    })?;
-                let consignment = match input {
-                    Format::Bech32 => {
-                        Consignment::from_str(&String::from_utf8_lossy(&data))?
-                    }
-                    Format::Yaml => {
-                        serde_yaml::from_str(&String::from_utf8_lossy(&data))
-                            .map_err(|err| err.to_string())?
-                    }
-                    Format::Json => {
-                        serde_json::from_str(&String::from_utf8_lossy(&data))
-                            .map_err(|err| err.to_string())?
-                    }
-                    Format::Hexadecimal => Consignment::strict_deserialize(
-                        Vec::<u8>::from_hex(&String::from_utf8_lossy(&data))
-                            .as_ref()
-                            .map_err(hex::Error::to_string)?,
-                    )?,
-                    Format::Binary => Consignment::strict_deserialize(&data)?,
-                    _ => panic!("Can't read data from {} format", input),
-                };
-                output_format(consignment, output)?;
+                let consignment: Consignment = input_read(consignment, input)?;
+                output_write(consignment, output)?;
+            }
+
+            ConsignmentCommand::Validate {
+                consignment,
+                schema,
+                input,
+                electrum,
+            } => {
+                let consignment: Consignment = input_read(consignment, input)?;
+                let schema = Schema::from_str(&schema.unwrap_or(s!(
+                    "schema1qxx4qkcjsgcqehyk7gg9lrp8uqw9a34r8r0qfay0lm\
+        cr3pxh7yrr2n2mvszq0s7symvkvdcf2ck6whm9zpgpqyk2nqypf8pget8vlk798ccuats4j\
+        zzn98ena4p2us7eyvmxvsz5zzvcc4yu5nvjdhlw76rkxn8vvs27f0qs4qyemfdfczyvve45\
+        qvfds8kryuuc4kzh03t2xruw932u6e7rn9szn8uz2kkcc7lrkzpw4ct4xpgej2s8e3vn224\
+        mmwh8yjwm3c3uzcsz350urqt6gfm6wpj6gcajd6uevncqy74u87jtfmx8raza9nlm2hazyd\
+        l7hyevmls6amyy4kl7rv6skggq"
+                )))?;
+                let status = consignment.validate(
+                    &schema,
+                    &ElectrumTxResolver::new(&electrum)
+                        .map_err(|err| format!("{:#?}", err))?,
+                );
+                println!(
+                    "{}",
+                    serde_yaml::to_string(&status)
+                        .as_ref()
+                        .map_err(serde_yaml::Error::to_string)?
+                );
             }
         },
     }
