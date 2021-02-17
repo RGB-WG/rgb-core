@@ -138,7 +138,7 @@ pub fn issue(
 pub fn transfer(
     asset: &mut Asset,
     inputs: BTreeSet<OutPoint>,
-    payment: BTreeMap<SealPrototype, AtomicValue>,
+    payment: BTreeMap<SealEndpoint, AtomicValue>,
     change: BTreeMap<SealDefinition, AtomicValue>,
 ) -> Result<Transition, TransferError> {
     // Collecting all input allocations
