@@ -881,7 +881,7 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 [[package]]
 name = "rgb-core"
 version = "0.4.0-beta"
-source = "git+https://github.com/rgb-org/rgb-core#5984c301c583161643cbecd3ae20405399f43ab4"
+source = "git+https://github.com/rgb-org/rgb-core#f50d5b27b6ac68bc922612cfa99a664a6a8273f2"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -889,6 +889,7 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes",
  "chrono",
+ "clap",
  "deflate",
  "descriptor-wallet",
  "ed25519-dalek",
@@ -902,8 +903,10 @@ dependencies = [
  "num-traits",
  "regex",
  "serde",
+ "serde_json",
  "serde_with",
  "serde_with_macros",
+ "serde_yaml",
  "strict_encoding",
 ]
 

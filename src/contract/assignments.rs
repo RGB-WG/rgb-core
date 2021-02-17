@@ -526,7 +526,7 @@ impl StateTypes for HashStrategy {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "kebab-case")
+    serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 pub enum OwnedState<STATE>
 where
