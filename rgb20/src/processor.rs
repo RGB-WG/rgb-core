@@ -12,16 +12,16 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use chrono::Utc;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 
 use bitcoin::OutPoint;
-use lnpbp::Chain;
+use lnpbp::{seals::OutpointHash, Chain};
 use rgb::prelude::*;
 use rgb::secp256k1zkp;
 
 use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
-use super::{AccountingAmount, Allocation, Asset, ConsealCoins, SealCoins};
+use super::{Allocation, Asset};
 
 use crate::asset;
 
@@ -137,46 +137,38 @@ pub fn issue(
 /// schema-based) given an asset information, inputs and desired outputs
 pub fn transfer(
     asset: &mut Asset,
-    inputs: Vec<OutPoint>,
-    ours: Vec<SealCoins>,
-    theirs: Vec<ConsealCoins>,
+    inputs: BTreeSet<OutPoint>,
+    payment: BTreeMap<OutpointHash, AtomicValue>,
+    change: BTreeMap<SealDefinition, AtomicValue>,
 ) -> Result<Transition, TransferError> {
     // Collecting all input allocations
     let mut input_allocations = Vec::<Allocation>::new();
-    for seal in &inputs {
-        let found = asset.allocations(seal).clone();
+    for outpoint in inputs {
+        let found = asset.allocations(outpoint).clone();
         if found.len() == 0 {
-            Err(TransferError::UnknownInput(*seal))?
+            Err(TransferError::UnknownInput(outpoint))?
         }
         input_allocations.extend(found);
     }
     // Computing sum of inputs
     let total_inputs = input_allocations
         .iter()
-        .fold(0u64, |acc, alloc| acc + alloc.confidential_amount().value);
+        .fold(0u64, |acc, alloc| acc + alloc.revealed_amount().value);
 
     let metadata = type_map! {};
     let mut total_outputs = 0;
-    let allocations_ours = ours
+    let allocations_ours = change
         .into_iter()
-        .map(|outcoins| {
-            let amount = AccountingAmount::transmutate_from(
-                *asset.fractional_bits(),
-                outcoins.coins,
-            );
-            total_outputs += amount;
-            (outcoins.seal_definition(), amount)
+        .map(|(seal, value)| {
+            total_outputs += value;
+            (seal, value)
         })
         .collect();
-    let allocations_theirs = theirs
+    let allocations_theirs = payment
         .into_iter()
-        .map(|outcoincealed| {
-            let amount = AccountingAmount::transmutate_from(
-                *asset.fractional_bits(),
-                outcoincealed.coins,
-            );
-            total_outputs += amount;
-            (outcoincealed.seal_confidential, amount)
+        .map(|(outpoint_hash, value)| {
+            total_outputs += value;
+            (outpoint_hash, value)
         })
         .collect();
 
@@ -186,7 +178,7 @@ pub fn transfer(
 
     let input_amounts = input_allocations
         .iter()
-        .map(|alloc| alloc.confidential_amount().clone())
+        .map(|alloc| *alloc.revealed_amount())
         .collect();
     let assignments = type_map! {
         OwnedRightsType::Assets =>

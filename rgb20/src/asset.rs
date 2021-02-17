@@ -301,7 +301,7 @@ impl Asset {
     Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{confidential_amount}@{node_id}#{index}>{outpoint}")]
+#[display("{revealed_amount}@{node_id}#{index}>{outpoint}")]
 pub struct Allocation {
     /// Unique primary key is `node_id` + `index`
     node_id: NodeId,
@@ -315,8 +315,8 @@ pub struct Allocation {
     outpoint: bitcoin::OutPoint,
 
     /// Revealed confidential amount consisting of an explicit atomic amount
-    /// and Pedesen commitment blinding factor
-    confidential_amount: value::Revealed,
+    /// and Pedersen commitment blinding factor
+    revealed_amount: value::Revealed,
 }
 
 impl Allocation {
@@ -331,13 +331,13 @@ impl Allocation {
             node_id,
             index,
             outpoint,
-            confidential_amount: value,
+            revealed_amount: value,
         }
     }
 
     #[inline]
     pub fn value(&self) -> AtomicValue {
-        self.confidential_amount.value
+        self.revealed_amount.value
     }
 }
 
@@ -468,10 +468,10 @@ impl Asset {
     }
 
     #[inline]
-    pub fn allocations(&self, outpoint: &bitcoin::OutPoint) -> Vec<Allocation> {
+    pub fn allocations(&self, outpoint: bitcoin::OutPoint) -> Vec<Allocation> {
         self.known_allocations
             .iter()
-            .filter(|a| a.outpoint == *outpoint)
+            .filter(|a| a.outpoint == outpoint)
             .copied()
             .collect()
     }
@@ -487,7 +487,7 @@ impl Asset {
             node_id,
             index,
             outpoint,
-            confidential_amount: value,
+            revealed_amount: value,
         };
         if !self.known_allocations.contains(&new_allocation) {
             self.known_allocations.push(new_allocation);
@@ -508,7 +508,7 @@ impl Asset {
             node_id,
             index,
             outpoint,
-            confidential_amount: value,
+            revealed_amount: value,
         };
         if let Some(index) = self
             .known_allocations
@@ -610,7 +610,7 @@ impl TryFrom<Genesis> for Asset {
                             node_id,
                             index: index as u16,
                             outpoint: outpoint_reveal.into(),
-                            confidential_amount: assigned_state,
+                            revealed_amount: assigned_state,
                         })
                     }
                 });

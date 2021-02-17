@@ -420,7 +420,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
         // Generate warning if some of the transitions within the consignment
         // were excessive (i.e. not part of validation_index). Nothing critical,
-        // but still good to report the used that the consignment is not perfect
+        // but still good to report the user that the consignment is not perfect
         for node_id in self
             .validation_index
             .difference(&self.consignment.node_ids())
