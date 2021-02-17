@@ -22,9 +22,7 @@ use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::hex::FromHex;
 use bitcoin::{OutPoint, Txid};
 use lnpbp::seals::{OutpointHash, OutpointReveal};
-use rgb::SealDefinition;
-
-use super::AccountingValue;
+use rgb::{AtomicValue, SealDefinition};
 
 #[derive(Clone, Copy, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -35,7 +33,18 @@ use super::AccountingValue;
 /// Error parsing data
 pub struct ParseError;
 
-#[derive(Clone, Debug, PartialEq, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize,),
@@ -43,12 +52,24 @@ pub struct ParseError;
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct SealCoins {
-    pub coins: AccountingValue,
+    pub coins: AtomicValue,
     pub vout: u32,
     pub txid: Option<Txid>,
 }
 
-#[derive(Clone, Debug, PartialEq, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize,),
@@ -57,11 +78,23 @@ pub struct SealCoins {
 #[display("{coins}@{outpoint}")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct OutpointCoins {
-    pub coins: AccountingValue,
+    pub coins: AtomicValue,
     pub outpoint: OutPoint,
 }
 
-#[derive(Clone, Debug, PartialEq, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize,),
@@ -70,7 +103,7 @@ pub struct OutpointCoins {
 #[display("{coins}@{seal_confidential}")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct ConsealCoins {
-    pub coins: AccountingValue,
+    pub coins: AtomicValue,
     pub seal_confidential: OutpointHash,
 }
 
@@ -122,7 +155,7 @@ impl FromStr for SealCoins {
         // TODO: Get rig of regex dependency
         let re = Regex::new(
             r"(?x)
-                ^(?P<coins>[\d.,_']+) # float amount
+                ^(?P<coins>[\d_'`]+) # float amount
                 @
                 ((?P<txid>[a-f\d]{64}) # Txid
                 :)
@@ -170,7 +203,7 @@ impl FromStr for ConsealCoins {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let re = Regex::new(
             r"(?x)
-                ^(?P<coins>[\d.,_']+) # float amount
+                ^(?P<coins>[\d_'`]+) # float amount
                 @
                 ((?P<seal>[a-f\d]{64}))$ # Confidential seal: outpoint hash
             ",
