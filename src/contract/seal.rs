@@ -25,7 +25,7 @@ pub type Confidential = OutpointHash;
 /// Convenience type name useful for defining new seals
 pub type SealDefinition = Revealed;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -39,7 +39,7 @@ pub enum SealPrototype {
     WitnessVout(u32),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, From)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, From, StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -106,45 +106,6 @@ impl TryFrom<Revealed> for OutPoint {
     }
 }
 
-mod _strict_encoding {
-    use super::*;
-    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
-    use std::io;
-
-    impl StrictEncode for Revealed {
-        fn strict_encode<E: io::Write>(
-            &self,
-            mut e: E,
-        ) -> Result<usize, Error> {
-            Ok(match self {
-                Revealed::TxOutpoint(outpoint) => {
-                    strict_encode_list!(e; 0u8, outpoint)
-                }
-                Revealed::WitnessVout { vout, blinding } => {
-                    strict_encode_list!(e; 1u8, vout, blinding)
-                }
-            })
-        }
-    }
-
-    impl StrictDecode for Revealed {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let format = u8::strict_decode(&mut d)?;
-            Ok(match format {
-                0u8 => Revealed::TxOutpoint(OutpointReveal::strict_decode(d)?),
-                1u8 => Revealed::WitnessVout {
-                    vout: u32::strict_decode(&mut d)?,
-                    blinding: u64::strict_decode(&mut d)?,
-                },
-                invalid => Err(Error::EnumValueNotKnown(
-                    "seal::Revealed".to_string(),
-                    invalid,
-                ))?,
-            })
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -202,7 +163,7 @@ mod test {
 
     #[test]
     fn test_wrong_encoding() {
-        let err = "seal::Revealed";
+        let err = "Revealed";
         test_garbage_exhaustive!(2..255; (REVEALED_TXOUTPOINT, Revealed, err), 
             (REVEALED_WITNESSVOUT, Revealed, err));
     }
