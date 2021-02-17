@@ -120,7 +120,7 @@ pub enum Error {
 
 #[cfg_attr(
     all(feature = "cli", feature = "serde"),
-    derive(Serialize),
+    derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, PartialEq, Eq, Debug, StrictEncode, StrictDecode)]

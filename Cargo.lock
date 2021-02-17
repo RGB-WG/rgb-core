@@ -510,7 +510,7 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 [[package]]
 name = "lnpbp"
 version = "0.4.0-beta"
-source = "git+https://github.com/LNP-BP/rust-lnpbp#09a1464394a0f6177c8c85e98f8d92510bdc0f90"
+source = "git+https://github.com/LNP-BP/rust-lnpbp#9e2c366bc3c041925c844fae5ec90597cb3a0529"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -881,7 +881,7 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 [[package]]
 name = "rgb-core"
 version = "0.4.0-beta"
-source = "git+https://github.com/rgb-org/rgb-core#f50d5b27b6ac68bc922612cfa99a664a6a8273f2"
+source = "git+https://github.com/rgb-org/rgb-core#fe8000434078f4d3be2428f5bee57a85a41878bd"
 dependencies = [
  "amplify",
  "amplify_derive",
