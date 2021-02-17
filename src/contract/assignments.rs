@@ -24,7 +24,7 @@ use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
     data, seal, value, AtomicValue, AutoConceal, NoDataError, NodeId,
-    SealDefinition, SECP256K1_ZKP,
+    SealDefinition, SealPrototype, SECP256K1_ZKP,
 };
 use crate::schema;
 
@@ -52,7 +52,7 @@ impl Assignments {
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
         allocations_ours: Vec<(SealDefinition, AtomicValue)>,
-        allocations_theirs: Vec<(seal::Confidential, AtomicValue)>,
+        allocations_theirs: Vec<(SealPrototype, AtomicValue)>,
     ) -> Self {
         if allocations_ours.len() + allocations_theirs.len() == 0 {
             return Self::DiscreteFiniteField(vec![]);
@@ -102,14 +102,23 @@ impl Assignments {
         set.extend(
             allocations_theirs
                 .into_iter()
-                .map(|(seal_definition, amount)| OwnedState::ConfidentialSeal {
-                    seal_definition,
-                    assigned_state: value::Revealed {
+                .map(|(seal_proto, amount)| {
+                    let assigned_state = value::Revealed {
                         value: amount,
                         blinding: blinding_iter.next().expect(
                             "Internal inconsistency in `AssignmentsVariant::zero_balanced`",
                         ).into(),
-                    },
+                    };
+                    match seal_proto {
+                        SealPrototype::TxOutpoint(seal_definition) => OwnedState::ConfidentialSeal {
+                            seal_definition,
+                            assigned_state,
+                        },
+                        SealPrototype::WitnessVout(vout) => OwnedState::Revealed {
+                            seal_definition: SealDefinition::with_vout(vout, &mut rng),
+                            assigned_state
+                        }
+                    }
                 }),
         );
 
@@ -1243,14 +1252,16 @@ mod test {
             .zip(output_amounts[partition..].iter());
 
         // Create their allocations
-        let theirs: Vec<(seal::Confidential, AtomicValue)> = zip_data2
+        let theirs: Vec<(SealPrototype, AtomicValue)> = zip_data2
             .map(|(txid, amount)| {
                 (
-                    Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
-                        *txid,
-                        rng.gen_range(0, 10),
-                    )))
-                    .conceal(),
+                    SealPrototype::TxOutpoint(
+                        OutpointReveal::from(OutPoint::new(
+                            *txid,
+                            rng.gen_range(0, 10),
+                        ))
+                        .conceal(),
+                    ),
                     amount.clone(),
                 )
             })

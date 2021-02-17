@@ -11,9 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bitcoin::{OutPoint, Txid};
 use core::convert::TryFrom;
 
+use bitcoin::secp256k1::rand::RngCore;
+use bitcoin::{OutPoint, Txid};
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, Conceal,
 };
@@ -31,14 +32,33 @@ pub type SealDefinition = Revealed;
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
+pub enum SealPrototype {
+    /// Seal that is concealed
+    TxOutpoint(OutpointHash),
+    /// Seal contained within the witness transaction
+    WitnessVout(u32),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, From)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "snake_case")
+)]
+#[display(Debug)]
 pub enum Revealed {
     /// Seal that is revealed
+    #[from]
     TxOutpoint(OutpointReveal),
     /// Seal contained within the witness transaction
     WitnessVout { vout: u32, blinding: u64 },
 }
 
 impl Revealed {
+    pub fn with_vout(vout: u32, rng: &mut impl RngCore) -> Revealed {
+        Revealed::WitnessVout { vout, blinding: rng.next_u64() }
+    }
+
     pub fn outpoint_reveal(&self, txid: Txid) -> OutpointReveal {
         match self.clone() {
             Revealed::TxOutpoint(op) => op,
