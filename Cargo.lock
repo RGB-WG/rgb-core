@@ -774,7 +774,7 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 [[package]]
 name = "rgb-core"
 version = "0.4.0-beta"
-source = "git+https://github.com/rgb-org/rgb-core#1351af4da67de0c2f79e4d53fd9a67e8a6b50e08"
+source = "git+https://github.com/rgb-org/rgb-core#9ed0601ab917ebe95f709118c5eb1af3554464b6"
 dependencies = [
  "amplify",
  "amplify_derive",

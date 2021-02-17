@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 
 use bitcoin::OutPoint;
-use lnpbp::{seals::OutpointHash, Chain};
+use lnpbp::Chain;
 use rgb::prelude::*;
 use rgb::secp256k1zkp;
 
@@ -138,7 +138,7 @@ pub fn issue(
 pub fn transfer(
     asset: &mut Asset,
     inputs: BTreeSet<OutPoint>,
-    payment: BTreeMap<OutpointHash, AtomicValue>,
+    payment: BTreeMap<SealPrototype, AtomicValue>,
     change: BTreeMap<SealDefinition, AtomicValue>,
 ) -> Result<Transition, TransferError> {
     // Collecting all input allocations
@@ -166,9 +166,9 @@ pub fn transfer(
         .collect();
     let allocations_theirs = payment
         .into_iter()
-        .map(|(outpoint_hash, value)| {
+        .map(|(seal_proto, value)| {
             total_outputs += value;
-            (outpoint_hash, value)
+            (seal_proto, value)
         })
         .collect();
 
