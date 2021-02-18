@@ -723,13 +723,19 @@ where
 
     fn conceal(&self) -> Self {
         match self {
-            OwnedState::Confidential { .. }
-            | OwnedState::ConfidentialAmount { .. } => self.clone(),
+            OwnedState::Confidential { .. } => self.clone(),
+            OwnedState::ConfidentialAmount {
+                seal_definition,
+                assigned_state,
+            } => Self::Confidential {
+                seal_definition: seal_definition.conceal(),
+                assigned_state: assigned_state.clone(),
+            },
             OwnedState::Revealed {
                 seal_definition,
                 assigned_state,
-            } => Self::ConfidentialAmount {
-                seal_definition: seal_definition.clone(),
+            } => Self::Confidential {
+                seal_definition: seal_definition.conceal(),
                 assigned_state: assigned_state.conceal().into(),
             },
             OwnedState::ConfidentialSeal {
