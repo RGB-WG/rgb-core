@@ -19,6 +19,7 @@ crate-type = ["rlib", "staticlib"]
 
 [[bin]]
 name = "rgb"
+path = "src/bin/rgb.rs"
 required-features = ["cli", "serde"]
 
 # Dependencies
@@ -100,7 +101,7 @@ serde = ["serde_crate", "serde_with", "serde_with_macros",
          "lnpbp/serde", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]
 
-[workspace]
-members = ["rgb20", "rgb21", "rgb22", "rgb23"]
-default-members = ["rgb20"]
-exclude = ["dep_test"]
+# [workspace]
+# members = [".", "rgb20", "rgb21", "rgb22", "rgb23"]
+# default-members = ["rgb20"]
+# exclude = ["dep_test"]

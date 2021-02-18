@@ -226,9 +226,9 @@ impl Consignment {
 pub(crate) mod test {
     use super::*;
     use crate::schema::test::schema;
-    use crate::validation::TxResolver;
     use lnpbp::strict_encoding::StrictDecode;
     use lnpbp::tagged_hash;
+    use wallet::resolvers::{TxResolver, TxResolverError};
 
     static CONSIGNMENT: [u8; 1549] = include!("../../test/consignment.in");
 
@@ -242,12 +242,10 @@ pub(crate) mod test {
         fn resolve(
             &self,
             txid: &Txid,
-        ) -> Result<
-            Option<(bitcoin::Transaction, u64)>,
-            validation::TxResolverError,
-        > {
+        ) -> Result<Option<(bitcoin::Transaction, u64)>, TxResolverError>
+        {
             eprintln!("Validating txid {}", txid);
-            Err(validation::TxResolverError)
+            Err(TxResolverError)
         }
     }
 
