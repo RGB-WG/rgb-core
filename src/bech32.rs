@@ -754,7 +754,7 @@ where
 mod test {
     use super::*;
     use amplify::DumbDefault;
-    use lnpbp::client_side_validation::Conceal;
+    use lnpbp::client_side_validation::CommitConceal;
     use lnpbp::seals::OutpointReveal;
 
     #[test]
@@ -764,7 +764,7 @@ mod test {
             txid: "42332750017e9547abf0e975ec92832d8cfe3fbbaa78cec434d22175d5b6e6d9"
                 .parse().unwrap(),
             vout: 3,
-        }).conceal();
+        }).commit_conceal();
         let bech32 = obj.to_bech32_string();
         assert_eq!(
             bech32,

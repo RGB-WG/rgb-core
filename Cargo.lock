@@ -150,9 +150,9 @@ checksum = "ae44d1a3d5a19df61dd0c8beb138458ac2a53a7ac09eba97d55592540004306b"
 
 [[package]]
 name = "cc"
-version = "1.0.66"
+version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c0496836a84f8d0495758516b8621a622beb77c0fed418570e50764093ced48"
+checksum = "e3c69b077ad434294d3ce9f1f6143a2a4b89a8a2d54ef813d85003a4fd1137fd"
 
 [[package]]
 name = "cfg-if"
@@ -211,6 +211,18 @@ name = "client_side_validation"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bdfd8dba1ad3d1958eac41d2675f6802606917e61daa312ea5b68fd2f075e934"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bitcoin_hashes",
+ "grin_secp256k1zkp",
+ "strict_encoding",
+]
+
+[[package]]
+name = "client_side_validation"
+version = "0.4.0-beta"
+source = "git+https://github.com/LNP-BP/rust-lnpbp?branch=fix/commit-encode#01cbc7fd0a95d57447d2a02fc15bc8e3f3f9f766"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -374,9 +386,9 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "form_urlencoded"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ece68d15c92e84fa4f19d3780f1294e5ca82a78a6d515f1efaabcc144688be00"
+checksum = "5fc25a87fa4fd2094bffb06925852034d90a17f0d1e05197d4956d3555752191"
 dependencies = [
  "matches",
  "percent-encoding",
@@ -551,14 +563,14 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 [[package]]
 name = "lnpbp"
 version = "0.4.0-beta"
-source = "git+https://github.com/LNP-BP/rust-lnpbp?branch=fix/commit-encode#ed4681777d77875f995b72cf7aa64d22dc9ae4e2"
+source = "git+https://github.com/LNP-BP/rust-lnpbp?branch=fix/commit-encode#01cbc7fd0a95d57447d2a02fc15bc8e3f3f9f766"
 dependencies = [
  "amplify",
  "amplify_derive",
  "bech32",
  "bitcoin",
  "bitcoin_hashes",
- "client_side_validation",
+ "client_side_validation 0.4.0-beta",
  "deflate",
  "descriptor-wallet",
  "inflate",
@@ -582,7 +594,7 @@ dependencies = [
  "bech32",
  "bitcoin",
  "bitcoin_hashes",
- "client_side_validation",
+ "client_side_validation 0.3.0",
  "deflate",
  "descriptor-wallet",
  "inflate",
@@ -955,7 +967,7 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 [[package]]
 name = "rgb-core"
 version = "0.4.0-beta"
-source = "git+https://github.com/rgb-org/rgb-core#e58ddaff0b3d4acb3797b6dc7cb0e83562192e26"
+source = "git+https://github.com/rgb-org/rgb-core#bf1bac19a27ec9a974d5d2412085d9081f9f3fcb"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -1488,9 +1500,9 @@ checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
 name = "url"
-version = "2.2.0"
+version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5909f2b0817350449ed73e8bcd81c8c3c8d9a7a5d8acba4b27db277f1868976e"
+checksum = "9ccd964113622c8e9322cfac19eb1004a07e636c545f325da085d5cdde6f1f8b"
 dependencies = [
  "form_urlencoded",
  "idna",

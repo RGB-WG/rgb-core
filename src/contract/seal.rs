@@ -16,7 +16,7 @@ use core::convert::TryFrom;
 use bitcoin::secp256k1::rand::RngCore;
 use bitcoin::{OutPoint, Txid};
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, Conceal,
+    commit_strategy, CommitEncodeWithStrategy, CommitConceal,
 };
 use lnpbp::seals::{OutpointHash, OutpointReveal};
 
@@ -48,13 +48,13 @@ impl SealEndpoint {
     }
 }
 
-impl Conceal for SealEndpoint {
-    type Confidential = Confidential;
+impl CommitConceal for SealEndpoint {
+    type ConcealedCommitment = Confidential;
 
-    fn conceal(&self) -> Self::Confidential {
+    fn commit_conceal(&self) -> Self::ConcealedCommitment {
         match *self {
             SealEndpoint::TxOutpoint(hash) => hash,
-            SealEndpoint::WitnessVout { vout, blinding } => SealDefinition::WitnessVout { vout, blinding }.conceal()
+            SealEndpoint::WitnessVout { vout, blinding } => SealDefinition::WitnessVout { vout, blinding }.commit_conceal()
         }
     }
 }
@@ -91,18 +91,18 @@ impl Revealed {
     }
 }
 
-impl Conceal for Revealed {
-    type Confidential = Confidential;
+impl CommitConceal for Revealed {
+    type ConcealedCommitment = Confidential;
 
-    fn conceal(&self) -> Confidential {
+    fn commit_conceal(&self) -> Self::ConcealedCommitment {
         match self.clone() {
-            Revealed::TxOutpoint(outpoint) => outpoint.conceal(),
+            Revealed::TxOutpoint(outpoint) => outpoint.commit_conceal(),
             Revealed::WitnessVout { vout, blinding } => OutpointReveal {
                 blinding,
                 txid: Txid::default(),
                 vout,
             }
-            .conceal(),
+            .commit_conceal(),
         }
     }
 }
@@ -193,7 +193,7 @@ mod test {
         let revelaed =
             Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
 
-        let concealed = revelaed.conceal();
+        let concealed = revelaed.commit_conceal();
 
         // Strict encoding of Confidential data
         let mut confidential_encoded = vec![];
@@ -207,7 +207,7 @@ mod test {
         let revelaed =
             Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
-        let concealed = revelaed.conceal();
+        let concealed = revelaed.commit_conceal();
 
         // Strict encoding Confidential data
         let mut confidential_encoded = vec![];
@@ -308,13 +308,13 @@ mod test {
 
         let mut txout_new = vec![];
         revealed_txout
-            .conceal()
+            .commit_conceal()
             .strict_encode(&mut txout_new)
             .unwrap();
 
         let mut witness_new = vec![];
         revealed_witness
-            .conceal()
+            .commit_conceal()
             .strict_encode(&mut witness_new)
             .unwrap();
 

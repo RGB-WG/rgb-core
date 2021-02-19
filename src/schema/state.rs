@@ -759,7 +759,7 @@ mod _validation {
         data, validation, DeclarativeStrategy, HashStrategy, NodeId,
         OwnedState, PedersenStrategy, StateTypes,
     };
-    use lnpbp::client_side_validation::Conceal;
+    use lnpbp::client_side_validation::CommitConceal;
 
     fn range_check<T, U>(
         type_id: usize,
@@ -966,7 +966,7 @@ mod _validation {
             STATE: StateTypes,
             STATE::Confidential: PartialEq + Eq,
             STATE::Confidential:
-                From<<STATE::Revealed as Conceal>::Confidential>,
+                From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
         {
             let mut status = validation::Status::new();
             match data {
@@ -1076,7 +1076,7 @@ mod test {
     use bitcoin::hashes::{hex::FromHex, sha256};
     use std::collections::BTreeMap;
 
-    use lnpbp::client_side_validation::Conceal;
+    use lnpbp::client_side_validation::CommitConceal;
     use lnpbp::seals::OutpointReveal;
     use lnpbp::strict_encoding::{strict_serialize, StrictDecode};
     use lnpbp::TaggedHash;
@@ -1499,7 +1499,7 @@ mod test {
                 seal_definition: crate::contract::seal::Revealed::TxOutpoint(
                     OutpointReveal::from(OutPoint::new(txid_vec[1], 2)),
                 )
-                .conceal(),
+                .commit_conceal(),
                 assigned_state: data::Void,
             };
 
@@ -1516,9 +1516,9 @@ mod test {
                 seal_definition: crate::contract::seal::Revealed::TxOutpoint(
                     OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
                 )
-                .conceal(),
+                .commit_conceal(),
                 assigned_state: value::Revealed::with_amount(10u64, &mut rng)
-                    .conceal(),
+                    .commit_conceal(),
             };
 
         // Create CustomData Assignmnets
@@ -1540,8 +1540,8 @@ mod test {
             seal_definition: crate::contract::seal::Revealed::TxOutpoint(
                 OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
             )
-            .conceal(),
-            assigned_state: state_data_vec[0].clone().conceal(),
+            .commit_conceal(),
+            assigned_state: state_data_vec[0].clone().commit_conceal(),
         };
 
         // Create NodeId amd Stateformats

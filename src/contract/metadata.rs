@@ -165,7 +165,7 @@ mod test {
     use amplify::Wrapper;
     use bitcoin::hashes::Hash;
     use lnpbp::client_side_validation::{
-        merklize, CommitEncode, Conceal, MerkleNode,
+        merklize, CommitConceal, CommitEncode, MerkleNode,
     };
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
     use secp256k1zkp::rand::{thread_rng, RngCore};
@@ -302,7 +302,10 @@ mod test {
             .iter()
             .map(|data| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone().conceal().strict_encode(&mut encoder).unwrap();
+                data.clone()
+                    .commit_conceal()
+                    .strict_encode(&mut encoder)
+                    .unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
@@ -318,7 +321,10 @@ mod test {
             .iter()
             .map(|data| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone().conceal().strict_encode(&mut encoder).unwrap();
+                data.clone()
+                    .commit_conceal()
+                    .strict_encode(&mut encoder)
+                    .unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
@@ -334,7 +340,10 @@ mod test {
             .iter()
             .map(|data| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone().conceal().strict_encode(&mut encoder).unwrap();
+                data.clone()
+                    .commit_conceal()
+                    .strict_encode(&mut encoder)
+                    .unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();

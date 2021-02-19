@@ -17,10 +17,11 @@ use core::fmt::Debug;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, Conceal,
+    commit_strategy, CommitConceal, CommitEncodeWithStrategy, ConsensusCommit,
+    ConsensusMerkleCommit, MerkleNode, MerkleSource, ToMerkleSource,
 };
 use lnpbp::seals::OutpointReveal;
-use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
     data, seal, value, AtomicValue, AutoConceal, NoDataError, NodeId,
@@ -413,7 +414,7 @@ pub trait ConfidentialState:
 }
 
 pub trait RevealedState:
-    StrictEncode + StrictDecode + Debug + Conceal + Clone + AsAny
+    StrictEncode + StrictDecode + Debug + CommitConceal + Clone + AsAny
 {
 }
 
@@ -534,7 +535,8 @@ where
     // Deterministic ordering requires Eq operation, so the confidential
     // state must have it
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     Confidential {
         seal_definition: seal::Confidential,
@@ -562,7 +564,8 @@ impl<STATE> PartialOrd for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.seal_definition_confidential()
@@ -574,7 +577,8 @@ impl<STATE> Ord for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.seal_definition_confidential()
@@ -586,7 +590,8 @@ impl<STATE> PartialEq for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn eq(&self, other: &Self) -> bool {
         self.seal_definition_confidential()
@@ -600,7 +605,8 @@ impl<STATE> Eq for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
 }
 
@@ -608,7 +614,8 @@ impl<STATE> OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     pub fn seal_definition_confidential(&self) -> seal::Confidential {
         match self {
@@ -617,7 +624,7 @@ where
             }
             | OwnedState::ConfidentialAmount {
                 seal_definition, ..
-            } => seal_definition.conceal(),
+            } => seal_definition.commit_conceal(),
             OwnedState::Confidential {
                 seal_definition, ..
             }
@@ -644,7 +651,7 @@ where
         match self {
             OwnedState::Revealed { assigned_state, .. }
             | OwnedState::ConfidentialSeal { assigned_state, .. } => {
-                assigned_state.conceal().into()
+                assigned_state.commit_conceal().into()
             }
             OwnedState::Confidential { assigned_state, .. }
             | OwnedState::ConfidentialAmount { assigned_state, .. } => {
@@ -673,7 +680,7 @@ where
     ) -> usize {
         let known_seals: HashMap<seal::Confidential, OutpointReveal> =
             known_seals
-                .map(|rev| (rev.conceal(), rev.clone()))
+                .map(|rev| (rev.commit_conceal(), rev.clone()))
                 .collect();
 
         let mut counter = 0;
@@ -712,38 +719,39 @@ where
     }
 }
 
-impl<STATE> Conceal for OwnedState<STATE>
+impl<STATE> CommitConceal for OwnedState<STATE>
 where
     Self: Clone,
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    type Confidential = OwnedState<STATE>;
+    type ConcealedCommitment = OwnedState<STATE>;
 
-    fn conceal(&self) -> Self {
+    fn commit_conceal(&self) -> Self::ConcealedCommitment {
         match self {
             OwnedState::Confidential { .. } => self.clone(),
             OwnedState::ConfidentialAmount {
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
-                seal_definition: seal_definition.conceal(),
+                seal_definition: seal_definition.commit_conceal(),
                 assigned_state: assigned_state.clone(),
             },
             OwnedState::Revealed {
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
-                seal_definition: seal_definition.conceal(),
-                assigned_state: assigned_state.conceal().into(),
+                seal_definition: seal_definition.commit_conceal(),
+                assigned_state: assigned_state.commit_conceal().into(),
             },
             OwnedState::ConfidentialSeal {
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
                 seal_definition: seal_definition.clone(),
-                assigned_state: assigned_state.conceal().into(),
+                assigned_state: assigned_state.commit_conceal().into(),
             },
         }
     }
@@ -752,10 +760,10 @@ where
 impl<STATE> AutoConceal for OwnedState<STATE>
 where
     STATE: StateTypes,
-    STATE::Revealed: Conceal,
+    STATE::Revealed: CommitConceal,
     STATE::Confidential: PartialEq + Eq,
     <STATE as StateTypes>::Confidential:
-        From<<STATE::Revealed as Conceal>::Confidential>,
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
@@ -769,7 +777,7 @@ where
                     0
                 } else {
                     *self = OwnedState::<STATE>::Confidential {
-                        assigned_state: assigned_state.conceal().into(),
+                        assigned_state: assigned_state.commit_conceal().into(),
                         seal_definition: seal_definition.clone(),
                     };
                     1
@@ -779,11 +787,11 @@ where
                 seal_definition,
                 assigned_state,
             } => {
-                if seals.contains(&seal_definition.conceal()) {
+                if seals.contains(&seal_definition.commit_conceal()) {
                     0
                 } else {
                     *self = OwnedState::<STATE>::ConfidentialAmount {
-                        assigned_state: assigned_state.conceal().into(),
+                        assigned_state: assigned_state.commit_conceal().into(),
                         seal_definition: seal_definition.clone(),
                     };
                     1
@@ -797,7 +805,8 @@ impl<STATE> CommitEncodeWithStrategy for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     type Strategy = commit_strategy::UsingConceal;
 }
@@ -854,7 +863,8 @@ mod _strict_encoding {
     where
         STATE: StateTypes,
         STATE::Confidential: PartialEq + Eq,
-        STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+        STATE::Confidential:
+            From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
     {
         fn strict_encode<E: io::Write>(
             &self,
@@ -893,7 +903,8 @@ mod _strict_encoding {
     where
         STATE: StateTypes,
         STATE::Confidential: PartialEq + Eq,
-        STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+        STATE::Confidential:
+            From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
     {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = u8::strict_decode(&mut d)?;
@@ -934,7 +945,7 @@ mod test {
         sha256, Hash, HashEngine,
     };
     use lnpbp::client_side_validation::{
-        merklize, CommitEncode, Conceal, MerkleNode,
+        merklize, CommitConceal, CommitEncode, MerkleNode,
     };
     use lnpbp::seals::OutpointReveal;
     use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
@@ -1266,7 +1277,7 @@ mod test {
                             *txid,
                             rng.gen_range(0, 10),
                         ))
-                        .conceal(),
+                        .commit_conceal(),
                     ),
                     amount.clone(),
                 )
@@ -1287,7 +1298,7 @@ mod test {
         // Create confidential input amounts
         let inputs: Vec<Commitment> = input_revealed
             .iter()
-            .map(|revealed| revealed.conceal().commitment)
+            .map(|revealed| revealed.commit_conceal().commitment)
             .collect();
 
         (inputs, outputs)
@@ -1857,7 +1868,7 @@ mod test {
         let mut hash_type =
             Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
-        // Conceal all without any exception
+        // CommitConceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
         // Assignments
         assert_eq!(2, hash_type.conceal_all());
@@ -2173,7 +2184,7 @@ mod test {
                 seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                     OutPoint::new(txid_vec[2], 3),
                 ))
-                .conceal(),
+                .commit_conceal(),
                 assigned_state: data::Void,
             };
 
@@ -2181,7 +2192,7 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 4),
             ))
-            .conceal(),
+            .commit_conceal(),
             assigned_state: data::Void,
         };
 
@@ -2213,14 +2224,14 @@ mod test {
                 OutPoint::new(txid_vec[1], 1),
             )),
             assigned_state: value::Revealed::with_amount(20u64, &mut rng)
-                .conceal(),
+                .commit_conceal(),
         };
 
         let assignment_3 = OwnedState::<PedersenStrategy>::ConfidentialSeal {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[2], 1),
             ))
-            .conceal(),
+            .commit_conceal(),
             assigned_state: value::Revealed::with_amount(30u64, &mut rng),
         };
 
@@ -2228,9 +2239,9 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 1),
             ))
-            .conceal(),
+            .commit_conceal(),
             assigned_state: value::Revealed::with_amount(10u64, &mut rng)
-                .conceal(),
+                .commit_conceal(),
         };
 
         let mut set = Vec::new();
@@ -2266,14 +2277,14 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[1], 1),
             )),
-            assigned_state: state_data_vec[1].clone().conceal(),
+            assigned_state: state_data_vec[1].clone().commit_conceal(),
         };
 
         let assignment_3 = OwnedState::<HashStrategy>::ConfidentialSeal {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[2], 1),
             ))
-            .conceal(),
+            .commit_conceal(),
             assigned_state: state_data_vec[2].clone(),
         };
 
@@ -2281,8 +2292,8 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 1),
             ))
-            .conceal(),
-            assigned_state: state_data_vec[3].clone().conceal(),
+            .commit_conceal(),
+            assigned_state: state_data_vec[3].clone().commit_conceal(),
         };
 
         let mut set = Vec::new();

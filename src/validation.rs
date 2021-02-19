@@ -16,7 +16,7 @@ use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
-use lnpbp::client_side_validation::Conceal;
+use lnpbp::client_side_validation::CommitConceal;
 use wallet::resolvers::TxResolver;
 
 use super::schema::{NodeType, OccurrencesError};
@@ -327,7 +327,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // Checking for endpoint definition duplicates
                 if node
                     .all_seal_definitions()
-                    .contains(&seal_endpoint.conceal())
+                    .contains(&seal_endpoint.commit_conceal())
                 {
                     if end_transitions
                         .iter()

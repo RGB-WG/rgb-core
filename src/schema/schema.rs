@@ -198,7 +198,7 @@ mod strict_encoding {
 mod _validation {
     use std::collections::BTreeSet;
 
-    use lnpbp::client_side_validation::Conceal;
+    use lnpbp::client_side_validation::CommitConceal;
 
     use super::*;
     use crate::contract::nodes::PublicRights;
@@ -755,8 +755,9 @@ mod _validation {
             where
                 STATE: StateTypes + Clone,
                 STATE::Confidential: PartialEq + Eq,
-                STATE::Confidential:
-                    From<<STATE::Revealed as Conceal>::Confidential>,
+                STATE::Confidential: From<
+                    <STATE::Revealed as CommitConceal>::ConcealedCommitment,
+                >,
             {
                 set.into_iter()
                     .enumerate()

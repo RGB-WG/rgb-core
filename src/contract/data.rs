@@ -23,8 +23,7 @@ use bitcoin::OutPoint;
 use bitcoin::{secp256k1, Transaction};
 
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, Conceal,
-    CommitEncode,
+    commit_strategy, CommitConceal, CommitEncode, CommitEncodeWithStrategy,
 };
 use lnpbp::strict_encoding::strict_serialize;
 
@@ -43,15 +42,17 @@ impl ConfidentialState for Void {}
 
 impl RevealedState for Void {}
 
-impl Conceal for Void {
-    type Confidential = Void;
+impl CommitConceal for Void {
+    type ConcealedCommitment = Void;
 
-    fn conceal(&self) -> Self::Confidential {
+    fn commit_conceal(&self) -> Self::ConcealedCommitment {
         self.clone()
     }
 }
 impl CommitEncode for Void {
-    fn commit_encode<E: io::Write>(self, _e: E) -> usize {0}
+    fn commit_encode<E: io::Write>(&self, _e: E) -> usize {
+        0
+    }
 }
 
 #[derive(Clone, Debug, Display, AsAny)]
@@ -117,10 +118,10 @@ pub enum Revealed {
 
 impl RevealedState for Revealed {}
 
-impl Conceal for Revealed {
-    type Confidential = Confidential;
+impl CommitConceal for Revealed {
+    type ConcealedCommitment = Confidential;
 
-    fn conceal(&self) -> Self::Confidential {
+    fn commit_conceal(&self) -> Self::ConcealedCommitment {
         Confidential::hash(
             &strict_serialize(self)
                 .expect("Encoding of predefined data types must not fail"),
