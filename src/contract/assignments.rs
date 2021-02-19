@@ -404,7 +404,7 @@ impl AutoConceal for Assignments {
 }
 
 impl CommitEncodeWithStrategy for Assignments {
-    type Strategy = commit_strategy::UsingStrict;
+    type Strategy = commit_strategy::UsingConceal;
 }
 
 pub trait ConfidentialState:
