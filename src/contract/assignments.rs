@@ -631,10 +631,6 @@ impl ConcealState for Assignments {
     }
 }
 
-impl CommitEncodeWithStrategy for Assignments {
-    type Strategy = commit_strategy::UsingConceal;
-}
-
 pub trait ConfidentialState:
     StrictEncode + StrictDecode + Debug + Clone + AsAny
 {
