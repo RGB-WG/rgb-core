@@ -230,7 +230,7 @@ pub(crate) mod test {
     use lnpbp::tagged_hash;
     use wallet::resolvers::{TxResolver, TxResolverError};
 
-    static CONSIGNMENT: [u8; 1549] = include!("../../test/consignment.in");
+    static CONSIGNMENT: [u8; 1496] = include!("../../test/consignment.in");
 
     pub(crate) fn consignment() -> Consignment {
         Consignment::strict_decode(&CONSIGNMENT[..]).unwrap()
@@ -269,7 +269,7 @@ pub(crate) mod test {
         let consignment = consignment();
 
         let bech32id =
-            "id10esx6u6e7yfmh86ngytsma5nk0pkxhuaa3yuqzgrcwnz2vknvduqt78j6u";
+            "id1mqqhssqzjqz5whcdkmwxj3ugv8ekmmyna2vfkjee204p4eu644psqqhg2c";
         let id = consignment.id();
         assert_eq!(bech32id, id.to_string());
         assert_eq!(ConsignmentId::from_str(bech32id).unwrap(), id);

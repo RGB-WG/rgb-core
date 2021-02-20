@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [ nightly, beta, stable, 1.41.1 ]
+        toolchain: [ nightly, beta, stable, 1.47.0 ]
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies

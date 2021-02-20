@@ -25,7 +25,19 @@ pub type Confidential = OutpointHash;
 /// Convenience type name useful for defining new seals
 pub type SealDefinition = Revealed;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, From, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -44,7 +56,10 @@ pub enum SealEndpoint {
 
 impl SealEndpoint {
     pub fn with_vout(vout: u32, rng: &mut impl RngCore) -> SealEndpoint {
-        SealEndpoint::WitnessVout { vout, blinding: rng.next_u64() }
+        SealEndpoint::WitnessVout {
+            vout,
+            blinding: rng.next_u64(),
+        }
     }
 }
 
@@ -59,7 +74,19 @@ impl CommitConceal for SealEndpoint {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Display, From, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -76,7 +103,10 @@ pub enum Revealed {
 
 impl Revealed {
     pub fn with_vout(vout: u32, rng: &mut impl RngCore) -> Revealed {
-        Revealed::WitnessVout { vout, blinding: rng.next_u64() }
+        Revealed::WitnessVout {
+            vout,
+            blinding: rng.next_u64(),
+        }
     }
 
     pub fn outpoint_reveal(&self, txid: Txid) -> OutpointReveal {
@@ -184,8 +214,11 @@ mod test {
     #[test]
     fn test_wrong_encoding() {
         let err = "Revealed";
-        test_garbage_exhaustive!(2..255; (REVEALED_TXOUTPOINT, Revealed, err), 
-            (REVEALED_WITNESSVOUT, Revealed, err));
+        test_garbage_exhaustive!(
+            2..255;
+            (REVEALED_TXOUTPOINT, Revealed, err),
+            (REVEALED_WITNESSVOUT, Revealed, err)
+        );
     }
 
     #[test]

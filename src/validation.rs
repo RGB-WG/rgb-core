@@ -239,6 +239,8 @@ pub enum Failure {
     WitnessTransactionMissed(Txid),
     WitnessNoCommitment(NodeId, AnchorId, Txid),
 
+    EndpointTransitionNotFound(NodeId),
+
     SimplicityIsNotSupportedYet,
     ScriptFailure(NodeId, u8),
 }
@@ -255,7 +257,6 @@ pub enum Failure {
 // TODO: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
-    EndpointTransitionNotFound(NodeId),
     EndpointDuplication(NodeId, SealEndpoint),
     EndpointTransitionSealNotFound(NodeId, SealEndpoint),
     ExcessiveTransition(NodeId),
@@ -355,11 +356,14 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                     );
                 }
             } else {
-                // We generate just a warning here because it's up to a user
+                // ~~We generate just a warning here because it's up to a user
                 // to decide whether to accept consignment with wrong
-                // endpoint list
+                // endpoint list~~
+                // Update: warning is transformed into an error, since it may
+                // lead to acceptance of non-verified consignment assigning
+                // positive fake balance to the user-controlled UTXO
                 status
-                    .add_warning(Warning::EndpointTransitionNotFound(*node_id));
+                    .add_failure(Failure::EndpointTransitionNotFound(*node_id));
             }
         }
 
