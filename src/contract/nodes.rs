@@ -770,6 +770,7 @@ mod test {
         strict_serialize, StrictDecode, StrictEncode,
     };
     use lnpbp::tagged_hash;
+    use lnpbp::client_side_validation::Conceal;
 
     static TRANSITION: [u8; 2356] = include!("../../test/transition.in");
     static GENESIS: [u8; 2454] = include!("../../test/genesis.in");
@@ -879,9 +880,31 @@ mod test {
 
     #[test]
     fn test_transition_node_id() {
+        fn conceal_transition(transition: &mut Transition) {
+            for (_, assignments) in transition.owned_rights_mut() {
+                match assignments {
+                    Assignments::Declarative(set) => {
+                        for assignment in set {
+                            *assignment = assignment.conceal();
+                        }
+                    },
+                    Assignments::DiscreteFiniteField(set) => {
+                        for assignment in set {
+                            *assignment = assignment.conceal();
+                        }
+                    },
+                    Assignments::CustomData(set) => {
+                        for assignment in set {
+                            *assignment = assignment.conceal();
+                        }
+                    },
+                }
+            }
+        }
+
         let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
         let mut concealed_transition = transition.clone();
-        concealed_transition.conceal_all();
+        conceal_transition(&mut concealed_transition);
 
         assert_eq!(transition.node_id(), concealed_transition.node_id());
     }
