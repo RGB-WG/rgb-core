@@ -208,19 +208,6 @@ dependencies = [
 
 [[package]]
 name = "client_side_validation"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdfd8dba1ad3d1958eac41d2675f6802606917e61daa312ea5b68fd2f075e934"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bitcoin_hashes",
- "grin_secp256k1zkp",
- "strict_encoding",
-]
-
-[[package]]
-name = "client_side_validation"
 version = "0.4.0-beta"
 source = "git+https://github.com/LNP-BP/rust-lnpbp?branch=fix/commit-encode#01cbc7fd0a95d57447d2a02fc15bc8e3f3f9f766"
 dependencies = [
@@ -563,38 +550,14 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 [[package]]
 name = "lnpbp"
 version = "0.4.0-beta"
-source = "git+https://github.com/LNP-BP/rust-lnpbp?branch=fix/commit-encode#01cbc7fd0a95d57447d2a02fc15bc8e3f3f9f766"
+source = "git+https://github.com/LNP-BP/rust-lnpbp#8653eb8767c5fa0241909c896efdaefaa3121768"
 dependencies = [
  "amplify",
  "amplify_derive",
  "bech32",
  "bitcoin",
  "bitcoin_hashes",
- "client_side_validation 0.4.0-beta",
- "deflate",
- "descriptor-wallet",
- "inflate",
- "lazy_static",
- "lightning_encoding",
- "miniscript",
- "serde",
- "serde_with",
- "serde_with_macros",
- "strict_encoding",
- "strict_encoding_derive",
-]
-
-[[package]]
-name = "lnpbp"
-version = "0.4.0-beta"
-source = "git+https://github.com/LNP-BP/rust-lnpbp#ce914435ddf2089c9f903463d53d6ac79da7c34b"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bech32",
- "bitcoin",
- "bitcoin_hashes",
- "client_side_validation 0.3.0",
+ "client_side_validation",
  "deflate",
  "descriptor-wallet",
  "inflate",
@@ -983,7 +946,7 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lightning_encoding",
- "lnpbp 0.4.0-beta (git+https://github.com/LNP-BP/rust-lnpbp)",
+ "lnpbp",
  "miniscript",
  "num-derive",
  "num-traits",
@@ -1014,7 +977,7 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lightning_encoding",
- "lnpbp 0.4.0-beta (git+https://github.com/LNP-BP/rust-lnpbp?branch=fix/commit-encode)",
+ "lnpbp",
  "miniscript",
  "num-derive",
  "num-traits",
@@ -1035,7 +998,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0-beta (git+https://github.com/LNP-BP/rust-lnpbp)",
+ "lnpbp",
  "regex",
  "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
  "serde",
@@ -1051,7 +1014,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0-beta (git+https://github.com/LNP-BP/rust-lnpbp)",
+ "lnpbp",
  "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",
@@ -1065,7 +1028,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0-beta (git+https://github.com/LNP-BP/rust-lnpbp)",
+ "lnpbp",
  "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",
@@ -1079,7 +1042,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0-beta (git+https://github.com/LNP-BP/rust-lnpbp)",
+ "lnpbp",
  "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",

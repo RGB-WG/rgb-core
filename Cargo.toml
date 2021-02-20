@@ -42,7 +42,7 @@ required-features = ["cli", "serde"]
 # -----------------------------------------
 amplify = { version = "3.1", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
-lnpbp = { git = "https://github.com/LNP-BP/rust-lnpbp", branch = "fix/commit-encode", features = ["bulletproofs", "zip"] }
+lnpbp = { git = "https://github.com/LNP-BP/rust-lnpbp", features = ["bulletproofs", "zip"] }
 strict_encoding = { version = "~1.1.0", features = ["crypto"] }
 lightning_encoding = { git = "https://github.com/LNP-BP/lnp-core" }
 descriptor-wallet = { git = "https://github.com/LNP-BP/descriptor-wallet" }
