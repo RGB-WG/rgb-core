@@ -789,6 +789,15 @@ mod test {
     }
 
     #[test]
+    fn test_transition_node_id() {
+        let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
+        let mut concealed_transition = transition.clone();
+        concealed_transition.conceal_all();
+
+        assert_eq!(transition.node_id(), concealed_transition.node_id());
+    }
+
+    #[test]
     fn test_node_attributes() {
         let genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
         let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
