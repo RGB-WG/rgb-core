@@ -25,7 +25,7 @@ use lnpbp::commit_verify::CommitVerify;
 use lnpbp::{Chain, TaggedHash};
 
 use super::{
-    Assignments, AutoConceal, OwnedRights, ParentOwnedRights,
+    Assignments, ConcealState, OwnedRights, ParentOwnedRights,
     ParentPublicRights, PublicRights,
 };
 use super::{
@@ -328,31 +328,40 @@ impl CommitEncode for Transition {
     }
 }
 
-impl AutoConceal for Genesis {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+impl ConcealState for Genesis {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut() {
-            count += assignment.conceal_except(seals);
+            count += assignment.conceal_state_except(seals);
         }
         count
     }
 }
 
-impl AutoConceal for Extension {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+impl ConcealState for Extension {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut() {
-            count += assignment.conceal_except(seals);
+            count += assignment.conceal_state_except(seals);
         }
         count
     }
 }
 
-impl AutoConceal for Transition {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+impl ConcealState for Transition {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut() {
-            count += assignment.conceal_except(seals);
+            count += assignment.conceal_state_except(seals);
         }
         count
     }
@@ -765,12 +774,12 @@ mod test {
 
     use super::*;
     use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
+    use lnpbp::client_side_validation::CommitConceal;
     use lnpbp::commit_verify::CommitVerify;
     use lnpbp::strict_encoding::{
         strict_serialize, StrictDecode, StrictEncode,
     };
     use lnpbp::tagged_hash;
-    use lnpbp::client_side_validation::CommitConceal;
 
     static TRANSITION: [u8; 2356] = include!("../../test/transition.in");
     static GENESIS: [u8; 2454] = include!("../../test/genesis.in");
@@ -887,17 +896,17 @@ mod test {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
-                    },
+                    }
                     Assignments::DiscreteFiniteField(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
-                    },
+                    }
                     Assignments::CustomData(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
-                    },
+                    }
                 }
             }
         }
@@ -1141,8 +1150,8 @@ mod test {
                 .unwrap()
         );
 
-        genesis.conceal_all();
-        transition.conceal_all();
+        genesis.conceal_state();
+        transition.conceal_state();
 
         assert_eq!(
             genesis.clone().consensus_commit(),

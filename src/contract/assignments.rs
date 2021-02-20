@@ -27,7 +27,7 @@ use lnpbp::seals::OutpointReveal;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
-    data, seal, value, AtomicValue, AutoConceal, NoDataError, NodeId,
+    data, seal, value, AtomicValue, ConcealState, NoDataError, NodeId,
     SealDefinition, SealEndpoint, SECP256K1_ZKP,
 };
 use crate::schema;
@@ -615,16 +615,19 @@ impl Assignments {
     }
 }
 
-impl AutoConceal for Assignments {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+impl ConcealState for Assignments {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         match self {
-            Assignments::Declarative(data) => data as &mut dyn AutoConceal,
+            Assignments::Declarative(data) => data as &mut dyn ConcealState,
             Assignments::DiscreteFiniteField(data) => {
-                data as &mut dyn AutoConceal
+                data as &mut dyn ConcealState
             }
-            Assignments::CustomData(data) => data as &mut dyn AutoConceal,
+            Assignments::CustomData(data) => data as &mut dyn ConcealState,
         }
-        .conceal_except(seals)
+        .conceal_state_except(seals)
     }
 }
 
@@ -981,7 +984,7 @@ where
     }
 }
 
-impl<STATE> AutoConceal for OwnedState<STATE>
+impl<STATE> ConcealState for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Revealed: CommitConceal,
@@ -989,7 +992,10 @@ where
     <STATE as StateTypes>::Confidential:
         From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         match self {
             OwnedState::Confidential { .. }
             | OwnedState::ConfidentialAmount { .. } => 0,
@@ -2116,7 +2122,7 @@ mod test {
         // CommitConceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
         // Assignments
-        assert_eq!(2, hash_type.conceal_all());
+        assert_eq!(2, hash_type.conceal_state());
 
         // Precomputed values of revealed seals in 2 ConfidentialState type
         // Assignments

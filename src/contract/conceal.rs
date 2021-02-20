@@ -16,33 +16,42 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use super::seal;
 
-pub trait AutoConceal {
-    fn conceal_all(&mut self) -> usize {
-        self.conceal_except(&vec![])
+pub trait ConcealState {
+    fn conceal_state(&mut self) -> usize {
+        self.conceal_state_except(&vec![])
     }
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize;
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize;
 }
 
-impl<T> AutoConceal for Vec<T>
+impl<T> ConcealState for Vec<T>
 where
-    T: AutoConceal,
+    T: ConcealState,
 {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         self.iter_mut()
-            .fold(0usize, |sum, item| sum + item.conceal_except(seals))
+            .fold(0usize, |sum, item| sum + item.conceal_state_except(seals))
     }
 }
 
-impl<T> AutoConceal for BTreeSet<T>
+impl<T> ConcealState for BTreeSet<T>
 where
-    T: AutoConceal + Ord + Clone,
+    T: ConcealState + Ord + Clone,
 {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         let mut count = 0;
         let mut new_self = BTreeSet::<T>::new();
         for item in self.iter() {
             let mut new_item = item.clone();
-            count += new_item.conceal_except(seals);
+            count += new_item.conceal_state_except(seals);
             new_self.insert(new_item);
         }
         *self = new_self;
@@ -50,26 +59,32 @@ where
     }
 }
 
-impl<K, V> AutoConceal for BTreeMap<K, V>
+impl<K, V> ConcealState for BTreeMap<K, V>
 where
-    V: AutoConceal,
+    V: ConcealState,
 {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         self.iter_mut()
-            .fold(0usize, |sum, item| sum + item.1.conceal_except(seals))
+            .fold(0usize, |sum, item| sum + item.1.conceal_state_except(seals))
     }
 }
 
-impl<T> AutoConceal for HashSet<T>
+impl<T> ConcealState for HashSet<T>
 where
-    T: AutoConceal + Ord + Clone + std::hash::Hash,
+    T: ConcealState + Ord + Clone + std::hash::Hash,
 {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         let mut count = 0;
         let mut new_self = HashSet::<T>::new();
         for item in self.iter() {
             let mut new_item = item.clone();
-            count += new_item.conceal_except(seals);
+            count += new_item.conceal_state_except(seals);
             new_self.insert(new_item);
         }
         *self = new_self;
@@ -77,12 +92,15 @@ where
     }
 }
 
-impl<K, V> AutoConceal for HashMap<K, V>
+impl<K, V> ConcealState for HashMap<K, V>
 where
-    V: AutoConceal,
+    V: ConcealState,
 {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         self.iter_mut()
-            .fold(0usize, |sum, item| sum + item.1.conceal_except(seals))
+            .fold(0usize, |sum, item| sum + item.1.conceal_state_except(seals))
     }
 }

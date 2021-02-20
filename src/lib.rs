@@ -59,7 +59,7 @@ pub mod prelude {
 
     pub use super::bech32::{Bech32, FromBech32, ToBech32};
     pub use contract::{
-        data, seal, value, Assignments, AtomicValue, AutoConceal,
+        data, seal, value, Assignments, AtomicValue, ConcealState,
         ConfidentialState, ContractId, DeclarativeStrategy, Extension, Genesis,
         HashStrategy, Metadata, NoDataError, Node, NodeId, OwnedRights,
         OwnedState, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
