@@ -58,7 +58,7 @@ impl ConsensusCommit for MetadataLeaf {
     type Commitment = MerkleNode;
 }
 impl ConsensusMerkleCommit for MetadataLeaf {
-    const MERKLE_NODE_TAG: &'static str = "parent_public_right";
+    const MERKLE_NODE_TAG: &'static str = "metadata";
 }
 impl ToMerkleSource for Metadata {
     type Leaf = MetadataLeaf;

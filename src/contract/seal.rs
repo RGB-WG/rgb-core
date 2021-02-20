@@ -16,7 +16,7 @@ use core::convert::TryFrom;
 use bitcoin::secp256k1::rand::RngCore;
 use bitcoin::{OutPoint, Txid};
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, CommitConceal,
+    commit_strategy, CommitConceal, CommitEncodeWithStrategy,
 };
 use lnpbp::seals::{OutpointHash, OutpointReveal};
 
@@ -69,7 +69,9 @@ impl CommitConceal for SealEndpoint {
     fn commit_conceal(&self) -> Self::ConcealedCommitment {
         match *self {
             SealEndpoint::TxOutpoint(hash) => hash,
-            SealEndpoint::WitnessVout { vout, blinding } => SealDefinition::WitnessVout { vout, blinding }.commit_conceal()
+            SealEndpoint::WitnessVout { vout, blinding } => {
+                SealDefinition::WitnessVout { vout, blinding }.commit_conceal()
+            }
         }
     }
 }
