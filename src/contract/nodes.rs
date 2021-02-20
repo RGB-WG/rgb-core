@@ -275,7 +275,11 @@ impl CommitEncode for Extension {
     fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
         let mut len = self.extension_type.commit_encode(&mut e);
         len += self.contract_id.commit_encode(&mut e);
-        len += self.metadata.commit_encode(&mut e);
+        len += self
+            .metadata
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
         len += self
             .parent_public_rights
             .to_merkle_source()
@@ -299,7 +303,11 @@ impl CommitEncode for Extension {
 impl CommitEncode for Transition {
     fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
         let mut len = self.transition_type.commit_encode(&mut e);
-        len += self.metadata.commit_encode(&mut e);
+        len += self
+            .metadata
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
         len += self
             .parent_owned_rights
             .to_merkle_source()
@@ -669,7 +677,11 @@ mod _strict_encoding {
             let mut encoder = || -> Result<_, Error> {
                 let mut len = self.schema_id.strict_encode(&mut e)?;
                 len += self.chain.as_genesis_hash().strict_encode(&mut e)?;
-                len += self.metadata.commit_encode(&mut e);
+                len += self
+                    .metadata
+                    .to_merkle_source()
+                    .consensus_commit()
+                    .commit_encode(&mut e);
                 len += self
                     .owned_rights
                     .to_merkle_source()
@@ -831,7 +843,11 @@ mod test {
         let transition2 = transition.clone();
         let mut encoder2 = vec![];
         transition2.transition_type.commit_encode(&mut encoder2);
-        transition2.metadata.commit_encode(&mut encoder2);
+        transition2
+            .metadata
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut encoder2);
         transition2
             .parent_owned_rights
             .to_merkle_source()

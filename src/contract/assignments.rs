@@ -17,6 +17,7 @@ use core::fmt::Debug;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io;
 
+use bitcoin::hashes::Hash;
 use lnpbp::client_side_validation::{
     commit_strategy, CommitConceal, CommitEncode, CommitEncodeWithStrategy,
     ConsensusCommit, ConsensusMerkleCommit, MerkleNode, MerkleSource,
@@ -81,6 +82,7 @@ pub(super) struct ParentPublicRightsInner(ParentPublicRights);
 
 #[derive(
     Clone,
+    Copy,
     Ord,
     PartialOrd,
     Eq,
@@ -90,7 +92,7 @@ pub(super) struct ParentPublicRightsInner(ParentPublicRights);
     StrictEncode,
     StrictDecode,
 )]
-struct PublicRightsLeaf(pub schema::PublicRightType);
+pub(super) struct PublicRightsLeaf(pub schema::PublicRightType);
 impl CommitEncodeWithStrategy for PublicRightsLeaf {
     type Strategy = commit_strategy::UsingStrict;
 }
@@ -114,6 +116,7 @@ impl ToMerkleSource for PublicRightsInner {
 
 #[derive(
     Clone,
+    Copy,
     Ord,
     PartialOrd,
     Eq,
@@ -123,7 +126,7 @@ impl ToMerkleSource for PublicRightsInner {
     StrictEncode,
     StrictDecode,
 )]
-struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
+pub(super) struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
 impl CommitEncodeWithStrategy for OwnedRightsLeaf {
     type Strategy = commit_strategy::UsingStrict;
 }
@@ -140,10 +143,14 @@ impl ToMerkleSource for OwnedRightsInner {
         self.as_inner()
             .iter()
             .flat_map(|(type_id, assignment)| {
-                assignment
-                    .consensus_commitments()
-                    .iter()
-                    .map(|commitment| OwnedRightsLeaf(*type_id, *commitment))
+                assignment.consensus_commitments().into_iter().map(
+                    move |commitment| {
+                        OwnedRightsLeaf(
+                            *type_id,
+                            MerkleNode::from_inner(commitment.into_inner()),
+                        )
+                    },
+                )
             })
             .collect()
     }
@@ -161,7 +168,10 @@ impl ToMerkleSource for OwnedRightsInner {
     StrictEncode,
     StrictDecode,
 )]
-struct ParentPublicRightsLeaf(pub NodeId, pub schema::PublicRightType);
+pub(super) struct ParentPublicRightsLeaf(
+    pub NodeId,
+    pub schema::PublicRightType,
+);
 impl CommitEncodeWithStrategy for ParentPublicRightsLeaf {
     type Strategy = commit_strategy::UsingStrict;
 }
@@ -178,8 +188,9 @@ impl ToMerkleSource for ParentPublicRightsInner {
         self.as_inner()
             .iter()
             .flat_map(|(node_id, i)| {
-                i.iter()
-                    .map(|type_id| ParentPublicRightsLeaf(*node_id, *type_id))
+                i.iter().map(move |type_id| {
+                    ParentPublicRightsLeaf(node_id.copy(), *type_id)
+                })
             })
             .collect()
     }
@@ -197,7 +208,11 @@ impl ToMerkleSource for ParentPublicRightsInner {
     StrictEncode,
     StrictDecode,
 )]
-struct ParentOwnedRightsLeaf(pub NodeId, pub schema::OwnedRightType, pub u16);
+pub(super) struct ParentOwnedRightsLeaf(
+    pub NodeId,
+    pub schema::OwnedRightType,
+    pub u16,
+);
 impl CommitEncodeWithStrategy for ParentOwnedRightsLeaf {
     type Strategy = commit_strategy::UsingStrict;
 }
@@ -214,9 +229,13 @@ impl ToMerkleSource for ParentOwnedRightsInner {
         self.as_inner()
             .iter()
             .flat_map(|(node_id, i)| {
-                i.iter().flat_map(|(type_id, prev_outs)| {
-                    prev_outs.iter().map(|prev_out| {
-                        ParentOwnedRightsLeaf(*node_id, *type_id, *prev_out)
+                i.iter().flat_map(move |(type_id, prev_outs)| {
+                    prev_outs.iter().map(move |prev_out| {
+                        ParentOwnedRightsLeaf(
+                            node_id.copy(),
+                            *type_id,
+                            *prev_out,
+                        )
                     })
                 })
             })
