@@ -770,7 +770,7 @@ mod test {
         strict_serialize, StrictDecode, StrictEncode,
     };
     use lnpbp::tagged_hash;
-    use lnpbp::client_side_validation::Conceal;
+    use lnpbp::client_side_validation::CommitConceal;
 
     static TRANSITION: [u8; 2356] = include!("../../test/transition.in");
     static GENESIS: [u8; 2454] = include!("../../test/genesis.in");
@@ -885,17 +885,17 @@ mod test {
                 match assignments {
                     Assignments::Declarative(set) => {
                         for assignment in set {
-                            *assignment = assignment.conceal();
+                            *assignment = assignment.commit_conceal();
                         }
                     },
                     Assignments::DiscreteFiniteField(set) => {
                         for assignment in set {
-                            *assignment = assignment.conceal();
+                            *assignment = assignment.commit_conceal();
                         }
                     },
                     Assignments::CustomData(set) => {
                         for assignment in set {
-                            *assignment = assignment.conceal();
+                            *assignment = assignment.commit_conceal();
                         }
                     },
                 }
