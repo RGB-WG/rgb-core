@@ -13,12 +13,12 @@
 
 //! Convenience metadata accessor methods for Genesis and state transitions.
 
-#[cfg(feature = "serde")]
-use serde::{Deserializer, Serializer};
 use std::collections::{BTreeMap, BTreeSet};
 
+use amplify::Wrapper;
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy,
+    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
+    ConsensusMerkleCommit, MerkleNode, MerkleSource, ToMerkleSource,
 };
 use lnpbp::strict_encoding;
 
@@ -29,39 +29,14 @@ type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
 /// Transition & genesis metadata fields
 #[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, Display, From)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+#[derive(StrictEncode, StrictDecode)]
 #[display(Debug)]
 pub struct Metadata(MetadataInner);
-
-impl strict_encoding::Strategy for Metadata {
-    type Strategy = strict_encoding::strategies::Wrapped;
-}
-
-#[cfg(feature = "serde")]
-impl serde::Serialize for Metadata {
-    fn serialize<S>(
-        &self,
-        serializer: S,
-    ) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
-    where
-        S: Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Metadata {
-    fn deserialize<D>(
-        deserializer: D,
-    ) -> Result<Self, <D as Deserializer<'de>>::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(Self(<Self as amplify::Wrapper>::Inner::deserialize(
-            deserializer,
-        )?))
-    }
-}
 
 impl IntoIterator for Metadata {
     type Item = <MetadataInner as IntoIterator>::Item;
@@ -72,8 +47,31 @@ impl IntoIterator for Metadata {
     }
 }
 
-impl CommitEncodeWithStrategy for Metadata {
-    type Strategy = commit_strategy::Merklization;
+#[derive(
+    Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
+)]
+pub struct MetadataLeaf(pub schema::FieldType, pub data::Revealed);
+impl CommitEncodeWithStrategy for MetadataLeaf {
+    type Strategy = commit_strategy::UsingStrict;
+}
+impl ConsensusCommit for MetadataLeaf {
+    type Commitment = MerkleNode;
+}
+impl ConsensusMerkleCommit for MetadataLeaf {
+    const MERKLE_NODE_TAG: &'static str = "metadata";
+}
+impl ToMerkleSource for Metadata {
+    type Leaf = MetadataLeaf;
+
+    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
+        self.as_inner()
+            .iter()
+            .flat_map(|(type_id, i)| {
+                i.iter()
+                    .map(move |data| MetadataLeaf(*type_id, data.clone()))
+            })
+            .collect()
+    }
 }
 
 impl Metadata {
@@ -165,7 +163,7 @@ mod test {
     use amplify::Wrapper;
     use bitcoin::hashes::Hash;
     use lnpbp::client_side_validation::{
-        merklize, CommitEncode, Conceal, MerkleNode,
+        merklize, CommitConceal, CommitEncode, MerkleNode,
     };
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
     use secp256k1zkp::rand::{thread_rng, RngCore};
@@ -294,7 +292,10 @@ mod test {
         let metadata = Metadata::from_inner(metadata_inner);
 
         let mut original_encoding = vec![];
-        metadata.commit_encode(&mut original_encoding);
+        metadata
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut original_encoding);
 
         // Hand calculate the encoding
 
@@ -302,7 +303,10 @@ mod test {
             .iter()
             .map(|data| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone().conceal().strict_encode(&mut encoder).unwrap();
+                data.clone()
+                    .commit_conceal()
+                    .strict_encode(&mut encoder)
+                    .unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
@@ -318,7 +322,10 @@ mod test {
             .iter()
             .map(|data| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone().conceal().strict_encode(&mut encoder).unwrap();
+                data.clone()
+                    .commit_conceal()
+                    .strict_encode(&mut encoder)
+                    .unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
@@ -334,7 +341,10 @@ mod test {
             .iter()
             .map(|data| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone().conceal().strict_encode(&mut encoder).unwrap();
+                data.clone()
+                    .commit_conceal()
+                    .strict_encode(&mut encoder)
+                    .unwrap();
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();

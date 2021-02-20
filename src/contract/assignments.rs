@@ -11,29 +11,237 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::AsAny;
+use amplify::{AsAny, Wrapper};
 use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::io;
 
+use bitcoin::hashes::Hash;
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, Conceal,
+    commit_strategy, CommitConceal, CommitEncode, CommitEncodeWithStrategy,
+    ConsensusCommit, ConsensusMerkleCommit, MerkleNode, MerkleSource,
+    ToMerkleSource,
 };
 use lnpbp::seals::OutpointReveal;
-use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
-    data, seal, value, AtomicValue, AutoConceal, NoDataError, NodeId,
+    data, seal, value, AtomicValue, ConcealState, NoDataError, NodeId,
     SealDefinition, SealEndpoint, SECP256K1_ZKP,
 };
 use crate::schema;
 
+/// Holds definition of valencies for contract nodes, which is a set of
+/// allowed valencies types
+pub type PublicRights = BTreeSet<schema::PublicRightType>;
 pub type OwnedRights = BTreeMap<schema::OwnedRightType, Assignments>;
-
 pub type ParentOwnedRights =
     BTreeMap<NodeId, BTreeMap<schema::OwnedRightType, Vec<u16>>>;
 pub type ParentPublicRights =
     BTreeMap<NodeId, BTreeSet<schema::PublicRightType>>;
+
+#[derive(Wrapper, Clone, PartialEq, Eq, Debug, Default, From)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+#[derive(StrictEncode, StrictDecode)]
+pub(super) struct OwnedRightsInner(OwnedRights);
+#[derive(
+    Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+#[derive(StrictEncode, StrictDecode)]
+pub(super) struct PublicRightsInner(PublicRights);
+#[derive(
+    Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+#[derive(StrictEncode, StrictDecode)]
+pub(super) struct ParentOwnedRightsInner(ParentOwnedRights);
+#[derive(
+    Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+#[derive(StrictEncode, StrictDecode)]
+pub(super) struct ParentPublicRightsInner(ParentPublicRights);
+
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
+)]
+pub(super) struct PublicRightsLeaf(pub schema::PublicRightType);
+impl CommitEncodeWithStrategy for PublicRightsLeaf {
+    type Strategy = commit_strategy::UsingStrict;
+}
+impl ConsensusCommit for PublicRightsLeaf {
+    type Commitment = MerkleNode;
+}
+impl ConsensusMerkleCommit for PublicRightsLeaf {
+    const MERKLE_NODE_TAG: &'static str = "public_right";
+}
+impl ToMerkleSource for PublicRightsInner {
+    type Leaf = PublicRightsLeaf;
+
+    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
+        self.as_inner()
+            .iter()
+            .copied()
+            .map(PublicRightsLeaf)
+            .collect()
+    }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
+)]
+pub(super) struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
+impl CommitEncodeWithStrategy for OwnedRightsLeaf {
+    type Strategy = commit_strategy::UsingStrict;
+}
+impl ConsensusCommit for OwnedRightsLeaf {
+    type Commitment = MerkleNode;
+}
+impl ConsensusMerkleCommit for OwnedRightsLeaf {
+    const MERKLE_NODE_TAG: &'static str = "owned_right";
+}
+impl ToMerkleSource for OwnedRightsInner {
+    type Leaf = OwnedRightsLeaf;
+
+    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
+        self.as_inner()
+            .iter()
+            .flat_map(|(type_id, assignment)| {
+                assignment.consensus_commitments().into_iter().map(
+                    move |commitment| {
+                        OwnedRightsLeaf(
+                            *type_id,
+                            MerkleNode::from_inner(commitment.into_inner()),
+                        )
+                    },
+                )
+            })
+            .collect()
+    }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
+)]
+pub(super) struct ParentPublicRightsLeaf(
+    pub NodeId,
+    pub schema::PublicRightType,
+);
+impl CommitEncodeWithStrategy for ParentPublicRightsLeaf {
+    type Strategy = commit_strategy::UsingStrict;
+}
+impl ConsensusCommit for ParentPublicRightsLeaf {
+    type Commitment = MerkleNode;
+}
+impl ConsensusMerkleCommit for ParentPublicRightsLeaf {
+    const MERKLE_NODE_TAG: &'static str = "parent_public_right";
+}
+impl ToMerkleSource for ParentPublicRightsInner {
+    type Leaf = ParentPublicRightsLeaf;
+
+    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
+        self.as_inner()
+            .iter()
+            .flat_map(|(node_id, i)| {
+                i.iter().map(move |type_id| {
+                    ParentPublicRightsLeaf(node_id.copy(), *type_id)
+                })
+            })
+            .collect()
+    }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode,
+)]
+pub(super) struct ParentOwnedRightsLeaf(
+    pub NodeId,
+    pub schema::OwnedRightType,
+    pub u16,
+);
+impl CommitEncodeWithStrategy for ParentOwnedRightsLeaf {
+    type Strategy = commit_strategy::UsingStrict;
+}
+impl ConsensusCommit for ParentOwnedRightsLeaf {
+    type Commitment = MerkleNode;
+}
+impl ConsensusMerkleCommit for ParentOwnedRightsLeaf {
+    const MERKLE_NODE_TAG: &'static str = "parent_owned_right";
+}
+impl ToMerkleSource for ParentOwnedRightsInner {
+    type Leaf = ParentOwnedRightsLeaf;
+
+    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
+        self.as_inner()
+            .iter()
+            .flat_map(|(node_id, i)| {
+                i.iter().flat_map(move |(type_id, prev_outs)| {
+                    prev_outs.iter().map(move |prev_out| {
+                        ParentOwnedRightsLeaf(
+                            node_id.copy(),
+                            *type_id,
+                            *prev_out,
+                        )
+                    })
+                })
+            })
+            .collect()
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]
@@ -388,23 +596,39 @@ impl Assignments {
         }
         counter
     }
-}
 
-impl AutoConceal for Assignments {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    pub fn consensus_commitments(&self) -> Vec<MerkleNode> {
         match self {
-            Assignments::Declarative(data) => data as &mut dyn AutoConceal,
-            Assignments::DiscreteFiniteField(data) => {
-                data as &mut dyn AutoConceal
-            }
-            Assignments::CustomData(data) => data as &mut dyn AutoConceal,
+            Assignments::Declarative(vec) => vec
+                .iter()
+                .map(OwnedState::<DeclarativeStrategy>::consensus_commit)
+                .collect(),
+            Assignments::DiscreteFiniteField(vec) => vec
+                .iter()
+                .map(OwnedState::<PedersenStrategy>::consensus_commit)
+                .collect(),
+            Assignments::CustomData(vec) => vec
+                .iter()
+                .map(OwnedState::<HashStrategy>::consensus_commit)
+                .collect(),
         }
-        .conceal_except(seals)
     }
 }
 
-impl CommitEncodeWithStrategy for Assignments {
-    type Strategy = commit_strategy::UsingStrict;
+impl ConcealState for Assignments {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
+        match self {
+            Assignments::Declarative(data) => data as &mut dyn ConcealState,
+            Assignments::DiscreteFiniteField(data) => {
+                data as &mut dyn ConcealState
+            }
+            Assignments::CustomData(data) => data as &mut dyn ConcealState,
+        }
+        .conceal_state_except(seals)
+    }
 }
 
 pub trait ConfidentialState:
@@ -413,7 +637,7 @@ pub trait ConfidentialState:
 }
 
 pub trait RevealedState:
-    StrictEncode + StrictDecode + Debug + Conceal + Clone + AsAny
+    StrictEncode + StrictDecode + Debug + CommitConceal + Clone + AsAny
 {
 }
 
@@ -534,7 +758,8 @@ where
     // Deterministic ordering requires Eq operation, so the confidential
     // state must have it
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     Confidential {
         seal_definition: seal::Confidential,
@@ -562,7 +787,8 @@ impl<STATE> PartialOrd for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.seal_definition_confidential()
@@ -574,7 +800,8 @@ impl<STATE> Ord for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.seal_definition_confidential()
@@ -586,7 +813,8 @@ impl<STATE> PartialEq for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn eq(&self, other: &Self) -> bool {
         self.seal_definition_confidential()
@@ -600,7 +828,8 @@ impl<STATE> Eq for OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
 }
 
@@ -608,7 +837,8 @@ impl<STATE> OwnedState<STATE>
 where
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     pub fn seal_definition_confidential(&self) -> seal::Confidential {
         match self {
@@ -617,7 +847,7 @@ where
             }
             | OwnedState::ConfidentialAmount {
                 seal_definition, ..
-            } => seal_definition.conceal(),
+            } => seal_definition.commit_conceal(),
             OwnedState::Confidential {
                 seal_definition, ..
             }
@@ -644,7 +874,7 @@ where
         match self {
             OwnedState::Revealed { assigned_state, .. }
             | OwnedState::ConfidentialSeal { assigned_state, .. } => {
-                assigned_state.conceal().into()
+                assigned_state.commit_conceal().into()
             }
             OwnedState::Confidential { assigned_state, .. }
             | OwnedState::ConfidentialAmount { assigned_state, .. } => {
@@ -673,7 +903,7 @@ where
     ) -> usize {
         let known_seals: HashMap<seal::Confidential, OutpointReveal> =
             known_seals
-                .map(|rev| (rev.conceal(), rev.clone()))
+                .map(|rev| (rev.commit_conceal(), rev.clone()))
                 .collect();
 
         let mut counter = 0;
@@ -712,46 +942,56 @@ where
     }
 }
 
-impl<STATE> Conceal for OwnedState<STATE>
+impl<STATE> CommitConceal for OwnedState<STATE>
 where
     Self: Clone,
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    type Confidential = OwnedState<STATE>;
+    type ConcealedCommitment = Self;
 
-    fn conceal(&self) -> Self {
+    fn commit_conceal(&self) -> Self::ConcealedCommitment {
         match self {
-            OwnedState::Confidential { .. }
-            | OwnedState::ConfidentialAmount { .. } => self.clone(),
+            OwnedState::Confidential { .. } => self.clone(),
+            OwnedState::ConfidentialAmount {
+                seal_definition,
+                assigned_state,
+            } => Self::Confidential {
+                seal_definition: seal_definition.commit_conceal(),
+                assigned_state: assigned_state.clone(),
+            },
             OwnedState::Revealed {
                 seal_definition,
                 assigned_state,
-            } => Self::ConfidentialAmount {
-                seal_definition: seal_definition.clone(),
-                assigned_state: assigned_state.conceal().into(),
+            } => Self::Confidential {
+                seal_definition: seal_definition.commit_conceal(),
+                assigned_state: assigned_state.commit_conceal().into(),
             },
             OwnedState::ConfidentialSeal {
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
                 seal_definition: seal_definition.clone(),
-                assigned_state: assigned_state.conceal().into(),
+                assigned_state: assigned_state.commit_conceal().into(),
             },
         }
     }
 }
 
-impl<STATE> AutoConceal for OwnedState<STATE>
+impl<STATE> ConcealState for OwnedState<STATE>
 where
     STATE: StateTypes,
-    STATE::Revealed: Conceal,
+    STATE::Revealed: CommitConceal,
     STATE::Confidential: PartialEq + Eq,
     <STATE as StateTypes>::Confidential:
-        From<<STATE::Revealed as Conceal>::Confidential>,
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         match self {
             OwnedState::Confidential { .. }
             | OwnedState::ConfidentialAmount { .. } => 0,
@@ -763,7 +1003,7 @@ where
                     0
                 } else {
                     *self = OwnedState::<STATE>::Confidential {
-                        assigned_state: assigned_state.conceal().into(),
+                        assigned_state: assigned_state.commit_conceal().into(),
                         seal_definition: seal_definition.clone(),
                     };
                     1
@@ -773,11 +1013,11 @@ where
                 seal_definition,
                 assigned_state,
             } => {
-                if seals.contains(&seal_definition.conceal()) {
+                if seals.contains(&seal_definition.commit_conceal()) {
                     0
                 } else {
                     *self = OwnedState::<STATE>::ConfidentialAmount {
-                        assigned_state: assigned_state.conceal().into(),
+                        assigned_state: assigned_state.commit_conceal().into(),
                         seal_definition: seal_definition.clone(),
                     };
                     1
@@ -787,13 +1027,35 @@ where
     }
 }
 
-impl<STATE> CommitEncodeWithStrategy for OwnedState<STATE>
+// We can't use `UsingConceal` strategy here since it relies on the
+// `commit_encode` of the concealed type, and here the concealed type is again
+// `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
+// concealed data.
+impl<STATE> CommitEncode for OwnedState<STATE>
 where
+    Self: Clone,
     STATE: StateTypes,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    type Strategy = commit_strategy::UsingConceal;
+    fn commit_encode<E: io::Write>(&self, e: E) -> usize {
+        self.commit_conceal().strict_encode(e).expect(
+            "Strict encoding must not fail for types implementing \
+             ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding"
+        )
+    }
+}
+
+impl<STATE> ConsensusCommit for OwnedState<STATE>
+where
+    Self: Clone,
+    STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+{
+    type Commitment = MerkleNode;
 }
 
 mod _strict_encoding {
@@ -848,7 +1110,8 @@ mod _strict_encoding {
     where
         STATE: StateTypes,
         STATE::Confidential: PartialEq + Eq,
-        STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+        STATE::Confidential:
+            From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
     {
         fn strict_encode<E: io::Write>(
             &self,
@@ -887,7 +1150,8 @@ mod _strict_encoding {
     where
         STATE: StateTypes,
         STATE::Confidential: PartialEq + Eq,
-        STATE::Confidential: From<<STATE::Revealed as Conceal>::Confidential>,
+        STATE::Confidential:
+            From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
     {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = u8::strict_decode(&mut d)?;
@@ -928,7 +1192,7 @@ mod test {
         sha256, Hash, HashEngine,
     };
     use lnpbp::client_side_validation::{
-        merklize, CommitEncode, Conceal, MerkleNode,
+        merklize, CommitConceal, CommitEncode, MerkleNode,
     };
     use lnpbp::seals::OutpointReveal;
     use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
@@ -1260,7 +1524,7 @@ mod test {
                             *txid,
                             rng.gen_range(0, 10),
                         ))
-                        .conceal(),
+                        .commit_conceal(),
                     ),
                     amount.clone(),
                 )
@@ -1281,7 +1545,7 @@ mod test {
         // Create confidential input amounts
         let inputs: Vec<Commitment> = input_revealed
             .iter()
-            .map(|revealed| revealed.conceal().commitment)
+            .map(|revealed| revealed.commit_conceal().commitment)
             .collect();
 
         (inputs, outputs)
@@ -1851,10 +2115,10 @@ mod test {
         let mut hash_type =
             Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
-        // Conceal all without any exception
+        // CommitConceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
         // Assignments
-        assert_eq!(2, hash_type.conceal_all());
+        assert_eq!(2, hash_type.conceal_state());
 
         // Precomputed values of revealed seals in 2 ConfidentialState type
         // Assignments
@@ -1963,11 +2227,13 @@ mod test {
         assignment.insert(ty, vec![data]);
 
         let nodeid = NodeId::default();
-        let mut ancestor = BTreeMap::new() as ParentOwnedRights;
-        ancestor.insert(nodeid, assignment);
+        let mut ancestor = ParentOwnedRightsInner::default();
+        ancestor.0.insert(nodeid, assignment);
 
         let mut original_commit = vec![];
-        ancestor.commit_encode(&mut original_commit); // Merkelizes the structure into buf
+        ancestor
+            .to_merkle_source()
+            .commit_encode(&mut original_commit); // Merkelizes the structure into buf
 
         // Do the full merklization process by hand
 
@@ -2054,12 +2320,14 @@ mod test {
         assignments.insert(type3, vec3.clone());
 
         // Construct ancestor
-        let mut ancestor = BTreeMap::new();
-        ancestor.insert(node_id, assignments);
+        let mut ancestor = ParentOwnedRightsInner::default();
+        ancestor.0.insert(node_id, assignments);
 
         // get the commit encoding
         let mut original_commit = vec![];
-        ancestor.commit_encode(&mut original_commit);
+        ancestor
+            .to_merkle_source()
+            .commit_encode(&mut original_commit);
 
         // Merkelize by hand
         // General flow is as below
@@ -2167,7 +2435,7 @@ mod test {
                 seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                     OutPoint::new(txid_vec[2], 3),
                 ))
-                .conceal(),
+                .commit_conceal(),
                 assigned_state: data::Void,
             };
 
@@ -2175,7 +2443,7 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 4),
             ))
-            .conceal(),
+            .commit_conceal(),
             assigned_state: data::Void,
         };
 
@@ -2207,14 +2475,14 @@ mod test {
                 OutPoint::new(txid_vec[1], 1),
             )),
             assigned_state: value::Revealed::with_amount(20u64, &mut rng)
-                .conceal(),
+                .commit_conceal(),
         };
 
         let assignment_3 = OwnedState::<PedersenStrategy>::ConfidentialSeal {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[2], 1),
             ))
-            .conceal(),
+            .commit_conceal(),
             assigned_state: value::Revealed::with_amount(30u64, &mut rng),
         };
 
@@ -2222,9 +2490,9 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 1),
             ))
-            .conceal(),
+            .commit_conceal(),
             assigned_state: value::Revealed::with_amount(10u64, &mut rng)
-                .conceal(),
+                .commit_conceal(),
         };
 
         let mut set = Vec::new();
@@ -2260,14 +2528,14 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[1], 1),
             )),
-            assigned_state: state_data_vec[1].clone().conceal(),
+            assigned_state: state_data_vec[1].clone().commit_conceal(),
         };
 
         let assignment_3 = OwnedState::<HashStrategy>::ConfidentialSeal {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[2], 1),
             ))
-            .conceal(),
+            .commit_conceal(),
             assigned_state: state_data_vec[2].clone(),
         };
 
@@ -2275,8 +2543,8 @@ mod test {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 1),
             ))
-            .conceal(),
-            assigned_state: state_data_vec[3].clone().conceal(),
+            .commit_conceal(),
+            assigned_state: state_data_vec[3].clone().commit_conceal(),
         };
 
         let mut set = Vec::new();
@@ -2293,22 +2561,27 @@ mod test {
         let type1 = 1 as schema::OwnedRightType;
         let type2 = 2 as schema::OwnedRightType;
         let type3 = 3 as schema::OwnedRightType;
-        let mut assignments = BTreeMap::new();
-        assignments.insert(type1, declarative_variant);
-        assignments.insert(type2, pedersen_variant);
-        assignments.insert(type3, hash_variant);
+        let mut assignments = OwnedRightsInner::default();
+        assignments.0.insert(type1, declarative_variant);
+        assignments.0.insert(type2, pedersen_variant);
+        assignments.0.insert(type3, hash_variant);
 
         let mut original_encoding = vec![];
-        assignments.clone().commit_encode(&mut original_encoding);
+        assignments
+            .to_merkle_source()
+            .commit_encode(&mut original_encoding);
 
         // Hand calculate the commit encoding procedure
 
         let merkle_nodes: Vec<MerkleNode> = assignments
+            .0
             .iter()
-            .map(|item| {
+            .map(|(type_id, assignment)| {
                 let mut encoder = std::io::Cursor::new(vec![]);
-                item.0.strict_encode(&mut encoder).unwrap();
-                item.1.clone().strict_encode(&mut encoder).unwrap();
+                type_id.commit_encode(&mut encoder);
+                assignment.consensus_commitments().iter().for_each(|leaf| {
+                    leaf.commit_encode(&mut encoder);
+                });
                 MerkleNode::hash(&encoder.into_inner())
             })
             .collect();
@@ -2316,7 +2589,7 @@ mod test {
         let final_node = merklize("", &merkle_nodes[..], 0);
 
         let mut computed_encoding = vec![];
-        final_node.strict_encode(&mut computed_encoding).unwrap();
+        final_node.commit_encode(&mut computed_encoding);
 
         assert_eq!(original_encoding, computed_encoding);
     }

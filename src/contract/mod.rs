@@ -23,9 +23,13 @@ pub mod value;
 pub use assignments::{
     Assignments, ConfidentialState, DeclarativeStrategy, HashStrategy,
     OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
-    PedersenStrategy, RevealedState, StateTypes,
+    PedersenStrategy, PublicRights, RevealedState, StateTypes,
 };
-pub use conceal::AutoConceal;
+pub(self) use assignments::{
+    OwnedRightsInner, ParentOwnedRightsInner, ParentPublicRightsInner,
+    PublicRightsInner,
+};
+pub use conceal::ConcealState;
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
 pub use seal::{SealDefinition, SealEndpoint};
@@ -45,19 +49,20 @@ pub struct NoDataError;
 
 #[cfg(test)]
 pub(crate) mod test {
-    use lnpbp::client_side_validation::{CommitEncode, Conceal};
+    use lnpbp::client_side_validation::{CommitConceal, CommitEncode};
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
 
     pub fn test_confidential<T>(data: &[u8], encoded: &[u8], commitment: &[u8])
     where
-        T: Conceal + StrictDecode + StrictEncode + Clone + CommitEncode,
-        <T as Conceal>::Confidential: StrictDecode + StrictEncode + Eq,
+        T: CommitConceal + StrictDecode + StrictEncode + Clone + CommitEncode,
+        <T as CommitConceal>::ConcealedCommitment:
+            StrictDecode + StrictEncode + Eq,
     {
         // Create the Revealed Structure from data bytes
         let revealed = T::strict_decode(data).unwrap();
 
-        // Conceal the Revealed structure into Confidential
-        let confidential = revealed.conceal();
+        // CommitConceal the Revealed structure into Confidential
+        let confidential = revealed.commit_conceal();
 
         // Strict_encode Confidential data
         let mut confidential_encoded = vec![];

@@ -198,10 +198,9 @@ mod strict_encoding {
 mod _validation {
     use std::collections::BTreeSet;
 
-    use lnpbp::client_side_validation::Conceal;
+    use lnpbp::client_side_validation::CommitConceal;
 
     use super::*;
-    use crate::contract::nodes::PublicRights;
     use crate::schema::{
         script, MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
         SchemaVerify,
@@ -209,7 +208,7 @@ mod _validation {
     use crate::{
         validation, AssignmentAction, Assignments, Metadata, Node, NodeId,
         OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
-        StateTypes, VirtualMachine,
+        PublicRights, StateTypes, VirtualMachine,
     };
 
     impl SchemaVerify for Schema {
@@ -755,8 +754,9 @@ mod _validation {
             where
                 STATE: StateTypes + Clone,
                 STATE::Confidential: PartialEq + Eq,
-                STATE::Confidential:
-                    From<<STATE::Revealed as Conceal>::Confidential>,
+                STATE::Confidential: From<
+                    <STATE::Revealed as CommitConceal>::ConcealedCommitment,
+                >,
             {
                 set.into_iter()
                     .enumerate()

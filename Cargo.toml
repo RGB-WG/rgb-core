@@ -40,7 +40,7 @@ required-features = ["cli", "serde"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = { version = "3", features = ["stringly_conversions"] }
+amplify = { version = "3.1", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
 lnpbp = { git = "https://github.com/LNP-BP/rust-lnpbp", features = ["bulletproofs", "zip"] }
 strict_encoding = { version = "~1.1.0", features = ["crypto"] }
@@ -101,7 +101,7 @@ serde = ["serde_crate", "serde_with", "serde_with_macros",
          "lnpbp/serde", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]
 
-# [workspace]
-# members = [".", "rgb20", "rgb21", "rgb22", "rgb23"]
-# default-members = ["rgb20"]
-# exclude = ["dep_test"]
+[workspace]
+members = [".", "rgb20", "rgb21", "rgb22", "rgb23"]
+default-members = ["rgb20"]
+exclude = ["dep_test"]

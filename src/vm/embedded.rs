@@ -13,7 +13,7 @@
 
 use core::any::Any;
 
-use lnpbp::client_side_validation::Conceal;
+use lnpbp::client_side_validation::CommitConceal;
 
 use super::VirtualMachine;
 use crate::{
@@ -108,7 +108,7 @@ impl Embedded {
                                         blinding: secp256k1zkp::key::ONE_KEY
                                             .into(),
                                     }
-                                    .conceal()
+                                    .commit_conceal()
                                     .commitment,
                                 ],
                             ) {

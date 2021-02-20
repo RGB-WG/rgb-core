@@ -12,31 +12,32 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::BTreeSet;
+use std::io;
 
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
 
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
+    ToMerkleSource,
 };
 use lnpbp::commit_verify::CommitVerify;
 use lnpbp::{Chain, TaggedHash};
 
 use super::{
-    Assignments, AutoConceal, OwnedRights, ParentOwnedRights,
-    ParentPublicRights,
+    Assignments, ConcealState, OwnedRights, ParentOwnedRights,
+    ParentPublicRights, PublicRights,
+};
+use super::{
+    OwnedRightsInner, ParentOwnedRightsInner, ParentPublicRightsInner,
+    PublicRightsInner,
 };
 use crate::schema::{
-    ExtensionType, FieldType, NodeType, OwnedRightType, PublicRightType,
-    TransitionType,
+    ExtensionType, FieldType, NodeType, OwnedRightType, TransitionType,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
 use crate::{schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32};
-
-/// Holds definition of valencies for contract nodes, which is a set of
-/// allowed valencies types
-pub type PublicRights = BTreeSet<PublicRightType>;
 
 static MIDSTATE_NODE_ID: [u8; 32] = [
     0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc,
@@ -216,8 +217,8 @@ pub struct Genesis {
     schema_id: SchemaId,
     chain: Chain,
     metadata: Metadata,
-    owned_rights: OwnedRights,
-    public_rights: PublicRights,
+    owned_rights: OwnedRightsInner,
+    public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -234,9 +235,9 @@ pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
     metadata: Metadata,
-    parent_public_rights: ParentPublicRights,
-    owned_rights: OwnedRights,
-    public_rights: PublicRights,
+    parent_public_rights: ParentPublicRightsInner,
+    owned_rights: OwnedRightsInner,
+    public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -252,9 +253,9 @@ pub struct Extension {
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
-    parent_owned_rights: ParentOwnedRights,
-    owned_rights: OwnedRights,
-    public_rights: PublicRights,
+    parent_owned_rights: ParentOwnedRightsInner,
+    owned_rights: OwnedRightsInner,
+    public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -270,39 +271,97 @@ impl ConsensusCommit for Transition {
     type Commitment = NodeId;
 }
 
-impl CommitEncodeWithStrategy for Extension {
-    type Strategy = commit_strategy::UsingStrict;
+impl CommitEncode for Extension {
+    fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
+        let mut len = self.extension_type.commit_encode(&mut e);
+        len += self.contract_id.commit_encode(&mut e);
+        len += self
+            .metadata
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self
+            .parent_public_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self
+            .owned_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self
+            .public_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self.script.commit_encode(&mut e);
+        len
+    }
 }
 
-impl CommitEncodeWithStrategy for Transition {
-    type Strategy = commit_strategy::UsingStrict;
+impl CommitEncode for Transition {
+    fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
+        let mut len = self.transition_type.commit_encode(&mut e);
+        len += self
+            .metadata
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self
+            .parent_owned_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self
+            .owned_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self
+            .public_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self.script.commit_encode(&mut e);
+        len
+    }
 }
 
-impl AutoConceal for Genesis {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+impl ConcealState for Genesis {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut() {
-            count += assignment.conceal_except(seals);
+            count += assignment.conceal_state_except(seals);
         }
         count
     }
 }
 
-impl AutoConceal for Extension {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+impl ConcealState for Extension {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut() {
-            count += assignment.conceal_except(seals);
+            count += assignment.conceal_state_except(seals);
         }
         count
     }
 }
 
-impl AutoConceal for Transition {
-    fn conceal_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+impl ConcealState for Transition {
+    fn conceal_state_except(
+        &mut self,
+        seals: &Vec<seal::Confidential>,
+    ) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut() {
-            count += assignment.conceal_except(seals);
+            count += assignment.conceal_state_except(seals);
         }
         count
     }
@@ -359,22 +418,22 @@ impl Node for Genesis {
 
     #[inline]
     fn owned_rights(&self) -> &OwnedRights {
-        &self.owned_rights
+        self.owned_rights.as_inner()
     }
 
     #[inline]
     fn owned_rights_mut(&mut self) -> &mut OwnedRights {
-        &mut self.owned_rights
+        self.owned_rights.as_inner_mut()
     }
 
     #[inline]
     fn public_rights(&self) -> &PublicRights {
-        &self.public_rights
+        self.public_rights.as_inner()
     }
 
     #[inline]
     fn public_rights_mut(&mut self) -> &mut PublicRights {
-        &mut self.public_rights
+        self.public_rights.as_inner_mut()
     }
 
     #[inline]
@@ -420,7 +479,7 @@ impl Node for Extension {
 
     #[inline]
     fn parent_public_rights(&self) -> &ParentPublicRights {
-        &self.parent_public_rights
+        self.parent_public_rights.as_inner()
     }
 
     #[inline]
@@ -430,22 +489,22 @@ impl Node for Extension {
 
     #[inline]
     fn owned_rights(&self) -> &OwnedRights {
-        &self.owned_rights
+        self.owned_rights.as_inner()
     }
 
     #[inline]
     fn owned_rights_mut(&mut self) -> &mut OwnedRights {
-        &mut self.owned_rights
+        self.owned_rights.as_inner_mut()
     }
 
     #[inline]
     fn public_rights(&self) -> &PublicRights {
-        &self.public_rights
+        self.public_rights.as_inner()
     }
 
     #[inline]
     fn public_rights_mut(&mut self) -> &mut PublicRights {
-        &mut self.public_rights
+        self.public_rights.as_inner_mut()
     }
 
     #[inline]
@@ -482,7 +541,7 @@ impl Node for Transition {
 
     #[inline]
     fn parent_owned_rights(&self) -> &ParentOwnedRights {
-        &self.parent_owned_rights
+        self.parent_owned_rights.as_inner()
     }
 
     #[inline]
@@ -501,22 +560,22 @@ impl Node for Transition {
 
     #[inline]
     fn owned_rights(&self) -> &OwnedRights {
-        &self.owned_rights
+        self.owned_rights.as_inner()
     }
 
     #[inline]
     fn owned_rights_mut(&mut self) -> &mut OwnedRights {
-        &mut self.owned_rights
+        self.owned_rights.as_inner_mut()
     }
 
     #[inline]
     fn public_rights(&self) -> &PublicRights {
-        &self.public_rights
+        self.public_rights.as_inner()
     }
 
     #[inline]
     fn public_rights_mut(&mut self) -> &mut PublicRights {
-        &mut self.public_rights
+        self.public_rights.as_inner_mut()
     }
 
     #[inline]
@@ -538,8 +597,8 @@ impl Genesis {
             schema_id,
             chain,
             metadata,
-            owned_rights,
-            public_rights,
+            owned_rights: owned_rights.into(),
+            public_rights: public_rights.into(),
             script,
         }
     }
@@ -574,9 +633,9 @@ impl Extension {
             extension_type,
             contract_id,
             metadata,
-            parent_public_rights,
-            owned_rights,
-            public_rights,
+            parent_public_rights: parent_public_rights.into(),
+            owned_rights: owned_rights.into(),
+            public_rights: public_rights.into(),
             script,
         }
     }
@@ -594,9 +653,9 @@ impl Transition {
         Self {
             transition_type,
             metadata,
-            parent_owned_rights,
-            owned_rights,
-            public_rights,
+            parent_owned_rights: parent_owned_rights.into(),
+            owned_rights: owned_rights.into(),
+            public_rights: public_rights.into(),
             script,
         }
     }
@@ -623,16 +682,27 @@ mod _strict_encoding {
     //                        hash and not all chain parameters.
     // See <https://github.com/LNP-BP/LNPBPs/issues/58> for details.
     impl CommitEncode for Genesis {
-        fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
+        fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
             let mut encoder = || -> Result<_, Error> {
                 let mut len = self.schema_id.strict_encode(&mut e)?;
                 len += self.chain.as_genesis_hash().strict_encode(&mut e)?;
-                Ok(strict_encode_list!(e; len;
-                    self.metadata,
-                    self.owned_rights,
-                    self.public_rights,
-                    self.script
-                ))
+                len += self
+                    .metadata
+                    .to_merkle_source()
+                    .consensus_commit()
+                    .commit_encode(&mut e);
+                len += self
+                    .owned_rights
+                    .to_merkle_source()
+                    .consensus_commit()
+                    .commit_encode(&mut e);
+                len += self
+                    .public_rights
+                    .to_merkle_source()
+                    .consensus_commit()
+                    .commit_encode(&mut e);
+                len += self.script.commit_encode(&mut e);
+                Ok(len)
             };
             encoder().expect("Strict encoding of genesis data must not fail")
         }
@@ -689,8 +759,8 @@ mod _strict_encoding {
                 schema_id,
                 chain,
                 metadata,
-                owned_rights: assignments,
-                public_rights: valencies,
+                owned_rights: assignments.into(),
+                public_rights: valencies.into(),
                 script,
             })
         }
@@ -704,6 +774,7 @@ mod test {
 
     use super::*;
     use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
+    use lnpbp::client_side_validation::CommitConceal;
     use lnpbp::commit_verify::CommitVerify;
     use lnpbp::strict_encoding::{
         strict_serialize, StrictDecode, StrictEncode,
@@ -755,6 +826,7 @@ mod test {
             script: Default::default(),
         };
 
+        // Strict encode
         let mut encoder = vec![];
         transition
             .transition_type
@@ -773,19 +845,77 @@ mod test {
         transition.script.strict_encode(&mut encoder).unwrap();
 
         let mut encoder1 = vec![];
-        let mut encoder2 = vec![];
+        transition.clone().strict_encode(&mut encoder1).unwrap();
 
-        transition.clone().commit_encode(&mut encoder1);
-        transition.clone().strict_encode(&mut encoder2).unwrap();
-
-        assert_eq!(encoder1, encoder2);
         assert_eq!(encoder, encoder1);
+
+        // Commit encode
+        let transition2 = transition.clone();
+        let mut encoder2 = vec![];
+        transition2.transition_type.commit_encode(&mut encoder2);
+        transition2
+            .metadata
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut encoder2);
+        transition2
+            .parent_owned_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut encoder2);
+        transition2
+            .owned_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut encoder2);
+        transition2
+            .public_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut encoder2);
+        transition2.script.commit_encode(&mut encoder2);
+
+        let mut encoder3 = vec![];
+        transition.clone().commit_encode(&mut encoder3);
+
+        assert_eq!(encoder2, encoder3);
     }
 
     #[test]
     fn test_encoding_nodes() {
         test_encode!((GENESIS, Genesis));
         test_encode!((TRANSITION, Transition));
+    }
+
+    #[test]
+    fn test_transition_node_id() {
+        fn conceal_transition(transition: &mut Transition) {
+            for (_, assignments) in transition.owned_rights_mut() {
+                match assignments {
+                    Assignments::Declarative(set) => {
+                        for assignment in set {
+                            *assignment = assignment.commit_conceal();
+                        }
+                    }
+                    Assignments::DiscreteFiniteField(set) => {
+                        for assignment in set {
+                            *assignment = assignment.commit_conceal();
+                        }
+                    }
+                    Assignments::CustomData(set) => {
+                        for assignment in set {
+                            *assignment = assignment.commit_conceal();
+                        }
+                    }
+                }
+            }
+        }
+
+        let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
+        let mut concealed_transition = transition.clone();
+        conceal_transition(&mut concealed_transition);
+
+        assert_eq!(transition.node_id(), concealed_transition.node_id());
     }
 
     #[test]
@@ -800,7 +930,7 @@ mod test {
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "72a375d75c925aee4e6c077b37cd85eb8a0d3a598d03c3ac038e31a46b145ac6"
+            "e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1016,12 +1146,12 @@ mod test {
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("72a375d75c925aee4e6c077b37cd85eb8a0d3a598d03c3ac038e31a46b145ac6")
+            NodeId::from_hex("e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2")
                 .unwrap()
         );
 
-        genesis.conceal_all();
-        transition.conceal_all();
+        genesis.conceal_state();
+        transition.conceal_state();
 
         assert_eq!(
             genesis.clone().consensus_commit(),
@@ -1030,7 +1160,7 @@ mod test {
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("0306cc6881cacd66ba1f842fb0b51481789d2580baf0089472ad207989e58670")
+            NodeId::from_hex("e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2")
                 .unwrap()
         );
     }

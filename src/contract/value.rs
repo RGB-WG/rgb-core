@@ -35,7 +35,7 @@ use secp256k1zkp::rand::{Rng, RngCore};
 
 use amplify::Wrapper;
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncode, CommitEncodeWithStrategy, Conceal,
+    commit_strategy, CommitConceal, CommitEncode, CommitEncodeWithStrategy,
 };
 use lnpbp::commit_verify::CommitVerify;
 use wallet::Slice32;
@@ -189,10 +189,10 @@ impl Revealed {
 
 impl RevealedState for Revealed {}
 
-impl Conceal for Revealed {
-    type Confidential = Confidential;
+impl CommitConceal for Revealed {
+    type ConcealedCommitment = Confidential;
 
-    fn conceal(&self) -> Confidential {
+    fn commit_conceal(&self) -> Self::ConcealedCommitment {
         Confidential::commit(self)
     }
 }
@@ -251,7 +251,7 @@ pub struct Confidential {
 impl ConfidentialState for Confidential {}
 
 impl CommitEncode for Confidential {
-    fn commit_encode<E: io::Write>(self, mut e: E) -> usize {
+    fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
         self.commitment.commit_encode(&mut e)
             + self.bulletproof.commit_encode(&mut e)
     }
@@ -507,8 +507,8 @@ mod test {
         );
         let coded_conf =
             Confidential::strict_decode(&CONFIDENTIAL_AMOUNT[..]).unwrap();
-        let old_conf = old_revealed.conceal();
-        let new_conf = revealed_64.conceal();
+        let old_conf = old_revealed.commit_conceal();
+        let new_conf = revealed_64.commit_conceal();
         assert_eq!(coded_conf, old_conf);
         assert_ne!(old_conf, new_conf);
         assert_eq!(old_conf.cmp(&new_conf), Ordering::Greater);
@@ -561,7 +561,7 @@ mod test {
                     value: amount,
                     blinding: blinding_factor.clone().into(),
                 }
-                .conceal()
+                .commit_conceal()
                 .commitment
             })
             .collect();
@@ -586,7 +586,7 @@ mod test {
                         value: amount,
                         blinding: blinding_factor.clone().into(),
                     }
-                    .conceal()
+                    .commit_conceal()
                     .commitment
                 })
                 .collect();
