@@ -201,7 +201,6 @@ mod _validation {
     use lnpbp::client_side_validation::CommitConceal;
 
     use super::*;
-    use crate::contract::nodes::PublicRights;
     use crate::schema::{
         script, MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
         SchemaVerify,
@@ -209,7 +208,7 @@ mod _validation {
     use crate::{
         validation, AssignmentAction, Assignments, Metadata, Node, NodeId,
         OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
-        StateTypes, VirtualMachine,
+        PublicRights, StateTypes, VirtualMachine,
     };
 
     impl SchemaVerify for Schema {

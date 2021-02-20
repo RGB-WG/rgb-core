@@ -23,7 +23,11 @@ pub mod value;
 pub use assignments::{
     Assignments, ConfidentialState, DeclarativeStrategy, HashStrategy,
     OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
-    PedersenStrategy, RevealedState, StateTypes,
+    PedersenStrategy, PublicRights, RevealedState, StateTypes,
+};
+pub(self) use assignments::{
+    OwnedRightsInner, ParentOwnedRightsInner, ParentPublicRightsInner,
+    PublicRightsInner,
 };
 pub use conceal::AutoConceal;
 pub use metadata::Metadata;
