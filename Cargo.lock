@@ -209,7 +209,7 @@ dependencies = [
 [[package]]
 name = "client_side_validation"
 version = "0.4.0-beta"
-source = "git+https://github.com/LNP-BP/rust-lnpbp?branch=fix/commit-encode#01cbc7fd0a95d57447d2a02fc15bc8e3f3f9f766"
+source = "git+https://github.com/LNP-BP/rust-lnpbp?branch=fix/commit-encode#2f0d69a407894af25a44251e18bb9627f5a979af"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -294,7 +294,7 @@ dependencies = [
 [[package]]
 name = "descriptor-wallet"
 version = "0.4.0-beta"
-source = "git+https://github.com/LNP-BP/descriptor-wallet#e39f6f3a4d278d90432e12015c203ccba998b5bf"
+source = "git+https://github.com/LNP-BP/descriptor-wallet#a59de0b534bdab5bc27ed9d6844a1a0dbe5c10ff"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -646,9 +646,9 @@ checksum = "4eae0151b9dacf24fcc170d9995e511669a082856a91f958a2fe380bfab3fb22"
 
 [[package]]
 name = "once_cell"
-version = "1.5.2"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
+checksum = "4ad167a2f54e832b82dbe003a046280dceffe5227b5f79e08e363a29638cfddd"
 
 [[package]]
 name = "opaque-debug"
@@ -930,7 +930,6 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 [[package]]
 name = "rgb-core"
 version = "0.4.0-beta"
-source = "git+https://github.com/rgb-org/rgb-core#bf1bac19a27ec9a974d5d2412085d9081f9f3fcb"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -962,6 +961,7 @@ dependencies = [
 [[package]]
 name = "rgb-core"
 version = "0.4.0-beta"
+source = "git+https://github.com/rgb-org/rgb-core#bbb457041ade3a6d70ea4ba085be4f54e1c68efc"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -1245,9 +1245,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "strict_encoding"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "040e89a9add0494e5a5eef5763ba18f0293ae4eed22bab439998fc893afd2a26"
+checksum = "8552fff4110a8689be2beb58dc2d89e24880fa192de2d192eebde88549eada6f"
 dependencies = [
  "amplify",
  "amplify_derive",
