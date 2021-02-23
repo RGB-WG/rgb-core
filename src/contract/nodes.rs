@@ -811,9 +811,21 @@ mod test {
         let mut encoder = vec![];
         genesis.schema_id.strict_encode(&mut encoder).unwrap();
         encoder.write_all(GENESIS_HASH_MAINNET).unwrap();
-        genesis.metadata.strict_encode(&mut encoder).unwrap();
-        genesis.owned_rights.strict_encode(&mut encoder).unwrap();
-        genesis.public_rights.strict_encode(&mut encoder).unwrap();
+        genesis
+            .metadata
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut encoder);
+        genesis
+            .owned_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut encoder);
+        genesis
+            .public_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut encoder);
         genesis.script.strict_encode(&mut encoder).unwrap();
         assert_eq!(genesis.consensus_commit(), NodeId::commit(&encoder));
 
@@ -926,11 +938,11 @@ mod test {
         // Typeid/Nodeid test
         assert_eq!(
             genesis.node_id().to_hex(),
-            "a0ce4948074b2a864153de704a1ca45ceab7cd1cf6a73312963cfd2191f5c62c"
+            "d2f452d8b3cdca74eb503904a80c75de5df6cb067dbc04624d98a56dec783f63"
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2"
+            "9baf13dd836cf971446026a172a619cc6aa2fe58127b4cb6018723e744f937cc"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1141,12 +1153,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("a0ce4948074b2a864153de704a1ca45ceab7cd1cf6a73312963cfd2191f5c62c")
+            NodeId::from_hex("d2f452d8b3cdca74eb503904a80c75de5df6cb067dbc04624d98a56dec783f63")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2")
+            NodeId::from_hex("9baf13dd836cf971446026a172a619cc6aa2fe58127b4cb6018723e744f937cc")
                 .unwrap()
         );
 
@@ -1155,12 +1167,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("d1e766948a975d1587cf365f2dc67cdbc296311aa031fca36c6915aff42cc516")
+            NodeId::from_hex("d2f452d8b3cdca74eb503904a80c75de5df6cb067dbc04624d98a56dec783f63")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("e2f910dbebc96dfc804175860758ce5283d61a841c96108550db8c53289298c2")
+            NodeId::from_hex("9baf13dd836cf971446026a172a619cc6aa2fe58127b4cb6018723e744f937cc")
                 .unwrap()
         );
     }
@@ -1172,11 +1184,11 @@ mod test {
         let contract_id = genesis.contract_id();
         assert_eq!(
             contract_id.to_string(),
-            "rgb19nr0tyfpl57fvy3n5lmpendhafw2g8z2wr09xsvx9f9swjzfe6sq0zta7a"
+            "rgb1vvlh3mrd5kvy6csyh37sdjlkth082r9gqsu4p6m5etxm8kzj7nfqsr0r9t"
         );
         assert_eq!(
             serde_json::to_string(&contract_id).unwrap(),
-            "\"rgb19nr0tyfpl57fvy3n5lmpendhafw2g8z2wr09xsvx9f9swjzfe6sq0zta7a\""
+            "\"rgb1vvlh3mrd5kvy6csyh37sdjlkth082r9gqsu4p6m5etxm8kzj7nfqsr0r9t\""
         );
     }
 
@@ -1191,7 +1203,7 @@ mod test {
         assert_eq!(
             contractid,
             ContractId::from_hex(
-                "a0ce4948074b2a864153de704a1ca45ceab7cd1cf6a73312963cfd2191f5c62c"
+                "d2f452d8b3cdca74eb503904a80c75de5df6cb067dbc04624d98a56dec783f63"
             )
             .unwrap()
         );
