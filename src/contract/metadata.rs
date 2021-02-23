@@ -161,12 +161,11 @@ impl Metadata {
 mod test {
     use super::*;
     use amplify::Wrapper;
-    use bitcoin::hashes::Hash;
-    use lnpbp::client_side_validation::{
-        merklize, CommitConceal, CommitEncode, MerkleNode,
-    };
+    use bitcoin_hashes::Hash;
+    use lnpbp::client_side_validation::{merklize, CommitEncode, MerkleNode};
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
     use secp256k1zkp::rand::{thread_rng, RngCore};
+    //use lnpbp::commit_verify::CommitVerify;
 
     // Hard coded sample metadata object as shown below
     // Metadata({13: {U8(2), U8(3), U16(2), U32(2), U32(3),
@@ -298,69 +297,32 @@ mod test {
             .commit_encode(&mut original_encoding);
 
         // Hand calculate the encoding
+        // create the leaves
+        let vec_1: Vec<(schema::FieldType, data::Revealed)> =
+            data1.iter().map(|data| (field1, data.clone())).collect();
+        let vec_2: Vec<(schema::FieldType, data::Revealed)> =
+            data2.iter().map(|data| (field2, data.clone())).collect();
+        let vec_3: Vec<(schema::FieldType, data::Revealed)> =
+            data3.iter().map(|data| (field3, data.clone())).collect();
 
-        let nodes1: Vec<MerkleNode> = data1
+        // combine all the leaves
+        let vec_4 = [vec_1, vec_2, vec_3].concat();
+
+        // create MerkleNodes from each leaf
+        let nodes: Vec<MerkleNode> = vec_4
             .iter()
-            .map(|data| {
-                let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone()
-                    .commit_conceal()
-                    .strict_encode(&mut encoder)
-                    .unwrap();
-                MerkleNode::hash(&encoder.into_inner())
+            .map(|item| {
+                MerkleNode::hash(&StrictEncode::strict_serialize(item).unwrap())
             })
             .collect();
 
-        let mid_node1 = merklize("", &nodes1[..], 0);
+        // compute merkle root of all the nodes
+        let root = merklize(MetadataLeaf::MERKLE_NODE_TAG, &nodes, 0);
 
-        let mut encoder = std::io::Cursor::new(vec![]);
-        field1.strict_encode(&mut encoder).unwrap();
-        mid_node1.strict_encode(&mut encoder).unwrap();
-        let node1 = MerkleNode::hash(&encoder.into_inner());
+        // Commit encode the root
+        let handmade_encoding = root.commit_serialize();
 
-        let nodes2: Vec<MerkleNode> = data2
-            .iter()
-            .map(|data| {
-                let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone()
-                    .commit_conceal()
-                    .strict_encode(&mut encoder)
-                    .unwrap();
-                MerkleNode::hash(&encoder.into_inner())
-            })
-            .collect();
-
-        let mid_node2 = merklize("", &nodes2[..], 0);
-
-        let mut encoder = std::io::Cursor::new(vec![]);
-        field2.strict_encode(&mut encoder).unwrap();
-        mid_node2.strict_encode(&mut encoder).unwrap();
-        let node2 = MerkleNode::hash(&encoder.into_inner());
-
-        let nodes3: Vec<MerkleNode> = data3
-            .iter()
-            .map(|data| {
-                let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone()
-                    .commit_conceal()
-                    .strict_encode(&mut encoder)
-                    .unwrap();
-                MerkleNode::hash(&encoder.into_inner())
-            })
-            .collect();
-
-        let mid_node3 = merklize("", &nodes3[..], 0);
-
-        let mut encoder = std::io::Cursor::new(vec![]);
-        field3.strict_encode(&mut encoder).unwrap();
-        mid_node3.strict_encode(&mut encoder).unwrap();
-        let node3 = MerkleNode::hash(&encoder.into_inner());
-
-        let final_node = merklize("", &[node1, node2, node3], 0);
-
-        let mut computed_encoding = vec![];
-        final_node.strict_encode(&mut computed_encoding).unwrap();
-
-        assert_eq!(original_encoding, computed_encoding);
+        // This should match with original encoding
+        assert_eq!(original_encoding, handmade_encoding);
     }
 }
