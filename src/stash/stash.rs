@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use lnpbp::seals::OutpointReveal;
 use std::collections::BTreeSet;
 
 use crate::{
@@ -81,8 +82,9 @@ pub trait Stash {
     /// and it gets into the known data.
     fn merge(
         &mut self,
-        consignment: Consignment,
-    ) -> Result<Vec<Box<dyn Node>>, Self::Error>;
+        consignment: &Consignment,
+        known_seals: &Vec<OutpointReveal>,
+    ) -> Result<(), Self::Error>;
 
     /// If we need to forget about the state which is not owned by us anymore
     /// (we have done the transfer and would like to prune this specific info)
