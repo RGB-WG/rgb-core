@@ -1,6 +1,6 @@
 [package]
 name = "rgb22"
-version = "0.4.0-alpha.1"
+version = "0.4.0-beta"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "RGB-22 Library: digital identity for bitcoin & lightning"

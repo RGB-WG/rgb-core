@@ -30,6 +30,7 @@ use rgb::{AtomicValue, SealDefinition};
 #[from(ParseIntError)]
 #[from(ParseOutPointError)]
 #[from(bitcoin::hashes::hex::Error)]
+#[from(lnpbp::bech32::Error)]
 /// Error parsing data
 pub struct ParseError;
 
@@ -213,7 +214,7 @@ impl FromStr for ConsealCoins {
             match (m.name("coins"), m.name("seal")) {
                 (Some(amount), Some(seal)) => Ok(Self {
                     coins: amount.as_str().parse()?,
-                    seal_confidential: OutpointHash::from_hex(seal.as_str())?,
+                    seal_confidential: OutpointHash::from_str(seal.as_str())?,
                 }),
                 _ => Err(ParseError),
             }
