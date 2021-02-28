@@ -161,12 +161,11 @@ impl Metadata {
 mod test {
     use super::*;
     use amplify::Wrapper;
-    use bitcoin::hashes::Hash;
-    use lnpbp::client_side_validation::{
-        merklize, CommitConceal, CommitEncode, MerkleNode,
-    };
+    use bitcoin_hashes::Hash;
+    use lnpbp::client_side_validation::{merklize, CommitEncode, MerkleNode};
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
     use secp256k1zkp::rand::{thread_rng, RngCore};
+    //use lnpbp::commit_verify::CommitVerify;
 
     // Hard coded sample metadata object as shown below
     // Metadata({13: {U8(2), U8(3), U16(2), U32(2), U32(3),
@@ -175,21 +174,7 @@ mod test {
     //    F64(3.0), Bytes([1, 2, 3, 4, 5]), Bytes([10, 20, 30, 40, 50]),
     //    String("One Random String"), String("Another Random String")}})
     // It has Field_type = 13 with only single U16 and no I16 data types.
-    static METADATA: [u8; 161] = [
-        0x1, 0x0, 0xd, 0x0, 0x15, 0x0, 0x0, 0x2, 0x0, 0x3, 0x1, 0x2, 0x0, 0x2,
-        0x2, 0x0, 0x0, 0x0, 0x2, 0x3, 0x0, 0x0, 0x0, 0x3, 0x2, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x0, 0x3, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8,
-        0x2, 0x8, 0x3, 0xa, 0x2, 0x0, 0x0, 0x0, 0xa, 0x3, 0x0, 0x0, 0x0, 0xb,
-        0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xb, 0x3, 0x0, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x12, 0x0, 0x0, 0x0, 0x40, 0x12, 0x0, 0x0, 0x40, 0x40,
-        0x13, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x13, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x8, 0x40, 0x20, 0x5, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5,
-        0x20, 0x5, 0x0, 0xa, 0x14, 0x1e, 0x28, 0x32, 0x21, 0x11, 0x0, 0x4f,
-        0x6e, 0x65, 0x20, 0x52, 0x61, 0x6e, 0x64, 0x6f, 0x6d, 0x20, 0x53, 0x74,
-        0x72, 0x69, 0x6e, 0x67, 0x21, 0x15, 0x0, 0x41, 0x6e, 0x6f, 0x74, 0x68,
-        0x65, 0x72, 0x20, 0x52, 0x61, 0x6e, 0x64, 0x6f, 0x6d, 0x20, 0x53, 0x74,
-        0x72, 0x69, 0x6e, 0x67,
-    ];
+    static METADATA: [u8; 161] = include!("../../test/metadata.in");
 
     #[test]
     fn test_extraction() {
@@ -298,69 +283,32 @@ mod test {
             .commit_encode(&mut original_encoding);
 
         // Hand calculate the encoding
+        // create the leaves
+        let vec_1: Vec<(schema::FieldType, data::Revealed)> =
+            data1.iter().map(|data| (field1, data.clone())).collect();
+        let vec_2: Vec<(schema::FieldType, data::Revealed)> =
+            data2.iter().map(|data| (field2, data.clone())).collect();
+        let vec_3: Vec<(schema::FieldType, data::Revealed)> =
+            data3.iter().map(|data| (field3, data.clone())).collect();
 
-        let nodes1: Vec<MerkleNode> = data1
+        // combine all the leaves
+        let vec_4 = [vec_1, vec_2, vec_3].concat();
+
+        // create MerkleNodes from each leaf
+        let nodes: Vec<MerkleNode> = vec_4
             .iter()
-            .map(|data| {
-                let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone()
-                    .commit_conceal()
-                    .strict_encode(&mut encoder)
-                    .unwrap();
-                MerkleNode::hash(&encoder.into_inner())
+            .map(|item| {
+                MerkleNode::hash(&StrictEncode::strict_serialize(item).unwrap())
             })
             .collect();
 
-        let mid_node1 = merklize("", &nodes1[..], 0);
+        // compute merkle root of all the nodes
+        let root = merklize(MetadataLeaf::MERKLE_NODE_TAG, &nodes, 0);
 
-        let mut encoder = std::io::Cursor::new(vec![]);
-        field1.strict_encode(&mut encoder).unwrap();
-        mid_node1.strict_encode(&mut encoder).unwrap();
-        let node1 = MerkleNode::hash(&encoder.into_inner());
+        // Commit encode the root
+        let handmade_encoding = root.commit_serialize();
 
-        let nodes2: Vec<MerkleNode> = data2
-            .iter()
-            .map(|data| {
-                let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone()
-                    .commit_conceal()
-                    .strict_encode(&mut encoder)
-                    .unwrap();
-                MerkleNode::hash(&encoder.into_inner())
-            })
-            .collect();
-
-        let mid_node2 = merklize("", &nodes2[..], 0);
-
-        let mut encoder = std::io::Cursor::new(vec![]);
-        field2.strict_encode(&mut encoder).unwrap();
-        mid_node2.strict_encode(&mut encoder).unwrap();
-        let node2 = MerkleNode::hash(&encoder.into_inner());
-
-        let nodes3: Vec<MerkleNode> = data3
-            .iter()
-            .map(|data| {
-                let mut encoder = std::io::Cursor::new(vec![]);
-                data.clone()
-                    .commit_conceal()
-                    .strict_encode(&mut encoder)
-                    .unwrap();
-                MerkleNode::hash(&encoder.into_inner())
-            })
-            .collect();
-
-        let mid_node3 = merklize("", &nodes3[..], 0);
-
-        let mut encoder = std::io::Cursor::new(vec![]);
-        field3.strict_encode(&mut encoder).unwrap();
-        mid_node3.strict_encode(&mut encoder).unwrap();
-        let node3 = MerkleNode::hash(&encoder.into_inner());
-
-        let final_node = merklize("", &[node1, node2, node3], 0);
-
-        let mut computed_encoding = vec![];
-        final_node.strict_encode(&mut computed_encoding).unwrap();
-
-        assert_eq!(original_encoding, computed_encoding);
+        // This should match with original encoding
+        assert_eq!(original_encoding, handmade_encoding);
     }
 }

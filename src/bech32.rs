@@ -792,7 +792,7 @@ mod test {
         let bech32 = obj.to_bech32_string();
         assert_eq!(
             bech32,
-            "rgb1eddz5h6cymzmnq4xv4r7w5an2gtdzmlhjcfpzkq3dc7wtn9varsskdzvun"
+            "rgb1mg7j5rvvlj6cj4lpsgc86l7zpzevgkagh8589gryduq90gtca6hqx4uzfz"
         );
         let decoded = ContractId::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
