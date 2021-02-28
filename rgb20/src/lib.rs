@@ -38,7 +38,6 @@ extern crate serde_crate as serde;
 extern crate serde_with;
 
 mod asset;
-mod invoice;
 pub mod outcoins;
 mod processor;
 pub mod schema;
@@ -46,9 +45,6 @@ pub mod schema;
 pub use asset::{
     AccountingAmount, AccountingValue, Allocation, Asset, Error, Issue, Supply,
     SupplyMeasure,
-};
-pub use invoice::{
-    Error as InvoiceError, Invoice, Outpoint, OutpointDescriptor,
 };
 pub use outcoins::{ConsealCoins, OutpointCoins, SealCoins};
 pub use processor::{issue, transfer, TransferError};
