@@ -74,7 +74,7 @@ pub trait Stash {
         contract_id: ContractId,
         node: &impl Node,
         anchor: Option<&Anchor>,
-        expose: &BTreeSet<SealEndpoint>,
+        endpoints: &BTreeSet<SealEndpoint>,
     ) -> Result<Consignment, Self::Error>;
 
     /// When we have received data from other peer (which usually relate to our

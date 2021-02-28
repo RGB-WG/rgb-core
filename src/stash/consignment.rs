@@ -18,16 +18,16 @@ use bitcoin::hashes::{sha256, sha256t};
 use bitcoin::Txid;
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use lnpbp::client_side_validation::{
-    commit_strategy, commit_verify::CommitVerify, CommitEncodeWithStrategy,
-    ConsensusCommit,
+    commit_strategy, commit_verify::CommitVerify, CommitConceal,
+    CommitEncodeWithStrategy, ConsensusCommit,
 };
 use lnpbp::seals::OutpointReveal;
 use lnpbp::TaggedHash;
 use wallet::resolvers::TxResolver;
 
 use crate::{
-    validation, Anchor, Extension, Genesis, Node, NodeId, Schema, SealEndpoint,
-    Transition, Validator,
+    validation, Anchor, ConcealState, ContractId, Extension, Genesis, Node,
+    NodeId, Schema, SealEndpoint, Transition, Validator,
 };
 
 pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
@@ -192,6 +192,40 @@ impl Consignment {
         resolver: R,
     ) -> validation::Status {
         Validator::validate(schema, self, resolver)
+    }
+
+    pub fn finalize(
+        &mut self,
+        expose: &BTreeSet<SealEndpoint>,
+        contract_id: ContractId,
+    ) -> usize {
+        let concealed_endpoints =
+            expose.iter().map(SealEndpoint::commit_conceal).collect();
+
+        let mut count = self.state_transitions.iter_mut().fold(
+            0usize,
+            |count, (anchor, transition)| {
+                count
+                    + anchor.conceal_except(contract_id)
+                    + transition.conceal_state_except(&concealed_endpoints)
+            },
+        );
+
+        count =
+            self.state_extensions
+                .iter_mut()
+                .fold(count, |count, extension| {
+                    count + extension.conceal_state_except(&concealed_endpoints)
+                });
+
+        self.endpoints = self
+            .endpoints
+            .clone()
+            .into_iter()
+            .filter(|(_, endpoint)| expose.contains(endpoint))
+            .collect();
+
+        count
     }
 
     /// Reveals previously known seal information (replacing blind UTXOs with

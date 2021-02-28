@@ -331,6 +331,20 @@ impl Anchor {
     pub fn anchor_id(&self) -> AnchorId {
         self.clone().consensus_commit()
     }
+
+    pub fn conceal_except(&mut self, contract_id: ContractId) -> usize {
+        self.commitment.entropy = None;
+        self.commitment.commitments.iter_mut().fold(
+            0usize,
+            |mut count, item| {
+                if item.protocol != Some((*contract_id.as_slice()).into()) {
+                    item.protocol = None;
+                    count += 1;
+                }
+                count
+            },
+        )
+    }
 }
 
 impl CommitEncodeWithStrategy for Anchor {
