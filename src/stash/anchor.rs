@@ -34,7 +34,7 @@ use lnpbp::dbc::{
 use lnpbp::lnpbp4::{MessageMap, MultimsgCommitment, TooManyMessagesError};
 use lnpbp::strict_encoding::{strategies, Strategy};
 use lnpbp::TaggedHash;
-use wallet::resolvers::{Fee, FeeError};
+use wallet::psbt::{Fee, FeeError};
 
 use crate::{ContractId, NodeId};
 
