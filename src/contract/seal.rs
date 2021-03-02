@@ -76,6 +76,19 @@ impl CommitConceal for SealEndpoint {
     }
 }
 
+impl From<SealDefinition> for SealEndpoint {
+    fn from(seal_definition: SealDefinition) -> Self {
+        match seal_definition {
+            Revealed::TxOutpoint(outpoint) => {
+                SealEndpoint::TxOutpoint(outpoint.commit_conceal())
+            }
+            Revealed::WitnessVout { vout, blinding } => {
+                SealEndpoint::WitnessVout { vout, blinding }
+            }
+        }
+    }
+}
+
 #[derive(
     Clone,
     Copy,
