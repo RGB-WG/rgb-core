@@ -25,7 +25,7 @@ use std::str::FromStr;
 
 use bitcoin::hashes::hex::{self, FromHex, ToHex};
 use lnpbp::client_side_validation::ConsensusCommit;
-use rgb::{Consignment, Schema};
+use rgb::{Consignment, Schema, Transition};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::resolvers::ElectrumTxResolver;
 
@@ -51,6 +51,12 @@ pub enum Command {
     Consignment {
         #[clap(subcommand)]
         subcommand: ConsignmentCommand,
+    },
+
+    /// Commands for working with state transitions
+    Transition {
+        #[clap(subcommand)]
+        subcommand: TransitionCommand,
     },
 }
 
@@ -85,6 +91,23 @@ pub enum ConsignmentCommand {
         /// Address for Electrum server
         #[clap(default_value = "pandora.network:60001")]
         electrum: String,
+    },
+}
+
+#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[clap(setting = AppSettings::ColoredHelp)]
+pub enum TransitionCommand {
+    Convert {
+        /// State transition data; if none are given reads from STDIN
+        transition: Option<String>,
+
+        /// Formatting of the input data
+        #[clap(short, long, default_value = "bech32")]
+        input: Format,
+
+        /// Formatting for the output
+        #[clap(short, long, default_value = "yaml")]
+        output: Format,
     },
 }
 
@@ -249,6 +272,16 @@ fn main() -> Result<(), String> {
                         .as_ref()
                         .map_err(serde_yaml::Error::to_string)?
                 );
+            }
+        },
+        Command::Transition { subcommand } => match subcommand {
+            TransitionCommand::Convert {
+                transition,
+                input,
+                output,
+            } => {
+                let transition: Transition = input_read(transition, input)?;
+                output_write(transition, output)?;
             }
         },
     }
