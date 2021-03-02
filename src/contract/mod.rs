@@ -29,7 +29,7 @@ pub(self) use assignments::{
     OwnedRightsInner, ParentOwnedRightsInner, ParentPublicRightsInner,
     PublicRightsInner,
 };
-pub use conceal::ConcealState;
+pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
 pub use seal::{SealDefinition, SealEndpoint};

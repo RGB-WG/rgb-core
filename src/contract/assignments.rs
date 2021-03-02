@@ -26,8 +26,8 @@ use lnpbp::seals::OutpointReveal;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
-    data, seal, value, AtomicValue, ConcealState, NoDataError, NodeId,
-    SealDefinition, SealEndpoint, SECP256K1_ZKP,
+    data, seal, value, AtomicValue, ConcealSeals, ConcealState, NoDataError,
+    NodeId, SealDefinition, SealEndpoint, SECP256K1_ZKP,
 };
 use crate::schema;
 
@@ -609,6 +609,19 @@ impl Assignments {
     }
 }
 
+impl ConcealSeals for Assignments {
+    fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        match self {
+            Assignments::Declarative(data) => data as &mut dyn ConcealSeals,
+            Assignments::DiscreteFiniteField(data) => {
+                data as &mut dyn ConcealSeals
+            }
+            Assignments::CustomData(data) => data as &mut dyn ConcealSeals,
+        }
+        .conceal_seals(seals)
+    }
+}
+
 impl ConcealState for Assignments {
     fn conceal_state_except(
         &mut self,
@@ -970,6 +983,50 @@ where
                 seal_definition: seal_definition.clone(),
                 assigned_state: assigned_state.commit_conceal().into(),
             },
+        }
+    }
+}
+
+impl<STATE> ConcealSeals for OwnedState<STATE>
+where
+    STATE: StateTypes,
+    STATE::Revealed: CommitConceal,
+    STATE::Confidential: PartialEq + Eq,
+    <STATE as StateTypes>::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+{
+    fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        match self {
+            OwnedState::Confidential { .. }
+            | OwnedState::ConfidentialSeal { .. } => 0,
+            OwnedState::ConfidentialAmount {
+                seal_definition,
+                assigned_state,
+            } => {
+                if seals.contains(&seal_definition.commit_conceal()) {
+                    *self = OwnedState::<STATE>::Confidential {
+                        assigned_state: assigned_state.clone(),
+                        seal_definition: seal_definition.commit_conceal(),
+                    };
+                    1
+                } else {
+                    0
+                }
+            }
+            OwnedState::Revealed {
+                seal_definition,
+                assigned_state,
+            } => {
+                if seals.contains(&seal_definition.commit_conceal()) {
+                    *self = OwnedState::<STATE>::ConfidentialSeal {
+                        assigned_state: assigned_state.clone(),
+                        seal_definition: seal_definition.commit_conceal(),
+                    };
+                    1
+                } else {
+                    0
+                }
+            }
         }
     }
 }

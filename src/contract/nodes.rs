@@ -25,7 +25,7 @@ use lnpbp::commit_verify::CommitVerify;
 use lnpbp::{Chain, TaggedHash};
 
 use super::{
-    Assignments, ConcealState, OwnedRights, ParentOwnedRights,
+    Assignments, ConcealSeals, ConcealState, OwnedRights, ParentOwnedRights,
     ParentPublicRights, PublicRights,
 };
 use super::{
@@ -362,6 +362,16 @@ impl ConcealState for Transition {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut() {
             count += assignment.conceal_state_except(seals);
+        }
+        count
+    }
+}
+
+impl ConcealSeals for Transition {
+    fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+        let mut count = 0;
+        for (_, assignment) in self.owned_rights_mut() {
+            count += assignment.conceal_seals(seals);
         }
         count
     }
