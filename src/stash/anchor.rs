@@ -38,6 +38,7 @@ use wallet::psbt::{Fee, FeeError};
 
 use crate::{ContractId, NodeId};
 
+pub const PSBT_PREFIX: &'static [u8] = b"RGB";
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
 pub const PSBT_OUT_TWEAK: u8 = 0x2;
 
@@ -145,6 +146,8 @@ impl Anchor {
         transitions: BTreeMap<ContractId, NodeId>,
         psbt: &mut Psbt,
     ) -> Result<(Vec<Self>, HashMap<ContractId, usize>), Error> {
+        // TODO: Adjust fee if the output does not contain a key marked for
+        //       tweaking
         let fee = psbt.fee()?;
 
         let tx = &mut psbt.global.unsigned_tx;
@@ -183,7 +186,7 @@ impl Anchor {
                 psbt_out
                     .proprietary
                     .get(&ProprietaryKey {
-                        prefix: b"RGB".to_vec(),
+                        prefix: PSBT_PREFIX.to_vec(),
                         subtype: PSBT_OUT_PUBKEY,
                         key: vec![],
                     })
@@ -241,9 +244,11 @@ impl Anchor {
             psbt.outputs
                 .get_mut(vout)
                 .map(|output| {
+                    // TODO: Provide full state transition information for the 
+                    //       signer with serialized `Roll`
                     output.proprietary.insert(
                         ProprietaryKey {
-                            prefix: b"RGB".to_vec(),
+                            prefix: PSBT_PREFIX.to_vec(),
                             subtype: PSBT_OUT_TWEAK,
                             key: vec![]
                         },
