@@ -178,6 +178,9 @@ where
                 .read_to_end(&mut buf)
                 .as_ref()
                 .map_err(io::Error::to_string)?;
+            if format == Format::Binary {
+                buf = buf[4..].to_vec();
+            }
             Ok(buf)
         },
     )?;
