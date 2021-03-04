@@ -31,6 +31,9 @@ use super::{
 };
 use crate::schema;
 
+//TODO: Find a better place for MergeReveal
+use crate::contract::MergeRevealed;
+
 /// Holds definition of valencies for contract nodes, which is a set of
 /// allowed valencies types
 pub type PublicRights = BTreeSet<schema::PublicRightType>;
@@ -147,6 +150,28 @@ impl ToMerkleSource for OwnedRightsInner {
                 )
             })
             .collect()
+    }
+}
+
+// Question: Should this also be implemented for ParentOwnedRights?
+impl MergeRevealed for OwnedRightsInner {
+    fn merge_revealed_with(&self, other: &Self) -> Result<Self, String> {
+        if self.to_merkle_source().consensus_commit()
+            == other.to_merkle_source().consensus_commit()
+        {
+            let mut result = BTreeMap::new();
+
+            for (existing, new) in
+                self.as_inner().iter().zip(other.as_inner().iter())
+            {
+                let merged = existing.1.merge_revealed_with(new.1)?;
+                result.insert(*existing.0, merged);
+            }
+
+            Ok(OwnedRightsInner(result))
+        } else {
+            Err(s!("Owned Right structure missmatch in merge operation"))
+        }
     }
 }
 
@@ -619,6 +644,58 @@ impl ConcealSeals for Assignments {
             Assignments::CustomData(data) => data as &mut dyn ConcealSeals,
         }
         .conceal_seals(seals)
+    }
+}
+
+impl MergeRevealed for Assignments {
+    fn merge_revealed_with(&self, other: &Self) -> Result<Self, String> {
+        // Better ways to do this?
+        if self.consensus_commitments() == other.consensus_commitments() {
+            match (self, other) {
+                (
+                    Assignments::Declarative(first_vec),
+                    Assignments::Declarative(second_vec),
+                ) => {
+                    let mut result = vec![];
+                    for (first, second) in
+                        first_vec.iter().zip(second_vec.iter())
+                    {
+                        result.push(first.merge_revealed_with(second)?);
+                    }
+                    Ok(Assignments::Declarative(result))
+                }
+
+                (
+                    Assignments::DiscreteFiniteField(first_vec),
+                    Assignments::DiscreteFiniteField(second_vec),
+                ) => {
+                    let mut result = vec![];
+                    for (first, second) in
+                        first_vec.iter().zip(second_vec.iter())
+                    {
+                        result.push(first.merge_revealed_with(second)?);
+                    }
+                    Ok(Assignments::DiscreteFiniteField(result))
+                }
+
+                (
+                    Assignments::CustomData(first_vec),
+                    Assignments::CustomData(second_vec),
+                ) => {
+                    let mut result = vec![];
+                    for (first, second) in
+                        first_vec.iter().zip(second_vec.iter())
+                    {
+                        result.push(first.merge_revealed_with(second)?);
+                    }
+                    Ok(Assignments::CustomData(result))
+                }
+
+                _ => Err(s!("Assignments type mismatch in merge operation")),
+            }
+        } else {
+            Err(s!("Assignments data mismatch in merge operation"))
+        }
     }
 }
 
@@ -1109,6 +1186,50 @@ where
     type Commitment = MerkleNode;
 }
 
+impl<STATE> MergeRevealed for OwnedState<STATE>
+where
+    Self: Clone,
+    STATE: StateTypes,
+    STATE::Confidential: PartialEq + Eq,
+    STATE::Confidential:
+        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+{
+    fn merge_revealed_with(&self, other: &Self) -> Result<Self, String> {
+        if self.commit_serialize() == other.commit_serialize() {
+            match (self, other) {
+
+                (_, OwnedState::Revealed{ .. }) => Ok(other.clone()),
+
+                (OwnedState::Revealed{ .. }, _) => Ok(self.clone()),
+
+                (OwnedState::ConfidentialSeal{ assigned_state: state , .. },
+                    OwnedState::ConfidentialAmount{ seal_definition: seal , ..}) => {
+                    Ok(OwnedState::<STATE>::Revealed {
+                        assigned_state: state.clone(),
+                        seal_definition: seal.clone()
+                    })
+                },
+
+                (OwnedState::ConfidentialAmount{ seal_definition: seal, ..},
+                OwnedState::ConfidentialSeal {assigned_state: state, ..}) => {
+                    Ok(OwnedState::<STATE>::Revealed {
+                        assigned_state: state.clone(),
+                        seal_definition: seal.clone(),
+                    })
+                },
+
+                (OwnedState::Confidential{ .. }, _) => Ok(other.clone()),
+
+                (_, OwnedState::Confidential { .. }) => Ok(self.clone()),
+
+                _ => Err(s!("Unknown merging pairs. This implies logical error. Should not happen")),
+            }
+        } else {
+            Err(s!("Owned state data missmatch in merge operation"))
+        }
+    }
+}
+
 mod _strict_encoding {
     use super::*;
     use data::_strict_encoding::EncodingTag;
@@ -1305,6 +1426,151 @@ mod test {
         "9b64a3024632f0517d8a608cb29902f7083eab0ac25d2827a5ef27e9a68b18f9",
         "dc0d0d7139a3ad6010a210e5900201979a1a09047b10a877688ee5a740ae215a",
     ];
+
+    #[test]
+    fn test_merge_reveal_state() {
+        let ass = Assignments::strict_decode(&PEDERSAN_VARIANT[..])
+            .unwrap()
+            .into_discrete_state();
+
+        let rev = ass[1].clone();
+
+        // Check Revealed + Anything = Revealed
+
+        // Revealed + Revealed = Revealed
+        let merge = MergeRevealed::merge(&rev, &rev).unwrap();
+        assert_eq!(merge.seal_definition(), rev.seal_definition());
+        assert_eq!(merge.assigned_state(), rev.assigned_state());
+
+        // Revealed + Confidential = Revealed
+        let conf = rev.commit_conceal();
+        let merge = MergeRevealed::merge(&rev, &conf).unwrap();
+        assert_eq!(merge.seal_definition(), rev.seal_definition());
+        assert_eq!(merge.assigned_state(), rev.assigned_state());
+
+        // Revealed + Confidential State = Revealed
+        let mut conf_state = rev.clone();
+        conf_state.conceal_state();
+        let merge = MergeRevealed::merge(&rev, &conf_state).unwrap();
+        assert_eq!(merge.seal_definition(), rev.seal_definition());
+        assert_eq!(merge.assigned_state(), rev.assigned_state());
+
+        // Revealed + Confidential Seal = Revealed
+        let seal = rev.seal_definition_confidential();
+        let conf_seal = OwnedState::<PedersenStrategy>::ConfidentialSeal {
+            seal_definition: seal,
+            assigned_state: rev.assigned_state().unwrap().clone(),
+        };
+        let merge = MergeRevealed::merge(&rev, &conf_seal).unwrap();
+        assert_eq!(merge.seal_definition(), rev.seal_definition());
+        assert_eq!(merge.assigned_state(), rev.assigned_state());
+
+        // Check Confidential Seal + Condfidential State = Revealed
+        let merge = MergeRevealed::merge(&conf_seal, &conf_state).unwrap();
+        assert_eq!(merge.seal_definition(), rev.seal_definition());
+        assert_eq!(merge.assigned_state(), rev.assigned_state());
+
+        // Check Condifential State + Confidential Seal = Revealed
+        let merge = MergeRevealed::merge(&conf_state, &conf_seal).unwrap();
+        assert_eq!(merge.seal_definition(), rev.seal_definition());
+        assert_eq!(merge.assigned_state(), rev.assigned_state());
+
+        // Check Confidential + Anything = Anything
+
+        // Confidential + Reveal = Reveal
+        let merge = MergeRevealed::merge(&conf, &rev).unwrap();
+        assert_eq!(merge.seal_definition(), rev.seal_definition());
+        assert_eq!(merge.assigned_state(), rev.assigned_state());
+
+        // Confidential + Confidential Seal = Confidential Seal
+        let merge = MergeRevealed::merge(&conf, &conf_seal).unwrap();
+        assert_eq!(merge.seal_definition(), conf.seal_definition());
+        assert_eq!(merge.assigned_state(), conf_seal.assigned_state());
+
+        // Confidential + Confidential State = Confidential State
+        let merge = MergeRevealed::merge(&conf, &conf_state).unwrap();
+        assert_eq!(merge.seal_definition(), conf_state.seal_definition());
+        assert_eq!(merge.assigned_state(), conf_state.assigned_state());
+
+        // Confidential + Confidential = Confidential
+        let merge = MergeRevealed::merge(&conf, &conf).unwrap();
+        assert_eq!(merge.seal_definition(), conf.seal_definition());
+        assert_eq!(merge.assigned_state(), conf.assigned_state());
+    }
+
+    #[test]
+    fn test_merge_reveal_assignements_ownedstates() {
+        let assignment = Assignments::strict_decode(&HASH_VARIANT[..])
+            .unwrap()
+            .to_custom_state();
+
+        // Get a revealed state
+        let rev = assignment[3].clone();
+
+        // Compute different exposure of the same state
+        let conf = rev.clone().commit_conceal();
+
+        let seal = rev.seal_definition_confidential();
+
+        let conf_seal = OwnedState::<HashStrategy>::ConfidentialSeal {
+            seal_definition: seal,
+            assigned_state: rev.assigned_state().unwrap().clone(),
+        };
+
+        let mut conf_state = rev.clone();
+        conf_state.conceal_state();
+
+        // Create assignment for testing
+        let test_variant_1 =
+            vec![rev.clone(), conf_seal, conf_state, conf.clone()];
+        let assignment_1 = Assignments::CustomData(test_variant_1.clone());
+
+        // Create assignment 2 for testing
+        // which is reverse of assignment 1
+        let mut test_variant_2 = test_variant_1.clone();
+        test_variant_2.reverse();
+        let assignmnet_2 = Assignments::CustomData(test_variant_2);
+
+        // Performing merge revelaing
+        let merged =
+            MergeRevealed::merge(&assignment_1, &assignmnet_2).unwrap();
+
+        // After merging all the states expeected be revealed
+        for state in merged.to_custom_state() {
+            assert_eq!(state, rev);
+        }
+
+        // Test against confidential merging
+        // Confidential + Anything = Anything
+        let test_variant_3 =
+            vec![conf.clone(), conf.clone(), conf.clone(), conf.clone()];
+        let assignment_3 = Assignments::CustomData(test_variant_3);
+
+        // merge with assignment 1
+        // resulting merge should keep the states intact
+        let merged =
+            MergeRevealed::merge(&assignment_3, &assignment_1).unwrap();
+
+        assert_eq!(assignment_1, merged);
+
+        // test for OwnedRights structure
+
+        let test_owned_rights_1 =
+            OwnedRightsInner(bmap! { 1usize => assignment_1.clone()});
+        let test_owned_rights_2 =
+            OwnedRightsInner(bmap! { 1usize => assignmnet_2.clone()});
+
+        let merged = test_owned_rights_1
+            .merge_revealed_with(&test_owned_rights_2)
+            .unwrap();
+
+        // after merge operation all the states will be revealed
+        let states = vec![rev.clone(), rev.clone(), rev.clone(), rev.clone()];
+        let assgn = Assignments::CustomData(states);
+        let expected_rights = OwnedRightsInner(bmap! {1usize => assgn});
+
+        assert_eq!(merged, expected_rights);
+    }
 
     // Generic encode-decode testing
     #[test]
