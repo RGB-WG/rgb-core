@@ -47,27 +47,6 @@ lazy_static! {
 #[display(Debug)]
 pub struct NoDataError;
 
-/// A trait to merge two structures yielding a new structure
-/// with more open internal state data and seal. The resulting new
-/// structure will depend on the openness of the both the input.
-/// Usage: prevent hiding already known previous state data by merging
-/// incoming new consignment in stash.
-///
-/// The follwoing conversion logic is intended by this trait:
-/// merge (Revelaed, Anything) = Revealed
-/// merge(ConfidentialSeal, ConfidentiualAmount) = Revealed
-/// merge(ConfidentialAmount, ConfidentialSeal) = Revealed
-/// merge(Confidential, Anything) = Anything   
-pub trait MergeRevealed: Sized {
-    fn merge_revealed_with(&self, other: &Self) -> Result<Self, String>;
-
-    #[inline]
-    fn merge(first: &Self, second: &Self) -> Result<Self, String> {
-        let merged = first.merge_revealed_with(second)?;
-        Ok(merged)
-    }
-}
-
 #[cfg(test)]
 pub(crate) mod test {
     use lnpbp::client_side_validation::{CommitConceal, CommitEncode};
