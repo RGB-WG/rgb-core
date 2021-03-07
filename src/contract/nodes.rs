@@ -39,8 +39,6 @@ use crate::schema::{
 use crate::Bech32;
 use crate::{schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32};
 
-use crate::contract::MergeRevealed;
-
 static MIDSTATE_NODE_ID: [u8; 32] = [
     0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc,
     0xbd, 0x5a, 0x58, 0x55, 0x6a, 0xe2, 0x16, 0xa5, 0xee, 0xb7, 0x3c, 0x1,
@@ -669,64 +667,6 @@ impl Transition {
             owned_rights: owned_rights.into(),
             public_rights: public_rights.into(),
             script,
-        }
-    }
-}
-
-impl MergeRevealed for Genesis {
-    fn merge_revealed_with(&self, other: &Self) -> Result<Self, String> {
-        if self.consensus_commit() == other.consensus_commit() {
-            Ok(Genesis {
-                schema_id: self.schema_id,
-                chain: self.chain.clone(),
-                metadata: self.metadata.clone(),
-                owned_rights: self
-                    .owned_rights
-                    .merge_revealed_with(&other.owned_rights)?,
-                public_rights: self.public_rights.clone(),
-                script: self.script.clone(),
-            })
-        } else {
-            Err(s!("Genesis node missmatch in merged operation"))
-        }
-    }
-}
-
-impl MergeRevealed for Transition {
-    fn merge_revealed_with(&self, other: &Self) -> Result<Self, String> {
-        if self.consensus_commit() == other.consensus_commit() {
-            Ok(Transition {
-                transition_type: self.transition_type,
-                metadata: self.metadata.clone(),
-                parent_owned_rights: self.parent_owned_rights.clone(),
-                owned_rights: self
-                    .owned_rights
-                    .merge_revealed_with(&other.owned_rights)?,
-                public_rights: self.public_rights.clone(),
-                script: self.script.clone(),
-            })
-        } else {
-            Err(s!("Transition node missmatch in merge operation"))
-        }
-    }
-}
-
-impl MergeRevealed for Extension {
-    fn merge_revealed_with(&self, other: &Self) -> Result<Self, String> {
-        if self.consensus_commit() == other.consensus_commit() {
-            Ok(Extension {
-                extension_type: self.extension_type,
-                contract_id: self.contract_id,
-                metadata: self.metadata.clone(),
-                parent_public_rights: self.parent_public_rights.clone(),
-                owned_rights: self
-                    .owned_rights
-                    .merge_revealed_with(&other.owned_rights)?,
-                public_rights: self.public_rights.clone(),
-                script: self.script.clone(),
-            })
-        } else {
-            Err(s!("Extension node mismatch in merge operation"))
         }
     }
 }
