@@ -44,8 +44,8 @@ amplify = { version = "3.1", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
 lnpbp = { git = "https://github.com/LNP-BP/rust-lnpbp", features = ["bulletproofs", "zip"] }
 strict_encoding = { version = "1.1.0", features = ["crypto"] }
-lightning_encoding = { git = "https://github.com/LNP-BP/lnp-core" }
-descriptor-wallet = { git = "https://github.com/LNP-BP/descriptor-wallet" }
+lightning_encoding = "0.4.0-beta.1"
+descriptor-wallet = "0.4"
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.26.0", features = ["rand"] }
@@ -98,7 +98,7 @@ default = ["serde", "cli"]
 all = ["serde", "cli"]
 cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum"]
 serde = ["serde_crate", "serde_with", "serde_with_macros",
-         "lnpbp/serde", "amplify/serde",
+         "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]
 
 [workspace]
