@@ -554,30 +554,6 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 [[package]]
 name = "lnpbp"
 version = "0.4.0"
-source = "git+https://github.com/LNP-BP/rust-lnpbp#1afc7146044e5c00af40ee4ed4cd3a520c9d0ab5"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bech32",
- "bitcoin",
- "bitcoin_hashes",
- "client_side_validation",
- "deflate",
- "descriptor-wallet",
- "inflate",
- "lazy_static",
- "lightning_encoding",
- "miniscript",
- "serde",
- "serde_with",
- "serde_with_macros",
- "strict_encoding",
- "strict_encoding_derive",
-]
-
-[[package]]
-name = "lnpbp"
-version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82895efc2bfbd69b26e60650a22839536ff0cfc2d2301cba76502ed51cf21f83"
 dependencies = [
@@ -959,7 +935,7 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 [[package]]
 name = "rgb-core"
 version = "0.4.0-beta"
-source = "git+https://github.com/rgb-org/rgb-core#620379e0cfd68d0c14710f69575289b1a87dcd80"
+source = "git+https://github.com/rgb-org/rgb-core#eb59b908b9b01f67bb0622e5581b7a2378e0854c"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -975,7 +951,7 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lightning_encoding",
- "lnpbp 0.4.0 (git+https://github.com/LNP-BP/rust-lnpbp)",
+ "lnpbp",
  "miniscript",
  "num-derive",
  "num-traits",
@@ -1006,7 +982,7 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lightning_encoding",
- "lnpbp 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp",
  "miniscript",
  "num-derive",
  "num-traits",
@@ -1027,7 +1003,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp",
  "regex",
  "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
  "serde",
@@ -1043,7 +1019,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp",
  "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",
@@ -1057,7 +1033,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp",
  "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",
@@ -1071,7 +1047,7 @@ dependencies = [
  "amplify_derive",
  "bitcoin",
  "chrono",
- "lnpbp 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnpbp",
  "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
  "serde",
  "serde_with",
