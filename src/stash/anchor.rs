@@ -37,6 +37,7 @@ use lnpbp::TaggedHash;
 use wallet::psbt::{Fee, FeeError};
 
 use crate::{ContractId, NodeId};
+use std::cmp::Ordering;
 
 pub const PSBT_PREFIX: &'static [u8] = b"RGB";
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
@@ -129,6 +130,18 @@ pub struct Anchor {
     pub txid: Txid,
     pub commitment: MultimsgCommitment,
     pub proof: Proof,
+}
+
+impl Ord for Anchor {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.anchor_id().cmp(&other.anchor_id())
+    }
+}
+
+impl PartialOrd for Anchor {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl DumbDefault for Anchor {

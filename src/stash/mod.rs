@@ -23,5 +23,5 @@ pub use consignment::{
     Consignment, ConsignmentEndpoints, ExtensionData, TransitionData,
     RGB_CONSIGNMENT_VERSION,
 };
-pub use disclosure::Disclosure;
+pub use disclosure::{Disclosure, RGB_DISCLOSURE_VERSION};
 pub use stash::Stash;

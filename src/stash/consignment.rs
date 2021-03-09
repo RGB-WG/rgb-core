@@ -46,7 +46,7 @@ static MIDSTATE_CONSIGNMENT_ID: [u8; 32] = [
     98, 75, 254, 29, 125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
 ];
 
-/// Tag used for [`NodeId`] and [`ContractId`] hash types
+/// Tag used for [`ConsignmentId`] hash types
 pub struct ConsignmentIdTag;
 
 impl sha256t::Tag for ConsignmentIdTag {
