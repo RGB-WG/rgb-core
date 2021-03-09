@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::stash::MergeRevealed;
+use crate::stash::{IntoRevealed, IntoRevealedError};
 use amplify::{AsAny, Wrapper};
 use core::cmp::Ordering;
 use core::fmt::Debug;
@@ -151,25 +151,37 @@ impl ToMerkleSource for OwnedRightsInner {
     }
 }
 
-impl MergeRevealed for OwnedRights {
-    fn merge_revealed(&mut self, other: &Self) -> Result<bool, String> {
-        if OwnedRightsInner(self.clone())
-            .to_merkle_source()
-            .commit_serialize()
-            != OwnedRightsInner(other.clone())
-                .to_merkle_source()
-                .commit_serialize()
+impl IntoRevealed for OwnedRightsInner {
+    type Error = IntoRevealedError;
+
+    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
+        if self.to_merkle_source().commit_serialize()
+            != other.to_merkle_source().commit_serialize()
         {
-            Err(s!("Owned Right structure missmatch in merge operation"))
+            Err(Self::Error::OwnedRightsMissmatch)
         } else {
-            for (existing, new) in self.iter_mut().zip(other.iter()) {
-                existing.1.merge_revealed(new.1)?;
+            let mut result: OwnedRights = BTreeMap::new();
+            for (first, second) in self
+                .into_inner()
+                .into_iter()
+                .zip(other.into_inner().into_iter())
+            {
+                result.insert(first.0, first.1.into_revealed(second.1)?);
             }
-            Ok(true)
+            Ok(OwnedRightsInner(result))
         }
     }
 }
 
+impl IntoRevealed for OwnedRights {
+    type Error = IntoRevealedError;
+
+    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
+        Ok(OwnedRightsInner(self)
+            .into_revealed(OwnedRightsInner(other))?
+            .into_inner())
+    }
+}
 #[derive(
     Clone,
     Copy,
