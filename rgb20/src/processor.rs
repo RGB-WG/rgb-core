@@ -136,7 +136,7 @@ pub fn issue(
 /// Function creates a fungible asset-specific state transition (i.e. RGB-20
 /// schema-based) given an asset information, inputs and desired outputs
 pub fn transfer(
-    asset: &mut Asset,
+    asset: &Asset,
     inputs: BTreeSet<OutPoint>,
     payment: BTreeMap<SealEndpoint, AtomicValue>,
     change: BTreeMap<SealDefinition, AtomicValue>,
@@ -144,7 +144,7 @@ pub fn transfer(
     // Collecting all input allocations
     let mut input_allocations = Vec::<Allocation>::new();
     for outpoint in inputs {
-        let found = asset.allocations(outpoint).clone();
+        let found = asset.allocations(outpoint);
         if found.len() == 0 {
             Err(TransferError::UnknownInput(outpoint))?
         }
