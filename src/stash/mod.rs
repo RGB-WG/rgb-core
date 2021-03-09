@@ -24,5 +24,5 @@ pub use consignment::{
     Consignment, ConsignmentEndpoints, ExtensionData, TransitionData,
 };
 pub use disclosure::Disclosure;
-pub use merge::MergeRevealed;
+pub use merge::{IntoRevealed, IntoRevealedError};
 pub use stash::Stash;
