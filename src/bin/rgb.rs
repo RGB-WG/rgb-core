@@ -25,7 +25,7 @@ use std::str::FromStr;
 
 use bitcoin::hashes::hex::{self, FromHex, ToHex};
 use lnpbp::client_side_validation::ConsensusCommit;
-use rgb::{Consignment, Schema, Transition};
+use rgb::{Consignment, Genesis, Schema, Transition};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::resolvers::ElectrumTxResolver;
 
@@ -57,6 +57,12 @@ pub enum Command {
     Transition {
         #[clap(subcommand)]
         subcommand: TransitionCommand,
+    },
+
+    /// Commands for working with state transitions
+    Genesis {
+        #[clap(subcommand)]
+        subcommand: GenesisCommand,
     },
 }
 
@@ -100,6 +106,23 @@ pub enum TransitionCommand {
     Convert {
         /// State transition data; if none are given reads from STDIN
         transition: Option<String>,
+
+        /// Formatting of the input data
+        #[clap(short, long, default_value = "bech32")]
+        input: Format,
+
+        /// Formatting for the output
+        #[clap(short, long, default_value = "yaml")]
+        output: Format,
+    },
+}
+
+#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[clap(setting = AppSettings::ColoredHelp)]
+pub enum GenesisCommand {
+    Convert {
+        /// Genesis data; if none are given reads from STDIN
+        genesis: Option<String>,
 
         /// Formatting of the input data
         #[clap(short, long, default_value = "bech32")]
@@ -285,6 +308,16 @@ fn main() -> Result<(), String> {
             } => {
                 let transition: Transition = input_read(transition, input)?;
                 output_write(transition, output)?;
+            }
+        },
+        Command::Genesis { subcommand } => match subcommand {
+            GenesisCommand::Convert {
+                genesis,
+                input,
+                output,
+            } => {
+                let genesis: Genesis = input_read(genesis, input)?;
+                output_write(genesis, output)?;
             }
         },
     }
