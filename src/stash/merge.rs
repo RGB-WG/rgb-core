@@ -13,6 +13,7 @@
 
 use crate::contract::nodes::{Extension, Genesis, Node, Transition};
 use crate::contract::{Assignments, OwnedState, StateTypes};
+use crate::schema::NodeType;
 use lnpbp::client_side_validation::{
     CommitConceal, CommitEncode, ConsensusCommit,
 };
@@ -32,14 +33,6 @@ pub enum IntoRevealedError {
 
     // Node data Missmatch of type: {0}
     NodeMissmatch(NodeType),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, From, Error)]
-#[display(Debug)]
-pub enum NodeType {
-    Genesis,
-    Transition,
-    Extension,
 }
 
 /// A trait to merge two structures modifying the revealed status
@@ -210,7 +203,7 @@ impl IntoRevealed for Transition {
 
     fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
         if self.consensus_commit() != other.consensus_commit() {
-            Err(Self::Error::NodeMissmatch(NodeType::Transition))
+            Err(Self::Error::NodeMissmatch(NodeType::StateTransition))
         } else {
             self.owned_rights()
                 .to_owned()
