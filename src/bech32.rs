@@ -856,7 +856,7 @@ mod test {
     fn test_bech32_disclosure() {
         let obj = Disclosure::default();
         let bech32 = format!("{}", obj);
-        assert_eq!(bech32, "disclosure1qypsq90a83g");
+        assert_eq!(bech32, "disclosure1q93cqqgqpmudg2");
         let decoded = Disclosure::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
     }

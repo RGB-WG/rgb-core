@@ -13,6 +13,7 @@
 
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 
 use amplify::{DumbDefault, Wrapper};
@@ -36,8 +37,7 @@ use lnpbp::strict_encoding::{strategies, Strategy};
 use lnpbp::TaggedHash;
 use wallet::psbt::{Fee, FeeError};
 
-use crate::{ContractId, NodeId};
-use std::cmp::Ordering;
+use crate::{reveal, ContractId, IntoRevealed, NodeId};
 
 pub const PSBT_PREFIX: &'static [u8] = b"RGB";
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
@@ -130,6 +130,27 @@ pub struct Anchor {
     pub txid: Txid,
     pub commitment: MultimsgCommitment,
     pub proof: Proof,
+}
+
+impl IntoRevealed for Anchor {
+    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+        if self.consensus_commit() != other.consensus_commit() {
+            return Err(reveal::Error::AnchorsMismatch);
+        }
+
+        self.commitment.entropy =
+            self.commitment.entropy.or(other.commitment.entropy);
+
+        self.commitment
+            .commitments
+            .iter_mut()
+            .zip(other.commitment.commitments)
+            .for_each(|(item, other)| {
+                item.protocol = item.protocol.or(other.protocol)
+            });
+
+        Ok(self)
+    }
 }
 
 impl Ord for Anchor {
