@@ -59,12 +59,12 @@ pub mod prelude {
 
     pub use super::bech32::{Bech32, FromBech32, ToBech32};
     pub use contract::{
-        data, reveal, seal, value, Assignments, AtomicValue, ConcealState,
-        ConfidentialState, ContractId, DeclarativeStrategy, Extension, Genesis,
-        HashStrategy, IntoRevealed, Metadata, NoDataError, Node, NodeId,
-        OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
-        PedersenStrategy, PublicRights, RevealedState, SealDefinition,
-        SealEndpoint, StateTypes, Transition,
+        data, reveal, seal, value, Assignments, AtomicValue, ConcealSeals,
+        ConcealState, ConfidentialState, ContractId, DeclarativeStrategy,
+        Extension, Genesis, HashStrategy, IntoRevealed, Metadata, NoDataError,
+        Node, NodeId, OwnedRights, OwnedState, ParentOwnedRights,
+        ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
+        SealDefinition, SealEndpoint, StateTypes, Transition,
     };
     pub use schema::{
         script, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction,
@@ -73,9 +73,9 @@ pub mod prelude {
         SimplicityScript, TransitionAbi, TransitionAction,
     };
     pub use stash::{
-        Anchor, AnchorId, Consignment, ConsignmentEndpoints, Disclosure,
-        ExtensionData, Stash, TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK,
-        PSBT_PREFIX,
+        Anchor, AnchorId, ConcealAnchors, Consignment, ConsignmentEndpoints,
+        Disclosure, ExtensionData, Stash, TransitionData, PSBT_OUT_PUBKEY,
+        PSBT_OUT_TWEAK, PSBT_PREFIX,
     };
     pub use validation::{Validator, Validity};
     pub use vm::VirtualMachine;

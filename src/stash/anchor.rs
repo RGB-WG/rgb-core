@@ -13,6 +13,7 @@
 
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 
 use amplify::{DumbDefault, Wrapper};
@@ -36,7 +37,7 @@ use lnpbp::strict_encoding::{strategies, Strategy};
 use lnpbp::TaggedHash;
 use wallet::psbt::{Fee, FeeError};
 
-use crate::{ContractId, NodeId};
+use crate::{reveal, ContractId, IntoRevealed, NodeId};
 
 pub const PSBT_PREFIX: &'static [u8] = b"RGB";
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
@@ -119,6 +120,13 @@ pub enum Error {
     SizeLimit,
 }
 
+pub trait ConcealAnchors {
+    fn conceal_anchors(&mut self) -> usize {
+        self.conceal_anchors_except(&vec![])
+    }
+    fn conceal_anchors_except(&mut self, protocols: &Vec<ContractId>) -> usize;
+}
+
 #[cfg_attr(
     all(feature = "cli", feature = "serde"),
     derive(Serialize, Deserialize),
@@ -129,6 +137,55 @@ pub struct Anchor {
     pub txid: Txid,
     pub commitment: MultimsgCommitment,
     pub proof: Proof,
+}
+
+impl ConcealAnchors for Anchor {
+    fn conceal_anchors_except(&mut self, protocols: &Vec<ContractId>) -> usize {
+        self.commitment.entropy = None;
+        self.commitment
+            .commitments
+            .iter_mut()
+            .fold(0usize, |count, item| match item.protocol {
+                Some(protocol) if !protocols.contains(&protocol.into()) => {
+                    item.protocol = None;
+                    count + 1
+                }
+                _ => count,
+            })
+    }
+}
+
+impl IntoRevealed for Anchor {
+    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+        if self.consensus_commit() != other.consensus_commit() {
+            return Err(reveal::Error::AnchorsMismatch);
+        }
+
+        self.commitment.entropy =
+            self.commitment.entropy.or(other.commitment.entropy);
+
+        self.commitment
+            .commitments
+            .iter_mut()
+            .zip(other.commitment.commitments)
+            .for_each(|(item, other)| {
+                item.protocol = item.protocol.or(other.protocol)
+            });
+
+        Ok(self)
+    }
+}
+
+impl Ord for Anchor {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.anchor_id().cmp(&other.anchor_id())
+    }
+}
+
+impl PartialOrd for Anchor {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl DumbDefault for Anchor {

@@ -38,16 +38,20 @@ use crate::{Assignments, OwnedRights, OwnedState, StateTypes};
 )]
 #[display(doc_comments)]
 pub enum Error {
-    /// Owned State Data Mismatch
+    /// Owned State has different commitment ids and can't be reveal-merged
     OwnedStateMismatch,
 
-    /// Assignment data mismatch
+    /// Assignment has different commitment ids and can't be reveal-merged
     AssignmentMismatch,
 
-    /// OwnedRights data mismatch
+    /// OwnedRights has different commitment ids and can't be reveal-merged
     OwnedRightsMismatch,
 
-    /// Node data mismatch for node type: {0}
+    /// Anchors has different commitment ids and can't be reveal-merged
+    AnchorsMismatch,
+
+    /// Node of type {0} has different commitment ids and can't be
+    /// reveal-merged
     NodeMismatch(NodeType),
 }
 

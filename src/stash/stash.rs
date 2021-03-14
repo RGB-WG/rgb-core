@@ -78,13 +78,17 @@ pub trait Stash {
     ) -> Result<Consignment, Self::Error>;
 
     /// When we have received data from other peer (which usually relate to our
-    /// newly owned state, like assets) we do `merge` with a [`Consignment`],
+    /// newly owned state, like assets) we do `accept` a [`Consignment`],
     /// and it gets into the known data.
-    fn merge(
+    fn accept(
         &mut self,
         consignment: &Consignment,
         known_seals: &Vec<OutpointReveal>,
     ) -> Result<(), Self::Error>;
+
+    /// Acquire knowledge from a given disclosure
+    fn know_about(&mut self, disclosure: Disclosure)
+        -> Result<(), Self::Error>;
 
     /// If we need to forget about the state which is not owned by us anymore
     /// (we have done the transfer and would like to prune this specific info)
@@ -97,7 +101,4 @@ pub trait Stash {
     /// Clears all data that are not related to the contract state owned by
     /// us in this moment — under all known contracts
     fn prune(&mut self) -> Result<usize, Self::Error>;
-
-    /// Prepares disclosure with confidential information
-    fn disclose(&self) -> Result<Disclosure, Self::Error>;
 }
