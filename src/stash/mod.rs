@@ -14,7 +14,6 @@
 mod anchor;
 mod consignment;
 mod disclosure;
-mod merge;
 mod stash;
 
 pub use anchor::{
@@ -24,5 +23,4 @@ pub use consignment::{
     Consignment, ConsignmentEndpoints, ExtensionData, TransitionData,
 };
 pub use disclosure::Disclosure;
-pub use merge::{IntoRevealed, IntoRevealedError};
 pub use stash::Stash;

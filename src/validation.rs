@@ -496,7 +496,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
             // Ouch, we are out of that multi-level nested cycles :)
             } else if node_type != NodeType::Genesis
-                && node_type != NodeType::Extension
+                && node_type != NodeType::StateExtension
             {
                 // This point is actually unreachable: b/c of the
                 // consignment structure, each state transition

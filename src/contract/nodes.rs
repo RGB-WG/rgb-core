@@ -217,8 +217,8 @@ pub struct Genesis {
     schema_id: SchemaId,
     chain: Chain,
     metadata: Metadata,
-    owned_rights: OwnedRightsInner,
-    public_rights: PublicRightsInner,
+    pub(super) owned_rights: OwnedRightsInner,
+    pub(super) public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -235,9 +235,9 @@ pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
     metadata: Metadata,
-    parent_public_rights: ParentPublicRightsInner,
-    owned_rights: OwnedRightsInner,
-    public_rights: PublicRightsInner,
+    pub(super) parent_public_rights: ParentPublicRightsInner,
+    pub(super) owned_rights: OwnedRightsInner,
+    pub(super) public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -253,9 +253,9 @@ pub struct Extension {
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
-    parent_owned_rights: ParentOwnedRightsInner,
-    owned_rights: OwnedRightsInner,
-    public_rights: PublicRightsInner,
+    pub(super) parent_owned_rights: ParentOwnedRightsInner,
+    pub(super) owned_rights: OwnedRightsInner,
+    pub(super) public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -455,7 +455,7 @@ impl Node for Genesis {
 impl Node for Extension {
     #[inline]
     fn node_type(&self) -> NodeType {
-        NodeType::Extension
+        NodeType::StateExtension
     }
 
     #[inline]

@@ -11,28 +11,47 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::contract::nodes::{Extension, Genesis, Node, Transition};
-use crate::contract::{Assignments, OwnedState, StateTypes};
-use crate::schema::NodeType;
+use std::collections::BTreeMap;
+
+use amplify::Wrapper;
 use lnpbp::client_side_validation::{
-    CommitConceal, CommitEncode, ConsensusCommit,
+    CommitConceal, CommitEncode, ConsensusCommit, ToMerkleSource,
+};
+
+use super::OwnedRightsInner;
+use crate::schema::NodeType;
+use crate::{
+    Assignments, Extension, Genesis, OwnedRights, OwnedState, StateTypes,
+    Transition,
 };
 
 /// Merge Error generated in merging operation
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, From, Error)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    From,
+    Error,
+)]
 #[display(doc_comments)]
-pub enum IntoRevealedError {
+pub enum Error {
     /// Owned State Data Mismatch
     OwnedStateMismatch,
 
-    // Assignment Data Missmatch
-    AssignmentMissmatch,
+    /// Assignment data mismatch
+    AssignmentMismatch,
 
-    // OwnedRights Data Missmatch
-    OwnedRightsMissmatch,
+    /// OwnedRights data mismatch
+    OwnedRightsMismatch,
 
-    // Node data Missmatch of type: {0}
-    NodeMissmatch(NodeType),
+    /// Node data mismatch for node type: {0}
+    NodeMismatch(NodeType),
 }
 
 /// A trait to merge two structures modifying the revealed status
@@ -50,11 +69,8 @@ pub enum IntoRevealedError {
 /// merge(ConfidentialSeal, ConfidentiualAmount) = Revealed
 /// merge(ConfidentialAmount, ConfidentialSeal) = Revealed
 /// merge(Confidential, Anything) = Anything
-///   
 pub trait IntoRevealed: Sized {
-    type Error;
-
-    fn into_revealed(self, other: Self) -> Result<Self, Self::Error>;
+    fn into_revealed(self, other: Self) -> Result<Self, Error>;
 }
 
 impl<STATE> IntoRevealed for OwnedState<STATE>
@@ -65,19 +81,15 @@ where
     STATE::Confidential:
         From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    type Error = IntoRevealedError;
-
-    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
+    fn into_revealed(self, other: Self) -> Result<Self, Error> {
         // if self and other is different through error
         if self.commit_serialize() != other.commit_serialize() {
-            Err(Self::Error::OwnedStateMismatch)
+            Err(Error::OwnedStateMismatch)
         } else {
-            match (&self, &other) {
+            match (self, other) {
                 // Anything + Revealed = Revealed
-                (_, OwnedState::Revealed { .. }) => Ok(other),
-
-                // Revealed + Anything = Revealed
-                (OwnedState::Revealed { .. }, _) => Ok(self),
+                (_, state @ OwnedState::Revealed { .. })
+                | (state @ OwnedState::Revealed { .. }, _) => Ok(state),
 
                 // ConfidentialAmount + ConfidentialSeal = Revealed
                 (
@@ -90,8 +102,8 @@ where
                         ..
                     },
                 ) => Ok(OwnedState::Revealed {
-                    seal_definition: *seal,
-                    assigned_state: state.to_owned(),
+                    seal_definition: seal,
+                    assigned_state: state,
                 }),
 
                 // ConfidentialSeal + ConfidentialAmount = Revealed
@@ -105,44 +117,39 @@ where
                         ..
                     },
                 ) => Ok(OwnedState::Revealed {
-                    seal_definition: *seal,
-                    assigned_state: state.to_owned(),
+                    seal_definition: seal,
+                    assigned_state: state,
                 }),
 
                 // if self and other is of same variant return self
                 (
+                    state @ OwnedState::ConfidentialAmount { .. },
                     OwnedState::ConfidentialAmount { .. },
-                    OwnedState::ConfidentialAmount { .. },
-                ) => Ok(self),
+                ) => Ok(state),
                 (
+                    state @ OwnedState::ConfidentialSeal { .. },
                     OwnedState::ConfidentialSeal { .. },
-                    OwnedState::ConfidentialSeal { .. },
-                ) => Ok(self),
+                ) => Ok(state),
 
                 // Anything + Confidential = Anything
-                (_, OwnedState::Confidential { .. }) => Ok(self),
-
-                // Confidential + Anything = Anything
-                (OwnedState::Confidential { .. }, _) => Ok(other),
+                (state, OwnedState::Confidential { .. })
+                | (OwnedState::Confidential { .. }, state) => Ok(state),
             }
         }
     }
 }
 
 impl IntoRevealed for Assignments {
-    type Error = IntoRevealedError;
-
-    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
-        // Better ways to do this?
+    fn into_revealed(self, other: Self) -> Result<Self, Error> {
         if self.consensus_commitments() != other.consensus_commitments() {
-            Err(Self::Error::AssignmentMissmatch)
+            Err(Error::AssignmentMismatch)
         } else {
             match (self, other) {
                 (
                     Assignments::Declarative(first_vec),
                     Assignments::Declarative(second_vec),
                 ) => {
-                    let mut result = vec![];
+                    let mut result = Vec::with_capacity(first_vec.len());
                     for (first, second) in
                         first_vec.into_iter().zip(second_vec.into_iter())
                     {
@@ -155,7 +162,7 @@ impl IntoRevealed for Assignments {
                     Assignments::DiscreteFiniteField(first_vec),
                     Assignments::DiscreteFiniteField(second_vec),
                 ) => {
-                    let mut result = vec![];
+                    let mut result = Vec::with_capacity(first_vec.len());
                     for (first, second) in
                         first_vec.into_iter().zip(second_vec.into_iter())
                     {
@@ -168,7 +175,7 @@ impl IntoRevealed for Assignments {
                     Assignments::CustomData(first_vec),
                     Assignments::CustomData(second_vec),
                 ) => {
-                    let mut result = vec![];
+                    let mut result = Vec::with_capacity(first_vec.len());
                     for (first, second) in
                         first_vec.into_iter().zip(second_vec.into_iter())
                     {
@@ -177,63 +184,71 @@ impl IntoRevealed for Assignments {
                     Ok(Assignments::CustomData(result))
                 }
                 // No other patterns possible, should not reach here
-                _ => unreachable!(),
+                _ => {
+                    unreachable!("Assignments::consensus_commitments is broken")
+                }
             }
         }
     }
 }
 
-impl IntoRevealed for Genesis {
-    type Error = IntoRevealedError;
-
-    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
-        if self.consensus_commit() != other.consensus_commit() {
-            Err(Self::Error::NodeMissmatch(NodeType::Genesis))
-        } else {
-            self.owned_rights()
-                .to_owned()
-                .into_revealed(other.owned_rights().to_owned())?;
-            Ok(self)
+impl IntoRevealed for OwnedRightsInner {
+    fn into_revealed(self, other: Self) -> Result<Self, Error> {
+        if self.to_merkle_source().commit_serialize()
+            != other.to_merkle_source().commit_serialize()
+        {
+            return Err(Error::OwnedRightsMismatch);
         }
+        let mut result: OwnedRights = BTreeMap::new();
+        for (first, second) in self
+            .into_inner()
+            .into_iter()
+            .zip(other.into_inner().into_iter())
+        {
+            result.insert(first.0, first.1.into_revealed(second.1)?);
+        }
+        Ok(OwnedRightsInner::from_inner(result))
+    }
+}
+
+impl IntoRevealed for Genesis {
+    fn into_revealed(mut self, other: Self) -> Result<Self, Error> {
+        if self.consensus_commit() != other.consensus_commit() {
+            return Err(Error::NodeMismatch(NodeType::Genesis));
+        }
+        self.owned_rights =
+            self.owned_rights.into_revealed(other.owned_rights)?;
+        Ok(self)
     }
 }
 
 impl IntoRevealed for Transition {
-    type Error = IntoRevealedError;
-
-    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
+    fn into_revealed(mut self, other: Self) -> Result<Self, Error> {
         if self.consensus_commit() != other.consensus_commit() {
-            Err(Self::Error::NodeMissmatch(NodeType::StateTransition))
-        } else {
-            self.owned_rights()
-                .to_owned()
-                .into_revealed(other.owned_rights().to_owned())?;
-            Ok(self)
+            return Err(Error::NodeMismatch(NodeType::StateTransition));
         }
+        self.owned_rights =
+            self.owned_rights.into_revealed(other.owned_rights)?;
+        Ok(self)
     }
 }
 
 impl IntoRevealed for Extension {
-    type Error = IntoRevealedError;
-
-    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
+    fn into_revealed(mut self, other: Self) -> Result<Self, Error> {
         if self.consensus_commit() != other.consensus_commit() {
-            Err(Self::Error::NodeMissmatch(NodeType::Extension))
-        } else {
-            self.owned_rights()
-                .to_owned()
-                .into_revealed(other.owned_rights().to_owned())?;
-            Ok(self)
+            return Err(Error::NodeMismatch(NodeType::StateExtension));
         }
+        self.owned_rights =
+            self.owned_rights.into_revealed(other.owned_rights)?;
+        Ok(self)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::contract::{ConcealState, OwnedRights};
-    use crate::stash::IntoRevealed;
     use crate::strict_encoding::StrictDecode;
+    use crate::ConcealState;
     use crate::{HashStrategy, PedersenStrategy};
 
     // Hard coded test vectors of Assignment Variants
@@ -363,10 +378,10 @@ mod test {
         assert_eq!(assignment_1, merged);
 
         // test for OwnedRights structure
-        let test_owned_rights_1: OwnedRights =
-            bmap! { 1usize => assignment_1.clone()};
-        let test_owned_rights_2: OwnedRights =
-            bmap! { 1usize => assignmnet_2.clone()};
+        let test_owned_rights_1: OwnedRightsInner =
+            bmap! { 1usize => assignment_1.clone()}.into();
+        let test_owned_rights_2: OwnedRightsInner =
+            bmap! { 1usize => assignmnet_2.clone()}.into();
 
         // Perform merge
         let merged = test_owned_rights_1
@@ -377,7 +392,7 @@ mod test {
         // after merge operation all the states will be revealed
         let states = vec![rev.clone(), rev.clone(), rev.clone(), rev.clone()];
         let assgn = Assignments::CustomData(states);
-        let expected_rights: OwnedRights = bmap! {1usize => assgn};
+        let expected_rights: OwnedRightsInner = bmap! {1usize => assgn}.into();
 
         assert_eq!(merged, expected_rights);
     }

@@ -11,7 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use crate::stash::{IntoRevealed, IntoRevealedError};
 use amplify::{AsAny, Wrapper};
 use core::cmp::Ordering;
 use core::fmt::Debug;
@@ -49,6 +48,7 @@ pub type ParentPublicRights =
 )]
 #[derive(StrictEncode, StrictDecode)]
 pub(super) struct OwnedRightsInner(OwnedRights);
+
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
 )]
@@ -59,6 +59,7 @@ pub(super) struct OwnedRightsInner(OwnedRights);
 )]
 #[derive(StrictEncode, StrictDecode)]
 pub(super) struct PublicRightsInner(PublicRights);
+
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
 )]
@@ -69,6 +70,7 @@ pub(super) struct PublicRightsInner(PublicRights);
 )]
 #[derive(StrictEncode, StrictDecode)]
 pub(super) struct ParentOwnedRightsInner(ParentOwnedRights);
+
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
 )]
@@ -151,37 +153,6 @@ impl ToMerkleSource for OwnedRightsInner {
     }
 }
 
-impl IntoRevealed for OwnedRightsInner {
-    type Error = IntoRevealedError;
-
-    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
-        if self.to_merkle_source().commit_serialize()
-            != other.to_merkle_source().commit_serialize()
-        {
-            Err(Self::Error::OwnedRightsMissmatch)
-        } else {
-            let mut result: OwnedRights = BTreeMap::new();
-            for (first, second) in self
-                .into_inner()
-                .into_iter()
-                .zip(other.into_inner().into_iter())
-            {
-                result.insert(first.0, first.1.into_revealed(second.1)?);
-            }
-            Ok(OwnedRightsInner(result))
-        }
-    }
-}
-
-impl IntoRevealed for OwnedRights {
-    type Error = IntoRevealedError;
-
-    fn into_revealed(self, other: Self) -> Result<Self, Self::Error> {
-        Ok(OwnedRightsInner(self)
-            .into_revealed(OwnedRightsInner(other))?
-            .into_inner())
-    }
-}
 #[derive(
     Clone,
     Copy,
@@ -268,9 +239,6 @@ impl ToMerkleSource for ParentOwnedRightsInner {
             .collect()
     }
 }
-
-// TODO: Implement MergeRevealed for ParentOwnedRights once it contains
-// concealed data, RGB V0.4
 
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]

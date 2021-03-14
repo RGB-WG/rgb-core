@@ -56,7 +56,7 @@ pub enum NodeType {
     /// committing either to a genesis or some state transition via their
     /// valencies
     #[display("extension")]
-    Extension,
+    StateExtension,
 
     /// State transition performing owned change to the state data and
     /// committing to (potentially multiple) ancestors (i.e. genesis,
@@ -167,7 +167,7 @@ impl NodeSchema for ExtensionSchema {
 
     #[inline]
     fn node_type(&self) -> NodeType {
-        NodeType::Extension
+        NodeType::StateExtension
     }
     #[inline]
     fn metadata(&self) -> &MetadataStructure {
@@ -590,7 +590,7 @@ mod test {
             Procedure::Embedded(StandardProcedure::NoInflationBySum),
         );
 
-        assert_eq!(extension_schema.node_type(), NodeType::Extension);
+        assert_eq!(extension_schema.node_type(), NodeType::StateExtension);
         assert_eq!(
             extension_schema.metadata().get(&2usize).unwrap(),
             &Occurences::NoneOrOnce
@@ -730,10 +730,10 @@ mod test {
 
         let extension_failures = vec![
             Failure::SchemaRootNoParentPublicRightsMatch(
-                NodeType::Extension,
+                NodeType::StateExtension,
                 2,
             ),
-            Failure::SchemaRootNoPublicRightsMatch(NodeType::Extension, 2),
+            Failure::SchemaRootNoPublicRightsMatch(NodeType::StateExtension, 2),
         ];
 
         // Assert failures matches with expectation
