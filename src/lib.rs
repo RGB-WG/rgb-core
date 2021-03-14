@@ -59,12 +59,12 @@ pub mod prelude {
 
     pub use super::bech32::{Bech32, FromBech32, ToBech32};
     pub use contract::{
-        data, reveal, seal, value, Assignments, AtomicValue, ConcealState,
-        ConfidentialState, ContractId, DeclarativeStrategy, Extension, Genesis,
-        HashStrategy, IntoRevealed, Metadata, NoDataError, Node, NodeId,
-        OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
-        PedersenStrategy, PublicRights, RevealedState, SealDefinition,
-        SealEndpoint, StateTypes, Transition,
+        data, reveal, seal, value, Assignments, AtomicValue, ConcealSeals,
+        ConcealState, ConfidentialState, ContractId, DeclarativeStrategy,
+        Extension, Genesis, HashStrategy, IntoRevealed, Metadata, NoDataError,
+        Node, NodeId, OwnedRights, OwnedState, ParentOwnedRights,
+        ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
+        SealDefinition, SealEndpoint, StateTypes, Transition,
     };
     pub use schema::{
         script, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction,

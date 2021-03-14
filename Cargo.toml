@@ -40,8 +40,8 @@ required-features = ["cli", "serde"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = { version = "3.1", features = ["stringly_conversions"] }
-amplify_derive = "2.4.3"
+amplify = { version = "3.2", features = ["stringly_conversions"] }
+amplify_derive = "2.5.1"
 lnpbp = { version = "0.4", features = ["bulletproofs", "zip"] }
 strict_encoding = { version = "1.1.0", features = ["crypto"] }
 lightning_encoding = "0.4.0-beta.1"

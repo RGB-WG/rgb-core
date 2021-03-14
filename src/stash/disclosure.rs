@@ -14,11 +14,13 @@
 //! Disclosure is the way to make certain confidential information about the
 //! stash public.
 
+use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::io;
 use std::str::FromStr;
 
-use bitcoin::hashes::{sha256, sha256t};
+use amplify::Wrapper;
+use bitcoin::hashes::{self, sha256, sha256t, Hash, HashEngine};
 use bitcoin::secp256k1::{PublicKey, Signature};
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use lnpbp::client_side_validation::{
@@ -26,12 +28,14 @@ use lnpbp::client_side_validation::{
 };
 use lnpbp::commit_verify::CommitVerify;
 use lnpbp::TaggedHash;
+use strict_encoding::StrictEncode;
 
 use crate::contract::seal::Confidential;
-use crate::contract::ConcealSeals;
 use crate::{
-    Anchor, AnchorId, ConcealState, ContractId, Extension, Transition,
+    Anchor, AnchorId, ConcealSeals, ConcealState, ContractId, Extension,
+    IntoRevealed, Transition,
 };
+use std::collections::btree_map::Entry;
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
 
@@ -142,33 +146,100 @@ impl sha256t::Tag for SigHashTag {
     StrictEncode,
     StrictDecode,
 )]
-#[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[wrapper(
+    Debug,
+    LowerHex,
+    BorrowSlice,
+    Index,
+    IndexRange,
+    IndexFrom,
+    IndexTo,
+    IndexFull
+)]
 #[display(LowerHex)]
 pub struct SigHash(sha256t::Hash<SigHashTag>);
 
-// We are limited by 16-bit integer size for the number of anchors and
-// extensions to disclose, but this is fine since we can produce multiple
-// disclosures when needed
+impl Hash for SigHash {
+    type Engine = <sha256t::Hash<SigHashTag> as Hash>::Engine;
+    type Inner = <sha256t::Hash<SigHashTag> as Hash>::Inner;
+    const LEN: usize = sha256t::Hash::<SigHashTag>::LEN;
+
+    fn from_engine(e: Self::Engine) -> Self {
+        <Self as Wrapper>::Inner::from_engine(e).into()
+    }
+
+    fn from_slice(sl: &[u8]) -> Result<Self, hashes::Error> {
+        <Self as Wrapper>::Inner::from_slice(sl).map(Wrapper::from_inner)
+    }
+
+    fn into_inner(self) -> Self::Inner {
+        Wrapper::into_inner(self).into_inner()
+    }
+
+    fn as_inner(&self) -> &Self::Inner {
+        Wrapper::as_inner(self).as_inner()
+    }
+
+    fn from_inner(inner: Self::Inner) -> Self {
+        <Self as Wrapper>::Inner::from_inner(inner).into()
+    }
+}
+
+/// Disclosure purpose is to expose a set of stash data related to number of
+/// RGB contracts to some external entity – or store them outside of the stash
+/// to be merged lately upon a certain event (for instance, withness transaction
+/// being mined or receiving a signature for the updated channel state from an
+/// LN channel counterparty).
+///
+/// MB: We are limited by 16-bit integer size for the number of anchors and
+/// extensions to disclose, but this is fine since we can produce multiple
+/// disclosures when needed
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Getters, Clone, PartialEq, Debug, Default, StrictEncode, StrictDecode,
 )]
 pub struct Disclosure {
+    /// Since these are not consensus-critical data structure (we never commit
+    /// to it) we can use encoding versioning here
     version: u16,
-    transitions: BTreeMap<Anchor, BTreeMap<ContractId, Transition>>,
-    extensions: BTreeMap<ContractId, Extension>,
+
+    /// State transitions organized by anchor and then RGB contract
+    transitions: BTreeMap<AnchorId, (Anchor, BTreeMap<ContractId, Transition>)>,
+
+    /// State extensions organized by RGB contract
+    extensions: BTreeMap<ContractId, Vec<Extension>>,
+
+    /// Optional human-readable comment on the nature of the disclosed data
     comment: Option<String>,
-    signature: Option<Signature>,
-    sig_source: Option<AnchorId>,
+
+    /// Signatures over all fields (apart from the signature itself) which may
+    /// be used for proving the source of the disclosure and for attributing
+    /// client-validated data which are the part of the disclosure
+    ///
+    /// Map also provides the source of the key used for the signature.
+    /// The key may be the same key which is used inside one of the
+    /// anchors within the disclosure, which perfectly attributes signer
+    /// with one of the previous owners of the disclosure data. Otherwise
+    /// the attribution is external to the disclosure.
+    ///
+    /// NB: For Schnorr keys ECDSA signature still has to be used here.
+    signatures: BTreeMap<PublicKey, Signature>,
 }
 
 impl CommitEncode for Disclosure {
-    fn commit_encode<E: io::Write>(&self, e: E) -> usize {
+    fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
         // 1. Do not conceal data: two disclosures exposing different data
         //    from the same sources MUST have different disclosure ids
         // 2. Do not include comment
         // 3. Do not include signature (since the signature signs commitment id
         //    + comment commitment)
-        unimplemented!()
+        (|| -> Result<usize, strict_encoding::Error> {
+            Ok(strict_encode_list!(e; self.version, self.transitions, self.extensions))
+        })().expect("Commit encoding is in-memory encoding and must not fail")
     }
 }
 
@@ -178,13 +249,25 @@ impl ConsensusCommit for Disclosure {
 
 impl ConcealSeals for Disclosure {
     fn conceal_seals(&mut self, seals: &Vec<Confidential>) -> usize {
-        unimplemented!()
+        self.transitions
+            .iter_mut()
+            .fold(0usize, |count, (_, (_, map))| {
+                map.iter_mut().fold(count, |count, (_, transition)| {
+                    count + transition.conceal_seals(seals)
+                })
+            })
     }
 }
 
 impl ConcealState for Disclosure {
     fn conceal_state_except(&mut self, seals: &Vec<Confidential>) -> usize {
-        unimplemented!()
+        self.transitions
+            .iter_mut()
+            .fold(0usize, |count, (_, (_, map))| {
+                map.iter_mut().fold(count, |count, (_, transition)| {
+                    count + transition.conceal_state_except(seals)
+                })
+            })
     }
 }
 
@@ -193,30 +276,80 @@ pub trait ConcealAnchors {}
 impl ConcealAnchors for Disclosure {}
 
 impl Disclosure {
-    pub fn insert_anchored_transitions(&mut self) -> usize {
-        unimplemented!()
+    pub fn insert_anchored_transitions(
+        &mut self,
+        anchor: Anchor,
+        transitions: BTreeMap<ContractId, Transition>,
+    ) {
+        self.signatures = empty!();
+        match self.transitions.entry(anchor.anchor_id()) {
+            Entry::Vacant(entry) => {
+                entry.insert((anchor, transitions));
+            }
+            Entry::Occupied(mut entry) => {
+                let (a, t) = entry.get_mut();
+                *a = anchor.into_revealed(a.clone())
+                    .expect(
+                        "Anchor into_revealed procedure is broken for anchors with the same id"
+                    );
+                t.extend(transitions);
+            }
+        }
     }
 
-    pub fn insert_extensions(&mut self) -> usize {
-        unimplemented!()
+    pub fn insert_extensions(
+        &mut self,
+        contract_id: ContractId,
+        extensions: Vec<Extension>,
+    ) {
+        self.signatures = empty!();
+        self.extensions
+            .entry(contract_id)
+            .or_insert(empty!())
+            .extend(extensions);
     }
 
-    pub fn change_comment(&mut self, comment: &str) -> bool {
-        unimplemented!()
+    pub fn change_comment(&mut self, comment: String) -> bool {
+        self.signatures = empty!();
+        let had_comment = self.comment.is_some();
+        self.comment = Some(comment);
+        had_comment
+    }
+
+    pub fn remove_comment(&mut self) -> bool {
+        self.signatures = empty!();
+        let had_comment = self.comment.is_some();
+        self.comment = None;
+        had_comment
     }
 
     pub fn sig_hash(&self) -> SigHash {
-        // Do a disclosure::SigHash type, which should be a tagged hash
-        // combining comment and disclosure commitment id
-        unimplemented!()
+        let mut engine = SigHash::engine();
+        self.commit_encode(&mut engine);
+        if let Some(ref comment) = self.comment {
+            engine.input(&sha256::Hash::hash(comment.as_bytes()))
+        }
+        SigHash::from_engine(engine)
     }
 
-    pub fn set_signature(
+    pub fn add_signature(
         &mut self,
         pubkey: PublicKey,
         signature: Signature,
-        sig_source: Option<AnchorId>,
-    ) -> bool {
-        unimplemented!()
+    ) -> Option<Signature> {
+        self.signatures.insert(pubkey, signature)
+    }
+
+    pub fn remove_signature(&mut self, pubkey: PublicKey) -> Option<Signature> {
+        self.signatures.remove(&pubkey)
+    }
+
+    #[inline]
+    pub fn empty_signatures(&mut self) -> usize {
+        let count = self.signatures.len();
+        self.signatures = empty!();
+        count
     }
 }
+
+// TODO: Validate disclosures
