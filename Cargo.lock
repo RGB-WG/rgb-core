@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "rgb-core"
-version = "0.4.0-beta"
+version = "0.4.0"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -996,7 +996,7 @@ dependencies = [
 
 [[package]]
 name = "rgb20"
-version = "0.4.0-beta"
+version = "0.4.0"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -1004,7 +1004,7 @@ dependencies = [
  "chrono",
  "lnpbp",
  "regex",
- "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
+ "rgb-core 0.4.0-beta",
  "serde",
  "serde_with",
  "url",
@@ -1019,7 +1019,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
+ "rgb-core 0.4.0-beta",
  "serde",
  "serde_with",
 ]
@@ -1033,7 +1033,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
+ "rgb-core 0.4.0-beta",
  "serde",
  "serde_with",
 ]
@@ -1047,7 +1047,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.0-beta (git+https://github.com/rgb-org/rgb-core)",
+ "rgb-core 0.4.0-beta",
  "serde",
  "serde_with",
 ]

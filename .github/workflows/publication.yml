@@ -14,6 +14,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: cargo login ${{ secrets.CRATES_IO_TOKEN }}
-      - run: cd derive && cargo publish --all-features; sleep 30
-      - run: cargo publish --all-features; sleep 30
-      - run: cd services && cargo publish --all-features
+      - run: cargo publish --all-features

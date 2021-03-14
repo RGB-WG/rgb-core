@@ -1,6 +1,18 @@
 Change Log
 ==========
 
+v0.4.0
+------
+- Disclosures
+- Improved concealment procedures; fixed node id mutability issue
+- Reveal-merge procedure
+- PSBT anchor processing refactoring & multiple bug fixes
+- Improved commit-encoding and consensus-commit procedures
+- Improved owned rights type system
+- RGB20: asset data representation refactoring
+- RGB20: removed deprecated LNPBP-37 invoicing
+- RGB20: transfer API improvements
+
 v0.3.1
 ------
 - Lightning encoding for RGB types used in lightning messages
