@@ -933,8 +933,7 @@ checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
 
 [[package]]
 name = "rgb-core"
-version = "0.4.0-beta"
-source = "git+https://github.com/rgb-org/rgb-core#df9b4d60f141dae3b03331f317148aa7dba254d6"
+version = "0.4.0"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -966,6 +965,8 @@ dependencies = [
 [[package]]
 name = "rgb-core"
 version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd9bd2df39de07815c1693da099f99058b3cae0fe7a5df31559ac9d5c1b97439"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -1004,7 +1005,7 @@ dependencies = [
  "chrono",
  "lnpbp",
  "regex",
- "rgb-core 0.4.0-beta",
+ "rgb-core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_with",
  "url",
@@ -1019,7 +1020,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.0-beta",
+ "rgb-core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_with",
 ]
@@ -1033,7 +1034,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.0-beta",
+ "rgb-core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_with",
 ]
@@ -1047,7 +1048,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.0-beta",
+ "rgb-core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_with",
 ]
