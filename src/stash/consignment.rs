@@ -149,6 +149,8 @@ impl FromStr for Consignment {
     }
 }
 
+// TODO: Implement different conceal procedures for the consignment
+
 impl Consignment {
     #[inline]
     pub fn with(

@@ -15,6 +15,7 @@
 //! stash public.
 
 use std::borrow::Borrow;
+use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::io;
 use std::str::FromStr;
@@ -32,10 +33,9 @@ use strict_encoding::StrictEncode;
 
 use crate::contract::seal::Confidential;
 use crate::{
-    Anchor, AnchorId, ConcealSeals, ConcealState, ContractId, Extension,
-    IntoRevealed, Transition,
+    Anchor, AnchorId, ConcealAnchors, ConcealSeals, ConcealState, ContractId,
+    Extension, IntoRevealed, Transition,
 };
-use std::collections::btree_map::Entry;
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
 
@@ -271,9 +271,15 @@ impl ConcealState for Disclosure {
     }
 }
 
-// TODO: Create trait and add it to Consignment as well
-pub trait ConcealAnchors {}
-impl ConcealAnchors for Disclosure {}
+impl ConcealAnchors for Disclosure {
+    fn conceal_anchors_except(&mut self, protocols: &Vec<ContractId>) -> usize {
+        self.transitions
+            .iter_mut()
+            .fold(0usize, |count, (_, (anchor, _))| {
+                count + anchor.conceal_anchors_except(protocols)
+            })
+    }
+}
 
 impl Disclosure {
     pub fn insert_anchored_transitions(

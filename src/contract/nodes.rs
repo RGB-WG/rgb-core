@@ -22,6 +22,7 @@ use lnpbp::client_side_validation::{
     ToMerkleSource,
 };
 use lnpbp::commit_verify::CommitVerify;
+use lnpbp::lnpbp4::ProtocolId;
 use lnpbp::{Chain, TaggedHash};
 
 use super::{
@@ -106,6 +107,20 @@ impl CommitEncodeWithStrategy for NodeId {
 #[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(ContractId::to_bech32_string)]
 pub struct ContractId(sha256t::Hash<NodeIdTag>);
+
+impl From<ContractId> for ProtocolId {
+    fn from(contract_id: ContractId) -> Self {
+        ProtocolId::from_inner(contract_id.into_inner().into_inner())
+    }
+}
+
+impl From<ProtocolId> for ContractId {
+    fn from(protocol_id: ProtocolId) -> Self {
+        ContractId::from_inner(<ContractId as Wrapper>::Inner::from_inner(
+            protocol_id.into_inner(),
+        ))
+    }
+}
 
 impl From<ContractId> for lnpbp::chain::AssetId {
     fn from(id: ContractId) -> Self {

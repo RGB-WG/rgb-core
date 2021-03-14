@@ -120,6 +120,13 @@ pub enum Error {
     SizeLimit,
 }
 
+pub trait ConcealAnchors {
+    fn conceal_anchors(&mut self) -> usize {
+        self.conceal_anchors_except(&vec![])
+    }
+    fn conceal_anchors_except(&mut self, protocols: &Vec<ContractId>) -> usize;
+}
+
 #[cfg_attr(
     all(feature = "cli", feature = "serde"),
     derive(Serialize, Deserialize),
@@ -130,6 +137,22 @@ pub struct Anchor {
     pub txid: Txid,
     pub commitment: MultimsgCommitment,
     pub proof: Proof,
+}
+
+impl ConcealAnchors for Anchor {
+    fn conceal_anchors_except(&mut self, protocols: &Vec<ContractId>) -> usize {
+        self.commitment.entropy = None;
+        self.commitment
+            .commitments
+            .iter_mut()
+            .fold(0usize, |count, item| match item.protocol {
+                Some(protocol) if !protocols.contains(&protocol.into()) => {
+                    item.protocol = None;
+                    count + 1
+                }
+                _ => count,
+            })
+    }
 }
 
 impl IntoRevealed for Anchor {
