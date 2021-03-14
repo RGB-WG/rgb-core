@@ -17,6 +17,7 @@ pub mod data;
 mod conceal;
 mod metadata;
 pub mod nodes;
+pub mod reveal;
 pub mod seal;
 pub mod value;
 
@@ -32,6 +33,7 @@ pub(self) use assignments::{
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
+pub use reveal::IntoRevealed;
 pub use seal::{SealDefinition, SealEndpoint};
 pub use value::AtomicValue;
 

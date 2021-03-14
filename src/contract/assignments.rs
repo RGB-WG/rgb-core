@@ -48,6 +48,7 @@ pub type ParentPublicRights =
 )]
 #[derive(StrictEncode, StrictDecode)]
 pub(super) struct OwnedRightsInner(OwnedRights);
+
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
 )]
@@ -58,6 +59,7 @@ pub(super) struct OwnedRightsInner(OwnedRights);
 )]
 #[derive(StrictEncode, StrictDecode)]
 pub(super) struct PublicRightsInner(PublicRights);
+
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
 )]
@@ -68,6 +70,7 @@ pub(super) struct PublicRightsInner(PublicRights);
 )]
 #[derive(StrictEncode, StrictDecode)]
 pub(super) struct ParentOwnedRightsInner(ParentOwnedRights);
+
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
 )]
