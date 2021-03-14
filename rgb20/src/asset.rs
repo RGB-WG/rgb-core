@@ -452,8 +452,7 @@ pub struct Issue {
     /// issuance (i.e. of `issue` type)
     id: NodeId,
 
-    /// In db we can store it as a simple u64 field converting it on read/write
-    /// using `decimal_precision` parameter of the asset
+    /// Amount of the issued asset
     amount: AtomicValue,
 
     /// Indicates transaction output which had an assigned inflation right and
