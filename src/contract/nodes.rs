@@ -25,13 +25,11 @@ use lnpbp::commit_verify::CommitVerify;
 use lnpbp::{Chain, TaggedHash};
 
 use super::{
-    Assignments, ConcealSeals, ConcealState, OwnedRights, ParentOwnedRights,
-    ParentPublicRights, PublicRights,
+    Assignments, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner,
+    ParentOwnedRights, ParentOwnedRightsInner, ParentPublicRights,
+    ParentPublicRightsInner, PublicRights, PublicRightsInner,
 };
-use super::{
-    OwnedRightsInner, ParentOwnedRightsInner, ParentPublicRightsInner,
-    PublicRightsInner,
-};
+use crate::reveal::{self, IntoRevealed};
 use crate::schema::{
     ExtensionType, FieldType, NodeType, OwnedRightType, TransitionType,
 };
@@ -217,8 +215,8 @@ pub struct Genesis {
     schema_id: SchemaId,
     chain: Chain,
     metadata: Metadata,
-    pub(super) owned_rights: OwnedRightsInner,
-    pub(super) public_rights: PublicRightsInner,
+    owned_rights: OwnedRightsInner,
+    public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -235,9 +233,9 @@ pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
     metadata: Metadata,
-    pub(super) parent_public_rights: ParentPublicRightsInner,
-    pub(super) owned_rights: OwnedRightsInner,
-    pub(super) public_rights: PublicRightsInner,
+    parent_public_rights: ParentPublicRightsInner,
+    owned_rights: OwnedRightsInner,
+    public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -253,9 +251,9 @@ pub struct Extension {
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
-    pub(super) parent_owned_rights: ParentOwnedRightsInner,
-    pub(super) owned_rights: OwnedRightsInner,
-    pub(super) public_rights: PublicRightsInner,
+    parent_owned_rights: ParentOwnedRightsInner,
+    owned_rights: OwnedRightsInner,
+    public_rights: PublicRightsInner,
     script: SimplicityScript,
 }
 
@@ -374,6 +372,39 @@ impl ConcealSeals for Transition {
             count += assignment.conceal_seals(seals);
         }
         count
+    }
+}
+
+impl IntoRevealed for Genesis {
+    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+        if self.consensus_commit() != other.consensus_commit() {
+            return Err(reveal::Error::NodeMismatch(NodeType::Genesis));
+        }
+        self.owned_rights =
+            self.owned_rights.into_revealed(other.owned_rights)?;
+        Ok(self)
+    }
+}
+
+impl IntoRevealed for Transition {
+    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+        if self.consensus_commit() != other.consensus_commit() {
+            return Err(reveal::Error::NodeMismatch(NodeType::StateTransition));
+        }
+        self.owned_rights =
+            self.owned_rights.into_revealed(other.owned_rights)?;
+        Ok(self)
+    }
+}
+
+impl IntoRevealed for Extension {
+    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+        if self.consensus_commit() != other.consensus_commit() {
+            return Err(reveal::Error::NodeMismatch(NodeType::StateExtension));
+        }
+        self.owned_rights =
+            self.owned_rights.into_revealed(other.owned_rights)?;
+        Ok(self)
     }
 }
 

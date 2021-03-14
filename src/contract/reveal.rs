@@ -15,15 +15,12 @@ use std::collections::BTreeMap;
 
 use amplify::Wrapper;
 use lnpbp::client_side_validation::{
-    CommitConceal, CommitEncode, ConsensusCommit, ToMerkleSource,
+    CommitConceal, CommitEncode, ToMerkleSource,
 };
 
 use super::OwnedRightsInner;
 use crate::schema::NodeType;
-use crate::{
-    Assignments, Extension, Genesis, OwnedRights, OwnedState, StateTypes,
-    Transition,
-};
+use crate::{Assignments, OwnedRights, OwnedState, StateTypes};
 
 /// Merge Error generated in merging operation
 #[derive(
@@ -208,39 +205,6 @@ impl IntoRevealed for OwnedRightsInner {
             result.insert(first.0, first.1.into_revealed(second.1)?);
         }
         Ok(OwnedRightsInner::from_inner(result))
-    }
-}
-
-impl IntoRevealed for Genesis {
-    fn into_revealed(mut self, other: Self) -> Result<Self, Error> {
-        if self.consensus_commit() != other.consensus_commit() {
-            return Err(Error::NodeMismatch(NodeType::Genesis));
-        }
-        self.owned_rights =
-            self.owned_rights.into_revealed(other.owned_rights)?;
-        Ok(self)
-    }
-}
-
-impl IntoRevealed for Transition {
-    fn into_revealed(mut self, other: Self) -> Result<Self, Error> {
-        if self.consensus_commit() != other.consensus_commit() {
-            return Err(Error::NodeMismatch(NodeType::StateTransition));
-        }
-        self.owned_rights =
-            self.owned_rights.into_revealed(other.owned_rights)?;
-        Ok(self)
-    }
-}
-
-impl IntoRevealed for Extension {
-    fn into_revealed(mut self, other: Self) -> Result<Self, Error> {
-        if self.consensus_commit() != other.consensus_commit() {
-            return Err(Error::NodeMismatch(NodeType::StateExtension));
-        }
-        self.owned_rights =
-            self.owned_rights.into_revealed(other.owned_rights)?;
-        Ok(self)
     }
 }
 
