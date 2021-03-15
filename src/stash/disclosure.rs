@@ -14,7 +14,6 @@
 //! Disclosure is the way to make certain confidential information about the
 //! stash public.
 
-use std::borrow::Borrow;
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::io;

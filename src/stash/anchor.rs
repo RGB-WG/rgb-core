@@ -128,7 +128,7 @@ pub trait ConcealAnchors {
 }
 
 #[cfg_attr(
-    all(feature = "cli", feature = "serde"),
+    any(feature = "cli", feature = "serde"),
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]

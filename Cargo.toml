@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.4.1"
+version = "0.4.2"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "RGB Core Library: private & scalable client-validated smart contracts for Bitcoin & Lightning"
