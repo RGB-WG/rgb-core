@@ -94,7 +94,7 @@ serde_json = { version = "1", optional = true }
 serde_json = "~1.0.60"
 
 [features]
-default = ["serde"]
+default = ["serde", "cli"]
 all = ["serde", "cli"]
 cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum"]
 serde = ["serde_crate", "serde_with", "serde_with_macros",

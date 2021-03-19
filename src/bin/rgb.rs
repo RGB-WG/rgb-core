@@ -25,7 +25,9 @@ use std::str::FromStr;
 
 use bitcoin::hashes::hex::{self, FromHex, ToHex};
 use lnpbp::client_side_validation::ConsensusCommit;
-use rgb::{Consignment, Disclosure, Genesis, Schema, Transition};
+use rgb::{
+    Anchor, Consignment, Disclosure, Extension, Genesis, Schema, Transition,
+};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::resolvers::ElectrumTxResolver;
 
@@ -59,13 +61,31 @@ pub enum Command {
         subcommand: DisclosureCommand,
     },
 
+    /// Commands for working with schemata
+    Schema {
+        #[clap(subcommand)]
+        subcommand: SchemaCommand,
+    },
+
+    /// Commands for working with anchors and multi-message commitments
+    Anchor {
+        #[clap(subcommand)]
+        subcommand: AnchorCommand,
+    },
+
+    /// Commands for working with state extensions
+    Extension {
+        #[clap(subcommand)]
+        subcommand: ExtensionCommand,
+    },
+
     /// Commands for working with state transitions
     Transition {
         #[clap(subcommand)]
         subcommand: TransitionCommand,
     },
 
-    /// Commands for working with state transitions
+    /// Commands for working with contract geneses
     Genesis {
         #[clap(subcommand)]
         subcommand: GenesisCommand,
@@ -112,6 +132,57 @@ pub enum DisclosureCommand {
     Convert {
         /// Consignment data; if none are given reads from STDIN
         disclosure: Option<String>,
+
+        /// Formatting of the input data
+        #[clap(short, long, default_value = "bech32")]
+        input: Format,
+
+        /// Formatting for the output
+        #[clap(short, long, default_value = "yaml")]
+        output: Format,
+    },
+}
+
+#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[clap(setting = AppSettings::ColoredHelp)]
+pub enum SchemaCommand {
+    Convert {
+        /// Schema data; if none are given reads from STDIN
+        schema: Option<String>,
+
+        /// Formatting of the input data
+        #[clap(short, long, default_value = "bech32")]
+        input: Format,
+
+        /// Formatting for the output
+        #[clap(short, long, default_value = "yaml")]
+        output: Format,
+    },
+}
+
+#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[clap(setting = AppSettings::ColoredHelp)]
+pub enum AnchorCommand {
+    Convert {
+        /// Anchor data; if none are given reads from STDIN
+        anchor: Option<String>,
+
+        /// Formatting of the input data
+        #[clap(short, long, default_value = "bech32")]
+        input: Format,
+
+        /// Formatting for the output
+        #[clap(short, long, default_value = "yaml")]
+        output: Format,
+    },
+}
+
+#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[clap(setting = AppSettings::ColoredHelp)]
+pub enum ExtensionCommand {
+    Convert {
+        /// State extension data; if none are given reads from STDIN
+        extension: Option<String>,
 
         /// Formatting of the input data
         #[clap(short, long, default_value = "bech32")]
@@ -331,6 +402,36 @@ fn main() -> Result<(), String> {
             } => {
                 let disclosure: Disclosure = input_read(disclosure, input)?;
                 output_write(disclosure, output)?;
+            }
+        },
+        Command::Schema { subcommand } => match subcommand {
+            SchemaCommand::Convert {
+                schema,
+                input,
+                output,
+            } => {
+                let schema: Schema = input_read(schema, input)?;
+                output_write(schema, output)?;
+            }
+        },
+        Command::Anchor { subcommand } => match subcommand {
+            AnchorCommand::Convert {
+                anchor,
+                input,
+                output,
+            } => {
+                let anchor: Anchor = input_read(anchor, input)?;
+                output_write(anchor, output)?;
+            }
+        },
+        Command::Extension { subcommand } => match subcommand {
+            ExtensionCommand::Convert {
+                extension,
+                input,
+                output,
+            } => {
+                let extension: Extension = input_read(extension, input)?;
+                output_write(extension, output)?;
             }
         },
         Command::Transition { subcommand } => match subcommand {
