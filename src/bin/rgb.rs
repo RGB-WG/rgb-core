@@ -25,7 +25,7 @@ use std::str::FromStr;
 
 use bitcoin::hashes::hex::{self, FromHex, ToHex};
 use lnpbp::client_side_validation::ConsensusCommit;
-use rgb::{Consignment, Genesis, Schema, Transition};
+use rgb::{Consignment, Disclosure, Genesis, Schema, Transition};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::resolvers::ElectrumTxResolver;
 
@@ -51,6 +51,12 @@ pub enum Command {
     Consignment {
         #[clap(subcommand)]
         subcommand: ConsignmentCommand,
+    },
+
+    /// Commands for working with disclosures
+    Disclosure {
+        #[clap(subcommand)]
+        subcommand: DisclosureCommand,
     },
 
     /// Commands for working with state transitions
@@ -97,6 +103,23 @@ pub enum ConsignmentCommand {
         /// Address for Electrum server
         #[clap(default_value = "pandora.network:60001")]
         electrum: String,
+    },
+}
+
+#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[clap(setting = AppSettings::ColoredHelp)]
+pub enum DisclosureCommand {
+    Convert {
+        /// Consignment data; if none are given reads from STDIN
+        disclosure: Option<String>,
+
+        /// Formatting of the input data
+        #[clap(short, long, default_value = "bech32")]
+        input: Format,
+
+        /// Formatting for the output
+        #[clap(short, long, default_value = "yaml")]
+        output: Format,
     },
 }
 
@@ -298,6 +321,16 @@ fn main() -> Result<(), String> {
                         .as_ref()
                         .map_err(serde_yaml::Error::to_string)?
                 );
+            }
+        },
+        Command::Disclosure { subcommand } => match subcommand {
+            DisclosureCommand::Convert {
+                disclosure,
+                input,
+                output,
+            } => {
+                let disclosure: Disclosure = input_read(disclosure, input)?;
+                output_write(disclosure, output)?;
             }
         },
         Command::Transition { subcommand } => match subcommand {
