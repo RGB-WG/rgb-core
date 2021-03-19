@@ -934,6 +934,36 @@ checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
 [[package]]
 name = "rgb-core"
 version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4abf30a6bd99279a794f8e9b2a71db895195726150071f35cdcaa9ae7e7503d2"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bech32",
+ "bitcoin",
+ "bitcoin_hashes",
+ "chrono",
+ "deflate",
+ "descriptor-wallet",
+ "ed25519-dalek",
+ "grin_secp256k1zkp",
+ "inflate",
+ "lazy_static",
+ "lightning_encoding",
+ "lnpbp",
+ "miniscript",
+ "num-derive",
+ "num-traits",
+ "regex",
+ "serde",
+ "serde_with",
+ "serde_with_macros",
+ "strict_encoding",
+]
+
+[[package]]
+name = "rgb-core"
+version = "0.4.3"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -963,36 +993,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rgb-core"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4abf30a6bd99279a794f8e9b2a71db895195726150071f35cdcaa9ae7e7503d2"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bech32",
- "bitcoin",
- "bitcoin_hashes",
- "chrono",
- "deflate",
- "descriptor-wallet",
- "ed25519-dalek",
- "grin_secp256k1zkp",
- "inflate",
- "lazy_static",
- "lightning_encoding",
- "lnpbp",
- "miniscript",
- "num-derive",
- "num-traits",
- "regex",
- "serde",
- "serde_with",
- "serde_with_macros",
- "strict_encoding",
-]
-
-[[package]]
 name = "rgb20"
 version = "0.4.0"
 dependencies = [
@@ -1002,7 +1002,7 @@ dependencies = [
  "chrono",
  "lnpbp",
  "regex",
- "rgb-core 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rgb-core 0.4.2",
  "serde",
  "serde_with",
  "url",
@@ -1017,7 +1017,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rgb-core 0.4.2",
  "serde",
  "serde_with",
 ]
@@ -1031,7 +1031,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rgb-core 0.4.2",
  "serde",
  "serde_with",
 ]
@@ -1045,7 +1045,7 @@ dependencies = [
  "bitcoin",
  "chrono",
  "lnpbp",
- "rgb-core 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rgb-core 0.4.2",
  "serde",
  "serde_with",
 ]

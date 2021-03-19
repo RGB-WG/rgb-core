@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+v0.4.x patches
+--------------
+- 0.4.3: Fixing seal_definition old-way of sorting seals before they were
+         held in Vec (and BTreeSet was used instead). This allows to validate
+         multi-output transition history
+
 v0.4.0
 ------
 - Disclosures

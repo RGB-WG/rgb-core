@@ -441,32 +441,19 @@ impl Assignments {
         &self,
         index: u16,
     ) -> Result<Option<seal::Revealed>, NoDataError> {
-        // NB: Seal indexes are part of the consensus commitment, so we have to
-        // use deterministic ordering of the seals. This is currently
-        // done by using `sort` vector method and `Ord` implementation
-        // for the `Assignment` type
         Ok(match self {
-            Assignments::Declarative(set) => {
-                let mut vec = set.into_iter().collect::<Vec<_>>();
-                vec.sort();
-                vec.get(index as usize)
-                    .ok_or(NoDataError)?
-                    .seal_definition()
-            }
-            Assignments::DiscreteFiniteField(set) => {
-                let mut vec = set.into_iter().collect::<Vec<_>>();
-                vec.sort();
-                vec.get(index as usize)
-                    .ok_or(NoDataError)?
-                    .seal_definition()
-            }
-            Assignments::CustomData(set) => {
-                let mut vec = set.into_iter().collect::<Vec<_>>();
-                vec.sort();
-                vec.get(index as usize)
-                    .ok_or(NoDataError)?
-                    .seal_definition()
-            }
+            Assignments::Declarative(vec) => vec
+                .get(index as usize)
+                .ok_or(NoDataError)?
+                .seal_definition(),
+            Assignments::DiscreteFiniteField(vec) => vec
+                .get(index as usize)
+                .ok_or(NoDataError)?
+                .seal_definition(),
+            Assignments::CustomData(vec) => vec
+                .get(index as usize)
+                .ok_or(NoDataError)?
+                .seal_definition(),
         })
     }
 

@@ -670,9 +670,10 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 None
             }
             (Ok(None), _) => {
-                // Everything is ok, but we have incomplete confidential data,
+                // Everything is ok, but we have incomplete data (confidential),
                 // thus can't do a full verification and have to report the
                 // failure
+                eprintln!("{:#?}", variant);
                 self.status.add_failure(
                     Failure::TransitionParentConfidentialSeal {
                         node_id,
