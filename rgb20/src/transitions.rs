@@ -1,5 +1,5 @@
 // RGB standard library
-// Written in 2020 by
+// Written in 2020-2021 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
 // To the extent possible under law, the author(s) have dedicated all
