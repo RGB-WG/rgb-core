@@ -93,6 +93,18 @@ where
     serde(crate = "serde_crate")
 )]
 pub struct Schema {
+    /// Feature flags control which of the available RGB features are allowed
+    /// for smart contracts created under this schema.
+    ///
+    /// RGBv1 defines that this structure must contain no flags set.
+    ///
+    /// NB: This is not the same as RGB protocol versioning: feature flag set
+    /// is specific to a particular RGB protocol version. The only currently
+    /// defined RGB version is RGBv1; future versions may change the whole
+    /// structure of Schema data, use of feature flags, re-define their meaning
+    /// or do other backward-incompatible changes (RGB protocol versions are
+    /// not interoperable and backward-incompatible by definitions and the
+    /// nature of client-side-validation which does not allow upgrades).
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::rust::display_fromstr")

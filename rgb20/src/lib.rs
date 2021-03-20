@@ -47,4 +47,4 @@ pub mod transitions;
 pub use allocation::{AllocatedValue, Allocation, OutpointValue, UtxobValue};
 pub use amount::{FractionalAmount, PreciseAmount};
 pub use asset::Asset;
-pub use supply::{Issue, Supply, SupplyMeasure};
+pub use supply::{BurnReplace, Epoch, Issue, Supply, SupplyMeasure};

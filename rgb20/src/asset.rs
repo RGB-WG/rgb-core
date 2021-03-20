@@ -27,7 +27,8 @@ use rgb::seal::WitnessVoutError;
 
 use super::schema::{self, FieldType, OwnedRightsType};
 use crate::{
-    Allocation, FractionalAmount, Issue, PreciseAmount, Supply, SupplyMeasure,
+    Allocation, Epoch, FractionalAmount, Issue, PreciseAmount, Supply,
+    SupplyMeasure,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, From, Error)]
@@ -45,6 +46,7 @@ pub enum Error {
 }
 
 // TODO: Add support for renominations, burn & replacements
+/// Detailed RGB20 asset information
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -56,26 +58,66 @@ pub enum Error {
 #[display("{ticker} ({id})")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Asset {
+    /// Bech32-representation of the asset genesis
     genesis: String,
-    id: ContractId, // This is a unique primary key
+
+    /// Asset ID, which is equal to Contract ID and genesis ID
+    ///
+    /// It can be used as a unique primary kep
+    id: ContractId,
+
+    /// Asset ticker, up to 8 characters
     ticker: String,
+
+    /// Full asset name
     name: String,
-    description: Option<String>,
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    supply: Supply,
+
+    /// Text of Ricardian contract
+    ricardian_contract: Option<String>,
+
+    /// Chain with which the asset is issued
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     chain: Chain,
+
+    /// Number of digits after the asset decimal point
     decimal_precision: u8,
+
+    /// Asset creation data
     date: DateTime<Utc>,
+
+    /// All issues known from the available data (stash and/or provided
+    /// consignments)
+    ///
+    /// Primary issue is always the first one; the rest are provided in
+    /// arbitrary order
     known_issues: Vec<Issue>,
+
+    /// Burn & replacement epochs, organized according to the epoch order
+    epochs: Vec<Epoch>,
+
+    /// Detailed information about the asset supply (aggregated from the issue
+    /// and burning information kept inside the epochs data)
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    supply: Supply,
+
     /// Specifies outpoints which when spent may indicate inflation happening
     /// up to specific amount.
+    ///
+    /// NB: Not of all inflation controlling points may be known
     #[cfg_attr(
         feature = "serde",
         serde(with = "As::<BTreeMap<DisplayFromStr, DisplayFromStr>>")
     )]
+    // TODO: Transform into method iterating and collecting this information
+    //       from `known_issues`
     known_inflation: BTreeMap<OutPoint, AtomicValue>,
-    /// Specifies outpoints controlling certain amounts of assets
+
+    /// Specifies outpoints controlling certain amounts of assets.
+    ///
+    /// NB: Information here does not imply that the outputs are owned by the
+    /// current user or the owning transactions are mined/exist; this must be
+    /// determined by the wallet and depends on specific medium (blockchain,
+    /// LN)
     known_allocations: Vec<Allocation>,
 }
 
@@ -86,7 +128,7 @@ impl Asset {
         id: ContractId,
         ticker: String,
         name: String,
-        description: Option<String>,
+        ricardian_contract: Option<String>,
         supply: Supply,
         chain: Chain,
         decimal_precision: u8,
@@ -100,7 +142,7 @@ impl Asset {
             id,
             ticker,
             name,
-            description,
+            ricardian_contract,
             supply,
             chain,
             decimal_precision,
@@ -108,6 +150,7 @@ impl Asset {
             known_issues,
             known_inflation,
             known_allocations,
+            epochs: empty!(),
         }
     }
 
@@ -276,8 +319,10 @@ impl TryFrom<Genesis> for Asset {
         let node_id = NodeId::from_inner(genesis.contract_id().into_inner());
         let issue = Issue::with(
             genesis.node_id(),
+            genesis.contract_id(),
             supply.clone(),
-            None, // This is a primary issue, so no origin here
+            empty!(), // This is a primary issue, so no origin here
+            known_inflation.clone(),
         );
         let mut known_allocations = Vec::<Allocation>::new();
         for assignment in genesis.owned_rights_by_type(*OwnedRightsType::Assets)
@@ -316,7 +361,7 @@ impl TryFrom<Genesis> for Asset {
                 .first()
                 .ok_or(schema::Error::NotAllFieldsPresent)?
                 .clone(),
-            description: genesis_meta
+            ricardian_contract: genesis_meta
                 .string(*FieldType::ContractText)
                 .first()
                 .cloned(),
@@ -337,6 +382,7 @@ impl TryFrom<Genesis> for Asset {
             // we assume that each genesis allocation with revealed amount
             // and known seal (they are always revealed together) belongs to us
             known_allocations,
+            epochs: empty!(),
         })
     }
 }
