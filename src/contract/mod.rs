@@ -34,7 +34,7 @@ pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
 pub use reveal::IntoRevealed;
-pub use seal::{SealDefinition, SealEndpoint};
+pub use seal::{SealDefinition, SealEndpoint, ToSealDefinition};
 pub use value::AtomicValue;
 
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;

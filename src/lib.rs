@@ -64,7 +64,7 @@ pub mod prelude {
         Extension, Genesis, HashStrategy, IntoRevealed, Metadata, NoDataError,
         Node, NodeId, OwnedRights, OwnedState, ParentOwnedRights,
         ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
-        SealDefinition, SealEndpoint, StateTypes, Transition,
+        SealDefinition, SealEndpoint, StateTypes, ToSealDefinition, Transition,
     };
     pub use schema::{
         script, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction,

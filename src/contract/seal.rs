@@ -25,6 +25,10 @@ pub type Confidential = OutpointHash;
 /// Convenience type name useful for defining new seals
 pub type SealDefinition = Revealed;
 
+pub trait ToSealDefinition {
+    fn to_seal_definition(&self) -> SealDefinition;
+}
+
 #[derive(
     Clone,
     Copy,
