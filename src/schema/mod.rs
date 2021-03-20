@@ -81,14 +81,19 @@ pub mod constants {
     /// [`StandardProcedure::InflationControlBySum`]
     pub const FIELD_TYPE_ISSUED_SUPPLY: usize = 0xA0;
 
+    /// [`TransitionType`] that is used by the embedded validation procedures
+    /// [`StandardProcedure::NonfungibleInflation`]
+    pub const STATE_TYPE_NONFUNGIBLE_INFLATION: usize = 0xA0;
+
     /// [`OwnedRightType`] that is used by the embedded validation procedures
     /// [`StandardProcedure::NonfungibleInflation`] and
     /// [`StandardProcedure::IdentityTransfer`]
-    pub const STATE_TYPE_NONFUNGIBLE_OWNERSHIP: usize = 0xA2;
+    pub const STATE_TYPE_NONFUNGIBLE_OWNERSHIP: usize = 0xA1;
 
-    /// [`TransitionType`] that is used by the embedded validation procedures
-    /// [`StandardProcedure::NonfungibleInflation`]
-    pub const STATE_TYPE_NONFUNGIBLE_INFLATION: usize = 0xA3;
+    /// [`OwnedRightType`] that is used by the embedded validation procedures
+    /// [`StandardProcedure::NonfungibleInflation`] and
+    /// [`StandardProcedure::IdentityTransfer`]
+    pub const STATE_TYPE_NONFUNGIBLE_ENGRAVED_OWNERSHIP: usize = 0xA2;
 
     /// [`OwnedRightType`] that is used by the embedded validation procedure
     /// [`StandardProcedure::InflationControlBySum`]

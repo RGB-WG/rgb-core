@@ -16,9 +16,8 @@ use std::ops::Deref;
 use rgb::schema::{
     constants::*,
     script::{Procedure, StandardProcedure},
-    AssignmentAction, Bits, DataFormat, GenesisAction, GenesisSchema,
-    Occurences, Schema, StateFormat, StateSchema, TransitionAction,
-    TransitionSchema,
+    Bits, DataFormat, GenesisAction, GenesisSchema, Occurences, Schema,
+    StateFormat, StateSchema, TransitionAction, TransitionSchema,
 };
 
 #[derive(Debug, Display, Error, From)]
@@ -41,8 +40,7 @@ pub enum FieldType {
     LockDescriptor,
     LockUtxo,
     BurnUtxo,
-    Salt,
-    NftSource,
+    Comment,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
@@ -51,6 +49,7 @@ pub enum FieldType {
 pub enum OwnedRightsType {
     Inflation,
     Ownership,
+    EngravedOwnership,
     Renomination,
 }
 
@@ -63,11 +62,13 @@ pub enum TransitionType {
     Engraving,
     Renomination,
     RightsSplit,
+    Burn,
 }
 
 pub fn schema() -> Schema {
     use Occurences::*;
 
+    // NFT source data are kept as metadata, not state,
     Schema {
         rgb_features: none!(),
         root_id: none!(),
@@ -75,28 +76,28 @@ pub fn schema() -> Schema {
             metadata: type_map! {
                 FieldType::Name => Once,
                 FieldType::Description => NoneOrOnce,
-                FieldType::Data => NoneOrMore,
+                // Data common for all tokens
+                FieldType::Data => NoneOrOnce,
+                // Data format
                 FieldType::DataFormat => NoneOrOnce,
                 // Proof of reserves UTXO
                 FieldType::LockUtxo => NoneOrMore,
                 // Proof of reserves scriptPubkey descriptor used for
                 // verification
-                FieldType::LockDescriptor => NoneOrUpTo(32),
-                FieldType::Timestamp => Once,
-                FieldType::NftSource => NoneOrMore,
-                FieldType::Salt => Once
+                FieldType::LockDescriptor => NoneOrOnce,
+                FieldType::Timestamp => Once
             },
             owned_rights: type_map! {
                 OwnedRightsType::Inflation => NoneOrOnce,
                 OwnedRightsType::Renomination => NoneOrOnce,
-                OwnedRightsType::Ownership => OnceOrMore
+                // We have an option of issuing zero tokens here and just
+                // declaring future issuance
+                OwnedRightsType::Ownership => NoneOrMore
             },
             public_rights: none!(),
             abi: bmap! {
-                // Here we validate hash uniqueness of NftSource values and that
-                // there is always one ownership state per NftSource matching
-                // its hash
-                // and verification of proof of reserves
+                // Here we validate hash uniqueness of state values for all
+                // issued token ownerships
                 GenesisAction::Validate => Procedure::Embedded(StandardProcedure::NonfungibleInflation)
             },
         },
@@ -104,13 +105,12 @@ pub fn schema() -> Schema {
         transitions: type_map! {
             TransitionType::Issue => TransitionSchema {
                 metadata: type_map! {
-                    // Proof of reserves UTXO
+                    // Proof of reserves UTXOs (relate to all tokens in the
+                    // issue)
                     FieldType::LockUtxo => NoneOrMore,
                     // Proof of reserves scriptPubkey descriptor used for
-                    // verification
-                    FieldType::LockDescriptor => NoneOrUpTo(32),
-                    FieldType::NftSource => NoneOrMore,
-                    FieldType::Salt => Once
+                    // verification.
+                    FieldType::LockDescriptor => NoneOrOnce
                 },
                 closes: type_map! {
                     OwnedRightsType::Inflation => Once
@@ -121,51 +121,59 @@ pub fn schema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    // Here we validate hash uniqueness of NftSource values and that
-                    // there is always one ownership state per NftSource matching
-                    // its hash, plus the fact that
-                    // count(in(inflation)) >= count(out(inflation), out(nft_source))
-                    // and verification of proof of reserves
+                    // Here we validate hash uniqueness of state values for all
+                    // issued token ownerships
                     TransitionAction::Validate => Procedure::Embedded(StandardProcedure::NonfungibleInflation)
                 }
             },
+            // We match input and output tokens by ordering outputs in the same
+            // way as the inputs. NodeId are lexicographically ordered by the
+            // same procedure as it is in the parent owned rights data structure
             TransitionType::Transfer => TransitionSchema {
                 metadata: type_map! {
-                    // By default, use 0
-                    FieldType::Salt => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Ownership => OnceOrMore
+                    OwnedRightsType::Ownership => OnceOrMore,
+                    OwnedRightsType::EngravedOwnership => OnceOrMore
                 },
                 owned_rights: type_map! {
                     OwnedRightsType::Ownership => OnceOrMore
                 },
                 public_rights: none!(),
-                abi: none!()
+                abi: bmap! {
+                    // Here we ensure that each unique NFT is transferred once
+                    // and only once, i.e. that number of inputs is equal to the
+                    // number of outputs
+                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::IdentityTransfer)
+                }
             },
             // One engraving per set of tokens
             TransitionType::Engraving => TransitionSchema {
                 metadata: type_map! {
-                    FieldType::Data => NoneOrMore,
-                    FieldType::DataFormat => NoneOrOnce,
-                    // By default, use 0
-                    FieldType::Salt => Once
+                    FieldType::Data => NoneOrOnce,
+                    FieldType::DataFormat => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Ownership => OnceOrMore
+                    OwnedRightsType::Ownership => OnceOrMore,
+                    OwnedRightsType::EngravedOwnership => OnceOrMore
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Ownership => OnceOrMore
+                    OwnedRightsType::EngravedOwnership => OnceOrMore
                 },
                 public_rights: none!(),
-                abi: none!()
+                abi: bmap! {
+                    // Here we ensure that each unique NFT is transferred once
+                    // and only once, i.e. that number of inputs is equal to the
+                    // number of outputs
+                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::IdentityTransfer)
+                }
             },
             TransitionType::Renomination => TransitionSchema {
                 metadata: type_map! {
                     FieldType::Name => NoneOrOnce,
                     FieldType::Description => NoneOrOnce,
-                    FieldType::Data => NoneOrMore,
-                    FieldType::DataFormat => NoneOrOnce
+                    FieldType::Data => NoneOrOnce,
+                    FieldType::DataFormat => Once
                 },
                 closes: type_map! {
                     OwnedRightsType::Renomination => Once
@@ -182,16 +190,17 @@ pub fn schema() -> Schema {
             // lost.
             TransitionType::RightsSplit => TransitionSchema {
                 metadata: type_map! {
-                    FieldType::Salt => Once
                 },
                 closes: type_map! {
                     OwnedRightsType::Inflation => NoneOrMore,
                     OwnedRightsType::Ownership => NoneOrMore,
+                    OwnedRightsType::EngravedOwnership => NoneOrMore,
                     OwnedRightsType::Renomination => NoneOrOnce
                 },
                 owned_rights: type_map! {
                     OwnedRightsType::Inflation => NoneOrMore,
                     OwnedRightsType::Ownership => NoneOrMore,
+                    OwnedRightsType::EngravedOwnership => NoneOrMore,
                     OwnedRightsType::Renomination => NoneOrOnce
                 },
                 public_rights: none!(),
@@ -203,13 +212,39 @@ pub fn schema() -> Schema {
                     // amounts
                     TransitionAction::Validate => Procedure::Embedded(StandardProcedure::RightsSplit)
                 }
+            },
+            TransitionType::Burn => TransitionSchema {
+                metadata: type_map! {
+                    // Some comment explaining the reasoning behind the burn
+                    // operation
+                    FieldType::Comment => NoneOrOnce,
+                    // Contained data which may contain "burn performance"
+                    FieldType::Data => NoneOrOnce,
+                    FieldType::DataFormat => NoneOrOnce
+                },
+                closes: type_map! {
+                    OwnedRightsType::Inflation => NoneOrMore,
+                    OwnedRightsType::Ownership => NoneOrMore,
+                    OwnedRightsType::EngravedOwnership => NoneOrMore,
+                    OwnedRightsType::Renomination => NoneOrOnce
+                },
+                owned_rights: none!(),
+                public_rights: none!(),
+                abi: none!()
             }
         },
         field_types: type_map! {
             FieldType::Name => DataFormat::String(256),
             FieldType::Description => DataFormat::String(core::u16::MAX),
+            // Data common for all NFTs inside specific state transition or
+            // genesis.
+            // TODO: Add DataContainer for common data kept inside external
+            //       data container
             FieldType::Data => DataFormat::Bytes(core::u16::MAX),
-            FieldType::DataFormat => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
+            // A set of data formats, corresponding values and user-defined
+            // type extensibility must be provided by RGB21 specification
+            // TODO: (LNPBPs) Consider using MIME types
+            FieldType::DataFormat => DataFormat::Unsigned(Bits::Bit32, 0, core::u32::MAX as u128),
             // While UNIX timestamps allow negative numbers; in context of RGB
             // Schema, assets can't be issued in the past before RGB or Bitcoin
             // even existed; so we prohibit all the dates before RGB release
@@ -217,16 +252,10 @@ pub fn schema() -> Schema {
             // as for RGB-20 standard.
             FieldType::Timestamp => DataFormat::Integer(Bits::Bit64, 1602340666, core::i64::MAX as i128),
             FieldType::LockUtxo => DataFormat::TxOutPoint,
-            FieldType::LockDescriptor => DataFormat::String(core::u16::MAX),
+            // Descriptor in binary strict encoded format
+            FieldType::LockDescriptor => DataFormat::Bytes(core::u16::MAX),
             FieldType::BurnUtxo => DataFormat::TxOutPoint,
-            // This type is used to "shift" unique tokens ids if there was a
-            // collision between them
-            FieldType::Salt => DataFormat::Unsigned(Bits::Bit32, 0, core::u32::MAX as u128),
-            // Hash of these data serves as a unique NFT identifier;
-            // if NFT contains no intrinsic data than simply put any unique
-            // value here (like counter value, increased with each token);
-            // it must be unique only within single issuance transition
-            FieldType::NftSource => DataFormat::Bytes(core::u16::MAX)
+            FieldType::Comment => DataFormat::String(core::u16::MAX)
         },
         owned_right_types: type_map! {
             OwnedRightsType::Inflation => StateSchema {
@@ -235,19 +264,16 @@ pub fn schema() -> Schema {
                 abi: none!()
             },
             OwnedRightsType::Ownership => StateSchema {
-                // This is unique token identifier, which is
-                // SHA256(SHA256(nft_source_state), issue_transition_id)
-                // convoluted to 32-bits with XOR operation and then XORed with
-                // salt value from state transition metadata.
-                // NB: It is unique inside single state transition only, not
-                // globally. For global unique id use non-convoluted hash value.
-                format: StateFormat::CustomData(DataFormat::Unsigned(Bits::Bit32, 0, core::u32::MAX as u128)),
-                abi: bmap! {
-                    // Here we ensure that each unique state value is
-                    // transferred once and only once (using "salt" value for
-                    // collision resoultion)
-                    AssignmentAction::Validate => Procedure::Embedded(StandardProcedure::IdentityTransfer)
-                }
+                // How much issuer can issue tokens on this path
+                format: StateFormat::Declarative,
+                abi: none!()
+            },
+            OwnedRightsType::EngravedOwnership => StateSchema {
+                // Engraving data (per-token). Data format is defined by metadata
+                // and must be same for all tokens
+                // TODO: Use `DataFormat::Container` once will be available
+                format: StateFormat::CustomData(DataFormat::Bytes(core::u16::MAX)),
+                abi: none!()
             },
             OwnedRightsType::Renomination => StateSchema {
                 format: StateFormat::Declarative,
@@ -258,6 +284,8 @@ pub fn schema() -> Schema {
     }
 }
 
+// TODO: Define all standard field, rights & transition types which are common
+//       to different schemata as constants
 impl Deref for FieldType {
     type Target = usize;
 
@@ -269,9 +297,7 @@ impl Deref for FieldType {
             FieldType::Timestamp => &4,
             FieldType::Data => &0x10,
             FieldType::DataFormat => &0x11,
-            // Token fields:
-            FieldType::Salt => &0x20,
-            FieldType::NftSource => &0x21,
+            FieldType::Comment => &0x12,
             // Proof-of-burn fields:
             FieldType::BurnUtxo => &FIELD_TYPE_BURN_UTXO,
             // Prood-of-reserves fields:
@@ -291,6 +317,9 @@ impl Deref for OwnedRightsType {
             // Inflation-control-related rights:
             OwnedRightsType::Inflation => &STATE_TYPE_NONFUNGIBLE_INFLATION,
             OwnedRightsType::Ownership => &STATE_TYPE_NONFUNGIBLE_OWNERSHIP,
+            OwnedRightsType::EngravedOwnership => {
+                &STATE_TYPE_NONFUNGIBLE_OWNERSHIP
+            }
         }
     }
 }
@@ -308,6 +337,7 @@ impl Deref for TransitionType {
             // Inflation-related transitions:
             TransitionType::Issue => &TRANSITION_TYPE_FUNGIBLE_ISSUE,
             TransitionType::RightsSplit => &0xF0,
+            TransitionType::Burn => &0xF1,
         }
     }
 }
