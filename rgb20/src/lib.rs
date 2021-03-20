@@ -47,4 +47,4 @@ pub use asset::{
     SupplyMeasure,
 };
 pub use outcoins::{ConsealCoins, OutpointCoins, SealCoins};
-pub use processor::{issue, transfer, TransferError};
+pub use processor::TransitionError;
