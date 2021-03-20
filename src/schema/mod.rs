@@ -141,6 +141,9 @@ pub mod constants {
     /// Right to replace some of the state issued under the contract
     pub const STATE_TYPE_ISSUE_REPLACEMENT_RIGHT: usize = 0xAB;
 
+    /// Right to replace some of the state issued under the contract
+    pub const STATE_TYPE_ISSUE_REVOCATION_RIGHT: usize = 0xAC;
+
     // --------
 
     /// Transitions transferring ownership over primary contract state

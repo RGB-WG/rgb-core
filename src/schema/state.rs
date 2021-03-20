@@ -109,7 +109,7 @@ pub enum DataFormat {
     PublicKey(EllipticCurve, elliptic_curve::PointSerialization),
     Signature(elliptic_curve::SignatureAlgorithm),
     // TODO: Add externally stored data container id
-    // Container(BlobId, u64 /* AES encryption key / salt */),
+    // Container(BlobId, MIME, u64 /* AES encryption key / salt */),
     TxOutPoint,
     Tx,
     Psbt,
