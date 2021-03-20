@@ -23,7 +23,6 @@ use rgb::schema::{
 #[repr(u16)]
 pub enum FieldType {
     Name,
-    Format,
     StartsFrom,
     Data,
     DataFormat,
@@ -50,7 +49,8 @@ pub fn schema() -> Schema {
         field_types: type_map! {
             // Human-readable name for UI
             FieldType::Name => DataFormat::String(256),
-            FieldType::Format => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
+            // TODO: (LNPBPs) Consider using MIME types
+            FieldType::DataFormat => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
             FieldType::Data => DataFormat::Bytes(core::u16::MAX),
             // While UNIX timestamps allow negative numbers; in context of RGB Schema, assets
             // can't be issued in the past before RGB or Bitcoin even existed; so we prohibit
@@ -69,12 +69,12 @@ pub fn schema() -> Schema {
         genesis: GenesisSchema {
             metadata: type_map! {
                 FieldType::Name => Occurences::Once,
-                FieldType::Format => Occurences::Once,
+                FieldType::DataFormat => Occurences::Once,
                 FieldType::Data => Occurences::Once,
                 FieldType::StartsFrom => Occurences::Once
             },
             owned_rights: type_map! {
-                OwnedRightsType::Entry => Occurences::NoneOrOnce
+                OwnedRightsType::Entry => Occurences::Once
             },
             public_rights: none!(),
             abi: bmap! {},
@@ -105,7 +105,6 @@ impl Deref for FieldType {
     fn deref(&self) -> &Self::Target {
         match self {
             FieldType::Name => &1,
-            FieldType::Format => &2,
             FieldType::StartsFrom => &3,
             FieldType::Data => &4,
             FieldType::DataFormat => &5,

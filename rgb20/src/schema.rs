@@ -130,6 +130,9 @@ impl HistoryProofFormat {
 pub fn schema() -> Schema {
     use Occurences::*;
 
+    // TODO: Consider using data containers + state extensions for
+    //       providing issuer-created asset meta-information
+
     Schema {
         rgb_features: none!(),
         root_id: none!(),
@@ -297,6 +300,7 @@ pub fn schema() -> Schema {
             // double SHA256 hash and URL should be used instead, pointing to
             // the full contract text, where hash must be represented by a
             // hexadecimal string, optionally followed by `\n` and text URL
+            // TODO: Consider using data container instead of the above ^^^
             FieldType::ContractText => DataFormat::String(core::u16::MAX),
             FieldType::Precision => DataFormat::Unsigned(Bits::Bit8, 0, 18u128),
             // We need this b/c allocated amounts are hidden behind Pedersen
