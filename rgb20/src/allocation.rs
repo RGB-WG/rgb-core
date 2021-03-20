@@ -13,6 +13,8 @@
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 use std::fmt::{self, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 use std::str::FromStr;
@@ -21,7 +23,7 @@ use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::hex::FromHex;
 use bitcoin::{OutPoint, Txid};
 use lnpbp::seals::{OutpointHash, OutpointReveal};
-use rgb::{AtomicValue, SealDefinition, ToSealDefinition};
+use rgb::{value, AtomicValue, NodeId, SealDefinition, ToSealDefinition};
 
 #[derive(Clone, Copy, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -196,5 +198,54 @@ impl FromStr for UtxobValue {
             }),
             _ => Err(ParseError),
         }
+    }
+}
+
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[derive(
+    Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
+)]
+#[strict_encoding_crate(lnpbp::strict_encoding)]
+#[display("{revealed_amount}@{outpoint}&{node_id}#{index}")]
+pub struct Allocation {
+    /// Unique primary key is `node_id` + `index`
+    node_id: NodeId,
+
+    /// Index of the assignment of ownership right type within the node
+    index: u16,
+
+    /// Copy of the outpoint from corresponding entry in
+    /// [`Asset::known_allocations`]
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+    outpoint: OutPoint,
+
+    /// Revealed confidential amount consisting of an explicit atomic amount
+    /// and Pedersen commitment blinding factor
+    revealed_amount: value::Revealed,
+}
+
+impl Allocation {
+    #[inline]
+    pub(crate) fn with(
+        node_id: NodeId,
+        index: u16,
+        outpoint: OutPoint,
+        value: value::Revealed,
+    ) -> Allocation {
+        Allocation {
+            node_id,
+            index,
+            outpoint,
+            revealed_amount: value,
+        }
+    }
+
+    #[inline]
+    pub fn value(&self) -> AtomicValue {
+        self.revealed_amount.value
     }
 }

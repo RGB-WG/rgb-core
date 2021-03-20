@@ -30,7 +30,7 @@ use crate::asset;
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
 )]
 #[display(doc_comments)]
-pub enum TransitionError {
+pub enum Error {
     /// input {0} is not related to the contract
     UnrelatedInput(OutPoint),
 
@@ -144,7 +144,7 @@ impl Asset {
         closing: BTreeSet<OutPoint>,
         next_inflation: BTreeMap<SealDefinition, AtomicValue>,
         allocations: BTreeMap<SealDefinition, AtomicValue>,
-    ) -> Result<Transition, TransitionError> {
+    ) -> Result<Transition, Error> {
         unimplemented!()
     }
 
@@ -153,7 +153,7 @@ impl Asset {
         closing: OutPoint,
         next_epoch: Option<SealDefinition>,
         burning_seal: Option<SealDefinition>,
-    ) -> Result<Transition, TransitionError> {
+    ) -> Result<Transition, Error> {
         unimplemented!()
     }
 
@@ -163,7 +163,7 @@ impl Asset {
         burned_value: AtomicValue,
         burned_utxos: BTreeSet<OutPoint>,
         next_burn: Option<SealDefinition>,
-    ) -> Result<Transition, TransitionError> {
+    ) -> Result<Transition, Error> {
         unimplemented!()
     }
 
@@ -174,13 +174,13 @@ impl Asset {
         inputs: BTreeSet<OutPoint>,
         payment: BTreeMap<SealEndpoint, AtomicValue>,
         change: BTreeMap<SealDefinition, AtomicValue>,
-    ) -> Result<Transition, TransitionError> {
+    ) -> Result<Transition, Error> {
         // Collecting all input allocations
         let mut input_allocations = Vec::<Allocation>::new();
         for outpoint in inputs {
             let found = self.allocations(outpoint);
             if found.len() == 0 {
-                Err(TransitionError::UnrelatedInput(outpoint))?
+                Err(Error::UnrelatedInput(outpoint))?
             }
             input_allocations.extend(found);
         }
@@ -207,7 +207,7 @@ impl Asset {
             .collect();
 
         if total_inputs != total_outputs {
-            Err(TransitionError::InputsNotEqualOutputs)?
+            Err(Error::InputsNotEqualOutputs)?
         }
 
         let input_amounts = input_allocations

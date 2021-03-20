@@ -18,150 +18,30 @@ use serde::{Deserialize, Serialize};
 use serde_with::{As, DisplayFromStr};
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
-use std::ops::{Add, AddAssign};
 
 use amplify::Wrapper;
+use bitcoin::OutPoint;
 use lnpbp::Chain;
 use rgb::prelude::*;
 use rgb::seal::WitnessVoutError;
 
 use super::schema::{self, FieldType, OwnedRightsType};
+use crate::{
+    Allocation, FractionalAmount, Issue, PreciseAmount, Supply, SupplyMeasure,
+};
 
-pub type FractionalAmount = f64;
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, From, Error)]
+#[display(doc_comments)]
+pub enum Error {
+    /// Can't read asset data: provided information does not match schema:
+    /// {_0}
+    #[from]
+    Schema(schema::Error),
 
-/// Accounting amount keeps track of the asset precision
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Hash,
-    Debug,
-    Display,
-    Default,
-    StrictEncode,
-    StrictDecode,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{0}~{1}")]
-pub struct PreciseAmount(AtomicValue, u8);
-
-impl PreciseAmount {
-    const DIVIDER: [u64; 20] = [
-        1,
-        10,
-        100,
-        1_000,
-        10_000,
-        100_000,
-        1_000_000,
-        10_000_000,
-        100_000_000,
-        1_000_000_000,
-        10_000_000_000,
-        100_000_000_000,
-        1_000_000_000_000,
-        10_000_000_000_000,
-        100_000_000_000_000,
-        1_000_000_000_000_000,
-        10_000_000_000_000_000,
-        100_000_000_000_000_000,
-        1_000_000_000_000_000_000,
-        10_000_000_000_000_000_000,
-    ];
-
-    #[inline]
-    pub fn transmutate_from(
-        fractional_amount: FractionalAmount,
-        decimal_precision: u8,
-    ) -> AtomicValue {
-        PreciseAmount::from_fractional_amount(
-            fractional_amount,
-            decimal_precision,
-        )
-        .atomic_value()
-    }
-
-    #[inline]
-    pub fn transmutate_into(
-        atomic_value: AtomicValue,
-        decimal_precision: u8,
-    ) -> FractionalAmount {
-        PreciseAmount::from_atomic_value(atomic_value, decimal_precision)
-            .fractional_amount()
-    }
-
-    #[inline]
-    pub fn from_atomic_value(
-        atomic_value: AtomicValue,
-        decimal_precision: u8,
-    ) -> Self {
-        Self(atomic_value, decimal_precision)
-    }
-
-    #[inline]
-    pub fn from_fractional_amount(
-        fractional_amount: FractionalAmount,
-        decimal_precision: u8,
-    ) -> Self {
-        let full = (fractional_amount.trunc() as u64)
-            * Self::DIVIDER[decimal_precision as usize];
-        let fract = fractional_amount.fract() as u64;
-        Self(full + fract, decimal_precision)
-    }
-
-    #[inline]
-    pub fn fractional_amount(&self) -> FractionalAmount {
-        self.0 as f64 / Self::DIVIDER[self.1 as usize] as f64
-    }
-
-    #[inline]
-    pub fn atomic_value(&self) -> AtomicValue {
-        self.0
-    }
-
-    #[inline]
-    pub fn decimal_precision(&self) -> u8 {
-        self.1
-    }
-}
-
-impl Add for PreciseAmount {
-    type Output = PreciseAmount;
-    fn add(self, rhs: Self) -> Self::Output {
-        if self.decimal_precision() != rhs.decimal_precision() {
-            panic!("Addition of amounts with different fractional bits")
-        } else {
-            PreciseAmount::from_atomic_value(
-                self.atomic_value() + rhs.atomic_value(),
-                self.decimal_precision(),
-            )
-        }
-    }
-}
-
-impl AddAssign for PreciseAmount {
-    fn add_assign(&mut self, rhs: Self) {
-        if self.decimal_precision() != rhs.decimal_precision() {
-            panic!("Addition of amounts with different fractional bits")
-        } else {
-            self.0 += rhs.0
-        }
-    }
-}
-
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[display(Debug)]
-#[repr(u8)]
-pub enum SupplyMeasure {
-    KnownCirculating = 0,
-    TotalCirculating = 1,
-    IssueLimit = 2,
+    /// Genesis defines a seal referencing witness transaction while there
+    /// can't be a witness transaction for genesis
+    #[from(WitnessVoutError)]
+    GenesisSeal,
 }
 
 // TODO: Add support for renominations, burn & replacements
@@ -194,7 +74,7 @@ pub struct Asset {
         feature = "serde",
         serde(with = "As::<BTreeMap<DisplayFromStr, DisplayFromStr>>")
     )]
-    known_inflation: BTreeMap<bitcoin::OutPoint, AtomicValue>,
+    known_inflation: BTreeMap<OutPoint, AtomicValue>,
     /// Specifies outpoints controlling certain amounts of assets
     known_allocations: Vec<Allocation>,
 }
@@ -236,14 +116,14 @@ impl Asset {
         measure: SupplyMeasure,
     ) -> FractionalAmount {
         let value = match measure {
-            SupplyMeasure::KnownCirculating => self.supply.known_circulating,
+            SupplyMeasure::KnownCirculating => *self.supply.known_circulating(),
             SupplyMeasure::TotalCirculating => {
                 match self.supply.total_circulating() {
                     None => return FractionalAmount::NAN,
                     Some(supply) => supply,
                 }
             }
-            SupplyMeasure::IssueLimit => self.supply.issue_limit,
+            SupplyMeasure::IssueLimit => *self.supply.issue_limit(),
         };
         PreciseAmount::transmutate_into(value, self.decimal_precision)
     }
@@ -292,174 +172,6 @@ impl Asset {
     }
 }
 
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[derive(
-    Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
-)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{revealed_amount}@{node_id}#{index}>{outpoint}")]
-pub struct Allocation {
-    /// Unique primary key is `node_id` + `index`
-    node_id: NodeId,
-
-    /// Index of the assignment of ownership right type within the node
-    index: u16,
-
-    /// Copy of the outpoint from corresponding entry in
-    /// [`Asset::known_allocations`]
-    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-    outpoint: bitcoin::OutPoint,
-
-    /// Revealed confidential amount consisting of an explicit atomic amount
-    /// and Pedersen commitment blinding factor
-    revealed_amount: value::Revealed,
-}
-
-impl Allocation {
-    #[inline]
-    pub fn with(
-        node_id: NodeId,
-        index: u16,
-        outpoint: bitcoin::OutPoint,
-        value: value::Revealed,
-    ) -> Allocation {
-        Allocation {
-            node_id,
-            index,
-            outpoint,
-            revealed_amount: value,
-        }
-    }
-
-    #[inline]
-    pub fn value(&self) -> AtomicValue {
-        self.revealed_amount.value
-    }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Getters,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    Default,
-    StrictEncode,
-    StrictDecode,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("circulating {known_circulating}, max {issue_limit}")]
-pub struct Supply {
-    /// Sum of all issued amounts
-    known_circulating: AtomicValue,
-
-    /// Specifies if all issuances are known (i.e. there are data for issue
-    /// state transitions for all already spent `inflation`
-    /// single-use-seals). In this case `known_circulating` will be equal to
-    /// `total_circulating`. The parameter is option since the fact that the
-    /// UTXO is spend may be unknown without blockchain access
-    is_issued_known: Option<bool>,
-
-    /// We always know total supply, b/c even for assets without defined cap
-    /// the cap *de facto* equals to u64::MAX
-    issue_limit: AtomicValue,
-}
-
-impl Supply {
-    #[inline]
-    pub fn with(
-        known_circulating: AtomicValue,
-        is_issued_known: Option<bool>,
-        issue_limit: AtomicValue,
-    ) -> Supply {
-        Supply {
-            known_circulating,
-            is_issued_known,
-            issue_limit,
-        }
-    }
-
-    #[inline]
-    pub fn total_circulating(&self) -> Option<AtomicValue> {
-        if self.is_issued_known.unwrap_or(false) {
-            Some(self.known_circulating)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Getters,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    Display,
-    StrictEncode,
-    StrictDecode,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{id} -> {amount}")]
-pub struct Issue {
-    /// Unique primary key; equals to the state transition id that performs
-    /// issuance (i.e. of `issue` type)
-    id: NodeId,
-
-    /// Amount of the issued asset
-    amount: AtomicValue,
-
-    /// Indicates transaction output which had an assigned inflation right and
-    /// which spending produced this issue. `None` signifies that the issue
-    /// was produced by genesis (i.e. it is a primary issue)
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "As::<Option<DisplayFromStr>>")
-    )]
-    origin: Option<bitcoin::OutPoint>,
-}
-
-impl Issue {
-    pub fn with(
-        id: NodeId,
-        amount: AtomicValue,
-        origin: Option<bitcoin::OutPoint>,
-    ) -> Issue {
-        Issue { id, amount, origin }
-    }
-
-    #[inline]
-    pub fn is_primary(&self) -> bool {
-        self.origin.is_none()
-    }
-
-    #[inline]
-    pub fn is_secondary(&self) -> bool {
-        self.origin.is_some()
-    }
-}
-
 impl Asset {
     #[inline]
     pub fn add_issue(&self, _issue: Transition) -> Supply {
@@ -470,7 +182,7 @@ impl Asset {
     pub fn allocations(&self, outpoint: bitcoin::OutPoint) -> Vec<Allocation> {
         self.known_allocations
             .iter()
-            .filter(|a| a.outpoint == outpoint)
+            .filter(|a| *a.outpoint() == outpoint)
             .copied()
             .collect()
     }
@@ -482,12 +194,7 @@ impl Asset {
         index: u16,
         value: value::Revealed,
     ) -> bool {
-        let new_allocation = Allocation {
-            node_id,
-            index,
-            outpoint,
-            revealed_amount: value,
-        };
+        let new_allocation = Allocation::with(node_id, index, outpoint, value);
         if !self.known_allocations.contains(&new_allocation) {
             self.known_allocations.push(new_allocation);
             true
@@ -503,12 +210,7 @@ impl Asset {
         index: u16,
         value: value::Revealed,
     ) -> bool {
-        let old_allocation = Allocation {
-            node_id,
-            index,
-            outpoint,
-            revealed_amount: value,
-        };
+        let old_allocation = Allocation::with(node_id, index, outpoint, value);
         if let Some(index) = self
             .known_allocations
             .iter()
@@ -520,20 +222,6 @@ impl Asset {
             false
         }
     }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, From, Error)]
-#[display(doc_comments)]
-pub enum Error {
-    /// Can't read asset data: provided information does not match schema:
-    /// {_0}
-    #[from]
-    Schema(schema::Error),
-
-    /// Genesis defines a seal referencing witness transaction while there
-    /// can't be a witness transaction for genesis
-    #[from(WitnessVoutError)]
-    GenesisSeal,
 }
 
 impl TryFrom<Genesis> for Asset {
@@ -586,11 +274,11 @@ impl TryFrom<Genesis> for Asset {
         }
 
         let node_id = NodeId::from_inner(genesis.contract_id().into_inner());
-        let issue = Issue {
-            id: genesis.node_id(),
-            amount: supply.clone(),
-            origin: None, // This is a primary issue, so no origin here
-        };
+        let issue = Issue::with(
+            genesis.node_id(),
+            supply.clone(),
+            None, // This is a primary issue, so no origin here
+        );
         let mut known_allocations = Vec::<Allocation>::new();
         for assignment in genesis.owned_rights_by_type(*OwnedRightsType::Assets)
         {
@@ -605,12 +293,12 @@ impl TryFrom<Genesis> for Asset {
                         assigned_state,
                     } = assign
                     {
-                        known_allocations.push(Allocation {
+                        known_allocations.push(Allocation::with(
                             node_id,
-                            index: index as u16,
-                            outpoint: outpoint_reveal.into(),
-                            revealed_amount: assigned_state,
-                        })
+                            index as u16,
+                            outpoint_reveal.into(),
+                            assigned_state,
+                        ))
                     }
                 });
         }
@@ -632,11 +320,7 @@ impl TryFrom<Genesis> for Asset {
                 .string(*FieldType::ContractText)
                 .first()
                 .cloned(),
-            supply: Supply {
-                known_circulating: supply,
-                is_issued_known: None,
-                issue_limit,
-            },
+            supply: Supply::with(supply, None, issue_limit),
             decimal_precision,
             date: DateTime::from_utc(
                 NaiveDateTime::from_timestamp(

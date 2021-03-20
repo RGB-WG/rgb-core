@@ -37,14 +37,14 @@ extern crate serde_crate as serde;
 #[cfg(feature = "serde")]
 extern crate serde_with;
 
-pub mod allocation;
-mod asset;
-mod processor;
+mod allocation;
+mod amount;
+pub mod asset;
 pub mod schema;
+mod supply;
+pub mod transitions;
 
-pub use allocation::{AllocatedValue, OutpointValue, UtxobValue};
-pub use asset::{
-    Allocation, Asset, Error, FractionalAmount, Issue, PreciseAmount, Supply,
-    SupplyMeasure,
-};
-pub use processor::TransitionError;
+pub use allocation::{AllocatedValue, Allocation, OutpointValue, UtxobValue};
+pub use amount::{FractionalAmount, PreciseAmount};
+pub use asset::Asset;
+pub use supply::{Issue, Supply, SupplyMeasure};
