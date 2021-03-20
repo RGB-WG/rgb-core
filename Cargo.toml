@@ -10,7 +10,7 @@ keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "lnp-bp"]
 categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
 edition = "2018"
-exclude = [".github", "contrib"]
+exclude = [".github", "contrib", "rgb20", "rgb21", "rgb22", "rgb23", "rgb24"]
 
 [lib]
 name = "rgb"
@@ -102,6 +102,6 @@ serde = ["serde_crate", "serde_with", "serde_with_macros",
          "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]
 
 [workspace]
-members = [".", "rgb20", "rgb21", "rgb22", "rgb23"]
+members = [".", "rgb20", "rgb21", "rgb22", "rgb23", "rgb24"]
 default-members = ["rgb20"]
 exclude = ["dep_test"]

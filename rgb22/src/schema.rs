@@ -19,7 +19,7 @@ use rgb::schema::{
     TransitionAction, TransitionSchema,
 };
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum FieldType {
@@ -33,7 +33,7 @@ pub enum FieldType {
     ValidFrom,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum OwnedRightsType {
@@ -41,7 +41,7 @@ pub enum OwnedRightsType {
     Extension,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum TransitionType {

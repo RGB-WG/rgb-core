@@ -363,6 +363,8 @@ pub fn subschema() -> Schema {
 
     // TODO: Consider using data containers + state extensions for
     //       providing issuer-created asset meta-information
+    // TODO: Consider adding Ricardian contracts to secondary issues and
+    //       transfers
 
     Schema {
         rgb_features: none!(),

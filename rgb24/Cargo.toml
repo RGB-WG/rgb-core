@@ -1,0 +1,33 @@
+[package]
+name = "rgb24"
+version = "0.5.0-alpha"
+license = "MIT"
+authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
+description = "RGB-24 Library: decentralized names"
+repository = "https://github.com/rgb-org/rgb-core"
+homepage = "https://rgb.network"
+keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "audit-log"]
+categories = ["cryptography::cryptocurrencies"]
+readme = "README.md"
+edition = "2018"
+exclude = [".github", "contrib"]
+
+[lib]
+name = "rgb23"
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
+
+[dependencies]
+amplify = "3"
+amplify_derive = "2"
+lnpbp = "0.4"
+rgb-core = { version = "0.5.0-alpha", path = ".." }
+bitcoin = "0.26"
+serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+serde_with = { version = "1.5", features = ["hex"], optional = true }
+chrono = "0.4"
+
+[features]
+default = []
+all = ["serde"]
+serde = ["serde_crate", "serde_with", "lnpbp/serde", "bitcoin/use-serde", "rgb-core/serde", "amplify/serde"]

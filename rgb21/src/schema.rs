@@ -20,7 +20,9 @@ use rgb::schema::{
     StateFormat, StateSchema, TransitionAction, TransitionSchema,
 };
 
-#[derive(Debug, Display, Error, From)]
+#[derive(
+    Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Error, From,
+)]
 #[display(Debug)]
 pub enum SchemaError {
     NotAllFieldsPresent,
@@ -28,7 +30,7 @@ pub enum SchemaError {
     WrongSchemaId,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum FieldType {

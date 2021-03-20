@@ -1020,6 +1020,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rgb24"
+version = "0.5.0-alpha"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bitcoin",
+ "chrono",
+ "lnpbp",
+ "rgb-core",
+ "serde",
+ "serde_with",
+]
+
+[[package]]
 name = "ring"
 version = "0.16.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
