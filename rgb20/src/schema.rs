@@ -13,14 +13,18 @@
 
 use std::collections::BTreeSet;
 use std::ops::Deref;
+use std::str::FromStr;
 
 use rgb::schema::{
     constants::*,
     script::{Procedure, StandardProcedure},
     AssignmentAction, Bits, DataFormat, DiscreteFiniteFieldFormat,
-    GenesisSchema, Occurences, Schema, StateFormat, StateSchema,
+    GenesisSchema, Occurences, Schema, SchemaId, StateFormat, StateSchema,
     TransitionAction, TransitionSchema,
 };
+
+pub const SCHEMA_ID_BECH32: &'static str =
+    "sch1zcdeayj9vpv852tx2sjzy7esyy82a6nk0gs854ktam24zxee42rqyzg95g";
 
 #[derive(
     Clone,
@@ -352,6 +356,206 @@ pub fn schema() -> Schema {
     }
 }
 
+/// Provides the only defined RGB20 subschema, which prohibits replace procedure
+/// and allows only burn operations
+pub fn subschema() -> Schema {
+    use Occurences::*;
+
+    // TODO: Consider using data containers + state extensions for
+    //       providing issuer-created asset meta-information
+
+    Schema {
+        rgb_features: none!(),
+        root_id: SchemaId::from_str(SCHEMA_ID_BECH32)
+            .expect("Broken schema ID for RGB20 sub-schema"),
+        genesis: GenesisSchema {
+            metadata: type_map! {
+                FieldType::Ticker => Once,
+                FieldType::Name => Once,
+                FieldType::ContractText => NoneOrOnce,
+                FieldType::Precision => Once,
+                FieldType::Timestamp => Once,
+                FieldType::IssuedSupply => Once
+            },
+            owned_rights: type_map! {
+                OwnedRightsType::Inflation => NoneOrMore,
+                OwnedRightsType::Epoch => NoneOrOnce,
+                OwnedRightsType::Assets => NoneOrMore,
+                OwnedRightsType::Renomination => NoneOrOnce
+            },
+            public_rights: none!(),
+            abi: none!(),
+        },
+        extensions: none!(),
+        transitions: type_map! {
+            TransitionType::Issue => TransitionSchema {
+                metadata: type_map! {
+                    FieldType::IssuedSupply => Once
+                },
+                closes: type_map! {
+                    OwnedRightsType::Inflation => OnceOrMore
+                },
+                owned_rights: type_map! {
+                    OwnedRightsType::Inflation => NoneOrMore,
+                    OwnedRightsType::Epoch => NoneOrOnce,
+                    OwnedRightsType::Assets => NoneOrMore
+                },
+                public_rights: none!(),
+                abi: bmap! {
+                    // sum(in(inflation)) >= sum(out(inflation), out(assets))
+                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::FungibleInflation)
+                }
+            },
+            TransitionType::Transfer => TransitionSchema {
+                metadata: none!(),
+                closes: type_map! {
+                    OwnedRightsType::Assets => OnceOrMore
+                },
+                owned_rights: type_map! {
+                    OwnedRightsType::Assets => NoneOrMore
+                },
+                public_rights: none!(),
+                abi: none!()
+            },
+            TransitionType::Epoch => TransitionSchema {
+                metadata: none!(),
+                closes: type_map! {
+                    OwnedRightsType::Epoch => Once
+                },
+                owned_rights: type_map! {
+                    OwnedRightsType::BurnReplace => NoneOrOnce
+                },
+                public_rights: none!(),
+                abi: none!()
+            },
+            TransitionType::Burn => TransitionSchema {
+                metadata: type_map! {
+                    FieldType::BurnedSupply => Once,
+                    // Normally issuer should aggregate burned assets into a
+                    // single UTXO; however if burn happens as a result of
+                    // mistake this will be impossible, so we allow to have
+                    // multiple burned UTXOs as a part of a single operation
+                    FieldType::BurnUtxo => OnceOrMore,
+                    FieldType::HistoryProofFormat => Once,
+                    FieldType::HistoryProof => NoneOrMore
+                },
+                closes: type_map! {
+                    OwnedRightsType::BurnReplace => Once
+                },
+                owned_rights: type_map! {
+                    OwnedRightsType::BurnReplace => NoneOrOnce
+                },
+                public_rights: none!(),
+                abi: bmap! {
+                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::ProofOfBurn)
+                }
+            },
+            TransitionType::Renomination => TransitionSchema {
+                metadata: type_map! {
+                    FieldType::Ticker => NoneOrOnce,
+                    FieldType::Name => NoneOrOnce,
+                    FieldType::ContractText => NoneOrOnce,
+                    FieldType::Precision => NoneOrOnce
+                },
+                closes: type_map! {
+                    OwnedRightsType::Renomination => Once
+                },
+                owned_rights: type_map! {
+                    OwnedRightsType::Renomination => NoneOrOnce
+                },
+                public_rights: none!(),
+                abi: none!()
+            },
+            // Allows split of rights if they were occasionally allocated to the
+            // same UTXO, for instance both assets and issuance right. Without
+            // this type of transition either assets or inflation rights will be
+            // lost.
+            TransitionType::RightsSplit => TransitionSchema {
+                metadata: type_map! {},
+                closes: type_map! {
+                    OwnedRightsType::Inflation => NoneOrMore,
+                    OwnedRightsType::Assets => NoneOrMore,
+                    OwnedRightsType::BurnReplace => NoneOrMore,
+                    OwnedRightsType::Renomination => NoneOrOnce
+                },
+                owned_rights: type_map! {
+                    OwnedRightsType::Inflation => NoneOrMore,
+                    OwnedRightsType::Assets => NoneOrMore,
+                    OwnedRightsType::BurnReplace => NoneOrMore,
+                    OwnedRightsType::Renomination => NoneOrOnce
+                },
+                public_rights: none!(),
+                abi: bmap! {
+                    // We must allocate exactly one or none rights per each
+                    // right used as input (i.e. closed seal); plus we need to
+                    // control that sum of inputs is equal to the sum of outputs
+                    // for each of state types having assigned confidential
+                    // amounts
+                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::RightsSplit)
+                }
+            }
+        },
+        field_types: type_map! {
+            // Rational: if we will use just 26 letters of English alphabet (and
+            // we are not limited by them), we will have 26^8 possible tickers,
+            // i.e. > 208 trillions, which is sufficient amount
+            FieldType::Ticker => DataFormat::String(8),
+            FieldType::Name => DataFormat::String(256),
+            // Contract text may contain URL, text or text representation of
+            // Ricardian contract, up to 64kb. If the contract doesn't fit, a
+            // double SHA256 hash and URL should be used instead, pointing to
+            // the full contract text, where hash must be represented by a
+            // hexadecimal string, optionally followed by `\n` and text URL
+            // TODO: Consider using data container instead of the above ^^^
+            FieldType::ContractText => DataFormat::String(core::u16::MAX),
+            FieldType::Precision => DataFormat::Unsigned(Bits::Bit8, 0, 18u128),
+            // We need this b/c allocated amounts are hidden behind Pedersen
+            // commitments
+            FieldType::IssuedSupply => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
+            // Supply in either burn or burn-and-replace procedure
+            FieldType::BurnedSupply => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
+            // While UNIX timestamps allow negative numbers; in context of RGB
+            // Schema, assets can't be issued in the past before RGB or Bitcoin
+            // even existed; so we prohibit all the dates before RGB release
+            // This timestamp is equal to 10/10/2020 @ 2:37pm (UTC)
+            FieldType::Timestamp => DataFormat::Integer(Bits::Bit64, 1602340666, core::i64::MAX as i128),
+            FieldType::BurnUtxo => DataFormat::TxOutPoint
+        },
+        owned_right_types: type_map! {
+            OwnedRightsType::Inflation => StateSchema {
+                // How much issuer can issue tokens on this path. If there is no
+                // limit, than `core::u64::MAX` / sum(inflation_assignments)
+                // must be used, as this will be a de-facto limit to the
+                // issuance
+                format: StateFormat::CustomData(DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)),
+                // Validation involves other state data, so it is performed
+                // at the level of `issue` state transition
+                abi: none!()
+            },
+            OwnedRightsType::Assets => StateSchema {
+                format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
+                abi: bmap! {
+                    // sum(inputs) == sum(outputs)
+                    AssignmentAction::Validate => Procedure::Embedded(StandardProcedure::NoInflationBySum)
+                }
+            },
+            OwnedRightsType::Epoch => StateSchema {
+                format: StateFormat::Declarative,
+                abi: none!()
+            },
+            OwnedRightsType::BurnReplace => StateSchema {
+                format: StateFormat::Declarative,
+                abi: none!()
+            },
+            OwnedRightsType::Renomination => StateSchema {
+                format: StateFormat::Declarative,
+                abi: none!()
+            }
+        },
+        public_right_types: none!(),
+    }
+}
+
 impl Deref for FieldType {
     type Target = usize;
 
@@ -444,12 +648,14 @@ mod test {
     use super::*;
     use lnpbp::bech32::Bech32DataString;
     use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
-    use rgb::{FromBech32, ToBech32};
+    use rgb::schema::SchemaVerify;
+    use rgb::{FromBech32, ToBech32, Validity};
 
     #[test]
     fn schema_id() {
         let id = schema().schema_id();
         println!("{}", id);
+        assert_eq!(id.to_string(), SCHEMA_ID_BECH32);
         assert_eq!(
             id.to_string(),
             "sch1zcdeayj9vpv852tx2sjzy7esyy82a6nk0gs854ktam24zxee42rqyzg95g"
@@ -754,6 +960,14 @@ mod test {
         qvfds8kryuuc4kzh03t2xruw932u6e7rn9szn8uz2kkcc7lrkzpw4ct4xpgej2s8e3vn224\
         mmwh8yjwm3c3uzcsz350urqt6gfm6wpj6gcajd6uevncqy74u87jtfmx8raza9nlm2hazyd\
         l7hyevmls6amyy4kl7rv6skggq"
+        );
+    }
+
+    #[test]
+    fn subschema_verify() {
+        assert_eq!(
+            subschema().schema_verify(&schema()).validity(),
+            Validity::Valid
         );
     }
 }
