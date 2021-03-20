@@ -14,9 +14,9 @@
 use std::ops::Deref;
 
 use rgb::schema::{
-    script::StandardProcedure, Bits, DataFormat, GenesisAction, GenesisSchema,
-    Occurences, Procedure, Schema, StateFormat, StateSchema, TransitionAction,
-    TransitionSchema,
+    constants::*, script::StandardProcedure, Bits, DataFormat, GenesisAction,
+    GenesisSchema, Occurences, Procedure, Schema, StateFormat, StateSchema,
+    TransitionAction, TransitionSchema,
 };
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
@@ -26,7 +26,7 @@ pub enum FieldType {
     Name,
     Format,
     Identity,
-    Cryptography,
+    UsedCryptography,
     PublicKey,
     Signature,
     ValidFrom,
@@ -55,7 +55,11 @@ pub fn schema() -> Schema {
             FieldType::Name => DataFormat::String(256),
             FieldType::Format => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
             FieldType::Identity => DataFormat::Bytes(core::u16::MAX),
-            FieldType::Cryptography => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
+            // We allow signatures to be created with different cryptographic
+            // methods, so keeping three fields to define them, instead of using
+            // `Signature` data format (which will force all contracts to
+            // use the same signature and cryptographic algorithm
+            FieldType::UsedCryptography => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
             FieldType::PublicKey => DataFormat::Bytes(core::u16::MAX),
             FieldType::Signature => DataFormat::Bytes(core::u16::MAX),
             // While UNIX timestamps allow negative numbers; in context of RGB Schema, assets
@@ -81,7 +85,7 @@ pub fn schema() -> Schema {
                 FieldType::Name => Occurences::Once,
                 FieldType::Format => Occurences::Once,
                 FieldType::Identity => Occurences::Once,
-                FieldType::Cryptography => Occurences::Once,
+                FieldType::UsedCryptography => Occurences::Once,
                 FieldType::PublicKey => Occurences::Once,
                 FieldType::Signature => Occurences::Once,
                 FieldType::ValidFrom => Occurences::Once
@@ -102,9 +106,11 @@ pub fn schema() -> Schema {
                     FieldType::Name => Occurences::Once,
                     FieldType::Format => Occurences::Once,
                     FieldType::Identity => Occurences::Once,
-                    FieldType::Cryptography => Occurences::Once,
+                    FieldType::UsedCryptography => Occurences::Once,
                     FieldType::PublicKey => Occurences::Once,
                     FieldType::Signature => Occurences::Once,
+                    // We need this to declare identities ahead of time of their
+                    // activation/validity
                     FieldType::ValidFrom => Occurences::Once
                 },
                 closes: type_map! {
@@ -129,13 +135,13 @@ impl Deref for FieldType {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            FieldType::Name => &1,
-            FieldType::Format => &2,
-            FieldType::Identity => &3,
-            FieldType::Cryptography => &4,
-            FieldType::PublicKey => &5,
-            FieldType::Signature => &6,
-            FieldType::ValidFrom => &7,
+            FieldType::Name => &FIELD_TYPE_NAME,
+            FieldType::Format => &FIELD_TYPE_DATA_FORMAT,
+            FieldType::ValidFrom => &FIELD_TYPE_TIMESTAMP,
+            FieldType::Identity => &0x0101,
+            FieldType::UsedCryptography => &0x0110,
+            FieldType::PublicKey => &0x0111,
+            FieldType::Signature => &0x0112,
         }
     }
 }
@@ -145,8 +151,8 @@ impl Deref for OwnedRightsType {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            OwnedRightsType::Revocation => &1,
-            OwnedRightsType::Extension => &2,
+            OwnedRightsType::Revocation => &0x0101,
+            OwnedRightsType::Extension => &0x0102,
         }
     }
 }
@@ -156,7 +162,7 @@ impl Deref for TransitionType {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            TransitionType::Identity => &1,
+            TransitionType::Identity => &TRANSITION_TYPE_STATE_MODIFICATION,
         }
     }
 }

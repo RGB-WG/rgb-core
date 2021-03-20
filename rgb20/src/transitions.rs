@@ -58,8 +58,10 @@ impl Asset {
             FieldType::Timestamp => field!(I64, now)
         };
         if let Some(description) = description {
-            metadata
-                .insert(*FieldType::ContractText, field!(String, description));
+            metadata.insert(
+                *FieldType::RicardianContract,
+                field!(String, description),
+            );
         }
 
         let mut issued_supply = 0u64;

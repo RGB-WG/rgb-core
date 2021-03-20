@@ -14,8 +14,8 @@
 use std::ops::Deref;
 
 use rgb::schema::{
-    Bits, DataFormat, GenesisSchema, Occurences, Schema, StateFormat,
-    StateSchema, TransitionSchema,
+    constants::*, Bits, DataFormat, GenesisSchema, Occurences, Schema,
+    StateFormat, StateSchema, TransitionSchema,
 };
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
@@ -23,6 +23,8 @@ use rgb::schema::{
 #[repr(u16)]
 pub enum FieldType {
     Name,
+    Commentary,
+    RicardianContract,
     StartsFrom,
     Data,
     DataFormat,
@@ -40,17 +42,26 @@ pub enum OwnedRightsType {
 #[repr(u16)]
 pub enum TransitionType {
     Entry,
+    Burn,
 }
 
 pub fn schema() -> Schema {
+    use Occurences::*;
+
+    // TODO: Link signatures to identity
+
     Schema {
         rgb_features: none!(),
         root_id: none!(),
         field_types: type_map! {
             // Human-readable name for UI
             FieldType::Name => DataFormat::String(256),
+            // TODO: Consider using data container
+            FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             // TODO: (LNPBPs) Consider using MIME types
             FieldType::DataFormat => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
+            // TODO: Use data container to keep the actual log record
+            //       matching the signature
             FieldType::Data => DataFormat::Bytes(core::u16::MAX),
             // While UNIX timestamps allow negative numbers; in context of RGB Schema, assets
             // can't be issued in the past before RGB or Bitcoin even existed; so we prohibit
@@ -68,13 +79,14 @@ pub fn schema() -> Schema {
         public_right_types: none!(),
         genesis: GenesisSchema {
             metadata: type_map! {
-                FieldType::Name => Occurences::Once,
-                FieldType::DataFormat => Occurences::Once,
-                FieldType::Data => Occurences::Once,
-                FieldType::StartsFrom => Occurences::Once
+                FieldType::Name => Once,
+                FieldType::RicardianContract => NoneOrOnce,
+                FieldType::DataFormat => Once,
+                FieldType::Data => Once,
+                FieldType::StartsFrom => Once
             },
             owned_rights: type_map! {
-                OwnedRightsType::Entry => Occurences::Once
+                OwnedRightsType::Entry => Once
             },
             public_rights: none!(),
             abi: bmap! {},
@@ -83,17 +95,29 @@ pub fn schema() -> Schema {
         transitions: type_map! {
             TransitionType::Entry => TransitionSchema {
                 metadata: type_map! {
-                    FieldType::DataFormat => Occurences::Once,
-                    FieldType::Data => Occurences::Once
+                    FieldType::Commentary => NoneOrOnce,
+                    FieldType::DataFormat => Once,
+                    FieldType::Data => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Entry => Occurences::Once
+                    OwnedRightsType::Entry => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Entry => Occurences::NoneOrOnce
+                    OwnedRightsType::Entry => Once
                 },
                 public_rights: none!(),
                 abi: bmap! { }
+            },
+            TransitionType::Burn => TransitionSchema {
+                metadata: type_map! {
+                    FieldType::Commentary => NoneOrOnce
+                },
+                closes: type_map! {
+                    OwnedRightsType::Entry => NoneOrOnce
+                },
+                owned_rights: none!(),
+                public_rights: none!(),
+                abi: none!()
             }
         },
     }
@@ -104,10 +128,12 @@ impl Deref for FieldType {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            FieldType::Name => &1,
-            FieldType::StartsFrom => &3,
-            FieldType::Data => &4,
-            FieldType::DataFormat => &5,
+            FieldType::Name => &FIELD_TYPE_NAME,
+            FieldType::StartsFrom => &FIELD_TYPE_TIMESTAMP,
+            FieldType::Data => &FIELD_TYPE_DATA,
+            FieldType::DataFormat => &FIELD_TYPE_DATA_FORMAT,
+            FieldType::Commentary => &FIELD_TYPE_COMMENTARY,
+            FieldType::RicardianContract => &FIELD_TYPE_CONTRACT_TEXT,
         }
     }
 }
@@ -117,7 +143,7 @@ impl Deref for OwnedRightsType {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            OwnedRightsType::Entry => &1,
+            OwnedRightsType::Entry => &0x0101,
         }
     }
 }
@@ -127,7 +153,8 @@ impl Deref for TransitionType {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            TransitionType::Entry => &1,
+            TransitionType::Entry => &TRANSITION_TYPE_STATE_MODIFICATION,
+            TransitionType::Burn => &TRANSITION_TYPE_RIGHTS_TERMINATION,
         }
     }
 }

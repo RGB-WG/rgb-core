@@ -50,9 +50,39 @@ mod verify {
 }
 pub use verify::SchemaVerify;
 
-/// Constants used by embedded validation procedures representing standard
-/// metadata fields, state and transition types analyzed by them
+/// Constants which are common to different schemata and can be recognized
+/// by the software even if the specific schema is unknown, since this type ids
+/// are reserved to a specific semantic meaning
+///
+/// These constants are also used by embedded validation procedures representing
+/// standard metadata fields, state and transition types analyzed by them
+// TODO: (LNPBPs) Make this part of the RGB generic schema LNPBP standard
 pub mod constants {
+    /// Ticker of the asset
+    pub const FIELD_TYPE_TICKER: usize = 0x00;
+
+    /// Contract or asset name
+    pub const FIELD_TYPE_NAME: usize = 0x01;
+
+    /// Ricardian contract text
+    pub const FIELD_TYPE_CONTRACT_TEXT: usize = 0x02;
+
+    /// Decimal precision for some sort of amount values used in a contract
+    pub const FIELD_TYPE_PRECISION: usize = 0x03;
+
+    /// Timestamp used in genesis to indicate moment of contract creation
+    pub const FIELD_TYPE_TIMESTAMP: usize = 0x04;
+
+    /// Generic comment about the contract or a state transitions
+    pub const FIELD_TYPE_COMMENTARY: usize = 0x05;
+
+    /// Data attached to a state transition in binary format
+    pub const FIELD_TYPE_DATA: usize = 0x10;
+
+    /// Format of the attached data, schema-specific
+    // TODO: Use LNPBP-extended MIME types
+    pub const FIELD_TYPE_DATA_FORMAT: usize = 0x11;
+
     /// [`FieldType`] that is used by the embedded validation procedure
     /// [`StandardProcedure::ProofOfReserve`]
     pub const FIELD_TYPE_LOCK_DESCRIPTOR: usize = 0xC0;
@@ -81,30 +111,70 @@ pub mod constants {
     /// [`StandardProcedure::InflationControlBySum`]
     pub const FIELD_TYPE_ISSUED_SUPPLY: usize = 0xA0;
 
-    /// [`TransitionType`] that is used by the embedded validation procedures
-    /// [`StandardProcedure::NonfungibleInflation`]
-    pub const STATE_TYPE_NONFUNGIBLE_INFLATION: usize = 0xA0;
+    // --------
 
-    /// [`OwnedRightType`] that is used by the embedded validation procedures
-    /// [`StandardProcedure::NonfungibleInflation`] and
-    /// [`StandardProcedure::IdentityTransfer`]
-    pub const STATE_TYPE_NONFUNGIBLE_OWNERSHIP: usize = 0xA1;
-
-    /// [`OwnedRightType`] that is used by the embedded validation procedures
-    /// [`StandardProcedure::NonfungibleInflation`] and
-    /// [`StandardProcedure::IdentityTransfer`]
-    pub const STATE_TYPE_NONFUNGIBLE_ENGRAVED_OWNERSHIP: usize = 0xA2;
+    /// Renomination of the contract parameters
+    pub const STATE_TYPE_RENOMINATION_RIGHT: usize = 0x01;
 
     /// [`OwnedRightType`] that is used by the embedded validation procedure
     /// [`StandardProcedure::InflationControlBySum`]
-    pub const STATE_TYPE_FUNGIBLE_INFLATION: usize = 0xA0;
+    pub const STATE_TYPE_INFLATION_RIGHT: usize = 0xA0;
 
     /// [`OwnedRightType`] that is used by the embedded validation procedures
     /// [`StandardProcedure::NoInflationBySum`] and
     /// [`StandardProcedure::InflationControlBySum`]
-    pub const STATE_TYPE_FUNGIBLE_ASSETS: usize = 0xA1;
+    pub const STATE_TYPE_OWNED_AMOUNT: usize = 0xA1;
+
+    /// [`OwnedRightType`] that is used by the embedded validation procedures
+    /// [`StandardProcedure::NonfungibleInflation`] and
+    /// [`StandardProcedure::IdentityTransfer`]
+    pub const STATE_TYPE_OWNED_DATA: usize = 0xA2;
+
+    /// [`OwnedRightType`] that is used by the embedded validation procedures
+    /// [`StandardProcedure::NonfungibleInflation`] and
+    /// [`StandardProcedure::IdentityTransfer`]
+    pub const STATE_TYPE_OWNERSHIP_RIGHT: usize = 0xA3;
+
+    /// Right to define epochs of asset replacement
+    pub const STATE_TYPE_ISSUE_EPOCH_RIGHT: usize = 0xAA;
+
+    /// Right to replace some of the state issued under the contract
+    pub const STATE_TYPE_ISSUE_REPLACEMENT_RIGHT: usize = 0xAB;
+
+    // --------
+
+    /// Transitions transferring ownership over primary contract state
+    pub const TRANSITION_TYPE_OWNERSHIP_TRANSFER: usize = 0x00;
+
+    /// Transitions modifying primary contract state, possibly combining with
+    /// ownership transfer
+    pub const TRANSITION_TYPE_STATE_MODIFICATION: usize = 0x01;
+
+    /// Transition performing renomination of contract metadata
+    pub const TRANSITION_TYPE_RENOMINATION: usize = 0x10;
 
     /// [`TransitionType`] that is used by the embedded validation procedures
     /// [`StandardProcedure::NoInflationBySum`]
-    pub const TRANSITION_TYPE_FUNGIBLE_ISSUE: usize = 0xA0;
+    pub const TRANSITION_TYPE_ISSUE: usize = 0xA0;
+
+    /// Transition that defines certain grouping of other issue-related
+    /// operations
+    pub const TRANSITION_TYPE_ISSUE_EPOCH: usize = 0xA1;
+
+    /// Transition burning some of the issued contract state.
+    ///
+    /// NB: It is not the same as [`TRANSITION_TYPE_RIGHTS_TERMINATION`], which
+    /// terminates ability to utilize some rights (but not the state)
+    pub const TRANSITION_TYPE_ISSUE_BURN: usize = 0xA2;
+
+    /// Transition replacing some of the previously issued state with the new
+    /// one
+    pub const TRANSITION_TYPE_ISSUE_REPLACE: usize = 0xA3;
+
+    /// Transition performing split of rights assigned to the same UTXO by
+    /// a mistake
+    pub const TRANSITION_TYPE_RIGHTS_SPLIT: usize = 0xF0;
+
+    /// Transition making certain rights void without executing the right itself
+    pub const TRANSITION_TYPE_RIGHTS_TERMINATION: usize = 0xFF;
 }

@@ -33,14 +33,14 @@ pub enum SchemaError {
 #[repr(u16)]
 pub enum FieldType {
     Name,
-    Description,
+    RicardianContract,
     Data,
     DataFormat,
     Timestamp,
     LockDescriptor,
     LockUtxo,
     BurnUtxo,
-    Comment,
+    Commentary,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
@@ -75,7 +75,8 @@ pub fn schema() -> Schema {
         genesis: GenesisSchema {
             metadata: type_map! {
                 FieldType::Name => Once,
-                FieldType::Description => NoneOrOnce,
+                FieldType::RicardianContract => NoneOrOnce,
+                FieldType::Commentary => NoneOrOnce,
                 // Data common for all tokens
                 FieldType::Data => NoneOrOnce,
                 // Data format
@@ -171,7 +172,7 @@ pub fn schema() -> Schema {
             TransitionType::Renomination => TransitionSchema {
                 metadata: type_map! {
                     FieldType::Name => NoneOrOnce,
-                    FieldType::Description => NoneOrOnce,
+                    FieldType::RicardianContract => NoneOrOnce,
                     FieldType::Data => NoneOrOnce,
                     FieldType::DataFormat => Once
                 },
@@ -217,7 +218,7 @@ pub fn schema() -> Schema {
                 metadata: type_map! {
                     // Some comment explaining the reasoning behind the burn
                     // operation
-                    FieldType::Comment => NoneOrOnce,
+                    FieldType::Commentary => NoneOrOnce,
                     // Contained data which may contain "burn performance"
                     FieldType::Data => NoneOrOnce,
                     FieldType::DataFormat => NoneOrOnce
@@ -235,7 +236,8 @@ pub fn schema() -> Schema {
         },
         field_types: type_map! {
             FieldType::Name => DataFormat::String(256),
-            FieldType::Description => DataFormat::String(core::u16::MAX),
+            // TODO: Consider using data container
+            FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             // Data common for all NFTs inside specific state transition or
             // genesis.
             // TODO: Add DataContainer for common data kept inside external
@@ -255,7 +257,7 @@ pub fn schema() -> Schema {
             // Descriptor in binary strict encoded format
             FieldType::LockDescriptor => DataFormat::Bytes(core::u16::MAX),
             FieldType::BurnUtxo => DataFormat::TxOutPoint,
-            FieldType::Comment => DataFormat::String(core::u16::MAX)
+            FieldType::Commentary => DataFormat::String(core::u16::MAX)
         },
         owned_right_types: type_map! {
             OwnedRightsType::Inflation => StateSchema {
@@ -292,12 +294,12 @@ impl Deref for FieldType {
     fn deref(&self) -> &Self::Target {
         match self {
             // Nomination fields:
-            FieldType::Name => &1,
-            FieldType::Description => &2,
-            FieldType::Timestamp => &4,
-            FieldType::Data => &0x10,
-            FieldType::DataFormat => &0x11,
-            FieldType::Comment => &0x12,
+            FieldType::Name => &FIELD_TYPE_NAME,
+            FieldType::RicardianContract => &FIELD_TYPE_CONTRACT_TEXT,
+            FieldType::Timestamp => &FIELD_TYPE_TIMESTAMP,
+            FieldType::Data => &FIELD_TYPE_DATA,
+            FieldType::DataFormat => &FIELD_TYPE_DATA_FORMAT,
+            FieldType::Commentary => &FIELD_TYPE_COMMENTARY,
             // Proof-of-burn fields:
             FieldType::BurnUtxo => &FIELD_TYPE_BURN_UTXO,
             // Prood-of-reserves fields:
@@ -313,13 +315,11 @@ impl Deref for OwnedRightsType {
     fn deref(&self) -> &Self::Target {
         match self {
             // Nomination rights:
-            OwnedRightsType::Renomination => &1,
+            OwnedRightsType::Renomination => &STATE_TYPE_RENOMINATION_RIGHT,
             // Inflation-control-related rights:
-            OwnedRightsType::Inflation => &STATE_TYPE_NONFUNGIBLE_INFLATION,
-            OwnedRightsType::Ownership => &STATE_TYPE_NONFUNGIBLE_OWNERSHIP,
-            OwnedRightsType::EngravedOwnership => {
-                &STATE_TYPE_NONFUNGIBLE_OWNERSHIP
-            }
+            OwnedRightsType::Inflation => &STATE_TYPE_INFLATION_RIGHT,
+            OwnedRightsType::Ownership => &STATE_TYPE_OWNERSHIP_RIGHT,
+            OwnedRightsType::EngravedOwnership => &STATE_TYPE_OWNERSHIP_RIGHT,
         }
     }
 }
@@ -330,14 +330,14 @@ impl Deref for TransitionType {
     fn deref(&self) -> &Self::Target {
         match self {
             // Asset transfers:
-            TransitionType::Transfer => &0x00,
-            TransitionType::Engraving => &0x01,
+            TransitionType::Transfer => &TRANSITION_TYPE_OWNERSHIP_TRANSFER,
+            TransitionType::Engraving => &TRANSITION_TYPE_STATE_MODIFICATION,
             // Nomination transitions:
-            TransitionType::Renomination => &0x10,
+            TransitionType::Renomination => &TRANSITION_TYPE_RENOMINATION,
             // Inflation-related transitions:
-            TransitionType::Issue => &TRANSITION_TYPE_FUNGIBLE_ISSUE,
-            TransitionType::RightsSplit => &0xF0,
-            TransitionType::Burn => &0xF1,
+            TransitionType::Issue => &TRANSITION_TYPE_ISSUE,
+            TransitionType::RightsSplit => &TRANSITION_TYPE_RIGHTS_SPLIT,
+            TransitionType::Burn => &TRANSITION_TYPE_RIGHTS_TERMINATION,
         }
     }
 }

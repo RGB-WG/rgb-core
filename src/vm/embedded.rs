@@ -61,7 +61,7 @@ impl Embedded {
                     None => {
                         if self.transition_type == None
                             || self.transition_type
-                                == Some(TRANSITION_TYPE_FUNGIBLE_ISSUE)
+                                == Some(TRANSITION_TYPE_ISSUE)
                         {
                             // We are at genesis or issue transition, must check
                             // issue metadata

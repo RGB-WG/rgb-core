@@ -51,7 +51,7 @@ pub enum Error {
 pub enum FieldType {
     Ticker,
     Name,
-    ContractText,
+    RicardianContract,
     Precision,
     IssuedSupply,
     BurnedSupply,
@@ -144,7 +144,7 @@ pub fn schema() -> Schema {
             metadata: type_map! {
                 FieldType::Ticker => Once,
                 FieldType::Name => Once,
-                FieldType::ContractText => NoneOrOnce,
+                FieldType::RicardianContract => NoneOrOnce,
                 FieldType::Precision => Once,
                 FieldType::Timestamp => Once,
                 FieldType::IssuedSupply => Once
@@ -250,7 +250,7 @@ pub fn schema() -> Schema {
                 metadata: type_map! {
                     FieldType::Ticker => NoneOrOnce,
                     FieldType::Name => NoneOrOnce,
-                    FieldType::ContractText => NoneOrOnce,
+                    FieldType::RicardianContract => NoneOrOnce,
                     FieldType::Precision => NoneOrOnce
                 },
                 closes: type_map! {
@@ -305,7 +305,7 @@ pub fn schema() -> Schema {
             // the full contract text, where hash must be represented by a
             // hexadecimal string, optionally followed by `\n` and text URL
             // TODO: Consider using data container instead of the above ^^^
-            FieldType::ContractText => DataFormat::String(core::u16::MAX),
+            FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             FieldType::Precision => DataFormat::Unsigned(Bits::Bit8, 0, 18u128),
             // We need this b/c allocated amounts are hidden behind Pedersen
             // commitments
@@ -372,7 +372,7 @@ pub fn subschema() -> Schema {
             metadata: type_map! {
                 FieldType::Ticker => Once,
                 FieldType::Name => Once,
-                FieldType::ContractText => NoneOrOnce,
+                FieldType::RicardianContract => NoneOrOnce,
                 FieldType::Precision => Once,
                 FieldType::Timestamp => Once,
                 FieldType::IssuedSupply => Once
@@ -454,7 +454,7 @@ pub fn subschema() -> Schema {
                 metadata: type_map! {
                     FieldType::Ticker => NoneOrOnce,
                     FieldType::Name => NoneOrOnce,
-                    FieldType::ContractText => NoneOrOnce,
+                    FieldType::RicardianContract => NoneOrOnce,
                     FieldType::Precision => NoneOrOnce
                 },
                 closes: type_map! {
@@ -507,7 +507,7 @@ pub fn subschema() -> Schema {
             // the full contract text, where hash must be represented by a
             // hexadecimal string, optionally followed by `\n` and text URL
             // TODO: Consider using data container instead of the above ^^^
-            FieldType::ContractText => DataFormat::String(core::u16::MAX),
+            FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             FieldType::Precision => DataFormat::Unsigned(Bits::Bit8, 0, 18u128),
             // We need this b/c allocated amounts are hidden behind Pedersen
             // commitments
@@ -562,11 +562,11 @@ impl Deref for FieldType {
     fn deref(&self) -> &Self::Target {
         match self {
             // Nomination fields:
-            FieldType::Ticker => &0,
-            FieldType::Name => &1,
-            FieldType::ContractText => &2,
-            FieldType::Precision => &3,
-            FieldType::Timestamp => &4,
+            FieldType::Ticker => &FIELD_TYPE_TICKER,
+            FieldType::Name => &FIELD_TYPE_NAME,
+            FieldType::RicardianContract => &FIELD_TYPE_CONTRACT_TEXT,
+            FieldType::Precision => &FIELD_TYPE_PRECISION,
+            FieldType::Timestamp => &FIELD_TYPE_TIMESTAMP,
             // Inflation fields:
             FieldType::IssuedSupply => &FIELD_TYPE_ISSUED_SUPPLY,
             // Proof-of-burn fields:
@@ -584,14 +584,12 @@ impl Deref for OwnedRightsType {
     fn deref(&self) -> &Self::Target {
         match self {
             // Nomination rights:
-            OwnedRightsType::Renomination => &1,
+            OwnedRightsType::Renomination => &STATE_TYPE_RENOMINATION_RIGHT,
             // Inflation-control-related rights:
-            OwnedRightsType::Inflation => &STATE_TYPE_FUNGIBLE_INFLATION,
-            OwnedRightsType::Assets => &STATE_TYPE_FUNGIBLE_ASSETS,
-            OwnedRightsType::Epoch => &(STATE_TYPE_FUNGIBLE_INFLATION + 0xA),
-            OwnedRightsType::BurnReplace => {
-                &(STATE_TYPE_FUNGIBLE_INFLATION + 0xB)
-            }
+            OwnedRightsType::Inflation => &STATE_TYPE_INFLATION_RIGHT,
+            OwnedRightsType::Assets => &STATE_TYPE_OWNED_AMOUNT,
+            OwnedRightsType::Epoch => &STATE_TYPE_ISSUE_EPOCH_RIGHT,
+            OwnedRightsType::BurnReplace => &STATE_TYPE_ISSUE_REPLACEMENT_RIGHT,
         }
     }
 }
@@ -602,17 +600,15 @@ impl Deref for TransitionType {
     fn deref(&self) -> &Self::Target {
         match self {
             // Asset transfers:
-            TransitionType::Transfer => &0x00,
+            TransitionType::Transfer => &TRANSITION_TYPE_OWNERSHIP_TRANSFER,
             // Nomination transitions:
-            TransitionType::Renomination => &0x10,
+            TransitionType::Renomination => &TRANSITION_TYPE_RENOMINATION,
             // Inflation-related transitions:
-            TransitionType::Issue => &TRANSITION_TYPE_FUNGIBLE_ISSUE,
-            TransitionType::Epoch => &(TRANSITION_TYPE_FUNGIBLE_ISSUE + 1),
-            TransitionType::Burn => &(TRANSITION_TYPE_FUNGIBLE_ISSUE + 2),
-            TransitionType::BurnAndReplace => {
-                &(TRANSITION_TYPE_FUNGIBLE_ISSUE + 3)
-            }
-            TransitionType::RightsSplit => &0xF0,
+            TransitionType::Issue => &TRANSITION_TYPE_ISSUE,
+            TransitionType::Epoch => &TRANSITION_TYPE_ISSUE_EPOCH,
+            TransitionType::Burn => &TRANSITION_TYPE_ISSUE_BURN,
+            TransitionType::BurnAndReplace => &TRANSITION_TYPE_ISSUE_REPLACE,
+            TransitionType::RightsSplit => &TRANSITION_TYPE_RIGHTS_SPLIT,
         }
     }
 }

@@ -362,7 +362,7 @@ impl TryFrom<Genesis> for Asset {
                 .ok_or(schema::Error::NotAllFieldsPresent)?
                 .clone(),
             ricardian_contract: genesis_meta
-                .string(*FieldType::ContractText)
+                .string(*FieldType::RicardianContract)
                 .first()
                 .cloned(),
             supply: Supply::with(supply, None, issue_limit),
