@@ -25,7 +25,7 @@ use super::{Allocation, Asset};
 
 use crate::asset;
 
-/// Erors happening during RGB-20 asset transfer operation
+/// Errors happening during RGB-20 asset state transitions
 #[derive(
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
 )]

@@ -1,6 +1,6 @@
 [package]
 name = "rgb22"
-version = "0.4.0-beta"
+version = "0.5.0-alpha"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "RGB-22 Library: digital identity for bitcoin & lightning"
@@ -21,7 +21,7 @@ crate-type = ["rlib", "staticlib"]
 amplify = "3"
 amplify_derive = "2"
 lnpbp = "0.4"
-rgb-core = "0.4"
+rgb-core = { version = "0.5.0-alpha", path = ".." }
 bitcoin = "0.26"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }

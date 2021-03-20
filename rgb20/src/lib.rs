@@ -37,14 +37,14 @@ extern crate serde_crate as serde;
 #[cfg(feature = "serde")]
 extern crate serde_with;
 
+pub mod allocation;
 mod asset;
-pub mod outcoins;
 mod processor;
 pub mod schema;
 
+pub use allocation::{AllocatedValue, OutpointValue, UtxobValue};
 pub use asset::{
-    AccountingAmount, AccountingValue, Allocation, Asset, Error, Issue, Supply,
+    Allocation, Asset, Error, FractionalAmount, Issue, PreciseAmount, Supply,
     SupplyMeasure,
 };
-pub use outcoins::{ConsealCoins, OutpointCoins, SealCoins};
 pub use processor::TransitionError;

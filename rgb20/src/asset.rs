@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime, Utc};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
@@ -27,7 +27,7 @@ use rgb::seal::WitnessVoutError;
 
 use super::schema::{self, FieldType, OwnedRightsType};
 
-pub type AccountingValue = f64;
+pub type FractionalAmount = f64;
 
 /// Accounting amount keeps track of the asset precision
 #[derive(
@@ -49,9 +49,9 @@ pub type AccountingValue = f64;
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 #[display("{0}~{1}")]
-pub struct AccountingAmount(AtomicValue, u8);
+pub struct PreciseAmount(AtomicValue, u8);
 
-impl AccountingAmount {
+impl PreciseAmount {
     const DIVIDER: [u64; 20] = [
         1,
         10,
@@ -77,68 +77,46 @@ impl AccountingAmount {
 
     #[inline]
     pub fn transmutate_from(
+        fractional_amount: FractionalAmount,
         decimal_precision: u8,
-        accounting_value: AccountingValue,
     ) -> AtomicValue {
-        AccountingAmount::from_fractioned_accounting_value(
+        PreciseAmount::from_fractional_amount(
+            fractional_amount,
             decimal_precision,
-            accounting_value,
         )
         .atomic_value()
     }
 
     #[inline]
     pub fn transmutate_into(
-        decimal_precision: u8,
         atomic_value: AtomicValue,
-    ) -> AccountingValue {
-        AccountingAmount::from_fractioned_atomic_value(
-            decimal_precision,
-            atomic_value,
-        )
-        .accounting_value()
+        decimal_precision: u8,
+    ) -> FractionalAmount {
+        PreciseAmount::from_atomic_value(atomic_value, decimal_precision)
+            .fractional_amount()
     }
 
     #[inline]
-    pub fn from_asset_accounting_value(
-        asset: &Asset,
-        accounting_value: AccountingValue,
-    ) -> Self {
-        Self::from_fractioned_accounting_value(
-            asset.decimal_precision,
-            accounting_value,
-        )
-    }
-
-    #[inline]
-    pub fn from_fractioned_atomic_value(
-        decimal_precision: u8,
+    pub fn from_atomic_value(
         atomic_value: AtomicValue,
+        decimal_precision: u8,
     ) -> Self {
         Self(atomic_value, decimal_precision)
     }
 
     #[inline]
-    pub fn from_fractioned_accounting_value(
+    pub fn from_fractional_amount(
+        fractional_amount: FractionalAmount,
         decimal_precision: u8,
-        accounting_value: AccountingValue,
     ) -> Self {
-        let full = (accounting_value.trunc() as u64)
+        let full = (fractional_amount.trunc() as u64)
             * Self::DIVIDER[decimal_precision as usize];
-        let fract = accounting_value.fract() as u64;
+        let fract = fractional_amount.fract() as u64;
         Self(full + fract, decimal_precision)
     }
 
     #[inline]
-    pub fn from_asset_atomic_value(
-        asset: &Asset,
-        atomic_value: AtomicValue,
-    ) -> Self {
-        Self(atomic_value, asset.decimal_precision)
-    }
-
-    #[inline]
-    pub fn accounting_value(&self) -> AccountingValue {
+    pub fn fractional_amount(&self) -> FractionalAmount {
         self.0 as f64 / Self::DIVIDER[self.1 as usize] as f64
     }
 
@@ -153,21 +131,21 @@ impl AccountingAmount {
     }
 }
 
-impl Add for AccountingAmount {
-    type Output = AccountingAmount;
+impl Add for PreciseAmount {
+    type Output = PreciseAmount;
     fn add(self, rhs: Self) -> Self::Output {
         if self.decimal_precision() != rhs.decimal_precision() {
             panic!("Addition of amounts with different fractional bits")
         } else {
-            AccountingAmount::from_fractioned_atomic_value(
-                self.decimal_precision(),
+            PreciseAmount::from_atomic_value(
                 self.atomic_value() + rhs.atomic_value(),
+                self.decimal_precision(),
             )
         }
     }
 }
 
-impl AddAssign for AccountingAmount {
+impl AddAssign for PreciseAmount {
     fn add_assign(&mut self, rhs: Self) {
         if self.decimal_precision() != rhs.decimal_precision() {
             panic!("Addition of amounts with different fractional bits")
@@ -208,7 +186,7 @@ pub struct Asset {
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     chain: Chain,
     decimal_precision: u8,
-    date: NaiveDateTime,
+    date: DateTime<Utc>,
     known_issues: Vec<Issue>,
     /// Specifies outpoints which when spent may indicate inflation happening
     /// up to specific amount.
@@ -232,7 +210,7 @@ impl Asset {
         supply: Supply,
         chain: Chain,
         decimal_precision: u8,
-        date: NaiveDateTime,
+        date: DateTime<Utc>,
         known_issues: Vec<Issue>,
         known_inflation: BTreeMap<bitcoin::OutPoint, AtomicValue>,
         known_allocations: Vec<Allocation>,
@@ -253,18 +231,21 @@ impl Asset {
         }
     }
 
-    pub fn accounting_supply(&self, measure: SupplyMeasure) -> AccountingValue {
+    pub fn accounting_supply(
+        &self,
+        measure: SupplyMeasure,
+    ) -> FractionalAmount {
         let value = match measure {
             SupplyMeasure::KnownCirculating => self.supply.known_circulating,
             SupplyMeasure::TotalCirculating => {
                 match self.supply.total_circulating() {
-                    None => return AccountingValue::NAN,
+                    None => return FractionalAmount::NAN,
                     Some(supply) => supply,
                 }
             }
             SupplyMeasure::IssueLimit => self.supply.issue_limit,
         };
-        AccountingAmount::transmutate_into(self.decimal_precision, value)
+        PreciseAmount::transmutate_into(value, self.decimal_precision)
     }
 
     #[inline]
@@ -283,15 +264,12 @@ impl Asset {
             .sum()
     }
 
-    pub fn known_accounting_value(&self) -> AccountingValue {
+    pub fn known_accounting_value(&self) -> FractionalAmount {
         self.known_allocations
             .iter()
             .map(Allocation::value)
             .map(|atomic| {
-                AccountingAmount::transmutate_into(
-                    self.decimal_precision,
-                    atomic,
-                )
+                PreciseAmount::transmutate_into(atomic, self.decimal_precision)
             })
             .sum()
     }
@@ -299,7 +277,7 @@ impl Asset {
     pub fn known_filtered_accounting_value<F>(
         &self,
         filter: F,
-    ) -> AccountingValue
+    ) -> FractionalAmount
     where
         F: Fn(&Allocation) -> bool,
     {
@@ -308,10 +286,7 @@ impl Asset {
             .filter(|allocation| filter(*allocation))
             .map(Allocation::value)
             .map(|atomic| {
-                AccountingAmount::transmutate_into(
-                    self.decimal_precision,
-                    atomic,
-                )
+                PreciseAmount::transmutate_into(atomic, self.decimal_precision)
             })
             .sum()
     }
@@ -663,12 +638,15 @@ impl TryFrom<Genesis> for Asset {
                 issue_limit,
             },
             decimal_precision,
-            date: NaiveDateTime::from_timestamp(
-                *genesis_meta
-                    .i64(*FieldType::Timestamp)
-                    .first()
-                    .ok_or(schema::Error::NotAllFieldsPresent)?,
-                0,
+            date: DateTime::from_utc(
+                NaiveDateTime::from_timestamp(
+                    *genesis_meta
+                        .i64(*FieldType::Timestamp)
+                        .first()
+                        .ok_or(schema::Error::NotAllFieldsPresent)?,
+                    0,
+                ),
+                Utc,
             ),
             known_inflation,
             known_issues: vec![issue],

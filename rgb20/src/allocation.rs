@@ -11,7 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use regex::Regex;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
@@ -22,7 +21,7 @@ use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::hex::FromHex;
 use bitcoin::{OutPoint, Txid};
 use lnpbp::seals::{OutpointHash, OutpointReveal};
-use rgb::{AtomicValue, SealDefinition};
+use rgb::{AtomicValue, SealDefinition, ToSealDefinition};
 
 #[derive(Clone, Copy, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -52,8 +51,8 @@ pub struct ParseError;
     serde(crate = "serde_crate")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-pub struct SealCoins {
-    pub coins: AtomicValue,
+pub struct AllocatedValue {
+    pub value: AtomicValue,
     pub vout: u32,
     pub txid: Option<Txid>,
 }
@@ -76,10 +75,10 @@ pub struct SealCoins {
     derive(Serialize, Deserialize,),
     serde(crate = "serde_crate")
 )]
-#[display("{coins}@{outpoint}")]
+#[display("{value}@{outpoint}")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-pub struct OutpointCoins {
-    pub coins: AtomicValue,
+pub struct OutpointValue {
+    pub value: AtomicValue,
     pub outpoint: OutPoint,
 }
 
@@ -101,18 +100,19 @@ pub struct OutpointCoins {
     derive(Serialize, Deserialize,),
     serde(crate = "serde_crate")
 )]
-#[display("{coins}@{seal_confidential}")]
+#[display("{value}@{seal_confidential}")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-pub struct ConsealCoins {
-    pub coins: AtomicValue,
+pub struct UtxobValue {
+    pub value: AtomicValue,
     pub seal_confidential: OutpointHash,
 }
 
-impl SealCoins {
-    pub fn seal_definition(&self) -> SealDefinition {
+impl ToSealDefinition for AllocatedValue {
+    fn to_seal_definition(&self) -> SealDefinition {
         use bitcoin::secp256k1::rand::{self, RngCore};
         let mut rng = rand::thread_rng();
-        let entropy = rng.next_u64(); // Not an amount blinding factor but outpoint blinding
+        // Not an amount blinding factor but outpoint blinding
+        let entropy = rng.next_u64();
         match self.txid {
             Some(txid) => SealDefinition::TxOutpoint(OutpointReveal {
                 blinding: entropy,
@@ -127,11 +127,12 @@ impl SealCoins {
     }
 }
 
-impl OutpointCoins {
-    pub fn seal_definition(&self) -> SealDefinition {
+impl ToSealDefinition for OutpointValue {
+    fn to_seal_definition(&self) -> SealDefinition {
         use bitcoin::secp256k1::rand::{self, RngCore};
         let mut rng = rand::thread_rng();
-        let entropy = rng.next_u64(); // Not an amount blinding factor but outpoint blinding
+        // Not an amount blinding factor but outpoint blinding
+        let entropy = rng.next_u64();
         SealDefinition::TxOutpoint(OutpointReveal {
             blinding: entropy,
             txid: self.outpoint.txid,
@@ -140,9 +141,9 @@ impl OutpointCoins {
     }
 }
 
-impl Display for SealCoins {
+impl Display for AllocatedValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}@", self.coins)?;
+        write!(f, "{}@", self.value)?;
         if let Some(txid) = self.txid {
             write!(f, "{}:", txid)?;
         }
@@ -150,76 +151,50 @@ impl Display for SealCoins {
     }
 }
 
-impl FromStr for SealCoins {
+impl FromStr for AllocatedValue {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // TODO: Get rig of regex dependency
-        let re = Regex::new(
-            r"(?x)
-                ^(?P<coins>[\d_'`]+) # float amount
-                @
-                ((?P<txid>[a-f\d]{64}) # Txid
-                :)
-                (?P<vout>\d+)$ # Vout
-            ",
-        )
-        .expect("Regex parse failure");
-        if let Some(m) = re.captures(&s.to_ascii_lowercase()) {
-            match (m.name("coins"), m.name("txid"), m.name("vout")) {
-                (Some(amount), Some(txid), Some(vout)) => Ok(Self {
-                    coins: amount.as_str().parse()?,
-                    vout: vout.as_str().parse()?,
-                    txid: Some(Txid::from_hex(txid.as_str())?),
-                }),
-                (Some(amount), None, Some(vout)) => Ok(Self {
-                    coins: amount.as_str().parse()?,
-                    vout: vout.as_str().parse()?,
-                    txid: None,
-                }),
-                _ => Err(ParseError),
-            }
-        } else {
-            Err(ParseError)
-        }
-    }
-}
-
-impl FromStr for OutpointCoins {
-    type Err = ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.split('@');
-        match (iter.next(), iter.next(), iter.next()) {
-            (Some(amount), Some(outpoint), None) => Ok(Self {
-                coins: amount.parse()?,
-                outpoint: outpoint.parse()?,
+        let mut split = s.split(&['@', ':'][..]);
+        match (split.next(), split.next(), split.next(), split.next()) {
+            (Some(value), Some(txid), Some(vout), None) => Ok(Self {
+                value: value.parse()?,
+                vout: vout.parse()?,
+                txid: Some(Txid::from_hex(txid)?),
             }),
-            (Some(_), Some(_), _) => Err(ParseError),
+            (Some(value), Some(vout), None, _) => Ok(Self {
+                value: value.parse()?,
+                vout: vout.parse()?,
+                txid: None,
+            }),
             _ => Err(ParseError),
         }
     }
 }
 
-impl FromStr for ConsealCoins {
+impl FromStr for OutpointValue {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = Regex::new(
-            r"(?x)
-                ^(?P<coins>[\d_'`]+) # float amount
-                @
-                ((?P<seal>[a-f\d]{64}))$ # Confidential seal: outpoint hash
-            ",
-        )
-        .expect("Regex parse failure");
-        if let Some(m) = re.captures(&s.to_ascii_lowercase()) {
-            match (m.name("coins"), m.name("seal")) {
-                (Some(amount), Some(seal)) => Ok(Self {
-                    coins: amount.as_str().parse()?,
-                    seal_confidential: OutpointHash::from_str(seal.as_str())?,
-                }),
-                _ => Err(ParseError),
-            }
-        } else {
-            Err(ParseError)
+        let mut split = s.split(&['@', ':'][..]);
+        match (split.next(), split.next(), split.next()) {
+            (Some(value), Some(outpoint), None) => Ok(Self {
+                value: value.parse()?,
+                outpoint: outpoint.parse()?,
+            }),
+            _ => Err(ParseError),
+        }
+    }
+}
+
+impl FromStr for UtxobValue {
+    type Err = ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split(&['@', ':'][..]);
+        match (split.next(), split.next(), split.next()) {
+            (Some(value), Some(seal), None) => Ok(Self {
+                value: value.parse()?,
+                seal_confidential: seal.parse()?,
+            }),
+            _ => Err(ParseError),
         }
     }
 }
