@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
 use amplify::{AsAny, Wrapper};
@@ -30,13 +30,17 @@ use super::{
     ParentOwnedRights, ParentOwnedRightsInner, ParentPublicRights,
     ParentPublicRightsInner, PublicRights, PublicRightsInner,
 };
+use crate::contract::assignments::NodeOutput;
 use crate::reveal::{self, IntoRevealed};
 use crate::schema::{
     ExtensionType, FieldType, NodeType, OwnedRightType, TransitionType,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
-use crate::{schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32};
+use crate::{
+    schema, seal, Metadata, PublicRightType, SchemaId, SimplicityScript,
+    ToBech32,
+};
 
 static MIDSTATE_NODE_ID: [u8; 32] = [
     0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc,
@@ -132,7 +136,12 @@ impl CommitEncodeWithStrategy for ContractId {
     type Strategy = commit_strategy::UsingStrict;
 }
 
-/// Trait which is implemented by all node types (see [`NodeType`])
+/// RGB contract node API, defined as trait
+///
+/// Implemented by all contract node types (see [`NodeType`]):
+/// - Genesis ([`Genesis`])
+/// - State transitions ([`Transitions`])
+/// - Public state extensions ([`Extensions`])
 pub trait Node: AsAny {
     /// Returns type of the node (see [`NodeType`]). Unfortunately, this can't
     /// be just a const, since it will break our ability to convert concrete
@@ -163,7 +172,12 @@ pub trait Node: AsAny {
     /// [`Option::None`] for genesis and trate transitions
     fn extension_type(&self) -> Option<ExtensionType>;
 
+    /// Returns reference to a full set of metadata (in form of [`Metadata`]
+    /// wrapper structure) for the contract node.
     fn metadata(&self) -> &Metadata;
+
+    /// Returns reference to information about the owned rights which this node
+    /// updates with state transition ("parent owned rights").
     fn parent_owned_rights(&self) -> &ParentOwnedRights;
     fn parent_public_rights(&self) -> &ParentPublicRights;
     fn owned_rights(&self) -> &OwnedRights;
@@ -174,7 +188,71 @@ pub trait Node: AsAny {
 
     #[inline]
     fn field_types(&self) -> Vec<FieldType> {
-        self.metadata().keys().cloned().collect()
+        self.metadata().keys().copied().collect()
+    }
+
+    #[inline]
+    fn parent_public_right_types(&self) -> Vec<PublicRightType> {
+        self.parent_public_rights()
+            .values()
+            .map(BTreeSet::iter)
+            .flatten()
+            .copied()
+            .collect()
+    }
+
+    #[inline]
+    fn parent_by_public_right_type(&self, t: PublicRightType) -> Vec<NodeId> {
+        self.parent_public_rights()
+            .iter()
+            .filter(|(_, t2)| t2.contains(&t))
+            .map(|(node_id, _)| *node_id)
+            .collect()
+    }
+
+    /// For genesis and public state extensions always returns an empty list.
+    /// While public state extension do have parent nodes, they do not contain
+    /// indexed rights.
+    #[inline]
+    fn parent_outputs(&self) -> Vec<NodeOutput> {
+        self.parent_owned_rights()
+            .iter()
+            .map(|(node_id, map)| {
+                let node_id = *node_id;
+                map.values()
+                    .flatten()
+                    .copied()
+                    .map(move |output_no| NodeOutput { node_id, output_no })
+            })
+            .flatten()
+            .collect()
+    }
+
+    #[inline]
+    fn parent_outputs_by_type(&self, t: OwnedRightType) -> Vec<NodeOutput> {
+        self.parent_owned_rights()
+            .iter()
+            .map(|(node_id, map)| {
+                let node_id = *node_id;
+                map.iter()
+                    .filter(|(t2, _)| t == **t2)
+                    .map(|(_, outputs)| outputs)
+                    .flatten()
+                    .copied()
+                    .map(move |output_no| NodeOutput { node_id, output_no })
+            })
+            .flatten()
+            .collect()
+    }
+
+    #[inline]
+    fn parent_owned_right_types(&self) -> Vec<OwnedRightType> {
+        self.parent_owned_rights()
+            .values()
+            .map(BTreeMap::keys)
+            .flatten()
+            .copied()
+            .collect()
     }
 
     #[inline]

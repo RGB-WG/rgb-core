@@ -31,6 +31,15 @@ use super::{
 };
 use crate::schema;
 
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display("{node_id}:{output_no}")]
+/// RGB contract node output pointer, defined by the node ID and output
+/// number.
+pub struct NodeOutput {
+    pub node_id: NodeId,
+    pub output_no: u16,
+}
+
 /// Holds definition of valencies for contract nodes, which is a set of
 /// allowed valencies types
 pub type PublicRights = BTreeSet<schema::PublicRightType>;

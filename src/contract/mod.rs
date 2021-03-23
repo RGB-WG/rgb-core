@@ -23,7 +23,7 @@ pub mod value;
 
 pub use assignments::{
     Assignments, ConfidentialState, DeclarativeStrategy, HashStrategy,
-    OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
+    NodeOutput, OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
     PedersenStrategy, PublicRights, RevealedState, StateTypes,
 };
 pub(self) use assignments::{

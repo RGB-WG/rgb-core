@@ -25,7 +25,7 @@ use lnpbp::strict_encoding;
 use super::data;
 use crate::schema;
 
-// TODO: Use of BTreeSet for metadata values breakes their arbitrary order
+// TODO: Use of BTreeSet for metadata values breaks their arbitrary order
 //       which may be used to correlate metadata with indexes of other
 //       metadata or state. Consider converting into `Vec` type like it was
 //       accomplished for the state data

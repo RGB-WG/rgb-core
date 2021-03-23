@@ -62,7 +62,7 @@ pub mod prelude {
         data, reveal, seal, value, Assignments, AtomicValue, ConcealSeals,
         ConcealState, ConfidentialState, ContractId, DeclarativeStrategy,
         Extension, Genesis, HashStrategy, IntoRevealed, Metadata, NoDataError,
-        Node, NodeId, OwnedRights, OwnedState, ParentOwnedRights,
+        Node, NodeId, NodeOutput, OwnedRights, OwnedState, ParentOwnedRights,
         ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
         SealDefinition, SealEndpoint, StateTypes, ToSealDefinition, Transition,
     };
