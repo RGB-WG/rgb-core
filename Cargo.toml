@@ -73,7 +73,6 @@ lazy_static = "~1.4.0"
 deflate = "~0.8.6"
 inflate = "~0.4.5"
 chrono = "~0.4.19"
-regex = "~1.4.3"
 # Temporary-needed dependencies:
 # ------------------------------
 # 1. We are of no control of what's happening in Grin and would like to prevent
