@@ -75,7 +75,7 @@ impl Asset {
         let mut owned_rights = BTreeMap::new();
         owned_rights.insert(
             *OwnedRightsType::Assets,
-            Assignments::zero_balanced(
+            AssignmentVec::zero_balanced(
                 vec![value::Revealed {
                     value: issued_supply,
                     blinding: secp256k1zkp::key::ONE_KEY.into(),
@@ -89,10 +89,10 @@ impl Asset {
         if !inflation.is_empty() {
             owned_rights.insert(
                 *OwnedRightsType::Inflation,
-                Assignments::CustomData(
+                AssignmentVec::CustomData(
                     inflation
                         .into_iter()
-                        .map(|(outpoint, value)| OwnedState::Revealed {
+                        .map(|(outpoint, value)| Assignment::Revealed {
                             seal_definition: SealDefinition::TxOutpoint(
                                 outpoint.into(),
                             ),
@@ -106,7 +106,7 @@ impl Asset {
         if let Some(outpoint) = renomination {
             owned_rights.insert(
                 *OwnedRightsType::Renomination,
-                Assignments::Declarative(vec![OwnedState::Revealed {
+                AssignmentVec::Declarative(vec![Assignment::Revealed {
                     seal_definition: SealDefinition::TxOutpoint(
                         outpoint.into(),
                     ),
@@ -118,7 +118,7 @@ impl Asset {
         if let Some(outpoint) = epoch {
             owned_rights.insert(
                 *OwnedRightsType::BurnReplace,
-                Assignments::Declarative(vec![OwnedState::Revealed {
+                AssignmentVec::Declarative(vec![Assignment::Revealed {
                     seal_definition: SealDefinition::TxOutpoint(
                         outpoint.into(),
                     ),
@@ -218,7 +218,7 @@ impl Asset {
             .collect();
         let assignments = type_map! {
             OwnedRightsType::Assets =>
-            Assignments::zero_balanced(input_amounts, allocations_ours, allocations_theirs)
+            AssignmentVec::zero_balanced(input_amounts, allocations_ours, allocations_theirs)
         };
 
         let mut parent = ParentOwnedRights::default();

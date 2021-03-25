@@ -205,7 +205,7 @@ impl Issue {
 
         let inflation_assignments = transition
             .owned_rights_by_type(*OwnedRightsType::Inflation)
-            .map(Assignments::as_revealed_owned_value)
+            .map(AssignmentVec::as_revealed_owned_value)
             .transpose()
             .map_err(|_| Error::InflationAssignmentConfidential(id))?
             .unwrap_or_default()
@@ -263,7 +263,7 @@ impl TryFrom<&Genesis> for Issue {
 
         let inflation_assignments = genesis
             .owned_rights_by_type(*OwnedRightsType::Inflation)
-            .map(Assignments::as_revealed_owned_value)
+            .map(AssignmentVec::as_revealed_owned_value)
             .transpose()
             .map_err(|_| Error::InflationAssignmentConfidential(id))?
             .unwrap_or_default()

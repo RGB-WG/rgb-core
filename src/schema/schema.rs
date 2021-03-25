@@ -218,8 +218,8 @@ mod _validation {
         SchemaVerify,
     };
     use crate::{
-        validation, AssignmentAction, Assignments, Metadata, Node, NodeId,
-        OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
+        validation, Assignment, AssignmentAction, AssignmentVec, Metadata,
+        Node, NodeId, OwnedRights, ParentOwnedRights, ParentPublicRights,
         PublicRights, StateTypes, VirtualMachine,
     };
 
@@ -525,7 +525,7 @@ mod _validation {
             for (owned_type_id, occ) in owned_rights_structure {
                 let len = owned_rights
                     .get(owned_type_id)
-                    .map(Assignments::len)
+                    .map(AssignmentVec::len)
                     .unwrap_or(0);
 
                 // Checking number of ancestor's assignment occurrences
@@ -589,7 +589,7 @@ mod _validation {
             for (owned_type_id, occ) in owned_rights_structure {
                 let len = owned_rights
                     .get(owned_type_id)
-                    .map(Assignments::len)
+                    .map(AssignmentVec::len)
                     .unwrap_or(0);
 
                 // Checking number of assignment occurrences
@@ -611,7 +611,7 @@ mod _validation {
 
                 match owned_rights.get(owned_type_id) {
                     None => {}
-                    Some(Assignments::Declarative(set)) => {
+                    Some(AssignmentVec::Declarative(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
@@ -620,7 +620,7 @@ mod _validation {
                             )
                         })
                     }
-                    Some(Assignments::DiscreteFiniteField(set)) => {
+                    Some(AssignmentVec::DiscreteFiniteField(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
@@ -629,7 +629,7 @@ mod _validation {
                             )
                         })
                     }
-                    Some(Assignments::CustomData(set)) => {
+                    Some(AssignmentVec::CustomData(set)) => {
                         set.into_iter().for_each(|data| {
                             status += assignment.validate(
                                 &node_id,
@@ -760,9 +760,9 @@ mod _validation {
             };
 
             fn filter<STATE>(
-                set: &Vec<OwnedState<STATE>>,
+                set: &Vec<Assignment<STATE>>,
                 indexes: &Vec<u16>,
-            ) -> Vec<OwnedState<STATE>>
+            ) -> Vec<Assignment<STATE>>
             where
                 STATE: StateTypes + Clone,
                 STATE::Confidential: PartialEq + Eq,
@@ -784,34 +784,34 @@ mod _validation {
 
             for (type_id, indexes) in details {
                 match parent_node.owned_rights_by_type(*type_id) {
-                    Some(Assignments::Declarative(set)) => {
+                    Some(AssignmentVec::Declarative(set)) => {
                         let set = filter(set, indexes);
                         owned_rights
                             .entry(*type_id)
-                            .or_insert(Assignments::Declarative(
+                            .or_insert(AssignmentVec::Declarative(
                                 Default::default(),
                             ))
-                            .declarative_state_mut()
+                            .declarative_assignment_vec_mut()
                             .map(|state| state.extend(set));
                     }
-                    Some(Assignments::DiscreteFiniteField(set)) => {
+                    Some(AssignmentVec::DiscreteFiniteField(set)) => {
                         let set = filter(set, indexes);
                         owned_rights
                             .entry(*type_id)
-                            .or_insert(Assignments::DiscreteFiniteField(
+                            .or_insert(AssignmentVec::DiscreteFiniteField(
                                 Default::default(),
                             ))
-                            .discrete_state_mut()
+                            .value_assignment_vec_mut()
                             .map(|state| state.extend(set));
                     }
-                    Some(Assignments::CustomData(set)) => {
+                    Some(AssignmentVec::CustomData(set)) => {
                         let set = filter(set, indexes);
                         owned_rights
                             .entry(*type_id)
-                            .or_insert(Assignments::CustomData(
+                            .or_insert(AssignmentVec::CustomData(
                                 Default::default(),
                             ))
-                            .custom_state_mut()
+                            .data_assignment_vec_mut()
                             .map(|state| state.extend(set));
                     }
                     None => {

@@ -22,9 +22,10 @@ pub mod seal;
 pub mod value;
 
 pub use assignments::{
-    Assignments, ConfidentialState, DeclarativeStrategy, HashStrategy,
-    NodeOutput, OwnedRights, OwnedState, ParentOwnedRights, ParentPublicRights,
-    PedersenStrategy, PublicRights, RevealedState, StateTypes,
+    Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy,
+    HashStrategy, NodeOutput, OwnedRights, ParentOwnedRights,
+    ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
+    StateTypes,
 };
 pub(self) use assignments::{
     OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,

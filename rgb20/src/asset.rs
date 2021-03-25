@@ -298,9 +298,9 @@ impl TryFrom<Genesis> for Asset {
         for assignment in
             genesis.owned_rights_by_type(*OwnedRightsType::Inflation)
         {
-            for state in assignment.to_custom_state() {
+            for state in assignment.to_data_assignment_vec() {
                 match state {
-                    OwnedState::Revealed {
+                    Assignment::Revealed {
                         seal_definition,
                         assigned_state,
                     } => {
@@ -311,7 +311,7 @@ impl TryFrom<Genesis> for Asset {
                                 .ok_or(schema::Error::NotAllFieldsPresent)?,
                         );
                     }
-                    OwnedState::ConfidentialSeal { assigned_state, .. } => {
+                    Assignment::ConfidentialSeal { assigned_state, .. } => {
                         if issue_limit < core::u64::MAX {
                             issue_limit += assigned_state
                                 .u64()
@@ -331,11 +331,11 @@ impl TryFrom<Genesis> for Asset {
         for assignment in genesis.owned_rights_by_type(*OwnedRightsType::Assets)
         {
             assignment
-                .to_discrete_state()
+                .to_value_assignment_vec()
                 .into_iter()
                 .enumerate()
                 .for_each(|(index, assign)| {
-                    if let OwnedState::Revealed {
+                    if let Assignment::Revealed {
                         seal_definition:
                             seal::Revealed::TxOutpoint(outpoint_reveal),
                         assigned_state,

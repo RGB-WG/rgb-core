@@ -21,8 +21,8 @@ use wallet::resolvers::TxResolver;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
-    schema, seal, Anchor, AnchorId, Assignments, Consignment, ContractId, Node,
-    NodeId, Schema, SchemaId,
+    schema, seal, Anchor, AnchorId, AssignmentVec, Consignment, ContractId,
+    Node, NodeId, Schema, SchemaId,
 };
 use crate::SealEndpoint;
 
@@ -654,7 +654,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         node_id: NodeId,
         ancestor_id: NodeId,
         assignment_type: schema::OwnedRightType,
-        variant: &'validator Assignments,
+        variant: &'validator AssignmentVec,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->

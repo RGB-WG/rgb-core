@@ -26,7 +26,7 @@ use lnpbp::lnpbp4::ProtocolId;
 use lnpbp::{Chain, TaggedHash};
 
 use super::{
-    Assignments, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner,
+    AssignmentVec, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner,
     ParentOwnedRights, ParentPublicRights, ParentPublicRightsInner,
     PublicRights, PublicRightsInner,
 };
@@ -275,7 +275,10 @@ pub trait Node: AsAny {
     }
 
     #[inline]
-    fn owned_rights_by_type(&self, t: OwnedRightType) -> Option<&Assignments> {
+    fn owned_rights_by_type(
+        &self,
+        t: OwnedRightType,
+    ) -> Option<&AssignmentVec> {
         self.owned_rights().iter().find_map(|(t2, a)| {
             if *t2 == t {
                 Some(a)
@@ -320,7 +323,7 @@ pub trait Node: AsAny {
     ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
         Ok(self
             .owned_rights_by_type(assignment_type)
-            .map(Assignments::revealed_seals)
+            .map(AssignmentVec::revealed_seals)
             .transpose()?
             .unwrap_or(vec![]))
     }
@@ -339,7 +342,7 @@ pub trait Node: AsAny {
         assignment_type: OwnedRightType,
     ) -> Vec<seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
-            .map(Assignments::filter_revealed_seals)
+            .map(AssignmentVec::filter_revealed_seals)
             .unwrap_or(vec![])
     }
 }
@@ -1084,17 +1087,17 @@ mod test {
         fn conceal_transition(transition: &mut Transition) {
             for (_, assignments) in transition.owned_rights_mut().iter_mut() {
                 match assignments {
-                    Assignments::Declarative(set) => {
+                    AssignmentVec::Declarative(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    Assignments::DiscreteFiniteField(set) => {
+                    AssignmentVec::DiscreteFiniteField(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    Assignments::CustomData(set) => {
+                    AssignmentVec::CustomData(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
@@ -1180,9 +1183,9 @@ mod test {
 
         assert_eq!(gen_assignments, tran_assingmnets);
 
-        assert!(gen_assignments.get(&1usize).unwrap().is_declarative_state());
-        assert!(gen_assignments.get(&2usize).unwrap().is_discrete_state());
-        assert!(tran_assingmnets.get(&3usize).unwrap().is_custom_state());
+        assert!(gen_assignments.get(&1usize).unwrap().is_declarative());
+        assert!(gen_assignments.get(&2usize).unwrap().has_value());
+        assert!(tran_assingmnets.get(&3usize).unwrap().has_data());
 
         let seal1 = gen_assignments
             .get(&2usize)
@@ -1250,8 +1253,8 @@ mod test {
         let assignment_gen = genesis.owned_rights_by_type(3).unwrap();
         let assignment_tran = transition.owned_rights_by_type(1).unwrap();
 
-        assert!(assignment_gen.is_custom_state());
-        assert!(assignment_tran.is_declarative_state());
+        assert!(assignment_gen.has_data());
+        assert!(assignment_tran.is_declarative());
 
         // All seal confidentials
         let gen_seals = genesis.to_confiential_seals();
