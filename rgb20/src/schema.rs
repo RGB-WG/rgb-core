@@ -134,7 +134,7 @@ impl HistoryProofFormat {
 pub fn schema() -> Schema {
     use Occurences::*;
 
-    // TODO: Consider using data containers + state extensions for
+    // TODO #33: Consider using data containers + state extensions for
     //       providing issuer-created asset meta-information
 
     Schema {
@@ -311,7 +311,7 @@ pub fn schema() -> Schema {
             // double SHA256 hash and URL should be used instead, pointing to
             // the full contract text, where hash must be represented by a
             // hexadecimal string, optionally followed by `\n` and text URL
-            // TODO: Consider using data container instead of the above ^^^
+            // TODO #33: Consider using data container instead of the above ^^^
             FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             FieldType::Precision => DataFormat::Unsigned(Bits::Bit8, 0, 18u128),
             // We need this b/c allocated amounts are hidden behind Pedersen
@@ -368,9 +368,9 @@ pub fn schema() -> Schema {
 pub fn subschema() -> Schema {
     use Occurences::*;
 
-    // TODO: Consider using data containers + state extensions for
+    // TODO #33: Consider using data containers + state extensions for
     //       providing issuer-created asset meta-information
-    // TODO: Consider adding Ricardian contracts to secondary issues and
+    // TODO #33: Consider adding Ricardian contracts to secondary issues and
     //       transfers
 
     Schema {
@@ -515,7 +515,7 @@ pub fn subschema() -> Schema {
             // double SHA256 hash and URL should be used instead, pointing to
             // the full contract text, where hash must be represented by a
             // hexadecimal string, optionally followed by `\n` and text URL
-            // TODO: Consider using data container instead of the above ^^^
+            // TODO #33: Consider using data container instead of the above ^^^
             FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             FieldType::Precision => DataFormat::Unsigned(Bits::Bit8, 0, 18u128),
             // We need this b/c allocated amounts are hidden behind Pedersen

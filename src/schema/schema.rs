@@ -129,7 +129,7 @@ impl Schema {
         self.clone().consensus_commit()
     }
 
-    // TODO: Change with the adoption of Simplicity
+    // TODO #49: Change with the adoption of Simplicity
     #[inline]
     pub fn scripts(&self) -> SimplicityScript {
         vec![]
@@ -157,7 +157,7 @@ mod strict_encoding {
         strategies, Error, Strategy, StrictDecode, StrictEncode,
     };
 
-    // TODO: Use derive macros and generalized `tagged_hash!` in the future
+    // TODO #50: Use derive macros and generalized `tagged_hash!` in the future
     impl Strategy for SchemaId {
         type Strategy = strategies::Wrapped;
     }

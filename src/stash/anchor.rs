@@ -203,7 +203,7 @@ impl Anchor {
         transitions: BTreeMap<ContractId, NodeId>,
         psbt: &mut Psbt,
     ) -> Result<(Vec<Self>, HashMap<ContractId, usize>), Error> {
-        // TODO: Adjust fee if the output does not contain a key marked for
+        // TODO #52: Adjust fee if the output does not contain a key marked for
         //       tweaking
         let fee = psbt.fee()?;
 
@@ -250,7 +250,7 @@ impl Anchor {
                     .ok_or(Error::NoRequiredPubkey(vout))?,
             )
             .map_err(|_| Error::WrongPubkeyData)?;
-            // TODO: (new) Add support for Taproot parsing
+            // TODO #53: (new) Add support for Taproot parsing
             let source = match psbt_out
                 .redeem_script
                 .as_ref()
@@ -261,15 +261,17 @@ impl Anchor {
                     ScriptEncodeData::LockScript(script.clone().into())
                 }
             };
-            // TODO: (new) Move parsing of the output+input into Descriptor impl
-            // TODO: (new) With miniscript stabilization refactor this to use it
+            // TODO #54: (new) Move parsing of the output+input into Descriptor
+            //      impl
+            // TODO #54: (new) With miniscript stabilization
+            //      refactor this to use it
             let method = if psbt_out.redeem_script.is_some() {
                 ScriptEncodeMethod::ScriptHash
             } else if psbt_out.witness_script.is_some() {
                 ScriptEncodeMethod::WScriptHash
             } else {
-                // TODO: (new) Check PSBT whether pubkey output is witness and
-                //       return error otherwise
+                // TODO #55: (new) Check PSBT whether pubkey output is witness
+                //      and return error otherwise
                 ScriptEncodeMethod::WPubkeyHash
             };
 
@@ -301,7 +303,7 @@ impl Anchor {
             psbt.outputs
                 .get_mut(vout)
                 .map(|output| {
-                    // TODO: Provide full state transition information for the 
+                    // TODO #56: Provide full state transition information for the 
                     //       signer with serialized `Roll`
                     output.proprietary.insert(
                         ProprietaryKey {
@@ -354,7 +356,7 @@ impl Anchor {
             id % Uint256::from_u64(tx.output.len() as u64).unwrap();
         let protocol_factor = protocol_factor.low_u64() as u32;
 
-        // TODO: Refactor multimessage commitments
+        // TODO #57: Refactor multimessage commitments
         let mm_buffer: Vec<u8> = self
             .commitment
             .clone()
@@ -382,7 +384,7 @@ impl Anchor {
         supplement: TxSupplement,
         value: sha256::Hash,
     ) -> Result<bool, dbc::Error> {
-        // TODO: Refactor using bp::seals
+        // TODO #58: Refactor using bp::seals
         let container =
             TxContainer::reconstruct(&self.proof, &supplement, &tx)?;
         let commitment = TxCommitment::from(tx.clone());

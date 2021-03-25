@@ -5,7 +5,7 @@ coverage:
   precision: 1
   round: nearest
   range: "0...95"
-  # TODO: Update codecov default requirements after v0.1 release
+  # TODO #30: Update codecov default requirements after v0.1 release
   status:
     project:
       default:

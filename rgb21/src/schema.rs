@@ -238,16 +238,16 @@ pub fn schema() -> Schema {
         },
         field_types: type_map! {
             FieldType::Name => DataFormat::String(256),
-            // TODO: Consider using data container
+            // TODO #35: Consider using data container
             FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             // Data common for all NFTs inside specific state transition or
             // genesis.
-            // TODO: Add DataContainer for common data kept inside external
+            // TODO #35: Add DataContainer for common data kept inside external
             //       data container
             FieldType::Data => DataFormat::Bytes(core::u16::MAX),
             // A set of data formats, corresponding values and user-defined
             // type extensibility must be provided by RGB21 specification
-            // TODO: (LNPBPs) Consider using MIME types
+            // TODO #36: (LNPBPs) Consider using MIME types
             FieldType::DataFormat => DataFormat::Unsigned(Bits::Bit32, 0, core::u32::MAX as u128),
             // While UNIX timestamps allow negative numbers; in context of RGB
             // Schema, assets can't be issued in the past before RGB or Bitcoin
@@ -275,7 +275,7 @@ pub fn schema() -> Schema {
             OwnedRightsType::EngravedOwnership => StateSchema {
                 // Engraving data (per-token). Data format is defined by metadata
                 // and must be same for all tokens
-                // TODO: Use `DataFormat::Container` once will be available
+                // TODO #35: Use `DataFormat::Container` once will be available
                 format: StateFormat::CustomData(DataFormat::Bytes(core::u16::MAX)),
                 abi: none!()
             },
@@ -288,8 +288,8 @@ pub fn schema() -> Schema {
     }
 }
 
-// TODO: Define all standard field, rights & transition types which are common
-//       to different schemata as constants
+// TODO #35: Define all standard field, rights & transition types which are
+//      common to different schemata as constants
 impl Deref for FieldType {
     type Target = usize;
 
