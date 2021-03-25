@@ -14,7 +14,7 @@
 use amplify::{AsAny, Wrapper};
 use core::cmp::Ordering;
 use core::fmt::Debug;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{btree_map, btree_set, BTreeMap, BTreeSet, HashMap};
 use std::io;
 
 use lnpbp::client_side_validation::{
@@ -29,15 +29,25 @@ use super::{
     data, seal, value, AtomicValue, ConcealSeals, ConcealState, NoDataError,
     NodeId, SealDefinition, SealEndpoint, SECP256K1_ZKP,
 };
-use crate::schema;
+use crate::{schema, ConfidentialDataError, StateRetrievalError};
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display("{node_id}:{output_no}")]
+/// RGB contract node output pointer, defined by the node ID and output
+/// number.
+pub struct NodeOutput {
+    pub node_id: NodeId,
+    pub output_no: u16,
+}
 
 /// Holds definition of valencies for contract nodes, which is a set of
 /// allowed valencies types
-pub type PublicRights = BTreeSet<schema::PublicRightType>;
-pub type OwnedRights = BTreeMap<schema::OwnedRightType, Assignments>;
-pub type ParentOwnedRights =
+pub(crate) type PublicRightsInner = BTreeSet<schema::PublicRightType>;
+pub(crate) type OwnedRightsInner =
+    BTreeMap<schema::OwnedRightType, AssignmentVec>;
+pub(crate) type ParentOwnedRightsInner =
     BTreeMap<NodeId, BTreeMap<schema::OwnedRightType, Vec<u16>>>;
-pub type ParentPublicRights =
+pub(crate) type ParentPublicRightsInner =
     BTreeMap<NodeId, BTreeSet<schema::PublicRightType>>;
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Debug, Default, From)]
@@ -47,7 +57,30 @@ pub type ParentPublicRights =
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(StrictEncode, StrictDecode)]
-pub(super) struct OwnedRightsInner(OwnedRights);
+pub struct OwnedRights(OwnedRightsInner);
+
+impl OwnedRights {
+    pub fn iter(
+        &self,
+    ) -> btree_map::Iter<'_, schema::OwnedRightType, AssignmentVec> {
+        self.0.iter()
+    }
+
+    pub fn iter_mut(
+        &mut self,
+    ) -> btree_map::IterMut<'_, schema::OwnedRightType, AssignmentVec> {
+        self.0.iter_mut()
+    }
+}
+
+impl IntoIterator for OwnedRights {
+    type Item = <OwnedRightsInner as IntoIterator>::Item;
+    type IntoIter = <OwnedRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
 
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
@@ -58,7 +91,22 @@ pub(super) struct OwnedRightsInner(OwnedRights);
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(StrictEncode, StrictDecode)]
-pub(super) struct PublicRightsInner(PublicRights);
+pub struct PublicRights(PublicRightsInner);
+
+impl PublicRights {
+    pub fn iter(&self) -> btree_set::Iter<'_, schema::PublicRightType> {
+        self.0.iter()
+    }
+}
+
+impl IntoIterator for PublicRights {
+    type Item = <PublicRightsInner as IntoIterator>::Item;
+    type IntoIter = <PublicRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
 
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
@@ -69,7 +117,35 @@ pub(super) struct PublicRightsInner(PublicRights);
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(StrictEncode, StrictDecode)]
-pub(super) struct ParentOwnedRightsInner(ParentOwnedRights);
+pub struct ParentOwnedRights(ParentOwnedRightsInner);
+
+impl ParentOwnedRights {
+    pub fn iter(
+        &self,
+    ) -> btree_map::Iter<'_, NodeId, BTreeMap<schema::OwnedRightType, Vec<u16>>>
+    {
+        self.0.iter()
+    }
+
+    pub fn iter_mut(
+        &mut self,
+    ) -> btree_map::IterMut<
+        '_,
+        NodeId,
+        BTreeMap<schema::OwnedRightType, Vec<u16>>,
+    > {
+        self.0.iter_mut()
+    }
+}
+
+impl IntoIterator for ParentOwnedRights {
+    type Item = <ParentOwnedRightsInner as IntoIterator>::Item;
+    type IntoIter = <ParentOwnedRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
 
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
@@ -80,7 +156,30 @@ pub(super) struct ParentOwnedRightsInner(ParentOwnedRights);
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(StrictEncode, StrictDecode)]
-pub(super) struct ParentPublicRightsInner(ParentPublicRights);
+pub struct ParentPublicRights(ParentPublicRightsInner);
+
+impl ParentPublicRights {
+    pub fn iter(
+        &self,
+    ) -> btree_map::Iter<'_, NodeId, BTreeSet<schema::PublicRightType>> {
+        self.0.iter()
+    }
+
+    pub fn iter_mut(
+        &mut self,
+    ) -> btree_map::IterMut<'_, NodeId, BTreeSet<schema::PublicRightType>> {
+        self.0.iter_mut()
+    }
+}
+
+impl IntoIterator for ParentPublicRights {
+    type Item = <ParentPublicRightsInner as IntoIterator>::Item;
+    type IntoIter = <ParentPublicRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
 
 #[derive(
     Clone,
@@ -94,7 +193,7 @@ pub(super) struct ParentPublicRightsInner(ParentPublicRights);
     StrictEncode,
     StrictDecode,
 )]
-pub(super) struct PublicRightsLeaf(pub schema::PublicRightType);
+pub struct PublicRightsLeaf(pub schema::PublicRightType);
 impl CommitEncodeWithStrategy for PublicRightsLeaf {
     type Strategy = commit_strategy::UsingStrict;
 }
@@ -104,7 +203,7 @@ impl ConsensusCommit for PublicRightsLeaf {
 impl ConsensusMerkleCommit for PublicRightsLeaf {
     const MERKLE_NODE_TAG: &'static str = "public_right";
 }
-impl ToMerkleSource for PublicRightsInner {
+impl ToMerkleSource for PublicRights {
     type Leaf = PublicRightsLeaf;
 
     fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
@@ -128,7 +227,7 @@ impl ToMerkleSource for PublicRightsInner {
     StrictEncode,
     StrictDecode,
 )]
-pub(super) struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
+pub struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
 impl CommitEncodeWithStrategy for OwnedRightsLeaf {
     type Strategy = commit_strategy::UsingStrict;
 }
@@ -138,7 +237,7 @@ impl ConsensusCommit for OwnedRightsLeaf {
 impl ConsensusMerkleCommit for OwnedRightsLeaf {
     const MERKLE_NODE_TAG: &'static str = "owned_right";
 }
-impl ToMerkleSource for OwnedRightsInner {
+impl ToMerkleSource for OwnedRights {
     type Leaf = OwnedRightsLeaf;
 
     fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
@@ -165,10 +264,7 @@ impl ToMerkleSource for OwnedRightsInner {
     StrictEncode,
     StrictDecode,
 )]
-pub(super) struct ParentPublicRightsLeaf(
-    pub NodeId,
-    pub schema::PublicRightType,
-);
+pub struct ParentPublicRightsLeaf(pub NodeId, pub schema::PublicRightType);
 impl CommitEncodeWithStrategy for ParentPublicRightsLeaf {
     type Strategy = commit_strategy::UsingStrict;
 }
@@ -178,7 +274,7 @@ impl ConsensusCommit for ParentPublicRightsLeaf {
 impl ConsensusMerkleCommit for ParentPublicRightsLeaf {
     const MERKLE_NODE_TAG: &'static str = "parent_public_right";
 }
-impl ToMerkleSource for ParentPublicRightsInner {
+impl ToMerkleSource for ParentPublicRights {
     type Leaf = ParentPublicRightsLeaf;
 
     fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
@@ -205,7 +301,7 @@ impl ToMerkleSource for ParentPublicRightsInner {
     StrictEncode,
     StrictDecode,
 )]
-pub(super) struct ParentOwnedRightsLeaf(
+pub struct ParentOwnedRightsLeaf(
     pub NodeId,
     pub schema::OwnedRightType,
     pub u16,
@@ -219,7 +315,7 @@ impl ConsensusCommit for ParentOwnedRightsLeaf {
 impl ConsensusMerkleCommit for ParentOwnedRightsLeaf {
     const MERKLE_NODE_TAG: &'static str = "parent_owned_right";
 }
-impl ToMerkleSource for ParentOwnedRightsInner {
+impl ToMerkleSource for ParentOwnedRights {
     type Leaf = ParentOwnedRightsLeaf;
 
     fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
@@ -247,13 +343,13 @@ impl ToMerkleSource for ParentOwnedRightsInner {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-pub enum Assignments {
-    Declarative(Vec<OwnedState<DeclarativeStrategy>>),
-    DiscreteFiniteField(Vec<OwnedState<PedersenStrategy>>),
-    CustomData(Vec<OwnedState<HashStrategy>>),
+pub enum AssignmentVec {
+    Declarative(Vec<Assignment<DeclarativeStrategy>>),
+    DiscreteFiniteField(Vec<Assignment<PedersenStrategy>>),
+    CustomData(Vec<Assignment<HashStrategy>>),
 }
 
-impl Assignments {
+impl AssignmentVec {
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
         allocations_ours: Vec<(SealDefinition, AtomicValue)>,
@@ -291,9 +387,9 @@ impl Assignments {
         }
 
         let mut blinding_iter = blinding_factors.into_iter();
-        let mut set: Vec<OwnedState<_>> = allocations_ours
+        let mut set: Vec<Assignment<_>> = allocations_ours
             .into_iter()
-            .map(|(seal_definition, amount)| OwnedState::Revealed {
+            .map(|(seal_definition, amount)| Assignment::Revealed {
                 seal_definition,
                 assigned_state: value::Revealed {
                     value: amount,
@@ -315,11 +411,11 @@ impl Assignments {
                         ).into(),
                     };
                     match seal_proto {
-                        SealEndpoint::TxOutpoint(seal_definition) => OwnedState::ConfidentialSeal {
+                        SealEndpoint::TxOutpoint(seal_definition) => Assignment::ConfidentialSeal {
                             seal_definition,
                             assigned_state,
                         },
-                        SealEndpoint::WitnessVout { vout, blinding } => OwnedState::Revealed {
+                        SealEndpoint::WitnessVout { vout, blinding } => Assignment::Revealed {
                             seal_definition: SealDefinition::WitnessVout { vout, blinding },
                             assigned_state
                         }
@@ -331,105 +427,109 @@ impl Assignments {
     }
 
     #[inline]
-    pub fn is_declarative_state(&self) -> bool {
+    pub fn is_declarative(&self) -> bool {
         match self {
-            Assignments::Declarative(_) => true,
+            AssignmentVec::Declarative(_) => true,
             _ => false,
         }
     }
 
     #[inline]
-    pub fn is_discrete_state(&self) -> bool {
+    pub fn has_value(&self) -> bool {
         match self {
-            Assignments::DiscreteFiniteField(_) => true,
+            AssignmentVec::DiscreteFiniteField(_) => true,
             _ => false,
         }
     }
 
     #[inline]
-    pub fn is_custom_state(&self) -> bool {
+    pub fn has_data(&self) -> bool {
         match self {
-            Assignments::CustomData(_) => true,
+            AssignmentVec::CustomData(_) => true,
             _ => false,
         }
     }
 
     #[inline]
-    pub fn declarative_state_mut(
+    pub fn declarative_assignment_vec_mut(
         &mut self,
-    ) -> Option<&mut Vec<OwnedState<DeclarativeStrategy>>> {
+    ) -> Option<&mut Vec<Assignment<DeclarativeStrategy>>> {
         match self {
-            Assignments::Declarative(set) => Some(set),
+            AssignmentVec::Declarative(set) => Some(set),
             _ => None,
         }
     }
 
     #[inline]
-    pub fn discrete_state_mut(
+    pub fn value_assignment_vec_mut(
         &mut self,
-    ) -> Option<&mut Vec<OwnedState<PedersenStrategy>>> {
+    ) -> Option<&mut Vec<Assignment<PedersenStrategy>>> {
         match self {
-            Assignments::DiscreteFiniteField(set) => Some(set),
+            AssignmentVec::DiscreteFiniteField(set) => Some(set),
             _ => None,
         }
     }
 
     #[inline]
-    pub fn custom_state_mut(
+    pub fn data_assignment_vec_mut(
         &mut self,
-    ) -> Option<&mut Vec<OwnedState<HashStrategy>>> {
+    ) -> Option<&mut Vec<Assignment<HashStrategy>>> {
         match self {
-            Assignments::CustomData(set) => Some(set),
+            AssignmentVec::CustomData(set) => Some(set),
             _ => None,
         }
     }
 
     #[inline]
-    pub fn to_declarative_state(&self) -> Vec<OwnedState<DeclarativeStrategy>> {
+    pub fn to_declarative_assignment_vec(
+        &self,
+    ) -> Vec<Assignment<DeclarativeStrategy>> {
         match self {
-            Assignments::Declarative(set) => set.clone(),
+            AssignmentVec::Declarative(set) => set.clone(),
             _ => Default::default(),
         }
     }
 
     #[inline]
-    pub fn to_discrete_state(&self) -> Vec<OwnedState<PedersenStrategy>> {
+    pub fn to_value_assignment_vec(&self) -> Vec<Assignment<PedersenStrategy>> {
         match self {
-            Assignments::DiscreteFiniteField(set) => set.clone(),
+            AssignmentVec::DiscreteFiniteField(set) => set.clone(),
             _ => Default::default(),
         }
     }
 
     #[inline]
-    pub fn to_custom_state(&self) -> Vec<OwnedState<HashStrategy>> {
+    pub fn to_data_assignment_vec(&self) -> Vec<Assignment<HashStrategy>> {
         match self {
-            Assignments::CustomData(set) => set.clone(),
+            AssignmentVec::CustomData(set) => set.clone(),
             _ => Default::default(),
         }
     }
 
     #[inline]
-    pub fn into_declarative_state(
+    pub fn into_declarative_assignment_vec(
         self,
-    ) -> Vec<OwnedState<DeclarativeStrategy>> {
+    ) -> Vec<Assignment<DeclarativeStrategy>> {
         match self {
-            Assignments::Declarative(set) => set,
+            AssignmentVec::Declarative(set) => set,
             _ => Default::default(),
         }
     }
 
     #[inline]
-    pub fn into_discrete_state(self) -> Vec<OwnedState<PedersenStrategy>> {
+    pub fn into_value_assignment_vec(
+        self,
+    ) -> Vec<Assignment<PedersenStrategy>> {
         match self {
-            Assignments::DiscreteFiniteField(set) => set,
+            AssignmentVec::DiscreteFiniteField(set) => set,
             _ => Default::default(),
         }
     }
 
     #[inline]
-    pub fn into_custom_state(self) -> Vec<OwnedState<HashStrategy>> {
+    pub fn into_data_assignment_vec(self) -> Vec<Assignment<HashStrategy>> {
         match self {
-            Assignments::CustomData(set) => set,
+            AssignmentVec::CustomData(set) => set,
             _ => Default::default(),
         }
     }
@@ -437,109 +537,217 @@ impl Assignments {
     /// If seal definition does not exist, returns [`NoDataError`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
     /// seal data packed as `Ok(Some(`[`seal::Revealed`]`))`
-    pub fn seal_definition(
+    pub fn revealed_seal_at(
         &self,
         index: u16,
     ) -> Result<Option<seal::Revealed>, NoDataError> {
         Ok(match self {
-            Assignments::Declarative(vec) => vec
-                .get(index as usize)
-                .ok_or(NoDataError)?
-                .seal_definition(),
-            Assignments::DiscreteFiniteField(vec) => vec
-                .get(index as usize)
-                .ok_or(NoDataError)?
-                .seal_definition(),
-            Assignments::CustomData(vec) => vec
-                .get(index as usize)
-                .ok_or(NoDataError)?
-                .seal_definition(),
+            AssignmentVec::Declarative(vec) => {
+                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
+            }
+            AssignmentVec::DiscreteFiniteField(vec) => {
+                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
+            }
+            AssignmentVec::CustomData(vec) => {
+                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
+            }
         })
     }
 
-    pub fn known_seal_definitions(&self) -> Vec<seal::Revealed> {
+    pub fn revealed_seals(
+        &self,
+    ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
+        let list: Vec<_> = match self {
+            AssignmentVec::Declarative(s) => {
+                s.into_iter().map(Assignment::<_>::revealed_seal).collect()
+            }
+            AssignmentVec::DiscreteFiniteField(s) => {
+                s.into_iter().map(Assignment::<_>::revealed_seal).collect()
+            }
+            AssignmentVec::CustomData(s) => {
+                s.into_iter().map(Assignment::<_>::revealed_seal).collect()
+            }
+        };
+        let len = list.len();
+        let filtered: Vec<seal::Revealed> =
+            list.into_iter().filter_map(|v| v).collect();
+        if len != filtered.len() {
+            return Err(ConfidentialDataError);
+        }
+        return Ok(filtered);
+    }
+
+    pub fn filter_revealed_seals(&self) -> Vec<seal::Revealed> {
         match self {
-            Assignments::Declarative(s) => s
+            AssignmentVec::Declarative(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::seal_definition)
+                .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
-            Assignments::DiscreteFiniteField(s) => s
+            AssignmentVec::DiscreteFiniteField(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::seal_definition)
+                .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
-            Assignments::CustomData(s) => s
+            AssignmentVec::CustomData(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::seal_definition)
+                .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
         }
     }
 
-    pub fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
+    pub fn to_confidential_seals(&self) -> Vec<seal::Confidential> {
         match self {
-            Assignments::Declarative(s) => s
+            AssignmentVec::Declarative(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::seal_definition_confidential)
+                .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
-            Assignments::DiscreteFiniteField(s) => s
+            AssignmentVec::DiscreteFiniteField(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::seal_definition_confidential)
+                .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
-            Assignments::CustomData(s) => s
+            AssignmentVec::CustomData(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::seal_definition_confidential)
+                .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
         }
     }
 
-    pub fn known_state_values(&self) -> Vec<&value::Revealed> {
+    pub fn as_revealed_state_values(
+        &self,
+    ) -> Result<Vec<&value::Revealed>, StateRetrievalError> {
+        let list = match self {
+            AssignmentVec::DiscreteFiniteField(s) => {
+                s.into_iter().map(Assignment::<_>::as_revealed_state)
+            }
+            _ => return Err(StateRetrievalError::StateTypeMismatch),
+        };
+        let len = list.len();
+        let filtered: Vec<&value::Revealed> = list.filter_map(|v| v).collect();
+        if len != filtered.len() {
+            return Err(StateRetrievalError::ConfidentialData);
+        }
+        return Ok(filtered);
+    }
+
+    pub fn as_revealed_state_data(
+        &self,
+    ) -> Result<Vec<&data::Revealed>, StateRetrievalError> {
+        let list = match self {
+            AssignmentVec::CustomData(s) => {
+                s.into_iter().map(Assignment::<_>::as_revealed_state)
+            }
+            _ => return Err(StateRetrievalError::StateTypeMismatch),
+        };
+        let len = list.len();
+        let filtered: Vec<&data::Revealed> = list.filter_map(|v| v).collect();
+        if len != filtered.len() {
+            return Err(StateRetrievalError::ConfidentialData);
+        }
+        return Ok(filtered);
+    }
+
+    pub fn filter_revealed_state_values(&self) -> Vec<&value::Revealed> {
         match self {
-            Assignments::Declarative(_) => vec![],
-            Assignments::DiscreteFiniteField(s) => s
+            AssignmentVec::Declarative(_) => vec![],
+            AssignmentVec::DiscreteFiniteField(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::assigned_state)
+                .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
-            Assignments::CustomData(_) => vec![],
+            AssignmentVec::CustomData(_) => vec![],
         }
     }
 
-    pub fn known_state_data(&self) -> Vec<&data::Revealed> {
+    pub fn filter_revealed_state_data(&self) -> Vec<&data::Revealed> {
         match self {
-            Assignments::Declarative(_) => vec![],
-            Assignments::DiscreteFiniteField(_) => vec![],
-            Assignments::CustomData(s) => s
+            AssignmentVec::Declarative(_) => vec![],
+            AssignmentVec::DiscreteFiniteField(_) => vec![],
+            AssignmentVec::CustomData(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::assigned_state)
+                .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
         }
     }
 
-    pub fn all_state_pedersen(&self) -> Vec<value::Confidential> {
+    pub fn to_confidential_state_pedersen(&self) -> Vec<value::Confidential> {
         match self {
-            Assignments::Declarative(_) => vec![],
-            Assignments::DiscreteFiniteField(s) => s
+            AssignmentVec::Declarative(_) => vec![],
+            AssignmentVec::DiscreteFiniteField(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::assigned_state_confidential)
+                .map(Assignment::<_>::to_confidential_state)
                 .collect(),
-            Assignments::CustomData(_) => vec![],
+            AssignmentVec::CustomData(_) => vec![],
         }
     }
 
-    pub fn all_state_hashed(&self) -> Vec<data::Confidential> {
+    pub fn to_confidential_state_hashed(&self) -> Vec<data::Confidential> {
         match self {
-            Assignments::Declarative(_) => vec![],
-            Assignments::DiscreteFiniteField(_) => vec![],
-            Assignments::CustomData(s) => s
+            AssignmentVec::Declarative(_) => vec![],
+            AssignmentVec::DiscreteFiniteField(_) => vec![],
+            AssignmentVec::CustomData(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::assigned_state_confidential)
+                .map(Assignment::<_>::to_confidential_state)
                 .collect(),
+        }
+    }
+
+    #[inline]
+    pub fn as_revealed_owned_value(
+        &self,
+    ) -> Result<Vec<(seal::Revealed, &value::Revealed)>, StateRetrievalError>
+    {
+        match self {
+            AssignmentVec::DiscreteFiniteField(vec) => {
+                let unfiltered: Vec<_> = vec
+                    .into_iter()
+                    .filter_map(|assignment| {
+                        assignment.revealed_seal().and_then(|seal| {
+                            assignment
+                                .as_revealed_state()
+                                .map(|state| (seal, state))
+                        })
+                    })
+                    .collect();
+                if unfiltered.len() != vec.len() {
+                    Err(StateRetrievalError::ConfidentialData)
+                } else {
+                    Ok(unfiltered)
+                }
+            }
+            _ => Err(StateRetrievalError::StateTypeMismatch),
+        }
+    }
+
+    #[inline]
+    pub fn as_revealed_owned_data(
+        &self,
+    ) -> Result<Vec<(seal::Revealed, &data::Revealed)>, StateRetrievalError>
+    {
+        match self {
+            AssignmentVec::CustomData(vec) => {
+                let unfiltered: Vec<_> = vec
+                    .into_iter()
+                    .filter_map(|assignment| {
+                        assignment.revealed_seal().and_then(|seal| {
+                            assignment
+                                .as_revealed_state()
+                                .map(|state| (seal, state))
+                        })
+                    })
+                    .collect();
+                if unfiltered.len() != vec.len() {
+                    Err(StateRetrievalError::ConfidentialData)
+                } else {
+                    Ok(unfiltered)
+                }
+            }
+            _ => Err(StateRetrievalError::StateTypeMismatch),
         }
     }
 
     pub fn len(&self) -> usize {
         match self {
-            Assignments::Declarative(set) => set.len(),
-            Assignments::DiscreteFiniteField(set) => set.len(),
-            Assignments::CustomData(set) => set.len(),
+            AssignmentVec::Declarative(set) => set.len(),
+            AssignmentVec::DiscreteFiniteField(set) => set.len(),
+            AssignmentVec::CustomData(set) => set.len(),
         }
     }
 
@@ -552,9 +760,9 @@ impl Assignments {
     ) -> usize {
         let mut counter = 0;
         match self {
-            Assignments::Declarative(_) => {}
-            Assignments::DiscreteFiniteField(set) => {
-                *self = Assignments::DiscreteFiniteField(
+            AssignmentVec::Declarative(_) => {}
+            AssignmentVec::DiscreteFiniteField(set) => {
+                *self = AssignmentVec::DiscreteFiniteField(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -565,8 +773,8 @@ impl Assignments {
                         .collect(),
                 );
             }
-            Assignments::CustomData(set) => {
-                *self = Assignments::CustomData(
+            AssignmentVec::CustomData(set) => {
+                *self = AssignmentVec::CustomData(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -583,46 +791,46 @@ impl Assignments {
 
     pub fn consensus_commitments(&self) -> Vec<MerkleNode> {
         match self {
-            Assignments::Declarative(vec) => vec
+            AssignmentVec::Declarative(vec) => vec
                 .iter()
-                .map(OwnedState::<DeclarativeStrategy>::consensus_commit)
+                .map(Assignment::<DeclarativeStrategy>::consensus_commit)
                 .collect(),
-            Assignments::DiscreteFiniteField(vec) => vec
+            AssignmentVec::DiscreteFiniteField(vec) => vec
                 .iter()
-                .map(OwnedState::<PedersenStrategy>::consensus_commit)
+                .map(Assignment::<PedersenStrategy>::consensus_commit)
                 .collect(),
-            Assignments::CustomData(vec) => vec
+            AssignmentVec::CustomData(vec) => vec
                 .iter()
-                .map(OwnedState::<HashStrategy>::consensus_commit)
+                .map(Assignment::<HashStrategy>::consensus_commit)
                 .collect(),
         }
     }
 }
 
-impl ConcealSeals for Assignments {
+impl ConcealSeals for AssignmentVec {
     fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
-            Assignments::Declarative(data) => data as &mut dyn ConcealSeals,
-            Assignments::DiscreteFiniteField(data) => {
+            AssignmentVec::Declarative(data) => data as &mut dyn ConcealSeals,
+            AssignmentVec::DiscreteFiniteField(data) => {
                 data as &mut dyn ConcealSeals
             }
-            Assignments::CustomData(data) => data as &mut dyn ConcealSeals,
+            AssignmentVec::CustomData(data) => data as &mut dyn ConcealSeals,
         }
         .conceal_seals(seals)
     }
 }
 
-impl ConcealState for Assignments {
+impl ConcealState for AssignmentVec {
     fn conceal_state_except(
         &mut self,
         seals: &Vec<seal::Confidential>,
     ) -> usize {
         match self {
-            Assignments::Declarative(data) => data as &mut dyn ConcealState,
-            Assignments::DiscreteFiniteField(data) => {
+            AssignmentVec::Declarative(data) => data as &mut dyn ConcealState,
+            AssignmentVec::DiscreteFiniteField(data) => {
                 data as &mut dyn ConcealState
             }
-            Assignments::CustomData(data) => data as &mut dyn ConcealState,
+            AssignmentVec::CustomData(data) => data as &mut dyn ConcealState,
         }
         .conceal_state_except(seals)
     }
@@ -638,75 +846,75 @@ pub trait RevealedState:
 {
 }
 
-impl Assignments {
+impl AssignmentVec {
     pub fn u8(&self) -> Vec<u8> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::u8)
             .collect()
     }
     pub fn u16(&self) -> Vec<u16> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::u16)
             .collect()
     }
     pub fn u32(&self) -> Vec<u32> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::u32)
             .collect()
     }
     pub fn u64(&self) -> Vec<u64> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::u64)
             .collect()
     }
     pub fn i8(&self) -> Vec<i8> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::i8)
             .collect()
     }
     pub fn i16(&self) -> Vec<i16> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::i16)
             .collect()
     }
     pub fn i32(&self) -> Vec<i32> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::i32)
             .collect()
     }
     pub fn i64(&self) -> Vec<i64> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::i64)
             .collect()
     }
     pub fn f32(&self) -> Vec<f32> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::f32)
             .collect()
     }
     pub fn f64(&self) -> Vec<f64> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::f64)
             .collect()
     }
     pub fn bytes(&self) -> Vec<Vec<u8>> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::bytes)
             .collect()
     }
     pub fn string(&self) -> Vec<String> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::string)
             .collect()
@@ -749,30 +957,30 @@ impl StateTypes for HashStrategy {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-pub enum OwnedState<STATE>
+pub enum Assignment<State>
 where
-    STATE: StateTypes,
+    State: StateTypes,
     // Deterministic ordering requires Eq operation, so the confidential
     // state must have it
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     Confidential {
         seal_definition: seal::Confidential,
-        assigned_state: STATE::Confidential,
+        assigned_state: State::Confidential,
     },
     Revealed {
         seal_definition: seal::Revealed,
-        assigned_state: STATE::Revealed,
+        assigned_state: State::Revealed,
     },
     ConfidentialSeal {
         seal_definition: seal::Confidential,
-        assigned_state: STATE::Revealed,
+        assigned_state: State::Revealed,
     },
     ConfidentialAmount {
         seal_definition: seal::Revealed,
-        assigned_state: STATE::Confidential,
+        assigned_state: State::Confidential,
     },
 }
 
@@ -780,114 +988,112 @@ where
 // Assignment indexes are part of the transition ancestor's commitment, so
 // here we use deterministic ordering based on hash values of the concealed
 // seal data contained within the assignment
-impl<STATE> PartialOrd for OwnedState<STATE>
+impl<State> PartialOrd for Assignment<State>
 where
-    STATE: StateTypes,
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.seal_definition_confidential()
-            .partial_cmp(&other.seal_definition_confidential())
+        self.to_confidential_seal()
+            .partial_cmp(&other.to_confidential_seal())
     }
 }
 
-impl<STATE> Ord for OwnedState<STATE>
+impl<State> Ord for Assignment<State>
 where
-    STATE: StateTypes,
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.seal_definition_confidential()
-            .cmp(&other.seal_definition_confidential())
+        self.to_confidential_seal()
+            .cmp(&other.to_confidential_seal())
     }
 }
 
-impl<STATE> PartialEq for OwnedState<STATE>
+impl<State> PartialEq for Assignment<State>
 where
-    STATE: StateTypes,
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.seal_definition_confidential()
-            == other.seal_definition_confidential()
-            && self.assigned_state_confidential()
-                == other.assigned_state_confidential()
+        self.to_confidential_seal() == other.to_confidential_seal()
+            && self.to_confidential_state() == other.to_confidential_state()
     }
 }
 
-impl<STATE> Eq for OwnedState<STATE>
+impl<State> Eq for Assignment<State>
 where
-    STATE: StateTypes,
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
 }
 
-impl<STATE> OwnedState<STATE>
+impl<State> Assignment<State>
 where
-    STATE: StateTypes,
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    pub fn seal_definition_confidential(&self) -> seal::Confidential {
+    pub fn to_confidential_seal(&self) -> seal::Confidential {
         match self {
-            OwnedState::Revealed {
+            Assignment::Revealed {
                 seal_definition, ..
             }
-            | OwnedState::ConfidentialAmount {
+            | Assignment::ConfidentialAmount {
                 seal_definition, ..
             } => seal_definition.commit_conceal(),
-            OwnedState::Confidential {
+            Assignment::Confidential {
                 seal_definition, ..
             }
-            | OwnedState::ConfidentialSeal {
+            | Assignment::ConfidentialSeal {
                 seal_definition, ..
             } => *seal_definition,
         }
     }
 
-    pub fn seal_definition(&self) -> Option<seal::Revealed> {
+    pub fn revealed_seal(&self) -> Option<seal::Revealed> {
         match self {
-            OwnedState::Revealed {
+            Assignment::Revealed {
                 seal_definition, ..
             }
-            | OwnedState::ConfidentialAmount {
+            | Assignment::ConfidentialAmount {
                 seal_definition, ..
             } => Some(*seal_definition),
-            OwnedState::Confidential { .. }
-            | OwnedState::ConfidentialSeal { .. } => None,
+            Assignment::Confidential { .. }
+            | Assignment::ConfidentialSeal { .. } => None,
         }
     }
 
-    pub fn assigned_state_confidential(&self) -> STATE::Confidential {
+    pub fn to_confidential_state(&self) -> State::Confidential {
         match self {
-            OwnedState::Revealed { assigned_state, .. }
-            | OwnedState::ConfidentialSeal { assigned_state, .. } => {
+            Assignment::Revealed { assigned_state, .. }
+            | Assignment::ConfidentialSeal { assigned_state, .. } => {
                 assigned_state.commit_conceal().into()
             }
-            OwnedState::Confidential { assigned_state, .. }
-            | OwnedState::ConfidentialAmount { assigned_state, .. } => {
+            Assignment::Confidential { assigned_state, .. }
+            | Assignment::ConfidentialAmount { assigned_state, .. } => {
                 assigned_state.clone()
             }
         }
     }
 
-    pub fn assigned_state(&self) -> Option<&STATE::Revealed> {
+    pub fn as_revealed_state(&self) -> Option<&State::Revealed> {
         match self {
-            OwnedState::Revealed { assigned_state, .. }
-            | OwnedState::ConfidentialSeal { assigned_state, .. } => {
+            Assignment::Revealed { assigned_state, .. }
+            | Assignment::ConfidentialSeal { assigned_state, .. } => {
                 Some(assigned_state)
             }
-            OwnedState::Confidential { .. }
-            | OwnedState::ConfidentialAmount { .. } => None,
+            Assignment::Confidential { .. }
+            | Assignment::ConfidentialAmount { .. } => None,
         }
     }
 
@@ -905,12 +1111,12 @@ where
 
         let mut counter = 0;
         match self {
-            OwnedState::Confidential {
+            Assignment::Confidential {
                 seal_definition,
                 assigned_state,
             } => {
                 if let Some(reveal) = known_seals.get(seal_definition) {
-                    *self = OwnedState::ConfidentialAmount {
+                    *self = Assignment::ConfidentialAmount {
                         seal_definition: seal::Revealed::TxOutpoint(
                             reveal.clone(),
                         ),
@@ -919,12 +1125,12 @@ where
                     counter += 1;
                 };
             }
-            OwnedState::ConfidentialSeal {
+            Assignment::ConfidentialSeal {
                 seal_definition,
                 assigned_state,
             } => {
                 if let Some(reveal) = known_seals.get(seal_definition) {
-                    *self = OwnedState::Revealed {
+                    *self = Assignment::Revealed {
                         seal_definition: seal::Revealed::TxOutpoint(
                             reveal.clone(),
                         ),
@@ -939,34 +1145,34 @@ where
     }
 }
 
-impl<STATE> CommitConceal for OwnedState<STATE>
+impl<State> CommitConceal for Assignment<State>
 where
     Self: Clone,
-    STATE: StateTypes,
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     type ConcealedCommitment = Self;
 
     fn commit_conceal(&self) -> Self::ConcealedCommitment {
         match self {
-            OwnedState::Confidential { .. } => self.clone(),
-            OwnedState::ConfidentialAmount {
+            Assignment::Confidential { .. } => self.clone(),
+            Assignment::ConfidentialAmount {
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
                 seal_definition: seal_definition.commit_conceal(),
                 assigned_state: assigned_state.clone(),
             },
-            OwnedState::Revealed {
+            Assignment::Revealed {
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
                 seal_definition: seal_definition.commit_conceal(),
                 assigned_state: assigned_state.commit_conceal().into(),
             },
-            OwnedState::ConfidentialSeal {
+            Assignment::ConfidentialSeal {
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
@@ -977,24 +1183,24 @@ where
     }
 }
 
-impl<STATE> ConcealSeals for OwnedState<STATE>
+impl<State> ConcealSeals for Assignment<State>
 where
-    STATE: StateTypes,
-    STATE::Revealed: CommitConceal,
-    STATE::Confidential: PartialEq + Eq,
-    <STATE as StateTypes>::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Revealed: CommitConceal,
+    State::Confidential: PartialEq + Eq,
+    <State as StateTypes>::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
-            OwnedState::Confidential { .. }
-            | OwnedState::ConfidentialSeal { .. } => 0,
-            OwnedState::ConfidentialAmount {
+            Assignment::Confidential { .. }
+            | Assignment::ConfidentialSeal { .. } => 0,
+            Assignment::ConfidentialAmount {
                 seal_definition,
                 assigned_state,
             } => {
                 if seals.contains(&seal_definition.commit_conceal()) {
-                    *self = OwnedState::<STATE>::Confidential {
+                    *self = Assignment::<State>::Confidential {
                         assigned_state: assigned_state.clone(),
                         seal_definition: seal_definition.commit_conceal(),
                     };
@@ -1003,12 +1209,12 @@ where
                     0
                 }
             }
-            OwnedState::Revealed {
+            Assignment::Revealed {
                 seal_definition,
                 assigned_state,
             } => {
                 if seals.contains(&seal_definition.commit_conceal()) {
-                    *self = OwnedState::<STATE>::ConfidentialSeal {
+                    *self = Assignment::<State>::ConfidentialSeal {
                         assigned_state: assigned_state.clone(),
                         seal_definition: seal_definition.commit_conceal(),
                     };
@@ -1021,43 +1227,43 @@ where
     }
 }
 
-impl<STATE> ConcealState for OwnedState<STATE>
+impl<State> ConcealState for Assignment<State>
 where
-    STATE: StateTypes,
-    STATE::Revealed: CommitConceal,
-    STATE::Confidential: PartialEq + Eq,
-    <STATE as StateTypes>::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Revealed: CommitConceal,
+    State::Confidential: PartialEq + Eq,
+    <State as StateTypes>::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn conceal_state_except(
         &mut self,
         seals: &Vec<seal::Confidential>,
     ) -> usize {
         match self {
-            OwnedState::Confidential { .. }
-            | OwnedState::ConfidentialAmount { .. } => 0,
-            OwnedState::ConfidentialSeal {
+            Assignment::Confidential { .. }
+            | Assignment::ConfidentialAmount { .. } => 0,
+            Assignment::ConfidentialSeal {
                 seal_definition,
                 assigned_state,
             } => {
                 if seals.contains(&seal_definition) {
                     0
                 } else {
-                    *self = OwnedState::<STATE>::Confidential {
+                    *self = Assignment::<State>::Confidential {
                         assigned_state: assigned_state.commit_conceal().into(),
                         seal_definition: seal_definition.clone(),
                     };
                     1
                 }
             }
-            OwnedState::Revealed {
+            Assignment::Revealed {
                 seal_definition,
                 assigned_state,
             } => {
                 if seals.contains(&seal_definition.commit_conceal()) {
                     0
                 } else {
-                    *self = OwnedState::<STATE>::ConfidentialAmount {
+                    *self = Assignment::<State>::ConfidentialAmount {
                         assigned_state: assigned_state.commit_conceal().into(),
                         seal_definition: seal_definition.clone(),
                     };
@@ -1072,13 +1278,13 @@ where
 // `commit_encode` of the concealed type, and here the concealed type is again
 // `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
 // concealed data.
-impl<STATE> CommitEncode for OwnedState<STATE>
+impl<State> CommitEncode for Assignment<State>
 where
     Self: Clone,
-    STATE: StateTypes,
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn commit_encode<E: io::Write>(&self, e: E) -> usize {
         self.commit_conceal().strict_encode(e).expect(
@@ -1088,13 +1294,13 @@ where
     }
 }
 
-impl<STATE> ConsensusCommit for OwnedState<STATE>
+impl<State> ConsensusCommit for Assignment<State>
 where
     Self: Clone,
-    STATE: StateTypes,
-    STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    State: StateTypes,
+    State::Confidential: PartialEq + Eq,
+    State::Confidential:
+        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     type Commitment = MerkleNode;
 }
@@ -1105,79 +1311,79 @@ mod _strict_encoding {
     use lnpbp::strict_encoding::Error;
     use std::io;
 
-    impl StrictEncode for Assignments {
+    impl StrictEncode for AssignmentVec {
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
         ) -> Result<usize, Error> {
             Ok(match self {
-                Assignments::Declarative(tree) => {
+                AssignmentVec::Declarative(tree) => {
                     strict_encode_list!(e; schema::StateType::Declarative, tree)
                 }
-                Assignments::DiscreteFiniteField(tree) => {
+                AssignmentVec::DiscreteFiniteField(tree) => {
                     strict_encode_list!(e; schema::StateType::DiscreteFiniteField, EncodingTag::U64, tree)
                 }
-                Assignments::CustomData(tree) => {
+                AssignmentVec::CustomData(tree) => {
                     strict_encode_list!(e; schema::StateType::CustomData, tree)
                 }
             })
         }
     }
 
-    impl StrictDecode for Assignments {
+    impl StrictDecode for AssignmentVec {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = schema::StateType::strict_decode(&mut d)?;
             Ok(match format {
                 schema::StateType::Declarative => {
-                    Assignments::Declarative(StrictDecode::strict_decode(d)?)
+                    AssignmentVec::Declarative(StrictDecode::strict_decode(d)?)
                 }
                 schema::StateType::DiscreteFiniteField => match EncodingTag::strict_decode(&mut d)?
                 {
                     EncodingTag::U64 => {
-                        Assignments::DiscreteFiniteField(StrictDecode::strict_decode(&mut d)?)
+                        AssignmentVec::DiscreteFiniteField(StrictDecode::strict_decode(&mut d)?)
                     }
                     _ => Err(Error::UnsupportedDataStructure(
                         "We support only homomorphic commitments to U64 data",
                     ))?,
                 },
                 schema::StateType::CustomData => {
-                    Assignments::CustomData(StrictDecode::strict_decode(d)?)
+                    AssignmentVec::CustomData(StrictDecode::strict_decode(d)?)
                 }
             })
         }
     }
 
-    impl<STATE> StrictEncode for OwnedState<STATE>
+    impl<State> StrictEncode for Assignment<State>
     where
-        STATE: StateTypes,
-        STATE::Confidential: PartialEq + Eq,
-        STATE::Confidential:
-            From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+        State: StateTypes,
+        State::Confidential: PartialEq + Eq,
+        State::Confidential:
+            From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
     {
         fn strict_encode<E: io::Write>(
             &self,
             mut e: E,
         ) -> Result<usize, Error> {
             Ok(match self {
-                OwnedState::Confidential {
+                Assignment::Confidential {
                     seal_definition,
                     assigned_state,
                 } => {
                     strict_encode_list!(e; 0u8, seal_definition, assigned_state)
                 }
-                OwnedState::Revealed {
+                Assignment::Revealed {
                     seal_definition,
                     assigned_state,
                 } => {
                     strict_encode_list!(e; 1u8, seal_definition, assigned_state)
                 }
-                OwnedState::ConfidentialSeal {
+                Assignment::ConfidentialSeal {
                     seal_definition,
                     assigned_state,
                 } => {
                     strict_encode_list!(e; 2u8, seal_definition, assigned_state)
                 }
-                OwnedState::ConfidentialAmount {
+                Assignment::ConfidentialAmount {
                     seal_definition,
                     assigned_state,
                 } => {
@@ -1187,31 +1393,31 @@ mod _strict_encoding {
         }
     }
 
-    impl<STATE> StrictDecode for OwnedState<STATE>
+    impl<State> StrictDecode for Assignment<State>
     where
-        STATE: StateTypes,
-        STATE::Confidential: PartialEq + Eq,
-        STATE::Confidential:
-            From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+        State: StateTypes,
+        State::Confidential: PartialEq + Eq,
+        State::Confidential:
+            From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
     {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = u8::strict_decode(&mut d)?;
             Ok(match format {
-                0u8 => OwnedState::Confidential {
+                0u8 => Assignment::Confidential {
                     seal_definition: seal::Confidential::strict_decode(&mut d)?,
-                    assigned_state: STATE::Confidential::strict_decode(&mut d)?,
+                    assigned_state: State::Confidential::strict_decode(&mut d)?,
                 },
-                1u8 => OwnedState::Revealed {
+                1u8 => Assignment::Revealed {
                     seal_definition: seal::Revealed::strict_decode(&mut d)?,
-                    assigned_state: STATE::Revealed::strict_decode(&mut d)?,
+                    assigned_state: State::Revealed::strict_decode(&mut d)?,
                 },
-                2u8 => OwnedState::ConfidentialSeal {
+                2u8 => Assignment::ConfidentialSeal {
                     seal_definition: seal::Confidential::strict_decode(&mut d)?,
-                    assigned_state: STATE::Revealed::strict_decode(&mut d)?,
+                    assigned_state: State::Revealed::strict_decode(&mut d)?,
                 },
-                3u8 => OwnedState::ConfidentialAmount {
+                3u8 => Assignment::ConfidentialAmount {
                     seal_definition: seal::Revealed::strict_decode(&mut d)?,
-                    assigned_state: STATE::Confidential::strict_decode(&mut d)?,
+                    assigned_state: State::Confidential::strict_decode(&mut d)?,
                 },
                 invalid => Err(Error::EnumValueNotKnown(
                     "Assignment".to_string(),
@@ -1299,18 +1505,18 @@ mod test {
     // Generic encode-decode testing
     #[test]
     fn test_encoded_data() {
-        test_encode!((HASH_VARIANT, Assignments));
-        test_encode!((PEDERSAN_VARIANT, Assignments));
-        test_encode!((DECLARATIVE_VARIANT, Assignments));
+        test_encode!((HASH_VARIANT, AssignmentVec));
+        test_encode!((PEDERSAN_VARIANT, AssignmentVec));
+        test_encode!((DECLARATIVE_VARIANT, AssignmentVec));
     }
 
     // Generic garbage value testing
     #[test]
     fn test_garbage_dec() {
         let err = "StateType";
-        test_garbage_exhaustive!(4..255; (DECLARATIVE_VARIANT, Assignments, err),
-            (HASH_VARIANT, Assignments, err),
-            (DECLARATIVE_VARIANT, Assignments, err));
+        test_garbage_exhaustive!(4..255; (DECLARATIVE_VARIANT, AssignmentVec, err),
+            (HASH_VARIANT, AssignmentVec, err),
+            (DECLARATIVE_VARIANT, AssignmentVec, err));
     }
 
     #[test]
@@ -1319,7 +1525,7 @@ mod test {
         let mut bytes = PEDERSAN_VARIANT.clone();
         bytes[1] = 0x02;
 
-        Assignments::strict_decode(&bytes[..]).unwrap();
+        AssignmentVec::strict_decode(&bytes[..]).unwrap();
     }
 
     fn zero_balance(
@@ -1389,11 +1595,11 @@ mod test {
 
         // Balance both the allocations against input amounts
         let balanced =
-            Assignments::zero_balanced(input_revealed.clone(), ours, theirs);
+            AssignmentVec::zero_balanced(input_revealed.clone(), ours, theirs);
 
         // Extract balanced confidential output amounts
         let outputs: Vec<Commitment> = balanced
-            .all_state_pedersen()
+            .to_confidential_state_pedersen()
             .iter()
             .map(|confidential| confidential.commitment)
             .collect();
@@ -1629,85 +1835,91 @@ mod test {
     #[test]
     fn test_identification() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check correct types are being identified
         // and wrong types return false
-        assert!(declarative_type.is_declarative_state());
-        assert!(pedersan_type.is_discrete_state());
-        assert!(hash_type.is_custom_state());
-        assert!(!declarative_type.is_custom_state());
-        assert!(!declarative_type.is_discrete_state());
-        assert!(!pedersan_type.is_declarative_state());
-        assert!(!pedersan_type.is_custom_state());
-        assert!(!hash_type.is_declarative_state());
-        assert!(!hash_type.is_discrete_state());
+        assert!(declarative_type.is_declarative());
+        assert!(pedersan_type.has_value());
+        assert!(hash_type.has_data());
+        assert!(!declarative_type.has_data());
+        assert!(!declarative_type.has_value());
+        assert!(!pedersan_type.is_declarative());
+        assert!(!pedersan_type.has_data());
+        assert!(!hash_type.is_declarative());
+        assert!(!hash_type.has_value());
     }
 
     #[test]
     fn test_extraction() {
         let mut declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let mut pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
         let mut hash_type =
-            Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check Correct type extraction works
-        assert!(!declarative_type.to_declarative_state().is_empty());
-        assert!(!pedersan_type.to_discrete_state().is_empty());
-        assert!(!hash_type.to_custom_state().is_empty());
+        assert!(!declarative_type.to_declarative_assignment_vec().is_empty());
+        assert!(!pedersan_type.to_value_assignment_vec().is_empty());
+        assert!(!hash_type.to_data_assignment_vec().is_empty());
 
         // Check wrong type extraction doesn't work
-        assert!(declarative_type.to_discrete_state().is_empty());
-        assert!(declarative_type.clone().into_custom_state().is_empty());
-        assert!(pedersan_type.to_declarative_state().is_empty());
-        assert!(pedersan_type.clone().into_custom_state().is_empty());
-        assert!(hash_type.to_declarative_state().is_empty());
-        assert!(hash_type.clone().into_discrete_state().is_empty());
+        assert!(declarative_type.to_value_assignment_vec().is_empty());
+        assert!(declarative_type
+            .clone()
+            .into_data_assignment_vec()
+            .is_empty());
+        assert!(pedersan_type.to_declarative_assignment_vec().is_empty());
+        assert!(pedersan_type.clone().into_data_assignment_vec().is_empty());
+        assert!(hash_type.to_declarative_assignment_vec().is_empty());
+        assert!(hash_type.clone().into_value_assignment_vec().is_empty());
 
         // Check correct mutable type extraction works
-        assert!(declarative_type.declarative_state_mut().is_some());
-        assert!(pedersan_type.discrete_state_mut().is_some());
-        assert!(hash_type.custom_state_mut().is_some());
+        assert!(declarative_type.declarative_assignment_vec_mut().is_some());
+        assert!(pedersan_type.value_assignment_vec_mut().is_some());
+        assert!(hash_type.data_assignment_vec_mut().is_some());
 
         // Check wrong mutable type extraction doesn't work
-        assert!(declarative_type.discrete_state_mut().is_none());
-        assert!(declarative_type.custom_state_mut().is_none());
-        assert!(pedersan_type.declarative_state_mut().is_none());
-        assert!(pedersan_type.custom_state_mut().is_none());
-        assert!(hash_type.declarative_state_mut().is_none());
-        assert!(hash_type.discrete_state_mut().is_none());
+        assert!(declarative_type.value_assignment_vec_mut().is_none());
+        assert!(declarative_type.data_assignment_vec_mut().is_none());
+        assert!(pedersan_type.declarative_assignment_vec_mut().is_none());
+        assert!(pedersan_type.data_assignment_vec_mut().is_none());
+        assert!(hash_type.declarative_assignment_vec_mut().is_none());
+        assert!(hash_type.value_assignment_vec_mut().is_none());
     }
 
     #[test]
     fn test_seal_extraction() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract a specific Txid from each variants
         let txid_1 =
-            match declarative_type.seal_definition(2).unwrap().unwrap() {
+            match declarative_type.revealed_seal_at(2).unwrap().unwrap() {
                 Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
                 _ => None,
             }
             .unwrap()
             .to_hex();
 
-        let txid_2 = match pedersan_type.seal_definition(0).unwrap().unwrap() {
-            Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
-            _ => None,
-        }
-        .unwrap()
-        .to_hex();
+        let txid_2 =
+            match pedersan_type.revealed_seal_at(0).unwrap().unwrap() {
+                Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
+                _ => None,
+            }
+            .unwrap()
+            .to_hex();
 
-        let txid_3 = match hash_type.seal_definition(1).unwrap().unwrap() {
+        let txid_3 = match hash_type.revealed_seal_at(1).unwrap().unwrap() {
             Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
             _ => None,
         }
@@ -1723,14 +1935,15 @@ mod test {
     #[test]
     fn test_known_seals() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known Txids from each variants
         let mut dec_txids: Vec<String> = declarative_type
-            .known_seal_definitions()
+            .filter_revealed_seals()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1743,7 +1956,7 @@ mod test {
             .collect();
 
         let mut ped_txids: Vec<String> = pedersan_type
-            .known_seal_definitions()
+            .filter_revealed_seals()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1756,7 +1969,7 @@ mod test {
             .collect();
 
         let mut hash_txids: Vec<String> = hash_type
-            .known_seal_definitions()
+            .filter_revealed_seals()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1786,26 +1999,27 @@ mod test {
     #[test]
     fn test_all_seals() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract seals from all variants and conceal them
         let mut dec_hashes: Vec<String> = declarative_type
-            .all_seal_definitions()
+            .to_confidential_seals()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
 
         let mut ped_hashes: Vec<String> = pedersan_type
-            .all_seal_definitions()
+            .to_confidential_seals()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
 
         let mut hash_hashes: Vec<String> = hash_type
-            .all_seal_definitions()
+            .to_confidential_seals()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
@@ -1824,13 +2038,14 @@ mod test {
     #[test]
     fn test_known_state_homomorphic() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from pedersan type variant
-        let states = pedersan_type.known_state_values();
+        let states = pedersan_type.filter_revealed_state_values();
 
         // Check the amounts matches with precomputed values
         assert_eq!(states[0].value, 10);
@@ -1858,20 +2073,21 @@ mod test {
 
         // Check no values returned for declarative and custom data type
         // variants
-        assert_eq!(declarative_type.known_state_values().len(), 0);
-        assert_eq!(hash_type.known_state_values().len(), 0);
+        assert_eq!(declarative_type.filter_revealed_state_values().len(), 0);
+        assert_eq!(hash_type.filter_revealed_state_values().len(), 0);
     }
 
     #[test]
     fn test_known_state_data() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from custom data type variant
-        let data_set = hash_type.known_state_data();
+        let data_set = hash_type.filter_revealed_state_data();
 
         // Create state data from precomputed values
         let data_1 = data::Revealed::Sha256(
@@ -1886,20 +2102,21 @@ mod test {
         assert_eq!(data_set[1].to_owned(), data_2);
 
         // Check no values returned for declarative and pedersan type variants
-        assert_eq!(declarative_type.known_state_data().len(), 0);
-        assert_eq!(pedersan_type.known_state_data().len(), 0);
+        assert_eq!(declarative_type.filter_revealed_state_data().len(), 0);
+        assert_eq!(pedersan_type.filter_revealed_state_data().len(), 0);
     }
 
     #[test]
     fn test_all_state_pedersan() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data for pedersan type and conceal them
-        let conf_amounts = pedersan_type.all_state_pedersen();
+        let conf_amounts = pedersan_type.to_confidential_state_pedersen();
 
         // Check extracted values matches with precomputed values
         assert_eq!(
@@ -1925,20 +2142,21 @@ mod test {
         );
 
         // Check no values returned for declarative and hash type
-        assert_eq!(declarative_type.all_state_pedersen().len(), 0);
-        assert_eq!(hash_type.all_state_pedersen().len(), 0);
+        assert_eq!(declarative_type.to_confidential_state_pedersen().len(), 0);
+        assert_eq!(hash_type.to_confidential_state_pedersen().len(), 0);
     }
 
     #[test]
     fn test_all_state_hashed() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data from hash type variant and conceal them
-        let extracted_states = hash_type.all_state_hashed();
+        let extracted_states = hash_type.to_confidential_state_hashed();
 
         // Precomputed concealed state data
         let expected: [&str; 4] = [
@@ -1958,8 +2176,8 @@ mod test {
         );
 
         // Check no values returned for declarative and pedersan types
-        assert_eq!(declarative_type.all_state_hashed().len(), 0);
-        assert_eq!(pedersan_type.all_state_hashed().len(), 0);
+        assert_eq!(declarative_type.to_confidential_state_hashed().len(), 0);
+        assert_eq!(pedersan_type.to_confidential_state_hashed().len(), 0);
     }
 
     #[test]
@@ -1969,7 +2187,7 @@ mod test {
         // Pedersan type has very large concealed state data which slows down
         // the test
         let mut hash_type =
-            Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // CommitConceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
@@ -1985,7 +2203,7 @@ mod test {
 
         // Extracted seal values
         let extracted_txid: Vec<String> = hash_type
-            .known_seal_definitions()
+            .filter_revealed_seals()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -2010,7 +2228,7 @@ mod test {
 
         // Extract concealed seals
         let extracted_seals_confidential: Vec<String> = hash_type
-            .all_seal_definitions()
+            .to_confidential_seals()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
@@ -2031,7 +2249,7 @@ mod test {
 
         // Extract concealed state data
         let extracted_state_confidential: Vec<String> = hash_type
-            .all_state_hashed()
+            .to_confidential_state_hashed()
             .iter()
             .map(|confidential| confidential.to_hex())
             .collect();
@@ -2046,10 +2264,11 @@ mod test {
     #[test]
     fn test_len() {
         let declarative_type =
-            Assignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type =
-            Assignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type =
+            AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // All variants have 4 assignments in them
         assert_eq!(declarative_type.len(), 4);
@@ -2059,7 +2278,7 @@ mod test {
 
     #[test]
     fn test_encoding_ancestor() {
-        test_encode!((PARENT_RIGHTS, ParentOwnedRights));
+        test_encode!((PARENT_RIGHTS, ParentOwnedRightsInner));
     }
 
     #[test]
@@ -2067,7 +2286,7 @@ mod test {
     fn test_garbage_ancestor() {
         let mut data = PARENT_RIGHTS.clone();
         data[0] = 0x36 as u8;
-        ParentOwnedRights::strict_decode(&data[..]).unwrap();
+        ParentOwnedRightsInner::strict_decode(&data[..]).unwrap();
     }
 
     // This doesn't use the merkelize() function
@@ -2083,7 +2302,7 @@ mod test {
         assignment.insert(ty, vec![data]);
 
         let nodeid = NodeId::default();
-        let mut parent_rights = ParentOwnedRightsInner::default();
+        let mut parent_rights = ParentOwnedRights::default();
         parent_rights.0.insert(nodeid, assignment);
 
         let mut original_commit = vec![];
@@ -2166,7 +2385,7 @@ mod test {
         assignments.insert(type3, vec3.clone());
 
         // Construct ancestor
-        let mut parent_rights = ParentOwnedRightsInner::default();
+        let mut parent_rights = ParentOwnedRights::default();
         parent_rights.0.insert(node_id, assignments);
 
         // get the commit encoding
@@ -2231,7 +2450,7 @@ mod test {
             .map(|txid| bitcoin::Txid::from_hex(txid).unwrap())
             .collect();
 
-        let assignment_1 = OwnedState::<DeclarativeStrategy>::Revealed {
+        let assignment_1 = Assignment::<DeclarativeStrategy>::Revealed {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[0], 1),
             )),
@@ -2239,7 +2458,7 @@ mod test {
         };
 
         let assignment_2 =
-            OwnedState::<DeclarativeStrategy>::ConfidentialAmount {
+            Assignment::<DeclarativeStrategy>::ConfidentialAmount {
                 seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                     OutPoint::new(txid_vec[1], 2),
                 )),
@@ -2247,7 +2466,7 @@ mod test {
             };
 
         let assignment_3 =
-            OwnedState::<DeclarativeStrategy>::ConfidentialSeal {
+            Assignment::<DeclarativeStrategy>::ConfidentialSeal {
                 seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                     OutPoint::new(txid_vec[2], 3),
                 ))
@@ -2255,7 +2474,7 @@ mod test {
                 assigned_state: data::Void,
             };
 
-        let assignment_4 = OwnedState::<DeclarativeStrategy>::Confidential {
+        let assignment_4 = Assignment::<DeclarativeStrategy>::Confidential {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 4),
             ))
@@ -2270,7 +2489,7 @@ mod test {
         set.push(assignment_3);
         set.push(assignment_4);
 
-        let declarative_variant = Assignments::Declarative(set);
+        let declarative_variant = AssignmentVec::Declarative(set);
 
         // Create Pedersan Variant
 
@@ -2279,14 +2498,14 @@ mod test {
             .map(|txid| bitcoin::Txid::from_hex(txid).unwrap())
             .collect();
 
-        let assignment_1 = OwnedState::<PedersenStrategy>::Revealed {
+        let assignment_1 = Assignment::<PedersenStrategy>::Revealed {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[0], 1),
             )),
             assigned_state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
-        let assignment_2 = OwnedState::<PedersenStrategy>::ConfidentialAmount {
+        let assignment_2 = Assignment::<PedersenStrategy>::ConfidentialAmount {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[1], 1),
             )),
@@ -2294,7 +2513,7 @@ mod test {
                 .commit_conceal(),
         };
 
-        let assignment_3 = OwnedState::<PedersenStrategy>::ConfidentialSeal {
+        let assignment_3 = Assignment::<PedersenStrategy>::ConfidentialSeal {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[2], 1),
             ))
@@ -2302,7 +2521,7 @@ mod test {
             assigned_state: value::Revealed::with_amount(30u64, &mut rng),
         };
 
-        let assignment_4 = OwnedState::<PedersenStrategy>::Confidential {
+        let assignment_4 = Assignment::<PedersenStrategy>::Confidential {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 1),
             ))
@@ -2318,7 +2537,7 @@ mod test {
         set.push(assignment_3);
         set.push(assignment_4);
 
-        let pedersen_variant = Assignments::DiscreteFiniteField(set);
+        let pedersen_variant = AssignmentVec::DiscreteFiniteField(set);
 
         // Create Hash variant
         let txid_vec: Vec<bitcoin::Txid> = TXID_VEC
@@ -2333,21 +2552,21 @@ mod test {
             })
             .collect();
 
-        let assignment_1 = OwnedState::<HashStrategy>::Revealed {
+        let assignment_1 = Assignment::<HashStrategy>::Revealed {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[0], 1),
             )),
             assigned_state: state_data_vec[0].clone(),
         };
 
-        let assignment_2 = OwnedState::<HashStrategy>::ConfidentialAmount {
+        let assignment_2 = Assignment::<HashStrategy>::ConfidentialAmount {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[1], 1),
             )),
             assigned_state: state_data_vec[1].clone().commit_conceal(),
         };
 
-        let assignment_3 = OwnedState::<HashStrategy>::ConfidentialSeal {
+        let assignment_3 = Assignment::<HashStrategy>::ConfidentialSeal {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[2], 1),
             ))
@@ -2355,7 +2574,7 @@ mod test {
             assigned_state: state_data_vec[2].clone(),
         };
 
-        let assignment_4 = OwnedState::<HashStrategy>::Confidential {
+        let assignment_4 = Assignment::<HashStrategy>::Confidential {
             seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
                 OutPoint::new(txid_vec[3], 1),
             ))
@@ -2370,14 +2589,14 @@ mod test {
         set.push(assignment_3);
         set.push(assignment_4);
 
-        let hash_variant = Assignments::CustomData(set);
+        let hash_variant = AssignmentVec::CustomData(set);
 
         // Create assignemnts
 
         let type1 = 1 as schema::OwnedRightType;
         let type2 = 2 as schema::OwnedRightType;
         let type3 = 3 as schema::OwnedRightType;
-        let mut owned_rights = OwnedRightsInner::default();
+        let mut owned_rights = OwnedRights::default();
         owned_rights.0.insert(type1, declarative_variant.clone());
         owned_rights.0.insert(type2, pedersen_variant.clone());
         owned_rights.0.insert(type3, hash_variant.clone());
@@ -2391,7 +2610,7 @@ mod test {
         // create individual leaves
         let declarative_leaves: Vec<(schema::OwnedRightType, MerkleNode)> =
             declarative_variant
-                .to_declarative_state()
+                .to_declarative_assignment_vec()
                 .iter()
                 .map(|assignment| {
                     (
@@ -2405,7 +2624,7 @@ mod test {
 
         let pedersan_leaves: Vec<(schema::OwnedRightType, MerkleNode)> =
             pedersen_variant
-                .to_discrete_state()
+                .to_value_assignment_vec()
                 .iter()
                 .map(|assignment| {
                     (
@@ -2419,7 +2638,7 @@ mod test {
 
         let hash_leaves: Vec<(schema::OwnedRightType, MerkleNode)> =
             hash_variant
-                .to_custom_state()
+                .to_data_assignment_vec()
                 .iter()
                 .map(|assignment| {
                     (

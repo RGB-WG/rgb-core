@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 
 use amplify::Wrapper;
-use bitcoin::OutPoint;
+use bitcoin::{OutPoint, Txid};
 use lnpbp::Chain;
 use rgb::prelude::*;
 use rgb::seal::WitnessVoutError;
@@ -43,6 +43,16 @@ pub enum Error {
     /// can't be a witness transaction for genesis
     #[from(WitnessVoutError)]
     GenesisSeal,
+
+    /// Epoch seal definition for node {0} contains confidential data
+    EpochSealConfidential(NodeId),
+
+    /// Burn & replace seal definition for node {0} contains confidential data
+    BurnSealConfidential(NodeId),
+
+    /// Inflation assignment (seal or state) for node {0} contains confidential
+    /// data
+    InflationAssignmentConfidential(NodeId),
 }
 
 // TODO #31: Add support for renominations, burn & replacements
@@ -92,8 +102,12 @@ pub struct Asset {
     /// arbitrary order
     known_issues: Vec<Issue>,
 
-    /// Burn & replacement epochs, organized according to the epoch order
-    epochs: Vec<Epoch>,
+    /// Burn & replacement epochs, organized according to the witness txid.
+    ///
+    /// Witness transaction must be mined for the epoch to be real.
+    /// One of the inputs of this transaction MUST spend UTXO defined as a
+    /// seal closed by this epoch ([`Epoch::closes`])
+    epochs: BTreeMap<Txid, Epoch>,
 
     /// Detailed information about the asset supply (aggregated from the issue
     /// and burning information kept inside the epochs data)
@@ -217,12 +231,7 @@ impl Asset {
 
 impl Asset {
     #[inline]
-    pub fn add_issue(&self, _issue: Transition) -> Supply {
-        unimplemented!()
-    }
-
-    #[inline]
-    pub fn allocations(&self, outpoint: bitcoin::OutPoint) -> Vec<Allocation> {
+    pub fn allocations(&self, outpoint: OutPoint) -> Vec<Allocation> {
         self.known_allocations
             .iter()
             .filter(|a| *a.outpoint() == outpoint)
@@ -232,7 +241,7 @@ impl Asset {
 
     pub fn add_allocation(
         &mut self,
-        outpoint: bitcoin::OutPoint,
+        outpoint: OutPoint,
         node_id: NodeId,
         index: u16,
         value: value::Revealed,
@@ -248,7 +257,7 @@ impl Asset {
 
     pub fn remove_allocation(
         &mut self,
-        outpoint: bitcoin::OutPoint,
+        outpoint: OutPoint,
         node_id: NodeId,
         index: u16,
         value: value::Revealed,
@@ -289,9 +298,9 @@ impl TryFrom<Genesis> for Asset {
         for assignment in
             genesis.owned_rights_by_type(*OwnedRightsType::Inflation)
         {
-            for state in assignment.to_custom_state() {
+            for state in assignment.to_data_assignment_vec() {
                 match state {
-                    OwnedState::Revealed {
+                    Assignment::Revealed {
                         seal_definition,
                         assigned_state,
                     } => {
@@ -302,7 +311,7 @@ impl TryFrom<Genesis> for Asset {
                                 .ok_or(schema::Error::NotAllFieldsPresent)?,
                         );
                     }
-                    OwnedState::ConfidentialSeal { assigned_state, .. } => {
+                    Assignment::ConfidentialSeal { assigned_state, .. } => {
                         if issue_limit < core::u64::MAX {
                             issue_limit += assigned_state
                                 .u64()
@@ -316,23 +325,17 @@ impl TryFrom<Genesis> for Asset {
             }
         }
 
+        let issue = Issue::try_from(&genesis)?;
         let node_id = NodeId::from_inner(genesis.contract_id().into_inner());
-        let issue = Issue::with(
-            genesis.node_id(),
-            genesis.contract_id(),
-            supply.clone(),
-            empty!(), // This is a primary issue, so no origin here
-            known_inflation.clone(),
-        );
         let mut known_allocations = Vec::<Allocation>::new();
         for assignment in genesis.owned_rights_by_type(*OwnedRightsType::Assets)
         {
             assignment
-                .to_discrete_state()
+                .to_value_assignment_vec()
                 .into_iter()
                 .enumerate()
                 .for_each(|(index, assign)| {
-                    if let OwnedState::Revealed {
+                    if let Assignment::Revealed {
                         seal_definition:
                             seal::Revealed::TxOutpoint(outpoint_reveal),
                         assigned_state,
@@ -384,5 +387,45 @@ impl TryFrom<Genesis> for Asset {
             known_allocations,
             epochs: empty!(),
         })
+    }
+}
+
+impl TryFrom<Consignment> for Asset {
+    type Error = Error;
+
+    fn try_from(consignment: Consignment) -> Result<Self, Self::Error> {
+        // 1. Parse genesis
+        let asset: Asset = consignment.genesis.try_into()?;
+
+        // 2. Parse secondary issues
+
+        // 3. Parse epochs & burn/replace operations
+
+        // 4. Parse renominations
+
+        unimplemented!()
+    }
+}
+
+impl Asset {
+    #[allow(dead_code)]
+    fn append_epoch(
+        &mut self,
+        consignment: &Consignment,
+        epoch_id: NodeId,
+    ) -> Result<(), Error> {
+        // 1. It must correctly extend known state, i.e. close UTXO for a seal
+        //    defined by a state transition already belonging to the asset
+        unimplemented!()
+    }
+
+    #[allow(dead_code)]
+    fn append_burn_or_replace(
+        &mut self,
+        consignment: &Consignment,
+        epoch_id: NodeId,
+        bor_id: NodeId,
+    ) -> Result<(), Error> {
+        unimplemented!()
     }
 }

@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
 use amplify::{AsAny, Wrapper};
@@ -26,18 +26,24 @@ use lnpbp::lnpbp4::ProtocolId;
 use lnpbp::{Chain, TaggedHash};
 
 use super::{
-    Assignments, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner,
-    ParentOwnedRights, ParentOwnedRightsInner, ParentPublicRights,
-    ParentPublicRightsInner, PublicRights, PublicRightsInner,
+    AssignmentVec, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner,
+    ParentOwnedRights, ParentPublicRights, ParentPublicRightsInner,
+    PublicRights, PublicRightsInner,
 };
+use crate::contract::assignments::NodeOutput;
 use crate::reveal::{self, IntoRevealed};
 use crate::schema::{
     ExtensionType, FieldType, NodeType, OwnedRightType, TransitionType,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
-use crate::{schema, seal, Metadata, SchemaId, SimplicityScript, ToBech32};
+use crate::{
+    schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId,
+    SimplicityScript, ToBech32,
+};
 
+/// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
+/// the value of two concatenated SHA256 hashes for `rgb:node` prefix string.
 static MIDSTATE_NODE_ID: [u8; 32] = [
     0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc,
     0xbd, 0x5a, 0x58, 0x55, 0x6a, 0xe2, 0x16, 0xa5, 0xee, 0xb7, 0x3c, 0x1,
@@ -132,7 +138,12 @@ impl CommitEncodeWithStrategy for ContractId {
     type Strategy = commit_strategy::UsingStrict;
 }
 
-/// Trait which is implemented by all node types (see [`NodeType`])
+/// RGB contract node API, defined as trait
+///
+/// Implemented by all contract node types (see [`NodeType`]):
+/// - Genesis ([`Genesis`])
+/// - State transitions ([`Transitions`])
+/// - Public state extensions ([`Extensions`])
 pub trait Node: AsAny {
     /// Returns type of the node (see [`NodeType`]). Unfortunately, this can't
     /// be just a const, since it will break our ability to convert concrete
@@ -163,8 +174,25 @@ pub trait Node: AsAny {
     /// [`Option::None`] for genesis and trate transitions
     fn extension_type(&self) -> Option<ExtensionType>;
 
+    /// Returns reference to a full set of metadata (in form of [`Metadata`]
+    /// wrapper structure) for the contract node.
     fn metadata(&self) -> &Metadata;
+
+    /// Returns reference to information about the owned rights in form of
+    /// [`ParentOwnedRights`] wrapper structure which this node updates with
+    /// state transition ("parent owned rights").
+    ///
+    /// This is always an empty `Vec` for [`Genesis`] and [`Extension`] node
+    /// types.
     fn parent_owned_rights(&self) -> &ParentOwnedRights;
+
+    /// Returns reference to information about the public rights (in form of
+    /// [`ParentPublicRights`] wrapper structure), defined with "parent" state
+    /// extensions (i.e. those finalized with the current state transition) or
+    /// referenced by another state extension, which this node updates
+    /// ("parent public rights").
+    ///
+    /// This is always an empty `Vec` for [`Genesis`].
     fn parent_public_rights(&self) -> &ParentPublicRights;
     fn owned_rights(&self) -> &OwnedRights;
     fn owned_rights_mut(&mut self) -> &mut OwnedRights;
@@ -174,7 +202,71 @@ pub trait Node: AsAny {
 
     #[inline]
     fn field_types(&self) -> Vec<FieldType> {
-        self.metadata().keys().cloned().collect()
+        self.metadata().keys().copied().collect()
+    }
+
+    #[inline]
+    fn parent_public_right_types(&self) -> Vec<PublicRightType> {
+        self.parent_public_rights()
+            .values()
+            .map(BTreeSet::iter)
+            .flatten()
+            .copied()
+            .collect()
+    }
+
+    #[inline]
+    fn parent_by_public_right_type(&self, t: PublicRightType) -> Vec<NodeId> {
+        self.parent_public_rights()
+            .iter()
+            .filter(|(_, t2)| t2.contains(&t))
+            .map(|(node_id, _)| *node_id)
+            .collect()
+    }
+
+    /// For genesis and public state extensions always returns an empty list.
+    /// While public state extension do have parent nodes, they do not contain
+    /// indexed rights.
+    #[inline]
+    fn parent_outputs(&self) -> Vec<NodeOutput> {
+        self.parent_owned_rights()
+            .iter()
+            .map(|(node_id, map)| {
+                let node_id = *node_id;
+                map.values()
+                    .flatten()
+                    .copied()
+                    .map(move |output_no| NodeOutput { node_id, output_no })
+            })
+            .flatten()
+            .collect()
+    }
+
+    #[inline]
+    fn parent_outputs_by_type(&self, t: OwnedRightType) -> Vec<NodeOutput> {
+        self.parent_owned_rights()
+            .iter()
+            .map(|(node_id, map)| {
+                let node_id = *node_id;
+                map.iter()
+                    .filter(|(t2, _)| t == **t2)
+                    .map(|(_, outputs)| outputs)
+                    .flatten()
+                    .copied()
+                    .map(move |output_no| NodeOutput { node_id, output_no })
+            })
+            .flatten()
+            .collect()
+    }
+
+    #[inline]
+    fn parent_owned_right_types(&self) -> Vec<OwnedRightType> {
+        self.parent_owned_rights()
+            .values()
+            .map(BTreeMap::keys)
+            .flatten()
+            .copied()
+            .collect()
     }
 
     #[inline]
@@ -183,8 +275,11 @@ pub trait Node: AsAny {
     }
 
     #[inline]
-    fn owned_rights_by_type(&self, t: OwnedRightType) -> Option<&Assignments> {
-        self.owned_rights().into_iter().find_map(|(t2, a)| {
+    fn owned_rights_by_type(
+        &self,
+        t: OwnedRightType,
+    ) -> Option<&AssignmentVec> {
+        self.owned_rights().iter().find_map(|(t2, a)| {
             if *t2 == t {
                 Some(a)
             } else {
@@ -194,28 +289,60 @@ pub trait Node: AsAny {
     }
 
     #[inline]
-    fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
+    fn to_confiential_seals(&self) -> Vec<seal::Confidential> {
         self.owned_rights()
-            .into_iter()
-            .flat_map(|(_, assignment)| assignment.all_seal_definitions())
+            .iter()
+            .flat_map(|(_, assignment)| assignment.to_confidential_seals())
             .collect()
     }
 
     #[inline]
-    fn known_seal_definitions(&self) -> Vec<seal::Revealed> {
-        self.owned_rights()
+    fn revealed_seals(
+        &self,
+    ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
+        let unfiltered = self
+            .owned_rights()
+            .iter()
+            .map(|(_, assignment)| assignment.revealed_seals())
+            .collect::<Vec<_>>();
+        if unfiltered.contains(&Err(ConfidentialDataError)) {
+            return Err(ConfidentialDataError);
+        }
+        Ok(unfiltered
             .into_iter()
-            .flat_map(|(_, assignment)| assignment.known_seal_definitions())
+            .filter_map(Result::ok)
+            .map(Vec::into_iter)
+            .flatten()
+            .collect())
+    }
+
+    #[inline]
+    fn revealed_seals_by_type(
+        &self,
+        assignment_type: OwnedRightType,
+    ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
+        Ok(self
+            .owned_rights_by_type(assignment_type)
+            .map(AssignmentVec::revealed_seals)
+            .transpose()?
+            .unwrap_or(vec![]))
+    }
+
+    #[inline]
+    fn filter_revealed_seals(&self) -> Vec<seal::Revealed> {
+        self.owned_rights()
+            .iter()
+            .flat_map(|(_, assignment)| assignment.filter_revealed_seals())
             .collect()
     }
 
     #[inline]
-    fn known_seal_definitions_by_type(
+    fn filter_revealed_seals_by_type(
         &self,
         assignment_type: OwnedRightType,
     ) -> Vec<seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
-            .map(Assignments::known_seal_definitions)
+            .map(AssignmentVec::filter_revealed_seals)
             .unwrap_or(vec![])
     }
 }
@@ -230,8 +357,8 @@ pub struct Genesis {
     schema_id: SchemaId,
     chain: Chain,
     metadata: Metadata,
-    owned_rights: OwnedRightsInner,
-    public_rights: PublicRightsInner,
+    owned_rights: OwnedRights,
+    public_rights: PublicRights,
     script: SimplicityScript,
 }
 
@@ -248,9 +375,9 @@ pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
     metadata: Metadata,
-    parent_public_rights: ParentPublicRightsInner,
-    owned_rights: OwnedRightsInner,
-    public_rights: PublicRightsInner,
+    parent_public_rights: ParentPublicRights,
+    owned_rights: OwnedRights,
+    public_rights: PublicRights,
     script: SimplicityScript,
 }
 
@@ -266,9 +393,9 @@ pub struct Extension {
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
-    parent_owned_rights: ParentOwnedRightsInner,
-    owned_rights: OwnedRightsInner,
-    public_rights: PublicRightsInner,
+    parent_owned_rights: ParentOwnedRights,
+    owned_rights: OwnedRights,
+    public_rights: PublicRights,
     script: SimplicityScript,
 }
 
@@ -347,7 +474,7 @@ impl ConcealState for Genesis {
         seals: &Vec<seal::Confidential>,
     ) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut() {
+        for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
         }
         count
@@ -360,7 +487,7 @@ impl ConcealState for Extension {
         seals: &Vec<seal::Confidential>,
     ) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut() {
+        for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
         }
         count
@@ -373,7 +500,7 @@ impl ConcealState for Transition {
         seals: &Vec<seal::Confidential>,
     ) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut() {
+        for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
         }
         count
@@ -383,7 +510,7 @@ impl ConcealState for Transition {
 impl ConcealSeals for Transition {
     fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut() {
+        for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_seals(seals);
         }
         count
@@ -453,7 +580,7 @@ impl Node for Genesis {
     fn parent_owned_rights(&self) -> &ParentOwnedRights {
         lazy_static! {
             static ref PARENT_EMPTY: ParentOwnedRights =
-                ParentOwnedRights::new();
+                ParentOwnedRights::default();
         }
         &PARENT_EMPTY
     }
@@ -462,7 +589,7 @@ impl Node for Genesis {
     fn parent_public_rights(&self) -> &ParentPublicRights {
         lazy_static! {
             static ref PARENT_EMPTY: ParentPublicRights =
-                ParentPublicRights::new();
+                ParentPublicRights::default();
         }
         &PARENT_EMPTY
     }
@@ -474,22 +601,22 @@ impl Node for Genesis {
 
     #[inline]
     fn owned_rights(&self) -> &OwnedRights {
-        self.owned_rights.as_inner()
+        &self.owned_rights
     }
 
     #[inline]
     fn owned_rights_mut(&mut self) -> &mut OwnedRights {
-        self.owned_rights.as_inner_mut()
+        &mut self.owned_rights
     }
 
     #[inline]
     fn public_rights(&self) -> &PublicRights {
-        self.public_rights.as_inner()
+        &self.public_rights
     }
 
     #[inline]
     fn public_rights_mut(&mut self) -> &mut PublicRights {
-        self.public_rights.as_inner_mut()
+        &mut self.public_rights
     }
 
     #[inline]
@@ -528,14 +655,14 @@ impl Node for Extension {
     fn parent_owned_rights(&self) -> &ParentOwnedRights {
         lazy_static! {
             static ref PARENT_EMPTY: ParentOwnedRights =
-                ParentOwnedRights::new();
+                ParentOwnedRights::default();
         }
         &PARENT_EMPTY
     }
 
     #[inline]
     fn parent_public_rights(&self) -> &ParentPublicRights {
-        self.parent_public_rights.as_inner()
+        &self.parent_public_rights
     }
 
     #[inline]
@@ -545,22 +672,22 @@ impl Node for Extension {
 
     #[inline]
     fn owned_rights(&self) -> &OwnedRights {
-        self.owned_rights.as_inner()
+        &self.owned_rights
     }
 
     #[inline]
     fn owned_rights_mut(&mut self) -> &mut OwnedRights {
-        self.owned_rights.as_inner_mut()
+        &mut self.owned_rights
     }
 
     #[inline]
     fn public_rights(&self) -> &PublicRights {
-        self.public_rights.as_inner()
+        &self.public_rights
     }
 
     #[inline]
     fn public_rights_mut(&mut self) -> &mut PublicRights {
-        self.public_rights.as_inner_mut()
+        &mut self.public_rights
     }
 
     #[inline]
@@ -597,14 +724,14 @@ impl Node for Transition {
 
     #[inline]
     fn parent_owned_rights(&self) -> &ParentOwnedRights {
-        self.parent_owned_rights.as_inner()
+        &self.parent_owned_rights
     }
 
     #[inline]
     fn parent_public_rights(&self) -> &ParentPublicRights {
         lazy_static! {
             static ref PARENT_EMPTY: ParentPublicRights =
-                ParentPublicRights::new();
+                ParentPublicRights::default();
         }
         &PARENT_EMPTY
     }
@@ -616,22 +743,22 @@ impl Node for Transition {
 
     #[inline]
     fn owned_rights(&self) -> &OwnedRights {
-        self.owned_rights.as_inner()
+        &self.owned_rights
     }
 
     #[inline]
     fn owned_rights_mut(&mut self) -> &mut OwnedRights {
-        self.owned_rights.as_inner_mut()
+        &mut self.owned_rights
     }
 
     #[inline]
     fn public_rights(&self) -> &PublicRights {
-        self.public_rights.as_inner()
+        &self.public_rights
     }
 
     #[inline]
     fn public_rights_mut(&mut self) -> &mut PublicRights {
-        self.public_rights.as_inner_mut()
+        &mut self.public_rights
     }
 
     #[inline]
@@ -645,8 +772,8 @@ impl Genesis {
         schema_id: SchemaId,
         chain: Chain,
         metadata: Metadata,
-        owned_rights: OwnedRights,
-        public_rights: PublicRights,
+        owned_rights: OwnedRightsInner,
+        public_rights: PublicRightsInner,
         script: SimplicityScript,
     ) -> Self {
         Self {
@@ -680,9 +807,9 @@ impl Extension {
         extension_type: ExtensionType,
         contract_id: ContractId,
         metadata: Metadata,
-        parent_public_rights: ParentPublicRights,
-        owned_rights: OwnedRights,
-        public_rights: PublicRights,
+        parent_public_rights: ParentPublicRightsInner,
+        owned_rights: OwnedRightsInner,
+        public_rights: PublicRightsInner,
         script: SimplicityScript,
     ) -> Self {
         Self {
@@ -709,9 +836,9 @@ impl Transition {
         Self {
             transition_type,
             metadata,
-            parent_owned_rights: parent_owned_rights.into(),
-            owned_rights: owned_rights.into(),
-            public_rights: public_rights.into(),
+            parent_owned_rights,
+            owned_rights,
+            public_rights,
             script,
         }
     }
@@ -808,8 +935,8 @@ mod _strict_encoding {
                 let _ = Vec::<u8>::strict_decode(&mut d)?;
             }
             let metadata = Metadata::strict_decode(&mut d)?;
-            let assignments = OwnedRights::strict_decode(&mut d)?;
-            let valencies = PublicRights::strict_decode(&mut d)?;
+            let assignments = OwnedRightsInner::strict_decode(&mut d)?;
+            let valencies = PublicRightsInner::strict_decode(&mut d)?;
             let script = SimplicityScript::strict_decode(&mut d)?;
             Ok(Self {
                 schema_id,
@@ -958,19 +1085,19 @@ mod test {
     #[test]
     fn test_transition_node_id() {
         fn conceal_transition(transition: &mut Transition) {
-            for (_, assignments) in transition.owned_rights_mut() {
+            for (_, assignments) in transition.owned_rights_mut().iter_mut() {
                 match assignments {
-                    Assignments::Declarative(set) => {
+                    AssignmentVec::Declarative(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    Assignments::DiscreteFiniteField(set) => {
+                    AssignmentVec::DiscreteFiniteField(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    Assignments::CustomData(set) => {
+                    AssignmentVec::CustomData(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
@@ -1006,7 +1133,10 @@ mod test {
 
         // Ancestor test
 
-        assert_eq!(genesis.parent_owned_rights(), &ParentOwnedRights::new());
+        assert_eq!(
+            genesis.parent_owned_rights(),
+            &ParentOwnedRights::default()
+        );
 
         let ancestor_trn = transition.parent_owned_rights();
         let assignments = ancestor_trn
@@ -1053,14 +1183,14 @@ mod test {
 
         assert_eq!(gen_assignments, tran_assingmnets);
 
-        assert!(gen_assignments.get(&1usize).unwrap().is_declarative_state());
-        assert!(gen_assignments.get(&2usize).unwrap().is_discrete_state());
-        assert!(tran_assingmnets.get(&3usize).unwrap().is_custom_state());
+        assert!(gen_assignments.get(&1usize).unwrap().is_declarative());
+        assert!(gen_assignments.get(&2usize).unwrap().has_value());
+        assert!(tran_assingmnets.get(&3usize).unwrap().has_data());
 
         let seal1 = gen_assignments
             .get(&2usize)
             .unwrap()
-            .seal_definition(1)
+            .revealed_seal_at(1)
             .unwrap()
             .unwrap();
 
@@ -1079,7 +1209,7 @@ mod test {
         let seal2 = tran_assingmnets
             .get(&3usize)
             .unwrap()
-            .seal_definition(1)
+            .revealed_seal_at(1)
             .unwrap()
             .unwrap();
 
@@ -1123,12 +1253,12 @@ mod test {
         let assignment_gen = genesis.owned_rights_by_type(3).unwrap();
         let assignment_tran = transition.owned_rights_by_type(1).unwrap();
 
-        assert!(assignment_gen.is_custom_state());
-        assert!(assignment_tran.is_declarative_state());
+        assert!(assignment_gen.has_data());
+        assert!(assignment_tran.is_declarative());
 
         // All seal confidentials
-        let gen_seals = genesis.all_seal_definitions();
-        let tran_seals = transition.all_seal_definitions();
+        let gen_seals = genesis.to_confiential_seals();
+        let tran_seals = transition.to_confiential_seals();
 
         assert_eq!(gen_seals, tran_seals);
 
@@ -1144,8 +1274,8 @@ mod test {
         );
 
         // Known seals
-        let known_gen_seals = genesis.known_seal_definitions();
-        let known_seals_tran = transition.known_seal_definitions();
+        let known_gen_seals = genesis.filter_revealed_seals();
+        let known_seals_tran = transition.filter_revealed_seals();
 
         assert_eq!(known_gen_seals, known_seals_tran);
 
@@ -1173,8 +1303,8 @@ mod test {
         );
 
         // Known seals by type
-        let dec_gen_seals = genesis.known_seal_definitions_by_type(1);
-        let hash_tran_seals = transition.known_seal_definitions_by_type(3);
+        let dec_gen_seals = genesis.filter_revealed_seals_by_type(1);
+        let hash_tran_seals = transition.filter_revealed_seals_by_type(3);
 
         let txid1 = match dec_gen_seals[0] {
             super::seal::Revealed::TxOutpoint(op) => Some(op.txid),

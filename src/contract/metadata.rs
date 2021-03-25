@@ -25,21 +25,20 @@ use lnpbp::strict_encoding;
 use super::data;
 use crate::schema;
 
-// TODO #47: Use of BTreeSet for metadata values breakes their arbitrary order
+// TODO #47: Use of BTreeSet for metadata values breaks their arbitrary order
 //       which may be used to correlate metadata with indexes of other
 //       metadata or state. Consider converting into `Vec` type like it was
 //       accomplished for the state data
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
 /// Transition & genesis metadata fields
-#[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, Display, From)]
+#[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[display(Debug)]
 pub struct Metadata(MetadataInner);
 
 impl IntoIterator for Metadata {

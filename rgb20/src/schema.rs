@@ -147,6 +147,8 @@ pub fn schema() -> Schema {
                 FieldType::RicardianContract => NoneOrOnce,
                 FieldType::Precision => Once,
                 FieldType::Timestamp => Once,
+                // We need this field in order to be able to verify pedersen
+                // commitments
                 FieldType::IssuedSupply => Once
             },
             owned_rights: type_map! {
@@ -162,6 +164,8 @@ pub fn schema() -> Schema {
         transitions: type_map! {
             TransitionType::Issue => TransitionSchema {
                 metadata: type_map! {
+                    // We need this field in order to be able to verify pedersen
+                    // commitments
                     FieldType::IssuedSupply => Once
                 },
                 closes: type_map! {
@@ -231,6 +235,9 @@ pub fn schema() -> Schema {
                     // mistake this will be impossible, so we allow to have
                     // multiple burned UTXOs as a part of a single operation
                     FieldType::BurnUtxo => OnceOrMore,
+                    // We need this field in order to be able to verify pedersen
+                    // commitments
+                    FieldType::IssuedSupply => Once,
                     FieldType::HistoryProofFormat => Once,
                     FieldType::HistoryProof => NoneOrMore
                 },

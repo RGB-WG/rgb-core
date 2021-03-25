@@ -262,7 +262,7 @@ impl Consignment {
     ) -> usize {
         let counter = 0;
         for (_, transition) in &mut self.state_transitions {
-            transition.owned_rights_mut().into_iter().fold(
+            transition.owned_rights_mut().iter_mut().fold(
                 counter,
                 |counter, (_, assignment)| {
                     counter + assignment.reveal_seals(known_seals.clone())
@@ -270,7 +270,7 @@ impl Consignment {
             );
         }
         for extension in &mut self.state_extensions {
-            extension.owned_rights_mut().into_iter().fold(
+            extension.owned_rights_mut().iter_mut().fold(
                 counter,
                 |counter, (_, assignment)| {
                     counter + assignment.reveal_seals(known_seals.clone())

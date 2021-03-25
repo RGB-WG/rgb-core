@@ -21,8 +21,8 @@ use wallet::resolvers::TxResolver;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
-    schema, seal, Anchor, AnchorId, Assignments, Consignment, ContractId, Node,
-    NodeId, Schema, SchemaId,
+    schema, seal, Anchor, AnchorId, AssignmentVec, Consignment, ContractId,
+    Node, NodeId, Schema, SchemaId,
 };
 use crate::SealEndpoint;
 
@@ -327,7 +327,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             if let Some(node) = node_index.get(node_id) {
                 // Checking for endpoint definition duplicates
                 if node
-                    .all_seal_definitions()
+                    .to_confiential_seals()
                     .contains(&seal_endpoint.commit_conceal())
                 {
                     if end_transitions
@@ -510,7 +510,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             // verification queue
             let parent_nodes_1: Vec<&dyn Node> = node
                 .parent_owned_rights()
-                .into_iter()
+                .iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
                         // This will not actually happen since we already
@@ -525,7 +525,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
             let parent_nodes_2: Vec<&dyn Node> = node
                 .parent_public_rights()
-                .into_iter()
+                .iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
                         // This will not actually happen since we already
@@ -595,7 +595,9 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
                 // Checking that bitcoin transaction closes seals defined by
                 // transition ancestors.
-                for (ancestor_id, assignments) in node.parent_owned_rights() {
+                for (ancestor_id, assignments) in
+                    node.parent_owned_rights().iter()
+                {
                     let ancestor_id = *ancestor_id;
                     let ancestor_node = if let Some(ancestor_node) =
                         self.node_index.get(&ancestor_id)
@@ -652,12 +654,12 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         node_id: NodeId,
         ancestor_id: NodeId,
         assignment_type: schema::OwnedRightType,
-        variant: &'validator Assignments,
+        variant: &'validator AssignmentVec,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
         match (
-            variant.seal_definition(seal_index),
+            variant.revealed_seal_at(seal_index),
             self.anchor_index.get(&ancestor_id),
         ) {
             (Err(_), _) => {

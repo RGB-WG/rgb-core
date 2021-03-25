@@ -18,7 +18,7 @@ use lnpbp::client_side_validation::CommitConceal;
 use super::VirtualMachine;
 use crate::{
     schema, schema::constants::*, script::StandardProcedure, value,
-    Assignments, Metadata,
+    AssignmentVec, Metadata,
 };
 
 macro_rules! push_stack {
@@ -30,8 +30,8 @@ macro_rules! push_stack {
 #[derive(Debug)]
 pub struct Embedded {
     transition_type: Option<schema::TransitionType>,
-    previous_state: Option<Assignments>,
-    current_state: Option<Assignments>,
+    previous_state: Option<AssignmentVec>,
+    current_state: Option<AssignmentVec>,
     current_meta: Metadata,
 
     stack: Vec<Box<dyn Any>>,
@@ -40,8 +40,8 @@ pub struct Embedded {
 impl Embedded {
     pub fn with(
         transition_type: Option<schema::TransitionType>,
-        previous_state: Option<Assignments>,
-        current_state: Option<Assignments>,
+        previous_state: Option<AssignmentVec>,
+        current_state: Option<AssignmentVec>,
         current_meta: Metadata,
     ) -> Self {
         Self {
@@ -69,7 +69,7 @@ impl Embedded {
                             // Collect outputs
                             let outputs =
                                 if let Some(ref state) = self.current_state {
-                                    state.all_state_pedersen()
+                                    state.to_confidential_state_pedersen()
                                 } else {
                                     push_stack!(self, 6u8);
                                     return;
@@ -123,13 +123,13 @@ impl Embedded {
                         }
                     }
                     Some(ref variant) => {
-                        if let Assignments::DiscreteFiniteField(_) = variant {
-                            let prev = variant.all_state_pedersen();
+                        if let AssignmentVec::DiscreteFiniteField(_) = variant {
+                            let prev = variant.to_confidential_state_pedersen();
                             let curr = self
                                 .current_state
                                 .as_ref()
                                 .unwrap()
-                                .all_state_pedersen();
+                                .to_confidential_state_pedersen();
 
                             for p in &prev {
                                 if p.verify_bullet_proof().is_err() {
