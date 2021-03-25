@@ -27,8 +27,7 @@ pub use assignments::{
     PedersenStrategy, PublicRights, RevealedState, StateTypes,
 };
 pub(self) use assignments::{
-    OwnedRightsInner, ParentOwnedRightsInner, ParentPublicRightsInner,
-    PublicRightsInner,
+    OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,
 };
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;

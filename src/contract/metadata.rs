@@ -32,14 +32,13 @@ use crate::schema;
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
 /// Transition & genesis metadata fields
-#[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, Display, From)]
+#[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[display(Debug)]
 pub struct Metadata(MetadataInner);
 
 impl IntoIterator for Metadata {

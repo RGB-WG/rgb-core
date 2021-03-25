@@ -221,7 +221,7 @@ impl Asset {
             Assignments::zero_balanced(input_amounts, allocations_ours, allocations_theirs)
         };
 
-        let mut parent = ParentOwnedRights::new();
+        let mut parent = ParentOwnedRights::default();
         for alloc in input_allocations {
             parent
                 .entry(*alloc.node_id())
@@ -235,8 +235,8 @@ impl Asset {
             *TransitionType::Transfer,
             metadata.into(),
             parent,
-            assignments,
-            bset![],
+            assignments.into(),
+            bset![].into(),
             vec![],
         );
 

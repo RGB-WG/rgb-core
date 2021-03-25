@@ -510,7 +510,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             // verification queue
             let parent_nodes_1: Vec<&dyn Node> = node
                 .parent_owned_rights()
-                .into_iter()
+                .iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
                         // This will not actually happen since we already
@@ -525,7 +525,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
             let parent_nodes_2: Vec<&dyn Node> = node
                 .parent_public_rights()
-                .into_iter()
+                .iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
                         // This will not actually happen since we already
@@ -595,7 +595,9 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
                 // Checking that bitcoin transaction closes seals defined by
                 // transition ancestors.
-                for (ancestor_id, assignments) in node.parent_owned_rights() {
+                for (ancestor_id, assignments) in
+                    node.parent_owned_rights().iter()
+                {
                     let ancestor_id = *ancestor_id;
                     let ancestor_node = if let Some(ancestor_node) =
                         self.node_index.get(&ancestor_id)

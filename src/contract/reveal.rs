@@ -193,14 +193,14 @@ impl IntoRevealed for Assignments {
     }
 }
 
-impl IntoRevealed for OwnedRightsInner {
+impl IntoRevealed for OwnedRights {
     fn into_revealed(self, other: Self) -> Result<Self, Error> {
         if self.to_merkle_source().commit_serialize()
             != other.to_merkle_source().commit_serialize()
         {
             return Err(Error::OwnedRightsMismatch);
         }
-        let mut result: OwnedRights = BTreeMap::new();
+        let mut result: OwnedRightsInner = BTreeMap::new();
         for (first, second) in self
             .into_inner()
             .into_iter()
@@ -208,7 +208,7 @@ impl IntoRevealed for OwnedRightsInner {
         {
             result.insert(first.0, first.1.into_revealed(second.1)?);
         }
-        Ok(OwnedRightsInner::from_inner(result))
+        Ok(OwnedRights::from_inner(result))
     }
 }
 
@@ -346,9 +346,9 @@ mod test {
         assert_eq!(assignment_1, merged);
 
         // test for OwnedRights structure
-        let test_owned_rights_1: OwnedRightsInner =
+        let test_owned_rights_1: OwnedRights =
             bmap! { 1usize => assignment_1.clone()}.into();
-        let test_owned_rights_2: OwnedRightsInner =
+        let test_owned_rights_2: OwnedRights =
             bmap! { 1usize => assignmnet_2.clone()}.into();
 
         // Perform merge
@@ -360,7 +360,7 @@ mod test {
         // after merge operation all the states will be revealed
         let states = vec![rev.clone(), rev.clone(), rev.clone(), rev.clone()];
         let assgn = Assignments::CustomData(states);
-        let expected_rights: OwnedRightsInner = bmap! {1usize => assgn}.into();
+        let expected_rights: OwnedRights = bmap! {1usize => assgn}.into();
 
         assert_eq!(merged, expected_rights);
     }

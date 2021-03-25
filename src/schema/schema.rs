@@ -747,8 +747,8 @@ mod _validation {
         parent_owned_rights: &ParentOwnedRights,
         status: &mut validation::Status,
     ) -> OwnedRights {
-        let mut owned_rights = OwnedRights::new();
-        for (id, details) in parent_owned_rights {
+        let mut owned_rights = OwnedRights::default();
+        for (id, details) in parent_owned_rights.iter() {
             let parent_node = match nodes.get(id) {
                 None => {
                     status.add_failure(validation::Failure::TransitionAbsent(
@@ -830,8 +830,8 @@ mod _validation {
         parent_public_rights: &ParentPublicRights,
         status: &mut validation::Status,
     ) -> PublicRights {
-        let mut public_rights = PublicRights::new();
-        for (id, public_right_types) in parent_public_rights {
+        let mut public_rights = PublicRights::default();
+        for (id, public_right_types) in parent_public_rights.iter() {
             if nodes.get(id).is_none() {
                 status.add_failure(validation::Failure::TransitionAbsent(*id));
             } else {
