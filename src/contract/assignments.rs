@@ -598,6 +598,60 @@ impl Assignments {
         }
     }
 
+    #[inline]
+    pub fn as_revealed_owned_value(
+        &self,
+    ) -> Result<Vec<(seal::Revealed, &value::Revealed)>, StateRetrievalError>
+    {
+        match self {
+            Assignments::DiscreteFiniteField(vec) => {
+                let unfiltered: Vec<_> = vec
+                    .into_iter()
+                    .filter_map(|assignment| {
+                        assignment.revealed_seal().and_then(|seal| {
+                            assignment
+                                .as_revealed_state()
+                                .map(|state| (seal, state))
+                        })
+                    })
+                    .collect();
+                if unfiltered.len() != vec.len() {
+                    Err(StateRetrievalError::ConfidentialData)
+                } else {
+                    Ok(unfiltered)
+                }
+            }
+            _ => Err(StateRetrievalError::StateTypeMismatch),
+        }
+    }
+
+    #[inline]
+    pub fn as_revealed_owned_data(
+        &self,
+    ) -> Result<Vec<(seal::Revealed, &data::Revealed)>, StateRetrievalError>
+    {
+        match self {
+            Assignments::CustomData(vec) => {
+                let unfiltered: Vec<_> = vec
+                    .into_iter()
+                    .filter_map(|assignment| {
+                        assignment.revealed_seal().and_then(|seal| {
+                            assignment
+                                .as_revealed_state()
+                                .map(|state| (seal, state))
+                        })
+                    })
+                    .collect();
+                if unfiltered.len() != vec.len() {
+                    Err(StateRetrievalError::ConfidentialData)
+                } else {
+                    Ok(unfiltered)
+                }
+            }
+            _ => Err(StateRetrievalError::StateTypeMismatch),
+        }
+    }
+
     pub fn len(&self) -> usize {
         match self {
             Assignments::Declarative(set) => set.len(),
