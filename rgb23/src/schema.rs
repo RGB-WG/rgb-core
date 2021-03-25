@@ -66,8 +66,8 @@ pub fn schema() -> Schema {
             // While UNIX timestamps allow negative numbers; in context of RGB Schema, assets
             // can't be issued in the past before RGB or Bitcoin even existed; so we prohibit
             // all the dates before RGB release
-            // TODO #38: Update lower limit with the first RGB release
             // Current lower time limit is 07/04/2020 @ 1:54pm (UTC)
+            // TODO #38: Update lower limit with the first RGB release
             FieldType::StartsFrom => DataFormat::Integer(Bits::Bit64, 1593870844, core::i64::MAX as i128)
         },
         owned_right_types: type_map! {

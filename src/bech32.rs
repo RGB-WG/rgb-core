@@ -30,7 +30,7 @@ use crate::{
 };
 
 // TODO #40: Refactor bech32 into single style after `Consignment` &
-// `ConsignmentId`
+//      `ConsignmentId`
 
 /// Bech32 representation of generic RGB data, that can be generated from
 /// some string basing on Bech32 HRP value.

@@ -305,7 +305,6 @@ pub fn schema() -> Schema {
             // the full contract text, where hash must be represented by a
             // hexadecimal string, optionally followed by `\n` and text URL
             // TODO #33: Consider using data container instead of the above ^^^
-            // Issue
             FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             FieldType::Precision => DataFormat::Unsigned(Bits::Bit8, 0, 18u128),
             // We need this b/c allocated amounts are hidden behind Pedersen

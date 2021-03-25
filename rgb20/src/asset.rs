@@ -109,7 +109,7 @@ pub struct Asset {
         serde(with = "As::<BTreeMap<DisplayFromStr, DisplayFromStr>>")
     )]
     // TODO #32: Transform into method iterating and collecting this
-    // information       from `known_issues`
+    // information      from `known_issues`
     known_inflation: BTreeMap<OutPoint, AtomicValue>,
 
     /// Specifies outpoints controlling certain amounts of assets.

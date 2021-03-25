@@ -262,15 +262,16 @@ impl Anchor {
                 }
             };
             // TODO #54: (new) Move parsing of the output+input into Descriptor
-            // impl TODO #54: (new) With miniscript stabilization
-            // refactor this to use it
+            //      impl
+            // TODO #54: (new) With miniscript stabilization
+            //      refactor this to use it
             let method = if psbt_out.redeem_script.is_some() {
                 ScriptEncodeMethod::ScriptHash
             } else if psbt_out.witness_script.is_some() {
                 ScriptEncodeMethod::WScriptHash
             } else {
                 // TODO #55: (new) Check PSBT whether pubkey output is witness
-                // and       return error otherwise
+                //      and return error otherwise
                 ScriptEncodeMethod::WPubkeyHash
             };
 

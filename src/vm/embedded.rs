@@ -179,7 +179,7 @@ impl Embedded {
             StandardProcedure::ProofOfReserve => {
                 push_stack!(self, 0u8);
                 // TODO #64: Implement bitcoin script lock validation (currently
-                // none)
+                //      none)
             }
             StandardProcedure::IdentityTransfer => {
                 push_stack!(self, 0u8);

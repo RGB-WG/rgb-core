@@ -33,10 +33,10 @@ use crate::{
 
 pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
 // TODO #59: Current strict encoding procedure limits transition history to
-// u16::MAX       which is insufficient. Upgrade it to use larger array size
+//      u16::MAX which is insufficient. Upgrade it to use larger array size
 pub type TransitionData = Vec<(Anchor, Transition)>;
 // TODO #59: Current strict encoding procedure limits extension history to
-// u16::MAX       which is insufficient. Upgrade it to use larger array size
+//      u16::MAX which is insufficient. Upgrade it to use larger array size
 pub type ExtensionData = Vec<Extension>;
 
 pub const RGB_CONSIGNMENT_VERSION: u16 = 0;

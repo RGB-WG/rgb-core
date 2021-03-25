@@ -57,7 +57,7 @@ pub use verify::SchemaVerify;
 /// These constants are also used by embedded validation procedures representing
 /// standard metadata fields, state and transition types analyzed by them
 // TODO #LNPBP(102): (LNPBPs) Make this part of the RGB generic schema LNPBP
-// standard
+//      standard
 pub mod constants {
     /// Ticker of the asset
     pub const FIELD_TYPE_TICKER: usize = 0x00;

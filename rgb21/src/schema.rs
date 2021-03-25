@@ -289,7 +289,7 @@ pub fn schema() -> Schema {
 }
 
 // TODO #35: Define all standard field, rights & transition types which are
-// common       to different schemata as constants
+//      common to different schemata as constants
 impl Deref for FieldType {
     type Target = usize;
 
