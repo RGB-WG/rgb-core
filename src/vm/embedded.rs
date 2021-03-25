@@ -165,28 +165,29 @@ impl Embedded {
             }
             StandardProcedure::FungibleInflation => {
                 push_stack!(self, 0u8);
-                // TODO: Implement secondary fungible issue validation (trivial)
+                // TODO #64: Implement secondary fungible issue validation
+                // (trivial)
             }
             StandardProcedure::NonfungibleInflation => {
                 push_stack!(self, 0u8);
-                // TODO: Implement secondary NFT issue validation (trivial)
+                // TODO #64: Implement secondary NFT issue validation (trivial)
             }
             StandardProcedure::ProofOfBurn => {
                 push_stack!(self, 0u8);
-                // TODO: Implement prunning validation (currently none)
+                // TODO #64: Implement prunning validation (currently none)
             }
             StandardProcedure::ProofOfReserve => {
                 push_stack!(self, 0u8);
-                // TODO: Implement bitcoin script lock validation (currently
+                // TODO #64: Implement bitcoin script lock validation (currently
                 // none)
             }
             StandardProcedure::IdentityTransfer => {
                 push_stack!(self, 0u8);
-                // TODO: Implement
+                // TODO #64: Implement
             }
             StandardProcedure::RightsSplit => {
                 push_stack!(self, 0u8);
-                // TODO: Implement
+                // TODO #64: Implement
             }
         }
     }

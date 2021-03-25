@@ -38,7 +38,7 @@ use crate::{
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
 
-// TODO: Change the value
+// TODO #62: Change the value
 static MIDSTATE_DISCLOSURE_ID: [u8; 32] = [
     8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197,
     98, 75, 254, 29, 125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
@@ -107,7 +107,7 @@ impl FromStr for DisclosureId {
     }
 }
 
-// TODO: Change the value
+// TODO #62: Change the value
 static MIDSTATE_SIG_HASH: [u8; 32] = [
     8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197,
     98, 75, 254, 29, 125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
@@ -357,4 +357,4 @@ impl Disclosure {
     }
 }
 
-// TODO: Validate disclosures
+// TODO #63: Validate disclosures

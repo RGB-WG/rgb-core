@@ -42,7 +42,7 @@ pub enum Validity {
     serde(crate = "serde_crate")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-// TODO: Display via YAML
+// TODO #42: Display via YAML
 #[display(Debug)]
 pub struct Status {
     pub unresolved_txids: Vec<Txid>,
@@ -60,7 +60,7 @@ impl AddAssign for Status {
     }
 }
 
-// TODO: (new) With rust `try_trait` stabilization re-implement using
+// TODO #43: (new) With rust `try_trait` stabilization re-implement using
 //       `Try` trait
 // impl Try for Status {
 //    type Ok = Status;
@@ -138,7 +138,7 @@ impl Status {
     serde(crate = "serde_crate")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-// TODO: (v0.3) convert to detailed error description using doc_comments
+// TODO #44: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
 pub enum Failure {
     SchemaUnknown(SchemaId),
@@ -254,7 +254,7 @@ pub enum Failure {
     serde(crate = "serde_crate")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-// TODO: (v0.3) convert to detailed descriptions using doc_comments
+// TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
     EndpointDuplication(NodeId, SealEndpoint),
@@ -271,7 +271,7 @@ pub enum Warning {
     serde(crate = "serde_crate")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-// TODO: (v0.3) convert to detailed descriptions using doc_comments
+// TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {
     UncheckableConfidentialStateData(NodeId, usize),
@@ -645,7 +645,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         }
     }
 
-    // TODO: Move part of logic into single-use-seals and bitcoin seals
+    // TODO #45: Move part of logic into single-use-seals and bitcoin seals
     fn validate_witness_input(
         &mut self,
         witness_tx: &Transaction,

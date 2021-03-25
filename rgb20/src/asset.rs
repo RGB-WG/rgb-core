@@ -45,7 +45,7 @@ pub enum Error {
     GenesisSeal,
 }
 
-// TODO: Add support for renominations, burn & replacements
+// TODO #31: Add support for renominations, burn & replacements
 /// Detailed RGB20 asset information
 #[cfg_attr(
     feature = "serde",
@@ -108,8 +108,8 @@ pub struct Asset {
         feature = "serde",
         serde(with = "As::<BTreeMap<DisplayFromStr, DisplayFromStr>>")
     )]
-    // TODO: Transform into method iterating and collecting this information
-    //       from `known_issues`
+    // TODO #32: Transform into method iterating and collecting this
+    // information       from `known_issues`
     known_inflation: BTreeMap<OutPoint, AtomicValue>,
 
     /// Specifies outpoints controlling certain amounts of assets.

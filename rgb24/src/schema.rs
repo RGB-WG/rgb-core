@@ -63,7 +63,7 @@ pub enum ExtensionType {
 pub fn schema() -> Schema {
     use Occurences::*;
 
-    // TODO: Link signatures to identity
+    // TODO #39: Link signatures to identity
 
     Schema {
         rgb_features: none!(),
@@ -71,7 +71,7 @@ pub fn schema() -> Schema {
         field_types: type_map! {
             // Human-readable name registered with this schema
             FieldType::Name => DataFormat::String(256),
-            // TODO: Consider using data container
+            // TODO #39: Consider using data container
             FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             // Data formats for name resolution, like IP addresses, ONIONs etc.
             // Formats are registered by LNP/BP Association and maintained as
@@ -82,7 +82,7 @@ pub fn schema() -> Schema {
             // While UNIX timestamps allow negative numbers; in context of RGB Schema, assets
             // can't be issued in the past before RGB or Bitcoin even existed; so we prohibit
             // all the dates before RGB release
-            // TODO: Update lower limit with the first RGB release
+            // TODO #39: Update lower limit with the first RGB release
             // Current lower time limit is 07/04/2020 @ 1:54pm (UTC)
             FieldType::ValidFrom => DataFormat::Integer(Bits::Bit64, 1593870844, core::i64::MAX as i128)
         },

@@ -29,7 +29,8 @@ use crate::{
     Transition,
 };
 
-// TODO: Refactor bech32 into single style after `Consignment` & `ConsignmentId`
+// TODO #40: Refactor bech32 into single style after `Consignment` &
+// `ConsignmentId`
 
 /// Bech32 representation of generic RGB data, that can be generated from
 /// some string basing on Bech32 HRP value.
@@ -678,7 +679,7 @@ impl FromStr for SchemaId {
     }
 }
 
-// TODO: Enable after removal of the default `Display` and `FromStr`
+// TODO #41: Enable after removal of the default `Display` and `FromStr`
 //       implementations for hash-derived types
 /*
 impl FromStr for seal::Confidential {
