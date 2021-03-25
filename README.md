@@ -56,7 +56,7 @@ sudo apt-get install cargo libssl-dev libzmq3-dev pkg-config g++ cmake
 
 On Mac OS, run
 ```shell script
-brew cargo pkg-config zmq
+brew install rust pkg-config zmq
 ```
 
 ### Clone and compile library
