@@ -14,6 +14,7 @@
 mod anchor;
 mod consignment;
 mod disclosure;
+pub mod iter;
 mod stash;
 
 pub use anchor::{
