@@ -29,7 +29,7 @@ use super::{
     data, seal, value, AtomicValue, ConcealSeals, ConcealState, NoDataError,
     NodeId, SealDefinition, SealEndpoint, SECP256K1_ZKP,
 };
-use crate::schema;
+use crate::{schema, ConfidentialDataError, StateRetrievalError};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display("{node_id}:{output_no}")]
@@ -446,100 +446,154 @@ impl Assignments {
     /// If seal definition does not exist, returns [`NoDataError`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
     /// seal data packed as `Ok(Some(`[`seal::Revealed`]`))`
-    pub fn seal_definition(
+    pub fn revealed_seal_at(
         &self,
         index: u16,
     ) -> Result<Option<seal::Revealed>, NoDataError> {
         Ok(match self {
-            Assignments::Declarative(vec) => vec
-                .get(index as usize)
-                .ok_or(NoDataError)?
-                .seal_definition(),
-            Assignments::DiscreteFiniteField(vec) => vec
-                .get(index as usize)
-                .ok_or(NoDataError)?
-                .seal_definition(),
-            Assignments::CustomData(vec) => vec
-                .get(index as usize)
-                .ok_or(NoDataError)?
-                .seal_definition(),
+            Assignments::Declarative(vec) => {
+                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
+            }
+            Assignments::DiscreteFiniteField(vec) => {
+                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
+            }
+            Assignments::CustomData(vec) => {
+                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
+            }
         })
     }
 
-    pub fn known_seal_definitions(&self) -> Vec<seal::Revealed> {
+    pub fn revealed_seals(
+        &self,
+    ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
+        let list: Vec<_> = match self {
+            Assignments::Declarative(s) => {
+                s.into_iter().map(OwnedState::<_>::revealed_seal).collect()
+            }
+            Assignments::DiscreteFiniteField(s) => {
+                s.into_iter().map(OwnedState::<_>::revealed_seal).collect()
+            }
+            Assignments::CustomData(s) => {
+                s.into_iter().map(OwnedState::<_>::revealed_seal).collect()
+            }
+        };
+        let len = list.len();
+        let filtered: Vec<seal::Revealed> =
+            list.into_iter().filter_map(|v| v).collect();
+        if len != filtered.len() {
+            return Err(ConfidentialDataError);
+        }
+        return Ok(filtered);
+    }
+
+    pub fn filter_revealed_seals(&self) -> Vec<seal::Revealed> {
         match self {
             Assignments::Declarative(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::seal_definition)
+                .filter_map(OwnedState::<_>::revealed_seal)
                 .collect(),
             Assignments::DiscreteFiniteField(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::seal_definition)
+                .filter_map(OwnedState::<_>::revealed_seal)
                 .collect(),
             Assignments::CustomData(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::seal_definition)
+                .filter_map(OwnedState::<_>::revealed_seal)
                 .collect(),
         }
     }
 
-    pub fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
+    pub fn to_confidential_seals(&self) -> Vec<seal::Confidential> {
         match self {
             Assignments::Declarative(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::seal_definition_confidential)
+                .map(OwnedState::<_>::to_confidential_seal)
                 .collect(),
             Assignments::DiscreteFiniteField(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::seal_definition_confidential)
+                .map(OwnedState::<_>::to_confidential_seal)
                 .collect(),
             Assignments::CustomData(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::seal_definition_confidential)
+                .map(OwnedState::<_>::to_confidential_seal)
                 .collect(),
         }
     }
 
-    pub fn known_state_values(&self) -> Vec<&value::Revealed> {
+    pub fn as_revealed_state_values(
+        &self,
+    ) -> Result<Vec<&value::Revealed>, StateRetrievalError> {
+        let list = match self {
+            Assignments::DiscreteFiniteField(s) => {
+                s.into_iter().map(OwnedState::<_>::as_revealed_state)
+            }
+            _ => return Err(StateRetrievalError::StateTypeMismatch),
+        };
+        let len = list.len();
+        let filtered: Vec<&value::Revealed> = list.filter_map(|v| v).collect();
+        if len != filtered.len() {
+            return Err(StateRetrievalError::ConfidentialData);
+        }
+        return Ok(filtered);
+    }
+
+    pub fn as_revealed_state_data(
+        &self,
+    ) -> Result<Vec<&data::Revealed>, StateRetrievalError> {
+        let list = match self {
+            Assignments::CustomData(s) => {
+                s.into_iter().map(OwnedState::<_>::as_revealed_state)
+            }
+            _ => return Err(StateRetrievalError::StateTypeMismatch),
+        };
+        let len = list.len();
+        let filtered: Vec<&data::Revealed> = list.filter_map(|v| v).collect();
+        if len != filtered.len() {
+            return Err(StateRetrievalError::ConfidentialData);
+        }
+        return Ok(filtered);
+    }
+
+    pub fn filter_revealed_state_values(&self) -> Vec<&value::Revealed> {
         match self {
             Assignments::Declarative(_) => vec![],
             Assignments::DiscreteFiniteField(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::assigned_state)
+                .filter_map(OwnedState::<_>::as_revealed_state)
                 .collect(),
             Assignments::CustomData(_) => vec![],
         }
     }
 
-    pub fn known_state_data(&self) -> Vec<&data::Revealed> {
+    pub fn filter_revealed_state_data(&self) -> Vec<&data::Revealed> {
         match self {
             Assignments::Declarative(_) => vec![],
             Assignments::DiscreteFiniteField(_) => vec![],
             Assignments::CustomData(s) => s
                 .into_iter()
-                .filter_map(OwnedState::<_>::assigned_state)
+                .filter_map(OwnedState::<_>::as_revealed_state)
                 .collect(),
         }
     }
 
-    pub fn all_state_pedersen(&self) -> Vec<value::Confidential> {
+    pub fn to_confidential_state_pedersen(&self) -> Vec<value::Confidential> {
         match self {
             Assignments::Declarative(_) => vec![],
             Assignments::DiscreteFiniteField(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::assigned_state_confidential)
+                .map(OwnedState::<_>::to_confidential_state)
                 .collect(),
             Assignments::CustomData(_) => vec![],
         }
     }
 
-    pub fn all_state_hashed(&self) -> Vec<data::Confidential> {
+    pub fn to_confidential_state_hashed(&self) -> Vec<data::Confidential> {
         match self {
             Assignments::Declarative(_) => vec![],
             Assignments::DiscreteFiniteField(_) => vec![],
             Assignments::CustomData(s) => s
                 .into_iter()
-                .map(OwnedState::<_>::assigned_state_confidential)
+                .map(OwnedState::<_>::to_confidential_state)
                 .collect(),
         }
     }
@@ -649,73 +703,73 @@ pub trait RevealedState:
 
 impl Assignments {
     pub fn u8(&self) -> Vec<u8> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::u8)
             .collect()
     }
     pub fn u16(&self) -> Vec<u16> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::u16)
             .collect()
     }
     pub fn u32(&self) -> Vec<u32> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::u32)
             .collect()
     }
     pub fn u64(&self) -> Vec<u64> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::u64)
             .collect()
     }
     pub fn i8(&self) -> Vec<i8> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::i8)
             .collect()
     }
     pub fn i16(&self) -> Vec<i16> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::i16)
             .collect()
     }
     pub fn i32(&self) -> Vec<i32> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::i32)
             .collect()
     }
     pub fn i64(&self) -> Vec<i64> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::i64)
             .collect()
     }
     pub fn f32(&self) -> Vec<f32> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::f32)
             .collect()
     }
     pub fn f64(&self) -> Vec<f64> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::f64)
             .collect()
     }
     pub fn bytes(&self) -> Vec<Vec<u8>> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::bytes)
             .collect()
     }
     pub fn string(&self) -> Vec<String> {
-        self.known_state_data()
+        self.filter_revealed_state_data()
             .into_iter()
             .filter_map(data::Revealed::string)
             .collect()
@@ -797,8 +851,8 @@ where
         From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.seal_definition_confidential()
-            .partial_cmp(&other.seal_definition_confidential())
+        self.to_confidential_seal()
+            .partial_cmp(&other.to_confidential_seal())
     }
 }
 
@@ -810,8 +864,8 @@ where
         From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.seal_definition_confidential()
-            .cmp(&other.seal_definition_confidential())
+        self.to_confidential_seal()
+            .cmp(&other.to_confidential_seal())
     }
 }
 
@@ -823,10 +877,8 @@ where
         From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.seal_definition_confidential()
-            == other.seal_definition_confidential()
-            && self.assigned_state_confidential()
-                == other.assigned_state_confidential()
+        self.to_confidential_seal() == other.to_confidential_seal()
+            && self.to_confidential_state() == other.to_confidential_state()
     }
 }
 
@@ -846,7 +898,7 @@ where
     STATE::Confidential:
         From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    pub fn seal_definition_confidential(&self) -> seal::Confidential {
+    pub fn to_confidential_seal(&self) -> seal::Confidential {
         match self {
             OwnedState::Revealed {
                 seal_definition, ..
@@ -863,7 +915,7 @@ where
         }
     }
 
-    pub fn seal_definition(&self) -> Option<seal::Revealed> {
+    pub fn revealed_seal(&self) -> Option<seal::Revealed> {
         match self {
             OwnedState::Revealed {
                 seal_definition, ..
@@ -876,7 +928,7 @@ where
         }
     }
 
-    pub fn assigned_state_confidential(&self) -> STATE::Confidential {
+    pub fn to_confidential_state(&self) -> STATE::Confidential {
         match self {
             OwnedState::Revealed { assigned_state, .. }
             | OwnedState::ConfidentialSeal { assigned_state, .. } => {
@@ -889,7 +941,7 @@ where
         }
     }
 
-    pub fn assigned_state(&self) -> Option<&STATE::Revealed> {
+    pub fn as_revealed_state(&self) -> Option<&STATE::Revealed> {
         match self {
             OwnedState::Revealed { assigned_state, .. }
             | OwnedState::ConfidentialSeal { assigned_state, .. } => {
@@ -1402,7 +1454,7 @@ mod test {
 
         // Extract balanced confidential output amounts
         let outputs: Vec<Commitment> = balanced
-            .all_state_pedersen()
+            .to_confidential_state_pedersen()
             .iter()
             .map(|confidential| confidential.commitment)
             .collect();
@@ -1702,21 +1754,22 @@ mod test {
 
         // Extract a specific Txid from each variants
         let txid_1 =
-            match declarative_type.seal_definition(2).unwrap().unwrap() {
+            match declarative_type.revealed_seal_at(2).unwrap().unwrap() {
                 Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
                 _ => None,
             }
             .unwrap()
             .to_hex();
 
-        let txid_2 = match pedersan_type.seal_definition(0).unwrap().unwrap() {
-            Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
-            _ => None,
-        }
-        .unwrap()
-        .to_hex();
+        let txid_2 =
+            match pedersan_type.revealed_seal_at(0).unwrap().unwrap() {
+                Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
+                _ => None,
+            }
+            .unwrap()
+            .to_hex();
 
-        let txid_3 = match hash_type.seal_definition(1).unwrap().unwrap() {
+        let txid_3 = match hash_type.revealed_seal_at(1).unwrap().unwrap() {
             Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
             _ => None,
         }
@@ -1739,7 +1792,7 @@ mod test {
 
         // Extract known Txids from each variants
         let mut dec_txids: Vec<String> = declarative_type
-            .known_seal_definitions()
+            .filter_revealed_seals()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1752,7 +1805,7 @@ mod test {
             .collect();
 
         let mut ped_txids: Vec<String> = pedersan_type
-            .known_seal_definitions()
+            .filter_revealed_seals()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1765,7 +1818,7 @@ mod test {
             .collect();
 
         let mut hash_txids: Vec<String> = hash_type
-            .known_seal_definitions()
+            .filter_revealed_seals()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -1802,19 +1855,19 @@ mod test {
 
         // Extract seals from all variants and conceal them
         let mut dec_hashes: Vec<String> = declarative_type
-            .all_seal_definitions()
+            .to_confidential_seals()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
 
         let mut ped_hashes: Vec<String> = pedersan_type
-            .all_seal_definitions()
+            .to_confidential_seals()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
 
         let mut hash_hashes: Vec<String> = hash_type
-            .all_seal_definitions()
+            .to_confidential_seals()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
@@ -1839,7 +1892,7 @@ mod test {
         let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from pedersan type variant
-        let states = pedersan_type.known_state_values();
+        let states = pedersan_type.filter_revealed_state_values();
 
         // Check the amounts matches with precomputed values
         assert_eq!(states[0].value, 10);
@@ -1867,8 +1920,8 @@ mod test {
 
         // Check no values returned for declarative and custom data type
         // variants
-        assert_eq!(declarative_type.known_state_values().len(), 0);
-        assert_eq!(hash_type.known_state_values().len(), 0);
+        assert_eq!(declarative_type.filter_revealed_state_values().len(), 0);
+        assert_eq!(hash_type.filter_revealed_state_values().len(), 0);
     }
 
     #[test]
@@ -1880,7 +1933,7 @@ mod test {
         let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from custom data type variant
-        let data_set = hash_type.known_state_data();
+        let data_set = hash_type.filter_revealed_state_data();
 
         // Create state data from precomputed values
         let data_1 = data::Revealed::Sha256(
@@ -1895,8 +1948,8 @@ mod test {
         assert_eq!(data_set[1].to_owned(), data_2);
 
         // Check no values returned for declarative and pedersan type variants
-        assert_eq!(declarative_type.known_state_data().len(), 0);
-        assert_eq!(pedersan_type.known_state_data().len(), 0);
+        assert_eq!(declarative_type.filter_revealed_state_data().len(), 0);
+        assert_eq!(pedersan_type.filter_revealed_state_data().len(), 0);
     }
 
     #[test]
@@ -1908,7 +1961,7 @@ mod test {
         let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data for pedersan type and conceal them
-        let conf_amounts = pedersan_type.all_state_pedersen();
+        let conf_amounts = pedersan_type.to_confidential_state_pedersen();
 
         // Check extracted values matches with precomputed values
         assert_eq!(
@@ -1934,8 +1987,8 @@ mod test {
         );
 
         // Check no values returned for declarative and hash type
-        assert_eq!(declarative_type.all_state_pedersen().len(), 0);
-        assert_eq!(hash_type.all_state_pedersen().len(), 0);
+        assert_eq!(declarative_type.to_confidential_state_pedersen().len(), 0);
+        assert_eq!(hash_type.to_confidential_state_pedersen().len(), 0);
     }
 
     #[test]
@@ -1947,7 +2000,7 @@ mod test {
         let hash_type = Assignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data from hash type variant and conceal them
-        let extracted_states = hash_type.all_state_hashed();
+        let extracted_states = hash_type.to_confidential_state_hashed();
 
         // Precomputed concealed state data
         let expected: [&str; 4] = [
@@ -1967,8 +2020,8 @@ mod test {
         );
 
         // Check no values returned for declarative and pedersan types
-        assert_eq!(declarative_type.all_state_hashed().len(), 0);
-        assert_eq!(pedersan_type.all_state_hashed().len(), 0);
+        assert_eq!(declarative_type.to_confidential_state_hashed().len(), 0);
+        assert_eq!(pedersan_type.to_confidential_state_hashed().len(), 0);
     }
 
     #[test]
@@ -1994,7 +2047,7 @@ mod test {
 
         // Extracted seal values
         let extracted_txid: Vec<String> = hash_type
-            .known_seal_definitions()
+            .filter_revealed_seals()
             .iter()
             .map(|revealed| {
                 match revealed {
@@ -2019,7 +2072,7 @@ mod test {
 
         // Extract concealed seals
         let extracted_seals_confidential: Vec<String> = hash_type
-            .all_seal_definitions()
+            .to_confidential_seals()
             .iter()
             .map(|hash| hash.to_hex())
             .collect();
@@ -2040,7 +2093,7 @@ mod test {
 
         // Extract concealed state data
         let extracted_state_confidential: Vec<String> = hash_type
-            .all_state_hashed()
+            .to_confidential_state_hashed()
             .iter()
             .map(|confidential| confidential.to_hex())
             .collect();

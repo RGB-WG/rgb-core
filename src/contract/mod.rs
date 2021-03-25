@@ -44,10 +44,44 @@ lazy_static! {
         Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
 }
 
-/// Error returned when the requested data does not exist
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
-#[display(Debug)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    Error,
+    From,
+)]
+#[display(doc_comments)]
+pub enum StateRetrievalError {
+    /// The requested state has a mismatched data type
+    StateTypeMismatch,
+
+    /// Some of the requested data are confidential, when they must be present
+    /// in revealed form
+    #[from(ConfidentialDataError)]
+    ConfidentialData,
+}
+
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
+#[display(doc_comments)]
+/// The requested data are not present
 pub struct NoDataError;
+
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
+#[display(doc_comments)]
+/// Some of the requested data are confidential, when they must be present in
+/// revealed form
+pub struct ConfidentialDataError;
 
 #[cfg(test)]
 pub(crate) mod test {

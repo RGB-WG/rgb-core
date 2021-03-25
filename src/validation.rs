@@ -327,7 +327,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             if let Some(node) = node_index.get(node_id) {
                 // Checking for endpoint definition duplicates
                 if node
-                    .all_seal_definitions()
+                    .to_confiential_seals()
                     .contains(&seal_endpoint.commit_conceal())
                 {
                     if end_transitions
@@ -657,7 +657,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
         match (
-            variant.seal_definition(seal_index),
+            variant.revealed_seal_at(seal_index),
             self.anchor_index.get(&ancestor_id),
         ) {
             (Err(_), _) => {

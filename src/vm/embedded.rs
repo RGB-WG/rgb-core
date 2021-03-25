@@ -69,7 +69,7 @@ impl Embedded {
                             // Collect outputs
                             let outputs =
                                 if let Some(ref state) = self.current_state {
-                                    state.all_state_pedersen()
+                                    state.to_confidential_state_pedersen()
                                 } else {
                                     push_stack!(self, 6u8);
                                     return;
@@ -124,12 +124,12 @@ impl Embedded {
                     }
                     Some(ref variant) => {
                         if let Assignments::DiscreteFiniteField(_) = variant {
-                            let prev = variant.all_state_pedersen();
+                            let prev = variant.to_confidential_state_pedersen();
                             let curr = self
                                 .current_state
                                 .as_ref()
                                 .unwrap()
-                                .all_state_pedersen();
+                                .to_confidential_state_pedersen();
 
                             for p in &prev {
                                 if p.verify_bullet_proof().is_err() {

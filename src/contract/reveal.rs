@@ -253,10 +253,10 @@ mod test {
         assert_eq!(merged, rev);
 
         // Revealed + Confidential Seal = Revealed
-        let seal = rev.seal_definition_confidential();
+        let seal = rev.to_confidential_seal();
         let conf_seal = OwnedState::<PedersenStrategy>::ConfidentialSeal {
             seal_definition: seal,
-            assigned_state: rev.assigned_state().unwrap().clone(),
+            assigned_state: rev.as_revealed_state().unwrap().clone(),
         };
         merged = rev.clone().into_revealed(conf_seal.clone()).unwrap();
         assert_eq!(merged, rev);
@@ -299,11 +299,11 @@ mod test {
         // Compute different exposure of the same state
         let conf = rev.clone().commit_conceal();
 
-        let seal = rev.seal_definition_confidential();
+        let seal = rev.to_confidential_seal();
 
         let conf_seal = OwnedState::<HashStrategy>::ConfidentialSeal {
             seal_definition: seal,
-            assigned_state: rev.assigned_state().unwrap().clone(),
+            assigned_state: rev.as_revealed_state().unwrap().clone(),
         };
 
         let mut conf_state = rev.clone();

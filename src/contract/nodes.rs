@@ -38,10 +38,12 @@ use crate::schema::{
 #[cfg(feature = "serde")]
 use crate::Bech32;
 use crate::{
-    schema, seal, Metadata, PublicRightType, SchemaId, SimplicityScript,
-    ToBech32,
+    schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId,
+    SimplicityScript, ToBech32,
 };
 
+/// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
+/// the value of two concatenated SHA256 hashes for `rgb:node` prefix string.
 static MIDSTATE_NODE_ID: [u8; 32] = [
     0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc,
     0xbd, 0x5a, 0x58, 0x55, 0x6a, 0xe2, 0x16, 0xa5, 0xee, 0xb7, 0x3c, 0x1,
@@ -176,9 +178,21 @@ pub trait Node: AsAny {
     /// wrapper structure) for the contract node.
     fn metadata(&self) -> &Metadata;
 
-    /// Returns reference to information about the owned rights which this node
-    /// updates with state transition ("parent owned rights").
+    /// Returns reference to information about the owned rights in form of
+    /// [`ParentOwnedRights`] wrapper structure which this node updates with
+    /// state transition ("parent owned rights").
+    ///
+    /// This is always an empty `Vec` for [`Genesis`] and [`Extension`] node
+    /// types.
     fn parent_owned_rights(&self) -> &ParentOwnedRights;
+
+    /// Returns reference to information about the public rights (in form of
+    /// [`ParentPublicRights`] wrapper structure), defined with "parent" state
+    /// extensions (i.e. those finalized with the current state transition) or
+    /// referenced by another state extension, which this node updates
+    /// ("parent public rights").
+    ///
+    /// This is always an empty `Vec` for [`Genesis`].
     fn parent_public_rights(&self) -> &ParentPublicRights;
     fn owned_rights(&self) -> &OwnedRights;
     fn owned_rights_mut(&mut self) -> &mut OwnedRights;
@@ -272,28 +286,60 @@ pub trait Node: AsAny {
     }
 
     #[inline]
-    fn all_seal_definitions(&self) -> Vec<seal::Confidential> {
+    fn to_confiential_seals(&self) -> Vec<seal::Confidential> {
         self.owned_rights()
             .into_iter()
-            .flat_map(|(_, assignment)| assignment.all_seal_definitions())
+            .flat_map(|(_, assignment)| assignment.to_confidential_seals())
             .collect()
     }
 
     #[inline]
-    fn known_seal_definitions(&self) -> Vec<seal::Revealed> {
+    fn revealed_seals(
+        &self,
+    ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
+        let unfiltered = self
+            .owned_rights()
+            .into_iter()
+            .map(|(_, assignment)| assignment.revealed_seals())
+            .collect::<Vec<_>>();
+        if unfiltered.contains(&Err(ConfidentialDataError)) {
+            return Err(ConfidentialDataError);
+        }
+        Ok(unfiltered
+            .into_iter()
+            .filter_map(Result::ok)
+            .map(Vec::into_iter)
+            .flatten()
+            .collect())
+    }
+
+    #[inline]
+    fn revealed_seals_by_type(
+        &self,
+        assignment_type: OwnedRightType,
+    ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
+        Ok(self
+            .owned_rights_by_type(assignment_type)
+            .map(Assignments::revealed_seals)
+            .transpose()?
+            .unwrap_or(vec![]))
+    }
+
+    #[inline]
+    fn filter_revealed_seals(&self) -> Vec<seal::Revealed> {
         self.owned_rights()
             .into_iter()
-            .flat_map(|(_, assignment)| assignment.known_seal_definitions())
+            .flat_map(|(_, assignment)| assignment.filter_revealed_seals())
             .collect()
     }
 
     #[inline]
-    fn known_seal_definitions_by_type(
+    fn filter_revealed_seals_by_type(
         &self,
         assignment_type: OwnedRightType,
     ) -> Vec<seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
-            .map(Assignments::known_seal_definitions)
+            .map(Assignments::filter_revealed_seals)
             .unwrap_or(vec![])
     }
 }
@@ -1138,7 +1184,7 @@ mod test {
         let seal1 = gen_assignments
             .get(&2usize)
             .unwrap()
-            .seal_definition(1)
+            .revealed_seal_at(1)
             .unwrap()
             .unwrap();
 
@@ -1157,7 +1203,7 @@ mod test {
         let seal2 = tran_assingmnets
             .get(&3usize)
             .unwrap()
-            .seal_definition(1)
+            .revealed_seal_at(1)
             .unwrap()
             .unwrap();
 
@@ -1205,8 +1251,8 @@ mod test {
         assert!(assignment_tran.is_declarative_state());
 
         // All seal confidentials
-        let gen_seals = genesis.all_seal_definitions();
-        let tran_seals = transition.all_seal_definitions();
+        let gen_seals = genesis.to_confiential_seals();
+        let tran_seals = transition.to_confiential_seals();
 
         assert_eq!(gen_seals, tran_seals);
 
@@ -1222,8 +1268,8 @@ mod test {
         );
 
         // Known seals
-        let known_gen_seals = genesis.known_seal_definitions();
-        let known_seals_tran = transition.known_seal_definitions();
+        let known_gen_seals = genesis.filter_revealed_seals();
+        let known_seals_tran = transition.filter_revealed_seals();
 
         assert_eq!(known_gen_seals, known_seals_tran);
 
@@ -1251,8 +1297,8 @@ mod test {
         );
 
         // Known seals by type
-        let dec_gen_seals = genesis.known_seal_definitions_by_type(1);
-        let hash_tran_seals = transition.known_seal_definitions_by_type(3);
+        let dec_gen_seals = genesis.filter_revealed_seals_by_type(1);
+        let hash_tran_seals = transition.filter_revealed_seals_by_type(3);
 
         let txid1 = match dec_gen_seals[0] {
             super::seal::Revealed::TxOutpoint(op) => Some(op.txid),
