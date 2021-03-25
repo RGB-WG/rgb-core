@@ -16,9 +16,13 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 
-use bitcoin::OutPoint;
+use bitcoin::{OutPoint, Txid};
 use rgb::prelude::*;
+
+use crate::asset::Error;
+use crate::schema::{self, FieldType, OwnedRightsType, TransitionType};
 
 /// Specific supply measure to be provided; used as an argument for methods
 /// returning supply information
@@ -169,43 +173,119 @@ pub struct Issue {
     /// Indicates transaction outputs which had an assigned inflation right and
     /// which spending produced this issue. Empty array signifies that the
     /// issue was produced by genesis (i.e. it is a primary issue)
-    origin: Vec<OutPoint>,
+    closes: Vec<OutPoint>,
 
     /// Seals controlling secondary (inflationary) issues, with corresponding
     /// maximum amount of the inflation allowed via spending that seal
     inflation_assignments: BTreeMap<OutPoint, AtomicValue>,
+
+    /// Witness transaction id, which should be present in the commitment
+    /// medium (bitcoin blockchain or state channel) to make the operation
+    /// valid
+    witness: Option<Txid>,
 }
 
 impl Issue {
     /// Constructor for structure initialization. Can not be used externally;
     /// the structure is always created from RGB contract data.
+    #[allow(dead_code)]
     pub(crate) fn with(
-        id: NodeId,
         contract_id: ContractId,
-        amount: AtomicValue,
-        origin: Vec<OutPoint>,
-        inflation_assignments: BTreeMap<OutPoint, AtomicValue>,
-    ) -> Issue {
-        Issue {
+        closes: Vec<OutPoint>,
+        transition: Transition,
+        witness: Txid,
+    ) -> Result<Issue, Error> {
+        let id = transition.node_id();
+
+        let amount = *transition
+            .metadata()
+            .u64(*FieldType::IssuedSupply)
+            .first()
+            .ok_or(schema::Error::NotAllFieldsPresent)?;
+
+        let inflation_assignments = transition
+            .owned_rights_by_type(*OwnedRightsType::Inflation)
+            .map(Assignments::as_revealed_owned_value)
+            .transpose()
+            .map_err(|_| Error::InflationAssignmentConfidential(id))?
+            .unwrap_or_default()
+            .into_iter()
+            .fold(BTreeMap::new(), |mut assignments, (seal, amount)| {
+                *assignments
+                    .entry(OutPoint::from(seal.outpoint_reveal(witness)))
+                    .or_insert(0) += amount.value;
+                assignments
+            });
+
+        Ok(Issue {
             id,
             contract_id,
             amount,
-            origin,
+            closes,
             inflation_assignments,
-        }
+            witness: Some(witness),
+        })
     }
 
     /// Detects if the issue is primary (i.e. defined as a part of genesis data)
     #[inline]
     pub fn is_primary(&self) -> bool {
-        self.origin.is_empty()
+        self.closes.is_empty()
     }
 
     /// Detects if the issue is secondary (i.e. created with inflation state
     /// transition)
     #[inline]
     pub fn is_secondary(&self) -> bool {
-        !self.origin.is_empty()
+        !self.closes.is_empty()
+    }
+}
+
+impl TryFrom<Genesis> for Issue {
+    type Error = Error;
+
+    fn try_from(genesis: Genesis) -> Result<Self, Self::Error> {
+        Issue::try_from(&genesis)
+    }
+}
+
+impl TryFrom<&Genesis> for Issue {
+    type Error = Error;
+
+    fn try_from(genesis: &Genesis) -> Result<Self, Self::Error> {
+        let id = genesis.node_id();
+
+        let amount = *genesis
+            .metadata()
+            .u64(*FieldType::IssuedSupply)
+            .first()
+            .ok_or(schema::Error::NotAllFieldsPresent)?;
+
+        let inflation_assignments = genesis
+            .owned_rights_by_type(*OwnedRightsType::Inflation)
+            .map(Assignments::as_revealed_owned_value)
+            .transpose()
+            .map_err(|_| Error::InflationAssignmentConfidential(id))?
+            .unwrap_or_default()
+            .into_iter()
+            .try_fold::<_, _, Result<_, Error>>(
+                BTreeMap::new(),
+                |mut assignments, (seal, amount)| {
+                    *assignments
+                        .entry(OutPoint::try_from(seal)?)
+                        .or_insert(0) += amount.value;
+                    Ok(assignments)
+                },
+            )?;
+
+        Ok(Issue {
+            id,
+            contract_id: genesis.contract_id(),
+            amount,
+            closes: empty!(),
+            inflation_assignments,
+            witness: None,
+        })
     }
 }
 
@@ -248,7 +328,7 @@ pub struct Epoch {
     contract_id: ContractId,
 
     /// Indicates transaction output/seal which had an assigned epoch right and
-    /// which spending produced opened this epoch.
+    /// which spending opened this epoch.
     closes: OutPoint,
 
     /// Seal controlling start of the next burn & replace epoch. This can be
@@ -272,22 +352,41 @@ pub struct Epoch {
 
     /// Sequence of known burn & replace operations
     known_operations: Vec<BurnReplace>,
+
+    /// Witness transaction id, which should be present in the commitment
+    /// medium (bitcoin blockchain or state channel) to make the operation
+    /// valid
+    witness: Txid,
 }
 
 impl Epoch {
-    /// Constructor for structure initialization. Can not be used externally;
+    /// Main form for [`Epoch`] initialization. Can not be used externally;
     /// the structure is always created from RGB contract data.
-    #[allow(unused)]
+    #[allow(dead_code)]
     pub(crate) fn with(
-        id: NodeId,
         contract_id: ContractId,
         no: u16,
         closes: OutPoint,
-        epoch_seal: Option<OutPoint>,
-        seal: Option<OutPoint>,
-        known_operations: Vec<BurnReplace>,
-    ) -> Self {
-        Epoch {
+        transition: Transition,
+        witness: Txid,
+    ) -> Result<Self, Error> {
+        let id = transition.node_id();
+        let epoch_seal = transition
+            .revealed_seals_by_type(*OwnedRightsType::Epoch)
+            .map_err(|_| Error::EpochSealConfidential(id))?
+            .first()
+            .copied()
+            .map(|seal| seal.outpoint_reveal(witness))
+            .map(OutPoint::from);
+        let seal = transition
+            .revealed_seals_by_type(*OwnedRightsType::BurnReplace)
+            .map_err(|_| Error::BurnSealConfidential(id))?
+            .first()
+            .copied()
+            .map(|seal| seal.outpoint_reveal(witness))
+            .map(OutPoint::from);
+
+        Ok(Epoch {
             id,
             no,
             contract_id,
@@ -296,8 +395,9 @@ impl Epoch {
             seal,
             is_final: epoch_seal.is_none(),
             is_unlocked: seal.is_some(),
-            known_operations,
-        }
+            known_operations: empty!(),
+            witness,
+        })
     }
 }
 
@@ -333,7 +433,7 @@ pub struct BurnReplace {
 
     /// Node ID of the state transition opening epoch under which this
     /// operation is performed
-    epoch_id: ContractId,
+    epoch_id: NodeId,
 
     /// Sequential number of the operation within its epoch
     ///
@@ -345,7 +445,7 @@ pub struct BurnReplace {
     contract_id: ContractId,
 
     /// Indicates transaction output/seal which had an assigned burn & replace
-    /// right and which spending produced opened this epoch.
+    /// right and which spending opened this epoch.
     closes: OutPoint,
 
     /// Indicates whether this is operation performs at least partial
@@ -393,24 +493,55 @@ pub struct BurnReplace {
     /// burn or replace operations for the epoch, i.e. it is final. In this
     /// case [`is_final()`] will return `true`.
     seal: Option<OutPoint>,
+
+    /// Witness transaction id, which should be present in the commitment
+    /// medium (bitcoin blockchain or state channel) to make the operation
+    /// valid
+    witness: Txid,
 }
 
 impl BurnReplace {
-    /// Constructor for structure initialization. Can not be used externally;
-    /// the structure is always created from RGB contract data.
-    #[allow(unused)]
+    /// Constructor for [`BurnReplace`] structure initialization. Can not be
+    /// used externally; the structure is always created from RGB contract
+    /// data.
+    #[allow(dead_code)]
     pub(crate) fn with(
-        id: NodeId,
-        epoch_id: ContractId,
-        no: u16,
         contract_id: ContractId,
+        epoch_id: NodeId,
+        no: u16,
         closes: OutPoint,
-        does_replacement: bool,
-        burned_amount: AtomicValue,
-        replaced_amount: AtomicValue,
-        seal: Option<OutPoint>,
-    ) -> Self {
-        BurnReplace {
+        transition: Transition,
+        witness: Txid,
+    ) -> Result<Self, Error> {
+        let id = transition.node_id();
+
+        let seal = transition
+            .revealed_seals_by_type(*OwnedRightsType::BurnReplace)
+            .map_err(|_| Error::BurnSealConfidential(id))?
+            .first()
+            .copied()
+            .map(|seal| seal.outpoint_reveal(witness))
+            .map(OutPoint::from);
+
+        let does_replacement = transition
+            .transition_type()
+            .expect("State transition always has a transition type")
+            == *TransitionType::BurnAndReplace;
+
+        let burned_amount = transition
+            .metadata()
+            .u64(*FieldType::BurnedSupply)
+            .first()
+            .copied()
+            .ok_or(schema::Error::NotAllFieldsPresent)?;
+        let replaced_amount = transition
+            .metadata()
+            .u64(*FieldType::IssuedSupply)
+            .first()
+            .copied()
+            .ok_or(schema::Error::NotAllFieldsPresent)?;
+
+        Ok(BurnReplace {
             id,
             epoch_id,
             no,
@@ -422,7 +553,8 @@ impl BurnReplace {
             supply_change: burned_amount - replaced_amount,
             is_final: seal.is_none(),
             seal,
-        }
+            witness,
+        })
     }
 }
 
