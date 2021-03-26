@@ -106,8 +106,10 @@ pub enum Bits {
     Bit16 = 2,
     Bit32 = 4,
     Bit64 = 8,
-    /* Bit128 = 16,
-     * Bit256 = 32, */
+    /* TODO #14: Add support later once bitcoin library will start
+     * supporting       consensus-encoding of the native rust `u128`
+     * type Bit128 = 16,
+     *Bit256 = 32, */
 }
 // TODO #46: Add support later once bitcoin library will start supporting
 //      consensus-encoding of the native rust `u128` type

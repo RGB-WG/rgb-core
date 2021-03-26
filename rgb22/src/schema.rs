@@ -57,10 +57,10 @@ pub fn schema() -> Schema {
         field_types: type_map! {
             FieldType::Name => DataFormat::String(256),
             // Data format for keeping identity-related information
-            // TODO #37: (LNPBPs) Consider using MIME types
+            // TODO #36: (LNPBPs) Consider using MIME types
             FieldType::DataFormat => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
             // Identity-related information (like SSI)
-            // TODO #37: Use data container to keep the actual log record
+            // TODO #33: Use data container to keep the actual log record
             //       matching the signature
             FieldType::Data => DataFormat::Bytes(core::u16::MAX),
             // We allow signatures to be created with different cryptographic

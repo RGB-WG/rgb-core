@@ -108,7 +108,7 @@ pub enum DataFormat {
     Digest(DigestAlgorithm),
     PublicKey(EllipticCurve, elliptic_curve::PointSerialization),
     Signature(elliptic_curve::SignatureAlgorithm),
-    // TODO #51: Add externally stored data container id
+    // TODO #33: Add externally stored data container id
     // Container(BlobId, MIME, u64 /* AES encryption key / salt */),
     TxOutPoint,
     Tx,
@@ -137,7 +137,7 @@ impl DataFormat {
         Self::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
     }
 
-    // TODO #46: Add support later once bitcoin library will start supporting
+    // TODO #14: Add support later once bitcoin library will start supporting
     //       consensus-encoding of the native rust `u128` type
     //#[inline]
     //pub fn u128() -> Self {
@@ -164,7 +164,7 @@ impl DataFormat {
         Self::Integer(Bits::Bit64, 0, core::i64::MAX as i128)
     }
 
-    // TODO #46: Add support later once bitcoin library will start supporting
+    // TODO #14: Add support later once bitcoin library will start supporting
     //       consensus-encoding of the native rust `u128` type
     //#[inline]
     //pub fn i128() -> Self {
@@ -791,6 +791,7 @@ mod _validation {
         }
     }
 
+    // TODO (new): consider having type_id as a method
     impl DataFormat {
         pub fn validate(
             &self,
@@ -993,7 +994,7 @@ mod _validation {
                                     assignment_id,
                                 ));
                             }
-                            // TODO: When other homomorphic formats will be added,
+                            // TODO #15: When other homomorphic formats will be added,
                             //       add information to the status like with
                             //       hashed data below
                         }
@@ -1039,7 +1040,7 @@ mod _validation {
                                     assignment_id,
                                 ));
                             }
-                            // TODO: When other homomorphic formats will be added,
+                            // TODO #15: When other homomorphic formats will be added,
                             //       add type check like with hashed data below
                         }
                         StateFormat::CustomData(format) => {

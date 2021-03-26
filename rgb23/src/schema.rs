@@ -56,11 +56,11 @@ pub fn schema() -> Schema {
         field_types: type_map! {
             // Human-readable name for UI
             FieldType::Name => DataFormat::String(256),
-            // TODO #38: Consider using data container
+            // TODO #33: Consider using data container
             FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             // TODO: 36: (LNPBPs) Consider using MIME types
             FieldType::DataFormat => DataFormat::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128),
-            // TODO #38: Use data container to keep the actual log record
+            // TODO #33: Use data container to keep the actual log record
             //       matching the signature
             FieldType::Data => DataFormat::Bytes(core::u16::MAX),
             // While UNIX timestamps allow negative numbers; in context of RGB Schema, assets
