@@ -27,8 +27,9 @@ use wallet::resolvers::TxResolver;
 
 use crate::contract::ConcealSeals;
 use crate::{
-    validation, Anchor, ConcealState, ContractId, Extension, Genesis, Node,
-    NodeId, Schema, SealEndpoint, Transition, Validator,
+    schema, validation, Anchor, ConcealState, ConsistencyError, ContractId,
+    Extension, Genesis, GraphApi, Node, NodeId, Schema, SealEndpoint,
+    Transition, Validator,
 };
 
 pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
@@ -109,6 +110,17 @@ impl FromStr for ConsignmentId {
     }
 }
 
+/// Consignment represents contract-specific data, always starting with genesis,
+/// which must be valid under client-side-validation rules (i.e. internally
+/// consistent and properly committed into the commitment layer, like bitcoin
+/// blockchain or current state of the lightning channel).
+///
+/// All consignment-related procedures, including validation or merging
+/// consignment data into stash or schema-specific data storage, must start with
+/// `endpoints` and process up to the genesis. If any of the nodes within the
+/// consignment are not part of the paths connecting endpoints with the genesis,
+/// consignment validation will return
+/// [`crate::validation::Warning::ExcessiveNode`] warning
 #[cfg_attr(
     all(feature = "cli", feature = "serde"),
     derive(Serialize, Deserialize),
@@ -117,10 +129,27 @@ impl FromStr for ConsignmentId {
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[display(Consignment::to_bech32_string)]
 pub struct Consignment {
+    /// Version, used internally
     version: u16,
+
+    /// Genesis data
     pub genesis: Genesis,
+
+    /// The final state ("endpoints") provided by this consignment.
+    ///
+    /// There are two reasons for having endpoints:
+    /// - navigation towards genesis from the final state is more
+    ///   computationally efficient, since state transition/extension graph is
+    ///   directed towards genesis (like bitcoin transaction graph)
+    /// - if the consignment contains concealed state (known by the receiver),
+    ///   it will be computationally inefficient to understand which of the
+    ///   state transitions represent the final state
     pub endpoints: ConsignmentEndpoints,
+
+    /// Data on all anchored state transitions contained in the consignment
     pub state_transitions: TransitionData,
+
+    /// Data on all state extensions contained in the consignment
     pub state_extensions: ExtensionData,
 }
 
@@ -196,6 +225,60 @@ impl Consignment {
         );
         set.extend(self.state_extensions.iter().map(Extension::node_id));
         set
+    }
+
+    #[inline]
+    pub fn endpoint_node_ids(&self) -> BTreeSet<NodeId> {
+        self.endpoints
+            .iter()
+            .map(|(node_id, _)| node_id)
+            .copied()
+            .collect()
+    }
+
+    #[inline]
+    pub fn endpoint_transitions(&self) -> Vec<&Transition> {
+        self.endpoint_node_ids()
+            .into_iter()
+            .filter_map(|node_id| self.transition_by_id(node_id).ok())
+            .collect()
+    }
+
+    #[inline]
+    pub fn endpoint_transition_by_id(
+        &self,
+        node_id: NodeId,
+    ) -> Result<&Transition, ConsistencyError> {
+        if self
+            .endpoints
+            .iter()
+            .find(|(id, _)| *id == node_id)
+            .is_none()
+        {
+            return Err(ConsistencyError::NotEndpoint(node_id));
+        }
+
+        self.transition_by_id(node_id)
+    }
+
+    #[inline]
+    pub fn endpoint_transitions_by_type(
+        &self,
+        transition_type: schema::TransitionType,
+    ) -> Vec<&Transition> {
+        self.endpoint_transitions_by_types(&[transition_type])
+    }
+
+    #[inline]
+    pub fn endpoint_transitions_by_types(
+        &self,
+        types: &[schema::TransitionType],
+    ) -> Vec<&Transition> {
+        self.endpoint_node_ids()
+            .into_iter()
+            .filter_map(|node_id| self.transition_by_id(node_id).ok())
+            .filter(|node| types.contains(&node.transition_type()))
+            .collect()
     }
 
     pub fn validate<R: TxResolver>(
