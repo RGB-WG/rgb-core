@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! Data structures and APIs for working with RGB20 assets
+
 use chrono::{DateTime, NaiveDateTime, Utc};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -25,34 +27,46 @@ use lnpbp::Chain;
 use rgb::prelude::*;
 use rgb::seal::WitnessVoutError;
 
-use super::schema::{self, FieldType, OwnedRightsType};
+use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
 use crate::{
-    Allocation, Epoch, FractionalAmount, Issue, PreciseAmount, Supply,
-    SupplyMeasure,
+    Allocation, BurnReplace, Epoch, FractionalAmount, Issue, PreciseAmount,
+    Supply, SupplyMeasure,
 };
 
+/// Errors generated during RGB20 asset information parsing from the underlying
+/// genesis or consignment data
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
-    /// Can't read asset data: provided information does not match schema:
-    /// {_0}
+    /// can't read asset data, since the provided information does not match
+    /// schema – {_0}
     #[from]
     Schema(schema::Error),
 
-    /// Genesis defines a seal referencing witness transaction while there
+    /// genesis defines a seal referencing witness transaction while there
     /// can't be a witness transaction for genesis
     #[from(WitnessVoutError)]
     GenesisSeal,
 
-    /// Epoch seal definition for node {0} contains confidential data
+    /// epoch seal definition for node {0} contains confidential data
     EpochSealConfidential(NodeId),
 
-    /// Burn & replace seal definition for node {0} contains confidential data
+    /// nurn & replace seal definition for node {0} contains confidential data
     BurnSealConfidential(NodeId),
 
-    /// Inflation assignment (seal or state) for node {0} contains confidential
+    /// inflation assignment (seal or state) for node {0} contains confidential
     /// data
     InflationAssignmentConfidential(NodeId),
+
+    /// Internal data inconsistency, as returned by the [`rgb::GraphAPI`]
+    /// methods
+    #[display(inner)]
+    #[from]
+    Inconsistency(rgb::ConsistencyError),
+
+    /// not of all epochs referenced in burn or burn & replace operation
+    /// history are known from the consignment
+    NotAllEpochsExposed,
 }
 
 // TODO #31: Add support for renominations, burn & replacements
@@ -102,12 +116,15 @@ pub struct Asset {
     /// arbitrary order
     known_issues: Vec<Issue>,
 
+    /// Single-use-seal controlling the beginning of the first epoch
+    epoch_opening_seal: Option<OutPoint>,
+
     /// Burn & replacement epochs, organized according to the witness txid.
     ///
     /// Witness transaction must be mined for the epoch to be real.
     /// One of the inputs of this transaction MUST spend UTXO defined as a
     /// seal closed by this epoch ([`Epoch::closes`])
-    epochs: BTreeMap<Txid, Epoch>,
+    epochs: Vec<Epoch>,
 
     /// Detailed information about the asset supply (aggregated from the issue
     /// and burning information kept inside the epochs data)
@@ -123,7 +140,7 @@ pub struct Asset {
         serde(with = "As::<BTreeMap<DisplayFromStr, DisplayFromStr>>")
     )]
     // TODO #32: Transform into method iterating and collecting this
-    // information      from `known_issues`
+    //      information from `known_issues`
     known_inflation: BTreeMap<OutPoint, AtomicValue>,
 
     /// Specifies outpoints controlling certain amounts of assets.
@@ -136,61 +153,41 @@ pub struct Asset {
 }
 
 impl Asset {
-    #[inline]
-    pub fn with(
-        genesis: String,
-        id: ContractId,
-        ticker: String,
-        name: String,
-        ricardian_contract: Option<String>,
-        supply: Supply,
-        chain: Chain,
-        decimal_precision: u8,
-        date: DateTime<Utc>,
-        known_issues: Vec<Issue>,
-        known_inflation: BTreeMap<bitcoin::OutPoint, AtomicValue>,
-        known_allocations: Vec<Allocation>,
-    ) -> Asset {
-        Asset {
-            genesis,
-            id,
-            ticker,
-            name,
-            ricardian_contract,
-            supply,
-            chain,
-            decimal_precision,
-            date,
-            known_issues,
-            known_inflation,
-            known_allocations,
-            epochs: empty!(),
-        }
-    }
-
-    pub fn accounting_supply(
+    /// Returns information (in atomic value units) about specific measure of
+    /// the asset supply, if known, or `None` otherwise
+    pub fn precise_supply(
         &self,
         measure: SupplyMeasure,
-    ) -> FractionalAmount {
-        let value = match measure {
+    ) -> Option<AtomicValue> {
+        Some(match measure {
             SupplyMeasure::KnownCirculating => *self.supply.known_circulating(),
             SupplyMeasure::TotalCirculating => {
                 match self.supply.total_circulating() {
-                    None => return FractionalAmount::NAN,
+                    None => return None,
                     Some(supply) => supply,
                 }
             }
             SupplyMeasure::IssueLimit => *self.supply.issue_limit(),
+        })
+    }
+
+    pub fn fractional_supply(
+        &self,
+        measure: SupplyMeasure,
+    ) -> FractionalAmount {
+        let value = match self.precise_supply(measure) {
+            None => return FractionalAmount::NAN,
+            Some(supply) => supply,
         };
         PreciseAmount::transmutate_into(value, self.decimal_precision)
     }
 
     #[inline]
-    pub fn known_atomic_value(&self) -> AtomicValue {
+    pub fn known_value(&self) -> AtomicValue {
         self.known_allocations.iter().map(Allocation::value).sum()
     }
 
-    pub fn known_filtered_atomic_value<F>(&self, filter: F) -> AtomicValue
+    pub fn known_filtered_value<F>(&self, filter: F) -> AtomicValue
     where
         F: Fn(&Allocation) -> bool,
     {
@@ -201,7 +198,7 @@ impl Asset {
             .sum()
     }
 
-    pub fn known_accounting_value(&self) -> FractionalAmount {
+    pub fn known_amount(&self) -> FractionalAmount {
         self.known_allocations
             .iter()
             .map(Allocation::value)
@@ -211,10 +208,7 @@ impl Asset {
             .sum()
     }
 
-    pub fn known_filtered_accounting_value<F>(
-        &self,
-        filter: F,
-    ) -> FractionalAmount
+    pub fn known_filtered_amount<F>(&self, filter: F) -> FractionalAmount
     where
         F: Fn(&Allocation) -> bool,
     {
@@ -227,11 +221,9 @@ impl Asset {
             })
             .sum()
     }
-}
 
-impl Asset {
     #[inline]
-    pub fn allocations(&self, outpoint: OutPoint) -> Vec<Allocation> {
+    pub fn outpoint_allocations(&self, outpoint: OutPoint) -> Vec<Allocation> {
         self.known_allocations
             .iter()
             .filter(|a| *a.outpoint() == outpoint)
@@ -255,24 +247,54 @@ impl Asset {
         }
     }
 
-    pub fn remove_allocation(
+    #[allow(dead_code)]
+    fn add_issue(
         &mut self,
-        outpoint: OutPoint,
-        node_id: NodeId,
-        index: u16,
-        value: value::Revealed,
-    ) -> bool {
-        let old_allocation = Allocation::with(node_id, index, outpoint, value);
-        if let Some(index) = self
-            .known_allocations
-            .iter()
-            .position(|a| *a == old_allocation)
-        {
-            self.known_allocations.remove(index);
-            true
-        } else {
-            false
-        }
+        consignment: &Consignment,
+        transition: &Transition,
+        witness: Txid,
+    ) -> Result<(), Error> {
+        let closed_seals = consignment.seals_closed_with(
+            transition.node_id(),
+            *OwnedRightsType::Inflation,
+            witness,
+        )?;
+        let issue = Issue::with(self.id, closed_seals, transition, witness)?;
+        self.known_issues.push(issue);
+        Ok(())
+    }
+
+    fn add_epoch(
+        &mut self,
+        consignment: &Consignment,
+        transition: &Transition,
+        no: usize,
+        operations: Vec<BurnReplace>,
+        witness: Txid,
+    ) -> Result<(), Error> {
+        let id = transition.node_id();
+        // 1. It must correctly extend known state, i.e. close UTXO for a seal
+        //    defined by a state transition already belonging to the asset
+        let closed_seal = consignment
+            .seals_closed_with(id, *OwnedRightsType::OpenEpoch, witness)?
+            .into_iter()
+            .next()
+            .ok_or(Error::Inconsistency(
+                rgb::ConsistencyError::NoSealsClosed(
+                    *OwnedRightsType::OpenEpoch,
+                    id,
+                ),
+            ))?;
+        let epoch = Epoch::with(
+            self.id,
+            no,
+            closed_seal,
+            transition,
+            operations,
+            witness,
+        )?;
+        self.epochs.insert(no as usize, epoch);
+        Ok(())
     }
 }
 
@@ -325,6 +347,14 @@ impl TryFrom<Genesis> for Asset {
             }
         }
 
+        let epoch_opening_seal = genesis
+            .revealed_seals_by_type(*OwnedRightsType::OpenEpoch)
+            .map_err(|_| Error::EpochSealConfidential(genesis.node_id()))?
+            .first()
+            .copied()
+            .map(|seal| seal.try_into())
+            .transpose()?;
+
         let issue = Issue::try_from(&genesis)?;
         let node_id = NodeId::from_inner(genesis.contract_id().into_inner());
         let mut known_allocations = Vec::<Allocation>::new();
@@ -350,7 +380,7 @@ impl TryFrom<Genesis> for Asset {
                     }
                 });
         }
-        Ok(Self {
+        Ok(Asset {
             genesis: genesis.to_string(),
             id: genesis.contract_id(),
             chain: genesis.chain().clone(),
@@ -386,6 +416,7 @@ impl TryFrom<Genesis> for Asset {
             // and known seal (they are always revealed together) belongs to us
             known_allocations,
             epochs: empty!(),
+            epoch_opening_seal,
         })
     }
 }
@@ -395,37 +426,88 @@ impl TryFrom<Consignment> for Asset {
 
     fn try_from(consignment: Consignment) -> Result<Self, Self::Error> {
         // 1. Parse genesis
-        let asset: Asset = consignment.genesis.try_into()?;
+        let mut asset: Asset = consignment.genesis.clone().try_into()?;
 
-        // 2. Parse secondary issues
+        // 2. Parse burn & replacement operations
+        let mut epoch_operations: BTreeMap<NodeId, Vec<BurnReplace>> = empty!();
+        for transition in consignment.endpoint_transitions_by_types(&[
+            *TransitionType::BurnAndReplace,
+            *TransitionType::Burn,
+        ]) {
+            let mut ops = consignment
+                .chain_iter(transition.node_id(), *OwnedRightsType::BurnReplace)
+                .collect::<Vec<_>>();
+            ops.reverse();
+            if let Some((epoch, _)) = ops.pop() {
+                let epoch_id = epoch.node_id();
+                let mut operations = vec![];
+                for (no, (transition, witness)) in ops.into_iter().enumerate() {
+                    let id = transition.node_id();
+                    let closed_seal = consignment
+                        .seals_closed_with(
+                            id,
+                            *OwnedRightsType::BurnReplace,
+                            witness,
+                        )?
+                        .into_iter()
+                        .next()
+                        .ok_or(Error::Inconsistency(
+                            rgb::ConsistencyError::NoSealsClosed(
+                                *OwnedRightsType::BurnReplace,
+                                id,
+                            ),
+                        ))?;
+                    operations.push(BurnReplace::with(
+                        asset.id,
+                        epoch_id,
+                        no,
+                        closed_seal,
+                        transition,
+                        witness,
+                    )?)
+                }
+                epoch_operations.insert(epoch_id, operations);
+            }
+        }
 
-        // 3. Parse epochs & burn/replace operations
+        // 3. Parse epochs
+        let epoch_transition = consignment
+            .endpoint_transitions_by_type(*TransitionType::Epoch)
+            .into_iter()
+            .next();
+        if let Some(epoch_transition) = epoch_transition {
+            let mut chain = consignment
+                .chain_iter(
+                    epoch_transition.node_id(),
+                    *OwnedRightsType::OpenEpoch,
+                )
+                .collect::<Vec<_>>();
+            chain.reverse();
+            for (no, (transition, witness)) in chain.into_iter().enumerate() {
+                let epoch_id = transition.node_id();
+                asset.add_epoch(
+                    &consignment,
+                    transition,
+                    no,
+                    epoch_operations.remove(&epoch_id).unwrap_or_default(),
+                    witness,
+                )?;
+            }
+        }
 
-        // 4. Parse renominations
+        if !epoch_operations.is_empty() {
+            return Err(Error::NotAllEpochsExposed);
+        }
 
-        unimplemented!()
-    }
-}
+        // 4. Parse secondary issues
+        /*
+        for (transition, witness) in consignment.chain_iter() {
+            asset.add_issue(&consignment, transition, witness)?;
+        }
+         */
 
-impl Asset {
-    #[allow(dead_code)]
-    fn append_epoch(
-        &mut self,
-        consignment: &Consignment,
-        epoch_id: NodeId,
-    ) -> Result<(), Error> {
-        // 1. It must correctly extend known state, i.e. close UTXO for a seal
-        //    defined by a state transition already belonging to the asset
-        unimplemented!()
-    }
+        // 5. Parse renominations
 
-    #[allow(dead_code)]
-    fn append_burn_or_replace(
-        &mut self,
-        consignment: &Consignment,
-        epoch_id: NodeId,
-        bor_id: NodeId,
-    ) -> Result<(), Error> {
-        unimplemented!()
+        Ok(asset)
     }
 }
