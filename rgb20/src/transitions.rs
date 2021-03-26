@@ -180,7 +180,7 @@ impl Asset {
         // Collecting all input allocations
         let mut input_allocations = Vec::<Allocation>::new();
         for outpoint in inputs {
-            let found = self.allocations(outpoint);
+            let found = self.outpoint_allocations(outpoint);
             if found.len() == 0 {
                 Err(Error::UnrelatedInput(outpoint))?
             }

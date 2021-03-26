@@ -15,7 +15,7 @@
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 
 use bitcoin::{OutPoint, Txid};
@@ -173,7 +173,7 @@ pub struct Issue {
     /// Indicates transaction outputs which had an assigned inflation right and
     /// which spending produced this issue. Empty array signifies that the
     /// issue was produced by genesis (i.e. it is a primary issue)
-    closes: Vec<OutPoint>,
+    closes: BTreeSet<OutPoint>,
 
     /// Seals controlling secondary (inflationary) issues, with corresponding
     /// maximum amount of the inflation allowed via spending that seal
@@ -191,8 +191,8 @@ impl Issue {
     #[allow(dead_code)]
     pub(crate) fn with(
         contract_id: ContractId,
-        closes: Vec<OutPoint>,
-        transition: Transition,
+        closes: BTreeSet<OutPoint>,
+        transition: &Transition,
         witness: Txid,
     ) -> Result<Issue, Error> {
         let id = transition.node_id();
@@ -322,7 +322,7 @@ pub struct Epoch {
     ///
     /// NB: There is no zero epoch and the first is an epoch closing genesis
     /// epoch seal
-    no: u16,
+    no: usize,
 
     /// Contract ID to which this epoch is related to
     contract_id: ContractId,
@@ -365,14 +365,15 @@ impl Epoch {
     #[allow(dead_code)]
     pub(crate) fn with(
         contract_id: ContractId,
-        no: u16,
+        no: usize,
         closes: OutPoint,
-        transition: Transition,
+        transition: &Transition,
+        operations: Vec<BurnReplace>,
         witness: Txid,
     ) -> Result<Self, Error> {
         let id = transition.node_id();
         let epoch_seal = transition
-            .revealed_seals_by_type(*OwnedRightsType::Epoch)
+            .revealed_seals_by_type(*OwnedRightsType::OpenEpoch)
             .map_err(|_| Error::EpochSealConfidential(id))?
             .first()
             .copied()
@@ -395,7 +396,7 @@ impl Epoch {
             seal,
             is_final: epoch_seal.is_none(),
             is_unlocked: seal.is_some(),
-            known_operations: empty!(),
+            known_operations: operations,
             witness,
         })
     }
@@ -439,7 +440,7 @@ pub struct BurnReplace {
     ///
     /// NB: There is no zero epoch and the first is an epoch closing genesis
     /// epoch seal
-    no: u16,
+    no: usize,
 
     /// Contract ID to which this burn & replace operation is related to
     contract_id: ContractId,
@@ -508,9 +509,9 @@ impl BurnReplace {
     pub(crate) fn with(
         contract_id: ContractId,
         epoch_id: NodeId,
-        no: u16,
+        no: usize,
         closes: OutPoint,
-        transition: Transition,
+        transition: &Transition,
         witness: Txid,
     ) -> Result<Self, Error> {
         let id = transition.node_id();
@@ -523,10 +524,8 @@ impl BurnReplace {
             .map(|seal| seal.outpoint_reveal(witness))
             .map(OutPoint::from);
 
-        let does_replacement = transition
-            .transition_type()
-            .expect("State transition always has a transition type")
-            == *TransitionType::BurnAndReplace;
+        let does_replacement =
+            transition.transition_type() == *TransitionType::BurnAndReplace;
 
         let burned_amount = transition
             .metadata()
