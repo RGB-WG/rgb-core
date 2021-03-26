@@ -244,12 +244,19 @@ pub trait Node: AsAny {
 
     #[inline]
     fn parent_outputs_by_type(&self, t: OwnedRightType) -> Vec<NodeOutput> {
+        self.parent_outputs_by_types(&[t])
+    }
+
+    fn parent_outputs_by_types(
+        &self,
+        types: &[OwnedRightType],
+    ) -> Vec<NodeOutput> {
         self.parent_owned_rights()
             .iter()
             .map(|(node_id, map)| {
                 let node_id = *node_id;
                 map.iter()
-                    .filter(|(t2, _)| t == **t2)
+                    .filter(|(t, _)| types.contains(*t))
                     .map(|(_, outputs)| outputs)
                     .flatten()
                     .copied()
@@ -842,6 +849,10 @@ impl Transition {
             script,
         }
     }
+
+    pub fn transition_type(&self) -> schema::TransitionType {
+        self.transition_type
+    }
 }
 
 mod _strict_encoding {
@@ -1129,7 +1140,7 @@ mod test {
         );
 
         assert_eq!(genesis.transition_type(), None);
-        assert_eq!(transition.transition_type(), Some(10));
+        assert_eq!(transition.transition_type(), 10);
 
         // Ancestor test
 
