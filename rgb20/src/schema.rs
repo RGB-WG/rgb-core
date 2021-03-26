@@ -25,6 +25,8 @@ use rgb::schema::{
 
 pub const SCHEMA_ID_BECH32: &'static str =
     "sch1zcdeayj9vpv852tx2sjzy7esyy82a6nk0gs854ktam24zxee42rqyzg95g";
+pub const SUBSCHEMA_ID_BECH32: &'static str =
+    "sch1zcdeayj9vpv852tx2sjzy7esyy82a6nk0gs854ktam24zxee42rqyzg95g";
 
 #[derive(
     Clone,
@@ -67,7 +69,7 @@ pub enum FieldType {
 pub enum OwnedRightsType {
     Inflation,
     Assets,
-    Epoch,
+    OpenEpoch,
     BurnReplace,
     Renomination,
 }
@@ -153,7 +155,7 @@ pub fn schema() -> Schema {
             },
             owned_rights: type_map! {
                 OwnedRightsType::Inflation => NoneOrMore,
-                OwnedRightsType::Epoch => NoneOrOnce,
+                OwnedRightsType::OpenEpoch => NoneOrOnce,
                 OwnedRightsType::Assets => NoneOrMore,
                 OwnedRightsType::Renomination => NoneOrOnce
             },
@@ -173,7 +175,7 @@ pub fn schema() -> Schema {
                 },
                 owned_rights: type_map! {
                     OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Epoch => NoneOrOnce,
+                    OwnedRightsType::OpenEpoch => NoneOrOnce,
                     OwnedRightsType::Assets => NoneOrMore
                 },
                 public_rights: none!(),
@@ -196,10 +198,10 @@ pub fn schema() -> Schema {
             TransitionType::Epoch => TransitionSchema {
                 metadata: none!(),
                 closes: type_map! {
-                    OwnedRightsType::Epoch => Once
+                    OwnedRightsType::OpenEpoch => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Epoch => NoneOrOnce,
+                    OwnedRightsType::OpenEpoch => NoneOrOnce,
                     OwnedRightsType::BurnReplace => NoneOrOnce
                 },
                 public_rights: none!(),
@@ -278,14 +280,14 @@ pub fn schema() -> Schema {
                 closes: type_map! {
                     OwnedRightsType::Inflation => NoneOrMore,
                     OwnedRightsType::Assets => NoneOrMore,
-                    OwnedRightsType::Epoch => NoneOrOnce,
+                    OwnedRightsType::OpenEpoch => NoneOrOnce,
                     OwnedRightsType::BurnReplace => NoneOrMore,
                     OwnedRightsType::Renomination => NoneOrOnce
                 },
                 owned_rights: type_map! {
                     OwnedRightsType::Inflation => NoneOrMore,
                     OwnedRightsType::Assets => NoneOrMore,
-                    OwnedRightsType::Epoch => NoneOrOnce,
+                    OwnedRightsType::OpenEpoch => NoneOrOnce,
                     OwnedRightsType::BurnReplace => NoneOrMore,
                     OwnedRightsType::Renomination => NoneOrOnce
                 },
@@ -346,7 +348,7 @@ pub fn schema() -> Schema {
                     AssignmentAction::Validate => Procedure::Embedded(StandardProcedure::NoInflationBySum)
                 }
             },
-            OwnedRightsType::Epoch => StateSchema {
+            OwnedRightsType::OpenEpoch => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             },
@@ -376,7 +378,7 @@ pub fn subschema() -> Schema {
     Schema {
         rgb_features: none!(),
         root_id: SchemaId::from_str(SCHEMA_ID_BECH32)
-            .expect("Broken schema ID for RGB20 sub-schema"),
+            .expect("Broken root schema ID for RGB20 sub-schema"),
         genesis: GenesisSchema {
             metadata: type_map! {
                 FieldType::Ticker => Once,
@@ -388,7 +390,7 @@ pub fn subschema() -> Schema {
             },
             owned_rights: type_map! {
                 OwnedRightsType::Inflation => NoneOrMore,
-                OwnedRightsType::Epoch => NoneOrOnce,
+                OwnedRightsType::OpenEpoch => NoneOrOnce,
                 OwnedRightsType::Assets => NoneOrMore,
                 OwnedRightsType::Renomination => NoneOrOnce
             },
@@ -406,7 +408,7 @@ pub fn subschema() -> Schema {
                 },
                 owned_rights: type_map! {
                     OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Epoch => NoneOrOnce,
+                    OwnedRightsType::OpenEpoch => NoneOrOnce,
                     OwnedRightsType::Assets => NoneOrMore
                 },
                 public_rights: none!(),
@@ -429,7 +431,7 @@ pub fn subschema() -> Schema {
             TransitionType::Epoch => TransitionSchema {
                 metadata: none!(),
                 closes: type_map! {
-                    OwnedRightsType::Epoch => Once
+                    OwnedRightsType::OpenEpoch => Once
                 },
                 owned_rights: type_map! {
                     OwnedRightsType::BurnReplace => NoneOrOnce
@@ -548,7 +550,7 @@ pub fn subschema() -> Schema {
                     AssignmentAction::Validate => Procedure::Embedded(StandardProcedure::NoInflationBySum)
                 }
             },
-            OwnedRightsType::Epoch => StateSchema {
+            OwnedRightsType::OpenEpoch => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             },
@@ -597,7 +599,7 @@ impl Deref for OwnedRightsType {
             // Inflation-control-related rights:
             OwnedRightsType::Inflation => &STATE_TYPE_INFLATION_RIGHT,
             OwnedRightsType::Assets => &STATE_TYPE_OWNED_AMOUNT,
-            OwnedRightsType::Epoch => &STATE_TYPE_ISSUE_EPOCH_RIGHT,
+            OwnedRightsType::OpenEpoch => &STATE_TYPE_ISSUE_EPOCH_RIGHT,
             OwnedRightsType::BurnReplace => &STATE_TYPE_ISSUE_REPLACEMENT_RIGHT,
         }
     }

@@ -23,6 +23,13 @@
     //missing_docs
 )]
 
+//! RGB20 library for working with fungible asset types, operating under
+//! schemata, defined with LNPBP-20 standard:
+//! - Root RGB20 schema, returned by [`schema::schema()`] with id
+//!   [`SCHEMA_ID_BECH32`]
+//! - RGB20 subschema, returned by [`schema::subschema()`], prohibiting asset
+//!   replacement procedure and having id [`SUBSCHEMA_ID_BECH32`]
+
 #[macro_use]
 extern crate amplify;
 #[macro_use]
@@ -47,4 +54,5 @@ pub mod transitions;
 pub use allocation::{AllocatedValue, Allocation, OutpointValue, UtxobValue};
 pub use amount::{FractionalAmount, PreciseAmount};
 pub use asset::Asset;
+pub use schema::{SCHEMA_ID_BECH32, SUBSCHEMA_ID_BECH32};
 pub use supply::{BurnReplace, Epoch, Issue, Supply, SupplyMeasure};
