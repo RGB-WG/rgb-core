@@ -259,7 +259,7 @@ pub enum Failure {
 pub enum Warning {
     EndpointDuplication(NodeId, SealEndpoint),
     EndpointTransitionSealNotFound(NodeId, SealEndpoint),
-    ExcessiveTransition(NodeId),
+    ExcessiveNode(NodeId),
 }
 
 #[derive(
@@ -444,8 +444,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             .validation_index
             .difference(&self.consignment.node_ids())
         {
-            self.status
-                .add_warning(Warning::ExcessiveTransition(*node_id));
+            self.status.add_warning(Warning::ExcessiveNode(*node_id));
         }
     }
 
