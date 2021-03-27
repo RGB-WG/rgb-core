@@ -195,7 +195,19 @@ pub trait GraphApi {
 
 impl GraphApi for Consignment {
     fn node_by_id(&self, node_id: NodeId) -> Option<&dyn Node> {
-        unimplemented!()
+        if self.genesis.node_id() == node_id {
+            return Some(&self.genesis);
+        }
+        self.state_transitions
+            .iter()
+            .find(|(_, transition)| transition.node_id() == node_id)
+            .map(|(_, transition)| transition as &dyn Node)
+            .or_else(|| {
+                self.state_extensions
+                    .iter()
+                    .find(|extension| extension.node_id() == node_id)
+                    .map(|extension| extension as &dyn Node)
+            })
     }
 
     fn transition_by_id(

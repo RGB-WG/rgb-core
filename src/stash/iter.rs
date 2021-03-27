@@ -14,23 +14,14 @@
 //! Iterators for stash-related data structures ([`Stash`] implementations,
 //! [`Consignment`]s, [`Disclosure`]s)
 
+use std::slice;
+
 use bitcoin::Txid;
 
-use crate::schema::OwnedRightType;
+use crate::schema::{OwnedRightType, TransitionType};
 use crate::{
-    Consignment, ConsistencyError, GraphApi, Node, NodeId, Transition,
+    Anchor, Consignment, ConsistencyError, GraphApi, Node, NodeId, Transition,
 };
-
-/// Generic trait for iterators over state transitions contained in
-/// client-side-validation containers
-pub trait TransitionIterator<'iter> {
-    /// Concrete type implementing the iterator
-    type Iterator: Iterator<Item = (&'iter Transition, Txid)>;
-}
-
-impl<'iter> TransitionIterator<'iter> for Consignment {
-    type Iterator = CsChainIter<'iter>;
-}
 
 /// Iterator over transitions and corresponding witness transaction ids which
 /// can be created out of consignment data. Transitions of this type must be
@@ -39,14 +30,14 @@ impl<'iter> TransitionIterator<'iter> for Consignment {
 ///
 /// Iterator is created with [`Consignment::chain_iter`]
 #[derive(Debug)]
-pub struct CsChainIter<'iter> {
+pub struct ChainIter<'iter> {
     consignment: &'iter Consignment,
     connected_by: OwnedRightType,
     next_item: Option<(&'iter Transition, Txid)>,
     error: Option<ConsistencyError>,
 }
 
-impl<'iter> CsChainIter<'iter> {
+impl<'iter> ChainIter<'iter> {
     /// Detects whether iterator was stopped by a error
     pub fn is_err(&'iter self) -> bool {
         self.error.is_some()
@@ -63,33 +54,7 @@ impl<'iter> CsChainIter<'iter> {
     }
 }
 
-impl Consignment {
-    /// Creates iterator over a single chain of state transition starting from
-    /// `node_id` which must be one of the consignment endpoints, and
-    /// corresponding witness transaction ids. Transitions must be organized
-    /// into a chain connecting 1-to-1 via the provided `connected_by` owned
-    /// rights (one or none of them must be present for each state transition).
-    pub fn chain_iter(
-        &self,
-        start_with: NodeId,
-        connected_by: OwnedRightType,
-    ) -> CsChainIter {
-        let next_item = self
-            .endpoint_transition_by_id(start_with)
-            .into_iter()
-            .next()
-            .and_then(|_| self.transition_witness_by_id(start_with).ok());
-
-        CsChainIter {
-            consignment: self,
-            connected_by,
-            next_item,
-            error: None,
-        }
-    }
-}
-
-impl<'iter> Iterator for CsChainIter<'iter> {
+impl<'iter> Iterator for ChainIter<'iter> {
     type Item = (&'iter Transition, Txid);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -118,5 +83,64 @@ impl<'iter> Iterator for CsChainIter<'iter> {
             .ok();
 
         Some(item)
+    }
+}
+
+#[derive(Debug)]
+pub struct MeshIter<'iter> {
+    iter: slice::Iter<'iter, (Anchor, Transition)>,
+    transition_types: &'iter [TransitionType],
+}
+
+impl<'iter> Iterator for MeshIter<'iter> {
+    type Item = (&'iter Transition, Txid);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((anchor, transition)) = self.iter.next() {
+            if self
+                .transition_types
+                .contains(&transition.transition_type())
+            {
+                return Some((transition, anchor.txid));
+            }
+        }
+        return None;
+    }
+}
+
+impl Consignment {
+    /// Creates iterator over a single chain of state transition starting from
+    /// `node_id` which must be one of the consignment endpoints, and
+    /// corresponding witness transaction ids. Transitions must be organized
+    /// into a chain connecting 1-to-1 via the provided `connected_by` owned
+    /// rights (one or none of them must be present for each state transition).
+    pub fn chain_iter(
+        &self,
+        start_with: NodeId,
+        connected_by: OwnedRightType,
+    ) -> ChainIter {
+        let next_item = self
+            .endpoint_transition_by_id(start_with)
+            .into_iter()
+            .next()
+            .and_then(|_| self.transition_witness_by_id(start_with).ok());
+
+        ChainIter {
+            consignment: self,
+            connected_by,
+            next_item,
+            error: None,
+        }
+    }
+
+    pub fn transition_witness_iter<'iter>(
+        &'iter self,
+        transition_types: &'iter [TransitionType],
+    ) -> MeshIter<'iter> {
+        let iter = self.state_transitions.iter();
+        MeshIter {
+            iter,
+            transition_types,
+        }
     }
 }
