@@ -25,8 +25,8 @@ pub use nodes::{
 };
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{
-    AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, GenesisAbi,
-    GenesisAction, NodeAction, Procedure, SimplicityScript, TransitionAbi,
+    AssignmentAbi, AssignmentAction, ByteCode, ExtensionAbi, ExtensionAction,
+    GenesisAbi, GenesisAction, NodeAction, Procedure, TransitionAbi,
     TransitionAction,
 };
 pub use state::{

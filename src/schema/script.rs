@@ -15,9 +15,8 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use std::collections::BTreeMap;
 use std::io;
 
-/// For now, Simplicity script is not implemented, so we use a byte array as a
-/// placeholder for script data
-pub type SimplicityScript = Vec<u8>;
+/// Script data are presented as a byte array (language-independent)
+pub type ByteCode = Vec<u8>;
 
 /// Marker trait for all node-specific action types
 pub trait NodeAction: ToPrimitive + FromPrimitive + Ord

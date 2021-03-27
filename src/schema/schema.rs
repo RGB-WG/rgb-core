@@ -24,8 +24,8 @@ use lnpbp::TaggedHash;
 use wallet::features;
 
 use super::{
-    vm, DataFormat, ExtensionSchema, GenesisSchema, OwnedRightType,
-    PublicRightType, SimplicityScript, StateSchema, TransitionSchema,
+    vm, ByteCode, DataFormat, ExtensionSchema, GenesisSchema, OwnedRightType,
+    PublicRightType, StateSchema, TransitionSchema,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
@@ -131,7 +131,7 @@ impl Schema {
 
     // TODO #49: Change with the adoption of Simplicity
     #[inline]
-    pub fn scripts(&self) -> SimplicityScript {
+    pub fn scripts(&self) -> ByteCode {
         vec![]
     }
 }
