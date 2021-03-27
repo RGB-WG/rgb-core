@@ -133,7 +133,6 @@ impl Asset {
             metadata.into(),
             owned_rights,
             bset![],
-            vec![],
         );
 
         let asset = Asset::try_from(genesis.clone())?;
@@ -237,7 +236,6 @@ impl Asset {
             parent,
             assignments.into(),
             bset![].into(),
-            vec![],
         );
 
         Ok(transition)

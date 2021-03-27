@@ -1078,6 +1078,7 @@ mod test {
     use bitcoin::hashes::{hex::FromHex, sha256};
     use std::collections::BTreeMap;
 
+    use crate::script::EntryPoint;
     use lnpbp::client_side_validation::CommitConceal;
     use lnpbp::seals::OutpointReveal;
     use lnpbp::strict_encoding::{strict_serialize, StrictDecode};
@@ -1244,16 +1245,14 @@ mod test {
         // Test for correct encoding in StateSchema
         // Only one variant is created as StateSchema::Abi
         // maps against single AssignmentAction variant
-        let schema_bytes = vec![0u8, 1, 0, 0, 255, 3];
+        let schema_bytes = vec![0u8, 1, 0, 0, 0x12, 0, 0, 0];
         let schema = StateSchema::strict_decode(&schema_bytes[..]).unwrap();
 
         test_encode!((schema_bytes, StateSchema));
         assert_eq!(schema.format, StateFormat::Declarative);
         assert_eq!(
             schema.abi.get(&script::AssignmentAction::Validate).unwrap(),
-            &script::Procedure::Embedded(
-                script::StandardProcedure::NonfungibleInflation
-            )
+            &(script::EmbeddedProcedure::NftIssue as EntryPoint)
         );
     }
 

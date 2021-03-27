@@ -16,8 +16,9 @@ use std::io;
 
 use super::{
     ExtensionAbi, ExtensionAction, FieldType, GenesisAbi, GenesisAction,
-    NodeAction, Occurences, Procedure, TransitionAbi, TransitionAction,
+    NodeAction, Occurences, TransitionAbi, TransitionAction,
 };
+use crate::script::EntryPoint;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type OwnedRightType = usize;
@@ -76,7 +77,7 @@ pub trait NodeSchema {
     fn extends(&self) -> &PublicRightsStructure;
     fn owned_rights(&self) -> &OwnedRightsStructure;
     fn public_rights(&self) -> &PublicRightsStructure;
-    fn abi(&self) -> &BTreeMap<Self::Action, Procedure>;
+    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint>;
 }
 
 #[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
@@ -157,7 +158,7 @@ impl NodeSchema for GenesisSchema {
         &self.public_rights
     }
     #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
+    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> {
         &self.abi
     }
 }
@@ -190,7 +191,7 @@ impl NodeSchema for ExtensionSchema {
         &self.public_rights
     }
     #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
+    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> {
         &self.abi
     }
 }
@@ -223,7 +224,7 @@ impl NodeSchema for TransitionSchema {
         &self.public_rights
     }
     #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, Procedure> {
+    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> {
         &self.abi
     }
 }
@@ -349,7 +350,6 @@ mod _verify {
     use super::*;
     use crate::schema::SchemaVerify;
     use crate::validation;
-    use num_traits::ToPrimitive;
 
     impl<T> SchemaVerify for T
     where
@@ -440,22 +440,21 @@ mod _verify {
                     None => status.add_failure(
                         validation::Failure::SchemaRootNoAbiMatch {
                             node_type,
-                            action_id: action.to_u16().expect(
-                                "Action type can't exceed 16-bit integer",
-                            ),
+                            action_id: (*action).into(),
                         },
                     ),
                     Some(root_proc) if root_proc != proc => status.add_failure(
                         validation::Failure::SchemaRootNoAbiMatch {
                             node_type,
-                            action_id: action.to_u16().expect(
-                                "Action type can't exceed 16-bit integer",
-                            ),
+                            action_id: (*action).into(),
                         },
                     ),
                     _ => &status,
                 };
             }
+
+            // TODO #70: Verify that script node script parameters match schema
+            //      requirements
 
             status
         }
@@ -465,30 +464,31 @@ mod _verify {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::schema::script::StandardProcedure;
+    use crate::schema::script::EmbeddedProcedure;
     use crate::schema::SchemaVerify;
     use crate::validation::Failure;
     use lnpbp::strict_encoding::StrictDecode;
 
-    static GENESIS_SCHEMA: [u8; 69] = [
+    static GENESIS_SCHEMA: [u8; 71] = [
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
         0, 17, 0, 4, 0, 1, 0, 1, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0,
-        2, 1, 0, 0, 1, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 255, 1, 0, 0,
+        2, 1, 0, 0, 1, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 1, 0, 0, 0, 0,
+        0,
     ];
 
-    static TRANSITION_SCHEMA: [u8; 95] = [
+    static TRANSITION_SCHEMA: [u8; 97] = [
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
         0, 17, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 25, 0,
         4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1,
-        0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0,
-        255, 1, 0, 0,
+        0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 1,
+        0, 0, 0, 0, 0,
     ];
 
-    static EXTENSION_SCHEMA: [u8; 79] = [
+    static EXTENSION_SCHEMA: [u8; 81] = [
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
         0, 17, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0,
         0, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3,
-        0, 4, 0, 1, 0, 0, 255, 1, 0, 0,
+        0, 4, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
     ];
 
     #[test]
@@ -520,7 +520,7 @@ mod test {
         let mut genesis_abi = GenesisAbi::new();
         genesis_abi.insert(
             GenesisAction::Validate,
-            Procedure::Embedded(StandardProcedure::NoInflationBySum),
+            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
         );
 
         assert_eq!(genesis_schema.node_type(), NodeType::Genesis);
@@ -552,7 +552,7 @@ mod test {
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
             TransitionAction::Validate,
-            Procedure::Embedded(StandardProcedure::NoInflationBySum),
+            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
         );
 
         assert_eq!(transition_schema.node_type(), NodeType::StateTransition);
@@ -587,7 +587,7 @@ mod test {
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
             ExtensionAction::Validate,
-            Procedure::Embedded(StandardProcedure::NoInflationBySum),
+            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
         );
 
         assert_eq!(extension_schema.node_type(), NodeType::StateExtension);
@@ -656,19 +656,19 @@ mod test {
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
             TransitionAction::Validate,
-            Procedure::Embedded(StandardProcedure::NoInflationBySum),
+            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
         );
 
         let mut transition_abi2 = TransitionAbi::new();
         transition_abi2.insert(
             TransitionAction::Validate,
-            Procedure::Embedded(StandardProcedure::ProofOfBurn),
+            EmbeddedProcedure::ProofOfBurn as EntryPoint,
         );
 
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
             ExtensionAction::Validate,
-            Procedure::Embedded(StandardProcedure::NoInflationBySum),
+            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
         );
 
         // Create Four Unequal Transition and Extension Structures

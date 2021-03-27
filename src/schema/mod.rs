@@ -25,9 +25,9 @@ pub use nodes::{
 };
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{
-    AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, GenesisAbi,
-    GenesisAction, NodeAction, Procedure, SimplicityScript, TransitionAbi,
-    TransitionAction,
+    AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi,
+    ExtensionAction, GenesisAbi, GenesisAction, NodeAction, TransitionAbi,
+    TransitionAction, VmType,
 };
 pub use state::{
     DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType,
@@ -85,31 +85,31 @@ pub mod constants {
     pub const FIELD_TYPE_DATA_FORMAT: usize = 0x11;
 
     /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`StandardProcedure::ProofOfReserve`]
+    /// [`EmbeddedProcedure::ProofOfReserve`]
     pub const FIELD_TYPE_LOCK_DESCRIPTOR: usize = 0xC0;
 
     /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`StandardProcedure::ProofOfReserve`]
+    /// [`EmbeddedProcedure::ProofOfReserve`]
     pub const FIELD_TYPE_LOCK_UTXO: usize = 0xC1;
 
     /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`StandardProcedure::ProofOfBurn`]
+    /// [`EmbeddedProcedure::ProofOfBurn`]
     pub const FIELD_TYPE_BURN_SUPPLY: usize = 0xB0;
 
     /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`StandardProcedure::ProofOfBurn`]
+    /// [`EmbeddedProcedure::ProofOfBurn`]
     pub const FIELD_TYPE_BURN_UTXO: usize = 0xB1;
 
     /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`StandardProcedure::ProofOfBurn`]
+    /// [`EmbeddedProcedure::ProofOfBurn`]
     pub const FIELD_TYPE_HISTORY_PROOF: usize = 0xB2;
 
     /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`StandardProcedure::ProofOfBurn`]
+    /// [`EmbeddedProcedure::ProofOfBurn`]
     pub const FIELD_TYPE_HISTORY_PROOF_FORMAT: usize = 0xB3;
 
     /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`StandardProcedure::InflationControlBySum`]
+    /// [`EmbeddedProcedure::FungibleIssue`]
     pub const FIELD_TYPE_ISSUED_SUPPLY: usize = 0xA0;
 
     // --------
@@ -118,22 +118,22 @@ pub mod constants {
     pub const STATE_TYPE_RENOMINATION_RIGHT: usize = 0x01;
 
     /// [`OwnedRightType`] that is used by the embedded validation procedure
-    /// [`StandardProcedure::InflationControlBySum`]
+    /// [`EmbeddedProcedure::FungibleIssue`]
     pub const STATE_TYPE_INFLATION_RIGHT: usize = 0xA0;
 
     /// [`OwnedRightType`] that is used by the embedded validation procedures
-    /// [`StandardProcedure::NoInflationBySum`] and
-    /// [`StandardProcedure::InflationControlBySum`]
+    /// [`EmbeddedProcedure::FungibleNoInflation`] and
+    /// [`EmbeddedProcedure::FungibleIssue`]
     pub const STATE_TYPE_OWNED_AMOUNT: usize = 0xA1;
 
     /// [`OwnedRightType`] that is used by the embedded validation procedures
-    /// [`StandardProcedure::NonfungibleInflation`] and
-    /// [`StandardProcedure::IdentityTransfer`]
+    /// [`EmbeddedProcedure::NftIssue`] and
+    /// [`EmbeddedProcedure::IdentityTransfer`]
     pub const STATE_TYPE_OWNED_DATA: usize = 0xA2;
 
     /// [`OwnedRightType`] that is used by the embedded validation procedures
-    /// [`StandardProcedure::NonfungibleInflation`] and
-    /// [`StandardProcedure::IdentityTransfer`]
+    /// [`EmbeddedProcedure::NftIssue`] and
+    /// [`EmbeddedProcedure::IdentityTransfer`]
     pub const STATE_TYPE_OWNERSHIP_RIGHT: usize = 0xA3;
 
     /// Right to define epochs of asset replacement
@@ -158,7 +158,7 @@ pub mod constants {
     pub const TRANSITION_TYPE_RENOMINATION: usize = 0x10;
 
     /// [`TransitionType`] that is used by the embedded validation procedures
-    /// [`StandardProcedure::NoInflationBySum`]
+    /// [`EmbeddedProcedure::FungibleNoInflation`]
     pub const TRANSITION_TYPE_ISSUE: usize = 0xA0;
 
     /// Transition that defines certain grouping of other issue-related

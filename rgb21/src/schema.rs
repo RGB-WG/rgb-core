@@ -14,10 +14,9 @@
 use std::ops::Deref;
 
 use rgb::schema::{
-    constants::*,
-    script::{Procedure, StandardProcedure},
-    Bits, DataFormat, GenesisAction, GenesisSchema, Occurences, Schema,
-    StateFormat, StateSchema, TransitionAction, TransitionSchema,
+    constants::*, script, Bits, DataFormat, GenesisAction, GenesisSchema,
+    Occurences, Schema, StateFormat, StateSchema, TransitionAction,
+    TransitionSchema,
 };
 
 #[derive(
@@ -101,7 +100,7 @@ pub fn schema() -> Schema {
             abi: bmap! {
                 // Here we validate hash uniqueness of state values for all
                 // issued token ownerships
-                GenesisAction::Validate => Procedure::Embedded(StandardProcedure::NonfungibleInflation)
+                GenesisAction::Validate => script::EmbeddedProcedure::NftIssue as script::EntryPoint
             },
         },
         extensions: bmap! {},
@@ -126,7 +125,7 @@ pub fn schema() -> Schema {
                 abi: bmap! {
                     // Here we validate hash uniqueness of state values for all
                     // issued token ownerships
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::NonfungibleInflation)
+                    TransitionAction::Validate => script::EmbeddedProcedure::NftIssue as script::EntryPoint
                 }
             },
             // We match input and output tokens by ordering outputs in the same
@@ -147,7 +146,7 @@ pub fn schema() -> Schema {
                     // Here we ensure that each unique NFT is transferred once
                     // and only once, i.e. that number of inputs is equal to the
                     // number of outputs
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::IdentityTransfer)
+                    TransitionAction::Validate => script::EmbeddedProcedure::IdentityTransfer as script::EntryPoint
                 }
             },
             // One engraving per set of tokens
@@ -168,7 +167,7 @@ pub fn schema() -> Schema {
                     // Here we ensure that each unique NFT is transferred once
                     // and only once, i.e. that number of inputs is equal to the
                     // number of outputs
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::IdentityTransfer)
+                    TransitionAction::Validate => script::EmbeddedProcedure::IdentityTransfer as script::EntryPoint
                 }
             },
             TransitionType::Renomination => TransitionSchema {
@@ -213,7 +212,7 @@ pub fn schema() -> Schema {
                     // control that sum of inputs is equal to the sum of outputs
                     // for each of state types having assigned confidential
                     // amounts
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::RightsSplit)
+                    TransitionAction::Validate => script::EmbeddedProcedure::RightsSplit as script::EntryPoint
                 }
             },
             TransitionType::Burn => TransitionSchema {
@@ -285,6 +284,11 @@ pub fn schema() -> Schema {
             }
         },
         public_right_types: none!(),
+        script: script::ExecutableCode {
+            vm_type: script::VmType::Embedded,
+            byte_code: empty!(),
+            override_rules: script::OverrideRules::Deny,
+        },
     }
 }
 

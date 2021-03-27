@@ -781,7 +781,7 @@ mod test {
         let bech32 = obj.to_bech32_string();
         assert_eq!(
             bech32,
-            "sch1m2xu4jnkhj6683kas3fj67rgp7mrudl6ydrqrg7550cda242e6wsk7a6yd"
+            "sch1a6f9nntrt6srwylsegj4ruudnztsupdrq0yx2z6z49djy8rd4dzqy86568"
         );
         let decoded = SchemaId::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
@@ -793,7 +793,7 @@ mod test {
         let bech32 = obj.to_bech32_string();
         assert_eq!(
             bech32,
-            "rgb1mg7j5rvvlj6cj4lpsgc86l7zpzevgkagh8589gryduq90gtca6hqx4uzfz"
+            "rgb1tmkhudlczkvwsjwuh4qf753hgp9vvad9u5x8wf0gpqu8dlc4sx3s53twr9"
         );
         let decoded = ContractId::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
@@ -803,7 +803,7 @@ mod test {
     fn test_bech32_schema() {
         let obj = Schema::default();
         let bech32 = format!("{}", obj);
-        assert_eq!(bech32, "schema1q93jqycqqqu3u9qr");
+        assert_eq!(bech32, "schema1q93jqxcqqq5nsf2p");
         let decoded = Schema::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
     }
@@ -816,7 +816,7 @@ mod test {
             bech32,
             "genesis1q93jqqqcr8nrzlyn0dnem09cv9ylnqhy74rfka5l4jvlluurhj8f86ktug\
             vc68zqx4kqe3vea9u6jf2uenn36crvy6rf9f9a20m5cegynvqsgjjvzqp4jxy2n4pfe\
-            7gcstqu59yuxf9e9uen70s0eckyjt7w9rzvs6r47k2p4gy4jrf3rvxqq4ltfvr"
+            7gcstqu59yuxf9e9uen70s0eckyjt7w9rzvs6r47k2p4gy4jrf3rvyqq3mewh6"
         );
         let decoded = Genesis::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
@@ -826,7 +826,7 @@ mod test {
     fn test_bech32_transition() {
         let obj = Transition::default();
         let bech32 = format!("{}", obj);
-        assert_eq!(bech32, "transition1q935qqsqpr0f9t");
+        assert_eq!(bech32, "transition1q93cqqcqm3d867");
         let decoded = Transition::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
     }
@@ -835,7 +835,7 @@ mod test {
     fn test_bech32_extension() {
         let obj = Extension::default();
         let bech32 = format!("{}", obj);
-        assert_eq!(bech32, "statex1q93jqqgqqq2mqg2z");
+        assert_eq!(bech32, "statex1q93jqxsqqqaepd2c");
         let decoded = Extension::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
     }

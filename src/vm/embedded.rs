@@ -17,7 +17,7 @@ use lnpbp::client_side_validation::CommitConceal;
 
 use super::VirtualMachine;
 use crate::{
-    schema, schema::constants::*, script::StandardProcedure, value,
+    schema, schema::constants::*, script::EmbeddedProcedure, value,
     AssignmentVec, Metadata,
 };
 
@@ -54,9 +54,9 @@ impl Embedded {
         }
     }
 
-    pub fn execute(&mut self, proc: StandardProcedure) {
+    pub fn execute(&mut self, proc: EmbeddedProcedure) {
         match proc {
-            StandardProcedure::NoInflationBySum => {
+            EmbeddedProcedure::FungibleNoInflation => {
                 match self.previous_state {
                     None => {
                         if self.transition_type == None
@@ -163,29 +163,29 @@ impl Embedded {
                     }
                 }
             }
-            StandardProcedure::FungibleInflation => {
+            EmbeddedProcedure::FungibleIssue => {
                 push_stack!(self, 0u8);
                 // TODO #64: Implement secondary fungible issue validation
                 // (trivial)
             }
-            StandardProcedure::NonfungibleInflation => {
+            EmbeddedProcedure::NftIssue => {
                 push_stack!(self, 0u8);
                 // TODO #64: Implement secondary NFT issue validation (trivial)
             }
-            StandardProcedure::ProofOfBurn => {
+            EmbeddedProcedure::ProofOfBurn => {
                 push_stack!(self, 0u8);
                 // TODO #64: Implement prunning validation (currently none)
             }
-            StandardProcedure::ProofOfReserve => {
+            EmbeddedProcedure::ProofOfReserve => {
                 push_stack!(self, 0u8);
                 // TODO #64: Implement bitcoin script lock validation (currently
                 //      none)
             }
-            StandardProcedure::IdentityTransfer => {
+            EmbeddedProcedure::IdentityTransfer => {
                 push_stack!(self, 0u8);
                 // TODO #64: Implement
             }
-            StandardProcedure::RightsSplit => {
+            EmbeddedProcedure::RightsSplit => {
                 push_stack!(self, 0u8);
                 // TODO #64: Implement
             }
