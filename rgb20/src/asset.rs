@@ -500,13 +500,40 @@ impl TryFrom<Consignment> for Asset {
         }
 
         // 4. Parse secondary issues
-        /*
-        for (transition, witness) in consignment.chain_iter() {
+        for (transition, witness) in
+            consignment.transition_witness_iter(&[*TransitionType::Issue])
+        {
             asset.add_issue(&consignment, transition, witness)?;
         }
-         */
 
         // 5. Parse renominations
+        // TODO: Parse renominations
+
+        // 6. Parse allocations
+        for (transaction, witness) in consignment.transition_witness_iter(&[
+            *TransitionType::Issue,
+            *TransitionType::BurnAndReplace,
+            *TransitionType::Transfer,
+            *TransitionType::RightsSplit,
+        ]) {
+            for assignments in
+                transaction.owned_rights_by_type(*OwnedRightsType::Assets)
+            {
+                for (index, (seal, state)) in assignments
+                    .to_value_assignment_vec()
+                    .into_iter()
+                    .filter_map(Assignment::into_revealed)
+                    .enumerate()
+                {
+                    asset.add_allocation(
+                        seal.outpoint_reveal(witness).into(),
+                        transaction.node_id(),
+                        index as u16,
+                        state,
+                    );
+                }
+            }
+        }
 
         Ok(asset)
     }
