@@ -38,8 +38,8 @@ use crate::schema::{
 #[cfg(feature = "serde")]
 use crate::Bech32;
 use crate::{
-    schema, seal, ByteCode, ConfidentialDataError, Metadata, PublicRightType,
-    SchemaId, ToBech32,
+    schema, seal, ConfidentialDataError, ExecutableCode, Metadata,
+    PublicRightType, SchemaId, ToBech32,
 };
 
 /// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
@@ -198,7 +198,7 @@ pub trait Node: AsAny {
     fn owned_rights_mut(&mut self) -> &mut OwnedRights;
     fn public_rights(&self) -> &PublicRights;
     fn public_rights_mut(&mut self) -> &mut PublicRights;
-    fn script(&self) -> &ByteCode;
+    fn script(&self) -> &ExecutableCode;
 
     #[inline]
     fn field_types(&self) -> Vec<FieldType> {
@@ -366,7 +366,7 @@ pub struct Genesis {
     metadata: Metadata,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
-    script: ByteCode,
+    script: ExecutableCode,
 }
 
 #[derive(
@@ -385,7 +385,7 @@ pub struct Extension {
     parent_public_rights: ParentPublicRights,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
-    script: ByteCode,
+    script: ExecutableCode,
 }
 
 #[derive(
@@ -403,7 +403,7 @@ pub struct Transition {
     parent_owned_rights: ParentOwnedRights,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
-    script: ByteCode,
+    script: ExecutableCode,
 }
 
 impl ConsensusCommit for Genesis {
@@ -627,7 +627,7 @@ impl Node for Genesis {
     }
 
     #[inline]
-    fn script(&self) -> &ByteCode {
+    fn script(&self) -> &ExecutableCode {
         &self.script
     }
 }
@@ -698,7 +698,7 @@ impl Node for Extension {
     }
 
     #[inline]
-    fn script(&self) -> &ByteCode {
+    fn script(&self) -> &ExecutableCode {
         &self.script
     }
 }
@@ -769,7 +769,7 @@ impl Node for Transition {
     }
 
     #[inline]
-    fn script(&self) -> &ByteCode {
+    fn script(&self) -> &ExecutableCode {
         &self.script
     }
 }
@@ -781,7 +781,7 @@ impl Genesis {
         metadata: Metadata,
         owned_rights: OwnedRightsInner,
         public_rights: PublicRightsInner,
-        script: ByteCode,
+        script: ExecutableCode,
     ) -> Self {
         Self {
             schema_id,
@@ -817,7 +817,7 @@ impl Extension {
         parent_public_rights: ParentPublicRightsInner,
         owned_rights: OwnedRightsInner,
         public_rights: PublicRightsInner,
-        script: ByteCode,
+        script: ExecutableCode,
     ) -> Self {
         Self {
             extension_type,
@@ -838,7 +838,7 @@ impl Transition {
         parent_owned_rights: ParentOwnedRights,
         owned_rights: OwnedRights,
         public_rights: PublicRights,
-        script: ByteCode,
+        script: ExecutableCode,
     ) -> Self {
         Self {
             transition_type,
@@ -948,7 +948,7 @@ mod _strict_encoding {
             let metadata = Metadata::strict_decode(&mut d)?;
             let assignments = OwnedRightsInner::strict_decode(&mut d)?;
             let valencies = PublicRightsInner::strict_decode(&mut d)?;
-            let script = ByteCode::strict_decode(&mut d)?;
+            let script = ExecutableCode::strict_decode(&mut d)?;
             Ok(Self {
                 schema_id,
                 chain,
@@ -1242,7 +1242,7 @@ mod test {
 
         assert_eq!(gen_script, tran_script);
 
-        assert_eq!(gen_script, &[1, 2, 3, 4, 5]);
+        assert_eq!(gen_script.byte_code, &[1, 2, 3, 4, 5]);
 
         // Field Types
         let gen_fields = genesis.field_types();

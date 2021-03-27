@@ -16,11 +16,9 @@ use std::ops::Deref;
 use std::str::FromStr;
 
 use rgb::schema::{
-    constants::*,
-    script::{Procedure, StandardProcedure},
-    AssignmentAction, Bits, DataFormat, DiscreteFiniteFieldFormat,
-    GenesisSchema, Occurences, Schema, SchemaId, StateFormat, StateSchema,
-    TransitionAction, TransitionSchema,
+    constants::*, script, AssignmentAction, Bits, DataFormat,
+    DiscreteFiniteFieldFormat, GenesisSchema, Occurences, Schema, SchemaId,
+    StateFormat, StateSchema, TransitionAction, TransitionSchema,
 };
 
 pub const SCHEMA_ID_BECH32: &'static str =
@@ -181,7 +179,7 @@ pub fn schema() -> Schema {
                 public_rights: none!(),
                 abi: bmap! {
                     // sum(in(inflation)) >= sum(out(inflation), out(assets))
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::FungibleInflation)
+                    TransitionAction::Validate => script::EmbeddedProcedure::FungibleIssue as script::EntryPoint
                 }
             },
             TransitionType::Transfer => TransitionSchema {
@@ -226,7 +224,7 @@ pub fn schema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::ProofOfBurn)
+                    TransitionAction::Validate => script::EmbeddedProcedure::ProofOfBurn as script::EntryPoint
                 }
             },
             TransitionType::BurnAndReplace => TransitionSchema {
@@ -252,7 +250,7 @@ pub fn schema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::ProofOfBurn)
+                    TransitionAction::Validate => script::EmbeddedProcedure::ProofOfBurn as script::EntryPoint
                 }
             },
             TransitionType::Renomination => TransitionSchema {
@@ -298,7 +296,7 @@ pub fn schema() -> Schema {
                     // control that sum of inputs is equal to the sum of outputs
                     // for each of state types having assigned confidential
                     // amounts
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::RightsSplit)
+                    TransitionAction::Validate => script::EmbeddedProcedure::RightsSplit as script::EntryPoint
                 }
             }
         },
@@ -345,7 +343,7 @@ pub fn schema() -> Schema {
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 abi: bmap! {
                     // sum(inputs) == sum(outputs)
-                    AssignmentAction::Validate => Procedure::Embedded(StandardProcedure::NoInflationBySum)
+                    AssignmentAction::Validate => script::EmbeddedProcedure::FungibleNoInflation as script::EntryPoint
                 }
             },
             OwnedRightsType::OpenEpoch => StateSchema {
@@ -362,6 +360,11 @@ pub fn schema() -> Schema {
             }
         },
         public_right_types: none!(),
+        script: script::ExecutableCode {
+            vm_type: script::VmType::Embedded,
+            byte_code: empty!(),
+            overwrite_rules: script::OverwriteRules::Deny,
+        },
     }
 }
 
@@ -414,7 +417,7 @@ pub fn subschema() -> Schema {
                 public_rights: none!(),
                 abi: bmap! {
                     // sum(in(inflation)) >= sum(out(inflation), out(assets))
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::FungibleInflation)
+                    TransitionAction::Validate => script::EmbeddedProcedure::FungibleIssue as script::EntryPoint
                 }
             },
             TransitionType::Transfer => TransitionSchema {
@@ -458,7 +461,7 @@ pub fn subschema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::ProofOfBurn)
+                    TransitionAction::Validate => script::EmbeddedProcedure::ProofOfBurn as script::EntryPoint
                 }
             },
             TransitionType::Renomination => TransitionSchema {
@@ -502,7 +505,7 @@ pub fn subschema() -> Schema {
                     // control that sum of inputs is equal to the sum of outputs
                     // for each of state types having assigned confidential
                     // amounts
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::RightsSplit)
+                    TransitionAction::Validate => script::EmbeddedProcedure::RightsSplit as script::EntryPoint
                 }
             }
         },
@@ -547,7 +550,7 @@ pub fn subschema() -> Schema {
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 abi: bmap! {
                     // sum(inputs) == sum(outputs)
-                    AssignmentAction::Validate => Procedure::Embedded(StandardProcedure::NoInflationBySum)
+                    AssignmentAction::Validate => script::EmbeddedProcedure::FungibleNoInflation as script::EntryPoint
                 }
             },
             OwnedRightsType::OpenEpoch => StateSchema {
@@ -564,6 +567,11 @@ pub fn subschema() -> Schema {
             }
         },
         public_right_types: none!(),
+        script: script::ExecutableCode {
+            vm_type: script::VmType::Embedded,
+            byte_code: empty!(),
+            overwrite_rules: script::OverwriteRules::Deny,
+        },
     }
 }
 

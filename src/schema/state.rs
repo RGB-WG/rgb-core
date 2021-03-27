@@ -1078,6 +1078,7 @@ mod test {
     use bitcoin::hashes::{hex::FromHex, sha256};
     use std::collections::BTreeMap;
 
+    use crate::script::EntryPoint;
     use lnpbp::client_side_validation::CommitConceal;
     use lnpbp::seals::OutpointReveal;
     use lnpbp::strict_encoding::{strict_serialize, StrictDecode};
@@ -1251,9 +1252,7 @@ mod test {
         assert_eq!(schema.format, StateFormat::Declarative);
         assert_eq!(
             schema.abi.get(&script::AssignmentAction::Validate).unwrap(),
-            &script::Procedure::Embedded(
-                script::StandardProcedure::NonfungibleInflation
-            )
+            &(script::EmbeddedProcedure::NftIssue as EntryPoint)
         );
     }
 

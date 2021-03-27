@@ -14,9 +14,9 @@
 use std::ops::Deref;
 
 use rgb::schema::{
-    constants::*, script::StandardProcedure, Bits, DataFormat, GenesisAction,
-    GenesisSchema, Occurences, Procedure, Schema, StateFormat, StateSchema,
-    TransitionAction, TransitionSchema,
+    constants::*, script, Bits, DataFormat, GenesisAction, GenesisSchema,
+    Occurences, Schema, StateFormat, StateSchema, TransitionAction,
+    TransitionSchema,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
@@ -107,7 +107,7 @@ pub fn schema() -> Schema {
             },
             public_rights: none!(),
             abi: bmap! {
-                GenesisAction::Validate => Procedure::Embedded(StandardProcedure::IdentityTransfer)
+                GenesisAction::Validate => script::EmbeddedProcedure::IdentityTransfer as script::EntryPoint
             },
         },
         extensions: none!(),
@@ -135,9 +135,14 @@ pub fn schema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    TransitionAction::Validate => Procedure::Embedded(StandardProcedure::IdentityTransfer)
+                    TransitionAction::Validate => script::EmbeddedProcedure::IdentityTransfer as script::EntryPoint
                 }
             }
+        },
+        script: script::ExecutableCode {
+            vm_type: script::VmType::Embedded,
+            byte_code: empty!(),
+            overwrite_rules: script::OverwriteRules::Deny,
         },
     }
 }

@@ -14,7 +14,7 @@
 use std::ops::Deref;
 
 use rgb::schema::{
-    constants::*, Bits, DataFormat, GenesisSchema, Occurences, Schema,
+    constants::*, script, Bits, DataFormat, GenesisSchema, Occurences, Schema,
     StateFormat, StateSchema, TransitionSchema,
 };
 
@@ -119,6 +119,11 @@ pub fn schema() -> Schema {
                 public_rights: none!(),
                 abi: none!()
             }
+        },
+        script: script::ExecutableCode {
+            vm_type: script::VmType::Embedded,
+            byte_code: empty!(),
+            overwrite_rules: script::OverwriteRules::Deny,
         },
     }
 }

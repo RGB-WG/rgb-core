@@ -24,8 +24,8 @@ use lnpbp::TaggedHash;
 use wallet::features;
 
 use super::{
-    vm, ByteCode, DataFormat, ExtensionSchema, GenesisSchema, OwnedRightType,
-    PublicRightType, StateSchema, TransitionSchema,
+    vm, DataFormat, ExecutableCode, ExtensionSchema, GenesisSchema,
+    OwnedRightType, PublicRightType, StateSchema, TransitionSchema,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
@@ -121,18 +121,13 @@ pub struct Schema {
     pub genesis: GenesisSchema,
     pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
+    pub script: ExecutableCode,
 }
 
 impl Schema {
     #[inline]
     pub fn schema_id(&self) -> SchemaId {
         self.clone().consensus_commit()
-    }
-
-    // TODO #49: Change with the adoption of Simplicity
-    #[inline]
-    pub fn scripts(&self) -> ByteCode {
-        vec![]
     }
 }
 
@@ -176,15 +171,14 @@ mod strict_encoding {
                 self.genesis,
                 self.extensions,
                 self.transitions,
-                // We keep this parameter for future script extended info (like ABI)
-                Vec::<u8>::new()
+                self.script
             ))
         }
     }
 
     impl StrictDecode for Schema {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let me = Self {
+            Ok(Self {
                 rgb_features: features::FlagVec::strict_decode(&mut d)?,
                 root_id: SchemaId::strict_decode(&mut d)?,
                 field_types: BTreeMap::strict_decode(&mut d)?,
@@ -193,16 +187,8 @@ mod strict_encoding {
                 genesis: GenesisSchema::strict_decode(&mut d)?,
                 extensions: BTreeMap::strict_decode(&mut d)?,
                 transitions: BTreeMap::strict_decode(&mut d)?,
-            };
-            // We keep this parameter for future script extended info (like ABI)
-            let script = Vec::<u8>::strict_decode(&mut d)?;
-            if !script.is_empty() {
-                Err(Error::UnsupportedDataStructure(
-                    "Scripting information is not yet supported",
-                ))
-            } else {
-                Ok(me)
-            }
+                script: ExecutableCode::strict_decode(&mut d)?,
+            })
         }
     }
 }
@@ -214,13 +200,14 @@ mod _validation {
 
     use super::*;
     use crate::schema::{
-        script, MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
+        MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
         SchemaVerify,
     };
+    use crate::script::{EmbeddedProcedure, OverwriteRules};
     use crate::{
         validation, Assignment, AssignmentAction, AssignmentVec, Metadata,
         Node, NodeId, OwnedRights, ParentOwnedRights, ParentPublicRights,
-        PublicRights, StateTypes, VirtualMachine,
+        PublicRights, StateTypes, VirtualMachine, VmType,
     };
 
     impl SchemaVerify for Schema {
@@ -446,6 +433,7 @@ mod _validation {
                 node.public_rights(),
                 valencies_structure,
             );
+            // TODO: #69 Add execution of the node scripts
             status += self.validate_state_evolution(
                 node_id,
                 node.transition_type(),
@@ -689,48 +677,83 @@ mod _validation {
                     .expect("We already passed owned rights type validation, so can be sure that the type exists")
                     .abi;
 
-                // If the procedure is not defined, it means no validation
-                // should be performed
-                if let Some(procedure) = abi.get(&AssignmentAction::Validate) {
-                    match procedure {
-                        script::Procedure::Embedded(proc) => {
-                            let mut vm = vm::Embedded::with(
-                                transition_type,
-                                parent_owned_rights
-                                    .get(&owned_type_id)
-                                    .cloned(),
-                                owned_rights.get(&owned_type_id).cloned(),
-                                metadata.clone(),
-                            );
-                            vm.execute(*proc);
-                            match vm.pop_stack().and_then(|x| x.downcast_ref::<u8>().cloned()) {
-                                None => panic!("LNP/BP core code is hacked: standard procedure must always return 8-bit value"),
-                                Some(0) => {
-                                    // Nothing to do here: 0 signifies successful script execution
-                                },
-                                Some(n) => {
-                                    status.add_failure(validation::Failure::ScriptFailure(node_id, n));
-                                }
-                            }
-                        }
-                        script::Procedure::Simplicity { .. } => {
-                            status.add_failure(validation::Failure::SimplicityIsNotSupportedYet);
-                            /* Draft of how this could look like:
+                // TODO: #69 Add the same logic to the validation of contract
+                //       node scripts
 
-                            let mut vm = VirtualMachine::new();
-                            vm.push_stack(previous_state.get(&assignment_type).cloned());
-                            vm.push_stack(current_state.get(&assignment_type).cloned());
-                            vm.push_stack(previous_meta.clone());
-                            vm.push_stack(current_meta.clone());
-                            match vm.execute(code.clone(), offset) {
-                                Err(_) => {}
-                                Ok => match vm.pop_stack() {
-                                    None => {}
-                                    Some(value) => {}
-                                },
-                            }
-                             */
-                        }
+                // If the entry point is not defined, it means no script-based
+                // validation should be performed
+                let entry_point = if let Some(entry_point) =
+                    abi.get(&AssignmentAction::Validate).copied()
+                {
+                    entry_point
+                } else {
+                    return status;
+                };
+
+                if self.script.overwrite_rules != OverwriteRules::Deny {
+                    status.add_failure(
+                        validation::Failure::ScriptOverwriteNotSupportedYet,
+                    );
+                    return status;
+                }
+
+                if self.script.vm_type != VmType::Embedded {
+                    status.add_failure(
+                        validation::Failure::VirtualMachinesNotSupportedYet,
+                    );
+                    return status;
+
+                    /* Draft of how this could look like:
+
+                    let mut vm = VirtualMachine::new();
+                    vm.push_stack(previous_state.get(&assignment_type).cloned());
+                    vm.push_stack(current_state.get(&assignment_type).cloned());
+                    vm.push_stack(previous_meta.clone());
+                    vm.push_stack(current_meta.clone());
+                    match vm.execute(code.clone(), offset) {
+                        Err(_) => {}
+                        Ok => match vm.pop_stack() {
+                            None => {}
+                            Some(value) => {}
+                        },
+                    }
+                     */
+                }
+
+                let procedure = if let Some(procedure) =
+                    EmbeddedProcedure::from_entry_point(entry_point)
+                {
+                    procedure
+                } else {
+                    status.add_failure(validation::Failure::WrongEntryPoint(
+                        entry_point,
+                    ));
+                    return status;
+                };
+
+                let mut vm = vm::Embedded::with(
+                    transition_type,
+                    parent_owned_rights.get(&owned_type_id).cloned(),
+                    owned_rights.get(&owned_type_id).cloned(),
+                    metadata.clone(),
+                );
+                vm.execute(procedure);
+                match vm
+                    .pop_stack()
+                    .and_then(|x| x.downcast_ref::<u8>().cloned())
+                {
+                    None => panic!(
+                        "LNP/BP core code is hacked: standard procedure must \
+                        always return 8-bit value"
+                    ),
+                    Some(0) => {
+                        // Nothing to do here: 0 signifies successful script
+                        // execution
+                    }
+                    Some(n) => {
+                        status.add_failure(validation::Failure::ScriptFailure(
+                            node_id, n,
+                        ));
                     }
                 }
             }
@@ -846,6 +869,7 @@ mod _validation {
 pub(crate) mod test {
     use super::*;
     use crate::schema::*;
+    use crate::script::EntryPoint;
     use lnpbp::strict_encoding::*;
     use lnpbp::tagged_hash;
 
@@ -893,19 +917,19 @@ pub(crate) mod test {
                 ASSIGNMENT_ISSUE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::FungibleInflation)
+                        AssignmentAction::Validate => script::EmbeddedProcedure::FungibleIssue as EntryPoint
                     }
                 },
                 ASSIGNMENT_ASSETS => StateSchema {
                     format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::NoInflationBySum)
+                        AssignmentAction::Validate => script::EmbeddedProcedure::FungibleNoInflation as EntryPoint
                     }
                 },
                 ASSIGNMENT_PRUNE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
-                        AssignmentAction::Validate => script::Procedure::Embedded(script::StandardProcedure::ProofOfBurn)
+                        AssignmentAction::Validate => script::EmbeddedProcedure::ProofOfBurn as EntryPoint
                     }
                 }
             },
@@ -988,6 +1012,7 @@ pub(crate) mod test {
                     abi: bmap! {}
                 }
             },
+            script: Default::default(),
         }
     }
 

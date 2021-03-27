@@ -24,6 +24,7 @@ use super::{
     schema, seal, Anchor, AnchorId, AssignmentVec, Consignment, ContractId,
     Node, NodeId, Schema, SchemaId,
 };
+use crate::script::EntryPoint;
 use crate::SealEndpoint;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -157,7 +158,7 @@ pub enum Failure {
     SchemaRootNoPublicRightsMatch(NodeType, schema::PublicRightType),
     SchemaRootNoAbiMatch {
         node_type: NodeType,
-        action_id: u16,
+        action_id: u8,
     },
 
     SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
@@ -241,7 +242,9 @@ pub enum Failure {
 
     EndpointTransitionNotFound(NodeId),
 
-    SimplicityIsNotSupportedYet,
+    WrongEntryPoint(EntryPoint),
+    ScriptOverwriteNotSupportedYet,
+    VirtualMachinesNotSupportedYet,
     ScriptFailure(NodeId, u8),
 }
 

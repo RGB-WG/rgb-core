@@ -68,10 +68,10 @@ pub mod prelude {
         StateRetrievalError, StateTypes, ToSealDefinition, Transition,
     };
     pub use schema::{
-        script, AssignmentAbi, AssignmentAction, ByteCode, ExtensionAbi,
+        script, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi,
         ExtensionAction, ExtensionSchema, ExtensionType, GenesisAbi,
         GenesisAction, PublicRightType, PublicRightsStructure, Schema,
-        SchemaId, TransitionAbi, TransitionAction,
+        SchemaId, TransitionAbi, TransitionAction, VmType,
     };
     pub use stash::{
         Anchor, AnchorId, ConcealAnchors, Consignment, ConsignmentEndpoints,
