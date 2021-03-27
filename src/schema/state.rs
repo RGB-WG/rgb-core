@@ -1245,7 +1245,7 @@ mod test {
         // Test for correct encoding in StateSchema
         // Only one variant is created as StateSchema::Abi
         // maps against single AssignmentAction variant
-        let schema_bytes = vec![0u8, 1, 0, 0, 255, 3];
+        let schema_bytes = vec![0u8, 1, 0, 0, 0x12, 0, 0, 0];
         let schema = StateSchema::strict_decode(&schema_bytes[..]).unwrap();
 
         test_encode!((schema_bytes, StateSchema));

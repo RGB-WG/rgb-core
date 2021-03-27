@@ -428,7 +428,7 @@ mod test {
     use lnpbp::strict_encoding::StrictDecode;
     use lnpbp::tagged_hash;
 
-    static GENESIS: [u8; 2454] = include!("../../test/genesis.in");
+    static GENESIS: [u8; 2447] = include!("../../test/genesis.in");
 
     static PSBT: [u8; 462] = include!("../../test/test_transaction.psbt");
 

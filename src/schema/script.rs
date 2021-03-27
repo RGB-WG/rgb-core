@@ -72,18 +72,19 @@ impl Default for VmType {
 )]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
+#[repr(u8)]
 pub enum OverwriteRules {
     #[display("deny")]
     /// Denies overwrites
-    Deny,
+    Deny = 0u8,
 
     #[display("allow-same-vm")]
     /// Allows overwrite only if the same VM is used
-    AllowSameVm,
+    AllowSameVm = 1u8,
 
     #[display("allow-any-vm")]
     /// Allows overwrite of both executable code and type of VM
-    AllowAnyVm,
+    AllowAnyVm = 2u8,
 }
 
 impl Default for OverwriteRules {
@@ -116,7 +117,7 @@ pub struct ExecutableCode {
     /// Script data are presented as a byte array (VM-specific)
     // TODO: #68 Currently script will be limited to 2^16 bytes; we need to
     //       extend that to at least 2^24
-    pub byte_code: Vec<u8>,
+    pub byte_code: Box<[u8]>,
 
     /// Defines whether child contract nodes (genesis for schema, state
     /// transitions for genesis, child state transitions for a state
@@ -264,6 +265,14 @@ pub type ExtensionAbi = BTreeMap<ExtensionAction, EntryPoint>;
 pub type TransitionAbi = BTreeMap<TransitionAction, EntryPoint>;
 /// ABI table for owned rights assignment inside a contract node
 pub type AssignmentAbi = BTreeMap<AssignmentAction, EntryPoint>;
+
+/// Market trait for generalizing over all available ABI types
+pub trait Abi {}
+
+impl Abi for GenesisAbi {}
+impl Abi for ExtensionAbi {}
+impl Abi for TransitionAbi {}
+impl Abi for AssignmentAbi {}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[cfg_attr(
@@ -422,14 +431,14 @@ mod strict_encoding {
                 EmbeddedProcedure::FungibleNoInflation as EntryPoint,
             );
             assert_eq!(
-                vec![0x01, 0x00, 0x00, 0xff, 0x01],
+                vec![0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00],
                 strict_serialize(&trans_abi).unwrap()
             );
 
             let mut assignment_abi = AssignmentAbi::new();
             assignment_abi.insert(AssignmentAction::Validate, 45);
             assert_eq!(
-                vec![0x01, 0x00, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x00],
+                vec![0x01, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x00],
                 strict_serialize(&assignment_abi).unwrap()
             );
         }

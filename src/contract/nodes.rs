@@ -38,8 +38,8 @@ use crate::schema::{
 #[cfg(feature = "serde")]
 use crate::Bech32;
 use crate::{
-    schema, seal, ConfidentialDataError, ExecutableCode, Metadata,
-    PublicRightType, SchemaId, ToBech32,
+    schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId,
+    ToBech32,
 };
 
 /// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
@@ -198,7 +198,6 @@ pub trait Node: AsAny {
     fn owned_rights_mut(&mut self) -> &mut OwnedRights;
     fn public_rights(&self) -> &PublicRights;
     fn public_rights_mut(&mut self) -> &mut PublicRights;
-    fn script(&self) -> &ExecutableCode;
 
     #[inline]
     fn field_types(&self) -> Vec<FieldType> {
@@ -366,7 +365,6 @@ pub struct Genesis {
     metadata: Metadata,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
-    script: ExecutableCode,
 }
 
 #[derive(
@@ -377,7 +375,6 @@ pub struct Genesis {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-
 pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
@@ -385,7 +382,6 @@ pub struct Extension {
     parent_public_rights: ParentPublicRights,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
-    script: ExecutableCode,
 }
 
 #[derive(
@@ -396,14 +392,12 @@ pub struct Extension {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
     parent_owned_rights: ParentOwnedRights,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
-    script: ExecutableCode,
 }
 
 impl ConsensusCommit for Genesis {
@@ -442,7 +436,6 @@ impl CommitEncode for Extension {
             .to_merkle_source()
             .consensus_commit()
             .commit_encode(&mut e);
-        len += self.script.commit_encode(&mut e);
         len
     }
 }
@@ -470,7 +463,6 @@ impl CommitEncode for Transition {
             .to_merkle_source()
             .consensus_commit()
             .commit_encode(&mut e);
-        len += self.script.commit_encode(&mut e);
         len
     }
 }
@@ -625,11 +617,6 @@ impl Node for Genesis {
     fn public_rights_mut(&mut self) -> &mut PublicRights {
         &mut self.public_rights
     }
-
-    #[inline]
-    fn script(&self) -> &ExecutableCode {
-        &self.script
-    }
 }
 
 impl Node for Extension {
@@ -695,11 +682,6 @@ impl Node for Extension {
     #[inline]
     fn public_rights_mut(&mut self) -> &mut PublicRights {
         &mut self.public_rights
-    }
-
-    #[inline]
-    fn script(&self) -> &ExecutableCode {
-        &self.script
     }
 }
 
@@ -767,11 +749,6 @@ impl Node for Transition {
     fn public_rights_mut(&mut self) -> &mut PublicRights {
         &mut self.public_rights
     }
-
-    #[inline]
-    fn script(&self) -> &ExecutableCode {
-        &self.script
-    }
 }
 
 impl Genesis {
@@ -781,7 +758,6 @@ impl Genesis {
         metadata: Metadata,
         owned_rights: OwnedRightsInner,
         public_rights: PublicRightsInner,
-        script: ExecutableCode,
     ) -> Self {
         Self {
             schema_id,
@@ -789,7 +765,6 @@ impl Genesis {
             metadata,
             owned_rights: owned_rights.into(),
             public_rights: public_rights.into(),
-            script,
         }
     }
 
@@ -817,7 +792,6 @@ impl Extension {
         parent_public_rights: ParentPublicRightsInner,
         owned_rights: OwnedRightsInner,
         public_rights: PublicRightsInner,
-        script: ExecutableCode,
     ) -> Self {
         Self {
             extension_type,
@@ -826,7 +800,6 @@ impl Extension {
             parent_public_rights: parent_public_rights.into(),
             owned_rights: owned_rights.into(),
             public_rights: public_rights.into(),
-            script,
         }
     }
 }
@@ -838,7 +811,6 @@ impl Transition {
         parent_owned_rights: ParentOwnedRights,
         owned_rights: OwnedRights,
         public_rights: PublicRights,
-        script: ExecutableCode,
     ) -> Self {
         Self {
             transition_type,
@@ -846,7 +818,6 @@ impl Transition {
             parent_owned_rights,
             owned_rights,
             public_rights,
-            script,
         }
     }
 
@@ -895,7 +866,6 @@ mod _strict_encoding {
                     .to_merkle_source()
                     .consensus_commit()
                     .commit_encode(&mut e);
-                len += self.script.commit_encode(&mut e);
                 Ok(len)
             };
             encoder().expect("Strict encoding of genesis data must not fail")
@@ -922,8 +892,7 @@ mod _strict_encoding {
                 chain_params,
                 self.metadata,
                 self.owned_rights,
-                self.public_rights,
-                self.script
+                self.public_rights
             ))
         }
     }
@@ -948,14 +917,12 @@ mod _strict_encoding {
             let metadata = Metadata::strict_decode(&mut d)?;
             let assignments = OwnedRightsInner::strict_decode(&mut d)?;
             let valencies = PublicRightsInner::strict_decode(&mut d)?;
-            let script = ExecutableCode::strict_decode(&mut d)?;
             Ok(Self {
                 schema_id,
                 chain,
                 metadata,
                 owned_rights: assignments.into(),
                 public_rights: valencies.into(),
-                script,
             })
         }
     }
@@ -975,8 +942,8 @@ mod test {
     };
     use lnpbp::tagged_hash;
 
-    static TRANSITION: [u8; 2356] = include!("../../test/transition.in");
-    static GENESIS: [u8; 2454] = include!("../../test/genesis.in");
+    static TRANSITION: [u8; 2349] = include!("../../test/transition.in");
+    static GENESIS: [u8; 2447] = include!("../../test/genesis.in");
 
     #[test]
     fn test_node_id_midstate() {
@@ -995,7 +962,6 @@ mod test {
             metadata: Default::default(),
             owned_rights: Default::default(),
             public_rights: Default::default(),
-            script: Default::default(),
         };
         assert_ne!(
             strict_serialize(&genesis).unwrap(),
@@ -1020,7 +986,6 @@ mod test {
             .to_merkle_source()
             .consensus_commit()
             .commit_encode(&mut encoder);
-        genesis.script.strict_encode(&mut encoder).unwrap();
         assert_eq!(genesis.consensus_commit(), NodeId::commit(&encoder));
 
         let transition = Transition {
@@ -1029,7 +994,6 @@ mod test {
             parent_owned_rights: Default::default(),
             owned_rights: Default::default(),
             public_rights: Default::default(),
-            script: Default::default(),
         };
 
         // Strict encode
@@ -1048,7 +1012,6 @@ mod test {
             .public_rights
             .strict_encode(&mut encoder)
             .unwrap();
-        transition.script.strict_encode(&mut encoder).unwrap();
 
         let mut encoder1 = vec![];
         transition.clone().strict_encode(&mut encoder1).unwrap();
@@ -1079,7 +1042,6 @@ mod test {
             .to_merkle_source()
             .consensus_commit()
             .commit_encode(&mut encoder2);
-        transition2.script.commit_encode(&mut encoder2);
 
         let mut encoder3 = vec![];
         transition.clone().commit_encode(&mut encoder3);
@@ -1132,11 +1094,11 @@ mod test {
         // Typeid/Nodeid test
         assert_eq!(
             genesis.node_id().to_hex(),
-            "d2f452d8b3cdca74eb503904a80c75de5df6cb067dbc04624d98a56dec783f63"
+            "eb6791eed7d194e286c3d06f9a9437cac16568acf3cb9fdef8007790a16df34f"
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "9baf13dd836cf971446026a172a619cc6aa2fe58127b4cb6018723e744f937cc"
+            "afd41355c98d349161e6dfc0b075370f12360b111c9b0305081f77f8e85d636f"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1235,14 +1197,6 @@ mod test {
             "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06"
                 .to_string()
         );
-
-        // Script
-        let gen_script = genesis.script();
-        let tran_script = transition.script();
-
-        assert_eq!(gen_script, tran_script);
-
-        assert_eq!(gen_script.byte_code, &[1, 2, 3, 4, 5]);
 
         // Field Types
         let gen_fields = genesis.field_types();
@@ -1350,12 +1304,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("d2f452d8b3cdca74eb503904a80c75de5df6cb067dbc04624d98a56dec783f63")
+            NodeId::from_hex("eb6791eed7d194e286c3d06f9a9437cac16568acf3cb9fdef8007790a16df34f")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("9baf13dd836cf971446026a172a619cc6aa2fe58127b4cb6018723e744f937cc")
+            NodeId::from_hex("afd41355c98d349161e6dfc0b075370f12360b111c9b0305081f77f8e85d636f")
                 .unwrap()
         );
 
@@ -1364,12 +1318,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("d2f452d8b3cdca74eb503904a80c75de5df6cb067dbc04624d98a56dec783f63")
+            NodeId::from_hex("eb6791eed7d194e286c3d06f9a9437cac16568acf3cb9fdef8007790a16df34f")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("9baf13dd836cf971446026a172a619cc6aa2fe58127b4cb6018723e744f937cc")
+            NodeId::from_hex("afd41355c98d349161e6dfc0b075370f12360b111c9b0305081f77f8e85d636f")
                 .unwrap()
         );
     }
@@ -1381,11 +1335,11 @@ mod test {
         let contract_id = genesis.contract_id();
         assert_eq!(
             contract_id.to_string(),
-            "rgb1vvlh3mrd5kvy6csyh37sdjlkth082r9gqsu4p6m5etxm8kzj7nfqsr0r9t"
+            "rgb1flekmgvswuq03h5le0e6c6r9c89r09y6dlgv8phzjnga0m53vl4smzrng6"
         );
         assert_eq!(
             serde_json::to_string(&contract_id).unwrap(),
-            "\"rgb1vvlh3mrd5kvy6csyh37sdjlkth082r9gqsu4p6m5etxm8kzj7nfqsr0r9t\""
+            "\"rgb1flekmgvswuq03h5le0e6c6r9c89r09y6dlgv8phzjnga0m53vl4smzrng6\""
         );
     }
 
@@ -1400,7 +1354,7 @@ mod test {
         assert_eq!(
             contractid,
             ContractId::from_hex(
-                "d2f452d8b3cdca74eb503904a80c75de5df6cb067dbc04624d98a56dec783f63"
+                "eb6791eed7d194e286c3d06f9a9437cac16568acf3cb9fdef8007790a16df34f"
             )
             .unwrap()
         );
