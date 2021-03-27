@@ -33,7 +33,7 @@ use strict_encoding::StrictEncode;
 use crate::contract::seal::Confidential;
 use crate::{
     Anchor, AnchorId, ConcealAnchors, ConcealSeals, ConcealState, ContractId,
-    Extension, IntoRevealed, Transition,
+    Extension, RevealedByMerge, Transition,
 };
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
@@ -293,7 +293,7 @@ impl Disclosure {
             }
             Entry::Occupied(mut entry) => {
                 let (a, t) = entry.get_mut();
-                *a = anchor.into_revealed(a.clone())
+                *a = anchor.revealed_by_merge(a.clone())
                     .expect(
                         "Anchor into_revealed procedure is broken for anchors with the same id"
                     );

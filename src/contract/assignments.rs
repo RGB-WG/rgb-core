@@ -1097,6 +1097,16 @@ where
         }
     }
 
+    pub fn into_revealed(self) -> Option<(seal::Revealed, State::Revealed)> {
+        match self {
+            Assignment::Revealed {
+                seal_definition,
+                assigned_state,
+            } => Some((seal_definition, assigned_state)),
+            _ => None,
+        }
+    }
+
     /// Reveals previously known seal information (replacing blind UTXOs with
     /// unblind ones). Function is used when a peer receives consignment
     /// containing concealed seals for the outputs owned by the peer

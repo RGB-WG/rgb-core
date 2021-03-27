@@ -37,7 +37,7 @@ use lnpbp::strict_encoding::{strategies, Strategy};
 use lnpbp::TaggedHash;
 use wallet::psbt::{Fee, FeeError};
 
-use crate::{reveal, ContractId, IntoRevealed, NodeId};
+use crate::{reveal, ContractId, NodeId, RevealedByMerge};
 
 pub const PSBT_PREFIX: &'static [u8] = b"RGB";
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
@@ -155,8 +155,8 @@ impl ConcealAnchors for Anchor {
     }
 }
 
-impl IntoRevealed for Anchor {
-    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+impl RevealedByMerge for Anchor {
+    fn revealed_by_merge(mut self, other: Self) -> Result<Self, reveal::Error> {
         if self.consensus_commit() != other.consensus_commit() {
             return Err(reveal::Error::AnchorsMismatch);
         }

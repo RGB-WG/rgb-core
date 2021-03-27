@@ -31,7 +31,7 @@ use super::{
     PublicRights, PublicRightsInner,
 };
 use crate::contract::assignments::NodeOutput;
-use crate::reveal::{self, IntoRevealed};
+use crate::reveal::{self, RevealedByMerge};
 use crate::schema::{
     ExtensionType, FieldType, NodeType, OwnedRightType, TransitionType,
 };
@@ -524,35 +524,35 @@ impl ConcealSeals for Transition {
     }
 }
 
-impl IntoRevealed for Genesis {
-    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+impl RevealedByMerge for Genesis {
+    fn revealed_by_merge(mut self, other: Self) -> Result<Self, reveal::Error> {
         if self.consensus_commit() != other.consensus_commit() {
             return Err(reveal::Error::NodeMismatch(NodeType::Genesis));
         }
         self.owned_rights =
-            self.owned_rights.into_revealed(other.owned_rights)?;
+            self.owned_rights.revealed_by_merge(other.owned_rights)?;
         Ok(self)
     }
 }
 
-impl IntoRevealed for Transition {
-    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+impl RevealedByMerge for Transition {
+    fn revealed_by_merge(mut self, other: Self) -> Result<Self, reveal::Error> {
         if self.consensus_commit() != other.consensus_commit() {
             return Err(reveal::Error::NodeMismatch(NodeType::StateTransition));
         }
         self.owned_rights =
-            self.owned_rights.into_revealed(other.owned_rights)?;
+            self.owned_rights.revealed_by_merge(other.owned_rights)?;
         Ok(self)
     }
 }
 
-impl IntoRevealed for Extension {
-    fn into_revealed(mut self, other: Self) -> Result<Self, reveal::Error> {
+impl RevealedByMerge for Extension {
+    fn revealed_by_merge(mut self, other: Self) -> Result<Self, reveal::Error> {
         if self.consensus_commit() != other.consensus_commit() {
             return Err(reveal::Error::NodeMismatch(NodeType::StateExtension));
         }
         self.owned_rights =
-            self.owned_rights.into_revealed(other.owned_rights)?;
+            self.owned_rights.revealed_by_merge(other.owned_rights)?;
         Ok(self)
     }
 }

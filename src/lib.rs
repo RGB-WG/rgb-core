@@ -62,9 +62,9 @@ pub mod prelude {
         data, reveal, seal, value, Assignment, AssignmentVec, AtomicValue,
         ConcealSeals, ConcealState, ConfidentialDataError, ConfidentialState,
         ContractId, DeclarativeStrategy, Extension, Genesis, HashStrategy,
-        IntoRevealed, Metadata, NoDataError, Node, NodeId, NodeOutput,
-        OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
-        PublicRights, RevealedState, SealDefinition, SealEndpoint,
+        Metadata, NoDataError, Node, NodeId, NodeOutput, OwnedRights,
+        ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights,
+        RevealedByMerge, RevealedState, SealDefinition, SealEndpoint,
         StateRetrievalError, StateTypes, ToSealDefinition, Transition,
     };
     pub use schema::{

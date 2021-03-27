@@ -33,7 +33,7 @@ pub(self) use assignments::{
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
-pub use reveal::IntoRevealed;
+pub use reveal::RevealedByMerge;
 pub use seal::{SealDefinition, SealEndpoint, ToSealDefinition};
 pub use value::AtomicValue;
 

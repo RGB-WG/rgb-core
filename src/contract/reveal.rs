@@ -66,15 +66,15 @@ pub enum Error {
 ///
 /// The follwoing conversion logic is intended by this trait:
 ///
-/// merge (Revelaed, Anything) = Revealed
-/// merge(ConfidentialSeal, ConfidentiualAmount) = Revealed
-/// merge(ConfidentialAmount, ConfidentialSeal) = Revealed
-/// merge(Confidential, Anything) = Anything
-pub trait IntoRevealed: Sized {
-    fn into_revealed(self, other: Self) -> Result<Self, Error>;
+/// merge(Revealed, Anything) => Revealed
+/// merge(ConfidentialSeal, ConfidentialAmount) => Revealed
+/// merge(ConfidentialAmount, ConfidentialSeal) => Revealed
+/// merge(Confidential, Anything) => Anything
+pub trait RevealedByMerge: Sized {
+    fn revealed_by_merge(self, other: Self) -> Result<Self, Error>;
 }
 
-impl<STATE> IntoRevealed for Assignment<STATE>
+impl<STATE> RevealedByMerge for Assignment<STATE>
 where
     Self: Clone,
     STATE: StateTypes,
@@ -82,7 +82,7 @@ where
     STATE::Confidential:
         From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    fn into_revealed(self, other: Self) -> Result<Self, Error> {
+    fn revealed_by_merge(self, other: Self) -> Result<Self, Error> {
         // if self and other is different through error
         if self.commit_serialize() != other.commit_serialize() {
             Err(Error::OwnedStateMismatch)
@@ -140,8 +140,8 @@ where
     }
 }
 
-impl IntoRevealed for AssignmentVec {
-    fn into_revealed(self, other: Self) -> Result<Self, Error> {
+impl RevealedByMerge for AssignmentVec {
+    fn revealed_by_merge(self, other: Self) -> Result<Self, Error> {
         if self.consensus_commitments() != other.consensus_commitments() {
             Err(Error::AssignmentMismatch)
         } else {
@@ -154,7 +154,7 @@ impl IntoRevealed for AssignmentVec {
                     for (first, second) in
                         first_vec.into_iter().zip(second_vec.into_iter())
                     {
-                        result.push(first.into_revealed(second)?);
+                        result.push(first.revealed_by_merge(second)?);
                     }
                     Ok(AssignmentVec::Declarative(result))
                 }
@@ -167,7 +167,7 @@ impl IntoRevealed for AssignmentVec {
                     for (first, second) in
                         first_vec.into_iter().zip(second_vec.into_iter())
                     {
-                        result.push(first.into_revealed(second)?);
+                        result.push(first.revealed_by_merge(second)?);
                     }
                     Ok(AssignmentVec::DiscreteFiniteField(result))
                 }
@@ -180,7 +180,7 @@ impl IntoRevealed for AssignmentVec {
                     for (first, second) in
                         first_vec.into_iter().zip(second_vec.into_iter())
                     {
-                        result.push(first.into_revealed(second)?);
+                        result.push(first.revealed_by_merge(second)?);
                     }
                     Ok(AssignmentVec::CustomData(result))
                 }
@@ -193,8 +193,8 @@ impl IntoRevealed for AssignmentVec {
     }
 }
 
-impl IntoRevealed for OwnedRights {
-    fn into_revealed(self, other: Self) -> Result<Self, Error> {
+impl RevealedByMerge for OwnedRights {
+    fn revealed_by_merge(self, other: Self) -> Result<Self, Error> {
         if self.to_merkle_source().commit_serialize()
             != other.to_merkle_source().commit_serialize()
         {
@@ -206,7 +206,7 @@ impl IntoRevealed for OwnedRights {
             .into_iter()
             .zip(other.into_inner().into_iter())
         {
-            result.insert(first.0, first.1.into_revealed(second.1)?);
+            result.insert(first.0, first.1.revealed_by_merge(second.1)?);
         }
         Ok(OwnedRights::from_inner(result))
     }
@@ -238,18 +238,18 @@ mod test {
         // Check Revealed + Anything = Revealed
 
         // Revealed + Revealed = Revealed
-        let mut merged = rev.clone().into_revealed(rev.clone()).unwrap();
+        let mut merged = rev.clone().revealed_by_merge(rev.clone()).unwrap();
         assert_eq!(merged, rev);
 
         // Revealed + Confidential = Revealed
         let conf = rev.commit_conceal();
-        merged = rev.clone().into_revealed(conf.clone()).unwrap();
+        merged = rev.clone().revealed_by_merge(conf.clone()).unwrap();
         assert_eq!(merged, rev);
 
         // Revealed + Confidential State = Revealed
         let mut conf_state = rev.clone();
         conf_state.conceal_state();
-        merged = rev.clone().into_revealed(conf_state.clone()).unwrap();
+        merged = rev.clone().revealed_by_merge(conf_state.clone()).unwrap();
         assert_eq!(merged, rev);
 
         // Revealed + Confidential Seal = Revealed
@@ -258,32 +258,38 @@ mod test {
             seal_definition: seal,
             assigned_state: rev.as_revealed_state().unwrap().clone(),
         };
-        merged = rev.clone().into_revealed(conf_seal.clone()).unwrap();
+        merged = rev.clone().revealed_by_merge(conf_seal.clone()).unwrap();
         assert_eq!(merged, rev);
 
         // Check Confidential Seal + Condfidential State = Revealed
-        merged = conf_seal.clone().into_revealed(conf_state.clone()).unwrap();
+        merged = conf_seal
+            .clone()
+            .revealed_by_merge(conf_state.clone())
+            .unwrap();
         assert_eq!(merged, rev);
 
         // Check Condifential State + Confidential Seal = Revealed
-        merged = conf_state.clone().into_revealed(conf_seal.clone()).unwrap();
+        merged = conf_state
+            .clone()
+            .revealed_by_merge(conf_seal.clone())
+            .unwrap();
         assert_eq!(merged, rev);
 
         // Check Confidential + Anything = Anything
         // Confidential + Reveal = Reveal
-        merged = conf.clone().into_revealed(rev.clone()).unwrap();
+        merged = conf.clone().revealed_by_merge(rev.clone()).unwrap();
         assert_eq!(merged, rev);
 
         // Confidential + Confidential Seal = Confidential Seal
-        merged = conf.clone().into_revealed(conf_seal.clone()).unwrap();
+        merged = conf.clone().revealed_by_merge(conf_seal.clone()).unwrap();
         assert_eq!(merged, conf_seal);
 
         // Confidential + Confidential State = Confidential State
-        merged = conf.clone().into_revealed(conf_state.clone()).unwrap();
+        merged = conf.clone().revealed_by_merge(conf_state.clone()).unwrap();
         assert_eq!(merged, conf_state);
 
         // Confidential + Confidential = Confidential
-        merged = conf.clone().into_revealed(conf.clone()).unwrap();
+        merged = conf.clone().revealed_by_merge(conf.clone()).unwrap();
         assert_eq!(merged, conf);
     }
 
@@ -323,7 +329,7 @@ mod test {
         // Performing merge revelaing
         let merged = assignment_1
             .clone()
-            .into_revealed(assignmnet_2.clone())
+            .revealed_by_merge(assignmnet_2.clone())
             .unwrap();
 
         // After merging all the states expeected be revealed
@@ -340,7 +346,7 @@ mod test {
         // merge with assignment 1
         let merged = assignment_3
             .clone()
-            .into_revealed(assignment_1.clone())
+            .revealed_by_merge(assignment_1.clone())
             .unwrap();
 
         assert_eq!(assignment_1, merged);
@@ -354,7 +360,7 @@ mod test {
         // Perform merge
         let merged = test_owned_rights_1
             .clone()
-            .into_revealed(test_owned_rights_2.clone())
+            .revealed_by_merge(test_owned_rights_2.clone())
             .unwrap();
 
         // after merge operation all the states will be revealed
