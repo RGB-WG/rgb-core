@@ -202,6 +202,9 @@ pub enum Failure {
         OccurrencesError,
     ),
 
+    SchemaScriptOverrideDenied,
+    SchemaScriptVmChangeDenied,
+
     TransitionAbsent(NodeId),
     TransitionNotAnchored(NodeId),
     TransitionNotInAnchor(NodeId, AnchorId),
@@ -243,7 +246,6 @@ pub enum Failure {
     EndpointTransitionNotFound(NodeId),
 
     WrongEntryPoint(EntryPoint),
-    ScriptOverwriteNotSupportedYet,
     VirtualMachinesNotSupportedYet,
     ScriptFailure(NodeId, u8),
 }

@@ -150,7 +150,7 @@ pub fn schema() -> Schema {
         script: script::ExecutableCode {
             vm_type: script::VmType::Embedded,
             byte_code: empty!(),
-            overwrite_rules: script::OverwriteRules::Deny,
+            override_rules: script::OverrideRules::Deny,
         },
     }
 }

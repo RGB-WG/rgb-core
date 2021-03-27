@@ -193,6 +193,7 @@ mod strict_encoding {
     }
 }
 
+// TODO #73: Move to validation module and refactor that module into a directory
 mod _validation {
     use std::collections::BTreeSet;
 
@@ -203,7 +204,7 @@ mod _validation {
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
         SchemaVerify,
     };
-    use crate::script::{EmbeddedProcedure, OverwriteRules};
+    use crate::script::{EmbeddedProcedure, OverrideRules};
     use crate::{
         validation, Assignment, AssignmentAction, AssignmentVec, Metadata,
         Node, NodeId, OwnedRights, ParentOwnedRights, ParentPublicRights,
@@ -293,6 +294,25 @@ mod _validation {
                         ),
                     );
                 }
+            }
+
+            match (root.script.override_rules, self.script.override_rules) {
+                (OverrideRules::Deny, _)
+                    if root.script.vm_type != self.script.vm_type
+                        || !self.script.byte_code.is_empty() =>
+                {
+                    status.add_failure(
+                        validation::Failure::SchemaScriptOverrideDenied,
+                    );
+                }
+                (OverrideRules::AllowSameVm, _)
+                    if root.script.vm_type != self.script.vm_type =>
+                {
+                    status.add_failure(
+                        validation::Failure::SchemaScriptVmChangeDenied,
+                    );
+                }
+                _ => {} // We are fine here
             }
 
             status
@@ -689,13 +709,6 @@ mod _validation {
                 } else {
                     return status;
                 };
-
-                if self.script.overwrite_rules != OverwriteRules::Deny {
-                    status.add_failure(
-                        validation::Failure::ScriptOverwriteNotSupportedYet,
-                    );
-                    return status;
-                }
 
                 if self.script.vm_type != VmType::Embedded {
                     status.add_failure(

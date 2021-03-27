@@ -73,7 +73,7 @@ impl Default for VmType {
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 #[repr(u8)]
-pub enum OverwriteRules {
+pub enum OverrideRules {
     #[display("deny")]
     /// Denies overwrites
     Deny = 0u8,
@@ -87,9 +87,9 @@ pub enum OverwriteRules {
     AllowAnyVm = 2u8,
 }
 
-impl Default for OverwriteRules {
+impl Default for OverrideRules {
     fn default() -> Self {
-        OverwriteRules::Deny
+        OverrideRules::Deny
     }
 }
 
@@ -119,10 +119,12 @@ pub struct ExecutableCode {
     //       extend that to at least 2^24
     pub byte_code: Box<[u8]>,
 
-    /// Defines whether child contract nodes (genesis for schema, state
-    /// transitions for genesis, child state transitions for a state
-    /// transition) are allowed to replace (overwrite) the code
-    pub overwrite_rules: OverwriteRules,
+    /// Defines whether subschemata are allowed to replace (override) the code
+    ///
+    /// Subschemata not the main schema code MUST set the virtual machine type
+    /// to the same as in the parent schema and set byte code to be empty
+    /// (zero-length)
+    pub override_rules: OverrideRules,
 }
 
 impl CommitEncodeWithStrategy for ExecutableCode {
