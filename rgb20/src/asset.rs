@@ -131,18 +131,6 @@ pub struct Asset {
     #[cfg_attr(feature = "serde", serde(flatten))]
     supply: Supply,
 
-    /// Specifies outpoints which when spent may indicate inflation happening
-    /// up to specific amount.
-    ///
-    /// NB: Not of all inflation controlling points may be known
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "As::<BTreeMap<DisplayFromStr, DisplayFromStr>>")
-    )]
-    // TODO #32: Transform into method iterating and collecting this
-    //      information from `known_issues`
-    known_inflation: BTreeMap<OutPoint, AtomicValue>,
-
     /// Specifies outpoints controlling certain amounts of assets.
     ///
     /// NB: Information here does not imply that the outputs are owned by the
@@ -220,6 +208,21 @@ impl Asset {
                 PreciseAmount::transmutate_into(atomic, self.decimal_precision)
             })
             .sum()
+    }
+
+    /// Returns outpoints which when spent may indicate inflation happening
+    /// up to specific amount.
+    ///
+    /// NB: Not of all inflation controlling points may be known
+    pub fn known_inflation(&self) -> BTreeMap<OutPoint, AtomicValue> {
+        let mut inflation_list = BTreeMap::new();
+        for issue in self.known_issues() {
+            for (seal, amount) in issue.inflation_assignments() {
+                inflation_list.insert(*seal, *amount);
+            }
+        }
+
+        inflation_list
     }
 
     #[inline]
@@ -314,35 +317,24 @@ impl TryFrom<Genesis> for Asset {
             .u64(*FieldType::IssuedSupply)
             .first()
             .ok_or(schema::Error::NotAllFieldsPresent)?;
-        let mut known_inflation = BTreeMap::<_, _>::default();
         let mut issue_limit = 0;
 
+        // Check if issue limit can be known
         for assignment in
             genesis.owned_rights_by_type(*OwnedRightsType::Inflation)
         {
             for state in assignment.to_data_assignment_vec() {
                 match state {
-                    Assignment::Revealed {
-                        seal_definition,
-                        assigned_state,
-                    } => {
-                        known_inflation.insert(
-                            seal_definition.try_into()?,
-                            assigned_state
-                                .u64()
-                                .ok_or(schema::Error::NotAllFieldsPresent)?,
-                        );
-                    }
-                    Assignment::ConfidentialSeal { assigned_state, .. } => {
+                    Assignment::Revealed { assigned_state, .. }
+                    | Assignment::ConfidentialSeal { assigned_state, .. } => {
                         if issue_limit < core::u64::MAX {
                             issue_limit += assigned_state
                                 .u64()
                                 .ok_or(schema::Error::NotAllFieldsPresent)?
                         };
                     }
-                    _ => {
-                        issue_limit = core::u64::MAX;
-                    }
+
+                    _ => issue_limit = core::u64::MAX,
                 }
             }
         }
@@ -410,7 +402,6 @@ impl TryFrom<Genesis> for Asset {
                 ),
                 Utc,
             ),
-            known_inflation,
             known_issues: vec![issue],
             // we assume that each genesis allocation with revealed amount
             // and known seal (they are always revealed together) belongs to us
