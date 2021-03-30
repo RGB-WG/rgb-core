@@ -237,11 +237,11 @@ pub fn schema() -> Schema {
         },
         field_types: type_map! {
             FieldType::Name => DataFormat::String(256),
-            // TODO #35: Consider using data container
+            // TODO #33: Consider using data container
             FieldType::RicardianContract => DataFormat::String(core::u16::MAX),
             // Data common for all NFTs inside specific state transition or
             // genesis.
-            // TODO #35: Add DataContainer for common data kept inside external
+            // TODO #33: Add DataContainer for common data kept inside external
             //       data container
             FieldType::Data => DataFormat::Bytes(core::u16::MAX),
             // A set of data formats, corresponding values and user-defined
@@ -274,7 +274,7 @@ pub fn schema() -> Schema {
             OwnedRightsType::EngravedOwnership => StateSchema {
                 // Engraving data (per-token). Data format is defined by metadata
                 // and must be same for all tokens
-                // TODO #35: Use `DataFormat::Container` once will be available
+                // TODO #33: Use `DataFormat::Container` once will be available
                 format: StateFormat::CustomData(DataFormat::Bytes(core::u16::MAX)),
                 abi: none!()
             },
