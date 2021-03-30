@@ -13,10 +13,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io;
+use std::str::FromStr;
 
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
 
+use lnpbp::bech32;
+use lnpbp::bech32::{FromBech32Str, ToBech32String};
 use lnpbp::client_side_validation::{
     commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
     ToMerkleSource,
@@ -60,22 +63,40 @@ impl sha256t::Tag for NodeIdTag {
         sha256::HashEngine::from_midstate(midstate, 64)
     }
 }
-
-// TODO #48: Refactor all ids into a single style after `ConsignmentId`
-/// Unique node (genesis, extensions & state transition) identifier equivalent
-/// to the commitment hash
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From,
+    Wrapper,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    From,
+    Display,
 )]
-#[wrapper(
-    Debug, Display, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull
-)]
+#[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[display(NodeId::to_bech32_string)]
 pub struct NodeId(sha256t::Hash<NodeIdTag>);
+
+impl bech32::Strategy for NodeId {
+    const HRP: &'static str = "node_id";
+    type Strategy = bech32::strategies::UsingStrictEncoding;
+}
+
+impl FromStr for NodeId {
+    type Err = bech32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        NodeId::from_bech32_str(s)
+    }
+}
 
 impl<MSG> CommitVerify<MSG> for NodeId
 where
