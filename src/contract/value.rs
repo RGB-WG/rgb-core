@@ -252,8 +252,8 @@ impl ConfidentialState for Confidential {}
 
 impl CommitEncode for Confidential {
     fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
+        // We do not commit to the bulletproof!
         self.commitment.commit_encode(&mut e)
-            + self.bulletproof.commit_encode(&mut e)
     }
 }
 
@@ -401,12 +401,10 @@ mod test {
         0x29, 0x1, 0x55, 0xfa, 0x68, 0x25, 0xe6, 0x3f, 0x62, 0x73, 0x54, 0xab,
         0xfd, 0x11, 0x2e, 0xf5,
     ];
-    static CONFIDENTIAL_COMMITMENT: [u8; 65] = [
+    static CONFIDENTIAL_COMMITMENT: [u8; 33] = [
         9, 125, 114, 210, 222, 31, 130, 153, 18, 25, 95, 36, 15, 61, 229, 94,
         29, 100, 154, 171, 251, 47, 128, 135, 176, 29, 117, 78, 198, 19, 187,
-        56, 251, 119, 47, 229, 218, 135, 170, 85, 106, 36, 197, 219, 244, 78,
-        213, 210, 148, 100, 236, 123, 67, 180, 184, 7, 119, 195, 36, 249, 250,
-        21, 247, 143, 218,
+        56, 251,
     ];
     static CONFIDENTIAL_AMOUNT: [u8; 710] = [
         0x9, 0x7d, 0x72, 0xd2, 0xde, 0x1f, 0x82, 0x99, 0x12, 0x19, 0x5f, 0x24,
