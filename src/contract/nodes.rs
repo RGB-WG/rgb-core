@@ -30,16 +30,16 @@ use super::{
     ParentOwnedRights, ParentPublicRights, ParentPublicRightsInner,
     PublicRights, PublicRightsInner,
 };
-use crate::contract::assignments::NodeOutput;
 use crate::reveal::{self, RevealedByMerge};
 use crate::schema::{
-    ExtensionType, FieldType, NodeType, OwnedRightType, TransitionType,
+    ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType,
+    TransitionType,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
 use crate::{
-    schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId,
-    ToBech32,
+    schema, seal, ConfidentialDataError, Metadata, NodeOutput, PublicRightType,
+    SchemaId, ToBech32,
 };
 
 /// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
@@ -150,6 +150,9 @@ pub trait Node: AsAny {
     /// `Node` types into `&dyn Node` (entities implementing traits with const
     /// definitions can't be made into objects)
     fn node_type(&self) -> NodeType;
+
+    /// Returns full contract node type information
+    fn subtype(&self) -> NodeSubtype;
 
     /// Returns [`NodeId`], which is a hash of this node commitment
     /// serialization
@@ -556,6 +559,11 @@ impl Node for Genesis {
     }
 
     #[inline]
+    fn subtype(&self) -> NodeSubtype {
+        NodeSubtype::Genesis
+    }
+
+    #[inline]
     fn node_id(&self) -> NodeId {
         self.clone().consensus_commit()
     }
@@ -626,6 +634,11 @@ impl Node for Extension {
     }
 
     #[inline]
+    fn subtype(&self) -> NodeSubtype {
+        NodeSubtype::StateExtension(self.extension_type)
+    }
+
+    #[inline]
     fn node_id(&self) -> NodeId {
         self.clone().consensus_commit()
     }
@@ -689,6 +702,11 @@ impl Node for Transition {
     #[inline]
     fn node_type(&self) -> NodeType {
         NodeType::StateTransition
+    }
+
+    #[inline]
+    fn subtype(&self) -> NodeSubtype {
+        NodeSubtype::StateTransition(self.transition_type)
     }
 
     #[inline]

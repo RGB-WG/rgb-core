@@ -284,9 +284,10 @@ impl Consignment {
     pub fn validate<R: TxResolver>(
         &self,
         schema: &Schema,
+        root_schema: Option<&Schema>,
         resolver: R,
     ) -> validation::Status {
-        Validator::validate(schema, self, resolver)
+        Validator::validate(schema, root_schema, self, resolver)
     }
 
     pub fn finalize(
@@ -395,7 +396,7 @@ pub(crate) mod test {
     fn test_consignment_validation() {
         let consignment = consignment();
         let schema = schema();
-        let status = consignment.validate(&schema, TestResolver);
+        let status = consignment.validate(&schema, None, TestResolver);
         println!("{}", status);
     }
 

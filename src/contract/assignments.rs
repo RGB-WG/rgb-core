@@ -31,6 +31,10 @@ use super::{
 };
 use crate::{schema, ConfidentialDataError, StateRetrievalError};
 
+lazy_static! {
+    static ref EMPTY_ASSIGNMENT_VEC: AssignmentVec = AssignmentVec::default();
+}
+
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display("{node_id}:{output_no}")]
 /// RGB contract node output pointer, defined by the node ID and output
@@ -70,6 +74,15 @@ impl OwnedRights {
         &mut self,
     ) -> btree_map::IterMut<'_, schema::OwnedRightType, AssignmentVec> {
         self.0.iter_mut()
+    }
+
+    pub fn assignments_by_type(
+        &self,
+        owned_rights_type: schema::OwnedRightType,
+    ) -> &AssignmentVec {
+        self.0
+            .get(&owned_rights_type)
+            .unwrap_or(&EMPTY_ASSIGNMENT_VEC)
     }
 }
 
@@ -336,6 +349,20 @@ impl ToMerkleSource for ParentOwnedRights {
     }
 }
 
+/// Categories of the state
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub enum StateType {
+    /// No state data
+    Declarative,
+
+    /// Value-based state, i.e. which can be committed to with a Pedersen
+    /// commitment
+    Value,
+
+    /// State defined with custom data
+    Data,
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Display)]
 #[display(Debug)]
 #[cfg_attr(
@@ -347,6 +374,12 @@ pub enum AssignmentVec {
     Declarative(Vec<Assignment<DeclarativeStrategy>>),
     DiscreteFiniteField(Vec<Assignment<PedersenStrategy>>),
     CustomData(Vec<Assignment<HashStrategy>>),
+}
+
+impl Default for AssignmentVec {
+    fn default() -> Self {
+        AssignmentVec::Declarative(vec![])
+    }
 }
 
 impl AssignmentVec {
@@ -424,6 +457,15 @@ impl AssignmentVec {
         );
 
         Self::DiscreteFiniteField(set)
+    }
+
+    #[inline]
+    pub fn state_type(&self) -> StateType {
+        match self {
+            AssignmentVec::Declarative(_) => StateType::Declarative,
+            AssignmentVec::DiscreteFiniteField(_) => StateType::Value,
+            AssignmentVec::CustomData(_) => StateType::Data,
+        }
     }
 
     #[inline]
@@ -921,28 +963,28 @@ impl AssignmentVec {
     }
 }
 
-pub trait StateTypes: Debug {
+pub trait State: Debug {
     type Confidential: ConfidentialState;
     type Revealed: RevealedState;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct DeclarativeStrategy;
-impl StateTypes for DeclarativeStrategy {
+impl State for DeclarativeStrategy {
     type Confidential = data::Void;
     type Revealed = data::Void;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct PedersenStrategy;
-impl StateTypes for PedersenStrategy {
+impl State for PedersenStrategy {
     type Confidential = value::Confidential;
     type Revealed = value::Revealed;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct HashStrategy;
-impl StateTypes for HashStrategy {
+impl State for HashStrategy {
     type Confidential = data::Confidential;
     type Revealed = data::Revealed;
 }
@@ -957,30 +999,30 @@ impl StateTypes for HashStrategy {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-pub enum Assignment<State>
+pub enum Assignment<StateType>
 where
-    State: StateTypes,
+    StateType: State,
     // Deterministic ordering requires Eq operation, so the confidential
     // state must have it
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     Confidential {
         seal_definition: seal::Confidential,
-        assigned_state: State::Confidential,
+        assigned_state: StateType::Confidential,
     },
     Revealed {
         seal_definition: seal::Revealed,
-        assigned_state: State::Revealed,
+        assigned_state: StateType::Revealed,
     },
     ConfidentialSeal {
         seal_definition: seal::Confidential,
-        assigned_state: State::Revealed,
+        assigned_state: StateType::Revealed,
     },
     ConfidentialAmount {
         seal_definition: seal::Revealed,
-        assigned_state: State::Confidential,
+        assigned_state: StateType::Confidential,
     },
 }
 
@@ -988,12 +1030,12 @@ where
 // Assignment indexes are part of the transition ancestor's commitment, so
 // here we use deterministic ordering based on hash values of the concealed
 // seal data contained within the assignment
-impl<State> PartialOrd for Assignment<State>
+impl<StateType> PartialOrd for Assignment<StateType>
 where
-    State: StateTypes,
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.to_confidential_seal()
@@ -1001,12 +1043,12 @@ where
     }
 }
 
-impl<State> Ord for Assignment<State>
+impl<StateType> Ord for Assignment<StateType>
 where
-    State: StateTypes,
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.to_confidential_seal()
@@ -1014,12 +1056,12 @@ where
     }
 }
 
-impl<State> PartialEq for Assignment<State>
+impl<StateType> PartialEq for Assignment<StateType>
 where
-    State: StateTypes,
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn eq(&self, other: &Self) -> bool {
         self.to_confidential_seal() == other.to_confidential_seal()
@@ -1027,21 +1069,21 @@ where
     }
 }
 
-impl<State> Eq for Assignment<State>
+impl<StateType> Eq for Assignment<StateType>
 where
-    State: StateTypes,
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
 }
 
-impl<State> Assignment<State>
+impl<StateType> Assignment<StateType>
 where
-    State: StateTypes,
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     pub fn to_confidential_seal(&self) -> seal::Confidential {
         match self {
@@ -1073,7 +1115,7 @@ where
         }
     }
 
-    pub fn to_confidential_state(&self) -> State::Confidential {
+    pub fn to_confidential_state(&self) -> StateType::Confidential {
         match self {
             Assignment::Revealed { assigned_state, .. }
             | Assignment::ConfidentialSeal { assigned_state, .. } => {
@@ -1086,7 +1128,7 @@ where
         }
     }
 
-    pub fn as_revealed_state(&self) -> Option<&State::Revealed> {
+    pub fn as_revealed_state(&self) -> Option<&StateType::Revealed> {
         match self {
             Assignment::Revealed { assigned_state, .. }
             | Assignment::ConfidentialSeal { assigned_state, .. } => {
@@ -1097,7 +1139,9 @@ where
         }
     }
 
-    pub fn into_revealed(self) -> Option<(seal::Revealed, State::Revealed)> {
+    pub fn into_revealed(
+        self,
+    ) -> Option<(seal::Revealed, StateType::Revealed)> {
         match self {
             Assignment::Revealed {
                 seal_definition,
@@ -1155,13 +1199,13 @@ where
     }
 }
 
-impl<State> CommitConceal for Assignment<State>
+impl<StateType> CommitConceal for Assignment<StateType>
 where
     Self: Clone,
-    State: StateTypes,
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     type ConcealedCommitment = Self;
 
@@ -1193,13 +1237,13 @@ where
     }
 }
 
-impl<State> ConcealSeals for Assignment<State>
+impl<StateType> ConcealSeals for Assignment<StateType>
 where
-    State: StateTypes,
-    State::Revealed: CommitConceal,
-    State::Confidential: PartialEq + Eq,
-    <State as StateTypes>::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Revealed: CommitConceal,
+    StateType::Confidential: PartialEq + Eq,
+    <StateType as State>::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
         match self {
@@ -1210,7 +1254,7 @@ where
                 assigned_state,
             } => {
                 if seals.contains(&seal_definition.commit_conceal()) {
-                    *self = Assignment::<State>::Confidential {
+                    *self = Assignment::<StateType>::Confidential {
                         assigned_state: assigned_state.clone(),
                         seal_definition: seal_definition.commit_conceal(),
                     };
@@ -1224,7 +1268,7 @@ where
                 assigned_state,
             } => {
                 if seals.contains(&seal_definition.commit_conceal()) {
-                    *self = Assignment::<State>::ConfidentialSeal {
+                    *self = Assignment::<StateType>::ConfidentialSeal {
                         assigned_state: assigned_state.clone(),
                         seal_definition: seal_definition.commit_conceal(),
                     };
@@ -1237,13 +1281,13 @@ where
     }
 }
 
-impl<State> ConcealState for Assignment<State>
+impl<StateType> ConcealState for Assignment<StateType>
 where
-    State: StateTypes,
-    State::Revealed: CommitConceal,
-    State::Confidential: PartialEq + Eq,
-    <State as StateTypes>::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Revealed: CommitConceal,
+    StateType::Confidential: PartialEq + Eq,
+    <StateType as State>::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn conceal_state_except(
         &mut self,
@@ -1259,7 +1303,7 @@ where
                 if seals.contains(&seal_definition) {
                     0
                 } else {
-                    *self = Assignment::<State>::Confidential {
+                    *self = Assignment::<StateType>::Confidential {
                         assigned_state: assigned_state.commit_conceal().into(),
                         seal_definition: seal_definition.clone(),
                     };
@@ -1273,7 +1317,7 @@ where
                 if seals.contains(&seal_definition.commit_conceal()) {
                     0
                 } else {
-                    *self = Assignment::<State>::ConfidentialAmount {
+                    *self = Assignment::<StateType>::ConfidentialAmount {
                         assigned_state: assigned_state.commit_conceal().into(),
                         seal_definition: seal_definition.clone(),
                     };
@@ -1288,13 +1332,13 @@ where
 // `commit_encode` of the concealed type, and here the concealed type is again
 // `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
 // concealed data.
-impl<State> CommitEncode for Assignment<State>
+impl<StateType> CommitEncode for Assignment<StateType>
 where
     Self: Clone,
-    State: StateTypes,
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn commit_encode<E: io::Write>(&self, e: E) -> usize {
         self.commit_conceal().strict_encode(e).expect(
@@ -1304,13 +1348,13 @@ where
     }
 }
 
-impl<State> ConsensusCommit for Assignment<State>
+impl<StateType> ConsensusCommit for Assignment<StateType>
 where
     Self: Clone,
-    State: StateTypes,
-    State::Confidential: PartialEq + Eq,
-    State::Confidential:
-        From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     type Commitment = MerkleNode;
 }
@@ -1363,12 +1407,12 @@ mod _strict_encoding {
         }
     }
 
-    impl<State> StrictEncode for Assignment<State>
+    impl<StateType> StrictEncode for Assignment<StateType>
     where
-        State: StateTypes,
-        State::Confidential: PartialEq + Eq,
-        State::Confidential:
-            From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+        StateType: State,
+        StateType::Confidential: PartialEq + Eq,
+        StateType::Confidential:
+            From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
     {
         fn strict_encode<E: io::Write>(
             &self,
@@ -1403,31 +1447,35 @@ mod _strict_encoding {
         }
     }
 
-    impl<State> StrictDecode for Assignment<State>
+    impl<StateType> StrictDecode for Assignment<StateType>
     where
-        State: StateTypes,
-        State::Confidential: PartialEq + Eq,
-        State::Confidential:
-            From<<State::Revealed as CommitConceal>::ConcealedCommitment>,
+        StateType: State,
+        StateType::Confidential: PartialEq + Eq,
+        StateType::Confidential:
+            From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
     {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             let format = u8::strict_decode(&mut d)?;
             Ok(match format {
                 0u8 => Assignment::Confidential {
                     seal_definition: seal::Confidential::strict_decode(&mut d)?,
-                    assigned_state: State::Confidential::strict_decode(&mut d)?,
+                    assigned_state: StateType::Confidential::strict_decode(
+                        &mut d,
+                    )?,
                 },
                 1u8 => Assignment::Revealed {
                     seal_definition: seal::Revealed::strict_decode(&mut d)?,
-                    assigned_state: State::Revealed::strict_decode(&mut d)?,
+                    assigned_state: StateType::Revealed::strict_decode(&mut d)?,
                 },
                 2u8 => Assignment::ConfidentialSeal {
                     seal_definition: seal::Confidential::strict_decode(&mut d)?,
-                    assigned_state: State::Revealed::strict_decode(&mut d)?,
+                    assigned_state: StateType::Revealed::strict_decode(&mut d)?,
                 },
                 3u8 => Assignment::ConfidentialAmount {
                     seal_definition: seal::Revealed::strict_decode(&mut d)?,
-                    assigned_state: State::Confidential::strict_decode(&mut d)?,
+                    assigned_state: StateType::Confidential::strict_decode(
+                        &mut d,
+                    )?,
                 },
                 invalid => Err(Error::EnumValueNotKnown(
                     "Assignment".to_string(),

@@ -24,8 +24,9 @@ use super::{
     schema, seal, Anchor, AnchorId, AssignmentVec, Consignment, ContractId,
     Node, NodeId, Schema, SchemaId,
 };
-use crate::script::EntryPoint;
-use crate::SealEndpoint;
+use crate::schema::SchemaVerify;
+use crate::script::{Action, EntryPoint};
+use crate::{SealEndpoint, VmType};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -143,6 +144,9 @@ impl Status {
 #[display(Debug)]
 pub enum Failure {
     SchemaUnknown(SchemaId),
+    /// schema is a subschema, so root schema {0} must be provided for the
+    /// validation
+    SchemaRootRequired(SchemaId),
     /// Root schema for this schema has another root, which is prohibited
     SchemaRootHierarchy(SchemaId),
     SchemaRootNoFieldTypeMatch(schema::FieldType),
@@ -158,7 +162,7 @@ pub enum Failure {
     SchemaRootNoPublicRightsMatch(NodeType, schema::PublicRightType),
     SchemaRootNoAbiMatch {
         node_type: NodeType,
-        action_id: u8,
+        action_id: Action,
     },
 
     SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
@@ -245,7 +249,14 @@ pub enum Failure {
 
     EndpointTransitionNotFound(NodeId),
 
+    /// invalid bulletproofs in {0}:{1}: {2}
+    InvalidBulletproofs(NodeId, usize, secp256k1zkp::Error),
+
     WrongEntryPoint(EntryPoint),
+    /// Under certain conditions the script code must be empty, for instance if
+    /// you use the embedded virtual machine or subschema which does not
+    /// override the parent scripts
+    ScriptCodeMustBeEmpty,
     VirtualMachinesNotSupportedYet,
     ScriptFailure(NodeId, u8),
 }
@@ -391,10 +402,10 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         }
     }
 
-    /// Validation procedure takes a schema object, resolver function
-    /// returning transaction and its fee for a given transaction id, and
-    /// returns a validation object listing all detected failures, warnings and
-    /// additional information.
+    /// Validation procedure takes a schema object, root schema (if any),
+    /// resolver function returning transaction and its fee for a given
+    /// transaction id, and returns a validation object listing all detected
+    /// failures, warnings and additional information.
     ///
     /// When a failure detected, it not stopped; the failure is is logged into
     /// the status object, but the validation continues for the rest of the
@@ -402,21 +413,52 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
     /// with the consignment.
     pub fn validate(
         schema: &Schema,
+        root: Option<&Schema>,
         consignment: &'validator Consignment,
         resolver: R,
     ) -> Status {
         let mut validator = Validator::init(consignment, resolver);
 
-        validator.validate_root(schema);
+        validator.validate_schema(schema, root);
+        // We must return here, since if the schema is not valid there is no
+        // reason to validate contract nodes against it: it will produce a
+        // plenty of errors
+        if validator.status.validity() == Validity::Invalid {
+            return validator.status;
+        }
+
+        let byte_code = if schema.script.byte_code.is_empty() {
+            root.map(|root| &root.script.byte_code)
+                .unwrap_or(&schema.script.byte_code)
+        } else {
+            &schema.script.byte_code
+        };
+
+        validator.validate_contract(schema, byte_code);
 
         // Done. Returning status report with all possible failures, issues,
         // warnings and notifications about transactions we were unable to
         // obtain.
-        let validator = validator;
-        validator.status.clone()
+        validator.status
     }
 
-    fn validate_root(&mut self, schema: &Schema) {
+    fn validate_schema(&mut self, schema: &Schema, root: Option<&Schema>) {
+        // Validating schema against root schema
+        if let Some(root) = root {
+            self.status += schema.schema_verify(root);
+        } else if schema.root_id != default!() {
+            self.status
+                .add_failure(Failure::SchemaRootRequired(schema.root_id));
+        }
+
+        // Validating VM
+        if schema.script.vm_type != VmType::Embedded {
+            self.status
+                .add_failure(Failure::VirtualMachinesNotSupportedYet);
+        }
+    }
+
+    fn validate_contract(&mut self, schema: &Schema, byte_code: &[u8]) {
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != self.schema_id {
@@ -429,8 +471,11 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         }
 
         // [VALIDATION]: Validate genesis
-        self.status +=
-            schema.validate(&self.node_index, &self.consignment.genesis);
+        self.status += schema.validate(
+            &self.node_index,
+            &self.consignment.genesis,
+            byte_code,
+        );
         self.validation_index.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
@@ -439,7 +484,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         //               instead treat it as a superposition of subgraphs, one
         //               for each endpoint; and validate them independently.
         for node in self.end_transitions.clone() {
-            self.validate_branch(schema, node);
+            self.validate_branch(schema, node, byte_code);
         }
 
         // Generate warning if some of the transitions within the consignment
@@ -453,7 +498,12 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
         }
     }
 
-    fn validate_branch(&mut self, schema: &Schema, node: &'validator dyn Node) {
+    fn validate_branch(
+        &mut self,
+        schema: &Schema,
+        node: &'validator dyn Node,
+        byte_code: &[u8],
+    ) {
         let mut queue: VecDeque<&dyn Node> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a
@@ -475,7 +525,8 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
             //               only a single node, not state evolution (it
             //               will be checked lately)
             if !self.validation_index.contains(&node_id) {
-                self.status += schema.validate(&self.node_index, node);
+                self.status +=
+                    schema.validate(&self.node_index, node, byte_code);
                 self.validation_index.insert(node_id);
             }
 

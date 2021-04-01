@@ -1228,9 +1228,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "strict_encoding"
-version = "1.2.1"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eefe9e6c710ac66e087e99b357b8c57557d8f578410c5bd682cfeb029e1de07c"
+checksum = "27e49df2b9fdbf1369e504e544715cd3b31d39ea44e4a8d93067a0cfb59d87da"
 dependencies = [
  "amplify",
  "amplify_derive",

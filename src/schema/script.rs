@@ -16,7 +16,6 @@
 
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
-use std::io;
 
 use bitcoin::hashes::hex::ToHex;
 use lnpbp::bech32::Bech32DataString;
@@ -29,7 +28,7 @@ use lnpbp::client_side_validation::{
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "kebab-case")
+    serde(crate = "serde_crate")
 )]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
@@ -38,20 +37,30 @@ use lnpbp::client_side_validation::{
 pub enum VmType {
     /// Embedded code (not a virtual machine) which is the part of this RGB
     /// Core Library. Using this option results in the fact that the schema
-    /// does not commit to the actual validating code and it may change (or
-    /// be patched) with new RGB Core Lib releases
+    /// does not commit to the actual validating code and the validation logic
+    /// may change in the future (like to be patched) with new RGB Core Lib
+    /// releases
     #[display("embedded")]
+    #[cfg_attr(feature = "serde", serde(rename = "embedded"))]
     Embedded = 0x00u8,
 
-    /// Simplicity-based virtual machine (not implemented yet, will always
-    /// return false validation result for RGBv0)
-    #[display("wasm")]
-    Wasm = 0x01u8,
+    /// AluVM: pure functional register-based virtual machine designed for RGB
+    /// and multiparty computing
+    #[display("AluVM")]
+    #[cfg_attr(feature = "serde", serde(rename = "AluVM"))]
+    Alu = 0x01u8,
+
+    /// WASM-based virtual machine (not implemented yet, will always return
+    /// failed validation result for RGBv0)
+    #[display("WASM")]
+    #[cfg_attr(feature = "serde", serde(rename = "WASM"))]
+    Wasm = 0x02u8,
 
     /// Simplicity-based virtual machine (not implemented yet, will always
-    /// return false validation result for RGBv0)
-    #[display("simplicity")]
-    Simplicity = 0x02u8,
+    /// return failed validation result for RGBv0)
+    #[display("Simplicity")]
+    #[cfg_attr(feature = "serde", serde(rename = "Simplicity"))]
+    Simplicity = 0x03u8,
 }
 
 impl Default for VmType {
@@ -117,13 +126,14 @@ pub struct ExecutableCode {
     /// Script data are presented as a byte array (VM-specific)
     // TODO: #68 Currently script will be limited to 2^16 bytes; we need to
     //       extend that to at least 2^24
+    //       Update: possible best way of doing that will be with #74
     pub byte_code: Box<[u8]>,
 
     /// Defines whether subschemata are allowed to replace (override) the code
     ///
-    /// Subschemata not the main schema code MUST set the virtual machine type
-    /// to the same as in the parent schema and set byte code to be empty
-    /// (zero-length)
+    /// Subschemata not overriding the main schema code MUST set the virtual
+    /// machine type to the same as in the parent schema and set byte code
+    /// to be empty (zero-length)
     pub override_rules: OverrideRules,
 }
 
@@ -142,8 +152,41 @@ impl Display for ExecutableCode {
     }
 }
 
-/// Marker trait for all node-specific ABI table keys
-pub trait NodeAction: Sized + Ord + Copy + Into<u8> {}
+/// All possible procedures which may be called to via ABI table
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display(doc_comments)]
+#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+#[non_exhaustive]
+#[repr(u8)]
+pub enum Action {
+    /// Genesis validation procedure
+    ValidateGenesis = 0,
+
+    /// State transition validation procedure
+    ValidateTransition = 2,
+
+    /// State extension validation procedure
+    ValidateExtension = 3,
+
+    /// State assignment validation procedure
+    ValidateAssignment = 4,
+
+    /// Procedure creating blank state transition, passing set of owned rights
+    /// from a given UTXO set to a new UTXO set
+    BlankTransition = 0x10,
+}
+
+/// Marker trait for all script-based actions, which are the keys in the ABI
+/// table
+pub trait GenericAction: Sized + Ord + Copy + Into<Action> {}
+
+/// Marker trait for node actions, which are the keys in the ABI table
+pub trait NodeAction: GenericAction {}
 
 /// Genesis-specific ABI table keys
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
@@ -162,12 +205,15 @@ pub enum GenesisAction {
     Validate = 0,
 }
 
-impl From<GenesisAction> for u8 {
+impl From<GenesisAction> for Action {
     fn from(action: GenesisAction) -> Self {
-        action as u8
+        match action {
+            GenesisAction::Validate => Action::ValidateGenesis,
+        }
     }
 }
 
+impl GenericAction for GenesisAction {}
 impl NodeAction for GenesisAction {}
 
 /// State extension-specific ABI table keys
@@ -187,12 +233,15 @@ pub enum ExtensionAction {
     Validate = 0,
 }
 
-impl From<ExtensionAction> for u8 {
+impl From<ExtensionAction> for Action {
     fn from(action: ExtensionAction) -> Self {
-        action as u8
+        match action {
+            ExtensionAction::Validate => Action::ValidateExtension,
+        }
     }
 }
 
+impl GenericAction for ExtensionAction {}
 impl NodeAction for ExtensionAction {}
 
 /// State transition-specific ABI table keys
@@ -218,12 +267,16 @@ pub enum TransitionAction {
     GenerateBlank = 1,
 }
 
-impl From<TransitionAction> for u8 {
+impl From<TransitionAction> for Action {
     fn from(action: TransitionAction) -> Self {
-        action as u8
+        match action {
+            TransitionAction::Validate => Action::ValidateTransition,
+            TransitionAction::GenerateBlank => Action::BlankTransition,
+        }
     }
 }
 
+impl GenericAction for TransitionAction {}
 impl NodeAction for TransitionAction {}
 
 /// ABI table keys for owned right assignment entries (parts of contract nodes)
@@ -243,11 +296,15 @@ pub enum AssignmentAction {
     Validate = 0,
 }
 
-impl From<AssignmentAction> for u8 {
+impl From<AssignmentAction> for Action {
     fn from(action: AssignmentAction) -> Self {
-        action as u8
+        match action {
+            AssignmentAction::Validate => Action::ValidateAssignment,
+        }
     }
 }
+
+impl GenericAction for AssignmentAction {}
 
 /// Offset within script data for the procedure entry point.
 ///
@@ -276,173 +333,49 @@ impl Abi for ExtensionAbi {}
 impl Abi for TransitionAbi {}
 impl Abi for AssignmentAbi {}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "kebab-case")
-)]
-#[non_exhaustive]
-#[repr(u32)] // We must use the type that fits in the size of `EntryPoint`
-pub enum EmbeddedProcedure {
-    /// Non-inflationary fungible asset transfer control
-    ///
-    /// Checks that the sum of pedersen commitments in the inputs of type
-    /// [`crate::schema::constants::STATE_TYPE_OWNED_AMOUNT`] equal to the sum
-    /// of the outputs of the same type, plus validates bulletproof data
-    #[display("fungible-no-inflation")]
-    FungibleNoInflation = 0x01,
-
-    /// Fungible asset inflation/issue control
-    ///
-    /// Checks that inflation of a fungible asset produces no more than was
-    /// allowed by [`crate::schema::constants::STATE_TYPE_INFLATION_RIGHT`],
-    /// i.e. that the sum of all outputs with
-    /// [`crate::schema::constants::STATE_TYPE_OWNED_AMOUNT`] type is no more
-    /// than that value - plus validates bulletproof data.
-    ///
-    /// Also validates that the sum of the issued asset is equal to the amount
-    /// specified in the [`crate::schema::constants::FIELD_TYPE_ISSUED_SUPPLY`]
-    /// metadata field
-    #[display("fungible-issue")]
-    FungibleIssue = 0x02,
-
-    /// NFT/identity transfer control
-    ///
-    /// Checks that all identities are transferred once and only once, i.e.
-    /// that the _number_ of
-    /// [`crate::schema::constants::STATE_TYPE_OWNED_DATA`] inputs is equal
-    /// to the _number_ of outputs of this type.
-    #[display("nft-transfer")]
-    IdentityTransfer = 0x11,
-
-    /// NFT asset secondary issue control
-    ///
-    /// Checks that inflation of a fungible asset produces no more than was
-    /// allowed by [`crate::schema::constants::STATE_TYPE_INFLATION_RIGHT`],
-    /// i.e. that the sum of all outputs with
-    /// [`crate::schema::constants::STATE_TYPE_OWNED_AMOUNT`] type is no more
-    /// than that value
-    #[display("nft-issue")]
-    NftIssue = 0x12,
-
-    /// Proof-of-burn verification
-    ///
-    /// Currently not implemented in RGBv0 and always validates to TRUE
-    #[display("proof-of-burn")]
-    ProofOfBurn = 0x20,
-
-    /// Proof-of-reserve verification
-    ///
-    /// Currently not implemented in RGBv0 and always validates to TRUE
-    #[display("proof-of-reserve")]
-    ProofOfReserve = 0x21,
-
-    /// Verification of rights splits procedure
-    ///
-    /// Checks that each of the owned rights types were assigned one-to-one
-    /// between inputs and outputs
-    #[display("rights-split")]
-    RightsSplit = 0x30,
-}
-
-impl EmbeddedProcedure {
-    /// Constructs [`EmbeddedProcedure`] from [`EntryPoint`], or returns
-    /// `None` if the provided entry point value does not correspond to any of
-    /// the embedded procedures
-    pub fn from_entry_point(entry_point: EntryPoint) -> Option<Self> {
-        Some(match entry_point {
-            x if x == EmbeddedProcedure::FungibleNoInflation as u32 => {
-                EmbeddedProcedure::FungibleNoInflation
-            }
-            x if x == EmbeddedProcedure::FungibleIssue as u32 => {
-                EmbeddedProcedure::FungibleIssue
-            }
-            x if x == EmbeddedProcedure::IdentityTransfer as u32 => {
-                EmbeddedProcedure::IdentityTransfer
-            }
-            x if x == EmbeddedProcedure::NftIssue as u32 => {
-                EmbeddedProcedure::NftIssue
-            }
-            x if x == EmbeddedProcedure::ProofOfBurn as u32 => {
-                EmbeddedProcedure::ProofOfBurn
-            }
-            x if x == EmbeddedProcedure::ProofOfReserve as u32 => {
-                EmbeddedProcedure::ProofOfReserve
-            }
-            x if x == EmbeddedProcedure::RightsSplit as u32 => {
-                EmbeddedProcedure::RightsSplit
-            }
-            _ => return None,
-        })
-    }
-}
-
-mod strict_encoding {
+#[cfg(test)]
+mod test {
     use super::*;
-    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use crate::vm::embedded::AssignmentValidator;
+    use lnpbp::strict_encoding::strict_serialize;
 
-    impl StrictEncode for EmbeddedProcedure {
-        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-            let val = *self as EntryPoint;
-            val.strict_encode(e)
-        }
-    }
+    #[test]
+    fn test_basics() {
+        // Test Actions and Standard procedures
+        // TODO: Uncomment once `test_enum_u8_exhaustive` update to
+        //       no-num-trait version will be complete
+        /*
+        test_enum_u8_exhaustive!(AssignmentAction; AssignmentAction::Validate => 0);
+        test_enum_u8_exhaustive!(TransitionAction;
+            TransitionAction::Validate => 0,
+            TransitionAction::GenerateBlank => 1
+        );
+        test_enum_u8_exhaustive!(EmbeddedProcedure;
+            EmbeddedProcedure::FungibleNoInflation => 0x01,
+            EmbeddedProcedure::FungibleIssue => 0x02,
+            EmbeddedProcedure::IdentityTransfer => 0x11,
+            EmbeddedProcedure::NftIssue => 0x12,
+            EmbeddedProcedure::ProofOfBurn => 0x20,
+            EmbeddedProcedure::ProofOfReserve => 0x21,
+            EmbeddedProcedure::RightsSplit => 0x30
+        );*/
 
-    impl StrictDecode for EmbeddedProcedure {
-        fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-            let entry_point = EntryPoint::strict_decode(d)?;
-            EmbeddedProcedure::from_entry_point(entry_point).ok_or(
-                Error::DataIntegrityError(format!(
-                    "Entry point value {} does not correspond to any of known embedded procedures",
-                    entry_point
-                )))
-        }
-    }
+        // Test Transition and Assignment ABI
+        let mut trans_abi = TransitionAbi::new();
+        trans_abi.insert(
+            TransitionAction::Validate,
+            AssignmentValidator::FungibleNoInflation as EntryPoint,
+        );
+        assert_eq!(
+            vec![0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00],
+            strict_serialize(&trans_abi).unwrap()
+        );
 
-    #[cfg(test)]
-    mod test {
-        use super::*;
-        use lnpbp::strict_encoding::strict_serialize;
-
-        #[test]
-        fn test_basics() {
-            // Test Actions and Standard procedures
-            // TODO: Uncomment once `test_enum_u8_exhaustive` update to
-            //       no-num-trait version will be complete
-            /*
-            test_enum_u8_exhaustive!(AssignmentAction; AssignmentAction::Validate => 0);
-            test_enum_u8_exhaustive!(TransitionAction;
-                TransitionAction::Validate => 0,
-                TransitionAction::GenerateBlank => 1
-            );
-            test_enum_u8_exhaustive!(EmbeddedProcedure;
-                EmbeddedProcedure::FungibleNoInflation => 0x01,
-                EmbeddedProcedure::FungibleIssue => 0x02,
-                EmbeddedProcedure::IdentityTransfer => 0x11,
-                EmbeddedProcedure::NftIssue => 0x12,
-                EmbeddedProcedure::ProofOfBurn => 0x20,
-                EmbeddedProcedure::ProofOfReserve => 0x21,
-                EmbeddedProcedure::RightsSplit => 0x30
-            );*/
-
-            // Test Transition and Assignment ABI
-            let mut trans_abi = TransitionAbi::new();
-            trans_abi.insert(
-                TransitionAction::Validate,
-                EmbeddedProcedure::FungibleNoInflation as EntryPoint,
-            );
-            assert_eq!(
-                vec![0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00],
-                strict_serialize(&trans_abi).unwrap()
-            );
-
-            let mut assignment_abi = AssignmentAbi::new();
-            assignment_abi.insert(AssignmentAction::Validate, 45);
-            assert_eq!(
-                vec![0x01, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x00],
-                strict_serialize(&assignment_abi).unwrap()
-            );
-        }
+        let mut assignment_abi = AssignmentAbi::new();
+        assignment_abi.insert(AssignmentAction::Validate, 45);
+        assert_eq!(
+            vec![0x01, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x00],
+            strict_serialize(&assignment_abi).unwrap()
+        );
     }
 }

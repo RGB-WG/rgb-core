@@ -24,8 +24,8 @@ use lnpbp::TaggedHash;
 use wallet::features;
 
 use super::{
-    vm, DataFormat, ExecutableCode, ExtensionSchema, GenesisSchema,
-    OwnedRightType, PublicRightType, StateSchema, TransitionSchema,
+    DataFormat, ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType,
+    PublicRightType, StateSchema, TransitionSchema,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
@@ -204,11 +204,12 @@ mod _validation {
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure,
         SchemaVerify,
     };
-    use crate::script::{EmbeddedProcedure, OverrideRules};
+    use crate::script::{Action, OverrideRules, VmType};
+    use crate::vm::{EmbeddedVm, VmApi};
     use crate::{
-        validation, Assignment, AssignmentAction, AssignmentVec, Metadata,
-        Node, NodeId, OwnedRights, ParentOwnedRights, ParentPublicRights,
-        PublicRights, StateTypes, VirtualMachine, VmType,
+        validation, Assignment, AssignmentVec, Metadata, Node, NodeId,
+        NodeSubtype, OwnedRights, ParentOwnedRights, ParentPublicRights,
+        PublicRights, State,
     };
 
     impl SchemaVerify for Schema {
@@ -315,6 +316,18 @@ mod _validation {
                 _ => {} // We are fine here
             }
 
+            if root.script.vm_type == VmType::Embedded
+                && !root.script.byte_code.is_empty()
+            {
+                status.add_failure(validation::Failure::ScriptCodeMustBeEmpty);
+            }
+
+            if self.script.vm_type == VmType::Embedded
+                && !self.script.byte_code.is_empty()
+            {
+                status.add_failure(validation::Failure::ScriptCodeMustBeEmpty);
+            }
+
             status
         }
     }
@@ -324,6 +337,7 @@ mod _validation {
             &self,
             all_nodes: &BTreeMap<NodeId, &dyn Node>,
             node: &dyn Node,
+            byte_code: &[u8],
         ) -> validation::Status {
             let node_id = node.node_id();
 
@@ -418,6 +432,7 @@ mod _validation {
             };
 
             let mut status = validation::Status::new();
+
             let parent_owned_rights = extract_parent_owned_rights(
                 all_nodes,
                 node.parent_owned_rights(),
@@ -453,13 +468,18 @@ mod _validation {
                 node.public_rights(),
                 valencies_structure,
             );
-            // TODO: #69 Add execution of the node scripts
+            // We need to run scripts as the very last step, since before that
+            // we need to make sure that the node data match the schema, so
+            // scripts are not required to validate the structure of the state
             status += self.validate_state_evolution(
                 node_id,
-                node.transition_type(),
+                node.subtype(),
                 &parent_owned_rights,
                 node.owned_rights(),
+                &parent_public_rights,
+                node.public_rights(),
                 node.metadata(),
+                &byte_code,
             );
             status
         }
@@ -677,12 +697,91 @@ mod _validation {
         fn validate_state_evolution(
             &self,
             node_id: NodeId,
-            transition_type: Option<TransitionType>,
+            node_subtype: NodeSubtype,
             parent_owned_rights: &OwnedRights,
             owned_rights: &OwnedRights,
+            parent_public_rights: &PublicRights,
+            public_rights: &PublicRights,
             metadata: &Metadata,
+            byte_code: &[u8],
         ) -> validation::Status {
             let mut status = validation::Status::new();
+
+            macro_rules! vm {
+                ($abi:expr) => {{
+                    // This code is actually unreachable, since we check VM type
+                    // at the start of schema validation in
+                    // `Validator::validate_schema` and return if it's
+                    // wrong, however it is here as an additional safety
+                    // placeholder
+                    if self.script.vm_type != VmType::Embedded {
+                        status.add_failure(
+                            validation::Failure::VirtualMachinesNotSupportedYet,
+                        );
+                        return status;
+                    }
+
+                    let vm = match EmbeddedVm::with(byte_code, $abi) {
+                        Ok(vm) => vm,
+                        Err(failure) => {
+                            status.add_failure(failure);
+                            return status;
+                        }
+                    };
+
+                    Box::new(vm) as Box<dyn VmApi>
+                }};
+            }
+
+            let abi = match node_subtype {
+                NodeSubtype::Genesis => self
+                    .genesis
+                    .abi
+                    .iter()
+                    .map(|(action, entry_point)| {
+                        (Action::from(*action), *entry_point)
+                    })
+                    .collect(),
+                NodeSubtype::StateTransition(type_id) => self
+                    .transitions
+                    .get(&type_id)
+                    .expect(
+                        "node structure must be validated against schema \
+                        requirements before any scripts is executed",
+                    )
+                    .abi
+                    .iter()
+                    .map(|(action, entry_point)| {
+                        (Action::from(*action), *entry_point)
+                    })
+                    .collect(),
+                NodeSubtype::StateExtension(type_id) => self
+                    .extensions
+                    .get(&type_id)
+                    .expect(
+                        "node structure must be validated against schema \
+                        requirements before any scripts is executed",
+                    )
+                    .abi
+                    .iter()
+                    .map(|(action, entry_point)| {
+                        (Action::from(*action), *entry_point)
+                    })
+                    .collect(),
+            };
+
+            let vm = vm!(&abi);
+            if let Err(err) = vm.validate_node(
+                node_id,
+                node_subtype,
+                parent_owned_rights,
+                owned_rights,
+                parent_public_rights,
+                public_rights,
+                metadata,
+            ) {
+                status.add_failure(err);
+            }
 
             let owned_right_types: BTreeSet<&OwnedRightType> =
                 parent_owned_rights
@@ -694,80 +793,24 @@ mod _validation {
                 let abi = &self
                     .owned_right_types
                     .get(&owned_type_id)
-                    .expect("We already passed owned rights type validation, so can be sure that the type exists")
+                    .expect(
+                        "node structure must be validated against schema \
+                        requirements before any scripts is executed",
+                    )
                     .abi;
 
-                // TODO: #69 Add the same logic to the validation of contract
-                //       node scripts
+                let vm = vm!(abi);
 
-                // If the entry point is not defined, it means no script-based
-                // validation should be performed
-                let entry_point = if let Some(entry_point) =
-                    abi.get(&AssignmentAction::Validate).copied()
-                {
-                    entry_point
-                } else {
-                    return status;
-                };
-
-                if self.script.vm_type != VmType::Embedded {
-                    status.add_failure(
-                        validation::Failure::VirtualMachinesNotSupportedYet,
-                    );
-                    return status;
-
-                    /* Draft of how this could look like:
-
-                    let mut vm = VirtualMachine::new();
-                    vm.push_stack(previous_state.get(&assignment_type).cloned());
-                    vm.push_stack(current_state.get(&assignment_type).cloned());
-                    vm.push_stack(previous_meta.clone());
-                    vm.push_stack(current_meta.clone());
-                    match vm.execute(code.clone(), offset) {
-                        Err(_) => {}
-                        Ok => match vm.pop_stack() {
-                            None => {}
-                            Some(value) => {}
-                        },
-                    }
-                     */
-                }
-
-                let procedure = if let Some(procedure) =
-                    EmbeddedProcedure::from_entry_point(entry_point)
-                {
-                    procedure
-                } else {
-                    status.add_failure(validation::Failure::WrongEntryPoint(
-                        entry_point,
-                    ));
-                    return status;
-                };
-
-                let mut vm = vm::Embedded::with(
-                    transition_type,
-                    parent_owned_rights.get(&owned_type_id).cloned(),
-                    owned_rights.get(&owned_type_id).cloned(),
-                    metadata.clone(),
-                );
-                vm.execute(procedure);
-                match vm
-                    .pop_stack()
-                    .and_then(|x| x.downcast_ref::<u8>().cloned())
-                {
-                    None => panic!(
-                        "LNP/BP core code is hacked: standard procedure must \
-                        always return 8-bit value"
-                    ),
-                    Some(0) => {
-                        // Nothing to do here: 0 signifies successful script
-                        // execution
-                    }
-                    Some(n) => {
-                        status.add_failure(validation::Failure::ScriptFailure(
-                            node_id, n,
-                        ));
-                    }
+                if let Err(err) = vm.validate_assignment(
+                    node_id,
+                    node_subtype,
+                    *owned_type_id,
+                    parent_owned_rights.assignments_by_type(*owned_type_id),
+                    owned_rights.assignments_by_type(*owned_type_id),
+                    metadata,
+                ) {
+                    status.add_failure(err);
+                    continue;
                 }
             }
 
@@ -800,7 +843,7 @@ mod _validation {
                 indexes: &Vec<u16>,
             ) -> Vec<Assignment<STATE>>
             where
-                STATE: StateTypes + Clone,
+                STATE: State + Clone,
                 STATE::Confidential: PartialEq + Eq,
                 STATE::Confidential: From<
                     <STATE::Revealed as CommitConceal>::ConcealedCommitment,
@@ -883,6 +926,7 @@ pub(crate) mod test {
     use super::*;
     use crate::schema::*;
     use crate::script::EntryPoint;
+    use crate::vm::embedded::NodeValidator;
     use lnpbp::strict_encoding::*;
     use lnpbp::tagged_hash;
 
@@ -930,19 +974,19 @@ pub(crate) mod test {
                 ASSIGNMENT_ISSUE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
-                        AssignmentAction::Validate => script::EmbeddedProcedure::FungibleIssue as EntryPoint
+                        AssignmentAction::Validate => NodeValidator::FungibleIssue as EntryPoint
                     }
                 },
                 ASSIGNMENT_ASSETS => StateSchema {
                     format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                     abi: bmap! {
-                        AssignmentAction::Validate => script::EmbeddedProcedure::FungibleNoInflation as EntryPoint
+                        AssignmentAction::Validate => NodeValidator::IdentityTransfer as EntryPoint
                     }
                 },
                 ASSIGNMENT_PRUNE => StateSchema {
                     format: StateFormat::Declarative,
                     abi: bmap! {
-                        AssignmentAction::Validate => script::EmbeddedProcedure::ProofOfBurn as EntryPoint
+                        AssignmentAction::Validate => NodeValidator::ProofOfBurn as EntryPoint
                     }
                 }
             },
@@ -1050,7 +1094,7 @@ pub(crate) mod test {
             0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255,
             255, 16, 0, 32, 3, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 0, 8,
             0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 1,
-            0, 0, 1, 0, 0, 0, 2, 0, 0, 1, 0, 0, 32, 0, 0, 0, 1, 0, 0, 0, 8, 0,
+            0, 0, 17, 0, 0, 0, 2, 0, 0, 1, 0, 0, 32, 0, 0, 0, 1, 0, 0, 0, 8, 0,
             0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0,
             1, 0, 4, 0, 1, 0, 1, 0, 5, 0, 0, 0, 1, 0, 6, 0, 1, 0, 1, 0, 8, 0,
             1, 0, 1, 0, 3, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 255, 255, 2, 0, 0,
