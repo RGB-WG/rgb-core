@@ -64,14 +64,15 @@ pub mod prelude {
         ContractId, DeclarativeStrategy, Extension, Genesis, HashStrategy,
         Metadata, NoDataError, Node, NodeId, NodeOutput, OwnedRights,
         ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights,
-        RevealedByMerge, RevealedState, SealDefinition, SealEndpoint,
-        StateRetrievalError, StateTypes, ToSealDefinition, Transition,
+        RevealedByMerge, RevealedState, SealDefinition, SealEndpoint, State,
+        StateRetrievalError, StateType, ToSealDefinition, Transition,
     };
     pub use schema::{
         script, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi,
         ExtensionAction, ExtensionSchema, ExtensionType, GenesisAbi,
-        GenesisAction, PublicRightType, PublicRightsStructure, Schema,
-        SchemaId, TransitionAbi, TransitionAction, VmType,
+        GenesisAction, NodeSubtype, NodeType, PublicRightType,
+        PublicRightsStructure, Schema, SchemaId, TransitionAbi,
+        TransitionAction, VmType,
     };
     pub use stash::{
         Anchor, AnchorId, ConcealAnchors, Consignment, ConsignmentEndpoints,
@@ -79,7 +80,7 @@ pub mod prelude {
         TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
     };
     pub use validation::{Validator, Validity};
-    pub use vm::VirtualMachine;
+    pub use vm::VmApi;
 }
 
 pub use prelude::*;

@@ -14,10 +14,10 @@
 use std::ops::Deref;
 
 use rgb::schema::{
-    constants::*, script, Bits, DataFormat, GenesisAction, GenesisSchema,
-    Occurences, Schema, StateFormat, StateSchema, TransitionAction,
-    TransitionSchema,
+    constants::*, script, Bits, DataFormat, GenesisSchema, Occurences, Schema,
+    StateFormat, StateSchema, TransitionAction, TransitionSchema,
 };
+use rgb::vm::embedded;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
@@ -106,9 +106,7 @@ pub fn schema() -> Schema {
                 OwnedRightsType::Extension => NoneOrUpTo(core::u16::MAX)
             },
             public_rights: none!(),
-            abi: bmap! {
-                GenesisAction::Validate => script::EmbeddedProcedure::IdentityTransfer as script::EntryPoint
-            },
+            abi: none!(),
         },
         extensions: none!(),
         transitions: type_map! {
@@ -135,7 +133,7 @@ pub fn schema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    TransitionAction::Validate => script::EmbeddedProcedure::IdentityTransfer as script::EntryPoint
+                    TransitionAction::Validate => embedded::NodeValidator::IdentityTransfer as script::EntryPoint
                 }
             }
         },

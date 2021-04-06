@@ -17,17 +17,16 @@ pub mod script;
 mod state;
 mod types;
 
-pub(self) use super::vm;
 pub use nodes::{
-    ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeType,
-    OwnedRightType, OwnedRightsStructure, PublicRightType,
+    ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeSubtype,
+    NodeType, OwnedRightType, OwnedRightsStructure, PublicRightType,
     PublicRightsStructure, TransitionSchema,
 };
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{
-    AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi,
-    ExtensionAction, GenesisAbi, GenesisAction, NodeAction, TransitionAbi,
-    TransitionAction, VmType,
+    Action, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi,
+    ExtensionAction, GenericAction, GenesisAbi, GenesisAction, NodeAction,
+    TransitionAbi, TransitionAction, VmType,
 };
 pub use state::{
     DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType,
@@ -49,6 +48,89 @@ mod verify {
     }
 }
 pub use verify::SchemaVerify;
+
+// ---------------
+
+use core::ops::Deref;
+
+/// Format for the stored history proofs, like proof of burn. It is a part of
+/// LNPBP standards
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[display(Debug)]
+#[non_exhaustive]
+#[repr(u8)]
+pub enum HistoryProofFormat {
+    ProofAbsent = 0,
+    ProofV1,
+    ProofV2,
+    ProofV3,
+    ProofV4,
+    ProofV5,
+    ProofV6,
+    ProofV7,
+    ProofV8,
+    ProofV9,
+    ProofV10,
+    ProofV11,
+    ProofV12,
+    ProofV13,
+    ProofV14,
+    ProofV15,
+}
+
+impl HistoryProofFormat {
+    /// Lists all available formats
+    pub fn all() -> Vec<Self> {
+        vec![
+            HistoryProofFormat::ProofAbsent,
+            HistoryProofFormat::ProofV1,
+            HistoryProofFormat::ProofV2,
+            HistoryProofFormat::ProofV3,
+            HistoryProofFormat::ProofV4,
+            HistoryProofFormat::ProofV5,
+            HistoryProofFormat::ProofV6,
+            HistoryProofFormat::ProofV7,
+            HistoryProofFormat::ProofV8,
+            HistoryProofFormat::ProofV9,
+            HistoryProofFormat::ProofV10,
+            HistoryProofFormat::ProofV11,
+            HistoryProofFormat::ProofV12,
+            HistoryProofFormat::ProofV13,
+            HistoryProofFormat::ProofV14,
+            HistoryProofFormat::ProofV15,
+        ]
+    }
+
+    pub fn from_u8(value: u8) -> Option<Self> {
+        Self::all().get(value as usize).copied()
+    }
+}
+
+impl Deref for HistoryProofFormat {
+    type Target = u8;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        match self {
+            HistoryProofFormat::ProofAbsent => &0x0,
+            HistoryProofFormat::ProofV1 => &0x1,
+            HistoryProofFormat::ProofV2 => &0x2,
+            HistoryProofFormat::ProofV3 => &0x3,
+            HistoryProofFormat::ProofV4 => &0x4,
+            HistoryProofFormat::ProofV5 => &0x5,
+            HistoryProofFormat::ProofV6 => &0x6,
+            HistoryProofFormat::ProofV7 => &0x7,
+            HistoryProofFormat::ProofV8 => &0x8,
+            HistoryProofFormat::ProofV9 => &0x9,
+            HistoryProofFormat::ProofV10 => &0xA,
+            HistoryProofFormat::ProofV11 => &0xB,
+            HistoryProofFormat::ProofV12 => &0xC,
+            HistoryProofFormat::ProofV13 => &0xD,
+            HistoryProofFormat::ProofV14 => &0xE,
+            HistoryProofFormat::ProofV15 => &0xF,
+        }
+    }
+}
 
 /// Constants which are common to different schemata and can be recognized
 /// by the software even if the specific schema is unknown, since this type ids
@@ -81,60 +163,53 @@ pub mod constants {
     pub const FIELD_TYPE_DATA: usize = 0x10;
 
     /// Format of the attached data, schema-specific
-    // TODO #36: Use LNPBP-extended MIME types
+    // TODO #36: Use LNPBP-extended MIME types embedded to data containers
     pub const FIELD_TYPE_DATA_FORMAT: usize = 0x11;
 
-    /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`EmbeddedProcedure::ProofOfReserve`]
-    pub const FIELD_TYPE_LOCK_DESCRIPTOR: usize = 0xC0;
+    /// [`FieldType`] that is used by validation procedures checking the issued
+    /// supply & inflation
+    pub const FIELD_TYPE_ISSUED_SUPPLY: usize = 0xA0;
 
-    /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`EmbeddedProcedure::ProofOfReserve`]
-    pub const FIELD_TYPE_LOCK_UTXO: usize = 0xC1;
-
-    /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`EmbeddedProcedure::ProofOfBurn`]
+    /// [`FieldType`] that is used by validation procedures checking proofs of
+    /// burn. Must contain amount of the burned supply, expressed as
+    /// revealed [`crate::value::Revealed`] data
     pub const FIELD_TYPE_BURN_SUPPLY: usize = 0xB0;
 
-    /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`EmbeddedProcedure::ProofOfBurn`]
+    /// [`FieldType`] that is used by validation procedures checking proofs of
+    /// burn. Must contain [`bitcoin::OutPoint`] consensus-encoded data.
     pub const FIELD_TYPE_BURN_UTXO: usize = 0xB1;
 
-    /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`EmbeddedProcedure::ProofOfBurn`]
+    /// [`FieldType`] that is used by validation procedures checking proofs of
+    /// burn. Must contain binary data ([`crate::data::Revealed::Bytes`])
     pub const FIELD_TYPE_HISTORY_PROOF: usize = 0xB2;
 
-    /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`EmbeddedProcedure::ProofOfBurn`]
+    /// [`FieldType`] that is used by validation procedures checking proofs of
+    /// burn. Must contain format of the provided proofs defined in
+    /// [`HistoryProofFormat`]
     pub const FIELD_TYPE_HISTORY_PROOF_FORMAT: usize = 0xB3;
 
-    /// [`FieldType`] that is used by the embedded validation procedure
-    /// [`EmbeddedProcedure::FungibleIssue`]
-    pub const FIELD_TYPE_ISSUED_SUPPLY: usize = 0xA0;
+    /// [`FieldType`] that is used by validation procedures checking proofs of
+    /// reserves. Must contain [`wallet::descriptor::Expanded`] strict encoded
+    /// data.
+    pub const FIELD_TYPE_LOCK_DESCRIPTOR: usize = 0xC0;
+
+    /// [`FieldType`] that is used by validation procedures checking proofs of
+    /// reserves. Must contain [`bitcoin::OutPoint`] consensus-encoded data
+    pub const FIELD_TYPE_LOCK_UTXO: usize = 0xC1;
 
     // --------
 
     /// Renomination of the contract parameters
     pub const STATE_TYPE_RENOMINATION_RIGHT: usize = 0x01;
 
-    /// [`OwnedRightType`] that is used by the embedded validation procedure
-    /// [`EmbeddedProcedure::FungibleIssue`]
+    /// [`OwnedRightType`] that is used by the validation procedures checking
+    /// asset inflation (applies to both fungible and non-fungible assets)
     pub const STATE_TYPE_INFLATION_RIGHT: usize = 0xA0;
 
-    /// [`OwnedRightType`] that is used by the embedded validation procedures
-    /// [`EmbeddedProcedure::FungibleNoInflation`] and
-    /// [`EmbeddedProcedure::FungibleIssue`]
-    pub const STATE_TYPE_OWNED_AMOUNT: usize = 0xA1;
-
-    /// [`OwnedRightType`] that is used by the embedded validation procedures
-    /// [`EmbeddedProcedure::NftIssue`] and
-    /// [`EmbeddedProcedure::IdentityTransfer`]
-    pub const STATE_TYPE_OWNED_DATA: usize = 0xA2;
-
-    /// [`OwnedRightType`] that is used by the embedded validation procedures
-    /// [`EmbeddedProcedure::NftIssue`] and
-    /// [`EmbeddedProcedure::IdentityTransfer`]
-    pub const STATE_TYPE_OWNERSHIP_RIGHT: usize = 0xA3;
+    /// [`OwnedRightType`] that is used by validation procedures checking for
+    /// the equivalence relations between previous and new asset ownership
+    /// (applies to both fungible and non-fungible assets)
+    pub const STATE_TYPE_OWNERSHIP_RIGHT: usize = 0xA1;
 
     /// Right to define epochs of asset replacement
     pub const STATE_TYPE_ISSUE_EPOCH_RIGHT: usize = 0xAA;
@@ -157,8 +232,8 @@ pub mod constants {
     /// Transition performing renomination of contract metadata
     pub const TRANSITION_TYPE_RENOMINATION: usize = 0x10;
 
-    /// [`TransitionType`] that is used by the embedded validation procedures
-    /// [`EmbeddedProcedure::FungibleNoInflation`]
+    /// [`TransitionType`] that is used by the validation procedures checking
+    /// asset inflation (applies to both fungible and non-fungible assets)
     pub const TRANSITION_TYPE_ISSUE: usize = 0xA0;
 
     /// Transition that defines certain grouping of other issue-related

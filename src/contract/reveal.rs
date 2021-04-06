@@ -20,7 +20,7 @@ use lnpbp::client_side_validation::{
 
 use super::OwnedRightsInner;
 use crate::schema::NodeType;
-use crate::{Assignment, AssignmentVec, OwnedRights, StateTypes};
+use crate::{Assignment, AssignmentVec, OwnedRights, State};
 
 /// Merge Error generated in merging operation
 #[derive(
@@ -77,7 +77,7 @@ pub trait RevealedByMerge: Sized {
 impl<STATE> RevealedByMerge for Assignment<STATE>
 where
     Self: Clone,
-    STATE: StateTypes,
+    STATE: State,
     STATE::Confidential: PartialEq + Eq,
     STATE::Confidential:
         From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,

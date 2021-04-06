@@ -11,15 +11,16 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::BTreeSet;
 use std::ops::Deref;
 use std::str::FromStr;
 
 use rgb::schema::{
     constants::*, script, AssignmentAction, Bits, DataFormat,
-    DiscreteFiniteFieldFormat, GenesisSchema, Occurences, Schema, SchemaId,
-    StateFormat, StateSchema, TransitionAction, TransitionSchema,
+    DiscreteFiniteFieldFormat, GenesisSchema, HistoryProofFormat, Occurences,
+    Schema, SchemaId, StateFormat, StateSchema, TransitionAction,
+    TransitionSchema,
 };
+use rgb::vm::embedded;
 
 pub const SCHEMA_ID_BECH32: &'static str =
     "sch1rw6q0s4ynl4k5nmk4u2q25dag4409t7882pq4n6n7ywdrhp4f6cqfaf4xw";
@@ -85,52 +86,6 @@ pub enum TransitionType {
     RightsSplit,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(Debug)]
-#[non_exhaustive]
-#[repr(u8)]
-pub enum HistoryProofFormat {
-    ProofAbsent,
-    ProofV1,
-    ProofV2,
-    ProofV3,
-    ProofV4,
-    ProofV5,
-    ProofV6,
-    ProofV7,
-    ProofV8,
-    ProofV9,
-    ProofV10,
-    ProofV11,
-    ProofV12,
-    ProofV13,
-    ProofV14,
-    ProofV15,
-}
-
-impl HistoryProofFormat {
-    pub fn all() -> BTreeSet<u8> {
-        bset![
-            *HistoryProofFormat::ProofAbsent,
-            *HistoryProofFormat::ProofV1,
-            *HistoryProofFormat::ProofV2,
-            *HistoryProofFormat::ProofV3,
-            *HistoryProofFormat::ProofV4,
-            *HistoryProofFormat::ProofV5,
-            *HistoryProofFormat::ProofV6,
-            *HistoryProofFormat::ProofV7,
-            *HistoryProofFormat::ProofV8,
-            *HistoryProofFormat::ProofV9,
-            *HistoryProofFormat::ProofV10,
-            *HistoryProofFormat::ProofV11,
-            *HistoryProofFormat::ProofV12,
-            *HistoryProofFormat::ProofV13,
-            *HistoryProofFormat::ProofV14,
-            *HistoryProofFormat::ProofV15
-        ]
-    }
-}
-
 pub fn schema() -> Schema {
     use Occurences::*;
 
@@ -179,7 +134,7 @@ pub fn schema() -> Schema {
                 public_rights: none!(),
                 abi: bmap! {
                     // sum(in(inflation)) >= sum(out(inflation), out(assets))
-                    TransitionAction::Validate => script::EmbeddedProcedure::FungibleIssue as script::EntryPoint
+                    TransitionAction::Validate => embedded::NodeValidator::FungibleIssue as script::EntryPoint
                 }
             },
             TransitionType::Transfer => TransitionSchema {
@@ -224,7 +179,7 @@ pub fn schema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    TransitionAction::Validate => script::EmbeddedProcedure::ProofOfBurn as script::EntryPoint
+                    TransitionAction::Validate => embedded::NodeValidator::ProofOfBurn as script::EntryPoint
                 }
             },
             TransitionType::BurnAndReplace => TransitionSchema {
@@ -250,7 +205,7 @@ pub fn schema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    TransitionAction::Validate => script::EmbeddedProcedure::ProofOfBurn as script::EntryPoint
+                    TransitionAction::Validate => embedded::NodeValidator::ProofOfBurn as script::EntryPoint
                 }
             },
             TransitionType::Renomination => TransitionSchema {
@@ -296,7 +251,7 @@ pub fn schema() -> Schema {
                     // control that sum of inputs is equal to the sum of outputs
                     // for each of state types having assigned confidential
                     // amounts
-                    TransitionAction::Validate => script::EmbeddedProcedure::RightsSplit as script::EntryPoint
+                    TransitionAction::Validate => embedded::NodeValidator::RightsSplit as script::EntryPoint
                 }
             }
         },
@@ -325,7 +280,14 @@ pub fn schema() -> Schema {
             // This timestamp is equal to 10/10/2020 @ 2:37pm (UTC)
             FieldType::Timestamp => DataFormat::Integer(Bits::Bit64, 1602340666, core::i64::MAX as i128),
             FieldType::HistoryProof => DataFormat::Bytes(core::u16::MAX),
-            FieldType::HistoryProofFormat => DataFormat::Enum(HistoryProofFormat::all()),
+            FieldType::HistoryProofFormat => DataFormat::Enum(
+                HistoryProofFormat::all()
+                    .iter()
+                    .map(HistoryProofFormat::deref)
+                    .copied()
+                    .collect()
+            ),
+            // TODO: Make it byte format embedding script
             FieldType::BurnUtxo => DataFormat::TxOutPoint
         },
         owned_right_types: type_map! {
@@ -343,7 +305,7 @@ pub fn schema() -> Schema {
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 abi: bmap! {
                     // sum(inputs) == sum(outputs)
-                    AssignmentAction::Validate => script::EmbeddedProcedure::FungibleNoInflation as script::EntryPoint
+                    AssignmentAction::Validate => embedded::AssignmentValidator::FungibleNoInflation as script::EntryPoint
                 }
             },
             OwnedRightsType::OpenEpoch => StateSchema {
@@ -417,7 +379,7 @@ pub fn subschema() -> Schema {
                 public_rights: none!(),
                 abi: bmap! {
                     // sum(in(inflation)) >= sum(out(inflation), out(assets))
-                    TransitionAction::Validate => script::EmbeddedProcedure::FungibleIssue as script::EntryPoint
+                    TransitionAction::Validate => embedded::NodeValidator::FungibleIssue as script::EntryPoint
                 }
             },
             TransitionType::Transfer => TransitionSchema {
@@ -461,7 +423,7 @@ pub fn subschema() -> Schema {
                 },
                 public_rights: none!(),
                 abi: bmap! {
-                    TransitionAction::Validate => script::EmbeddedProcedure::ProofOfBurn as script::EntryPoint
+                    TransitionAction::Validate => embedded::NodeValidator::ProofOfBurn as script::EntryPoint
                 }
             },
             TransitionType::Renomination => TransitionSchema {
@@ -505,7 +467,7 @@ pub fn subschema() -> Schema {
                     // control that sum of inputs is equal to the sum of outputs
                     // for each of state types having assigned confidential
                     // amounts
-                    TransitionAction::Validate => script::EmbeddedProcedure::RightsSplit as script::EntryPoint
+                    TransitionAction::Validate => embedded::NodeValidator::RightsSplit as script::EntryPoint
                 }
             }
         },
@@ -550,7 +512,7 @@ pub fn subschema() -> Schema {
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 abi: bmap! {
                     // sum(inputs) == sum(outputs)
-                    AssignmentAction::Validate => script::EmbeddedProcedure::FungibleNoInflation as script::EntryPoint
+                    AssignmentAction::Validate => embedded::AssignmentValidator::FungibleNoInflation as script::EntryPoint
                 }
             },
             OwnedRightsType::OpenEpoch => StateSchema {
@@ -606,7 +568,7 @@ impl Deref for OwnedRightsType {
             OwnedRightsType::Renomination => &STATE_TYPE_RENOMINATION_RIGHT,
             // Inflation-control-related rights:
             OwnedRightsType::Inflation => &STATE_TYPE_INFLATION_RIGHT,
-            OwnedRightsType::Assets => &STATE_TYPE_OWNED_AMOUNT,
+            OwnedRightsType::Assets => &STATE_TYPE_OWNERSHIP_RIGHT,
             OwnedRightsType::OpenEpoch => &STATE_TYPE_ISSUE_EPOCH_RIGHT,
             OwnedRightsType::BurnReplace => &STATE_TYPE_ISSUE_REPLACEMENT_RIGHT,
         }
@@ -628,32 +590,6 @@ impl Deref for TransitionType {
             TransitionType::Burn => &TRANSITION_TYPE_ISSUE_BURN,
             TransitionType::BurnAndReplace => &TRANSITION_TYPE_ISSUE_REPLACE,
             TransitionType::RightsSplit => &TRANSITION_TYPE_RIGHTS_SPLIT,
-        }
-    }
-}
-
-impl Deref for HistoryProofFormat {
-    type Target = u8;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        match self {
-            HistoryProofFormat::ProofAbsent => &0x0,
-            HistoryProofFormat::ProofV1 => &0x1,
-            HistoryProofFormat::ProofV2 => &0x2,
-            HistoryProofFormat::ProofV3 => &0x3,
-            HistoryProofFormat::ProofV4 => &0x4,
-            HistoryProofFormat::ProofV5 => &0x5,
-            HistoryProofFormat::ProofV6 => &0x6,
-            HistoryProofFormat::ProofV7 => &0x7,
-            HistoryProofFormat::ProofV8 => &0x8,
-            HistoryProofFormat::ProofV9 => &0x9,
-            HistoryProofFormat::ProofV10 => &0xA,
-            HistoryProofFormat::ProofV11 => &0xB,
-            HistoryProofFormat::ProofV12 => &0xC,
-            HistoryProofFormat::ProofV13 => &0xD,
-            HistoryProofFormat::ProofV14 => &0xE,
-            HistoryProofFormat::ProofV15 => &0xF,
         }
     }
 }

@@ -759,7 +759,7 @@ mod _validation {
     use super::*;
     use crate::{
         data, validation, Assignment, DeclarativeStrategy, HashStrategy,
-        NodeId, PedersenStrategy, StateTypes,
+        NodeId, PedersenStrategy, State,
     };
     use lnpbp::client_side_validation::CommitConceal;
 
@@ -966,7 +966,7 @@ mod _validation {
             data: &Assignment<STATE>,
         ) -> validation::Status
         where
-            STATE: StateTypes,
+            STATE: State,
             STATE::Confidential: PartialEq + Eq,
             STATE::Confidential:
                 From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
@@ -978,7 +978,7 @@ mod _validation {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
                         StateFormat::Declarative => {
-                            if a.downcast_ref::<<DeclarativeStrategy as StateTypes>::Confidential>()
+                            if a.downcast_ref::<<DeclarativeStrategy as State>::Confidential>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -987,19 +987,29 @@ mod _validation {
                             }
                         }
                         StateFormat::DiscreteFiniteField(_) => {
-                            if a.downcast_ref::<<PedersenStrategy as StateTypes>::Confidential>()
-                                .is_none()
-                            {
-                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                    assignment_id,
-                                ));
+                            if let Some(value) = a.downcast_ref::<<PedersenStrategy as State>::Confidential>() {
+                                // [SECURITY-CRITICAL]: Bulletproofs validation
+                                if let Err(err) = value.verify_bullet_proof() {
+                                    status.add_failure(
+                                        validation::Failure::InvalidBulletproofs(
+                                            *node_id, assignment_id, err
+                                        )
+                                    );
+                                }
+                            } else {
+                                status.add_failure(
+                                    validation::Failure::SchemaMismatchedStateType(
+                                        assignment_id,
+                                    )
+                                );
                             }
-                            // TODO #15: When other homomorphic formats will be added,
+
+                            // TODO: When other homomorphic formats will be added,
                             //       add information to the status like with
                             //       hashed data below
                         }
                         StateFormat::CustomData(_) => {
-                            match a.downcast_ref::<<HashStrategy as StateTypes>::Confidential>() {
+                            match a.downcast_ref::<<HashStrategy as State>::Confidential>() {
                                 None => {
                                     status.add_failure(
                                         validation::Failure::SchemaMismatchedStateType(
@@ -1024,7 +1034,7 @@ mod _validation {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
                         StateFormat::Declarative => {
-                            if a.downcast_ref::<<DeclarativeStrategy as StateTypes>::Revealed>()
+                            if a.downcast_ref::<<DeclarativeStrategy as State>::Revealed>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -1033,7 +1043,7 @@ mod _validation {
                             }
                         }
                         StateFormat::DiscreteFiniteField(_format) => {
-                            if a.downcast_ref::<<PedersenStrategy as StateTypes>::Revealed>()
+                            if a.downcast_ref::<<PedersenStrategy as State>::Revealed>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -1044,7 +1054,7 @@ mod _validation {
                             //       add type check like with hashed data below
                         }
                         StateFormat::CustomData(format) => {
-                            match a.downcast_ref::<<HashStrategy as StateTypes>::Revealed>() {
+                            match a.downcast_ref::<<HashStrategy as State>::Revealed>() {
                                 None => {
                                     status.add_failure(
                                         validation::Failure::SchemaMismatchedStateType(
@@ -1080,6 +1090,7 @@ mod test {
     use std::collections::BTreeMap;
 
     use crate::script::EntryPoint;
+    use crate::vm::embedded::NodeValidator;
     use lnpbp::client_side_validation::CommitConceal;
     use lnpbp::seals::OutpointReveal;
     use lnpbp::strict_encoding::{strict_serialize, StrictDecode};
@@ -1253,7 +1264,7 @@ mod test {
         assert_eq!(schema.format, StateFormat::Declarative);
         assert_eq!(
             schema.abi.get(&script::AssignmentAction::Validate).unwrap(),
-            &(script::EmbeddedProcedure::NftIssue as EntryPoint)
+            &(NodeValidator::NftIssue as EntryPoint)
         );
     }
 

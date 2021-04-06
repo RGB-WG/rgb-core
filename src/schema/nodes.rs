@@ -15,8 +15,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
 use super::{
-    ExtensionAbi, ExtensionAction, FieldType, GenesisAbi, GenesisAction,
-    NodeAction, Occurences, TransitionAbi, TransitionAction,
+    ExtensionAbi, ExtensionAction, ExtensionType, FieldType, GenesisAbi,
+    GenesisAction, NodeAction, Occurences, TransitionAbi, TransitionAction,
+    TransitionType,
 };
 use crate::script::EntryPoint;
 
@@ -65,6 +66,20 @@ pub enum NodeType {
     /// corresponding transaction outputs assigned some state by ancestors
     #[display("transition")]
     StateTransition,
+}
+
+/// Aggregated type used to supply full contract node type and transition/state
+/// extension type information
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub enum NodeSubtype {
+    /// Genesis node (no subtypes)
+    Genesis,
+
+    /// State transition contract node, subtyped by transition type
+    StateTransition(TransitionType),
+
+    /// State extension contract node, subtyped by extension type
+    StateExtension(ExtensionType),
 }
 
 /// Trait defining common API for all node type schemata
@@ -125,8 +140,9 @@ pub struct TransitionSchema {
 }
 
 lazy_static! {
-    static ref EMPTY_SEALS: OwnedRightsStructure = OwnedRightsStructure::new();
-    static ref EMPTY_VALENCIES: PublicRightsStructure =
+    static ref EMPTY_OWNED_RIGHTS: OwnedRightsStructure =
+        OwnedRightsStructure::new();
+    static ref EMPTY_PUBLIC_RIGHTS: PublicRightsStructure =
         PublicRightsStructure::new();
 }
 
@@ -143,11 +159,11 @@ impl NodeSchema for GenesisSchema {
     }
     #[inline]
     fn closes(&self) -> &OwnedRightsStructure {
-        &EMPTY_SEALS
+        &EMPTY_OWNED_RIGHTS
     }
     #[inline]
     fn extends(&self) -> &PublicRightsStructure {
-        &EMPTY_VALENCIES
+        &EMPTY_PUBLIC_RIGHTS
     }
     #[inline]
     fn owned_rights(&self) -> &OwnedRightsStructure {
@@ -176,7 +192,7 @@ impl NodeSchema for ExtensionSchema {
     }
     #[inline]
     fn closes(&self) -> &OwnedRightsStructure {
-        &EMPTY_SEALS
+        &EMPTY_OWNED_RIGHTS
     }
     #[inline]
     fn extends(&self) -> &PublicRightsStructure {
@@ -213,7 +229,7 @@ impl NodeSchema for TransitionSchema {
     }
     #[inline]
     fn extends(&self) -> &PublicRightsStructure {
-        &EMPTY_VALENCIES
+        &EMPTY_PUBLIC_RIGHTS
     }
     #[inline]
     fn owned_rights(&self) -> &OwnedRightsStructure {
@@ -464,23 +480,24 @@ mod _verify {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::schema::script::EmbeddedProcedure;
     use crate::schema::SchemaVerify;
+    use crate::script::Action;
     use crate::validation::Failure;
+    use crate::vm::embedded::NodeValidator;
     use lnpbp::strict_encoding::StrictDecode;
 
     static GENESIS_SCHEMA: [u8; 71] = [
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
         0, 17, 0, 4, 0, 1, 0, 1, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0,
-        2, 1, 0, 0, 1, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 1, 0, 0, 0, 0,
-        0,
+        2, 1, 0, 0, 1, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 17, 0, 0, 0,
+        0, 0,
     ];
 
     static TRANSITION_SCHEMA: [u8; 97] = [
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
         0, 17, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 25, 0,
         4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1,
-        0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 1,
+        0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 17,
         0, 0, 0, 0, 0,
     ];
 
@@ -488,7 +505,7 @@ mod test {
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
         0, 17, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0,
         0, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3,
-        0, 4, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+        0, 4, 0, 1, 0, 0, 17, 0, 0, 0, 0, 0,
     ];
 
     #[test]
@@ -520,7 +537,7 @@ mod test {
         let mut genesis_abi = GenesisAbi::new();
         genesis_abi.insert(
             GenesisAction::Validate,
-            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
+            NodeValidator::IdentityTransfer as EntryPoint,
         );
 
         assert_eq!(genesis_schema.node_type(), NodeType::Genesis);
@@ -552,7 +569,7 @@ mod test {
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
             TransitionAction::Validate,
-            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
+            NodeValidator::IdentityTransfer as EntryPoint,
         );
 
         assert_eq!(transition_schema.node_type(), NodeType::StateTransition);
@@ -587,7 +604,7 @@ mod test {
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
             ExtensionAction::Validate,
-            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
+            NodeValidator::IdentityTransfer as EntryPoint,
         );
 
         assert_eq!(extension_schema.node_type(), NodeType::StateExtension);
@@ -656,19 +673,19 @@ mod test {
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
             TransitionAction::Validate,
-            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
+            NodeValidator::IdentityTransfer as EntryPoint,
         );
 
         let mut transition_abi2 = TransitionAbi::new();
         transition_abi2.insert(
             TransitionAction::Validate,
-            EmbeddedProcedure::ProofOfBurn as EntryPoint,
+            NodeValidator::ProofOfBurn as EntryPoint,
         );
 
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
             ExtensionAction::Validate,
-            EmbeddedProcedure::FungibleNoInflation as EntryPoint,
+            NodeValidator::IdentityTransfer as EntryPoint,
         );
 
         // Create Four Unequal Transition and Extension Structures
@@ -724,7 +741,7 @@ mod test {
             ),
             Failure::SchemaRootNoAbiMatch {
                 node_type: NodeType::StateTransition,
-                action_id: 0,
+                action_id: Action::ValidateTransition,
             },
         ];
 

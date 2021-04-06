@@ -11,23 +11,65 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use core::any::Any;
+//! API for interfacing different virtual machines
+//!
+//! Concrete virtual machine implementations must be wrapped into this API
 
-pub const RGB_VM_STACK_SIZE_LIMIT: u16 = core::u16::MAX;
+use std::collections::{BTreeMap, BTreeSet};
 
-pub trait VirtualMachine {
-    fn stack(&mut self) -> &mut Vec<Box<dyn Any>>;
+use bitcoin::OutPoint;
 
-    fn push_stack(&mut self, data: Box<dyn Any>) -> bool {
-        if self.stack().len() >= RGB_VM_STACK_SIZE_LIMIT as usize {
-            false
-        } else {
-            self.stack().push(data);
-            true
-        }
-    }
+use crate::script::{Action, EntryPoint};
+use crate::{
+    schema, validation, AssignmentVec, Metadata, NodeId, NodeOutput,
+    OwnedRights, PublicRights, Transition,
+};
 
-    fn pop_stack(&mut self) -> Option<Box<dyn Any>> {
-        self.stack().pop()
-    }
+/// Trait for concrete types wrapping virtual machines to be used from inside
+/// RGB schema validation routines
+pub trait VmApi {
+    /// Initializes virtual machine with the provided byte code and ABI table.
+    ///
+    /// NB: If any of the ABI procedures from [`Procedure`] are not defined than
+    /// virtual machine MUST return `Result::Ok(())` (meaning that the function
+    /// succeeded)
+    fn with(
+        byte_code: &[u8],
+        abi: &BTreeMap<impl Into<Action> + Copy, EntryPoint>,
+    ) -> Result<Self, validation::Failure>
+    where
+        Self: Sized;
+
+    /// Validates contract node
+    fn validate_node(
+        &self,
+        node_id: NodeId,
+        node_subtype: schema::NodeSubtype,
+        previous_owned_rights: &OwnedRights,
+        current_owned_rights: &OwnedRights,
+        previous_public_rights: &PublicRights,
+        current_public_rights: &PublicRights,
+        current_meta: &Metadata,
+    ) -> Result<(), validation::Failure>;
+
+    /// Validates single state assignment
+    fn validate_assignment(
+        &self,
+        node_id: NodeId,
+        node_subtype: schema::NodeSubtype,
+        owned_rights_type: schema::OwnedRightType,
+        previous_state: &AssignmentVec,
+        current_state: &AssignmentVec,
+        current_meta: &Metadata,
+    ) -> Result<(), validation::Failure>;
+
+    /// Constructs blank state transition transferring all owned rights from
+    /// `inputs` to a new set of UTXOs in `outpoints`. Fails if the number of
+    /// outpoints does not allow to fit all of the state
+    fn blank_transition(
+        &self,
+        node_id: NodeId,
+        inputs: &BTreeSet<NodeOutput>,
+        outpoints: &BTreeSet<OutPoint>,
+    ) -> Result<Transition, validation::Failure>;
 }

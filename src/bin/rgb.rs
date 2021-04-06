@@ -383,6 +383,7 @@ fn main() -> Result<(), String> {
                 )))?;
                 let status = consignment.validate(
                     &schema,
+                    None,
                     &ElectrumTxResolver::new(&electrum)
                         .map_err(|err| format!("{:#?}", err))?,
                 );

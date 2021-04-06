@@ -24,10 +24,10 @@ pub mod value;
 pub use assignments::{
     Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy,
     HashStrategy, NodeOutput, OwnedRights, ParentOwnedRights,
-    ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
-    StateTypes,
+    ParentPublicRights, PedersenStrategy, PublicRights, RevealedState, State,
+    StateType,
 };
-pub(self) use assignments::{
+pub(crate) use assignments::{
     OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,
 };
 pub use conceal::{ConcealSeals, ConcealState};

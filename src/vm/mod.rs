@@ -11,10 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-mod embedded;
-mod simplicity;
+//! RGB virtual machine
+
+pub mod embedded;
 mod vm;
 
-pub use embedded::Embedded;
-pub use simplicity::Simplicity;
-pub use vm::VirtualMachine;
+pub use embedded::EmbeddedVm;
+pub use vm::VmApi;
