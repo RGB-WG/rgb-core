@@ -11,6 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! High-level RGB20 API performing asset issuance, transfers and other
+//! asset-management operations
+
 use chrono::Utc;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
@@ -22,8 +25,6 @@ use rgb::secp256k1zkp;
 
 use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
 use super::{Allocation, Asset};
-
-use crate::asset;
 
 /// Errors happening during RGB-20 asset state transitions
 #[derive(
@@ -39,6 +40,8 @@ pub enum Error {
 }
 
 impl Asset {
+    /// Performs primary asset issue, producing genesis data and an [`Asset`]
+    /// structure parsed from it.
     pub fn issue(
         chain: Chain,
         ticker: String,
@@ -49,7 +52,7 @@ impl Asset {
         inflation: BTreeMap<OutPoint, AtomicValue>,
         renomination: Option<OutPoint>,
         epoch: Option<OutPoint>,
-    ) -> Result<(Asset, Genesis), asset::Error> {
+    ) -> (Asset, Genesis) {
         let now = Utc::now().timestamp();
         let mut metadata = type_map! {
             FieldType::Ticker => field!(String, ticker.to_uppercase()),
@@ -135,11 +138,15 @@ impl Asset {
             bset![],
         );
 
-        let asset = Asset::try_from(genesis.clone())?;
+        let asset = Asset::try_from(genesis.clone())
+            .expect("RGB20 asset genesis parser is broken");
 
-        Ok((asset, genesis))
+        (asset, genesis)
     }
 
+    /// Performs secondary issue closing an inflation-controlling seal over
+    /// inflation state transition, which is constructed and returned by this
+    /// function
     pub fn inflate(
         self,
         closing: BTreeSet<OutPoint>,
@@ -149,6 +156,8 @@ impl Asset {
         unimplemented!()
     }
 
+    /// Opens a new epoch by closing epoch-controlling seal over epoch opening
+    /// state transition, which is constructed and returned by this function
     pub fn epoch(
         self,
         closing: OutPoint,
@@ -158,6 +167,9 @@ impl Asset {
         unimplemented!()
     }
 
+    /// Burns certain amount of the asset by closing burn-controlling seal over
+    /// inflation state transition, which is constructed and returned by this
+    /// function
     pub fn burn(
         self,
         closing: OutPoint,

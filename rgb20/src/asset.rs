@@ -159,6 +159,8 @@ impl Asset {
         })
     }
 
+    /// Returns information in form of a float number about specific measure of
+    /// the asset supply, if known, or [`f64::NAN`] otherwise
     pub fn fractional_supply(
         &self,
         measure: SupplyMeasure,
@@ -170,11 +172,15 @@ impl Asset {
         PreciseAmount::transmutate_into(value, self.decimal_precision)
     }
 
+    /// Returns sum of all known allocations, in atomic value units
     #[inline]
     pub fn known_value(&self) -> AtomicValue {
         self.known_allocations.iter().map(Allocation::value).sum()
     }
 
+    /// Returns sum of known allocation after applying `filter` function. Useful
+    /// for filtering UTXOs owned by the current wallet. The returned value is
+    /// in atomic units (see [`AtomicValue`]
     pub fn known_filtered_value<F>(&self, filter: F) -> AtomicValue
     where
         F: Fn(&Allocation) -> bool,
@@ -186,6 +192,8 @@ impl Asset {
             .sum()
     }
 
+    /// Returns sum of all known allocations, as a floating point value (see
+    /// [`FractionalAmount`])
     pub fn known_amount(&self) -> FractionalAmount {
         self.known_allocations
             .iter()
@@ -196,6 +204,9 @@ impl Asset {
             .sum()
     }
 
+    /// Returns sum of known allocation after applying `filter` function. Useful
+    /// for filtering UTXOs owned by the current wallet. The returned amount is
+    /// a floating point number (see [`FractionalAmount`])
     pub fn known_filtered_amount<F>(&self, filter: F) -> FractionalAmount
     where
         F: Fn(&Allocation) -> bool,
@@ -226,6 +237,8 @@ impl Asset {
     }
 
     #[inline]
+    /// Lists all known allocations for the given bitcoin transaction
+    /// [`OutPoint`]
     pub fn outpoint_allocations(&self, outpoint: OutPoint) -> Vec<Allocation> {
         self.known_allocations
             .iter()
@@ -234,6 +247,7 @@ impl Asset {
             .collect()
     }
 
+    /// Adds new allocation to the list of known allocations
     pub fn add_allocation(
         &mut self,
         outpoint: OutPoint,
@@ -250,7 +264,9 @@ impl Asset {
         }
     }
 
-    #[allow(dead_code)]
+    /// Adds issue to the list of known issues. This is an internal function
+    /// which should not be used directly; instead construct the asset structure
+    /// from the [`Consignment`] using [`Asset::try_from`] method.
     fn add_issue(
         &mut self,
         consignment: &Consignment,
@@ -267,6 +283,9 @@ impl Asset {
         Ok(())
     }
 
+    /// Adds an epoch to the list of known epochs. This is an internal function
+    /// which should not be used directly; instead construct the asset structure
+    /// from the [`Consignment`] using [`Asset::try_from`] method.
     fn add_epoch(
         &mut self,
         consignment: &Consignment,

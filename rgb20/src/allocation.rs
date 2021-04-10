@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! Information about RGB20 asset allocations
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
@@ -35,6 +37,9 @@ use rgb::{value, AtomicValue, NodeId, SealDefinition, ToSealDefinition};
 /// Error parsing data
 pub struct ParseError;
 
+/// Information about specific allocated asset value, assigned to either
+/// external bitcoin transaction outpoint or specific witness transaction output
+/// number
 #[derive(
     Clone,
     Copy,
@@ -54,11 +59,20 @@ pub struct ParseError;
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct AllocatedValue {
+    /// Assigned value of the asset
     pub value: AtomicValue,
+
+    /// Transaction output number
     pub vout: u32,
+
+    /// [`Txid`] of the external transaction, if the amount assigned not to the
+    /// witness transaction output
     pub txid: Option<Txid>,
 }
 
+/// Information about asset value allocated to well-formed bitcoin transaction
+/// output. Unlike [`AllocatedValue`] keeps the full transaction id even if the
+/// output is contained within the witness transaction.
 #[derive(
     Clone,
     Copy,
@@ -80,10 +94,14 @@ pub struct AllocatedValue {
 #[display("{value}@{outpoint}")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct OutpointValue {
+    /// Assigned value of the asset
     pub value: AtomicValue,
+
+    /// Outpoint containing asset assignment
     pub outpoint: OutPoint,
 }
 
+/// Information about RGB20 asset assigned to a blinded transaction output
 #[derive(
     Clone,
     Copy,
@@ -105,7 +123,10 @@ pub struct OutpointValue {
 #[display("{value}@{seal_confidential}")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct UtxobValue {
+    /// Assigned value of the asset
     pub value: AtomicValue,
+
+    /// Blinded transaction outpoint
     pub seal_confidential: OutpointHash,
 }
 
@@ -201,6 +222,7 @@ impl FromStr for UtxobValue {
     }
 }
 
+/// Information about asset allocation source
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -229,6 +251,8 @@ pub struct Allocation {
 }
 
 impl Allocation {
+    /// Constructs asset allocation information from the provided function
+    /// arguments
     #[inline]
     pub(crate) fn with(
         node_id: NodeId,
@@ -244,6 +268,8 @@ impl Allocation {
         }
     }
 
+    /// Convenience function returning atomic value of the asset inside the
+    /// assignments. Equal to `Allocation::revealed_amount.value`
     #[inline]
     pub fn value(&self) -> AtomicValue {
         self.revealed_amount.value

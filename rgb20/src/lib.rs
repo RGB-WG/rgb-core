@@ -20,7 +20,7 @@
     unused_mut,
     unused_imports,
     dead_code,
-    //missing_docs
+    missing_docs
 )]
 
 //! RGB20 library for working with fungible asset types, operating under

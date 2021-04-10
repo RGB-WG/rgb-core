@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! RGB20 schemata defining fungible asset smart contract prototypes.
+
 use std::ops::Deref;
 use std::str::FromStr;
 
@@ -22,11 +24,16 @@ use rgb::schema::{
 };
 use rgb::vm::embedded;
 
+/// Schema identifier for full RGB20 fungible asset
 pub const SCHEMA_ID_BECH32: &'static str =
     "sch1rw6q0s4ynl4k5nmk4u2q25dag4409t7882pq4n6n7ywdrhp4f6cqfaf4xw";
+
+/// Schema identifier for full RGB20 fungible asset subschema prohibiting burn &
+/// replace operations
 pub const SUBSCHEMA_ID_BECH32: &'static str =
     "sch1zcdeayj9vpv852tx2sjzy7esyy82a6nk0gs854ktam24zxee42rqyzg95g";
 
+/// RGB20 schema-specific processing errors
 #[derive(
     Clone,
     Copy,
@@ -40,52 +47,108 @@ pub const SUBSCHEMA_ID_BECH32: &'static str =
     Error,
     From,
 )]
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Error {
+    /// the provided genesis or state transition does not contain all metadata
+    /// fields required for the RGB20 asset
     NotAllFieldsPresent,
 
+    /// genesis schmeta id does not match any of RGB20 schemata
     WrongSchemaId,
 }
 
+/// Field types for RGB20 schemata
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 pub enum FieldType {
+    /// Asset ticker
+    ///
+    /// Used within context of genesis or renomination state transition
     Ticker,
+
+    /// Asset name
+    ///
+    /// Used within context of genesis or renomination state transition
     Name,
+
+    /// Text of the asset contract
+    ///
+    /// Used within context of genesis or renomination state transition
     RicardianContract,
+
+    /// Decimal precision
     Precision,
+
+    /// Supply issued with the genesis, secondary issuance or burn & replace
+    /// state transition
     IssuedSupply,
+
+    /// Supply burned with the burn or burn & replace state transition
     BurnedSupply,
+
+    /// Timestamp for genesis
     Timestamp,
+
+    /// UTXO containing the burned asset
     BurnUtxo,
+
+    /// Proofs of the burned supply
     HistoryProof,
+
+    /// Media format for the information proving burned supply
     HistoryProofFormat,
 }
 
+/// Owned right types used by RGB20 schemata
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum OwnedRightsType {
+    /// Inflation control right (secondary issuance right)
     Inflation,
+
+    /// Asset ownership right
     Assets,
+
+    /// Right to open a new burn & replace epoch
     OpenEpoch,
+
+    /// Right to perform burn or burn & replace operation
     BurnReplace,
+
+    /// Right to perform asset renomination
     Renomination,
 }
 
+/// State transition types defined by RGB20 schemata
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum TransitionType {
+    /// Secondary issuance
     Issue,
+
+    /// Asset transfer
     Transfer,
+
+    /// Opening of the new burn & replace asset epoch
     Epoch,
+
+    /// Asset burn operation
     Burn,
+
+    /// Burning and replacement (re-issuance) of the asset
     BurnAndReplace,
+
+    /// Renomination (change in the asset name, ticker, contract text of
+    /// decimal precision).
     Renomination,
+
+    /// Operation splitting rights assigned to the same UTXO
     RightsSplit,
 }
 
+/// Builds & returns complete RGB20 schema (root schema object)
 pub fn schema() -> Schema {
     use Occurences::*;
 
