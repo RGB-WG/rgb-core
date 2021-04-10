@@ -4,16 +4,8 @@ AS_DEPENDENCY=true
 DO_LINT=true
 
 # Library components
-FEATURES="lnp"
-# Cryptographic optionals
-FEATURES="${FEATURES} keygen bulletproofs elgamal"
-# Core rust optionals
-FEATURES="${FEATURES} serde tokio async"
-# Networking
-FEATURES="${FEATURES} tor url websockets"
-FEATURES="${FEATURES} tor,url"
-# Full LNP strength, but without Serde
-FEATURES="${FEATURES} lnp,websockets,url,tokio,async,keygen,bulletproofs"
+FEATURES="cli serde"
+
 
 if [ "$DO_COV" = true ]
 then
@@ -37,11 +29,15 @@ do
     cargo check --verbose --features="$feature" --all-targets
 done
 
-# Check that we can build services with different features
-for feature in "server client embedded cli server,serde client,serde"
+# Check that we can build rgb* crates
+for crate in rgb20 rgb21 rgb22 rgb23
 do
-    cargo check --manifest-path services/Cargo.toml --verbose --features="$feature"
+    cargo check --manifest-path $crate/Cargo.toml --verbose --features all
 done
+
+# Check that we can build rgb binary
+# rgb binary is not building by following command and I am not sure why
+cargo check --bins --features all --verbose
 
 # Fuzz if told to
 if [ "$DO_FUZZ" = true ]
