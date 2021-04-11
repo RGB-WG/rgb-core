@@ -16,6 +16,8 @@
 //! some additive values, like amount of asset – see [`rgb::value`] and
 //! [`AtomicAmount`]).
 //!
+//! # Allocation types
+//!
 //! RGB Core library defines three data types for holding allocation data, which
 //! differ in their support for witness-based assignments and blinding secret:
 //!
@@ -24,6 +26,27 @@
 //! | [`OutpointValue`]  | [`OutPoint`]               | No          | No           | Genesis creation                              |
 //! | [`AllocatedValue`] | [`SealPoint`]              | Yes         | No           | State transition with self-owned rights       |
 //! | [`UtxobValue`]     | [`OutpointHash`]           | Implicit    | Implicit     | State transition with externally-owned rights |
+//!
+//! # Allocation maps
+//!
+//! In most of the cases functions constructing state transitions consume
+//! allocation data with different structure, depending on specific schema
+//! requirements. For this purpose this module defines a set of helper type
+//! aliases (**allocation maps**):
+//!
+//! | **Type name**          | **Seals can be repeated** | **Seal blinding** | **Can use witness?** | **Seals**      | **Underlying type**                                 | **Use cases**           |
+//! | ---------------------- | ------------------------- | ----------------- | -------------------- | -------------- | --------------------------------------------------- | ----------------------- |
+//! | [`OutpointValueVec`]   | Yes                       | Not important     | No                   | OutPoint       | `Vec<`[`OutpointValue`]`>`                          | Genesis, ownership      |
+//! | [`OutpointValueMap`]   | No                        | Not important     | No                   | OutPoint       | `BTreeMap<`[`OutPoint`]`, `[`AtomicValue`]`>`       | Genesis, control rights |
+//! | [`AllocationValueVec`] | Yes                       | Not important     | Yes                  | SealPoint      | `Vec<`[`AllocatedValue`]`>`                         | Change                  |
+//! | [`AllocationValueMap`] | No                        | Not important     | Yes                  | SealPoint      | `BTreeMap<`[`SealPoint`]`, `[`AtomicValue`]`>`      | Control rights          |
+//! | [`SealValueMap`]       | By using blinding         | Present           | Yes                  | SealDefinition | `BTreeMap<`[`SealDefinition`]`, `[`AtomicValue`]`>` | Zero balancing          |
+//! | [`EndpointValueMap`]   | By using blinding         | Predefined        | Yes                  | SealEndpoint   | `BTreeMap<`[`SealEndpoint`]`, `[`AtomicValue`]`>`   | Payment                 |
+//!
+//! Allocation maps are used by schema-specific APIs node constructors. They
+//! allow creation of type-safe arguments listing each of the seals exactly
+//! once, and providing [`AtomicValue`] that has to be assigned to each of the
+//! seals.
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -34,12 +57,14 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::blockdata::transaction::ParseOutPointError;
+use bitcoin::secp256k1::rand::thread_rng;
 use bitcoin::OutPoint;
 use lnpbp::seals::{OutpointHash, OutpointReveal};
 
 use crate::seal::SealPoint;
 use crate::{
-    value, AtomicValue, NodeId, NodeOutput, SealDefinition, ToSealDefinition,
+    value, Assignment, AssignmentVec, AtomicValue, NodeId, NodeOutput,
+    SealDefinition, SealEndpoint, ToSealDefinition,
 };
 
 /// Error parsing allocation data
@@ -314,8 +339,172 @@ impl Allocation {
     }
 }
 
-/// Allocation maps are used by schema-specific APIs node constructors. They
-/// allow creation of type-safe arguments listing each of the seals exactly
-/// once, and providing [`AtomicAmount`] that has to be assigned to each of the
-/// seals.
-pub type AllocationMap<S> = BTreeMap<S, AtomicValue>;
+/// Allocation map using vec of non-blinded seal definitions which can't assign
+/// to a witness transaction output. Seal definition may be repeating (i.e.
+/// single seal may receive multiple allocations)
+pub type OutpointValueVec = Vec<OutpointValue>;
+
+/// Allocation map using unique set of non-blinded seal definitions, which can't
+/// assign to a witness transaction output.
+pub type OutpointValueMap = BTreeMap<OutPoint, AtomicValue>;
+
+/// Allocation map using vec of non-blinded seal definitions, which may be
+/// repeating (i.e. single seal may receive multiple allocations)
+pub type AllocationValueVec = Vec<AllocatedValue>;
+
+/// Allocation map using unique set of non-blinded seal definitions
+pub type AllocationValueMap = BTreeMap<SealPoint, AtomicValue>;
+
+/// Allocation map using unique set of seal definitions
+pub type SealValueMap = BTreeMap<SealDefinition, AtomicValue>;
+
+/// Allocation map using unique set of blinded consignment endpoints
+pub type EndpointValueMap = BTreeMap<SealEndpoint, AtomicValue>;
+
+pub trait AllocationMap {
+    fn sum(&self) -> AtomicValue;
+    fn into_assignments(self) -> AssignmentVec;
+}
+
+impl AllocationMap for OutpointValueVec {
+    fn sum(&self) -> u64 {
+        self.iter().map(|v| v.value).sum()
+    }
+
+    fn into_assignments(self) -> AssignmentVec {
+        self.into_seal_value_map().into_assignments()
+    }
+}
+
+impl AllocationMap for OutpointValueMap {
+    fn sum(&self) -> u64 {
+        self.values().sum()
+    }
+
+    fn into_assignments(self) -> AssignmentVec {
+        self.into_seal_value_map().into_assignments()
+    }
+}
+
+impl AllocationMap for AllocationValueVec {
+    fn sum(&self) -> u64 {
+        self.iter().map(|v| v.value).sum()
+    }
+
+    fn into_assignments(self) -> AssignmentVec {
+        self.into_seal_value_map().into_assignments()
+    }
+}
+
+impl AllocationMap for AllocationValueMap {
+    fn sum(&self) -> u64 {
+        self.values().sum()
+    }
+
+    fn into_assignments(self) -> AssignmentVec {
+        self.into_seal_value_map().into_assignments()
+    }
+}
+
+impl AllocationMap for SealValueMap {
+    fn sum(&self) -> u64 {
+        self.values().sum()
+    }
+
+    fn into_assignments(self) -> AssignmentVec {
+        let mut rng = thread_rng();
+        AssignmentVec::DiscreteFiniteField(
+            self.into_iter()
+                .map(|(seal, value)| Assignment::Revealed {
+                    seal_definition: seal,
+                    assigned_state: value::Revealed::with_amount(
+                        value, &mut rng,
+                    ),
+                })
+                .collect(),
+        )
+    }
+}
+
+impl AllocationMap for EndpointValueMap {
+    fn sum(&self) -> u64 {
+        self.values().sum()
+    }
+
+    fn into_assignments(self) -> AssignmentVec {
+        let mut rng = thread_rng();
+        AssignmentVec::DiscreteFiniteField(
+            self.into_iter()
+                .map(|(seal, value)| {
+                    let assigned_state =
+                        value::Revealed::with_amount(value, &mut rng);
+                    match seal {
+                        SealEndpoint::TxOutpoint(confidential) => {
+                            Assignment::ConfidentialSeal {
+                                seal_definition: confidential,
+                                assigned_state,
+                            }
+                        }
+                        SealEndpoint::WitnessVout { vout, blinding } => {
+                            Assignment::Revealed {
+                                seal_definition: SealDefinition::WitnessVout {
+                                    vout,
+                                    blinding,
+                                },
+                                assigned_state,
+                            }
+                        }
+                    }
+                })
+                .collect(),
+        )
+    }
+}
+
+pub trait IntoSealValueMap {
+    fn into_seal_value_map(self) -> SealValueMap;
+}
+
+impl IntoSealValueMap for OutpointValueVec {
+    fn into_seal_value_map(self) -> SealValueMap {
+        self.into_iter()
+            .map(|outpoint_value| {
+                (
+                    SealDefinition::TxOutpoint(outpoint_value.outpoint.into()),
+                    outpoint_value.value,
+                )
+            })
+            .collect()
+    }
+}
+
+impl IntoSealValueMap for OutpointValueMap {
+    fn into_seal_value_map(self) -> SealValueMap {
+        self.into_iter()
+            .map(|(outpoint, value)| {
+                (SealDefinition::TxOutpoint(outpoint.into()), value)
+            })
+            .collect()
+    }
+}
+
+impl IntoSealValueMap for AllocationValueVec {
+    fn into_seal_value_map(self) -> SealValueMap {
+        self.into_iter()
+            .map(|allocated_value| {
+                (
+                    allocated_value.seal.to_seal_definition(),
+                    allocated_value.value,
+                )
+            })
+            .collect()
+    }
+}
+
+impl IntoSealValueMap for AllocationValueMap {
+    fn into_seal_value_map(self) -> SealValueMap {
+        self.into_iter()
+            .map(|(seal, value)| (seal.to_seal_definition(), value))
+            .collect()
+    }
+}

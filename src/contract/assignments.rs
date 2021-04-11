@@ -24,8 +24,8 @@ use lnpbp::seals::OutpointReveal;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
-    data, seal, value, AtomicValue, ConcealSeals, ConcealState, NoDataError,
-    SealDefinition, SealEndpoint, SECP256K1_ZKP,
+    data, seal, value, ConcealSeals, ConcealState, EndpointValueMap,
+    NoDataError, SealDefinition, SealEndpoint, SealValueMap, SECP256K1_ZKP,
 };
 use crate::{schema, ConfidentialDataError, StateRetrievalError};
 
@@ -70,8 +70,8 @@ impl Default for AssignmentVec {
 impl AssignmentVec {
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
-        allocations_ours: Vec<(SealDefinition, AtomicValue)>,
-        allocations_theirs: Vec<(SealEndpoint, AtomicValue)>,
+        allocations_ours: SealValueMap,
+        allocations_theirs: EndpointValueMap,
     ) -> Self {
         if allocations_ours.len() + allocations_theirs.len() == 0 {
             return Self::DiscreteFiniteField(vec![]);
@@ -1304,7 +1304,7 @@ mod test {
             .zip(output_amounts[..partition].iter());
 
         // Create our allocations
-        let ours: Vec<(SealDefinition, AtomicValue)> = zip_data
+        let ours: SealValueMap = zip_data
             .map(|(txid, amount)| {
                 (
                     Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
@@ -1322,7 +1322,7 @@ mod test {
             .zip(output_amounts[partition..].iter());
 
         // Create their allocations
-        let theirs: Vec<(SealEndpoint, AtomicValue)> = zip_data2
+        let theirs: EndpointValueMap = zip_data2
             .map(|(txid, amount)| {
                 (
                     SealEndpoint::TxOutpoint(

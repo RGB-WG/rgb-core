@@ -40,7 +40,7 @@ use core::convert::TryFrom;
 use std::fmt::{self, Display, Formatter, Write};
 use std::str::FromStr;
 
-use bitcoin::secp256k1::rand::RngCore;
+use bitcoin::secp256k1::rand::{thread_rng, RngCore};
 use bitcoin::{OutPoint, Txid};
 use lnpbp::client_side_validation::{
     commit_strategy, CommitConceal, CommitEncodeWithStrategy,
@@ -208,6 +208,20 @@ pub struct SealPoint {
 }
 
 impl Seal for SealPoint {}
+
+impl ToSealDefinition for SealPoint {
+    fn to_seal_definition(&self) -> SealDefinition {
+        match self.txid {
+            Some(txid) => SealDefinition::TxOutpoint(
+                OutPoint::new(txid, self.vout).into(),
+            ),
+            None => SealDefinition::WitnessVout {
+                vout: self.vout,
+                blinding: thread_rng().next_u64(),
+            },
+        }
+    }
+}
 
 impl Display for SealPoint {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

@@ -23,7 +23,11 @@ mod rights;
 pub mod seal;
 pub mod value;
 
-pub use allocation::{AllocatedValue, Allocation, OutpointValue, UtxobValue};
+pub use allocation::{
+    AllocatedValue, Allocation, AllocationMap, AllocationValueMap,
+    AllocationValueVec, EndpointValueMap, IntoSealValueMap, OutpointValue,
+    OutpointValueMap, OutpointValueVec, SealValueMap, UtxobValue,
+};
 pub(self) use assignments::EMPTY_ASSIGNMENT_VEC;
 pub use assignments::{
     Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy,
@@ -41,7 +45,9 @@ pub use rights::{
 pub(crate) use rights::{
     OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,
 };
-pub use seal::{Seal, SealDefinition, SealEndpoint, ToSealDefinition};
+pub use seal::{
+    Seal, SealDefinition, SealEndpoint, SealPoint, ToSealDefinition,
+};
 pub use value::AtomicValue;
 
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;

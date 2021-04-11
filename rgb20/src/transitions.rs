@@ -70,8 +70,8 @@ impl Asset {
         name: String,
         description: Option<String>,
         precision: u8,
-        allocation: Vec<OutpointValue>,
-        inflation: BTreeMap<OutPoint, AtomicValue>,
+        allocations: OutpointValueVec,
+        inflation: OutpointValueMap,
         renomination: Option<OutPoint>,
         epoch: Option<OutPoint>,
     ) -> (Asset, Genesis) {
@@ -89,17 +89,7 @@ impl Asset {
             );
         }
 
-        let mut issued_supply = 0u64;
-        let allocations = allocation
-            .into_iter()
-            .map(|outpoint_value| {
-                issued_supply += outpoint_value.value;
-                (
-                    SealDefinition::TxOutpoint(outpoint_value.outpoint.into()),
-                    outpoint_value.value,
-                )
-            })
-            .collect();
+        let issued_supply = allocations.sum();
         let mut owned_rights = BTreeMap::new();
         owned_rights.insert(
             *OwnedRightsType::Assets,
@@ -108,8 +98,8 @@ impl Asset {
                     value: issued_supply,
                     blinding: secp256k1zkp::key::ONE_KEY.into(),
                 }],
-                allocations,
-                vec![],
+                allocations.into_seal_value_map(),
+                empty![],
             ),
         );
         metadata.insert(*FieldType::IssuedSupply, field!(U64, issued_supply));
@@ -117,17 +107,7 @@ impl Asset {
         if !inflation.is_empty() {
             owned_rights.insert(
                 *OwnedRightsType::Inflation,
-                AssignmentVec::CustomData(
-                    inflation
-                        .into_iter()
-                        .map(|(outpoint, value)| Assignment::Revealed {
-                            seal_definition: SealDefinition::TxOutpoint(
-                                outpoint.into(),
-                            ),
-                            assigned_state: data::Revealed::U64(value),
-                        })
-                        .collect(),
-                ),
+                inflation.into_assignments(),
             );
         }
 
@@ -175,11 +155,11 @@ impl Asset {
     pub fn inflate(
         self,
         closing: BTreeSet<OutPoint>,
-        next_inflation: BTreeMap<SealDefinition, AtomicValue>,
-        allocations: Vec<(SealDefinition, AtomicValue)>,
+        next_inflation: AllocationValueMap,
+        allocations: AllocationValueVec,
     ) -> Result<Transition, Error> {
-        let issued_supply = allocations.iter().map(|(_, value)| value).sum();
-        let future_inflation: AtomicValue = next_inflation.values().sum();
+        let issued_supply = allocations.sum();
+        let future_inflation: AtomicValue = next_inflation.sum();
 
         let input_issues: Vec<&Issue> = self
             .known_issues()
@@ -246,22 +226,14 @@ impl Asset {
                     value: issued_supply,
                     blinding: secp256k1zkp::key::ONE_KEY.into(),
                 }],
-                allocations.into_iter().collect(),
-                vec![],
+                allocations.into_seal_value_map(),
+                empty![],
             ),
         );
         if !next_inflation.is_empty() {
             owned_rights.insert(
                 *OwnedRightsType::Inflation,
-                AssignmentVec::CustomData(
-                    next_inflation
-                        .into_iter()
-                        .map(|(seal_definition, value)| Assignment::Revealed {
-                            seal_definition,
-                            assigned_state: data::Revealed::U64(value),
-                        })
-                        .collect(),
-                ),
+                next_inflation.into_assignments(),
             );
         }
 
@@ -281,8 +253,8 @@ impl Asset {
     pub fn epoch(
         self,
         closing: OutPoint,
-        next_epoch: Option<SealDefinition>,
-        burning_seal: Option<SealDefinition>,
+        next_epoch: Option<SealPoint>,
+        burning_seal: Option<SealPoint>,
     ) -> Result<Transition, Error> {
         todo!()
     }
@@ -295,7 +267,7 @@ impl Asset {
         closing: OutPoint,
         burned_value: AtomicValue,
         burned_utxos: BTreeSet<OutPoint>,
-        next_burn: Option<SealDefinition>,
+        next_burn: Option<SealPoint>,
     ) -> Result<Transition, Error> {
         todo!()
     }
@@ -308,8 +280,8 @@ impl Asset {
         closing: OutPoint,
         burned_value: AtomicValue,
         burned_utxos: BTreeSet<OutPoint>,
-        next_burn: Option<SealDefinition>,
-        allocations: Vec<(SealDefinition, AtomicValue)>,
+        next_burn: Option<SealPoint>,
+        allocations: AllocationValueVec,
     ) -> Result<Transition, Error> {
         todo!()
     }
@@ -319,8 +291,8 @@ impl Asset {
     pub fn transfer(
         self,
         inputs: BTreeSet<OutPoint>,
-        payment: BTreeMap<SealEndpoint, AtomicValue>,
-        change: BTreeMap<SealDefinition, AtomicValue>,
+        payment: EndpointValueMap,
+        change: SealValueMap,
     ) -> Result<Transition, Error> {
         // Collecting all input allocations
         let mut input_allocations = Vec::<Allocation>::new();
@@ -337,21 +309,7 @@ impl Asset {
             .fold(0u64, |acc, alloc| acc + alloc.revealed_amount().value);
 
         let metadata = type_map! {};
-        let mut total_outputs = 0;
-        let allocations_ours = change
-            .into_iter()
-            .map(|(seal, value)| {
-                total_outputs += value;
-                (seal, value)
-            })
-            .collect();
-        let allocations_theirs = payment
-            .into_iter()
-            .map(|(seal_proto, value)| {
-                total_outputs += value;
-                (seal_proto, value)
-            })
-            .collect();
+        let total_outputs = change.sum() + payment.sum();
 
         if total_inputs != total_outputs {
             Err(Error::InputsNotEqualOutputs)?
@@ -363,7 +321,7 @@ impl Asset {
             .collect();
         let assignments = type_map! {
             OwnedRightsType::Assets =>
-            AssignmentVec::zero_balanced(input_amounts, allocations_ours, allocations_theirs)
+            AssignmentVec::zero_balanced(input_amounts, change, payment)
         };
 
         let mut parent = ParentOwnedRights::default();
