@@ -18,22 +18,27 @@ mod conceal;
 mod metadata;
 pub mod nodes;
 pub mod reveal;
+mod rights;
 pub mod seal;
 pub mod value;
 
+pub(self) use assignments::EMPTY_ASSIGNMENT_VEC;
 pub use assignments::{
     Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy,
-    HashStrategy, NodeOutput, OwnedRights, ParentOwnedRights,
-    ParentPublicRights, PedersenStrategy, PublicRights, RevealedState, State,
-    StateType,
-};
-pub(crate) use assignments::{
-    OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,
+    HashStrategy, PedersenStrategy, RevealedState, State, StateType,
 };
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
-pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, Transition};
+pub use nodes::{
+    ContractId, Extension, Genesis, Node, NodeId, NodeOutput, Transition,
+};
 pub use reveal::RevealedByMerge;
+pub use rights::{
+    OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights,
+};
+pub(crate) use rights::{
+    OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,
+};
 pub use seal::{SealDefinition, SealEndpoint, ToSealDefinition};
 pub use value::AtomicValue;
 

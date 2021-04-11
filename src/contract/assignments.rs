@@ -11,342 +11,27 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use amplify::{AsAny, Wrapper};
+use amplify::AsAny;
 use core::cmp::Ordering;
 use core::fmt::Debug;
-use std::collections::{btree_map, btree_set, BTreeMap, BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::io;
 
 use lnpbp::client_side_validation::{
-    commit_strategy, CommitConceal, CommitEncode, CommitEncodeWithStrategy,
-    ConsensusCommit, ConsensusMerkleCommit, MerkleNode, MerkleSource,
-    ToMerkleSource,
+    CommitConceal, CommitEncode, ConsensusCommit, MerkleNode,
 };
 use lnpbp::seals::OutpointReveal;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
     data, seal, value, AtomicValue, ConcealSeals, ConcealState, NoDataError,
-    NodeId, SealDefinition, SealEndpoint, SECP256K1_ZKP,
+    SealDefinition, SealEndpoint, SECP256K1_ZKP,
 };
 use crate::{schema, ConfidentialDataError, StateRetrievalError};
 
 lazy_static! {
-    static ref EMPTY_ASSIGNMENT_VEC: AssignmentVec = AssignmentVec::default();
-}
-
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[display("{node_id}:{output_no}")]
-/// RGB contract node output pointer, defined by the node ID and output
-/// number.
-pub struct NodeOutput {
-    pub node_id: NodeId,
-    pub output_no: u16,
-}
-
-/// Holds definition of valencies for contract nodes, which is a set of
-/// allowed valencies types
-pub(crate) type PublicRightsInner = BTreeSet<schema::PublicRightType>;
-pub(crate) type OwnedRightsInner =
-    BTreeMap<schema::OwnedRightType, AssignmentVec>;
-pub(crate) type ParentOwnedRightsInner =
-    BTreeMap<NodeId, BTreeMap<schema::OwnedRightType, Vec<u16>>>;
-pub(crate) type ParentPublicRightsInner =
-    BTreeMap<NodeId, BTreeSet<schema::PublicRightType>>;
-
-#[derive(Wrapper, Clone, PartialEq, Eq, Debug, Default, From)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-#[derive(StrictEncode, StrictDecode)]
-pub struct OwnedRights(OwnedRightsInner);
-
-impl OwnedRights {
-    pub fn iter(
-        &self,
-    ) -> btree_map::Iter<'_, schema::OwnedRightType, AssignmentVec> {
-        self.0.iter()
-    }
-
-    pub fn iter_mut(
-        &mut self,
-    ) -> btree_map::IterMut<'_, schema::OwnedRightType, AssignmentVec> {
-        self.0.iter_mut()
-    }
-
-    pub fn assignments_by_type(
-        &self,
-        owned_rights_type: schema::OwnedRightType,
-    ) -> &AssignmentVec {
-        self.0
-            .get(&owned_rights_type)
-            .unwrap_or(&EMPTY_ASSIGNMENT_VEC)
-    }
-}
-
-impl IntoIterator for OwnedRights {
-    type Item = <OwnedRightsInner as IntoIterator>::Item;
-    type IntoIter = <OwnedRightsInner as IntoIterator>::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-#[derive(
-    Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-#[derive(StrictEncode, StrictDecode)]
-pub struct PublicRights(PublicRightsInner);
-
-impl PublicRights {
-    pub fn iter(&self) -> btree_set::Iter<'_, schema::PublicRightType> {
-        self.0.iter()
-    }
-}
-
-impl IntoIterator for PublicRights {
-    type Item = <PublicRightsInner as IntoIterator>::Item;
-    type IntoIter = <PublicRightsInner as IntoIterator>::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-#[derive(
-    Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-#[derive(StrictEncode, StrictDecode)]
-pub struct ParentOwnedRights(ParentOwnedRightsInner);
-
-impl ParentOwnedRights {
-    pub fn iter(
-        &self,
-    ) -> btree_map::Iter<'_, NodeId, BTreeMap<schema::OwnedRightType, Vec<u16>>>
-    {
-        self.0.iter()
-    }
-
-    pub fn iter_mut(
-        &mut self,
-    ) -> btree_map::IterMut<
-        '_,
-        NodeId,
-        BTreeMap<schema::OwnedRightType, Vec<u16>>,
-    > {
-        self.0.iter_mut()
-    }
-}
-
-impl IntoIterator for ParentOwnedRights {
-    type Item = <ParentOwnedRightsInner as IntoIterator>::Item;
-    type IntoIter = <ParentOwnedRightsInner as IntoIterator>::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-#[derive(
-    Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-#[derive(StrictEncode, StrictDecode)]
-pub struct ParentPublicRights(ParentPublicRightsInner);
-
-impl ParentPublicRights {
-    pub fn iter(
-        &self,
-    ) -> btree_map::Iter<'_, NodeId, BTreeSet<schema::PublicRightType>> {
-        self.0.iter()
-    }
-
-    pub fn iter_mut(
-        &mut self,
-    ) -> btree_map::IterMut<'_, NodeId, BTreeSet<schema::PublicRightType>> {
-        self.0.iter_mut()
-    }
-}
-
-impl IntoIterator for ParentPublicRights {
-    type Item = <ParentPublicRightsInner as IntoIterator>::Item;
-    type IntoIter = <ParentPublicRightsInner as IntoIterator>::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    StrictEncode,
-    StrictDecode,
-)]
-pub struct PublicRightsLeaf(pub schema::PublicRightType);
-impl CommitEncodeWithStrategy for PublicRightsLeaf {
-    type Strategy = commit_strategy::UsingStrict;
-}
-impl ConsensusCommit for PublicRightsLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for PublicRightsLeaf {
-    const MERKLE_NODE_TAG: &'static str = "public_right";
-}
-impl ToMerkleSource for PublicRights {
-    type Leaf = PublicRightsLeaf;
-
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .copied()
-            .map(PublicRightsLeaf)
-            .collect()
-    }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    StrictEncode,
-    StrictDecode,
-)]
-pub struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
-impl CommitEncodeWithStrategy for OwnedRightsLeaf {
-    type Strategy = commit_strategy::UsingStrict;
-}
-impl ConsensusCommit for OwnedRightsLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for OwnedRightsLeaf {
-    const MERKLE_NODE_TAG: &'static str = "owned_right";
-}
-impl ToMerkleSource for OwnedRights {
-    type Leaf = OwnedRightsLeaf;
-
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .flat_map(|(type_id, assignment)| {
-                assignment.consensus_commitments().into_iter().map(
-                    move |commitment| OwnedRightsLeaf(*type_id, commitment),
-                )
-            })
-            .collect()
-    }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    StrictEncode,
-    StrictDecode,
-)]
-pub struct ParentPublicRightsLeaf(pub NodeId, pub schema::PublicRightType);
-impl CommitEncodeWithStrategy for ParentPublicRightsLeaf {
-    type Strategy = commit_strategy::UsingStrict;
-}
-impl ConsensusCommit for ParentPublicRightsLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for ParentPublicRightsLeaf {
-    const MERKLE_NODE_TAG: &'static str = "parent_public_right";
-}
-impl ToMerkleSource for ParentPublicRights {
-    type Leaf = ParentPublicRightsLeaf;
-
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .flat_map(|(node_id, i)| {
-                i.iter().map(move |type_id| {
-                    ParentPublicRightsLeaf(node_id.copy(), *type_id)
-                })
-            })
-            .collect()
-    }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    StrictEncode,
-    StrictDecode,
-)]
-pub struct ParentOwnedRightsLeaf(
-    pub NodeId,
-    pub schema::OwnedRightType,
-    pub u16,
-);
-impl CommitEncodeWithStrategy for ParentOwnedRightsLeaf {
-    type Strategy = commit_strategy::UsingStrict;
-}
-impl ConsensusCommit for ParentOwnedRightsLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for ParentOwnedRightsLeaf {
-    const MERKLE_NODE_TAG: &'static str = "parent_owned_right";
-}
-impl ToMerkleSource for ParentOwnedRights {
-    type Leaf = ParentOwnedRightsLeaf;
-
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .flat_map(|(node_id, i)| {
-                i.iter().flat_map(move |(type_id, prev_outs)| {
-                    prev_outs.iter().map(move |prev_out| {
-                        ParentOwnedRightsLeaf(
-                            node_id.copy(),
-                            *type_id,
-                            *prev_out,
-                        )
-                    })
-                })
-            })
-            .collect()
-    }
+    pub(super) static ref EMPTY_ASSIGNMENT_VEC: AssignmentVec =
+        AssignmentVec::default();
 }
 
 /// Categories of the state
@@ -1488,7 +1173,7 @@ mod _strict_encoding {
 
 #[cfg(test)]
 mod test {
-    use super::data;
+    use super::super::{NodeId, OwnedRights, ParentOwnedRights};
     use super::*;
     use crate::contract::seal::Revealed;
     use bitcoin::blockdata::transaction::OutPoint;
@@ -1497,11 +1182,12 @@ mod test {
         sha256, Hash,
     };
     use lnpbp::client_side_validation::{
-        merklize, CommitConceal, CommitEncode, MerkleNode,
+        merklize, CommitConceal, CommitEncode, MerkleNode, ToMerkleSource,
     };
     use lnpbp::seals::OutpointReveal;
     use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
     use secp256k1zkp::{pedersen::Commitment, Secp256k1, SecretKey};
+    use std::collections::BTreeMap;
 
     // Hard coded test vectors of Assignment Variants
     // Each Variant contains 4 types of Assignments
@@ -2336,7 +2022,7 @@ mod test {
 
     #[test]
     fn test_encoding_ancestor() {
-        test_encode!((PARENT_RIGHTS, ParentOwnedRightsInner));
+        test_encode!((PARENT_RIGHTS, ParentOwnedRights));
     }
 
     #[test]
@@ -2344,7 +2030,7 @@ mod test {
     fn test_garbage_ancestor() {
         let mut data = PARENT_RIGHTS.clone();
         data[0] = 0x36 as u8;
-        ParentOwnedRightsInner::strict_decode(&data[..]).unwrap();
+        ParentOwnedRights::strict_decode(&data[..]).unwrap();
     }
 
     // This doesn't use the merkelize() function
@@ -2361,7 +2047,7 @@ mod test {
 
         let nodeid = NodeId::default();
         let mut parent_rights = ParentOwnedRights::default();
-        parent_rights.0.insert(nodeid, assignment);
+        parent_rights.as_mut().insert(nodeid, assignment);
 
         let mut original_commit = vec![];
         parent_rights
@@ -2382,8 +2068,7 @@ mod test {
         let merkle_node = MerkleNode::hash(&encoded_leaf[..]);
 
         // merkelize the node with correct tag
-        let root =
-            merklize(ParentOwnedRightsLeaf::MERKLE_NODE_TAG, &[merkle_node], 0);
+        let root = merklize("parent_owned_right", &[merkle_node], 0);
 
         // Commit encode the resulting merkle root
         let handmade_commit = root.commit_serialize();
@@ -2444,7 +2129,7 @@ mod test {
 
         // Construct ancestor
         let mut parent_rights = ParentOwnedRights::default();
-        parent_rights.0.insert(node_id, assignments);
+        parent_rights.as_mut().insert(node_id, assignments);
 
         // get the commit encoding
         let mut original_commit = vec![];
@@ -2488,7 +2173,7 @@ mod test {
             .collect();
 
         // Calculate Merkle Root for the the above nodes
-        let root = merklize(ParentOwnedRightsLeaf::MERKLE_NODE_TAG, &nodes, 0);
+        let root = merklize("parent_owned_right", &nodes, 0);
 
         // Commit encode the root
         let handmade_commit = root.commit_serialize();
@@ -2655,9 +2340,13 @@ mod test {
         let type2 = 2 as schema::OwnedRightType;
         let type3 = 3 as schema::OwnedRightType;
         let mut owned_rights = OwnedRights::default();
-        owned_rights.0.insert(type1, declarative_variant.clone());
-        owned_rights.0.insert(type2, pedersen_variant.clone());
-        owned_rights.0.insert(type3, hash_variant.clone());
+        owned_rights
+            .as_mut()
+            .insert(type1, declarative_variant.clone());
+        owned_rights
+            .as_mut()
+            .insert(type2, pedersen_variant.clone());
+        owned_rights.as_mut().insert(type3, hash_variant.clone());
 
         let mut original_encoding = vec![];
         owned_rights
@@ -2719,7 +2408,7 @@ mod test {
             .collect();
 
         // compute merkle root of all the nodes
-        let root = merklize(OwnedRightsLeaf::MERKLE_NODE_TAG, &nodes, 0);
+        let root = merklize("parent_owned_right", &nodes, 0);
 
         // Commit encode the root
         let handmade_encoding = root.commit_serialize();

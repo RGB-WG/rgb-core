@@ -38,9 +38,18 @@ use crate::schema::{
 #[cfg(feature = "serde")]
 use crate::Bech32;
 use crate::{
-    schema, seal, ConfidentialDataError, Metadata, NodeOutput, PublicRightType,
-    SchemaId, ToBech32,
+    schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId,
+    ToBech32,
 };
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display("{node_id}:{output_no}")]
+/// RGB contract node output pointer, defined by the node ID and output
+/// number.
+pub struct NodeOutput {
+    pub node_id: NodeId,
+    pub output_no: u16,
+}
 
 /// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
 /// the value of two concatenated SHA256 hashes for `rgb:node` prefix string.
