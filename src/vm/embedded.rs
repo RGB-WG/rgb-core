@@ -57,6 +57,11 @@ pub enum AssignmentValidator {
     /// of the outputs of the same type, plus validates bulletproof data
     #[display("fungible-no-inflation")]
     FungibleNoInflation = 0x01,
+
+    /// Control that multiple rights assigning additive state value do not allow
+    /// maximum allowed bit dimensionality
+    #[display("no-overflow")]
+    NoOverflow = 0x02,
 }
 
 impl FromEntryPoint for AssignmentValidator {
@@ -67,6 +72,9 @@ impl FromEntryPoint for AssignmentValidator {
         Some(match entry_point {
             x if x == AssignmentValidator::FungibleNoInflation as u32 => {
                 AssignmentValidator::FungibleNoInflation
+            }
+            x if x == AssignmentValidator::NoOverflow as u32 => {
+                AssignmentValidator::NoOverflow
             }
             _ => return None,
         })
@@ -300,6 +308,9 @@ pub enum HandlerError {
     /// confidential state data are found in location where state equivalence
     /// must be checked and the provided state commitments do not match
     ConfidentialState,
+
+    /// sum of assigned values overflows schema-allowed bit dimension
+    ValueOverflow,
 
     /// wrong format for byte-encoded data
     DataEncoding,
@@ -565,6 +576,9 @@ impl AssignmentValidator {
             AssignmentValidator::FungibleNoInflation => {
                 Self::validate_pedersen_sum(previous_state, current_state)
             }
+            AssignmentValidator::NoOverflow => {
+                Self::validate_no_overflow(current_state)
+            }
         }
     }
 
@@ -593,6 +607,19 @@ impl AssignmentValidator {
         } else {
             Ok(())
         }
+    }
+
+    pub(self) fn validate_no_overflow(
+        current_state: &AssignmentVec,
+    ) -> Result<(), HandlerError> {
+        current_state
+            .as_revealed_state_values()
+            .map_err(|_| HandlerError::ConfidentialState)?
+            .into_iter()
+            .map(|v| v.value)
+            .try_fold(0u64, |sum, value| sum.checked_add(value))
+            .ok_or(HandlerError::ValueOverflow)
+            .map(|_| ())
     }
 }
 

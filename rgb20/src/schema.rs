@@ -360,9 +360,12 @@ pub fn schema() -> Schema {
                 // must be used, as this will be a de-facto limit to the
                 // issuance
                 format: StateFormat::CustomData(DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)),
-                // Validation involves other state data, so it is performed
+                // Validation involves other state data, so it is also performed
                 // at the level of `issue` state transition
-                abi: none!()
+                abi: bmap! {
+                    // make sure we do not overflow 64 bits
+                    AssignmentAction::Validate => embedded::AssignmentValidator::NoOverflow as script::EntryPoint
+                }
             },
             OwnedRightsType::Assets => StateSchema {
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
@@ -567,9 +570,12 @@ pub fn subschema() -> Schema {
                 // must be used, as this will be a de-facto limit to the
                 // issuance
                 format: StateFormat::CustomData(DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)),
-                // Validation involves other state data, so it is performed
+                // Validation involves other state data, so it is also performed
                 // at the level of `issue` state transition
-                abi: none!()
+                abi: bmap! {
+                    // make sure we do not overflow 64 bits
+                    AssignmentAction::Validate => embedded::AssignmentValidator::NoOverflow as script::EntryPoint
+                }
             },
             OwnedRightsType::Assets => StateSchema {
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),

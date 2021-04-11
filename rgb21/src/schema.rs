@@ -14,9 +14,9 @@
 use std::ops::Deref;
 
 use rgb::schema::{
-    constants::*, script, Bits, DataFormat, DiscreteFiniteFieldFormat,
-    GenesisAction, GenesisSchema, Occurences, Schema, StateFormat, StateSchema,
-    TransitionAction, TransitionSchema,
+    constants::*, script, AssignmentAction, Bits, DataFormat,
+    DiscreteFiniteFieldFormat, GenesisAction, GenesisSchema, Occurences,
+    Schema, StateFormat, StateSchema, TransitionAction, TransitionSchema,
 };
 use rgb::vm::embedded;
 
@@ -265,7 +265,10 @@ pub fn schema() -> Schema {
             OwnedRightsType::Inflation => StateSchema {
                 // How much issuer can issue tokens on this path
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
-                abi: none!()
+                abi: bmap! {
+                    // make sure we do not overflow 64 bits
+                    AssignmentAction::Validate => embedded::AssignmentValidator::NoOverflow as script::EntryPoint
+                }
             },
             OwnedRightsType::Ownership => StateSchema {
                 // How much issuer can issue tokens on this path
