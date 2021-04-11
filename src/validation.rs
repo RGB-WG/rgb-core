@@ -750,10 +750,10 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 // and the node is not genesis, we always have an anchor
                 unreachable!()
             }
-            (Ok(Some(seal)), Some(anchor)) => {
-                Some(bitcoin::OutPoint::from(seal.outpoint_reveal(anchor.txid)))
-            } /* -> ... so we can check that the bitcoin transaction
-               * references it as one of its inputs */
+            (Ok(Some(seal)), Some(anchor)) => Some(bitcoin::OutPoint::from(
+                seal.to_outpoint_reveal(anchor.txid),
+            )), /* -> ... so we can check that the bitcoin transaction
+                 * references it as one of its inputs */
         }
         .map(|outpoint| {
             if witness_tx

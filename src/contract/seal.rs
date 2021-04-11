@@ -11,6 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+//! Single-use-seal API specific for RGB implementation
+//!
+//! Based on LNP/BP client-side-validation single-use-seals API (see
+//! [`lnpbp::seals`])
+//!
+//! Single-use-seals in RGB are used for holding assigned state, i.e. *state* +
+//! *seal definition* = *assignment*. Closing of the single-use-seal invalidates
+//! the assigned state.
+//!
+//! Single-use-seals in RGB can have multiple forms because of the
+//! confidentiality options and ability to be linked to the witness transaction
+//! closing previous seal in RGB state evolution graph.
+
 use core::convert::TryFrom;
 
 use bitcoin::secp256k1::rand::RngCore;
@@ -20,15 +33,34 @@ use lnpbp::client_side_validation::{
 };
 use lnpbp::seals::{OutpointHash, OutpointReveal};
 
+/// Market trait for different forms of seal definitions
+pub trait Seal {}
+
+/// Confidential seal data, equivalent to the [`OutpointHash`] type provided by
+/// the LNP/BP client-side-validation library
 pub type Confidential = OutpointHash;
+
+impl Seal for Confidential {}
 
 /// Convenience type name useful for defining new seals
 pub type SealDefinition = Revealed;
 
+/// Trait for types supporting conversion to a [`SealDefinition`]
 pub trait ToSealDefinition {
+    /// Constructs [`SealDefinition`] from the inner type data
     fn to_seal_definition(&self) -> SealDefinition;
 }
 
+/// Seal endpoint is a confidential seal which may be linked to the witness
+/// transaction, but does not contain information about its id.
+///
+/// Seal endpoing can be either a pointer to the output in the witness
+/// transaction, plus blinding factor value, or a confidential seal
+/// [`seal::Confidential`] value pointing some external uknown transaction
+/// output
+///
+/// Seal endpoint is required in situations where sender assigns state to the
+/// witness transaction output on behalf of receiver
 #[derive(
     Clone,
     Copy,
@@ -48,17 +80,21 @@ pub trait ToSealDefinition {
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[display(Debug)]
-/// Seal endpoint is required in situations where sender assigns state to the
-/// witness transaction output on behalf of receiver
 pub enum SealEndpoint {
-    /// Seal that is concealed
+    /// External transaction output in concealed form (see
+    /// [`seal::Confidential`])
     #[from]
     TxOutpoint(OutpointHash),
+
     /// Seal contained within the witness transaction
     WitnessVout { vout: u32, blinding: u64 },
 }
 
+impl Seal for SealEndpoint {}
+
 impl SealEndpoint {
+    /// Cnostructs [`SealEndpoint`] for the witness transaction output using
+    /// provided random number generator for creating blinding factor
     pub fn with_vout(vout: u32, rng: &mut impl RngCore) -> SealEndpoint {
         SealEndpoint::WitnessVout {
             vout,
@@ -93,6 +129,8 @@ impl From<SealDefinition> for SealEndpoint {
     }
 }
 
+/// Revealed seal data, i.e. seal definition containing explicit information
+/// about the bitcoin transaction output
 #[derive(
     Clone,
     Copy,
@@ -113,14 +151,21 @@ impl From<SealDefinition> for SealEndpoint {
 )]
 #[display(Debug)]
 pub enum Revealed {
-    /// Seal that is revealed
+    /// Seal defined by external transaction output with additional blinding
+    /// factor used in deterministic concealment and commitments
     #[from]
     TxOutpoint(OutpointReveal),
+
     /// Seal contained within the witness transaction
     WitnessVout { vout: u32, blinding: u64 },
 }
 
+impl Seal for Revealed {}
+
 impl Revealed {
+    /// Constructs seal corresponding to the output of the witness transaction
+    /// using the provided random number generator for creating blinding factor
+    /// value
     pub fn with_vout(vout: u32, rng: &mut impl RngCore) -> Revealed {
         Revealed::WitnessVout {
             vout,
@@ -128,7 +173,12 @@ impl Revealed {
         }
     }
 
-    pub fn outpoint_reveal(&self, txid: Txid) -> OutpointReveal {
+    /// Constructs [`lnpbp::seal::OutpointReveal`] from the revealed seal data.
+    ///
+    /// Unlike [`rgb::seal::Revealed`], the revealed outpoint of the LNP/BP
+    /// client-side-validation library contains full txid of the witness
+    /// transaction variant
+    pub fn to_outpoint_reveal(&self, txid: Txid) -> OutpointReveal {
         match self.clone() {
             Revealed::TxOutpoint(op) => op,
             Revealed::WitnessVout { vout, blinding } => OutpointReveal {
@@ -160,8 +210,12 @@ impl CommitEncodeWithStrategy for Revealed {
     type Strategy = commit_strategy::UsingConceal;
 }
 
+/// Error happening if the seal data holds an pointer to the witness
+/// transaction output and thus can't be used alone for constructing full
+/// bitcoin transaction ouput data which must include the witness transaction id
+/// (unknown to the seal).
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display, Error)]
-#[display(Debug)]
+#[display("witness txid is unknown; unable to reconstruct full outpoint data")]
 pub struct WitnessVoutError;
 
 impl TryFrom<Revealed> for OutPoint {
@@ -308,9 +362,9 @@ mod test {
 
         // This should produce two exact same Revealed Outpoint
         let outpoint_from_txoutpoint =
-            revealed_txoutpoint.outpoint_reveal(txid);
+            revealed_txoutpoint.to_outpoint_reveal(txid);
         let outpoint_from_witnessvout =
-            revelaed_wtinessvout.outpoint_reveal(txid);
+            revelaed_wtinessvout.to_outpoint_reveal(txid);
 
         // Check integrity
         assert_eq!(outpoint_from_txoutpoint, outpoint_from_witnessvout);

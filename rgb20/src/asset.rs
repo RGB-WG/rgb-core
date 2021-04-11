@@ -538,7 +538,7 @@ impl TryFrom<Consignment> for Asset {
                     .enumerate()
                 {
                     asset.add_allocation(
-                        seal.outpoint_reveal(witness).into(),
+                        seal.to_outpoint_reveal(witness).into(),
                         transaction.node_id(),
                         index as u16,
                         state,

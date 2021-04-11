@@ -216,7 +216,7 @@ impl Issue {
                 BTreeMap::new(),
                 |mut assignments, (index, (seal, amount))| {
                     let item = assignments
-                        .entry(OutPoint::from(seal.outpoint_reveal(witness)))
+                        .entry(OutPoint::from(seal.to_outpoint_reveal(witness)))
                         .or_insert((0, vec![]));
                     item.0 += amount.value;
                     item.1.push(index as u16);
@@ -387,14 +387,14 @@ impl Epoch {
             .map_err(|_| Error::EpochSealConfidential(id))?
             .first()
             .copied()
-            .map(|seal| seal.outpoint_reveal(witness))
+            .map(|seal| seal.to_outpoint_reveal(witness))
             .map(OutPoint::from);
         let seal = transition
             .revealed_seals_by_type(*OwnedRightsType::BurnReplace)
             .map_err(|_| Error::BurnSealConfidential(id))?
             .first()
             .copied()
-            .map(|seal| seal.outpoint_reveal(witness))
+            .map(|seal| seal.to_outpoint_reveal(witness))
             .map(OutPoint::from);
 
         Ok(Epoch {
@@ -531,7 +531,7 @@ impl BurnReplace {
             .map_err(|_| Error::BurnSealConfidential(id))?
             .first()
             .copied()
-            .map(|seal| seal.outpoint_reveal(witness))
+            .map(|seal| seal.to_outpoint_reveal(witness))
             .map(OutPoint::from);
 
         let does_replacement =
