@@ -359,7 +359,7 @@ pub fn schema() -> Schema {
                 // limit, than `core::u64::MAX` / sum(inflation_assignments)
                 // must be used, as this will be a de-facto limit to the
                 // issuance
-                format: StateFormat::CustomData(DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)),
+                format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 // Validation involves other state data, so it is also performed
                 // at the level of `issue` state transition
                 abi: bmap! {
@@ -569,7 +569,7 @@ pub fn subschema() -> Schema {
                 // limit, than `core::u64::MAX` / sum(inflation_assignments)
                 // must be used, as this will be a de-facto limit to the
                 // issuance
-                format: StateFormat::CustomData(DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)),
+                format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 // Validation involves other state data, so it is also performed
                 // at the level of `issue` state transition
                 abi: bmap! {
