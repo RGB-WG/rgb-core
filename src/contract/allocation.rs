@@ -31,12 +31,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::{As, DisplayFromStr};
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
-use std::num::{ParseFloatError, ParseIntError};
 use std::str::FromStr;
 
 use bitcoin::blockdata::transaction::ParseOutPointError;
-use bitcoin::hashes::hex::FromHex;
-use bitcoin::{OutPoint, Txid};
+use bitcoin::OutPoint;
 use lnpbp::seals::{OutpointHash, OutpointReveal};
 
 use crate::seal::SealPoint;
@@ -45,15 +43,27 @@ use crate::{
 };
 
 /// Error parsing allocation data
-#[derive(Clone, Copy, Debug, Display, Error, From)]
+#[derive(
+    Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From,
+)]
 #[display(doc_comments)]
-#[from(ParseFloatError)]
-#[from(ParseIntError)]
-#[from(ParseOutPointError)]
-#[from(bitcoin::hashes::hex::Error)]
-#[from(lnpbp::bech32::Error)]
-#[from(lnpbp::seals::ParseError)]
-pub struct ParseError;
+pub enum ParseError {
+    /// Seal parse error
+    #[display(inner)]
+    #[from]
+    Seal(lnpbp::seals::ParseError),
+
+    /// the value for the allocation must be an 64-bit decimal integer
+    WrongValue,
+
+    /// wrong structure of the transaction outpoint data
+    #[from(ParseOutPointError)]
+    WrongOutpoint,
+
+    /// wrong structure of allocation string representation: it must be
+    /// represented as `<atomic_value>@<seal_definition>
+    WrongStructure,
+}
 
 /// Information about specific allocated asset value, assigned to either
 /// external bitcoin transaction outpoint or specific witness transaction output
@@ -115,23 +125,13 @@ impl Display for AllocatedValue {
 impl FromStr for AllocatedValue {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(&['@', ':'][..]);
-        match (split.next(), split.next(), split.next(), split.next()) {
-            (Some(value), Some(txid), Some(vout), None) => Ok(AllocatedValue {
-                value: value.parse()?,
-                seal: SealPoint {
-                    vout: vout.parse()?,
-                    txid: Some(Txid::from_hex(txid)?),
-                },
+        let mut split = s.split('@');
+        match (split.next(), split.next(), split.next()) {
+            (Some(value), Some(seal), None) => Ok(AllocatedValue {
+                value: value.parse().map_err(|_| ParseError::WrongValue)?,
+                seal: seal.parse()?,
             }),
-            (Some(value), Some(vout), None, _) => Ok(AllocatedValue {
-                value: value.parse()?,
-                seal: SealPoint {
-                    vout: vout.parse()?,
-                    txid: None,
-                },
-            }),
-            _ => Err(ParseError),
+            _ => Err(ParseError::WrongStructure),
         }
     }
 }
@@ -184,13 +184,15 @@ impl ToSealDefinition for OutpointValue {
 impl FromStr for OutpointValue {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(&['@', ':'][..]);
+        let mut split = s.split('@');
         match (split.next(), split.next(), split.next()) {
             (Some(value), Some(outpoint), None) => Ok(Self {
-                value: value.parse()?,
-                outpoint: outpoint.parse()?,
+                value: value.parse().map_err(|_| ParseError::WrongValue)?,
+                outpoint: outpoint
+                    .parse()
+                    .map_err(|_| ParseError::WrongOutpoint)?,
             }),
-            _ => Err(ParseError),
+            _ => Err(ParseError::WrongStructure),
         }
     }
 }
@@ -227,13 +229,13 @@ pub struct UtxobValue {
 impl FromStr for UtxobValue {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(&['@', ':'][..]);
+        let mut split = s.split('@');
         match (split.next(), split.next(), split.next()) {
-            (Some(value), Some(seal), None) => Ok(Self {
-                value: value.parse()?,
+            (Some(value), Some(seal), None) => Ok(UtxobValue {
+                value: value.parse().map_err(|_| ParseError::WrongValue)?,
                 seal_confidential: seal.parse()?,
             }),
-            _ => Err(ParseError),
+            _ => Err(ParseError::WrongStructure),
         }
     }
 }
