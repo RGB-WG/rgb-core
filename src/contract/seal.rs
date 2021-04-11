@@ -36,6 +36,8 @@ use lnpbp::seals::{OutpointHash, OutpointReveal};
 /// Market trait for different forms of seal definitions
 pub trait Seal {}
 
+impl Seal for OutPoint {}
+
 /// Confidential seal data, equivalent to the [`OutpointHash`] type provided by
 /// the LNP/BP client-side-validation library
 pub type Confidential = OutpointHash;

@@ -24,8 +24,7 @@ use rgb::prelude::*;
 use rgb::secp256k1zkp;
 
 use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
-use super::{Allocation, Asset};
-use crate::Issue;
+use super::{Asset, Issue};
 
 /// Errors happening during RGB-20 asset state transitions
 #[derive(

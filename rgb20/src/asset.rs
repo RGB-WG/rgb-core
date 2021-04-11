@@ -29,8 +29,8 @@ use rgb::seal::WitnessVoutError;
 
 use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
 use crate::{
-    Allocation, BurnReplace, Epoch, FractionalAmount, Issue, PreciseAmount,
-    Supply, SupplyMeasure,
+    BurnReplace, Epoch, FractionalAmount, Issue, PreciseAmount, Supply,
+    SupplyMeasure,
 };
 
 /// Errors generated during RGB20 asset information parsing from the underlying

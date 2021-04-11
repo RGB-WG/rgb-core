@@ -44,14 +44,12 @@ extern crate serde_crate as serde;
 #[cfg(feature = "serde")]
 extern crate serde_with;
 
-mod allocation;
 mod amount;
 pub mod asset;
 pub mod schema;
 mod supply;
 pub mod transitions;
 
-pub use allocation::{AllocatedValue, Allocation, OutpointValue, UtxobValue};
 pub use amount::{FractionalAmount, PreciseAmount};
 pub use asset::Asset;
 pub use schema::{SCHEMA_ID_BECH32, SUBSCHEMA_ID_BECH32};

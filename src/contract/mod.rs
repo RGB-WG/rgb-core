@@ -14,6 +14,7 @@
 mod assignments;
 #[macro_use]
 pub mod data;
+pub mod allocation;
 mod conceal;
 mod metadata;
 pub mod nodes;
@@ -22,6 +23,7 @@ mod rights;
 pub mod seal;
 pub mod value;
 
+pub use allocation::{AllocatedValue, Allocation, OutpointValue, UtxobValue};
 pub(self) use assignments::EMPTY_ASSIGNMENT_VEC;
 pub use assignments::{
     Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy,

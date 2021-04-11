@@ -11,7 +11,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//! Information about RGB20 asset allocations
+//! Allocations are a special case of assignments, where the state assigned to
+//! the seal contains homomorphicly-committed value (i.e. data representing
+//! some additive values, like amount of asset – see [`rgb::value`] and
+//! [`AtomicAmount`])
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -25,8 +28,12 @@ use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::hex::FromHex;
 use bitcoin::{OutPoint, Txid};
 use lnpbp::seals::{OutpointHash, OutpointReveal};
-use rgb::{value, AtomicValue, NodeId, SealDefinition, ToSealDefinition};
 
+use crate::{
+    value, AtomicValue, NodeId, NodeOutput, SealDefinition, ToSealDefinition,
+};
+
+/// Error parsing allocation data
 #[derive(Clone, Copy, Debug, Display, Error, From)]
 #[display(doc_comments)]
 #[from(ParseFloatError)]
@@ -34,7 +41,6 @@ use rgb::{value, AtomicValue, NodeId, SealDefinition, ToSealDefinition};
 #[from(ParseOutPointError)]
 #[from(bitcoin::hashes::hex::Error)]
 #[from(lnpbp::bech32::Error)]
-/// Error parsing data
 pub struct ParseError;
 
 /// Information about specific allocated asset value, assigned to either
@@ -222,7 +228,8 @@ impl FromStr for UtxobValue {
     }
 }
 
-/// Information about asset allocation source
+/// Information about an allocation, represented by RGB contract node output,
+/// seal definition and assigned value
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -254,7 +261,7 @@ impl Allocation {
     /// Constructs asset allocation information from the provided function
     /// arguments
     #[inline]
-    pub(crate) fn with(
+    pub fn with(
         node_id: NodeId,
         index: u16,
         outpoint: OutPoint,
@@ -273,5 +280,14 @@ impl Allocation {
     #[inline]
     pub fn value(&self) -> AtomicValue {
         self.revealed_amount.value
+    }
+
+    /// Returns [`NodeOutput`] containing current allocation
+    #[inline]
+    pub fn node_output(&self) -> NodeOutput {
+        NodeOutput {
+            node_id: self.node_id,
+            output_no: self.index,
+        }
     }
 }
