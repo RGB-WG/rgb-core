@@ -12,9 +12,18 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 //! Allocations are a special case of assignments, where the state assigned to
-//! the seal contains homomorphicly-committed value (i.e. data representing
+//! the seal contains homomorphically-committed value (i.e. data representing
 //! some additive values, like amount of asset – see [`rgb::value`] and
-//! [`AtomicAmount`])
+//! [`AtomicAmount`]).
+//!
+//! RGB Core library defines three data types for holding allocation data, which
+//! differ in their support for witness-based assignments and blinding secret:
+//!
+//! | **Type name**      | **Which seal can produce** | **Witness** | **Blinding** | **Use case**                                  |
+//! | ------------------ | -------------------------- | ----------- | ------------ | --------------------------------------------- |
+//! | [`OutpointValue`]  | [`OutPoint`]               | No          | No           | Genesis creation                              |
+//! | [`AllocatedValue`] | [`SealPoint`]              | Yes         | No           | State transition with self-owned rights       |
+//! | [`UtxobValue`]     | [`OutpointHash`]           | Implicit    | Implicit     | State transition with externally-owned rights |
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -30,6 +39,7 @@ use bitcoin::hashes::hex::FromHex;
 use bitcoin::{OutPoint, Txid};
 use lnpbp::seals::{OutpointHash, OutpointReveal};
 
+use crate::seal::SealPoint;
 use crate::{
     value, AtomicValue, NodeId, NodeOutput, SealDefinition, ToSealDefinition,
 };
@@ -70,12 +80,60 @@ pub struct AllocatedValue {
     /// Assigned value of the asset
     pub value: AtomicValue,
 
-    /// Transaction output number
-    pub vout: u32,
+    /// Seal definition
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub seal: SealPoint,
+}
 
-    /// [`Txid`] of the external transaction, if the amount assigned not to the
-    /// witness transaction output
-    pub txid: Option<Txid>,
+impl ToSealDefinition for AllocatedValue {
+    fn to_seal_definition(&self) -> SealDefinition {
+        use bitcoin::secp256k1::rand::{self, RngCore};
+        let mut rng = rand::thread_rng();
+        // Not an amount blinding factor but outpoint blinding
+        let entropy = rng.next_u64();
+        match self.seal.txid {
+            Some(txid) => SealDefinition::TxOutpoint(OutpointReveal {
+                blinding: entropy,
+                txid,
+                vout: self.seal.vout,
+            }),
+            None => SealDefinition::WitnessVout {
+                vout: self.seal.vout,
+                blinding: entropy,
+            },
+        }
+    }
+}
+
+impl Display for AllocatedValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}@", self.value)?;
+        Display::fmt(&self.seal, f)
+    }
+}
+
+impl FromStr for AllocatedValue {
+    type Err = ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split(&['@', ':'][..]);
+        match (split.next(), split.next(), split.next(), split.next()) {
+            (Some(value), Some(txid), Some(vout), None) => Ok(AllocatedValue {
+                value: value.parse()?,
+                seal: SealPoint {
+                    vout: vout.parse()?,
+                    txid: Some(Txid::from_hex(txid)?),
+                },
+            }),
+            (Some(value), Some(vout), None, _) => Ok(AllocatedValue {
+                value: value.parse()?,
+                seal: SealPoint {
+                    vout: vout.parse()?,
+                    txid: None,
+                },
+            }),
+            _ => Err(ParseError),
+        }
+    }
 }
 
 /// Information about asset value allocated to well-formed bitcoin transaction
@@ -109,6 +167,34 @@ pub struct OutpointValue {
     pub outpoint: OutPoint,
 }
 
+impl ToSealDefinition for OutpointValue {
+    fn to_seal_definition(&self) -> SealDefinition {
+        use bitcoin::secp256k1::rand::{self, RngCore};
+        let mut rng = rand::thread_rng();
+        // Not an amount blinding factor but outpoint blinding
+        let entropy = rng.next_u64();
+        SealDefinition::TxOutpoint(OutpointReveal {
+            blinding: entropy,
+            txid: self.outpoint.txid,
+            vout: self.outpoint.vout,
+        })
+    }
+}
+
+impl FromStr for OutpointValue {
+    type Err = ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split(&['@', ':'][..]);
+        match (split.next(), split.next(), split.next()) {
+            (Some(value), Some(outpoint), None) => Ok(Self {
+                value: value.parse()?,
+                outpoint: outpoint.parse()?,
+            }),
+            _ => Err(ParseError),
+        }
+    }
+}
+
 /// Information about RGB20 asset assigned to a blinded transaction output
 #[derive(
     Clone,
@@ -136,84 +222,6 @@ pub struct UtxobValue {
 
     /// Blinded transaction outpoint
     pub seal_confidential: OutpointHash,
-}
-
-impl ToSealDefinition for AllocatedValue {
-    fn to_seal_definition(&self) -> SealDefinition {
-        use bitcoin::secp256k1::rand::{self, RngCore};
-        let mut rng = rand::thread_rng();
-        // Not an amount blinding factor but outpoint blinding
-        let entropy = rng.next_u64();
-        match self.txid {
-            Some(txid) => SealDefinition::TxOutpoint(OutpointReveal {
-                blinding: entropy,
-                txid,
-                vout: self.vout,
-            }),
-            None => SealDefinition::WitnessVout {
-                vout: self.vout,
-                blinding: entropy,
-            },
-        }
-    }
-}
-
-impl ToSealDefinition for OutpointValue {
-    fn to_seal_definition(&self) -> SealDefinition {
-        use bitcoin::secp256k1::rand::{self, RngCore};
-        let mut rng = rand::thread_rng();
-        // Not an amount blinding factor but outpoint blinding
-        let entropy = rng.next_u64();
-        SealDefinition::TxOutpoint(OutpointReveal {
-            blinding: entropy,
-            txid: self.outpoint.txid,
-            vout: self.outpoint.vout,
-        })
-    }
-}
-
-impl Display for AllocatedValue {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}@", self.value)?;
-        if let Some(txid) = self.txid {
-            write!(f, "{}:", txid)?;
-        }
-        f.write_str(&self.vout.to_string())
-    }
-}
-
-impl FromStr for AllocatedValue {
-    type Err = ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(&['@', ':'][..]);
-        match (split.next(), split.next(), split.next(), split.next()) {
-            (Some(value), Some(txid), Some(vout), None) => Ok(Self {
-                value: value.parse()?,
-                vout: vout.parse()?,
-                txid: Some(Txid::from_hex(txid)?),
-            }),
-            (Some(value), Some(vout), None, _) => Ok(Self {
-                value: value.parse()?,
-                vout: vout.parse()?,
-                txid: None,
-            }),
-            _ => Err(ParseError),
-        }
-    }
-}
-
-impl FromStr for OutpointValue {
-    type Err = ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(&['@', ':'][..]);
-        match (split.next(), split.next(), split.next()) {
-            (Some(value), Some(outpoint), None) => Ok(Self {
-                value: value.parse()?,
-                outpoint: outpoint.parse()?,
-            }),
-            _ => Err(ParseError),
-        }
-    }
 }
 
 impl FromStr for UtxobValue {
@@ -290,6 +298,16 @@ impl Allocation {
         NodeOutput {
             node_id: self.node_id,
             output_no: self.index,
+        }
+    }
+
+    /// Returns [`OutpointValue`] combining full bitcoin transaction output as
+    /// seal definition and [`AtomicValue`] of the assignment
+    #[inline]
+    pub fn outpoint_value(&self) -> OutpointValue {
+        OutpointValue {
+            value: self.revealed_amount.value,
+            outpoint: self.outpoint,
         }
     }
 }
