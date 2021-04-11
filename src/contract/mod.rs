@@ -41,7 +41,7 @@ pub use rights::{
 pub(crate) use rights::{
     OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,
 };
-pub use seal::{SealDefinition, SealEndpoint, ToSealDefinition};
+pub use seal::{Seal, SealDefinition, SealEndpoint, ToSealDefinition};
 pub use value::AtomicValue;
 
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;

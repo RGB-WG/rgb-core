@@ -70,7 +70,7 @@ impl Asset {
         name: String,
         description: Option<String>,
         precision: u8,
-        allocation: Vec<(OutPoint, AtomicValue)>,
+        allocation: Vec<OutpointValue>,
         inflation: BTreeMap<OutPoint, AtomicValue>,
         renomination: Option<OutPoint>,
         epoch: Option<OutPoint>,
@@ -92,9 +92,12 @@ impl Asset {
         let mut issued_supply = 0u64;
         let allocations = allocation
             .into_iter()
-            .map(|(outpoint, value)| {
-                issued_supply += value;
-                (SealDefinition::TxOutpoint(outpoint.into()), value)
+            .map(|outpoint_value| {
+                issued_supply += outpoint_value.value;
+                (
+                    SealDefinition::TxOutpoint(outpoint_value.outpoint.into()),
+                    outpoint_value.value,
+                )
             })
             .collect();
         let mut owned_rights = BTreeMap::new();
@@ -173,9 +176,9 @@ impl Asset {
         self,
         closing: BTreeSet<OutPoint>,
         next_inflation: BTreeMap<SealDefinition, AtomicValue>,
-        allocations: BTreeMap<SealDefinition, AtomicValue>,
+        allocations: Vec<(SealDefinition, AtomicValue)>,
     ) -> Result<Transition, Error> {
-        let issued_supply = allocations.values().sum();
+        let issued_supply = allocations.iter().map(|(_, value)| value).sum();
         let future_inflation: AtomicValue = next_inflation.values().sum();
 
         let input_issues: Vec<&Issue> = self
@@ -281,12 +284,12 @@ impl Asset {
         next_epoch: Option<SealDefinition>,
         burning_seal: Option<SealDefinition>,
     ) -> Result<Transition, Error> {
-        unimplemented!()
+        todo!()
     }
 
     /// Burns certain amount of the asset by closing burn-controlling seal over
-    /// inflation state transition, which is constructed and returned by this
-    /// function
+    /// proof-of-burn state transition, which is constructed and returned by
+    /// this function
     pub fn burn(
         self,
         closing: OutPoint,
@@ -294,7 +297,21 @@ impl Asset {
         burned_utxos: BTreeSet<OutPoint>,
         next_burn: Option<SealDefinition>,
     ) -> Result<Transition, Error> {
-        unimplemented!()
+        todo!()
+    }
+
+    /// Burns and re-allocates certain amount of the asset by closing
+    /// burn-controlling seal over proof-of-burn state transition, which is
+    /// constructed and returned by this function
+    pub fn burn_replace(
+        self,
+        closing: OutPoint,
+        burned_value: AtomicValue,
+        burned_utxos: BTreeSet<OutPoint>,
+        next_burn: Option<SealDefinition>,
+        allocations: Vec<(SealDefinition, AtomicValue)>,
+    ) -> Result<Transition, Error> {
+        todo!()
     }
 
     /// Function creates a fungible asset-specific state transition (i.e. RGB-20

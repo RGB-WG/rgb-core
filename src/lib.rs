@@ -65,8 +65,8 @@ pub mod prelude {
         DeclarativeStrategy, Extension, Genesis, HashStrategy, Metadata,
         NoDataError, Node, NodeId, NodeOutput, OutpointValue, OwnedRights,
         ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights,
-        RevealedByMerge, RevealedState, SealDefinition, SealEndpoint, State,
-        StateRetrievalError, StateType, ToSealDefinition, Transition,
+        RevealedByMerge, RevealedState, Seal, SealDefinition, SealEndpoint,
+        State, StateRetrievalError, StateType, ToSealDefinition, Transition,
         UtxobValue,
     };
     pub use schema::{

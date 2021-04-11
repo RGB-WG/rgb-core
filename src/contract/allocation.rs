@@ -20,6 +20,7 @@
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
+use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 use std::str::FromStr;
@@ -41,6 +42,7 @@ use crate::{
 #[from(ParseOutPointError)]
 #[from(bitcoin::hashes::hex::Error)]
 #[from(lnpbp::bech32::Error)]
+#[from(lnpbp::seals::ParseError)]
 pub struct ParseError;
 
 /// Information about specific allocated asset value, assigned to either
@@ -291,3 +293,9 @@ impl Allocation {
         }
     }
 }
+
+/// Allocation maps are used by schema-specific APIs node constructors. They
+/// allow creation of type-safe arguments listing each of the seals exactly
+/// once, and providing [`AtomicAmount`] that has to be assigned to each of the
+/// seals.
+pub type AllocationMap<S> = BTreeMap<S, AtomicValue>;

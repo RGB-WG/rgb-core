@@ -2408,7 +2408,7 @@ mod test {
             .collect();
 
         // compute merkle root of all the nodes
-        let root = merklize("parent_owned_right", &nodes, 0);
+        let root = merklize("owned_right", &nodes, 0);
 
         // Commit encode the root
         let handmade_encoding = root.commit_serialize();

@@ -14,7 +14,10 @@
 //! Single-use-seal API specific for RGB implementation
 //!
 //! Based on LNP/BP client-side-validation single-use-seals API (see
-//! [`lnpbp::seals`])
+//! [`lnpbp::seals`]). RGB single-use-seal implementation differs in the fact
+//! that seals are orginized into a graph; thus a seal may be defined as
+//! pointing witness transaction closing some other seal, which is meaningless
+//! with LNP/BP seals.
 //!
 //! Single-use-seals in RGB are used for holding assigned state, i.e. *state* +
 //! *seal definition* = *assignment*. Closing of the single-use-seal invalidates
@@ -23,17 +26,39 @@
 //! Single-use-seals in RGB can have multiple forms because of the
 //! confidentiality options and ability to be linked to the witness transaction
 //! closing previous seal in RGB state evolution graph.
+//!
+//! | **Type name**                              | **Library** | **Witness** | **Blinding**         | **Confidential** | **String serialization**   | **Use case**                      |
+//! | ------------------------------------------ | ----------- | ----------- | -------------------- | ---------------- | -------------------------- | --------------------------------- |
+//! | [`OutPoint`]                               | LNP/BP      | No          | No                   | No               | `<txid>:<vout>`            | Genesis control rights            |
+//! | [`OutpointReveal`]                         | LNP/BP      | No          | Yes                  | No               | `<txid>:<vout>#<blinding>` |                                   |
+//! | [`OutpointHash`]<br>[`seal::Confidential`] | LNP/BP      | Implicit?   | Implicit             | Yes              | `utxob1....`               | External payments                 |
+//! | [`SealPoint`]                              | RGB         | Yes         | No                   | No               | `[<txid>]|_:<vout>`        | Change, transition control rights |
+//! | [`SealDefinition`]<br>[`seal::Revealed`]   | RGB         | Yes         | Yes                  | No               | `[<txid>]|_:<vout>#<blinding>` |                                   |
+//! | [`SealEndpoint`]                           | RGB         | Yes         | Explicit or implicit | May be           | `_:<vout>#<blinding>`      | `utxob1....` | Consignments                      |
 
 use core::convert::TryFrom;
+use std::fmt::{self, Display, Formatter, Write};
+use std::str::FromStr;
 
 use bitcoin::secp256k1::rand::RngCore;
 use bitcoin::{OutPoint, Txid};
 use lnpbp::client_side_validation::{
     commit_strategy, CommitConceal, CommitEncodeWithStrategy,
 };
-use lnpbp::seals::{OutpointHash, OutpointReveal};
+use lnpbp::seals::{OutpointHash, OutpointReveal, ParseError};
 
-/// Market trait for different forms of seal definitions
+/// Error happening if the seal data holds only witness transaction output
+/// number and thus can't be used alone for constructing full bitcoin
+/// transaction output data which must include the witness transaction id
+/// (unknown to the seal).
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
+#[display("witness txid is unknown; unable to reconstruct full outpoint data")]
+pub struct WitnessVoutError;
+
+/// Marker trait for different forms of seal definitions supported in RGB, which
+/// can be used for creating RGB owned rights assignments
 pub trait Seal {}
 
 impl Seal for OutPoint {}
@@ -63,25 +88,13 @@ pub trait ToSealDefinition {
 ///
 /// Seal endpoint is required in situations where sender assigns state to the
 /// witness transaction output on behalf of receiver
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode,
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-#[display(Debug)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum SealEndpoint {
     /// External transaction output in concealed form (see
     /// [`seal::Confidential`])
@@ -131,27 +144,109 @@ impl From<SealDefinition> for SealEndpoint {
     }
 }
 
-/// Revealed seal data, i.e. seal definition containing explicit information
-/// about the bitcoin transaction output
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode,
-)]
+impl Display for SealEndpoint {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            SealEndpoint::TxOutpoint(outpoint_hash) => {
+                Display::fmt(outpoint_hash, f)
+            }
+            SealEndpoint::WitnessVout { vout, blinding } => {
+                write!(f, "_:{}#{}", vout, blinding)
+            }
+        }
+    }
+}
+
+impl FromStr for SealEndpoint {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split(&[':', '#'][..]);
+        match (split.next(), split.next(), split.next(), split.next()) {
+            (Some(utxob), None, ..) => {
+                Ok(OutpointHash::from_str(utxob)?.into())
+            }
+            (Some(_), Some(_), Some(blinding), None)
+                if !blinding.starts_with("0x") =>
+            {
+                Err(ParseError::NonHexBlinding)
+            }
+            (Some("_"), Some(vout), Some(blinding), None) => {
+                Ok(SealEndpoint::WitnessVout {
+                    vout: vout.parse().map_err(|_| ParseError::WrongVout)?,
+                    blinding: u64::from_str_radix(
+                        blinding.trim_start_matches("0x"),
+                        16,
+                    )
+                    .map_err(|_| ParseError::WrongBlinding)?,
+                })
+            }
+            _ => Err(ParseError::WrongStructure),
+        }
+    }
+}
+
+/// Revealed seal definition which may point to a witness transactions and does
+/// not contain blinding data.
+///
+/// These data are not used within RGB contract data, thus we do not have a
+/// commitment and conceal procedures (since without knowing a blinding factor
+/// we can't perform them).
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-#[display(Debug)]
+#[derive(StrictEncode, StrictDecode)]
+pub struct SealPoint {
+    /// Transaction output number
+    pub vout: u32,
+
+    /// Transaction id; `None` if the transaction is the witness transaction
+    pub txid: Option<Txid>,
+}
+
+impl Seal for SealPoint {}
+
+impl Display for SealPoint {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self.txid {
+            Some(txid) => Display::fmt(&txid, f)?,
+            None => f.write_char('_')?,
+        };
+        write!(f, ":{}", self.vout)
+    }
+}
+
+impl FromStr for SealPoint {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split(':');
+        match (split.next(), split.next(), split.next()) {
+            (Some("_"), Some(vout), None) => Ok(SealPoint {
+                vout: vout.parse().map_err(|_| ParseError::WrongVout)?,
+                txid: None,
+            }),
+            (Some(txid), Some(vout), None) => Ok(SealPoint {
+                vout: vout.parse().map_err(|_| ParseError::WrongVout)?,
+                txid: Some(txid.parse().map_err(|_| ParseError::WrongTxid)?),
+            }),
+            _ => Err(ParseError::WrongStructure),
+        }
+    }
+}
+
+/// Revealed seal data, i.e. seal definition containing explicit information
+/// about the bitcoin transaction output
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "snake_case")
+)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum Revealed {
     /// Seal defined by external transaction output with additional blinding
     /// factor used in deterministic concealment and commitments
@@ -212,14 +307,6 @@ impl CommitEncodeWithStrategy for Revealed {
     type Strategy = commit_strategy::UsingConceal;
 }
 
-/// Error happening if the seal data holds an pointer to the witness
-/// transaction output and thus can't be used alone for constructing full
-/// bitcoin transaction ouput data which must include the witness transaction id
-/// (unknown to the seal).
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Display, Error)]
-#[display("witness txid is unknown; unable to reconstruct full outpoint data")]
-pub struct WitnessVoutError;
-
 impl TryFrom<Revealed> for OutPoint {
     type Error = WitnessVoutError;
 
@@ -227,6 +314,53 @@ impl TryFrom<Revealed> for OutPoint {
         match value {
             Revealed::TxOutpoint(reveal) => Ok(reveal.into()),
             Revealed::WitnessVout { .. } => Err(WitnessVoutError),
+        }
+    }
+}
+
+impl Display for Revealed {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Revealed::TxOutpoint(outpoint) => Display::fmt(outpoint, f),
+            Revealed::WitnessVout { vout, blinding } => {
+                write!(f, "_:{}#", vout)?;
+                // We use display here to allow complex formatting of the
+                // blinding factor
+                Display::fmt(blinding, f)
+            }
+        }
+    }
+}
+
+impl FromStr for Revealed {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split(&[':', '#'][..]);
+        match (split.next(), split.next(), split.next(), split.next()) {
+            (Some(_), Some(_), Some(blinding), ..)
+                if !blinding.starts_with("0x") =>
+            {
+                Err(ParseError::NonHexBlinding)
+            }
+            (Some("_"), Some(vout), Some(blinding), None) => {
+                Ok(Revealed::WitnessVout {
+                    vout: vout.parse().map_err(|_| ParseError::WrongVout)?,
+                    blinding: blinding
+                        .parse()
+                        .map_err(|_| ParseError::WrongBlinding)?,
+                })
+            }
+            (Some(txid), Some(vout), Some(blinding), None) => {
+                Ok(Revealed::TxOutpoint(OutpointReveal {
+                    blinding: blinding
+                        .parse()
+                        .map_err(|_| ParseError::WrongBlinding)?,
+                    txid: txid.parse().map_err(|_| ParseError::WrongTxid)?,
+                    vout: vout.parse().map_err(|_| ParseError::WrongVout)?,
+                }))
+            }
+            _ => Err(ParseError::WrongStructure),
         }
     }
 }
