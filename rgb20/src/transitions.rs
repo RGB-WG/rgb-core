@@ -25,10 +25,11 @@ use rgb::secp256k1zkp;
 
 use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
 use super::{Allocation, Asset};
+use crate::Issue;
 
 /// Errors happening during RGB-20 asset state transitions
 #[derive(
-    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
+    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
 )]
 #[display(doc_comments)]
 pub enum Error {
@@ -37,6 +38,28 @@ pub enum Error {
 
     /// sum of inputs and outputs is not equal
     InputsNotEqualOutputs,
+
+    /// issue allowance {allowed} for the provided set of issue-controlling
+    /// rights is insufficient to issue the requested amount {requested}
+    InsufficientIssueAllowance {
+        /// Allowed issue value
+        allowed: AtomicValue,
+        /// Requested issue value
+        requested: AtomicValue,
+    },
+
+    /// the requested supply {requested} does not match the total supply
+    /// {assigned} allocated to the owned rights consumed by the operation
+    SupplyMismatch {
+        /// Assigned supply change rights
+        assigned: AtomicValue,
+        /// Requested supply change
+        requested: AtomicValue,
+    },
+
+    /// method was provided with a set of seals for owned rights which are not
+    /// a part of the asset data: {0:?}
+    UnknownSeals(BTreeSet<OutPoint>),
 }
 
 impl Asset {
@@ -153,7 +176,102 @@ impl Asset {
         next_inflation: BTreeMap<SealDefinition, AtomicValue>,
         allocations: BTreeMap<SealDefinition, AtomicValue>,
     ) -> Result<Transition, Error> {
-        unimplemented!()
+        let issued_supply = allocations.values().sum();
+        let future_inflation: AtomicValue = next_inflation.values().sum();
+
+        let input_issues: Vec<&Issue> = self
+            .known_issues()
+            .iter()
+            .filter(|issue| {
+                issue
+                    .inflation_assignments()
+                    .keys()
+                    .find(|outpoint| closing.contains(outpoint))
+                    .is_some()
+            })
+            .collect();
+
+        let mut found_seals = bset![];
+        let mut parent = ParentOwnedRights::default();
+        let issue_allowance = input_issues.iter().fold(0u64, |sum, issue| {
+            let issued: AtomicValue = issue
+                .inflation_assignments()
+                .iter()
+                .filter(|(outpoint, _)| closing.contains(outpoint))
+                .map(|(outpoint, (value, indexes))| {
+                    indexes.into_iter().for_each(|index| {
+                        parent
+                            .entry(*issue.node_id())
+                            .or_insert(empty!())
+                            .entry(*OwnedRightsType::Inflation)
+                            .or_insert(empty!())
+                            .push(*index)
+                    });
+                    found_seals.insert(*outpoint);
+                    value
+                })
+                .sum();
+            sum + issued
+        });
+
+        if issue_allowance < issued_supply {
+            return Err(Error::InsufficientIssueAllowance {
+                allowed: issue_allowance,
+                requested: issued_supply,
+            });
+        }
+
+        if future_inflation + issued_supply != issue_allowance {
+            return Err(Error::SupplyMismatch {
+                assigned: issue_allowance,
+                requested: issued_supply + future_inflation,
+            });
+        }
+
+        if found_seals != closing {
+            return Err(Error::UnknownSeals(closing));
+        }
+
+        let metadata = type_map! {
+            FieldType::IssuedSupply => field!(U64, issued_supply)
+        };
+
+        let mut owned_rights = BTreeMap::new();
+        owned_rights.insert(
+            *OwnedRightsType::Assets,
+            AssignmentVec::zero_balanced(
+                vec![value::Revealed {
+                    value: issued_supply,
+                    blinding: secp256k1zkp::key::ONE_KEY.into(),
+                }],
+                allocations.into_iter().collect(),
+                vec![],
+            ),
+        );
+        if !next_inflation.is_empty() {
+            owned_rights.insert(
+                *OwnedRightsType::Inflation,
+                AssignmentVec::CustomData(
+                    next_inflation
+                        .into_iter()
+                        .map(|(seal_definition, value)| Assignment::Revealed {
+                            seal_definition,
+                            assigned_state: data::Revealed::U64(value),
+                        })
+                        .collect(),
+                ),
+            );
+        }
+
+        let transition = Transition::with(
+            *TransitionType::Issue,
+            metadata.into(),
+            parent,
+            owned_rights.into(),
+            bset!().into(),
+        );
+
+        Ok(transition)
     }
 
     /// Opens a new epoch by closing epoch-controlling seal over epoch opening
@@ -236,9 +354,9 @@ impl Asset {
         for alloc in input_allocations {
             parent
                 .entry(*alloc.node_id())
-                .or_insert(bmap! {})
+                .or_insert(empty!())
                 .entry(*OwnedRightsType::Assets)
-                .or_insert(vec![])
+                .or_insert(empty!())
                 .push(*alloc.index());
         }
 
@@ -247,7 +365,7 @@ impl Asset {
             metadata.into(),
             parent,
             assignments.into(),
-            bset![].into(),
+            bset!().into(),
         );
 
         Ok(transition)

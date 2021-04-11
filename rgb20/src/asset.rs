@@ -225,11 +225,13 @@ impl Asset {
     /// up to specific amount.
     ///
     /// NB: Not of all inflation controlling points may be known
-    pub fn known_inflation(&self) -> BTreeMap<OutPoint, AtomicValue> {
+    pub fn known_inflation(
+        &self,
+    ) -> BTreeMap<OutPoint, (AtomicValue, Vec<u16>)> {
         let mut inflation_list = BTreeMap::new();
         for issue in self.known_issues() {
-            for (seal, amount) in issue.inflation_assignments() {
-                inflation_list.insert(*seal, *amount);
+            for (seal, data) in issue.inflation_assignments() {
+                inflation_list.insert(*seal, data.clone());
             }
         }
 

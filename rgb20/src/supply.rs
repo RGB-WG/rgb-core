@@ -158,11 +158,11 @@ impl Supply {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{id} -> {amount}")]
+#[display("{node_id} -> {amount}")]
 pub struct Issue {
     /// Unique primary key; equals to the state transition id that performs
     /// issuance (i.e. of `issue` type)
-    id: NodeId,
+    node_id: NodeId,
 
     /// Contract ID to which this issue is related to
     contract_id: ContractId,
@@ -176,8 +176,9 @@ pub struct Issue {
     closes: BTreeSet<OutPoint>,
 
     /// Seals controlling secondary (inflationary) issues, with corresponding
-    /// maximum amount of the inflation allowed via spending that seal
-    inflation_assignments: BTreeMap<OutPoint, AtomicValue>,
+    /// maximum amount of the inflation allowed via spending that seal and
+    /// assignments indexes from the inflation state transition
+    inflation_assignments: BTreeMap<OutPoint, (AtomicValue, Vec<u16>)>,
 
     /// Witness transaction id, which should be present in the commitment
     /// medium (bitcoin blockchain or state channel) to make the operation
@@ -210,15 +211,21 @@ impl Issue {
             .map_err(|_| Error::InflationAssignmentConfidential(id))?
             .unwrap_or_default()
             .into_iter()
-            .fold(BTreeMap::new(), |mut assignments, (seal, amount)| {
-                *assignments
-                    .entry(OutPoint::from(seal.outpoint_reveal(witness)))
-                    .or_insert(0) += amount.value;
-                assignments
-            });
+            .enumerate()
+            .fold(
+                BTreeMap::new(),
+                |mut assignments, (index, (seal, amount))| {
+                    let item = assignments
+                        .entry(OutPoint::from(seal.outpoint_reveal(witness)))
+                        .or_insert((0, vec![]));
+                    item.0 += amount.value;
+                    item.1.push(index as u16);
+                    assignments
+                },
+            );
 
         Ok(Issue {
-            id,
+            node_id: id,
             contract_id,
             amount,
             closes,
@@ -268,18 +275,21 @@ impl TryFrom<&Genesis> for Issue {
             .map_err(|_| Error::InflationAssignmentConfidential(id))?
             .unwrap_or_default()
             .into_iter()
+            .enumerate()
             .try_fold::<_, _, Result<_, Error>>(
                 BTreeMap::new(),
-                |mut assignments, (seal, amount)| {
-                    *assignments
+                |mut assignments, (index, (seal, amount))| {
+                    let item = assignments
                         .entry(OutPoint::try_from(seal)?)
-                        .or_insert(0) += amount.value;
+                        .or_insert((0, vec![]));
+                    item.0 += amount.value;
+                    item.1.push(index as u16);
                     Ok(assignments)
                 },
             )?;
 
         Ok(Issue {
-            id,
+            node_id: id,
             contract_id: genesis.contract_id(),
             amount,
             closes: empty!(),
