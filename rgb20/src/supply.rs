@@ -322,11 +322,11 @@ impl TryFrom<&Genesis> for Issue {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{id} -> {no}")]
+#[display("{no}:{node_id}")]
 pub struct Epoch {
     /// Unique primary key; equals to the state transition id that performs
     /// operation opening this epoch
-    id: NodeId,
+    node_id: NodeId,
 
     /// Sequential number of the epoch
     ///
@@ -398,7 +398,7 @@ impl Epoch {
             .map(OutPoint::from);
 
         Ok(Epoch {
-            id,
+            node_id: id,
             no,
             contract_id,
             closes,
@@ -436,11 +436,11 @@ impl Epoch {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
-#[display("{id} -> {no}")]
+#[display("{no}:{node_id}")]
 pub struct BurnReplace {
     /// Unique primary key; equals to the state transition id that performs
     /// burn & replace operation
-    id: NodeId,
+    node_id: NodeId,
 
     /// Node ID of the state transition opening epoch under which this
     /// operation is performed
@@ -551,7 +551,7 @@ impl BurnReplace {
             .ok_or(Error::UnsatisfiedSchemaRequirement)?;
 
         Ok(BurnReplace {
-            id,
+            node_id: id,
             epoch_id,
             no,
             contract_id,

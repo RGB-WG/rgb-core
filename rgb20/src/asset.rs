@@ -29,8 +29,8 @@ use rgb::seal::WitnessVoutError;
 
 use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
 use crate::{
-    BurnReplace, Epoch, FractionalAmount, Issue, PreciseAmount, Supply,
-    SupplyMeasure,
+    BurnReplace, Epoch, FractionalAmount, Issue, Nomination, PreciseAmount,
+    Renomination, Supply, SupplyMeasure,
 };
 
 /// Errors generated during RGB20 asset information parsing from the underlying
@@ -71,8 +71,30 @@ pub enum Error {
     NotAllEpochsExposed,
 }
 
-// TODO #31: Add support for renominations, burn & replacements
 /// Detailed RGB20 asset information
+///
+/// Structure presents complete set of RGB20 asset-related data which can be
+/// extracted from the genesis or a consignment. It is not the source of the
+/// truth, and the presence of the data in the structure does not imply their
+/// validity, since the structure constructor does not validates blockchain or
+/// LN-based transaction commitments or satisfaction of schema requirements.
+///
+/// The main reason of the structure is:
+/// 1) to persist *cached* copy of the asset data without the requirement to
+///    parse all stash transition each time in order to extract allocation
+///    information;
+/// 2) to present data from asset genesis or consignment for UI in convenient
+///    form.
+/// 3) to orchestrate generation of new state transitions taking into account
+///    known asset information.
+///
+/// (1) is important for wallets, (2) is for more generic software, like
+/// client-side-validated data explorers, developer & debugging tools etc and
+/// (3) for asset-management software.
+///
+/// In both (2) and (3) case there is no need to persist the structure; genesis
+/// /consignment should be persisted instead and the structure must be
+/// reconstructed each time from that data upon the launch
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -81,7 +103,7 @@ pub enum Error {
 #[derive(
     Clone, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
-#[display("{ticker} ({id})")]
+#[display("{genesis_nomination} ({id})")]
 #[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct Asset {
     /// Bech32-representation of the asset genesis
@@ -92,24 +114,28 @@ pub struct Asset {
     /// It can be used as a unique primary kep
     id: ContractId,
 
-    /// Asset ticker, up to 8 characters
-    ticker: String,
-
-    /// Full asset name
-    name: String,
-
-    /// Text of Ricardian contract
-    ricardian_contract: Option<String>,
-
     /// Chain with which the asset is issued
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     chain: Chain,
 
-    /// Number of digits after the asset decimal point
-    decimal_precision: u8,
-
     /// Asset creation data
     date: DateTime<Utc>,
+
+    /// Names assigned to the asset at the issue time
+    ///
+    /// Nomination is a set of asset metadata assigned by the issuer, which
+    /// define core asset properties: ticker, name, decimal precision, contract
+    /// text.
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    genesis_nomination: Nomination,
+
+    /// List of all known renominations.
+    ///
+    /// This list does not include genesis nomination, which can be accessed
+    /// via [`Asset::genesis_nomination`]. The last item in the list contains
+    /// [`Asset::last_nomination`] data as a part of its renomination operation
+    /// details.
+    known_renominations: Vec<Renomination>,
 
     /// All issues known from the available data (stash and/or provided
     /// consignments)
@@ -143,6 +169,58 @@ pub struct Asset {
 }
 
 impl Asset {
+    /// Current asset ticker
+    ///
+    /// Current value determined by the last known renomination operation –
+    /// or, by the genesis nomination, if no renomination are known
+    ///
+    /// NB: the returned result may not match the current valid nomination,
+    ///     since if there were further not yet known nominations the value
+    ///     returned by this function will not match the valid data
+    #[inline]
+    pub fn ticker(&self) -> &str {
+        &self.active_nomination().ticker()
+    }
+
+    /// Current asset name
+    ///
+    /// Current value determined by the last known renomination operation –
+    /// or, by the genesis nomination, if no renomination are known
+    ///
+    /// NB: the returned result may not match the current valid nomination,
+    ///     since if there were further not yet known nominations the value
+    ///     returned by this function will not match the valid data
+    #[inline]
+    pub fn name(&self) -> &str {
+        &self.active_nomination().ticker()
+    }
+
+    /// Current version of the asset contract, represented in Ricardian form
+    ///
+    /// Current value determined by the last known renomination operation –
+    /// or, by the genesis nomination, if no renomination are known
+    ///
+    /// NB: the returned result may not match the current valid nomination,
+    ///     since if there were further not yet known nominations the value
+    ///     returned by this function will not match the valid data
+    #[inline]
+    pub fn ricardian_contract(&self) -> &str {
+        &self.active_nomination().ticker()
+    }
+
+    /// Current decimal precision of the asset value
+    ///
+    /// Current value determined by the last known renomination operation –
+    /// or, by the genesis nomination, if no renomination are known
+    ///
+    /// NB: the returned result may not match the current valid nomination,
+    ///     since if there were further not yet known nominations the value
+    ///     returned by this function will not match the valid data
+    #[inline]
+    pub fn decimal_precision(&self) -> u8 {
+        *self.active_nomination().decimal_precision()
+    }
+
     /// Returns information (in atomic value units) about specific measure of
     /// the asset supply, if known, or `None` otherwise
     pub fn precise_supply(
@@ -171,7 +249,27 @@ impl Asset {
             None => return FractionalAmount::NAN,
             Some(supply) => supply,
         };
-        PreciseAmount::transmutate_into(value, self.decimal_precision)
+        PreciseAmount::transmutate_into(value, self.decimal_precision())
+    }
+
+    /// Nomination resulting from the last known renomination
+    ///
+    /// NB: the returned result may not match the current valid nomination,
+    ///     since if there were further not yet known nominations the value
+    ///     returned by this function will not match the valid data
+    #[inline]
+    pub fn last_nomination(&self) -> Option<&Nomination> {
+        self.known_renominations.last().map(|o| o.nomination())
+    }
+
+    /// Active nomination data.
+    ///
+    /// NB: the returned result may not match the current valid nomination,
+    ///     since if there were further not yet known nominations the value
+    ///     returned by this function will not match the valid data
+    #[inline]
+    pub fn active_nomination(&self) -> &Nomination {
+        self.last_nomination().unwrap_or(&self.genesis_nomination)
     }
 
     /// Returns sum of all known allocations, in atomic value units
@@ -201,7 +299,10 @@ impl Asset {
             .iter()
             .map(Allocation::value)
             .map(|atomic| {
-                PreciseAmount::transmutate_into(atomic, self.decimal_precision)
+                PreciseAmount::transmutate_into(
+                    atomic,
+                    self.decimal_precision(),
+                )
             })
             .sum()
     }
@@ -218,7 +319,10 @@ impl Asset {
             .filter(|allocation| filter(*allocation))
             .map(Allocation::value)
             .map(|atomic| {
-                PreciseAmount::transmutate_into(atomic, self.decimal_precision)
+                PreciseAmount::transmutate_into(
+                    atomic,
+                    self.decimal_precision(),
+                )
             })
             .sum()
     }
@@ -332,10 +436,6 @@ impl TryFrom<Genesis> for Asset {
             Err(Error::WrongSchemaId)?;
         }
         let genesis_meta = genesis.metadata();
-        let decimal_precision = *genesis_meta
-            .u8(*FieldType::Precision)
-            .first()
-            .ok_or(Error::UnsatisfiedSchemaRequirement)?;
         let supply = *genesis_meta
             .u64(*FieldType::IssuedSupply)
             .first()
@@ -399,22 +499,8 @@ impl TryFrom<Genesis> for Asset {
             genesis: genesis.to_string(),
             id: genesis.contract_id(),
             chain: genesis.chain().clone(),
-            ticker: genesis_meta
-                .string(*FieldType::Ticker)
-                .first()
-                .ok_or(Error::UnsatisfiedSchemaRequirement)?
-                .clone(),
-            name: genesis_meta
-                .string(*FieldType::Name)
-                .first()
-                .ok_or(Error::UnsatisfiedSchemaRequirement)?
-                .clone(),
-            ricardian_contract: genesis_meta
-                .string(*FieldType::RicardianContract)
-                .first()
-                .cloned(),
+            genesis_nomination: Nomination::try_from(&genesis)?,
             supply: Supply::with(supply, None, issue_limit),
-            decimal_precision,
             date: DateTime::from_utc(
                 NaiveDateTime::from_timestamp(
                     *genesis_meta
@@ -425,6 +511,7 @@ impl TryFrom<Genesis> for Asset {
                 ),
                 Utc,
             ),
+            known_renominations: empty!(),
             known_issues: vec![issue],
             // we assume that each genesis allocation with revealed amount
             // and known seal (they are always revealed together) belongs to us
