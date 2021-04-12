@@ -13,7 +13,6 @@
 
 //! RGB20 schemata defining fungible asset smart contract prototypes.
 
-use std::ops::Deref;
 use std::str::FromStr;
 
 use rgb::schema::{
@@ -34,94 +33,122 @@ pub const SUBSCHEMA_ID_BECH32: &'static str =
     "sch1zcdeayj9vpv852tx2sjzy7esyy82a6nk0gs854ktam24zxee42rqyzg95g";
 
 /// Field types for RGB20 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to fungible assets.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
+#[repr(u16)]
 pub enum FieldType {
     /// Asset ticker
     ///
     /// Used within context of genesis or renomination state transition
-    Ticker,
+    Ticker = FIELD_TYPE_TICKER,
 
     /// Asset name
     ///
     /// Used within context of genesis or renomination state transition
-    Name,
+    Name = FIELD_TYPE_NAME,
 
     /// Text of the asset contract
     ///
     /// Used within context of genesis or renomination state transition
-    RicardianContract,
+    RicardianContract = FIELD_TYPE_CONTRACT_TEXT,
 
     /// Decimal precision
-    Precision,
+    Precision = FIELD_TYPE_PRECISION,
 
     /// Supply issued with the genesis, secondary issuance or burn & replace
     /// state transition
-    IssuedSupply,
+    IssuedSupply = FIELD_TYPE_ISSUED_SUPPLY,
 
     /// Supply burned with the burn or burn & replace state transition
-    BurnedSupply,
+    BurnedSupply = FIELD_TYPE_BURN_SUPPLY,
 
     /// Timestamp for genesis
-    Timestamp,
+    Timestamp = FIELD_TYPE_TIMESTAMP,
 
     /// UTXO containing the burned asset
-    BurnUtxo,
+    BurnUtxo = FIELD_TYPE_BURN_UTXO,
 
     /// Proofs of the burned supply
-    HistoryProof,
+    HistoryProof = FIELD_TYPE_HISTORY_PROOF,
 
     /// Media format for the information proving burned supply
-    HistoryProofFormat,
+    HistoryProofFormat = FIELD_TYPE_HISTORY_PROOF_FORMAT,
+}
+
+impl From<FieldType> for rgb::schema::FieldType {
+    #[inline]
+    fn from(ft: FieldType) -> Self {
+        ft as rgb::schema::FieldType
+    }
 }
 
 /// Owned right types used by RGB20 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to fungible assets.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
-pub enum OwnedRightsType {
+pub enum OwnedRightType {
     /// Inflation control right (secondary issuance right)
-    Inflation,
+    Inflation = STATE_TYPE_INFLATION_RIGHT,
 
     /// Asset ownership right
-    Assets,
+    Assets = STATE_TYPE_OWNERSHIP_RIGHT,
 
     /// Right to open a new burn & replace epoch
-    OpenEpoch,
+    OpenEpoch = STATE_TYPE_ISSUE_EPOCH_RIGHT,
 
     /// Right to perform burn or burn & replace operation
-    BurnReplace,
+    BurnReplace = STATE_TYPE_ISSUE_REPLACEMENT_RIGHT,
 
     /// Right to perform asset renomination
-    Renomination,
+    Renomination = STATE_TYPE_RENOMINATION_RIGHT,
+}
+
+impl From<OwnedRightType> for rgb::schema::OwnedRightType {
+    #[inline]
+    fn from(t: OwnedRightType) -> Self {
+        t as rgb::schema::OwnedRightType
+    }
 }
 
 /// State transition types defined by RGB20 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to fungible assets.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum TransitionType {
     /// Secondary issuance
-    Issue,
+    Issue = TRANSITION_TYPE_ISSUE,
 
     /// Asset transfer
-    Transfer,
+    Transfer = TRANSITION_TYPE_OWNERSHIP_TRANSFER,
 
     /// Opening of the new burn & replace asset epoch
-    Epoch,
+    Epoch = TRANSITION_TYPE_ISSUE_EPOCH,
 
     /// Asset burn operation
-    Burn,
+    Burn = TRANSITION_TYPE_ISSUE_BURN,
 
     /// Burning and replacement (re-issuance) of the asset
-    BurnAndReplace,
+    BurnAndReplace = TRANSITION_TYPE_ISSUE_REPLACE,
 
     /// Renomination (change in the asset name, ticker, contract text of
     /// decimal precision).
-    Renomination,
+    Renomination = TRANSITION_TYPE_RENOMINATION,
 
     /// Operation splitting rights assigned to the same UTXO
-    RightsSplit,
+    RightsSplit = TRANSITION_TYPE_RIGHTS_SPLIT,
+}
+
+impl From<TransitionType> for rgb::schema::TransitionType {
+    #[inline]
+    fn from(t: TransitionType) -> Self {
+        t as rgb::schema::TransitionType
+    }
 }
 
 /// Builds & returns complete RGB20 schema (root schema object)
@@ -146,10 +173,10 @@ pub fn schema() -> Schema {
                 FieldType::IssuedSupply => Once
             },
             owned_rights: type_map! {
-                OwnedRightsType::Inflation => NoneOrMore,
-                OwnedRightsType::OpenEpoch => NoneOrOnce,
-                OwnedRightsType::Assets => NoneOrMore,
-                OwnedRightsType::Renomination => NoneOrOnce
+                OwnedRightType::Inflation => NoneOrMore,
+                OwnedRightType::OpenEpoch => NoneOrOnce,
+                OwnedRightType::Assets => NoneOrMore,
+                OwnedRightType::Renomination => NoneOrOnce
             },
             public_rights: none!(),
             abi: none!(),
@@ -163,12 +190,12 @@ pub fn schema() -> Schema {
                     FieldType::IssuedSupply => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Inflation => OnceOrMore
+                    OwnedRightType::Inflation => OnceOrMore
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::OpenEpoch => NoneOrOnce,
-                    OwnedRightsType::Assets => NoneOrMore
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::OpenEpoch => NoneOrOnce,
+                    OwnedRightType::Assets => NoneOrMore
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -179,10 +206,10 @@ pub fn schema() -> Schema {
             TransitionType::Transfer => TransitionSchema {
                 metadata: none!(),
                 closes: type_map! {
-                    OwnedRightsType::Assets => OnceOrMore
+                    OwnedRightType::Assets => OnceOrMore
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Assets => NoneOrMore
+                    OwnedRightType::Assets => NoneOrMore
                 },
                 public_rights: none!(),
                 abi: none!()
@@ -190,11 +217,11 @@ pub fn schema() -> Schema {
             TransitionType::Epoch => TransitionSchema {
                 metadata: none!(),
                 closes: type_map! {
-                    OwnedRightsType::OpenEpoch => Once
+                    OwnedRightType::OpenEpoch => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::OpenEpoch => NoneOrOnce,
-                    OwnedRightsType::BurnReplace => NoneOrOnce
+                    OwnedRightType::OpenEpoch => NoneOrOnce,
+                    OwnedRightType::BurnReplace => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: none!()
@@ -211,10 +238,10 @@ pub fn schema() -> Schema {
                     FieldType::HistoryProof => NoneOrMore
                 },
                 closes: type_map! {
-                    OwnedRightsType::BurnReplace => Once
+                    OwnedRightType::BurnReplace => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::BurnReplace => NoneOrOnce
+                    OwnedRightType::BurnReplace => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -236,11 +263,11 @@ pub fn schema() -> Schema {
                     FieldType::HistoryProof => NoneOrMore
                 },
                 closes: type_map! {
-                    OwnedRightsType::BurnReplace => Once
+                    OwnedRightType::BurnReplace => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::BurnReplace => NoneOrOnce,
-                    OwnedRightsType::Assets => OnceOrMore
+                    OwnedRightType::BurnReplace => NoneOrOnce,
+                    OwnedRightType::Assets => OnceOrMore
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -255,10 +282,10 @@ pub fn schema() -> Schema {
                     FieldType::Precision => NoneOrOnce
                 },
                 closes: type_map! {
-                    OwnedRightsType::Renomination => Once
+                    OwnedRightType::Renomination => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: none!()
@@ -270,18 +297,18 @@ pub fn schema() -> Schema {
             TransitionType::RightsSplit => TransitionSchema {
                 metadata: type_map! {},
                 closes: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Assets => NoneOrMore,
-                    OwnedRightsType::OpenEpoch => NoneOrOnce,
-                    OwnedRightsType::BurnReplace => NoneOrMore,
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::Assets => NoneOrMore,
+                    OwnedRightType::OpenEpoch => NoneOrOnce,
+                    OwnedRightType::BurnReplace => NoneOrMore,
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Assets => NoneOrMore,
-                    OwnedRightsType::OpenEpoch => NoneOrOnce,
-                    OwnedRightsType::BurnReplace => NoneOrMore,
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::Assets => NoneOrMore,
+                    OwnedRightType::OpenEpoch => NoneOrOnce,
+                    OwnedRightType::BurnReplace => NoneOrMore,
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -321,16 +348,15 @@ pub fn schema() -> Schema {
             FieldType::HistoryProof => DataFormat::Bytes(core::u16::MAX),
             FieldType::HistoryProofFormat => DataFormat::Enum(
                 HistoryProofFormat::all()
-                    .iter()
-                    .map(HistoryProofFormat::deref)
-                    .copied()
+                    .into_iter()
+                    .map(|p| p as u8)
                     .collect()
             ),
             // TODO: Make it byte format embedding script
             FieldType::BurnUtxo => DataFormat::TxOutPoint
         },
         owned_right_types: type_map! {
-            OwnedRightsType::Inflation => StateSchema {
+            OwnedRightType::Inflation => StateSchema {
                 // How much issuer can issue tokens on this path. If there is no
                 // limit, than `core::u64::MAX` / sum(inflation_assignments)
                 // must be used, as this will be a de-facto limit to the
@@ -343,22 +369,22 @@ pub fn schema() -> Schema {
                     AssignmentAction::Validate => embedded::AssignmentValidator::NoOverflow as script::EntryPoint
                 }
             },
-            OwnedRightsType::Assets => StateSchema {
+            OwnedRightType::Assets => StateSchema {
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 abi: bmap! {
                     // sum(inputs) == sum(outputs)
                     AssignmentAction::Validate => embedded::AssignmentValidator::FungibleNoInflation as script::EntryPoint
                 }
             },
-            OwnedRightsType::OpenEpoch => StateSchema {
+            OwnedRightType::OpenEpoch => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             },
-            OwnedRightsType::BurnReplace => StateSchema {
+            OwnedRightType::BurnReplace => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             },
-            OwnedRightsType::Renomination => StateSchema {
+            OwnedRightType::Renomination => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             }
@@ -396,10 +422,10 @@ pub fn subschema() -> Schema {
                 FieldType::IssuedSupply => Once
             },
             owned_rights: type_map! {
-                OwnedRightsType::Inflation => NoneOrMore,
-                OwnedRightsType::OpenEpoch => NoneOrOnce,
-                OwnedRightsType::Assets => NoneOrMore,
-                OwnedRightsType::Renomination => NoneOrOnce
+                OwnedRightType::Inflation => NoneOrMore,
+                OwnedRightType::OpenEpoch => NoneOrOnce,
+                OwnedRightType::Assets => NoneOrMore,
+                OwnedRightType::Renomination => NoneOrOnce
             },
             public_rights: none!(),
             abi: none!(),
@@ -411,12 +437,12 @@ pub fn subschema() -> Schema {
                     FieldType::IssuedSupply => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Inflation => OnceOrMore
+                    OwnedRightType::Inflation => OnceOrMore
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::OpenEpoch => NoneOrOnce,
-                    OwnedRightsType::Assets => NoneOrMore
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::OpenEpoch => NoneOrOnce,
+                    OwnedRightType::Assets => NoneOrMore
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -427,10 +453,10 @@ pub fn subschema() -> Schema {
             TransitionType::Transfer => TransitionSchema {
                 metadata: none!(),
                 closes: type_map! {
-                    OwnedRightsType::Assets => OnceOrMore
+                    OwnedRightType::Assets => OnceOrMore
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Assets => NoneOrMore
+                    OwnedRightType::Assets => NoneOrMore
                 },
                 public_rights: none!(),
                 abi: none!()
@@ -438,10 +464,10 @@ pub fn subschema() -> Schema {
             TransitionType::Epoch => TransitionSchema {
                 metadata: none!(),
                 closes: type_map! {
-                    OwnedRightsType::OpenEpoch => Once
+                    OwnedRightType::OpenEpoch => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::BurnReplace => NoneOrOnce
+                    OwnedRightType::BurnReplace => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: none!()
@@ -458,10 +484,10 @@ pub fn subschema() -> Schema {
                     FieldType::HistoryProof => NoneOrMore
                 },
                 closes: type_map! {
-                    OwnedRightsType::BurnReplace => Once
+                    OwnedRightType::BurnReplace => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::BurnReplace => NoneOrOnce
+                    OwnedRightType::BurnReplace => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -476,10 +502,10 @@ pub fn subschema() -> Schema {
                     FieldType::Precision => NoneOrOnce
                 },
                 closes: type_map! {
-                    OwnedRightsType::Renomination => Once
+                    OwnedRightType::Renomination => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: none!()
@@ -491,16 +517,16 @@ pub fn subschema() -> Schema {
             TransitionType::RightsSplit => TransitionSchema {
                 metadata: type_map! {},
                 closes: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Assets => NoneOrMore,
-                    OwnedRightsType::BurnReplace => NoneOrMore,
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::Assets => NoneOrMore,
+                    OwnedRightType::BurnReplace => NoneOrMore,
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Assets => NoneOrMore,
-                    OwnedRightsType::BurnReplace => NoneOrMore,
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::Assets => NoneOrMore,
+                    OwnedRightType::BurnReplace => NoneOrMore,
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -540,7 +566,7 @@ pub fn subschema() -> Schema {
             FieldType::BurnUtxo => DataFormat::TxOutPoint
         },
         owned_right_types: type_map! {
-            OwnedRightsType::Inflation => StateSchema {
+            OwnedRightType::Inflation => StateSchema {
                 // How much issuer can issue tokens on this path. If there is no
                 // limit, than `core::u64::MAX` / sum(inflation_assignments)
                 // must be used, as this will be a de-facto limit to the
@@ -553,22 +579,22 @@ pub fn subschema() -> Schema {
                     AssignmentAction::Validate => embedded::AssignmentValidator::NoOverflow as script::EntryPoint
                 }
             },
-            OwnedRightsType::Assets => StateSchema {
+            OwnedRightType::Assets => StateSchema {
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 abi: bmap! {
                     // sum(inputs) == sum(outputs)
                     AssignmentAction::Validate => embedded::AssignmentValidator::FungibleNoInflation as script::EntryPoint
                 }
             },
-            OwnedRightsType::OpenEpoch => StateSchema {
+            OwnedRightType::OpenEpoch => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             },
-            OwnedRightsType::BurnReplace => StateSchema {
+            OwnedRightType::BurnReplace => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             },
-            OwnedRightsType::Renomination => StateSchema {
+            OwnedRightType::Renomination => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             }
@@ -579,63 +605,6 @@ pub fn subschema() -> Schema {
             byte_code: empty!(),
             override_rules: script::OverrideRules::Deny,
         },
-    }
-}
-
-impl Deref for FieldType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            // Nomination fields:
-            FieldType::Ticker => &FIELD_TYPE_TICKER,
-            FieldType::Name => &FIELD_TYPE_NAME,
-            FieldType::RicardianContract => &FIELD_TYPE_CONTRACT_TEXT,
-            FieldType::Precision => &FIELD_TYPE_PRECISION,
-            FieldType::Timestamp => &FIELD_TYPE_TIMESTAMP,
-            // Inflation fields:
-            FieldType::IssuedSupply => &FIELD_TYPE_ISSUED_SUPPLY,
-            // Proof-of-burn fields:
-            FieldType::BurnedSupply => &FIELD_TYPE_BURN_SUPPLY,
-            FieldType::BurnUtxo => &FIELD_TYPE_BURN_UTXO,
-            FieldType::HistoryProof => &FIELD_TYPE_HISTORY_PROOF,
-            FieldType::HistoryProofFormat => &FIELD_TYPE_HISTORY_PROOF_FORMAT,
-        }
-    }
-}
-
-impl Deref for OwnedRightsType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            // Nomination rights:
-            OwnedRightsType::Renomination => &STATE_TYPE_RENOMINATION_RIGHT,
-            // Inflation-control-related rights:
-            OwnedRightsType::Inflation => &STATE_TYPE_INFLATION_RIGHT,
-            OwnedRightsType::Assets => &STATE_TYPE_OWNERSHIP_RIGHT,
-            OwnedRightsType::OpenEpoch => &STATE_TYPE_ISSUE_EPOCH_RIGHT,
-            OwnedRightsType::BurnReplace => &STATE_TYPE_ISSUE_REPLACEMENT_RIGHT,
-        }
-    }
-}
-
-impl Deref for TransitionType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            // Asset transfers:
-            TransitionType::Transfer => &TRANSITION_TYPE_OWNERSHIP_TRANSFER,
-            // Nomination transitions:
-            TransitionType::Renomination => &TRANSITION_TYPE_RENOMINATION,
-            // Inflation-related transitions:
-            TransitionType::Issue => &TRANSITION_TYPE_ISSUE,
-            TransitionType::Epoch => &TRANSITION_TYPE_ISSUE_EPOCH,
-            TransitionType::Burn => &TRANSITION_TYPE_ISSUE_BURN,
-            TransitionType::BurnAndReplace => &TRANSITION_TYPE_ISSUE_REPLACE,
-            TransitionType::RightsSplit => &TRANSITION_TYPE_RIGHTS_SPLIT,
-        }
     }
 }
 

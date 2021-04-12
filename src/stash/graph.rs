@@ -188,7 +188,7 @@ pub trait GraphApi {
     fn seals_closed_with(
         &self,
         node_id: NodeId,
-        owned_right_type: OwnedRightType,
+        owned_right_type: impl Into<OwnedRightType>,
         witness: Txid,
     ) -> Result<BTreeSet<OutPoint>, ConsistencyError>;
 }
@@ -300,9 +300,10 @@ impl GraphApi for Consignment {
     fn seals_closed_with(
         &self,
         node_id: NodeId,
-        owned_right_type: OwnedRightType,
+        owned_right_type: impl Into<OwnedRightType>,
         witness: Txid,
     ) -> Result<BTreeSet<OutPoint>, ConsistencyError> {
+        let owned_right_type = owned_right_type.into();
         let transition = self.transition_by_id(node_id)?;
         let mut closed_seals = bset!();
         for output in transition.parent_outputs_by_type(owned_right_type) {

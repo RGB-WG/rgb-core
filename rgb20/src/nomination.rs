@@ -78,21 +78,21 @@ impl TryFrom<&Genesis> for Nomination {
 
         Ok(Nomination {
             ticker: genesis_meta
-                .string(*FieldType::Ticker)
+                .string(FieldType::Ticker)
                 .first()
                 .ok_or(Error::UnsatisfiedSchemaRequirement)?
                 .clone(),
             name: genesis_meta
-                .string(*FieldType::Name)
+                .string(FieldType::Name)
                 .first()
                 .ok_or(Error::UnsatisfiedSchemaRequirement)?
                 .clone(),
             ricardian_contract: genesis_meta
-                .string(*FieldType::RicardianContract)
+                .string(FieldType::RicardianContract)
                 .first()
                 .cloned(),
             decimal_precision: *genesis_meta
-                .u8(*FieldType::Precision)
+                .u8(FieldType::Precision)
                 .first()
                 .ok_or(Error::UnsatisfiedSchemaRequirement)?,
         })

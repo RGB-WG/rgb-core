@@ -353,9 +353,9 @@ mod test {
 
         // test for OwnedRights structure
         let test_owned_rights_1: OwnedRights =
-            bmap! { 1usize => assignment_1.clone()}.into();
+            bmap! { 1u16 => assignment_1.clone() }.into();
         let test_owned_rights_2: OwnedRights =
-            bmap! { 1usize => assignmnet_2.clone()}.into();
+            bmap! { 1u16 => assignmnet_2.clone()}.into();
 
         // Perform merge
         let merged = test_owned_rights_1
@@ -366,7 +366,7 @@ mod test {
         // after merge operation all the states will be revealed
         let states = vec![rev.clone(), rev.clone(), rev.clone(), rev.clone()];
         let assgn = AssignmentVec::CustomData(states);
-        let expected_rights: OwnedRights = bmap! {1usize => assgn}.into();
+        let expected_rights: OwnedRights = bmap! {1u16 => assgn}.into();
 
         assert_eq!(merged, expected_rights);
     }

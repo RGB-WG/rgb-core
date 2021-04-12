@@ -142,118 +142,121 @@ impl Deref for HistoryProofFormat {
 //      standard
 pub mod constants {
     /// Ticker of the asset
-    pub const FIELD_TYPE_TICKER: usize = 0x00;
+    pub const FIELD_TYPE_TICKER: u16 = 0x00;
 
     /// Contract or asset name
-    pub const FIELD_TYPE_NAME: usize = 0x01;
+    pub const FIELD_TYPE_NAME: u16 = 0x01;
 
     /// Ricardian contract text
-    pub const FIELD_TYPE_CONTRACT_TEXT: usize = 0x02;
+    pub const FIELD_TYPE_CONTRACT_TEXT: u16 = 0x02;
 
     /// Decimal precision for some sort of amount values used in a contract
-    pub const FIELD_TYPE_PRECISION: usize = 0x03;
+    pub const FIELD_TYPE_PRECISION: u16 = 0x03;
 
     /// Timestamp used in genesis to indicate moment of contract creation
-    pub const FIELD_TYPE_TIMESTAMP: usize = 0x04;
+    pub const FIELD_TYPE_TIMESTAMP: u16 = 0x04;
 
     /// Generic comment about the contract or a state transitions
-    pub const FIELD_TYPE_COMMENTARY: usize = 0x05;
+    pub const FIELD_TYPE_COMMENTARY: u16 = 0x05;
 
     /// Data attached to a state transition in binary format
-    pub const FIELD_TYPE_DATA: usize = 0x10;
+    pub const FIELD_TYPE_DATA: u16 = 0x10;
 
     /// Format of the attached data, schema-specific
     // TODO #36: Use LNPBP-extended MIME types embedded to data containers
-    pub const FIELD_TYPE_DATA_FORMAT: usize = 0x11;
+    pub const FIELD_TYPE_DATA_FORMAT: u16 = 0x11;
 
     /// [`FieldType`] that is used by validation procedures checking the issued
     /// supply & inflation
-    pub const FIELD_TYPE_ISSUED_SUPPLY: usize = 0xA0;
+    pub const FIELD_TYPE_ISSUED_SUPPLY: u16 = 0xA0;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
     /// burn. Must contain amount of the burned supply, expressed as
     /// revealed [`crate::value::Revealed`] data
-    pub const FIELD_TYPE_BURN_SUPPLY: usize = 0xB0;
+    pub const FIELD_TYPE_BURN_SUPPLY: u16 = 0xB0;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
     /// burn. Must contain [`bitcoin::OutPoint`] consensus-encoded data.
-    pub const FIELD_TYPE_BURN_UTXO: usize = 0xB1;
+    pub const FIELD_TYPE_BURN_UTXO: u16 = 0xB1;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
     /// burn. Must contain binary data ([`crate::data::Revealed::Bytes`])
-    pub const FIELD_TYPE_HISTORY_PROOF: usize = 0xB2;
+    pub const FIELD_TYPE_HISTORY_PROOF: u16 = 0xB2;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
     /// burn. Must contain format of the provided proofs defined in
     /// [`HistoryProofFormat`]
-    pub const FIELD_TYPE_HISTORY_PROOF_FORMAT: usize = 0xB3;
+    pub const FIELD_TYPE_HISTORY_PROOF_FORMAT: u16 = 0xB3;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
     /// reserves. Must contain [`wallet::descriptor::Expanded`] strict encoded
     /// data.
-    pub const FIELD_TYPE_LOCK_DESCRIPTOR: usize = 0xC0;
+    pub const FIELD_TYPE_LOCK_DESCRIPTOR: u16 = 0xC0;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
     /// reserves. Must contain [`bitcoin::OutPoint`] consensus-encoded data
-    pub const FIELD_TYPE_LOCK_UTXO: usize = 0xC1;
+    pub const FIELD_TYPE_LOCK_UTXO: u16 = 0xC1;
 
     // --------
 
     /// Renomination of the contract parameters
-    pub const STATE_TYPE_RENOMINATION_RIGHT: usize = 0x01;
+    pub const STATE_TYPE_RENOMINATION_RIGHT: u16 = 0x01;
 
     /// [`OwnedRightType`] that is used by the validation procedures checking
     /// asset inflation (applies to both fungible and non-fungible assets)
-    pub const STATE_TYPE_INFLATION_RIGHT: usize = 0xA0;
+    pub const STATE_TYPE_INFLATION_RIGHT: u16 = 0xA0;
 
     /// [`OwnedRightType`] that is used by validation procedures checking for
     /// the equivalence relations between previous and new asset ownership
-    /// (applies to both fungible and non-fungible assets)
-    pub const STATE_TYPE_OWNERSHIP_RIGHT: usize = 0xA1;
+    /// (applies to both fungible and non-fungible assets).
+    ///
+    /// NB: STATE_TYPE_OWNERSHIP_RIGHT + N where N = 1..9 are reserved for
+    ///     custom forms of ownership (like "engraved ownership" for NFT tokens)
+    pub const STATE_TYPE_OWNERSHIP_RIGHT: u16 = 0xA1;
 
     /// Right to define epochs of asset replacement
-    pub const STATE_TYPE_ISSUE_EPOCH_RIGHT: usize = 0xAA;
+    pub const STATE_TYPE_ISSUE_EPOCH_RIGHT: u16 = 0xAA;
 
     /// Right to replace some of the state issued under the contract
-    pub const STATE_TYPE_ISSUE_REPLACEMENT_RIGHT: usize = 0xAB;
+    pub const STATE_TYPE_ISSUE_REPLACEMENT_RIGHT: u16 = 0xAB;
 
     /// Right to replace some of the state issued under the contract
-    pub const STATE_TYPE_ISSUE_REVOCATION_RIGHT: usize = 0xAC;
+    pub const STATE_TYPE_ISSUE_REVOCATION_RIGHT: u16 = 0xAC;
 
     // --------
 
     /// Transitions transferring ownership over primary contract state
-    pub const TRANSITION_TYPE_OWNERSHIP_TRANSFER: usize = 0x00;
+    pub const TRANSITION_TYPE_OWNERSHIP_TRANSFER: u16 = 0x00;
 
     /// Transitions modifying primary contract state, possibly combining with
     /// ownership transfer
-    pub const TRANSITION_TYPE_STATE_MODIFICATION: usize = 0x01;
+    pub const TRANSITION_TYPE_STATE_MODIFICATION: u16 = 0x01;
 
     /// Transition performing renomination of contract metadata
-    pub const TRANSITION_TYPE_RENOMINATION: usize = 0x10;
+    pub const TRANSITION_TYPE_RENOMINATION: u16 = 0x10;
 
     /// [`TransitionType`] that is used by the validation procedures checking
     /// asset inflation (applies to both fungible and non-fungible assets)
-    pub const TRANSITION_TYPE_ISSUE: usize = 0xA0;
+    pub const TRANSITION_TYPE_ISSUE: u16 = 0xA0;
 
     /// Transition that defines certain grouping of other issue-related
     /// operations
-    pub const TRANSITION_TYPE_ISSUE_EPOCH: usize = 0xA1;
+    pub const TRANSITION_TYPE_ISSUE_EPOCH: u16 = 0xA1;
 
     /// Transition burning some of the issued contract state.
     ///
     /// NB: It is not the same as [`TRANSITION_TYPE_RIGHTS_TERMINATION`], which
     /// terminates ability to utilize some rights (but not the state)
-    pub const TRANSITION_TYPE_ISSUE_BURN: usize = 0xA2;
+    pub const TRANSITION_TYPE_ISSUE_BURN: u16 = 0xA2;
 
     /// Transition replacing some of the previously issued state with the new
     /// one
-    pub const TRANSITION_TYPE_ISSUE_REPLACE: usize = 0xA3;
+    pub const TRANSITION_TYPE_ISSUE_REPLACE: u16 = 0xA3;
 
     /// Transition performing split of rights assigned to the same UTXO by
     /// a mistake
-    pub const TRANSITION_TYPE_RIGHTS_SPLIT: usize = 0xF0;
+    pub const TRANSITION_TYPE_RIGHTS_SPLIT: u16 = 0xF0;
 
     /// Transition making certain rights void without executing the right itself
-    pub const TRANSITION_TYPE_RIGHTS_TERMINATION: usize = 0xFF;
+    pub const TRANSITION_TYPE_RIGHTS_TERMINATION: u16 = 0xFF;
 }

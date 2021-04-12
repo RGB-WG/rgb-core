@@ -179,19 +179,19 @@ pub enum Failure {
     SchemaStateValueTooLarge(schema::OwnedRightType),
 
     SchemaMismatchedBits {
-        field_or_state_type: usize,
+        field_or_state_type: u16,
         expected: schema::Bits,
     },
     SchemaWrongEnumValue {
-        field_or_state_type: usize,
+        field_or_state_type: u16,
         unexpected: u8,
     },
     SchemaWrongDataLength {
-        field_or_state_type: usize,
+        field_or_state_type: u16,
         max_expected: u16,
         found: usize,
     },
-    SchemaMismatchedDataType(usize),
+    SchemaMismatchedDataType(u16),
     SchemaMismatchedStateType(schema::OwnedRightType),
 
     SchemaMetaOccurencesError(NodeId, schema::FieldType, OccurrencesError),
@@ -250,7 +250,7 @@ pub enum Failure {
     EndpointTransitionNotFound(NodeId),
 
     /// invalid bulletproofs in {0}:{1}: {2}
-    InvalidBulletproofs(NodeId, usize, secp256k1zkp::Error),
+    InvalidBulletproofs(NodeId, u16, secp256k1zkp::Error),
 
     WrongEntryPoint(EntryPoint),
     /// Under certain conditions the script code must be empty, for instance if
@@ -290,7 +290,7 @@ pub enum Warning {
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {
-    UncheckableConfidentialStateData(NodeId, usize),
+    UncheckableConfidentialStateData(NodeId, u16),
 }
 
 pub struct Validator<'validator, R: TxResolver> {

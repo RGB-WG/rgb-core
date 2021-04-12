@@ -27,7 +27,7 @@ use lnpbp::Chain;
 use rgb::prelude::*;
 use rgb::seal::WitnessVoutError;
 
-use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
+use super::schema::{self, FieldType, OwnedRightType, TransitionType};
 use crate::{
     BurnReplace, Epoch, FractionalAmount, Issue, Nomination, PreciseAmount,
     Renomination, Supply, SupplyMeasure,
@@ -383,7 +383,7 @@ impl Asset {
     ) -> Result<(), Error> {
         let closed_seals = consignment.seals_closed_with(
             transition.node_id(),
-            *OwnedRightsType::Inflation,
+            OwnedRightType::Inflation,
             witness,
         )?;
         let issue = Issue::with(self.id, closed_seals, transition, witness)?;
@@ -406,12 +406,12 @@ impl Asset {
         // 1. It must correctly extend known state, i.e. close UTXO for a seal
         //    defined by a state transition already belonging to the asset
         let closed_seal = consignment
-            .seals_closed_with(id, *OwnedRightsType::OpenEpoch, witness)?
+            .seals_closed_with(id, OwnedRightType::OpenEpoch, witness)?
             .into_iter()
             .next()
             .ok_or(Error::Inconsistency(
                 rgb::ConsistencyError::NoSealsClosed(
-                    *OwnedRightsType::OpenEpoch,
+                    OwnedRightType::OpenEpoch.into(),
                     id,
                 ),
             ))?;
@@ -437,14 +437,14 @@ impl TryFrom<Genesis> for Asset {
         }
         let genesis_meta = genesis.metadata();
         let supply = *genesis_meta
-            .u64(*FieldType::IssuedSupply)
+            .u64(FieldType::IssuedSupply)
             .first()
             .ok_or(Error::UnsatisfiedSchemaRequirement)?;
         let mut issue_limit = 0;
 
         // Check if issue limit can be known
         for assignment in
-            genesis.owned_rights_by_type(*OwnedRightsType::Inflation)
+            genesis.owned_rights_by_type(OwnedRightType::Inflation.into())
         {
             for state in assignment.to_data_assignment_vec() {
                 match state {
@@ -463,7 +463,7 @@ impl TryFrom<Genesis> for Asset {
         }
 
         let epoch_opening_seal = genesis
-            .revealed_seals_by_type(*OwnedRightsType::OpenEpoch)
+            .revealed_seals_by_type(OwnedRightType::OpenEpoch.into())
             .map_err(|_| Error::EpochSealConfidential(genesis.node_id()))?
             .first()
             .copied()
@@ -473,7 +473,8 @@ impl TryFrom<Genesis> for Asset {
         let issue = Issue::try_from(&genesis)?;
         let node_id = NodeId::from_inner(genesis.contract_id().into_inner());
         let mut known_allocations = Vec::<Allocation>::new();
-        for assignment in genesis.owned_rights_by_type(*OwnedRightsType::Assets)
+        for assignment in
+            genesis.owned_rights_by_type(OwnedRightType::Assets.into())
         {
             assignment
                 .to_value_assignment_vec()
@@ -504,7 +505,7 @@ impl TryFrom<Genesis> for Asset {
             date: DateTime::from_utc(
                 NaiveDateTime::from_timestamp(
                     *genesis_meta
-                        .i64(*FieldType::Timestamp)
+                        .i64(FieldType::Timestamp)
                         .first()
                         .ok_or(Error::UnsatisfiedSchemaRequirement)?,
                     0,
@@ -532,11 +533,14 @@ impl TryFrom<Consignment> for Asset {
         // 2. Parse burn & replacement operations
         let mut epoch_operations: BTreeMap<NodeId, Vec<BurnReplace>> = empty!();
         for transition in consignment.endpoint_transitions_by_types(&[
-            *TransitionType::BurnAndReplace,
-            *TransitionType::Burn,
+            TransitionType::BurnAndReplace.into(),
+            TransitionType::Burn.into(),
         ]) {
             let mut ops = consignment
-                .chain_iter(transition.node_id(), *OwnedRightsType::BurnReplace)
+                .chain_iter(
+                    transition.node_id(),
+                    OwnedRightType::BurnReplace.into(),
+                )
                 .collect::<Vec<_>>();
             ops.reverse();
             if let Some((epoch, _)) = ops.pop() {
@@ -547,14 +551,14 @@ impl TryFrom<Consignment> for Asset {
                     let closed_seal = consignment
                         .seals_closed_with(
                             id,
-                            *OwnedRightsType::BurnReplace,
+                            OwnedRightType::BurnReplace,
                             witness,
                         )?
                         .into_iter()
                         .next()
                         .ok_or(Error::Inconsistency(
                             rgb::ConsistencyError::NoSealsClosed(
-                                *OwnedRightsType::BurnReplace,
+                                OwnedRightType::BurnReplace.into(),
                                 id,
                             ),
                         ))?;
@@ -573,14 +577,14 @@ impl TryFrom<Consignment> for Asset {
 
         // 3. Parse epochs
         let epoch_transition = consignment
-            .endpoint_transitions_by_type(*TransitionType::Epoch)
+            .endpoint_transitions_by_type(TransitionType::Epoch.into())
             .into_iter()
             .next();
         if let Some(epoch_transition) = epoch_transition {
             let mut chain = consignment
                 .chain_iter(
                     epoch_transition.node_id(),
-                    *OwnedRightsType::OpenEpoch,
+                    OwnedRightType::OpenEpoch.into(),
                 )
                 .collect::<Vec<_>>();
             chain.reverse();
@@ -602,7 +606,7 @@ impl TryFrom<Consignment> for Asset {
 
         // 4. Parse secondary issues
         for (transition, witness) in
-            consignment.transition_witness_iter(&[*TransitionType::Issue])
+            consignment.transition_witness_iter(&[TransitionType::Issue.into()])
         {
             asset.add_issue(&consignment, transition, witness)?;
         }
@@ -612,13 +616,13 @@ impl TryFrom<Consignment> for Asset {
 
         // 6. Parse allocations
         for (transaction, witness) in consignment.transition_witness_iter(&[
-            *TransitionType::Issue,
-            *TransitionType::BurnAndReplace,
-            *TransitionType::Transfer,
-            *TransitionType::RightsSplit,
+            TransitionType::Issue.into(),
+            TransitionType::BurnAndReplace.into(),
+            TransitionType::Transfer.into(),
+            TransitionType::RightsSplit.into(),
         ]) {
             for assignments in
-                transaction.owned_rights_by_type(*OwnedRightsType::Assets)
+                transaction.owned_rights_by_type(OwnedRightType::Assets.into())
             {
                 for (index, (seal, state)) in assignments
                     .to_value_assignment_vec()

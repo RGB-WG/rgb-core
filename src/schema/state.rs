@@ -755,16 +755,17 @@ mod _strict_encoding {
 mod _validation {
     use amplify::AsAny;
     use core::any::Any;
+    use lnpbp::client_side_validation::CommitConceal;
 
     use super::*;
+    use crate::schema::OwnedRightType;
     use crate::{
         data, validation, Assignment, DeclarativeStrategy, HashStrategy,
         NodeId, PedersenStrategy, State,
     };
-    use lnpbp::client_side_validation::CommitConceal;
 
     fn range_check<T, U>(
-        type_id: usize,
+        type_id: u16,
         is_meta: bool,
         val: T,
         min: U,
@@ -795,7 +796,7 @@ mod _validation {
     impl DataFormat {
         pub fn validate(
             &self,
-            item_id: usize,
+            item_id: u16,
             data: &data::Revealed,
         ) -> validation::Status {
             let mut status = validation::Status::new();
@@ -962,7 +963,7 @@ mod _validation {
         pub fn validate<STATE>(
             &self,
             node_id: &NodeId,
-            assignment_id: usize,
+            assignment_id: OwnedRightType,
             data: &Assignment<STATE>,
         ) -> validation::Status
         where
@@ -1573,75 +1574,75 @@ mod test {
         // Assert different failure combinations
         assert_eq!(
             dec_format
-                .validate(&node_id, 3usize, &assignment_ped_rev)
+                .validate(&node_id, 3u16, &assignment_ped_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             dec_format
-                .validate(&node_id, 3usize, &assignment_ped_conf)
+                .validate(&node_id, 3u16, &assignment_ped_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             dec_format
-                .validate(&node_id, 3usize, &assignment_hash_rev)
+                .validate(&node_id, 3u16, &assignment_hash_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             dec_format
-                .validate(&node_id, 3usize, &assignment_hash_conf)
+                .validate(&node_id, 3u16, &assignment_hash_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
 
         assert_eq!(
             ped_format
-                .validate(&node_id, 3usize, &assignment_dec_rev)
+                .validate(&node_id, 3u16, &assignment_dec_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             ped_format
-                .validate(&node_id, 3usize, &assignment_dec_conf)
+                .validate(&node_id, 3u16, &assignment_dec_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             ped_format
-                .validate(&node_id, 3usize, &assignment_hash_rev)
+                .validate(&node_id, 3u16, &assignment_hash_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             ped_format
-                .validate(&node_id, 3usize, &assignment_hash_conf)
+                .validate(&node_id, 3u16, &assignment_hash_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
 
         assert_eq!(
             hash_format
-                .validate(&node_id, 3usize, &assignment_dec_rev)
+                .validate(&node_id, 3u16, &assignment_dec_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             hash_format
-                .validate(&node_id, 3usize, &assignment_dec_conf)
+                .validate(&node_id, 3u16, &assignment_dec_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             hash_format
-                .validate(&node_id, 3usize, &assignment_ped_rev)
+                .validate(&node_id, 3u16, &assignment_ped_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             hash_format
-                .validate(&node_id, 3usize, &assignment_ped_conf)
+                .validate(&node_id, 3u16, &assignment_ped_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );

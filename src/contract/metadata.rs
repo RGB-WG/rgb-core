@@ -78,81 +78,87 @@ impl ToMerkleSource for Metadata {
 }
 
 impl Metadata {
-    pub fn u8(&self, field_type: schema::FieldType) -> Vec<u8> {
-        self.get(&field_type)
+    pub fn u8(&self, field_type: impl Into<schema::FieldType>) -> Vec<u8> {
+        self.get(&field_type.into())
             .map(|set| set.into_iter().filter_map(data::Revealed::u8).collect())
             .unwrap_or_default()
     }
-    pub fn u16(&self, field_type: schema::FieldType) -> Vec<u16> {
-        self.get(&field_type)
+    pub fn u16(&self, field_type: impl Into<schema::FieldType>) -> Vec<u16> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::u16).collect()
             })
             .unwrap_or_default()
     }
-    pub fn u32(&self, field_type: schema::FieldType) -> Vec<u32> {
-        self.get(&field_type)
+    pub fn u32(&self, field_type: impl Into<schema::FieldType>) -> Vec<u32> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::u32).collect()
             })
             .unwrap_or_default()
     }
-    pub fn u64(&self, field_type: schema::FieldType) -> Vec<u64> {
-        self.get(&field_type)
+    pub fn u64(&self, field_type: impl Into<schema::FieldType>) -> Vec<u64> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::u64).collect()
             })
             .unwrap_or_default()
     }
-    pub fn i8(&self, field_type: schema::FieldType) -> Vec<i8> {
-        self.get(&field_type)
+    pub fn i8(&self, field_type: impl Into<schema::FieldType>) -> Vec<i8> {
+        self.get(&field_type.into())
             .map(|set| set.into_iter().filter_map(data::Revealed::i8).collect())
             .unwrap_or_default()
     }
-    pub fn i16(&self, field_type: schema::FieldType) -> Vec<i16> {
-        self.get(&field_type)
+    pub fn i16(&self, field_type: impl Into<schema::FieldType>) -> Vec<i16> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::i16).collect()
             })
             .unwrap_or_default()
     }
-    pub fn i32(&self, field_type: schema::FieldType) -> Vec<i32> {
-        self.get(&field_type)
+    pub fn i32(&self, field_type: impl Into<schema::FieldType>) -> Vec<i32> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::i32).collect()
             })
             .unwrap_or_default()
     }
-    pub fn i64(&self, field_type: schema::FieldType) -> Vec<i64> {
-        self.get(&field_type)
+    pub fn i64(&self, field_type: impl Into<schema::FieldType>) -> Vec<i64> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::i64).collect()
             })
             .unwrap_or_default()
     }
-    pub fn f32(&self, field_type: schema::FieldType) -> Vec<f32> {
-        self.get(&field_type)
+    pub fn f32(&self, field_type: impl Into<schema::FieldType>) -> Vec<f32> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::f32).collect()
             })
             .unwrap_or_default()
     }
-    pub fn f64(&self, field_type: schema::FieldType) -> Vec<f64> {
-        self.get(&field_type)
+    pub fn f64(&self, field_type: impl Into<schema::FieldType>) -> Vec<f64> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::f64).collect()
             })
             .unwrap_or_default()
     }
-    pub fn bytes(&self, field_type: schema::FieldType) -> Vec<Vec<u8>> {
-        self.get(&field_type)
+    pub fn bytes(
+        &self,
+        field_type: impl Into<schema::FieldType>,
+    ) -> Vec<Vec<u8>> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::bytes).collect()
             })
             .unwrap_or_default()
     }
-    pub fn string(&self, field_type: schema::FieldType) -> Vec<String> {
-        self.get(&field_type)
+    pub fn string(
+        &self,
+        field_type: impl Into<schema::FieldType>,
+    ) -> Vec<String> {
+        self.get(&field_type.into())
             .map(|set| {
                 set.into_iter().filter_map(data::Revealed::string).collect()
             })

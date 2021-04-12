@@ -23,7 +23,7 @@ macro_rules! type_map {
         {
             let mut m = ::std::collections::BTreeMap::new();
             $(
-                m.insert(*$key, $value);
+                m.insert($key.into(), $value);
             )+
             m
         }

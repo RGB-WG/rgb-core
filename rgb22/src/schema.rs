@@ -11,41 +11,91 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::ops::Deref;
-
 use rgb::schema::{
     constants::*, script, Bits, DataFormat, GenesisSchema, Occurences, Schema,
     StateFormat, StateSchema, TransitionAction, TransitionSchema,
 };
 use rgb::vm::embedded;
 
+/// Field types for RGB22 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to digital identity.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum FieldType {
-    Name,
-    Commentary,
-    Data,
-    DataFormat,
-    UsedCryptography,
-    PublicKey,
-    Signature,
-    ValidFrom,
+    /// Asset name
+    ///
+    /// Used within context of genesis or renomination state transition
+    Name = FIELD_TYPE_NAME,
+
+    /// Binary data representing the NFT
+    Data = FIELD_TYPE_DATA,
+
+    /// Format of the binary NFT data
+    DataFormat = FIELD_TYPE_DATA_FORMAT,
+
+    /// Timestamp defining from which point in time the data become valid
+    ValidFrom = FIELD_TYPE_TIMESTAMP,
+
+    /// Type of the used elliptic curve for the identity key
+    UsedCryptography = 0x0110,
+
+    /// Public key representing identity
+    PublicKey = 0x0111,
+
+    /// Self-key signature confirming identity ownership
+    Signature = 0x0112,
+
+    /// Text commentary for an NFT operation
+    Commentary = FIELD_TYPE_COMMENTARY,
 }
 
+impl From<FieldType> for rgb::schema::FieldType {
+    #[inline]
+    fn from(ft: FieldType) -> Self {
+        ft as rgb::schema::FieldType
+    }
+}
+
+/// Owned right types used by RGB22 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to digital identity.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
-pub enum OwnedRightsType {
-    Revocation,
-    Extension,
+pub enum OwnedRightType {
+    /// Revocation right
+    Revocation = STATE_TYPE_ISSUE_REVOCATION_RIGHT,
+
+    /// Right to define new (sub)identity
+    Extension = STATE_TYPE_ISSUE_REPLACEMENT_RIGHT,
 }
 
+impl From<OwnedRightType> for rgb::schema::OwnedRightType {
+    #[inline]
+    fn from(t: OwnedRightType) -> Self {
+        t as rgb::schema::OwnedRightType
+    }
+}
+
+/// State transition types defined by RGB22 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to digital identity.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum TransitionType {
-    Update,
+    /// Modification of the contract state (revocation and extension with new
+    /// identities)
+    Update = TRANSITION_TYPE_STATE_MODIFICATION,
+}
+
+impl From<TransitionType> for rgb::schema::TransitionType {
+    #[inline]
+    fn from(t: TransitionType) -> Self {
+        t as rgb::schema::TransitionType
+    }
 }
 
 pub fn schema() -> Schema {
@@ -81,11 +131,11 @@ pub fn schema() -> Schema {
             FieldType::ValidFrom => DataFormat::Integer(Bits::Bit64, 1593870844, core::i64::MAX as i128)
         },
         owned_right_types: type_map! {
-            OwnedRightsType::Revocation => StateSchema {
+            OwnedRightType::Revocation => StateSchema {
                 format: StateFormat::Declarative,
                 abi: bmap! {}
             },
-            OwnedRightsType::Extension => StateSchema {
+            OwnedRightType::Extension => StateSchema {
                 format: StateFormat::Declarative,
                 abi: bmap! {}
             }
@@ -102,8 +152,8 @@ pub fn schema() -> Schema {
                 FieldType::ValidFrom => Once
             },
             owned_rights: type_map! {
-                OwnedRightsType::Revocation => Once,
-                OwnedRightsType::Extension => NoneOrUpTo(core::u16::MAX)
+                OwnedRightType::Revocation => Once,
+                OwnedRightType::Extension => NoneOrUpTo(core::u16::MAX)
             },
             public_rights: none!(),
             abi: none!(),
@@ -124,12 +174,12 @@ pub fn schema() -> Schema {
                     FieldType::ValidFrom => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Revocation => NoneOrUpTo(core::u16::MAX),
-                    OwnedRightsType::Extension => NoneOrUpTo(core::u16::MAX)
+                    OwnedRightType::Revocation => NoneOrUpTo(core::u16::MAX),
+                    OwnedRightType::Extension => NoneOrUpTo(core::u16::MAX)
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Revocation => Once,
-                    OwnedRightsType::Extension => NoneOrUpTo(core::u16::MAX)
+                    OwnedRightType::Revocation => Once,
+                    OwnedRightType::Extension => NoneOrUpTo(core::u16::MAX)
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -142,43 +192,5 @@ pub fn schema() -> Schema {
             byte_code: empty!(),
             override_rules: script::OverrideRules::Deny,
         },
-    }
-}
-
-impl Deref for FieldType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            FieldType::Name => &FIELD_TYPE_NAME,
-            FieldType::DataFormat => &FIELD_TYPE_DATA_FORMAT,
-            FieldType::ValidFrom => &FIELD_TYPE_TIMESTAMP,
-            FieldType::Commentary => &FIELD_TYPE_COMMENTARY,
-            FieldType::Data => &FIELD_TYPE_DATA,
-            FieldType::UsedCryptography => &0x0110,
-            FieldType::PublicKey => &0x0111,
-            FieldType::Signature => &0x0112,
-        }
-    }
-}
-
-impl Deref for OwnedRightsType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            OwnedRightsType::Revocation => &STATE_TYPE_ISSUE_REVOCATION_RIGHT,
-            OwnedRightsType::Extension => &STATE_TYPE_ISSUE_REPLACEMENT_RIGHT,
-        }
-    }
-}
-
-impl Deref for TransitionType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            TransitionType::Update => &TRANSITION_TYPE_STATE_MODIFICATION,
-        }
     }
 }

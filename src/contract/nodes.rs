@@ -583,12 +583,12 @@ impl Node for Genesis {
     }
 
     #[inline]
-    fn transition_type(&self) -> Option<schema::TransitionType> {
+    fn transition_type(&self) -> Option<TransitionType> {
         None
     }
 
     #[inline]
-    fn extension_type(&self) -> Option<usize> {
+    fn extension_type(&self) -> Option<ExtensionType> {
         None
     }
 
@@ -658,12 +658,12 @@ impl Node for Extension {
     }
 
     #[inline]
-    fn transition_type(&self) -> Option<schema::TransitionType> {
+    fn transition_type(&self) -> Option<TransitionType> {
         None
     }
 
     #[inline]
-    fn extension_type(&self) -> Option<usize> {
+    fn extension_type(&self) -> Option<ExtensionType> {
         Some(self.extension_type)
     }
 
@@ -729,12 +729,12 @@ impl Node for Transition {
     }
 
     #[inline]
-    fn transition_type(&self) -> Option<schema::TransitionType> {
+    fn transition_type(&self) -> Option<TransitionType> {
         Some(self.transition_type)
     }
 
     #[inline]
-    fn extension_type(&self) -> Option<usize> {
+    fn extension_type(&self) -> Option<ExtensionType> {
         None
     }
 
@@ -833,14 +833,14 @@ impl Extension {
 
 impl Transition {
     pub fn with(
-        transition_type: schema::TransitionType,
+        transition_type: impl Into<schema::TransitionType>,
         metadata: Metadata,
         parent_owned_rights: ParentOwnedRights,
         owned_rights: OwnedRights,
         public_rights: PublicRights,
     ) -> Self {
         Self {
-            transition_type,
+            transition_type: transition_type.into(),
             metadata,
             parent_owned_rights,
             owned_rights,
@@ -1148,15 +1148,15 @@ mod test {
             )
             .unwrap();
         assert_eq!(
-            assignments.get(&1usize).unwrap(),
+            assignments.get(&1u16).unwrap(),
             &[1u16, 2u16, 3u16, 4u16, 5u16].to_vec()
         );
         assert_eq!(
-            assignments.get(&2usize).unwrap(),
+            assignments.get(&2u16).unwrap(),
             &[10u16, 20u16, 30u16, 40u16, 50u16].to_vec()
         );
         assert_eq!(
-            assignments.get(&3usize).unwrap(),
+            assignments.get(&3u16).unwrap(),
             &[100u16, 200u16, 300u16, 400u16, 500u16].to_vec()
         );
 
@@ -1183,12 +1183,12 @@ mod test {
 
         assert_eq!(gen_assignments, tran_assingmnets);
 
-        assert!(gen_assignments.get(&1usize).unwrap().is_declarative());
-        assert!(gen_assignments.get(&2usize).unwrap().has_value());
-        assert!(tran_assingmnets.get(&3usize).unwrap().has_data());
+        assert!(gen_assignments.get(&1u16).unwrap().is_declarative());
+        assert!(gen_assignments.get(&2u16).unwrap().has_value());
+        assert!(tran_assingmnets.get(&3u16).unwrap().has_data());
 
         let seal1 = gen_assignments
-            .get(&2usize)
+            .get(&2u16)
             .unwrap()
             .revealed_seal_at(1)
             .unwrap()
@@ -1207,7 +1207,7 @@ mod test {
         );
 
         let seal2 = tran_assingmnets
-            .get(&3usize)
+            .get(&3u16)
             .unwrap()
             .revealed_seal_at(1)
             .unwrap()
@@ -1231,7 +1231,7 @@ mod test {
 
         assert_eq!(gen_fields, tran_fields);
 
-        assert_eq!(gen_fields, vec![13usize]);
+        assert_eq!(gen_fields, vec![13u16]);
 
         // Assignment types
         let gen_ass_types = genesis.owned_right_types();
@@ -1239,7 +1239,7 @@ mod test {
 
         assert_eq!(gen_ass_types, tran_ass_types);
 
-        assert_eq!(gen_ass_types, bset![1usize, 2, 3]);
+        assert_eq!(gen_ass_types, bset![1u16, 2, 3]);
 
         // assignment by types
         let assignment_gen = genesis.owned_rights_by_type(3).unwrap();

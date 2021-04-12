@@ -22,7 +22,7 @@ use bitcoin::{OutPoint, Txid};
 use rgb::prelude::*;
 
 use crate::asset::Error;
-use crate::schema::{FieldType, OwnedRightsType, TransitionType};
+use crate::schema::{FieldType, OwnedRightType, TransitionType};
 
 /// Specific supply measure to be provided; used as an argument for methods
 /// returning supply information
@@ -200,12 +200,12 @@ impl Issue {
 
         let amount = *transition
             .metadata()
-            .u64(*FieldType::IssuedSupply)
+            .u64(FieldType::IssuedSupply)
             .first()
             .ok_or(Error::UnsatisfiedSchemaRequirement)?;
 
         let inflation_assignments = transition
-            .owned_rights_by_type(*OwnedRightsType::Inflation)
+            .owned_rights_by_type(OwnedRightType::Inflation.into())
             .map(AssignmentVec::as_revealed_owned_value)
             .transpose()
             .map_err(|_| Error::InflationAssignmentConfidential(id))?
@@ -264,12 +264,12 @@ impl TryFrom<&Genesis> for Issue {
 
         let amount = *genesis
             .metadata()
-            .u64(*FieldType::IssuedSupply)
+            .u64(FieldType::IssuedSupply)
             .first()
             .ok_or(Error::UnsatisfiedSchemaRequirement)?;
 
         let inflation_assignments = genesis
-            .owned_rights_by_type(*OwnedRightsType::Inflation)
+            .owned_rights_by_type(OwnedRightType::Inflation.into())
             .map(AssignmentVec::as_revealed_owned_value)
             .transpose()
             .map_err(|_| Error::InflationAssignmentConfidential(id))?
@@ -383,14 +383,14 @@ impl Epoch {
     ) -> Result<Self, Error> {
         let id = transition.node_id();
         let epoch_seal = transition
-            .revealed_seals_by_type(*OwnedRightsType::OpenEpoch)
+            .revealed_seals_by_type(OwnedRightType::OpenEpoch.into())
             .map_err(|_| Error::EpochSealConfidential(id))?
             .first()
             .copied()
             .map(|seal| seal.to_outpoint_reveal(witness))
             .map(OutPoint::from);
         let seal = transition
-            .revealed_seals_by_type(*OwnedRightsType::BurnReplace)
+            .revealed_seals_by_type(OwnedRightType::BurnReplace.into())
             .map_err(|_| Error::BurnSealConfidential(id))?
             .first()
             .copied()
@@ -527,25 +527,25 @@ impl BurnReplace {
         let id = transition.node_id();
 
         let seal = transition
-            .revealed_seals_by_type(*OwnedRightsType::BurnReplace)
+            .revealed_seals_by_type(OwnedRightType::BurnReplace.into())
             .map_err(|_| Error::BurnSealConfidential(id))?
             .first()
             .copied()
             .map(|seal| seal.to_outpoint_reveal(witness))
             .map(OutPoint::from);
 
-        let does_replacement =
-            transition.transition_type() == *TransitionType::BurnAndReplace;
+        let does_replacement = transition.transition_type()
+            == TransitionType::BurnAndReplace as rgb::schema::TransitionType;
 
         let burned_amount = transition
             .metadata()
-            .u64(*FieldType::BurnedSupply)
+            .u64(FieldType::BurnedSupply)
             .first()
             .copied()
             .ok_or(Error::UnsatisfiedSchemaRequirement)?;
         let replaced_amount = transition
             .metadata()
-            .u64(*FieldType::IssuedSupply)
+            .u64(FieldType::IssuedSupply)
             .first()
             .copied()
             .ok_or(Error::UnsatisfiedSchemaRequirement)?;

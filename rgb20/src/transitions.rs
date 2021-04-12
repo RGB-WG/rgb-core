@@ -23,7 +23,7 @@ use lnpbp::Chain;
 use rgb::prelude::*;
 use rgb::secp256k1zkp;
 
-use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
+use super::schema::{self, FieldType, OwnedRightType, TransitionType};
 use super::{Asset, Issue};
 
 /// Errors happening during construction of RGB-20 asset state transitions
@@ -84,7 +84,7 @@ impl Asset {
         };
         if let Some(description) = description {
             metadata.insert(
-                *FieldType::RicardianContract,
+                FieldType::RicardianContract.into(),
                 field!(String, description),
             );
         }
@@ -92,7 +92,7 @@ impl Asset {
         let issued_supply = allocations.sum();
         let mut owned_rights = BTreeMap::new();
         owned_rights.insert(
-            *OwnedRightsType::Assets,
+            OwnedRightType::Assets.into(),
             AssignmentVec::zero_balanced(
                 vec![value::Revealed {
                     value: issued_supply,
@@ -102,18 +102,19 @@ impl Asset {
                 empty![],
             ),
         );
-        metadata.insert(*FieldType::IssuedSupply, field!(U64, issued_supply));
+        metadata
+            .insert(FieldType::IssuedSupply.into(), field!(U64, issued_supply));
 
         if !inflation.is_empty() {
             owned_rights.insert(
-                *OwnedRightsType::Inflation,
+                OwnedRightType::Inflation.into(),
                 inflation.into_assignments(),
             );
         }
 
         if let Some(outpoint) = renomination {
             owned_rights.insert(
-                *OwnedRightsType::Renomination,
+                OwnedRightType::Renomination.into(),
                 AssignmentVec::Declarative(vec![Assignment::Revealed {
                     seal_definition: SealDefinition::TxOutpoint(
                         outpoint.into(),
@@ -125,7 +126,7 @@ impl Asset {
 
         if let Some(outpoint) = epoch {
             owned_rights.insert(
-                *OwnedRightsType::BurnReplace,
+                OwnedRightType::BurnReplace.into(),
                 AssignmentVec::Declarative(vec![Assignment::Revealed {
                     seal_definition: SealDefinition::TxOutpoint(
                         outpoint.into(),
@@ -185,7 +186,7 @@ impl Asset {
                         parent
                             .entry(*issue.node_id())
                             .or_insert(empty!())
-                            .entry(*OwnedRightsType::Inflation)
+                            .entry(OwnedRightType::Inflation.into())
                             .or_insert(empty!())
                             .push(*index)
                     });
@@ -220,7 +221,7 @@ impl Asset {
 
         let mut owned_rights = BTreeMap::new();
         owned_rights.insert(
-            *OwnedRightsType::Assets,
+            OwnedRightType::Assets.into(),
             AssignmentVec::zero_balanced(
                 vec![value::Revealed {
                     value: issued_supply,
@@ -232,13 +233,13 @@ impl Asset {
         );
         if !next_inflation.is_empty() {
             owned_rights.insert(
-                *OwnedRightsType::Inflation,
+                OwnedRightType::Inflation.into(),
                 next_inflation.into_assignments(),
             );
         }
 
         let transition = Transition::with(
-            *TransitionType::Issue,
+            TransitionType::Issue,
             metadata.into(),
             parent,
             owned_rights.into(),
@@ -308,7 +309,6 @@ impl Asset {
             .iter()
             .fold(0u64, |acc, alloc| acc + alloc.revealed_amount().value);
 
-        let metadata = type_map! {};
         let total_outputs = change.sum() + payment.sum();
 
         if total_inputs != total_outputs {
@@ -320,7 +320,7 @@ impl Asset {
             .map(|alloc| *alloc.revealed_amount())
             .collect();
         let assignments = type_map! {
-            OwnedRightsType::Assets =>
+            OwnedRightType::Assets =>
             AssignmentVec::zero_balanced(input_amounts, change, payment)
         };
 
@@ -329,14 +329,14 @@ impl Asset {
             parent
                 .entry(*alloc.node_id())
                 .or_insert(empty!())
-                .entry(*OwnedRightsType::Assets)
+                .entry(OwnedRightType::Assets.into())
                 .or_insert(empty!())
                 .push(*alloc.index());
         }
 
         let transition = Transition::with(
-            *TransitionType::Transfer,
-            metadata.into(),
+            TransitionType::Transfer,
+            type_map!().into(),
             parent,
             assignments.into(),
             bset!().into(),

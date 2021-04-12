@@ -11,38 +11,81 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::ops::Deref;
-
 use rgb::schema::{
     constants::*, script, Bits, DataFormat, GenesisSchema, Occurences, Schema,
     StateFormat, StateSchema, TransitionSchema,
 };
 
+/// Field types for RGB23 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to audit logs.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum FieldType {
-    Name,
-    Commentary,
-    RicardianContract,
-    StartsFrom,
-    Data,
-    DataFormat,
+    /// Name for the audit log
+    Name = FIELD_TYPE_NAME,
+
+    /// Text of the asset contract
+    RicardianContract = FIELD_TYPE_CONTRACT_TEXT,
+
+    /// Text commentary for an audit log entry
+    Commentary = FIELD_TYPE_COMMENTARY,
+
+    /// Timestamp defining from which point in time the audit log was created
+    StartsFrom = FIELD_TYPE_TIMESTAMP,
+
+    /// Binary data – audit log commitment or entry data
+    Data = FIELD_TYPE_DATA,
+
+    /// Format of the binary audit log entry data
+    DataFormat = FIELD_TYPE_DATA_FORMAT,
 }
 
+impl From<FieldType> for rgb::schema::FieldType {
+    #[inline]
+    fn from(ft: FieldType) -> Self {
+        ft as rgb::schema::FieldType
+    }
+}
+
+/// Owned right types used by RGB23 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to audit logs.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
-pub enum OwnedRightsType {
+pub enum OwnedRightType {
+    /// Right to create next audit log record
     Entry,
 }
 
+impl From<OwnedRightType> for rgb::schema::OwnedRightType {
+    #[inline]
+    fn from(t: OwnedRightType) -> Self {
+        t as rgb::schema::OwnedRightType
+    }
+}
+
+/// State transition types defined by RGB23 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to audit logs.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum TransitionType {
-    Entry,
-    Burn,
+    /// Creation of next audit log record
+    Entry = TRANSITION_TYPE_STATE_MODIFICATION,
+
+    /// Operation terminating audit log record
+    Terminate = TRANSITION_TYPE_RIGHTS_TERMINATION,
+}
+
+impl From<TransitionType> for rgb::schema::TransitionType {
+    #[inline]
+    fn from(t: TransitionType) -> Self {
+        t as rgb::schema::TransitionType
+    }
 }
 
 pub fn schema() -> Schema {
@@ -71,7 +114,7 @@ pub fn schema() -> Schema {
             FieldType::StartsFrom => DataFormat::Integer(Bits::Bit64, 1593870844, core::i64::MAX as i128)
         },
         owned_right_types: type_map! {
-            OwnedRightsType::Entry => StateSchema {
+            OwnedRightType::Entry => StateSchema {
                 format: StateFormat::Declarative,
                 abi: bmap! {}
             }
@@ -86,7 +129,7 @@ pub fn schema() -> Schema {
                 FieldType::StartsFrom => Once
             },
             owned_rights: type_map! {
-                OwnedRightsType::Entry => Once
+                OwnedRightType::Entry => Once
             },
             public_rights: none!(),
             abi: bmap! {},
@@ -100,20 +143,20 @@ pub fn schema() -> Schema {
                     FieldType::Data => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Entry => Once
+                    OwnedRightType::Entry => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Entry => Once
+                    OwnedRightType::Entry => Once
                 },
                 public_rights: none!(),
                 abi: bmap! { }
             },
-            TransitionType::Burn => TransitionSchema {
+            TransitionType::Terminate => TransitionSchema {
                 metadata: type_map! {
                     FieldType::Commentary => NoneOrOnce
                 },
                 closes: type_map! {
-                    OwnedRightsType::Entry => NoneOrOnce
+                    OwnedRightType::Entry => NoneOrOnce
                 },
                 owned_rights: none!(),
                 public_rights: none!(),
@@ -125,41 +168,5 @@ pub fn schema() -> Schema {
             byte_code: empty!(),
             override_rules: script::OverrideRules::Deny,
         },
-    }
-}
-
-impl Deref for FieldType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            FieldType::Name => &FIELD_TYPE_NAME,
-            FieldType::StartsFrom => &FIELD_TYPE_TIMESTAMP,
-            FieldType::Data => &FIELD_TYPE_DATA,
-            FieldType::DataFormat => &FIELD_TYPE_DATA_FORMAT,
-            FieldType::Commentary => &FIELD_TYPE_COMMENTARY,
-            FieldType::RicardianContract => &FIELD_TYPE_CONTRACT_TEXT,
-        }
-    }
-}
-
-impl Deref for OwnedRightsType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            OwnedRightsType::Entry => &0x0101,
-        }
-    }
-}
-
-impl Deref for TransitionType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            TransitionType::Entry => &TRANSITION_TYPE_STATE_MODIFICATION,
-            TransitionType::Burn => &TRANSITION_TYPE_RIGHTS_TERMINATION,
-        }
     }
 }

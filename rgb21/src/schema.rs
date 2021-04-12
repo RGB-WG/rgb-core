@@ -11,8 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::ops::Deref;
-
 use rgb::schema::{
     constants::*, script, AssignmentAction, Bits, DataFormat,
     DiscreteFiniteFieldFormat, GenesisAction, GenesisSchema, Occurences,
@@ -20,51 +18,110 @@ use rgb::schema::{
 };
 use rgb::vm::embedded;
 
-#[derive(
-    Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Error, From,
-)]
-#[display(Debug)]
-pub enum SchemaError {
-    NotAllFieldsPresent,
-
-    WrongSchemaId,
-}
-
+/// Field types for RGB21 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to NFTs.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum FieldType {
-    Name,
-    RicardianContract,
-    Data,
-    DataFormat,
-    Timestamp,
-    LockDescriptor,
-    LockUtxo,
-    BurnUtxo,
-    Commentary,
+    /// Asset name
+    ///
+    /// Used within context of genesis or renomination state transition
+    Name = FIELD_TYPE_NAME,
+
+    /// Text of the asset contract
+    ///
+    /// Used within context of genesis or renomination state transition
+    RicardianContract = FIELD_TYPE_CONTRACT_TEXT,
+
+    /// Timestamp for genesis
+    Timestamp = FIELD_TYPE_TIMESTAMP,
+
+    /// Binary data representing the NFT
+    Data = FIELD_TYPE_DATA,
+
+    /// Format of the binary NFT data
+    DataFormat = FIELD_TYPE_DATA_FORMAT,
+
+    /// Bitcoin output descriptor for the UTXO containing the locked funds
+    LockDescriptor = FIELD_TYPE_LOCK_DESCRIPTOR,
+
+    /// UTXO containing locked funds as a NFT reserve
+    LockUtxo = FIELD_TYPE_LOCK_UTXO,
+
+    /// UTXO that is provably unspendable and contains burned NFT
+    BurnUtxo = FIELD_TYPE_BURN_UTXO,
+
+    /// Text commentary for an NFT operation
+    Commentary = FIELD_TYPE_COMMENTARY,
 }
 
+impl From<FieldType> for rgb::schema::FieldType {
+    #[inline]
+    fn from(ft: FieldType) -> Self {
+        ft as rgb::schema::FieldType
+    }
+}
+
+/// Owned right types used by RGB21 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to NFTs.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
-pub enum OwnedRightsType {
-    Inflation,
-    Ownership,
-    EngravedOwnership,
-    Renomination,
+pub enum OwnedRightType {
+    /// Inflation control right (secondary issuance right)
+    Inflation = STATE_TYPE_INFLATION_RIGHT,
+
+    /// Asset ownership right
+    Ownership = STATE_TYPE_OWNERSHIP_RIGHT,
+
+    /// Asset ownership right
+    EngravedOwnership = STATE_TYPE_OWNERSHIP_RIGHT + 1,
+
+    /// Right to perform asset renomination
+    Renomination = STATE_TYPE_RENOMINATION_RIGHT,
 }
 
+impl From<OwnedRightType> for rgb::schema::OwnedRightType {
+    #[inline]
+    fn from(t: OwnedRightType) -> Self {
+        t as rgb::schema::OwnedRightType
+    }
+}
+
+/// State transition types defined by RGB21 schemata
+///
+/// Subset of known RGB schema pre-defined types applicable to NFTs.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]
 #[repr(u16)]
 pub enum TransitionType {
-    Issue,
-    Transfer,
-    Engraving,
-    Renomination,
-    RightsSplit,
-    Burn,
+    /// Secondary issuance
+    Issue = TRANSITION_TYPE_ISSUE,
+
+    /// Asset transfer
+    Transfer = TRANSITION_TYPE_OWNERSHIP_TRANSFER,
+
+    /// Asset transfer joined with addition of custom data to NFT ("engraving")
+    Engraving = TRANSITION_TYPE_STATE_MODIFICATION,
+
+    /// Asset burn operation
+    Burn = TRANSITION_TYPE_ISSUE_BURN,
+
+    /// Renomination (change in the NFT metadata).
+    Renomination = TRANSITION_TYPE_RENOMINATION,
+
+    /// Operation splitting rights assigned to the same UTXO
+    RightsSplit = TRANSITION_TYPE_RIGHTS_SPLIT,
+}
+
+impl From<TransitionType> for rgb::schema::TransitionType {
+    #[inline]
+    fn from(t: TransitionType) -> Self {
+        t as rgb::schema::TransitionType
+    }
 }
 
 pub fn schema() -> Schema {
@@ -91,11 +148,11 @@ pub fn schema() -> Schema {
                 FieldType::Timestamp => Once
             },
             owned_rights: type_map! {
-                OwnedRightsType::Inflation => NoneOrOnce,
-                OwnedRightsType::Renomination => NoneOrOnce,
+                OwnedRightType::Inflation => NoneOrOnce,
+                OwnedRightType::Renomination => NoneOrOnce,
                 // We have an option of issuing zero tokens here and just
                 // declaring future issuance
-                OwnedRightsType::Ownership => NoneOrMore
+                OwnedRightType::Ownership => NoneOrMore
             },
             public_rights: none!(),
             abi: bmap! {
@@ -116,11 +173,11 @@ pub fn schema() -> Schema {
                     FieldType::LockDescriptor => NoneOrOnce
                 },
                 closes: type_map! {
-                    OwnedRightsType::Inflation => Once
+                    OwnedRightType::Inflation => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Inflation => NoneOrOnce,
-                    OwnedRightsType::Ownership => OnceOrMore
+                    OwnedRightType::Inflation => NoneOrOnce,
+                    OwnedRightType::Ownership => OnceOrMore
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -136,11 +193,11 @@ pub fn schema() -> Schema {
                 metadata: type_map! {
                 },
                 closes: type_map! {
-                    OwnedRightsType::Ownership => OnceOrMore,
-                    OwnedRightsType::EngravedOwnership => OnceOrMore
+                    OwnedRightType::Ownership => OnceOrMore,
+                    OwnedRightType::EngravedOwnership => OnceOrMore
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Ownership => OnceOrMore
+                    OwnedRightType::Ownership => OnceOrMore
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -157,11 +214,11 @@ pub fn schema() -> Schema {
                     FieldType::DataFormat => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Ownership => OnceOrMore,
-                    OwnedRightsType::EngravedOwnership => OnceOrMore
+                    OwnedRightType::Ownership => OnceOrMore,
+                    OwnedRightType::EngravedOwnership => OnceOrMore
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::EngravedOwnership => OnceOrMore
+                    OwnedRightType::EngravedOwnership => OnceOrMore
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -179,10 +236,10 @@ pub fn schema() -> Schema {
                     FieldType::DataFormat => Once
                 },
                 closes: type_map! {
-                    OwnedRightsType::Renomination => Once
+                    OwnedRightType::Renomination => Once
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: none!()
@@ -195,16 +252,16 @@ pub fn schema() -> Schema {
                 metadata: type_map! {
                 },
                 closes: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Ownership => NoneOrMore,
-                    OwnedRightsType::EngravedOwnership => NoneOrMore,
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::Ownership => NoneOrMore,
+                    OwnedRightType::EngravedOwnership => NoneOrMore,
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 owned_rights: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Ownership => NoneOrMore,
-                    OwnedRightsType::EngravedOwnership => NoneOrMore,
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::Ownership => NoneOrMore,
+                    OwnedRightType::EngravedOwnership => NoneOrMore,
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 public_rights: none!(),
                 abi: bmap! {
@@ -226,10 +283,10 @@ pub fn schema() -> Schema {
                     FieldType::DataFormat => NoneOrOnce
                 },
                 closes: type_map! {
-                    OwnedRightsType::Inflation => NoneOrMore,
-                    OwnedRightsType::Ownership => NoneOrMore,
-                    OwnedRightsType::EngravedOwnership => NoneOrMore,
-                    OwnedRightsType::Renomination => NoneOrOnce
+                    OwnedRightType::Inflation => NoneOrMore,
+                    OwnedRightType::Ownership => NoneOrMore,
+                    OwnedRightType::EngravedOwnership => NoneOrMore,
+                    OwnedRightType::Renomination => NoneOrOnce
                 },
                 owned_rights: none!(),
                 public_rights: none!(),
@@ -262,7 +319,7 @@ pub fn schema() -> Schema {
             FieldType::Commentary => DataFormat::String(core::u16::MAX)
         },
         owned_right_types: type_map! {
-            OwnedRightsType::Inflation => StateSchema {
+            OwnedRightType::Inflation => StateSchema {
                 // How much issuer can issue tokens on this path
                 format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 abi: bmap! {
@@ -270,19 +327,19 @@ pub fn schema() -> Schema {
                     AssignmentAction::Validate => embedded::AssignmentValidator::NoOverflow as script::EntryPoint
                 }
             },
-            OwnedRightsType::Ownership => StateSchema {
+            OwnedRightType::Ownership => StateSchema {
                 // How much issuer can issue tokens on this path
                 format: StateFormat::Declarative,
                 abi: none!()
             },
-            OwnedRightsType::EngravedOwnership => StateSchema {
+            OwnedRightType::EngravedOwnership => StateSchema {
                 // Engraving data (per-token). Data format is defined by metadata
                 // and must be same for all tokens
                 // TODO #33: Use `DataFormat::Container` once will be available
                 format: StateFormat::CustomData(DataFormat::Bytes(core::u16::MAX)),
                 abi: none!()
             },
-            OwnedRightsType::Renomination => StateSchema {
+            OwnedRightType::Renomination => StateSchema {
                 format: StateFormat::Declarative,
                 abi: none!()
             }
@@ -293,61 +350,5 @@ pub fn schema() -> Schema {
             byte_code: empty!(),
             override_rules: script::OverrideRules::Deny,
         },
-    }
-}
-
-// TODO #35: Define all standard field, rights & transition types which are
-//      common to different schemata as constants
-impl Deref for FieldType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            // Nomination fields:
-            FieldType::Name => &FIELD_TYPE_NAME,
-            FieldType::RicardianContract => &FIELD_TYPE_CONTRACT_TEXT,
-            FieldType::Timestamp => &FIELD_TYPE_TIMESTAMP,
-            FieldType::Data => &FIELD_TYPE_DATA,
-            FieldType::DataFormat => &FIELD_TYPE_DATA_FORMAT,
-            FieldType::Commentary => &FIELD_TYPE_COMMENTARY,
-            // Proof-of-burn fields:
-            FieldType::BurnUtxo => &FIELD_TYPE_BURN_UTXO,
-            // Prood-of-reserves fields:
-            FieldType::LockDescriptor => &FIELD_TYPE_LOCK_DESCRIPTOR,
-            FieldType::LockUtxo => &FIELD_TYPE_LOCK_UTXO,
-        }
-    }
-}
-
-impl Deref for OwnedRightsType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            // Nomination rights:
-            OwnedRightsType::Renomination => &STATE_TYPE_RENOMINATION_RIGHT,
-            // Inflation-control-related rights:
-            OwnedRightsType::Inflation => &STATE_TYPE_INFLATION_RIGHT,
-            OwnedRightsType::Ownership => &STATE_TYPE_OWNERSHIP_RIGHT,
-            OwnedRightsType::EngravedOwnership => &STATE_TYPE_OWNERSHIP_RIGHT,
-        }
-    }
-}
-
-impl Deref for TransitionType {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            // Asset transfers:
-            TransitionType::Transfer => &TRANSITION_TYPE_OWNERSHIP_TRANSFER,
-            TransitionType::Engraving => &TRANSITION_TYPE_STATE_MODIFICATION,
-            // Nomination transitions:
-            TransitionType::Renomination => &TRANSITION_TYPE_RENOMINATION,
-            // Inflation-related transitions:
-            TransitionType::Issue => &TRANSITION_TYPE_ISSUE,
-            TransitionType::RightsSplit => &TRANSITION_TYPE_RIGHTS_SPLIT,
-            TransitionType::Burn => &TRANSITION_TYPE_RIGHTS_TERMINATION,
-        }
     }
 }

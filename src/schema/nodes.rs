@@ -22,8 +22,8 @@ use super::{
 use crate::script::EntryPoint;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type OwnedRightType = usize;
-pub type PublicRightType = usize;
+pub type OwnedRightType = u16;
+pub type PublicRightType = u16;
 pub type MetadataStructure = BTreeMap<FieldType, Occurences>;
 pub type PublicRightsStructure = BTreeSet<PublicRightType>;
 pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurences>;
@@ -529,10 +529,10 @@ mod test {
             GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
-        valencies.insert(1usize);
-        valencies.insert(2usize);
-        valencies.insert(3usize);
-        valencies.insert(4usize);
+        valencies.insert(1u16);
+        valencies.insert(2u16);
+        valencies.insert(3u16);
+        valencies.insert(4u16);
 
         let mut genesis_abi = GenesisAbi::new();
         genesis_abi.insert(
@@ -542,13 +542,13 @@ mod test {
 
         assert_eq!(genesis_schema.node_type(), NodeType::Genesis);
         assert_eq!(
-            genesis_schema.metadata().get(&2usize).unwrap(),
+            genesis_schema.metadata().get(&2u16).unwrap(),
             &Occurences::NoneOrOnce
         );
         assert_eq!(genesis_schema.closes(), &OwnedRightsStructure::new());
         assert_eq!(genesis_schema.extends(), &PublicRightsStructure::new());
         assert_eq!(
-            genesis_schema.owned_rights().get(&3usize).unwrap(),
+            genesis_schema.owned_rights().get(&3u16).unwrap(),
             &Occurences::OnceOrUpTo(25u16)
         );
         assert_eq!(genesis_schema.public_rights(), &valencies);
@@ -561,10 +561,10 @@ mod test {
             TransitionSchema::strict_decode(&TRANSITION_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
-        valencies.insert(1usize);
-        valencies.insert(2usize);
-        valencies.insert(3usize);
-        valencies.insert(4usize);
+        valencies.insert(1u16);
+        valencies.insert(2u16);
+        valencies.insert(3u16);
+        valencies.insert(4u16);
 
         let mut transition_abi = TransitionAbi::new();
         transition_abi.insert(
@@ -574,16 +574,16 @@ mod test {
 
         assert_eq!(transition_schema.node_type(), NodeType::StateTransition);
         assert_eq!(
-            transition_schema.metadata().get(&2usize).unwrap(),
+            transition_schema.metadata().get(&2u16).unwrap(),
             &Occurences::NoneOrOnce
         );
         assert_eq!(
-            transition_schema.closes().get(&3usize).unwrap(),
+            transition_schema.closes().get(&3u16).unwrap(),
             &Occurences::OnceOrUpTo(25u16)
         );
         assert_eq!(transition_schema.extends(), &PublicRightsStructure::new());
         assert_eq!(
-            transition_schema.owned_rights().get(&3usize).unwrap(),
+            transition_schema.owned_rights().get(&3u16).unwrap(),
             &Occurences::OnceOrUpTo(25u16)
         );
         assert_eq!(transition_schema.public_rights(), &valencies);
@@ -596,10 +596,10 @@ mod test {
             ExtensionSchema::strict_decode(&EXTENSION_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
-        valencies.insert(1usize);
-        valencies.insert(2usize);
-        valencies.insert(3usize);
-        valencies.insert(4usize);
+        valencies.insert(1u16);
+        valencies.insert(2u16);
+        valencies.insert(3u16);
+        valencies.insert(4u16);
 
         let mut extension_abi = ExtensionAbi::new();
         extension_abi.insert(
@@ -609,13 +609,13 @@ mod test {
 
         assert_eq!(extension_schema.node_type(), NodeType::StateExtension);
         assert_eq!(
-            extension_schema.metadata().get(&2usize).unwrap(),
+            extension_schema.metadata().get(&2u16).unwrap(),
             &Occurences::NoneOrOnce
         );
         assert_eq!(extension_schema.closes(), &OwnedRightsStructure::new());
         assert_eq!(extension_schema.extends(), &valencies);
         assert_eq!(
-            extension_schema.owned_rights().get(&3usize).unwrap(),
+            extension_schema.owned_rights().get(&3u16).unwrap(),
             &Occurences::OnceOrUpTo(25u16)
         );
         assert_eq!(extension_schema.public_rights(), &valencies);

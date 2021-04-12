@@ -32,9 +32,9 @@ use crate::Bech32;
 use crate::ToBech32;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type FieldType = usize;
-pub type ExtensionType = usize;
-pub type TransitionType = usize;
+pub type FieldType = u16;
+pub type ExtensionType = u16;
+pub type TransitionType = u16;
 
 static MIDSTATE_SHEMA_ID: [u8; 32] = [
     0x81, 0x73, 0x33, 0x7c, 0xcb, 0xc4, 0x8b, 0xd1, 0x24, 0x89, 0x65, 0xcd,
@@ -931,29 +931,29 @@ pub(crate) mod test {
     use lnpbp::tagged_hash;
 
     pub(crate) fn schema() -> Schema {
-        const FIELD_TICKER: usize = 0;
-        const FIELD_NAME: usize = 1;
-        const FIELD_DESCRIPTION: usize = 2;
-        const FIELD_TOTAL_SUPPLY: usize = 3;
-        const FIELD_ISSUED_SUPPLY: usize = 4;
-        const FIELD_DUST_LIMIT: usize = 5;
-        const FIELD_PRECISION: usize = 6;
-        const FIELD_PRUNE_PROOF: usize = 7;
-        const FIELD_TIMESTAMP: usize = 8;
+        const FIELD_TICKER: u16 = 0;
+        const FIELD_NAME: u16 = 1;
+        const FIELD_DESCRIPTION: u16 = 2;
+        const FIELD_TOTAL_SUPPLY: u16 = 3;
+        const FIELD_ISSUED_SUPPLY: u16 = 4;
+        const FIELD_DUST_LIMIT: u16 = 5;
+        const FIELD_PRECISION: u16 = 6;
+        const FIELD_PRUNE_PROOF: u16 = 7;
+        const FIELD_TIMESTAMP: u16 = 8;
 
-        const FIELD_PROOF_OF_BURN: usize = 0x10;
+        const FIELD_PROOF_OF_BURN: u16 = 0x10;
 
-        const ASSIGNMENT_ISSUE: usize = 0;
-        const ASSIGNMENT_ASSETS: usize = 1;
-        const ASSIGNMENT_PRUNE: usize = 2;
+        const ASSIGNMENT_ISSUE: u16 = 0;
+        const ASSIGNMENT_ASSETS: u16 = 1;
+        const ASSIGNMENT_PRUNE: u16 = 2;
 
-        const TRANSITION_ISSUE: usize = 0;
-        const TRANSITION_TRANSFER: usize = 1;
-        const TRANSITION_PRUNE: usize = 2;
+        const TRANSITION_ISSUE: u16 = 0;
+        const TRANSITION_TRANSFER: u16 = 1;
+        const TRANSITION_PRUNE: u16 = 2;
 
-        const VALENCIES_DECENTRALIZED_ISSUE: usize = 0;
+        const VALENCIES_DECENTRALIZED_ISSUE: u16 = 0;
 
-        const EXTENSION_DECENTRALIZED_ISSUE: usize = 0;
+        const EXTENSION_DECENTRALIZED_ISSUE: u16 = 0;
 
         Schema {
             rgb_features: features::FlagVec::default(),
