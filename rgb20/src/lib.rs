@@ -48,9 +48,10 @@ mod amount;
 pub mod asset;
 pub mod schema;
 mod supply;
-pub mod transitions;
+mod transitions;
 
 pub use amount::{FractionalAmount, PreciseAmount};
 pub use asset::Asset;
 pub use schema::{SCHEMA_ID_BECH32, SUBSCHEMA_ID_BECH32};
 pub use supply::{BurnReplace, Epoch, Issue, Supply, SupplyMeasure};
+pub use transitions::Error;

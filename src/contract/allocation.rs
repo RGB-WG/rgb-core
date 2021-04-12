@@ -361,8 +361,12 @@ pub type SealValueMap = BTreeMap<SealDefinition, AtomicValue>;
 /// Allocation map using unique set of blinded consignment endpoints
 pub type EndpointValueMap = BTreeMap<SealEndpoint, AtomicValue>;
 
+/// Methods common to all kinds of **allocation map** data types
 pub trait AllocationMap {
+    /// Returns sum of all atomic values inside the allocation map
     fn sum(&self) -> AtomicValue;
+
+    /// Turns allocation map into [`AssignmentVec`]
     fn into_assignments(self) -> AssignmentVec;
 }
 
@@ -461,7 +465,11 @@ impl AllocationMap for EndpointValueMap {
     }
 }
 
+/// Conversion into [`SealValueMap`] which has all required data for
+/// constructing assignments (complete revealed seal definitions with assigned
+/// blinding factors to them).
 pub trait IntoSealValueMap {
+    /// Converts given **allocation map** into [`SealValueMap`]
     fn into_seal_value_map(self) -> SealValueMap;
 }
 
