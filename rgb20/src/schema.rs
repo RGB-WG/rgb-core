@@ -33,30 +33,6 @@ pub const SCHEMA_ID_BECH32: &'static str =
 pub const SUBSCHEMA_ID_BECH32: &'static str =
     "sch1zcdeayj9vpv852tx2sjzy7esyy82a6nk0gs854ktam24zxee42rqyzg95g";
 
-/// RGB20 schema-specific processing errors
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    Error,
-    From,
-)]
-#[display(doc_comments)]
-pub enum Error {
-    /// the provided genesis or state transition does not contain all metadata
-    /// fields required for the RGB20 asset
-    NotAllFieldsPresent,
-
-    /// genesis schmeta id does not match any of RGB20 schemata
-    WrongSchemaId,
-}
-
 /// Field types for RGB20 schemata
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(Debug)]

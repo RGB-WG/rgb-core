@@ -26,7 +26,7 @@ use rgb::secp256k1zkp;
 use super::schema::{self, FieldType, OwnedRightsType, TransitionType};
 use super::{Asset, Issue};
 
-/// Errors happening during RGB-20 asset state transitions
+/// Errors happening during construction of RGB-20 asset state transitions
 #[derive(
     Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
 )]

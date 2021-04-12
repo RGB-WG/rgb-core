@@ -38,10 +38,12 @@ use crate::{
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
-    /// can't read asset data, since the provided information does not match
-    /// schema – {_0}
-    #[from]
-    Schema(schema::Error),
+    /// can't read asset data, since the provided information does not satisfy
+    /// schema requirements
+    UnsatisfiedSchemaRequirement,
+
+    /// genesis schema id does not match any of RGB20 schemata
+    WrongSchemaId,
 
     /// genesis defines a seal referencing witness transaction while there
     /// can't be a witness transaction for genesis
@@ -327,17 +329,17 @@ impl TryFrom<Genesis> for Asset {
 
     fn try_from(genesis: Genesis) -> Result<Self, Self::Error> {
         if genesis.schema_id() != schema::schema().schema_id() {
-            Err(schema::Error::WrongSchemaId)?;
+            Err(Error::WrongSchemaId)?;
         }
         let genesis_meta = genesis.metadata();
         let decimal_precision = *genesis_meta
             .u8(*FieldType::Precision)
             .first()
-            .ok_or(schema::Error::NotAllFieldsPresent)?;
+            .ok_or(Error::UnsatisfiedSchemaRequirement)?;
         let supply = *genesis_meta
             .u64(*FieldType::IssuedSupply)
             .first()
-            .ok_or(schema::Error::NotAllFieldsPresent)?;
+            .ok_or(Error::UnsatisfiedSchemaRequirement)?;
         let mut issue_limit = 0;
 
         // Check if issue limit can be known
@@ -351,7 +353,7 @@ impl TryFrom<Genesis> for Asset {
                         if issue_limit < core::u64::MAX {
                             issue_limit += assigned_state
                                 .u64()
-                                .ok_or(schema::Error::NotAllFieldsPresent)?
+                                .ok_or(Error::UnsatisfiedSchemaRequirement)?
                         };
                     }
 
@@ -400,12 +402,12 @@ impl TryFrom<Genesis> for Asset {
             ticker: genesis_meta
                 .string(*FieldType::Ticker)
                 .first()
-                .ok_or(schema::Error::NotAllFieldsPresent)?
+                .ok_or(Error::UnsatisfiedSchemaRequirement)?
                 .clone(),
             name: genesis_meta
                 .string(*FieldType::Name)
                 .first()
-                .ok_or(schema::Error::NotAllFieldsPresent)?
+                .ok_or(Error::UnsatisfiedSchemaRequirement)?
                 .clone(),
             ricardian_contract: genesis_meta
                 .string(*FieldType::RicardianContract)
@@ -418,7 +420,7 @@ impl TryFrom<Genesis> for Asset {
                     *genesis_meta
                         .i64(*FieldType::Timestamp)
                         .first()
-                        .ok_or(schema::Error::NotAllFieldsPresent)?,
+                        .ok_or(Error::UnsatisfiedSchemaRequirement)?,
                     0,
                 ),
                 Utc,

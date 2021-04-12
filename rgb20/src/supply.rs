@@ -22,7 +22,7 @@ use bitcoin::{OutPoint, Txid};
 use rgb::prelude::*;
 
 use crate::asset::Error;
-use crate::schema::{self, FieldType, OwnedRightsType, TransitionType};
+use crate::schema::{FieldType, OwnedRightsType, TransitionType};
 
 /// Specific supply measure to be provided; used as an argument for methods
 /// returning supply information
@@ -202,7 +202,7 @@ impl Issue {
             .metadata()
             .u64(*FieldType::IssuedSupply)
             .first()
-            .ok_or(schema::Error::NotAllFieldsPresent)?;
+            .ok_or(Error::UnsatisfiedSchemaRequirement)?;
 
         let inflation_assignments = transition
             .owned_rights_by_type(*OwnedRightsType::Inflation)
@@ -266,7 +266,7 @@ impl TryFrom<&Genesis> for Issue {
             .metadata()
             .u64(*FieldType::IssuedSupply)
             .first()
-            .ok_or(schema::Error::NotAllFieldsPresent)?;
+            .ok_or(Error::UnsatisfiedSchemaRequirement)?;
 
         let inflation_assignments = genesis
             .owned_rights_by_type(*OwnedRightsType::Inflation)
@@ -542,13 +542,13 @@ impl BurnReplace {
             .u64(*FieldType::BurnedSupply)
             .first()
             .copied()
-            .ok_or(schema::Error::NotAllFieldsPresent)?;
+            .ok_or(Error::UnsatisfiedSchemaRequirement)?;
         let replaced_amount = transition
             .metadata()
             .u64(*FieldType::IssuedSupply)
             .first()
             .copied()
-            .ok_or(schema::Error::NotAllFieldsPresent)?;
+            .ok_or(Error::UnsatisfiedSchemaRequirement)?;
 
         Ok(BurnReplace {
             id,
