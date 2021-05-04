@@ -16,7 +16,7 @@ use std::io;
 
 use super::{
     ExtensionAbi, ExtensionAction, ExtensionType, FieldType, GenesisAbi,
-    GenesisAction, NodeAction, Occurences, TransitionAbi, TransitionAction,
+    GenesisAction, NodeAction, Occurrences, TransitionAbi, TransitionAction,
     TransitionType,
 };
 use crate::script::EntryPoint;
@@ -24,9 +24,9 @@ use crate::script::EntryPoint;
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type OwnedRightType = u16;
 pub type PublicRightType = u16;
-pub type MetadataStructure = BTreeMap<FieldType, Occurences>;
+pub type MetadataStructure = BTreeMap<FieldType, Occurrences>;
 pub type PublicRightsStructure = BTreeSet<PublicRightType>;
-pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurences>;
+pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurrences>;
 
 #[derive(
     Copy,
@@ -543,13 +543,13 @@ mod test {
         assert_eq!(genesis_schema.node_type(), NodeType::Genesis);
         assert_eq!(
             genesis_schema.metadata().get(&2u16).unwrap(),
-            &Occurences::NoneOrOnce
+            &Occurrences::NoneOrOnce
         );
         assert_eq!(genesis_schema.closes(), &OwnedRightsStructure::new());
         assert_eq!(genesis_schema.extends(), &PublicRightsStructure::new());
         assert_eq!(
             genesis_schema.owned_rights().get(&3u16).unwrap(),
-            &Occurences::OnceOrUpTo(25u16)
+            &Occurrences::OnceOrUpTo(25u16)
         );
         assert_eq!(genesis_schema.public_rights(), &valencies);
         assert_eq!(genesis_schema.abi(), &genesis_abi);
@@ -575,16 +575,16 @@ mod test {
         assert_eq!(transition_schema.node_type(), NodeType::StateTransition);
         assert_eq!(
             transition_schema.metadata().get(&2u16).unwrap(),
-            &Occurences::NoneOrOnce
+            &Occurrences::NoneOrOnce
         );
         assert_eq!(
             transition_schema.closes().get(&3u16).unwrap(),
-            &Occurences::OnceOrUpTo(25u16)
+            &Occurrences::OnceOrUpTo(25u16)
         );
         assert_eq!(transition_schema.extends(), &PublicRightsStructure::new());
         assert_eq!(
             transition_schema.owned_rights().get(&3u16).unwrap(),
-            &Occurences::OnceOrUpTo(25u16)
+            &Occurrences::OnceOrUpTo(25u16)
         );
         assert_eq!(transition_schema.public_rights(), &valencies);
         assert_eq!(transition_schema.abi(), &transition_abi);
@@ -610,13 +610,13 @@ mod test {
         assert_eq!(extension_schema.node_type(), NodeType::StateExtension);
         assert_eq!(
             extension_schema.metadata().get(&2u16).unwrap(),
-            &Occurences::NoneOrOnce
+            &Occurrences::NoneOrOnce
         );
         assert_eq!(extension_schema.closes(), &OwnedRightsStructure::new());
         assert_eq!(extension_schema.extends(), &valencies);
         assert_eq!(
             extension_schema.owned_rights().get(&3u16).unwrap(),
-            &Occurences::OnceOrUpTo(25u16)
+            &Occurrences::OnceOrUpTo(25u16)
         );
         assert_eq!(extension_schema.public_rights(), &valencies);
         assert_eq!(extension_schema.abi(), &extension_abi);
@@ -626,35 +626,35 @@ mod test {
     fn test_validation() {
         // Create Two Metadata Structures
         let mut metadata_structures = MetadataStructure::new();
-        metadata_structures.insert(1 as FieldType, Occurences::Once);
-        metadata_structures.insert(2 as FieldType, Occurences::NoneOrOnce);
+        metadata_structures.insert(1 as FieldType, Occurrences::Once);
+        metadata_structures.insert(2 as FieldType, Occurrences::NoneOrOnce);
         metadata_structures
-            .insert(3 as FieldType, Occurences::OnceOrUpTo(13u16));
+            .insert(3 as FieldType, Occurrences::OnceOrUpTo(13u16));
         metadata_structures
-            .insert(4 as FieldType, Occurences::NoneOrUpTo(17u16));
+            .insert(4 as FieldType, Occurrences::NoneOrUpTo(17u16));
 
         let mut metadata_structures2 = MetadataStructure::new();
-        metadata_structures2.insert(1 as FieldType, Occurences::Once);
-        metadata_structures2.insert(2 as FieldType, Occurences::NoneOrOnce);
-        metadata_structures2.insert(3 as FieldType, Occurences::OnceOrMore);
+        metadata_structures2.insert(1 as FieldType, Occurrences::Once);
+        metadata_structures2.insert(2 as FieldType, Occurrences::NoneOrOnce);
+        metadata_structures2.insert(3 as FieldType, Occurrences::OnceOrMore);
         metadata_structures2
-            .insert(4 as FieldType, Occurences::NoneOrUpTo(15u16));
+            .insert(4 as FieldType, Occurrences::NoneOrUpTo(15u16));
 
         // Create Two Seal Structures
         let mut seal_structures = OwnedRightsStructure::new();
-        seal_structures.insert(1 as OwnedRightType, Occurences::Once);
-        seal_structures.insert(2 as OwnedRightType, Occurences::NoneOrOnce);
+        seal_structures.insert(1 as OwnedRightType, Occurrences::Once);
+        seal_structures.insert(2 as OwnedRightType, Occurrences::NoneOrOnce);
         seal_structures
-            .insert(3 as OwnedRightType, Occurences::OnceOrUpTo(25u16));
+            .insert(3 as OwnedRightType, Occurrences::OnceOrUpTo(25u16));
         seal_structures
-            .insert(4 as OwnedRightType, Occurences::NoneOrUpTo(12u16));
+            .insert(4 as OwnedRightType, Occurrences::NoneOrUpTo(12u16));
 
         let mut seal_structures2 = OwnedRightsStructure::new();
-        seal_structures2.insert(1 as OwnedRightType, Occurences::Once);
-        seal_structures2.insert(2 as OwnedRightType, Occurences::NoneOrOnce);
-        seal_structures2.insert(3 as OwnedRightType, Occurences::OnceOrMore);
+        seal_structures2.insert(1 as OwnedRightType, Occurrences::Once);
+        seal_structures2.insert(2 as OwnedRightType, Occurrences::NoneOrOnce);
+        seal_structures2.insert(3 as OwnedRightType, Occurrences::OnceOrMore);
         seal_structures2
-            .insert(4 as OwnedRightType, Occurences::NoneOrUpTo(30u16));
+            .insert(4 as OwnedRightType, Occurrences::NoneOrUpTo(30u16));
 
         // Create Two Valency structure
         let mut valency_structure = PublicRightsStructure::new();

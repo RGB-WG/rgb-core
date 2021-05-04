@@ -32,7 +32,7 @@ pub use state::{
     DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType,
 };
 pub use types::{
-    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurences,
+    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurrences,
     OccurrencesError,
 };
 
