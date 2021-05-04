@@ -511,7 +511,7 @@ mod _validation {
                 // Checking number of field occurrences
                 if let Err(err) = occ.check(set.len() as u16) {
                     status.add_failure(
-                        validation::Failure::SchemaMetaOccurencesError(
+                        validation::Failure::SchemaMetaOccurrencesError(
                             node_id,
                             *field_type_id,
                             err,
@@ -559,7 +559,7 @@ mod _validation {
                 // Checking number of ancestor's assignment occurrences
                 if let Err(err) = occ.check(len as u16) {
                     status.add_failure(
-                        validation::Failure::SchemaParentOwnedRightOccurencesError(
+                        validation::Failure::SchemaParentOwnedRightOccurrencesError(
                             node_id,
                             *owned_type_id,
                             err,
@@ -623,7 +623,7 @@ mod _validation {
                 // Checking number of assignment occurrences
                 if let Err(err) = occ.check(len as u16) {
                     status.add_failure(
-                        validation::Failure::SchemaOwnedRightOccurencesError(
+                        validation::Failure::SchemaOwnedRightOccurrencesError(
                             node_id,
                             *owned_type_id,
                             err,
@@ -995,19 +995,19 @@ pub(crate) mod test {
             },
             genesis: GenesisSchema {
                 metadata: bmap! {
-                    FIELD_TICKER => Occurences::Once,
-                    FIELD_NAME => Occurences::Once,
-                    FIELD_DESCRIPTION => Occurences::NoneOrOnce,
-                    FIELD_TOTAL_SUPPLY => Occurences::Once,
-                    FIELD_ISSUED_SUPPLY => Occurences::Once,
-                    FIELD_DUST_LIMIT => Occurences::NoneOrOnce,
-                    FIELD_PRECISION => Occurences::Once,
-                    FIELD_TIMESTAMP => Occurences::Once
+                    FIELD_TICKER => Occurrences::Once,
+                    FIELD_NAME => Occurrences::Once,
+                    FIELD_DESCRIPTION => Occurrences::NoneOrOnce,
+                    FIELD_TOTAL_SUPPLY => Occurrences::Once,
+                    FIELD_ISSUED_SUPPLY => Occurrences::Once,
+                    FIELD_DUST_LIMIT => Occurrences::NoneOrOnce,
+                    FIELD_PRECISION => Occurrences::Once,
+                    FIELD_TIMESTAMP => Occurrences::Once
                 },
                 owned_rights: bmap! {
-                    ASSIGNMENT_ISSUE => Occurences::NoneOrOnce,
-                    ASSIGNMENT_ASSETS => Occurences::NoneOrMore,
-                    ASSIGNMENT_PRUNE => Occurences::NoneOrMore
+                    ASSIGNMENT_ISSUE => Occurrences::NoneOrOnce,
+                    ASSIGNMENT_ASSETS => Occurrences::NoneOrMore,
+                    ASSIGNMENT_PRUNE => Occurrences::NoneOrMore
                 },
                 public_rights: bset! { VALENCIES_DECENTRALIZED_ISSUE },
                 abi: bmap! {},
@@ -1016,11 +1016,11 @@ pub(crate) mod test {
                 EXTENSION_DECENTRALIZED_ISSUE => ExtensionSchema {
                     extends: bset! { VALENCIES_DECENTRALIZED_ISSUE },
                     metadata: bmap! {
-                        FIELD_ISSUED_SUPPLY => Occurences::Once,
-                        FIELD_PROOF_OF_BURN => Occurences::OnceOrMore
+                        FIELD_ISSUED_SUPPLY => Occurrences::Once,
+                        FIELD_PROOF_OF_BURN => Occurrences::OnceOrMore
                     },
                     owned_rights: bmap! {
-                        ASSIGNMENT_ASSETS => Occurences::NoneOrMore
+                        ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! { },
                     abi: bmap! {},
@@ -1029,41 +1029,41 @@ pub(crate) mod test {
             transitions: bmap! {
                 TRANSITION_ISSUE => TransitionSchema {
                     closes: bmap! {
-                        ASSIGNMENT_ISSUE => Occurences::Once
+                        ASSIGNMENT_ISSUE => Occurrences::Once
                     },
                     metadata: bmap! {
-                        FIELD_ISSUED_SUPPLY => Occurences::Once
+                        FIELD_ISSUED_SUPPLY => Occurrences::Once
                     },
                     owned_rights: bmap! {
-                        ASSIGNMENT_ISSUE => Occurences::NoneOrOnce,
-                        ASSIGNMENT_PRUNE => Occurences::NoneOrMore,
-                        ASSIGNMENT_ASSETS => Occurences::NoneOrMore
+                        ASSIGNMENT_ISSUE => Occurrences::NoneOrOnce,
+                        ASSIGNMENT_PRUNE => Occurrences::NoneOrMore,
+                        ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_TRANSFER => TransitionSchema {
                     closes: bmap! {
-                        ASSIGNMENT_ASSETS => Occurences::OnceOrMore
+                        ASSIGNMENT_ASSETS => Occurrences::OnceOrMore
                     },
                     metadata: bmap! {},
                     owned_rights: bmap! {
-                        ASSIGNMENT_ASSETS => Occurences::NoneOrMore
+                        ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
                     abi: bmap! {}
                 },
                 TRANSITION_PRUNE => TransitionSchema {
                     closes: bmap! {
-                        ASSIGNMENT_PRUNE => Occurences::OnceOrMore,
-                        ASSIGNMENT_ASSETS => Occurences::OnceOrMore
+                        ASSIGNMENT_PRUNE => Occurrences::OnceOrMore,
+                        ASSIGNMENT_ASSETS => Occurrences::OnceOrMore
                     },
                     metadata: bmap! {
-                        FIELD_PRUNE_PROOF => Occurences::NoneOrMore
+                        FIELD_PRUNE_PROOF => Occurrences::NoneOrMore
                     },
                     owned_rights: bmap! {
-                        ASSIGNMENT_PRUNE => Occurences::NoneOrMore,
-                        ASSIGNMENT_ASSETS => Occurences::NoneOrMore
+                        ASSIGNMENT_PRUNE => Occurrences::NoneOrMore,
+                        ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
                     abi: bmap! {}

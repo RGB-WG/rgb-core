@@ -194,13 +194,13 @@ pub enum Failure {
     SchemaMismatchedDataType(u16),
     SchemaMismatchedStateType(schema::OwnedRightType),
 
-    SchemaMetaOccurencesError(NodeId, schema::FieldType, OccurrencesError),
-    SchemaParentOwnedRightOccurencesError(
+    SchemaMetaOccurrencesError(NodeId, schema::FieldType, OccurrencesError),
+    SchemaParentOwnedRightOccurrencesError(
         NodeId,
         schema::OwnedRightType,
         OccurrencesError,
     ),
-    SchemaOwnedRightOccurencesError(
+    SchemaOwnedRightOccurrencesError(
         NodeId,
         schema::OwnedRightType,
         OccurrencesError,
