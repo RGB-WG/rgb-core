@@ -13,6 +13,7 @@
 
 use num_traits::ToPrimitive;
 use std::io;
+use std::ops::RangeInclusive;
 
 pub trait UnsignedInteger:
     Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Into<u64> + std::fmt::Debug
@@ -342,7 +343,6 @@ pub mod elliptic_curve {
         Bip340,
     }
 }
-use bitcoin::hashes::core::ops::RangeInclusive;
 pub use elliptic_curve::EllipticCurve;
 
 mod _strict_encoding {
