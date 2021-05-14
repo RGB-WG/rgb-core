@@ -6,6 +6,8 @@ v0.4.x patches
 - 0.4.3: Fixing seal_definition old-way of sorting seals before they were
          held in Vec (and BTreeSet was used instead). This allows to validate
          multi-output transition history
+- 0.4.4: Fixing broken upstream dependency breaking change in `zeroize` crate
+         
 
 v0.4.0
 ------
