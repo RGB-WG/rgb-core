@@ -28,44 +28,34 @@ pub type MetadataStructure = BTreeMap<FieldType, Occurrences>;
 pub type PublicRightsStructure = BTreeSet<PublicRightType>;
 pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurrences>;
 
-#[derive(
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode,
-)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_value)]
+#[repr(u8)]
 /// Node type: genesis, extensions and state transitions
 pub enum NodeType {
     /// Genesis node: single node per contract, defining contract and
     /// committing to a specific schema and underlying chain hash
     #[display("genesis")]
-    Genesis,
+    Genesis = 0,
 
     /// Multiple points for decentralized & unowned contract extension,
     /// committing either to a genesis or some state transition via their
     /// valencies
     #[display("extension")]
-    StateExtension,
+    StateExtension = 1,
 
     /// State transition performing owned change to the state data and
     /// committing to (potentially multiple) ancestors (i.e. genesis,
     /// extensions and/or  other state transitions) via spending
     /// corresponding transaction outputs assigned some state by ancestors
     #[display("transition")]
-    StateTransition,
+    StateTransition = 2,
 }
 
 /// Aggregated type used to supply full contract node type and transition/state

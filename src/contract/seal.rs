@@ -95,6 +95,7 @@ pub trait ToSealDefinition {
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_order)]
 pub enum SealEndpoint {
     /// External transaction output in concealed form (see
     /// [`seal::Confidential`])

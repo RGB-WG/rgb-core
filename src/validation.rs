@@ -43,7 +43,6 @@ pub enum Validity {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO #42: Display via YAML
 #[display(Debug)]
 pub struct Status {
@@ -139,7 +138,6 @@ impl Status {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO #44: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
 pub enum Failure {
@@ -269,7 +267,6 @@ pub enum Failure {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
@@ -286,7 +283,6 @@ pub enum Warning {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {

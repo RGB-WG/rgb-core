@@ -31,7 +31,7 @@ use lnpbp::client_side_validation::{
     serde(crate = "serde_crate")
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
+#[strict_encoding(by_value, repr = u8)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum VmType {
@@ -80,7 +80,6 @@ impl Default for VmType {
     serde(crate = "serde_crate", rename_all = "kebab-case")
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 #[repr(u8)]
 pub enum OverrideRules {
     #[display("deny")]
@@ -117,7 +116,6 @@ impl Default for OverrideRules {
     serde(crate = "serde_crate")
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct ExecutableCode {
     /// Type of the virtual machine that MUST be used to run the given byte
     /// code
@@ -196,7 +194,6 @@ pub trait NodeAction: GenericAction {}
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum GenesisAction {
@@ -224,7 +221,6 @@ impl NodeAction for GenesisAction {}
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum ExtensionAction {
@@ -252,7 +248,6 @@ impl NodeAction for ExtensionAction {}
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum TransitionAction {
@@ -287,7 +282,6 @@ impl NodeAction for TransitionAction {}
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum AssignmentAction {

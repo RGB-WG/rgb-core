@@ -40,10 +40,11 @@ required-features = ["cli", "serde"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = { version = "3.2", features = ["stringly_conversions"] }
-amplify_derive = "2.5.1"
+amplify = { version = "3.4", features = ["stringly_conversions"] }
+amplify_derive = "2.7"
 lnpbp = { git = "https://github.com/LNP-BP/rust-lnpbp", features = ["bulletproofs", "zip"] }
-strict_encoding = { version = "1.2.2", features = ["crypto"] }
+strict_encoding = { path = "../../lnpbp/rust-lnpbp/strict_encoding", version = "1.2.2", default-features = false, features = ["crypto", "chrono"] }
+strict_encoding_derive = { path = "../../lnpbp/rust-lnpbp/strict_encoding/derive" }
 lightning_encoding = "0.4.0-beta.1"
 descriptor-wallet = "0.4"
 # Dependencies on core rust-bitcoin ecosystem projects

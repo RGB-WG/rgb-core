@@ -30,6 +30,8 @@ extern crate amplify_derive;
 #[macro_use]
 extern crate strict_encoding;
 #[macro_use]
+extern crate strict_encoding_derive;
+#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate num_derive;

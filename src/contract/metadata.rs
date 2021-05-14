@@ -20,7 +20,6 @@ use lnpbp::client_side_validation::{
     commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
     ConsensusMerkleCommit, MerkleNode, MerkleSource, ToMerkleSource,
 };
-use lnpbp::strict_encoding;
 
 use super::data;
 use crate::schema;

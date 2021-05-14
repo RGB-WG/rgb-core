@@ -110,7 +110,6 @@ pub enum ParseError {
     derive(Serialize, Deserialize,),
     serde(crate = "serde_crate")
 )]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct AllocatedValue {
     /// Assigned value of the asset
     pub value: AtomicValue,
@@ -183,7 +182,6 @@ impl FromStr for AllocatedValue {
     serde(crate = "serde_crate")
 )]
 #[display("{value}@{outpoint}")]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct OutpointValue {
     /// Assigned value of the asset
     pub value: AtomicValue,
@@ -242,7 +240,6 @@ impl FromStr for OutpointValue {
     serde(crate = "serde_crate")
 )]
 #[display("{value}@{seal_confidential}")]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 pub struct UtxobValue {
     /// Assigned value of the asset
     pub value: AtomicValue,
@@ -275,7 +272,6 @@ impl FromStr for UtxobValue {
 #[derive(
     Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
 )]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 #[display("{revealed_amount}@{outpoint}&{node_id}#{index}")]
 pub struct Allocation {
     /// Unique primary key is `node_id` + `index`
