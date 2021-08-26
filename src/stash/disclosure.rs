@@ -204,7 +204,7 @@ impl Hash for SigHash {
 pub struct Disclosure {
     /// Since these are not consensus-critical data structure (we never commit
     /// to it) we can use encoding versioning here
-    version: u16,
+    version: u8,
 
     /// State transitions organized by anchor and then RGB contract
     transitions: BTreeMap<AnchorId, (Anchor, BTreeMap<ContractId, Transition>)>,

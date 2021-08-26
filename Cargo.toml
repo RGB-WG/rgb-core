@@ -10,7 +10,7 @@ keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "lnp-bp"]
 categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
 edition = "2018"
-exclude = [".github", "contrib"]
+exclude = [".github", "test"]
 
 [lib]
 name = "rgb"

@@ -5,7 +5,7 @@
 ![Lints](https://github.com/rgb-org/rgb-core/workflows/Lints/badge.svg)
 [![codecov](https://codecov.io/gh/rgb-org/rgb-core/branch/master/graph/badge.svg)](https://codecov.io/gh/rgb-org/rgb-core)
 
-[![crates.io](https://meritbadge.herokuapp.com/lnpbp)](https://crates.io/crates/rgb-core)
+[![crates.io](https://img.shields.io/crates/v/rgb-core)](https://crates.io/crates/rgb-core)
 [![Docs](https://docs.rs/rgb-core/badge.svg)](https://docs.rs/rgb-core)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)

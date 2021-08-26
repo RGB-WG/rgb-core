@@ -407,6 +407,7 @@ pub struct Extension {
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
+    // TODO: Add parent public rights
     parent_owned_rights: ParentOwnedRights,
     owned_rights: OwnedRights,
     public_rights: PublicRights,

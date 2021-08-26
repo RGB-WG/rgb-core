@@ -130,7 +130,7 @@ impl FromStr for ConsignmentId {
 #[display(Consignment::to_bech32_string)]
 pub struct Consignment {
     /// Version, used internally
-    version: u16,
+    version: u8,
 
     /// Genesis data
     pub genesis: Genesis,
