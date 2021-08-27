@@ -16,13 +16,11 @@ use std::str::FromStr;
 
 use bitcoin::hashes::{sha256, sha256t};
 use bitcoin::Txid;
-use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
-use lnpbp::client_side_validation::{
-    commit_strategy, commit_verify::CommitVerify, CommitConceal,
-    CommitEncodeWithStrategy, ConsensusCommit,
+use bp::seals::OutpointReveal;
+use commit_verify::{
+    commit_encode, CommitConceal, CommitVerify, ConsensusCommit, TaggedHash,
 };
-use lnpbp::seals::OutpointReveal;
-use lnpbp::TaggedHash;
+use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use wallet::resolvers::TxResolver;
 
 use crate::contract::ConcealSeals;
@@ -40,7 +38,7 @@ pub type TransitionData = Vec<(Anchor, Transition)>;
 //      u16::MAX which is insufficient. Upgrade it to use larger array size
 pub type ExtensionData = Vec<Extension>;
 
-pub const RGB_CONSIGNMENT_VERSION: u16 = 0;
+pub const RGB_CONSIGNMENT_VERSION: u8 = 0;
 
 static MIDSTATE_CONSIGNMENT_ID: [u8; 32] = [
     8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197,
@@ -93,8 +91,8 @@ where
     }
 }
 
-impl CommitEncodeWithStrategy for ConsignmentId {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for ConsignmentId {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl bech32::Strategy for ConsignmentId {
@@ -153,12 +151,8 @@ pub struct Consignment {
     pub state_extensions: ExtensionData,
 }
 
-impl lightning_encoding::Strategy for Consignment {
-    type Strategy = lightning_encoding::strategies::AsStrict;
-}
-
-impl CommitEncodeWithStrategy for Consignment {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for Consignment {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl ConsensusCommit for Consignment {
@@ -203,7 +197,7 @@ impl Consignment {
     }
 
     #[inline]
-    pub fn version(&self) -> u16 {
+    pub fn version(&self) -> u8 {
         self.version
     }
 
@@ -369,8 +363,8 @@ impl Consignment {
 pub(crate) mod test {
     use super::*;
     use crate::schema::test::schema;
-    use lnpbp::strict_encoding::StrictDecode;
-    use lnpbp::tagged_hash;
+    use commit_verify::tagged_hash;
+    use strict_encoding::StrictDecode;
     use wallet::resolvers::{TxResolver, TxResolverError};
 
     static CONSIGNMENT: [u8; 1496] = include!("../../test/consignment.in");

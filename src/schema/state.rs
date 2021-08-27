@@ -187,9 +187,9 @@ mod _strict_encoding {
     use core::convert::TryFrom;
     use core::fmt::Debug;
     use core::ops::{Add, Bound, RangeBounds, RangeInclusive, Sub};
-    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
     use num_derive::{FromPrimitive, ToPrimitive};
     use num_traits::{Bounded, ToPrimitive};
+    use strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl_enum_strict_encoding!(StateType);
 
@@ -754,8 +754,8 @@ mod _strict_encoding {
 
 mod _validation {
     use amplify::AsAny;
+    use commit_verify::CommitConceal;
     use core::any::Any;
-    use lnpbp::client_side_validation::CommitConceal;
 
     use super::*;
     use crate::schema::OwnedRightType;
@@ -1092,11 +1092,10 @@ mod test {
 
     use crate::script::EntryPoint;
     use crate::vm::embedded::NodeValidator;
-    use lnpbp::client_side_validation::CommitConceal;
-    use lnpbp::seals::OutpointReveal;
-    use lnpbp::strict_encoding::{strict_serialize, StrictDecode};
-    use lnpbp::TaggedHash;
+    use bp::seals::OutpointReveal;
+    use commit_verify::{CommitConceal, TaggedHash};
     use secp256k1zkp::rand::thread_rng;
+    use strict_encoding::{strict_serialize, StrictDecode};
 
     // Txids to generate seals
     static TXID_VEC: [&str; 4] = [

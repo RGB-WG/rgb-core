@@ -22,12 +22,10 @@ use std::str::FromStr;
 use amplify::Wrapper;
 use bitcoin::hashes::{self, sha256, sha256t, Hash, HashEngine};
 use bitcoin::secp256k1::{PublicKey, Signature};
-use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
+use commit_verify::{
+    commit_encode, CommitEncode, CommitVerify, ConsensusCommit, TaggedHash,
 };
-use lnpbp::commit_verify::CommitVerify;
-use lnpbp::TaggedHash;
+use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use strict_encoding::StrictEncode;
 
 use crate::contract::seal::Confidential;
@@ -90,8 +88,8 @@ where
     }
 }
 
-impl CommitEncodeWithStrategy for DisclosureId {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for DisclosureId {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl bech32::Strategy for DisclosureId {

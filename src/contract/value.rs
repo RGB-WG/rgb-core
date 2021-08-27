@@ -28,20 +28,15 @@ use std::str::FromStr;
 
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
-use bitcoin::hashes::hex::FromHex;
+use amplify::hex::{Error, FromHex};
 use secp256k1zkp;
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::rand::{Rng, RngCore};
 
-use amplify::Wrapper;
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitConceal, CommitEncode, CommitEncodeWithStrategy,
-};
-use lnpbp::commit_verify::CommitVerify;
-use wallet::Slice32;
+use amplify::{Slice32, Wrapper};
+use commit_verify::{commit_encode, CommitConceal, CommitEncode, CommitVerify};
 
 use super::{ConfidentialState, RevealedState, SECP256K1_ZKP};
-use bitcoin_hashes::hex::Error;
 use secp256k1zkp::SecretKey;
 
 pub type AtomicValue = u64;
@@ -72,8 +67,9 @@ pub type AtomicValue = u64;
 pub struct BlindingFactor(Slice32);
 
 impl AsRef<[u8]> for BlindingFactor {
+    #[inline]
     fn as_ref(&self) -> &[u8] {
-        self.as_inner().as_ref()
+        &self.0[..]
     }
 }
 
@@ -151,7 +147,7 @@ pub enum RevealedParseError {
 
     /// Error parsing Pedersen commitment inside RGB revealed value string
     /// representation. The commitment must be a hex-encoded
-    #[from(bitcoin::hashes::hex::Error)]
+    #[from(amplify::hex::Error)]
     PedersenHex,
 }
 
@@ -196,8 +192,8 @@ impl CommitConceal for Revealed {
         Confidential::commit(self)
     }
 }
-impl CommitEncodeWithStrategy for Revealed {
-    type Strategy = commit_strategy::UsingConceal;
+impl commit_encode::Strategy for Revealed {
+    type Strategy = commit_encode::strategies::UsingConceal;
 }
 
 impl PartialOrd for Revealed {
@@ -357,8 +353,8 @@ impl Confidential {
 mod _strict_encoding {
     use super::*;
     use crate::data::_strict_encoding::EncodingTag;
-    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::io;
+    use strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl StrictEncode for Revealed {
         fn strict_encode<E: io::Write>(
@@ -391,9 +387,7 @@ mod _strict_encoding {
 mod test {
     use super::super::test::test_confidential;
     use super::*;
-    use lnpbp::strict_encoding::{
-        strict_deserialize, StrictDecode, StrictEncode,
-    };
+    use strict_encoding::{strict_deserialize, StrictDecode, StrictEncode};
 
     static AMOUNT_65: [u8; 41] = [
         0x3, 0x41, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa6, 0x2b, 0x27, 0xae,

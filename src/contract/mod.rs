@@ -98,8 +98,8 @@ pub struct ConfidentialDataError;
 
 #[cfg(test)]
 pub(crate) mod test {
-    use lnpbp::client_side_validation::{CommitConceal, CommitEncode};
-    use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+    use commit_verify::{CommitConceal, CommitEncode};
+    use strict_encoding::{StrictDecode, StrictEncode};
 
     pub fn test_confidential<T>(data: &[u8], encoded: &[u8], commitment: &[u8])
     where

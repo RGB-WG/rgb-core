@@ -16,7 +16,7 @@ use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
-use lnpbp::client_side_validation::CommitConceal;
+use commit_verify::CommitConceal;
 use wallet::resolvers::TxResolver;
 
 use super::schema::{NodeType, OccurrencesError};

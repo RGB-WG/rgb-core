@@ -17,13 +17,11 @@ use std::io;
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
 
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncode, CommitEncodeWithStrategy, ConsensusCommit,
-    ToMerkleSource,
+use commit_verify::{
+    commit_encode, multi_commit::ProtocolId, CommitEncode, CommitVerify,
+    ConsensusCommit, TaggedHash, ToMerkleSource,
 };
-use lnpbp::commit_verify::CommitVerify;
-use lnpbp::lnpbp4::ProtocolId;
-use lnpbp::{Chain, TaggedHash};
+use lnpbp::chain::Chain;
 
 use super::{
     AssignmentVec, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner,
@@ -96,8 +94,8 @@ where
     }
 }
 
-impl CommitEncodeWithStrategy for NodeId {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for NodeId {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -143,8 +141,8 @@ impl From<ContractId> for lnpbp::chain::AssetId {
     }
 }
 
-impl CommitEncodeWithStrategy for ContractId {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for ContractId {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 /// RGB contract node API, defined as trait
@@ -856,11 +854,11 @@ impl Transition {
 
 mod _strict_encoding {
     use super::*;
-    use lnpbp::strict_encoding::{
+    use std::io;
+    use strict_encoding::{
         strategies, strict_deserialize, strict_serialize, Error, Strategy,
         StrictDecode, StrictEncode,
     };
-    use std::io;
 
     impl Strategy for NodeId {
         type Strategy = strategies::Wrapped;
@@ -962,13 +960,9 @@ mod test {
     use std::io::Write;
 
     use super::*;
+    use commit_verify::{tagged_hash, CommitConceal, CommitVerify};
     use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
-    use lnpbp::client_side_validation::CommitConceal;
-    use lnpbp::commit_verify::CommitVerify;
-    use lnpbp::strict_encoding::{
-        strict_serialize, StrictDecode, StrictEncode,
-    };
-    use lnpbp::tagged_hash;
+    use strict_encoding::{strict_serialize, StrictDecode, StrictEncode};
 
     static TRANSITION: [u8; 2349] = include!("../../test/transition.in");
     static GENESIS: [u8; 2447] = include!("../../test/genesis.in");
@@ -1391,6 +1385,6 @@ mod test {
             SchemaId::from_hex("8eafd3360d65258952f4d9575eac1b1f18ee185129718293b6d7622b1edd1f20")
                 .unwrap()
         );
-        assert_eq!(chain, &lnpbp::Chain::Mainnet);
+        assert_eq!(chain, &Chain::Mainnet);
     }
 }

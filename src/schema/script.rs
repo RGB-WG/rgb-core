@@ -18,10 +18,8 @@ use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
 
 use bitcoin::hashes::hex::ToHex;
+use commit_verify::commit_encode;
 use lnpbp::bech32::Bech32DataString;
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy,
-};
 
 /// Types of supported virtual machines
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -135,8 +133,8 @@ pub struct ExecutableCode {
     pub override_rules: OverrideRules,
 }
 
-impl CommitEncodeWithStrategy for ExecutableCode {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for ExecutableCode {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl Display for ExecutableCode {
@@ -331,7 +329,7 @@ impl Abi for AssignmentAbi {}
 mod test {
     use super::*;
     use crate::vm::embedded::AssignmentValidator;
-    use lnpbp::strict_encoding::strict_serialize;
+    use strict_encoding::strict_serialize;
 
     #[test]
     fn test_basics() {

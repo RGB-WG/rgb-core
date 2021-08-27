@@ -14,9 +14,7 @@
 use std::collections::BTreeMap;
 
 use amplify::Wrapper;
-use lnpbp::client_side_validation::{
-    CommitConceal, CommitEncode, ToMerkleSource,
-};
+use commit_verify::{CommitConceal, CommitEncode, ToMerkleSource};
 
 use super::OwnedRightsInner;
 use crate::schema::NodeType;

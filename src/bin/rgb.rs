@@ -13,8 +13,6 @@
 
 #[macro_use]
 extern crate amplify;
-#[macro_use]
-extern crate amplify_derive;
 extern crate serde_crate as serde;
 
 use clap::{AppSettings, Clap};
@@ -23,8 +21,8 @@ use std::fmt::{Debug, Display};
 use std::io::{self, Read};
 use std::str::FromStr;
 
-use bitcoin::hashes::hex::{self, FromHex, ToHex};
-use lnpbp::client_side_validation::ConsensusCommit;
+use amplify::hex::{self, FromHex, ToHex};
+use commit_verify::ConsensusCommit;
 use rgb::{
     Anchor, Consignment, Disclosure, Extension, Genesis, Schema, Transition,
 };

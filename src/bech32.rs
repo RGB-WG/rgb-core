@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bech32::{self, FromBase32, ToBase32};
+use bech32::{self, FromBase32, ToBase32, Variant};
 use core::fmt::{Display, Formatter};
 use core::str::FromStr;
 use deflate::{write::DeflateEncoder, Compression};
@@ -19,10 +19,10 @@ use deflate::{write::DeflateEncoder, Compression};
 use serde::{Deserialize, Deserializer, Serializer};
 use std::convert::{TryFrom, TryInto};
 
-use lnpbp::strict_encoding::{
+use secp256k1zkp;
+use strict_encoding::{
     self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
 };
-use secp256k1zkp;
 
 use crate::{
     seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
@@ -517,8 +517,10 @@ impl FromStr for Bech32 {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (hrp, data) = bech32::decode(&s)?;
+        let (hrp, data, _variant) = bech32::decode(&s)?;
         let data = Vec::<u8>::from_base32(&data)?;
+
+        // TODO: Update to Bech32m and check variant
 
         Ok(match hrp {
             x if x == Self::HRP_PEDERSEN => {
@@ -609,7 +611,8 @@ impl Display for Bech32 {
             }
             Self::Other(hrp, obj) => (hrp.as_ref(), obj.clone()),
         };
-        let b = ::bech32::encode(hrp, data.to_base32())
+        // TODO: Update to Bech32m
+        let b = ::bech32::encode(hrp, data.to_base32(), Variant::Bech32)
             .map_err(|_| ::core::fmt::Error)?;
         b.fmt(f)
     }
@@ -755,8 +758,8 @@ where
 mod test {
     use super::*;
     use amplify::DumbDefault;
-    use lnpbp::client_side_validation::CommitConceal;
-    use lnpbp::seals::OutpointReveal;
+    use bp::seals::OutpointReveal;
+    use commit_verify::CommitConceal;
 
     #[test]
     fn test_bech32_outpoint() {

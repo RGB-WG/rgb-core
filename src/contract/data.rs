@@ -22,10 +22,8 @@ use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::OutPoint;
 use bitcoin::{secp256k1, Transaction};
 
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitConceal, CommitEncode, CommitEncodeWithStrategy,
-};
-use lnpbp::strict_encoding::strict_serialize;
+use commit_verify::{commit_encode, CommitConceal, CommitEncode};
+use strict_encoding::strict_serialize;
 
 use super::{ConfidentialState, RevealedState};
 
@@ -128,8 +126,8 @@ impl CommitConceal for Revealed {
         )
     }
 }
-impl CommitEncodeWithStrategy for Revealed {
-    type Strategy = commit_strategy::UsingConceal;
+impl commit_encode::Strategy for Revealed {
+    type Strategy = commit_encode::strategies::UsingConceal;
 }
 
 impl PartialEq for Revealed {
@@ -194,8 +192,8 @@ impl AsAny for Confidential {
     }
 }
 
-impl CommitEncodeWithStrategy for Confidential {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for Confidential {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl Revealed {
@@ -276,10 +274,10 @@ impl Revealed {
 pub(super) mod _strict_encoding {
     use super::*;
 
-    use lnpbp::strict_encoding::{
+    use std::io;
+    use strict_encoding::{
         strategies, Error, Strategy, StrictDecode, StrictEncode,
     };
-    use std::io;
 
     impl Strategy for Confidential {
         type Strategy = strategies::HashFixedBytes;
@@ -534,7 +532,7 @@ mod test {
     use super::super::test::test_confidential;
     use super::*;
 
-    use lnpbp::strict_encoding::StrictDecode;
+    use strict_encoding::StrictDecode;
 
     // Hard coded test vectors
     static U_8: [u8; 2] = [0x0, 0x8];

@@ -17,9 +17,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use amplify::Wrapper;
 use bitcoin::OutPoint;
-use lnpbp::client_side_validation::CommitConceal;
-use lnpbp::strict_encoding::StrictDecode;
-use wallet::descriptor;
+use commit_verify::CommitConceal;
+use strict_encoding::StrictDecode;
+use wallet::descriptors;
 
 use super::VmApi;
 use crate::script::{Action, EntryPoint};
@@ -207,10 +207,10 @@ impl FromEntryPoint for TransitionConstructor {
     }
 }
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
-    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
     use std::io;
+    use strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl StrictEncode for NodeValidator {
         fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
@@ -463,7 +463,7 @@ impl NodeValidator {
             .cloned()
             .ok_or(HandlerError::BrokenSchema)?;
         let _descriptor =
-            descriptor::Expanded::strict_deserialize(descriptor_data)
+            descriptors::Expanded::strict_deserialize(descriptor_data)
                 .map_err(|_| HandlerError::DataEncoding)?;
         // TODO #81: Implement blockchain access for the VM
         return Err(HandlerError::NotImplemented);

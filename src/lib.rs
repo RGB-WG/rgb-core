@@ -26,11 +26,7 @@
 #[macro_use]
 extern crate amplify;
 #[macro_use]
-extern crate amplify_derive;
-#[macro_use]
 extern crate strict_encoding;
-#[macro_use]
-extern crate strict_encoding_derive;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -45,6 +41,45 @@ extern crate serde_with;
 extern crate serde_crate as serde;
 
 pub use secp256k1zkp;
+
+macro_rules! impl_enum_strict_encoding {
+    ($type:ty) => {
+        impl ::strict_encoding::StrictEncode for $type {
+            #[inline]
+            fn strict_encode<E: ::std::io::Write>(
+                &self,
+                e: E,
+            ) -> Result<usize, ::strict_encoding::Error> {
+                use ::num_traits::ToPrimitive;
+
+                match self.to_u8() {
+                    Some(result) => result.strict_encode(e),
+                    None => Err(::strict_encoding::Error::EnumValueOverflow(
+                        stringify!($type),
+                    )),
+                }
+            }
+        }
+
+        impl ::strict_encoding::StrictDecode for $type {
+            #[inline]
+            fn strict_decode<D: ::std::io::Read>(
+                d: D,
+            ) -> Result<Self, ::strict_encoding::Error> {
+                use ::num_traits::FromPrimitive;
+
+                let value = u8::strict_decode(d)?;
+                match Self::from_u8(value) {
+                    Some(result) => Ok(result),
+                    None => Err(::strict_encoding::Error::EnumValueNotKnown(
+                        stringify!($type),
+                        value.into(),
+                    )),
+                }
+            }
+        }
+    };
+}
 
 pub mod bech32;
 pub mod contract;

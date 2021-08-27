@@ -28,7 +28,7 @@
 use std::collections::BTreeSet;
 
 use bitcoin::OutPoint;
-use lnpbp::seals::OutpointReveal;
+use bp::seals::OutpointReveal;
 use wallet::resolvers::TxResolver;
 
 use crate::{

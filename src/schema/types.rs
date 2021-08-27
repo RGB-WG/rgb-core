@@ -350,7 +350,7 @@ pub use elliptic_curve::EllipticCurve;
 
 mod _strict_encoding {
     use super::*;
-    use lnpbp::strict_encoding::{Error, StrictDecode, StrictEncode};
+    use strict_encoding::{Error, StrictDecode, StrictEncode};
 
     impl_enum_strict_encoding!(DigestAlgorithm);
     impl_enum_strict_encoding!(Bits);
@@ -400,8 +400,8 @@ mod _strict_encoding {
 mod test {
     use super::Occurrences;
     use super::*;
-    use lnpbp::strict_encoding::StrictDecode;
     use strict_encoding::test_helpers::*;
+    use strict_encoding::StrictDecode;
 
     static ONCE: [u8; 4] = [1, 0, 1, 0];
 

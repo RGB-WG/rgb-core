@@ -16,12 +16,8 @@ use std::io;
 
 use bitcoin::hashes::{sha256, sha256t};
 
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
-};
-use lnpbp::commit_verify::CommitVerify;
-use lnpbp::TaggedHash;
-use wallet::features;
+use amplify::flags::FlagVec;
+use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, TaggedHash};
 
 use super::{
     DataFormat, ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType,
@@ -109,7 +105,7 @@ pub struct Schema {
         feature = "serde",
         serde(with = "serde_with::rust::display_fromstr")
     )]
-    pub rgb_features: features::FlagVec,
+    pub rgb_features: FlagVec,
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::rust::display_fromstr")
@@ -134,8 +130,8 @@ impl Schema {
 impl ConsensusCommit for Schema {
     type Commitment = SchemaId;
 }
-impl CommitEncodeWithStrategy for Schema {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for Schema {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl PartialEq for Schema {
@@ -146,9 +142,9 @@ impl PartialEq for Schema {
 
 impl Eq for Schema {}
 
-mod strict_encoding {
+mod _strict_encoding {
     use super::*;
-    use lnpbp::strict_encoding::{
+    use strict_encoding::{
         strategies, Error, Strategy, StrictDecode, StrictEncode,
     };
 
@@ -179,7 +175,7 @@ mod strict_encoding {
     impl StrictDecode for Schema {
         fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
             Ok(Self {
-                rgb_features: features::FlagVec::strict_decode(&mut d)?,
+                rgb_features: FlagVec::strict_decode(&mut d)?,
                 root_id: SchemaId::strict_decode(&mut d)?,
                 field_types: BTreeMap::strict_decode(&mut d)?,
                 owned_right_types: BTreeMap::strict_decode(&mut d)?,
@@ -197,7 +193,7 @@ mod strict_encoding {
 mod _validation {
     use std::collections::BTreeSet;
 
-    use lnpbp::client_side_validation::CommitConceal;
+    use commit_verify::CommitConceal;
 
     use super::*;
     use crate::schema::{
@@ -927,8 +923,8 @@ pub(crate) mod test {
     use crate::schema::*;
     use crate::script::EntryPoint;
     use crate::vm::embedded::NodeValidator;
-    use lnpbp::strict_encoding::*;
-    use lnpbp::tagged_hash;
+    use commit_verify::tagged_hash;
+    use strict_encoding::*;
 
     pub(crate) fn schema() -> Schema {
         const FIELD_TICKER: u16 = 0;
@@ -956,7 +952,7 @@ pub(crate) mod test {
         const EXTENSION_DECENTRALIZED_ISSUE: u16 = 0;
 
         Schema {
-            rgb_features: features::FlagVec::default(),
+            rgb_features: FlagVec::default(),
             root_id: Default::default(),
             field_types: bmap! {
                 FIELD_TICKER => DataFormat::String(16),

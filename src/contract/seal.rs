@@ -42,10 +42,8 @@ use std::str::FromStr;
 
 use bitcoin::secp256k1::rand::{thread_rng, RngCore};
 use bitcoin::{OutPoint, Txid};
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitConceal, CommitEncodeWithStrategy,
-};
-use lnpbp::seals::{OutpointHash, OutpointReveal, ParseError};
+use bp::seals::{OutpointHash, OutpointReveal, ParseError};
+use commit_verify::{commit_encode, CommitConceal};
 
 /// Error happening if the seal data holds only witness transaction output
 /// number and thus can't be used alone for constructing full bitcoin
@@ -318,8 +316,8 @@ impl CommitConceal for Revealed {
     }
 }
 
-impl CommitEncodeWithStrategy for Revealed {
-    type Strategy = commit_strategy::UsingConceal;
+impl commit_encode::Strategy for Revealed {
+    type Strategy = commit_encode::strategies::UsingConceal;
 }
 
 impl TryFrom<Revealed> for OutPoint {
@@ -384,9 +382,9 @@ impl FromStr for Revealed {
 mod test {
     use super::*;
     use bitcoin::hashes::hex::FromHex;
-    use lnpbp::client_side_validation::CommitEncode;
-    use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+    use commit_verify::CommitEncode;
     use secp256k1zkp::rand::{thread_rng, RngCore};
+    use strict_encoding::{StrictDecode, StrictEncode};
 
     // Hard coded TxOutpoint variant of a Revealed Seal
     // Constructed with following data

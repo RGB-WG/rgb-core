@@ -17,10 +17,10 @@ use core::fmt::Debug;
 use std::collections::HashMap;
 use std::io;
 
-use lnpbp::client_side_validation::{
-    CommitConceal, CommitEncode, ConsensusCommit, MerkleNode,
+use bp::seals::OutpointReveal;
+use commit_verify::{
+    merkle::MerkleNode, CommitConceal, CommitEncode, ConsensusCommit,
 };
-use lnpbp::seals::OutpointReveal;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
@@ -1047,8 +1047,8 @@ where
 mod _strict_encoding {
     use super::*;
     use data::_strict_encoding::EncodingTag;
-    use lnpbp::strict_encoding::Error;
     use std::io;
+    use strict_encoding::Error;
 
     impl StrictEncode for AssignmentVec {
         fn strict_encode<E: io::Write>(
@@ -1163,8 +1163,8 @@ mod _strict_encoding {
                     )?,
                 },
                 invalid => Err(Error::EnumValueNotKnown(
-                    "Assignment".to_string(),
-                    invalid,
+                    "Assignment",
+                    invalid as usize,
                 ))?,
             })
         }
@@ -1181,10 +1181,11 @@ mod test {
         hex::{FromHex, ToHex},
         sha256, Hash,
     };
-    use lnpbp::client_side_validation::{
-        merklize, CommitConceal, CommitEncode, MerkleNode, ToMerkleSource,
+    use bp::seals::OutpointReveal;
+    use commit_verify::{
+        merkle::MerkleNode, merklize, CommitConceal, CommitEncode,
+        ToMerkleSource,
     };
-    use lnpbp::seals::OutpointReveal;
     use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
     use secp256k1zkp::{pedersen::Commitment, Secp256k1, SecretKey};
     use std::collections::BTreeMap;

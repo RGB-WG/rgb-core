@@ -16,9 +16,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use amplify::Wrapper;
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
-    ConsensusMerkleCommit, MerkleNode, MerkleSource, ToMerkleSource,
+use commit_verify::{
+    commit_encode, merkle::MerkleNode, ConsensusCommit, ConsensusMerkleCommit,
+    MerkleSource, ToMerkleSource,
 };
 
 use super::data;
@@ -53,14 +53,14 @@ impl IntoIterator for Metadata {
     Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
 )]
 pub struct MetadataLeaf(pub schema::FieldType, pub data::Revealed);
-impl CommitEncodeWithStrategy for MetadataLeaf {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for MetadataLeaf {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 impl ConsensusCommit for MetadataLeaf {
     type Commitment = MerkleNode;
 }
 impl ConsensusMerkleCommit for MetadataLeaf {
-    const MERKLE_NODE_TAG: &'static str = "metadata";
+    const MERKLE_NODE_PREFIX: &'static str = "metadata";
 }
 impl ToMerkleSource for Metadata {
     type Leaf = MetadataLeaf;
@@ -170,9 +170,9 @@ mod test {
     use super::*;
     use amplify::Wrapper;
     use bitcoin_hashes::Hash;
-    use lnpbp::client_side_validation::{merklize, CommitEncode, MerkleNode};
-    use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+    use commit_verify::{merkle::MerkleNode, merklize, CommitEncode};
     use secp256k1zkp::rand::{thread_rng, RngCore};
+    use strict_encoding::{StrictDecode, StrictEncode};
     //use lnpbp::commit_verify::CommitVerify;
 
     // Hard coded sample metadata object as shown below

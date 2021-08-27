@@ -24,17 +24,18 @@ use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::util::uint::Uint256;
 use bitcoin::{Transaction, Txid};
 
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
-};
-use lnpbp::commit_verify::{CommitVerify, EmbedCommitVerify, TryCommitVerify};
-use lnpbp::dbc::{
+use bp::dbc::{
     self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
     TxCommitment, TxContainer, TxSupplement, TxoutCommitment, TxoutContainer,
 };
-use lnpbp::lnpbp4::{MessageMap, MultimsgCommitment, TooManyMessagesError};
-use lnpbp::strict_encoding::{strategies, Strategy};
-use lnpbp::TaggedHash;
+use commit_verify::multi_commit::{
+    self, Message, MultiCommitBlock, MultiSource, ProtocolId,
+};
+use commit_verify::{
+    commit_encode, CommitVerify, ConsensusCommit, EmbedCommitVerify,
+    TaggedHash, TryCommitVerify,
+};
+use strict_encoding::{strategies, Strategy};
 use wallet::psbt::{Fee, FeeError};
 
 use crate::{reveal, ContractId, NodeId, RevealedByMerge};
@@ -47,6 +48,8 @@ lazy_static! {
     static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash =
         sha256::Hash::hash(b"LNPBP4");
 }
+
+pub static ANCHOR_MIN_COMMITMENTS: u16 = 5;
 
 static MIDSTATE_ANCHOR_ID: [u8; 32] = [
     0x2b, 0x17, 0xab, 0x6a, 0x88, 0x35, 0xf6, 0x62, 0x86, 0xc1, 0xa6, 0x14,
@@ -116,7 +119,7 @@ pub enum Error {
 
     /// Too many state transitions for commitment; can't fit into a single
     /// anchor
-    #[from(TooManyMessagesError)]
+    #[from(multi_commit::Error)]
     SizeLimit,
 }
 
@@ -135,7 +138,7 @@ pub trait ConcealAnchors {
 #[derive(Clone, PartialEq, Eq, Debug, StrictEncode, StrictDecode)]
 pub struct Anchor {
     pub txid: Txid,
-    pub commitment: MultimsgCommitment,
+    pub commitment: MultiCommitBlock,
     pub proof: Proof,
 }
 
@@ -193,7 +196,7 @@ impl DumbDefault for Anchor {
         Self {
             txid: Txid::default(),
             proof: Proof::dumb_default(),
-            commitment: MultimsgCommitment::default(),
+            commitment: MultiCommitBlock::default(),
         }
     }
 }
@@ -214,14 +217,14 @@ impl Anchor {
         // assemble them in per-output-packs of ContractId: Transition
         // commitment type
         let per_output_sources = transitions.into_iter().fold(
-            HashMap::<usize, MessageMap>::new(),
+            HashMap::<usize, BTreeMap<ProtocolId, Message>>::new(),
             |mut data, (contract_id, node_id)| {
                 let id = Uint256::from_be_bytes(*contract_id.as_slice());
                 let vout = id % Uint256::from_u64(num_outs).unwrap();
                 let vout = ((vout.low_u64() + fee as u64) % num_outs) as usize;
                 data.entry(vout).or_insert(BTreeMap::default()).insert(
                     (*contract_id.as_slice()).into(),
-                    sha256d::Hash::from_inner(*node_id.as_slice()),
+                    Message::from_inner(*node_id.as_slice()),
                 );
                 data
             },
@@ -229,8 +232,12 @@ impl Anchor {
 
         let mut anchors: Vec<Anchor> = vec![];
         let mut contract_anchor_map = HashMap::<ContractId, usize>::new();
-        for (vout, multimsg) in per_output_sources {
-            let mm_commitment = MultimsgCommitment::try_commit(&multimsg)?;
+        for (vout, messages) in per_output_sources {
+            let multi_source = MultiSource {
+                min_length: ANCHOR_MIN_COMMITMENTS,
+                messages,
+            };
+            let mm_commitment = MultiCommitBlock::try_commit(&multi_source)?;
 
             let psbt_out = psbt
                 .outputs
@@ -251,7 +258,7 @@ impl Anchor {
             )
             .map_err(|_| Error::WrongPubkeyData)?;
             // TODO #53: (new) Add support for Taproot parsing
-            let source = match psbt_out
+            let script_source = match psbt_out
                 .redeem_script
                 .as_ref()
                 .or_else(|| psbt_out.witness_script.as_ref())
@@ -280,7 +287,7 @@ impl Anchor {
                 script_container: SpkContainer {
                     pubkey,
                     method,
-                    source,
+                    source: script_source,
                     tag: *LNPBP4_TAG,
                     tweaking_factor: None,
                 },
@@ -291,7 +298,7 @@ impl Anchor {
                 .clone()
                 .commitments
                 .into_iter()
-                .map(|item| item.commitment.into_inner().to_vec())
+                .map(|item| item.message.into_inner().to_vec())
                 .flatten()
                 .collect();
             let mm_digest = sha256::Hash::commit(&mm_buffer);
@@ -316,9 +323,10 @@ impl Anchor {
                         )[..].to_vec())
                 });
 
-            multimsg.iter().for_each(|(id, _)| {
-                let contract_id =
-                    ContractId::from_hash(sha256d::Hash::from_inner(**id));
+            multi_source.messages.iter().for_each(|(id, _)| {
+                let contract_id = ContractId::from_hash(
+                    sha256d::Hash::from_inner(*id.as_inner()),
+                );
                 contract_anchor_map.insert(contract_id, anchors.len());
             });
             anchors.push(Anchor {
@@ -340,9 +348,8 @@ impl Anchor {
             .commitments
             .get(pos)
             .expect("Index modulo length can't exceed array length")
-            .commitment
-            == sha256d::Hash::from_slice(&node_id[..])
-                .expect("TaggedHashes type is broken")
+            .message
+            == Message::from_inner(*node_id.as_slice())
     }
 
     pub fn verify(
@@ -362,7 +369,7 @@ impl Anchor {
             .clone()
             .commitments
             .into_iter()
-            .map(|item| item.commitment.into_inner().to_vec())
+            .map(|item| item.message.into_inner().to_vec())
             .flatten()
             .collect();
         let mm_digest = sha256::Hash::commit(&mm_buffer);
@@ -411,8 +418,8 @@ impl Anchor {
     }
 }
 
-impl CommitEncodeWithStrategy for Anchor {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for Anchor {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl ConsensusCommit for Anchor {
@@ -425,8 +432,8 @@ mod test {
     use crate::contract::{Genesis, Node};
     use bitcoin::consensus::deserialize;
     use bitcoin::util::psbt::PartiallySignedTransaction;
-    use lnpbp::strict_encoding::StrictDecode;
-    use lnpbp::tagged_hash;
+    use commit_verify::tagged_hash;
+    use strict_encoding::StrictDecode;
 
     static GENESIS: [u8; 2447] = include!("../../test/genesis.in");
 

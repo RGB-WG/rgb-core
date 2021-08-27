@@ -59,7 +59,7 @@ use std::str::FromStr;
 use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::secp256k1::rand::thread_rng;
 use bitcoin::OutPoint;
-use lnpbp::seals::{OutpointHash, OutpointReveal};
+use bp::seals::{OutpointHash, OutpointReveal};
 
 use crate::seal::SealPoint;
 use crate::{
@@ -68,15 +68,13 @@ use crate::{
 };
 
 /// Error parsing allocation data
-#[derive(
-    Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From,
-)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum ParseError {
     /// Seal parse error
     #[display(inner)]
     #[from]
-    Seal(lnpbp::seals::ParseError),
+    Seal(bp::seals::ParseError),
 
     /// the value for the allocation must be an 64-bit decimal integer
     WrongValue,

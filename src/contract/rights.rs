@@ -15,9 +15,9 @@ use amplify::Wrapper;
 use core::fmt::Debug;
 use std::collections::{btree_map, btree_set, BTreeMap, BTreeSet};
 
-use lnpbp::client_side_validation::{
-    commit_strategy, CommitEncodeWithStrategy, ConsensusCommit,
-    ConsensusMerkleCommit, MerkleNode, MerkleSource, ToMerkleSource,
+use commit_verify::{
+    commit_encode, merkle::MerkleNode, ConsensusCommit, ConsensusMerkleCommit,
+    MerkleSource, ToMerkleSource,
 };
 use strict_encoding::StrictEncode;
 
@@ -187,14 +187,14 @@ impl IntoIterator for ParentPublicRights {
     StrictDecode,
 )]
 pub struct PublicRightsLeaf(pub schema::PublicRightType);
-impl CommitEncodeWithStrategy for PublicRightsLeaf {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for PublicRightsLeaf {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 impl ConsensusCommit for PublicRightsLeaf {
     type Commitment = MerkleNode;
 }
 impl ConsensusMerkleCommit for PublicRightsLeaf {
-    const MERKLE_NODE_TAG: &'static str = "public_right";
+    const MERKLE_NODE_PREFIX: &'static str = "public_right";
 }
 impl ToMerkleSource for PublicRights {
     type Leaf = PublicRightsLeaf;
@@ -221,14 +221,14 @@ impl ToMerkleSource for PublicRights {
     StrictDecode,
 )]
 pub struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
-impl CommitEncodeWithStrategy for OwnedRightsLeaf {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for OwnedRightsLeaf {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 impl ConsensusCommit for OwnedRightsLeaf {
     type Commitment = MerkleNode;
 }
 impl ConsensusMerkleCommit for OwnedRightsLeaf {
-    const MERKLE_NODE_TAG: &'static str = "owned_right";
+    const MERKLE_NODE_PREFIX: &'static str = "owned_right";
 }
 impl ToMerkleSource for OwnedRights {
     type Leaf = OwnedRightsLeaf;
@@ -258,14 +258,14 @@ impl ToMerkleSource for OwnedRights {
     StrictDecode,
 )]
 pub struct ParentPublicRightsLeaf(pub NodeId, pub schema::PublicRightType);
-impl CommitEncodeWithStrategy for ParentPublicRightsLeaf {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for ParentPublicRightsLeaf {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 impl ConsensusCommit for ParentPublicRightsLeaf {
     type Commitment = MerkleNode;
 }
 impl ConsensusMerkleCommit for ParentPublicRightsLeaf {
-    const MERKLE_NODE_TAG: &'static str = "parent_public_right";
+    const MERKLE_NODE_PREFIX: &'static str = "parent_public_right";
 }
 impl ToMerkleSource for ParentPublicRights {
     type Leaf = ParentPublicRightsLeaf;
@@ -299,14 +299,14 @@ pub struct ParentOwnedRightsLeaf(
     pub schema::OwnedRightType,
     pub u16,
 );
-impl CommitEncodeWithStrategy for ParentOwnedRightsLeaf {
-    type Strategy = commit_strategy::UsingStrict;
+impl commit_encode::Strategy for ParentOwnedRightsLeaf {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 impl ConsensusCommit for ParentOwnedRightsLeaf {
     type Commitment = MerkleNode;
 }
 impl ConsensusMerkleCommit for ParentOwnedRightsLeaf {
-    const MERKLE_NODE_TAG: &'static str = "parent_owned_right";
+    const MERKLE_NODE_PREFIX: &'static str = "parent_owned_right";
 }
 impl ToMerkleSource for ParentOwnedRights {
     type Leaf = ParentOwnedRightsLeaf;
