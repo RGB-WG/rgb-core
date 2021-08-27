@@ -442,7 +442,7 @@ mod test {
     #[test]
     fn test_anchor_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:anchor");
-        assert_eq!(**midstate, MIDSTATE_ANCHOR_ID);
+        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_ANCHOR_ID);
     }
 
     #[test]

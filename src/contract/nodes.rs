@@ -970,7 +970,7 @@ mod test {
     #[test]
     fn test_node_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:node");
-        assert_eq!(**midstate, MIDSTATE_NODE_ID);
+        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_NODE_ID);
     }
 
     // Making sure that <https://github.com/LNP-BP/LNPBPs/issues/58>

@@ -363,6 +363,7 @@ impl Consignment {
 pub(crate) mod test {
     use super::*;
     use crate::schema::test::schema;
+    use amplify::Wrapper;
     use commit_verify::tagged_hash;
     use strict_encoding::StrictDecode;
     use wallet::resolvers::{TxResolver, TxResolverError};
@@ -398,7 +399,7 @@ pub(crate) mod test {
     fn test_consignment_id_midstate() {
         // TODO #61: Do the actual consignment verification testing
         let midstate = tagged_hash::Midstate::with(b"rgb:consignment");
-        assert_eq!(**midstate, MIDSTATE_CONSIGNMENT_ID);
+        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_CONSIGNMENT_ID);
     }
 
     #[test]

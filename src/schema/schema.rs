@@ -923,6 +923,7 @@ pub(crate) mod test {
     use crate::schema::*;
     use crate::script::EntryPoint;
     use crate::vm::embedded::NodeValidator;
+    use amplify::Wrapper;
     use commit_verify::tagged_hash;
     use strict_encoding::*;
 
@@ -1072,7 +1073,7 @@ pub(crate) mod test {
     #[test]
     fn test_schema_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:schema");
-        assert_eq!(**midstate, MIDSTATE_SHEMA_ID);
+        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_SHEMA_ID);
     }
 
     #[test]

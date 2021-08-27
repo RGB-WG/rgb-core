@@ -311,7 +311,7 @@ mod test {
             .collect();
 
         // compute merkle root of all the nodes
-        let root = merklize(MetadataLeaf::MERKLE_NODE_TAG, &nodes, 0);
+        let (root, _) = merklize(MetadataLeaf::MERKLE_NODE_PREFIX, nodes);
 
         // Commit encode the root
         let handmade_encoding = root.commit_serialize();

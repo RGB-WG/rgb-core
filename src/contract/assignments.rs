@@ -2069,7 +2069,7 @@ mod test {
         let merkle_node = MerkleNode::hash(&encoded_leaf[..]);
 
         // merkelize the node with correct tag
-        let root = merklize("parent_owned_right", &[merkle_node], 0);
+        let (root, _) = merklize("parent_owned_right", [merkle_node]);
 
         // Commit encode the resulting merkle root
         let handmade_commit = root.commit_serialize();
@@ -2174,7 +2174,7 @@ mod test {
             .collect();
 
         // Calculate Merkle Root for the the above nodes
-        let root = merklize("parent_owned_right", &nodes, 0);
+        let (root, _) = merklize("parent_owned_right", nodes);
 
         // Commit encode the root
         let handmade_commit = root.commit_serialize();
@@ -2409,7 +2409,7 @@ mod test {
             .collect();
 
         // compute merkle root of all the nodes
-        let root = merklize("owned_right", &nodes, 0);
+        let (root, _) = merklize("owned_right", nodes);
 
         // Commit encode the root
         let handmade_encoding = root.commit_serialize();
