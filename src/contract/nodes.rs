@@ -1116,11 +1116,11 @@ mod test {
         // Typeid/Nodeid test
         assert_eq!(
             genesis.node_id().to_hex(),
-            "eb6791eed7d194e286c3d06f9a9437cac16568acf3cb9fdef8007790a16df34f"
+            "977e9d7344aec3f01aca1a05b3f328fe91aa252481433e7cd87b22dbb48cd01c"
         );
         assert_eq!(
             transition.node_id().to_hex(),
-            "afd41355c98d349161e6dfc0b075370f12360b111c9b0305081f77f8e85d636f"
+            "52776d37dfce78a3d075f8c79c2c40ed6d95d271c74f7aea910c17218255aa68"
         );
 
         assert_eq!(genesis.transition_type(), None);
@@ -1326,12 +1326,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("eb6791eed7d194e286c3d06f9a9437cac16568acf3cb9fdef8007790a16df34f")
+            NodeId::from_hex("977e9d7344aec3f01aca1a05b3f328fe91aa252481433e7cd87b22dbb48cd01c")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("afd41355c98d349161e6dfc0b075370f12360b111c9b0305081f77f8e85d636f")
+            NodeId::from_hex("52776d37dfce78a3d075f8c79c2c40ed6d95d271c74f7aea910c17218255aa68")
                 .unwrap()
         );
 
@@ -1340,12 +1340,12 @@ mod test {
 
         assert_eq!(
             genesis.clone().consensus_commit(),
-            NodeId::from_hex("eb6791eed7d194e286c3d06f9a9437cac16568acf3cb9fdef8007790a16df34f")
+            NodeId::from_hex("977e9d7344aec3f01aca1a05b3f328fe91aa252481433e7cd87b22dbb48cd01c")
                 .unwrap()
         );
         assert_eq!(
             transition.clone().consensus_commit(),
-            NodeId::from_hex("afd41355c98d349161e6dfc0b075370f12360b111c9b0305081f77f8e85d636f")
+            NodeId::from_hex("52776d37dfce78a3d075f8c79c2c40ed6d95d271c74f7aea910c17218255aa68")
                 .unwrap()
         );
     }
@@ -1357,11 +1357,11 @@ mod test {
         let contract_id = genesis.contract_id();
         assert_eq!(
             contract_id.to_string(),
-            "rgb1flekmgvswuq03h5le0e6c6r9c89r09y6dlgv8phzjnga0m53vl4smzrng6"
+            "rgb1rnggedxmyfaaslp7gwqjgfd2j8lz3uanq5dv5xhscwhyguua06tskhgfdg"
         );
         assert_eq!(
             serde_json::to_string(&contract_id).unwrap(),
-            "\"rgb1flekmgvswuq03h5le0e6c6r9c89r09y6dlgv8phzjnga0m53vl4smzrng6\""
+            "\"rgb1rnggedxmyfaaslp7gwqjgfd2j8lz3uanq5dv5xhscwhyguua06tskhgfdg\""
         );
     }
 
@@ -1376,7 +1376,7 @@ mod test {
         assert_eq!(
             contractid,
             ContractId::from_hex(
-                "eb6791eed7d194e286c3d06f9a9437cac16568acf3cb9fdef8007790a16df34f"
+                "977e9d7344aec3f01aca1a05b3f328fe91aa252481433e7cd87b22dbb48cd01c"
             )
             .unwrap()
         );

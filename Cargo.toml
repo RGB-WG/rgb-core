@@ -44,7 +44,7 @@ amplify = "~3.8.2"
 bp-core = "~0.5.0-beta.5"
 lnpbp = { version = "~0.5.0-beta.3", features = ["zip"] }
 strict_encoding = { version = "~1.6.1", features = ["crypto", "chrono", "bitcoin"] }
-commit_verify = { version = "~0.5.7", features = ["rand", "bulletproofs"] }
+commit_verify = { version = "~0.5.11", features = ["rand", "bulletproofs"] }
 client_side_validation = "~0.5.5"
 descriptor-wallet = { version = "~0.5.0-alpha.3", features = ["descriptors"] }
 aluvm = "~0.4.0"

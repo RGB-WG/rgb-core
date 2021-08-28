@@ -493,7 +493,7 @@ pub(super) mod _strict_encoding {
 
         #[test]
         fn test_enum_encodingtag_exhaustive() {
-            test_enum_u8_exhaustive!(EncodingTag;
+            test_encoding_enum_u8_exhaustive!(EncodingTag;
                 EncodingTag::U8 => 0b_0000_0000_u8,
                 EncodingTag::U16 => 0b_0000_0001_u8,
                 EncodingTag::U32 => 0b_0000_0010_u8,
@@ -522,7 +522,8 @@ pub(super) mod _strict_encoding {
                 EncodingTag::TxOutPoint => 0b_0101_0001_u8,
                 EncodingTag::Tx => 0b_0101_0010_u8,
                 EncodingTag::Psbt => 0b_0101_0011_u8
-            );
+            )
+            .unwrap();
         }
     }
 }

@@ -796,7 +796,7 @@ mod test {
         let bech32 = obj.to_bech32_string();
         assert_eq!(
             bech32,
-            "rgb1tmkhudlczkvwsjwuh4qf753hgp9vvad9u5x8wf0gpqu8dlc4sx3s53twr9"
+            "rgb1uzunxx7zguyrtyg2sfddgchn40u3ae8vv46ejpa3kvf78qfk2ztqx04rae"
         );
         let decoded = ContractId::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
@@ -860,7 +860,7 @@ mod test {
     fn test_bech32_disclosure() {
         let obj = Disclosure::default();
         let bech32 = format!("{}", obj);
-        assert_eq!(bech32, "disclosure1q93cqqgqpmudg2");
+        assert_eq!(bech32, "disclosure1q93cqqsqyseukg");
         let decoded = Disclosure::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
     }

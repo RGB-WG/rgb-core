@@ -400,7 +400,6 @@ mod _strict_encoding {
 mod test {
     use super::Occurrences;
     use super::*;
-    use strict_encoding::test_helpers::*;
     use strict_encoding::StrictDecode;
 
     static ONCE: [u8; 4] = [1, 0, 1, 0];
@@ -541,16 +540,6 @@ mod test {
 
     #[test]
     fn test_digest_algorithm() {
-        let sha256 = DigestAlgorithm::Sha256;
-        let sha512 = DigestAlgorithm::Sha512;
-        let bitcoin160 = DigestAlgorithm::Bitcoin160;
-        let bitcoin256 = DigestAlgorithm::Bitcoin256;
-
-        print_bytes(&sha256);
-        print_bytes(&sha512);
-        print_bytes(&bitcoin160);
-        print_bytes(&bitcoin256);
-
         let sha256_byte: [u8; 1] = [0x11];
         let sha512_byte: [u8; 1] = [0x12];
         let bitcoin160_byte: [u8; 1] = [0x48];

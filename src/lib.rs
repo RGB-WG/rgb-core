@@ -81,6 +81,34 @@ macro_rules! impl_enum_strict_encoding {
     };
 }
 
+// TODO: Move to strict_encoding_test
+#[cfg(test)]
+#[macro_export]
+macro_rules! test_encode {
+    ( $(( $data:ident, $ty:ty )),+ ) => {
+        $( let _: $ty = ::strict_encoding::test_helpers::test_vec_decoding_roundtrip($data).unwrap(); )+
+    }
+}
+
+/// Macro to run test suite with garbage vector against all non-consensus
+/// enum values
+#[cfg(test)]
+#[macro_export]
+macro_rules! test_garbage_exhaustive {
+    ($range:expr; $( ($x:ident, $ty:ty, $err:ident) ),+ ) => (
+        {$(
+            let mut cp = $x.clone();
+            for byte in $range {
+                cp[0] = byte as u8;
+                assert_eq!(
+                    <$ty>::strict_decode(&cp[..]).unwrap_err(),
+                    ::strict_encoding::Error::EnumValueNotKnown($err, byte)
+                );
+            }
+        )+}
+    );
+}
+
 pub mod bech32;
 pub mod contract;
 pub mod schema;
