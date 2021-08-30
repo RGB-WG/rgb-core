@@ -40,10 +40,10 @@ required-features = ["cli", "serde"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = "~3.8.2"
+amplify = "~3.9.0"
 bp-core = "~0.5.0-beta.5"
 lnpbp = { version = "~0.5.0-beta.3", features = ["zip"] }
-strict_encoding = { version = "~1.6.1", features = ["crypto", "chrono", "bitcoin"] }
+strict_encoding = { version = "~1.7.0", features = ["crypto", "chrono", "bitcoin"] }
 commit_verify = { version = "~0.5.11", features = ["rand", "bulletproofs"] }
 client_side_validation = "~0.5.5"
 descriptor-wallet = { version = "~0.5.0-alpha.3", features = ["descriptors"] }

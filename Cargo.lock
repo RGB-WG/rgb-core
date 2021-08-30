@@ -33,9 +33,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "3.8.2"
+version = "3.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ecf2a5a73524630dd5dd1ecde8ad6db426ecc04a28f6eb302fc145259fe6c3d"
+checksum = "7f685c1150eb6226b9432acaeef7d9ddead665903cba3a514b0f3dc663a73f74"
 dependencies = [
  "amplify_derive",
  "amplify_num",
@@ -70,9 +70,9 @@ dependencies = [
 
 [[package]]
 name = "amplify_syn"
-version = "1.1.4"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf296f37a25aa9511edecc6a713361370a857d0dccd808407d7972a66cc91d6a"
+checksum = "da24db1445cc7bc3842fa072c2d51fe5b25b812b6a572d65842a4c72e87221ac"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -510,6 +510,18 @@ dependencies = [
  "socks",
  "webpki",
  "webpki-roots",
+]
+
+[[package]]
+name = "encoding_derive_helpers"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "911435b8f39bc1d07706597189fd529d9730179c51636504818f961a5b71ecb1"
+dependencies = [
+ "amplify",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1289,9 +1301,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "strict_encoding"
-version = "1.6.1"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ec448f7e3f5261fe66ab0843d044a8ce05af4a64a833a9d72d96672b01d9e66"
+checksum = "c759ca0aa75a1553a8a16068298076e5a3639a497e4ca25507b527daa0faab6d"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -1305,13 +1317,13 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding_derive"
-version = "1.5.2"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73f8703ce3fc844e1bed7cdf3d538b292f90eb3ac41b48542a08980c517b88f8"
+checksum = "957674828fd99a99958f85ceb126f4555f66c7911b6efc7c821b015332b0bd3e"
 dependencies = [
- "amplify",
+ "amplify_syn",
+ "encoding_derive_helpers",
  "proc-macro2",
- "quote",
  "syn",
 ]
 

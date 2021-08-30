@@ -80,6 +80,17 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           override: true
+      - name: Regenerate Cargo.lock
+        if: startsWith(matrix.toolchain, '1.')
+        uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+      - name: Pin versions
+        if: startsWith(matrix.toolchain, '1.')
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+          args: -p zeroize --precise "1.2.0"
       - name: All features
         uses: actions-rs/cargo@v1
         with:
