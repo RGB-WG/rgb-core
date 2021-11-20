@@ -12,8 +12,9 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use num_traits::ToPrimitive;
+use std::convert::TryFrom;
 use std::io;
-use std::ops::RangeInclusive;
+use std::ops::{Deref, RangeInclusive};
 
 pub trait UnsignedInteger:
     Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Into<u64> + std::fmt::Debug
@@ -78,6 +79,51 @@ impl Number for i64 {}
 impl Number for i128 {}
 impl Number for f32 {}
 impl Number for f64 {}
+
+#[derive(Clone, Debug, Display, PartialEq, Eq)]
+#[display(Debug)]
+/// Error indicating that a value is not in 0..=18 and therefore not suitable for a [DecimalPrecision]
+pub struct DecimalPrecisionOverflowError;
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[display(Debug)]
+/// u8 wrapper limiting the value range to 0..=18
+pub struct DecimalPrecision(u8);
+
+impl Deref for DecimalPrecision {
+    type Target = u8;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl TryFrom<amplify::num::u5> for DecimalPrecision {
+    type Error = DecimalPrecisionOverflowError;
+
+    fn try_from(value: amplify::num::u5) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_u8())
+    }
+}
+
+impl TryFrom<u8> for DecimalPrecision {
+    type Error = DecimalPrecisionOverflowError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0..=18 => Ok(DecimalPrecision(value)),
+            _ => Err(DecimalPrecisionOverflowError),
+        }
+    }
+}
+
+impl TryFrom<usize> for DecimalPrecision {
+    type Error = DecimalPrecisionOverflowError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_u8().ok_or(DecimalPrecisionOverflowError)?)
+    }
+}
 
 /// NB: For now, we support only up to 128-bit integers and 64-bit floats;
 /// nevertheless RGB schema standard allows up to 256-byte numeric types.
@@ -400,6 +446,7 @@ mod _strict_encoding {
 mod test {
     use super::Occurrences;
     use super::*;
+    use amplify::num::u5;
     use strict_encoding::StrictDecode;
 
     static ONCE: [u8; 4] = [1, 0, 1, 0];
@@ -714,5 +761,38 @@ mod test {
         assert_eq!(u32::bits(), Bits::Bit32);
         assert_eq!(u64_unsigned.as_u64(), core::u64::MAX as u64);
         assert_eq!(u64::bits(), Bits::Bit64);
+    }
+
+    #[test]
+    fn decimal_precision() {
+        // Minimal
+        assert_eq!(*DecimalPrecision::try_from(u5::ZERO).unwrap(), 0);
+        assert_eq!(*DecimalPrecision::try_from(0u8).unwrap(), 0);
+        assert_eq!(*DecimalPrecision::try_from(0usize).unwrap(), 0);
+
+        // Maximal
+        let u5_18 = u5::try_from(18).unwrap();
+        assert_eq!(*DecimalPrecision::try_from(u5_18).unwrap(), 18);
+        assert_eq!(*DecimalPrecision::try_from(18u8).unwrap(), 18);
+        assert_eq!(*DecimalPrecision::try_from(18usize).unwrap(), 18);
+
+        // Overflow: >18
+        let u5_19 = u5::try_from(19).unwrap();
+        assert_eq!(
+            DecimalPrecision::try_from(u5_19).unwrap_err(),
+            DecimalPrecisionOverflowError
+        );
+        assert_eq!(
+            DecimalPrecision::try_from(19u8).unwrap_err(),
+            DecimalPrecisionOverflowError
+        );
+        assert_eq!(
+            DecimalPrecision::try_from(19usize).unwrap_err(),
+            DecimalPrecisionOverflowError
+        );
+        assert_eq!(
+            DecimalPrecision::try_from(usize::MAX).unwrap_err(),
+            DecimalPrecisionOverflowError
+        );
     }
 }
