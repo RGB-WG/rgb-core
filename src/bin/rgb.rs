@@ -12,10 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 #[macro_use]
+extern crate clap;
+#[macro_use]
 extern crate amplify;
 extern crate serde_crate as serde;
 
-use clap::{AppSettings, Clap};
+use clap::Parser;
 use serde::Serialize;
 use std::fmt::{Debug, Display};
 use std::io::{self, Read};
@@ -29,14 +31,13 @@ use rgb::{
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::resolvers::ElectrumTxResolver;
 
-#[derive(Clap, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 #[clap(
     name = "rgb",
     bin_name = "rgb",
     author,
     version,
-    about = "Command-line tool for working with RGB smart contracts",
-    setting = AppSettings::ColoredHelp,
+    about = "Command-line tool for working with RGB smart contracts"
 )]
 pub struct Opts {
     /// Command to execute
@@ -44,8 +45,7 @@ pub struct Opts {
     pub command: Command,
 }
 
-#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum Command {
     /// Commands for working with consignments
     Consignment {
@@ -90,8 +90,7 @@ pub enum Command {
     },
 }
 
-#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum ConsignmentCommand {
     Convert {
         /// Consignment data; if none are given reads from STDIN
@@ -124,8 +123,7 @@ pub enum ConsignmentCommand {
     },
 }
 
-#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum DisclosureCommand {
     Convert {
         /// Consignment data; if none are given reads from STDIN
@@ -141,8 +139,7 @@ pub enum DisclosureCommand {
     },
 }
 
-#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum SchemaCommand {
     Convert {
         /// Schema data; if none are given reads from STDIN
@@ -158,8 +155,7 @@ pub enum SchemaCommand {
     },
 }
 
-#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum AnchorCommand {
     Convert {
         /// Anchor data; if none are given reads from STDIN
@@ -175,8 +171,7 @@ pub enum AnchorCommand {
     },
 }
 
-#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum ExtensionCommand {
     Convert {
         /// State extension data; if none are given reads from STDIN
@@ -192,8 +187,7 @@ pub enum ExtensionCommand {
     },
 }
 
-#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum TransitionCommand {
     Convert {
         /// State transition data; if none are given reads from STDIN
@@ -209,8 +203,7 @@ pub enum TransitionCommand {
     },
 }
 
-#[derive(Clap, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum GenesisCommand {
     Convert {
         /// Genesis data; if none are given reads from STDIN
@@ -227,7 +220,7 @@ pub enum GenesisCommand {
 }
 
 #[derive(
-    Clap, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display,
+    ArgEnum, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display,
 )]
 pub enum Format {
     /// Format according to the rust debug rules

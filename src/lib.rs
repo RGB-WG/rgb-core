@@ -22,6 +22,8 @@
     dead_code,
     //missing_docs
 )]
+// TODO: Upgrade tests to use new strict_encoding_test crate
+#![cfg_attr(test, allow(deprecated))]
 
 #[macro_use]
 extern crate amplify;

@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v0.5.0
+------
+- Separation of specific schemata into independent libraries
+- Introduction of AluVM virtual machine
+- Bulletproofs data removed from client-side commitments
+- Refactored schema type system
+
 v0.4.x patches
 --------------
 - 0.4.3: Fixing seal_definition old-way of sorting seals before they were

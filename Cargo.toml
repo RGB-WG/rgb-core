@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.5.0-alpha.1"
+version = "0.5.0"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "RGB Core Library: private & scalable client-validated smart contracts for Bitcoin & Lightning"
@@ -40,17 +40,17 @@ required-features = ["cli", "serde"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = "~3.9.0"
-bp-core = "~0.5.0-beta.5"
-lnpbp = { version = "~0.5.0-beta.3", features = ["zip"] }
+amplify = "~3.9.1"
+bp-core = "~0.5.0"
+lnpbp = { version = "~0.5.0", features = ["zip"] }
 strict_encoding = { version = "~1.7.0", features = ["crypto", "chrono", "bitcoin"] }
 commit_verify = { version = "~0.5.11", features = ["rand", "bulletproofs"] }
 client_side_validation = "~0.5.5"
-descriptor-wallet = { version = "~0.5.0-alpha.3", features = ["descriptors"] }
+descriptor-wallet = { version = "~0.5.0", features = ["descriptors"] }
 aluvm = "~0.4.0"
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
-bitcoin = { version = "~0.27.0", features = ["rand"] }
+bitcoin = { version = "~0.27.1", features = ["rand"] }
 bitcoin_hashes = "~0.10.0" # we need macro from here
 # <https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0002.md#deterministic-public-key-extraction-from-bitcoin-script>
 # We have to fix version of miniscript as required by LNPBP-2 specification
@@ -87,7 +87,7 @@ grin_secp256k1zkp = { version = "=0.7.11" }
 num-traits = "~0.2.11"
 num-derive = "~0.3.0"
 # Optional features used only by a binary
-clap = { version = "3.0.0-beta.4", optional = true }
+clap = { version = "3.0.0-beta.5", optional = true }
 serde_yaml = { version = "0.8", optional = true }
 serde_json = { version = "1", optional = true }
 
