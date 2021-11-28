@@ -29,7 +29,7 @@ use rgb::{
     Anchor, Consignment, Disclosure, Extension, Genesis, Schema, Transition,
 };
 use strict_encoding::{StrictDecode, StrictEncode};
-use wallet::resolvers::ElectrumTxResolver;
+use wallet::onchain::ElectrumTxResolver;
 
 #[derive(Parser, Clone, Debug)]
 #[clap(
@@ -375,7 +375,7 @@ fn main() -> Result<(), String> {
                 let status = consignment.validate(
                     &schema,
                     None,
-                    &ElectrumTxResolver::new(&electrum)
+                    ElectrumTxResolver::new(&electrum)
                         .map_err(|err| format!("{:#?}", err))?,
                 );
                 println!(

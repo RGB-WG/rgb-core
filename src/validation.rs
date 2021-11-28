@@ -17,7 +17,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
 use commit_verify::CommitConceal;
-use wallet::resolvers::TxResolver;
+use wallet::onchain::ResolveTxFee;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
@@ -289,7 +289,7 @@ pub enum Info {
     UncheckableConfidentialStateData(NodeId, u16),
 }
 
-pub struct Validator<'validator, R: TxResolver> {
+pub struct Validator<'validator, R: ResolveTxFee> {
     consignment: &'validator Consignment,
 
     status: Status,
@@ -305,7 +305,7 @@ pub struct Validator<'validator, R: TxResolver> {
     resolver: R,
 }
 
-impl<'validator, R: TxResolver> Validator<'validator, R> {
+impl<'validator, R: ResolveTxFee> Validator<'validator, R> {
     fn init(consignment: &'validator Consignment, resolver: R) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
@@ -604,7 +604,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.
-        match self.resolver.resolve(&txid) {
+        match self.resolver.resolve_tx_fee(&txid) {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't
                 // check. Reporting this incident and continuing further.

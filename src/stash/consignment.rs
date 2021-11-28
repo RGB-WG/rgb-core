@@ -21,7 +21,7 @@ use commit_verify::{
     commit_encode, CommitConceal, CommitVerify, ConsensusCommit, TaggedHash,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
-use wallet::resolvers::TxResolver;
+use wallet::onchain::ResolveTxFee;
 
 use crate::contract::ConcealSeals;
 use crate::{
@@ -275,7 +275,7 @@ impl Consignment {
             .collect()
     }
 
-    pub fn validate<R: TxResolver>(
+    pub fn validate<R: ResolveTxFee>(
         &self,
         schema: &Schema,
         root_schema: Option<&Schema>,
@@ -366,7 +366,7 @@ pub(crate) mod test {
     use amplify::Wrapper;
     use commit_verify::tagged_hash;
     use strict_encoding::StrictDecode;
-    use wallet::resolvers::{TxResolver, TxResolverError};
+    use wallet::onchain::{ResolveTxFee, TxResolverError};
 
     static CONSIGNMENT: [u8; 1496] = include!("../../test/consignment.in");
 
@@ -376,14 +376,14 @@ pub(crate) mod test {
 
     struct TestResolver;
 
-    impl TxResolver for TestResolver {
-        fn resolve(
+    impl ResolveTxFee for TestResolver {
+        fn resolve_tx_fee(
             &self,
             txid: &Txid,
         ) -> Result<Option<(bitcoin::Transaction, u64)>, TxResolverError>
         {
             eprintln!("Validating txid {}", txid);
-            Err(TxResolverError)
+            Err(TxResolverError::with(*txid))
         }
     }
 

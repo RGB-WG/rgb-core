@@ -210,7 +210,7 @@ impl Anchor {
         //       tweaking
         let fee = psbt.fee()?;
 
-        let tx = &mut psbt.global.unsigned_tx;
+        let tx = &mut psbt.unsigned_tx;
         let num_outs = tx.output.len() as u64;
 
         // Compute which transition commitments must go into which output and
@@ -468,7 +468,7 @@ mod test {
                         subtype: PSBT_OUT_PUBKEY,
                         key: vec![],
                     },
-                    key.key.serialize().to_vec(),
+                    key.serialize().to_vec(),
                 );
             }
         }
@@ -485,18 +485,18 @@ mod test {
 
         // Check number of output remains same
         assert_eq!(
-            source_psbt.global.unsigned_tx.output.len(),
-            witness_psbt.global.unsigned_tx.output.len()
+            source_psbt.unsigned_tx.output.len(),
+            witness_psbt.unsigned_tx.output.len()
         );
 
         // Check output values remains unchanged
         assert_eq!(
-            source_psbt.global.unsigned_tx.output[0].value,
-            witness_psbt.global.unsigned_tx.output[0].value
+            source_psbt.unsigned_tx.output[0].value,
+            witness_psbt.unsigned_tx.output[0].value
         );
         assert_eq!(
-            source_psbt.global.unsigned_tx.output[1].value,
-            witness_psbt.global.unsigned_tx.output[1].value
+            source_psbt.unsigned_tx.output[1].value,
+            witness_psbt.unsigned_tx.output[1].value
         );
     }
 }

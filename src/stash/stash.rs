@@ -29,7 +29,7 @@ use std::collections::BTreeSet;
 
 use bitcoin::OutPoint;
 use bp::seals::OutpointReveal;
-use wallet::resolvers::TxResolver;
+use wallet::onchain::ResolveTxFee;
 
 use crate::{
     Anchor, AnchorId, Consignment, ContractId, Disclosure, Extension, Genesis,
@@ -161,7 +161,7 @@ pub trait Stash {
     /// holder)
     fn prune(
         &mut self,
-        tx_resolver: &mut impl TxResolver,
+        tx_resolver: &mut impl ResolveTxFee,
         ownership_resolver: impl Fn(OutPoint) -> bool,
     ) -> Result<usize, Self::Error>;
 }
