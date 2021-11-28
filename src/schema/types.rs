@@ -81,13 +81,13 @@ impl Number for f32 {}
 impl Number for f64 {}
 
 #[derive(Clone, Debug, Display, PartialEq, Eq)]
-#[display(Debug)]
-/// Error indicating that a value is not in 0..=18 and therefore not suitable for a [DecimalPrecision]
+#[display(doc_comments)]
+/// Asset decimal precision exceeds 18 digits
 pub struct DecimalPrecisionOverflowError;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display(Debug)]
-/// u8 wrapper limiting the value range to 0..=18
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[display(inner)]
+/// Decimal precision for asset value: a wrapper limiting the value range to 0..=18
 pub struct DecimalPrecision(u8);
 
 impl Deref for DecimalPrecision {
