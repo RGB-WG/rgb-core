@@ -87,7 +87,7 @@ grin_secp256k1zkp = { version = "=0.7.11" }
 num-traits = "~0.2.11"
 num-derive = "~0.3.0"
 # Optional features used only by a binary
-clap = { version = "3.0.0-beta.5", optional = true }
+clap = { version = "3.0.0-beta.5", optional = true, features = ["derive"] }
 serde_yaml = { version = "0.8", optional = true }
 serde_json = { version = "1", optional = true }
 
