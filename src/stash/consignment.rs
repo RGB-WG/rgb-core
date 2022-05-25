@@ -16,16 +16,17 @@ use std::str::FromStr;
 
 use bitcoin::hashes::{sha256, sha256t};
 use bitcoin::Txid;
-use bp::seals::OutpointReveal;
+use bp::dbc::Anchor;
 use commit_verify::{
     commit_encode, CommitConceal, CommitVerify, ConsensusCommit, TaggedHash,
+    UntaggedProtocol,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
-use wallet::resolvers::TxResolver;
+use wallet::onchain::ResolveTx;
 
 use crate::contract::ConcealSeals;
 use crate::{
-    schema, validation, Anchor, ConcealState, ConsistencyError, ContractId,
+    schema, seal, validation, ConcealState, ConsistencyError, ContractId,
     Extension, Genesis, GraphApi, Node, NodeId, Schema, SealEndpoint,
     Transition, Validator,
 };
@@ -81,12 +82,13 @@ impl sha256t::Tag for ConsignmentIdTag {
 #[display(ConsignmentId::to_bech32_string)]
 pub struct ConsignmentId(sha256t::Hash<ConsignmentIdTag>);
 
-impl<MSG> CommitVerify<MSG> for ConsignmentId
+// TODO: Use tagged protocol
+impl<Msg> CommitVerify<Msg, UntaggedProtocol> for ConsignmentId
 where
-    MSG: AsRef<[u8]>,
+    Msg: AsRef<[u8]>,
 {
     #[inline]
-    fn commit(msg: &MSG) -> ConsignmentId {
+    fn commit(msg: &Msg) -> ConsignmentId {
         ConsignmentId::hash(msg)
     }
 }
@@ -275,7 +277,7 @@ impl Consignment {
             .collect()
     }
 
-    pub fn validate<R: TxResolver>(
+    pub fn validate<R: ResolveTx>(
         &self,
         schema: &Schema,
         root_schema: Option<&Schema>,
@@ -336,7 +338,7 @@ impl Consignment {
     /// containing concealed seals for the outputs owned by the peer
     pub fn reveal_seals<'a>(
         &mut self,
-        known_seals: impl Iterator<Item = &'a OutpointReveal> + Clone,
+        known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
     ) -> usize {
         let counter = 0;
         for (_, transition) in &mut self.state_transitions {
@@ -366,7 +368,7 @@ pub(crate) mod test {
     use amplify::Wrapper;
     use commit_verify::tagged_hash;
     use strict_encoding::StrictDecode;
-    use wallet::resolvers::{TxResolver, TxResolverError};
+    use wallet::onchain::TxResolverError;
 
     static CONSIGNMENT: [u8; 1496] = include!("../../test/consignment.in");
 
@@ -376,14 +378,16 @@ pub(crate) mod test {
 
     struct TestResolver;
 
-    impl TxResolver for TestResolver {
-        fn resolve(
+    impl ResolveTx for TestResolver {
+        fn resolve_tx(
             &self,
-            txid: &Txid,
-        ) -> Result<Option<(bitcoin::Transaction, u64)>, TxResolverError>
-        {
+            txid: Txid,
+        ) -> Result<bitcoin::Transaction, TxResolverError> {
             eprintln!("Validating txid {}", txid);
-            Err(TxResolverError)
+            Err(TxResolverError {
+                txid: txid,
+                err: None,
+            })
         }
     }
 

@@ -27,12 +27,11 @@
 use std::collections::BTreeSet;
 
 use bitcoin::{OutPoint, Txid};
+use bp::dbc::{Anchor, AnchorId};
+use bp::seals::txout::TxoSeal;
 
 use crate::schema::{NodeType, OwnedRightType};
-use crate::{
-    Anchor, AnchorId, Consignment, Extension, Node, NodeId, NodeOutput,
-    Transition,
-};
+use crate::{Consignment, Extension, Node, NodeId, NodeOutput, Transition};
 
 /// Errors accessing graph data via [`GraphApi`].
 ///
@@ -317,7 +316,7 @@ impl GraphApi for Consignment {
                 .revealed_seal_at(output.output_no)
                 .map_err(|_| ConsistencyError::OutputNotPresent(output))?
                 .ok_or(ConsistencyError::ConfidentialSeal(output))?
-                .to_outpoint_reveal(witness)
+                .outpoint_or(witness)
                 .into();
             closed_seals.insert(outpoint);
         }

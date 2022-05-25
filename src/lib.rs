@@ -130,12 +130,12 @@ pub mod prelude {
         AllocationValueMap, AllocationValueVec, Assignment, AssignmentVec,
         AtomicValue, ConcealSeals, ConcealState, ConfidentialDataError,
         ConfidentialState, ContractId, DeclarativeStrategy, EndpointValueMap,
-        Extension, Genesis, HashStrategy, IntoSealValueMap, Metadata,
-        NoDataError, Node, NodeId, NodeOutput, OutpointValue, OutpointValueMap,
-        OutpointValueVec, OwnedRights, ParentOwnedRights, ParentPublicRights,
-        PedersenStrategy, PublicRights, RevealedByMerge, RevealedState, Seal,
-        SealDefinition, SealEndpoint, SealPoint, SealValueMap, State,
-        StateRetrievalError, StateType, ToSealDefinition, Transition,
+        Extension, Genesis, HashStrategy, HomomorphicBulletproofGrin,
+        IntoRevealedSeal, IntoSealValueMap, Metadata, NoDataError, Node,
+        NodeId, NodeOutput, OutpointValue, OutpointValueMap, OutpointValueVec,
+        OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
+        PublicRights, RevealedByMerge, RevealedState, SealEndpoint,
+        SealValueMap, State, StateRetrievalError, StateType, Transition,
         UtxobValue,
     };
     pub use schema::{
@@ -146,9 +146,9 @@ pub mod prelude {
         TransitionAction, VmType,
     };
     pub use stash::{
-        Anchor, AnchorId, ConcealAnchors, Consignment, ConsignmentEndpoints,
-        ConsistencyError, Disclosure, ExtensionData, GraphApi, Stash,
-        TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
+        ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError,
+        Disclosure, ExtensionData, GraphApi, Stash, TransitionData,
+        PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
     };
     pub use validation::{Validator, Validity};
     pub use vm::VmApi;

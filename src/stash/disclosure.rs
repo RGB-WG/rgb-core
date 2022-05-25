@@ -21,17 +21,19 @@ use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::hashes::{self, sha256, sha256t, Hash, HashEngine};
-use bitcoin::secp256k1::{PublicKey, Signature};
+use bitcoin::secp256k1::{ecdsa::Signature, PublicKey};
+use bp::dbc::{Anchor, AnchorId};
 use commit_verify::{
     commit_encode, CommitEncode, CommitVerify, ConsensusCommit, TaggedHash,
+    UntaggedProtocol,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use strict_encoding::StrictEncode;
 
 use crate::contract::seal::Confidential;
 use crate::{
-    Anchor, AnchorId, ConcealAnchors, ConcealSeals, ConcealState, ContractId,
-    Extension, RevealedByMerge, Transition,
+    ConcealAnchors, ConcealSeals, ConcealState, ContractId, Extension,
+    RevealedByMerge, Transition,
 };
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
@@ -78,12 +80,13 @@ impl sha256t::Tag for DisclosureIdTag {
 #[display(DisclosureId::to_bech32_string)]
 pub struct DisclosureId(sha256t::Hash<DisclosureIdTag>);
 
-impl<MSG> CommitVerify<MSG> for DisclosureId
+// TODO: Use tagged protocol
+impl<Msg> CommitVerify<Msg, UntaggedProtocol> for DisclosureId
 where
-    MSG: AsRef<[u8]>,
+    Msg: AsRef<[u8]>,
 {
     #[inline]
-    fn commit(msg: &MSG) -> DisclosureId {
+    fn commit(msg: &Msg) -> DisclosureId {
         DisclosureId::hash(msg)
     }
 }

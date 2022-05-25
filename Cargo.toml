@@ -40,22 +40,21 @@ required-features = ["cli", "serde"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = "~3.10.0"
-bp-core = "~0.5.0"
-lnpbp = { version = "~0.5.0", features = ["zip"] }
-strict_encoding = { version = "~1.7.0", features = ["crypto", "chrono", "bitcoin"] }
-commit_verify = { version = "~0.5.11", features = ["rand", "bulletproofs"] }
-client_side_validation = "~0.5.5"
-descriptor-wallet = { version = "~0.5.0", features = ["descriptors"] }
-aluvm = "~0.4.0"
+amplify = "~3.12.0"
+bp-core = "~0.7.0-beta.1"
+lnpbp = { version = "~0.7.0", features = ["zip"] }
+strict_encoding = { version = "~1.8.0", features = ["crypto", "chrono", "bitcoin"] }
+commit_verify = { version = "~0.7.0-beta.1", features = ["rand", "bulletproofs"] }
+descriptor-wallet = { version = "~0.7.1", features = ["descriptors"] }
+aluvm = "~0.5.0"
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
-bitcoin = { version = "~0.27.1", features = ["rand"] }
+bitcoin = { version = "~0.28.1", features = ["rand"] }
 bitcoin_hashes = "~0.10.0" # we need macro from here
 # <https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0002.md#deterministic-public-key-extraction-from-bitcoin-script>
 # We have to fix version of miniscript as required by LNPBP-2 specification
-miniscript = { version = "~6.0.1", features = ["compiler"] }
-bech32 = "~0.8.1"
+miniscript = { version = "~7.0.0", features = ["compiler"] }
+bech32 = "~0.9.0"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
 #   a part of Tor address)
 ed25519-dalek = "~1.0.1"
@@ -87,7 +86,7 @@ grin_secp256k1zkp = { version = "=0.7.11" }
 num-traits = "~0.2.11"
 num-derive = "~0.3.0"
 # Optional features used only by a binary
-clap = { version = "3.0.0-beta.5", optional = true, features = ["derive"] }
+clap = { version = "3.1", optional = true, features = ["derive"] }
 serde_yaml = { version = "0.8", optional = true }
 serde_json = { version = "1", optional = true }
 
@@ -99,6 +98,6 @@ default = ["serde", "cli"]
 all = ["serde", "cli"]
 cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum"]
 serde = ["serde_crate", "serde_with", # "serde_with_macros",
-         "client_side_validation/serde", "commit_verify/serde",
+         "commit_verify/serde",
          "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]

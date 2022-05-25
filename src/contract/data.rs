@@ -98,7 +98,7 @@ pub enum Revealed {
     )]
     Curve25519Pubkey(ed25519_dalek::PublicKey),
 
-    Secp256k1ECDSASignature(secp256k1::Signature),
+    Secp256k1ECDSASignature(secp256k1::ecdsa::Signature),
     #[cfg_attr(
         feature = "serde",
         serde(
@@ -465,7 +465,7 @@ pub(super) mod _strict_encoding {
                 ),
                 EncodingTag::Secp256k1Signature => {
                     Revealed::Secp256k1ECDSASignature(
-                        secp256k1::Signature::strict_decode(&mut d)?,
+                        secp256k1::ecdsa::Signature::strict_decode(&mut d)?,
                     )
                 }
                 EncodingTag::Curve25519Pubkey => Revealed::Curve25519Pubkey(

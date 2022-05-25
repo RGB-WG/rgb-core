@@ -18,8 +18,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use amplify::Wrapper;
 use bitcoin::OutPoint;
 use commit_verify::CommitConceal;
-use strict_encoding::StrictDecode;
-use wallet::descriptors;
 
 use super::VmApi;
 use crate::script::{Action, EntryPoint};
@@ -462,9 +460,9 @@ impl NodeValidator {
             .first()
             .cloned()
             .ok_or(HandlerError::BrokenSchema)?;
-        let _descriptor =
-            descriptors::Expanded::strict_deserialize(descriptor_data)
-                .map_err(|_| HandlerError::DataEncoding)?;
+        // let _descriptor =
+        //     descriptors::Expanded::strict_deserialize(descriptor_data)
+        //        .map_err(|_| HandlerError::DataEncoding)?;
         // TODO #81: Implement blockchain access for the VM
         return Err(HandlerError::NotImplemented);
     }

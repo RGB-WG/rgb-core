@@ -17,10 +17,11 @@
 use std::slice;
 
 use bitcoin::Txid;
+use bp::dbc::Anchor;
 
 use crate::schema::{OwnedRightType, TransitionType};
 use crate::{
-    Anchor, Consignment, ConsistencyError, GraphApi, Node, NodeId, Transition,
+    Consignment, ConsistencyError, GraphApi, Node, NodeId, Transition,
 };
 
 /// Iterator over transitions and corresponding witness transaction ids which

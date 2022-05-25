@@ -28,12 +28,12 @@
 use std::collections::BTreeSet;
 
 use bitcoin::OutPoint;
-use bp::seals::OutpointReveal;
-use wallet::resolvers::TxResolver;
+use bp::dbc::{Anchor, AnchorId};
+use wallet::onchain::ResolveTx;
 
 use crate::{
-    Anchor, AnchorId, Consignment, ContractId, Disclosure, Extension, Genesis,
-    Node, NodeId, Schema, SchemaId, SealEndpoint, Transition,
+    seal, Consignment, ContractId, Disclosure, Extension, Genesis, Node,
+    NodeId, Schema, SchemaId, SealEndpoint, Transition,
 };
 
 /// Top-level structure used by client wallets to manage all known RGB smart
@@ -147,7 +147,7 @@ pub trait Stash {
     fn accept(
         &mut self,
         consignment: &Consignment,
-        known_seals: &Vec<OutpointReveal>,
+        known_seals: &Vec<seal::Revealed>,
     ) -> Result<(), Self::Error>;
 
     /// Acquire knowledge from a given disclosure (**enclose** procedure)
@@ -161,7 +161,7 @@ pub trait Stash {
     /// holder)
     fn prune(
         &mut self,
-        tx_resolver: &mut impl TxResolver,
+        tx_resolver: &mut impl ResolveTx,
         ownership_resolver: impl Fn(OutPoint) -> bool,
     ) -> Result<usize, Self::Error>;
 }

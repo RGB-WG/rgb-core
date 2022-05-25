@@ -11,135 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#[cfg(feature = "serde")]
-use serde_with::{As, DisplayFromStr};
-use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap};
-
-use amplify::{DumbDefault, Wrapper};
-use bitcoin::hashes::{sha256, sha256d, sha256t, Hash};
-use bitcoin::secp256k1;
-use bitcoin::util::psbt::raw::ProprietaryKey;
-use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
-use bitcoin::util::uint::Uint256;
-use bitcoin::{Transaction, Txid};
-
-use bp::dbc::{
-    self, Container, Proof, ScriptEncodeData, ScriptEncodeMethod, SpkContainer,
-    TxCommitment, TxContainer, TxSupplement, TxoutCommitment, TxoutContainer,
-};
-use commit_verify::multi_commit::{
-    self, Message, MultiCommitBlock, MultiSource, ProtocolId,
-};
-use commit_verify::{
-    commit_encode, CommitVerify, ConsensusCommit, EmbedCommitVerify,
-    TaggedHash, TryCommitVerify,
-};
-use strict_encoding::{strategies, Strategy};
-use wallet::psbt::{Fee, FeeError};
-
-use crate::{reveal, ContractId, NodeId, RevealedByMerge};
+use crate::{reveal, ContractId, RevealedByMerge};
+use bp::dbc::Anchor;
+use commit_verify::ConsensusCommit;
 
 pub const PSBT_PREFIX: &'static [u8] = b"RGB";
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
 pub const PSBT_OUT_TWEAK: u8 = 0x2;
-
-lazy_static! {
-    static ref LNPBP4_TAG: bitcoin::hashes::sha256::Hash =
-        sha256::Hash::hash(b"LNPBP4");
-}
-
-pub static ANCHOR_MIN_COMMITMENTS: u16 = 5;
-
-static MIDSTATE_ANCHOR_ID: [u8; 32] = [
-    0x2b, 0x17, 0xab, 0x6a, 0x88, 0x35, 0xf6, 0x62, 0x86, 0xc1, 0xa6, 0x14,
-    0x36, 0x18, 0xc, 0x1f, 0xf, 0x80, 0x96, 0x1b, 0x47, 0x70, 0xe5, 0xf5, 0x45,
-    0x45, 0xe4, 0x28, 0x45, 0x47, 0xbf, 0xe9,
-];
-
-/// Tag used for [`AnchorId`] hash type
-pub struct AnchorIdTag;
-
-impl sha256t::Tag for AnchorIdTag {
-    #[inline]
-    fn engine() -> sha256::HashEngine {
-        let midstate = sha256::Midstate::from_inner(MIDSTATE_ANCHOR_ID);
-        sha256::HashEngine::from_midstate(midstate, 64)
-    }
-}
-
-/// Unique anchor identifier equivalent to the anchor commitment hash
-#[cfg_attr(
-    feature = "serde",
-    serde_as,
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-#[derive(
-    Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From,
-)]
-#[wrapper(
-    Debug, Display, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull
-)]
-pub struct AnchorId(
-    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-    sha256t::Hash<AnchorIdTag>,
-);
-
-impl<MSG> CommitVerify<MSG> for AnchorId
-where
-    MSG: AsRef<[u8]>,
-{
-    #[inline]
-    fn commit(msg: &MSG) -> AnchorId {
-        AnchorId::hash(msg)
-    }
-}
-
-impl Strategy for AnchorId {
-    type Strategy = strategies::Wrapped;
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
-#[display(doc_comments)]
-pub enum Error {
-    /// Details of output #{0} are required, but were not provided in PSBT
-    NoRequiredOutputInformation(usize),
-
-    /// Explicit public key must be given for output number #{0}
-    NoRequiredPubkey(usize),
-
-    /// Unable to estimate fee: {0}
-    #[from]
-    FeeEstimationError(FeeError),
-
-    /// Incorrect public key data: {0}
-    #[from(secp256k1::Error)]
-    WrongPubkeyData,
-
-    /// Too many state transitions for commitment; can't fit into a single
-    /// anchor
-    #[from(multi_commit::Error)]
-    SizeLimit,
-}
 
 pub trait ConcealAnchors {
     fn conceal_anchors(&mut self) -> usize {
         self.conceal_anchors_except(&vec![])
     }
     fn conceal_anchors_except(&mut self, protocols: &Vec<ContractId>) -> usize;
-}
-
-#[cfg_attr(
-    any(feature = "cli", feature = "serde"),
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
-#[derive(Clone, PartialEq, Eq, Debug, StrictEncode, StrictDecode)]
-pub struct Anchor {
-    pub txid: Txid,
-    pub commitment: MultiCommitBlock,
-    pub proof: Proof,
 }
 
 impl ConcealAnchors for Anchor {
@@ -179,28 +63,7 @@ impl RevealedByMerge for Anchor {
     }
 }
 
-impl Ord for Anchor {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.anchor_id().cmp(&other.anchor_id())
-    }
-}
-
-impl PartialOrd for Anchor {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl DumbDefault for Anchor {
-    fn dumb_default() -> Self {
-        Self {
-            txid: Txid::default(),
-            proof: Proof::dumb_default(),
-            commitment: MultiCommitBlock::default(),
-        }
-    }
-}
-
+/*
 impl Anchor {
     pub fn commit(
         transitions: BTreeMap<ContractId, NodeId>,
@@ -310,7 +173,7 @@ impl Anchor {
             psbt.outputs
                 .get_mut(vout)
                 .map(|output| {
-                    // TODO #56: Provide full state transition information for the 
+                    // TODO #56: Provide full state transition information for the
                     //       signer with serialized `Roll`
                     output.proprietary.insert(
                         ProprietaryKey {
@@ -417,33 +280,22 @@ impl Anchor {
         )
     }
 }
-
-impl commit_encode::Strategy for Anchor {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-
-impl ConsensusCommit for Anchor {
-    type Commitment = AnchorId;
-}
+ */
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::contract::{Genesis, Node};
+    use crate::NodeId;
     use bitcoin::consensus::deserialize;
+    use bitcoin::psbt::raw::ProprietaryKey;
     use bitcoin::util::psbt::PartiallySignedTransaction;
-    use commit_verify::tagged_hash;
+    use std::collections::BTreeMap;
     use strict_encoding::StrictDecode;
 
     static GENESIS: [u8; 2447] = include!("../../test/genesis.in");
 
     static PSBT: [u8; 462] = include!("../../test/test_transaction.psbt");
-
-    #[test]
-    fn test_anchor_id_midstate() {
-        let midstate = tagged_hash::Midstate::with(b"rgb:anchor");
-        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_ANCHOR_ID);
-    }
 
     #[test]
     fn test_psbt() {
@@ -468,7 +320,7 @@ mod test {
                         subtype: PSBT_OUT_PUBKEY,
                         key: vec![],
                     },
-                    key.key.serialize().to_vec(),
+                    key.serialize().to_vec(),
                 );
             }
         }
@@ -480,23 +332,20 @@ mod test {
         let mut map: BTreeMap<ContractId, NodeId> = BTreeMap::new();
         map.insert(contract_id, node_id);
 
-        // Make commitment into witness psbt
-        Anchor::commit(map, &mut witness_psbt).unwrap();
-
         // Check number of output remains same
         assert_eq!(
-            source_psbt.global.unsigned_tx.output.len(),
-            witness_psbt.global.unsigned_tx.output.len()
+            source_psbt.unsigned_tx.output.len(),
+            witness_psbt.unsigned_tx.output.len()
         );
 
         // Check output values remains unchanged
         assert_eq!(
-            source_psbt.global.unsigned_tx.output[0].value,
-            witness_psbt.global.unsigned_tx.output[0].value
+            source_psbt.unsigned_tx.output[0].value,
+            witness_psbt.unsigned_tx.output[0].value
         );
         assert_eq!(
-            source_psbt.global.unsigned_tx.output[1].value,
-            witness_psbt.global.unsigned_tx.output[1].value
+            source_psbt.unsigned_tx.output[1].value,
+            witness_psbt.unsigned_tx.output[1].value
         );
     }
 }

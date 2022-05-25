@@ -45,10 +45,8 @@ pub use rights::{
 pub(crate) use rights::{
     OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,
 };
-pub use seal::{
-    Seal, SealDefinition, SealEndpoint, SealPoint, ToSealDefinition,
-};
-pub use value::AtomicValue;
+pub use seal::{IntoRevealedSeal, SealEndpoint};
+pub use value::{AtomicValue, HomomorphicBulletproofGrin};
 
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 lazy_static! {

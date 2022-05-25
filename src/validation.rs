@@ -16,13 +16,15 @@ use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
+use bp::dbc::{Anchor, AnchorId};
+use bp::seals::txout::TxoSeal;
 use commit_verify::CommitConceal;
-use wallet::resolvers::TxResolver;
+use wallet::onchain::ResolveTx;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{
-    schema, seal, Anchor, AnchorId, AssignmentVec, Consignment, ContractId,
-    Node, NodeId, Schema, SchemaId,
+    schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema,
+    SchemaId,
 };
 use crate::schema::SchemaVerify;
 use crate::script::{Action, EntryPoint};
@@ -289,7 +291,7 @@ pub enum Info {
     UncheckableConfidentialStateData(NodeId, u16),
 }
 
-pub struct Validator<'validator, R: TxResolver> {
+pub struct Validator<'validator, R: ResolveTx> {
     consignment: &'validator Consignment,
 
     status: Status,
@@ -305,7 +307,7 @@ pub struct Validator<'validator, R: TxResolver> {
     resolver: R,
 }
 
-impl<'validator, R: TxResolver> Validator<'validator, R> {
+impl<'validator, R: ResolveTx> Validator<'validator, R> {
     fn init(consignment: &'validator Consignment, resolver: R) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
@@ -604,7 +606,7 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.
-        match self.resolver.resolve(&txid) {
+        match self.resolver.resolve_tx(txid) {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't
                 // check. Reporting this incident and continuing further.
@@ -737,19 +739,26 @@ impl<'validator, R: TxResolver> Validator<'validator, R> {
                 );
                 None
             }
-            (Ok(Some(seal::Revealed::TxOutpoint(outpoint))), None) => {
+            (
+                Ok(Some(seal::Revealed {
+                    txid: Some(txid),
+                    vout,
+                    ..
+                })),
+                None,
+            ) => {
                 // We are at genesis, so the outpoint must contain tx
-                Some(bitcoin::OutPoint::from(outpoint.clone()))
+                Some(bitcoin::OutPoint::new(txid, vout))
             }
             (Ok(Some(_)), None) => {
                 // This can't happen, since if we have a node in the index
                 // and the node is not genesis, we always have an anchor
                 unreachable!()
             }
-            (Ok(Some(seal)), Some(anchor)) => Some(bitcoin::OutPoint::from(
-                seal.to_outpoint_reveal(anchor.txid),
-            )), /* -> ... so we can check that the bitcoin transaction
-                 * references it as one of its inputs */
+            (Ok(Some(seal)), Some(anchor)) => {
+                Some(seal.outpoint_or(anchor.txid))
+            } /* -> ... so we can check that the bitcoin transaction
+               * references it as one of its inputs */
         }
         .map(|outpoint| {
             if witness_tx

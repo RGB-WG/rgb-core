@@ -12,7 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 //! Allocations are a special case of assignments, where the state assigned to
-//! the seal contains homomorphically-committed value (i.e. data representing
+//! the seal contains homomorphicly-committed value (i.e. data representing
 //! some additive values, like amount of asset – see [`rgb::value`] and
 //! [`AtomicAmount`]).
 //!
@@ -59,22 +59,28 @@ use std::str::FromStr;
 use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::secp256k1::rand::thread_rng;
 use bitcoin::OutPoint;
-use bp::seals::{OutpointHash, OutpointReveal};
+use bp::seals;
+use bp::seals::txout::blind::RevealedSeal;
+use bp::seals::txout::ExplicitSeal;
 
-use crate::seal::SealPoint;
 use crate::{
-    value, Assignment, AssignmentVec, AtomicValue, NodeId, NodeOutput,
-    SealDefinition, SealEndpoint, ToSealDefinition,
+    seal, value, Assignment, AssignmentVec, AtomicValue, IntoRevealedSeal,
+    NodeId, NodeOutput, SealEndpoint,
 };
 
 /// Error parsing allocation data
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum ParseError {
-    /// Seal parse error
+    /// Blind seal parse error
     #[display(inner)]
     #[from]
-    Seal(bp::seals::ParseError),
+    BlindSeal(seals::txout::blind::ParseError),
+
+    /// Explicit seal parse error
+    #[display(inner)]
+    #[from]
+    ExplicitSeal(seals::txout::explicit::ParseError),
 
     /// the value for the allocation must be an 64-bit decimal integer
     WrongValue,
@@ -114,26 +120,12 @@ pub struct AllocatedValue {
 
     /// Seal definition
     #[cfg_attr(feature = "serde", serde(flatten))]
-    pub seal: SealPoint,
+    pub seal: ExplicitSeal,
 }
 
-impl ToSealDefinition for AllocatedValue {
-    fn to_seal_definition(&self) -> SealDefinition {
-        use bitcoin::secp256k1::rand::{self, RngCore};
-        let mut rng = rand::thread_rng();
-        // Not an amount blinding factor but outpoint blinding
-        let entropy = rng.next_u64();
-        match self.seal.txid {
-            Some(txid) => SealDefinition::TxOutpoint(OutpointReveal {
-                blinding: entropy,
-                txid,
-                vout: self.seal.vout,
-            }),
-            None => SealDefinition::WitnessVout {
-                vout: self.seal.vout,
-                blinding: entropy,
-            },
-        }
+impl IntoRevealedSeal for AllocatedValue {
+    fn into_revealed_seal(self) -> RevealedSeal {
+        RevealedSeal::from(self.seal)
     }
 }
 
@@ -188,17 +180,9 @@ pub struct OutpointValue {
     pub outpoint: OutPoint,
 }
 
-impl ToSealDefinition for OutpointValue {
-    fn to_seal_definition(&self) -> SealDefinition {
-        use bitcoin::secp256k1::rand::{self, RngCore};
-        let mut rng = rand::thread_rng();
-        // Not an amount blinding factor but outpoint blinding
-        let entropy = rng.next_u64();
-        SealDefinition::TxOutpoint(OutpointReveal {
-            blinding: entropy,
-            txid: self.outpoint.txid,
-            vout: self.outpoint.vout,
-        })
+impl IntoRevealedSeal for OutpointValue {
+    fn into_revealed_seal(self) -> RevealedSeal {
+        seal::Revealed::from(self.outpoint)
     }
 }
 
@@ -243,7 +227,7 @@ pub struct UtxobValue {
     pub value: AtomicValue,
 
     /// Blinded transaction outpoint
-    pub seal_confidential: OutpointHash,
+    pub seal_confidential: seal::Confidential,
 }
 
 impl FromStr for UtxobValue {
@@ -347,10 +331,10 @@ pub type OutpointValueMap = BTreeMap<OutPoint, AtomicValue>;
 pub type AllocationValueVec = Vec<AllocatedValue>;
 
 /// Allocation map using unique set of non-blinded seal definitions
-pub type AllocationValueMap = BTreeMap<SealPoint, AtomicValue>;
+pub type AllocationValueMap = BTreeMap<ExplicitSeal, AtomicValue>;
 
 /// Allocation map using unique set of seal definitions
-pub type SealValueMap = BTreeMap<SealDefinition, AtomicValue>;
+pub type SealValueMap = BTreeMap<seal::Revealed, AtomicValue>;
 
 /// Allocation map using unique set of blinded consignment endpoints
 pub type EndpointValueMap = BTreeMap<SealEndpoint, AtomicValue>;
@@ -437,21 +421,25 @@ impl AllocationMap for EndpointValueMap {
                     let assigned_state =
                         value::Revealed::with_amount(value, &mut rng);
                     match seal {
-                        SealEndpoint::TxOutpoint(confidential) => {
+                        SealEndpoint::ConcealedUtxo(confidential) => {
                             Assignment::ConfidentialSeal {
                                 seal_definition: confidential,
                                 assigned_state,
                             }
                         }
-                        SealEndpoint::WitnessVout { vout, blinding } => {
-                            Assignment::Revealed {
-                                seal_definition: SealDefinition::WitnessVout {
-                                    vout,
-                                    blinding,
-                                },
-                                assigned_state,
-                            }
-                        }
+                        SealEndpoint::WitnessVout {
+                            method,
+                            vout,
+                            blinding,
+                        } => Assignment::Revealed {
+                            seal_definition: seal::Revealed {
+                                method,
+                                txid: None,
+                                vout,
+                                blinding,
+                            },
+                            assigned_state,
+                        },
                     }
                 })
                 .collect(),
@@ -472,7 +460,7 @@ impl IntoSealValueMap for OutpointValueVec {
         self.into_iter()
             .map(|outpoint_value| {
                 (
-                    SealDefinition::TxOutpoint(outpoint_value.outpoint.into()),
+                    seal::Revealed::from(outpoint_value.outpoint),
                     outpoint_value.value,
                 )
             })
@@ -483,9 +471,7 @@ impl IntoSealValueMap for OutpointValueVec {
 impl IntoSealValueMap for OutpointValueMap {
     fn into_seal_value_map(self) -> SealValueMap {
         self.into_iter()
-            .map(|(outpoint, value)| {
-                (SealDefinition::TxOutpoint(outpoint.into()), value)
-            })
+            .map(|(outpoint, value)| (seal::Revealed::from(outpoint), value))
             .collect()
     }
 }
@@ -494,10 +480,7 @@ impl IntoSealValueMap for AllocationValueVec {
     fn into_seal_value_map(self) -> SealValueMap {
         self.into_iter()
             .map(|allocated_value| {
-                (
-                    allocated_value.seal.to_seal_definition(),
-                    allocated_value.value,
-                )
+                (allocated_value.seal.into(), allocated_value.value)
             })
             .collect()
     }
@@ -506,7 +489,7 @@ impl IntoSealValueMap for AllocationValueVec {
 impl IntoSealValueMap for AllocationValueMap {
     fn into_seal_value_map(self) -> SealValueMap {
         self.into_iter()
-            .map(|(seal, value)| (seal.to_seal_definition(), value))
+            .map(|(seal, value)| (seal.into(), value))
             .collect()
     }
 }

@@ -1092,7 +1092,6 @@ mod test {
 
     use crate::script::EntryPoint;
     use crate::vm::embedded::NodeValidator;
-    use bp::seals::OutpointReveal;
     use commit_verify::{CommitConceal, TaggedHash};
     use secp256k1zkp::rand::thread_rng;
     use strict_encoding::{strict_serialize, StrictDecode};
@@ -1499,18 +1498,18 @@ mod test {
             .map(|txid| bitcoin::Txid::from_hex(txid).unwrap())
             .collect();
 
-        // Create Declerative Assignments
+        // Create Declarative Assignments
         let assignment_dec_rev = Assignment::<DeclarativeStrategy>::Revealed {
-            seal_definition: crate::contract::seal::Revealed::TxOutpoint(
-                OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
+            seal_definition: crate::contract::seal::Revealed::from(
+                OutPoint::new(txid_vec[0], 1),
             ),
             assigned_state: data::Void,
         };
 
         let assignment_dec_conf =
             Assignment::<DeclarativeStrategy>::Confidential {
-                seal_definition: crate::contract::seal::Revealed::TxOutpoint(
-                    OutpointReveal::from(OutPoint::new(txid_vec[1], 2)),
+                seal_definition: crate::contract::seal::Revealed::from(
+                    OutPoint::new(txid_vec[1], 2),
                 )
                 .commit_conceal(),
                 assigned_state: data::Void,
@@ -1518,16 +1517,16 @@ mod test {
 
         // Create Pedersan Assignments
         let assignment_ped_rev = Assignment::<PedersenStrategy>::Revealed {
-            seal_definition: crate::contract::seal::Revealed::TxOutpoint(
-                OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
+            seal_definition: crate::contract::seal::Revealed::from(
+                OutPoint::new(txid_vec[0], 1),
             ),
             assigned_state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
         let assignment_ped_conf =
             Assignment::<PedersenStrategy>::Confidential {
-                seal_definition: crate::contract::seal::Revealed::TxOutpoint(
-                    OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
+                seal_definition: crate::contract::seal::Revealed::from(
+                    OutPoint::new(txid_vec[1], 1),
                 )
                 .commit_conceal(),
                 assigned_state: value::Revealed::with_amount(10u64, &mut rng)
@@ -1543,15 +1542,15 @@ mod test {
             .collect();
 
         let assignment_hash_rev = Assignment::<HashStrategy>::Revealed {
-            seal_definition: crate::contract::seal::Revealed::TxOutpoint(
-                OutpointReveal::from(OutPoint::new(txid_vec[0], 1)),
+            seal_definition: crate::contract::seal::Revealed::from(
+                OutPoint::new(txid_vec[0], 1),
             ),
             assigned_state: state_data_vec[0].clone(),
         };
 
         let assignment_hash_conf = Assignment::<HashStrategy>::Confidential {
-            seal_definition: crate::contract::seal::Revealed::TxOutpoint(
-                OutpointReveal::from(OutPoint::new(txid_vec[1], 1)),
+            seal_definition: crate::contract::seal::Revealed::from(
+                OutPoint::new(txid_vec[1], 1),
             )
             .commit_conceal(),
             assigned_state: state_data_vec[0].clone().commit_conceal(),

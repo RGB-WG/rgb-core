@@ -34,7 +34,11 @@ pub use secp256k1zkp::pedersen;
 use secp256k1zkp::rand::{Rng, RngCore};
 
 use amplify::{Slice32, Wrapper};
-use commit_verify::{commit_encode, CommitConceal, CommitEncode, CommitVerify};
+use bitcoin_hashes::sha256::Midstate;
+use commit_verify::{
+    commit_encode, CommitConceal, CommitEncode, CommitVerify,
+    CommitmentProtocol,
+};
 
 use super::{ConfidentialState, RevealedState, SECP256K1_ZKP};
 use secp256k1zkp::SecretKey;
@@ -290,7 +294,13 @@ impl PartialEq for Confidential {
     }
 }
 
-impl CommitVerify<Revealed> for Confidential {
+pub enum HomomorphicBulletproofGrin {}
+
+impl CommitmentProtocol for HomomorphicBulletproofGrin {
+    const HASH_TAG_MIDSTATE: Option<Midstate> = None;
+}
+
+impl CommitVerify<Revealed, HomomorphicBulletproofGrin> for Confidential {
     fn commit(revealed: &Revealed) -> Self {
         let blinding = revealed.blinding.clone();
         let value = revealed.value;

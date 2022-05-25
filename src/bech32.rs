@@ -12,6 +12,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bech32::{self, FromBase32, ToBase32, Variant};
+use bp::dbc::Anchor;
 use core::fmt::{Display, Formatter};
 use core::str::FromStr;
 use deflate::{write::DeflateEncoder, Compression};
@@ -25,7 +26,7 @@ use strict_encoding::{
 };
 
 use crate::{
-    seal, Anchor, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
+    seal, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
     Transition,
 };
 
@@ -650,14 +651,6 @@ impl FromStr for Transition {
     }
 }
 
-impl FromStr for Anchor {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s)?.try_into()
-    }
-}
-
 impl FromStr for Disclosure {
     type Err = Error;
 
@@ -718,12 +711,6 @@ impl Display for Extension {
     }
 }
 
-impl Display for Anchor {
-    fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
-        Bech32::Anchor(self.clone()).fmt(f)
-    }
-}
-
 impl Display for Disclosure {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         Bech32::Disclosure(self.clone()).fmt(f)
@@ -757,18 +744,18 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use amplify::DumbDefault;
-    use bp::seals::OutpointReveal;
+    use bp::seals::txout::CloseMethod;
     use commit_verify::CommitConceal;
 
     #[test]
     fn test_bech32_outpoint() {
-        let obj = seal::Revealed::TxOutpoint(OutpointReveal {
+        let obj = seal::Revealed {
+            method: CloseMethod::TapretFirst,
             blinding: 11645300769465024575,
-            txid: "42332750017e9547abf0e975ec92832d8cfe3fbbaa78cec434d22175d5b6e6d9"
-                .parse().unwrap(),
+            txid: Some("42332750017e9547abf0e975ec92832d8cfe3fbbaa78cec434d22175d5b6e6d9"
+                .parse().unwrap()),
             vout: 3,
-        }).commit_conceal();
+        }.commit_conceal();
         let bech32 = obj.to_bech32_string();
         assert_eq!(
             bech32,
@@ -840,19 +827,6 @@ mod test {
         let bech32 = format!("{}", obj);
         assert_eq!(bech32, "statex1q93jqxsqqqaepd2c");
         let decoded = Extension::from_bech32_str(&bech32).unwrap();
-        assert_eq!(obj, decoded);
-    }
-
-    #[test]
-    fn test_bech32_anchor() {
-        let obj = Anchor::dumb_default();
-        let bech32 = format!("{}", obj);
-        assert_eq!(
-            bech32,
-            "anchor1q93jqryc9tm6t40ahjehkn0gs2j2ne76h8vejehlhxkhknhrvmj203ngky0\
-            7yvccqq8jzvcv"
-        );
-        let decoded = Anchor::from_bech32_str(&bech32).unwrap();
         assert_eq!(obj, decoded);
     }
 

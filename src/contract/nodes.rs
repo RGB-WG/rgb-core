@@ -19,7 +19,7 @@ use bitcoin::hashes::{sha256, sha256t, Hash};
 
 use commit_verify::{
     commit_encode, multi_commit::ProtocolId, CommitEncode, CommitVerify,
-    ConsensusCommit, TaggedHash, ToMerkleSource,
+    ConsensusCommit, TaggedHash, ToMerkleSource, UntaggedProtocol,
 };
 use lnpbp::chain::Chain;
 
@@ -84,12 +84,13 @@ impl sha256t::Tag for NodeIdTag {
 )]
 pub struct NodeId(sha256t::Hash<NodeIdTag>);
 
-impl<MSG> CommitVerify<MSG> for NodeId
+// TODO: Use tagged protocol
+impl<Msg> CommitVerify<Msg, UntaggedProtocol> for NodeId
 where
-    MSG: AsRef<[u8]>,
+    Msg: AsRef<[u8]>,
 {
     #[inline]
-    fn commit(msg: &MSG) -> NodeId {
+    fn commit(msg: &Msg) -> NodeId {
         NodeId::hash(msg)
     }
 }
@@ -960,7 +961,7 @@ mod test {
     use std::io::Write;
 
     use super::*;
-    use commit_verify::{tagged_hash, CommitConceal, CommitVerify};
+    use commit_verify::{tagged_hash, CommitConceal, TaggedHash};
     use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
     use strict_encoding::{strict_serialize, StrictDecode, StrictEncode};
 
@@ -1189,11 +1190,7 @@ mod test {
             .unwrap()
             .unwrap();
 
-        let txid = match seal1 {
-            super::seal::Revealed::TxOutpoint(op) => Some(op.txid),
-            _ => None,
-        }
-        .unwrap();
+        let txid = seal1.txid.unwrap();
 
         assert_eq!(
             txid.to_hex(),
@@ -1208,11 +1205,7 @@ mod test {
             .unwrap()
             .unwrap();
 
-        let txid = match seal2 {
-            super::seal::Revealed::TxOutpoint(op) => Some(op.txid),
-            _ => None,
-        }
-        .unwrap();
+        let txid = seal2.txid.unwrap();
 
         assert_eq!(
             txid.to_hex(),
@@ -1266,17 +1259,9 @@ mod test {
 
         assert_eq!(known_gen_seals, known_seals_tran);
 
-        let txid1 = match known_gen_seals[2] {
-            super::seal::Revealed::TxOutpoint(op) => Some(op.txid),
-            _ => None,
-        }
-        .unwrap();
+        let txid1 = known_gen_seals[2].txid.unwrap();
 
-        let txid2 = match known_gen_seals[3] {
-            super::seal::Revealed::TxOutpoint(op) => Some(op.txid),
-            _ => None,
-        }
-        .unwrap();
+        let txid2 = known_gen_seals[3].txid.unwrap();
 
         assert_eq!(
             txid1.to_hex(),
@@ -1293,11 +1278,7 @@ mod test {
         let dec_gen_seals = genesis.filter_revealed_seals_by_type(1);
         let hash_tran_seals = transition.filter_revealed_seals_by_type(3);
 
-        let txid1 = match dec_gen_seals[0] {
-            super::seal::Revealed::TxOutpoint(op) => Some(op.txid),
-            _ => None,
-        }
-        .unwrap();
+        let txid1 = dec_gen_seals[0].txid.unwrap();
 
         assert_eq!(
             txid1.to_hex(),
@@ -1305,11 +1286,7 @@ mod test {
                 .to_string()
         );
 
-        let txid2 = match hash_tran_seals[1] {
-            super::seal::Revealed::TxOutpoint(op) => Some(op.txid),
-            _ => None,
-        }
-        .unwrap();
+        let txid2 = hash_tran_seals[1].txid.unwrap();
 
         assert_eq!(
             txid2.to_hex(),

@@ -17,7 +17,6 @@ use core::fmt::Debug;
 use std::collections::HashMap;
 use std::io;
 
-use bp::seals::OutpointReveal;
 use commit_verify::{
     merkle::MerkleNode, CommitConceal, CommitEncode, ConsensusCommit,
 };
@@ -25,7 +24,7 @@ use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
     data, seal, value, ConcealSeals, ConcealState, EndpointValueMap,
-    NoDataError, SealDefinition, SealEndpoint, SealValueMap, SECP256K1_ZKP,
+    NoDataError, SealEndpoint, SealValueMap, SECP256K1_ZKP,
 };
 use crate::{schema, ConfidentialDataError, StateRetrievalError};
 
@@ -129,12 +128,12 @@ impl AssignmentVec {
                         ).into(),
                     };
                     match seal_proto {
-                        SealEndpoint::TxOutpoint(seal_definition) => Assignment::ConfidentialSeal {
+                        SealEndpoint::ConcealedUtxo(seal_definition) => Assignment::ConfidentialSeal {
                             seal_definition,
                             assigned_state,
                         },
-                        SealEndpoint::WitnessVout { vout, blinding } => Assignment::Revealed {
-                            seal_definition: SealDefinition::WitnessVout { vout, blinding },
+                        SealEndpoint::WitnessVout { method, vout, blinding } => Assignment::Revealed {
+                            seal_definition: seal::Revealed { method, txid: None, vout, blinding },
                             assigned_state
                         }
                     }
@@ -483,7 +482,7 @@ impl AssignmentVec {
     /// containing concealed seals for the outputs owned by the peer
     pub fn reveal_seals<'a>(
         &mut self,
-        known_seals: impl Iterator<Item = &'a OutpointReveal> + Clone,
+        known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
     ) -> usize {
         let mut counter = 0;
         match self {
@@ -841,9 +840,9 @@ where
     /// containing concealed seals for the outputs owned by the peer
     pub fn reveal_seals<'a>(
         &mut self,
-        known_seals: impl Iterator<Item = &'a OutpointReveal>,
+        known_seals: impl Iterator<Item = &'a seal::Revealed>,
     ) -> usize {
-        let known_seals: HashMap<seal::Confidential, OutpointReveal> =
+        let known_seals: HashMap<seal::Confidential, seal::Revealed> =
             known_seals
                 .map(|rev| (rev.commit_conceal(), rev.clone()))
                 .collect();
@@ -856,9 +855,7 @@ where
             } => {
                 if let Some(reveal) = known_seals.get(seal_definition) {
                     *self = Assignment::ConfidentialAmount {
-                        seal_definition: seal::Revealed::TxOutpoint(
-                            reveal.clone(),
-                        ),
+                        seal_definition: reveal.clone(),
                         assigned_state: assigned_state.clone(),
                     };
                     counter += 1;
@@ -870,9 +867,7 @@ where
             } => {
                 if let Some(reveal) = known_seals.get(seal_definition) {
                     *self = Assignment::Revealed {
-                        seal_definition: seal::Revealed::TxOutpoint(
-                            reveal.clone(),
-                        ),
+                        seal_definition: reveal.clone(),
                         assigned_state: assigned_state.clone(),
                     };
                     counter += 1;
@@ -1181,7 +1176,7 @@ mod test {
         hex::{FromHex, ToHex},
         sha256, Hash,
     };
-    use bp::seals::OutpointReveal;
+    use bp::seals::txout::TxoSeal;
     use commit_verify::{
         merkle::MerkleNode, merklize, CommitConceal, CommitEncode,
         ToMerkleSource,
@@ -1308,10 +1303,7 @@ mod test {
         let ours: SealValueMap = zip_data
             .map(|(txid, amount)| {
                 (
-                    Revealed::TxOutpoint(OutpointReveal::from(OutPoint::new(
-                        *txid,
-                        rng.gen_range(0, 10),
-                    ))),
+                    Revealed::from(OutPoint::new(*txid, rng.gen_range(0, 10))),
                     amount.clone(),
                 )
             })
@@ -1326,8 +1318,8 @@ mod test {
         let theirs: EndpointValueMap = zip_data2
             .map(|(txid, amount)| {
                 (
-                    SealEndpoint::TxOutpoint(
-                        OutpointReveal::from(OutPoint::new(
+                    SealEndpoint::ConcealedUtxo(
+                        Revealed::from(OutPoint::new(
                             *txid,
                             rng.gen_range(0, 10),
                         ))
@@ -1648,28 +1640,37 @@ mod test {
             AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract a specific Txid from each variants
-        let txid_1 =
-            match declarative_type.revealed_seal_at(2).unwrap().unwrap() {
-                Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
-                _ => None,
-            }
+        let txid_1 = match declarative_type
+            .revealed_seal_at(2)
             .unwrap()
-            .to_hex();
-
-        let txid_2 =
-            match pedersan_type.revealed_seal_at(0).unwrap().unwrap() {
-                Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
-                _ => None,
-            }
             .unwrap()
-            .to_hex();
-
-        let txid_3 = match hash_type.revealed_seal_at(1).unwrap().unwrap() {
-            Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
+            .outpoint()
+        {
+            Some(outpoint) => Some(outpoint.txid),
             _ => None,
         }
         .unwrap()
         .to_hex();
+
+        let txid_2 = match pedersan_type
+            .revealed_seal_at(0)
+            .unwrap()
+            .unwrap()
+            .outpoint()
+        {
+            Some(outpoint) => Some(outpoint.txid),
+            _ => None,
+        }
+        .unwrap()
+        .to_hex();
+
+        let txid_3 =
+            match hash_type.revealed_seal_at(1).unwrap().unwrap().outpoint() {
+                Some(outpoint) => Some(outpoint.txid),
+                _ => None,
+            }
+            .unwrap()
+            .to_hex();
 
         // Check extracted Txids matches with predetermined values
         assert_eq!(txid_1, TXID_VEC[1]);
@@ -1691,8 +1692,8 @@ mod test {
             .filter_revealed_seals()
             .iter()
             .map(|revealed| {
-                match revealed {
-                    Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
+                match revealed.outpoint() {
+                    Some(outpoint) => Some(outpoint.txid),
                     _ => None,
                 }
                 .unwrap()
@@ -1704,8 +1705,8 @@ mod test {
             .filter_revealed_seals()
             .iter()
             .map(|revealed| {
-                match revealed {
-                    Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
+                match revealed.outpoint() {
+                    Some(outpoint) => Some(outpoint.txid),
                     _ => None,
                 }
                 .unwrap()
@@ -1717,8 +1718,8 @@ mod test {
             .filter_revealed_seals()
             .iter()
             .map(|revealed| {
-                match revealed {
-                    Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
+                match revealed.outpoint() {
+                    Some(outpoint) => Some(outpoint.txid),
                     _ => None,
                 }
                 .unwrap()
@@ -1951,8 +1952,8 @@ mod test {
             .filter_revealed_seals()
             .iter()
             .map(|revealed| {
-                match revealed {
-                    Revealed::TxOutpoint(outpoint) => Some(outpoint.txid),
+                match revealed.outpoint() {
+                    Some(outpoint) => Some(outpoint.txid),
                     _ => None,
                 }
                 .unwrap()
@@ -2195,34 +2196,26 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<DeclarativeStrategy>::Revealed {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[0], 1),
-            )),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[0], 1)),
             assigned_state: data::Void,
         };
 
         let assignment_2 =
             Assignment::<DeclarativeStrategy>::ConfidentialAmount {
-                seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                    OutPoint::new(txid_vec[1], 2),
-                )),
+                seal_definition: Revealed::from(OutPoint::new(txid_vec[1], 2)),
                 assigned_state: data::Void,
             };
 
         let assignment_3 =
             Assignment::<DeclarativeStrategy>::ConfidentialSeal {
-                seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                    OutPoint::new(txid_vec[2], 3),
-                ))
-                .commit_conceal(),
+                seal_definition: Revealed::from(OutPoint::new(txid_vec[2], 3))
+                    .commit_conceal(),
                 assigned_state: data::Void,
             };
 
         let assignment_4 = Assignment::<DeclarativeStrategy>::Confidential {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[3], 4),
-            ))
-            .commit_conceal(),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[3], 4))
+                .commit_conceal(),
             assigned_state: data::Void,
         };
 
@@ -2243,33 +2236,25 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<PedersenStrategy>::Revealed {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[0], 1),
-            )),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[0], 1)),
             assigned_state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
         let assignment_2 = Assignment::<PedersenStrategy>::ConfidentialAmount {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[1], 1),
-            )),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[1], 1)),
             assigned_state: value::Revealed::with_amount(20u64, &mut rng)
                 .commit_conceal(),
         };
 
         let assignment_3 = Assignment::<PedersenStrategy>::ConfidentialSeal {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[2], 1),
-            ))
-            .commit_conceal(),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[2], 1))
+                .commit_conceal(),
             assigned_state: value::Revealed::with_amount(30u64, &mut rng),
         };
 
         let assignment_4 = Assignment::<PedersenStrategy>::Confidential {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[3], 1),
-            ))
-            .commit_conceal(),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[3], 1))
+                .commit_conceal(),
             assigned_state: value::Revealed::with_amount(10u64, &mut rng)
                 .commit_conceal(),
         };
@@ -2297,32 +2282,24 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<HashStrategy>::Revealed {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[0], 1),
-            )),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[0], 1)),
             assigned_state: state_data_vec[0].clone(),
         };
 
         let assignment_2 = Assignment::<HashStrategy>::ConfidentialAmount {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[1], 1),
-            )),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[1], 1)),
             assigned_state: state_data_vec[1].clone().commit_conceal(),
         };
 
         let assignment_3 = Assignment::<HashStrategy>::ConfidentialSeal {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[2], 1),
-            ))
-            .commit_conceal(),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[2], 1))
+                .commit_conceal(),
             assigned_state: state_data_vec[2].clone(),
         };
 
         let assignment_4 = Assignment::<HashStrategy>::Confidential {
-            seal_definition: Revealed::TxOutpoint(OutpointReveal::from(
-                OutPoint::new(txid_vec[3], 1),
-            ))
-            .commit_conceal(),
+            seal_definition: Revealed::from(OutPoint::new(txid_vec[3], 1))
+                .commit_conceal(),
             assigned_state: state_data_vec[3].clone().commit_conceal(),
         };
 
