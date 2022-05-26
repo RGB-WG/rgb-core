@@ -14,6 +14,7 @@
 use std::collections::BTreeMap;
 
 use amplify::Wrapper;
+use bp::dbc;
 use commit_verify::{CommitConceal, CommitEncode, ToMerkleSource};
 
 use super::OwnedRightsInner;
@@ -45,8 +46,9 @@ pub enum Error {
     /// OwnedRights has different commitment ids and can't be reveal-merged
     OwnedRightsMismatch,
 
-    /// Anchors has different commitment ids and can't be reveal-merged
-    AnchorsMismatch,
+    /// Anchors has different commitment ids and can't be reveal-merged. Details: {0}
+    #[from]
+    AnchorsMismatch(dbc::anchor::MergeError),
 
     /// Node of type {0} has different commitment ids and can't be
     /// reveal-merged

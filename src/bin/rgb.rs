@@ -25,11 +25,9 @@ use std::str::FromStr;
 
 use amplify::hex::{self, FromHex, ToHex};
 use commit_verify::ConsensusCommit;
-use rgb::{
-    Anchor, Consignment, Disclosure, Extension, Genesis, Schema, Transition,
-};
+use electrum_client::Client as ElectrumClient;
+use rgb::{Consignment, Disclosure, Extension, Genesis, Schema, Transition};
 use strict_encoding::{StrictDecode, StrictEncode};
-use wallet::resolvers::ElectrumTxResolver;
 
 #[derive(Parser, Clone, Debug)]
 #[clap(
@@ -156,20 +154,7 @@ pub enum SchemaCommand {
 }
 
 #[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub enum AnchorCommand {
-    Convert {
-        /// Anchor data; if none are given reads from STDIN
-        anchor: Option<String>,
-
-        /// Formatting of the input data
-        #[clap(short, long, default_value = "bech32")]
-        input: Format,
-
-        /// Formatting for the output
-        #[clap(short, long, default_value = "yaml")]
-        output: Format,
-    },
-}
+pub enum AnchorCommand {}
 
 #[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum ExtensionCommand {
@@ -375,7 +360,7 @@ fn main() -> Result<(), String> {
                 let status = consignment.validate(
                     &schema,
                     None,
-                    &ElectrumTxResolver::new(&electrum)
+                    ElectrumClient::new(&electrum)
                         .map_err(|err| format!("{:#?}", err))?,
                 );
                 println!(
@@ -406,16 +391,7 @@ fn main() -> Result<(), String> {
                 output_write(schema, output)?;
             }
         },
-        Command::Anchor { subcommand } => match subcommand {
-            AnchorCommand::Convert {
-                anchor,
-                input,
-                output,
-            } => {
-                let anchor: Anchor = input_read(anchor, input)?;
-                output_write(anchor, output)?;
-            }
-        },
+        Command::Anchor { subcommand } => match subcommand {},
         Command::Extension { subcommand } => match subcommand {
             ExtensionCommand::Convert {
                 extension,

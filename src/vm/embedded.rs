@@ -455,7 +455,7 @@ impl NodeValidator {
     }
 
     fn proof_of_reserve(meta: &Metadata) -> Result<(), HandlerError> {
-        let descriptor_data = meta
+        let _descriptor_data = meta
             .bytes(FIELD_TYPE_LOCK_DESCRIPTOR)
             .first()
             .cloned()

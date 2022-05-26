@@ -538,7 +538,9 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // [VALIDATION]: Check that transition is committed into the
                 //               anchor. This must be done with
                 //               deterministic bitcoin commitments & LNPBP-4
-                if !anchor.validate(&self.contract_id, &node_id) {
+                if !anchor
+                    .verify_lnpbp4(self.contract_id.into(), node_id.into())
+                {
                     self.status.add_failure(Failure::TransitionNotInAnchor(
                         node_id,
                         anchor.anchor_id(),
@@ -610,7 +612,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't
                 // check. Reporting this incident and continuing further.
-                // Why this happens? no connection to Bitcoin Core, Electrum or
+                // Why this happens? No connection to Bitcoin Core, Electrum or
                 // other backend etc. So this is not a failure in a strict
                 // sense, however we can't be sure that the
                 // consignment is valid. That's why we keep the
@@ -618,16 +620,14 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // (`unresolved_txids` field of the validation
                 // status object).
                 self.status.unresolved_txids.push(txid);
-            }
-            Ok(None) => {
-                // There is no mined transaction with the id provided by the
-                // anchor. Literally, the whole consignment is fucked up, but we
+                // This also can mean that there is no known transaction with the
+                // id provided by the anchor, i.e. consignment is invalid. We
                 // are proceeding with further validation in order to detect the
-                // rest of fuck ups (and reporting the failure!)
+                // rest of problems (and reporting the failure!)
                 self.status
                     .add_failure(Failure::WitnessTransactionMissed(txid));
             }
-            Ok(Some((witness_tx, fee))) => {
+            Ok(witness_tx) => {
                 // Ok, now we have the transaction and fee information for a
                 // single state change from some ancestors array to the
                 // currently validated transition node: that's everything
@@ -635,7 +635,8 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
 
                 // [VALIDATION]: Checking anchor deterministic bitcoin
                 //               commitment
-                if !anchor.verify(&self.contract_id, &witness_tx, fee) {
+                if anchor.verify_dbc(witness_tx.clone()).is_ok() {
+                    // TODO: Save error details
                     // The node is not committed to bitcoin transaction graph!
                     // Ultimate failure. But continuing to detect the rest
                     // (after reporting it).

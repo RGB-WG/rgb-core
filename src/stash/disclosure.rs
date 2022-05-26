@@ -272,7 +272,7 @@ impl ConcealState for Disclosure {
 }
 
 impl ConcealAnchors for Disclosure {
-    fn conceal_anchors_except(&mut self, protocols: &Vec<ContractId>) -> usize {
+    fn conceal_anchors_except(&mut self, protocols: &[ContractId]) -> usize {
         self.transitions
             .iter_mut()
             .fold(0usize, |count, (_, (anchor, _))| {

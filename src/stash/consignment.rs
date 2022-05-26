@@ -317,7 +317,7 @@ impl Consignment {
             0usize,
             |count, (anchor, transition)| {
                 count
-                    + anchor.conceal_except(contract_id)
+                    + anchor.conceal_except(&[contract_id.into()])
                     + transition.conceal_state_except(&concealed_endpoints)
                     + transition.conceal_seals(&seals_to_conceal)
             },
