@@ -121,7 +121,7 @@ pub mod vm;
 mod macros;
 
 pub mod prelude {
-    use bp::dbc::{Anchor, AnchorId};
+    pub use bp::dbc::{Anchor, AnchorId};
 
     use super::*;
     pub use super::{bech32, schema, vm};
