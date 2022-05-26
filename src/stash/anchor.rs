@@ -11,16 +11,26 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[cfg(feature = "wallet")]
 use std::collections::BTreeMap;
 
+#[cfg(feature = "wallet")]
 use amplify::Wrapper;
+#[cfg(feature = "wallet")]
 use bitcoin_hashes::Hash;
-use bp::dbc::{anchor::Error, Anchor};
-use commit_verify::multi_commit::ProtocolId;
+#[cfg(feature = "wallet")]
+use bp::dbc::anchor::Error;
+#[cfg(feature = "wallet")]
 use commit_verify::{Message, TaggedHash};
+#[cfg(feature = "wallet")]
 use wallet::psbt::Psbt;
 
-use crate::{reveal, ContractId, NodeId, RevealedByMerge};
+use bp::dbc::Anchor;
+use commit_verify::multi_commit::ProtocolId;
+
+#[cfg(feature = "wallet")]
+use crate::NodeId;
+use crate::{reveal, ContractId, RevealedByMerge};
 
 pub const PSBT_PREFIX: &'static [u8] = b"RGB";
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
@@ -51,6 +61,7 @@ impl RevealedByMerge for Anchor {
     }
 }
 
+#[cfg(feature = "wallet")]
 pub trait AnchorExt {
     fn commit(
         psbt: &mut Psbt,
@@ -58,6 +69,7 @@ pub trait AnchorExt {
     ) -> Result<Anchor, Error>;
 }
 
+#[cfg(feature = "wallet")]
 impl AnchorExt for Anchor {
     fn commit(
         psbt: &mut Psbt,

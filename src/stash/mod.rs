@@ -34,8 +34,10 @@ mod graph;
 pub mod iter;
 mod stash;
 
+#[cfg(feature = "wallet")]
+pub use anchor::AnchorExt;
 pub use anchor::{
-    AnchorExt, ConcealAnchors, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
+    ConcealAnchors, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
 };
 pub use consignment::{
     Consignment, ConsignmentEndpoints, ExtensionData, TransitionData,
