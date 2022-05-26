@@ -35,7 +35,7 @@ pub mod iter;
 mod stash;
 
 pub use anchor::{
-    ConcealAnchors, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
+    AnchorExt, ConcealAnchors, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
 };
 pub use consignment::{
     Consignment, ConsignmentEndpoints, ExtensionData, TransitionData,
