@@ -29,6 +29,7 @@ use std::collections::BTreeSet;
 
 use bitcoin::OutPoint;
 use bp::dbc::{Anchor, AnchorId};
+use commit_verify::lnpbp4;
 use wallet::onchain::ResolveTx;
 
 use crate::{
@@ -55,7 +56,7 @@ pub trait Stash {
     /// Iterator implementation able to run over all contract geneses
     type GenesisIterator: Iterator<Item = Genesis>;
     /// Iterator implementation able to run over all known anchors
-    type AnchorIterator: Iterator<Item = Anchor>;
+    type AnchorIterator: Iterator<Item = Anchor<lnpbp4::MerkleBlock>>;
     /// Iterator implementation able to run over all state transitions under
     /// particular contract
     type TransitionIterator: Iterator<Item = Transition>;
@@ -103,7 +104,7 @@ pub trait Stash {
     /// contracts to which this anchor is related to may be known from the
     /// anchor data, unless they are kept in the confidential form. See
     /// [`Anchor`] documentation for the details.
-    fn get_anchor(&self, anchor_id: AnchorId) -> Result<Anchor, Self::Error>;
+    fn get_anchor(&self, anchor_id: AnchorId) -> Result<Anchor<lnpbp4::MerkleBlock>, Self::Error>;
 
     /// Iterator over all contract geneses (i.e. iterator over all known RGB
     /// contracts).
@@ -137,7 +138,7 @@ pub trait Stash {
         &self,
         contract_id: ContractId,
         node: &impl Node,
-        anchor: Option<&Anchor>,
+        anchor: Option<&Anchor<lnpbp4::MerkleProof>>,
         endpoints: &BTreeSet<SealEndpoint>,
     ) -> Result<Consignment, Self::Error>;
 

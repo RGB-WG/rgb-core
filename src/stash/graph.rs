@@ -27,7 +27,7 @@
 use std::collections::BTreeSet;
 
 use bitcoin::{OutPoint, Txid};
-use bp::dbc::{Anchor, AnchorId};
+use bp::dbc::{AnchorId};
 use bp::seals::txout::TxoSeal;
 
 use crate::schema::{NodeType, OwnedRightType};
@@ -127,10 +127,6 @@ pub trait GraphApi {
         &self,
         node_id: NodeId,
     ) -> Result<&Extension, ConsistencyError>;
-
-    /// Returns reference to an anchor, if known, matching the provided id. If
-    /// id is unknown, `None` is returned.
-    fn anchor_by_id(&self, anchor_id: AnchorId) -> Option<&Anchor>;
 
     /// Returns reference to a state transition, like
     /// [`GraphApi::transition_by_id`], extended with [`Txid`] of the witness
@@ -250,13 +246,6 @@ impl GraphApi for Consignment {
                         actual: NodeType::Genesis,
                     })?
             })
-    }
-
-    fn anchor_by_id(&self, anchor_id: AnchorId) -> Option<&Anchor> {
-        self.state_transitions
-            .iter()
-            .map(|(anchor, _)| anchor)
-            .find(|anchor| anchor.anchor_id() == anchor_id)
     }
 
     fn transition_witness_by_id(

@@ -21,43 +21,45 @@ use bitcoin_hashes::Hash;
 #[cfg(feature = "wallet")]
 use bp::dbc::anchor::Error;
 #[cfg(feature = "wallet")]
-use commit_verify::{Message, TaggedHash};
+use commit_verify::{lnpbp4, TaggedHash};
 #[cfg(feature = "wallet")]
 use wallet::psbt::Psbt;
 
 use bp::dbc::Anchor;
-use commit_verify::multi_commit::ProtocolId;
 
 #[cfg(feature = "wallet")]
 use crate::NodeId;
-use crate::{reveal, ContractId, RevealedByMerge};
+use crate::{reveal, ContractId, MergeReveal};
 
 pub const PSBT_PREFIX: &'static [u8] = b"RGB";
 pub const PSBT_OUT_PUBKEY: u8 = 0x1;
 pub const PSBT_OUT_TWEAK: u8 = 0x2;
 
 pub trait ConcealAnchors {
-    fn conceal_anchors(&mut self) -> usize {
-        self.conceal_anchors_except(&vec![])
-    }
-    fn conceal_anchors_except(&mut self, contracts: &[ContractId]) -> usize;
+    fn conceal_anchors_except(
+        &mut self,
+        contracts: impl AsRef<[ContractId]>,
+    ) -> Result<usize, lnpbp4::LeafNotKnown>;
 }
 
-impl ConcealAnchors for Anchor {
-    fn conceal_anchors_except(&mut self, contracts: &[ContractId]) -> usize {
-        self.conceal_except(
-            &contracts
-                .iter()
-                .copied()
-                .map(ProtocolId::from)
-                .collect::<Vec<_>>(),
-        )
+impl ConcealAnchors for Anchor<lnpbp4::MerkleBlock> {
+    fn conceal_anchors_except(
+        &mut self,
+        contracts: impl AsRef<[ContractId]>,
+    ) -> Result<usize, lnpbp4::LeafNotKnown> {
+        let protocols = contracts
+            .as_ref()
+            .iter()
+            .copied()
+            .map(lnpbp4::ProtocolId::from)
+            .collect::<Vec<_>>();
+        self.conceal_except(protocols)
     }
 }
 
-impl RevealedByMerge for Anchor {
-    fn revealed_by_merge(self, other: Self) -> Result<Self, reveal::Error> {
-        self.merge(other).map_err(reveal::Error::from)
+impl MergeReveal for Anchor<lnpbp4::MerkleBlock> {
+    fn merge_reveal(self, other: Self) -> Result<Self, reveal::Error> {
+        self.merge_reveal(other).map_err(reveal::Error::from)
     }
 }
 
@@ -66,21 +68,21 @@ pub trait AnchorExt {
     fn commit(
         psbt: &mut Psbt,
         transitions: BTreeMap<ContractId, NodeId>,
-    ) -> Result<Anchor, Error>;
+    ) -> Result<Anchor<lnpbp4::MerkleBlock>, Error>;
 }
 
 #[cfg(feature = "wallet")]
-impl AnchorExt for Anchor {
+impl AnchorExt for Anchor<lnpbp4::MerkleBlock> {
     fn commit(
         psbt: &mut Psbt,
         transitions: BTreeMap<ContractId, NodeId>,
-    ) -> Result<Anchor, Error> {
+    ) -> Result<Anchor<lnpbp4::MerkleBlock>, Error> {
         let messages = transitions
             .iter()
             .map(|(contract_id, node_id)| {
                 let protocol_id =
-                    ProtocolId::from_inner(contract_id.to_bytes());
-                let message = Message::from_inner(node_id.to_bytes());
+                    lnpbp4::ProtocolId::from_inner(contract_id.to_bytes());
+                let message = lnpbp4::Message::from_inner(node_id.to_bytes());
                 (protocol_id, message)
             })
             .collect::<BTreeMap<_, _>>();

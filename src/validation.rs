@@ -16,9 +16,9 @@ use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bitcoin::{Transaction, Txid};
-use bp::dbc::{Anchor, AnchorId};
+use bp::dbc::{Anchor};
 use bp::seals::txout::TxoSeal;
-use commit_verify::CommitConceal;
+use commit_verify::{CommitConceal, lnpbp4};
 use wallet::onchain::ResolveTx;
 
 use super::schema::{NodeType, OccurrencesError};
@@ -211,7 +211,7 @@ pub enum Failure {
 
     TransitionAbsent(NodeId),
     TransitionNotAnchored(NodeId),
-    TransitionNotInAnchor(NodeId, AnchorId),
+    TransitionNotInAnchor(NodeId, Txid),
     TransitionParentWrongSealType {
         node_id: NodeId,
         ancestor_id: NodeId,
@@ -245,7 +245,7 @@ pub enum Failure {
     },
 
     WitnessTransactionMissed(Txid),
-    WitnessNoCommitment(NodeId, AnchorId, Txid),
+    WitnessNoCommitment(NodeId, Txid),
 
     EndpointTransitionNotFound(NodeId),
 
@@ -300,7 +300,7 @@ pub struct Validator<'validator, R: ResolveTx> {
     genesis_id: NodeId,
     contract_id: ContractId,
     node_index: BTreeMap<NodeId, &'validator dyn Node>,
-    anchor_index: BTreeMap<NodeId, &'validator Anchor>,
+    anchor_index: BTreeMap<NodeId, &'validator Anchor<lnpbp4::MerkleProof>>,
     end_transitions: Vec<&'validator dyn Node>,
     validation_index: BTreeSet<NodeId>,
 
@@ -320,7 +320,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
 
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
-        let mut anchor_index = BTreeMap::<NodeId, &Anchor>::new();
+        let mut anchor_index = BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
         for (anchor, transition) in &consignment.state_transitions {
             let node_id = transition.node_id();
             node_index.insert(node_id, transition);
@@ -538,12 +538,12 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // [VALIDATION]: Check that transition is committed into the
                 //               anchor. This must be done with
                 //               deterministic bitcoin commitments & LNPBP-4
-                if !anchor
-                    .verify_lnpbp4(self.contract_id.into(), node_id.into())
+                if anchor
+                    .convolve(self.contract_id.into(), node_id.into()).is_err()
                 {
                     self.status.add_failure(Failure::TransitionNotInAnchor(
                         node_id,
-                        anchor.anchor_id(),
+                        anchor.txid,
                     ));
                 }
 
@@ -601,7 +601,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
     fn validate_graph_node(
         &mut self,
         node: &'validator dyn Node,
-        anchor: &'validator Anchor,
+        anchor: &'validator Anchor<lnpbp4::MerkleProof>,
     ) {
         let txid = anchor.txid;
         let node_id = node.node_id();
@@ -635,14 +635,13 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
 
                 // [VALIDATION]: Checking anchor deterministic bitcoin
                 //               commitment
-                if anchor.verify_dbc(witness_tx.clone()).is_ok() {
+                if anchor.verify(self.contract_id.into(), node.node_id().into(), witness_tx.clone()).is_ok() {
                     // TODO: Save error details
                     // The node is not committed to bitcoin transaction graph!
                     // Ultimate failure. But continuing to detect the rest
                     // (after reporting it).
                     self.status.add_failure(Failure::WitnessNoCommitment(
                         node_id,
-                        anchor.anchor_id(),
                         txid,
                     ));
                 }

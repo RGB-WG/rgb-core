@@ -18,8 +18,8 @@ use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
 
 use commit_verify::{
-    commit_encode, multi_commit::ProtocolId, CommitEncode, CommitVerify,
-    ConsensusCommit, Message, TaggedHash, ToMerkleSource, UntaggedProtocol,
+    commit_encode, lnpbp4::ProtocolId, CommitEncode, CommitVerify,
+    ConsensusCommit, lnpbp4::Message, TaggedHash, ToMerkleSource, PrehashedProtocol,
 };
 use lnpbp::chain::Chain;
 
@@ -28,7 +28,7 @@ use super::{
     ParentOwnedRights, ParentPublicRights, ParentPublicRightsInner,
     PublicRights, PublicRightsInner,
 };
-use crate::reveal::{self, RevealedByMerge};
+use crate::reveal::{self, MergeReveal};
 use crate::schema::{
     ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType,
     TransitionType,
@@ -85,7 +85,7 @@ impl sha256t::Tag for NodeIdTag {
 pub struct NodeId(sha256t::Hash<NodeIdTag>);
 
 // TODO: Use tagged protocol
-impl<Msg> CommitVerify<Msg, UntaggedProtocol> for NodeId
+impl<Msg> CommitVerify<Msg, PrehashedProtocol> for NodeId
 where
     Msg: AsRef<[u8]>,
 {
@@ -534,35 +534,35 @@ impl ConcealSeals for Transition {
     }
 }
 
-impl RevealedByMerge for Genesis {
-    fn revealed_by_merge(mut self, other: Self) -> Result<Self, reveal::Error> {
+impl MergeReveal for Genesis {
+    fn merge_reveal(mut self, other: Self) -> Result<Self, reveal::Error> {
         if self.consensus_commit() != other.consensus_commit() {
             return Err(reveal::Error::NodeMismatch(NodeType::Genesis));
         }
         self.owned_rights =
-            self.owned_rights.revealed_by_merge(other.owned_rights)?;
+            self.owned_rights.merge_reveal(other.owned_rights)?;
         Ok(self)
     }
 }
 
-impl RevealedByMerge for Transition {
-    fn revealed_by_merge(mut self, other: Self) -> Result<Self, reveal::Error> {
+impl MergeReveal for Transition {
+    fn merge_reveal(mut self, other: Self) -> Result<Self, reveal::Error> {
         if self.consensus_commit() != other.consensus_commit() {
             return Err(reveal::Error::NodeMismatch(NodeType::StateTransition));
         }
         self.owned_rights =
-            self.owned_rights.revealed_by_merge(other.owned_rights)?;
+            self.owned_rights.merge_reveal(other.owned_rights)?;
         Ok(self)
     }
 }
 
-impl RevealedByMerge for Extension {
-    fn revealed_by_merge(mut self, other: Self) -> Result<Self, reveal::Error> {
+impl MergeReveal for Extension {
+    fn merge_reveal(mut self, other: Self) -> Result<Self, reveal::Error> {
         if self.consensus_commit() != other.consensus_commit() {
             return Err(reveal::Error::NodeMismatch(NodeType::StateExtension));
         }
         self.owned_rights =
-            self.owned_rights.revealed_by_merge(other.owned_rights)?;
+            self.owned_rights.merge_reveal(other.owned_rights)?;
         Ok(self)
     }
 }

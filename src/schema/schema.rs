@@ -18,7 +18,7 @@ use bitcoin::hashes::{sha256, sha256t};
 
 use amplify::flags::FlagVec;
 use commit_verify::{
-    commit_encode, CommitVerify, ConsensusCommit, TaggedHash, UntaggedProtocol,
+    commit_encode, CommitVerify, ConsensusCommit, TaggedHash, PrehashedProtocol,
 };
 
 use super::{
@@ -75,7 +75,7 @@ impl sha256t::Tag for SchemaIdTag {
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
 
 // TODO: Use tagged protocol
-impl<Msg> CommitVerify<Msg, UntaggedProtocol> for SchemaId
+impl<Msg> CommitVerify<Msg, PrehashedProtocol> for SchemaId
 where
     Msg: AsRef<[u8]>,
 {

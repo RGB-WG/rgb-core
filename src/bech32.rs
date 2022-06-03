@@ -12,7 +12,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bech32::{self, FromBase32, ToBase32, Variant};
-use bp::dbc::Anchor;
 use core::fmt::{Display, Formatter};
 use core::str::FromStr;
 use deflate::{write::DeflateEncoder, Compression};
@@ -185,19 +184,6 @@ pub enum Bech32 {
     )]
     Extension(Extension),
 
-    /// Anchor data for some dterministic bitcoin commitment
-    ///
-    /// HRP: `anchor`
-    #[from]
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
-    )]
-    Anchor(Anchor),
-
     /// Disclosure data revealing some specific confidential information about
     /// RGB contract
     ///
@@ -241,8 +227,6 @@ impl Bech32 {
     pub const HRP_TRANSITION: &'static str = "transition";
     /// HRP for a Bech32-encoded raw RGB state extension data
     pub const HRP_EXTENSION: &'static str = "statex";
-    /// HRP for a Bech32-encoded deterministic bitcoin commitments anchor data
-    pub const HRP_ANCHOR: &'static str = "anchor";
     /// HRP for a Bech32-encoded RGB disclosure data
     pub const HRP_DISCLOSURE: &'static str = "disclosure";
 
@@ -492,17 +476,6 @@ impl TryFrom<Bech32> for Transition {
     }
 }
 
-impl TryFrom<Bech32> for Anchor {
-    type Error = Error;
-
-    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
-        match bech32 {
-            Bech32::Anchor(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
-    }
-}
-
 impl TryFrom<Bech32> for Disclosure {
     type Error = Error;
 
@@ -557,9 +530,6 @@ impl FromStr for Bech32 {
             x if x == Self::HRP_TRANSITION => {
                 Self::Transition(Bech32::raw_decode(&data)?)
             }
-            x if x == Self::HRP_ANCHOR => {
-                Self::Anchor(Bech32::raw_decode(&data)?)
-            }
             x if x == Self::HRP_DISCLOSURE => {
                 Self::Disclosure(Bech32::raw_decode(&data)?)
             }
@@ -603,9 +573,6 @@ impl Display for Bech32 {
             }
             Self::Transition(obj) => {
                 (Self::HRP_TRANSITION, Bech32::deflate_encode(obj)?)
-            }
-            Self::Anchor(obj) => {
-                (Self::HRP_ANCHOR, Bech32::deflate_encode(obj)?)
             }
             Self::Disclosure(obj) => {
                 (Self::HRP_DISCLOSURE, Bech32::deflate_encode(obj)?)

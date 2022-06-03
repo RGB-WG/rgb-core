@@ -38,7 +38,7 @@ pub use metadata::Metadata;
 pub use nodes::{
     ContractId, Extension, Genesis, Node, NodeId, NodeOutput, Transition,
 };
-pub use reveal::RevealedByMerge;
+pub use reveal::MergeReveal;
 pub use rights::{
     OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights,
 };

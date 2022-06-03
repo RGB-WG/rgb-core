@@ -24,8 +24,8 @@ use bitcoin::hashes::{self, sha256, sha256t, Hash, HashEngine};
 use bitcoin::secp256k1::{ecdsa::Signature, PublicKey};
 use bp::dbc::{Anchor, AnchorId};
 use commit_verify::{
-    commit_encode, CommitEncode, CommitVerify, ConsensusCommit, TaggedHash,
-    UntaggedProtocol,
+    commit_encode, lnpbp4, CommitEncode, CommitVerify, ConsensusCommit,
+    PrehashedProtocol, TaggedHash,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use strict_encoding::StrictEncode;
@@ -33,7 +33,7 @@ use strict_encoding::StrictEncode;
 use crate::contract::seal::Confidential;
 use crate::{
     ConcealAnchors, ConcealSeals, ConcealState, ContractId, Extension,
-    RevealedByMerge, Transition,
+    Transition,
 };
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
@@ -81,7 +81,7 @@ impl sha256t::Tag for DisclosureIdTag {
 pub struct DisclosureId(sha256t::Hash<DisclosureIdTag>);
 
 // TODO: Use tagged protocol
-impl<Msg> CommitVerify<Msg, UntaggedProtocol> for DisclosureId
+impl<Msg> CommitVerify<Msg, PrehashedProtocol> for DisclosureId
 where
     Msg: AsRef<[u8]>,
 {
@@ -208,7 +208,13 @@ pub struct Disclosure {
     version: u8,
 
     /// State transitions organized by anchor and then RGB contract
-    transitions: BTreeMap<AnchorId, (Anchor, BTreeMap<ContractId, Transition>)>,
+    transitions: BTreeMap<
+        AnchorId,
+        (
+            Anchor<lnpbp4::MerkleBlock>,
+            BTreeMap<ContractId, Transition>,
+        ),
+    >,
 
     /// State extensions organized by RGB contract
     extensions: BTreeMap<ContractId, Vec<Extension>>,
@@ -272,19 +278,22 @@ impl ConcealState for Disclosure {
 }
 
 impl ConcealAnchors for Disclosure {
-    fn conceal_anchors_except(&mut self, protocols: &[ContractId]) -> usize {
-        self.transitions
-            .iter_mut()
-            .fold(0usize, |count, (_, (anchor, _))| {
-                count + anchor.conceal_anchors_except(protocols)
-            })
+    fn conceal_anchors_except(
+        &mut self,
+        contracts: impl AsRef<[ContractId]>,
+    ) -> Result<usize, lnpbp4::LeafNotKnown> {
+        let mut count = 0usize;
+        for (_, (anchor, _)) in &mut self.transitions {
+            count += anchor.conceal_anchors_except(contracts.as_ref())?;
+        }
+        Ok(count)
     }
 }
 
 impl Disclosure {
     pub fn insert_anchored_transitions(
         &mut self,
-        anchor: Anchor,
+        anchor: Anchor<lnpbp4::MerkleBlock>,
         transitions: BTreeMap<ContractId, Transition>,
     ) {
         self.signatures = empty!();
@@ -294,7 +303,7 @@ impl Disclosure {
             }
             Entry::Occupied(mut entry) => {
                 let (a, t) = entry.get_mut();
-                *a = anchor.revealed_by_merge(a.clone())
+                *a = anchor.merge_reveal(a.clone())
                     .expect(
                         "Anchor into_revealed procedure is broken for anchors with the same id"
                     );

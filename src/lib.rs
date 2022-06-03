@@ -136,7 +136,7 @@ pub mod prelude {
         IntoRevealedSeal, IntoSealValueMap, Metadata, NoDataError, Node,
         NodeId, NodeOutput, OutpointValue, OutpointValueMap, OutpointValueVec,
         OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
-        PublicRights, RevealedByMerge, RevealedState, SealEndpoint,
+        PublicRights, MergeReveal, RevealedState, SealEndpoint,
         SealValueMap, State, StateRetrievalError, StateType, Transition,
         UtxobValue,
     };

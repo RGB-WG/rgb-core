@@ -18,6 +18,7 @@ use std::slice;
 
 use bitcoin::Txid;
 use bp::dbc::Anchor;
+use commit_verify::lnpbp4;
 
 use crate::schema::{OwnedRightType, TransitionType};
 use crate::{
@@ -89,7 +90,7 @@ impl<'iter> Iterator for ChainIter<'iter> {
 
 #[derive(Debug)]
 pub struct MeshIter<'iter> {
-    iter: slice::Iter<'iter, (Anchor, Transition)>,
+    iter: slice::Iter<'iter, (Anchor<lnpbp4::MerkleProof>, Transition)>,
     transition_types: &'iter [TransitionType],
 }
 

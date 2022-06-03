@@ -41,10 +41,10 @@ required-features = ["cli", "serde"]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
 amplify = "~3.12.0"
-bp-core = "~0.7.0-beta.3"
+bp-core = { version = "~0.7.0-beta.3", git = "https://github.com/BP-WG/bp-core" }
 lnpbp = { version = "~0.7.0", features = ["zip"] }
 strict_encoding = { version = "~1.8.0", features = ["crypto", "chrono", "bitcoin"] }
-commit_verify = { version = "~0.7.0-beta.1", features = ["rand", "bulletproofs"] }
+commit_verify = { version = "~0.7.0-rc.3", features = ["rand", "bulletproofs"] }
 descriptor-wallet = { version = "~0.7.1", features = ["descriptors"] }
 aluvm = "~0.5.0"
 # Dependencies on core rust-bitcoin ecosystem projects

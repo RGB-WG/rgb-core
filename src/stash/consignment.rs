@@ -18,23 +18,23 @@ use bitcoin::hashes::{sha256, sha256t};
 use bitcoin::Txid;
 use bp::dbc::Anchor;
 use commit_verify::{
-    commit_encode, CommitConceal, CommitVerify, ConsensusCommit, TaggedHash,
-    UntaggedProtocol,
+    commit_encode, lnpbp4, CommitConceal, CommitVerify, ConsensusCommit,
+    PrehashedProtocol, TaggedHash,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use wallet::onchain::ResolveTx;
 
 use crate::contract::ConcealSeals;
 use crate::{
-    schema, seal, validation, ConcealState, ConsistencyError, ContractId,
-    Extension, Genesis, GraphApi, Node, NodeId, Schema, SealEndpoint,
-    Transition, Validator,
+    schema, seal, validation, ConcealState, ConsistencyError, Extension,
+    Genesis, GraphApi, Node, NodeId, Schema, SealEndpoint, Transition,
+    Validator,
 };
 
 pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
 // TODO #59: Current strict encoding procedure limits transition history to
 //      u16::MAX which is insufficient. Upgrade it to use larger array size
-pub type TransitionData = Vec<(Anchor, Transition)>;
+pub type TransitionData = Vec<(Anchor<lnpbp4::MerkleProof>, Transition)>;
 // TODO #59: Current strict encoding procedure limits extension history to
 //      u16::MAX which is insufficient. Upgrade it to use larger array size
 pub type ExtensionData = Vec<Extension>;
@@ -83,7 +83,7 @@ impl sha256t::Tag for ConsignmentIdTag {
 pub struct ConsignmentId(sha256t::Hash<ConsignmentIdTag>);
 
 // TODO: Use tagged protocol
-impl<Msg> CommitVerify<Msg, UntaggedProtocol> for ConsignmentId
+impl<Msg> CommitVerify<Msg, PrehashedProtocol> for ConsignmentId
 where
     Msg: AsRef<[u8]>,
 {
@@ -286,11 +286,7 @@ impl Consignment {
         Validator::validate(schema, root_schema, self, resolver)
     }
 
-    pub fn finalize(
-        &mut self,
-        expose: &BTreeSet<SealEndpoint>,
-        contract_id: ContractId,
-    ) -> usize {
+    pub fn finalize(&mut self, expose: &BTreeSet<SealEndpoint>) -> usize {
         let concealed_endpoints =
             expose.iter().map(SealEndpoint::commit_conceal).collect();
 
@@ -315,9 +311,8 @@ impl Consignment {
 
         let mut count = self.state_transitions.iter_mut().fold(
             0usize,
-            |count, (anchor, transition)| {
+            |count, (_, transition)| {
                 count
-                    + anchor.conceal_except(&[contract_id.into()])
                     + transition.conceal_state_except(&concealed_endpoints)
                     + transition.conceal_seals(&seals_to_conceal)
             },
