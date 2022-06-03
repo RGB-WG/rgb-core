@@ -22,6 +22,7 @@ use commit_verify::{
     PrehashedProtocol, TaggedHash,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
+use strict_encoding::LargeVec;
 use wallet::onchain::ResolveTx;
 
 use crate::contract::ConcealSeals;
@@ -32,12 +33,8 @@ use crate::{
 };
 
 pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
-// TODO #59: Current strict encoding procedure limits transition history to
-//      u16::MAX which is insufficient. Upgrade it to use larger array size
-pub type TransitionData = Vec<(Anchor<lnpbp4::MerkleProof>, Transition)>;
-// TODO #59: Current strict encoding procedure limits extension history to
-//      u16::MAX which is insufficient. Upgrade it to use larger array size
-pub type ExtensionData = Vec<Extension>;
+pub type TransitionData = LargeVec<(Anchor<lnpbp4::MerkleProof>, Transition)>;
+pub type ExtensionData = LargeVec<Extension>;
 
 pub const RGB_CONSIGNMENT_VERSION: u8 = 0;
 
@@ -336,7 +333,7 @@ impl Consignment {
         known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
     ) -> usize {
         let counter = 0;
-        for (_, transition) in &mut self.state_transitions {
+        for (_, transition) in &mut *self.state_transitions {
             transition.owned_rights_mut().iter_mut().fold(
                 counter,
                 |counter, (_, assignment)| {
@@ -344,7 +341,7 @@ impl Consignment {
                 },
             );
         }
-        for extension in &mut self.state_extensions {
+        for extension in &mut *self.state_extensions {
             extension.owned_rights_mut().iter_mut().fold(
                 counter,
                 |counter, (_, assignment)| {
