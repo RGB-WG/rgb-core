@@ -78,11 +78,6 @@ chrono = "~0.4.19"
 #    updates w/o checking them manually. Should Elements Project secpk256k-zkp
 #    accept bulletproofs code, we will switch to it
 grin_secp256k1zkp = { version = "=0.7.11" }
-# 2. We use these to simplify enum strict encoding, but once the required
-#    functionality will become part of either amplify_derive or lnpbp_derive
-#    crates they should be removed
-num-traits = "~0.2.11"
-num-derive = "~0.3.0"
 # Optional features used only by a binary
 clap = { version = "3.1", optional = true, features = ["derive"] }
 serde_yaml = { version = "0.8", optional = true }

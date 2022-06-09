@@ -769,13 +769,13 @@ mod test {
         // Create Declarative Assignments
         let assignment_dec_rev = Assignment::<DeclarativeStrategy>::Revealed {
             seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: data::Void,
+            assigned_state: data::Void(),
         };
 
         let assignment_dec_conf = Assignment::<DeclarativeStrategy>::Confidential {
             seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[1], 2))
                 .commit_conceal(),
-            assigned_state: data::Void,
+            assigned_state: data::Void(),
         };
 
         // Create Pedersan Assignments

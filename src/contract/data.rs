@@ -25,8 +25,9 @@ use super::{ConfidentialState, RevealedState};
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, AsAny)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct Void;
+pub struct Void();
 
 impl ConfidentialState for Void {}
 
@@ -41,13 +42,14 @@ impl CommitEncode for Void {
     fn commit_encode<E: io::Write>(&self, _e: E) -> usize { 0 }
 }
 
-#[derive(Clone, Debug, Display, AsAny)]
+#[derive(Clone, Debug, AsAny)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "lowercase")
 )]
-#[display(Debug)]
 #[non_exhaustive]
 pub enum Revealed {
     U8(u8),
@@ -135,6 +137,10 @@ hash_newtype!(
     doc = "Confidential representation of data"
 );
 
+impl strict_encoding::Strategy for Confidential {
+    type Strategy = strict_encoding::strategies::HashFixedBytes;
+}
+
 impl ConfidentialState for Confidential {}
 
 impl AsAny for Confidential {
@@ -216,145 +222,6 @@ impl Revealed {
         match self {
             Revealed::String(val) => Some(val.clone()),
             _ => None,
-        }
-    }
-}
-
-pub(super) mod _strict_encoding {
-    use std::io;
-
-    use strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
-
-    use super::*;
-
-    impl Strategy for Confidential {
-        type Strategy = strategies::HashFixedBytes;
-    }
-
-    #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, FromPrimitive, ToPrimitive, Debug)]
-    #[repr(u8)]
-    pub enum EncodingTag {
-        U8 = 0b_0000_0000_u8,
-        U16 = 0b_0000_0001_u8,
-        U32 = 0b_0000_0010_u8,
-        U64 = 0b_0000_0011_u8,
-        U128 = 0b_0000_0100_u8,
-        I8 = 0b_0000_1000_u8,
-        I16 = 0b_0000_1001_u8,
-        I32 = 0b_0000_1010_u8,
-        I64 = 0b_0000_1011_u8,
-        I128 = 0b_0000_1100_u8,
-        F32 = 0b_0001_0010_u8,
-        F64 = 0b_0001_0011_u8,
-
-        Bytes = 0b_0010_0000_u8,
-        String = 0b_0010_0001_u8,
-    }
-    impl_enum_strict_encoding!(EncodingTag);
-
-    impl StrictEncode for Void {
-        fn strict_encode<E: io::Write>(&self, _: E) -> Result<usize, Error> { Ok(0) }
-    }
-
-    impl StrictDecode for Void {
-        fn strict_decode<D: io::Read>(_: D) -> Result<Self, Error> { Ok(Void) }
-    }
-
-    impl StrictEncode for Revealed {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            Ok(match self {
-                Revealed::U8(val) => {
-                    strict_encode_list!(e; EncodingTag::U8, val)
-                }
-                Revealed::U16(val) => {
-                    strict_encode_list!(e; EncodingTag::U16, val)
-                }
-                Revealed::U32(val) => {
-                    strict_encode_list!(e; EncodingTag::U32, val)
-                }
-                Revealed::U64(val) => {
-                    strict_encode_list!(e; EncodingTag::U64, val)
-                }
-                Revealed::U128(val) => {
-                    strict_encode_list!(e; EncodingTag::U128, val)
-                }
-                Revealed::I8(val) => {
-                    strict_encode_list!(e; EncodingTag::I8, val)
-                }
-                Revealed::I16(val) => {
-                    strict_encode_list!(e; EncodingTag::I16, val)
-                }
-                Revealed::I32(val) => {
-                    strict_encode_list!(e; EncodingTag::I32, val)
-                }
-                Revealed::I64(val) => {
-                    strict_encode_list!(e; EncodingTag::I64, val)
-                }
-                Revealed::I128(val) => {
-                    strict_encode_list!(e; EncodingTag::I128, val)
-                }
-                Revealed::F32(val) => {
-                    strict_encode_list!(e; EncodingTag::F32, val)
-                }
-                Revealed::F64(val) => {
-                    strict_encode_list!(e; EncodingTag::F64, val)
-                }
-                Revealed::Bytes(val) => {
-                    strict_encode_list!(e; EncodingTag::Bytes, val)
-                }
-                Revealed::String(val) => {
-                    strict_encode_list!(e; EncodingTag::String, val)
-                }
-            })
-        }
-    }
-
-    impl StrictDecode for Revealed {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let format = EncodingTag::strict_decode(&mut d)?;
-            Ok(match format {
-                EncodingTag::U8 => Revealed::U8(u8::strict_decode(&mut d)?),
-                EncodingTag::U16 => Revealed::U16(u16::strict_decode(&mut d)?),
-                EncodingTag::U32 => Revealed::U32(u32::strict_decode(&mut d)?),
-                EncodingTag::U64 => Revealed::U64(u64::strict_decode(&mut d)?),
-                EncodingTag::U128 => Revealed::U128(u128::strict_decode(&mut d)?),
-                EncodingTag::I8 => Revealed::I8(i8::strict_decode(&mut d)?),
-                EncodingTag::I16 => Revealed::I16(i16::strict_decode(&mut d)?),
-                EncodingTag::I32 => Revealed::I32(i32::strict_decode(&mut d)?),
-                EncodingTag::I64 => Revealed::I64(i64::strict_decode(&mut d)?),
-                EncodingTag::I128 => Revealed::I128(i128::strict_decode(&mut d)?),
-                EncodingTag::F32 => Revealed::F32(f32::strict_decode(&mut d)?),
-                EncodingTag::F64 => Revealed::F64(f64::strict_decode(&mut d)?),
-                EncodingTag::Bytes => Revealed::Bytes(Vec::strict_decode(&mut d)?),
-                EncodingTag::String => Revealed::String(String::strict_decode(&mut d)?),
-            })
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::EncodingTag;
-
-        #[test]
-        fn test_enum_encodingtag_exhaustive() {
-            test_encoding_enum_u8_exhaustive!(EncodingTag;
-                EncodingTag::U8 => 0b_0000_0000_u8,
-                EncodingTag::U16 => 0b_0000_0001_u8,
-                EncodingTag::U32 => 0b_0000_0010_u8,
-                EncodingTag::U64 => 0b_0000_0011_u8,
-                EncodingTag::U128 => 0b_0000_0100_u8,
-                EncodingTag::I8 => 0b_0000_1000_u8,
-                EncodingTag::I16 => 0b_0000_1001_u8,
-                EncodingTag::I32 => 0b_0000_1010_u8,
-                EncodingTag::I64 => 0b_0000_1011_u8,
-                EncodingTag::I128 => 0b_0000_1100_u8,
-                EncodingTag::F32 => 0b_0001_0010_u8,
-                EncodingTag::F64 => 0b_0001_0011_u8,
-
-                EncodingTag::Bytes => 0b_0010_0000_u8,
-                EncodingTag::String => 0b_0010_0001_u8
-            )
-            .unwrap();
         }
     }
 }
