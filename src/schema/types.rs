@@ -11,7 +11,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::io;
 use std::ops::RangeInclusive;
 
 use num_traits::ToPrimitive;
@@ -189,7 +188,11 @@ pub struct OccurrencesError {
 }
 
 mod _strict_encoding {
+    use std::io;
+
     use strict_encoding::{Error, StrictDecode, StrictEncode};
+
+    use super::*;
 
     impl_enum_strict_encoding!(Bits);
 

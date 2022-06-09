@@ -381,11 +381,8 @@ mod _strict_encoding {
                                 .map_err(|_| Error::ValueOutOfRange(
                                     "Maximum value for Unsigned data type are outside of bit dimension",
                                     (core::u128::MIN as u128)..(core::u128::MAX as u128), *max as u128))?;
-                            let (min, max) = get_bounds(
-                                min..=max,
-                                core::u128::MIN..=core::u128::MAX,
-                                true,
-                            )?;
+                            let (min, max) =
+                                get_bounds(min..=max, core::u128::MIN..=core::u128::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                     }
@@ -457,11 +454,8 @@ mod _strict_encoding {
                                 .map_err(|_| Error::ValueOutOfRange(
                                     "Maximum value for Unsigned data type are outside of bit dimension",
                                     (core::i128::MIN as u128)..(core::i128::MAX as u128), *max as u128))?;
-                            let (min, max) = get_bounds(
-                                min..=max,
-                                core::i128::MIN..=core::i128::MAX,
-                                true,
-                            )?;
+                            let (min, max) =
+                                get_bounds(min..=max, core::i128::MIN..=core::i128::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
                     }
@@ -646,18 +640,10 @@ mod _strict_encoding {
                     };
                     DataFormat::Float(bits, min, max)
                 }
-                EncodingTag::Enum => {
-                    DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?)
-                }
-                EncodingTag::UniString => {
-                    DataFormat::UniString(u16::strict_decode(&mut d)?)
-                }
-                EncodingTag::ByteString => {
-                    DataFormat::ByteString(u16::strict_decode(&mut d)?)
-                }
-                EncodingTag::FixedBytes => {
-                    DataFormat::FixedBytes(u16::strict_decode(&mut d)?)
-                }
+                EncodingTag::Enum => DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?),
+                EncodingTag::UniString => DataFormat::UniString(u16::strict_decode(&mut d)?),
+                EncodingTag::ByteString => DataFormat::ByteString(u16::strict_decode(&mut d)?),
+                EncodingTag::FixedBytes => DataFormat::FixedBytes(u16::strict_decode(&mut d)?),
             })
         }
     }

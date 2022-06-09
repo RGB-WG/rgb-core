@@ -16,8 +16,8 @@ use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::io;
 
+use amplify::AsAny;
 use bitcoin::hashes::{hash160, Hash};
-
 use commit_verify::{commit_encode, CommitConceal, CommitEncode};
 use strict_encoding::strict_serialize;
 
@@ -317,24 +317,16 @@ pub(super) mod _strict_encoding {
                 EncodingTag::U16 => Revealed::U16(u16::strict_decode(&mut d)?),
                 EncodingTag::U32 => Revealed::U32(u32::strict_decode(&mut d)?),
                 EncodingTag::U64 => Revealed::U64(u64::strict_decode(&mut d)?),
-                EncodingTag::U128 => {
-                    Revealed::U128(u128::strict_decode(&mut d)?)
-                }
+                EncodingTag::U128 => Revealed::U128(u128::strict_decode(&mut d)?),
                 EncodingTag::I8 => Revealed::I8(i8::strict_decode(&mut d)?),
                 EncodingTag::I16 => Revealed::I16(i16::strict_decode(&mut d)?),
                 EncodingTag::I32 => Revealed::I32(i32::strict_decode(&mut d)?),
                 EncodingTag::I64 => Revealed::I64(i64::strict_decode(&mut d)?),
-                EncodingTag::I128 => {
-                    Revealed::I128(i128::strict_decode(&mut d)?)
-                }
+                EncodingTag::I128 => Revealed::I128(i128::strict_decode(&mut d)?),
                 EncodingTag::F32 => Revealed::F32(f32::strict_decode(&mut d)?),
                 EncodingTag::F64 => Revealed::F64(f64::strict_decode(&mut d)?),
-                EncodingTag::Bytes => {
-                    Revealed::Bytes(Vec::strict_decode(&mut d)?)
-                }
-                EncodingTag::String => {
-                    Revealed::String(String::strict_decode(&mut d)?)
-                }
+                EncodingTag::Bytes => Revealed::Bytes(Vec::strict_decode(&mut d)?),
+                EncodingTag::String => Revealed::String(String::strict_decode(&mut d)?),
             })
         }
     }
