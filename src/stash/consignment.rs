@@ -130,6 +130,7 @@ pub struct Consignment {
     /// Version, used internally
     version: u8,
 
+    // TODO: Add schema to the consignment
     /// Genesis data
     pub genesis: Genesis,
 
