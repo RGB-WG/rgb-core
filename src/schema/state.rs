@@ -386,6 +386,22 @@ mod _strict_encoding {
                                 get_bounds(min..=max, core::u64::MIN..=core::u64::MAX, true)?;
                             write_min_max!(min, max, e, len);
                         }
+                        Bits::Bit128 => {
+                            let min = u128::try_from(*min)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Minimum value for Unsigned data type are outside of bit dimension",
+                                    (core::u128::MIN as u128)..(core::u128::MAX as u128), *min as u128))?;
+                            let max = u128::try_from(*max)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Maximum value for Unsigned data type are outside of bit dimension",
+                                    (core::u128::MIN as u128)..(core::u128::MAX as u128), *max as u128))?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::u128::MIN..=core::u128::MAX,
+                                true,
+                            )?;
+                            write_min_max!(min, max, e, len);
+                        }
                     }
                     len
                 }
@@ -444,6 +460,22 @@ mod _strict_encoding {
                                     (core::i64::MIN as u128)..(core::i64::MAX as u128), *max as u128))?;
                             let (min, max) =
                                 get_bounds(min..=max, core::i64::MIN..=core::i64::MAX, true)?;
+                            write_min_max!(min, max, e, len);
+                        }
+                        Bits::Bit128 => {
+                            let min = i128::try_from(*min)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Minimum value for Unsigned data type are outside of bit dimension",
+                                    (core::i128::MIN as u128)..(core::i128::MAX as u128), *min as u128))?;
+                            let max = i128::try_from(*max)
+                                .map_err(|_| Error::ValueOutOfRange(
+                                    "Maximum value for Unsigned data type are outside of bit dimension",
+                                    (core::i128::MIN as u128)..(core::i128::MAX as u128), *max as u128))?;
+                            let (min, max) = get_bounds(
+                                min..=max,
+                                core::i128::MIN..=core::i128::MAX,
+                                true,
+                            )?;
                             write_min_max!(min, max, e, len);
                         }
                     }
@@ -547,15 +579,14 @@ mod _strict_encoding {
                                 u64::from_le_bytes(min) as u128,
                                 u64::from_le_bytes(max) as u128,
                             )
-                        } /*
-                          Bits::Bit128 => {
-                              let mut min = [0u8; 16];
-                              let mut max = [0u8; 16];
-                              d.read_exact(&mut min)?;
-                              d.read_exact(&mut max)?;
-                              (u128::from_le_bytes(min), u128::from_le_bytes(max))
-                          }
-                           */
+                        }
+                        Bits::Bit128 => {
+                            let mut min = [0u8; 16];
+                            let mut max = [0u8; 16];
+                            d.read_exact(&mut min)?;
+                            d.read_exact(&mut max)?;
+                            (u128::from_le_bytes(min), u128::from_le_bytes(max))
+                        }
                     };
                     DataFormat::Unsigned(bits, min, max)
                 }
@@ -601,15 +632,14 @@ mod _strict_encoding {
                                 i64::from_le_bytes(min) as i128,
                                 i64::from_le_bytes(max) as i128,
                             )
-                        } /*
-                          Bits::Bit128 => {
-                              let mut min = [0u8; 16];
-                              let mut max = [0u8; 16];
-                              d.read_exact(&mut min)?;
-                              d.read_exact(&mut max)?;
-                              (i128::from_le_bytes(min), i128::from_le_bytes(max))
-                          }
-                           */
+                        }
+                        Bits::Bit128 => {
+                            let mut min = [0u8; 16];
+                            let mut max = [0u8; 16];
+                            d.read_exact(&mut min)?;
+                            d.read_exact(&mut max)?;
+                            (i128::from_le_bytes(min), i128::from_le_bytes(max))
+                        }
                     };
                     DataFormat::Integer(bits, min, max)
                 }

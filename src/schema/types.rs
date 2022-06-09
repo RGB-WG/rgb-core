@@ -84,13 +84,10 @@ pub enum Bits {
     Bit16 = 2,
     Bit32 = 4,
     Bit64 = 8,
-    /* TODO #14: Add support later once bitcoin library will start
-     * supporting       consensus-encoding of the native rust `u128`
-     * type Bit128 = 16,
-     *Bit256 = 32, */
+    Bit128 = 16,
+    // Bit256 = 32,
 }
-// TODO #46: Add support later once bitcoin library will start supporting
-//      consensus-encoding of the native rust `u128` type
+// TODO #46: Add support for 256-bit types
 
 impl Bits {
     pub fn max_value(&self) -> u128 {
@@ -99,7 +96,7 @@ impl Bits {
             Bits::Bit16 => core::u16::MAX as u128,
             Bits::Bit32 => core::u32::MAX as u128,
             Bits::Bit64 => core::u64::MAX as u128,
-            //Bits::Bit128 => core::u128::MAX as u128,
+            Bits::Bit128 => core::u128::MAX as u128,
         }
     }
 
