@@ -93,6 +93,12 @@ impl Metadata {
             .map(|set| set.into_iter().filter_map(data::Revealed::u64).collect())
             .unwrap_or_default()
     }
+    pub fn u128(&self, field_type: impl Into<schema::FieldType>) -> Vec<u128> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::u128).collect())
+            .unwrap_or_default()
+    }
+    // TODO #14: Add support for u256 type
     pub fn i8(&self, field_type: impl Into<schema::FieldType>) -> Vec<i8> {
         self.get(&field_type.into())
             .map(|set| set.into_iter().filter_map(data::Revealed::i8).collect())
@@ -113,6 +119,12 @@ impl Metadata {
             .map(|set| set.into_iter().filter_map(data::Revealed::i64).collect())
             .unwrap_or_default()
     }
+    pub fn i128(&self, field_type: impl Into<schema::FieldType>) -> Vec<i128> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::i128).collect())
+            .unwrap_or_default()
+    }
+    // TODO #14: Add support for u256 type
     pub fn f32(&self, field_type: impl Into<schema::FieldType>) -> Vec<f32> {
         self.get(&field_type.into())
             .map(|set| set.into_iter().filter_map(data::Revealed::f32).collect())

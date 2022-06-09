@@ -57,13 +57,13 @@ pub enum Revealed {
     U32(u32),
     U64(u64),
     U128(u128),
-    // TODO #15: Add support for u256
+    // TODO #14: Add support for u256 type
     I8(i8),
     I16(i16),
     I32(i32),
     I64(i64),
     I128(i128),
-    // TODO #15: Add support for i256
+    // TODO #14: Add support for i256 type
     F32(f32),
     F64(f64),
     Bytes(Vec<u8>),
@@ -177,6 +177,13 @@ impl Revealed {
             _ => None,
         }
     }
+    pub fn u128(&self) -> Option<u128> {
+        match self {
+            Revealed::U128(val) => Some(*val),
+            _ => None,
+        }
+    }
+    // TODO #14: Add support for u256 type
     pub fn i8(&self) -> Option<i8> {
         match self {
             Revealed::I8(val) => Some(*val),
@@ -201,6 +208,13 @@ impl Revealed {
             _ => None,
         }
     }
+    pub fn i128(&self) -> Option<i128> {
+        match self {
+            Revealed::I128(val) => Some(*val),
+            _ => None,
+        }
+    }
+    // TODO #14: Add support for u256 type
     pub fn f32(&self) -> Option<f32> {
         match self {
             Revealed::F32(val) => Some(*val),
