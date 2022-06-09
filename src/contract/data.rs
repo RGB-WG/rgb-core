@@ -17,7 +17,7 @@ use core::fmt::Debug;
 use std::io;
 
 use amplify::AsAny;
-use bitcoin::hashes::{hash160, Hash};
+use bitcoin::hashes::{sha256d, Hash};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode};
 use strict_encoding::strict_serialize;
 
@@ -130,9 +130,10 @@ impl Ord for Revealed {
 // the confidential state data, they will occupy space, and 20 bytes of hash
 // is much better than 32 bytes, especially for low-profile original state data
 // (like numbers).
+// TODO: Use tagged hash
 hash_newtype!(
     Confidential,
-    hash160::Hash,
+    sha256d::Hash,
     20,
     doc = "Confidential representation of data"
 );

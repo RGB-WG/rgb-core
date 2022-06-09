@@ -136,19 +136,8 @@ impl FromStr for AllocatedValue {
 /// Information about asset value allocated to well-formed bitcoin transaction
 /// output. Unlike [`AllocatedValue`] keeps the full transaction id even if the
 /// output is contained within the witness transaction.
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize,), serde(crate = "serde_crate"))]
 #[display("{value}@{outpoint}")]
 pub struct OutpointValue {
@@ -178,19 +167,8 @@ impl FromStr for OutpointValue {
 }
 
 /// Information about RGB20 asset assigned to a blinded transaction output
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize,), serde(crate = "serde_crate"))]
 #[display("{value}@{seal_confidential}")]
 pub struct UtxobValue {
@@ -222,7 +200,8 @@ impl FromStr for UtxobValue {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[derive(Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Getters, PartialEq, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[display("{revealed_amount}@{outpoint}&{node_id}#{index}")]
 pub struct Allocation {
     /// Unique primary key is `node_id` + `index`
