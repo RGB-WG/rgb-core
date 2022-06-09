@@ -18,26 +18,20 @@ mod state;
 mod types;
 
 pub use nodes::{
-    ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeSubtype,
-    NodeType, OwnedRightType, OwnedRightsStructure, PublicRightType,
-    PublicRightsStructure, TransitionSchema,
+    ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeSubtype, NodeType,
+    OwnedRightType, OwnedRightsStructure, PublicRightType, PublicRightsStructure, TransitionSchema,
 };
-pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
-pub use script::{
-    Action, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi,
-    ExtensionAction, GenericAction, GenesisAbi, GenesisAction, NodeAction,
-    TransitionAbi, TransitionAction, VmType,
-};
-pub use state::{
-    DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType,
-};
-pub use types::{
-    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurrences,
-    OccurrencesError,
-};
-
 #[cfg(test)]
 pub(crate) use schema::test;
+pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
+pub use script::{
+    Action, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi, ExtensionAction,
+    GenericAction, GenesisAbi, GenesisAction, NodeAction, TransitionAbi, TransitionAction, VmType,
+};
+pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
+pub use types::{
+    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurrences, OccurrencesError,
+};
 
 mod verify {
     use crate::validation;
@@ -47,11 +41,10 @@ mod verify {
         fn schema_verify(&self, root: &Self) -> validation::Status;
     }
 }
-pub use verify::SchemaVerify;
-
 // ---------------
-
 use core::ops::Deref;
+
+pub use verify::SchemaVerify;
 
 /// Format for the stored history proofs, like proof of burn. It is a part of
 /// LNPBP standards
@@ -101,9 +94,7 @@ impl HistoryProofFormat {
         ]
     }
 
-    pub fn from_u8(value: u8) -> Option<Self> {
-        Self::all().get(value as usize).copied()
-    }
+    pub fn from_u8(value: u8) -> Option<Self> { Self::all().get(value as usize).copied() }
 }
 
 impl Deref for HistoryProofFormat {

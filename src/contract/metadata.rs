@@ -16,9 +16,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use amplify::Wrapper;
+use commit_verify::merkle::MerkleNode;
 use commit_verify::{
-    commit_encode, merkle::MerkleNode, ConsensusCommit, ConsensusMerkleCommit,
-    MerkleSource, ToMerkleSource,
+    commit_encode, ConsensusCommit, ConsensusMerkleCommit, MerkleSource, ToMerkleSource,
 };
 
 use super::data;
@@ -44,14 +44,10 @@ impl IntoIterator for Metadata {
     type Item = <MetadataInner as IntoIterator>::Item;
     type IntoIter = <MetadataInner as IntoIterator>::IntoIter;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
 
-#[derive(
-    Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode,
-)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode)]
 pub struct MetadataLeaf(pub schema::FieldType, pub data::Revealed);
 impl commit_encode::Strategy for MetadataLeaf {
     type Strategy = commit_encode::strategies::UsingStrict;
@@ -84,23 +80,17 @@ impl Metadata {
     }
     pub fn u16(&self, field_type: impl Into<schema::FieldType>) -> Vec<u16> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::u16).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::u16).collect())
             .unwrap_or_default()
     }
     pub fn u32(&self, field_type: impl Into<schema::FieldType>) -> Vec<u32> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::u32).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::u32).collect())
             .unwrap_or_default()
     }
     pub fn u64(&self, field_type: impl Into<schema::FieldType>) -> Vec<u64> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::u64).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::u64).collect())
             .unwrap_or_default()
     }
     pub fn i8(&self, field_type: impl Into<schema::FieldType>) -> Vec<i8> {
@@ -110,69 +100,51 @@ impl Metadata {
     }
     pub fn i16(&self, field_type: impl Into<schema::FieldType>) -> Vec<i16> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::i16).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::i16).collect())
             .unwrap_or_default()
     }
     pub fn i32(&self, field_type: impl Into<schema::FieldType>) -> Vec<i32> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::i32).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::i32).collect())
             .unwrap_or_default()
     }
     pub fn i64(&self, field_type: impl Into<schema::FieldType>) -> Vec<i64> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::i64).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::i64).collect())
             .unwrap_or_default()
     }
     pub fn f32(&self, field_type: impl Into<schema::FieldType>) -> Vec<f32> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::f32).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::f32).collect())
             .unwrap_or_default()
     }
     pub fn f64(&self, field_type: impl Into<schema::FieldType>) -> Vec<f64> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::f64).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::f64).collect())
             .unwrap_or_default()
     }
-    pub fn bytes(
-        &self,
-        field_type: impl Into<schema::FieldType>,
-    ) -> Vec<Vec<u8>> {
+    pub fn bytes(&self, field_type: impl Into<schema::FieldType>) -> Vec<Vec<u8>> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::bytes).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::bytes).collect())
             .unwrap_or_default()
     }
-    pub fn string(
-        &self,
-        field_type: impl Into<schema::FieldType>,
-    ) -> Vec<String> {
+    pub fn string(&self, field_type: impl Into<schema::FieldType>) -> Vec<String> {
         self.get(&field_type.into())
-            .map(|set| {
-                set.into_iter().filter_map(data::Revealed::string).collect()
-            })
+            .map(|set| set.into_iter().filter_map(data::Revealed::string).collect())
             .unwrap_or_default()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use amplify::Wrapper;
     use bitcoin_hashes::Hash;
-    use commit_verify::{merkle::MerkleNode, merklize, CommitEncode};
+    use commit_verify::merkle::MerkleNode;
+    use commit_verify::{merklize, CommitEncode};
     use secp256k1zkp::rand::{thread_rng, RngCore};
     use strict_encoding::{StrictDecode, StrictEncode};
+
+    use super::*;
     //use lnpbp::commit_verify::CommitVerify;
 
     // Hard coded sample metadata object as shown below
@@ -213,17 +185,14 @@ mod test {
         assert_eq!(field_8, vec![2, 3]);
         assert_eq!(field_9, vec![2 as f32, 3 as f32]);
         assert_eq!(field_10, vec![2 as f64, 3 as f64]);
-        assert_eq!(
-            field_11,
-            vec![[1u8, 2, 3, 4, 5].to_vec(), [10u8, 20, 30, 40, 50].to_vec()]
-        );
-        assert_eq!(
-            field_12,
-            vec![
-                "One Random String".to_string(),
-                "Another Random String".to_string()
-            ]
-        );
+        assert_eq!(field_11, vec![
+            [1u8, 2, 3, 4, 5].to_vec(),
+            [10u8, 20, 30, 40, 50].to_vec()
+        ]);
+        assert_eq!(field_12, vec![
+            "One Random String".to_string(),
+            "Another Random String".to_string()
+        ]);
     }
 
     #[test]
@@ -305,9 +274,7 @@ mod test {
         // create MerkleNodes from each leaf
         let nodes: Vec<MerkleNode> = vec_4
             .iter()
-            .map(|item| {
-                MerkleNode::hash(&StrictEncode::strict_serialize(item).unwrap())
-            })
+            .map(|item| MerkleNode::hash(&StrictEncode::strict_serialize(item).unwrap()))
             .collect();
 
         // compute merkle root of all the nodes

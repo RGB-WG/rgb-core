@@ -56,18 +56,16 @@ macro_rules! impl_enum_strict_encoding {
 
                 match self.to_u8() {
                     Some(result) => result.strict_encode(e),
-                    None => Err(::strict_encoding::Error::EnumValueOverflow(
-                        stringify!($type),
-                    )),
+                    None => Err(::strict_encoding::Error::EnumValueOverflow(stringify!(
+                        $type
+                    ))),
                 }
             }
         }
 
         impl ::strict_encoding::StrictDecode for $type {
             #[inline]
-            fn strict_decode<D: ::std::io::Read>(
-                d: D,
-            ) -> Result<Self, ::strict_encoding::Error> {
+            fn strict_decode<D: ::std::io::Read>(d: D) -> Result<Self, ::strict_encoding::Error> {
                 use ::num_traits::FromPrimitive;
 
                 let value = u8::strict_decode(d)?;
@@ -122,38 +120,33 @@ mod macros;
 
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
-
-    use super::*;
-    pub use super::{bech32, schema, vm};
-
-    pub use super::bech32::{Bech32, FromBech32, ToBech32};
     pub use contract::{
-        data, reveal, seal, value, AllocatedValue, Allocation, AllocationMap,
-        AllocationValueMap, AllocationValueVec, Assignment, AssignmentVec,
-        AtomicValue, ConcealSeals, ConcealState, ConfidentialDataError,
-        ConfidentialState, ContractId, DeclarativeStrategy, EndpointValueMap,
-        Extension, Genesis, HashStrategy, HomomorphicBulletproofGrin,
-        IntoRevealedSeal, IntoSealValueMap, Metadata, NoDataError, Node,
-        NodeId, NodeOutput, OutpointValue, OutpointValueMap, OutpointValueVec,
-        OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
-        PublicRights, MergeReveal, RevealedState, SealEndpoint,
-        SealValueMap, State, StateRetrievalError, StateType, Transition,
-        UtxobValue,
+        data, reveal, seal, value, AllocatedValue, Allocation, AllocationMap, AllocationValueMap,
+        AllocationValueVec, Assignment, AssignmentVec, AtomicValue, ConcealSeals, ConcealState,
+        ConfidentialDataError, ConfidentialState, ContractId, DeclarativeStrategy,
+        EndpointValueMap, Extension, Genesis, HashStrategy, HomomorphicBulletproofGrin,
+        IntoRevealedSeal, IntoSealValueMap, MergeReveal, Metadata, NoDataError, Node, NodeId,
+        NodeOutput, OutpointValue, OutpointValueMap, OutpointValueVec, OwnedRights,
+        ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
+        SealEndpoint, SealValueMap, State, StateRetrievalError, StateType, Transition, UtxobValue,
     };
     pub use schema::{
-        script, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi,
-        ExtensionAction, ExtensionSchema, ExtensionType, GenesisAbi,
-        GenesisAction, NodeSubtype, NodeType, PublicRightType,
-        PublicRightsStructure, Schema, SchemaId, TransitionAbi,
-        TransitionAction, VmType,
+        script, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi, ExtensionAction,
+        ExtensionSchema, ExtensionType, GenesisAbi, GenesisAction, NodeSubtype, NodeType,
+        PublicRightType, PublicRightsStructure, Schema, SchemaId, TransitionAbi, TransitionAction,
+        VmType,
     };
     pub use stash::{
-        ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError,
-        Disclosure, ExtensionData, GraphApi, Stash, TransitionData,
-        PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
+        ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError, Disclosure,
+        ExtensionData, GraphApi, Stash, TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK,
+        PSBT_PREFIX,
     };
     pub use validation::{Validator, Validity};
     pub use vm::VmApi;
+
+    pub use super::bech32::{Bech32, FromBech32, ToBech32};
+    use super::*;
+    pub use super::{bech32, schema, vm};
 }
 
 pub use prelude::*;

@@ -27,7 +27,7 @@
 use std::collections::BTreeSet;
 
 use bitcoin::{OutPoint, Txid};
-use bp::dbc::{AnchorId};
+use bp::dbc::AnchorId;
 use bp::seals::txout::TxoSeal;
 
 use crate::schema::{NodeType, OwnedRightType};
@@ -39,9 +39,7 @@ use crate::{Consignment, Extension, Node, NodeId, NodeOutput, Transition};
 /// are malformed (forged or damaged) and were not validated. The other reason
 /// for these error are mistakes in the logic of the caller, which may not match
 /// schema used by the contract.
-#[derive(
-    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
-)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum ConsistencyError {
     /// Node with id {0} is not present in the storage/container
@@ -108,10 +106,7 @@ pub trait GraphApi {
     ///   type
     /// - [`Error::TransitionAbsent`] when node with the given id is absent from
     ///   the storage/container
-    fn transition_by_id(
-        &self,
-        node_id: NodeId,
-    ) -> Result<&Transition, ConsistencyError>;
+    fn transition_by_id(&self, node_id: NodeId) -> Result<&Transition, ConsistencyError>;
 
     /// Returns reference to a state extension, if known, matching the provided
     /// id. If id is unknown, or corresponds to other type of the node (genesis
@@ -123,10 +118,7 @@ pub trait GraphApi {
     ///   type
     /// - [`Error::ExtensionAbsent`] when node with the given id is absent from
     ///   the storage/container
-    fn extension_by_id(
-        &self,
-        node_id: NodeId,
-    ) -> Result<&Extension, ConsistencyError>;
+    fn extension_by_id(&self, node_id: NodeId) -> Result<&Extension, ConsistencyError>;
 
     /// Returns reference to a state transition, like
     /// [`GraphApi::transition_by_id`], extended with [`Txid`] of the witness
@@ -205,17 +197,11 @@ impl GraphApi for Consignment {
             })
     }
 
-    fn transition_by_id(
-        &self,
-        node_id: NodeId,
-    ) -> Result<&Transition, ConsistencyError> {
+    fn transition_by_id(&self, node_id: NodeId) -> Result<&Transition, ConsistencyError> {
         Ok(self.transition_witness_by_id(node_id)?.0)
     }
 
-    fn extension_by_id(
-        &self,
-        node_id: NodeId,
-    ) -> Result<&Extension, ConsistencyError> {
+    fn extension_by_id(&self, node_id: NodeId) -> Result<&Extension, ConsistencyError> {
         self.state_extensions
             .iter()
             .find(|extension| extension.node_id() == node_id)
@@ -232,13 +218,15 @@ impl GraphApi for Consignment {
                         })
                     })
                     .transpose()?
-                    .or_else(|| {
-                        if self.genesis.node_id() == node_id {
-                            Some(Err(err))
-                        } else {
-                            None
-                        }
-                    })
+                    .or_else(
+                        || {
+                            if self.genesis.node_id() == node_id {
+                                Some(Err(err))
+                            } else {
+                                None
+                            }
+                        },
+                    )
                     .transpose()?
                     .ok_or(ConsistencyError::WrongNodeType {
                         node_id,
@@ -269,13 +257,15 @@ impl GraphApi for Consignment {
                         })
                     })
                     .transpose()?
-                    .or_else(|| {
-                        if self.genesis.node_id() == node_id {
-                            Some(Err(err))
-                        } else {
-                            None
-                        }
-                    })
+                    .or_else(
+                        || {
+                            if self.genesis.node_id() == node_id {
+                                Some(Err(err))
+                            } else {
+                                None
+                            }
+                        },
+                    )
                     .transpose()?
                     .ok_or(ConsistencyError::WrongNodeType {
                         node_id,
@@ -298,10 +288,7 @@ impl GraphApi for Consignment {
             let parent = self.transition_by_id(output.node_id)?;
             let outpoint = parent
                 .owned_rights_by_type(owned_right_type)
-                .ok_or(ConsistencyError::NoSealsClosed(
-                    owned_right_type,
-                    node_id,
-                ))?
+                .ok_or(ConsistencyError::NoSealsClosed(owned_right_type, node_id))?
                 .revealed_seal_at(output.output_no)
                 .map_err(|_| ConsistencyError::OutputNotPresent(output))?
                 .ok_or(ConsistencyError::ConfidentialSeal(output))?

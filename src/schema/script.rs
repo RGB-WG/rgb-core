@@ -23,11 +23,7 @@ use lnpbp::bech32::Bech32DataString;
 
 /// Types of supported virtual machines
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(by_value, repr = u8)]
 #[non_exhaustive]
@@ -62,9 +58,7 @@ pub enum VmType {
 }
 
 impl Default for VmType {
-    fn default() -> Self {
-        VmType::Embedded
-    }
+    fn default() -> Self { VmType::Embedded }
 }
 
 /// Executable code overwrite rules
@@ -94,9 +88,7 @@ pub enum OverrideRules {
 }
 
 impl Default for OverrideRules {
-    fn default() -> Self {
-        OverrideRules::Deny
-    }
+    fn default() -> Self { OverrideRules::Deny }
 }
 
 /// Executable code
@@ -108,11 +100,7 @@ impl Default for OverrideRules {
 /// in the schema (for schema-supplied code base) or within the contract nodes,
 /// if the contract is allowed to replace the code provided by the schema.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(StrictEncode, StrictDecode)]
 pub struct ExecutableCode {
     /// Type of the virtual machine that MUST be used to run the given byte
@@ -152,11 +140,7 @@ impl Display for ExecutableCode {
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(doc_comments)]
 #[derive(StrictEncode, StrictDecode)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum Action {
@@ -327,9 +311,10 @@ impl Abi for AssignmentAbi {}
 
 #[cfg(test)]
 mod test {
+    use strict_encoding::strict_serialize;
+
     use super::*;
     use crate::vm::embedded::AssignmentValidator;
-    use strict_encoding::strict_serialize;
 
     #[test]
     fn test_basics() {

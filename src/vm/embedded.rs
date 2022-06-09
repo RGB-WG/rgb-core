@@ -20,10 +20,11 @@ use bitcoin::OutPoint;
 use commit_verify::CommitConceal;
 
 use super::VmApi;
+use crate::schema::constants::*;
 use crate::script::{Action, EntryPoint};
 use crate::{
-    schema, schema::constants::*, validation, value, AssignmentVec, Metadata,
-    NodeId, NodeOutput, NodeSubtype, OwnedRights, PublicRights, Transition,
+    schema, validation, value, AssignmentVec, Metadata, NodeId, NodeOutput, NodeSubtype,
+    OwnedRights, PublicRights, Transition,
 };
 
 /// Trait for all embedded handlers which allows their construction from
@@ -33,8 +34,7 @@ pub trait FromEntryPoint {
     /// point value. Returns `None` if the provided entry point value does not
     /// correspond to any of the embedded procedures
     fn from_entry_point(entry_point: EntryPoint) -> Option<Self>
-    where
-        Self: Sized;
+    where Self: Sized;
 }
 
 /// Embedded action handlers for state assignments processed by the embedded
@@ -71,9 +71,7 @@ impl FromEntryPoint for AssignmentValidator {
             x if x == AssignmentValidator::FungibleNoInflation as u32 => {
                 AssignmentValidator::FungibleNoInflation
             }
-            x if x == AssignmentValidator::NoOverflow as u32 => {
-                AssignmentValidator::NoOverflow
-            }
+            x if x == AssignmentValidator::NoOverflow as u32 => AssignmentValidator::NoOverflow,
             _ => return None,
         })
     }
@@ -146,22 +144,12 @@ impl FromEntryPoint for NodeValidator {
     /// the embedded procedures
     fn from_entry_point(entry_point: EntryPoint) -> Option<Self> {
         Some(match entry_point {
-            x if x == NodeValidator::FungibleIssue as u32 => {
-                NodeValidator::FungibleIssue
-            }
-            x if x == NodeValidator::IdentityTransfer as u32 => {
-                NodeValidator::IdentityTransfer
-            }
+            x if x == NodeValidator::FungibleIssue as u32 => NodeValidator::FungibleIssue,
+            x if x == NodeValidator::IdentityTransfer as u32 => NodeValidator::IdentityTransfer,
             x if x == NodeValidator::NftIssue as u32 => NodeValidator::NftIssue,
-            x if x == NodeValidator::ProofOfBurn as u32 => {
-                NodeValidator::ProofOfBurn
-            }
-            x if x == NodeValidator::ProofOfReserve as u32 => {
-                NodeValidator::ProofOfReserve
-            }
-            x if x == NodeValidator::RightsSplit as u32 => {
-                NodeValidator::RightsSplit
-            }
+            x if x == NodeValidator::ProofOfBurn as u32 => NodeValidator::ProofOfBurn,
+            x if x == NodeValidator::ProofOfReserve as u32 => NodeValidator::ProofOfReserve,
+            x if x == NodeValidator::RightsSplit as u32 => NodeValidator::RightsSplit,
             _ => return None,
         })
     }
@@ -194,21 +182,19 @@ impl FromEntryPoint for TransitionConstructor {
     /// of the embedded procedures
     fn from_entry_point(entry_point: u32) -> Option<Self> {
         Some(match entry_point {
-            x if x == TransitionConstructor::OneToOne as u32 => {
-                TransitionConstructor::OneToOne
-            }
-            x if x == TransitionConstructor::Aggregate as u32 => {
-                TransitionConstructor::Aggregate
-            }
+            x if x == TransitionConstructor::OneToOne as u32 => TransitionConstructor::OneToOne,
+            x if x == TransitionConstructor::Aggregate as u32 => TransitionConstructor::Aggregate,
             _ => return None,
         })
     }
 }
 
 mod _strict_encoding {
-    use super::*;
     use std::io;
+
     use strict_encoding::{Error, StrictDecode, StrictEncode};
+
+    use super::*;
 
     impl StrictEncode for NodeValidator {
         fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
@@ -220,11 +206,10 @@ mod _strict_encoding {
     impl StrictDecode for NodeValidator {
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             let entry_point = EntryPoint::strict_decode(d)?;
-            NodeValidator::from_entry_point(entry_point).ok_or(
-                Error::DataIntegrityError(format!(
-                    "Entry point value {} does not correspond to any of known embedded procedures",
-                    entry_point
-                )))
+            NodeValidator::from_entry_point(entry_point).ok_or(Error::DataIntegrityError(format!(
+                "Entry point value {} does not correspond to any of known embedded procedures",
+                entry_point
+            )))
         }
     }
 
@@ -238,11 +223,12 @@ mod _strict_encoding {
     impl StrictDecode for AssignmentValidator {
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             let entry_point = EntryPoint::strict_decode(d)?;
-            AssignmentValidator::from_entry_point(entry_point).ok_or(
-                Error::DataIntegrityError(format!(
+            AssignmentValidator::from_entry_point(entry_point).ok_or(Error::DataIntegrityError(
+                format!(
                     "Entry point value {} does not correspond to any of known embedded procedures",
                     entry_point
-                )))
+                ),
+            ))
         }
     }
 
@@ -256,18 +242,17 @@ mod _strict_encoding {
     impl StrictDecode for TransitionConstructor {
         fn strict_decode<D: io::Read>(d: D) -> Result<Self, Error> {
             let entry_point = EntryPoint::strict_decode(d)?;
-            TransitionConstructor::from_entry_point(entry_point).ok_or(
-                Error::DataIntegrityError(format!(
+            TransitionConstructor::from_entry_point(entry_point).ok_or(Error::DataIntegrityError(
+                format!(
                     "Entry point value {} does not correspond to any of known embedded procedures",
                     entry_point
-                )))
+                ),
+            ))
         }
     }
 }
 
-#[derive(
-    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
-)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 #[repr(u16)]
 pub enum HandlerError {
@@ -325,28 +310,20 @@ impl NodeValidator {
         current_meta: &Metadata,
     ) -> Result<(), HandlerError> {
         match self {
-            NodeValidator::FungibleIssue => Self::fungible_issue(
-                current_meta,
-                previous_owned_rights,
-                current_owned_rights,
-            ),
-            NodeValidator::IdentityTransfer => Self::input_output_count_eq(
-                previous_owned_rights,
-                current_owned_rights,
-            ),
-            NodeValidator::NftIssue => Self::nft_issue(
-                current_meta,
-                previous_owned_rights,
-                current_owned_rights,
-            ),
-            NodeValidator::ProofOfBurn => Self::proof_of_burn(current_meta),
-            NodeValidator::ProofOfReserve => {
-                Self::proof_of_reserve(current_meta)
+            NodeValidator::FungibleIssue => {
+                Self::fungible_issue(current_meta, previous_owned_rights, current_owned_rights)
             }
-            NodeValidator::RightsSplit => Self::input_output_value_eq(
-                previous_owned_rights,
-                current_owned_rights,
-            ),
+            NodeValidator::IdentityTransfer => {
+                Self::input_output_count_eq(previous_owned_rights, current_owned_rights)
+            }
+            NodeValidator::NftIssue => {
+                Self::nft_issue(current_meta, previous_owned_rights, current_owned_rights)
+            }
+            NodeValidator::ProofOfBurn => Self::proof_of_burn(current_meta),
+            NodeValidator::ProofOfReserve => Self::proof_of_reserve(current_meta),
+            NodeValidator::RightsSplit => {
+                Self::input_output_value_eq(previous_owned_rights, current_owned_rights)
+            }
         }
     }
 
@@ -446,9 +423,7 @@ impl NodeValidator {
             .copied()
             .ok_or(HandlerError::BrokenSchema)?;
 
-        match schema::HistoryProofFormat::from_u8(format)
-            .ok_or(HandlerError::BrokenSchema)?
-        {
+        match schema::HistoryProofFormat::from_u8(format).ok_or(HandlerError::BrokenSchema)? {
             schema::HistoryProofFormat::ProofAbsent => Ok(()),
             _ => Err(HandlerError::NotImplemented),
         }
@@ -491,10 +466,7 @@ impl NodeValidator {
             }
 
             match (prev_assignments, curr_assignments) {
-                (
-                    AssignmentVec::Declarative(_),
-                    AssignmentVec::Declarative(_),
-                ) => {
+                (AssignmentVec::Declarative(_), AssignmentVec::Declarative(_)) => {
                     // This is valid, so passing validation step
                 }
                 (
@@ -515,21 +487,14 @@ impl NodeValidator {
                         }
                     }
                 }
-                (
-                    AssignmentVec::CustomData(prev),
-                    AssignmentVec::CustomData(curr),
-                ) => {
+                (AssignmentVec::CustomData(prev), AssignmentVec::CustomData(curr)) => {
                     for (prev, curr) in prev.into_iter().zip(curr.into_iter()) {
-                        if prev.to_confidential_state()
-                            != curr.to_confidential_state()
-                        {
+                        if prev.to_confidential_state() != curr.to_confidential_state() {
                             return Err(HandlerError::NonEqualState);
                         }
                     }
                 }
-                (_, _) => unreachable!(
-                    "assignment formats are equal as checked above"
-                ),
+                (_, _) => unreachable!("assignment formats are equal as checked above"),
             }
         }
 
@@ -574,9 +539,7 @@ impl AssignmentValidator {
             AssignmentValidator::FungibleNoInflation => {
                 Self::validate_pedersen_sum(previous_state, current_state)
             }
-            AssignmentValidator::NoOverflow => {
-                Self::validate_no_overflow(current_state)
-            }
+            AssignmentValidator::NoOverflow => Self::validate_no_overflow(current_state),
         }
     }
 
@@ -607,9 +570,7 @@ impl AssignmentValidator {
         }
     }
 
-    pub(self) fn validate_no_overflow(
-        current_state: &AssignmentVec,
-    ) -> Result<(), HandlerError> {
+    pub(self) fn validate_no_overflow(current_state: &AssignmentVec) -> Result<(), HandlerError> {
         current_state
             .as_revealed_state_values()
             .map_err(|_| HandlerError::ConfidentialState)?
@@ -632,9 +593,7 @@ impl TransitionConstructor {
     }
 }
 
-#[derive(
-    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
-)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum InitError {
     /// Byte code for the embedded virtual machine must be an empty string,
@@ -689,16 +648,12 @@ impl VmApi for EmbeddedVm {
                         Some(NodeValidator::from_entry_point(*id).ok_or(err)?);
                 }
                 Action::ValidateAssignment => {
-                    vm.validate_assignment_handler = Some(
-                        AssignmentValidator::from_entry_point(*id)
-                            .ok_or(err)?,
-                    );
+                    vm.validate_assignment_handler =
+                        Some(AssignmentValidator::from_entry_point(*id).ok_or(err)?);
                 }
                 Action::BlankTransition => {
-                    vm.blank_transition_handler = Some(
-                        TransitionConstructor::from_entry_point(*id)
-                            .ok_or(err)?,
-                    );
+                    vm.blank_transition_handler =
+                        Some(TransitionConstructor::from_entry_point(*id).ok_or(err)?);
                 }
             }
         }
@@ -733,9 +688,7 @@ impl VmApi for EmbeddedVm {
                 )
             })
             .transpose()
-            .map_err(|err| {
-                validation::Failure::ScriptFailure(node_id, err as u8)
-            })?
+            .map_err(|err| validation::Failure::ScriptFailure(node_id, err as u8))?
             .unwrap_or_default())
     }
 
@@ -760,9 +713,7 @@ impl VmApi for EmbeddedVm {
                 )
             })
             .transpose()
-            .map_err(|err| {
-                validation::Failure::ScriptFailure(node_id, err as u8)
-            })?
+            .map_err(|err| validation::Failure::ScriptFailure(node_id, err as u8))?
             .unwrap_or_default())
     }
 
@@ -776,9 +727,7 @@ impl VmApi for EmbeddedVm {
             .blank_transition_handler
             .map(|handler| handler.construct(inputs, outpoints))
             .transpose()
-            .map_err(|err| {
-                validation::Failure::ScriptFailure(node_id, err as u8)
-            })?
+            .map_err(|err| validation::Failure::ScriptFailure(node_id, err as u8))?
             .unwrap_or_default())
     }
 }

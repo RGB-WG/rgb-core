@@ -24,50 +24,31 @@ pub mod seal;
 pub mod value;
 
 pub use allocation::{
-    AllocatedValue, Allocation, AllocationMap, AllocationValueMap,
-    AllocationValueVec, EndpointValueMap, IntoSealValueMap, OutpointValue,
-    OutpointValueMap, OutpointValueVec, SealValueMap, UtxobValue,
+    AllocatedValue, Allocation, AllocationMap, AllocationValueMap, AllocationValueVec,
+    EndpointValueMap, IntoSealValueMap, OutpointValue, OutpointValueMap, OutpointValueVec,
+    SealValueMap, UtxobValue,
 };
 pub(self) use assignments::EMPTY_ASSIGNMENT_VEC;
 pub use assignments::{
-    Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy,
-    HashStrategy, PedersenStrategy, RevealedState, State, StateType,
+    Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy, HashStrategy,
+    PedersenStrategy, RevealedState, State, StateType,
 };
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
-pub use nodes::{
-    ContractId, Extension, Genesis, Node, NodeId, NodeOutput, Transition,
-};
+pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutput, Transition};
 pub use reveal::MergeReveal;
-pub use rights::{
-    OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights,
-};
-pub(crate) use rights::{
-    OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner,
-};
+pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
+pub(crate) use rights::{OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner};
 pub use seal::{IntoRevealedSeal, SealEndpoint};
-pub use value::{AtomicValue, HomomorphicBulletproofGrin};
-
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
+pub use value::{AtomicValue, HomomorphicBulletproofGrin};
 lazy_static! {
     /// Secp256k1zpk context object
     pub(crate) static ref SECP256K1_ZKP: Secp256k1zkp =
         Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
 }
 
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    Error,
-    From,
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum StateRetrievalError {
     /// The requested state has a mismatched data type
@@ -79,16 +60,12 @@ pub enum StateRetrievalError {
     ConfidentialData,
 }
 
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 /// The requested data are not present
 pub struct NoDataError;
 
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 /// Some of the requested data are confidential, when they must be present in
 /// revealed form
@@ -102,8 +79,7 @@ pub(crate) mod test {
     pub fn test_confidential<T>(data: &[u8], encoded: &[u8], commitment: &[u8])
     where
         T: CommitConceal + StrictDecode + StrictEncode + Clone + CommitEncode,
-        <T as CommitConceal>::ConcealedCommitment:
-            StrictDecode + StrictEncode + Eq,
+        <T as CommitConceal>::ConcealedCommitment: StrictDecode + StrictEncode + Eq,
     {
         // Create the Revealed Structure from data bytes
         let revealed = T::strict_decode(data).unwrap();

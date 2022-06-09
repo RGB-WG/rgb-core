@@ -20,12 +20,11 @@ use amplify::Wrapper;
 use bitcoin_hashes::Hash;
 #[cfg(feature = "wallet")]
 use bp::dbc::anchor::Error;
+use bp::dbc::Anchor;
 #[cfg(feature = "wallet")]
 use commit_verify::{lnpbp4, TaggedHash};
 #[cfg(feature = "wallet")]
 use wallet::psbt::Psbt;
-
-use bp::dbc::Anchor;
 
 #[cfg(feature = "wallet")]
 use crate::NodeId;
@@ -80,8 +79,7 @@ impl AnchorExt for Anchor<lnpbp4::MerkleBlock> {
         let messages = transitions
             .iter()
             .map(|(contract_id, node_id)| {
-                let protocol_id =
-                    lnpbp4::ProtocolId::from_inner(contract_id.to_bytes());
+                let protocol_id = lnpbp4::ProtocolId::from_inner(contract_id.to_bytes());
                 let message = lnpbp4::Message::from_inner(node_id.to_bytes());
                 (protocol_id, message)
             })
@@ -97,14 +95,16 @@ impl AnchorExt for Anchor<lnpbp4::MerkleBlock> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::contract::{Genesis, Node};
-    use crate::NodeId;
+    use std::collections::BTreeMap;
+
     use bitcoin::consensus::deserialize;
     use bitcoin::psbt::raw::ProprietaryKey;
     use bitcoin::util::psbt::PartiallySignedTransaction;
-    use std::collections::BTreeMap;
     use strict_encoding::StrictDecode;
+
+    use super::*;
+    use crate::contract::{Genesis, Node};
+    use crate::NodeId;
 
     static GENESIS: [u8; 2447] = include!("../../test/genesis.in");
 
@@ -120,8 +120,7 @@ mod test {
         let node_id = genesis.node_id();
 
         // Get the test psbt
-        let mut source_psbt: PartiallySignedTransaction =
-            deserialize(&PSBT[..]).unwrap();
+        let mut source_psbt: PartiallySignedTransaction = deserialize(&PSBT[..]).unwrap();
 
         // Modify test psbt to include Proprietary Key information
         for output in &mut source_psbt.outputs.iter_mut() {

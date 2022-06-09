@@ -21,8 +21,8 @@ use bitcoin::OutPoint;
 
 use crate::script::{Action, EntryPoint};
 use crate::{
-    schema, validation, AssignmentVec, Metadata, NodeId, NodeOutput,
-    OwnedRights, PublicRights, Transition,
+    schema, validation, AssignmentVec, Metadata, NodeId, NodeOutput, OwnedRights, PublicRights,
+    Transition,
 };
 
 /// Trait for concrete types wrapping virtual machines to be used from inside

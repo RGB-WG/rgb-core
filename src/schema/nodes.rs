@@ -15,9 +15,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 
 use super::{
-    ExtensionAbi, ExtensionAction, ExtensionType, FieldType, GenesisAbi,
-    GenesisAction, NodeAction, Occurrences, TransitionAbi, TransitionAction,
-    TransitionType,
+    ExtensionAbi, ExtensionAction, ExtensionType, FieldType, GenesisAbi, GenesisAction, NodeAction,
+    Occurrences, TransitionAbi, TransitionAction, TransitionType,
 };
 use crate::script::EntryPoint;
 
@@ -86,11 +85,7 @@ pub trait NodeSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display(Debug)]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
@@ -100,11 +95,7 @@ pub struct GenesisSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display(Debug)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
@@ -115,11 +106,7 @@ pub struct ExtensionSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display(Debug)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
@@ -130,120 +117,74 @@ pub struct TransitionSchema {
 }
 
 lazy_static! {
-    static ref EMPTY_OWNED_RIGHTS: OwnedRightsStructure =
-        OwnedRightsStructure::new();
-    static ref EMPTY_PUBLIC_RIGHTS: PublicRightsStructure =
-        PublicRightsStructure::new();
+    static ref EMPTY_OWNED_RIGHTS: OwnedRightsStructure = OwnedRightsStructure::new();
+    static ref EMPTY_PUBLIC_RIGHTS: PublicRightsStructure = PublicRightsStructure::new();
 }
 
 impl NodeSchema for GenesisSchema {
     type Action = GenesisAction;
 
     #[inline]
-    fn node_type(&self) -> NodeType {
-        NodeType::Genesis
-    }
+    fn node_type(&self) -> NodeType { NodeType::Genesis }
     #[inline]
-    fn metadata(&self) -> &MetadataStructure {
-        &self.metadata
-    }
+    fn metadata(&self) -> &MetadataStructure { &self.metadata }
     #[inline]
-    fn closes(&self) -> &OwnedRightsStructure {
-        &EMPTY_OWNED_RIGHTS
-    }
+    fn closes(&self) -> &OwnedRightsStructure { &EMPTY_OWNED_RIGHTS }
     #[inline]
-    fn extends(&self) -> &PublicRightsStructure {
-        &EMPTY_PUBLIC_RIGHTS
-    }
+    fn extends(&self) -> &PublicRightsStructure { &EMPTY_PUBLIC_RIGHTS }
     #[inline]
-    fn owned_rights(&self) -> &OwnedRightsStructure {
-        &self.owned_rights
-    }
+    fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
     #[inline]
-    fn public_rights(&self) -> &PublicRightsStructure {
-        &self.public_rights
-    }
+    fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
     #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> {
-        &self.abi
-    }
+    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> { &self.abi }
 }
 
 impl NodeSchema for ExtensionSchema {
     type Action = ExtensionAction;
 
     #[inline]
-    fn node_type(&self) -> NodeType {
-        NodeType::StateExtension
-    }
+    fn node_type(&self) -> NodeType { NodeType::StateExtension }
     #[inline]
-    fn metadata(&self) -> &MetadataStructure {
-        &self.metadata
-    }
+    fn metadata(&self) -> &MetadataStructure { &self.metadata }
     #[inline]
-    fn closes(&self) -> &OwnedRightsStructure {
-        &EMPTY_OWNED_RIGHTS
-    }
+    fn closes(&self) -> &OwnedRightsStructure { &EMPTY_OWNED_RIGHTS }
     #[inline]
-    fn extends(&self) -> &PublicRightsStructure {
-        &self.extends
-    }
+    fn extends(&self) -> &PublicRightsStructure { &self.extends }
     #[inline]
-    fn owned_rights(&self) -> &OwnedRightsStructure {
-        &self.owned_rights
-    }
+    fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
     #[inline]
-    fn public_rights(&self) -> &PublicRightsStructure {
-        &self.public_rights
-    }
+    fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
     #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> {
-        &self.abi
-    }
+    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> { &self.abi }
 }
 
 impl NodeSchema for TransitionSchema {
     type Action = TransitionAction;
 
     #[inline]
-    fn node_type(&self) -> NodeType {
-        NodeType::StateTransition
-    }
+    fn node_type(&self) -> NodeType { NodeType::StateTransition }
     #[inline]
-    fn metadata(&self) -> &MetadataStructure {
-        &self.metadata
-    }
+    fn metadata(&self) -> &MetadataStructure { &self.metadata }
     #[inline]
-    fn closes(&self) -> &OwnedRightsStructure {
-        &self.closes
-    }
+    fn closes(&self) -> &OwnedRightsStructure { &self.closes }
     #[inline]
-    fn extends(&self) -> &PublicRightsStructure {
-        &EMPTY_PUBLIC_RIGHTS
-    }
+    fn extends(&self) -> &PublicRightsStructure { &EMPTY_PUBLIC_RIGHTS }
     #[inline]
-    fn owned_rights(&self) -> &OwnedRightsStructure {
-        &self.owned_rights
-    }
+    fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
     #[inline]
-    fn public_rights(&self) -> &PublicRightsStructure {
-        &self.public_rights
-    }
+    fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
     #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> {
-        &self.abi
-    }
+    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> { &self.abi }
 }
 
 mod _strict_encoding {
-    use super::*;
     use strict_encoding::{Error, StrictDecode, StrictEncode};
 
+    use super::*;
+
     impl StrictEncode for GenesisSchema {
-        fn strict_encode<E: io::Write>(
-            &self,
-            mut e: E,
-        ) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
             let mut len = 0usize;
             len += self.metadata.strict_encode(&mut e)?;
             len += self.owned_rights.strict_encode(&mut e)?;
@@ -276,10 +217,7 @@ mod _strict_encoding {
     }
 
     impl StrictEncode for ExtensionSchema {
-        fn strict_encode<E: io::Write>(
-            &self,
-            mut e: E,
-        ) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
             let mut len = 0usize;
             len += self.metadata.strict_encode(&mut e)?;
             len += self.extends.strict_encode(&mut e)?;
@@ -314,10 +252,7 @@ mod _strict_encoding {
     }
 
     impl StrictEncode for TransitionSchema {
-        fn strict_encode<E: io::Write>(
-            &self,
-            mut e: E,
-        ) -> Result<usize, Error> {
+        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
             let mut len = 0usize;
             len += self.metadata.strict_encode(&mut e)?;
             len += self.closes.strict_encode(&mut e)?;
@@ -358,8 +293,7 @@ mod _verify {
     use crate::validation;
 
     impl<T> SchemaVerify for T
-    where
-        T: NodeSchema,
+    where T: NodeSchema
     {
         fn schema_verify(&self, root: &Self) -> validation::Status {
             let mut status = validation::Status::new();
@@ -367,17 +301,12 @@ mod _verify {
 
             for (field_type, occ) in self.metadata() {
                 match root.metadata().get(field_type) {
-                    None => status.add_failure(
-                        validation::Failure::SchemaRootNoMetadataMatch(
-                            node_type,
-                            *field_type,
-                        ),
-                    ),
+                    None => status.add_failure(validation::Failure::SchemaRootNoMetadataMatch(
+                        node_type,
+                        *field_type,
+                    )),
                     Some(root_occ) if occ != root_occ => status.add_failure(
-                        validation::Failure::SchemaRootNoMetadataMatch(
-                            node_type,
-                            *field_type,
-                        ),
+                        validation::Failure::SchemaRootNoMetadataMatch(node_type, *field_type),
                     ),
                     _ => &status,
                 };
@@ -385,76 +314,68 @@ mod _verify {
 
             for (assignments_type, occ) in self.closes() {
                 match root.closes().get(assignments_type) {
-                    None => status.add_failure(
-                        validation::Failure::SchemaRootNoParentOwnedRightsMatch(
+                    None => {
+                        status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
                             node_type,
                             *assignments_type,
-                        ),
-                    ),
-                    Some(root_occ) if occ != root_occ => status.add_failure(
-                        validation::Failure::SchemaRootNoParentOwnedRightsMatch(
+                        ))
+                    }
+                    Some(root_occ) if occ != root_occ => {
+                        status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
                             node_type,
                             *assignments_type,
-                        ),
-                    ),
+                        ))
+                    }
                     _ => &status,
                 };
             }
 
             for (assignments_type, occ) in self.owned_rights() {
                 match root.owned_rights().get(assignments_type) {
-                    None => status.add_failure(
-                        validation::Failure::SchemaRootNoOwnedRightsMatch(
+                    None => status.add_failure(validation::Failure::SchemaRootNoOwnedRightsMatch(
+                        node_type,
+                        *assignments_type,
+                    )),
+                    Some(root_occ) if occ != root_occ => {
+                        status.add_failure(validation::Failure::SchemaRootNoOwnedRightsMatch(
                             node_type,
                             *assignments_type,
-                        ),
-                    ),
-                    Some(root_occ) if occ != root_occ => status.add_failure(
-                        validation::Failure::SchemaRootNoOwnedRightsMatch(
-                            node_type,
-                            *assignments_type,
-                        ),
-                    ),
+                        ))
+                    }
                     _ => &status,
                 };
             }
 
             for valencies_type in self.extends() {
                 if !root.extends().contains(valencies_type) {
-                    status.add_failure(
-                        validation::Failure::SchemaRootNoParentPublicRightsMatch(
-                            node_type,
-                            *valencies_type,
-                        ),
-                    );
+                    status.add_failure(validation::Failure::SchemaRootNoParentPublicRightsMatch(
+                        node_type,
+                        *valencies_type,
+                    ));
                 }
             }
 
             for valencies_type in self.public_rights() {
                 if !root.public_rights().contains(valencies_type) {
-                    status.add_failure(
-                        validation::Failure::SchemaRootNoPublicRightsMatch(
-                            node_type,
-                            *valencies_type,
-                        ),
-                    );
+                    status.add_failure(validation::Failure::SchemaRootNoPublicRightsMatch(
+                        node_type,
+                        *valencies_type,
+                    ));
                 }
             }
 
             for (action, proc) in self.abi() {
                 match root.abi().get(action) {
-                    None => status.add_failure(
-                        validation::Failure::SchemaRootNoAbiMatch {
+                    None => status.add_failure(validation::Failure::SchemaRootNoAbiMatch {
+                        node_type,
+                        action_id: (*action).into(),
+                    }),
+                    Some(root_proc) if root_proc != proc => {
+                        status.add_failure(validation::Failure::SchemaRootNoAbiMatch {
                             node_type,
                             action_id: (*action).into(),
-                        },
-                    ),
-                    Some(root_proc) if root_proc != proc => status.add_failure(
-                        validation::Failure::SchemaRootNoAbiMatch {
-                            node_type,
-                            action_id: (*action).into(),
-                        },
-                    ),
+                        })
+                    }
                     _ => &status,
                 };
             }
@@ -469,33 +390,31 @@ mod _verify {
 
 #[cfg(test)]
 mod test {
+    use strict_encoding::StrictDecode;
+
     use super::*;
     use crate::schema::SchemaVerify;
     use crate::script::Action;
     use crate::validation::Failure;
     use crate::vm::embedded::NodeValidator;
-    use strict_encoding::StrictDecode;
 
     static GENESIS_SCHEMA: [u8; 71] = [
-        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
-        0, 17, 0, 4, 0, 1, 0, 1, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0,
-        2, 1, 0, 0, 1, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 17, 0, 0, 0,
-        0, 0,
+        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0, 0, 17, 0, 4, 0, 1, 0,
+        1, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0, 2, 1, 0, 0, 1, 0, 4, 0, 1, 0, 2, 0, 3, 0,
+        4, 0, 1, 0, 0, 17, 0, 0, 0, 0, 0,
     ];
 
     static TRANSITION_SCHEMA: [u8; 97] = [
-        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
-        0, 17, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 25, 0,
-        4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1,
-        0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 17,
-        0, 0, 0, 0, 0,
+        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0, 0, 17, 0, 4, 0, 1, 0,
+        1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 1, 0, 1, 0,
+        2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0,
+        0, 17, 0, 0, 0, 0, 0,
     ];
 
     static EXTENSION_SCHEMA: [u8; 81] = [
-        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0,
-        0, 17, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0,
-        0, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0, 12, 0, 4, 0, 1, 0, 2, 0, 3,
-        0, 4, 0, 1, 0, 0, 17, 0, 0, 0, 0, 0,
+        4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0, 0, 17, 0, 4, 0, 1, 0,
+        2, 0, 3, 0, 4, 0, 4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 25, 0, 4, 0, 0, 0,
+        12, 0, 4, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 0, 17, 0, 0, 0, 0, 0,
     ];
 
     #[test]
@@ -515,8 +434,7 @@ mod test {
 
     #[test]
     fn test_node_for_genesis() {
-        let genesis_schema =
-            GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]).unwrap();
+        let genesis_schema = GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
         valencies.insert(1u16);
@@ -547,8 +465,7 @@ mod test {
 
     #[test]
     fn test_node_for_transition() {
-        let transition_schema =
-            TransitionSchema::strict_decode(&TRANSITION_SCHEMA[..]).unwrap();
+        let transition_schema = TransitionSchema::strict_decode(&TRANSITION_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
         valencies.insert(1u16);
@@ -582,8 +499,7 @@ mod test {
 
     #[test]
     fn test_node_for_extension() {
-        let extension_schema =
-            ExtensionSchema::strict_decode(&EXTENSION_SCHEMA[..]).unwrap();
+        let extension_schema = ExtensionSchema::strict_decode(&EXTENSION_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
         valencies.insert(1u16);
@@ -618,33 +534,27 @@ mod test {
         let mut metadata_structures = MetadataStructure::new();
         metadata_structures.insert(1 as FieldType, Occurrences::Once);
         metadata_structures.insert(2 as FieldType, Occurrences::NoneOrOnce);
-        metadata_structures
-            .insert(3 as FieldType, Occurrences::OnceOrUpTo(13u16));
-        metadata_structures
-            .insert(4 as FieldType, Occurrences::NoneOrUpTo(17u16));
+        metadata_structures.insert(3 as FieldType, Occurrences::OnceOrUpTo(13u16));
+        metadata_structures.insert(4 as FieldType, Occurrences::NoneOrUpTo(17u16));
 
         let mut metadata_structures2 = MetadataStructure::new();
         metadata_structures2.insert(1 as FieldType, Occurrences::Once);
         metadata_structures2.insert(2 as FieldType, Occurrences::NoneOrOnce);
         metadata_structures2.insert(3 as FieldType, Occurrences::OnceOrMore);
-        metadata_structures2
-            .insert(4 as FieldType, Occurrences::NoneOrUpTo(15u16));
+        metadata_structures2.insert(4 as FieldType, Occurrences::NoneOrUpTo(15u16));
 
         // Create Two Seal Structures
         let mut seal_structures = OwnedRightsStructure::new();
         seal_structures.insert(1 as OwnedRightType, Occurrences::Once);
         seal_structures.insert(2 as OwnedRightType, Occurrences::NoneOrOnce);
-        seal_structures
-            .insert(3 as OwnedRightType, Occurrences::OnceOrUpTo(25u16));
-        seal_structures
-            .insert(4 as OwnedRightType, Occurrences::NoneOrUpTo(12u16));
+        seal_structures.insert(3 as OwnedRightType, Occurrences::OnceOrUpTo(25u16));
+        seal_structures.insert(4 as OwnedRightType, Occurrences::NoneOrUpTo(12u16));
 
         let mut seal_structures2 = OwnedRightsStructure::new();
         seal_structures2.insert(1 as OwnedRightType, Occurrences::Once);
         seal_structures2.insert(2 as OwnedRightType, Occurrences::NoneOrOnce);
         seal_structures2.insert(3 as OwnedRightType, Occurrences::OnceOrMore);
-        seal_structures2
-            .insert(4 as OwnedRightType, Occurrences::NoneOrUpTo(30u16));
+        seal_structures2.insert(4 as OwnedRightType, Occurrences::NoneOrUpTo(30u16));
 
         // Create Two Valency structure
         let mut valency_structure = PublicRightsStructure::new();
@@ -715,20 +625,11 @@ mod test {
         let transition_failures = vec![
             Failure::SchemaRootNoMetadataMatch(NodeType::StateTransition, 3),
             Failure::SchemaRootNoMetadataMatch(NodeType::StateTransition, 4),
-            Failure::SchemaRootNoParentOwnedRightsMatch(
-                NodeType::StateTransition,
-                3,
-            ),
-            Failure::SchemaRootNoParentOwnedRightsMatch(
-                NodeType::StateTransition,
-                4,
-            ),
+            Failure::SchemaRootNoParentOwnedRightsMatch(NodeType::StateTransition, 3),
+            Failure::SchemaRootNoParentOwnedRightsMatch(NodeType::StateTransition, 4),
             Failure::SchemaRootNoOwnedRightsMatch(NodeType::StateTransition, 3),
             Failure::SchemaRootNoOwnedRightsMatch(NodeType::StateTransition, 4),
-            Failure::SchemaRootNoPublicRightsMatch(
-                NodeType::StateTransition,
-                2,
-            ),
+            Failure::SchemaRootNoPublicRightsMatch(NodeType::StateTransition, 2),
             Failure::SchemaRootNoAbiMatch {
                 node_type: NodeType::StateTransition,
                 action_id: Action::ValidateTransition,
@@ -736,10 +637,7 @@ mod test {
         ];
 
         let extension_failures = vec![
-            Failure::SchemaRootNoParentPublicRightsMatch(
-                NodeType::StateExtension,
-                2,
-            ),
+            Failure::SchemaRootNoParentPublicRightsMatch(NodeType::StateExtension, 2),
             Failure::SchemaRootNoPublicRightsMatch(NodeType::StateExtension, 2),
         ];
 

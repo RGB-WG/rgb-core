@@ -39,13 +39,10 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::secp256k1::rand::RngCore;
-use commit_verify::CommitConceal;
-
 use bp::seals::txout::blind::{ConcealedSeal, ParseError, RevealedSeal};
-pub use bp::seals::txout::blind::{
-    ConcealedSeal as Confidential, RevealedSeal as Revealed,
-};
+pub use bp::seals::txout::blind::{ConcealedSeal as Confidential, RevealedSeal as Revealed};
 use bp::seals::txout::CloseMethod;
+use commit_verify::CommitConceal;
 
 /// Trait for types supporting conversion to a [`RevealedSeal`]
 pub trait IntoRevealedSeal {
@@ -101,11 +98,7 @@ impl From<RevealedSeal> for SealEndpoint {
 impl SealEndpoint {
     /// Constructs [`SealEndpoint`] for the witness transaction output using
     /// provided random number generator for creating blinding factor
-    pub fn with(
-        method: CloseMethod,
-        vout: u32,
-        rng: &mut impl RngCore,
-    ) -> SealEndpoint {
+    pub fn with(method: CloseMethod, vout: u32, rng: &mut impl RngCore) -> SealEndpoint {
         SealEndpoint::WitnessVout {
             method,
             vout,
@@ -162,14 +155,16 @@ impl FromStr for SealEndpoint {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::convert::TryFrom;
+
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::OutPoint;
     use bp::seals::txout::TxoSeal;
     use commit_verify::CommitEncode;
     use secp256k1zkp::rand::{thread_rng, RngCore};
-    use std::convert::TryFrom;
     use strict_encoding::{StrictDecode, StrictEncode};
+
+    use super::*;
 
     // Hard coded TxOutpoint variant of a Revealed Seal
     // Constructed with following data
@@ -177,39 +172,37 @@ mod test {
     // blinding = 13457965799463774082
     // vout = 6
     static REVEALED_TXOUTPOINT: [u8; 45] = [
-        0x0, 0x82, 0xe7, 0x64, 0x5c, 0x97, 0x4c, 0xc4, 0xba, 0x8e, 0xaf, 0xd3,
-        0x36, 0xd, 0x65, 0x25, 0x89, 0x52, 0xf4, 0xd9, 0x57, 0x5e, 0xac, 0x1b,
-        0x1f, 0x18, 0xee, 0x18, 0x51, 0x29, 0x71, 0x82, 0x93, 0xb6, 0xd7, 0x62,
-        0x2b, 0x1e, 0xdd, 0x1f, 0x20, 0x6, 0x0, 0x0, 0x0,
+        0x0, 0x82, 0xe7, 0x64, 0x5c, 0x97, 0x4c, 0xc4, 0xba, 0x8e, 0xaf, 0xd3, 0x36, 0xd, 0x65,
+        0x25, 0x89, 0x52, 0xf4, 0xd9, 0x57, 0x5e, 0xac, 0x1b, 0x1f, 0x18, 0xee, 0x18, 0x51, 0x29,
+        0x71, 0x82, 0x93, 0xb6, 0xd7, 0x62, 0x2b, 0x1e, 0xdd, 0x1f, 0x20, 0x6, 0x0, 0x0, 0x0,
     ];
 
     // Hard coded concealed seal of the above TxOutpoint variant
     static CONCEALED_TXOUTPOINT: [u8; 32] = [
-        0x43, 0xea, 0xe3, 0x29, 0x3d, 0x22, 0xcb, 0x33, 0x37, 0x53, 0x78, 0x74,
-        0x8, 0xe, 0xed, 0x5d, 0x7c, 0xff, 0xde, 0x4c, 0xee, 0x6e, 0x44, 0xc5,
-        0x62, 0x7d, 0x73, 0x19, 0x61, 0x6e, 0x4, 0x87,
+        0x43, 0xea, 0xe3, 0x29, 0x3d, 0x22, 0xcb, 0x33, 0x37, 0x53, 0x78, 0x74, 0x8, 0xe, 0xed,
+        0x5d, 0x7c, 0xff, 0xde, 0x4c, 0xee, 0x6e, 0x44, 0xc5, 0x62, 0x7d, 0x73, 0x19, 0x61, 0x6e,
+        0x4, 0x87,
     ];
 
     // Hard coded WitnessVout variant of a Revealed Seal
     // Constructred with following data
     // vout = 6
     // blinding = 13457965799463774082
-    static REVEALED_WITNESSVOUT: [u8; 13] = [
-        0x1, 0x6, 0x0, 0x0, 0x0, 0x82, 0xe7, 0x64, 0x5c, 0x97, 0x4c, 0xc4, 0xba,
-    ];
+    static REVEALED_WITNESSVOUT: [u8; 13] =
+        [0x1, 0x6, 0x0, 0x0, 0x0, 0x82, 0xe7, 0x64, 0x5c, 0x97, 0x4c, 0xc4, 0xba];
 
     // Hard coded concealed seal of the above WitnessVout variant
     static CONCEALED_WITNESSVOUT: [u8; 32] = [
-        0x3e, 0x90, 0x1d, 0x9d, 0xef, 0xb4, 0xbb, 0x11, 0x8d, 0x69, 0x23, 0x9c,
-        0xe, 0x41, 0xb9, 0x80, 0xd, 0x29, 0xdc, 0x5a, 0x7d, 0x2b, 0xa9, 0xe2,
-        0x39, 0xc8, 0x83, 0x90, 0x6, 0x93, 0x74, 0xca,
+        0x3e, 0x90, 0x1d, 0x9d, 0xef, 0xb4, 0xbb, 0x11, 0x8d, 0x69, 0x23, 0x9c, 0xe, 0x41, 0xb9,
+        0x80, 0xd, 0x29, 0xdc, 0x5a, 0x7d, 0x2b, 0xa9, 0xe2, 0x39, 0xc8, 0x83, 0x90, 0x6, 0x93,
+        0x74, 0xca,
     ];
 
     // Hard coded outpoint of the above seals
     static OUTPOINT: [u8; 36] = [
-        0x8e, 0xaf, 0xd3, 0x36, 0xd, 0x65, 0x25, 0x89, 0x52, 0xf4, 0xd9, 0x57,
-        0x5e, 0xac, 0x1b, 0x1f, 0x18, 0xee, 0x18, 0x51, 0x29, 0x71, 0x82, 0x93,
-        0xb6, 0xd7, 0x62, 0x2b, 0x1e, 0xdd, 0x1f, 0x20, 0x6, 0x0, 0x0, 0x0,
+        0x8e, 0xaf, 0xd3, 0x36, 0xd, 0x65, 0x25, 0x89, 0x52, 0xf4, 0xd9, 0x57, 0x5e, 0xac, 0x1b,
+        0x1f, 0x18, 0xee, 0x18, 0x51, 0x29, 0x71, 0x82, 0x93, 0xb6, 0xd7, 0x62, 0x2b, 0x1e, 0xdd,
+        0x1f, 0x20, 0x6, 0x0, 0x0, 0x0,
     ];
 
     #[test]
@@ -230,8 +223,7 @@ mod test {
 
     #[test]
     fn test_concealed() {
-        let revelaed =
-            Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revelaed = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
 
         let concealed = revelaed.commit_conceal();
 
@@ -244,8 +236,7 @@ mod test {
 
     #[test]
     fn test_witness_conf() {
-        let revelaed =
-            Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+        let revelaed = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
         let concealed = revelaed.commit_conceal();
 
@@ -258,8 +249,7 @@ mod test {
 
     #[test]
     fn test_into_outpoint() {
-        let revealed =
-            Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revealed = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
 
         let outpoint = OutPoint::try_from(revealed.clone()).unwrap();
 
@@ -272,17 +262,14 @@ mod test {
     #[should_panic(expected = "WitnessVoutError")]
     fn test_witness_to_outpoint() {
         // Conversion to Outpoint from WitnessVout variant should panic
-        let revealed =
-            Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+        let revealed = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
         bitcoin::OutPoint::try_from(revealed).unwrap();
     }
 
     #[test]
     fn test_outpoint_reveal() {
-        let revealed_txoutpoint =
-            Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
-        let revealed_witnessvout =
-            Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+        let revealed_txoutpoint = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revealed_witnessvout = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
         // Data used for constructing above seals
         let txid = bitcoin::Txid::from_hex(
@@ -307,10 +294,8 @@ mod test {
 
     #[test]
     fn test_commitencode_seal() {
-        let revealed_txoutpoint =
-            Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
-        let revelaed_wtinessvout =
-            Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+        let revealed_txoutpoint = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revelaed_wtinessvout = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
         let mut commit1 = vec![];
         revealed_txoutpoint.commit_encode(&mut commit1);

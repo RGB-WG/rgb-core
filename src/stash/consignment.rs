@@ -18,8 +18,8 @@ use bitcoin::hashes::{sha256, sha256t};
 use bitcoin::Txid;
 use bp::dbc::Anchor;
 use commit_verify::{
-    commit_encode, lnpbp4, CommitConceal, CommitVerify, ConsensusCommit,
-    PrehashedProtocol, TaggedHash,
+    commit_encode, lnpbp4, CommitConceal, CommitVerify, ConsensusCommit, PrehashedProtocol,
+    TaggedHash,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use strict_encoding::LargeVec;
@@ -27,9 +27,8 @@ use wallet::onchain::ResolveTx;
 
 use crate::contract::ConcealSeals;
 use crate::{
-    schema, seal, validation, ConcealState, ConsistencyError, Extension,
-    Genesis, GraphApi, Node, NodeId, Schema, SealEndpoint, Transition,
-    Validator,
+    schema, seal, validation, ConcealState, ConsistencyError, Extension, Genesis, GraphApi, Node,
+    NodeId, Schema, SealEndpoint, Transition, Validator,
 };
 
 pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
@@ -39,8 +38,8 @@ pub type ExtensionData = LargeVec<Extension>;
 pub const RGB_CONSIGNMENT_VERSION: u8 = 0;
 
 static MIDSTATE_CONSIGNMENT_ID: [u8; 32] = [
-    8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197,
-    98, 75, 254, 29, 125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
+    8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197, 98, 75, 254, 29,
+    125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
 ];
 
 /// Tag used for [`ConsignmentId`] hash types
@@ -55,11 +54,7 @@ impl sha256t::Tag for ConsignmentIdTag {
 }
 
 /// Unique consignment identifier equivalent to the commitment hash
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(
     Wrapper,
     Copy,
@@ -73,7 +68,7 @@ impl sha256t::Tag for ConsignmentIdTag {
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(ConsignmentId::to_bech32_string)]
@@ -81,13 +76,10 @@ pub struct ConsignmentId(sha256t::Hash<ConsignmentIdTag>);
 
 // TODO: Use tagged protocol
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for ConsignmentId
-where
-    Msg: AsRef<[u8]>,
+where Msg: AsRef<[u8]>
 {
     #[inline]
-    fn commit(msg: &Msg) -> ConsignmentId {
-        ConsignmentId::hash(msg)
-    }
+    fn commit(msg: &Msg) -> ConsignmentId { ConsignmentId::hash(msg) }
 }
 
 impl commit_encode::Strategy for ConsignmentId {
@@ -102,9 +94,7 @@ impl bech32::Strategy for ConsignmentId {
 impl FromStr for ConsignmentId {
     type Err = bech32::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        ConsignmentId::from_bech32_str(s)
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { ConsignmentId::from_bech32_str(s) }
 }
 
 /// Consignment represents contract-specific data, always starting with genesis,
@@ -168,9 +158,7 @@ impl bech32::Strategy for Consignment {
 impl FromStr for Consignment {
     type Err = bech32::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Consignment::from_bech32_str(s)
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Consignment::from_bech32_str(s) }
 }
 
 // TODO #60: Implement different conceal procedures for the consignment
@@ -193,14 +181,10 @@ impl Consignment {
     }
 
     #[inline]
-    pub fn id(&self) -> ConsignmentId {
-        self.clone().consensus_commit()
-    }
+    pub fn id(&self) -> ConsignmentId { self.clone().consensus_commit() }
 
     #[inline]
-    pub fn version(&self) -> u8 {
-        self.version
-    }
+    pub fn version(&self) -> u8 { self.version }
 
     #[inline]
     pub fn txids(&self) -> BTreeSet<Txid> {
@@ -286,8 +270,7 @@ impl Consignment {
     }
 
     pub fn finalize(&mut self, expose: &BTreeSet<SealEndpoint>) -> usize {
-        let concealed_endpoints =
-            expose.iter().map(SealEndpoint::commit_conceal).collect();
+        let concealed_endpoints = expose.iter().map(SealEndpoint::commit_conceal).collect();
 
         let mut removed_endpoints = vec![];
         self.endpoints = self
@@ -308,21 +291,21 @@ impl Consignment {
             .map(SealEndpoint::commit_conceal)
             .collect();
 
-        let mut count = self.state_transitions.iter_mut().fold(
-            0usize,
-            |count, (_, transition)| {
+        let mut count = self
+            .state_transitions
+            .iter_mut()
+            .fold(0usize, |count, (_, transition)| {
                 count
                     + transition.conceal_state_except(&concealed_endpoints)
                     + transition.conceal_seals(&seals_to_conceal)
-            },
-        );
+            });
 
-        count =
-            self.state_extensions
-                .iter_mut()
-                .fold(count, |count, extension| {
-                    count + extension.conceal_state_except(&concealed_endpoints)
-                });
+        count = self
+            .state_extensions
+            .iter_mut()
+            .fold(count, |count, extension| {
+                count + extension.conceal_state_except(&concealed_endpoints)
+            });
 
         count
     }
@@ -336,20 +319,20 @@ impl Consignment {
     ) -> usize {
         let counter = 0;
         for (_, transition) in &mut *self.state_transitions {
-            transition.owned_rights_mut().iter_mut().fold(
-                counter,
-                |counter, (_, assignment)| {
+            transition
+                .owned_rights_mut()
+                .iter_mut()
+                .fold(counter, |counter, (_, assignment)| {
                     counter + assignment.reveal_seals(known_seals.clone())
-                },
-            );
+                });
         }
         for extension in &mut *self.state_extensions {
-            extension.owned_rights_mut().iter_mut().fold(
-                counter,
-                |counter, (_, assignment)| {
+            extension
+                .owned_rights_mut()
+                .iter_mut()
+                .fold(counter, |counter, (_, assignment)| {
                     counter + assignment.reveal_seals(known_seals.clone())
-                },
-            );
+                });
         }
         counter
     }
@@ -357,12 +340,13 @@ impl Consignment {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use super::*;
-    use crate::schema::test::schema;
     use amplify::Wrapper;
     use commit_verify::tagged_hash;
     use strict_encoding::StrictDecode;
     use wallet::onchain::TxResolverError;
+
+    use super::*;
+    use crate::schema::test::schema;
 
     static CONSIGNMENT: [u8; 1496] = include!("../../test/consignment.in");
 
@@ -373,15 +357,9 @@ pub(crate) mod test {
     struct TestResolver;
 
     impl ResolveTx for TestResolver {
-        fn resolve_tx(
-            &self,
-            txid: Txid,
-        ) -> Result<bitcoin::Transaction, TxResolverError> {
+        fn resolve_tx(&self, txid: Txid) -> Result<bitcoin::Transaction, TxResolverError> {
             eprintln!("Validating txid {}", txid);
-            Err(TxResolverError {
-                txid: txid,
-                err: None,
-            })
+            Err(TxResolverError { txid, err: None })
         }
     }
 
@@ -406,8 +384,7 @@ pub(crate) mod test {
     fn test_consignment_bech32() {
         let consignment = consignment();
 
-        let bech32id =
-            "id1mqqhssqzjqz5whcdkmwxj3ugv8ekmmyna2vfkjee204p4eu644psqqhg2c";
+        let bech32id = "id1mqqhssqzjqz5whcdkmwxj3ugv8ekmmyna2vfkjee204p4eu644psqqhg2c";
         let id = consignment.id();
         assert_eq!(bech32id, id.to_string());
         assert_eq!(ConsignmentId::from_str(bech32id).unwrap(), id);

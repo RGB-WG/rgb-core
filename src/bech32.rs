@@ -11,23 +11,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use bech32::{self, FromBase32, ToBase32, Variant};
 use core::fmt::{Display, Formatter};
 use core::str::FromStr;
-use deflate::{write::DeflateEncoder, Compression};
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Deserializer, Serializer};
 use std::convert::{TryFrom, TryInto};
 
+use bech32::{self, FromBase32, ToBase32, Variant};
+use deflate::write::DeflateEncoder;
+use deflate::Compression;
 use secp256k1zkp;
-use strict_encoding::{
-    self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode,
-};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serializer};
+use strict_encoding::{self, strict_deserialize, strict_serialize, StrictDecode, StrictEncode};
 
-use crate::{
-    seal, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId,
-    Transition,
-};
+use crate::{seal, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId, Transition};
 
 // TODO #40: Refactor bech32 into single style after `Consignment` &
 //      `ConsignmentId`
@@ -47,10 +43,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     PedersenCommitment(secp256k1zkp::pedersen::Commitment),
 
@@ -60,10 +53,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     Bulletproof(secp256k1zkp::pedersen::RangeProof),
 
@@ -73,10 +63,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     Curve25519Pk(ed25519_dalek::PublicKey),
 
@@ -86,10 +73,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     Ed25519Sign(ed25519_dalek::Signature),
 
@@ -99,10 +83,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     BlindedUtxo(seal::Confidential),
 
@@ -112,10 +93,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     SchemaId(SchemaId),
 
@@ -125,10 +103,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     Schema(Schema),
 
@@ -138,10 +113,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     ContractId(ContractId),
 
@@ -151,10 +123,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     Genesis(Genesis),
 
@@ -164,10 +133,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     Transition(Transition),
 
@@ -177,10 +143,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     Extension(Extension),
 
@@ -191,10 +154,7 @@ pub enum Bech32 {
     #[from]
     #[cfg_attr(
         feature = "serde",
-        serde(
-            serialize_with = "to_bech32_str",
-            deserialize_with = "from_bech32_str"
-        )
+        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
     )]
     Disclosure(Disclosure),
 
@@ -236,9 +196,7 @@ impl Bech32 {
     /// Encoder for v0 of raw data encoding algorithm. Uses plain strict encoded
     /// data
     #[allow(dead_code)]
-    pub(self) fn plain_encode(
-        obj: &impl StrictEncode,
-    ) -> Result<Vec<u8>, Error> {
+    pub(self) fn plain_encode(obj: &impl StrictEncode) -> Result<Vec<u8>, Error> {
         // We initialize writer with a version byte, indicating plain
         // algorithm used
         let mut writer = vec![Self::RAW_DATA_ENCODING_PLAIN];
@@ -247,9 +205,7 @@ impl Bech32 {
     }
 
     /// Encoder for v1 of raw data encoding algorithm. Uses deflate
-    pub(self) fn deflate_encode(
-        obj: &impl StrictEncode,
-    ) -> Result<Vec<u8>, Error> {
+    pub(self) fn deflate_encode(obj: &impl StrictEncode) -> Result<Vec<u8>, Error> {
         // We initialize writer with a version byte, indicating deflation
         // algorithm used
         let writer = vec![Self::RAW_DATA_ENCODING_DEFLATE];
@@ -259,15 +215,13 @@ impl Bech32 {
     }
 
     pub(self) fn raw_decode<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
-    where
-        T: StrictDecode,
-    {
+    where T: StrictDecode {
         let mut reader = data.as_ref();
         Ok(match u8::strict_decode(&mut reader)? {
             Self::RAW_DATA_ENCODING_PLAIN => T::strict_decode(&mut reader)?,
             Self::RAW_DATA_ENCODING_DEFLATE => {
-                let decoded = inflate::inflate_bytes(&mut reader)
-                    .map_err(|e| Error::InflateError(e))?;
+                let decoded =
+                    inflate::inflate_bytes(&mut reader).map_err(|e| Error::InflateError(e))?;
                 T::strict_decode(&decoded[..])?
             }
             unknown_ver => Err(Error::UnknownRawDataEncoding(unknown_ver))?,
@@ -282,16 +236,13 @@ pub trait ToBech32 {
 
     /// Converts type to it's Bech32-encoded representation. Default
     /// implementation constructs [`Bech32`] object and converts it to string.
-    fn to_bech32_string(&self) -> String {
-        self.to_bech32().to_string()
-    }
+    fn to_bech32_string(&self) -> String { self.to_bech32().to_string() }
 }
 
 /// Trait for types that can be reconstructed from Bech32-encoded data tagged
 /// with specific HRP
 pub trait FromBech32
-where
-    Self: Sized,
+where Self: Sized
 {
     /// Unwraps [`Bech32`] enum data into a concrete type, if any, or fails with
     /// [`Error::WrongType`] otherwise
@@ -300,27 +251,19 @@ where
     /// Tries to read Bech32-encoded data from `s` argument, checks it's type
     /// and constructs object if HRP corresponds to the type implementing this
     /// trait. Fails with [`Error`] type
-    fn from_bech32_str(s: &str) -> Result<Self, Error> {
-        Self::from_bech32(s.parse()?)
-    }
+    fn from_bech32_str(s: &str) -> Result<Self, Error> { Self::from_bech32(s.parse()?) }
 }
 
 impl<T> ToBech32 for T
-where
-    T: Into<Bech32> + Clone,
+where T: Into<Bech32> + Clone
 {
-    fn to_bech32(&self) -> Bech32 {
-        self.clone().into()
-    }
+    fn to_bech32(&self) -> Bech32 { self.clone().into() }
 }
 
 impl<T> FromBech32 for T
-where
-    T: TryFrom<Bech32, Error = Error>,
+where T: TryFrom<Bech32, Error = Error>
 {
-    fn from_bech32(bech32: Bech32) -> Result<Self, Error> {
-        Self::try_from(bech32)
-    }
+    fn from_bech32(bech32: Bech32) -> Result<Self, Error> { Self::try_from(bech32) }
 }
 
 /// Errors generated by Bech32 conversion functions (both parsing and
@@ -350,9 +293,7 @@ pub enum Error {
 }
 
 impl From<Error> for ::core::fmt::Error {
-    fn from(_: Error) -> Self {
-        ::core::fmt::Error
-    }
+    fn from(_: Error) -> Self { ::core::fmt::Error }
 }
 
 impl TryFrom<Bech32> for secp256k1zkp::pedersen::Commitment {
@@ -497,42 +438,18 @@ impl FromStr for Bech32 {
         // TODO: Update to Bech32m and check variant
 
         Ok(match hrp {
-            x if x == Self::HRP_PEDERSEN => {
-                Self::PedersenCommitment(strict_deserialize(&data)?)
-            }
-            x if x == Self::HRP_BULLETPROOF => {
-                Self::Bulletproof(strict_deserialize(&data)?)
-            }
-            x if x == Self::HRP_CURVE25519OPK => {
-                Self::Curve25519Pk(strict_deserialize(&data)?)
-            }
-            x if x == Self::HRP_ED25519OSIGN => {
-                Self::Ed25519Sign(strict_deserialize(&data)?)
-            }
-            x if x == Self::HRP_OUTPOINT => {
-                Self::BlindedUtxo(strict_deserialize(&data)?)
-            }
-            x if x == Self::HRP_SCHEMA_ID => {
-                Self::SchemaId(strict_deserialize(&data)?)
-            }
-            x if x == Self::HRP_CONTRACT_ID => {
-                Self::ContractId(strict_deserialize(&data)?)
-            }
-            x if x == Self::HRP_SCHEMA => {
-                Self::Schema(Bech32::raw_decode(&data)?)
-            }
-            x if x == Self::HRP_GENESIS => {
-                Self::Genesis(Bech32::raw_decode(&data)?)
-            }
-            x if x == Self::HRP_EXTENSION => {
-                Self::Extension(Bech32::raw_decode(&data)?)
-            }
-            x if x == Self::HRP_TRANSITION => {
-                Self::Transition(Bech32::raw_decode(&data)?)
-            }
-            x if x == Self::HRP_DISCLOSURE => {
-                Self::Disclosure(Bech32::raw_decode(&data)?)
-            }
+            x if x == Self::HRP_PEDERSEN => Self::PedersenCommitment(strict_deserialize(&data)?),
+            x if x == Self::HRP_BULLETPROOF => Self::Bulletproof(strict_deserialize(&data)?),
+            x if x == Self::HRP_CURVE25519OPK => Self::Curve25519Pk(strict_deserialize(&data)?),
+            x if x == Self::HRP_ED25519OSIGN => Self::Ed25519Sign(strict_deserialize(&data)?),
+            x if x == Self::HRP_OUTPOINT => Self::BlindedUtxo(strict_deserialize(&data)?),
+            x if x == Self::HRP_SCHEMA_ID => Self::SchemaId(strict_deserialize(&data)?),
+            x if x == Self::HRP_CONTRACT_ID => Self::ContractId(strict_deserialize(&data)?),
+            x if x == Self::HRP_SCHEMA => Self::Schema(Bech32::raw_decode(&data)?),
+            x if x == Self::HRP_GENESIS => Self::Genesis(Bech32::raw_decode(&data)?),
+            x if x == Self::HRP_EXTENSION => Self::Extension(Bech32::raw_decode(&data)?),
+            x if x == Self::HRP_TRANSITION => Self::Transition(Bech32::raw_decode(&data)?),
+            x if x == Self::HRP_DISCLOSURE => Self::Disclosure(Bech32::raw_decode(&data)?),
             other => Self::Other(other, data),
         })
     }
@@ -541,42 +458,18 @@ impl FromStr for Bech32 {
 impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
-            Self::PedersenCommitment(obj) => {
-                (Self::HRP_PEDERSEN, strict_serialize(obj)?)
-            }
-            Self::Bulletproof(obj) => {
-                (Self::HRP_BULLETPROOF, strict_serialize(obj)?)
-            }
-            Self::Curve25519Pk(obj) => {
-                (Self::HRP_CURVE25519OPK, strict_serialize(obj)?)
-            }
-            Self::Ed25519Sign(obj) => {
-                (Self::HRP_ED25519OSIGN, strict_serialize(obj)?)
-            }
-            Self::BlindedUtxo(obj) => {
-                (Self::HRP_OUTPOINT, strict_serialize(obj)?)
-            }
-            Self::SchemaId(obj) => {
-                (Self::HRP_SCHEMA_ID, strict_serialize(obj)?)
-            }
-            Self::ContractId(obj) => {
-                (Self::HRP_CONTRACT_ID, strict_serialize(obj)?)
-            }
-            Self::Schema(obj) => {
-                (Self::HRP_SCHEMA, Bech32::deflate_encode(obj)?)
-            }
-            Self::Genesis(obj) => {
-                (Self::HRP_GENESIS, Bech32::deflate_encode(obj)?)
-            }
-            Self::Extension(obj) => {
-                (Self::HRP_EXTENSION, Bech32::deflate_encode(obj)?)
-            }
-            Self::Transition(obj) => {
-                (Self::HRP_TRANSITION, Bech32::deflate_encode(obj)?)
-            }
-            Self::Disclosure(obj) => {
-                (Self::HRP_DISCLOSURE, Bech32::deflate_encode(obj)?)
-            }
+            Self::PedersenCommitment(obj) => (Self::HRP_PEDERSEN, strict_serialize(obj)?),
+            Self::Bulletproof(obj) => (Self::HRP_BULLETPROOF, strict_serialize(obj)?),
+            Self::Curve25519Pk(obj) => (Self::HRP_CURVE25519OPK, strict_serialize(obj)?),
+            Self::Ed25519Sign(obj) => (Self::HRP_ED25519OSIGN, strict_serialize(obj)?),
+            Self::BlindedUtxo(obj) => (Self::HRP_OUTPOINT, strict_serialize(obj)?),
+            Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_serialize(obj)?),
+            Self::ContractId(obj) => (Self::HRP_CONTRACT_ID, strict_serialize(obj)?),
+            Self::Schema(obj) => (Self::HRP_SCHEMA, Bech32::deflate_encode(obj)?),
+            Self::Genesis(obj) => (Self::HRP_GENESIS, Bech32::deflate_encode(obj)?),
+            Self::Extension(obj) => (Self::HRP_EXTENSION, Bech32::deflate_encode(obj)?),
+            Self::Transition(obj) => (Self::HRP_TRANSITION, Bech32::deflate_encode(obj)?),
+            Self::Disclosure(obj) => (Self::HRP_DISCLOSURE, Bech32::deflate_encode(obj)?),
             Self::Other(hrp, obj) => (hrp.as_ref(), obj.clone()),
         };
         // TODO: Update to Bech32m
@@ -589,57 +482,43 @@ impl Display for Bech32 {
 impl FromStr for Schema {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s)?.try_into()
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Bech32::from_str(s)?.try_into() }
 }
 
 impl FromStr for Genesis {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s)?.try_into()
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Bech32::from_str(s)?.try_into() }
 }
 
 impl FromStr for Extension {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s)?.try_into()
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Bech32::from_str(s)?.try_into() }
 }
 
 impl FromStr for Transition {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s)?.try_into()
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Bech32::from_str(s)?.try_into() }
 }
 
 impl FromStr for Disclosure {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s)?.try_into()
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Bech32::from_str(s)?.try_into() }
 }
 
 impl FromStr for ContractId {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s)?.try_into()
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Bech32::from_str(s)?.try_into() }
 }
 
 impl FromStr for SchemaId {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Bech32::from_str(s)?.try_into()
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Bech32::from_str(s)?.try_into() }
 }
 
 // TODO #41: Enable after removal of the default `Display` and `FromStr`
@@ -703,26 +582,30 @@ where
 {
     use serde::de::Error;
     String::deserialize(deserializer).and_then(|string| {
-        T::from_bech32_str(&string)
-            .map_err(|err| Error::custom(err.to_string()))
+        T::from_bech32_str(&string).map_err(|err| Error::custom(err.to_string()))
     })
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use bp::seals::txout::CloseMethod;
     use commit_verify::CommitConceal;
+
+    use super::*;
 
     #[test]
     fn test_bech32_outpoint() {
         let obj = seal::Revealed {
             method: CloseMethod::TapretFirst,
             blinding: 11645300769465024575,
-            txid: Some("42332750017e9547abf0e975ec92832d8cfe3fbbaa78cec434d22175d5b6e6d9"
-                .parse().unwrap()),
+            txid: Some(
+                "42332750017e9547abf0e975ec92832d8cfe3fbbaa78cec434d22175d5b6e6d9"
+                    .parse()
+                    .unwrap(),
+            ),
             vout: 3,
-        }.commit_conceal();
+        }
+        .commit_conceal();
         let bech32 = obj.to_bech32_string();
         assert_eq!(
             bech32,

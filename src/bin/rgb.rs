@@ -17,16 +17,16 @@ extern crate clap;
 extern crate amplify;
 extern crate serde_crate as serde;
 
-use clap::Parser;
-use serde::Serialize;
 use std::fmt::{Debug, Display};
 use std::io::{self, Read};
 use std::str::FromStr;
 
 use amplify::hex::{self, FromHex, ToHex};
+use clap::Parser;
 use commit_verify::ConsensusCommit;
 use electrum_client::Client as ElectrumClient;
 use rgb::{Consignment, Disclosure, Extension, Genesis, Schema, Transition};
+use serde::Serialize;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 #[derive(Parser, Clone, Debug)]
@@ -204,9 +204,7 @@ pub enum GenesisCommand {
     },
 }
 
-#[derive(
-    ArgEnum, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display,
-)]
+#[derive(ArgEnum, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum Format {
     /// Format according to the rust debug rules
     #[display("debug")]
@@ -278,12 +276,15 @@ where
         },
     )?;
     Ok(match format {
-        Format::Bech32 => T::from_str(&String::from_utf8_lossy(&data))
-            .map_err(|err| err.to_string())?,
-        Format::Yaml => serde_yaml::from_str(&String::from_utf8_lossy(&data))
-            .map_err(|err| err.to_string())?,
-        Format::Json => serde_json::from_str(&String::from_utf8_lossy(&data))
-            .map_err(|err| err.to_string())?,
+        Format::Bech32 => {
+            T::from_str(&String::from_utf8_lossy(&data)).map_err(|err| err.to_string())?
+        }
+        Format::Yaml => {
+            serde_yaml::from_str(&String::from_utf8_lossy(&data)).map_err(|err| err.to_string())?
+        }
+        Format::Json => {
+            serde_json::from_str(&String::from_utf8_lossy(&data)).map_err(|err| err.to_string())?
+        }
         Format::Hexadecimal => T::strict_deserialize(
             Vec::<u8>::from_hex(&String::from_utf8_lossy(&data))
                 .as_ref()
@@ -360,8 +361,7 @@ fn main() -> Result<(), String> {
                 let status = consignment.validate(
                     &schema,
                     None,
-                    ElectrumClient::new(&electrum)
-                        .map_err(|err| format!("{:#?}", err))?,
+                    ElectrumClient::new(&electrum).map_err(|err| format!("{:#?}", err))?,
                 );
                 println!(
                     "{}",

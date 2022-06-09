@@ -21,27 +21,25 @@ use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::hashes::{self, sha256, sha256t, Hash, HashEngine};
-use bitcoin::secp256k1::{ecdsa::Signature, PublicKey};
+use bitcoin::secp256k1::ecdsa::Signature;
+use bitcoin::secp256k1::PublicKey;
 use bp::dbc::{Anchor, AnchorId};
 use commit_verify::{
-    commit_encode, lnpbp4, CommitEncode, CommitVerify, ConsensusCommit,
-    PrehashedProtocol, TaggedHash,
+    commit_encode, lnpbp4, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol,
+    TaggedHash,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use strict_encoding::StrictEncode;
 
 use crate::contract::seal::Confidential;
-use crate::{
-    ConcealAnchors, ConcealSeals, ConcealState, ContractId, Extension,
-    Transition,
-};
+use crate::{ConcealAnchors, ConcealSeals, ConcealState, ContractId, Extension, Transition};
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
 
 // TODO #62: Change the value
 static MIDSTATE_DISCLOSURE_ID: [u8; 32] = [
-    8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197,
-    98, 75, 254, 29, 125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
+    8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197, 98, 75, 254, 29,
+    125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
 ];
 
 /// Tag used for [`DisclosureId`] hash types
@@ -56,11 +54,7 @@ impl sha256t::Tag for DisclosureIdTag {
 }
 
 /// Unique disclosure identifier equivalent to the commitment hash
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(
     Wrapper,
     Copy,
@@ -74,7 +68,7 @@ impl sha256t::Tag for DisclosureIdTag {
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(DisclosureId::to_bech32_string)]
@@ -82,13 +76,10 @@ pub struct DisclosureId(sha256t::Hash<DisclosureIdTag>);
 
 // TODO: Use tagged protocol
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for DisclosureId
-where
-    Msg: AsRef<[u8]>,
+where Msg: AsRef<[u8]>
 {
     #[inline]
-    fn commit(msg: &Msg) -> DisclosureId {
-        DisclosureId::hash(msg)
-    }
+    fn commit(msg: &Msg) -> DisclosureId { DisclosureId::hash(msg) }
 }
 
 impl commit_encode::Strategy for DisclosureId {
@@ -103,15 +94,13 @@ impl bech32::Strategy for DisclosureId {
 impl FromStr for DisclosureId {
     type Err = bech32::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        DisclosureId::from_bech32_str(s)
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { DisclosureId::from_bech32_str(s) }
 }
 
 // TODO #62: Change the value
 static MIDSTATE_SIG_HASH: [u8; 32] = [
-    8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197,
-    98, 75, 254, 29, 125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
+    8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197, 98, 75, 254, 29,
+    125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
 ];
 
 /// Tag used for [`SigHash`] hash types
@@ -126,11 +115,7 @@ impl sha256t::Tag for SigHashTag {
 }
 
 /// Disclosure sig hash
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(
     Wrapper,
     Copy,
@@ -144,18 +129,9 @@ impl sha256t::Tag for SigHashTag {
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
-#[wrapper(
-    Debug,
-    LowerHex,
-    BorrowSlice,
-    Index,
-    IndexRange,
-    IndexFrom,
-    IndexTo,
-    IndexFull
-)]
+#[wrapper(Debug, LowerHex, BorrowSlice, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(LowerHex)]
 pub struct SigHash(sha256t::Hash<SigHashTag>);
 
@@ -164,25 +140,17 @@ impl Hash for SigHash {
     type Inner = <sha256t::Hash<SigHashTag> as Hash>::Inner;
     const LEN: usize = sha256t::Hash::<SigHashTag>::LEN;
 
-    fn from_engine(e: Self::Engine) -> Self {
-        <Self as Wrapper>::Inner::from_engine(e).into()
-    }
+    fn from_engine(e: Self::Engine) -> Self { <Self as Wrapper>::Inner::from_engine(e).into() }
 
     fn from_slice(sl: &[u8]) -> Result<Self, hashes::Error> {
         <Self as Wrapper>::Inner::from_slice(sl).map(Wrapper::from_inner)
     }
 
-    fn into_inner(self) -> Self::Inner {
-        Wrapper::into_inner(self).into_inner()
-    }
+    fn into_inner(self) -> Self::Inner { Wrapper::into_inner(self).into_inner() }
 
-    fn as_inner(&self) -> &Self::Inner {
-        Wrapper::as_inner(self).as_inner()
-    }
+    fn as_inner(&self) -> &Self::Inner { Wrapper::as_inner(self).as_inner() }
 
-    fn from_inner(inner: Self::Inner) -> Self {
-        <Self as Wrapper>::Inner::from_inner(inner).into()
-    }
+    fn from_inner(inner: Self::Inner) -> Self { <Self as Wrapper>::Inner::from_inner(inner).into() }
 }
 
 /// Disclosure purpose is to expose a set of stash data related to number of
@@ -194,14 +162,8 @@ impl Hash for SigHash {
 /// MB: We are limited by 16-bit integer size for the number of anchors and
 /// extensions to disclose, but this is fine since we can produce multiple
 /// disclosures when needed
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
-#[derive(
-    Getters, Clone, PartialEq, Debug, Default, StrictEncode, StrictDecode,
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[derive(Getters, Clone, PartialEq, Debug, Default, StrictEncode, StrictDecode)]
 pub struct Disclosure {
     /// Since these are not consensus-critical data structure (we never commit
     /// to it) we can use encoding versioning here
@@ -245,7 +207,8 @@ impl CommitEncode for Disclosure {
         //    + comment commitment)
         (|| -> Result<usize, strict_encoding::Error> {
             Ok(strict_encode_list!(e; self.version, self.transitions, self.extensions))
-        })().expect("Commit encoding is in-memory encoding and must not fail")
+        })()
+        .expect("Commit encoding is in-memory encoding and must not fail")
     }
 }
 
@@ -303,20 +266,15 @@ impl Disclosure {
             }
             Entry::Occupied(mut entry) => {
                 let (a, t) = entry.get_mut();
-                *a = anchor.merge_reveal(a.clone())
-                    .expect(
-                        "Anchor into_revealed procedure is broken for anchors with the same id"
-                    );
+                *a = anchor.merge_reveal(a.clone()).expect(
+                    "Anchor into_revealed procedure is broken for anchors with the same id",
+                );
                 t.extend(transitions);
             }
         }
     }
 
-    pub fn insert_extensions(
-        &mut self,
-        contract_id: ContractId,
-        extensions: Vec<Extension>,
-    ) {
+    pub fn insert_extensions(&mut self, contract_id: ContractId, extensions: Vec<Extension>) {
         self.signatures = empty!();
         self.extensions
             .entry(contract_id)
@@ -347,11 +305,7 @@ impl Disclosure {
         SigHash::from_engine(engine)
     }
 
-    pub fn add_signature(
-        &mut self,
-        pubkey: PublicKey,
-        signature: Signature,
-    ) -> Option<Signature> {
+    pub fn add_signature(&mut self, pubkey: PublicKey, signature: Signature) -> Option<Signature> {
         self.signatures.insert(pubkey, signature)
     }
 

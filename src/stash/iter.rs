@@ -21,9 +21,7 @@ use bp::dbc::Anchor;
 use commit_verify::lnpbp4;
 
 use crate::schema::{OwnedRightType, TransitionType};
-use crate::{
-    Consignment, ConsistencyError, GraphApi, Node, NodeId, Transition,
-};
+use crate::{Consignment, ConsistencyError, GraphApi, Node, NodeId, Transition};
 
 /// Iterator over transitions and corresponding witness transaction ids which
 /// can be created out of consignment data. Transitions of this type must be
@@ -41,9 +39,7 @@ pub struct ChainIter<'iter> {
 
 impl<'iter> ChainIter<'iter> {
     /// Detects whether iterator was stopped by a error
-    pub fn is_err(&'iter self) -> bool {
-        self.error.is_some()
-    }
+    pub fn is_err(&'iter self) -> bool { self.error.is_some() }
 
     /// Converts iterator into a result type prividing information about the
     /// error (if any) which terminated execution of the iterator
@@ -116,11 +112,7 @@ impl Consignment {
     /// corresponding witness transaction ids. Transitions must be organized
     /// into a chain connecting 1-to-1 via the provided `connected_by` owned
     /// rights (one or none of them must be present for each state transition).
-    pub fn chain_iter(
-        &self,
-        start_with: NodeId,
-        connected_by: OwnedRightType,
-    ) -> ChainIter {
+    pub fn chain_iter(&self, start_with: NodeId, connected_by: OwnedRightType) -> ChainIter {
         let next_item = self
             .endpoint_transition_by_id(start_with)
             .into_iter()

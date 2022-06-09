@@ -33,8 +33,8 @@ use commit_verify::lnpbp4;
 use wallet::onchain::ResolveTx;
 
 use crate::{
-    seal, Consignment, ContractId, Disclosure, Extension, Genesis, Node,
-    NodeId, Schema, SchemaId, SealEndpoint, Transition,
+    seal, Consignment, ContractId, Disclosure, Extension, Genesis, Node, NodeId, Schema, SchemaId,
+    SealEndpoint, Transition,
 };
 
 /// Top-level structure used by client wallets to manage all known RGB smart
@@ -73,10 +73,7 @@ pub trait Stash {
 
     /// Returns genesis matching the provided id, if any, or storage-specific
     /// error otherwise
-    fn get_genesis(
-        &self,
-        contract_id: ContractId,
-    ) -> Result<Genesis, Self::Error>;
+    fn get_genesis(&self, contract_id: ContractId) -> Result<Genesis, Self::Error>;
 
     /// Returns state transition matching the provided `node_id`, if any, or
     /// storage-specific error otherwise.
@@ -84,10 +81,7 @@ pub trait Stash {
     /// NB: Here the state transition is identified by the node id and not
     /// relates to a specific contract_id. To get the transitions by a contract
     /// id please use transition iterator.
-    fn get_transition(
-        &self,
-        node_id: NodeId,
-    ) -> Result<Transition, Self::Error>;
+    fn get_transition(&self, node_id: NodeId) -> Result<Transition, Self::Error>;
 
     /// Returns state extension matching the provided `node_id`, if any, or
     /// storage-specific error otherwise.
@@ -117,16 +111,10 @@ pub trait Stash {
     fn anchor_iter(&self) -> Self::AnchorIterator;
 
     /// Iterator over all known state transition under particular RGB contract
-    fn transition_iter(
-        &self,
-        contract_id: ContractId,
-    ) -> Self::TransitionIterator;
+    fn transition_iter(&self, contract_id: ContractId) -> Self::TransitionIterator;
 
     /// Iterator over all known state extensions under particular RGB contract
-    fn extension_iter(
-        &self,
-        contract_id: ContractId,
-    ) -> Self::ExtensionIterator;
+    fn extension_iter(&self, contract_id: ContractId) -> Self::ExtensionIterator;
 
     /// When we need to send over to somebody else an update (like we have
     /// transferred him some state, for instance an asset) for each transfer we

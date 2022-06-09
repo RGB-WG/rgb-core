@@ -22,10 +22,7 @@ use commit_verify::{lnpbp4, CommitConceal};
 use wallet::onchain::ResolveTx;
 
 use super::schema::{NodeType, OccurrencesError};
-use super::{
-    schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema,
-    SchemaId,
-};
+use super::{schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
 use crate::script::{Action, EntryPoint};
 use crate::{SealEndpoint, VmType};
@@ -40,11 +37,7 @@ pub enum Validity {
 }
 
 #[derive(Clone, Debug, Display, Default, StrictEncode, StrictDecode)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #42: Display via YAML
 #[display(Debug)]
 pub struct Status {
@@ -95,9 +88,7 @@ impl FromIterator<Failure> for Status {
 }
 
 impl Status {
-    pub fn new() -> Self {
-        Self::default()
-    }
+    pub fn new() -> Self { Self::default() }
 
     pub fn with_failure(failure: Failure) -> Self {
         Self {
@@ -132,14 +123,8 @@ impl Status {
     }
 }
 
-#[derive(
-    Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
 pub enum Failure {
@@ -195,16 +180,8 @@ pub enum Failure {
     SchemaMismatchedStateType(schema::OwnedRightType),
 
     SchemaMetaOccurrencesError(NodeId, schema::FieldType, OccurrencesError),
-    SchemaParentOwnedRightOccurrencesError(
-        NodeId,
-        schema::OwnedRightType,
-        OccurrencesError,
-    ),
-    SchemaOwnedRightOccurrencesError(
-        NodeId,
-        schema::OwnedRightType,
-        OccurrencesError,
-    ),
+    SchemaParentOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesError),
+    SchemaOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesError),
 
     SchemaScriptOverrideDenied,
     SchemaScriptVmChangeDenied,
@@ -261,14 +238,8 @@ pub enum Failure {
     ScriptFailure(NodeId, u8),
 }
 
-#[derive(
-    Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
@@ -277,14 +248,8 @@ pub enum Warning {
     ExcessiveNode(NodeId),
 }
 
-#[derive(
-    Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {
@@ -320,8 +285,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
 
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
-        let mut anchor_index =
-            BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
+        let mut anchor_index = BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
         for (anchor, transition) in &*consignment.state_transitions {
             let node_id = transition.node_id();
             node_index.insert(node_id, transition);
@@ -352,10 +316,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                         .len()
                         > 0
                     {
-                        status.add_warning(Warning::EndpointDuplication(
-                            *node_id,
-                            *seal_endpoint,
-                        ));
+                        status.add_warning(Warning::EndpointDuplication(*node_id, *seal_endpoint));
                     } else {
                         end_transitions.push(*node);
                     }
@@ -363,12 +324,10 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
                     // endpoint list
-                    status.add_warning(
-                        Warning::EndpointTransitionSealNotFound(
-                            *node_id,
-                            *seal_endpoint,
-                        ),
-                    );
+                    status.add_warning(Warning::EndpointTransitionSealNotFound(
+                        *node_id,
+                        *seal_endpoint,
+                    ));
                 }
             } else {
                 // ~~We generate just a warning here because it's up to a user
@@ -377,8 +336,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // Update: warning is transformed into an error, since it may
                 // lead to acceptance of non-verified consignment assigning
                 // positive fake balance to the user-controlled UTXO
-                status
-                    .add_failure(Failure::EndpointTransitionNotFound(*node_id));
+                status.add_failure(Failure::EndpointTransitionNotFound(*node_id));
             }
         }
 
@@ -470,11 +428,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         }
 
         // [VALIDATION]: Validate genesis
-        self.status += schema.validate(
-            &self.node_index,
-            &self.consignment.genesis,
-            byte_code,
-        );
+        self.status += schema.validate(&self.node_index, &self.consignment.genesis, byte_code);
         self.validation_index.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
@@ -497,12 +451,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         }
     }
 
-    fn validate_branch(
-        &mut self,
-        schema: &Schema,
-        node: &'validator dyn Node,
-        byte_code: &[u8],
-    ) {
+    fn validate_branch(&mut self, schema: &Schema, node: &'validator dyn Node, byte_code: &[u8]) {
         let mut queue: VecDeque<&dyn Node> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a
@@ -524,8 +473,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
             //               only a single node, not state evolution (it
             //               will be checked lately)
             if !self.validation_index.contains(&node_id) {
-                self.status +=
-                    schema.validate(&self.node_index, node, byte_code);
+                self.status += schema.validate(&self.node_index, node, byte_code);
                 self.validation_index.insert(node_id);
             }
 
@@ -543,18 +491,14 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                     .convolve(self.contract_id.into(), node_id.into())
                     .is_err()
                 {
-                    self.status.add_failure(Failure::TransitionNotInAnchor(
-                        node_id,
-                        anchor.txid,
-                    ));
+                    self.status
+                        .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.txid));
                 }
 
                 self.validate_graph_node(node, anchor);
 
             // Ouch, we are out of that multi-level nested cycles :)
-            } else if node_type != NodeType::Genesis
-                && node_type != NodeType::StateExtension
-            {
+            } else if node_type != NodeType::Genesis && node_type != NodeType::StateExtension {
                 // This point is actually unreachable: b/c of the
                 // consignment structure, each state transition
                 // has a corresponding anchor. So if we've got here there
@@ -649,30 +593,25 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                     // The node is not committed to bitcoin transaction graph!
                     // Ultimate failure. But continuing to detect the rest
                     // (after reporting it).
-                    self.status.add_failure(Failure::WitnessNoCommitment(
-                        node_id, txid,
-                    ));
+                    self.status
+                        .add_failure(Failure::WitnessNoCommitment(node_id, txid));
                 }
 
                 // Checking that bitcoin transaction closes seals defined by
                 // transition ancestors.
-                for (ancestor_id, assignments) in
-                    node.parent_owned_rights().iter()
-                {
+                for (ancestor_id, assignments) in node.parent_owned_rights().iter() {
                     let ancestor_id = *ancestor_id;
-                    let ancestor_node = if let Some(ancestor_node) =
-                        self.node_index.get(&ancestor_id)
-                    {
-                        *ancestor_node
-                    } else {
-                        // Node, referenced as the ancestor, was not found
-                        // in the consignment. Usually this means that the
-                        // consignment data are broken
-                        self.status.add_failure(Failure::TransitionAbsent(
-                            ancestor_id,
-                        ));
-                        continue;
-                    };
+                    let ancestor_node =
+                        if let Some(ancestor_node) = self.node_index.get(&ancestor_id) {
+                            *ancestor_node
+                        } else {
+                            // Node, referenced as the ancestor, was not found
+                            // in the consignment. Usually this means that the
+                            // consignment data are broken
+                            self.status
+                                .add_failure(Failure::TransitionAbsent(ancestor_id));
+                            continue;
+                        };
 
                     for (assignment_type, assignment_indexes) in assignments {
                         let assignment_type = *assignment_type;
@@ -682,13 +621,12 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                         {
                             variant
                         } else {
-                            self.status.add_failure(
-                                Failure::TransitionParentWrongSealType {
+                            self.status
+                                .add_failure(Failure::TransitionParentWrongSealType {
                                     node_id,
                                     ancestor_id,
                                     assignment_type,
-                                },
-                            );
+                                });
                             continue;
                         };
 

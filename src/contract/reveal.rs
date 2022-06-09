@@ -22,19 +22,7 @@ use crate::schema::NodeType;
 use crate::{Assignment, AssignmentVec, OwnedRights, State};
 
 /// Merge Error generated in merging operation
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    From,
-    Error,
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
     /// Owned State has different commitment ids and can't be reveal-merged
@@ -79,8 +67,7 @@ where
     Self: Clone,
     STATE: State,
     STATE::Confidential: PartialEq + Eq,
-    STATE::Confidential:
-        From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
+    STATE::Confidential: From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn merge_reveal(self, other: Self) -> Result<Self, Error> {
         // if self and other is different through error
@@ -146,14 +133,9 @@ impl MergeReveal for AssignmentVec {
             Err(Error::AssignmentMismatch)
         } else {
             match (self, other) {
-                (
-                    AssignmentVec::Declarative(first_vec),
-                    AssignmentVec::Declarative(second_vec),
-                ) => {
+                (AssignmentVec::Declarative(first_vec), AssignmentVec::Declarative(second_vec)) => {
                     let mut result = Vec::with_capacity(first_vec.len());
-                    for (first, second) in
-                        first_vec.into_iter().zip(second_vec.into_iter())
-                    {
+                    for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
                         result.push(first.merge_reveal(second)?);
                     }
                     Ok(AssignmentVec::Declarative(result))
@@ -164,22 +146,15 @@ impl MergeReveal for AssignmentVec {
                     AssignmentVec::DiscreteFiniteField(second_vec),
                 ) => {
                     let mut result = Vec::with_capacity(first_vec.len());
-                    for (first, second) in
-                        first_vec.into_iter().zip(second_vec.into_iter())
-                    {
+                    for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
                         result.push(first.merge_reveal(second)?);
                     }
                     Ok(AssignmentVec::DiscreteFiniteField(result))
                 }
 
-                (
-                    AssignmentVec::CustomData(first_vec),
-                    AssignmentVec::CustomData(second_vec),
-                ) => {
+                (AssignmentVec::CustomData(first_vec), AssignmentVec::CustomData(second_vec)) => {
                     let mut result = Vec::with_capacity(first_vec.len());
-                    for (first, second) in
-                        first_vec.into_iter().zip(second_vec.into_iter())
-                    {
+                    for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
                         result.push(first.merge_reveal(second)?);
                     }
                     Ok(AssignmentVec::CustomData(result))
@@ -195,8 +170,7 @@ impl MergeReveal for AssignmentVec {
 
 impl MergeReveal for OwnedRights {
     fn merge_reveal(self, other: Self) -> Result<Self, Error> {
-        if self.to_merkle_source().commit_serialize()
-            != other.to_merkle_source().commit_serialize()
+        if self.to_merkle_source().commit_serialize() != other.to_merkle_source().commit_serialize()
         {
             return Err(Error::OwnedRightsMismatch);
         }
@@ -216,16 +190,14 @@ impl MergeReveal for OwnedRights {
 mod test {
     use super::*;
     use crate::strict_encoding::StrictDecode;
-    use crate::ConcealState;
-    use crate::{HashStrategy, PedersenStrategy};
+    use crate::{ConcealState, HashStrategy, PedersenStrategy};
 
     // Hard coded test vectors of Assignment Variants
     // Each Variant contains 4 types of Assignments
     // [Revealed, Confidential, ConfidentialSeal, ConfidentialState]
     static HASH_VARIANT: [u8; 267] = include!("../../test/hash_state.in");
 
-    static PEDERSAN_VARIANT: [u8; 1664] =
-        include!("../../test/pedersan_state.in");
+    static PEDERSAN_VARIANT: [u8; 1664] = include!("../../test/pedersan_state.in");
 
     #[test]
     fn test_into_revealed_state() {
@@ -262,17 +234,11 @@ mod test {
         assert_eq!(merged, rev);
 
         // Check Confidential Seal + Condfidential State = Revealed
-        merged = conf_seal
-            .clone()
-            .merge_reveal(conf_state.clone())
-            .unwrap();
+        merged = conf_seal.clone().merge_reveal(conf_state.clone()).unwrap();
         assert_eq!(merged, rev);
 
         // Check Condifential State + Confidential Seal = Revealed
-        merged = conf_state
-            .clone()
-            .merge_reveal(conf_seal.clone())
-            .unwrap();
+        merged = conf_state.clone().merge_reveal(conf_seal.clone()).unwrap();
         assert_eq!(merged, rev);
 
         // Check Confidential + Anything = Anything
@@ -316,8 +282,7 @@ mod test {
         conf_state.conceal_state();
 
         // Create assignment for testing
-        let test_variant_1 =
-            vec![rev.clone(), conf_seal, conf_state, conf.clone()];
+        let test_variant_1 = vec![rev.clone(), conf_seal, conf_state, conf.clone()];
         let assignment_1 = AssignmentVec::CustomData(test_variant_1.clone());
 
         // Create assignment 2 for testing
@@ -339,8 +304,7 @@ mod test {
 
         // Test against confidential merging
         // Confidential + Anything = Anything
-        let test_variant_3 =
-            vec![conf.clone(), conf.clone(), conf.clone(), conf.clone()];
+        let test_variant_3 = vec![conf.clone(), conf.clone(), conf.clone(), conf.clone()];
         let assignment_3 = AssignmentVec::CustomData(test_variant_3);
 
         // merge with assignment 1
@@ -352,10 +316,8 @@ mod test {
         assert_eq!(assignment_1, merged);
 
         // test for OwnedRights structure
-        let test_owned_rights_1: OwnedRights =
-            bmap! { 1u16 => assignment_1.clone() }.into();
-        let test_owned_rights_2: OwnedRights =
-            bmap! { 1u16 => assignmnet_2.clone()}.into();
+        let test_owned_rights_1: OwnedRights = bmap! { 1u16 => assignment_1.clone() }.into();
+        let test_owned_rights_2: OwnedRights = bmap! { 1u16 => assignmnet_2.clone()}.into();
 
         // Perform merge
         let merged = test_owned_rights_1

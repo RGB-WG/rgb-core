@@ -48,10 +48,6 @@
 //! once, and providing [`AtomicValue`] that has to be assigned to each of the
 //! seals.
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
-use serde_with::{As, DisplayFromStr};
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -62,10 +58,14 @@ use bitcoin::OutPoint;
 use bp::seals;
 use bp::seals::txout::blind::RevealedSeal;
 use bp::seals::txout::ExplicitSeal;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 
 use crate::{
-    seal, value, Assignment, AssignmentVec, AtomicValue, IntoRevealedSeal,
-    NodeId, NodeOutput, SealEndpoint,
+    seal, value, Assignment, AssignmentVec, AtomicValue, IntoRevealedSeal, NodeId, NodeOutput,
+    SealEndpoint,
 };
 
 /// Error parsing allocation data
@@ -97,23 +97,8 @@ pub enum ParseError {
 /// Information about specific allocated asset value, assigned to either
 /// external bitcoin transaction outpoint or specific witness transaction output
 /// number
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    StrictEncode,
-    StrictDecode,
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize,),
-    serde(crate = "serde_crate")
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize,), serde(crate = "serde_crate"))]
 pub struct AllocatedValue {
     /// Assigned value of the asset
     pub value: AtomicValue,
@@ -124,9 +109,7 @@ pub struct AllocatedValue {
 }
 
 impl IntoRevealedSeal for AllocatedValue {
-    fn into_revealed_seal(self) -> RevealedSeal {
-        RevealedSeal::from(self.seal)
-    }
+    fn into_revealed_seal(self) -> RevealedSeal { RevealedSeal::from(self.seal) }
 }
 
 impl Display for AllocatedValue {
@@ -164,13 +147,9 @@ impl FromStr for AllocatedValue {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize,),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize,), serde(crate = "serde_crate"))]
 #[display("{value}@{outpoint}")]
 pub struct OutpointValue {
     /// Assigned value of the asset
@@ -181,9 +160,7 @@ pub struct OutpointValue {
 }
 
 impl IntoRevealedSeal for OutpointValue {
-    fn into_revealed_seal(self) -> RevealedSeal {
-        seal::Revealed::from(self.outpoint)
-    }
+    fn into_revealed_seal(self) -> RevealedSeal { seal::Revealed::from(self.outpoint) }
 }
 
 impl FromStr for OutpointValue {
@@ -193,9 +170,7 @@ impl FromStr for OutpointValue {
         match (split.next(), split.next(), split.next()) {
             (Some(value), Some(outpoint), None) => Ok(Self {
                 value: value.parse().map_err(|_| ParseError::WrongValue)?,
-                outpoint: outpoint
-                    .parse()
-                    .map_err(|_| ParseError::WrongOutpoint)?,
+                outpoint: outpoint.parse().map_err(|_| ParseError::WrongOutpoint)?,
             }),
             _ => Err(ParseError::WrongStructure),
         }
@@ -214,13 +189,9 @@ impl FromStr for OutpointValue {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize,),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize,), serde(crate = "serde_crate"))]
 #[display("{value}@{seal_confidential}")]
 pub struct UtxobValue {
     /// Assigned value of the asset
@@ -251,9 +222,7 @@ impl FromStr for UtxobValue {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[derive(
-    Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode,
-)]
+#[derive(Clone, Copy, Getters, PartialEq, Debug, Display, StrictEncode, StrictDecode)]
 #[display("{revealed_amount}@{outpoint}&{node_id}#{index}")]
 pub struct Allocation {
     /// Unique primary key is `node_id` + `index`
@@ -293,9 +262,7 @@ impl Allocation {
     /// Convenience function returning atomic value of the asset inside the
     /// assignments. Equal to `Allocation::revealed_amount.value`
     #[inline]
-    pub fn value(&self) -> AtomicValue {
-        self.revealed_amount.value
-    }
+    pub fn value(&self) -> AtomicValue { self.revealed_amount.value }
 
     /// Returns [`NodeOutput`] containing current allocation
     #[inline]
@@ -349,49 +316,31 @@ pub trait AllocationMap {
 }
 
 impl AllocationMap for OutpointValueVec {
-    fn sum(&self) -> u64 {
-        self.iter().map(|v| v.value).sum()
-    }
+    fn sum(&self) -> u64 { self.iter().map(|v| v.value).sum() }
 
-    fn into_assignments(self) -> AssignmentVec {
-        self.into_seal_value_map().into_assignments()
-    }
+    fn into_assignments(self) -> AssignmentVec { self.into_seal_value_map().into_assignments() }
 }
 
 impl AllocationMap for OutpointValueMap {
-    fn sum(&self) -> u64 {
-        self.values().sum()
-    }
+    fn sum(&self) -> u64 { self.values().sum() }
 
-    fn into_assignments(self) -> AssignmentVec {
-        self.into_seal_value_map().into_assignments()
-    }
+    fn into_assignments(self) -> AssignmentVec { self.into_seal_value_map().into_assignments() }
 }
 
 impl AllocationMap for AllocationValueVec {
-    fn sum(&self) -> u64 {
-        self.iter().map(|v| v.value).sum()
-    }
+    fn sum(&self) -> u64 { self.iter().map(|v| v.value).sum() }
 
-    fn into_assignments(self) -> AssignmentVec {
-        self.into_seal_value_map().into_assignments()
-    }
+    fn into_assignments(self) -> AssignmentVec { self.into_seal_value_map().into_assignments() }
 }
 
 impl AllocationMap for AllocationValueMap {
-    fn sum(&self) -> u64 {
-        self.values().sum()
-    }
+    fn sum(&self) -> u64 { self.values().sum() }
 
-    fn into_assignments(self) -> AssignmentVec {
-        self.into_seal_value_map().into_assignments()
-    }
+    fn into_assignments(self) -> AssignmentVec { self.into_seal_value_map().into_assignments() }
 }
 
 impl AllocationMap for SealValueMap {
-    fn sum(&self) -> u64 {
-        self.values().sum()
-    }
+    fn sum(&self) -> u64 { self.values().sum() }
 
     fn into_assignments(self) -> AssignmentVec {
         let mut rng = thread_rng();
@@ -399,9 +348,7 @@ impl AllocationMap for SealValueMap {
             self.into_iter()
                 .map(|(seal, value)| Assignment::Revealed {
                     seal_definition: seal,
-                    assigned_state: value::Revealed::with_amount(
-                        value, &mut rng,
-                    ),
+                    assigned_state: value::Revealed::with_amount(value, &mut rng),
                 })
                 .collect(),
         )
@@ -409,24 +356,19 @@ impl AllocationMap for SealValueMap {
 }
 
 impl AllocationMap for EndpointValueMap {
-    fn sum(&self) -> u64 {
-        self.values().sum()
-    }
+    fn sum(&self) -> u64 { self.values().sum() }
 
     fn into_assignments(self) -> AssignmentVec {
         let mut rng = thread_rng();
         AssignmentVec::DiscreteFiniteField(
             self.into_iter()
                 .map(|(seal, value)| {
-                    let assigned_state =
-                        value::Revealed::with_amount(value, &mut rng);
+                    let assigned_state = value::Revealed::with_amount(value, &mut rng);
                     match seal {
-                        SealEndpoint::ConcealedUtxo(confidential) => {
-                            Assignment::ConfidentialSeal {
-                                seal_definition: confidential,
-                                assigned_state,
-                            }
-                        }
+                        SealEndpoint::ConcealedUtxo(confidential) => Assignment::ConfidentialSeal {
+                            seal_definition: confidential,
+                            assigned_state,
+                        },
                         SealEndpoint::WitnessVout {
                             method,
                             vout,
@@ -479,9 +421,7 @@ impl IntoSealValueMap for OutpointValueMap {
 impl IntoSealValueMap for AllocationValueVec {
     fn into_seal_value_map(self) -> SealValueMap {
         self.into_iter()
-            .map(|allocated_value| {
-                (allocated_value.seal.into(), allocated_value.value)
-            })
+            .map(|allocated_value| (allocated_value.seal.into(), allocated_value.value))
             .collect()
     }
 }
