@@ -1145,7 +1145,6 @@ dependencies = [
  "commit_verify",
  "deflate 0.8.6",
  "descriptor-wallet",
- "ed25519-dalek",
  "electrum-client",
  "grin_secp256k1zkp",
  "inflate",

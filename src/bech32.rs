@@ -57,26 +57,6 @@ pub enum Bech32 {
     )]
     Bulletproof(secp256k1zkp::pedersen::RangeProof),
 
-    /// Curve25519 public key
-    ///
-    /// HRP: `curve25519pk`
-    #[from]
-    #[cfg_attr(
-        feature = "serde",
-        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
-    )]
-    Curve25519Pk(ed25519_dalek::PublicKey),
-
-    /// Ed25519 signature
-    ///
-    /// HRP: `ed25519sign`
-    #[from]
-    #[cfg_attr(
-        feature = "serde",
-        serde(serialize_with = "to_bech32_str", deserialize_with = "from_bech32_str")
-    )]
-    Ed25519Sign(ed25519_dalek::Signature),
-
     /// Blinded UTXO for assigning RGB state to.
     ///
     /// HRP: `utxob`
@@ -167,10 +147,6 @@ impl Bech32 {
     pub const HRP_PEDERSEN: &'static str = "pedersen";
     /// HRP for a Bech32-encoded blinded bulletproof range proof data
     pub const HRP_BULLETPROOF: &'static str = "bulletproof";
-    /// HRP for a Bech32-encoded blinded bulletproof range proof data
-    pub const HRP_CURVE25519OPK: &'static str = "curve25519pk";
-    /// HRP for a Bech32-encoded blinded bulletproof range proof data
-    pub const HRP_ED25519OSIGN: &'static str = "ed25519sign";
     /// HRP for a Bech32-encoded blinded UTXO data
     pub const HRP_OUTPOINT: &'static str = "utxob";
 
@@ -318,28 +294,6 @@ impl TryFrom<Bech32> for secp256k1zkp::pedersen::RangeProof {
     }
 }
 
-impl TryFrom<Bech32> for ed25519_dalek::PublicKey {
-    type Error = Error;
-
-    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
-        match bech32 {
-            Bech32::Curve25519Pk(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
-    }
-}
-
-impl TryFrom<Bech32> for ed25519_dalek::Signature {
-    type Error = Error;
-
-    fn try_from(bech32: Bech32) -> Result<Self, Self::Error> {
-        match bech32 {
-            Bech32::Ed25519Sign(obj) => Ok(obj),
-            _ => Err(Error::WrongType),
-        }
-    }
-}
-
 impl TryFrom<Bech32> for seal::Confidential {
     type Error = Error;
 
@@ -438,18 +392,36 @@ impl FromStr for Bech32 {
         // TODO: Update to Bech32m and check variant
 
         Ok(match hrp {
-            x if x == Self::HRP_PEDERSEN => Self::PedersenCommitment(strict_deserialize(&data)?),
-            x if x == Self::HRP_BULLETPROOF => Self::Bulletproof(strict_deserialize(&data)?),
-            x if x == Self::HRP_CURVE25519OPK => Self::Curve25519Pk(strict_deserialize(&data)?),
-            x if x == Self::HRP_ED25519OSIGN => Self::Ed25519Sign(strict_deserialize(&data)?),
-            x if x == Self::HRP_OUTPOINT => Self::BlindedUtxo(strict_deserialize(&data)?),
-            x if x == Self::HRP_SCHEMA_ID => Self::SchemaId(strict_deserialize(&data)?),
-            x if x == Self::HRP_CONTRACT_ID => Self::ContractId(strict_deserialize(&data)?),
-            x if x == Self::HRP_SCHEMA => Self::Schema(Bech32::raw_decode(&data)?),
-            x if x == Self::HRP_GENESIS => Self::Genesis(Bech32::raw_decode(&data)?),
-            x if x == Self::HRP_EXTENSION => Self::Extension(Bech32::raw_decode(&data)?),
-            x if x == Self::HRP_TRANSITION => Self::Transition(Bech32::raw_decode(&data)?),
-            x if x == Self::HRP_DISCLOSURE => Self::Disclosure(Bech32::raw_decode(&data)?),
+            x if x == Self::HRP_PEDERSEN => {
+                Self::PedersenCommitment(strict_deserialize(&data)?)
+            }
+            x if x == Self::HRP_BULLETPROOF => {
+                Self::Bulletproof(strict_deserialize(&data)?)
+            }
+            x if x == Self::HRP_OUTPOINT => {
+                Self::BlindedUtxo(strict_deserialize(&data)?)
+            }
+            x if x == Self::HRP_SCHEMA_ID => {
+                Self::SchemaId(strict_deserialize(&data)?)
+            }
+            x if x == Self::HRP_CONTRACT_ID => {
+                Self::ContractId(strict_deserialize(&data)?)
+            }
+            x if x == Self::HRP_SCHEMA => {
+                Self::Schema(Bech32::raw_decode(&data)?)
+            }
+            x if x == Self::HRP_GENESIS => {
+                Self::Genesis(Bech32::raw_decode(&data)?)
+            }
+            x if x == Self::HRP_EXTENSION => {
+                Self::Extension(Bech32::raw_decode(&data)?)
+            }
+            x if x == Self::HRP_TRANSITION => {
+                Self::Transition(Bech32::raw_decode(&data)?)
+            }
+            x if x == Self::HRP_DISCLOSURE => {
+                Self::Disclosure(Bech32::raw_decode(&data)?)
+            }
             other => Self::Other(other, data),
         })
     }
@@ -458,18 +430,36 @@ impl FromStr for Bech32 {
 impl Display for Bech32 {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::core::fmt::Result {
         let (hrp, data) = match self {
-            Self::PedersenCommitment(obj) => (Self::HRP_PEDERSEN, strict_serialize(obj)?),
-            Self::Bulletproof(obj) => (Self::HRP_BULLETPROOF, strict_serialize(obj)?),
-            Self::Curve25519Pk(obj) => (Self::HRP_CURVE25519OPK, strict_serialize(obj)?),
-            Self::Ed25519Sign(obj) => (Self::HRP_ED25519OSIGN, strict_serialize(obj)?),
-            Self::BlindedUtxo(obj) => (Self::HRP_OUTPOINT, strict_serialize(obj)?),
-            Self::SchemaId(obj) => (Self::HRP_SCHEMA_ID, strict_serialize(obj)?),
-            Self::ContractId(obj) => (Self::HRP_CONTRACT_ID, strict_serialize(obj)?),
-            Self::Schema(obj) => (Self::HRP_SCHEMA, Bech32::deflate_encode(obj)?),
-            Self::Genesis(obj) => (Self::HRP_GENESIS, Bech32::deflate_encode(obj)?),
-            Self::Extension(obj) => (Self::HRP_EXTENSION, Bech32::deflate_encode(obj)?),
-            Self::Transition(obj) => (Self::HRP_TRANSITION, Bech32::deflate_encode(obj)?),
-            Self::Disclosure(obj) => (Self::HRP_DISCLOSURE, Bech32::deflate_encode(obj)?),
+            Self::PedersenCommitment(obj) => {
+                (Self::HRP_PEDERSEN, strict_serialize(obj)?)
+            }
+            Self::Bulletproof(obj) => {
+                (Self::HRP_BULLETPROOF, strict_serialize(obj)?)
+            }
+            Self::BlindedUtxo(obj) => {
+                (Self::HRP_OUTPOINT, strict_serialize(obj)?)
+            }
+            Self::SchemaId(obj) => {
+                (Self::HRP_SCHEMA_ID, strict_serialize(obj)?)
+            }
+            Self::ContractId(obj) => {
+                (Self::HRP_CONTRACT_ID, strict_serialize(obj)?)
+            }
+            Self::Schema(obj) => {
+                (Self::HRP_SCHEMA, Bech32::deflate_encode(obj)?)
+            }
+            Self::Genesis(obj) => {
+                (Self::HRP_GENESIS, Bech32::deflate_encode(obj)?)
+            }
+            Self::Extension(obj) => {
+                (Self::HRP_EXTENSION, Bech32::deflate_encode(obj)?)
+            }
+            Self::Transition(obj) => {
+                (Self::HRP_TRANSITION, Bech32::deflate_encode(obj)?)
+            }
+            Self::Disclosure(obj) => {
+                (Self::HRP_DISCLOSURE, Bech32::deflate_encode(obj)?)
+            }
             Self::Other(hrp, obj) => (hrp.as_ref(), obj.clone()),
         };
         // TODO: Update to Bech32m
