@@ -352,7 +352,7 @@ pub(super) mod _strict_encoding {
                 EncodingTag::F64 => 0b_0001_0011_u8,
 
                 EncodingTag::Bytes => 0b_0010_0000_u8,
-                EncodingTag::String => 0b_0010_0001_u8,
+                EncodingTag::String => 0b_0010_0001_u8
             )
             .unwrap();
         }
@@ -451,7 +451,7 @@ mod test {
             (F_32, Revealed),
             (F_64, Revealed),
             (BYTES, Revealed),
-            (STRING, Revealed),
+            (STRING, Revealed)
         );
     }
 
@@ -471,7 +471,7 @@ mod test {
             (F_32, Revealed, err),
             (F_64, Revealed, err),
             (BYTES, Revealed, err),
-            (STRING, Revealed, err),
+            (STRING, Revealed, err)
         );
     }
 
@@ -500,7 +500,7 @@ mod test {
             (F_64, F64_CONCEALED, Revealed),
             (F_64, F64_CONCEALED, Revealed),
             (BYTES, BYTES_CONCEALED, Revealed),
-            (STRING, STRING_CONCEALED, Revealed),
+            (STRING, STRING_CONCEALED, Revealed)
         );
     }
 }

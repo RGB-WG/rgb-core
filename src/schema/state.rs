@@ -480,8 +480,8 @@ mod test {
         // Create a Map of Format type and encoded data
 
         let mut map: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
-        // Declarative and Pedersan formats
-        map.insert("Declerative", vec![0]);
+        // Declarative and Pedersen formats
+        map.insert("Declarative", vec![0]);
         map.insert("DiscreteFinite format", vec![
             1, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255,
         ]);
@@ -511,33 +511,6 @@ mod test {
 
         // Bytes
         map.insert("Bytes(27)", vec![2, 5, 27, 0]);
-
-        // Digest Algo
-        map.insert("Digest(Sha256)", vec![2, 16, 17]);
-        map.insert("Digest(Sha512)", vec![2, 16, 18]);
-        map.insert("Digest(Bitcoin160)", vec![2, 16, 72]);
-        map.insert("Digest(Bitcoin256)", vec![2, 16, 81]);
-
-        // Txoutpoint
-        map.insert("TxOutPoint", vec![2, 32]);
-
-        // Public Keys
-        map.insert("PublickKey(Secp, Compressed)", vec![2, 17, 0, 1]);
-        map.insert("PublickKey(Secp, Unompressed)", vec![2, 17, 0, 0]);
-        map.insert("PublickKey(Secp, SchnorrBip)", vec![2, 17, 0, 2]);
-        map.insert("PublickKey(Curve25519, Compressed)", vec![2, 17, 16, 1]);
-        map.insert("PublickKey(Curve25519, Unompressed)", vec![2, 17, 16, 0]);
-        map.insert("PublickKey(Curve25519, SchnorrBip)", vec![2, 17, 16, 2]);
-
-        // Signatures
-        map.insert("Signature(Ecdsa)", vec![2, 18, 0]);
-        map.insert("Signature(Schnorr)", vec![2, 18, 1]);
-        map.insert("Signature(Ed25519)", vec![2, 18, 2]);
-
-        // TX TxOutpoint and Psbt
-        map.insert("TxOutpoint", vec![2, 32]);
-        map.insert("Tx", vec![2, 33]);
-        map.insert("Psbt", vec![2, 34]);
 
         // Test for correct encoding of each cases
         let _test: Vec<()> = map
@@ -820,7 +793,7 @@ mod test {
         // Create CustomData Assignmnets
         let state_data_vec: Vec<data::Revealed> = TXID_VEC
             .iter()
-            .map(|data| data::Revealed::Sha256(sha256::Hash::from_hex(data).unwrap()))
+            .map(|data| data::Revealed::Bytes(sha256::Hash::from_hex(data).unwrap().to_vec()))
             .collect();
 
         let assignment_hash_rev = Assignment::<HashStrategy>::Revealed {
@@ -840,7 +813,7 @@ mod test {
                 .unwrap();
         let dec_format = StateFormat::Declarative;
         let ped_format = StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit);
-        let hash_format = StateFormat::CustomData(DataFormat::Digest(DigestAlgorithm::Sha256));
+        let hash_format = StateFormat::CustomData(DataFormat::ByteString(32));
 
         // Assert different failure combinations
         assert_eq!(

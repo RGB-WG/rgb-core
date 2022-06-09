@@ -829,8 +829,7 @@ pub(crate) mod test {
                 FIELD_ISSUED_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_DUST_LIMIT => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_PRUNE_PROOF => DataFormat::ByteString(core::u16::MAX),
-                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_PROOF_OF_BURN => DataFormat::TxOutPoint
+                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
             },
             owned_right_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema {

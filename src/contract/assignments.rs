@@ -1713,8 +1713,8 @@ mod test {
         let data_set = hash_type.filter_revealed_state_data();
 
         // Create state data from precomputed values
-        let data_1 = data::Revealed::Sha256(sha256::Hash::from_hex(STATE_DATA[2]).unwrap());
-        let data_2 = data::Revealed::Sha256(sha256::Hash::from_hex(STATE_DATA[0]).unwrap());
+        let data_1 = data::Revealed::Bytes(sha256::Hash::from_hex(STATE_DATA[2]).unwrap().to_vec());
+        let data_2 = data::Revealed::Bytes(sha256::Hash::from_hex(STATE_DATA[0]).unwrap().to_vec());
 
         // Check extracted data matches with precomputed values
         assert_eq!(data_set[0].to_owned(), data_1);
@@ -2130,7 +2130,7 @@ mod test {
 
         let state_data_vec: Vec<data::Revealed> = STATE_DATA
             .iter()
-            .map(|data| data::Revealed::Sha256(sha256::Hash::from_hex(data).unwrap()))
+            .map(|data| data::Revealed::Bytes(sha256::Hash::from_hex(data).unwrap().to_vec()))
             .collect();
 
         let assignment_1 = Assignment::<HashStrategy>::Revealed {
