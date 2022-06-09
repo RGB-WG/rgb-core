@@ -16,7 +16,7 @@ use std::io;
 
 use num_derive::{FromPrimitive, ToPrimitive};
 
-use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
+use super::{script, Bits};
 
 #[derive(Clone, PartialEq, Debug, Display, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -88,16 +88,9 @@ pub enum DataFormat {
     Integer(Bits, i128, i128),
     Float(Bits, f64, f64),
     Enum(BTreeSet<u8>),
-    String(u16),
-    Bytes(u16),
-    Digest(DigestAlgorithm),
-    PublicKey(EllipticCurve, elliptic_curve::PointSerialization),
-    Signature(elliptic_curve::SignatureAlgorithm),
-    // TODO #33: Add externally stored data container id
-    // Container(BlobId, MIME, u64 /* AES encryption key / salt */),
-    TxOutPoint,
-    Tx,
-    Psbt,
+    UniString(u16),
+    ByteString(u16),
+    FixedBytes(u16),
 }
 
 // Convenience methods
@@ -196,16 +189,9 @@ mod _strict_encoding {
         Integer = 1,
         Float = 2,
         Enum = 3,
-        String = 4,
-        Bytes = 5,
-        // Cryptographic types
-        Digest = 0x10,
-        PublicKey = 0x11,
-        Signature = 0x12,
-        // Composed types
-        TxOutPoint = 0x20,
-        Tx = 0x21,
-        Psbt = 0x22,
+        UniString = 4,
+        ByteString = 5,
+        FixedBytes = 6,
     }
     impl_enum_strict_encoding!(EncodingTag);
 
@@ -511,24 +497,15 @@ mod _strict_encoding {
                 DataFormat::Enum(values) => {
                     strict_encode_list!(e; EncodingTag::Enum, values)
                 }
-                DataFormat::String(size) => {
-                    strict_encode_list!(e; EncodingTag::String, size)
+                DataFormat::UniString(size) => {
+                    strict_encode_list!(e; EncodingTag::UniString, size)
                 }
-                DataFormat::Bytes(size) => {
-                    strict_encode_list!(e; EncodingTag::Bytes, size)
+                DataFormat::ByteString(size) => {
+                    strict_encode_list!(e; EncodingTag::ByteString, size)
                 }
-                DataFormat::Digest(algo) => {
-                    strict_encode_list!(e; EncodingTag::Digest, algo)
+                DataFormat::FixedBytes(size) => {
+                    strict_encode_list!(e; EncodingTag::FixedBytes, size)
                 }
-                DataFormat::PublicKey(curve, ser) => {
-                    strict_encode_list!(e; EncodingTag::PublicKey, curve, ser)
-                }
-                DataFormat::Signature(algo) => {
-                    strict_encode_list!(e; EncodingTag::Signature, algo)
-                }
-                DataFormat::TxOutPoint => EncodingTag::TxOutPoint.strict_encode(&mut e)?,
-                DataFormat::Tx => EncodingTag::Tx.strict_encode(&mut e)?,
-                DataFormat::Psbt => EncodingTag::Psbt.strict_encode(&mut e)?,
             })
         }
     }
@@ -669,20 +646,18 @@ mod _strict_encoding {
                     };
                     DataFormat::Float(bits, min, max)
                 }
-                EncodingTag::Enum => DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?),
-                EncodingTag::String => DataFormat::String(u16::strict_decode(&mut d)?),
-                EncodingTag::Bytes => DataFormat::Bytes(u16::strict_decode(&mut d)?),
-                EncodingTag::Digest => DataFormat::Digest(DigestAlgorithm::strict_decode(&mut d)?),
-                EncodingTag::PublicKey => DataFormat::PublicKey(
-                    EllipticCurve::strict_decode(&mut d)?,
-                    elliptic_curve::PointSerialization::strict_decode(&mut d)?,
-                ),
-                EncodingTag::Signature => DataFormat::Signature(
-                    elliptic_curve::SignatureAlgorithm::strict_decode(&mut d)?,
-                ),
-                EncodingTag::TxOutPoint => DataFormat::TxOutPoint,
-                EncodingTag::Tx => DataFormat::Tx,
-                EncodingTag::Psbt => DataFormat::Psbt,
+                EncodingTag::Enum => {
+                    DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?)
+                }
+                EncodingTag::UniString => {
+                    DataFormat::UniString(u16::strict_decode(&mut d)?)
+                }
+                EncodingTag::ByteString => {
+                    DataFormat::ByteString(u16::strict_decode(&mut d)?)
+                }
+                EncodingTag::FixedBytes => {
+                    DataFormat::FixedBytes(u16::strict_decode(&mut d)?)
+                }
             })
         }
     }
@@ -800,7 +775,7 @@ mod _validation {
                     });
                 }
 
-                (Self::String(len), data::Revealed::String(val)) => {
+                (Self::UniString(len), data::Revealed::String(val)) => {
                     if val.len() > *len as usize {
                         status.add_failure(validation::Failure::SchemaWrongDataLength {
                             field_or_state_type: item_id,
@@ -809,7 +784,7 @@ mod _validation {
                         });
                     }
                 }
-                (Self::Bytes(len), data::Revealed::Bytes(val)) => {
+                (Self::ByteString(len), data::Revealed::Bytes(val)) => {
                     if val.len() > *len as usize {
                         status.add_failure(validation::Failure::SchemaWrongDataLength {
                             field_or_state_type: item_id,
@@ -818,31 +793,6 @@ mod _validation {
                         });
                     }
                 }
-
-                (Self::Digest(DigestAlgorithm::Sha256), data::Revealed::Sha256(_)) => {}
-                (Self::Digest(DigestAlgorithm::Sha512), data::Revealed::Sha512(_)) => {}
-                (Self::Digest(DigestAlgorithm::Bitcoin160), data::Revealed::Bitcoin160(_)) => {}
-                (Self::Digest(DigestAlgorithm::Bitcoin256), data::Revealed::Bitcoin256(_)) => {}
-
-                (
-                    Self::PublicKey(EllipticCurve::Secp256k1, _),
-                    data::Revealed::Secp256k1Pubkey(_),
-                ) => {}
-                (
-                    Self::PublicKey(EllipticCurve::Curve25519, _),
-                    data::Revealed::Curve25519Pubkey(_),
-                ) => {}
-                (
-                    Self::Signature(elliptic_curve::SignatureAlgorithm::Ecdsa),
-                    data::Revealed::Secp256k1ECDSASignature(_),
-                ) => {}
-                (
-                    Self::Signature(elliptic_curve::SignatureAlgorithm::Ed25519),
-                    data::Revealed::Ed25519Signature(_),
-                ) => {}
-                (Self::TxOutPoint, data::Revealed::TxOutPoint(_)) => {}
-                (Self::Tx, data::Revealed::Tx(_)) => {}
-                (Self::Psbt, data::Revealed::Psbt(_)) => {}
 
                 _ => {
                     status.add_failure(validation::Failure::SchemaMismatchedDataType(item_id));
@@ -1323,7 +1273,7 @@ mod test {
 
         // Test failure cases for String format
         let string_data = Revealed::String("Hello".to_string());
-        let string_format = DataFormat::String(2u16);
+        let string_format = DataFormat::UniString(2u16);
         assert_eq!(
             string_format.validate(3, &string_data).failures[0],
             Failure::SchemaWrongDataLength {
@@ -1336,7 +1286,7 @@ mod test {
         // Test failure cases for Bytes format
         let bytes = vec![1u8, 2u8, 3u8];
         let bytes_data = Revealed::Bytes(bytes);
-        let bytes_format = DataFormat::Bytes(2u16);
+        let bytes_format = DataFormat::ByteString(2u16);
         assert_eq!(
             bytes_format.validate(3, &bytes_data).failures[0],
             Failure::SchemaWrongDataLength {
