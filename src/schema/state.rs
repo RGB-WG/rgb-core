@@ -107,12 +107,9 @@ impl DataFormat {
     #[inline]
     pub fn u64() -> Self { Self::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128) }
 
-    // TODO #14: Add support later once bitcoin library will start supporting
-    //       consensus-encoding of the native rust `u128` type
-    //#[inline]
-    //pub fn u128() -> Self {
-    //    Self::Unsigned(Bits::Bit128, 0, core::u128::MAX)
-    // }
+    #[inline]
+    pub fn u128() -> Self { Self::Unsigned(Bits::Bit128, 0, core::u128::MAX) }
+    // TODO #14: Add support for `u256` type
 
     #[inline]
     pub fn i8() -> Self { Self::Integer(Bits::Bit8, 0, core::i8::MAX as i128) }
@@ -126,12 +123,9 @@ impl DataFormat {
     #[inline]
     pub fn i64() -> Self { Self::Integer(Bits::Bit64, 0, core::i64::MAX as i128) }
 
-    // TODO #14: Add support later once bitcoin library will start supporting
-    //       consensus-encoding of the native rust `u128` type
-    //#[inline]
-    //pub fn i128() -> Self {
-    //    Self::Integer(Bits::Bit128, 0, core::i128::MAX)
-    //}
+    #[inline]
+    pub fn i128() -> Self { Self::Integer(Bits::Bit128, 0, core::i128::MAX) }
+    // TODO #14: Add support for `i256` type
 
     #[inline]
     pub fn f32() -> Self { Self::Float(Bits::Bit32, 0.0, core::f32::MAX as f64) }
@@ -198,6 +192,10 @@ mod _validation {
                 (Self::Unsigned(Bits::Bit64, min, max), data::Revealed::U64(val)) => {
                     range_check(item_id, true, *val, *min, *max, &mut status)
                 }
+                (Self::Unsigned(Bits::Bit128, min, max), data::Revealed::U128(val)) => {
+                    range_check(item_id, true, *val, *min, *max, &mut status)
+                }
+                // TODO #14: Add support for `u256` type
                 (Self::Unsigned(bits, _, _), _) => {
                     status.add_failure(validation::Failure::SchemaMismatchedBits {
                         field_or_state_type: item_id,
@@ -217,6 +215,10 @@ mod _validation {
                 (Self::Integer(Bits::Bit64, min, max), data::Revealed::I64(val)) => {
                     range_check(item_id, true, *val, *min, *max, &mut status)
                 }
+                (Self::Integer(Bits::Bit128, min, max), data::Revealed::I128(val)) => {
+                    range_check(item_id, true, *val, *min, *max, &mut status)
+                }
+                // TODO #14: Add support for `i256` type
                 (Self::Integer(bits, _, _), _) => {
                     status.add_failure(validation::Failure::SchemaMismatchedBits {
                         field_or_state_type: item_id,
