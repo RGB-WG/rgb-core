@@ -272,6 +272,15 @@ mod _validation {
                         });
                     }
                 }
+                (Self::FixedBytes(len), data::Revealed::Bytes(val)) => {
+                    if val.len() != *len as usize {
+                        status.add_failure(validation::Failure::SchemaWrongDataLength {
+                            field_or_state_type: item_id,
+                            max_expected: *len,
+                            found: val.len(),
+                        });
+                    }
+                }
 
                 _ => {
                     status.add_failure(validation::Failure::SchemaMismatchedDataType(item_id));
