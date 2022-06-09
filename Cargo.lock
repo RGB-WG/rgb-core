@@ -223,8 +223,8 @@ dependencies = [
 
 [[package]]
 name = "bp-core"
-version = "0.7.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core#35946c0d72a882ed5a360092cd97ec9d72bd74c2"
+version = "0.7.0-beta.5"
+source = "git+https://github.com/BP-WG/bp-core#2e036b5736c6c37e2dad26e19d7fb109de68528d"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -240,8 +240,8 @@ dependencies = [
 
 [[package]]
 name = "bp-dbc"
-version = "0.7.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core#35946c0d72a882ed5a360092cd97ec9d72bd74c2"
+version = "0.7.0-beta.5"
+source = "git+https://github.com/BP-WG/bp-core#2e036b5736c6c37e2dad26e19d7fb109de68528d"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -256,8 +256,8 @@ dependencies = [
 
 [[package]]
 name = "bp-seals"
-version = "0.7.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core#35946c0d72a882ed5a360092cd97ec9d72bd74c2"
+version = "0.7.0-beta.5"
+source = "git+https://github.com/BP-WG/bp-core#2e036b5736c6c37e2dad26e19d7fb109de68528d"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -517,9 +517,9 @@ dependencies = [
 
 [[package]]
 name = "electrum-client"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff0ecf5f0d1d0ca8ec87cefd7b3118be46cd47309a49c4172ce91adc98895413"
+checksum = "8ef9b40020912229e947b45d91f9ff96b10d543e0eddd75ff41b9eda24d9c051"
 dependencies = [
  "bitcoin",
  "log",
