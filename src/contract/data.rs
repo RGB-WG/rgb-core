@@ -56,16 +56,14 @@ pub enum Revealed {
     U16(u16),
     U32(u32),
     U64(u64),
-    // TODO #15: Add support later once bitcoin library will start supporting
-    //       consensus-encoding of the native rust `u128` type
-    // U128(u128),
+    U128(u128),
+    // TODO #15: Add support for u256
     I8(i8),
     I16(i16),
     I32(i32),
     I64(i64),
-    // TODO #15: Add support later once bitcoin library will start supporting
-    //       consensus-encoding of the native rust `i128` type
-    // I128(i128),
+    I128(i128),
+    // TODO #15: Add support for i256
     F32(f32),
     F64(f64),
     Bytes(Vec<u8>),
@@ -274,12 +272,12 @@ pub(super) mod _strict_encoding {
         U16 = 0b_0000_0001_u8,
         U32 = 0b_0000_0010_u8,
         U64 = 0b_0000_0011_u8,
-        // U128 = 0b_0000_0100_u8,
+        U128 = 0b_0000_0100_u8,
         I8 = 0b_0000_1000_u8,
         I16 = 0b_0000_1001_u8,
         I32 = 0b_0000_1010_u8,
         I64 = 0b_0000_1011_u8,
-        // I128 = 0b_0000_1100_u8,
+        I128 = 0b_0000_1100_u8,
         F32 = 0b_0001_0010_u8,
         F64 = 0b_0001_0011_u8,
 
@@ -326,8 +324,9 @@ pub(super) mod _strict_encoding {
                 Revealed::U64(val) => {
                     strict_encode_list!(e; EncodingTag::U64, val)
                 }
-                // Value::U128(val) => strict_encode_list!(e; EncodingTag::U128,
-                // val),
+                Revealed::U128(val) => {
+                    strict_encode_list!(e; EncodingTag::U128, val)
+                }
                 Revealed::I8(val) => {
                     strict_encode_list!(e; EncodingTag::I8, val)
                 }
@@ -340,8 +339,9 @@ pub(super) mod _strict_encoding {
                 Revealed::I64(val) => {
                     strict_encode_list!(e; EncodingTag::I64, val)
                 }
-                // Value::I128(val) => strict_encode_list!(e; EncodingTag::I128,
-                // val),
+                Revealed::I128(val) => {
+                    strict_encode_list!(e; EncodingTag::I128, val)
+                }
                 Revealed::F32(val) => {
                     strict_encode_list!(e; EncodingTag::F32, val)
                 }
@@ -399,14 +399,16 @@ pub(super) mod _strict_encoding {
                 EncodingTag::U16 => Revealed::U16(u16::strict_decode(&mut d)?),
                 EncodingTag::U32 => Revealed::U32(u32::strict_decode(&mut d)?),
                 EncodingTag::U64 => Revealed::U64(u64::strict_decode(&mut d)?),
-                // EncodingTag::U128 => Value::U128(u128::strict_decode(&mut
-                // d)?),
+                EncodingTag::U128 => {
+                    Revealed::U128(u128::strict_decode(&mut d)?)
+                }
                 EncodingTag::I8 => Revealed::I8(i8::strict_decode(&mut d)?),
                 EncodingTag::I16 => Revealed::I16(i16::strict_decode(&mut d)?),
                 EncodingTag::I32 => Revealed::I32(i32::strict_decode(&mut d)?),
                 EncodingTag::I64 => Revealed::I64(i64::strict_decode(&mut d)?),
-                // EncodingTag::I128 => Value::I128(i128::strict_decode(&mut
-                // d)?),
+                EncodingTag::I128 => {
+                    Revealed::I128(i128::strict_decode(&mut d)?)
+                }
                 EncodingTag::F32 => Revealed::F32(f32::strict_decode(&mut d)?),
                 EncodingTag::F64 => Revealed::F64(f64::strict_decode(&mut d)?),
                 EncodingTag::Bytes => Revealed::Bytes(Vec::strict_decode(&mut d)?),
@@ -451,10 +453,12 @@ pub(super) mod _strict_encoding {
                 EncodingTag::U16 => 0b_0000_0001_u8,
                 EncodingTag::U32 => 0b_0000_0010_u8,
                 EncodingTag::U64 => 0b_0000_0011_u8,
+                EncodingTag::U128 => 0b_0000_0100_u8,
                 EncodingTag::I8 => 0b_0000_1000_u8,
                 EncodingTag::I16 => 0b_0000_1001_u8,
                 EncodingTag::I32 => 0b_0000_1010_u8,
                 EncodingTag::I64 => 0b_0000_1011_u8,
+                EncodingTag::I128 => 0b_0000_1100_u8,
                 EncodingTag::F32 => 0b_0001_0010_u8,
                 EncodingTag::F64 => 0b_0001_0011_u8,
 
