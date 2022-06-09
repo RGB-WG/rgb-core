@@ -26,7 +26,9 @@ pub struct StateSchema {
     pub abi: script::AssignmentAbi,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -34,7 +36,6 @@ pub struct StateSchema {
 )]
 #[non_exhaustive]
 #[repr(u8)]
-#[display(Debug)]
 pub enum StateType {
     Declarative = 0,
     DiscreteFiniteField = 1,
@@ -150,8 +151,6 @@ mod _strict_encoding {
     use strict_encoding::{Error, StrictDecode, StrictEncode};
 
     use super::*;
-
-    impl_enum_strict_encoding!(StateType);
 
     impl StrictEncode for StateFormat {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
