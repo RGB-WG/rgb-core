@@ -46,8 +46,7 @@ pub use verify::SchemaVerify;
 
 /// Format for the stored history proofs, like proof of burn. It is a part of
 /// LNPBP standards
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum HistoryProofFormat {

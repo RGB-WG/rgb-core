@@ -15,9 +15,8 @@ use std::collections::BTreeSet;
 
 use super::{script, Bits};
 
-#[derive(Clone, PartialEq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Debug, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display(Debug)]
 pub struct StateSchema {
     pub format: StateFormat,
     pub abi: script::AssignmentAbi,

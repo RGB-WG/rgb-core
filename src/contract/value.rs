@@ -182,9 +182,8 @@ impl Ord for Revealed {
     }
 }
 
-#[derive(Clone, Debug, Display, AsAny, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, AsAny, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display(Debug)]
 pub struct Confidential {
     #[cfg_attr(
         feature = "serde",

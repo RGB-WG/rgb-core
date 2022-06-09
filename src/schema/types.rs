@@ -103,13 +103,12 @@ impl Bits {
     pub fn bit_len(self) -> usize { self.byte_len() * 8 }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum Occurrences {

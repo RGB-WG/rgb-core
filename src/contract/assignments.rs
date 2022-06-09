@@ -45,9 +45,8 @@ pub enum StateType {
     Data,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictEncode, StrictDecode)]
-#[display(Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

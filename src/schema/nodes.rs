@@ -84,9 +84,8 @@ pub trait NodeSchema {
     fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint>;
 }
 
-#[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
+#[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display(Debug)]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
     pub owned_rights: OwnedRightsStructure,
@@ -94,9 +93,8 @@ pub struct GenesisSchema {
     pub abi: GenesisAbi,
 }
 
-#[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
+#[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display(Debug)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
     pub extends: PublicRightsStructure,
@@ -105,9 +103,8 @@ pub struct ExtensionSchema {
     pub abi: ExtensionAbi,
 }
 
-#[derive(Clone, PartialEq, Debug, Display, Default, AsAny)]
+#[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display(Debug)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
     pub closes: OwnedRightsStructure,
