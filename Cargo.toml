@@ -51,9 +51,6 @@ aluvm = "~0.5.0"
 # ----------------------------------------------------
 bitcoin = { version = "~0.28.1", features = ["rand"] }
 bitcoin_hashes = "~0.10.0" # we need macro from here
-# <https://github.com/LNP-BP/LNPBPs/blob/master/lnpbp-0002.md#deterministic-public-key-extraction-from-bitcoin-script>
-# We have to fix version of miniscript as required by LNPBP-2 specification
-miniscript = { version = "~7.0.0", features = ["compiler"] }
 electrum-client = { version = "0.10.0", optional = true }
 bech32 = "~0.9.0"
 #   Used only as a part of RGB for encoding Ed25519 key data (for instance as
@@ -102,4 +99,4 @@ cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum", "electr
 serde = ["serde_crate", "serde_with", # "serde_with_macros",
          "commit_verify/serde", "strict_encoding/serde",
          "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde",
-         "bitcoin/use-serde", "bitcoin_hashes/serde", "miniscript/serde"]
+         "bitcoin/use-serde", "bitcoin_hashes/serde"]

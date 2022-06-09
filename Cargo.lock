@@ -796,7 +796,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da39fc7a8adea97a677337b0091779dd86349226b869053af496584a9b9e5847"
 dependencies = [
  "bitcoin",
- "serde",
 ]
 
 [[package]]
@@ -1151,7 +1150,6 @@ dependencies = [
  "inflate",
  "lazy_static",
  "lnpbp",
- "miniscript",
  "num-derive",
  "num-traits",
  "serde",
