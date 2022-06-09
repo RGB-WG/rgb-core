@@ -145,8 +145,8 @@ mod _strict_encoding {
     use core::fmt::Debug;
     use core::ops::{Add, Bound, RangeBounds, RangeInclusive, Sub};
 
-    use num_derive::{FromPrimitive, ToPrimitive};
-    use num_traits::{Bounded, ToPrimitive};
+    use num_derive::FromPrimitive;
+    use num_traits::Bounded;
     use strict_encoding::{Error, StrictDecode, StrictEncode};
 
     use super::*;
@@ -482,7 +482,7 @@ mod _strict_encoding {
                             "The provided number of bits for the floating number \
                              is not supported by the platform",
                             32..64,
-                            unsupported_bits.to_u64().unwrap() as u128,
+                            (*unsupported_bits as u8) as u128,
                         ))?,
                     }
                     len

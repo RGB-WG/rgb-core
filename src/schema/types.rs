@@ -13,8 +13,6 @@
 
 use std::ops::RangeInclusive;
 
-use num_traits::ToPrimitive;
-
 pub trait UnsignedInteger:
     Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Into<u64> + std::fmt::Debug
 {
@@ -69,13 +67,14 @@ impl Number for f64 {}
 /// NB: For now, we support only up to 128-bit integers and 64-bit floats;
 /// nevertheless RGB schema standard allows up to 256-byte numeric types.
 /// Support for larger types can be added later.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "lowercase")
 )]
-#[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum Bits {
@@ -89,8 +88,8 @@ pub enum Bits {
 // TODO #46: Add support for 256-bit types
 
 impl Bits {
-    pub fn max_value(&self) -> u128 {
-        match *self {
+    pub fn max_value(self) -> u128 {
+        match self {
             Bits::Bit8 => core::u8::MAX as u128,
             Bits::Bit16 => core::u16::MAX as u128,
             Bits::Bit32 => core::u32::MAX as u128,
@@ -99,12 +98,9 @@ impl Bits {
         }
     }
 
-    pub fn byte_len(&self) -> usize {
-        self.to_u8()
-            .expect("Bit type MUST always occupy < 256 bytes") as usize
-    }
+    pub fn byte_len(self) -> usize { (self as u8) as usize }
 
-    pub fn bit_len(&self) -> usize { self.byte_len() * 8 }
+    pub fn bit_len(self) -> usize { self.byte_len() * 8 }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
@@ -193,8 +189,6 @@ mod _strict_encoding {
     use strict_encoding::{Error, StrictDecode, StrictEncode};
 
     use super::*;
-
-    impl_enum_strict_encoding!(Bits);
 
     impl StrictEncode for Occurrences {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
