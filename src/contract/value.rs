@@ -87,6 +87,7 @@ impl FromHex for BlindingFactor {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, AsAny)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display("{value}#{blinding}")]
 pub struct Revealed {
@@ -181,9 +182,8 @@ impl Ord for Revealed {
     }
 }
 
-#[derive(Clone, Debug, Display, AsAny, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, AsAny, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display(Debug)]
 pub struct Confidential {
     #[cfg_attr(
         feature = "serde",
@@ -304,36 +304,6 @@ impl Confidential {
         negative: Vec<pedersen::Commitment>,
     ) -> bool {
         SECP256K1_ZKP.verify_commit_sum(positive, negative)
-    }
-}
-
-mod _strict_encoding {
-    use std::io;
-
-    use strict_encoding::{Error, StrictDecode, StrictEncode};
-
-    use super::*;
-    use crate::data::_strict_encoding::EncodingTag;
-
-    impl StrictEncode for Revealed {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            Ok(strict_encode_list!(e; EncodingTag::U64, self.value, self.blinding))
-        }
-    }
-
-    impl StrictDecode for Revealed {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let format = EncodingTag::strict_decode(&mut d)?;
-            Ok(match format {
-                EncodingTag::U64 => Self {
-                    value: AtomicValue::strict_decode(&mut d)?,
-                    blinding: BlindingFactor::strict_decode(&mut d)?,
-                },
-                _ => Err(Error::UnsupportedDataStructure(
-                    "We support only homomorphic commitments to U64 data",
-                ))?,
-            })
-        }
     }
 }
 

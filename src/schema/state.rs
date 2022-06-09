@@ -12,21 +12,19 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::BTreeSet;
-use std::io;
 
-use num_derive::{FromPrimitive, ToPrimitive};
+use super::{script, Bits};
 
-use super::{elliptic_curve, script, Bits, DigestAlgorithm, EllipticCurve};
-
-#[derive(Clone, PartialEq, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Debug, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display(Debug)]
 pub struct StateSchema {
     pub format: StateFormat,
     pub abi: script::AssignmentAbi,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -34,34 +32,35 @@ pub struct StateSchema {
 )]
 #[non_exhaustive]
 #[repr(u8)]
-#[display(Debug)]
 pub enum StateType {
     Declarative = 0,
     DiscreteFiniteField = 1,
     CustomData = 2,
 }
 
-#[derive(Clone, PartialEq, Debug, Display)]
+#[derive(Clone, PartialEq, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[non_exhaustive]
-#[display(Debug)]
 pub enum StateFormat {
     Declarative,
     DiscreteFiniteField(DiscreteFiniteFieldFormat),
     CustomData(DataFormat),
 }
 
-#[derive(Clone, PartialEq, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(Clone, PartialEq, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "lowercase")
 )]
-#[display(Debug)]
 #[non_exhaustive]
 #[repr(u8)]
 /// Today we support only a single format of confidential data, because of the
@@ -75,29 +74,23 @@ pub enum DiscreteFiniteFieldFormat {
     Unsigned64bit,
 }
 
-#[derive(Clone, PartialEq, Debug, Display)]
+#[derive(Clone, PartialEq, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "lowercase")
 )]
-#[display(Debug)]
 #[non_exhaustive]
 pub enum DataFormat {
     Unsigned(Bits, u128, u128),
     Integer(Bits, i128, i128),
     Float(Bits, f64, f64),
     Enum(BTreeSet<u8>),
-    String(u16),
-    Bytes(u16),
-    Digest(DigestAlgorithm),
-    PublicKey(EllipticCurve, elliptic_curve::PointSerialization),
-    Signature(elliptic_curve::SignatureAlgorithm),
-    // TODO #33: Add externally stored data container id
-    // Container(BlobId, MIME, u64 /* AES encryption key / salt */),
-    TxOutPoint,
-    Tx,
-    Psbt,
+    UniString(u16),
+    ByteString(u16),
+    FixedBytes(u16),
 }
 
 // Convenience methods
@@ -114,12 +107,9 @@ impl DataFormat {
     #[inline]
     pub fn u64() -> Self { Self::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128) }
 
-    // TODO #14: Add support later once bitcoin library will start supporting
-    //       consensus-encoding of the native rust `u128` type
-    //#[inline]
-    //pub fn u128() -> Self {
-    //    Self::Unsigned(Bits::Bit128, 0, core::u128::MAX)
-    // }
+    #[inline]
+    pub fn u128() -> Self { Self::Unsigned(Bits::Bit128, 0, core::u128::MAX) }
+    // TODO #14: Add support for `u256` type
 
     #[inline]
     pub fn i8() -> Self { Self::Integer(Bits::Bit8, 0, core::i8::MAX as i128) }
@@ -133,529 +123,15 @@ impl DataFormat {
     #[inline]
     pub fn i64() -> Self { Self::Integer(Bits::Bit64, 0, core::i64::MAX as i128) }
 
-    // TODO #14: Add support later once bitcoin library will start supporting
-    //       consensus-encoding of the native rust `u128` type
-    //#[inline]
-    //pub fn i128() -> Self {
-    //    Self::Integer(Bits::Bit128, 0, core::i128::MAX)
-    //}
+    #[inline]
+    pub fn i128() -> Self { Self::Integer(Bits::Bit128, 0, core::i128::MAX) }
+    // TODO #14: Add support for `i256` type
 
     #[inline]
     pub fn f32() -> Self { Self::Float(Bits::Bit32, 0.0, core::f32::MAX as f64) }
 
     #[inline]
     pub fn f64() -> Self { Self::Float(Bits::Bit64, 0.0, core::f64::MAX) }
-}
-
-mod _strict_encoding {
-    use core::convert::TryFrom;
-    use core::fmt::Debug;
-    use core::ops::{Add, Bound, RangeBounds, RangeInclusive, Sub};
-
-    use num_derive::{FromPrimitive, ToPrimitive};
-    use num_traits::{Bounded, ToPrimitive};
-    use strict_encoding::{Error, StrictDecode, StrictEncode};
-
-    use super::*;
-
-    impl_enum_strict_encoding!(StateType);
-
-    impl StrictEncode for StateFormat {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            Ok(match self {
-                StateFormat::Declarative => StateType::Declarative.strict_encode(e)?,
-                StateFormat::DiscreteFiniteField(data) => {
-                    strict_encode_list!(e; StateType::DiscreteFiniteField, data)
-                }
-                StateFormat::CustomData(data) => {
-                    strict_encode_list!(e; StateType::CustomData, data)
-                }
-            })
-        }
-    }
-
-    impl StrictDecode for StateFormat {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let format = StateType::strict_decode(&mut d)?;
-            Ok(match format {
-                StateType::Declarative => StateFormat::Declarative,
-                StateType::DiscreteFiniteField => {
-                    StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::strict_decode(d)?)
-                }
-                StateType::CustomData => StateFormat::CustomData(DataFormat::strict_decode(d)?),
-            })
-        }
-    }
-
-    #[derive(Debug, Display, FromPrimitive, ToPrimitive)]
-    #[display(Debug)]
-    #[repr(u8)]
-    enum EncodingTag {
-        // Primitive types
-        Unsigned = 0,
-        Integer = 1,
-        Float = 2,
-        Enum = 3,
-        String = 4,
-        Bytes = 5,
-        // Cryptographic types
-        Digest = 0x10,
-        PublicKey = 0x11,
-        Signature = 0x12,
-        // Composed types
-        TxOutPoint = 0x20,
-        Tx = 0x21,
-        Psbt = 0x22,
-    }
-    impl_enum_strict_encoding!(EncodingTag);
-
-    impl StrictEncode for DiscreteFiniteFieldFormat {
-        fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, Error> {
-            match self {
-                // Today we support only a single format of confidential data,
-                // but tomorrow there might be more
-                DiscreteFiniteFieldFormat::Unsigned64bit => {
-                    DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128).strict_encode(e)
-                }
-            }
-        }
-    }
-
-    impl StrictDecode for DiscreteFiniteFieldFormat {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let format = EncodingTag::strict_decode(&mut d)?;
-            match format {
-                EncodingTag::Unsigned => {
-                    let bits = Bits::strict_decode(&mut d)?;
-                    let (min, max) = match bits {
-                        Bits::Bit64 => {
-                            let mut min = [0u8; 8];
-                            let mut max = [0u8; 8];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                u64::from_le_bytes(min) as u128,
-                                u64::from_le_bytes(max) as u128,
-                            )
-                        }
-                        _ => Err(Error::UnsupportedDataStructure(
-                            "confidential amounts can be only of u64 type; \
-                             unsigned integers with different bit coin are not \
-                             yet supported",
-                        ))?,
-                    };
-                    if min != 0 || max != core::u64::MAX as u128 {
-                        Err(Error::UnsupportedDataStructure(
-                            "confidential amounts can be only of u64 type; \
-                             allowed values should cover full u64 value range",
-                        ))?
-                    }
-                    Ok(DiscreteFiniteFieldFormat::Unsigned64bit)
-                }
-                _ => Err(Error::UnsupportedDataStructure(
-                    "confidential amounts can be only of u64 type; \
-                     other types of the data is not yet supported",
-                )),
-            }
-        }
-    }
-
-    impl StrictEncode for DataFormat {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            fn get_bounds<T>(
-                provided: impl RangeBounds<T>,
-                allowed: RangeInclusive<T>,
-                exclusive: bool,
-            ) -> Result<(T, T), Error>
-            where
-                T: Copy
-                    + Bounded
-                    + PartialOrd
-                    + Debug
-                    + Add<Output = T>
-                    + Sub<Output = T>
-                    + TryFrom<u8>
-                    + Default,
-            {
-                let min = match provided.start_bound() {
-                    Bound::Excluded(bound) | Bound::Included(bound) if !allowed.contains(bound) => {
-                        Err(Error::DataIntegrityError(format!(
-                            "Lower bound {:?} of the allowed range for \
-                             DataFormat is outside of the possible values \
-                             of used number type",
-                            bound,
-                        )))?
-                    }
-                    Bound::Included(bound) => *bound,
-                    Bound::Excluded(_) if !exclusive => Err(Error::DataIntegrityError(
-                        "Excluded upper bound for the allowed range in \
-                             DataFormat does not make sense for float type"
-                            .to_string(),
-                    ))?,
-                    Bound::Excluded(bound) => *bound + T::try_from(1).unwrap_or_default(),
-                    Bound::Unbounded => *allowed.start(),
-                };
-                let max = match provided.end_bound() {
-                    Bound::Excluded(bound) | Bound::Included(bound) if !allowed.contains(bound) => {
-                        Err(Error::DataIntegrityError(format!(
-                            "Upper bound {:?} of the allowed range for \
-                             DataFormat is outside of the possible values \
-                             of used number type",
-                            bound,
-                        )))?
-                    }
-                    Bound::Included(bound) => *bound,
-                    Bound::Excluded(_) if !exclusive => Err(Error::DataIntegrityError(
-                        "Excluded upper bound for the allowed range in \
-                             DataFormat does not make sense for float type"
-                            .to_string(),
-                    ))?,
-                    Bound::Excluded(bound) => *bound - T::try_from(1).unwrap_or_default(),
-                    Bound::Unbounded => *allowed.end(),
-                };
-                Ok((min, max))
-            }
-
-            macro_rules! write_min_max {
-                ($min:ident, $max:ident, $e:ident, $len:ident) => {
-                    let (min, max) = (
-                        $min.to_le_bytes().to_vec(),
-                        $max.to_le_bytes().to_vec(),
-                    );
-                    $e.write_all(&min)?;
-                    $e.write_all(&max)?;
-                    $len += ::core::mem::size_of_val(&$min)
-                          + ::core::mem::size_of_val(&$max);
-                };
-            }
-
-            Ok(match self {
-                DataFormat::Unsigned(bits, min, max) => {
-                    let mut len = (EncodingTag::Unsigned).strict_encode(&mut e)?;
-                    len += bits.strict_encode(&mut e)?;
-                    match bits {
-                        Bits::Bit8 => {
-                            let min = u8::try_from(*min)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Unsigned data type are outside of bit dimension",
-                                    (core::u8::MIN as u128)..(core::u8::MAX as u128), *min as u128))?;
-                            let max = u8::try_from(*max)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Unsigned data type are outside of bit dimension",
-                                    (core::u8::MIN as u128)..(core::u8::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::u8::MIN..=core::u8::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                        Bits::Bit16 => {
-                            let min = u16::try_from(*min)
-                                    .map_err(|_| Error::ValueOutOfRange(
-                                        "Minimum value for Unsigned data type are outside of bit dimension",
-                                        (core::u16::MIN as u128)..(core::u16::MAX as u128), *min as u128))?;
-                            let max = u16::try_from(*max)
-                                    .map_err(|_| Error::ValueOutOfRange(
-                                        "Maximum value for Unsigned data type are outside of bit dimension",
-                                        (core::u16::MIN as u128)..(core::u16::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::u16::MIN..=core::u16::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                        Bits::Bit32 => {
-                            let min = u32::try_from(*min)
-                                    .map_err(|_| Error::ValueOutOfRange(
-                                        "Minimum value for Unsigned data type are outside of bit dimension",
-                                        (core::u32::MIN as u128)..(core::u32::MAX as u128), *min as u128))?;
-                            let max = u32::try_from(*max)
-                                    .map_err(|_| Error::ValueOutOfRange(
-                                        "Maximum value for Unsigned data type are outside of bit dimension",
-                                        (core::u32::MIN as u128)..(core::u32::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::u32::MIN..=core::u32::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                        Bits::Bit64 => {
-                            let min = u64::try_from(*min)
-                                    .map_err(|_| Error::ValueOutOfRange(
-                                        "Minimum value for Unsigned data type are outside of bit dimension",
-                                        (core::u64::MIN as u128)..(core::u64::MAX as u128), *min as u128))?;
-                            let max = u64::try_from(*max)
-                                    .map_err(|_| Error::ValueOutOfRange(
-                                        "Maximum value for Unsigned data type are outside of bit dimension",
-                                        (core::u64::MIN as u128)..(core::u64::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::u64::MIN..=core::u64::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                    }
-                    len
-                }
-
-                DataFormat::Integer(bits, min, max) => {
-                    let mut len = (EncodingTag::Integer).strict_encode(&mut e)?;
-                    len += bits.strict_encode(&mut e)?;
-                    match bits {
-                        Bits::Bit8 => {
-                            let min = i8::try_from(*min)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Integer data type are outside of bit dimension",
-                                    (core::i8::MIN as u128)..(core::i8::MAX as u128), *min as u128))?;
-                            let max = i8::try_from(*max)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Integer data type are outside of bit dimension",
-                                    (core::i8::MIN as u128)..(core::i8::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::i8::MIN..=core::i8::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                        Bits::Bit16 => {
-                            let min = i16::try_from(*min)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Integer data type are outside of bit dimension",
-                                    (core::i16::MIN as u128)..(core::i16::MAX as u128), *min as u128))?;
-                            let max = i16::try_from(*max)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Integer data type are outside of bit dimension",
-                                    (core::i16::MIN as u128)..(core::i16::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::i16::MIN..=core::i16::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                        Bits::Bit32 => {
-                            let min = i32::try_from(*min)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Integer data type are outside of bit dimension",
-                                    (core::i32::MIN as u128)..(core::i32::MAX as u128), *min as u128))?;
-                            let max = i32::try_from(*max)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Integer data type are outside of bit dimension",
-                                    (core::i32::MIN as u128)..(core::i32::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::i32::MIN..=core::i32::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                        Bits::Bit64 => {
-                            let min = i64::try_from(*min)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Minimum value for Integer data type are outside of bit dimension",
-                                    (core::i64::MIN as u128)..(core::i64::MAX as u128), *min as u128))?;
-                            let max = i64::try_from(*max)
-                                .map_err(|_| Error::ValueOutOfRange(
-                                    "Maximum value for Integer data type are outside of bit dimension",
-                                    (core::i64::MIN as u128)..(core::i64::MAX as u128), *max as u128))?;
-                            let (min, max) =
-                                get_bounds(min..=max, core::i64::MIN..=core::i64::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                    }
-                    len
-                }
-
-                DataFormat::Float(bits, min, max) => {
-                    let mut len = (EncodingTag::Float).strict_encode(&mut e)?;
-                    len += bits.strict_encode(&mut e)?;
-                    match bits {
-                        Bits::Bit32 => {
-                            let min = *min as f32;
-                            let max = *max as f32;
-                            let (min, max) =
-                                get_bounds(min..=max, core::f32::MIN..=core::f32::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                        Bits::Bit64 => {
-                            let (min, max) =
-                                get_bounds(min..=max, core::f64::MIN..=core::f64::MAX, true)?;
-                            write_min_max!(min, max, e, len);
-                        }
-                        unsupported_bits => Err(Error::ValueOutOfRange(
-                            "The provided number of bits for the floating number \
-                             is not supported by the platform",
-                            32..64,
-                            unsupported_bits.to_u64().unwrap() as u128,
-                        ))?,
-                    }
-                    len
-                }
-
-                DataFormat::Enum(values) => {
-                    strict_encode_list!(e; EncodingTag::Enum, values)
-                }
-                DataFormat::String(size) => {
-                    strict_encode_list!(e; EncodingTag::String, size)
-                }
-                DataFormat::Bytes(size) => {
-                    strict_encode_list!(e; EncodingTag::Bytes, size)
-                }
-                DataFormat::Digest(algo) => {
-                    strict_encode_list!(e; EncodingTag::Digest, algo)
-                }
-                DataFormat::PublicKey(curve, ser) => {
-                    strict_encode_list!(e; EncodingTag::PublicKey, curve, ser)
-                }
-                DataFormat::Signature(algo) => {
-                    strict_encode_list!(e; EncodingTag::Signature, algo)
-                }
-                DataFormat::TxOutPoint => EncodingTag::TxOutPoint.strict_encode(&mut e)?,
-                DataFormat::Tx => EncodingTag::Tx.strict_encode(&mut e)?,
-                DataFormat::Psbt => EncodingTag::Psbt.strict_encode(&mut e)?,
-            })
-        }
-    }
-
-    impl StrictDecode for DataFormat {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let format = EncodingTag::strict_decode(&mut d)?;
-            Ok(match format {
-                EncodingTag::Unsigned => {
-                    let bits = Bits::strict_decode(&mut d)?;
-                    let (min, max) = match bits {
-                        Bits::Bit8 => {
-                            let mut min = [0u8; 1];
-                            let mut max = [0u8; 1];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                u8::from_le_bytes(min) as u128,
-                                u8::from_le_bytes(max) as u128,
-                            )
-                        }
-                        Bits::Bit16 => {
-                            let mut min = [0u8; 2];
-                            let mut max = [0u8; 2];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                u16::from_le_bytes(min) as u128,
-                                u16::from_le_bytes(max) as u128,
-                            )
-                        }
-                        Bits::Bit32 => {
-                            let mut min = [0u8; 4];
-                            let mut max = [0u8; 4];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                u32::from_le_bytes(min) as u128,
-                                u32::from_le_bytes(max) as u128,
-                            )
-                        }
-                        Bits::Bit64 => {
-                            let mut min = [0u8; 8];
-                            let mut max = [0u8; 8];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                u64::from_le_bytes(min) as u128,
-                                u64::from_le_bytes(max) as u128,
-                            )
-                        } /*
-                          Bits::Bit128 => {
-                              let mut min = [0u8; 16];
-                              let mut max = [0u8; 16];
-                              d.read_exact(&mut min)?;
-                              d.read_exact(&mut max)?;
-                              (u128::from_le_bytes(min), u128::from_le_bytes(max))
-                          }
-                           */
-                    };
-                    DataFormat::Unsigned(bits, min, max)
-                }
-                EncodingTag::Integer => {
-                    let bits = Bits::strict_decode(&mut d)?;
-                    let (min, max) = match bits {
-                        Bits::Bit8 => {
-                            let mut min = [0u8; 1];
-                            let mut max = [0u8; 1];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                i8::from_le_bytes(min) as i128,
-                                i8::from_le_bytes(max) as i128,
-                            )
-                        }
-                        Bits::Bit16 => {
-                            let mut min = [0u8; 2];
-                            let mut max = [0u8; 2];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                i16::from_le_bytes(min) as i128,
-                                i16::from_le_bytes(max) as i128,
-                            )
-                        }
-                        Bits::Bit32 => {
-                            let mut min = [0u8; 4];
-                            let mut max = [0u8; 4];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                i32::from_le_bytes(min) as i128,
-                                i32::from_le_bytes(max) as i128,
-                            )
-                        }
-                        Bits::Bit64 => {
-                            let mut min = [0u8; 8];
-                            let mut max = [0u8; 8];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                i64::from_le_bytes(min) as i128,
-                                i64::from_le_bytes(max) as i128,
-                            )
-                        } /*
-                          Bits::Bit128 => {
-                              let mut min = [0u8; 16];
-                              let mut max = [0u8; 16];
-                              d.read_exact(&mut min)?;
-                              d.read_exact(&mut max)?;
-                              (i128::from_le_bytes(min), i128::from_le_bytes(max))
-                          }
-                           */
-                    };
-                    DataFormat::Integer(bits, min, max)
-                }
-                EncodingTag::Float => {
-                    let bits = Bits::strict_decode(&mut d)?;
-                    let (min, max) = match bits {
-                        Bits::Bit32 => {
-                            let mut min = [0u8; 4];
-                            let mut max = [0u8; 4];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (
-                                f32::from_le_bytes(min) as f64,
-                                f32::from_le_bytes(max) as f64,
-                            )
-                        }
-                        Bits::Bit64 => {
-                            let mut min = [0u8; 8];
-                            let mut max = [0u8; 8];
-                            d.read_exact(&mut min)?;
-                            d.read_exact(&mut max)?;
-                            (f64::from_le_bytes(min), f64::from_le_bytes(max))
-                        }
-                        _ => Err(Error::DataIntegrityError(
-                            "Unsupported float field bit size".to_string(),
-                        ))?,
-                    };
-                    DataFormat::Float(bits, min, max)
-                }
-                EncodingTag::Enum => DataFormat::Enum(BTreeSet::<u8>::strict_decode(&mut d)?),
-                EncodingTag::String => DataFormat::String(u16::strict_decode(&mut d)?),
-                EncodingTag::Bytes => DataFormat::Bytes(u16::strict_decode(&mut d)?),
-                EncodingTag::Digest => DataFormat::Digest(DigestAlgorithm::strict_decode(&mut d)?),
-                EncodingTag::PublicKey => DataFormat::PublicKey(
-                    EllipticCurve::strict_decode(&mut d)?,
-                    elliptic_curve::PointSerialization::strict_decode(&mut d)?,
-                ),
-                EncodingTag::Signature => DataFormat::Signature(
-                    elliptic_curve::SignatureAlgorithm::strict_decode(&mut d)?,
-                ),
-                EncodingTag::TxOutPoint => DataFormat::TxOutPoint,
-                EncodingTag::Tx => DataFormat::Tx,
-                EncodingTag::Psbt => DataFormat::Psbt,
-            })
-        }
-    }
 }
 
 mod _validation {
@@ -716,6 +192,10 @@ mod _validation {
                 (Self::Unsigned(Bits::Bit64, min, max), data::Revealed::U64(val)) => {
                     range_check(item_id, true, *val, *min, *max, &mut status)
                 }
+                (Self::Unsigned(Bits::Bit128, min, max), data::Revealed::U128(val)) => {
+                    range_check(item_id, true, *val, *min, *max, &mut status)
+                }
+                // TODO #14: Add support for `u256` type
                 (Self::Unsigned(bits, _, _), _) => {
                     status.add_failure(validation::Failure::SchemaMismatchedBits {
                         field_or_state_type: item_id,
@@ -735,6 +215,10 @@ mod _validation {
                 (Self::Integer(Bits::Bit64, min, max), data::Revealed::I64(val)) => {
                     range_check(item_id, true, *val, *min, *max, &mut status)
                 }
+                (Self::Integer(Bits::Bit128, min, max), data::Revealed::I128(val)) => {
+                    range_check(item_id, true, *val, *min, *max, &mut status)
+                }
+                // TODO #14: Add support for `i256` type
                 (Self::Integer(bits, _, _), _) => {
                     status.add_failure(validation::Failure::SchemaMismatchedBits {
                         field_or_state_type: item_id,
@@ -770,7 +254,7 @@ mod _validation {
                     });
                 }
 
-                (Self::String(len), data::Revealed::String(val)) => {
+                (Self::UniString(len), data::Revealed::String(val)) => {
                     if val.len() > *len as usize {
                         status.add_failure(validation::Failure::SchemaWrongDataLength {
                             field_or_state_type: item_id,
@@ -779,7 +263,7 @@ mod _validation {
                         });
                     }
                 }
-                (Self::Bytes(len), data::Revealed::Bytes(val)) => {
+                (Self::ByteString(len), data::Revealed::Bytes(val)) => {
                     if val.len() > *len as usize {
                         status.add_failure(validation::Failure::SchemaWrongDataLength {
                             field_or_state_type: item_id,
@@ -788,31 +272,15 @@ mod _validation {
                         });
                     }
                 }
-
-                (Self::Digest(DigestAlgorithm::Sha256), data::Revealed::Sha256(_)) => {}
-                (Self::Digest(DigestAlgorithm::Sha512), data::Revealed::Sha512(_)) => {}
-                (Self::Digest(DigestAlgorithm::Bitcoin160), data::Revealed::Bitcoin160(_)) => {}
-                (Self::Digest(DigestAlgorithm::Bitcoin256), data::Revealed::Bitcoin256(_)) => {}
-
-                (
-                    Self::PublicKey(EllipticCurve::Secp256k1, _),
-                    data::Revealed::Secp256k1Pubkey(_),
-                ) => {}
-                (
-                    Self::PublicKey(EllipticCurve::Curve25519, _),
-                    data::Revealed::Curve25519Pubkey(_),
-                ) => {}
-                (
-                    Self::Signature(elliptic_curve::SignatureAlgorithm::Ecdsa),
-                    data::Revealed::Secp256k1ECDSASignature(_),
-                ) => {}
-                (
-                    Self::Signature(elliptic_curve::SignatureAlgorithm::Ed25519),
-                    data::Revealed::Ed25519Signature(_),
-                ) => {}
-                (Self::TxOutPoint, data::Revealed::TxOutPoint(_)) => {}
-                (Self::Tx, data::Revealed::Tx(_)) => {}
-                (Self::Psbt, data::Revealed::Psbt(_)) => {}
+                (Self::FixedBytes(len), data::Revealed::Bytes(val)) => {
+                    if val.len() != *len as usize {
+                        status.add_failure(validation::Failure::SchemaWrongDataLength {
+                            field_or_state_type: item_id,
+                            max_expected: *len,
+                            found: val.len(),
+                        });
+                    }
+                }
 
                 _ => {
                     status.add_failure(validation::Failure::SchemaMismatchedDataType(item_id));
@@ -1022,8 +490,8 @@ mod test {
         // Create a Map of Format type and encoded data
 
         let mut map: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
-        // Declarative and Pedersan formats
-        map.insert("Declerative", vec![0]);
+        // Declarative and Pedersen formats
+        map.insert("Declarative", vec![0]);
         map.insert("DiscreteFinite format", vec![
             1, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255,
         ]);
@@ -1053,33 +521,6 @@ mod test {
 
         // Bytes
         map.insert("Bytes(27)", vec![2, 5, 27, 0]);
-
-        // Digest Algo
-        map.insert("Digest(Sha256)", vec![2, 16, 17]);
-        map.insert("Digest(Sha512)", vec![2, 16, 18]);
-        map.insert("Digest(Bitcoin160)", vec![2, 16, 72]);
-        map.insert("Digest(Bitcoin256)", vec![2, 16, 81]);
-
-        // Txoutpoint
-        map.insert("TxOutPoint", vec![2, 32]);
-
-        // Public Keys
-        map.insert("PublickKey(Secp, Compressed)", vec![2, 17, 0, 1]);
-        map.insert("PublickKey(Secp, Unompressed)", vec![2, 17, 0, 0]);
-        map.insert("PublickKey(Secp, SchnorrBip)", vec![2, 17, 0, 2]);
-        map.insert("PublickKey(Curve25519, Compressed)", vec![2, 17, 16, 1]);
-        map.insert("PublickKey(Curve25519, Unompressed)", vec![2, 17, 16, 0]);
-        map.insert("PublickKey(Curve25519, SchnorrBip)", vec![2, 17, 16, 2]);
-
-        // Signatures
-        map.insert("Signature(Ecdsa)", vec![2, 18, 0]);
-        map.insert("Signature(Schnorr)", vec![2, 18, 1]);
-        map.insert("Signature(Ed25519)", vec![2, 18, 2]);
-
-        // TX TxOutpoint and Psbt
-        map.insert("TxOutpoint", vec![2, 32]);
-        map.insert("Tx", vec![2, 33]);
-        map.insert("Psbt", vec![2, 34]);
 
         // Test for correct encoding of each cases
         let _test: Vec<()> = map
@@ -1293,7 +734,7 @@ mod test {
 
         // Test failure cases for String format
         let string_data = Revealed::String("Hello".to_string());
-        let string_format = DataFormat::String(2u16);
+        let string_format = DataFormat::UniString(2u16);
         assert_eq!(
             string_format.validate(3, &string_data).failures[0],
             Failure::SchemaWrongDataLength {
@@ -1306,7 +747,7 @@ mod test {
         // Test failure cases for Bytes format
         let bytes = vec![1u8, 2u8, 3u8];
         let bytes_data = Revealed::Bytes(bytes);
-        let bytes_format = DataFormat::Bytes(2u16);
+        let bytes_format = DataFormat::ByteString(2u16);
         assert_eq!(
             bytes_format.validate(3, &bytes_data).failures[0],
             Failure::SchemaWrongDataLength {
@@ -1338,13 +779,13 @@ mod test {
         // Create Declarative Assignments
         let assignment_dec_rev = Assignment::<DeclarativeStrategy>::Revealed {
             seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: data::Void,
+            assigned_state: data::Void(),
         };
 
         let assignment_dec_conf = Assignment::<DeclarativeStrategy>::Confidential {
             seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[1], 2))
                 .commit_conceal(),
-            assigned_state: data::Void,
+            assigned_state: data::Void(),
         };
 
         // Create Pedersan Assignments
@@ -1362,7 +803,7 @@ mod test {
         // Create CustomData Assignmnets
         let state_data_vec: Vec<data::Revealed> = TXID_VEC
             .iter()
-            .map(|data| data::Revealed::Sha256(sha256::Hash::from_hex(data).unwrap()))
+            .map(|data| data::Revealed::Bytes(sha256::Hash::from_hex(data).unwrap().to_vec()))
             .collect();
 
         let assignment_hash_rev = Assignment::<HashStrategy>::Revealed {
@@ -1382,7 +823,7 @@ mod test {
                 .unwrap();
         let dec_format = StateFormat::Declarative;
         let ped_format = StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit);
-        let hash_format = StateFormat::CustomData(DataFormat::Digest(DigestAlgorithm::Sha256));
+        let hash_format = StateFormat::CustomData(DataFormat::ByteString(32));
 
         // Assert different failure combinations
         assert_eq!(

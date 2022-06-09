@@ -11,10 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::io;
 use std::ops::RangeInclusive;
-
-use num_traits::ToPrimitive;
 
 pub trait UnsignedInteger:
     Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Into<u64> + std::fmt::Debug
@@ -70,13 +67,14 @@ impl Number for f64 {}
 /// NB: For now, we support only up to 128-bit integers and 64-bit floats;
 /// nevertheless RGB schema standard allows up to 256-byte numeric types.
 /// Support for larger types can be added later.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "lowercase")
 )]
-#[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum Bits {
@@ -84,40 +82,33 @@ pub enum Bits {
     Bit16 = 2,
     Bit32 = 4,
     Bit64 = 8,
-    /* TODO #14: Add support later once bitcoin library will start
-     * supporting       consensus-encoding of the native rust `u128`
-     * type Bit128 = 16,
-     *Bit256 = 32, */
+    Bit128 = 16,
+    // Bit256 = 32,
 }
-// TODO #46: Add support later once bitcoin library will start supporting
-//      consensus-encoding of the native rust `u128` type
+// TODO #46: Add support for 256-bit types
 
 impl Bits {
-    pub fn max_value(&self) -> u128 {
-        match *self {
+    pub fn max_value(self) -> u128 {
+        match self {
             Bits::Bit8 => core::u8::MAX as u128,
             Bits::Bit16 => core::u16::MAX as u128,
             Bits::Bit32 => core::u32::MAX as u128,
             Bits::Bit64 => core::u64::MAX as u128,
-            //Bits::Bit128 => core::u128::MAX as u128,
+            Bits::Bit128 => core::u128::MAX as u128,
         }
     }
 
-    pub fn byte_len(&self) -> usize {
-        self.to_u8()
-            .expect("Bit type MUST always occupy < 256 bytes") as usize
-    }
+    pub fn byte_len(self) -> usize { (self as u8) as usize }
 
-    pub fn bit_len(&self) -> usize { self.byte_len() * 8 }
+    pub fn bit_len(self) -> usize { self.byte_len() * 8 }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[display(Debug)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum Occurrences {
@@ -191,120 +182,12 @@ pub struct OccurrencesError {
     pub found: u16,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, ToPrimitive, FromPrimitive)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "lowercase")
-)]
-#[display(Debug)]
-#[repr(u8)]
-#[non_exhaustive]
-pub enum DigestAlgorithm {
-    // Single-path RIPEMD-160 is not secure and should not be used; see
-    // <https://eprint.iacr.org/2004/199.pdf>
-    //Ripemd160 = 0b_0000_1000_u8,
-    Sha256 = 0b_0001_0001_u8,
-    Sha512 = 0b_0001_0010_u8,
-    Bitcoin160 = 0b_0100_1000_u8,
-    Bitcoin256 = 0b_0101_0001_u8,
-    /* Each tagged hash is a type on it's own, so the following umbrella
-     * type was removed; a plain sha256 type must be used instead
-     *Tagged256 = 0b_1100_0000_u8, */
-}
-
-pub mod elliptic_curve {
-    use num_derive::{FromPrimitive, ToPrimitive};
-
-    #[derive(
-        Clone,
-        Copy,
-        PartialEq,
-        Eq,
-        PartialOrd,
-        Ord,
-        Debug,
-        Display,
-        ToPrimitive,
-        FromPrimitive
-    )]
-    #[cfg_attr(
-        feature = "serde",
-        derive(Serialize, Deserialize),
-        serde(crate = "serde_crate", rename_all = "lowercase")
-    )]
-    #[display(Debug)]
-    #[repr(u8)]
-    #[non_exhaustive]
-    pub enum EllipticCurve {
-        Secp256k1 = 0x00,
-        Curve25519 = 0x10,
-    }
-
-    #[derive(
-        Clone,
-        Copy,
-        PartialEq,
-        Eq,
-        PartialOrd,
-        Ord,
-        Debug,
-        Display,
-        ToPrimitive,
-        FromPrimitive
-    )]
-    #[cfg_attr(
-        feature = "serde",
-        derive(Serialize, Deserialize),
-        serde(crate = "serde_crate", rename_all = "lowercase")
-    )]
-    #[display(Debug)]
-    #[repr(u8)]
-    #[non_exhaustive]
-    pub enum SignatureAlgorithm {
-        Ecdsa = 0,
-        Schnorr,
-        Ed25519,
-    }
-
-    #[derive(
-        Clone,
-        Copy,
-        PartialEq,
-        Eq,
-        PartialOrd,
-        Ord,
-        Debug,
-        Display,
-        ToPrimitive,
-        FromPrimitive
-    )]
-    #[cfg_attr(
-        feature = "serde",
-        derive(Serialize, Deserialize),
-        serde(crate = "serde_crate", rename_all = "lowercase")
-    )]
-    #[display(Debug)]
-    #[repr(u8)]
-    #[non_exhaustive]
-    pub enum PointSerialization {
-        Uncompressed = 0,
-        Compressed,
-        Bip340,
-    }
-}
-pub use elliptic_curve::EllipticCurve;
-
 mod _strict_encoding {
+    use std::io;
+
     use strict_encoding::{Error, StrictDecode, StrictEncode};
 
     use super::*;
-
-    impl_enum_strict_encoding!(DigestAlgorithm);
-    impl_enum_strict_encoding!(Bits);
-    impl_enum_strict_encoding!(EllipticCurve);
-    impl_enum_strict_encoding!(elliptic_curve::SignatureAlgorithm);
-    impl_enum_strict_encoding!(elliptic_curve::PointSerialization);
 
     impl StrictEncode for Occurrences {
         fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
@@ -476,35 +359,6 @@ mod test {
     }
 
     #[test]
-    fn test_digest_algorithm() {
-        let sha256_byte: [u8; 1] = [0x11];
-        let sha512_byte: [u8; 1] = [0x12];
-        let bitcoin160_byte: [u8; 1] = [0x48];
-        let bitcoin256_byte: [u8; 1] = [0x51];
-
-        test_encode!(
-            (sha256_byte, DigestAlgorithm),
-            (sha512_byte, DigestAlgorithm),
-            (bitcoin160_byte, DigestAlgorithm),
-            (bitcoin256_byte, DigestAlgorithm)
-        );
-
-        let sha256 = DigestAlgorithm::strict_decode(&[0x11][..]).unwrap();
-        let sha512 = DigestAlgorithm::strict_decode(&[0x12][..]).unwrap();
-        let bitcoin160 = DigestAlgorithm::strict_decode(&[0x48][..]).unwrap();
-        let bitcoin256 = DigestAlgorithm::strict_decode(&[0x51][..]).unwrap();
-
-        assert_eq!(sha256, DigestAlgorithm::Sha256);
-        assert_eq!(sha512, DigestAlgorithm::Sha512);
-        assert_eq!(bitcoin160, DigestAlgorithm::Bitcoin160);
-        assert_eq!(bitcoin256, DigestAlgorithm::Bitcoin256);
-    }
-
-    #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_digest_panic() { DigestAlgorithm::strict_decode(&[0x17][..]).unwrap(); }
-
-    #[test]
     fn test_bits() {
         let bit8 = Bits::strict_decode(&[0x01][..]).unwrap();
         let bit16 = Bits::strict_decode(&[0x02][..]).unwrap();
@@ -534,94 +388,6 @@ mod test {
     #[test]
     #[should_panic(expected = "EnumValueNotKnown")]
     fn test_bits_panic() { Bits::strict_decode(&[0x12][..]).unwrap(); }
-
-    #[test]
-    fn test_elliptic_curve() {
-        let secp: [u8; 1] = [0x00];
-        let c25519: [u8; 1] = [0x10];
-
-        test_encode!(
-            (secp, elliptic_curve::EllipticCurve),
-            (c25519, elliptic_curve::EllipticCurve)
-        );
-
-        assert_eq!(
-            elliptic_curve::EllipticCurve::strict_decode(&[0x00][..]).unwrap(),
-            elliptic_curve::EllipticCurve::Secp256k1
-        );
-
-        assert_eq!(
-            elliptic_curve::EllipticCurve::strict_decode(&[0x10][..]).unwrap(),
-            elliptic_curve::EllipticCurve::Curve25519
-        );
-    }
-
-    #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_elliptic_curve_panic() {
-        elliptic_curve::EllipticCurve::strict_decode(&[0x09][..]).unwrap();
-    }
-
-    #[test]
-    fn test_signature_algo() {
-        let ecdsa_byte: [u8; 1] = [0x00];
-        let schnorr_byte: [u8; 1] = [0x01];
-        let ed25519_byte: [u8; 1] = [0x02];
-
-        test_encode!(
-            (ecdsa_byte, elliptic_curve::SignatureAlgorithm),
-            (schnorr_byte, elliptic_curve::SignatureAlgorithm),
-            (ed25519_byte, elliptic_curve::SignatureAlgorithm)
-        );
-
-        let ecdsa = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x00][..]).unwrap();
-        let schnorr = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x01][..]).unwrap();
-        let ed25519 = elliptic_curve::SignatureAlgorithm::strict_decode(&[0x02][..]).unwrap();
-
-        assert_eq!(ecdsa, elliptic_curve::SignatureAlgorithm::Ecdsa);
-        assert_eq!(schnorr, elliptic_curve::SignatureAlgorithm::Schnorr);
-        assert_eq!(ed25519, elliptic_curve::SignatureAlgorithm::Ed25519);
-    }
-
-    #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_signature_algo_panic() {
-        elliptic_curve::SignatureAlgorithm::strict_decode(&[0x03][..]).unwrap();
-    }
-
-    #[test]
-    fn test_point_ser() {
-        let uncompressed_byte: [u8; 1] = [0x00];
-        let compressed_byte: [u8; 1] = [0x01];
-        let schnorr_bip_byte: [u8; 1] = [0x02];
-
-        test_encode!(
-            (uncompressed_byte, elliptic_curve::PointSerialization),
-            (compressed_byte, elliptic_curve::PointSerialization),
-            (schnorr_bip_byte, elliptic_curve::PointSerialization)
-        );
-
-        assert_eq!(
-            elliptic_curve::PointSerialization::strict_decode(&[0x00][..]).unwrap(),
-            elliptic_curve::PointSerialization::Uncompressed
-        );
-
-        assert_eq!(
-            elliptic_curve::PointSerialization::strict_decode(&[0x01][..]).unwrap(),
-            elliptic_curve::PointSerialization::Compressed
-        );
-
-        assert_eq!(
-            elliptic_curve::PointSerialization::strict_decode(&[0x02][..]).unwrap(),
-            elliptic_curve::PointSerialization::Bip340
-        );
-    }
-
-    #[test]
-    #[should_panic(expected = "EnumValueNotKnown")]
-    fn test_point_ser_panic() {
-        elliptic_curve::PointSerialization::strict_decode(&[0x03][..]).unwrap();
-    }
 
     #[test]
     fn test_unsigned() {

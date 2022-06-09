@@ -29,9 +29,7 @@ pub use script::{
     GenericAction, GenesisAbi, GenesisAction, NodeAction, TransitionAbi, TransitionAction, VmType,
 };
 pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
-pub use types::{
-    elliptic_curve, Bits, DigestAlgorithm, EllipticCurve, Occurrences, OccurrencesError,
-};
+pub use types::{Bits, Occurrences, OccurrencesError};
 
 mod verify {
     use crate::validation;
@@ -48,8 +46,7 @@ pub use verify::SchemaVerify;
 
 /// Format for the stored history proofs, like proof of burn. It is a part of
 /// LNPBP standards
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum HistoryProofFormat {

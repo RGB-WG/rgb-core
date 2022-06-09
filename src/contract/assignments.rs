@@ -25,7 +25,7 @@ use super::{
     data, seal, value, ConcealSeals, ConcealState, EndpointValueMap, NoDataError, SealEndpoint,
     SealValueMap, SECP256K1_ZKP,
 };
-use crate::{schema, ConfidentialDataError, StateRetrievalError};
+use crate::{ConfidentialDataError, StateRetrievalError};
 
 lazy_static! {
     pub(super) static ref EMPTY_ASSIGNMENT_VEC: AssignmentVec = AssignmentVec::default();
@@ -45,8 +45,8 @@ pub enum StateType {
     Data,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
-#[display(Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -636,8 +636,8 @@ impl State for HashStrategy {
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
-#[derive(Clone, Debug, Display)]
-#[display(Debug)]
+#[derive(Clone, Debug)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -976,120 +976,6 @@ where
     type Commitment = MerkleNode;
 }
 
-mod _strict_encoding {
-    use std::io;
-
-    use data::_strict_encoding::EncodingTag;
-    use strict_encoding::Error;
-
-    use super::*;
-
-    impl StrictEncode for AssignmentVec {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            Ok(match self {
-                AssignmentVec::Declarative(tree) => {
-                    strict_encode_list!(e; schema::StateType::Declarative, tree)
-                }
-                AssignmentVec::DiscreteFiniteField(tree) => {
-                    strict_encode_list!(e; schema::StateType::DiscreteFiniteField, EncodingTag::U64, tree)
-                }
-                AssignmentVec::CustomData(tree) => {
-                    strict_encode_list!(e; schema::StateType::CustomData, tree)
-                }
-            })
-        }
-    }
-
-    impl StrictDecode for AssignmentVec {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let format = schema::StateType::strict_decode(&mut d)?;
-            Ok(match format {
-                schema::StateType::Declarative => {
-                    AssignmentVec::Declarative(StrictDecode::strict_decode(d)?)
-                }
-                schema::StateType::DiscreteFiniteField => match EncodingTag::strict_decode(&mut d)?
-                {
-                    EncodingTag::U64 => {
-                        AssignmentVec::DiscreteFiniteField(StrictDecode::strict_decode(&mut d)?)
-                    }
-                    _ => Err(Error::UnsupportedDataStructure(
-                        "We support only homomorphic commitments to U64 data",
-                    ))?,
-                },
-                schema::StateType::CustomData => {
-                    AssignmentVec::CustomData(StrictDecode::strict_decode(d)?)
-                }
-            })
-        }
-    }
-
-    impl<StateType> StrictEncode for Assignment<StateType>
-    where
-        StateType: State,
-        StateType::Confidential: PartialEq + Eq,
-        StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
-    {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            Ok(match self {
-                Assignment::Confidential {
-                    seal_definition,
-                    assigned_state,
-                } => {
-                    strict_encode_list!(e; 0u8, seal_definition, assigned_state)
-                }
-                Assignment::Revealed {
-                    seal_definition,
-                    assigned_state,
-                } => {
-                    strict_encode_list!(e; 1u8, seal_definition, assigned_state)
-                }
-                Assignment::ConfidentialSeal {
-                    seal_definition,
-                    assigned_state,
-                } => {
-                    strict_encode_list!(e; 2u8, seal_definition, assigned_state)
-                }
-                Assignment::ConfidentialAmount {
-                    seal_definition,
-                    assigned_state,
-                } => {
-                    strict_encode_list!(e; 3u8, seal_definition, assigned_state)
-                }
-            })
-        }
-    }
-
-    impl<StateType> StrictDecode for Assignment<StateType>
-    where
-        StateType: State,
-        StateType::Confidential: PartialEq + Eq,
-        StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
-    {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let format = u8::strict_decode(&mut d)?;
-            Ok(match format {
-                0u8 => Assignment::Confidential {
-                    seal_definition: seal::Confidential::strict_decode(&mut d)?,
-                    assigned_state: StateType::Confidential::strict_decode(&mut d)?,
-                },
-                1u8 => Assignment::Revealed {
-                    seal_definition: seal::Revealed::strict_decode(&mut d)?,
-                    assigned_state: StateType::Revealed::strict_decode(&mut d)?,
-                },
-                2u8 => Assignment::ConfidentialSeal {
-                    seal_definition: seal::Confidential::strict_decode(&mut d)?,
-                    assigned_state: StateType::Revealed::strict_decode(&mut d)?,
-                },
-                3u8 => Assignment::ConfidentialAmount {
-                    seal_definition: seal::Revealed::strict_decode(&mut d)?,
-                    assigned_state: StateType::Confidential::strict_decode(&mut d)?,
-                },
-                invalid => Err(Error::EnumValueNotKnown("Assignment", invalid as usize))?,
-            })
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::collections::BTreeMap;
@@ -1107,6 +993,7 @@ mod test {
     use super::super::{NodeId, OwnedRights, ParentOwnedRights};
     use super::*;
     use crate::contract::seal::Revealed;
+    use crate::schema;
 
     // Hard coded test vectors of Assignment Variants
     // Each Variant contains 4 types of Assignments
@@ -1713,8 +1600,8 @@ mod test {
         let data_set = hash_type.filter_revealed_state_data();
 
         // Create state data from precomputed values
-        let data_1 = data::Revealed::Sha256(sha256::Hash::from_hex(STATE_DATA[2]).unwrap());
-        let data_2 = data::Revealed::Sha256(sha256::Hash::from_hex(STATE_DATA[0]).unwrap());
+        let data_1 = data::Revealed::Bytes(sha256::Hash::from_hex(STATE_DATA[2]).unwrap().to_vec());
+        let data_2 = data::Revealed::Bytes(sha256::Hash::from_hex(STATE_DATA[0]).unwrap().to_vec());
 
         // Check extracted data matches with precomputed values
         assert_eq!(data_set[0].to_owned(), data_1);
@@ -2059,22 +1946,22 @@ mod test {
 
         let assignment_1 = Assignment::<DeclarativeStrategy>::Revealed {
             seal_definition: Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: data::Void,
+            assigned_state: data::Void(),
         };
 
         let assignment_2 = Assignment::<DeclarativeStrategy>::ConfidentialAmount {
             seal_definition: Revealed::from(OutPoint::new(txid_vec[1], 2)),
-            assigned_state: data::Void,
+            assigned_state: data::Void(),
         };
 
         let assignment_3 = Assignment::<DeclarativeStrategy>::ConfidentialSeal {
             seal_definition: Revealed::from(OutPoint::new(txid_vec[2], 3)).commit_conceal(),
-            assigned_state: data::Void,
+            assigned_state: data::Void(),
         };
 
         let assignment_4 = Assignment::<DeclarativeStrategy>::Confidential {
             seal_definition: Revealed::from(OutPoint::new(txid_vec[3], 4)).commit_conceal(),
-            assigned_state: data::Void,
+            assigned_state: data::Void(),
         };
 
         let mut set = Vec::new();
@@ -2130,7 +2017,7 @@ mod test {
 
         let state_data_vec: Vec<data::Revealed> = STATE_DATA
             .iter()
-            .map(|data| data::Revealed::Sha256(sha256::Hash::from_hex(data).unwrap()))
+            .map(|data| data::Revealed::Bytes(sha256::Hash::from_hex(data).unwrap().to_vec()))
             .collect();
 
         let assignment_1 = Assignment::<HashStrategy>::Revealed {

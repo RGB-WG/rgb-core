@@ -808,17 +808,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 
 [[package]]
-name = "num-derive"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "num-integer"
 version = "0.1.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1147,14 +1136,11 @@ dependencies = [
  "commit_verify",
  "deflate 0.8.6",
  "descriptor-wallet",
- "ed25519-dalek",
  "electrum-client",
  "grin_secp256k1zkp",
  "inflate",
  "lazy_static",
  "lnpbp",
- "num-derive",
- "num-traits",
  "serde",
  "serde_json",
  "serde_with",

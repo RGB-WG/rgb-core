@@ -821,16 +821,15 @@ pub(crate) mod test {
             rgb_features: FlagVec::default(),
             root_id: Default::default(),
             field_types: bmap! {
-                FIELD_TICKER => DataFormat::String(16),
-                FIELD_NAME => DataFormat::String(256),
-                FIELD_DESCRIPTION => DataFormat::String(1024),
+                FIELD_TICKER => DataFormat::UniString(16),
+                FIELD_NAME => DataFormat::UniString(256),
+                FIELD_DESCRIPTION => DataFormat::UniString(1024),
                 FIELD_TOTAL_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_PRECISION => DataFormat::Unsigned(Bits::Bit64, 0, 18u128),
                 FIELD_ISSUED_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
                 FIELD_DUST_LIMIT => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_PRUNE_PROOF => DataFormat::Bytes(core::u16::MAX),
-                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_PROOF_OF_BURN => DataFormat::TxOutPoint
+                FIELD_PRUNE_PROOF => DataFormat::ByteString(core::u16::MAX),
+                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
             },
             owned_right_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema {
