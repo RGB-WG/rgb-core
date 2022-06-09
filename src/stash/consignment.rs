@@ -126,6 +126,7 @@ impl FromStr for ConsignmentId {
 #[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
 #[display(Consignment::to_bech32_string)]
 pub struct Consignment {
+    // TODO: Fail to decode on an unknown version number
     /// Version, used internally
     version: u8,
 
