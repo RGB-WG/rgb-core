@@ -487,10 +487,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // [VALIDATION]: Check that transition is committed into the
                 //               anchor. This must be done with
                 //               deterministic bitcoin commitments & LNPBP-4
-                if anchor
-                    .convolve(self.contract_id.into(), node_id.into())
-                    .is_err()
-                {
+                if anchor.convolve(self.contract_id, node_id.into()).is_err() {
                     self.status
                         .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.txid));
                 }
@@ -582,11 +579,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // [VALIDATION]: Checking anchor deterministic bitcoin
                 //               commitment
                 if anchor
-                    .verify(
-                        self.contract_id.into(),
-                        node.node_id().into(),
-                        witness_tx.clone(),
-                    )
+                    .verify(self.contract_id, node.node_id().into(), witness_tx.clone())
                     .is_ok()
                 {
                     // TODO: Save error details
