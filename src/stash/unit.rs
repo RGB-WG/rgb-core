@@ -1,24 +1,23 @@
-// LNP/BP Rust Library
-// Written in 2020 by
-//     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
+// RGB Core Library: a reference implementation of RGB smart contract standards.
+// Written in 2019-2022 by
+//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// To the extent possible under law, the author(s) have dedicated all copyright
+// and related and neighboring rights to this software to the public domain
+// worldwide. This software is distributed without any warranty.
 //
-// You should have received a copy of the MIT License
-// along with this software.
+// You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
 //! Definition of and operations with state transition units ([`Unit`])
+
+use std::iter::Filter;
 
 use bitcoin::{OutPoint, Txid};
 
 use crate::schema::OwnedRightType;
 use crate::stash::iter::{ConsTsIter, TransitionIterator};
 use crate::{Assignments, Consignment, NodeOutput, StateTypes, Transition};
-use std::iter::Filter;
 
 /// State transition units (or simply "state units", or even just "units") are
 /// extracts from the RGB contract data (as they are stored in a stash)
@@ -43,8 +42,7 @@ use std::iter::Filter;
 /// be composed by adding RGB contract id to those data.
 #[derive(Getters, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct Unit<'container, State>
-where
-    State: StateTypes,
+where State: StateTypes
 {
     /// The type of the owned rights which is being modified by the operation
     state_type: OwnedRightType,
@@ -85,8 +83,7 @@ where
     state_type: OwnedRightType,
 }
 
-impl<'iter, TsIter, State, Resolver> Iterator
-    for UnitIter<'iter, TsIter, State, Resolver>
+impl<'iter, TsIter, State, Resolver> Iterator for UnitIter<'iter, TsIter, State, Resolver>
 where
     State: StateTypes,
     TsIter: TransitionIterator<'iter>,
@@ -95,20 +92,18 @@ where
     type Item = Unit<'iter, State>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (txid, assignments) = if let Some((txid, assignments)) =
-            while self.item.is_none() {
-                let (txid, transition) =
-                    if let Some((txid, transition)) = self.iter.next() {
-                        (txid, transition)
-                    } else {
-                        return None;
-                    };
-                self.item = transition
-                    .owned_rights_by_type(self.state_type)
-                    .map(|assignments| (txid, assignments));
-                self.index = 0;
-                self.item
-            } {
+        let (txid, assignments) = if let Some((txid, assignments)) = while self.item.is_none() {
+            let (txid, transition) = if let Some((txid, transition)) = self.iter.next() {
+                (txid, transition)
+            } else {
+                return None;
+            };
+            self.item = transition
+                .owned_rights_by_type(self.state_type)
+                .map(|assignments| (txid, assignments));
+            self.index = 0;
+            self.item
+        } {
             (txid, assignments)
         } else {
             return None;

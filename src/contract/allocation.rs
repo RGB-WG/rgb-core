@@ -1,14 +1,12 @@
 // RGB20 Library: fungible digital assets for bitcoin & lightning
-// Written in 2020-2021 by
-//     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
+// Written in 2019-2022 by
+//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// To the extent possible under law, the author(s) have dedicated all copyright
+// and related and neighboring rights to this software to the public domain
+// worldwide. This software is distributed without any warranty.
 //
-// You should have received a copy of the MIT License
-// along with this software.
+// You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
 //! Allocations are a special case of assignments, where the state assigned to
