@@ -20,6 +20,7 @@ pub mod reveal;
 mod rights;
 pub mod seal;
 pub mod value;
+pub mod bundle;
 
 pub use allocation::{
     AllocatedValue, Allocation, AllocationMap, AllocationValueMap, AllocationValueVec,
