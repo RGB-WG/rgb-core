@@ -12,6 +12,7 @@
 use core::any::Any;
 use core::cmp::Ordering;
 use core::fmt::Debug;
+use std::hash::Hasher;
 use std::io;
 
 use amplify::num::apfloat::ieee;
@@ -26,7 +27,7 @@ use strict_encoding::strict_serialize;
 use super::{ConfidentialState, RevealedState};
 
 /// Struct using for storing Void (i.e. absent) state
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, AsAny)]
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Void();
@@ -136,6 +137,12 @@ impl PartialEq for Revealed {
 }
 
 impl Eq for Revealed {}
+
+impl std::hash::Hash for Revealed {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write(&self.commit_conceal().commit_serialize())
+    }
+}
 
 impl PartialOrd for Revealed {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {

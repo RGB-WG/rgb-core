@@ -43,7 +43,7 @@ pub enum StateType {
     Data,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
@@ -610,21 +610,21 @@ pub trait State: Debug {
     type Revealed: RevealedState;
 }
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct DeclarativeStrategy;
 impl State for DeclarativeStrategy {
     type Confidential = data::Void;
     type Revealed = data::Void;
 }
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct PedersenStrategy;
 impl State for PedersenStrategy {
     type Confidential = value::Confidential;
     type Revealed = value::Revealed;
 }
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct HashStrategy;
 impl State for HashStrategy {
     type Confidential = data::Confidential;
@@ -634,7 +634,7 @@ impl State for HashStrategy {
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
-#[derive(Clone, Debug)]
+#[derive(Clone, Hash, Debug)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",

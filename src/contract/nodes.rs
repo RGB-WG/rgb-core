@@ -321,7 +321,7 @@ pub trait Node: AsAny {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Genesis {
     schema_id: SchemaId,
@@ -331,7 +331,19 @@ pub struct Genesis {
     public_rights: PublicRights,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, StrictEncode, StrictDecode, AsAny)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Default,
+    StrictEncode,
+    StrictDecode,
+    AsAny
+)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
     extension_type: ExtensionType,
@@ -342,7 +354,19 @@ pub struct Extension {
     public_rights: PublicRights,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, StrictEncode, StrictDecode, AsAny)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Default,
+    StrictEncode,
+    StrictDecode,
+    AsAny
+)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     transition_type: TransitionType,

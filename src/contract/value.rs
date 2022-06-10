@@ -21,6 +21,7 @@
 
 use core::cmp::Ordering;
 use core::ops::Add;
+use std::hash::Hasher;
 use std::io;
 use std::str::FromStr;
 
@@ -84,7 +85,7 @@ impl FromHex for BlindingFactor {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, AsAny)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display("{value}#{blinding}")]
@@ -230,6 +231,10 @@ impl Ord for Confidential {
             other => other,
         }
     }
+}
+
+impl std::hash::Hash for Confidential {
+    fn hash<H: Hasher>(&self, state: &mut H) { state.write(&self.commitment.0) }
 }
 
 // The normal notion of the equivalence operator is to compare the _value_
