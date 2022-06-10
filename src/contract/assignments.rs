@@ -23,6 +23,7 @@ use super::{
     data, seal, value, ConcealSeals, ConcealState, EndpointValueMap, NoDataError, SealEndpoint,
     SealValueMap, SECP256K1_ZKP,
 };
+use crate::contract::container;
 use crate::{ConfidentialDataError, StateRetrievalError};
 
 lazy_static! {
@@ -54,6 +55,7 @@ pub enum AssignmentVec {
     Declarative(Vec<Assignment<DeclarativeStrategy>>),
     DiscreteFiniteField(Vec<Assignment<PedersenStrategy>>),
     CustomData(Vec<Assignment<HashStrategy>>),
+    Container(Vec<Assignment<ContainerStrategy>>),
 }
 
 impl Default for AssignmentVec {
@@ -628,7 +630,15 @@ impl State for PedersenStrategy {
 pub struct HashStrategy;
 impl State for HashStrategy {
     type Confidential = data::Confidential;
+    // TODO: Add salt to conceal the data
     type Revealed = data::Revealed;
+}
+
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+pub struct ContainerStrategy;
+impl State for ContainerStrategy {
+    type Confidential = container::Confidential;
+    type Revealed = container::Revealed;
 }
 
 /// State data are assigned to a seal definition, which means that they are
