@@ -11,6 +11,8 @@
 
 use std::collections::BTreeSet;
 
+use stens::TypeRef;
+
 use super::{script, Bits};
 
 #[derive(Clone, PartialEq, Debug, StrictEncode, StrictDecode)]
@@ -48,7 +50,7 @@ pub enum StateType {
 pub enum StateFormat {
     Declarative,
     DiscreteFiniteField(DiscreteFiniteFieldFormat),
-    CustomData(DataFormat),
+    CustomData(TypeRef),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -392,7 +394,8 @@ mod _validation {
                                     );
                                 }
                                 Some(data) => {
-                                    status += format.validate(assignment_id, data);
+                                    // TODO: [validation] validate type schema
+                                    // status += format.validate(assignment_id, data);
                                 }
                             }
                         }
@@ -821,7 +824,7 @@ mod test {
                 .unwrap();
         let dec_format = StateFormat::Declarative;
         let ped_format = StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit);
-        let hash_format = StateFormat::CustomData(DataFormat::ByteString(32));
+        let hash_format = StateFormat::CustomData(TypeRef::bytes());
 
         // Assert different failure combinations
         assert_eq!(

@@ -14,11 +14,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use amplify::flags::FlagVec;
 use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
-use stens::TypeSystem;
+use stens::{TypeRef, TypeSystem};
 
 use super::{
-    DataFormat, ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType,
-    StateSchema, TransitionSchema,
+    ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema,
+    TransitionSchema,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
@@ -86,7 +86,7 @@ pub struct Schema {
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub root_id: SchemaId,
     pub type_system: TypeSystem,
-    pub field_types: BTreeMap<FieldType, DataFormat>,
+    pub field_types: BTreeMap<FieldType, TypeRef>,
     pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,
     pub public_right_types: BTreeSet<PublicRightType>,
     pub genesis: GenesisSchema,
@@ -385,7 +385,8 @@ mod _validation {
                 let field = self.field_types.get(field_type_id)
                     .expect("If the field were absent, the schema would not be able to pass the internal validation and we would not reach this point");
                 for data in set {
-                    status += field.validate(*field_type_id, &data);
+                    // TODO: [validation] validate type schema
+                    // status += field.validate(*field_type_id, &data);
                 }
             }
 
@@ -780,15 +781,15 @@ pub(crate) mod test {
             root_id: Default::default(),
             type_system: Default::default(),
             field_types: bmap! {
-                FIELD_TICKER => DataFormat::UniString(16),
-                FIELD_NAME => DataFormat::UniString(256),
-                FIELD_DESCRIPTION => DataFormat::UniString(1024),
-                FIELD_TOTAL_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_PRECISION => DataFormat::Unsigned(Bits::Bit64, 0, 18u128),
-                FIELD_ISSUED_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_DUST_LIMIT => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_PRUNE_PROOF => DataFormat::ByteString(core::u16::MAX),
-                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
+                FIELD_TICKER => TypeRef::ascii_string(),
+                FIELD_NAME => TypeRef::ascii_string(),
+                FIELD_DESCRIPTION => TypeRef::unicode_string(),
+                FIELD_TOTAL_SUPPLY => TypeRef::u64(),
+                FIELD_PRECISION => TypeRef::u8(),
+                FIELD_ISSUED_SUPPLY => TypeRef::u64(),
+                FIELD_DUST_LIMIT => TypeRef::u64(),
+                FIELD_PRUNE_PROOF => TypeRef::bytes(),
+                FIELD_TIMESTAMP => TypeRef::i64()
             },
             owned_right_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema {

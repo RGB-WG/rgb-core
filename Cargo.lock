@@ -1364,9 +1364,9 @@ dependencies = [
 
 [[package]]
 name = "stens"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9e78939a07155195fa390d2cbb61c68350dd7b2399af7606aec4b8096d35331"
+checksum = "5e734a9c8275025839e778e346c2ac5e3f9848de8bd1f39b5d8c3643f7327650"
 dependencies = [
  "amplify",
  "serde",

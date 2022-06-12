@@ -43,7 +43,7 @@ required-features = ["cli", "serde"]
 amplify = "~3.12.0"
 bp-core = { version = "~0.7.0-beta.5" }
 lnpbp = { version = "~0.7.0", features = ["zip"] }
-stens = "0.2.0"
+stens = "0.3.0"
 strict_encoding = { version = "~1.8.3", features = ["crypto", "chrono", "bitcoin"] }
 commit_verify = { version = "~0.7.0-rc.4", features = ["rand", "bulletproofs"] }
 descriptor-wallet = { version = "~0.7.1", features = ["descriptors"] }
