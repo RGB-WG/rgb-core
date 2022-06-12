@@ -11,7 +11,7 @@
 
 //! Implementation of the embedded state machine
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use amplify::Wrapper;
 use bitcoin::OutPoint;

@@ -10,15 +10,16 @@ checksum = "aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234"
 
 [[package]]
 name = "aluvm"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e698b0196880b27e034902900c3df9a1d64473e30efe0939b59796a024c9091d"
+version = "0.6.0"
+source = "git+https://github.com/Internet2-WG/rust-aluvm#5ec985cecec95fd330c9ef8a7c1f92842610237f"
 dependencies = [
  "amplify",
  "bech32 0.9.0",
  "bitcoin_hashes",
+ "curve25519-dalek",
  "half",
  "paste",
+ "secp256k1",
 ]
 
 [[package]]
