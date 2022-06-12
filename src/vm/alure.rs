@@ -18,7 +18,7 @@ use aluvm::reg::CoreRegs;
 use aluvm::Vm;
 
 use crate::validation::Failure;
-use crate::{Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, VmApi};
+use crate::{Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, Validate};
 
 pub const INSTR_NOOP: u8 = 0b11_000_000;
 pub const INSTR_ISAE_FROM: u8 = 0b11_000_000;
@@ -84,7 +84,7 @@ impl<'script> Runtime<'script> {
     pub fn new(script: &'script ValidationScript) -> Self { Runtime { script } }
 }
 
-impl<'script> VmApi for Runtime<'script> {
+impl<'script> Validate for Runtime<'script> {
     fn validate(
         &self,
         node_id: NodeId,

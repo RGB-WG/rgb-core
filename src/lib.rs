@@ -99,7 +99,7 @@ pub mod prelude {
         PSBT_PREFIX,
     };
     pub use validation::{Validator, Validity};
-    pub use vm::VmApi;
+    pub use vm::Validate;
 
     pub use super::bech32::{Bech32, FromBech32, ToBech32};
     use super::*;

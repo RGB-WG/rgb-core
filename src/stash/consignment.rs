@@ -316,7 +316,7 @@ impl Consignment {
         known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
     ) -> usize {
         let counter = 0;
-        for (_, transition) in &mut *self.state_transitions {
+        for (_, transition) in self.state_transitions.iter_mut() {
             transition
                 .owned_rights_mut()
                 .iter_mut()
@@ -324,7 +324,7 @@ impl Consignment {
                     counter + assignment.reveal_seals(known_seals.clone())
                 });
         }
-        for extension in &mut *self.state_extensions {
+        for extension in self.state_extensions.iter_mut() {
             extension
                 .owned_rights_mut()
                 .iter_mut()

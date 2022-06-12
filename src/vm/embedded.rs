@@ -9,12 +9,14 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#![allow(dead_code)]
+
 //! Implementation of the embedded state machine
 
 use amplify::Wrapper;
 use commit_verify::CommitConceal;
 
-use super::VmApi;
+use super::Validate;
 use crate::{
     schema, validation, value, AssignmentVec, Metadata, NodeId, NodeSubtype, OwnedRights,
     PublicRights,
@@ -533,7 +535,7 @@ impl EmbeddedVm {
     pub fn new() -> EmbeddedVm { EmbeddedVm }
 }
 
-impl VmApi for EmbeddedVm {
+impl Validate for EmbeddedVm {
     fn validate(
         &self,
         node_id: NodeId,
