@@ -175,7 +175,7 @@ impl GraphApi for Consignment {
             .find(|extension| extension.node_id() == node_id)
             .map(|extension| extension as &dyn Node)
             .or_else(|| {
-                self.state_transitions
+                self.anchored_bundles
                     .iter()
                     .flat_map(|(_, bundle)| bundle.transitions())
                     .find(|transition| transition.node_id() == node_id)
@@ -198,7 +198,7 @@ impl GraphApi for Consignment {
         &self,
         node_id: NodeId,
     ) -> Result<(&Transition, Txid), ConsistencyError> {
-        self.state_transitions
+        self.anchored_bundles
             .iter()
             .find_map(|(anchor, bundle)| {
                 bundle

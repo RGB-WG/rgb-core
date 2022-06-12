@@ -32,8 +32,8 @@ use crate::{
 };
 
 pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
-pub type TransitionData = LargeVec<(Anchor<lnpbp4::MerkleProof>, TransitionBundle)>;
-pub type ExtensionData = LargeVec<Extension>;
+pub type AnchoredBundles = LargeVec<(Anchor<lnpbp4::MerkleProof>, TransitionBundle)>;
+pub type ExtensionList = LargeVec<Extension>;
 
 pub const RGB_CONSIGNMENT_VERSION: u8 = 0;
 
@@ -55,21 +55,8 @@ impl sha256t::Tag for ConsignmentIdTag {
 
 /// Unique consignment identifier equivalent to the commitment hash
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(
-    Wrapper,
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(ConsignmentId::to_bech32_string)]
 pub struct ConsignmentId(sha256t::Hash<ConsignmentIdTag>);
@@ -136,10 +123,10 @@ pub struct Consignment {
     pub endpoints: ConsignmentEndpoints,
 
     /// Data on all anchored state transitions contained in the consignment
-    pub state_transitions: TransitionData,
+    pub anchored_bundles: AnchoredBundles,
 
     /// Data on all state extensions contained in the consignment
-    pub state_extensions: ExtensionData,
+    pub state_extensions: ExtensionList,
 }
 
 impl commit_encode::Strategy for Consignment {
@@ -168,15 +155,15 @@ impl Consignment {
     pub fn with(
         genesis: Genesis,
         endpoints: ConsignmentEndpoints,
-        state_transitions: TransitionData,
-        state_extensions: ExtensionData,
+        state_transitions: AnchoredBundles,
+        state_extensions: ExtensionList,
     ) -> Consignment {
         Self {
             version: RGB_CONSIGNMENT_VERSION,
             genesis,
             endpoints,
             state_extensions,
-            state_transitions,
+            anchored_bundles: state_transitions,
         }
     }
 
@@ -188,7 +175,7 @@ impl Consignment {
 
     #[inline]
     pub fn txids(&self) -> BTreeSet<Txid> {
-        self.state_transitions
+        self.anchored_bundles
             .iter()
             .map(|(anchor, _)| anchor.txid)
             .collect()
@@ -198,7 +185,7 @@ impl Consignment {
     pub fn node_ids(&self) -> BTreeSet<NodeId> {
         let mut set = bset![self.genesis.node_id()];
         set.extend(
-            self.state_transitions
+            self.anchored_bundles
                 .iter()
                 .map(|(_, bundle)| bundle.node_ids())
                 .flatten(),
@@ -293,8 +280,8 @@ impl Consignment {
             .collect();
 
         let mut count = 0usize;
-        self.state_transitions = self
-            .state_transitions
+        self.anchored_bundles = self
+            .anchored_bundles
             .iter()
             .map(|(anchor, bundle)| {
                 let bundle = bundle
@@ -330,7 +317,7 @@ impl Consignment {
         known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
     ) -> usize {
         let mut counter = 0;
-        for (_, bundle) in self.state_transitions.iter_mut() {
+        for (_, bundle) in self.anchored_bundles.iter_mut() {
             *bundle = bundle
                 .into_iter()
                 .map(|(transition, inputs)| {
