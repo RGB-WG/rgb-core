@@ -161,10 +161,6 @@ pub enum Failure {
     SchemaStateValueTooSmall(schema::OwnedRightType),
     SchemaStateValueTooLarge(schema::OwnedRightType),
 
-    SchemaMismatchedBits {
-        field_or_state_type: u16,
-        expected: schema::Bits,
-    },
     SchemaWrongEnumValue {
         field_or_state_type: u16,
         unexpected: u8,

@@ -27,7 +27,7 @@ pub use script::{
     GenericAction, GenesisAbi, GenesisAction, NodeAction, TransitionAbi, TransitionAction, VmType,
 };
 pub use state::{DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
-pub use types::{Bits, Occurrences, OccurrencesError};
+pub use types::{Occurrences, OccurrencesError};
 
 mod verify {
     use crate::validation;
