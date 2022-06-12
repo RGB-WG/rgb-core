@@ -971,6 +971,11 @@ mod test {
                             *assignment = assignment.commit_conceal();
                         }
                     }
+                    AssignmentVec::Container(set) => {
+                        for assignment in set {
+                            *assignment = assignment.commit_conceal();
+                        }
+                    }
                 }
             }
         }
