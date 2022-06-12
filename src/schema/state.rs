@@ -34,7 +34,7 @@ pub enum StateType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-pub enum StateFormat {
+pub enum StateSchema {
     Declarative,
     DiscreteFiniteField(DiscreteFiniteFieldFormat),
     CustomData(TypeRef),
@@ -72,7 +72,7 @@ mod _validation {
         validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy, State,
     };
 
-    impl StateFormat {
+    impl StateSchema {
         pub fn validate<STATE>(
             &self,
             node_id: &NodeId,
@@ -90,7 +90,7 @@ mod _validation {
                 | Assignment::ConfidentialAmount { assigned_state, .. } => {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
-                        StateFormat::Declarative => {
+                        StateSchema::Declarative => {
                             if a.downcast_ref::<<DeclarativeStrategy as State>::Confidential>()
                                 .is_none()
                             {
@@ -99,7 +99,7 @@ mod _validation {
                                 ));
                             }
                         }
-                        StateFormat::DiscreteFiniteField(_) => {
+                        StateSchema::DiscreteFiniteField(_) => {
                             if let Some(value) =
                                 a.downcast_ref::<<PedersenStrategy as State>::Confidential>()
                             {
@@ -121,7 +121,7 @@ mod _validation {
                             //       add information to the status like with
                             //       hashed data below
                         }
-                        StateFormat::CustomData(_) => {
+                        StateSchema::CustomData(_) => {
                             match a.downcast_ref::<<HashStrategy as State>::Confidential>() {
                                 None => {
                                     status.add_failure(
@@ -146,7 +146,7 @@ mod _validation {
                 | Assignment::ConfidentialSeal { assigned_state, .. } => {
                     let a: &dyn Any = assigned_state.as_any();
                     match self {
-                        StateFormat::Declarative => {
+                        StateSchema::Declarative => {
                             if a.downcast_ref::<<DeclarativeStrategy as State>::Revealed>()
                                 .is_none()
                             {
@@ -155,7 +155,7 @@ mod _validation {
                                 ));
                             }
                         }
-                        StateFormat::DiscreteFiniteField(_format) => {
+                        StateSchema::DiscreteFiniteField(_format) => {
                             if a.downcast_ref::<<PedersenStrategy as State>::Revealed>()
                                 .is_none()
                             {
@@ -166,7 +166,7 @@ mod _validation {
                             // TODO #15: When other homomorphic formats will be added,
                             //       add type check like with hashed data below
                         }
-                        StateFormat::CustomData(format) => {
+                        StateSchema::CustomData(format) => {
                             match a.downcast_ref::<<HashStrategy as State>::Revealed>() {
                                 None => {
                                     status.add_failure(
@@ -305,9 +305,9 @@ mod test {
         let node_id =
             NodeId::from_hex("201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e")
                 .unwrap();
-        let dec_format = StateFormat::Declarative;
-        let ped_format = StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit);
-        let hash_format = StateFormat::CustomData(TypeRef::bytes());
+        let dec_format = StateSchema::Declarative;
+        let ped_format = StateSchema::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit);
+        let hash_format = StateSchema::CustomData(TypeRef::bytes());
 
         // Assert different failure combinations
         assert_eq!(

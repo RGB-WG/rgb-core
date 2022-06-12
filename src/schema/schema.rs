@@ -17,6 +17,7 @@ use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProto
 use stens::{TypeRef, TypeSystem};
 
 use super::{ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, TransitionSchema};
+use crate::schema::StateSchema;
 use crate::script::OverrideRules;
 #[cfg(feature = "serde")]
 use crate::Bech32;
@@ -489,8 +490,7 @@ mod _validation {
                 let assignment = &self
                     .owned_right_types
                     .get(owned_type_id)
-                    .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point")
-                    .format;
+                    .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point");
 
                 match owned_rights.get(owned_type_id) {
                     None => {}
@@ -791,24 +791,9 @@ pub(crate) mod test {
                 FIELD_TIMESTAMP => TypeRef::i64()
             },
             owned_right_types: bmap! {
-                ASSIGNMENT_ISSUE => StateSchema {
-                    format: StateFormat::Declarative,
-                    abi: bmap! {
-                        AssignmentAction::Validate => NodeValidator::FungibleIssue as EntryPoint
-                    }
-                },
-                ASSIGNMENT_ASSETS => StateSchema {
-                    format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
-                    abi: bmap! {
-                        AssignmentAction::Validate => NodeValidator::IdentityTransfer as EntryPoint
-                    }
-                },
-                ASSIGNMENT_PRUNE => StateSchema {
-                    format: StateFormat::Declarative,
-                    abi: bmap! {
-                        AssignmentAction::Validate => NodeValidator::ProofOfBurn as EntryPoint
-                    }
-                }
+                ASSIGNMENT_ISSUE => StateSchema::Declarative,
+                ASSIGNMENT_ASSETS => SStateSchema::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
+                ASSIGNMENT_PRUNE => StateSchema::Declarative,
             },
             public_right_types: bset! {
                 VALENCIES_DECENTRALIZED_ISSUE
@@ -830,7 +815,6 @@ pub(crate) mod test {
                     ASSIGNMENT_PRUNE => Occurrences::NoneOrMore
                 },
                 public_rights: bset! { VALENCIES_DECENTRALIZED_ISSUE },
-                abi: bmap! {},
             },
             extensions: bmap! {
                 EXTENSION_DECENTRALIZED_ISSUE => ExtensionSchema {
@@ -843,7 +827,6 @@ pub(crate) mod test {
                         ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! { },
-                    abi: bmap! {},
                 }
             },
             transitions: bmap! {
@@ -860,7 +843,6 @@ pub(crate) mod test {
                         ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
-                    abi: bmap! {}
                 },
                 TRANSITION_TRANSFER => TransitionSchema {
                     closes: bmap! {
@@ -871,7 +853,6 @@ pub(crate) mod test {
                         ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
-                    abi: bmap! {}
                 },
                 TRANSITION_PRUNE => TransitionSchema {
                     closes: bmap! {
@@ -886,7 +867,6 @@ pub(crate) mod test {
                         ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
-                    abi: bmap! {}
                 }
             },
             script: Default::default(),

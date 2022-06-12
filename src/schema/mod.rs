@@ -24,7 +24,7 @@ pub use occurences::{Occurrences, OccurrencesError};
 pub(crate) use schema::test;
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{VmScript, VmType};
-pub use state::{DiscreteFiniteFieldFormat, StateFormat, StateType};
+pub use state::{DiscreteFiniteFieldFormat, StateSchema, StateType};
 
 mod verify {
     use crate::validation;
