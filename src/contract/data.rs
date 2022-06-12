@@ -14,6 +14,7 @@ use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::io;
 
+use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::AsAny;
 use bitcoin::hashes::{sha256d, Hash};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode};
@@ -55,15 +56,22 @@ pub enum Revealed {
     U32(u32),
     U64(u64),
     U128(u128),
-    // TODO #14: Add support for u256 type
+    U256(u256),
+    U512(u512),
+    U1024(u1024),
+
     I8(i8),
     I16(i16),
     I32(i32),
     I64(i64),
     I128(i128),
-    // TODO #14: Add support for i256 type
+    I256(i256),
+    I512(i512),
+    I1024(i1024),
+
     F32(f32),
     F64(f64),
+
     Bytes(Vec<u8>),
     String(String),
 }
@@ -181,7 +189,25 @@ impl Revealed {
             _ => None,
         }
     }
-    // TODO #14: Add support for u256 type
+    pub fn u256(&self) -> Option<u256> {
+        match self {
+            Revealed::U256(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn u512(&self) -> Option<u512> {
+        match self {
+            Revealed::U512(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn u1024(&self) -> Option<u1024> {
+        match self {
+            Revealed::U1024(val) => Some(*val),
+            _ => None,
+        }
+    }
+
     pub fn i8(&self) -> Option<i8> {
         match self {
             Revealed::I8(val) => Some(*val),
@@ -212,7 +238,25 @@ impl Revealed {
             _ => None,
         }
     }
-    // TODO #14: Add support for u256 type
+    pub fn i256(&self) -> Option<i256> {
+        match self {
+            Revealed::I256(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn i512(&self) -> Option<i512> {
+        match self {
+            Revealed::I512(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn i1024(&self) -> Option<i1024> {
+        match self {
+            Revealed::I1024(val) => Some(*val),
+            _ => None,
+        }
+    }
+
     pub fn f32(&self) -> Option<f32> {
         match self {
             Revealed::F32(val) => Some(*val),

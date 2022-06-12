@@ -13,6 +13,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::Wrapper;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{
@@ -96,7 +97,22 @@ impl Metadata {
             .map(|set| set.into_iter().filter_map(data::Revealed::u128).collect())
             .unwrap_or_default()
     }
-    // TODO #14: Add support for u256 type
+    pub fn u256(&self, field_type: impl Into<schema::FieldType>) -> Vec<u256> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::u256).collect())
+            .unwrap_or_default()
+    }
+    pub fn u512(&self, field_type: impl Into<schema::FieldType>) -> Vec<u512> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::u512).collect())
+            .unwrap_or_default()
+    }
+    pub fn u1024(&self, field_type: impl Into<schema::FieldType>) -> Vec<u1024> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::u1024).collect())
+            .unwrap_or_default()
+    }
+
     pub fn i8(&self, field_type: impl Into<schema::FieldType>) -> Vec<i8> {
         self.get(&field_type.into())
             .map(|set| set.into_iter().filter_map(data::Revealed::i8).collect())
@@ -122,7 +138,22 @@ impl Metadata {
             .map(|set| set.into_iter().filter_map(data::Revealed::i128).collect())
             .unwrap_or_default()
     }
-    // TODO #14: Add support for u256 type
+    pub fn i256(&self, field_type: impl Into<schema::FieldType>) -> Vec<i256> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::i256).collect())
+            .unwrap_or_default()
+    }
+    pub fn i512(&self, field_type: impl Into<schema::FieldType>) -> Vec<i512> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::i512).collect())
+            .unwrap_or_default()
+    }
+    pub fn i1024(&self, field_type: impl Into<schema::FieldType>) -> Vec<i1024> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::i1024).collect())
+            .unwrap_or_default()
+    }
+
     pub fn f32(&self, field_type: impl Into<schema::FieldType>) -> Vec<f32> {
         self.get(&field_type.into())
             .map(|set| set.into_iter().filter_map(data::Revealed::f32).collect())
