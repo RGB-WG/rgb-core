@@ -18,9 +18,8 @@ pub mod alure;
 
 pub use embedded::EmbeddedVm;
 
-use crate::validation::Failure;
 use crate::{
-    schema, validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, ValidationScript,
+    validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, ValidationScript,
 };
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
@@ -30,7 +29,7 @@ pub trait VmApi {
     fn validate(
         &self,
         node_id: NodeId,
-        node_subtype: schema::NodeSubtype,
+        node_subtype: NodeSubtype,
         previous_owned_rights: &OwnedRights,
         current_owned_rights: &OwnedRights,
         previous_public_rights: &PublicRights,
@@ -49,7 +48,7 @@ impl VmApi for ValidationScript {
         previous_public_rights: &PublicRights,
         current_public_rights: &PublicRights,
         current_meta: &Metadata,
-    ) -> Result<(), Failure> {
+    ) -> Result<(), validation::Failure> {
         let vm = match self {
             ValidationScript::Embedded => &EmbeddedVm::new() as &dyn VmApi,
             ValidationScript::AluVM(script) => &alure::Runtime::new(script) as &dyn VmApi,
