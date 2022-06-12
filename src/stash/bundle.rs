@@ -10,9 +10,10 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write;
 
 use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::{CommitVerify, PrehashedProtocol, TaggedHash};
+use commit_verify::{CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
 
 use crate::{Node, NodeId, Transition};
 
@@ -41,7 +42,8 @@ impl sha256t::Tag for BundleIdTag {
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[wrapper(Debug, Display, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[derive(StrictEncode, StrictDecode)]
+#[wrapper(Debug, Display)]
 pub struct BundleId(sha256t::Hash<BundleIdTag>);
 
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for BundleId
@@ -51,14 +53,18 @@ where Msg: AsRef<[u8]>
     fn commit(msg: &Msg) -> BundleId { BundleId::hash(msg) }
 }
 
-impl strict_encoding::Strategy for BundleId {
-    type Strategy = strict_encoding::strategies::Wrapped;
-}
-
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny, From)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct TransitionBundle(BTreeMap<Transition, BTreeSet<u16>>);
+
+impl CommitEncode for TransitionBundle {
+    fn commit_encode<E: Write>(&self, e: E) -> usize { todo!() }
+}
+
+impl ConsensusCommit for TransitionBundle {
+    type Commitment = BundleId;
+}
 
 impl<'me> IntoIterator for &'me TransitionBundle {
     type Item = (&'me Transition, &'me BTreeSet<u16>);
@@ -68,6 +74,8 @@ impl<'me> IntoIterator for &'me TransitionBundle {
 }
 
 impl TransitionBundle {
+    pub fn bundle_id(&self) -> BundleId { self.consensus_commit() }
+
     pub fn transitions(&self) -> std::collections::btree_map::Keys<Transition, BTreeSet<u16>> {
         self.0.keys()
     }
