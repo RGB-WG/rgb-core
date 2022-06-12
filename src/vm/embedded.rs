@@ -724,12 +724,10 @@ pub enum InitError {
 }
 
 #[derive(Debug, Default)]
-pub struct EmbeddedVm {
-    pub(self) validate_genesis_handler: Option<NodeValidator>,
-    pub(self) validate_transition_handler: Option<NodeValidator>,
-    pub(self) validate_extension_handler: Option<NodeValidator>,
-    pub(self) validate_assignment_handler: Option<AssignmentValidator>,
-    pub(self) blank_transition_handler: Option<TransitionConstructor>,
+pub struct EmbeddedVm;
+
+impl EmbeddedVm {
+    pub fn new() -> EmbeddedVm { EmbeddedVm }
 }
 
 impl VmApi for EmbeddedVm {

@@ -133,7 +133,7 @@ mod _validation {
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure, SchemaVerify,
     };
     use crate::script::{OverrideRules, ValidationScript};
-    use crate::vm::{EmbeddedVm, VmApi};
+    use crate::vm::VmApi;
     use crate::{
         validation, Assignment, AssignmentVec, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
         ParentOwnedRights, ParentPublicRights, PublicRights, State,
@@ -221,7 +221,7 @@ mod _validation {
             &self,
             all_nodes: &BTreeMap<NodeId, &dyn Node>,
             node: &dyn Node,
-            byte_code: &[u8],
+            script: &ValidationScript,
         ) -> validation::Status {
             let node_id = node.node_id();
 
@@ -347,7 +347,7 @@ mod _validation {
                 &parent_public_rights,
                 node.public_rights(),
                 node.metadata(),
-                &byte_code,
+                script,
             );
             status
         }
@@ -540,67 +540,14 @@ mod _validation {
             parent_public_rights: &PublicRights,
             public_rights: &PublicRights,
             metadata: &Metadata,
-            byte_code: &[u8],
+            script: &ValidationScript,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
-            macro_rules! vm {
-                ($abi:expr) => {{
-                    // This code is actually unreachable, since we check VM type
-                    // at the start of schema validation in
-                    // `Validator::validate_schema` and return if it's
-                    // wrong, however it is here as an additional safety
-                    // placeholder
-                    if self.script.vm_type() != VmScript::Embedded {
-                        status.add_failure(validation::Failure::VirtualMachinesNotSupportedYet);
-                        return status;
-                    }
+            // We do not validate public rights, since they do not have an
+            // associated state and there is nothing to validate beyond schema
 
-                    let vm = match EmbeddedVm::with(byte_code, $abi) {
-                        Ok(vm) => vm,
-                        Err(failure) => {
-                            status.add_failure(failure);
-                            return status;
-                        }
-                    };
-
-                    Box::new(vm) as Box<dyn VmApi>
-                }};
-            }
-
-            let abi = match node_subtype {
-                NodeSubtype::Genesis => self
-                    .genesis
-                    .abi
-                    .iter()
-                    .map(|(action, entry_point)| (Action::from(*action), *entry_point))
-                    .collect(),
-                NodeSubtype::StateTransition(type_id) => self
-                    .transitions
-                    .get(&type_id)
-                    .expect(
-                        "node structure must be validated against schema \
-                        requirements before any scripts is executed",
-                    )
-                    .abi
-                    .iter()
-                    .map(|(action, entry_point)| (Action::from(*action), *entry_point))
-                    .collect(),
-                NodeSubtype::StateExtension(type_id) => self
-                    .extensions
-                    .get(&type_id)
-                    .expect(
-                        "node structure must be validated against schema \
-                        requirements before any scripts is executed",
-                    )
-                    .abi
-                    .iter()
-                    .map(|(action, entry_point)| (Action::from(*action), *entry_point))
-                    .collect(),
-            };
-
-            let vm = vm!(&abi);
-            if let Err(err) = vm.validate_node(
+            if let Err(err) = script.validate(
                 node_id,
                 node_subtype,
                 parent_owned_rights,
@@ -611,39 +558,6 @@ mod _validation {
             ) {
                 status.add_failure(err);
             }
-
-            let owned_right_types: BTreeSet<&OwnedRightType> = parent_owned_rights
-                .keys()
-                .chain(owned_rights.keys())
-                .collect();
-
-            for owned_type_id in owned_right_types {
-                let abi = &self
-                    .owned_right_types
-                    .get(&owned_type_id)
-                    .expect(
-                        "node structure must be validated against schema \
-                        requirements before any scripts is executed",
-                    )
-                    .abi;
-
-                let vm = vm!(abi);
-
-                if let Err(err) = vm.validate_assignment(
-                    node_id,
-                    node_subtype,
-                    *owned_type_id,
-                    parent_owned_rights.assignments_by_type(*owned_type_id),
-                    owned_rights.assignments_by_type(*owned_type_id),
-                    metadata,
-                ) {
-                    status.add_failure(err);
-                    continue;
-                }
-            }
-
-            // We do not validate public rights, since they do not have an
-            // associated state and there is nothing to validate beyond schema
 
             status
         }

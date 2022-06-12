@@ -18,13 +18,16 @@ pub mod alure;
 
 pub use embedded::EmbeddedVm;
 
-use crate::{schema, validation, Metadata, NodeId, OwnedRights, PublicRights};
+use crate::validation::Failure;
+use crate::{
+    schema, validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, ValidationScript,
+};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
-/// RGB schema validation routines
+/// RGB schema validation routines.
 pub trait VmApi {
-    /// Validates contract node
-    fn validate_node(
+    /// Validates state change in a contract node.
+    fn validate(
         &self,
         node_id: NodeId,
         node_subtype: schema::NodeSubtype,
@@ -34,4 +37,31 @@ pub trait VmApi {
         current_public_rights: &PublicRights,
         current_meta: &Metadata,
     ) -> Result<(), validation::Failure>;
+}
+
+impl VmApi for ValidationScript {
+    fn validate(
+        &self,
+        node_id: NodeId,
+        node_subtype: NodeSubtype,
+        previous_owned_rights: &OwnedRights,
+        current_owned_rights: &OwnedRights,
+        previous_public_rights: &PublicRights,
+        current_public_rights: &PublicRights,
+        current_meta: &Metadata,
+    ) -> Result<(), Failure> {
+        let vm = match self {
+            ValidationScript::Embedded => &EmbeddedVm::new() as &dyn VmApi,
+            ValidationScript::AluVM(script) => &alure::Runtime::new(script) as &dyn VmApi,
+        };
+        vm.validate(
+            node_id,
+            node_subtype,
+            previous_owned_rights,
+            current_owned_rights,
+            previous_public_rights,
+            current_public_rights,
+            current_meta,
+        )
+    }
 }
