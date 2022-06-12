@@ -14,6 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use amplify::flags::FlagVec;
 use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
+use stens::TypeSystem;
 
 use super::{
     DataFormat, ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType,
@@ -84,6 +85,7 @@ pub struct Schema {
     pub rgb_features: FlagVec,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub root_id: SchemaId,
+    pub type_system: TypeSystem,
     pub field_types: BTreeMap<FieldType, DataFormat>,
     pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,
     pub public_right_types: BTreeSet<PublicRightType>,
@@ -776,6 +778,7 @@ pub(crate) mod test {
         Schema {
             rgb_features: FlagVec::default(),
             root_id: Default::default(),
+            type_system: Default::default(),
             field_types: bmap! {
                 FIELD_TICKER => DataFormat::UniString(16),
                 FIELD_NAME => DataFormat::UniString(256),

@@ -1145,6 +1145,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "serde_yaml",
+ "stens",
  "strict_encoding",
 ]
 
@@ -1359,6 +1360,19 @@ checksum = "ebd1b177894da2a2d9120208c3386066af06a488255caabc5de8ddca22dbc3ce"
 dependencies = [
  "quote",
  "syn",
+]
+
+[[package]]
+name = "stens"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9e78939a07155195fa390d2cbb61c68350dd7b2399af7606aec4b8096d35331"
+dependencies = [
+ "amplify",
+ "serde",
+ "serde_with",
+ "serde_yaml",
+ "strict_encoding",
 ]
 
 [[package]]

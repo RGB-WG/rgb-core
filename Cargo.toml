@@ -43,6 +43,7 @@ required-features = ["cli", "serde"]
 amplify = "~3.12.0"
 bp-core = { version = "~0.7.0-beta.5" }
 lnpbp = { version = "~0.7.0", features = ["zip"] }
+stens = "0.2.0"
 strict_encoding = { version = "~1.8.3", features = ["crypto", "chrono", "bitcoin"] }
 commit_verify = { version = "~0.7.0-rc.4", features = ["rand", "bulletproofs"] }
 descriptor-wallet = { version = "~0.7.1", features = ["descriptors"] }
@@ -89,5 +90,5 @@ wallet = ["bp-core/wallet"]
 cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum", "electrum-client"]
 serde = ["serde_crate", "serde_with", # "serde_with_macros",
          "commit_verify/serde", "strict_encoding/serde",
-         "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde",
-         "bitcoin/use-serde", "bitcoin_hashes/serde"]
+         "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde",
+         "bitcoin/use-serde", "bitcoin_hashes/serde",]
