@@ -187,7 +187,7 @@ impl Consignment {
         set.extend(
             self.anchored_bundles
                 .iter()
-                .map(|(_, bundle)| bundle.node_ids())
+                .map(|(_, bundle)| bundle.revealed_node_ids())
                 .flatten(),
         );
         set.extend(self.state_extensions.iter().map(Extension::node_id));
