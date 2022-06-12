@@ -48,7 +48,6 @@ impl CommitEncode for Void {
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(repr = u8)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[non_exhaustive]
 pub enum Revealed {
     #[strict_encoding(value = 0x00)]
     U8(u8),

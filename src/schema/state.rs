@@ -28,7 +28,6 @@ pub struct StateSchema {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-#[non_exhaustive]
 #[repr(u8)]
 pub enum StateType {
     Declarative = 0,
@@ -44,7 +43,6 @@ pub enum StateType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-#[non_exhaustive]
 pub enum StateFormat {
     Declarative,
     DiscreteFiniteField(DiscreteFiniteFieldFormat),
@@ -59,7 +57,6 @@ pub enum StateFormat {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "lowercase")
 )]
-#[non_exhaustive]
 #[repr(u8)]
 /// Today we support only a single format of confidential data, because of the
 /// limitations of the underlying secp256k1-zkp library: it works only with
