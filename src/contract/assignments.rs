@@ -634,7 +634,7 @@ impl State for HashStrategy {
     type Revealed = data::Revealed;
 }
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct ContainerStrategy;
 impl State for ContainerStrategy {
     type Confidential = container::Confidential;
