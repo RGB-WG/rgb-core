@@ -46,43 +46,69 @@ impl CommitEncode for Void {
 
 #[derive(Clone, Debug, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_order)]
+#[strict_encoding(repr = u8)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[non_exhaustive]
 pub enum Revealed {
+    #[strict_encoding(value = 0x00)]
     U8(u8),
+    #[strict_encoding(value = 0x01)]
     U16(u16),
+    #[strict_encoding(value = 0x02)]
     U32(u32),
+    #[strict_encoding(value = 0x03)]
     U64(u64),
+    #[strict_encoding(value = 0x04)]
     U128(u128),
+    #[strict_encoding(value = 0x05)]
     U256(u256),
+    #[strict_encoding(value = 0x06)]
     U512(u512),
+    #[strict_encoding(value = 0x07)]
     U1024(u1024),
 
+    #[strict_encoding(value = 0x10)]
     I8(i8),
+    #[strict_encoding(value = 0x11)]
     I16(i16),
+    #[strict_encoding(value = 0x12)]
     I32(i32),
+    #[strict_encoding(value = 0x13)]
     I64(i64),
+    #[strict_encoding(value = 0x14)]
     I128(i128),
+    #[strict_encoding(value = 0x15)]
     I256(i256),
+    #[strict_encoding(value = 0x16)]
     I512(i512),
+    #[strict_encoding(value = 0x17)]
     I1024(i1024),
 
     // TODO #100: Implement tapered float format
+    #[strict_encoding(value = 0x30)]
     F16B(bf16),
+    #[strict_encoding(value = 0x31)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     F16(ieee::Half),
+    #[strict_encoding(value = 0x32)]
     F32(f32),
+    #[strict_encoding(value = 0x33)]
     F64(f64),
+    #[strict_encoding(value = 0x34)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     F80(ieee::X87DoubleExtended),
+    #[strict_encoding(value = 0x35)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     F128(ieee::Quad),
+    #[strict_encoding(value = 0x36)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     F256(ieee::Oct),
 
+    #[strict_encoding(value = 0xE0)]
     Bytes(Vec<u8>),
+    #[strict_encoding(value = 0xEE)]
     AsciiString(AsciiString),
+    #[strict_encoding(value = 0xEF)]
     UnicodeString(String),
 }
 
