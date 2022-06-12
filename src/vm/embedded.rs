@@ -19,7 +19,6 @@ use commit_verify::CommitConceal;
 
 use super::VmApi;
 use crate::schema::constants::*;
-use crate::script::EntryPoint;
 use crate::{
     schema, validation, value, AssignmentVec, Metadata, NodeId, NodeOutput, NodeSubtype,
     OwnedRights, PublicRights, Transition,

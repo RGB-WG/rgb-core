@@ -22,7 +22,7 @@ use wallet::onchain::ResolveTx;
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
-use crate::script::{EntryPoint, VmType};
+use crate::script::VmType;
 use crate::SealEndpoint;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -223,7 +223,6 @@ pub enum Failure {
     /// invalid bulletproofs in {0}:{1}: {2}
     InvalidBulletproofs(NodeId, u16, secp256k1zkp::Error),
 
-    WrongEntryPoint(EntryPoint),
     VirtualMachinesNotSupportedYet,
     ScriptFailure(NodeId, u8),
 }

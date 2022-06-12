@@ -84,6 +84,7 @@ pub struct Schema {
     pub rgb_features: FlagVec,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub root_id: SchemaId,
+
     pub type_system: TypeSystem,
     pub field_types: BTreeMap<FieldType, TypeRef>,
     pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,
@@ -747,7 +748,6 @@ pub(crate) mod test {
 
     use super::*;
     use crate::schema::*;
-    use crate::script::EntryPoint;
     use crate::vm::embedded::NodeValidator;
 
     pub(crate) fn schema() -> Schema {
@@ -793,7 +793,7 @@ pub(crate) mod test {
             owned_right_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema::Declarative,
                 ASSIGNMENT_ASSETS => SStateSchema::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
-                ASSIGNMENT_PRUNE => StateSchema::Declarative,
+                ASSIGNMENT_PRUNE => StateSchema::Declarative
             },
             public_right_types: bset! {
                 VALENCIES_DECENTRALIZED_ISSUE

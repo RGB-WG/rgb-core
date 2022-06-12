@@ -17,7 +17,6 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use bitcoin::OutPoint;
 
-use crate::script::EntryPoint;
 use crate::{
     schema, validation, AssignmentVec, Metadata, NodeId, NodeOutput, OwnedRights, PublicRights,
     Transition,

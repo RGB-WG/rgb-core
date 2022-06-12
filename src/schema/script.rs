@@ -12,7 +12,7 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract node level
 
-use amplify::num::u24;
+use bitcoin_hashes::sha256;
 use commit_verify::commit_encode;
 use strict_encoding::MediumVec;
 
@@ -56,7 +56,11 @@ pub enum VmScript {
     // TODO: Use library-based approach with `aluvm::Lib` type and special
     //       RGB AluVM runtime environment controlling the total number of
     //       libraries used is below 256.
-    AluVM(MediumVec<u8>),
+    // TODO: Use `aluvm::libs::LibSite` once AluVM will integrate strict encoding
+    AluVM {
+        program: MediumVec<u8>,
+        validate: (sha256::Hash, u16),
+    },
 }
 
 impl Default for VmScript {
@@ -72,7 +76,7 @@ impl VmScript {
     pub fn vm_type(&self) -> VmType {
         match self {
             VmScript::Embedded => VmType::Embedded,
-            VmScript::AluVM(_) => VmType::AluVM,
+            VmScript::AluVM { .. } => VmType::AluVM,
         }
     }
 }
@@ -106,11 +110,3 @@ pub enum OverrideRules {
 impl Default for OverrideRules {
     fn default() -> Self { OverrideRules::Deny }
 }
-
-/// Offset within script data for the procedure entry point.
-///
-/// Part of the ABI data.
-///
-/// NB: For embedded procedures this is a code name of the embedded procedure
-///     as defined by [`EmbeddedProcedure`]
-pub type EntryPoint = u24;
