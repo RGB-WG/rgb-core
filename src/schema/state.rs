@@ -11,15 +11,6 @@
 
 use stens::TypeRef;
 
-use super::script;
-
-#[derive(Clone, PartialEq, Debug, StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct StateSchema {
-    pub format: StateFormat,
-    pub abi: script::AssignmentAbi,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(by_value, repr = u8)]

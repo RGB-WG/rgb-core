@@ -16,9 +16,7 @@ use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
 use stens::{TypeRef, TypeSystem};
 
-use super::{
-    ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema, TransitionSchema,
-};
+use super::{ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, TransitionSchema};
 use crate::script::OverrideRules;
 #[cfg(feature = "serde")]
 use crate::Bech32;
