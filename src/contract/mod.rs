@@ -34,7 +34,7 @@ pub use assignments::{
 };
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
-pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutput, Transition};
+pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 pub use reveal::MergeReveal;
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner};

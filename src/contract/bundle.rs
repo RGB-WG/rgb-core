@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use bitcoin_hashes::{sha256, sha256t};
 use commit_verify::{CommitVerify, PrehashedProtocol, TaggedHash};
 
-use crate::{NodeId, Transition};
+use crate::Transition;
 
 // TODO: Update the value
 // "rgb:bundle"
@@ -58,7 +58,30 @@ impl strict_encoding::Strategy for BundleId {
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct TransitionBundle {
-    pub input_map: BTreeMap<u16, NodeId>,
-    pub transitions: BTreeSet<Transition>,
+pub struct TransitionBundle(BTreeMap<Transition, BTreeSet<u16>>);
+
+impl<'me> IntoIterator for &'me TransitionBundle {
+    type Item = (&'me Transition, &'me BTreeSet<u16>);
+    type IntoIter = std::collections::btree_map::Iter<'me, Transition, BTreeSet<u16>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
+impl TransitionBundle {
+    pub fn transitions(&self) -> std::collections::btree_map::Keys<Transition, BTreeSet<u16>> {
+        self.0.keys()
+    }
+}
+
+impl TransitionBundle {
+    pub fn validate(&self) -> bool {
+        let mut used_inputs = bset! {};
+        for set in self.0.values() {
+            if used_inputs.intersection(set).count() > 0 {
+                return false;
+            }
+            used_inputs.extend(set);
+        }
+        true
+    }
 }

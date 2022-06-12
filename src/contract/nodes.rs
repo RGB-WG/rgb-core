@@ -37,7 +37,7 @@ use crate::{schema, seal, ConfidentialDataError, Metadata, PublicRightType, Sche
 #[display("{node_id}:{output_no}")]
 /// RGB contract node output pointer, defined by the node ID and output
 /// number.
-pub struct NodeOutput {
+pub struct NodeOutpoint {
     pub node_id: NodeId,
     pub output_no: u16,
 }
@@ -207,7 +207,7 @@ pub trait Node: AsAny {
     /// While public state extension do have parent nodes, they do not contain
     /// indexed rights.
     #[inline]
-    fn parent_outputs(&self) -> Vec<NodeOutput> {
+    fn parent_outputs(&self) -> Vec<NodeOutpoint> {
         self.parent_owned_rights()
             .iter()
             .map(|(node_id, map)| {
@@ -215,18 +215,18 @@ pub trait Node: AsAny {
                 map.values()
                     .flatten()
                     .copied()
-                    .map(move |output_no| NodeOutput { node_id, output_no })
+                    .map(move |output_no| NodeOutpoint { node_id, output_no })
             })
             .flatten()
             .collect()
     }
 
     #[inline]
-    fn parent_outputs_by_type(&self, t: OwnedRightType) -> Vec<NodeOutput> {
+    fn parent_outputs_by_type(&self, t: OwnedRightType) -> Vec<NodeOutpoint> {
         self.parent_outputs_by_types(&[t])
     }
 
-    fn parent_outputs_by_types(&self, types: &[OwnedRightType]) -> Vec<NodeOutput> {
+    fn parent_outputs_by_types(&self, types: &[OwnedRightType]) -> Vec<NodeOutpoint> {
         self.parent_owned_rights()
             .iter()
             .map(|(node_id, map)| {
@@ -236,7 +236,7 @@ pub trait Node: AsAny {
                     .map(|(_, outputs)| outputs)
                     .flatten()
                     .copied()
-                    .map(move |output_no| NodeOutput { node_id, output_no })
+                    .map(move |output_no| NodeOutpoint { node_id, output_no })
             })
             .flatten()
             .collect()

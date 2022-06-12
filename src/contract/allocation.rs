@@ -62,7 +62,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{As, DisplayFromStr};
 
 use crate::{
-    seal, value, Assignment, AssignmentVec, AtomicValue, IntoRevealedSeal, NodeId, NodeOutput,
+    seal, value, Assignment, AssignmentVec, AtomicValue, IntoRevealedSeal, NodeId, NodeOutpoint,
     SealEndpoint,
 };
 
@@ -243,8 +243,8 @@ impl Allocation {
 
     /// Returns [`NodeOutput`] containing current allocation
     #[inline]
-    pub fn node_output(&self) -> NodeOutput {
-        NodeOutput {
+    pub fn node_output(&self) -> NodeOutpoint {
+        NodeOutpoint {
             node_id: self.node_id,
             output_no: self.index,
         }

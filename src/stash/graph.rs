@@ -29,7 +29,7 @@ use bp::dbc::AnchorId;
 use bp::seals::txout::TxoSeal;
 
 use crate::schema::{NodeType, OwnedRightType};
-use crate::{Consignment, Extension, Node, NodeId, NodeOutput, Transition};
+use crate::{Consignment, Extension, Node, NodeId, NodeOutpoint, Transition};
 
 /// Errors accessing graph data via [`GraphApi`].
 ///
@@ -69,11 +69,11 @@ pub enum ConsistencyError {
     NoSealsClosed(OwnedRightType, NodeId),
 
     /// Output {0} is not present in the storage
-    OutputNotPresent(NodeOutput),
+    OutputNotPresent(NodeOutpoint),
 
     /// Seal definition for {0} is confidential while was required to be in
     /// revealed state
-    ConfidentialSeal(NodeOutput),
+    ConfidentialSeal(NodeOutpoint),
 
     /// The provided node with id {0} is not an endpoint of the consignment
     NotEndpoint(NodeId),

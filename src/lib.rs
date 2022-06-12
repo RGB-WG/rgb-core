@@ -85,7 +85,7 @@ pub mod prelude {
         ConfidentialDataError, ConfidentialState, ContractId, DeclarativeStrategy,
         EndpointValueMap, Extension, Genesis, HashStrategy, HomomorphicBulletproofGrin,
         IntoRevealedSeal, IntoSealValueMap, MergeReveal, Metadata, NoDataError, Node, NodeId,
-        NodeOutput, OutpointValue, OutpointValueMap, OutpointValueVec, OwnedRights,
+        NodeOutpoint, OutpointValue, OutpointValueMap, OutpointValueVec, OwnedRights,
         ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
         SealEndpoint, SealValueMap, State, StateRetrievalError, StateType, Transition, UtxobValue,
     };
