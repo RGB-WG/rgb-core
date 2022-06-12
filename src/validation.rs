@@ -22,8 +22,8 @@ use wallet::onchain::ResolveTx;
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
-use crate::script::{Action, EntryPoint};
-use crate::{SealEndpoint, VmType};
+use crate::script::{Action, EntryPoint, VmType};
+use crate::{SealEndpoint, VmScript};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -224,10 +224,6 @@ pub enum Failure {
     InvalidBulletproofs(NodeId, u16, secp256k1zkp::Error),
 
     WrongEntryPoint(EntryPoint),
-    /// Under certain conditions the script code must be empty, for instance if
-    /// you use the embedded virtual machine or subschema which does not
-    /// override the parent scripts
-    ScriptCodeMustBeEmpty,
     VirtualMachinesNotSupportedYet,
     ScriptFailure(NodeId, u8),
 }
@@ -378,11 +374,10 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
             return validator.status;
         }
 
-        let byte_code = if schema.script.byte_code.is_empty() {
-            root.map(|root| &root.script.byte_code)
-                .unwrap_or(&schema.script.byte_code)
+        let byte_code = if schema.script.is_empty() {
+            root.map(|root| &root.script).unwrap_or(&schema.script)
         } else {
-            &schema.script.byte_code
+            &schema.script
         };
 
         validator.validate_contract(schema, byte_code);
@@ -403,7 +398,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         }
 
         // Validating VM
-        if schema.script.vm_type != VmType::Embedded {
+        if schema.script.vm_type() != VmType::Embedded {
             self.status
                 .add_failure(Failure::VirtualMachinesNotSupportedYet);
         }

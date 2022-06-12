@@ -17,12 +17,12 @@ use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProto
 use stens::{TypeRef, TypeSystem};
 
 use super::{
-    ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema,
-    TransitionSchema,
+    ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema, TransitionSchema,
 };
+use crate::script::OverrideRules;
 #[cfg(feature = "serde")]
 use crate::Bech32;
-use crate::ToBech32;
+use crate::{ToBech32, VmScript};
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = u16;
@@ -92,7 +92,17 @@ pub struct Schema {
     pub genesis: GenesisSchema,
     pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
-    pub script: ExecutableCode,
+
+    /// Type of the virtual machine that MUST be used to run the given byte
+    /// code
+    pub script: VmScript,
+
+    /// Defines whether subschemata are allowed to replace (override) the code
+    ///
+    /// Subschemata not overriding the main schema code MUST set the virtual
+    /// machine type to the same as in the parent schema and set byte code
+    /// to be empty (zero-length)
+    pub override_rules: OverrideRules,
 }
 
 impl Schema {
@@ -123,7 +133,7 @@ mod _validation {
     use crate::schema::{
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure, SchemaVerify,
     };
-    use crate::script::{Action, OverrideRules, VmType};
+    use crate::script::{Action, OverrideRules, VmScript};
     use crate::vm::{EmbeddedVm, VmApi};
     use crate::{
         validation, Assignment, AssignmentVec, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
@@ -191,25 +201,16 @@ mod _validation {
                 }
             }
 
-            match (root.script.override_rules, self.script.override_rules) {
-                (OverrideRules::Deny, _)
-                    if root.script.vm_type != self.script.vm_type
-                        || !self.script.byte_code.is_empty() =>
-                {
+            match (root.override_rules, self.override_rules) {
+                (OverrideRules::Deny, _) if root.script != self.script => {
                     status.add_failure(validation::Failure::SchemaScriptOverrideDenied);
                 }
-                (OverrideRules::AllowSameVm, _) if root.script.vm_type != self.script.vm_type => {
+                (OverrideRules::AllowSameVm, _)
+                    if root.script.vm_type() != self.script.vm_type() =>
+                {
                     status.add_failure(validation::Failure::SchemaScriptVmChangeDenied);
                 }
                 _ => {} // We are fine here
-            }
-
-            if root.script.vm_type == VmType::Embedded && !root.script.byte_code.is_empty() {
-                status.add_failure(validation::Failure::ScriptCodeMustBeEmpty);
-            }
-
-            if self.script.vm_type == VmType::Embedded && !self.script.byte_code.is_empty() {
-                status.add_failure(validation::Failure::ScriptCodeMustBeEmpty);
             }
 
             status
@@ -552,7 +553,7 @@ mod _validation {
                     // `Validator::validate_schema` and return if it's
                     // wrong, however it is here as an additional safety
                     // placeholder
-                    if self.script.vm_type != VmType::Embedded {
+                    if self.script.vm_type() != VmScript::Embedded {
                         status.add_failure(validation::Failure::VirtualMachinesNotSupportedYet);
                         return status;
                     }
@@ -891,6 +892,7 @@ pub(crate) mod test {
                 }
             },
             script: Default::default(),
+            override_rules: Default::default(),
         }
     }
 

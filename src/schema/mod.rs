@@ -24,8 +24,8 @@ pub use occurences::{Occurrences, OccurrencesError};
 pub(crate) use schema::test;
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{
-    Action, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi, ExtensionAction,
-    GenericAction, GenesisAbi, GenesisAction, NodeAction, TransitionAbi, TransitionAction, VmType,
+    Action, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, GenericAction,
+    GenesisAbi, GenesisAction, NodeAction, TransitionAbi, TransitionAction, VmScript, VmType,
 };
 pub use state::{DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
 

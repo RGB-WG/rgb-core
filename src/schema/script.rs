@@ -13,40 +13,70 @@
 //! specific contract node level
 
 use std::collections::BTreeMap;
-use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
-use bitcoin::hashes::hex::ToHex;
 use commit_verify::commit_encode;
-use lnpbp::bech32::Bech32DataString;
 use strict_encoding::MediumVec;
 
-/// Types of supported virtual machines
+/// Virtual machine types.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display(Debug)]
+pub enum VmType {
+    /// Embedded code (not a virtual machine) which is the part of this RGB
+    /// Core Library.
+    Embedded,
+
+    /// AluVM: pure functional register-based virtual machine designed for RGB
+    /// and multiparty computing.
+    AluVM,
+}
+
+/// Virtual machine and machine-specific script data.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(by_value, repr = u8)]
-#[repr(u8)]
-pub enum VmType {
+pub enum VmScript {
     /// Embedded code (not a virtual machine) which is the part of this RGB
     /// Core Library. Using this option results in the fact that the schema
     /// does not commit to the actual validating code and the validation logic
     /// may change in the future (like to be patched) with new RGB Core Lib
-    /// releases
-    #[display("embedded")]
-    #[cfg_attr(feature = "serde", serde(rename = "embedded"))]
-    Embedded = 0x00u8,
+    /// releases.
+    #[strict_encoding(value = 0x00)]
+    Embedded,
 
     /// AluVM: pure functional register-based virtual machine designed for RGB
-    /// and multiparty computing
-    #[display("AluVM")]
-    #[cfg_attr(feature = "serde", serde(rename = "AluVM"))]
-    AluVM = 0x01u8,
+    /// and multiparty computing.
+    ///
+    /// The inner data contains actual executable code in form of complete set
+    /// of AliVM libraries, which must be holistic and not dependent on any
+    /// external libraries (i.e. must contain all libraries embedded).
+    ///
+    /// Its routines can be accessed only through well-typed ABI entrance
+    /// pointers, defined as a part of the schema.
+    #[strict_encoding(value = 0x01)]
+    // TODO: Use library-based approach with `aluvm::Lib` type and special
+    //       RGB AluVM runtime environment controlling the total number of
+    //       libraries used is below 256.
+    AluVM(MediumVec<u8>),
 }
 
-impl Default for VmType {
+impl Default for VmScript {
     // TODO: Update default VM type to AluVM in RGBv1 release
-    fn default() -> Self { VmType::Embedded }
+    fn default() -> Self { VmScript::Embedded }
+}
+
+impl commit_encode::Strategy for VmScript {
+    type Strategy = commit_encode::strategies::UsingStrict;
+}
+
+impl VmScript {
+    pub fn vm_type(&self) -> VmType {
+        match self {
+            VmScript::Embedded => VmType::Embedded,
+            VmScript::AluVM(_) => VmType::AluVM,
+        }
+    }
 }
 
 /// VM and script overwrite rules by subschemata.
@@ -77,48 +107,6 @@ pub enum OverrideRules {
 
 impl Default for OverrideRules {
     fn default() -> Self { OverrideRules::Deny }
-}
-
-/// Executable code
-///
-/// The actual executable code, which must be holistic and not dependent on any
-/// external libraries (i.e. must contain all libraries embedded into itself).
-/// Its routines can be accessed only through well-typed ABI entrance points,
-/// defined as a part of the specific state transition and owned rights, either
-/// in the schema (for schema-supplied code base) or within the contract nodes,
-/// if the contract is allowed to replace the code provided by the schema.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
-pub struct ExecutableCode {
-    /// Type of the virtual machine that MUST be used to run the given byte
-    /// code
-    pub vm_type: VmType,
-
-    /// Script data are presented as a byte array (VM-specific)
-    pub byte_code: MediumVec<u8>,
-
-    /// Defines whether subschemata are allowed to replace (override) the code
-    ///
-    /// Subschemata not overriding the main schema code MUST set the virtual
-    /// machine type to the same as in the parent schema and set byte code
-    /// to be empty (zero-length)
-    pub override_rules: OverrideRules,
-}
-
-impl commit_encode::Strategy for ExecutableCode {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-
-impl Display for ExecutableCode {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        Display::fmt(&self.vm_type, f)?;
-        if f.alternate() {
-            f.write_str(&self.byte_code.to_hex())
-        } else {
-            f.write_str(&self.byte_code.bech32_data_string())
-        }
-    }
 }
 
 /// All possible procedures which may be called to via ABI table
