@@ -215,7 +215,7 @@ impl ConsensusCommit for Disclosure {
 }
 
 impl ConcealSeals for Disclosure {
-    fn conceal_seals(&mut self, seals: &Vec<Confidential>) -> usize {
+    fn conceal_seals(&mut self, seals: &[Confidential]) -> usize {
         self.transitions
             .iter_mut()
             .fold(0usize, |count, (_, (_, map))| {
@@ -227,7 +227,7 @@ impl ConcealSeals for Disclosure {
 }
 
 impl ConcealState for Disclosure {
-    fn conceal_state_except(&mut self, seals: &Vec<Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[Confidential]) -> usize {
         self.transitions
             .iter_mut()
             .fold(0usize, |count, (_, (_, map))| {

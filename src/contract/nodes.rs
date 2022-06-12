@@ -445,7 +445,7 @@ impl CommitEncode for Transition {
 }
 
 impl ConcealState for Genesis {
-    fn conceal_state_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
@@ -455,7 +455,7 @@ impl ConcealState for Genesis {
 }
 
 impl ConcealState for Extension {
-    fn conceal_state_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
@@ -465,7 +465,7 @@ impl ConcealState for Extension {
 }
 
 impl ConcealState for Transition {
-    fn conceal_state_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
@@ -475,7 +475,7 @@ impl ConcealState for Transition {
 }
 
 impl ConcealSeals for Transition {
-    fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_seals(seals);

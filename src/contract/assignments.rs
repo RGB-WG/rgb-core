@@ -502,7 +502,7 @@ impl AssignmentVec {
 }
 
 impl ConcealSeals for AssignmentVec {
-    fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             AssignmentVec::Declarative(data) => data as &mut dyn ConcealSeals,
             AssignmentVec::DiscreteFiniteField(data) => data as &mut dyn ConcealSeals,
@@ -513,7 +513,7 @@ impl ConcealSeals for AssignmentVec {
 }
 
 impl ConcealState for AssignmentVec {
-    fn conceal_state_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             AssignmentVec::Declarative(data) => data as &mut dyn ConcealState,
             AssignmentVec::DiscreteFiniteField(data) => data as &mut dyn ConcealState,
@@ -867,7 +867,7 @@ where
     <StateType as State>::Confidential:
         From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => 0,
             Assignment::ConfidentialAmount {
@@ -910,7 +910,7 @@ where
     <StateType as State>::Confidential:
         From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    fn conceal_state_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => 0,
             Assignment::ConfidentialSeal {

@@ -258,7 +258,10 @@ impl Consignment {
     }
 
     pub fn finalize(&mut self, expose: &BTreeSet<SealEndpoint>) -> usize {
-        let concealed_endpoints = expose.iter().map(SealEndpoint::commit_conceal).collect();
+        let concealed_endpoints = expose
+            .iter()
+            .map(SealEndpoint::commit_conceal)
+            .collect::<Vec<_>>();
 
         let mut removed_endpoints = vec![];
         self.endpoints = self
@@ -277,7 +280,7 @@ impl Consignment {
         let seals_to_conceal = removed_endpoints
             .iter()
             .map(SealEndpoint::commit_conceal)
-            .collect();
+            .collect::<Vec<_>>();
 
         let mut count = 0usize;
         self.anchored_bundles = self
