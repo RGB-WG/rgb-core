@@ -230,9 +230,6 @@ mod _verify {
                 }
             }
 
-            // TODO #70: Verify that script node script parameters match schema
-            //      requirements
-
             status
         }
     }

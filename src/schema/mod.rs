@@ -20,8 +20,6 @@ pub use nodes::{
     OwnedRightType, OwnedRightsStructure, PublicRightType, PublicRightsStructure, TransitionSchema,
 };
 pub use occurences::{Occurrences, OccurrencesError};
-#[cfg(test)]
-pub(crate) use schema::test;
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{VmScript, VmType};
 pub use state::{DiscreteFiniteFieldFormat, StateSchema, StateType};
