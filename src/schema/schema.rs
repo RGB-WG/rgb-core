@@ -661,7 +661,6 @@ pub(crate) mod test {
 
     use super::*;
     use crate::schema::*;
-    use crate::vm::embedded::NodeValidator;
 
     pub(crate) fn schema() -> Schema {
         const FIELD_TICKER: u16 = 0;
@@ -705,7 +704,7 @@ pub(crate) mod test {
             },
             owned_right_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema::Declarative,
-                ASSIGNMENT_ASSETS => SStateSchema::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
+                ASSIGNMENT_ASSETS => StateSchema::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
                 ASSIGNMENT_PRUNE => StateSchema::Declarative
             },
             public_right_types: bset! {
