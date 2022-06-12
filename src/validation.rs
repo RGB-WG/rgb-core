@@ -23,7 +23,7 @@ use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
 use crate::script::{Action, EntryPoint, VmType};
-use crate::{SealEndpoint, VmScript};
+use crate::SealEndpoint;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
