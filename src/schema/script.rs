@@ -47,10 +47,10 @@ impl Default for VmType {
     fn default() -> Self { VmType::Embedded }
 }
 
-/// Executable code overwrite rules
+/// VM and script overwrite rules by subschemata.
 ///
-/// Defines whether child contract nodes are allowed to replace (overwrite) the
-/// code
+/// Defines whether subschemata are allowed to replace (overwrite) the type of
+/// VM and scripts.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[cfg_attr(
     feature = "serde",
