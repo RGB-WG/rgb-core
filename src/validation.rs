@@ -143,10 +143,6 @@ pub enum Failure {
     SchemaRootNoParentPublicRightsMatch(NodeType, schema::PublicRightType),
     SchemaRootNoOwnedRightsMatch(NodeType, schema::OwnedRightType),
     SchemaRootNoPublicRightsMatch(NodeType, schema::PublicRightType),
-    SchemaRootNoAbiMatch {
-        node_type: NodeType,
-        action_id: Action,
-    },
 
     SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
     SchemaUnknownTransitionType(NodeId, schema::TransitionType),

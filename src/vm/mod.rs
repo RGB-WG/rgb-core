@@ -9,10 +9,28 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-//! RGB virtual machine
+//! API for interfacing different virtual machines
+//!
+//! Concrete virtual machine implementations must be wrapped into this API
 
 pub mod embedded;
-mod vm;
 
 pub use embedded::EmbeddedVm;
-pub use vm::VmApi;
+
+use crate::{schema, validation, Metadata, NodeId, OwnedRights, PublicRights};
+
+/// Trait for concrete types wrapping virtual machines to be used from inside
+/// RGB schema validation routines
+pub trait VmApi {
+    /// Validates contract node
+    fn validate_node(
+        &self,
+        node_id: NodeId,
+        node_subtype: schema::NodeSubtype,
+        previous_owned_rights: &OwnedRights,
+        current_owned_rights: &OwnedRights,
+        previous_public_rights: &PublicRights,
+        current_public_rights: &PublicRights,
+        current_meta: &Metadata,
+    ) -> Result<(), validation::Failure>;
+}

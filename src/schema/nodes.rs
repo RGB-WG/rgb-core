@@ -434,10 +434,6 @@ mod test {
             Failure::SchemaRootNoOwnedRightsMatch(NodeType::StateTransition, 3),
             Failure::SchemaRootNoOwnedRightsMatch(NodeType::StateTransition, 4),
             Failure::SchemaRootNoPublicRightsMatch(NodeType::StateTransition, 2),
-            Failure::SchemaRootNoAbiMatch {
-                node_type: NodeType::StateTransition,
-                action_id: Action::ValidateTransition,
-            },
         ];
 
         let extension_failures = vec![

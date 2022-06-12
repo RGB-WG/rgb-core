@@ -614,50 +614,6 @@ pub struct EmbeddedVm {
 }
 
 impl VmApi for EmbeddedVm {
-    fn with(
-        byte_code: &[u8],
-        abi: &BTreeMap<impl Into<Action> + Copy, EntryPoint>,
-    ) -> Result<Self, validation::Failure>
-    where
-        Self: Sized,
-    {
-        // Check that byte_code is empty; otherwise return error
-        if !byte_code.is_empty() {
-            return Err(validation::Failure::ScriptCodeMustBeEmpty);
-        }
-
-        let mut vm = EmbeddedVm::default();
-
-        for (action, id) in abi {
-            let action = (*action).into();
-            let err = validation::Failure::WrongEntryPoint(*id);
-            match action {
-                Action::ValidateGenesis => {
-                    vm.validate_genesis_handler =
-                        Some(NodeValidator::from_entry_point(*id).ok_or(err)?);
-                }
-                Action::ValidateTransition => {
-                    vm.validate_transition_handler =
-                        Some(NodeValidator::from_entry_point(*id).ok_or(err)?);
-                }
-                Action::ValidateExtension => {
-                    vm.validate_extension_handler =
-                        Some(NodeValidator::from_entry_point(*id).ok_or(err)?);
-                }
-                Action::ValidateAssignment => {
-                    vm.validate_assignment_handler =
-                        Some(AssignmentValidator::from_entry_point(*id).ok_or(err)?);
-                }
-                Action::BlankTransition => {
-                    vm.blank_transition_handler =
-                        Some(TransitionConstructor::from_entry_point(*id).ok_or(err)?);
-                }
-            }
-        }
-
-        Ok(vm)
-    }
-
     fn validate_node(
         &self,
         node_id: NodeId,
@@ -687,17 +643,8 @@ impl VmApi for EmbeddedVm {
             .transpose()
             .map_err(|err| validation::Failure::ScriptFailure(node_id, err as u8))?
             .unwrap_or_default())
-    }
 
-    fn validate_assignment(
-        &self,
-        node_id: NodeId,
-        node_subtype: NodeSubtype,
-        owned_rights_type: schema::OwnedRightType,
-        previous_state: &AssignmentVec,
-        current_state: &AssignmentVec,
-        current_meta: &Metadata,
-    ) -> Result<(), validation::Failure> {
+        /* TODO: for each assignment
         Ok(self
             .validate_assignment_handler
             .map(|handler| {
@@ -712,19 +659,6 @@ impl VmApi for EmbeddedVm {
             .transpose()
             .map_err(|err| validation::Failure::ScriptFailure(node_id, err as u8))?
             .unwrap_or_default())
-    }
-
-    fn blank_transition(
-        &self,
-        node_id: NodeId,
-        inputs: &BTreeSet<NodeOutput>,
-        outpoints: &BTreeSet<OutPoint>,
-    ) -> Result<Transition, validation::Failure> {
-        Ok(self
-            .blank_transition_handler
-            .map(|handler| handler.construct(inputs, outpoints))
-            .transpose()
-            .map_err(|err| validation::Failure::ScriptFailure(node_id, err as u8))?
-            .unwrap_or_default())
+             */
     }
 }
