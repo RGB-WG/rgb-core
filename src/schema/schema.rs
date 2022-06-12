@@ -93,8 +93,7 @@ pub struct Schema {
     pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
 
-    /// Type of the virtual machine that MUST be used to run the given byte
-    /// code
+    /// Validation code.
     pub script: ValidationScript,
 
     /// Defines whether subschemata are allowed to replace (override) the code
