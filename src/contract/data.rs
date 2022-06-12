@@ -48,7 +48,6 @@ impl CommitEncode for Void {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "lowercase")
 )]
-#[non_exhaustive]
 pub enum Revealed {
     U8(u8),
     U16(u16),

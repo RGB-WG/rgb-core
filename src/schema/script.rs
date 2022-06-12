@@ -24,7 +24,6 @@ use lnpbp::bech32::Bech32DataString;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(by_value, repr = u8)]
-#[non_exhaustive]
 #[repr(u8)]
 pub enum VmType {
     /// Embedded code (not a virtual machine) which is the part of this RGB

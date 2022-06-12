@@ -108,7 +108,6 @@ impl Bits {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[repr(u8)]
-#[non_exhaustive]
 pub enum Occurrences {
     Once,
     NoneOrOnce,
