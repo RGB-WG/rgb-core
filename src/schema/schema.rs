@@ -133,7 +133,7 @@ mod _validation {
     use crate::schema::{
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure, SchemaVerify,
     };
-    use crate::script::{Action, OverrideRules, VmScript};
+    use crate::script::{OverrideRules, VmScript};
     use crate::vm::{EmbeddedVm, VmApi};
     use crate::{
         validation, Assignment, AssignmentVec, Metadata, Node, NodeId, NodeSubtype, OwnedRights,

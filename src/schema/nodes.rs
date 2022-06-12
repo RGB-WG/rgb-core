@@ -244,7 +244,6 @@ mod test {
 
     use super::*;
     use crate::schema::SchemaVerify;
-    use crate::script::Action;
     use crate::validation::Failure;
 
     static GENESIS_SCHEMA: [u8; 71] = [

@@ -23,10 +23,7 @@ pub use occurences::{Occurrences, OccurrencesError};
 #[cfg(test)]
 pub(crate) use schema::test;
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
-pub use script::{
-    Action, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, GenericAction,
-    GenesisAbi, GenesisAction, NodeAction, TransitionAbi, TransitionAction, VmScript, VmType,
-};
+pub use script::{VmScript, VmType};
 pub use state::{DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
 
 mod verify {

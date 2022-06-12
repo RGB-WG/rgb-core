@@ -90,9 +90,8 @@ pub mod prelude {
         SealEndpoint, SealValueMap, State, StateRetrievalError, StateType, Transition, UtxobValue,
     };
     pub use schema::{
-        script, AssignmentAbi, AssignmentAction, ExtensionAbi, ExtensionAction, ExtensionSchema,
-        ExtensionType, GenesisAbi, GenesisAction, NodeSubtype, NodeType, PublicRightType,
-        PublicRightsStructure, Schema, SchemaId, TransitionAbi, TransitionAction, VmScript,
+        script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
+        PublicRightsStructure, Schema, SchemaId, VmScript, VmType,
     };
     pub use stash::{
         ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError, Disclosure,
