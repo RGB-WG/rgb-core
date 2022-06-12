@@ -47,20 +47,6 @@ The library is based on other projects:
 
 ## Install
 
-### Get the dependencies
-
-On Debian, run
-```shell script
-sudo apt-get install cargo libssl-dev libzmq3-dev pkg-config g++ cmake
-```
-
-On Mac OS, run
-```shell script
-brew install rust pkg-config zmq
-```
-
-### Clone and compile library
-
 Minimum supported rust compiler version (MSRV): 1.41.1 (if used without tokio)
 
 ```shell script
@@ -86,7 +72,7 @@ Add these lines to your `Cargo.toml` file at the very end of the `[dependecies]`
 section:
 
 ```toml
-rgb-core = "~0.3.0"
+rgb-core = "~0.7.0"
 ```
 
 
