@@ -15,9 +15,11 @@
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
 
+use amplify::num::u24;
 use bitcoin::hashes::hex::ToHex;
 use commit_verify::commit_encode;
 use lnpbp::bech32::Bech32DataString;
+use strict_encoding::MediumVec;
 
 /// Types of supported virtual machines
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -94,10 +96,7 @@ pub struct ExecutableCode {
     pub vm_type: VmType,
 
     /// Script data are presented as a byte array (VM-specific)
-    // TODO: #68 Currently script will be limited to 2^16 bytes; we need to
-    //       extend that to at least 2^24
-    //       Update: possible best way of doing that will be with #74
-    pub byte_code: Box<[u8]>,
+    pub byte_code: MediumVec<u8>,
 
     /// Defines whether subschemata are allowed to replace (override) the code
     ///
@@ -274,9 +273,7 @@ impl GenericAction for AssignmentAction {}
 ///
 /// NB: For embedded procedures this is a code name of the embedded procedure
 ///     as defined by [`EmbeddedProcedure`]
-// TODO: #68 Replace this type with `Uint24` once it will be implemented by
-//       upstream LNPBP#205
-pub type EntryPoint = u32;
+pub type EntryPoint = u24;
 
 /// ABI table for contract genesis
 pub type GenesisAbi = BTreeMap<GenesisAction, EntryPoint>;
@@ -297,6 +294,8 @@ impl Abi for AssignmentAbi {}
 
 #[cfg(test)]
 mod test {
+    use std::convert::TryInto;
+
     use strict_encoding::strict_serialize;
 
     use super::*;
@@ -335,7 +334,7 @@ mod test {
         );
 
         let mut assignment_abi = AssignmentAbi::new();
-        assignment_abi.insert(AssignmentAction::Validate, 45);
+        assignment_abi.insert(AssignmentAction::Validate, 45.try_into().unwrap());
         assert_eq!(
             vec![0x01, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x00],
             strict_serialize(&assignment_abi).unwrap()
