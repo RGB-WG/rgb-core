@@ -13,12 +13,13 @@ mod nodes;
 mod schema;
 pub mod script;
 mod state;
-mod types;
+mod occurences;
 
 pub use nodes::{
     ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeSubtype, NodeType,
     OwnedRightType, OwnedRightsStructure, PublicRightType, PublicRightsStructure, TransitionSchema,
 };
+pub use occurences::{Occurrences, OccurrencesError};
 #[cfg(test)]
 pub(crate) use schema::test;
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
@@ -27,7 +28,6 @@ pub use script::{
     GenericAction, GenesisAbi, GenesisAction, NodeAction, TransitionAbi, TransitionAction, VmType,
 };
 pub use state::{DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
-pub use types::{Occurrences, OccurrencesError};
 
 mod verify {
     use crate::validation;
