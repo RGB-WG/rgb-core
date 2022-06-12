@@ -90,10 +90,8 @@ pub mod prelude {
         SealEndpoint, SealValueMap, State, StateRetrievalError, StateType, Transition, UtxobValue,
     };
     pub use schema::{
-        script, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi, ExtensionAction,
-        ExtensionSchema, ExtensionType, GenesisAbi, GenesisAction, NodeSubtype, NodeType,
-        PublicRightType, PublicRightsStructure, Schema, SchemaId, TransitionAbi, TransitionAction,
-        VmType,
+        script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
+        PublicRightsStructure, Schema, SchemaId, ValidationScript, VmType,
     };
     pub use stash::{
         ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError, Disclosure,
@@ -101,7 +99,7 @@ pub mod prelude {
         PSBT_PREFIX,
     };
     pub use validation::{Validator, Validity};
-    pub use vm::VmApi;
+    pub use vm::Validate;
 
     pub use super::bech32::{Bech32, FromBech32, ToBech32};
     use super::*;

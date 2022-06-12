@@ -16,13 +16,12 @@ use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
 use stens::{TypeRef, TypeSystem};
 
-use super::{
-    ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema,
-    TransitionSchema,
-};
+use super::{ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, TransitionSchema};
+use crate::schema::StateSchema;
+use crate::script::OverrideRules;
 #[cfg(feature = "serde")]
 use crate::Bech32;
-use crate::ToBech32;
+use crate::{ToBech32, ValidationScript};
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = u16;
@@ -85,6 +84,7 @@ pub struct Schema {
     pub rgb_features: FlagVec,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub root_id: SchemaId,
+
     pub type_system: TypeSystem,
     pub field_types: BTreeMap<FieldType, TypeRef>,
     pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,
@@ -92,7 +92,16 @@ pub struct Schema {
     pub genesis: GenesisSchema,
     pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
-    pub script: ExecutableCode,
+
+    /// Validation code.
+    pub script: ValidationScript,
+
+    /// Defines whether subschemata are allowed to replace (override) the code
+    ///
+    /// Subschemata not overriding the main schema code MUST set the virtual
+    /// machine type to the same as in the parent schema and set byte code
+    /// to be empty (zero-length)
+    pub override_rules: OverrideRules,
 }
 
 impl Schema {
@@ -123,8 +132,8 @@ mod _validation {
     use crate::schema::{
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure, SchemaVerify,
     };
-    use crate::script::{Action, OverrideRules, VmType};
-    use crate::vm::{EmbeddedVm, VmApi};
+    use crate::script::{OverrideRules, ValidationScript};
+    use crate::vm::Validate;
     use crate::{
         validation, Assignment, AssignmentVec, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
         ParentOwnedRights, ParentPublicRights, PublicRights, State,
@@ -191,25 +200,16 @@ mod _validation {
                 }
             }
 
-            match (root.script.override_rules, self.script.override_rules) {
-                (OverrideRules::Deny, _)
-                    if root.script.vm_type != self.script.vm_type
-                        || !self.script.byte_code.is_empty() =>
-                {
+            match (root.override_rules, self.override_rules) {
+                (OverrideRules::Deny, _) if root.script != self.script => {
                     status.add_failure(validation::Failure::SchemaScriptOverrideDenied);
                 }
-                (OverrideRules::AllowSameVm, _) if root.script.vm_type != self.script.vm_type => {
+                (OverrideRules::AllowSameVm, _)
+                    if root.script.vm_type() != self.script.vm_type() =>
+                {
                     status.add_failure(validation::Failure::SchemaScriptVmChangeDenied);
                 }
                 _ => {} // We are fine here
-            }
-
-            if root.script.vm_type == VmType::Embedded && !root.script.byte_code.is_empty() {
-                status.add_failure(validation::Failure::ScriptCodeMustBeEmpty);
-            }
-
-            if self.script.vm_type == VmType::Embedded && !self.script.byte_code.is_empty() {
-                status.add_failure(validation::Failure::ScriptCodeMustBeEmpty);
             }
 
             status
@@ -221,7 +221,7 @@ mod _validation {
             &self,
             all_nodes: &BTreeMap<NodeId, &dyn Node>,
             node: &dyn Node,
-            byte_code: &[u8],
+            script: &ValidationScript,
         ) -> validation::Status {
             let node_id = node.node_id();
 
@@ -347,7 +347,7 @@ mod _validation {
                 &parent_public_rights,
                 node.public_rights(),
                 node.metadata(),
-                &byte_code,
+                script,
             );
             status
         }
@@ -490,8 +490,7 @@ mod _validation {
                 let assignment = &self
                     .owned_right_types
                     .get(owned_type_id)
-                    .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point")
-                    .format;
+                    .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point");
 
                 match owned_rights.get(owned_type_id) {
                     None => {}
@@ -541,67 +540,14 @@ mod _validation {
             parent_public_rights: &PublicRights,
             public_rights: &PublicRights,
             metadata: &Metadata,
-            byte_code: &[u8],
+            script: &ValidationScript,
         ) -> validation::Status {
             let mut status = validation::Status::new();
 
-            macro_rules! vm {
-                ($abi:expr) => {{
-                    // This code is actually unreachable, since we check VM type
-                    // at the start of schema validation in
-                    // `Validator::validate_schema` and return if it's
-                    // wrong, however it is here as an additional safety
-                    // placeholder
-                    if self.script.vm_type != VmType::Embedded {
-                        status.add_failure(validation::Failure::VirtualMachinesNotSupportedYet);
-                        return status;
-                    }
+            // We do not validate public rights, since they do not have an
+            // associated state and there is nothing to validate beyond schema
 
-                    let vm = match EmbeddedVm::with(byte_code, $abi) {
-                        Ok(vm) => vm,
-                        Err(failure) => {
-                            status.add_failure(failure);
-                            return status;
-                        }
-                    };
-
-                    Box::new(vm) as Box<dyn VmApi>
-                }};
-            }
-
-            let abi = match node_subtype {
-                NodeSubtype::Genesis => self
-                    .genesis
-                    .abi
-                    .iter()
-                    .map(|(action, entry_point)| (Action::from(*action), *entry_point))
-                    .collect(),
-                NodeSubtype::StateTransition(type_id) => self
-                    .transitions
-                    .get(&type_id)
-                    .expect(
-                        "node structure must be validated against schema \
-                        requirements before any scripts is executed",
-                    )
-                    .abi
-                    .iter()
-                    .map(|(action, entry_point)| (Action::from(*action), *entry_point))
-                    .collect(),
-                NodeSubtype::StateExtension(type_id) => self
-                    .extensions
-                    .get(&type_id)
-                    .expect(
-                        "node structure must be validated against schema \
-                        requirements before any scripts is executed",
-                    )
-                    .abi
-                    .iter()
-                    .map(|(action, entry_point)| (Action::from(*action), *entry_point))
-                    .collect(),
-            };
-
-            let vm = vm!(&abi);
-            if let Err(err) = vm.validate_node(
+            if let Err(err) = script.validate(
                 node_id,
                 node_subtype,
                 parent_owned_rights,
@@ -612,39 +558,6 @@ mod _validation {
             ) {
                 status.add_failure(err);
             }
-
-            let owned_right_types: BTreeSet<&OwnedRightType> = parent_owned_rights
-                .keys()
-                .chain(owned_rights.keys())
-                .collect();
-
-            for owned_type_id in owned_right_types {
-                let abi = &self
-                    .owned_right_types
-                    .get(&owned_type_id)
-                    .expect(
-                        "node structure must be validated against schema \
-                        requirements before any scripts is executed",
-                    )
-                    .abi;
-
-                let vm = vm!(abi);
-
-                if let Err(err) = vm.validate_assignment(
-                    node_id,
-                    node_subtype,
-                    *owned_type_id,
-                    parent_owned_rights.assignments_by_type(*owned_type_id),
-                    owned_rights.assignments_by_type(*owned_type_id),
-                    metadata,
-                ) {
-                    status.add_failure(err);
-                    continue;
-                }
-            }
-
-            // We do not validate public rights, since they do not have an
-            // associated state and there is nothing to validate beyond schema
 
             status
         }
@@ -748,7 +661,6 @@ pub(crate) mod test {
 
     use super::*;
     use crate::schema::*;
-    use crate::script::EntryPoint;
     use crate::vm::embedded::NodeValidator;
 
     pub(crate) fn schema() -> Schema {
@@ -792,24 +704,9 @@ pub(crate) mod test {
                 FIELD_TIMESTAMP => TypeRef::i64()
             },
             owned_right_types: bmap! {
-                ASSIGNMENT_ISSUE => StateSchema {
-                    format: StateFormat::Declarative,
-                    abi: bmap! {
-                        AssignmentAction::Validate => NodeValidator::FungibleIssue as EntryPoint
-                    }
-                },
-                ASSIGNMENT_ASSETS => StateSchema {
-                    format: StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
-                    abi: bmap! {
-                        AssignmentAction::Validate => NodeValidator::IdentityTransfer as EntryPoint
-                    }
-                },
-                ASSIGNMENT_PRUNE => StateSchema {
-                    format: StateFormat::Declarative,
-                    abi: bmap! {
-                        AssignmentAction::Validate => NodeValidator::ProofOfBurn as EntryPoint
-                    }
-                }
+                ASSIGNMENT_ISSUE => StateSchema::Declarative,
+                ASSIGNMENT_ASSETS => SStateSchema::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit),
+                ASSIGNMENT_PRUNE => StateSchema::Declarative
             },
             public_right_types: bset! {
                 VALENCIES_DECENTRALIZED_ISSUE
@@ -831,7 +728,6 @@ pub(crate) mod test {
                     ASSIGNMENT_PRUNE => Occurrences::NoneOrMore
                 },
                 public_rights: bset! { VALENCIES_DECENTRALIZED_ISSUE },
-                abi: bmap! {},
             },
             extensions: bmap! {
                 EXTENSION_DECENTRALIZED_ISSUE => ExtensionSchema {
@@ -844,7 +740,6 @@ pub(crate) mod test {
                         ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! { },
-                    abi: bmap! {},
                 }
             },
             transitions: bmap! {
@@ -861,7 +756,6 @@ pub(crate) mod test {
                         ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
-                    abi: bmap! {}
                 },
                 TRANSITION_TRANSFER => TransitionSchema {
                     closes: bmap! {
@@ -872,7 +766,6 @@ pub(crate) mod test {
                         ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
-                    abi: bmap! {}
                 },
                 TRANSITION_PRUNE => TransitionSchema {
                     closes: bmap! {
@@ -887,10 +780,10 @@ pub(crate) mod test {
                         ASSIGNMENT_ASSETS => Occurrences::NoneOrMore
                     },
                     public_rights: bset! {},
-                    abi: bmap! {}
                 }
             },
             script: Default::default(),
+            override_rules: Default::default(),
         }
     }
 

@@ -22,8 +22,7 @@ use wallet::onchain::ResolveTx;
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
-use crate::script::{Action, EntryPoint};
-use crate::{SealEndpoint, VmType};
+use crate::SealEndpoint;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -143,10 +142,6 @@ pub enum Failure {
     SchemaRootNoParentPublicRightsMatch(NodeType, schema::PublicRightType),
     SchemaRootNoOwnedRightsMatch(NodeType, schema::OwnedRightType),
     SchemaRootNoPublicRightsMatch(NodeType, schema::PublicRightType),
-    SchemaRootNoAbiMatch {
-        node_type: NodeType,
-        action_id: Action,
-    },
 
     SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
     SchemaUnknownTransitionType(NodeId, schema::TransitionType),
@@ -223,13 +218,7 @@ pub enum Failure {
     /// invalid bulletproofs in {0}:{1}: {2}
     InvalidBulletproofs(NodeId, u16, secp256k1zkp::Error),
 
-    WrongEntryPoint(EntryPoint),
-    /// Under certain conditions the script code must be empty, for instance if
-    /// you use the embedded virtual machine or subschema which does not
-    /// override the parent scripts
-    ScriptCodeMustBeEmpty,
-    VirtualMachinesNotSupportedYet,
-    ScriptFailure(NodeId, u8),
+    ScriptFailure(NodeId),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
@@ -378,14 +367,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
             return validator.status;
         }
 
-        let byte_code = if schema.script.byte_code.is_empty() {
-            root.map(|root| &root.script.byte_code)
-                .unwrap_or(&schema.script.byte_code)
-        } else {
-            &schema.script.byte_code
-        };
-
-        validator.validate_contract(schema, byte_code);
+        validator.validate_contract(schema);
 
         // Done. Returning status report with all possible failures, issues,
         // warnings and notifications about transactions we were unable to
@@ -401,15 +383,9 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
             self.status
                 .add_failure(Failure::SchemaRootRequired(schema.root_id));
         }
-
-        // Validating VM
-        if schema.script.vm_type != VmType::Embedded {
-            self.status
-                .add_failure(Failure::VirtualMachinesNotSupportedYet);
-        }
     }
 
-    fn validate_contract(&mut self, schema: &Schema, byte_code: &[u8]) {
+    fn validate_contract(&mut self, schema: &Schema) {
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != self.schema_id {
@@ -422,7 +398,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         }
 
         // [VALIDATION]: Validate genesis
-        self.status += schema.validate(&self.node_index, &self.consignment.genesis, byte_code);
+        self.status += schema.validate(&self.node_index, &self.consignment.genesis, &schema.script);
         self.validation_index.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
@@ -431,7 +407,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         //               instead treat it as a superposition of subgraphs, one
         //               for each endpoint; and validate them independently.
         for node in self.end_transitions.clone() {
-            self.validate_branch(schema, node, byte_code);
+            self.validate_branch(schema, node);
         }
 
         // Generate warning if some of the transitions within the consignment
@@ -445,7 +421,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         }
     }
 
-    fn validate_branch(&mut self, schema: &Schema, node: &'validator dyn Node, byte_code: &[u8]) {
+    fn validate_branch(&mut self, schema: &Schema, node: &'validator dyn Node) {
         let mut queue: VecDeque<&dyn Node> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a
@@ -467,7 +443,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
             //               only a single node, not state evolution (it
             //               will be checked lately)
             if !self.validation_index.contains(&node_id) {
-                self.status += schema.validate(&self.node_index, node, byte_code);
+                self.status += schema.validate(&self.node_index, node, &schema.script);
                 self.validation_index.insert(node_id);
             }
 

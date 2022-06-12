@@ -10,15 +10,20 @@ checksum = "aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234"
 
 [[package]]
 name = "aluvm"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e698b0196880b27e034902900c3df9a1d64473e30efe0939b59796a024c9091d"
+checksum = "75924aea03d228075f25e7d7344479483918976dbdfbdb37aec8f32bbc48014e"
 dependencies = [
  "amplify",
  "bech32 0.9.0",
  "bitcoin_hashes",
+ "curve25519-dalek",
  "half",
  "paste",
+ "secp256k1",
+ "serde",
+ "serde_with",
+ "strict_encoding",
 ]
 
 [[package]]
@@ -392,6 +397,7 @@ dependencies = [
  "byteorder",
  "digest",
  "rand_core 0.5.1",
+ "serde",
  "subtle",
  "zeroize",
 ]
@@ -1381,9 +1387,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "1.8.5"
+version = "1.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9b4b2bef0fd91726731f23db65a349afce5ff692c5402e5fb66fae86de96955"
+checksum = "d1bbb5109701ede3df3e20b82a134d601036f02b8b2f259965266a6a784cc749"
 dependencies = [
  "amplify",
  "bitcoin",

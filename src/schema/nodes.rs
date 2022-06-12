@@ -10,13 +10,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io;
 
-use super::{
-    ExtensionAbi, ExtensionAction, ExtensionType, FieldType, GenesisAbi, GenesisAction, NodeAction,
-    Occurrences, TransitionAbi, TransitionAction, TransitionType,
-};
-use crate::script::EntryPoint;
+use super::{ExtensionType, FieldType, Occurrences, TransitionType};
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type OwnedRightType = u16;
@@ -71,44 +66,41 @@ pub enum NodeSubtype {
 
 /// Trait defining common API for all node type schemata
 pub trait NodeSchema {
-    type Action: NodeAction;
-
     fn node_type(&self) -> NodeType;
     fn metadata(&self) -> &MetadataStructure;
     fn closes(&self) -> &OwnedRightsStructure;
     fn extends(&self) -> &PublicRightsStructure;
     fn owned_rights(&self) -> &OwnedRightsStructure;
     fn public_rights(&self) -> &PublicRightsStructure;
-    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint>;
 }
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
     pub owned_rights: OwnedRightsStructure,
     pub public_rights: PublicRightsStructure,
-    pub abi: GenesisAbi,
 }
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[derive(StrictEncode, StrictDecode)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
     pub extends: PublicRightsStructure,
     pub owned_rights: OwnedRightsStructure,
     pub public_rights: PublicRightsStructure,
-    pub abi: ExtensionAbi,
 }
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[derive(StrictEncode, StrictDecode)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
     pub closes: OwnedRightsStructure,
     pub owned_rights: OwnedRightsStructure,
     pub public_rights: PublicRightsStructure,
-    pub abi: TransitionAbi,
 }
 
 lazy_static! {
@@ -117,8 +109,6 @@ lazy_static! {
 }
 
 impl NodeSchema for GenesisSchema {
-    type Action = GenesisAction;
-
     #[inline]
     fn node_type(&self) -> NodeType { NodeType::Genesis }
     #[inline]
@@ -131,13 +121,9 @@ impl NodeSchema for GenesisSchema {
     fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
     #[inline]
     fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
-    #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> { &self.abi }
 }
 
 impl NodeSchema for ExtensionSchema {
-    type Action = ExtensionAction;
-
     #[inline]
     fn node_type(&self) -> NodeType { NodeType::StateExtension }
     #[inline]
@@ -150,13 +136,9 @@ impl NodeSchema for ExtensionSchema {
     fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
     #[inline]
     fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
-    #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> { &self.abi }
 }
 
 impl NodeSchema for TransitionSchema {
-    type Action = TransitionAction;
-
     #[inline]
     fn node_type(&self) -> NodeType { NodeType::StateTransition }
     #[inline]
@@ -169,117 +151,6 @@ impl NodeSchema for TransitionSchema {
     fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
     #[inline]
     fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
-    #[inline]
-    fn abi(&self) -> &BTreeMap<Self::Action, EntryPoint> { &self.abi }
-}
-
-mod _strict_encoding {
-    use strict_encoding::{Error, StrictDecode, StrictEncode};
-
-    use super::*;
-
-    impl StrictEncode for GenesisSchema {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            let mut len = 0usize;
-            len += self.metadata.strict_encode(&mut e)?;
-            len += self.owned_rights.strict_encode(&mut e)?;
-            len += self.public_rights.strict_encode(&mut e)?;
-            len += self.abi.strict_encode(&mut e)?;
-            // We keep this parameter for future script extended info (like ABI)
-            len += Vec::<u8>::new().strict_encode(&mut e)?;
-            Ok(len)
-        }
-    }
-
-    impl StrictDecode for GenesisSchema {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let me = Self {
-                metadata: MetadataStructure::strict_decode(&mut d)?,
-                owned_rights: OwnedRightsStructure::strict_decode(&mut d)?,
-                public_rights: PublicRightsStructure::strict_decode(&mut d)?,
-                abi: GenesisAbi::strict_decode(&mut d)?,
-            };
-            // We keep this parameter for future script extended info (like ABI)
-            let script = Vec::<u8>::strict_decode(&mut d)?;
-            if !script.is_empty() {
-                Err(Error::UnsupportedDataStructure(
-                    "Scripting information is not yet supported",
-                ))
-            } else {
-                Ok(me)
-            }
-        }
-    }
-
-    impl StrictEncode for ExtensionSchema {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            let mut len = 0usize;
-            len += self.metadata.strict_encode(&mut e)?;
-            len += self.extends.strict_encode(&mut e)?;
-            len += self.owned_rights.strict_encode(&mut e)?;
-            len += self.public_rights.strict_encode(&mut e)?;
-            len += self.abi.strict_encode(&mut e)?;
-            // We keep this parameter for future script extended info (like ABI)
-            len += Vec::<u8>::new().strict_encode(&mut e)?;
-            Ok(len)
-        }
-    }
-
-    impl StrictDecode for ExtensionSchema {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let me = Self {
-                metadata: MetadataStructure::strict_decode(&mut d)?,
-                extends: PublicRightsStructure::strict_decode(&mut d)?,
-                owned_rights: OwnedRightsStructure::strict_decode(&mut d)?,
-                public_rights: PublicRightsStructure::strict_decode(&mut d)?,
-                abi: ExtensionAbi::strict_decode(&mut d)?,
-            };
-            // We keep this parameter for future script extended info (like ABI)
-            let script = Vec::<u8>::strict_decode(&mut d)?;
-            if !script.is_empty() {
-                Err(Error::UnsupportedDataStructure(
-                    "Scripting information is not yet supported",
-                ))
-            } else {
-                Ok(me)
-            }
-        }
-    }
-
-    impl StrictEncode for TransitionSchema {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            let mut len = 0usize;
-            len += self.metadata.strict_encode(&mut e)?;
-            len += self.closes.strict_encode(&mut e)?;
-            len += self.owned_rights.strict_encode(&mut e)?;
-            len += self.public_rights.strict_encode(&mut e)?;
-            len += self.abi.strict_encode(&mut e)?;
-            // We keep this parameter for future script extended info (like ABI)
-            len += Vec::<u8>::new().strict_encode(&mut e)?;
-            Ok(len)
-        }
-    }
-
-    impl StrictDecode for TransitionSchema {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let me = Self {
-                metadata: MetadataStructure::strict_decode(&mut d)?,
-                closes: OwnedRightsStructure::strict_decode(&mut d)?,
-                owned_rights: OwnedRightsStructure::strict_decode(&mut d)?,
-                public_rights: PublicRightsStructure::strict_decode(&mut d)?,
-                abi: TransitionAbi::strict_decode(&mut d)?,
-            };
-            // We keep this parameter for future script extended info (like ABI)
-            let script = Vec::<u8>::strict_decode(&mut d)?;
-            if !script.is_empty() {
-                Err(Error::UnsupportedDataStructure(
-                    "Scripting information is not yet supported",
-                ))
-            } else {
-                Ok(me)
-            }
-        }
-    }
 }
 
 mod _verify {
@@ -359,25 +230,6 @@ mod _verify {
                 }
             }
 
-            for (action, proc) in self.abi() {
-                match root.abi().get(action) {
-                    None => status.add_failure(validation::Failure::SchemaRootNoAbiMatch {
-                        node_type,
-                        action_id: (*action).into(),
-                    }),
-                    Some(root_proc) if root_proc != proc => {
-                        status.add_failure(validation::Failure::SchemaRootNoAbiMatch {
-                            node_type,
-                            action_id: (*action).into(),
-                        })
-                    }
-                    _ => &status,
-                };
-            }
-
-            // TODO #70: Verify that script node script parameters match schema
-            //      requirements
-
             status
         }
     }
@@ -389,9 +241,7 @@ mod test {
 
     use super::*;
     use crate::schema::SchemaVerify;
-    use crate::script::Action;
     use crate::validation::Failure;
-    use crate::vm::embedded::NodeValidator;
 
     static GENESIS_SCHEMA: [u8; 71] = [
         4, 0, 1, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 13, 0, 4, 0, 0, 0, 17, 0, 4, 0, 1, 0,
@@ -437,12 +287,6 @@ mod test {
         valencies.insert(3u16);
         valencies.insert(4u16);
 
-        let mut genesis_abi = GenesisAbi::new();
-        genesis_abi.insert(
-            GenesisAction::Validate,
-            NodeValidator::IdentityTransfer as EntryPoint,
-        );
-
         assert_eq!(genesis_schema.node_type(), NodeType::Genesis);
         assert_eq!(
             genesis_schema.metadata().get(&2u16).unwrap(),
@@ -455,7 +299,6 @@ mod test {
             &Occurrences::OnceOrUpTo(25u16)
         );
         assert_eq!(genesis_schema.public_rights(), &valencies);
-        assert_eq!(genesis_schema.abi(), &genesis_abi);
     }
 
     #[test]
@@ -467,12 +310,6 @@ mod test {
         valencies.insert(2u16);
         valencies.insert(3u16);
         valencies.insert(4u16);
-
-        let mut transition_abi = TransitionAbi::new();
-        transition_abi.insert(
-            TransitionAction::Validate,
-            NodeValidator::IdentityTransfer as EntryPoint,
-        );
 
         assert_eq!(transition_schema.node_type(), NodeType::StateTransition);
         assert_eq!(
@@ -489,7 +326,6 @@ mod test {
             &Occurrences::OnceOrUpTo(25u16)
         );
         assert_eq!(transition_schema.public_rights(), &valencies);
-        assert_eq!(transition_schema.abi(), &transition_abi);
     }
 
     #[test]
@@ -501,12 +337,6 @@ mod test {
         valencies.insert(2u16);
         valencies.insert(3u16);
         valencies.insert(4u16);
-
-        let mut extension_abi = ExtensionAbi::new();
-        extension_abi.insert(
-            ExtensionAction::Validate,
-            NodeValidator::IdentityTransfer as EntryPoint,
-        );
 
         assert_eq!(extension_schema.node_type(), NodeType::StateExtension);
         assert_eq!(
@@ -520,7 +350,6 @@ mod test {
             &Occurrences::OnceOrUpTo(25u16)
         );
         assert_eq!(extension_schema.public_rights(), &valencies);
-        assert_eq!(extension_schema.abi(), &extension_abi);
     }
 
     #[test]
@@ -564,32 +393,12 @@ mod test {
         valency_structure2.insert(3 as PublicRightType);
         valency_structure2.insert(4 as PublicRightType);
 
-        // Create the required ABIs
-        let mut transition_abi = TransitionAbi::new();
-        transition_abi.insert(
-            TransitionAction::Validate,
-            NodeValidator::IdentityTransfer as EntryPoint,
-        );
-
-        let mut transition_abi2 = TransitionAbi::new();
-        transition_abi2.insert(
-            TransitionAction::Validate,
-            NodeValidator::ProofOfBurn as EntryPoint,
-        );
-
-        let mut extension_abi = ExtensionAbi::new();
-        extension_abi.insert(
-            ExtensionAction::Validate,
-            NodeValidator::IdentityTransfer as EntryPoint,
-        );
-
         // Create Four Unequal Transition and Extension Structures
         let transtion_schema = TransitionSchema {
             metadata: metadata_structures.clone(),
             closes: seal_structures.clone(),
             owned_rights: seal_structures.clone(),
             public_rights: valency_structure.clone(),
-            abi: transition_abi.clone(),
         };
 
         let transtion_schema2 = TransitionSchema {
@@ -597,7 +406,6 @@ mod test {
             closes: seal_structures2.clone(),
             owned_rights: seal_structures2.clone(),
             public_rights: valency_structure2.clone(),
-            abi: transition_abi2.clone(),
         };
 
         let extension_schema = ExtensionSchema {
@@ -605,7 +413,6 @@ mod test {
             extends: valency_structure.clone(),
             owned_rights: seal_structures.clone(),
             public_rights: valency_structure.clone(),
-            abi: extension_abi.clone(),
         };
 
         let extension_schema2 = ExtensionSchema {
@@ -613,7 +420,6 @@ mod test {
             extends: valency_structure2.clone(),
             owned_rights: seal_structures.clone(),
             public_rights: valency_structure2.clone(),
-            abi: extension_abi.clone(),
         };
 
         // Create the expected failure results
@@ -625,10 +431,6 @@ mod test {
             Failure::SchemaRootNoOwnedRightsMatch(NodeType::StateTransition, 3),
             Failure::SchemaRootNoOwnedRightsMatch(NodeType::StateTransition, 4),
             Failure::SchemaRootNoPublicRightsMatch(NodeType::StateTransition, 2),
-            Failure::SchemaRootNoAbiMatch {
-                node_type: NodeType::StateTransition,
-                action_id: Action::ValidateTransition,
-            },
         ];
 
         let extension_failures = vec![
