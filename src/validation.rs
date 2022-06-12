@@ -22,7 +22,7 @@ use wallet::onchain::ResolveTx;
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
-use crate::SealEndpoint;
+use crate::{BundleId, SealEndpoint};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -175,6 +175,8 @@ pub enum Failure {
     SchemaScriptOverrideDenied,
     SchemaScriptVmChangeDenied,
 
+    BundleInvalid(BundleId),
+
     TransitionAbsent(NodeId),
     TransitionNotAnchored(NodeId),
     TransitionNotInAnchor(NodeId, Txid),
@@ -269,10 +271,15 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
         let mut anchor_index = BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
-        for (anchor, transition) in &*consignment.state_transitions {
-            let node_id = transition.node_id();
-            node_index.insert(node_id, transition);
-            anchor_index.insert(node_id, anchor);
+        for (anchor, bundle) in &*consignment.anchored_bundles {
+            if !bundle.validate() {
+                status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
+            }
+            for transition in bundle.transitions() {
+                let node_id = transition.node_id();
+                node_index.insert(node_id, transition);
+                anchor_index.insert(node_id, anchor);
+            }
         }
         node_index.insert(genesis_id, &consignment.genesis);
         for extension in &*consignment.state_extensions {

@@ -30,7 +30,7 @@ pub(crate) type ParentOwnedRightsInner =
     BTreeMap<NodeId, BTreeMap<schema::OwnedRightType, Vec<u16>>>;
 pub(crate) type ParentPublicRightsInner = BTreeMap<NodeId, BTreeSet<schema::PublicRightType>>;
 
-#[derive(Wrapper, Clone, PartialEq, Eq, Debug, Default, From)]
+#[derive(Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

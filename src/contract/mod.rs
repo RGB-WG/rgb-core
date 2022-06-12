@@ -33,13 +33,14 @@ pub use assignments::{
 };
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
-pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutput, Transition};
+pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 pub use reveal::MergeReveal;
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner};
 pub use seal::{IntoRevealedSeal, SealEndpoint};
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 pub use value::{AtomicValue, HomomorphicBulletproofGrin};
+
 lazy_static! {
     /// Secp256k1zpk context object
     pub(crate) static ref SECP256K1_ZKP: Secp256k1zkp =

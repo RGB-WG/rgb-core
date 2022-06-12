@@ -29,14 +29,15 @@ mod anchor;
 mod consignment;
 mod disclosure;
 mod graph;
-pub mod iter;
 mod stash;
+mod bundle;
 
 #[cfg(feature = "wallet")]
 pub use anchor::AnchorExt;
 pub use anchor::{ConcealAnchors, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX};
+pub use bundle::{BundleId, TransitionBundle};
 pub use consignment::{
-    Consignment, ConsignmentEndpoints, ExtensionData, TransitionData, RGB_CONSIGNMENT_VERSION,
+    AnchoredBundles, Consignment, ConsignmentEndpoints, ExtensionList, RGB_CONSIGNMENT_VERSION,
 };
 pub use disclosure::{Disclosure, RGB_DISCLOSURE_VERSION};
 pub use graph::{ConsistencyError, GraphApi};

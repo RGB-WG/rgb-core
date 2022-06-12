@@ -37,7 +37,7 @@ use crate::{schema, seal, ConfidentialDataError, Metadata, PublicRightType, Sche
 #[display("{node_id}:{output_no}")]
 /// RGB contract node output pointer, defined by the node ID and output
 /// number.
-pub struct NodeOutput {
+pub struct NodeOutpoint {
     pub node_id: NodeId,
     pub output_no: u16,
 }
@@ -207,7 +207,7 @@ pub trait Node: AsAny {
     /// While public state extension do have parent nodes, they do not contain
     /// indexed rights.
     #[inline]
-    fn parent_outputs(&self) -> Vec<NodeOutput> {
+    fn parent_outputs(&self) -> Vec<NodeOutpoint> {
         self.parent_owned_rights()
             .iter()
             .map(|(node_id, map)| {
@@ -215,18 +215,18 @@ pub trait Node: AsAny {
                 map.values()
                     .flatten()
                     .copied()
-                    .map(move |output_no| NodeOutput { node_id, output_no })
+                    .map(move |output_no| NodeOutpoint { node_id, output_no })
             })
             .flatten()
             .collect()
     }
 
     #[inline]
-    fn parent_outputs_by_type(&self, t: OwnedRightType) -> Vec<NodeOutput> {
+    fn parent_outputs_by_type(&self, t: OwnedRightType) -> Vec<NodeOutpoint> {
         self.parent_outputs_by_types(&[t])
     }
 
-    fn parent_outputs_by_types(&self, types: &[OwnedRightType]) -> Vec<NodeOutput> {
+    fn parent_outputs_by_types(&self, types: &[OwnedRightType]) -> Vec<NodeOutpoint> {
         self.parent_owned_rights()
             .iter()
             .map(|(node_id, map)| {
@@ -236,7 +236,7 @@ pub trait Node: AsAny {
                     .map(|(_, outputs)| outputs)
                     .flatten()
                     .copied()
-                    .map(move |output_no| NodeOutput { node_id, output_no })
+                    .map(move |output_no| NodeOutpoint { node_id, output_no })
             })
             .flatten()
             .collect()
@@ -321,7 +321,7 @@ pub trait Node: AsAny {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Genesis {
     schema_id: SchemaId,
@@ -331,7 +331,19 @@ pub struct Genesis {
     public_rights: PublicRights,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, StrictEncode, StrictDecode, AsAny)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Default,
+    StrictEncode,
+    StrictDecode,
+    AsAny
+)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
     extension_type: ExtensionType,
@@ -342,7 +354,19 @@ pub struct Extension {
     public_rights: PublicRights,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, StrictEncode, StrictDecode, AsAny)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Default,
+    StrictEncode,
+    StrictDecode,
+    AsAny
+)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     transition_type: TransitionType,
@@ -421,7 +445,7 @@ impl CommitEncode for Transition {
 }
 
 impl ConcealState for Genesis {
-    fn conceal_state_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
@@ -431,7 +455,7 @@ impl ConcealState for Genesis {
 }
 
 impl ConcealState for Extension {
-    fn conceal_state_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
@@ -441,7 +465,7 @@ impl ConcealState for Extension {
 }
 
 impl ConcealState for Transition {
-    fn conceal_state_except(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_state_except(seals);
@@ -451,7 +475,7 @@ impl ConcealState for Transition {
 }
 
 impl ConcealSeals for Transition {
-    fn conceal_seals(&mut self, seals: &Vec<seal::Confidential>) -> usize {
+    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
         for (_, assignment) in self.owned_rights_mut().iter_mut() {
             count += assignment.conceal_seals(seals);

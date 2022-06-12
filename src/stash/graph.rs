@@ -28,8 +28,8 @@ use bitcoin::{OutPoint, Txid};
 use bp::dbc::AnchorId;
 use bp::seals::txout::TxoSeal;
 
-use crate::schema::{NodeType, OwnedRightType};
-use crate::{Consignment, Extension, Node, NodeId, NodeOutput, Transition};
+use crate::schema::OwnedRightType;
+use crate::{Consignment, Extension, Node, NodeId, NodeOutpoint, Transition};
 
 /// Errors accessing graph data via [`GraphApi`].
 ///
@@ -42,19 +42,6 @@ use crate::{Consignment, Extension, Node, NodeId, NodeOutput, Transition};
 pub enum ConsistencyError {
     /// Node with id {0} is not present in the storage/container
     NodeIdAbsent(NodeId),
-
-    /// Requested node with id {node_id} has a different type {actual} from the
-    /// requested type {requested}. This error usually means that the
-    /// implementation of the schema-specific library has internal logical
-    /// errors
-    WrongNodeType {
-        /// Node id
-        node_id: NodeId,
-        /// Requested type of the node
-        requested: NodeType,
-        /// Actually present node type
-        actual: NodeType,
-    },
 
     /// Transition with id {0} is not present in the storage/container
     TransitionAbsent(NodeId),
@@ -69,11 +56,11 @@ pub enum ConsistencyError {
     NoSealsClosed(OwnedRightType, NodeId),
 
     /// Output {0} is not present in the storage
-    OutputNotPresent(NodeOutput),
+    OutputNotPresent(NodeOutpoint),
 
     /// Seal definition for {0} is confidential while was required to be in
     /// revealed state
-    ConfidentialSeal(NodeOutput),
+    ConfidentialSeal(NodeOutpoint),
 
     /// The provided node with id {0} is not an endpoint of the consignment
     NotEndpoint(NodeId),
@@ -183,15 +170,16 @@ impl GraphApi for Consignment {
         if self.genesis.node_id() == node_id {
             return Some(&self.genesis);
         }
-        self.state_transitions
+        self.state_extensions
             .iter()
-            .find(|(_, transition)| transition.node_id() == node_id)
-            .map(|(_, transition)| transition as &dyn Node)
+            .find(|extension| extension.node_id() == node_id)
+            .map(|extension| extension as &dyn Node)
             .or_else(|| {
-                self.state_extensions
+                self.anchored_bundles
                     .iter()
-                    .find(|extension| extension.node_id() == node_id)
-                    .map(|extension| extension as &dyn Node)
+                    .flat_map(|(_, bundle)| bundle.transitions())
+                    .find(|transition| transition.node_id() == node_id)
+                    .map(|transition| transition as &dyn Node)
             })
     }
 
@@ -204,73 +192,22 @@ impl GraphApi for Consignment {
             .iter()
             .find(|extension| extension.node_id() == node_id)
             .ok_or(ConsistencyError::ExtensionAbsent(node_id))
-            .or_else(|err| {
-                self.state_transitions
-                    .iter()
-                    .find(|(_, transition)| transition.node_id() == node_id)
-                    .map(|_| {
-                        Err(ConsistencyError::WrongNodeType {
-                            node_id,
-                            requested: NodeType::StateExtension,
-                            actual: NodeType::StateTransition,
-                        })
-                    })
-                    .transpose()?
-                    .or_else(
-                        || {
-                            if self.genesis.node_id() == node_id {
-                                Some(Err(err))
-                            } else {
-                                None
-                            }
-                        },
-                    )
-                    .transpose()?
-                    .ok_or(ConsistencyError::WrongNodeType {
-                        node_id,
-                        requested: NodeType::StateExtension,
-                        actual: NodeType::Genesis,
-                    })?
-            })
     }
 
     fn transition_witness_by_id(
         &self,
         node_id: NodeId,
     ) -> Result<(&Transition, Txid), ConsistencyError> {
-        self.state_transitions
+        self.anchored_bundles
             .iter()
-            .find(|(_, transition)| transition.node_id() == node_id)
-            .map(|(anchor, transition)| (transition, anchor.txid))
-            .ok_or(ConsistencyError::TransitionAbsent(node_id))
-            .or_else(|err| {
-                self.state_extensions
-                    .iter()
-                    .find(|extension| extension.node_id() == node_id)
-                    .map(|_| {
-                        Err(ConsistencyError::WrongNodeType {
-                            node_id,
-                            requested: NodeType::StateTransition,
-                            actual: NodeType::StateExtension,
-                        })
-                    })
-                    .transpose()?
-                    .or_else(
-                        || {
-                            if self.genesis.node_id() == node_id {
-                                Some(Err(err))
-                            } else {
-                                None
-                            }
-                        },
-                    )
-                    .transpose()?
-                    .ok_or(ConsistencyError::WrongNodeType {
-                        node_id,
-                        requested: NodeType::StateTransition,
-                        actual: NodeType::Genesis,
-                    })?
+            .find_map(|(anchor, bundle)| {
+                bundle
+                    .transitions()
+                    .into_iter()
+                    .find(|transition| transition.node_id() == node_id)
+                    .map(|transition| (transition, anchor.txid))
             })
+            .ok_or(ConsistencyError::TransitionAbsent(node_id))
     }
 
     fn seals_closed_with(

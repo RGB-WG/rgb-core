@@ -33,7 +33,7 @@ use crate::schema;
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
 /// Transition & genesis metadata fields
-#[derive(Wrapper, Clone, PartialEq, Eq, Default, Debug, From)]
+#[derive(Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

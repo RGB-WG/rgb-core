@@ -85,7 +85,7 @@ pub mod prelude {
         ConfidentialDataError, ConfidentialState, ContractId, DeclarativeStrategy,
         EndpointValueMap, Extension, Genesis, HashStrategy, HomomorphicBulletproofGrin,
         IntoRevealedSeal, IntoSealValueMap, MergeReveal, Metadata, NoDataError, Node, NodeId,
-        NodeOutput, OutpointValue, OutpointValueMap, OutpointValueVec, OwnedRights,
+        NodeOutpoint, OutpointValue, OutpointValueMap, OutpointValueVec, OwnedRights,
         ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights, RevealedState,
         SealEndpoint, SealValueMap, State, StateRetrievalError, StateType, Transition, UtxobValue,
     };
@@ -94,9 +94,9 @@ pub mod prelude {
         PublicRightsStructure, Schema, SchemaId, ValidationScript, VmType,
     };
     pub use stash::{
-        ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError, Disclosure,
-        ExtensionData, GraphApi, Stash, TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK,
-        PSBT_PREFIX,
+        AnchoredBundles, BundleId, ConcealAnchors, Consignment, ConsignmentEndpoints,
+        ConsistencyError, Disclosure, ExtensionList, GraphApi, Stash, TransitionBundle,
+        PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX,
     };
     pub use validation::{Validator, Validity};
     pub use vm::Validate;
