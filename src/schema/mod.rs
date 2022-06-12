@@ -13,15 +13,15 @@ mod nodes;
 mod schema;
 pub mod script;
 mod state;
-mod occurences;
+mod occurrences;
 
 pub use nodes::{
     ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeSubtype, NodeType,
     OwnedRightType, OwnedRightsStructure, PublicRightType, PublicRightsStructure, TransitionSchema,
 };
-pub use occurences::{Occurrences, OccurrencesError};
+pub use occurrences::{Occurrences, OccurrencesError};
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
-pub use script::{VmScript, VmType};
+pub use script::{ValidationScript, VmType};
 pub use state::{DiscreteFiniteFieldFormat, StateSchema, StateType};
 
 /// Trait used for internal schema validation against some root schema

@@ -21,7 +21,7 @@ use crate::schema::StateSchema;
 use crate::script::OverrideRules;
 #[cfg(feature = "serde")]
 use crate::Bech32;
-use crate::{ToBech32, VmScript};
+use crate::{ToBech32, ValidationScript};
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = u16;
@@ -95,7 +95,7 @@ pub struct Schema {
 
     /// Type of the virtual machine that MUST be used to run the given byte
     /// code
-    pub script: VmScript,
+    pub script: ValidationScript,
 
     /// Defines whether subschemata are allowed to replace (override) the code
     ///
@@ -133,7 +133,7 @@ mod _validation {
     use crate::schema::{
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure, SchemaVerify,
     };
-    use crate::script::{OverrideRules, VmScript};
+    use crate::script::{OverrideRules, ValidationScript};
     use crate::vm::{EmbeddedVm, VmApi};
     use crate::{
         validation, Assignment, AssignmentVec, Metadata, Node, NodeId, NodeSubtype, OwnedRights,

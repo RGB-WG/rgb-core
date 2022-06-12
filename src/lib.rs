@@ -91,7 +91,7 @@ pub mod prelude {
     };
     pub use schema::{
         script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
-        PublicRightsStructure, Schema, SchemaId, VmScript, VmType,
+        PublicRightsStructure, Schema, SchemaId, ValidationScript, VmType,
     };
     pub use stash::{
         ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError, Disclosure,

@@ -34,7 +34,7 @@ pub enum VmType {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(by_value, repr = u8)]
-pub enum VmScript {
+pub enum ValidationScript {
     /// Embedded code (not a virtual machine) which is the part of this RGB
     /// Core Library. Using this option results in the fact that the schema
     /// does not commit to the actual validating code and the validation logic
@@ -56,20 +56,20 @@ pub enum VmScript {
     AluVM(alure::ValidationScript),
 }
 
-impl Default for VmScript {
+impl Default for ValidationScript {
     // TODO: Update default VM type to AluVM in RGBv1 release
-    fn default() -> Self { VmScript::Embedded }
+    fn default() -> Self { ValidationScript::Embedded }
 }
 
-impl commit_encode::Strategy for VmScript {
+impl commit_encode::Strategy for ValidationScript {
     type Strategy = commit_encode::strategies::UsingStrict;
 }
 
-impl VmScript {
+impl ValidationScript {
     pub fn vm_type(&self) -> VmType {
         match self {
-            VmScript::Embedded => VmType::Embedded,
-            VmScript::AluVM { .. } => VmType::AluVM,
+            ValidationScript::Embedded => VmType::Embedded,
+            ValidationScript::AluVM(_) => VmType::AluVM,
         }
     }
 }
