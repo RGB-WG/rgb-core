@@ -39,22 +39,11 @@ pub enum VmType {
     /// and multiparty computing
     #[display("AluVM")]
     #[cfg_attr(feature = "serde", serde(rename = "AluVM"))]
-    Alu = 0x01u8,
-
-    /// WASM-based virtual machine (not implemented yet, will always return
-    /// failed validation result for RGBv0)
-    #[display("WASM")]
-    #[cfg_attr(feature = "serde", serde(rename = "WASM"))]
-    Wasm = 0x02u8,
-
-    /// Simplicity-based virtual machine (not implemented yet, will always
-    /// return failed validation result for RGBv0)
-    #[display("Simplicity")]
-    #[cfg_attr(feature = "serde", serde(rename = "Simplicity"))]
-    Simplicity = 0x03u8,
+    AluVM = 0x01u8,
 }
 
 impl Default for VmType {
+    // TODO: Update default VM type to AluVM in RGBv1 release
     fn default() -> Self { VmType::Embedded }
 }
 
