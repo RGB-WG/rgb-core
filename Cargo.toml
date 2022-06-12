@@ -15,7 +15,6 @@ exclude = [".github", "contrib"]
 [lib]
 name = "rgb"
 path = "src/lib.rs"
-crate-type = ["rlib", "staticlib"]
 
 [[bin]]
 name = "rgb"
