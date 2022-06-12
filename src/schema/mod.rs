@@ -26,93 +26,9 @@ pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{VmScript, VmType};
 pub use state::{DiscreteFiniteFieldFormat, StateSchema, StateType};
 
-mod verify {
-    use crate::validation;
-
-    /// Trait used for internal schema validation against some root schema
-    pub trait SchemaVerify {
-        fn schema_verify(&self, root: &Self) -> validation::Status;
-    }
-}
-// ---------------
-use core::ops::Deref;
-
-pub use verify::SchemaVerify;
-
-/// Format for the stored history proofs, like proof of burn. It is a part of
-/// LNPBP standards
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[non_exhaustive]
-#[repr(u8)]
-pub enum HistoryProofFormat {
-    ProofAbsent = 0,
-    ProofV1,
-    ProofV2,
-    ProofV3,
-    ProofV4,
-    ProofV5,
-    ProofV6,
-    ProofV7,
-    ProofV8,
-    ProofV9,
-    ProofV10,
-    ProofV11,
-    ProofV12,
-    ProofV13,
-    ProofV14,
-    ProofV15,
-}
-
-impl HistoryProofFormat {
-    /// Lists all available formats
-    pub fn all() -> Vec<Self> {
-        vec![
-            HistoryProofFormat::ProofAbsent,
-            HistoryProofFormat::ProofV1,
-            HistoryProofFormat::ProofV2,
-            HistoryProofFormat::ProofV3,
-            HistoryProofFormat::ProofV4,
-            HistoryProofFormat::ProofV5,
-            HistoryProofFormat::ProofV6,
-            HistoryProofFormat::ProofV7,
-            HistoryProofFormat::ProofV8,
-            HistoryProofFormat::ProofV9,
-            HistoryProofFormat::ProofV10,
-            HistoryProofFormat::ProofV11,
-            HistoryProofFormat::ProofV12,
-            HistoryProofFormat::ProofV13,
-            HistoryProofFormat::ProofV14,
-            HistoryProofFormat::ProofV15,
-        ]
-    }
-
-    pub fn from_u8(value: u8) -> Option<Self> { Self::all().get(value as usize).copied() }
-}
-
-impl Deref for HistoryProofFormat {
-    type Target = u8;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        match self {
-            HistoryProofFormat::ProofAbsent => &0x0,
-            HistoryProofFormat::ProofV1 => &0x1,
-            HistoryProofFormat::ProofV2 => &0x2,
-            HistoryProofFormat::ProofV3 => &0x3,
-            HistoryProofFormat::ProofV4 => &0x4,
-            HistoryProofFormat::ProofV5 => &0x5,
-            HistoryProofFormat::ProofV6 => &0x6,
-            HistoryProofFormat::ProofV7 => &0x7,
-            HistoryProofFormat::ProofV8 => &0x8,
-            HistoryProofFormat::ProofV9 => &0x9,
-            HistoryProofFormat::ProofV10 => &0xA,
-            HistoryProofFormat::ProofV11 => &0xB,
-            HistoryProofFormat::ProofV12 => &0xC,
-            HistoryProofFormat::ProofV13 => &0xD,
-            HistoryProofFormat::ProofV14 => &0xE,
-            HistoryProofFormat::ProofV15 => &0xF,
-        }
-    }
+/// Trait used for internal schema validation against some root schema
+pub(self) trait SchemaVerify {
+    fn schema_verify(&self, root: &Self) -> crate::validation::Status;
 }
 
 /// Constants which are common to different schemata and can be recognized
