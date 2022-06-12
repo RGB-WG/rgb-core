@@ -14,9 +14,13 @@ use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::io;
 
+use amplify::num::apfloat::ieee;
+use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::AsAny;
 use bitcoin::hashes::{sha256d, Hash};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode};
+use half::bf16;
+use stens::AsciiString;
 use strict_encoding::strict_serialize;
 
 use super::{ConfidentialState, RevealedState};
@@ -42,29 +46,69 @@ impl CommitEncode for Void {
 
 #[derive(Clone, Debug, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_order)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "lowercase")
-)]
+#[strict_encoding(repr = u8)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub enum Revealed {
+    #[strict_encoding(value = 0x00)]
     U8(u8),
+    #[strict_encoding(value = 0x01)]
     U16(u16),
+    #[strict_encoding(value = 0x02)]
     U32(u32),
+    #[strict_encoding(value = 0x03)]
     U64(u64),
+    #[strict_encoding(value = 0x04)]
     U128(u128),
-    // TODO #14: Add support for u256 type
+    #[strict_encoding(value = 0x05)]
+    U256(u256),
+    #[strict_encoding(value = 0x06)]
+    U512(u512),
+    #[strict_encoding(value = 0x07)]
+    U1024(u1024),
+
+    #[strict_encoding(value = 0x10)]
     I8(i8),
+    #[strict_encoding(value = 0x11)]
     I16(i16),
+    #[strict_encoding(value = 0x12)]
     I32(i32),
+    #[strict_encoding(value = 0x13)]
     I64(i64),
+    #[strict_encoding(value = 0x14)]
     I128(i128),
-    // TODO #14: Add support for i256 type
+    #[strict_encoding(value = 0x15)]
+    I256(i256),
+    #[strict_encoding(value = 0x16)]
+    I512(i512),
+    #[strict_encoding(value = 0x17)]
+    I1024(i1024),
+
+    // TODO #100: Implement tapered float format
+    #[strict_encoding(value = 0x30)]
+    F16B(bf16),
+    #[strict_encoding(value = 0x31)]
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    F16(ieee::Half),
+    #[strict_encoding(value = 0x32)]
     F32(f32),
+    #[strict_encoding(value = 0x33)]
     F64(f64),
+    #[strict_encoding(value = 0x34)]
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    F80(ieee::X87DoubleExtended),
+    #[strict_encoding(value = 0x35)]
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    F128(ieee::Quad),
+    #[strict_encoding(value = 0x36)]
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    F256(ieee::Oct),
+
+    #[strict_encoding(value = 0xE0)]
     Bytes(Vec<u8>),
-    String(String),
+    #[strict_encoding(value = 0xEE)]
+    AsciiString(AsciiString),
+    #[strict_encoding(value = 0xEF)]
+    UnicodeString(String),
 }
 
 impl RevealedState for Revealed {}
@@ -180,7 +224,25 @@ impl Revealed {
             _ => None,
         }
     }
-    // TODO #14: Add support for u256 type
+    pub fn u256(&self) -> Option<u256> {
+        match self {
+            Revealed::U256(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn u512(&self) -> Option<u512> {
+        match self {
+            Revealed::U512(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn u1024(&self) -> Option<u1024> {
+        match self {
+            Revealed::U1024(val) => Some(*val),
+            _ => None,
+        }
+    }
+
     pub fn i8(&self) -> Option<i8> {
         match self {
             Revealed::I8(val) => Some(*val),
@@ -211,7 +273,37 @@ impl Revealed {
             _ => None,
         }
     }
-    // TODO #14: Add support for u256 type
+    pub fn i256(&self) -> Option<i256> {
+        match self {
+            Revealed::I256(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn i512(&self) -> Option<i512> {
+        match self {
+            Revealed::I512(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn i1024(&self) -> Option<i1024> {
+        match self {
+            Revealed::I1024(val) => Some(*val),
+            _ => None,
+        }
+    }
+
+    pub fn f16b(&self) -> Option<bf16> {
+        match self {
+            Revealed::F16B(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn f16(&self) -> Option<ieee::Half> {
+        match self {
+            Revealed::F16(val) => Some(*val),
+            _ => None,
+        }
+    }
     pub fn f32(&self) -> Option<f32> {
         match self {
             Revealed::F32(val) => Some(*val),
@@ -224,15 +316,41 @@ impl Revealed {
             _ => None,
         }
     }
+    pub fn f80(&self) -> Option<ieee::X87DoubleExtended> {
+        match self {
+            Revealed::F80(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn f128(&self) -> Option<ieee::Quad> {
+        match self {
+            Revealed::F128(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn f256(&self) -> Option<ieee::Oct> {
+        match self {
+            Revealed::F256(val) => Some(*val),
+            _ => None,
+        }
+    }
+    // TODO #100: Implement tapered float format
+
     pub fn bytes(&self) -> Option<Vec<u8>> {
         match self {
             Revealed::Bytes(val) => Some(val.clone()),
             _ => None,
         }
     }
-    pub fn string(&self) -> Option<String> {
+    pub fn ascii_string(&self) -> Option<AsciiString> {
         match self {
-            Revealed::String(val) => Some(val.clone()),
+            Revealed::AsciiString(val) => Some(val.clone()),
+            _ => None,
+        }
+    }
+    pub fn unicode_string(&self) -> Option<String> {
+        match self {
+            Revealed::UnicodeString(val) => Some(val.clone()),
             _ => None,
         }
     }

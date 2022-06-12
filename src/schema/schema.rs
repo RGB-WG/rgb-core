@@ -10,15 +10,15 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io;
 
 use amplify::flags::FlagVec;
 use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
+use stens::{TypeRef, TypeSystem};
 
 use super::{
-    DataFormat, ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType,
-    StateSchema, TransitionSchema,
+    ExecutableCode, ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema,
+    TransitionSchema,
 };
 #[cfg(feature = "serde")]
 use crate::Bech32;
@@ -52,6 +52,7 @@ impl sha256t::Tag for SchemaIdTag {
     serde(crate = "serde_crate", try_from = "Bech32", into = "Bech32")
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(SchemaId::to_bech32_string)]
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
@@ -65,6 +66,7 @@ where Msg: AsRef<[u8]>
 }
 
 #[derive(Clone, Debug, Default)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Schema {
     /// Feature flags control which of the available RGB features are allowed
@@ -83,7 +85,8 @@ pub struct Schema {
     pub rgb_features: FlagVec,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub root_id: SchemaId,
-    pub field_types: BTreeMap<FieldType, DataFormat>,
+    pub type_system: TypeSystem,
+    pub field_types: BTreeMap<FieldType, TypeRef>,
     pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,
     pub public_right_types: BTreeSet<PublicRightType>,
     pub genesis: GenesisSchema,
@@ -109,49 +112,6 @@ impl PartialEq for Schema {
 }
 
 impl Eq for Schema {}
-
-mod _strict_encoding {
-    use strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
-
-    use super::*;
-
-    // TODO #50: Use derive macros and generalized `tagged_hash!` in the future
-    impl Strategy for SchemaId {
-        type Strategy = strategies::Wrapped;
-    }
-
-    impl StrictEncode for Schema {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            Ok(strict_encode_list!(e;
-                self.rgb_features,
-                self.root_id,
-                self.field_types,
-                self.owned_right_types,
-                self.public_right_types,
-                self.genesis,
-                self.extensions,
-                self.transitions,
-                self.script
-            ))
-        }
-    }
-
-    impl StrictDecode for Schema {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            Ok(Self {
-                rgb_features: FlagVec::strict_decode(&mut d)?,
-                root_id: SchemaId::strict_decode(&mut d)?,
-                field_types: BTreeMap::strict_decode(&mut d)?,
-                owned_right_types: BTreeMap::strict_decode(&mut d)?,
-                public_right_types: BTreeSet::strict_decode(&mut d)?,
-                genesis: GenesisSchema::strict_decode(&mut d)?,
-                extensions: BTreeMap::strict_decode(&mut d)?,
-                transitions: BTreeMap::strict_decode(&mut d)?,
-                script: ExecutableCode::strict_decode(&mut d)?,
-            })
-        }
-    }
-}
 
 // TODO #73: Move to validation module and refactor that module into a directory
 mod _validation {
@@ -425,7 +385,8 @@ mod _validation {
                 let field = self.field_types.get(field_type_id)
                     .expect("If the field were absent, the schema would not be able to pass the internal validation and we would not reach this point");
                 for data in set {
-                    status += field.validate(*field_type_id, &data);
+                    // TODO: [validation] validate type schema
+                    // status += field.validate(*field_type_id, &data);
                 }
             }
 
@@ -818,16 +779,17 @@ pub(crate) mod test {
         Schema {
             rgb_features: FlagVec::default(),
             root_id: Default::default(),
+            type_system: Default::default(),
             field_types: bmap! {
-                FIELD_TICKER => DataFormat::UniString(16),
-                FIELD_NAME => DataFormat::UniString(256),
-                FIELD_DESCRIPTION => DataFormat::UniString(1024),
-                FIELD_TOTAL_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_PRECISION => DataFormat::Unsigned(Bits::Bit64, 0, 18u128),
-                FIELD_ISSUED_SUPPLY => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_DUST_LIMIT => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128),
-                FIELD_PRUNE_PROOF => DataFormat::ByteString(core::u16::MAX),
-                FIELD_TIMESTAMP => DataFormat::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128)
+                FIELD_TICKER => TypeRef::ascii_string(),
+                FIELD_NAME => TypeRef::ascii_string(),
+                FIELD_DESCRIPTION => TypeRef::unicode_string(),
+                FIELD_TOTAL_SUPPLY => TypeRef::u64(),
+                FIELD_PRECISION => TypeRef::u8(),
+                FIELD_ISSUED_SUPPLY => TypeRef::u64(),
+                FIELD_DUST_LIMIT => TypeRef::u64(),
+                FIELD_PRUNE_PROOF => TypeRef::bytes(),
+                FIELD_TIMESTAMP => TypeRef::i64()
             },
             owned_right_types: bmap! {
                 ASSIGNMENT_ISSUE => StateSchema {

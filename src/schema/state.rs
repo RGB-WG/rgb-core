@@ -9,9 +9,9 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::BTreeSet;
+use stens::TypeRef;
 
-use super::{script, Bits};
+use super::script;
 
 #[derive(Clone, PartialEq, Debug, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -46,7 +46,7 @@ pub enum StateType {
 pub enum StateFormat {
     Declarative,
     DiscreteFiniteField(DiscreteFiniteFieldFormat),
-    CustomData(DataFormat),
+    CustomData(TypeRef),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -69,66 +69,6 @@ pub enum DiscreteFiniteFieldFormat {
     Unsigned64bit,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_order)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "lowercase")
-)]
-#[non_exhaustive]
-pub enum DataFormat {
-    Unsigned(Bits, u128, u128),
-    Integer(Bits, i128, i128),
-    Float(Bits, f64, f64),
-    Enum(BTreeSet<u8>),
-    UniString(u16),
-    ByteString(u16),
-    FixedBytes(u16),
-}
-
-// Convenience methods
-impl DataFormat {
-    #[inline]
-    pub fn u8() -> Self { Self::Unsigned(Bits::Bit8, 0, core::u8::MAX as u128) }
-
-    #[inline]
-    pub fn u16() -> Self { Self::Unsigned(Bits::Bit16, 0, core::u16::MAX as u128) }
-
-    #[inline]
-    pub fn u32() -> Self { Self::Unsigned(Bits::Bit32, 0, core::u32::MAX as u128) }
-
-    #[inline]
-    pub fn u64() -> Self { Self::Unsigned(Bits::Bit64, 0, core::u64::MAX as u128) }
-
-    #[inline]
-    pub fn u128() -> Self { Self::Unsigned(Bits::Bit128, 0, core::u128::MAX) }
-    // TODO #14: Add support for `u256` type
-
-    #[inline]
-    pub fn i8() -> Self { Self::Integer(Bits::Bit8, 0, core::i8::MAX as i128) }
-
-    #[inline]
-    pub fn i16() -> Self { Self::Integer(Bits::Bit16, 0, core::i16::MAX as i128) }
-
-    #[inline]
-    pub fn i32() -> Self { Self::Integer(Bits::Bit32, 0, core::i32::MAX as i128) }
-
-    #[inline]
-    pub fn i64() -> Self { Self::Integer(Bits::Bit64, 0, core::i64::MAX as i128) }
-
-    #[inline]
-    pub fn i128() -> Self { Self::Integer(Bits::Bit128, 0, core::i128::MAX) }
-    // TODO #14: Add support for `i256` type
-
-    #[inline]
-    pub fn f32() -> Self { Self::Float(Bits::Bit32, 0.0, core::f32::MAX as f64) }
-
-    #[inline]
-    pub fn f64() -> Self { Self::Float(Bits::Bit64, 0.0, core::f64::MAX) }
-}
-
 mod _validation {
     use core::any::Any;
 
@@ -138,152 +78,8 @@ mod _validation {
     use super::*;
     use crate::schema::OwnedRightType;
     use crate::{
-        data, validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy,
-        State,
+        validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy, State,
     };
-
-    fn range_check<T, U>(
-        type_id: u16,
-        is_meta: bool,
-        val: T,
-        min: U,
-        max: U,
-        status: &mut validation::Status,
-    ) where
-        T: Copy,
-        U: From<T>,
-        U: PartialOrd,
-    {
-        if U::from(val) < min {
-            status.add_failure(if is_meta {
-                validation::Failure::SchemaMetaValueTooSmall(type_id)
-            } else {
-                validation::Failure::SchemaStateValueTooSmall(type_id)
-            });
-        }
-        if U::from(val) > max {
-            status.add_failure(if is_meta {
-                validation::Failure::SchemaMetaValueTooLarge(type_id)
-            } else {
-                validation::Failure::SchemaStateValueTooLarge(type_id)
-            });
-        }
-    }
-
-    // TODO (new): consider having type_id as a method
-    impl DataFormat {
-        pub fn validate(&self, item_id: u16, data: &data::Revealed) -> validation::Status {
-            let mut status = validation::Status::new();
-            match (self, data) {
-                (Self::Unsigned(Bits::Bit8, min, max), data::Revealed::U8(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Unsigned(Bits::Bit16, min, max), data::Revealed::U16(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Unsigned(Bits::Bit32, min, max), data::Revealed::U32(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Unsigned(Bits::Bit64, min, max), data::Revealed::U64(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Unsigned(Bits::Bit128, min, max), data::Revealed::U128(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                // TODO #14: Add support for `u256` type
-                (Self::Unsigned(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits {
-                        field_or_state_type: item_id,
-                        expected: *bits,
-                    });
-                }
-
-                (Self::Integer(Bits::Bit8, min, max), data::Revealed::I8(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Integer(Bits::Bit16, min, max), data::Revealed::I16(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Integer(Bits::Bit32, min, max), data::Revealed::I32(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Integer(Bits::Bit64, min, max), data::Revealed::I64(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Integer(Bits::Bit128, min, max), data::Revealed::I128(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                // TODO #14: Add support for `i256` type
-                (Self::Integer(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits {
-                        field_or_state_type: item_id,
-                        expected: *bits,
-                    });
-                }
-
-                (Self::Float(Bits::Bit32, min, max), data::Revealed::F32(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Float(Bits::Bit64, min, max), data::Revealed::F64(val)) => {
-                    range_check(item_id, true, *val, *min, *max, &mut status)
-                }
-                (Self::Float(bits, _, _), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits {
-                        field_or_state_type: item_id,
-                        expected: *bits,
-                    });
-                }
-
-                (Self::Enum(value_set), data::Revealed::U8(val)) => {
-                    if !value_set.contains(val) {
-                        status.add_failure(validation::Failure::SchemaWrongEnumValue {
-                            field_or_state_type: item_id,
-                            unexpected: *val,
-                        });
-                    }
-                }
-                (Self::Enum(_), _) => {
-                    status.add_failure(validation::Failure::SchemaMismatchedBits {
-                        field_or_state_type: item_id,
-                        expected: Bits::Bit8,
-                    });
-                }
-
-                (Self::UniString(len), data::Revealed::String(val)) => {
-                    if val.len() > *len as usize {
-                        status.add_failure(validation::Failure::SchemaWrongDataLength {
-                            field_or_state_type: item_id,
-                            max_expected: *len,
-                            found: val.len(),
-                        });
-                    }
-                }
-                (Self::ByteString(len), data::Revealed::Bytes(val)) => {
-                    if val.len() > *len as usize {
-                        status.add_failure(validation::Failure::SchemaWrongDataLength {
-                            field_or_state_type: item_id,
-                            max_expected: *len,
-                            found: val.len(),
-                        });
-                    }
-                }
-                (Self::FixedBytes(len), data::Revealed::Bytes(val)) => {
-                    if val.len() != *len as usize {
-                        status.add_failure(validation::Failure::SchemaWrongDataLength {
-                            field_or_state_type: item_id,
-                            max_expected: *len,
-                            found: val.len(),
-                        });
-                    }
-                }
-
-                _ => {
-                    status.add_failure(validation::Failure::SchemaMismatchedDataType(item_id));
-                }
-            }
-            status
-        }
-    }
 
     impl StateFormat {
         pub fn validate<STATE>(
@@ -389,7 +185,8 @@ mod _validation {
                                     );
                                 }
                                 Some(data) => {
-                                    status += format.validate(assignment_id, data);
+                                    // TODO: [validation] validate type schema
+                                    // status += format.validate(assignment_id, data);
                                 }
                             }
                         }
@@ -403,21 +200,16 @@ mod _validation {
 
 #[cfg(test)]
 mod test {
-    use std::collections::BTreeMap;
-
     use bitcoin::blockdata::transaction::OutPoint;
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::hashes::sha256;
     use commit_verify::{CommitConceal, TaggedHash};
     use secp256k1zkp::rand::thread_rng;
-    use strict_encoding::{strict_serialize, StrictDecode};
+    use strict_encoding::StrictDecode;
 
     use super::*;
-    use crate::contract::data::{self, Revealed};
-    use crate::contract::{value, NodeId};
-    use crate::script::EntryPoint;
-    use crate::validation::{Failure, Validity};
-    use crate::vm::embedded::NodeValidator;
+    use crate::contract::{data, value, NodeId};
+    use crate::validation::Failure;
     use crate::{Assignment, DeclarativeStrategy, HashStrategy, PedersenStrategy};
 
     // Txids to generate seals
@@ -461,304 +253,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "DataIntegrityError")]
-    fn test_garbage_data_format1() {
-        let bytes: Vec<u8> = vec![2, 2, 4, 0, 0, 0, 0, 255, 255, 127, 127];
-        DataFormat::strict_decode(&bytes[..]).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "ValueOutOfRange")]
-    fn test_garbage_data_format2() {
-        let format = DataFormat::Float(Bits::Bit16, 0.0, core::f32::MAX as f64);
-        strict_serialize(&format).unwrap();
-    }
-
-    #[test]
     fn test_random() {
         let n = 67u8;
         println!("{}", ::core::mem::size_of_val(&n));
     }
-
-    #[test]
-    fn test_encoding_state_format() {
-        // Create a Map of Format type and encoded data
-
-        let mut map: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
-        // Declarative and Pedersen formats
-        map.insert("Declarative", vec![0]);
-        map.insert("DiscreteFinite format", vec![
-            1, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255,
-        ]);
-        // data formats
-        map.insert("u8", vec![2, 0, 1, 0, 255]);
-        map.insert("u16", vec![2, 0, 2, 0, 0, 255, 255]);
-        map.insert("u32", vec![2, 0, 4, 0, 0, 0, 0, 255, 255, 255, 255]);
-        map.insert("u64", vec![
-            2, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255,
-        ]);
-        map.insert("i8", vec![2, 1, 1, 0, 127]);
-        map.insert("i16", vec![2, 1, 2, 0, 0, 255, 127]);
-        map.insert("i32", vec![2, 1, 4, 0, 0, 0, 0, 255, 255, 255, 127]);
-        map.insert("i64", vec![
-            2, 1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 127,
-        ]);
-        map.insert("f32", vec![2, 2, 4, 0, 0, 0, 0, 255, 255, 127, 127]);
-        map.insert("f64", vec![
-            2, 2, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 239, 127,
-        ]);
-
-        // Enums
-        map.insert("Enum(1, 2, 3)", vec![2, 3, 3, 0, 1, 2, 3]);
-
-        // String
-        map.insert("String(13", vec![2, 4, 13, 0]);
-
-        // Bytes
-        map.insert("Bytes(27)", vec![2, 5, 27, 0]);
-
-        // Test for correct encoding of each cases
-        let _test: Vec<()> = map
-            .iter()
-            .map(|pair| {
-                let data = pair.1;
-                test_encode!((data, StateFormat));
-            })
-            .collect();
-
-        // Test for correct encoding in StateSchema
-        // Only one variant is created as StateSchema::Abi
-        // maps against single AssignmentAction variant
-        let schema_bytes = vec![0u8, 1, 0, 0, 0x12, 0, 0, 0];
-        let schema = StateSchema::strict_decode(&schema_bytes[..]).unwrap();
-
-        test_encode!((schema_bytes, StateSchema));
-        assert_eq!(schema.format, StateFormat::Declarative);
-        assert_eq!(
-            schema.abi.get(&script::AssignmentAction::Validate).unwrap(),
-            &(NodeValidator::NftIssue as EntryPoint)
-        );
-    }
-
-    #[test]
-    fn test_dataformat_validate() {
-        // Test general cases that pass validation=
-        assert_eq!(
-            DataFormat::u8().validate(3, &Revealed::U8(32u8)).validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::u16()
-                .validate(3, &Revealed::U16(32u16))
-                .validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::u32()
-                .validate(3, &Revealed::U32(32u32))
-                .validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::u64()
-                .validate(3, &Revealed::U64(32u64))
-                .validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::i8().validate(3, &Revealed::I8(32i8)).validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::i16()
-                .validate(3, &Revealed::I16(32i16))
-                .validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::i32()
-                .validate(3, &Revealed::I32(32i32))
-                .validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::i64()
-                .validate(3, &Revealed::I64(32i64))
-                .validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::f32()
-                .validate(3, &Revealed::F32(32f32))
-                .validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            DataFormat::f64()
-                .validate(3, &Revealed::F64(32f64))
-                .validity(),
-            Validity::Valid
-        );
-
-        // Test failure for values smaller than allowed
-        assert_eq!(
-            DataFormat::i32()
-                .validate(3, &Revealed::I32(-25i32))
-                .validity(),
-            Validity::Invalid
-        );
-        assert_eq!(
-            DataFormat::i32()
-                .validate(3, &Revealed::I32(-25i32))
-                .failures[0],
-            Failure::SchemaMetaValueTooSmall(3)
-        );
-        assert_eq!(
-            DataFormat::i8()
-                .validate(3, &Revealed::I8(-25i8))
-                .validity(),
-            Validity::Invalid
-        );
-        assert_eq!(
-            DataFormat::i8().validate(3, &Revealed::I8(-25i8)).failures[0],
-            Failure::SchemaMetaValueTooSmall(3)
-        );
-        assert_eq!(
-            DataFormat::i16()
-                .validate(3, &Revealed::I16(-25i16))
-                .validity(),
-            Validity::Invalid
-        );
-        assert_eq!(
-            DataFormat::i16()
-                .validate(3, &Revealed::I16(-25i16))
-                .failures[0],
-            Failure::SchemaMetaValueTooSmall(3)
-        );
-        assert_eq!(
-            DataFormat::i64()
-                .validate(3, &Revealed::I64(-25i64))
-                .validity(),
-            Validity::Invalid
-        );
-        assert_eq!(
-            DataFormat::i64()
-                .validate(3, &Revealed::I64(-25i64))
-                .failures[0],
-            Failure::SchemaMetaValueTooSmall(3)
-        );
-        assert_eq!(
-            DataFormat::f32()
-                .validate(3, &Revealed::F32(-25f32))
-                .validity(),
-            Validity::Invalid
-        );
-        assert_eq!(
-            DataFormat::f32()
-                .validate(3, &Revealed::F32(-25f32))
-                .failures[0],
-            Failure::SchemaMetaValueTooSmall(3)
-        );
-        assert_eq!(
-            DataFormat::f64()
-                .validate(3, &Revealed::F64(-25f64))
-                .validity(),
-            Validity::Invalid
-        );
-        assert_eq!(
-            DataFormat::f64()
-                .validate(3, &Revealed::F64(-25f64))
-                .failures[0],
-            Failure::SchemaMetaValueTooSmall(3)
-        );
-        assert_eq!(
-            DataFormat::i32()
-                .validate(3, &Revealed::I64(-25i64))
-                .failures[0],
-            Failure::SchemaMismatchedBits {
-                field_or_state_type: 3,
-                expected: Bits::Bit32
-            }
-        );
-
-        // Test incompatible data
-        assert_eq!(
-            DataFormat::u16()
-                .validate(3, &Revealed::U32(25u32))
-                .failures[0],
-            Failure::SchemaMismatchedBits {
-                field_or_state_type: 3,
-                expected: Bits::Bit16
-            }
-        );
-        assert_eq!(
-            DataFormat::f32()
-                .validate(3, &Revealed::F64(25f64))
-                .failures[0],
-            Failure::SchemaMismatchedBits {
-                field_or_state_type: 3,
-                expected: Bits::Bit32
-            }
-        );
-
-        // Test validity and failure cases for Enum format
-        let mut set = BTreeSet::new();
-        set.insert(1u8);
-        set.insert(2u8);
-        set.insert(3u8);
-
-        let enum_fromat = DataFormat::Enum(set);
-        assert_eq!(
-            enum_fromat.validate(3, &Revealed::U8(3u8)).validity(),
-            Validity::Valid
-        );
-        assert_eq!(
-            enum_fromat.validate(3, &Revealed::U8(4u8)).failures[0],
-            Failure::SchemaWrongEnumValue {
-                field_or_state_type: 3,
-                unexpected: 4
-            }
-        );
-        assert_eq!(
-            enum_fromat.validate(3, &Revealed::U16(4u16)).failures[0],
-            Failure::SchemaMismatchedBits {
-                field_or_state_type: 3,
-                expected: Bits::Bit8
-            }
-        );
-
-        // Test failure cases for String format
-        let string_data = Revealed::String("Hello".to_string());
-        let string_format = DataFormat::UniString(2u16);
-        assert_eq!(
-            string_format.validate(3, &string_data).failures[0],
-            Failure::SchemaWrongDataLength {
-                field_or_state_type: 3,
-                max_expected: 2,
-                found: 5
-            }
-        );
-
-        // Test failure cases for Bytes format
-        let bytes = vec![1u8, 2u8, 3u8];
-        let bytes_data = Revealed::Bytes(bytes);
-        let bytes_format = DataFormat::ByteString(2u16);
-        assert_eq!(
-            bytes_format.validate(3, &bytes_data).failures[0],
-            Failure::SchemaWrongDataLength {
-                field_or_state_type: 3,
-                max_expected: 2,
-                found: 3
-            }
-        );
-
-        // Generic failure situation
-        assert_eq!(
-            bytes_format.validate(3, &string_data).failures[0],
-            Failure::SchemaMismatchedDataType(3)
-        );
-    }
-
     #[test]
     fn test_state_format() {
         // Create typical assignments
@@ -818,7 +316,7 @@ mod test {
                 .unwrap();
         let dec_format = StateFormat::Declarative;
         let ped_format = StateFormat::DiscreteFiniteField(DiscreteFiniteFieldFormat::Unsigned64bit);
-        let hash_format = StateFormat::CustomData(DataFormat::ByteString(32));
+        let hash_format = StateFormat::CustomData(TypeRef::bytes());
 
         // Assert different failure combinations
         assert_eq!(
