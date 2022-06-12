@@ -505,6 +505,9 @@ mod _validation {
                     Some(AssignmentVec::CustomData(set)) => set.into_iter().for_each(|data| {
                         status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
+                    Some(AssignmentVec::Container(set)) => set.into_iter().for_each(|data| {
+                        status += assignment.validate(&node_id, *owned_type_id, data)
+                    }),
                 };
             }
 
@@ -623,6 +626,14 @@ mod _validation {
                             .entry(*type_id)
                             .or_insert(AssignmentVec::CustomData(Default::default()))
                             .data_assignment_vec_mut()
+                            .map(|state| state.extend(set));
+                    }
+                    Some(AssignmentVec::Container(set)) => {
+                        let set = filter(set, indexes);
+                        owned_rights
+                            .entry(*type_id)
+                            .or_insert(AssignmentVec::Container(Default::default()))
+                            .container_assignment_vec_mut()
                             .map(|state| state.extend(set));
                     }
                     None => {
