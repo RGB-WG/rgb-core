@@ -94,9 +94,9 @@ pub mod prelude {
         PublicRightsStructure, Schema, SchemaId, ValidationScript, VmType,
     };
     pub use stash::{
-        ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError, Disclosure,
-        ExtensionData, GraphApi, Stash, TransitionData, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK,
-        PSBT_PREFIX,
+        BundleId, ConcealAnchors, Consignment, ConsignmentEndpoints, ConsistencyError, Disclosure,
+        ExtensionData, GraphApi, Stash, TransitionBundle, TransitionData, PSBT_OUT_PUBKEY,
+        PSBT_OUT_TWEAK, PSBT_PREFIX,
     };
     pub use validation::{Validator, Validity};
     pub use vm::Validate;

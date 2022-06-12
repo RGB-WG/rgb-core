@@ -269,10 +269,12 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
         let mut anchor_index = BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
-        for (anchor, transition) in &*consignment.state_transitions {
-            let node_id = transition.node_id();
-            node_index.insert(node_id, transition);
-            anchor_index.insert(node_id, anchor);
+        for (anchor, bundle) in &*consignment.state_transitions {
+            for transition in bundle.transitions() {
+                let node_id = transition.node_id();
+                node_index.insert(node_id, transition);
+                anchor_index.insert(node_id, anchor);
+            }
         }
         node_index.insert(genesis_id, &consignment.genesis);
         for extension in &*consignment.state_extensions {

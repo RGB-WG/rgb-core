@@ -25,7 +25,7 @@ use commit_verify::{lnpbp4, TaggedHash};
 use wallet::psbt::Psbt;
 
 #[cfg(feature = "wallet")]
-use crate::NodeId;
+use crate::BundleId;
 use crate::{reveal, ContractId, MergeReveal};
 
 pub const PSBT_PREFIX: &'static [u8] = b"RGB";
@@ -64,7 +64,7 @@ impl MergeReveal for Anchor<lnpbp4::MerkleBlock> {
 pub trait AnchorExt {
     fn commit(
         psbt: &mut Psbt,
-        transitions: BTreeMap<ContractId, NodeId>,
+        bundle_id: BTreeMap<ContractId, BundleId>,
     ) -> Result<Anchor<lnpbp4::MerkleBlock>, Error>;
 }
 
@@ -72,13 +72,13 @@ pub trait AnchorExt {
 impl AnchorExt for Anchor<lnpbp4::MerkleBlock> {
     fn commit(
         psbt: &mut Psbt,
-        transitions: BTreeMap<ContractId, NodeId>,
+        bundles: BTreeMap<ContractId, BundleId>,
     ) -> Result<Anchor<lnpbp4::MerkleBlock>, Error> {
-        let messages = transitions
+        let messages = bundles
             .iter()
-            .map(|(contract_id, node_id)| {
+            .map(|(contract_id, bundle_id)| {
                 let protocol_id = lnpbp4::ProtocolId::from_inner(contract_id.to_bytes());
-                let message = lnpbp4::Message::from_inner(node_id.to_bytes());
+                let message = lnpbp4::Message::from_inner(bundle_id.to_bytes());
                 (protocol_id, message)
             })
             .collect::<BTreeMap<_, _>>();

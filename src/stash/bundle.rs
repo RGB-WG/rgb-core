@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use bitcoin_hashes::{sha256, sha256t};
 use commit_verify::{CommitVerify, PrehashedProtocol, TaggedHash};
 
-use crate::Transition;
+use crate::{Node, NodeId, Transition};
 
 // TODO: Update the value
 // "rgb:bundle"
@@ -55,7 +55,7 @@ impl strict_encoding::Strategy for BundleId {
     type Strategy = strict_encoding::strategies::Wrapped;
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny, From)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct TransitionBundle(BTreeMap<Transition, BTreeSet<u16>>);
@@ -70,6 +70,10 @@ impl<'me> IntoIterator for &'me TransitionBundle {
 impl TransitionBundle {
     pub fn transitions(&self) -> std::collections::btree_map::Keys<Transition, BTreeSet<u16>> {
         self.0.keys()
+    }
+
+    pub fn node_ids(&self) -> BTreeSet<NodeId> {
+        self.transitions().map(Transition::node_id).collect()
     }
 }
 

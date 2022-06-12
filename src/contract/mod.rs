@@ -20,7 +20,6 @@ pub mod reveal;
 mod rights;
 pub mod seal;
 pub mod value;
-pub mod bundle;
 
 pub use allocation::{
     AllocatedValue, Allocation, AllocationMap, AllocationValueMap, AllocationValueVec,
@@ -41,6 +40,7 @@ pub(crate) use rights::{OwnedRightsInner, ParentPublicRightsInner, PublicRightsI
 pub use seal::{IntoRevealedSeal, SealEndpoint};
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 pub use value::{AtomicValue, HomomorphicBulletproofGrin};
+
 lazy_static! {
     /// Secp256k1zpk context object
     pub(crate) static ref SECP256K1_ZKP: Secp256k1zkp =

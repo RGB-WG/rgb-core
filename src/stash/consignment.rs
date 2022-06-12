@@ -9,7 +9,8 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::convert::TryInto;
 use std::str::FromStr;
 
 use bitcoin::hashes::{sha256, sha256t};
@@ -24,13 +25,14 @@ use strict_encoding::LargeVec;
 use wallet::onchain::ResolveTx;
 
 use crate::contract::ConcealSeals;
+use crate::stash::TransitionBundle;
 use crate::{
     schema, seal, validation, ConcealState, ConsistencyError, Extension, Genesis, GraphApi, Node,
     NodeId, Schema, SealEndpoint, Transition, Validator,
 };
 
 pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
-pub type TransitionData = LargeVec<(Anchor<lnpbp4::MerkleProof>, Transition)>;
+pub type TransitionData = LargeVec<(Anchor<lnpbp4::MerkleProof>, TransitionBundle)>;
 pub type ExtensionData = LargeVec<Extension>;
 
 pub const RGB_CONSIGNMENT_VERSION: u8 = 0;
@@ -198,7 +200,8 @@ impl Consignment {
         set.extend(
             self.state_transitions
                 .iter()
-                .map(|(_, node)| node.node_id()),
+                .map(|(_, bundle)| bundle.node_ids())
+                .flatten(),
         );
         set.extend(self.state_extensions.iter().map(Extension::node_id));
         set
@@ -289,14 +292,25 @@ impl Consignment {
             .map(SealEndpoint::commit_conceal)
             .collect();
 
-        let mut count = self
+        let mut count = 0usize;
+        self.state_transitions = self
             .state_transitions
-            .iter_mut()
-            .fold(0usize, |count, (_, transition)| {
-                count
-                    + transition.conceal_state_except(&concealed_endpoints)
-                    + transition.conceal_seals(&seals_to_conceal)
-            });
+            .iter()
+            .map(|(anchor, bundle)| {
+                let bundle = bundle
+                    .into_iter()
+                    .map(|(transition, inputs)| {
+                        let mut transition = transition.clone();
+                        count += transition.conceal_state_except(&concealed_endpoints)
+                            + transition.conceal_seals(&seals_to_conceal);
+                        (transition, inputs.clone())
+                    })
+                    .collect::<BTreeMap<_, _>>();
+                (anchor.clone(), TransitionBundle::from(bundle))
+            })
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("size of the original collection not changed");
 
         count = self
             .state_extensions
@@ -315,22 +329,24 @@ impl Consignment {
         &mut self,
         known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
     ) -> usize {
-        let counter = 0;
-        for (_, transition) in self.state_transitions.iter_mut() {
-            transition
-                .owned_rights_mut()
-                .iter_mut()
-                .fold(counter, |counter, (_, assignment)| {
-                    counter + assignment.reveal_seals(known_seals.clone())
-                });
+        let mut counter = 0;
+        for (_, bundle) in self.state_transitions.iter_mut() {
+            *bundle = bundle
+                .into_iter()
+                .map(|(transition, inputs)| {
+                    let mut transition = transition.clone();
+                    for (_, assignment) in transition.owned_rights_mut().iter_mut() {
+                        counter += assignment.reveal_seals(known_seals.clone());
+                    }
+                    (transition, inputs.clone())
+                })
+                .collect::<BTreeMap<_, _>>()
+                .into();
         }
         for extension in self.state_extensions.iter_mut() {
-            extension
-                .owned_rights_mut()
-                .iter_mut()
-                .fold(counter, |counter, (_, assignment)| {
-                    counter + assignment.reveal_seals(known_seals.clone())
-                });
+            for (_, assignment) in extension.owned_rights_mut().iter_mut() {
+                counter += assignment.reveal_seals(known_seals.clone())
+            }
         }
         counter
     }
