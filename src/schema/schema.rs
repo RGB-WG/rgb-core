@@ -10,7 +10,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io;
 
 use amplify::flags::FlagVec;
 use bitcoin::hashes::{sha256, sha256t};
@@ -52,6 +51,7 @@ impl sha256t::Tag for SchemaIdTag {
     serde(crate = "serde_crate", try_from = "Bech32", into = "Bech32")
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(SchemaId::to_bech32_string)]
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
@@ -65,6 +65,7 @@ where Msg: AsRef<[u8]>
 }
 
 #[derive(Clone, Debug, Default)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Schema {
     /// Feature flags control which of the available RGB features are allowed
@@ -109,49 +110,6 @@ impl PartialEq for Schema {
 }
 
 impl Eq for Schema {}
-
-mod _strict_encoding {
-    use strict_encoding::{strategies, Error, Strategy, StrictDecode, StrictEncode};
-
-    use super::*;
-
-    // TODO #50: Use derive macros and generalized `tagged_hash!` in the future
-    impl Strategy for SchemaId {
-        type Strategy = strategies::Wrapped;
-    }
-
-    impl StrictEncode for Schema {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            Ok(strict_encode_list!(e;
-                self.rgb_features,
-                self.root_id,
-                self.field_types,
-                self.owned_right_types,
-                self.public_right_types,
-                self.genesis,
-                self.extensions,
-                self.transitions,
-                self.script
-            ))
-        }
-    }
-
-    impl StrictDecode for Schema {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            Ok(Self {
-                rgb_features: FlagVec::strict_decode(&mut d)?,
-                root_id: SchemaId::strict_decode(&mut d)?,
-                field_types: BTreeMap::strict_decode(&mut d)?,
-                owned_right_types: BTreeMap::strict_decode(&mut d)?,
-                public_right_types: BTreeSet::strict_decode(&mut d)?,
-                genesis: GenesisSchema::strict_decode(&mut d)?,
-                extensions: BTreeMap::strict_decode(&mut d)?,
-                transitions: BTreeMap::strict_decode(&mut d)?,
-                script: ExecutableCode::strict_decode(&mut d)?,
-            })
-        }
-    }
-}
 
 // TODO #73: Move to validation module and refactor that module into a directory
 mod _validation {
