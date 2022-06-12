@@ -14,6 +14,7 @@
 //! Concrete virtual machine implementations must be wrapped into this API
 
 pub mod embedded;
+pub mod alure;
 
 pub use embedded::EmbeddedVm;
 

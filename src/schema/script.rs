@@ -13,7 +13,8 @@
 //! specific contract node level
 
 use commit_verify::commit_encode;
-use strict_encoding::MediumVec;
+
+use crate::vm::alure;
 
 /// Virtual machine types.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -52,13 +53,7 @@ pub enum VmScript {
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
     #[strict_encoding(value = 0x01)]
-    // TODO: Use library-based approach with `aluvm::Lib` type and special
-    //       RGB AluVM runtime environment controlling the total number of
-    //       libraries used is below 256.
-    AluVM {
-        program: MediumVec<u8>,
-        validate: aluvm::libs::LibSite,
-    },
+    AluVM(alure::ValidationScript),
 }
 
 impl Default for VmScript {

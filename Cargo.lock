@@ -11,7 +11,7 @@ checksum = "aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234"
 [[package]]
 name = "aluvm"
 version = "0.6.0"
-source = "git+https://github.com/Internet2-WG/rust-aluvm#14068b4e3a53ea417202a3df6edcc6b6cf1da2ff"
+source = "git+https://github.com/Internet2-WG/rust-aluvm#e53e586ad04a9ed5b81dace437c77934e1469230"
 dependencies = [
  "amplify",
  "bech32 0.9.0",
