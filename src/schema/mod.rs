@@ -26,7 +26,7 @@ pub use script::{
     Action, AssignmentAbi, AssignmentAction, ExecutableCode, ExtensionAbi, ExtensionAction,
     GenericAction, GenesisAbi, GenesisAction, NodeAction, TransitionAbi, TransitionAction, VmType,
 };
-pub use state::{DataFormat, DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
+pub use state::{DiscreteFiniteFieldFormat, StateFormat, StateSchema, StateType};
 pub use types::{Bits, Occurrences, OccurrencesError};
 
 mod verify {
