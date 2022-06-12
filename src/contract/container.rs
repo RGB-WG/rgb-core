@@ -16,6 +16,7 @@ use commit_verify::{
     commit_encode, CommitConceal, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol,
     TaggedHash,
 };
+use stens::AsciiString;
 use strict_encoding::{strict_serialize, StrictEncode};
 
 use crate::{ConfidentialState, RevealedState};
@@ -106,7 +107,7 @@ impl Confidential {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Revealed {
     pub id: ContainerId,
-    pub mime: String,
+    pub mime: AsciiString,
     pub salt: u64,
 }
 
