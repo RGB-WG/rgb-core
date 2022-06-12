@@ -40,11 +40,11 @@ required-features = ["cli", "serde"]
 [dependencies]
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
-amplify = "~3.12.0"
+amplify = { version = "~3.12.0", features = ["apfloat"] }
 bp-core = { version = "~0.7.0-beta.5" }
 lnpbp = { version = "~0.7.0", features = ["zip"] }
 stens = "0.3.0"
-strict_encoding = { version = "~1.8.4", features = ["crypto", "chrono", "bitcoin", "float"] }
+strict_encoding = { version = "~1.8.5", features = ["crypto", "chrono", "bitcoin", "float"] }
 commit_verify = { version = "~0.7.0-rc.4", features = ["rand", "bulletproofs"] }
 descriptor-wallet = { version = "~0.7.1", features = ["descriptors"] }
 aluvm = "~0.5.0"
@@ -60,6 +60,7 @@ bech32 = "~0.9.0"
 #   features for a dependency. See
 #   <https://github.com/rust-lang/api-guidelines/issues/180> for the explanation
 #   and references.
+half = "~1.8.2"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.8", features = ["hex"], optional = true }
 lazy_static = "~1.4.0" # TODO: Replace lazy_static with once_cell
@@ -88,7 +89,7 @@ default = ["serde", "cli"]
 all = ["serde", "cli", "wallet"]
 wallet = ["bp-core/wallet"]
 cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum", "electrum-client"]
-serde = ["serde_crate", "serde_with", # "serde_with_macros",
-         "commit_verify/serde", "strict_encoding/serde",
+serde = ["serde_crate", "serde_with", "half/serialize",
+         "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
          "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde",]

@@ -13,12 +13,14 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use amplify::num::apfloat::ieee;
 use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::Wrapper;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{
     commit_encode, ConsensusCommit, ConsensusMerkleCommit, MerkleSource, ToMerkleSource,
 };
+use half::bf16;
 use stens::AsciiString;
 
 use super::data;
@@ -155,6 +157,16 @@ impl Metadata {
             .unwrap_or_default()
     }
 
+    pub fn f16b(&self, field_type: impl Into<schema::FieldType>) -> Vec<bf16> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::f16b).collect())
+            .unwrap_or_default()
+    }
+    pub fn f16(&self, field_type: impl Into<schema::FieldType>) -> Vec<ieee::Half> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::f16).collect())
+            .unwrap_or_default()
+    }
     pub fn f32(&self, field_type: impl Into<schema::FieldType>) -> Vec<f32> {
         self.get(&field_type.into())
             .map(|set| set.into_iter().filter_map(data::Revealed::f32).collect())
@@ -165,6 +177,22 @@ impl Metadata {
             .map(|set| set.into_iter().filter_map(data::Revealed::f64).collect())
             .unwrap_or_default()
     }
+    pub fn f80(&self, field_type: impl Into<schema::FieldType>) -> Vec<ieee::X87DoubleExtended> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::f80).collect())
+            .unwrap_or_default()
+    }
+    pub fn f128(&self, field_type: impl Into<schema::FieldType>) -> Vec<ieee::Quad> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::f128).collect())
+            .unwrap_or_default()
+    }
+    pub fn f256(&self, field_type: impl Into<schema::FieldType>) -> Vec<ieee::Oct> {
+        self.get(&field_type.into())
+            .map(|set| set.into_iter().filter_map(data::Revealed::f256).collect())
+            .unwrap_or_default()
+    }
+    // TODO #100: Implement tapered float format
 
     pub fn bytes(&self, field_type: impl Into<schema::FieldType>) -> Vec<Vec<u8>> {
         self.get(&field_type.into())

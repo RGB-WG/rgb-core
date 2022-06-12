@@ -14,10 +14,12 @@ use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::io;
 
+use amplify::num::apfloat::ieee;
 use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::AsAny;
 use bitcoin::hashes::{sha256d, Hash};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode};
+use half::bf16;
 use stens::AsciiString;
 use strict_encoding::strict_serialize;
 
@@ -45,11 +47,7 @@ impl CommitEncode for Void {
 #[derive(Clone, Debug, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(by_order)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "lowercase")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[non_exhaustive]
 pub enum Revealed {
     U8(u8),
@@ -70,8 +68,18 @@ pub enum Revealed {
     I512(i512),
     I1024(i1024),
 
+    // TODO #100: Implement tapered float format
+    F16B(bf16),
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    F16(ieee::Half),
     F32(f32),
     F64(f64),
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    F80(ieee::X87DoubleExtended),
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    F128(ieee::Quad),
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    F256(ieee::Oct),
 
     Bytes(Vec<u8>),
     AsciiString(AsciiString),
@@ -259,6 +267,18 @@ impl Revealed {
         }
     }
 
+    pub fn f16b(&self) -> Option<bf16> {
+        match self {
+            Revealed::F16B(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn f16(&self) -> Option<ieee::Half> {
+        match self {
+            Revealed::F16(val) => Some(*val),
+            _ => None,
+        }
+    }
     pub fn f32(&self) -> Option<f32> {
         match self {
             Revealed::F32(val) => Some(*val),
@@ -271,6 +291,25 @@ impl Revealed {
             _ => None,
         }
     }
+    pub fn f80(&self) -> Option<ieee::X87DoubleExtended> {
+        match self {
+            Revealed::F80(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn f128(&self) -> Option<ieee::Quad> {
+        match self {
+            Revealed::F128(val) => Some(*val),
+            _ => None,
+        }
+    }
+    pub fn f256(&self) -> Option<ieee::Oct> {
+        match self {
+            Revealed::F256(val) => Some(*val),
+            _ => None,
+        }
+    }
+    // TODO #100: Implement tapered float format
 
     pub fn bytes(&self) -> Option<Vec<u8>> {
         match self {
