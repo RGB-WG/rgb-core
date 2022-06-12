@@ -1014,7 +1014,7 @@ mod test {
 
         assert_eq!(u8_from_gen, [2u8, 3u8].to_vec());
 
-        let string_from_tran = tran_meta.string(13 as schema::FieldType);
+        let string_from_tran = tran_meta.unicode_string(13 as schema::FieldType);
 
         assert_eq!(string_from_tran[0], "One Random String".to_string());
 

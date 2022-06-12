@@ -18,6 +18,7 @@ use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::AsAny;
 use bitcoin::hashes::{sha256d, Hash};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode};
+use stens::AsciiString;
 use strict_encoding::strict_serialize;
 
 use super::{ConfidentialState, RevealedState};
@@ -73,7 +74,8 @@ pub enum Revealed {
     F64(f64),
 
     Bytes(Vec<u8>),
-    String(String),
+    AsciiString(AsciiString),
+    UnicodeString(String),
 }
 
 impl RevealedState for Revealed {}
@@ -269,15 +271,22 @@ impl Revealed {
             _ => None,
         }
     }
+
     pub fn bytes(&self) -> Option<Vec<u8>> {
         match self {
             Revealed::Bytes(val) => Some(val.clone()),
             _ => None,
         }
     }
-    pub fn string(&self) -> Option<String> {
+    pub fn ascii_string(&self) -> Option<AsciiString> {
         match self {
-            Revealed::String(val) => Some(val.clone()),
+            Revealed::AsciiString(val) => Some(val.clone()),
+            _ => None,
+        }
+    }
+    pub fn unicode_string(&self) -> Option<String> {
+        match self {
+            Revealed::UnicodeString(val) => Some(val.clone()),
             _ => None,
         }
     }

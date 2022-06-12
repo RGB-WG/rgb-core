@@ -600,7 +600,7 @@ impl AssignmentVec {
     pub fn string(&self) -> Vec<String> {
         self.filter_revealed_state_data()
             .into_iter()
-            .filter_map(data::Revealed::string)
+            .filter_map(data::Revealed::unicode_string)
             .collect()
     }
 }

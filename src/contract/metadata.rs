@@ -19,6 +19,7 @@ use commit_verify::merkle::MerkleNode;
 use commit_verify::{
     commit_encode, ConsensusCommit, ConsensusMerkleCommit, MerkleSource, ToMerkleSource,
 };
+use stens::AsciiString;
 
 use super::data;
 use crate::schema;
@@ -164,14 +165,28 @@ impl Metadata {
             .map(|set| set.into_iter().filter_map(data::Revealed::f64).collect())
             .unwrap_or_default()
     }
+
     pub fn bytes(&self, field_type: impl Into<schema::FieldType>) -> Vec<Vec<u8>> {
         self.get(&field_type.into())
             .map(|set| set.into_iter().filter_map(data::Revealed::bytes).collect())
             .unwrap_or_default()
     }
-    pub fn string(&self, field_type: impl Into<schema::FieldType>) -> Vec<String> {
+    pub fn ascii_string(&self, field_type: impl Into<schema::FieldType>) -> Vec<AsciiString> {
         self.get(&field_type.into())
-            .map(|set| set.into_iter().filter_map(data::Revealed::string).collect())
+            .map(|set| {
+                set.into_iter()
+                    .filter_map(data::Revealed::ascii_string)
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+    pub fn unicode_string(&self, field_type: impl Into<schema::FieldType>) -> Vec<String> {
+        self.get(&field_type.into())
+            .map(|set| {
+                set.into_iter()
+                    .filter_map(data::Revealed::unicode_string)
+                    .collect()
+            })
             .unwrap_or_default()
     }
 }
@@ -214,7 +229,7 @@ mod test {
         let field_9 = metadata.f32(field_type);
         let field_10 = metadata.f64(field_type);
         let field_11 = metadata.bytes(field_type);
-        let field_12 = metadata.string(field_type);
+        let field_12 = metadata.unicode_string(field_type);
 
         assert_eq!(field_1, vec![2, 3]);
         assert_eq!(field_2, vec![2]);
@@ -281,7 +296,7 @@ mod test {
         data3.insert(data::Revealed::F32(rng.next_u32() as f32));
         data3.insert(data::Revealed::F64(rng.next_u32() as f64));
         data3.insert(data::Revealed::Bytes(byte_vec));
-        data3.insert(data::Revealed::String("Random String".to_string()));
+        data3.insert(data::Revealed::UnicodeString("Random String".to_string()));
 
         let field1 = 1 as schema::FieldType;
         let field2 = 2 as schema::FieldType;
