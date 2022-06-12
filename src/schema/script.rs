@@ -12,7 +12,6 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract node level
 
-use bitcoin_hashes::sha256;
 use commit_verify::commit_encode;
 use strict_encoding::MediumVec;
 
@@ -56,10 +55,9 @@ pub enum VmScript {
     // TODO: Use library-based approach with `aluvm::Lib` type and special
     //       RGB AluVM runtime environment controlling the total number of
     //       libraries used is below 256.
-    // TODO: Use `aluvm::libs::LibSite` once AluVM will integrate strict encoding
     AluVM {
         program: MediumVec<u8>,
-        validate: (sha256::Hash, u16),
+        validate: aluvm::libs::LibSite,
     },
 }
 

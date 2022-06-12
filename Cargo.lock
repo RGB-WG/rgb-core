@@ -11,7 +11,7 @@ checksum = "aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234"
 [[package]]
 name = "aluvm"
 version = "0.6.0"
-source = "git+https://github.com/Internet2-WG/rust-aluvm#5ec985cecec95fd330c9ef8a7c1f92842610237f"
+source = "git+https://github.com/Internet2-WG/rust-aluvm#14068b4e3a53ea417202a3df6edcc6b6cf1da2ff"
 dependencies = [
  "amplify",
  "bech32 0.9.0",
@@ -20,6 +20,9 @@ dependencies = [
  "half",
  "paste",
  "secp256k1",
+ "serde",
+ "serde_with",
+ "strict_encoding",
 ]
 
 [[package]]
@@ -393,6 +396,7 @@ dependencies = [
  "byteorder",
  "digest",
  "rand_core 0.5.1",
+ "serde",
  "subtle",
  "zeroize",
 ]

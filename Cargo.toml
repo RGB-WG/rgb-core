@@ -47,7 +47,7 @@ stens = "0.3.0"
 strict_encoding = { version = "~1.8.7", features = ["crypto", "chrono", "bitcoin", "float"] }
 commit_verify = { version = "~0.7.0-rc.4", features = ["rand", "bulletproofs"] }
 descriptor-wallet = { version = "~0.7.1", features = ["descriptors"] }
-aluvm = { version = "~0.6.0", git = "https://github.com/Internet2-WG/rust-aluvm", features = ["std"] }
+aluvm = { version = "~0.6.0", git = "https://github.com/Internet2-WG/rust-aluvm", features = ["std", "strict_encoding"] }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.28.1", features = ["rand"] }
@@ -91,5 +91,5 @@ wallet = ["bp-core/wallet"]
 cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum", "electrum-client"]
 serde = ["serde_crate", "serde_with", "half/serialize",
          "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
-         "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde",
+         "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde", "aluvm/serde",
          "bitcoin/use-serde", "bitcoin_hashes/serde",]
