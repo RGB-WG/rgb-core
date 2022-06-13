@@ -105,7 +105,8 @@ pub struct Consignment {
     /// Version, used internally
     version: u8,
 
-    // TODO: Add schema to the consignment
+    pub schema: Schema,
+
     /// Genesis data
     pub genesis: Genesis,
 
@@ -151,6 +152,7 @@ impl FromStr for Consignment {
 impl Consignment {
     #[inline]
     pub fn with(
+        schema: Schema,
         genesis: Genesis,
         endpoints: ConsignmentEndpoints,
         anchored_bundles: AnchoredBundles,
@@ -158,6 +160,7 @@ impl Consignment {
     ) -> Consignment {
         Self {
             version: RGB_CONSIGNMENT_VERSION,
+            schema,
             genesis,
             endpoints,
             state_extensions,
