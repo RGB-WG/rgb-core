@@ -28,7 +28,7 @@ use crate::{
 ///
 /// These constants are also used by embedded validation procedures representing
 /// standard metadata fields, state and transition types analyzed by them
-mod constants {
+pub mod constants {
     /// Ticker of the asset
     pub const FIELD_TYPE_TICKER: u16 = 0x00;
 
@@ -197,6 +197,9 @@ pub enum HandlerError {
 
     /// wrong format for byte-encoded data
     DataEncoding,
+
+    /// incorrect field value
+    FieldValue,
 }
 
 /// Embedded action handlers for contract nodes processed by the embedded state
@@ -212,23 +215,26 @@ mod node {
         _current_public_rights: &PublicRights,
         current_meta: &Metadata,
     ) -> Result<(), HandlerError> {
+        for (field_type, fields) in current_meta {
+            for data in fields {
+                meta::validate(*field_type, data)?;
+            }
+        }
+
         match node_subtype {
             NodeSubtype::StateTransition(TRANSITION_TYPE_ISSUE_FUNGIBLE) => {
                 fungible_issue(current_meta, previous_owned_rights, current_owned_rights)
             }
-            NodeSubtype::StateTransition(TRANSITION_TYPE_VALUE_TRANSFER) => {
-                input_output_value_eq(previous_owned_rights, current_owned_rights)
-            }
+            NodeSubtype::StateTransition(TRANSITION_TYPE_VALUE_TRANSFER) => Ok(()),
             NodeSubtype::StateTransition(TRANSITION_TYPE_IDENTITY_TRANSFER) => {
                 input_output_count_eq(previous_owned_rights, current_owned_rights)
             }
             NodeSubtype::StateTransition(TRANSITION_TYPE_ISSUE_NFT) => {
                 nft_issue(current_meta, previous_owned_rights, current_owned_rights)
             }
-            NodeSubtype::StateTransition(TRANSITION_TYPE_ISSUE_BURN) => proof_of_burn(current_meta),
-            NodeSubtype::StateTransition(TRANSITION_TYPE_ISSUE_REPLACE) => {
-                proof_of_burn(current_meta)?;
-                input_output_value_eq(previous_owned_rights, current_owned_rights)
+            NodeSubtype::StateTransition(TRANSITION_TYPE_ISSUE_BURN)
+            | NodeSubtype::StateTransition(TRANSITION_TYPE_ISSUE_REPLACE) => {
+                proof_of_burn(current_meta)
             }
             NodeSubtype::StateTransition(TRANSITION_TYPE_RIGHTS_SPLIT) => {
                 input_output_value_eq(previous_owned_rights, current_owned_rights)
@@ -369,7 +375,12 @@ mod node {
         return Err(HandlerError::NotImplemented);
     }
 
-    /// Rights split
+    /// Rights split.
+    ///
+    /// We must allocate exactly one or none rights per each right used as input
+    /// (i.e. closed seal); plus we need to control that sum of inputs is equal
+    /// to the sum of outputs for each of state types having assigned
+    /// confidential amounts
     fn input_output_value_eq(
         previous_owned_rights: &OwnedRights,
         current_owned_rights: &OwnedRights,
@@ -477,7 +488,10 @@ mod assignment {
                 NodeSubtype::StateTransition(TRANSITION_TYPE_VALUE_TRANSFER),
                 STATE_TYPE_OWNERSHIP_RIGHT,
             ) => validate_pedersen_sum(previous_state, current_state),
-            // AssignmentValidator::NoOverflow => validate_no_overflow(current_state),
+            (
+                NodeSubtype::StateTransition(TRANSITION_TYPE_ISSUE_FUNGIBLE) | NodeSubtype::Genesis,
+                STATE_TYPE_INFLATION_RIGHT,
+            ) => validate_no_overflow(current_state),
             _ => Ok(()),
         }
     }
@@ -525,6 +539,31 @@ mod assignment {
             .try_fold(0u64, |sum, value| sum.checked_add(value))
             .ok_or(HandlerError::ValueOverflow)
             .map(|_| ())
+    }
+}
+
+mod meta {
+    use super::*;
+    use crate::data;
+    use crate::schema::FieldType;
+
+    /// Validates that field value is withing the allowed ranges.
+    pub fn validate(field_type: FieldType, value: &data::Revealed) -> Result<(), HandlerError> {
+        match (field_type, value) {
+            (FIELD_TYPE_TICKER, data::Revealed::AsciiString(s)) if s.is_empty() && s.len() > 8 => {
+                Err(HandlerError::FieldValue)
+            }
+            (FIELD_TYPE_NAME, data::Revealed::AsciiString(s)) if s.is_empty() && s.len() > 256 => {
+                Err(HandlerError::FieldValue)
+            }
+            (FIELD_TYPE_PRECISION, data::Revealed::U8(s)) if *s > 18 => {
+                Err(HandlerError::FieldValue)
+            }
+            (FIELD_TYPE_TIMESTAMP, data::Revealed::I64(s)) if *s < 1602340666 => {
+                Err(HandlerError::FieldValue)
+            }
+            (_, _) => Ok(()),
+        }
     }
 }
 
