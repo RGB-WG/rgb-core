@@ -20,11 +20,10 @@ use strict_encoding::StrictEncode;
 
 use crate::{Node, NodeId, Transition};
 
-// TODO: Update the value
 // "rgb:bundle"
 static MIDSTATE_BUNDLE_ID: [u8; 32] = [
-    148, 72, 59, 59, 150, 173, 163, 140, 159, 237, 69, 118, 104, 132, 194, 110, 250, 108, 1, 140,
-    74, 248, 152, 205, 70, 32, 184, 87, 20, 102, 127, 20,
+    219, 42, 125, 118, 252, 62, 163, 226, 43, 104, 76, 97, 218, 62, 92, 108, 200, 133, 207, 235,
+    35, 72, 210, 0, 122, 143, 80, 88, 238, 145, 95, 89,
 ];
 
 /// Tag used for [`BundleId`] hash type
@@ -167,5 +166,19 @@ impl TransitionBundle {
             used_inputs.extend(set);
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use amplify::Wrapper;
+    use commit_verify::tagged_hash;
+
+    use super::*;
+
+    #[test]
+    fn test_bundle_id_midstate() {
+        let midstate = tagged_hash::Midstate::with(b"rgb:bundle");
+        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_BUNDLE_ID);
     }
 }
