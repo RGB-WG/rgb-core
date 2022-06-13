@@ -23,7 +23,7 @@ use lnpbp::chain::Chain;
 
 use super::{
     AssignmentVec, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner, ParentOwnedRights,
-    ParentPublicRights, ParentPublicRightsInner, PublicRights, PublicRightsInner,
+    ParentPublicRights, PublicRights, PublicRightsInner,
 };
 use crate::reveal::{self, MergeReveal};
 use crate::schema::{
@@ -332,8 +332,8 @@ pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
     metadata: Metadata,
-    parent_public_rights: ParentPublicRights,
     owned_rights: OwnedRights,
+    parent_public_rights: ParentPublicRights,
     public_rights: PublicRights,
 }
 
@@ -343,9 +343,9 @@ pub struct Extension {
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
-    // TODO: Add parent public rights
     parent_owned_rights: ParentOwnedRights,
     owned_rights: OwnedRights,
+    parent_public_rights: ParentPublicRights,
     public_rights: PublicRights,
 }
 
@@ -398,12 +398,17 @@ impl CommitEncode for Transition {
             .consensus_commit()
             .commit_encode(&mut e);
         len += self
-            .parent_owned_rights
+            .parent_public_rights
             .to_merkle_source()
             .consensus_commit()
             .commit_encode(&mut e);
         len += self
             .owned_rights
+            .to_merkle_source()
+            .consensus_commit()
+            .commit_encode(&mut e);
+        len += self
+            .parent_owned_rights
             .to_merkle_source()
             .consensus_commit()
             .commit_encode(&mut e);
@@ -608,12 +613,7 @@ impl Node for Transition {
     fn parent_owned_rights(&self) -> &ParentOwnedRights { &self.parent_owned_rights }
 
     #[inline]
-    fn parent_public_rights(&self) -> &ParentPublicRights {
-        lazy_static! {
-            static ref PARENT_EMPTY: ParentPublicRights = ParentPublicRights::default();
-        }
-        &PARENT_EMPTY
-    }
+    fn parent_public_rights(&self) -> &ParentPublicRights { &self.parent_public_rights }
 
     #[inline]
     fn metadata(&self) -> &Metadata { &self.metadata }
@@ -663,17 +663,17 @@ impl Extension {
         extension_type: ExtensionType,
         contract_id: ContractId,
         metadata: Metadata,
-        parent_public_rights: ParentPublicRightsInner,
-        owned_rights: OwnedRightsInner,
-        public_rights: PublicRightsInner,
+        owned_rights: OwnedRights,
+        parent_public_rights: ParentPublicRights,
+        public_rights: PublicRights,
     ) -> Self {
         Self {
             extension_type,
             contract_id,
             metadata,
-            parent_public_rights: parent_public_rights.into(),
-            owned_rights: owned_rights.into(),
-            public_rights: public_rights.into(),
+            parent_public_rights,
+            owned_rights,
+            public_rights,
         }
     }
 }
@@ -682,13 +682,15 @@ impl Transition {
     pub fn with(
         transition_type: impl Into<schema::TransitionType>,
         metadata: Metadata,
-        parent_owned_rights: ParentOwnedRights,
+        parent_public_rights: ParentPublicRights,
         owned_rights: OwnedRights,
         public_rights: PublicRights,
+        parent_owned_rights: ParentOwnedRights,
     ) -> Self {
         Self {
             transition_type: transition_type.into(),
             metadata,
+            parent_public_rights,
             parent_owned_rights,
             owned_rights,
             public_rights,
@@ -861,6 +863,7 @@ mod test {
             metadata: Default::default(),
             parent_owned_rights: Default::default(),
             owned_rights: Default::default(),
+            parent_public_rights: Default::default(),
             public_rights: Default::default(),
         };
 

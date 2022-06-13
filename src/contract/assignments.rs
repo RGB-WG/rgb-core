@@ -728,7 +728,6 @@ impl State for PedersenStrategy {
 pub struct HashStrategy;
 impl State for HashStrategy {
     type Confidential = data::Confidential;
-    // TODO: Add salt to conceal the data
     type Revealed = data::Revealed;
 }
 

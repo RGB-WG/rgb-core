@@ -37,7 +37,7 @@ pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 pub use reveal::MergeReveal;
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
-pub(crate) use rights::{OwnedRightsInner, ParentPublicRightsInner, PublicRightsInner};
+pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
 pub use seal::{IntoRevealedSeal, SealEndpoint};
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 pub use value::{AtomicValue, HomomorphicBulletproofGrin};
