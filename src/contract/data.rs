@@ -21,7 +21,7 @@ use amplify::AsAny;
 use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode, TaggedHash};
 use half::bf16;
-use stens::AsciiString;
+use stens::{AsciiString, PrimitiveType, TypeRef};
 use strict_encoding::strict_serialize;
 
 use super::{ConfidentialState, RevealedState};
@@ -358,6 +358,37 @@ impl Revealed {
         match self {
             Revealed::UnicodeString(val) => Some(val.clone()),
             _ => None,
+        }
+    }
+
+    pub fn schema_type(&self) -> TypeRef {
+        match self {
+            Revealed::U8(_) => TypeRef::u8(),
+            Revealed::U16(_) => TypeRef::u16(),
+            Revealed::U32(_) => TypeRef::u32(),
+            Revealed::U64(_) => TypeRef::u64(),
+            Revealed::U128(_) => TypeRef::u128(),
+            Revealed::U256(_) => TypeRef::Primitive(PrimitiveType::U256.into()),
+            Revealed::U512(_) => TypeRef::Primitive(PrimitiveType::U512.into()),
+            Revealed::U1024(_) => TypeRef::Primitive(PrimitiveType::U1024.into()),
+            Revealed::I8(_) => TypeRef::i8(),
+            Revealed::I16(_) => TypeRef::i16(),
+            Revealed::I32(_) => TypeRef::i32(),
+            Revealed::I64(_) => TypeRef::i64(),
+            Revealed::I128(_) => TypeRef::i128(),
+            Revealed::I256(_) => TypeRef::Primitive(PrimitiveType::I256.into()),
+            Revealed::I512(_) => TypeRef::Primitive(PrimitiveType::I512.into()),
+            Revealed::I1024(_) => TypeRef::Primitive(PrimitiveType::I1024.into()),
+            Revealed::F16B(_) => TypeRef::Primitive(PrimitiveType::F16b.into()),
+            Revealed::F16(_) => TypeRef::Primitive(PrimitiveType::F16.into()),
+            Revealed::F32(_) => TypeRef::f32(),
+            Revealed::F64(_) => TypeRef::f64(),
+            Revealed::F80(_) => TypeRef::Primitive(PrimitiveType::F80.into()),
+            Revealed::F128(_) => TypeRef::Primitive(PrimitiveType::F128.into()),
+            Revealed::F256(_) => TypeRef::Primitive(PrimitiveType::F256.into()),
+            Revealed::Bytes(_) => TypeRef::bytes(),
+            Revealed::AsciiString(_) => TypeRef::ascii_string(),
+            Revealed::UnicodeString(_) => TypeRef::unicode_string(),
         }
     }
 }

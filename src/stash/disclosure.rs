@@ -265,7 +265,7 @@ impl Disclosure {
         self.signatures = empty!();
         self.extensions
             .entry(contract_id)
-            .or_insert_with(BTreeMap::new)
+            .or_insert_with(Vec::new)
             .extend(extensions);
     }
 

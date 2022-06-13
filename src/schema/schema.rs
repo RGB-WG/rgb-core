@@ -134,8 +134,8 @@ mod _validation {
     use crate::script::{OverrideRules, ValidationScript};
     use crate::vm::Validate;
     use crate::{
-        validation, Assignment, AssignmentVec, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
-        ParentOwnedRights, ParentPublicRights, PublicRights, State,
+        data, validation, Assignment, AssignmentVec, Metadata, Node, NodeId, NodeSubtype,
+        OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights, State,
     };
 
     impl SchemaVerify for Schema {
@@ -387,8 +387,16 @@ mod _validation {
                 let field = self.field_types.get(field_type_id)
                     .expect("If the field were absent, the schema would not be able to pass the internal validation and we would not reach this point");
                 for data in set {
-                    // TODO: [validation] validate type schema
-                    // status += field.validate(*field_type_id, &data);
+                    let schema_type = data.schema_type();
+                    if &schema_type != field
+                        && !matches!((data, field), (data::Revealed::Bytes(_), TypeRef::Named(_)))
+                    {
+                        status.add_failure(validation::Failure::SchemaMismatchedDataType(
+                            *field_type_id,
+                        ));
+                    }
+                    // TODO: [validation] validate type serialization for structured types
+                    // status += field.validate(&data);
                 }
             }
 
