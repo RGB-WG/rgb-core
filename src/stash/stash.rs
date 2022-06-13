@@ -32,7 +32,7 @@ use wallet::onchain::ResolveTx;
 
 use crate::{
     seal, Consignment, ContractId, Disclosure, Extension, Genesis, Node, NodeId, Schema, SchemaId,
-    SealEndpoint, Transition,
+    SealEndpoint, Transition, TransitionBundle,
 };
 
 /// Top-level structure used by client wallets to manage all known RGB smart
@@ -123,7 +123,7 @@ pub trait Stash {
     fn consign(
         &self,
         contract_id: ContractId,
-        node: &impl Node,
+        bundle: TransitionBundle,
         anchor: Option<&Anchor<lnpbp4::MerkleProof>>,
         endpoints: &BTreeSet<SealEndpoint>,
     ) -> Result<Consignment, Self::Error>;
