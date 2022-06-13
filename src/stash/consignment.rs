@@ -373,7 +373,6 @@ pub(crate) mod test {
     }
 
     #[test]
-    #[ignore] // TODO: Fix consignment binary data
     fn test_consignment_validation() {
         let consignment = consignment();
         let schema = schema();
@@ -389,7 +388,6 @@ pub(crate) mod test {
     }
 
     #[test]
-    #[ignore] // TODO: Fix consignment binary data
     fn test_consignment_bech32() {
         let consignment = consignment();
 
