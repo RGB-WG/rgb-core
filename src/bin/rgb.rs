@@ -319,32 +319,29 @@ fn main() -> Result<(), String> {
 
     match opts.command {
         Command::Consignment { subcommand } => match subcommand {
-            ConsignmentCommand::Validate {
-                consignment,
-                schema,
-                input,
-                electrum,
-            } => {
-                let consignment: Consignment = input_read(consignment, input)?;
-                let schema = Schema::from_str(&schema.unwrap_or(s!(
-                    "schema1qxx4qkcjsgcqehyk7gg9lrp8uqw9a34r8r0qfay0lm\
-        cr3pxh7yrr2n2mvszq0s7symvkvdcf2ck6whm9zpgpqyk2nqypf8pget8vlk798ccuats4j\
-        zzn98ena4p2us7eyvmxvsz5zzvcc4yu5nvjdhlw76rkxn8vvs27f0qs4qyemfdfczyvve45\
-        qvfds8kryuuc4kzh03t2xruw932u6e7rn9szn8uz2kkcc7lrkzpw4ct4xpgej2s8e3vn224\
-        mmwh8yjwm3c3uzcsz350urqt6gfm6wpj6gcajd6uevncqy74u87jtfmx8raza9nlm2hazyd\
-        l7hyevmls6amyy4kl7rv6skggq"
-                )))?;
-                let status = consignment.validate(
-                    &schema,
-                    None,
-                    ElectrumClient::new(&electrum).map_err(|err| format!("{:#?}", err))?,
-                );
-                println!(
-                    "{}",
-                    serde_yaml::to_string(&status)
-                        .as_ref()
-                        .map_err(serde_yaml::Error::to_string)?
-                );
+            ConsignmentCommand::Validate { .. } => {
+                /* TODO: Re-implement reading consignments from a file
+                        let consignment: Consignment = input_read(consignment, input)?;
+                        let schema = Schema::from_str(&schema.unwrap_or(s!(
+                            "schema1qxx4qkcjsgcqehyk7gg9lrp8uqw9a34r8r0qfay0lm\
+                cr3pxh7yrr2n2mvszq0s7symvkvdcf2ck6whm9zpgpqyk2nqypf8pget8vlk798ccuats4j\
+                zzn98ena4p2us7eyvmxvsz5zzvcc4yu5nvjdhlw76rkxn8vvs27f0qs4qyemfdfczyvve45\
+                qvfds8kryuuc4kzh03t2xruw932u6e7rn9szn8uz2kkcc7lrkzpw4ct4xpgej2s8e3vn224\
+                mmwh8yjwm3c3uzcsz350urqt6gfm6wpj6gcajd6uevncqy74u87jtfmx8raza9nlm2hazyd\
+                l7hyevmls6amyy4kl7rv6skggq"
+                        )))?;
+                        let status = consignment.validate(
+                            &schema,
+                            None,
+                            ElectrumClient::new(&electrum).map_err(|err| format!("{:#?}", err))?,
+                        );
+                        println!(
+                            "{}",
+                            serde_yaml::to_string(&status)
+                                .as_ref()
+                                .map_err(serde_yaml::Error::to_string)?
+                        );
+                     */
             }
         },
         Command::Disclosure { subcommand } => match subcommand {

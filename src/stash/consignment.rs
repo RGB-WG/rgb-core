@@ -11,6 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
+use std::io::Read;
 use std::str::FromStr;
 
 use bitcoin::hashes::{sha256, sha256t};
@@ -21,7 +22,7 @@ use commit_verify::{
     TaggedHash,
 };
 use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
-use strict_encoding::LargeVec;
+use strict_encoding::{LargeVec, StrictDecode};
 use wallet::onchain::ResolveTx;
 
 use crate::contract::ConcealSeals;
@@ -99,9 +100,8 @@ impl FromStr for ConsignmentId {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(Clone, PartialEq, Eq, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, StrictEncode)]
 pub struct Consignment {
-    // TODO: Fail to decode on an unknown version number
     /// Version, used internally
     version: u8,
 
@@ -136,15 +136,16 @@ impl ConsensusCommit for Consignment {
     type Commitment = ConsignmentId;
 }
 
-impl bech32::Strategy for Consignment {
-    const HRP: &'static str = "consignment";
-    type Strategy = bech32::strategies::CompressedStrictEncoding;
-}
-
-impl FromStr for Consignment {
-    type Err = bech32::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Consignment::from_bech32_str(s) }
+impl StrictDecode for Consignment {
+    fn strict_decode<D: Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
+        let consignment = strict_decode_self!(d; version, schema, genesis, endpoints, anchored_bundles, state_extensions);
+        if consignment.version != 0 {
+            return Err(strict_encoding::Error::UnsupportedDataStructure(
+                "Consignment versions above 0 are not supported",
+            ));
+        }
+        Ok(consignment)
+    }
 }
 
 // TODO #60: Implement different conceal procedures for the consignment
