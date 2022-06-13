@@ -65,6 +65,10 @@ impl From<BundleId> for lnpbp4::Message {
     fn from(id: BundleId) -> Self { lnpbp4::Message::from_inner(id.into_inner()) }
 }
 
+impl From<lnpbp4::Message> for BundleId {
+    fn from(id: lnpbp4::Message) -> Self { BundleId(sha256t::Hash::from_inner(id.into_inner())) }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
