@@ -29,7 +29,9 @@ use bp::dbc::AnchorId;
 use bp::seals::txout::TxoSeal;
 
 use crate::schema::OwnedRightType;
-use crate::{Consignment, Extension, Node, NodeId, NodeOutpoint, Transition};
+use crate::{
+    BundleId, Consignment, Extension, Node, NodeId, NodeOutpoint, Transition, TransitionBundle,
+};
 
 /// Errors accessing graph data via [`GraphApi`].
 ///
@@ -40,8 +42,8 @@ use crate::{Consignment, Extension, Node, NodeId, NodeOutpoint, Transition};
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum ConsistencyError {
-    /// Node with id {0} is not present in the storage/container
-    NodeIdAbsent(NodeId),
+    /// Bundle with id {0} is not present in the storage/container
+    BundleIdAbsent(BundleId),
 
     /// Transition with id {0} is not present in the storage/container
     TransitionAbsent(NodeId),
@@ -80,6 +82,13 @@ pub trait GraphApi {
     /// Returns reference to a node (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
     fn node_by_id(&self, node_id: NodeId) -> Option<&dyn Node>;
+
+    fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
+
+    fn known_transitions_by_bundle_id(
+        &self,
+        bundle_id: BundleId,
+    ) -> Result<Vec<&Transition>, ConsistencyError>;
 
     /// Returns reference to a state transition, if known, matching the provided
     /// id. If id is unknown, or corresponds to other type of the node (genesis
@@ -177,10 +186,25 @@ impl GraphApi for Consignment {
             .or_else(|| {
                 self.anchored_bundles
                     .iter()
-                    .flat_map(|(_, bundle)| bundle.transitions())
+                    .flat_map(|(_, bundle)| bundle.known_transitions())
                     .find(|transition| transition.node_id() == node_id)
                     .map(|transition| transition as &dyn Node)
             })
+    }
+
+    fn known_transitions_by_bundle_id(
+        &self,
+        bundle_id: BundleId,
+    ) -> Result<Vec<&Transition>, ConsistencyError> {
+        Ok(self.bundle_by_id(bundle_id)?.known_transitions().collect())
+    }
+
+    fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError> {
+        self.anchored_bundles
+            .iter()
+            .map(|(_, bundle)| bundle)
+            .find(|bundle| bundle.bundle_id() == bundle_id)
+            .ok_or(ConsistencyError::BundleIdAbsent(bundle_id))
     }
 
     fn transition_by_id(&self, node_id: NodeId) -> Result<&Transition, ConsistencyError> {
@@ -202,7 +226,7 @@ impl GraphApi for Consignment {
             .iter()
             .find_map(|(anchor, bundle)| {
                 bundle
-                    .transitions()
+                    .known_transitions()
                     .into_iter()
                     .find(|transition| transition.node_id() == node_id)
                     .map(|transition| (transition, anchor.txid))

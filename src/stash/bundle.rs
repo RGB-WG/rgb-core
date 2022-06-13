@@ -12,8 +12,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 
-use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::{CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
+use bitcoin_hashes::{sha256, sha256t, Hash};
+use commit_verify::{
+    lnpbp4, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
+};
 use strict_encoding::StrictEncode;
 
 use crate::{Node, NodeId, Transition};
@@ -57,6 +59,10 @@ where Msg: AsRef<[u8]>
 pub trait ConcealTransitions {
     fn conceal_transitions(&mut self) -> usize { self.conceal_transitions_except(&vec![]) }
     fn conceal_transitions_except(&mut self, node_ids: &[NodeId]) -> usize;
+}
+
+impl From<BundleId> for lnpbp4::Message {
+    fn from(id: BundleId) -> Self { lnpbp4::Message::from_inner(id.into_inner()) }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
@@ -130,12 +136,14 @@ impl<'me> IntoIterator for &'me TransitionBundle {
 impl TransitionBundle {
     pub fn bundle_id(&self) -> BundleId { self.consensus_commit() }
 
-    pub fn transitions(&self) -> std::collections::btree_map::Keys<Transition, BTreeSet<u16>> {
+    pub fn known_transitions(
+        &self,
+    ) -> std::collections::btree_map::Keys<Transition, BTreeSet<u16>> {
         self.revealed.keys()
     }
 
-    pub fn revealed_node_ids(&self) -> BTreeSet<NodeId> {
-        self.transitions().map(Transition::node_id).collect()
+    pub fn known_node_ids(&self) -> BTreeSet<NodeId> {
+        self.known_transitions().map(Transition::node_id).collect()
     }
 }
 

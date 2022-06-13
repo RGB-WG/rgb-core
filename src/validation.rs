@@ -22,7 +22,7 @@ use wallet::onchain::ResolveTx;
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
-use crate::{BundleId, SealEndpoint};
+use crate::{BundleId, GraphApi, SealEndpoint};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -251,7 +251,7 @@ pub struct Validator<'validator, R: ResolveTx> {
     contract_id: ContractId,
     node_index: BTreeMap<NodeId, &'validator dyn Node>,
     anchor_index: BTreeMap<NodeId, &'validator Anchor<lnpbp4::MerkleProof>>,
-    end_transitions: Vec<&'validator dyn Node>,
+    end_transitions: Vec<(&'validator dyn Node, BundleId)>,
     validation_index: BTreeSet<NodeId>,
 
     resolver: R,
@@ -275,7 +275,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
             if !bundle.validate() {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
-            for transition in bundle.transitions() {
+            for transition in bundle.known_transitions() {
                 let node_id = transition.node_id();
                 node_index.insert(node_id, transition);
                 anchor_index.insert(node_id, anchor);
@@ -291,42 +291,42 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         // This is pretty simple operation; it takes a lot of code because
         // we would like to detect any potential issues with the consignment
         // structure and notify user about them (in form of generated warnings)
-        let mut end_transitions = Vec::<&dyn Node>::new();
-        for (node_id, seal_endpoint) in &consignment.endpoints {
-            if let Some(node) = node_index.get(node_id) {
+        let mut end_transitions = Vec::<(&dyn Node, BundleId)>::new();
+        for (bundle_id, seal_endpoint) in &consignment.endpoints {
+            let transitions = match consignment.known_transitions_by_bundle_id(*bundle_id) {
+                Ok(transitions) => transitions,
+                Err(_) => {
+                    status.add_failure(Failure::BundleInvalid(*bundle_id));
+                    continue;
+                }
+            };
+            for transition in transitions {
+                let node_id = transition.node_id();
                 // Checking for endpoint definition duplicates
-                if node
+                if transition
                     .to_confiential_seals()
                     .contains(&seal_endpoint.commit_conceal())
                 {
                     if end_transitions
                         .iter()
-                        .filter(|n| n.node_id() == *node_id)
+                        .filter(|(n, _)| n.node_id() == node_id)
                         .collect::<Vec<_>>()
                         .len()
                         > 0
                     {
-                        status.add_warning(Warning::EndpointDuplication(*node_id, *seal_endpoint));
+                        status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
                     } else {
-                        end_transitions.push(*node);
+                        end_transitions.push((transition, *bundle_id));
                     }
                 } else {
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
                     // endpoint list
                     status.add_warning(Warning::EndpointTransitionSealNotFound(
-                        *node_id,
+                        node_id,
                         *seal_endpoint,
                     ));
                 }
-            } else {
-                // ~~We generate just a warning here because it's up to a user
-                // to decide whether to accept consignment with wrong
-                // endpoint list~~
-                // Update: warning is transformed into an error, since it may
-                // lead to acceptance of non-verified consignment assigning
-                // positive fake balance to the user-controlled UTXO
-                status.add_failure(Failure::EndpointTransitionNotFound(*node_id));
             }
         }
 
@@ -413,8 +413,8 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         //               aiming to validate the consignment as a whole, but
         //               instead treat it as a superposition of subgraphs, one
         //               for each endpoint; and validate them independently.
-        for node in self.end_transitions.clone() {
-            self.validate_branch(schema, node);
+        for (node, bundle_id) in self.end_transitions.clone() {
+            self.validate_branch(schema, node, bundle_id);
         }
 
         // Generate warning if some of the transitions within the consignment
@@ -428,7 +428,12 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         }
     }
 
-    fn validate_branch(&mut self, schema: &Schema, node: &'validator dyn Node) {
+    fn validate_branch(
+        &mut self,
+        schema: &Schema,
+        node: &'validator dyn Node,
+        bundle_id: BundleId,
+    ) {
         let mut queue: VecDeque<&dyn Node> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a
@@ -464,12 +469,12 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // [VALIDATION]: Check that transition is committed into the
                 //               anchor. This must be done with
                 //               deterministic bitcoin commitments & LNPBP-4
-                if anchor.convolve(self.contract_id, node_id.into()).is_err() {
+                if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
                     self.status
                         .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.txid));
                 }
 
-                self.validate_graph_node(node, anchor);
+                self.validate_graph_node(node, bundle_id, anchor);
 
             // Ouch, we are out of that multi-level nested cycles :)
             } else if node_type != NodeType::Genesis && node_type != NodeType::StateExtension {
@@ -521,6 +526,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
     fn validate_graph_node(
         &mut self,
         node: &'validator dyn Node,
+        bundle_id: BundleId,
         anchor: &'validator Anchor<lnpbp4::MerkleProof>,
     ) {
         let txid = anchor.txid;
@@ -556,7 +562,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // [VALIDATION]: Checking anchor deterministic bitcoin
                 //               commitment
                 if anchor
-                    .verify(self.contract_id, node.node_id().into(), witness_tx.clone())
+                    .verify(self.contract_id, bundle_id.into(), witness_tx.clone())
                     .is_ok()
                 {
                     // TODO: Save error details

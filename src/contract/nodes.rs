@@ -14,7 +14,7 @@ use std::io;
 
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
-use commit_verify::lnpbp4::{Message, ProtocolId};
+use commit_verify::lnpbp4::ProtocolId;
 use commit_verify::{
     commit_encode, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
     ToMerkleSource,
@@ -78,10 +78,6 @@ where Msg: AsRef<[u8]>
 
 impl commit_encode::Strategy for NodeId {
     type Strategy = commit_encode::strategies::UsingStrict;
-}
-
-impl From<NodeId> for Message {
-    fn from(id: NodeId) -> Self { Message::from_inner(id.into_inner().into_inner()) }
 }
 
 /// Unique contract identifier equivalent to the contract genesis commitment

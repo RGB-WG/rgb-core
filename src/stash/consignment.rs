@@ -27,11 +27,11 @@ use wallet::onchain::ResolveTx;
 use crate::contract::ConcealSeals;
 use crate::stash::TransitionBundle;
 use crate::{
-    schema, seal, validation, ConcealState, ConsistencyError, Extension, Genesis, GraphApi, Node,
-    NodeId, Schema, SealEndpoint, Transition, Validator,
+    schema, seal, validation, BundleId, ConcealState, ConsistencyError, Extension, Genesis,
+    GraphApi, Node, NodeId, Schema, SealEndpoint, Transition, Validator,
 };
 
-pub type ConsignmentEndpoints = Vec<(NodeId, SealEndpoint)>;
+pub type ConsignmentEndpoints = Vec<(BundleId, SealEndpoint)>;
 pub type AnchoredBundles = LargeVec<(Anchor<lnpbp4::MerkleProof>, TransitionBundle)>;
 pub type ExtensionList = LargeVec<Extension>;
 
@@ -187,7 +187,7 @@ impl Consignment {
         set.extend(
             self.anchored_bundles
                 .iter()
-                .map(|(_, bundle)| bundle.revealed_node_ids())
+                .map(|(_, bundle)| bundle.known_node_ids())
                 .flatten(),
         );
         set.extend(self.state_extensions.iter().map(Extension::node_id));
@@ -195,19 +195,19 @@ impl Consignment {
     }
 
     #[inline]
-    pub fn endpoint_node_ids(&self) -> BTreeSet<NodeId> {
+    pub fn endpoint_bundle_ids(&self) -> BTreeSet<BundleId> {
         self.endpoints
             .iter()
-            .map(|(node_id, _)| node_id)
+            .map(|(bundle_id, _)| bundle_id)
             .copied()
             .collect()
     }
 
     #[inline]
-    pub fn endpoint_transitions(&self) -> Vec<&Transition> {
-        self.endpoint_node_ids()
+    pub fn endpoint_bundles(&self) -> Vec<&TransitionBundle> {
+        self.endpoint_bundle_ids()
             .into_iter()
-            .filter_map(|node_id| self.transition_by_id(node_id).ok())
+            .filter_map(|bundle_id| self.bundle_by_id(bundle_id).ok())
             .collect()
     }
 
@@ -219,8 +219,11 @@ impl Consignment {
         if self
             .endpoints
             .iter()
-            .find(|(id, _)| *id == node_id)
-            .is_none()
+            .filter_map(|(id, _)| self.bundle_by_id(*id).ok())
+            .map(|bundle| bundle.known_node_ids())
+            .flatten()
+            .find(|id| *id == node_id)
+            .is_some()
         {
             return Err(ConsistencyError::NotEndpoint(node_id));
         }
@@ -241,9 +244,11 @@ impl Consignment {
         &self,
         types: &[schema::TransitionType],
     ) -> Vec<&Transition> {
-        self.endpoint_node_ids()
+        self.endpoint_bundle_ids()
             .into_iter()
-            .filter_map(|node_id| self.transition_by_id(node_id).ok())
+            .filter_map(|bundle_id| self.known_transitions_by_bundle_id(bundle_id).ok())
+            .map(Vec::into_iter)
+            .flatten()
             .filter(|node| types.contains(&node.transition_type()))
             .collect()
     }

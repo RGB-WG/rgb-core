@@ -108,7 +108,8 @@ impl<'iter> Iterator for MeshIter<'iter> {
                 }
             }
             let next = self.bundles.next();
-            self.transitions = next.map(|(anchor, bundle)| (anchor.txid, bundle.transitions()));
+            self.transitions =
+                next.map(|(anchor, bundle)| (anchor.txid, bundle.known_transitions()));
             if self.transitions.is_none() {
                 return None;
             }
@@ -143,7 +144,7 @@ impl Consignment {
     ) -> MeshIter<'iter> {
         let mut bundles = self.anchored_bundles.iter();
         let next = bundles.next();
-        let transitions = next.map(|(anchor, bundle)| (anchor.txid, bundle.transitions()));
+        let transitions = next.map(|(anchor, bundle)| (anchor.txid, bundle.known_transitions()));
         MeshIter {
             bundles,
             transitions,
