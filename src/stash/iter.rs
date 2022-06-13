@@ -12,6 +12,7 @@
 //! Iterators for stash-related data structures ([`Stash`] implementations,
 //! [`Consignment`]s, [`Disclosure`]s)
 
+use std::collections::{btree_map, BTreeSet};
 use std::slice;
 
 use bitcoin::Txid;
@@ -19,7 +20,7 @@ use bp::dbc::Anchor;
 use commit_verify::lnpbp4;
 
 use crate::schema::{OwnedRightType, TransitionType};
-use crate::{Consignment, ConsistencyError, GraphApi, Node, NodeId, Transition};
+use crate::{Consignment, ConsistencyError, GraphApi, Node, NodeId, Transition, TransitionBundle};
 
 /// Iterator over transitions and corresponding witness transaction ids which
 /// can be created out of consignment data. Transitions of this type must be
@@ -84,7 +85,8 @@ impl<'iter> Iterator for ChainIter<'iter> {
 
 #[derive(Debug)]
 pub struct MeshIter<'iter> {
-    iter: slice::Iter<'iter, (Anchor<lnpbp4::MerkleProof>, Transition)>,
+    bundles: slice::Iter<'iter, (Anchor<lnpbp4::MerkleProof>, TransitionBundle)>,
+    transitions: Option<(Txid, btree_map::Keys<'iter, Transition, BTreeSet<u16>>)>,
     transition_types: &'iter [TransitionType],
 }
 
@@ -92,15 +94,25 @@ impl<'iter> Iterator for MeshIter<'iter> {
     type Item = (&'iter Transition, Txid);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((anchor, transition)) = self.iter.next() {
-            if self
-                .transition_types
-                .contains(&transition.transition_type())
+        loop {
+            while let Some((txid, transition)) = self
+                .transitions
+                .as_mut()
+                .and_then(|(txid, iter)| iter.next().map(|transition| (txid, transition)))
             {
-                return Some((transition, anchor.txid));
+                if self
+                    .transition_types
+                    .contains(&transition.transition_type())
+                {
+                    return Some((transition, *txid));
+                }
+            }
+            let next = self.bundles.next();
+            self.transitions = next.map(|(anchor, bundle)| (anchor.txid, bundle.transitions()));
+            if self.transitions.is_none() {
+                return None;
             }
         }
-        return None;
     }
 }
 
@@ -129,9 +141,12 @@ impl Consignment {
         &'iter self,
         transition_types: &'iter [TransitionType],
     ) -> MeshIter<'iter> {
-        let iter = self.state_transitions.iter();
+        let mut bundles = self.anchored_bundles.iter();
+        let next = bundles.next();
+        let transitions = next.map(|(anchor, bundle)| (anchor.txid, bundle.transitions()));
         MeshIter {
-            iter,
+            bundles,
+            transitions,
             transition_types,
         }
     }

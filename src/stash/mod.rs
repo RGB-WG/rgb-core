@@ -31,6 +31,7 @@ mod disclosure;
 mod graph;
 mod stash;
 mod bundle;
+mod iter;
 
 #[cfg(feature = "wallet")]
 pub use anchor::AnchorExt;
@@ -41,4 +42,5 @@ pub use consignment::{
 };
 pub use disclosure::{Disclosure, RGB_DISCLOSURE_VERSION};
 pub use graph::{ConsistencyError, GraphApi};
+pub use iter::{ChainIter, MeshIter};
 pub use stash::Stash;
