@@ -34,10 +34,10 @@ use crate::{ConcealAnchors, ConcealSeals, ConcealState, ContractId, Extension, T
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
 
-// TODO #62: Change the value
+// "rgb:disclosure"
 static MIDSTATE_DISCLOSURE_ID: [u8; 32] = [
-    8, 36, 37, 167, 51, 70, 76, 241, 171, 132, 169, 56, 76, 108, 174, 226, 197, 98, 75, 254, 29,
-    125, 170, 233, 184, 121, 13, 183, 90, 51, 134, 6,
+    230, 128, 38, 245, 29, 214, 250, 240, 128, 2, 99, 77, 116, 110, 36, 100, 173, 187, 58, 179, 73,
+    121, 157, 241, 96, 84, 44, 86, 141, 48, 95, 119,
 ];
 
 /// Tag used for [`DisclosureId`] hash types
@@ -55,11 +55,10 @@ impl sha256t::Tag for DisclosureIdTag {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
 #[derive(StrictEncode, StrictDecode)]
-#[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[wrapper(Debug)]
 #[display(DisclosureId::to_bech32_string)]
 pub struct DisclosureId(sha256t::Hash<DisclosureIdTag>);
 
-// TODO: Use tagged protocol
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for DisclosureId
 where Msg: AsRef<[u8]>
 {
@@ -310,3 +309,17 @@ impl Disclosure {
 }
 
 // TODO #63: Validate disclosures
+
+#[cfg(test)]
+mod test {
+    use amplify::Wrapper;
+    use commit_verify::tagged_hash;
+
+    use super::*;
+
+    #[test]
+    fn test_container_id_midstate() {
+        let midstate = tagged_hash::Midstate::with(b"rgb:disclosure");
+        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_DISCLOSURE_ID);
+    }
+}
