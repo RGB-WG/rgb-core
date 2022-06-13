@@ -29,7 +29,7 @@ use std::str::FromStr;
 // that we do not use the standard secp256k1zkp library
 use amplify::hex::{Error, FromHex};
 use amplify::{Slice32, Wrapper};
-use bitcoin_hashes::sha256::Midstate;
+use bitcoin::hashes::sha256::Midstate;
 use commit_verify::{commit_encode, CommitConceal, CommitEncode, CommitVerify, CommitmentProtocol};
 use secp256k1zkp;
 pub use secp256k1zkp::pedersen;

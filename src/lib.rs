@@ -29,8 +29,6 @@ extern crate amplify;
 extern crate strict_encoding;
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate bitcoin_hashes;
 
 #[cfg(feature = "serde")]
 #[macro_use]

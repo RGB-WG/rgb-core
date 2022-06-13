@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 #[cfg(feature = "wallet")]
 use amplify::Wrapper;
 #[cfg(feature = "wallet")]
-use bitcoin_hashes::Hash;
+use bitcoin::hashes::Hash;
 #[cfg(feature = "wallet")]
 use bp::dbc::anchor::Error;
 use bp::dbc::Anchor;

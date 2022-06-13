@@ -12,7 +12,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 
-use bitcoin_hashes::{sha256, sha256t, Hash};
+use bitcoin::hashes::{sha256, sha256t, Hash};
 use commit_verify::{
     lnpbp4, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
 };

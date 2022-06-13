@@ -18,8 +18,8 @@ use std::io;
 use amplify::num::apfloat::ieee;
 use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::AsAny;
-use bitcoin::hashes::{sha256d, Hash};
-use commit_verify::{commit_encode, CommitConceal, CommitEncode};
+use bitcoin::hashes::{sha256, sha256t};
+use commit_verify::{commit_encode, CommitConceal, CommitEncode, TaggedHash};
 use half::bf16;
 use stens::AsciiString;
 use strict_encoding::strict_serialize;
@@ -165,39 +165,38 @@ impl Ord for Revealed {
     }
 }
 
-// # Security analysis
-//
-// While RIPEMD-160 collision security is not perfect and a
-// [known attack exists](https://eprint.iacr.org/2004/199.pdf)
-// for our purposes it still works well. First, we use SHA-256 followed by
-// RIPEMD-160 (known as bitcoin hash 160 function), and even if a collision for
-// a resulting RIPEMD-160 hash would be known, to fake the commitment we still
-// and present verifier with some alternative data we have to find a SHA-256
-// collision for RIPEMD-160 preimage with meaningful SHA-256 preimage, which
-// requires us to break SHA-256 collision resistance. Second, when we transfer
-// the confidential state data, they will occupy space, and 20 bytes of hash
-// is much better than 32 bytes, especially for low-profile original state data
-// (like numbers).
-// TODO: Use tagged hash
-hash_newtype!(
-    Confidential,
-    sha256d::Hash,
-    20,
-    doc = "Confidential representation of data"
-);
+// "rgb:data:confidential"
+static MIDSTATE_CONFIDENTIAL_DATA: [u8; 32] = [
+    151, 235, 12, 105, 100, 154, 61, 159, 108, 179, 41, 229, 218, 159, 57, 12, 233, 248, 167, 213,
+    228, 9, 202, 215, 27, 84, 249, 215, 93, 189, 75, 146,
+];
 
-impl strict_encoding::Strategy for Confidential {
-    type Strategy = strict_encoding::strategies::HashFixedBytes;
+/// Tag used for [`Confidential`] hash value of the data
+pub struct ConfidentialTag;
+
+impl sha256t::Tag for ConfidentialTag {
+    #[inline]
+    fn engine() -> sha256::HashEngine {
+        let midstate = sha256::Midstate::from_inner(MIDSTATE_CONFIDENTIAL_DATA);
+        sha256::HashEngine::from_midstate(midstate, 64)
+    }
+}
+
+/// Blind version of transaction outpoint-based single-use-seal
+#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
+#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[wrapper(Debug, Display)]
+pub struct Confidential(sha256t::Hash<ConfidentialTag>);
+
+impl commit_encode::Strategy for Confidential {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl ConfidentialState for Confidential {}
 
 impl AsAny for Confidential {
     fn as_any(&self) -> &dyn Any { self as &dyn Any }
-}
-
-impl commit_encode::Strategy for Confidential {
-    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl Revealed {
@@ -365,6 +364,8 @@ impl Revealed {
 
 #[cfg(test)]
 mod test {
+    use amplify::Wrapper;
+    use commit_verify::tagged_hash;
     use strict_encoding::StrictDecode;
 
     use super::super::test::test_confidential;
@@ -439,6 +440,15 @@ mod test {
         0xf8, 0x3b, 0x1b, 0xcd, 0xd8, 0x82, 0x55, 0xe1, 0xf9, 0x37, 0x52, 0xeb, 0x20, 0x90, 0xfe,
         0xa9, 0x14, 0x4f, 0x8a, 0xe1,
     ];
+
+    #[test]
+    fn test_confidential_midstate() {
+        let midstate = tagged_hash::Midstate::with(b"rgb:data:confidential");
+        assert_eq!(
+            midstate.into_inner().into_inner(),
+            MIDSTATE_CONFIDENTIAL_DATA
+        );
+    }
 
     // Normal encode/decode testing
     #[test]

@@ -50,7 +50,6 @@ aluvm = { version = "~0.6.0", features = ["std", "strict_encoding"] }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.28.1", features = ["rand"] }
-bitcoin_hashes = "~0.10.0" # we need macro from here
 electrum-client = { version = "0.10.0", optional = true } # TODO: Remove electrum dependency
 bech32 = "~0.9.0"
 # Core rust projects
@@ -91,4 +90,4 @@ cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum", "electr
 serde = ["serde_crate", "serde_with", "half/serialize",
          "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
          "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde", "aluvm/serde",
-         "bitcoin/use-serde", "bitcoin_hashes/serde",]
+         "bitcoin/use-serde"]

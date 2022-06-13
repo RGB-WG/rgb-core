@@ -1124,7 +1124,6 @@ dependencies = [
  "amplify",
  "bech32 0.9.0",
  "bitcoin",
- "bitcoin_hashes",
  "bp-core",
  "chrono",
  "clap",

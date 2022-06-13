@@ -224,7 +224,7 @@ impl Metadata {
 #[cfg(test)]
 mod test {
     use amplify::Wrapper;
-    use bitcoin_hashes::Hash;
+    use bitcoin::hashes::Hash;
     use commit_verify::merkle::MerkleNode;
     use commit_verify::{merklize, CommitEncode};
     use secp256k1zkp::rand::{thread_rng, RngCore};

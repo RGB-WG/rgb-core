@@ -9,12 +9,9 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::io::Write;
-
-use bitcoin_hashes::{sha256, sha256t};
+use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{
-    commit_encode, CommitConceal, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol,
-    TaggedHash,
+    commit_encode, CommitConceal, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
 };
 use stens::AsciiString;
 use strict_encoding::{strict_serialize, StrictEncode};
@@ -83,11 +80,8 @@ impl sha256t::Tag for ConfidentialContainerTag {
 #[wrapper(Debug, Display)]
 pub struct Confidential(sha256t::Hash<ConfidentialContainerTag>);
 
-impl CommitEncode for Confidential {
-    fn commit_encode<E: Write>(&self, e: E) -> usize {
-        let _ = ContainerId::commit(&self.0).strict_encode(e);
-        32
-    }
+impl commit_encode::Strategy for Confidential {
+    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl ConsensusCommit for Confidential {
