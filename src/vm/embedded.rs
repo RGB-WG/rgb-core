@@ -550,10 +550,12 @@ mod meta {
     /// Validates that field value is withing the allowed ranges.
     pub fn validate(field_type: FieldType, value: &data::Revealed) -> Result<(), HandlerError> {
         match (field_type, value) {
-            (FIELD_TYPE_TICKER, data::Revealed::AsciiString(s)) if s.is_empty() && s.len() > 8 => {
+            (FIELD_TYPE_TICKER, data::Revealed::AsciiString(s))
+                if s.is_empty() || s.len() > 8 || s.to_ascii_uppercase() != s.to_string() =>
+            {
                 Err(HandlerError::FieldValue)
             }
-            (FIELD_TYPE_NAME, data::Revealed::AsciiString(s)) if s.is_empty() && s.len() > 256 => {
+            (FIELD_TYPE_NAME, data::Revealed::AsciiString(s)) if s.is_empty() || s.len() > 256 => {
                 Err(HandlerError::FieldValue)
             }
             (FIELD_TYPE_PRECISION, data::Revealed::U8(s)) if *s > 18 => {
