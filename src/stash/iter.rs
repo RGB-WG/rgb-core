@@ -55,11 +55,7 @@ impl<'iter> Iterator for ChainIter<'iter> {
     type Item = (&'iter Transition, Txid);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = if let Some(item) = self.next_item {
-            item
-        } else {
-            return None;
-        };
+        let item = self.next_item?;
 
         let output = if let Some(output) = item
             .0
@@ -110,9 +106,7 @@ impl<'iter> Iterator for MeshIter<'iter> {
             let next = self.bundles.next();
             self.transitions =
                 next.map(|(anchor, bundle)| (anchor.txid, bundle.known_transitions()));
-            if self.transitions.is_none() {
-                return None;
-            }
+            self.transitions.as_ref()?;
         }
     }
 }

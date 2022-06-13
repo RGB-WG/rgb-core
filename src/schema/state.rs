@@ -133,7 +133,7 @@ mod _validation {
                                 Some(_) => {
                                     status.add_info(
                                         validation::Info::UncheckableConfidentialStateData(
-                                            node_id.clone(),
+                                            *node_id,
                                             assignment_id,
                                         ),
                                     );

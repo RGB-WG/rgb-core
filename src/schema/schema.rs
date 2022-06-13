@@ -370,7 +370,10 @@ mod _validation {
                 });
 
             for (field_type_id, occ) in metadata_structure {
-                let set = metadata.get(field_type_id).cloned().unwrap_or(bset!());
+                let set = metadata
+                    .get(field_type_id)
+                    .cloned()
+                    .unwrap_or_else(BTreeSet::new);
 
                 // Checking number of field occurrences
                 if let Err(err) = occ.check(set.len() as u16) {
@@ -441,7 +444,7 @@ mod _validation {
             let mut status = validation::Status::new();
 
             public_rights
-                .difference(&public_rights_structure)
+                .difference(public_rights_structure)
                 .for_each(|public_type_id| {
                     status.add_failure(validation::Failure::SchemaUnknownPublicRightType(
                         node_id,
@@ -493,18 +496,16 @@ mod _validation {
 
                 match owned_rights.get(owned_type_id) {
                     None => {}
-                    Some(AssignmentVec::Declarative(set)) => set.into_iter().for_each(|data| {
+                    Some(AssignmentVec::Declarative(set)) => set.iter().for_each(|data| {
                         status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
-                    Some(AssignmentVec::DiscreteFiniteField(set)) => {
-                        set.into_iter().for_each(|data| {
-                            status += assignment.validate(&node_id, *owned_type_id, data)
-                        })
-                    }
-                    Some(AssignmentVec::CustomData(set)) => set.into_iter().for_each(|data| {
+                    Some(AssignmentVec::DiscreteFiniteField(set)) => set.iter().for_each(|data| {
                         status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
-                    Some(AssignmentVec::Container(set)) => set.into_iter().for_each(|data| {
+                    Some(AssignmentVec::CustomData(set)) => set.iter().for_each(|data| {
+                        status += assignment.validate(&node_id, *owned_type_id, data)
+                    }),
+                    Some(AssignmentVec::Container(set)) => set.iter().for_each(|data| {
                         status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
                 };
@@ -522,7 +523,7 @@ mod _validation {
             let mut status = validation::Status::new();
 
             public_rights
-                .difference(&public_rights_structure)
+                .difference(public_rights_structure)
                 .for_each(|public_type_id| {
                     status.add_failure(validation::Failure::SchemaUnknownPublicRightType(
                         node_id,
@@ -580,16 +581,13 @@ mod _validation {
                 Some(node) => node,
             };
 
-            fn filter<STATE>(
-                set: &Vec<Assignment<STATE>>,
-                indexes: &Vec<u16>,
-            ) -> Vec<Assignment<STATE>>
+            fn filter<STATE>(set: &[Assignment<STATE>], indexes: &[u16]) -> Vec<Assignment<STATE>>
             where
                 STATE: State + Clone,
                 STATE::Confidential: PartialEq + Eq,
                 STATE::Confidential: From<<STATE::Revealed as CommitConceal>::ConcealedCommitment>,
             {
-                set.into_iter()
+                set.iter()
                     .enumerate()
                     .filter_map(|(index, item)| {
                         if indexes.contains(&(index as u16)) {
@@ -605,35 +603,45 @@ mod _validation {
                 match parent_node.owned_rights_by_type(*type_id) {
                     Some(AssignmentVec::Declarative(set)) => {
                         let set = filter(set, indexes);
-                        owned_rights
+                        if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert(AssignmentVec::Declarative(Default::default()))
+                            .or_insert_with(|| AssignmentVec::Declarative(Default::default()))
                             .declarative_assignment_vec_mut()
-                            .map(|state| state.extend(set));
+                        {
+                            state.extend(set);
+                        }
                     }
                     Some(AssignmentVec::DiscreteFiniteField(set)) => {
                         let set = filter(set, indexes);
-                        owned_rights
+                        if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert(AssignmentVec::DiscreteFiniteField(Default::default()))
+                            .or_insert_with(|| {
+                                AssignmentVec::DiscreteFiniteField(Default::default())
+                            })
                             .value_assignment_vec_mut()
-                            .map(|state| state.extend(set));
+                        {
+                            state.extend(set);
+                        }
                     }
                     Some(AssignmentVec::CustomData(set)) => {
                         let set = filter(set, indexes);
-                        owned_rights
+                        if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert(AssignmentVec::CustomData(Default::default()))
+                            .or_insert_with(|| AssignmentVec::CustomData(Default::default()))
                             .data_assignment_vec_mut()
-                            .map(|state| state.extend(set));
+                        {
+                            state.extend(set);
+                        }
                     }
                     Some(AssignmentVec::Container(set)) => {
                         let set = filter(set, indexes);
-                        owned_rights
+                        if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert(AssignmentVec::Container(Default::default()))
+                            .or_insert_with(|| AssignmentVec::Container(Default::default()))
                             .container_assignment_vec_mut()
-                            .map(|state| state.extend(set));
+                        {
+                            state.extend(set);
+                        }
                     }
                     None => {
                         // Presence of the required owned rights type in the

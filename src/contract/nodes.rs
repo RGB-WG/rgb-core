@@ -182,8 +182,7 @@ pub trait Node: AsAny {
     fn parent_public_right_types(&self) -> Vec<PublicRightType> {
         self.parent_public_rights()
             .values()
-            .map(BTreeSet::iter)
-            .flatten()
+            .flat_map(BTreeSet::iter)
             .copied()
             .collect()
     }
@@ -204,14 +203,13 @@ pub trait Node: AsAny {
     fn parent_outputs(&self) -> Vec<NodeOutpoint> {
         self.parent_owned_rights()
             .iter()
-            .map(|(node_id, map)| {
+            .flat_map(|(node_id, map)| {
                 let node_id = *node_id;
                 map.values()
                     .flatten()
                     .copied()
                     .map(move |output_no| NodeOutpoint { node_id, output_no })
             })
-            .flatten()
             .collect()
     }
 
@@ -223,16 +221,14 @@ pub trait Node: AsAny {
     fn parent_outputs_by_types(&self, types: &[OwnedRightType]) -> Vec<NodeOutpoint> {
         self.parent_owned_rights()
             .iter()
-            .map(|(node_id, map)| {
+            .flat_map(|(node_id, map)| {
                 let node_id = *node_id;
                 map.iter()
                     .filter(|(t, _)| types.contains(*t))
-                    .map(|(_, outputs)| outputs)
-                    .flatten()
+                    .flat_map(|(_, outputs)| outputs)
                     .copied()
                     .map(move |output_no| NodeOutpoint { node_id, output_no })
             })
-            .flatten()
             .collect()
     }
 
@@ -240,8 +236,7 @@ pub trait Node: AsAny {
     fn parent_owned_right_types(&self) -> Vec<OwnedRightType> {
         self.parent_owned_rights()
             .values()
-            .map(BTreeMap::keys)
-            .flatten()
+            .flat_map(BTreeMap::keys)
             .copied()
             .collect()
     }
@@ -279,8 +274,7 @@ pub trait Node: AsAny {
         Ok(unfiltered
             .into_iter()
             .filter_map(Result::ok)
-            .map(Vec::into_iter)
-            .flatten()
+            .flat_map(Vec::into_iter)
             .collect())
     }
 
@@ -293,7 +287,7 @@ pub trait Node: AsAny {
             .owned_rights_by_type(assignment_type)
             .map(AssignmentVec::revealed_seals)
             .transpose()?
-            .unwrap_or(vec![]))
+            .unwrap_or_else(Vec::new))
     }
 
     #[inline]
@@ -311,7 +305,7 @@ pub trait Node: AsAny {
     ) -> Vec<seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
             .map(AssignmentVec::filter_revealed_seals)
-            .unwrap_or(vec![])
+            .unwrap_or_else(Vec::new)
     }
 }
 

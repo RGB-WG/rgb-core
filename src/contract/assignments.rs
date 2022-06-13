@@ -12,6 +12,7 @@
 use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::collections::HashMap;
+use std::hash::Hasher;
 use std::io;
 
 use amplify::AsAny;
@@ -157,28 +158,13 @@ impl AssignmentVec {
     }
 
     #[inline]
-    pub fn is_declarative(&self) -> bool {
-        match self {
-            AssignmentVec::Declarative(_) => true,
-            _ => false,
-        }
-    }
+    pub fn is_declarative(&self) -> bool { matches!(self, AssignmentVec::Declarative(_)) }
 
     #[inline]
-    pub fn has_value(&self) -> bool {
-        match self {
-            AssignmentVec::DiscreteFiniteField(_) => true,
-            _ => false,
-        }
-    }
+    pub fn has_value(&self) -> bool { matches!(self, AssignmentVec::DiscreteFiniteField(_)) }
 
     #[inline]
-    pub fn has_data(&self) -> bool {
-        match self {
-            AssignmentVec::CustomData(_) => true,
-            _ => false,
-        }
-    }
+    pub fn has_data(&self) -> bool { matches!(self, AssignmentVec::CustomData(_)) }
 
     #[inline]
     pub fn declarative_assignment_vec_mut(
@@ -286,43 +272,37 @@ impl AssignmentVec {
 
     pub fn revealed_seals(&self) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
         let list: Vec<_> = match self {
-            AssignmentVec::Declarative(s) => {
-                s.into_iter().map(Assignment::<_>::revealed_seal).collect()
-            }
+            AssignmentVec::Declarative(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
             AssignmentVec::DiscreteFiniteField(s) => {
-                s.into_iter().map(Assignment::<_>::revealed_seal).collect()
+                s.iter().map(Assignment::<_>::revealed_seal).collect()
             }
-            AssignmentVec::CustomData(s) => {
-                s.into_iter().map(Assignment::<_>::revealed_seal).collect()
-            }
-            AssignmentVec::Container(s) => {
-                s.into_iter().map(Assignment::<_>::revealed_seal).collect()
-            }
+            AssignmentVec::CustomData(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
+            AssignmentVec::Container(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
         };
         let len = list.len();
-        let filtered: Vec<seal::Revealed> = list.into_iter().filter_map(|v| v).collect();
+        let filtered: Vec<seal::Revealed> = list.into_iter().flatten().collect();
         if len != filtered.len() {
             return Err(ConfidentialDataError);
         }
-        return Ok(filtered);
+        Ok(filtered)
     }
 
     pub fn filter_revealed_seals(&self) -> Vec<seal::Revealed> {
         match self {
             AssignmentVec::Declarative(s) => s
-                .into_iter()
+                .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
             AssignmentVec::DiscreteFiniteField(s) => s
-                .into_iter()
+                .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
             AssignmentVec::CustomData(s) => s
-                .into_iter()
+                .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
             AssignmentVec::Container(s) => s
-                .into_iter()
+                .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
         }
@@ -331,19 +311,19 @@ impl AssignmentVec {
     pub fn to_confidential_seals(&self) -> Vec<seal::Confidential> {
         match self {
             AssignmentVec::Declarative(s) => s
-                .into_iter()
+                .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
             AssignmentVec::DiscreteFiniteField(s) => s
-                .into_iter()
+                .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
             AssignmentVec::CustomData(s) => s
-                .into_iter()
+                .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
             AssignmentVec::Container(s) => s
-                .into_iter()
+                .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
         }
@@ -352,36 +332,36 @@ impl AssignmentVec {
     pub fn as_revealed_state_values(&self) -> Result<Vec<&value::Revealed>, StateRetrievalError> {
         let list = match self {
             AssignmentVec::DiscreteFiniteField(s) => {
-                s.into_iter().map(Assignment::<_>::as_revealed_state)
+                s.iter().map(Assignment::<_>::as_revealed_state)
             }
             _ => return Err(StateRetrievalError::StateTypeMismatch),
         };
         let len = list.len();
-        let filtered: Vec<&value::Revealed> = list.filter_map(|v| v).collect();
+        let filtered: Vec<&value::Revealed> = list.flatten().collect();
         if len != filtered.len() {
             return Err(StateRetrievalError::ConfidentialData);
         }
-        return Ok(filtered);
+        Ok(filtered)
     }
 
     pub fn as_revealed_state_data(&self) -> Result<Vec<&data::Revealed>, StateRetrievalError> {
         let list = match self {
-            AssignmentVec::CustomData(s) => s.into_iter().map(Assignment::<_>::as_revealed_state),
+            AssignmentVec::CustomData(s) => s.iter().map(Assignment::<_>::as_revealed_state),
             _ => return Err(StateRetrievalError::StateTypeMismatch),
         };
         let len = list.len();
-        let filtered: Vec<&data::Revealed> = list.filter_map(|v| v).collect();
+        let filtered: Vec<&data::Revealed> = list.flatten().collect();
         if len != filtered.len() {
             return Err(StateRetrievalError::ConfidentialData);
         }
-        return Ok(filtered);
+        Ok(filtered)
     }
 
     pub fn filter_revealed_state_values(&self) -> Vec<&value::Revealed> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
             AssignmentVec::DiscreteFiniteField(s) => s
-                .into_iter()
+                .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
             AssignmentVec::CustomData(_) => vec![],
@@ -394,7 +374,7 @@ impl AssignmentVec {
             AssignmentVec::Declarative(_) => vec![],
             AssignmentVec::DiscreteFiniteField(_) => vec![],
             AssignmentVec::CustomData(s) => s
-                .into_iter()
+                .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
             AssignmentVec::Container(_) => vec![],
@@ -407,7 +387,7 @@ impl AssignmentVec {
             AssignmentVec::DiscreteFiniteField(_) => vec![],
             AssignmentVec::CustomData(_) => vec![],
             AssignmentVec::Container(s) => s
-                .into_iter()
+                .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
         }
@@ -417,7 +397,7 @@ impl AssignmentVec {
         match self {
             AssignmentVec::Declarative(_) => vec![],
             AssignmentVec::DiscreteFiniteField(s) => s
-                .into_iter()
+                .iter()
                 .map(Assignment::<_>::to_confidential_state)
                 .collect(),
             AssignmentVec::CustomData(_) => vec![],
@@ -430,7 +410,7 @@ impl AssignmentVec {
             AssignmentVec::Declarative(_) => vec![],
             AssignmentVec::DiscreteFiniteField(_) => vec![],
             AssignmentVec::CustomData(s) => s
-                .into_iter()
+                .iter()
                 .map(Assignment::<_>::to_confidential_state)
                 .collect(),
             AssignmentVec::Container(_) => vec![],
@@ -443,7 +423,7 @@ impl AssignmentVec {
             AssignmentVec::DiscreteFiniteField(_) => vec![],
             AssignmentVec::CustomData(_) => vec![],
             AssignmentVec::Container(s) => s
-                .into_iter()
+                .iter()
                 .map(Assignment::<_>::to_confidential_state)
                 .collect(),
         }
@@ -456,7 +436,7 @@ impl AssignmentVec {
         match self {
             AssignmentVec::DiscreteFiniteField(vec) => {
                 let unfiltered: Vec<_> = vec
-                    .into_iter()
+                    .iter()
                     .filter_map(|assignment| {
                         assignment.revealed_seal().and_then(|seal| {
                             assignment.as_revealed_state().map(|state| (seal, state))
@@ -480,7 +460,7 @@ impl AssignmentVec {
         match self {
             AssignmentVec::CustomData(vec) => {
                 let unfiltered: Vec<_> = vec
-                    .into_iter()
+                    .iter()
                     .filter_map(|assignment| {
                         assignment.revealed_seal().and_then(|seal| {
                             assignment.as_revealed_state().map(|state| (seal, state))
@@ -504,7 +484,7 @@ impl AssignmentVec {
         match self {
             AssignmentVec::Container(vec) => {
                 let unfiltered: Vec<_> = vec
-                    .into_iter()
+                    .iter()
                     .filter_map(|assignment| {
                         assignment.revealed_seal().and_then(|seal| {
                             assignment.as_revealed_state().map(|state| (seal, state))
@@ -518,6 +498,15 @@ impl AssignmentVec {
                 }
             }
             _ => Err(StateRetrievalError::StateTypeMismatch),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            AssignmentVec::Declarative(set) => set.is_empty(),
+            AssignmentVec::DiscreteFiniteField(set) => set.is_empty(),
+            AssignmentVec::CustomData(set) => set.is_empty(),
+            AssignmentVec::Container(set) => set.is_empty(),
         }
     }
 
@@ -741,7 +730,7 @@ impl State for ContainerStrategy {
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
-#[derive(Clone, Hash, Debug)]
+#[derive(Clone, Debug)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
@@ -772,6 +761,16 @@ where
         seal_definition: seal::Revealed,
         assigned_state: StateType::Confidential,
     },
+}
+
+impl<StateType> std::hash::Hash for Assignment<StateType>
+where
+    Self: Clone,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) { state.write(&self.consensus_commit()[..]) }
 }
 
 // Consensus-critical!
@@ -894,7 +893,7 @@ where
         known_seals: impl Iterator<Item = &'a seal::Revealed>,
     ) -> usize {
         let known_seals: HashMap<seal::Confidential, seal::Revealed> = known_seals
-            .map(|rev| (rev.commit_conceal(), rev.clone()))
+            .map(|rev| (rev.commit_conceal(), *rev))
             .collect();
 
         let mut counter = 0;
@@ -905,7 +904,7 @@ where
             } => {
                 if let Some(reveal) = known_seals.get(seal_definition) {
                     *self = Assignment::ConfidentialAmount {
-                        seal_definition: reveal.clone(),
+                        seal_definition: *reveal,
                         assigned_state: assigned_state.clone(),
                     };
                     counter += 1;
@@ -917,7 +916,7 @@ where
             } => {
                 if let Some(reveal) = known_seals.get(seal_definition) {
                     *self = Assignment::Revealed {
-                        seal_definition: reveal.clone(),
+                        seal_definition: *reveal,
                         assigned_state: assigned_state.clone(),
                     };
                     counter += 1;
@@ -959,7 +958,7 @@ where
                 seal_definition,
                 assigned_state,
             } => Self::Confidential {
-                seal_definition: seal_definition.clone(),
+                seal_definition: *seal_definition,
                 assigned_state: assigned_state.commit_conceal().into(),
             },
         }
@@ -1024,12 +1023,12 @@ where
                 seal_definition,
                 assigned_state,
             } => {
-                if seals.contains(&seal_definition) {
+                if seals.contains(seal_definition) {
                     0
                 } else {
                     *self = Assignment::<StateType>::Confidential {
                         assigned_state: assigned_state.commit_conceal().into(),
-                        seal_definition: seal_definition.clone(),
+                        seal_definition: *seal_definition,
                     };
                     1
                 }
@@ -1043,7 +1042,7 @@ where
                 } else {
                     *self = Assignment::<StateType>::ConfidentialAmount {
                         assigned_state: assigned_state.commit_conceal().into(),
-                        seal_definition: seal_definition.clone(),
+                        seal_definition: *seal_definition,
                     };
                     1
                 }

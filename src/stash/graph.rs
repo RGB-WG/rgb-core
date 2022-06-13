@@ -251,8 +251,7 @@ impl GraphApi for Consignment {
                 .revealed_seal_at(output.output_no)
                 .map_err(|_| ConsistencyError::OutputNotPresent(output))?
                 .ok_or(ConsistencyError::ConfidentialSeal(output))?
-                .outpoint_or(witness)
-                .into();
+                .outpoint_or(witness);
             closed_seals.insert(outpoint);
         }
         Ok(closed_seals)

@@ -19,7 +19,7 @@ pub trait ConcealSeals {
 }
 
 pub trait ConcealState {
-    fn conceal_state(&mut self) -> usize { self.conceal_state_except(&vec![]) }
+    fn conceal_state(&mut self) -> usize { self.conceal_state_except(&[]) }
     fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize;
 }
 

@@ -28,6 +28,7 @@ use crate::{seal, ContractId, Disclosure, Extension, Genesis, Schema, SchemaId, 
 
 /// Bech32 representation of generic RGB data, that can be generated from
 /// some string basing on Bech32 HRP value.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, From)]
 #[cfg_attr(
     feature = "serde",
@@ -185,7 +186,7 @@ impl Bech32 {
         let writer = vec![Self::RAW_DATA_ENCODING_DEFLATE];
         let mut encoder = DeflateEncoder::new(writer, Compression::Best);
         obj.strict_encode(&mut encoder)?;
-        Ok(encoder.finish().map_err(|_| Error::DeflateEncoding)?)
+        encoder.finish().map_err(|_| Error::DeflateEncoding)
     }
 
     pub(self) fn raw_decode<T>(data: &impl AsRef<[u8]>) -> Result<T, Error>
@@ -194,8 +195,7 @@ impl Bech32 {
         Ok(match u8::strict_decode(&mut reader)? {
             Self::RAW_DATA_ENCODING_PLAIN => T::strict_decode(&mut reader)?,
             Self::RAW_DATA_ENCODING_DEFLATE => {
-                let decoded =
-                    inflate::inflate_bytes(&mut reader).map_err(|e| Error::InflateError(e))?;
+                let decoded = inflate::inflate_bytes(reader).map_err(Error::InflateError)?;
                 T::strict_decode(&decoded[..])?
             }
             unknown_ver => Err(Error::UnknownRawDataEncoding(unknown_ver))?,
@@ -384,7 +384,7 @@ impl FromStr for Bech32 {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (hrp, data, _variant) = bech32::decode(&s)?;
+        let (hrp, data, _variant) = bech32::decode(s)?;
         let data = Vec::<u8>::from_base32(&data)?;
 
         // TODO: Update to Bech32m and check variant

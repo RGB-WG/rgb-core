@@ -189,8 +189,7 @@ impl Consignment {
         set.extend(
             self.anchored_bundles
                 .iter()
-                .map(|(_, bundle)| bundle.known_node_ids())
-                .flatten(),
+                .flat_map(|(_, bundle)| bundle.known_node_ids()),
         );
         set.extend(self.state_extensions.iter().map(Extension::node_id));
         set
@@ -222,10 +221,8 @@ impl Consignment {
             .endpoints
             .iter()
             .filter_map(|(id, _)| self.bundle_by_id(*id).ok())
-            .map(|bundle| bundle.known_node_ids())
-            .flatten()
-            .find(|id| *id == node_id)
-            .is_some()
+            .flat_map(|bundle| bundle.known_node_ids())
+            .any(|id| id == node_id)
         {
             return Err(ConsistencyError::NotEndpoint(node_id));
         }
@@ -249,8 +246,7 @@ impl Consignment {
         self.endpoint_bundle_ids()
             .into_iter()
             .filter_map(|bundle_id| self.known_transitions_by_bundle_id(bundle_id).ok())
-            .map(Vec::into_iter)
-            .flatten()
+            .flat_map(Vec::into_iter)
             .filter(|node| types.contains(&node.transition_type()))
             .collect()
     }
@@ -386,20 +382,5 @@ pub(crate) mod test {
     fn test_consignment_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:consignment");
         assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_CONSIGNMENT_ID);
-    }
-
-    #[test]
-    fn test_consignment_bech32() {
-        let consignment = consignment();
-
-        let bech32id = "id1mqqhssqzjqz5whcdkmwxj3ugv8ekmmyna2vfkjee204p4eu644psqqhg2c";
-        let id = consignment.id();
-        assert_eq!(bech32id, id.to_string());
-        assert_eq!(ConsignmentId::from_str(bech32id).unwrap(), id);
-
-        let bech32cs = include!("../../test/consignment1bech.in");
-
-        assert_eq!(bech32cs, consignment.to_string());
-        assert_eq!(Consignment::from_str(bech32cs).unwrap(), consignment);
     }
 }

@@ -22,8 +22,7 @@ use std::str::FromStr;
 use amplify::hex::{self, FromHex, ToHex};
 use clap::Parser;
 use commit_verify::ConsensusCommit;
-use electrum_client::Client as ElectrumClient;
-use rgb::{Consignment, Disclosure, Extension, Genesis, Schema, Transition};
+use rgb::{Disclosure, Extension, Genesis, Schema, Transition};
 use serde::Serialize;
 use strict_encoding::{StrictDecode, StrictEncode};
 
@@ -247,8 +246,10 @@ where
     T: FromStr + StrictDecode + for<'de> serde::Deserialize<'de>,
     <T as FromStr>::Err: ToString,
 {
-    let data = data.map(|d| d.as_bytes().to_vec()).ok_or(s!("")).or_else(
-        |_| -> Result<Vec<u8>, String> {
+    let data = data
+        .map(|d| d.as_bytes().to_vec())
+        .ok_or_else(String::new)
+        .or_else(|_| -> Result<Vec<u8>, String> {
             let mut buf = Vec::new();
             io::stdin()
                 .read_to_end(&mut buf)
@@ -258,8 +259,7 @@ where
                 buf = buf[4..].to_vec();
             }
             Ok(buf)
-        },
-    )?;
+        })?;
     Ok(match format {
         Format::Bech32 => {
             T::from_str(&String::from_utf8_lossy(&data)).map_err(|err| err.to_string())?

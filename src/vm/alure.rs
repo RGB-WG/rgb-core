@@ -97,7 +97,7 @@ impl<'script> Validate for Runtime<'script> {
     ) -> Result<(), Failure> {
         // TODO: Implement validation with AluVM
         let mut vm = Vm::<RgbIsa>::new();
-        if vm.run(&self.script) {
+        if vm.run(self.script) {
             Ok(())
         } else {
             Err(Failure::ScriptFailure(node_id))

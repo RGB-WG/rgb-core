@@ -371,7 +371,7 @@ mod node {
         //     descriptors::Expanded::strict_deserialize(descriptor_data)
         //        .map_err(|_| HandlerError::DataEncoding)?;
         // TODO #81: Implement blockchain access for the VM
-        return Err(HandlerError::NotImplemented);
+        Err(HandlerError::NotImplemented)
     }
 
     /// Rights split.
@@ -390,8 +390,7 @@ mod node {
             return Err(HandlerError::NonEqualTypes);
         }
 
-        for ((prev_type, prev_assignments), (curr_type, curr_assignments)) in
-            prev.into_iter().zip(curr)
+        for ((prev_type, prev_assignments), (curr_type, curr_assignments)) in prev.iter().zip(curr)
         {
             if prev_type != curr_type {
                 return Err(HandlerError::NonEqualTypes);
@@ -411,7 +410,7 @@ mod node {
                     AssignmentVec::DiscreteFiniteField(prev),
                     AssignmentVec::DiscreteFiniteField(curr),
                 ) => {
-                    for (prev, curr) in prev.into_iter().zip(curr.into_iter()) {
+                    for (prev, curr) in prev.iter().zip(curr.iter()) {
                         if let (Some(prev), Some(curr)) =
                             (prev.as_revealed_state(), curr.as_revealed_state())
                         {
@@ -426,7 +425,7 @@ mod node {
                     }
                 }
                 (AssignmentVec::CustomData(prev), AssignmentVec::CustomData(curr)) => {
-                    for (prev, curr) in prev.into_iter().zip(curr.into_iter()) {
+                    for (prev, curr) in prev.iter().zip(curr.iter()) {
                         if prev.to_confidential_state() != curr.to_confidential_state() {
                             return Err(HandlerError::NonEqualState);
                         }
@@ -455,8 +454,7 @@ mod node {
             return Err(HandlerError::NonEqualTypes);
         }
 
-        for ((prev_type, prev_assignments), (curr_type, curr_assignments)) in
-            prev.into_iter().zip(curr)
+        for ((prev_type, prev_assignments), (curr_type, curr_assignments)) in prev.iter().zip(curr)
         {
             if prev_type != curr_type {
                 return Err(HandlerError::NonEqualTypes);

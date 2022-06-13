@@ -190,7 +190,7 @@ impl ConsensusCommit for Disclosure {
 impl ConcealSeals for Disclosure {
     fn conceal_seals(&mut self, seals: &[Confidential]) -> usize {
         let mut count = 0usize;
-        for (_, (_, map)) in &mut self.anchored_bundles {
+        for (_, map) in self.anchored_bundles.values_mut() {
             for bundle in map.values_mut() {
                 *bundle = bundle
                     .into_iter()
@@ -210,7 +210,7 @@ impl ConcealSeals for Disclosure {
 impl ConcealState for Disclosure {
     fn conceal_state_except(&mut self, seals: &[Confidential]) -> usize {
         let mut count = 0usize;
-        for (_, (_, map)) in &mut self.anchored_bundles {
+        for (_, map) in self.anchored_bundles.values_mut() {
             for bundle in map.values_mut() {
                 *bundle = bundle
                     .into_iter()
@@ -233,7 +233,7 @@ impl ConcealAnchors for Disclosure {
         contracts: impl AsRef<[ContractId]>,
     ) -> Result<usize, lnpbp4::LeafNotKnown> {
         let mut count = 0usize;
-        for (_, (anchor, _)) in &mut self.anchored_bundles {
+        for (anchor, _) in self.anchored_bundles.values_mut() {
             count += anchor.conceal_anchors_except(contracts.as_ref())?;
         }
         Ok(count)
@@ -265,7 +265,7 @@ impl Disclosure {
         self.signatures = empty!();
         self.extensions
             .entry(contract_id)
-            .or_insert(empty!())
+            .or_insert_with(BTreeMap::new)
             .extend(extensions);
     }
 

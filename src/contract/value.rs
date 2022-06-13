@@ -258,7 +258,7 @@ impl CommitmentProtocol for HomomorphicBulletproofGrin {
 
 impl CommitVerify<Revealed, HomomorphicBulletproofGrin> for Confidential {
     fn commit(revealed: &Revealed) -> Self {
-        let blinding = revealed.blinding.clone();
+        let blinding = revealed.blinding;
         let value = revealed.value;
 
         let commitment = SECP256K1_ZKP
@@ -299,7 +299,7 @@ impl Confidential {
     }
 
     pub fn verify_bullet_proof(&self) -> Result<pedersen::ProofRange, secp256k1zkp::Error> {
-        SECP256K1_ZKP.verify_bullet_proof(self.commitment.clone(), self.bulletproof.clone(), None)
+        SECP256K1_ZKP.verify_bullet_proof(self.commitment, self.bulletproof, None)
     }
 
     pub fn verify_commit_sum(

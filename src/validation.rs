@@ -310,8 +310,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                     if end_transitions
                         .iter()
                         .filter(|(n, _)| n.node_id() == node_id)
-                        .collect::<Vec<_>>()
-                        .len()
+                        .count()
                         > 0
                     {
                         status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
@@ -633,7 +632,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
-        match (
+        if let Some(outpoint) = match (
             variant.revealed_seal_at(seal_index),
             self.anchor_index.get(&ancestor_id),
         ) {
@@ -651,14 +650,13 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // thus can't do a full verification and have to report the
                 // failure
                 eprintln!("{:#?}", variant);
-                self.status.add_failure(
-                    Failure::TransitionParentConfidentialSeal {
+                self.status
+                    .add_failure(Failure::TransitionParentConfidentialSeal {
                         node_id,
                         ancestor_id,
                         assignment_type,
                         seal_index,
-                    },
-                );
+                    });
                 None
             }
             (
@@ -677,32 +675,27 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 // and the node is not genesis, we always have an anchor
                 unreachable!()
             }
-            (Ok(Some(seal)), Some(anchor)) => {
-                Some(seal.outpoint_or(anchor.txid))
-            } /* -> ... so we can check that the bitcoin transaction
-               * references it as one of its inputs */
-        }
-        .map(|outpoint| {
-            if witness_tx
+            (Ok(Some(seal)), Some(anchor)) => Some(seal.outpoint_or(anchor.txid)), /* -> ... so we can check that the bitcoin transaction
+                                                                                    * references it as one of its inputs */
+        } {
+            if !witness_tx
                 .input
                 .iter()
-                .find(|txin| txin.previous_output == outpoint)
-                .is_none()
+                .any(|txin| txin.previous_output == outpoint)
             {
                 // Another failure: we do not spend one of the transition
                 // ancestors in the witness transaction. The consignment is
                 // clearly invalid; reporting this and processing to other
                 // potential issues.
-                self.status.add_failure(
-                    Failure::TransitionParentIsNotWitnessInput {
+                self.status
+                    .add_failure(Failure::TransitionParentIsNotWitnessInput {
                         node_id,
                         ancestor_id,
                         assignment_type,
                         seal_index,
                         outpoint,
-                    },
-                );
+                    });
             }
-        });
+        }
     }
 }

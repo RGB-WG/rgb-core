@@ -134,7 +134,7 @@ pub trait Stash {
     fn accept(
         &mut self,
         consignment: &Consignment,
-        known_seals: &Vec<seal::Revealed>,
+        known_seals: &[seal::Revealed],
     ) -> Result<(), Self::Error>;
 
     /// Acquire knowledge from a given disclosure (**enclose** procedure)

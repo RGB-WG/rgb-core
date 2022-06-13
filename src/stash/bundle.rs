@@ -56,7 +56,7 @@ where Msg: AsRef<[u8]>
 }
 
 pub trait ConcealTransitions {
-    fn conceal_transitions(&mut self) -> usize { self.conceal_transitions_except(&vec![]) }
+    fn conceal_transitions(&mut self) -> usize { self.conceal_transitions_except(&[]) }
     fn conceal_transitions_except(&mut self, node_ids: &[NodeId]) -> usize;
 }
 
