@@ -21,17 +21,15 @@ use strict_encoding::{strict_serialize, StrictEncode};
 
 use crate::{ConfidentialState, RevealedState};
 
-// TODO: Update the value
 // "rgb:container:id"
 static MIDSTATE_CONTAINER_ID: [u8; 32] = [
-    148, 72, 59, 59, 150, 173, 163, 140, 159, 237, 69, 118, 104, 132, 194, 110, 250, 108, 1, 140,
-    74, 248, 152, 205, 70, 32, 184, 87, 20, 102, 127, 20,
+    12, 61, 136, 60, 191, 129, 135, 229, 141, 35, 41, 161, 203, 125, 0, 101, 109, 136, 50, 236, 7,
+    101, 59, 39, 148, 207, 63, 236, 255, 48, 24, 171,
 ];
-// TODO: Update the value
 // "rgb:container:confidential"
 static MIDSTATE_CONFIDENTIAL_CONTAINER: [u8; 32] = [
-    148, 72, 59, 59, 150, 173, 163, 140, 159, 237, 69, 118, 104, 132, 194, 110, 250, 108, 1, 140,
-    74, 248, 152, 205, 70, 32, 184, 87, 20, 102, 127, 20,
+    91, 91, 44, 25, 205, 155, 231, 106, 244, 163, 175, 204, 49, 17, 129, 52, 227, 151, 9, 5, 246,
+    42, 1, 226, 126, 43, 141, 177, 84, 100, 61, 108,
 ];
 
 /// Tag used for [`ContainerId`] hash type
@@ -125,3 +123,26 @@ impl commit_encode::Strategy for Revealed {
 }
 
 impl RevealedState for Revealed {}
+
+#[cfg(test)]
+mod test {
+    use amplify::Wrapper;
+    use commit_verify::tagged_hash;
+
+    use super::*;
+
+    #[test]
+    fn test_container_id_midstate() {
+        let midstate = tagged_hash::Midstate::with(b"rgb:container:id");
+        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_CONTAINER_ID);
+    }
+
+    #[test]
+    fn test_confidential_midstate() {
+        let midstate = tagged_hash::Midstate::with(b"rgb:container:confidential");
+        assert_eq!(
+            midstate.into_inner().into_inner(),
+            MIDSTATE_CONFIDENTIAL_CONTAINER
+        );
+    }
+}
