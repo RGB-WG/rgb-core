@@ -31,7 +31,7 @@ use commit_verify::lnpbp4;
 use wallet::onchain::ResolveTx;
 
 use crate::{
-    seal, Consignment, ContractId, Disclosure, Extension, Genesis, Node, NodeId, Schema, SchemaId,
+    seal, Consignment, ContractId, Disclosure, Extension, Genesis, NodeId, Schema, SchemaId,
     SealEndpoint, Transition, TransitionBundle,
 };
 

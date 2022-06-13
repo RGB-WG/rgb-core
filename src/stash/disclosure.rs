@@ -30,7 +30,7 @@ use lnpbp::bech32::{self, FromBech32Str, ToBech32String};
 use strict_encoding::StrictEncode;
 
 use crate::contract::seal::Confidential;
-use crate::{ConcealAnchors, ConcealSeals, ConcealState, ContractId, Extension, Transition};
+use crate::{ConcealAnchors, ConcealSeals, ConcealState, ContractId, Extension, TransitionBundle};
 
 pub const RGB_DISCLOSURE_VERSION: u16 = 0;
 
@@ -53,21 +53,8 @@ impl sha256t::Tag for DisclosureIdTag {
 
 /// Unique disclosure identifier equivalent to the commitment hash
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(
-    Wrapper,
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(DisclosureId::to_bech32_string)]
 pub struct DisclosureId(sha256t::Hash<DisclosureIdTag>);
@@ -114,21 +101,8 @@ impl sha256t::Tag for SigHashTag {
 
 /// Disclosure sig hash
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(
-    Wrapper,
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, LowerHex, BorrowSlice, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 #[display(LowerHex)]
 pub struct SigHash(sha256t::Hash<SigHashTag>);
@@ -168,11 +142,11 @@ pub struct Disclosure {
     version: u8,
 
     /// State transitions organized by anchor and then RGB contract
-    transitions: BTreeMap<
+    anchored_bundles: BTreeMap<
         AnchorId,
         (
             Anchor<lnpbp4::MerkleBlock>,
-            BTreeMap<ContractId, Transition>,
+            BTreeMap<ContractId, TransitionBundle>,
         ),
     >,
 
@@ -204,7 +178,7 @@ impl CommitEncode for Disclosure {
         // 3. Do not include signature (since the signature signs commitment id
         //    + comment commitment)
         (|| -> Result<usize, strict_encoding::Error> {
-            Ok(strict_encode_list!(e; self.version, self.transitions, self.extensions))
+            Ok(strict_encode_list!(e; self.version, self.anchored_bundles, self.extensions))
         })()
         .expect("Commit encoding is in-memory encoding and must not fail")
     }
@@ -216,25 +190,41 @@ impl ConsensusCommit for Disclosure {
 
 impl ConcealSeals for Disclosure {
     fn conceal_seals(&mut self, seals: &[Confidential]) -> usize {
-        self.transitions
-            .iter_mut()
-            .fold(0usize, |count, (_, (_, map))| {
-                map.iter_mut().fold(count, |count, (_, transition)| {
-                    count + transition.conceal_seals(seals)
-                })
-            })
+        let mut count = 0usize;
+        for (_, (_, map)) in &mut self.anchored_bundles {
+            for bundle in map.values_mut() {
+                *bundle = bundle
+                    .into_iter()
+                    .map(|(transition, inputs)| {
+                        let mut transition = transition.clone();
+                        count += transition.conceal_seals(seals);
+                        (transition, inputs.clone())
+                    })
+                    .collect::<BTreeMap<_, _>>()
+                    .into();
+            }
+        }
+        count
     }
 }
 
 impl ConcealState for Disclosure {
     fn conceal_state_except(&mut self, seals: &[Confidential]) -> usize {
-        self.transitions
-            .iter_mut()
-            .fold(0usize, |count, (_, (_, map))| {
-                map.iter_mut().fold(count, |count, (_, transition)| {
-                    count + transition.conceal_state_except(seals)
-                })
-            })
+        let mut count = 0usize;
+        for (_, (_, map)) in &mut self.anchored_bundles {
+            for bundle in map.values_mut() {
+                *bundle = bundle
+                    .into_iter()
+                    .map(|(transition, inputs)| {
+                        let mut transition = transition.clone();
+                        count += transition.conceal_state_except(seals);
+                        (transition, inputs.clone())
+                    })
+                    .collect::<BTreeMap<_, _>>()
+                    .into();
+            }
+        }
+        count
     }
 }
 
@@ -244,7 +234,7 @@ impl ConcealAnchors for Disclosure {
         contracts: impl AsRef<[ContractId]>,
     ) -> Result<usize, lnpbp4::LeafNotKnown> {
         let mut count = 0usize;
-        for (_, (anchor, _)) in &mut self.transitions {
+        for (_, (anchor, _)) in &mut self.anchored_bundles {
             count += anchor.conceal_anchors_except(contracts.as_ref())?;
         }
         Ok(count)
@@ -252,22 +242,22 @@ impl ConcealAnchors for Disclosure {
 }
 
 impl Disclosure {
-    pub fn insert_anchored_transitions(
+    pub fn insert_anchored_bundles(
         &mut self,
         anchor: Anchor<lnpbp4::MerkleBlock>,
-        transitions: BTreeMap<ContractId, Transition>,
+        bundles: BTreeMap<ContractId, TransitionBundle>,
     ) {
         self.signatures = empty!();
-        match self.transitions.entry(anchor.anchor_id()) {
+        match self.anchored_bundles.entry(anchor.anchor_id()) {
             Entry::Vacant(entry) => {
-                entry.insert((anchor, transitions));
+                entry.insert((anchor, bundles));
             }
             Entry::Occupied(mut entry) => {
                 let (a, t) = entry.get_mut();
                 *a = anchor.merge_reveal(a.clone()).expect(
                     "Anchor into_revealed procedure is broken for anchors with the same id",
                 );
-                t.extend(transitions);
+                t.extend(bundles);
             }
         }
     }
