@@ -28,10 +28,6 @@ use wallet::psbt::Psbt;
 use crate::BundleId;
 use crate::{reveal, ContractId, MergeReveal};
 
-pub const PSBT_PREFIX: &'static [u8] = b"RGB";
-pub const PSBT_OUT_PUBKEY: u8 = 0x1;
-pub const PSBT_OUT_TWEAK: u8 = 0x2;
-
 pub trait ConcealAnchors {
     fn conceal_anchors_except(
         &mut self,
@@ -96,7 +92,6 @@ mod test {
     use std::collections::BTreeMap;
 
     use bitcoin::consensus::deserialize;
-    use bitcoin::psbt::raw::ProprietaryKey;
     use bitcoin::util::psbt::PartiallySignedTransaction;
     use strict_encoding::StrictDecode;
 
@@ -118,22 +113,7 @@ mod test {
         let node_id = genesis.node_id();
 
         // Get the test psbt
-        let mut source_psbt: PartiallySignedTransaction = deserialize(&PSBT[..]).unwrap();
-
-        // Modify test psbt to include Proprietary Key information
-        for output in &mut source_psbt.outputs.iter_mut() {
-            if let Some(key) = output.bip32_derivation.keys().next() {
-                let key = key.clone();
-                output.proprietary.insert(
-                    ProprietaryKey {
-                        prefix: b"RGB".to_vec(),
-                        subtype: PSBT_OUT_PUBKEY,
-                        key: vec![],
-                    },
-                    key.serialize().to_vec(),
-                );
-            }
-        }
+        let source_psbt: PartiallySignedTransaction = deserialize(&PSBT[..]).unwrap();
 
         // Copy witness psbt for future assertion
         let witness_psbt = source_psbt.clone();
