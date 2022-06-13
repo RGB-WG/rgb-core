@@ -1,6 +1,17 @@
 Change Log
 ==========
 
+v0.7.0
+------
+- Taproot-based OP_RETURN commitments
+- New LNPBP-4 multi-protocol commitments based on merkle trees (support for 
+  using RGB alongside other client-side-validation protocols)
+- State transition bundling for multi-participant transactions (required for LN,
+  pay/coinjoin)
+- Data containers (binary data for NFTs etc)
+- Support for arbitrary rich data in contract state with a new schema for 
+  representing hierarchies of such data structures.
+
 v0.5.0
 ------
 - Separation of specific schemata into independent libraries
