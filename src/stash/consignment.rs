@@ -61,7 +61,6 @@ impl sha256t::Tag for ConsignmentIdTag {
 #[display(ConsignmentId::to_bech32_string)]
 pub struct ConsignmentId(sha256t::Hash<ConsignmentIdTag>);
 
-// TODO: Use tagged protocol
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for ConsignmentId
 where Msg: AsRef<[u8]>
 {
@@ -382,7 +381,6 @@ pub(crate) mod test {
 
     #[test]
     fn test_consignment_id_midstate() {
-        // TODO #61: Do the actual consignment verification testing
         let midstate = tagged_hash::Midstate::with(b"rgb:consignment");
         assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_CONSIGNMENT_ID);
     }

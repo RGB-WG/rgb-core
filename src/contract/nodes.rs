@@ -60,7 +60,6 @@ impl sha256t::Tag for NodeIdTag {
     }
 }
 
-// TODO #48: Refactor all ids into a single style after `ConsignmentId`
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -68,7 +67,6 @@ impl sha256t::Tag for NodeIdTag {
 #[wrapper(Debug, Display, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
 pub struct NodeId(sha256t::Hash<NodeIdTag>);
 
-// TODO: Use tagged protocol
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for NodeId
 where Msg: AsRef<[u8]>
 {
@@ -327,19 +325,8 @@ pub struct Genesis {
     public_rights: PublicRights,
 }
 
-#[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Default,
-    StrictEncode,
-    StrictDecode,
-    AsAny
-)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
     extension_type: ExtensionType,
@@ -350,19 +337,8 @@ pub struct Extension {
     public_rights: PublicRights,
 }
 
-#[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Default,
-    StrictEncode,
-    StrictDecode,
-    AsAny
-)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     transition_type: TransitionType,

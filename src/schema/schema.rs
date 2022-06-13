@@ -56,7 +56,6 @@ impl sha256t::Tag for SchemaIdTag {
 #[display(SchemaId::to_bech32_string)]
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
 
-// TODO: Use tagged protocol
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for SchemaId
 where Msg: AsRef<[u8]>
 {

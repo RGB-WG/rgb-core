@@ -26,10 +26,10 @@ use stens::AsciiString;
 use super::data;
 use crate::schema;
 
-// TODO #47: Use of BTreeSet for metadata values breaks their arbitrary order
+// TODO #47: Use of BTreeMap for metadata values breaks their arbitrary order
 //       which may be used to correlate metadata with indexes of other
 //       metadata or state. Consider converting into `Vec` type like it was
-//       accomplished for the state data
+//       accomplished for the state data. This change will not break encoding.
 type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 
 /// Transition & genesis metadata fields

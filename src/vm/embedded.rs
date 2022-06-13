@@ -51,7 +51,6 @@ pub mod constants {
     pub const FIELD_TYPE_DATA: u16 = 0x10;
 
     /// Format of the attached data, schema-specific
-    // TODO #36: Use LNPBP-extended MIME types embedded to data containers
     pub const FIELD_TYPE_DATA_FORMAT: u16 = 0x11;
 
     /// [`FieldType`] that is used by validation procedures checking the issued
