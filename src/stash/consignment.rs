@@ -155,7 +155,7 @@ impl Consignment {
     pub fn with(
         genesis: Genesis,
         endpoints: ConsignmentEndpoints,
-        state_transitions: AnchoredBundles,
+        anchored_bundles: AnchoredBundles,
         state_extensions: ExtensionList,
     ) -> Consignment {
         Self {
@@ -163,7 +163,7 @@ impl Consignment {
             genesis,
             endpoints,
             state_extensions,
-            anchored_bundles: state_transitions,
+            anchored_bundles,
         }
     }
 

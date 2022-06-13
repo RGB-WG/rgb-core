@@ -36,7 +36,7 @@ mod iter;
 #[cfg(feature = "wallet")]
 pub use anchor::AnchorExt;
 pub use anchor::{ConcealAnchors, PSBT_OUT_PUBKEY, PSBT_OUT_TWEAK, PSBT_PREFIX};
-pub use bundle::{BundleId, TransitionBundle};
+pub use bundle::{BundleId, ConcealTransitions, TransitionBundle};
 pub use consignment::{
     AnchoredBundles, Consignment, ConsignmentEndpoints, ExtensionList, RGB_CONSIGNMENT_VERSION,
 };
