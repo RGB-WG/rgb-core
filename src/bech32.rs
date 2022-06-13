@@ -420,8 +420,7 @@ impl Display for Bech32 {
             Self::Disclosure(obj) => (Self::HRP_DISCLOSURE, Bech32::deflate_encode(obj)?),
             Self::Other(hrp, obj) => (hrp.as_ref(), obj.clone()),
         };
-        // TODO: Update to Bech32m
-        let b = ::bech32::encode(hrp, data.to_base32(), Variant::Bech32)
+        let b = ::bech32::encode(hrp, data.to_base32(), Variant::Bech32m)
             .map_err(|_| ::core::fmt::Error)?;
         b.fmt(f)
     }
