@@ -88,19 +88,6 @@ pub enum Command {
 
 #[derive(Subcommand, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum ConsignmentCommand {
-    Convert {
-        /// Consignment data; if none are given reads from STDIN
-        consignment: Option<String>,
-
-        /// Formatting of the input data
-        #[clap(short, long, default_value = "bech32")]
-        input: Format,
-
-        /// Formatting for the output
-        #[clap(short, long, default_value = "yaml")]
-        output: Format,
-    },
-
     Validate {
         /// Consignment data; if none are given reads from STDIN
         consignment: Option<String>,
@@ -332,15 +319,6 @@ fn main() -> Result<(), String> {
 
     match opts.command {
         Command::Consignment { subcommand } => match subcommand {
-            ConsignmentCommand::Convert {
-                consignment,
-                input,
-                output,
-            } => {
-                let consignment: Consignment = input_read(consignment, input)?;
-                output_write(consignment, output)?;
-            }
-
             ConsignmentCommand::Validate {
                 consignment,
                 schema,
