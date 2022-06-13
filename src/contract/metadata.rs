@@ -42,11 +42,13 @@ type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
 #[derive(StrictEncode, StrictDecode)]
 pub struct Metadata(MetadataInner);
 
-impl IntoIterator for Metadata {
-    type Item = <MetadataInner as IntoIterator>::Item;
-    type IntoIter = <MetadataInner as IntoIterator>::IntoIter;
+// TODO: Improve other iterators for contract collection types.
+impl<'me> IntoIterator for &'me Metadata {
+    type Item = (&'me schema::FieldType, &'me BTreeSet<data::Revealed>);
+    type IntoIter =
+        std::collections::btree_map::Iter<'me, schema::FieldType, BTreeSet<data::Revealed>>;
 
-    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode)]
