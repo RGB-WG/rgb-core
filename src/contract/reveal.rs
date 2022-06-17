@@ -1,6 +1,6 @@
 // RGB Core Library: a reference implementation of RGB smart contract standards.
 // Written in 2019-2022 by
-//     Rajarshi Maitra <rajarshi149@protonmail.com>
+//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
 // To the extent possible under law, the author(s) have dedicated all copyright
 // and related and neighboring rights to this software to the public domain

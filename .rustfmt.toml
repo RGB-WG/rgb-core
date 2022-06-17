@@ -17,5 +17,6 @@ wrap_comments = false
 where_single_line = true
 unstable_features = true
 
+license_template_path = "license_header"
 imports_granularity = "Module"
 group_imports = "StdExternalCrate"

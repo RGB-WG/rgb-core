@@ -1,4 +1,4 @@
-// RGB20 Library: fungible digital assets for bitcoin & lightning
+// RGB Core Library: a reference implementation of RGB smart contract standards.
 // Written in 2019-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //

@@ -8,29 +8,3 @@
 //
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
-
-#[macro_export]
-macro_rules! type_map {
-    { } =>  {
-        {
-            ::std::collections::BTreeMap::new()
-        }
-    };
-
-    { $($key:expr => $value:expr),+ } => {
-        {
-            let mut m = ::std::collections::BTreeMap::new();
-            $(
-                m.insert($key.into(), $value);
-            )+
-            m
-        }
-    }
-}
-
-#[macro_export]
-macro_rules! field {
-    ($type:ident, $value:expr) => {
-        bset![::rgb::data::Revealed::$type($value)]
-    };
-}
