@@ -16,11 +16,6 @@ exclude = [".github", "contrib"]
 name = "rgb"
 path = "src/lib.rs"
 
-[[bin]]
-name = "rgb"
-path = "src/bin/rgb.rs"
-required-features = ["cli", "serde"]
-
 # Dependencies
 # ============
 #
@@ -45,12 +40,11 @@ lnpbp = { version = "~0.7.0", features = ["zip"] }
 stens = "0.3.2"
 strict_encoding = { version = "~1.8.8", features = ["crypto", "chrono", "bitcoin", "float"] }
 commit_verify = { version = "~0.7.0", features = ["rand", "bulletproofs"] }
-descriptor-wallet = { version = "~0.7.1", features = ["descriptors"] }
+descriptor-wallet = "0.7.1"
 aluvm = { version = "~0.6.0", features = ["std", "strict_encoding"] }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.28.1", features = ["rand"] }
-electrum-client = { version = "0.10.0", optional = true } # TODO: Remove electrum dependency
 bech32 = "~0.9.0"
 # Core rust projects
 # ------------------
@@ -62,31 +56,24 @@ half = "~1.8.2"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.8", features = ["hex"], optional = true }
 lazy_static = "~1.4.0" # TODO: Replace lazy_static with once_cell
-# Serializtion
-# ------------
-#    Used in RGB data Bech32 encodings
-deflate = "~0.8.6"
-inflate = "~0.4.5"
-chrono = "~0.4.19"
-# Temporary-needed dependencies:
+# Other dependencies:
 # ------------------------------
-# 1. We are of no control of what's happening in Grin and would like to prevent
+#    We are of no control of what's happening in Grin and would like to prevent
 #    updates w/o checking them manually. Should Elements Project secpk256k-zkp
 #    accept bulletproofs code, we will switch to it
 grin_secp256k1zkp = { version = "=0.7.11" }
-# Optional features used only by a binary
-clap = { version = "~3.1.18", optional = true, features = ["derive"] }
-serde_yaml = { version = "0.8", optional = true }
-serde_json = { version = "1", optional = true }
+#    Used in RGB data Bech32 encodings
+deflate = "~0.8.6" # TODO: Remove dependecy
+inflate = "~0.4.5" # TODO: Remove dependecy
+chrono = "~0.4.19" # TODO: Remove dependecy
 
 [dev-dependencies]
 serde_json = "1"
 
 [features]
-default = ["serde", "cli"]
-all = ["serde", "cli", "wallet"]
+default = ["serde"]
+all = ["serde", "wallet"]
 wallet = ["bp-core/wallet"]
-cli = ["clap", "serde_yaml", "serde_json", "descriptor-wallet/electrum", "electrum-client"]
 serde = ["serde_crate", "serde_with", "half/serialize",
          "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
          "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde", "aluvm/serde",
