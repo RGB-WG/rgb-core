@@ -11,7 +11,7 @@
 
 //! Convenience metadata accessor methods for Genesis and state transitions.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use amplify::num::apfloat::ieee;
 use amplify::num::{i1024, i256, i512, u1024, u256, u512};
@@ -26,11 +26,7 @@ use stens::AsciiString;
 use super::data;
 use crate::schema;
 
-// TODO #47: Use of BTreeMap for metadata values breaks their arbitrary order
-//       which may be used to correlate metadata with indexes of other
-//       metadata or state. Consider converting into `Vec` type like it was
-//       accomplished for the state data. This change will not break encoding.
-type MetadataInner = BTreeMap<schema::FieldType, BTreeSet<data::Revealed>>;
+type MetadataInner = BTreeMap<schema::FieldType, Vec<data::Revealed>>;
 
 /// Transition & genesis metadata fields
 #[derive(Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From)]
@@ -44,9 +40,8 @@ pub struct Metadata(MetadataInner);
 
 // TODO: Improve other iterators for contract collection types.
 impl<'me> IntoIterator for &'me Metadata {
-    type Item = (&'me schema::FieldType, &'me BTreeSet<data::Revealed>);
-    type IntoIter =
-        std::collections::btree_map::Iter<'me, schema::FieldType, BTreeSet<data::Revealed>>;
+    type Item = (&'me schema::FieldType, &'me Vec<data::Revealed>);
+    type IntoIter = std::collections::btree_map::Iter<'me, schema::FieldType, Vec<data::Revealed>>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
@@ -309,28 +304,28 @@ mod test {
     #[test]
     fn test_commitencoding_field() {
         let mut rng = thread_rng();
-        let mut data1 = BTreeSet::new();
-        data1.insert(data::Revealed::U8(rng.next_u64() as u8));
-        data1.insert(data::Revealed::U16(rng.next_u64() as u16));
-        data1.insert(data::Revealed::U32(rng.next_u64() as u32));
-        data1.insert(data::Revealed::U64(rng.next_u64() as u64));
+        let mut data1 = Vec::new();
+        data1.push(data::Revealed::U8(rng.next_u64() as u8));
+        data1.push(data::Revealed::U16(rng.next_u64() as u16));
+        data1.push(data::Revealed::U32(rng.next_u64() as u32));
+        data1.push(data::Revealed::U64(rng.next_u64() as u64));
 
-        let mut data2 = BTreeSet::new();
-        data2.insert(data::Revealed::I8(rng.next_u64() as i8));
-        data2.insert(data::Revealed::I16(rng.next_u64() as i16));
-        data2.insert(data::Revealed::I32(rng.next_u64() as i32));
-        data2.insert(data::Revealed::I64(rng.next_u64() as i64));
+        let mut data2 = Vec::new();
+        data2.push(data::Revealed::I8(rng.next_u64() as i8));
+        data2.push(data::Revealed::I16(rng.next_u64() as i16));
+        data2.push(data::Revealed::I32(rng.next_u64() as i32));
+        data2.push(data::Revealed::I64(rng.next_u64() as i64));
 
         let mut byte_vec = vec![];
         for i in 0..10 {
             byte_vec.insert(i, rng.next_u32() as u8);
         }
 
-        let mut data3 = BTreeSet::new();
-        data3.insert(data::Revealed::F32(rng.next_u32() as f32));
-        data3.insert(data::Revealed::F64(rng.next_u32() as f64));
-        data3.insert(data::Revealed::Bytes(byte_vec));
-        data3.insert(data::Revealed::UnicodeString("Random String".to_string()));
+        let mut data3 = Vec::new();
+        data3.push(data::Revealed::F32(rng.next_u32() as f32));
+        data3.push(data::Revealed::F64(rng.next_u32() as f64));
+        data3.push(data::Revealed::Bytes(byte_vec));
+        data3.push(data::Revealed::UnicodeString("Random String".to_string()));
 
         let field1 = 1 as schema::FieldType;
         let field2 = 2 as schema::FieldType;
