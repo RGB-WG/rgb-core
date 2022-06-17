@@ -16,31 +16,28 @@
 //! client-side-validated and data containers): [`Stash`] API and [`GraphAPI`].
 //! They differ in the fact that [`Stash`] manages long-term persistance of
 //! large-volume data, while [`GraphAPI`] is used by the data structures fitting
-//! into the computer memory ([`Consignment`]s and [`Disclosure`]s).
+//! into the computer memory (`Consignment`s and `Disclosure`s of the standard
+//! library).
 //!
 //! These data structures are not part of the client-side-validation
 //! commitments (like [`ConsensusCommit`] and [`CommitEncode`]), however, some
 //! of them MAY participate client-side-validation process (see
-//! [`Consignments`]) or MAY have a restricted forms of validation (see
-//! [`Disclosure`]), while others are constantly maintained in valid state by
+//! `Consignments`) or MAY have a restricted forms of validation (see
+//! `Disclosure`), while others are constantly maintained in valid state by
 //! the data management procedures ([`Stash`]).
 
 mod anchor;
-mod consignment;
-mod disclosure;
 mod graph;
 mod stash;
 mod bundle;
 mod iter;
+mod consignment;
 
 #[cfg(feature = "wallet")]
 pub use anchor::AnchorExt;
 pub use anchor::ConcealAnchors;
 pub use bundle::{BundleId, ConcealTransitions, TransitionBundle};
-pub use consignment::{
-    AnchoredBundles, Consignment, ConsignmentEndpoints, ExtensionList, RGB_CONSIGNMENT_VERSION,
-};
-pub use disclosure::{Disclosure, RGB_DISCLOSURE_VERSION};
+pub use consignment::{AnchoredBundle, Consignment, ConsignmentEndpoint};
 pub use graph::{ConsistencyError, GraphApi};
-pub use iter::{ChainIter, MeshIter};
+pub use iter::MeshIter;
 pub use stash::Stash;

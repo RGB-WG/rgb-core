@@ -23,17 +23,12 @@
 //! NB: Stash implementations must be able to operate multiple independent RGB
 //! contract.
 
-use std::collections::BTreeSet;
-
 use bitcoin::OutPoint;
 use bp::dbc::{Anchor, AnchorId};
 use commit_verify::lnpbp4;
 use wallet::onchain::ResolveTx;
 
-use crate::{
-    seal, Consignment, ContractId, Disclosure, Extension, Genesis, NodeId, Schema, SchemaId,
-    SealEndpoint, Transition, TransitionBundle,
-};
+use crate::{ContractId, Extension, Genesis, NodeId, Schema, SchemaId, Transition};
 
 /// Top-level structure used by client wallets to manage all known RGB smart
 /// contracts and related data.
@@ -113,32 +108,6 @@ pub trait Stash {
 
     /// Iterator over all known state extensions under particular RGB contract
     fn extension_iter(&self, contract_id: ContractId) -> Self::ExtensionIterator;
-
-    /// When we need to send over to somebody else an update (like we have
-    /// transferred him some state, for instance an asset) for each transfer we
-    /// ask [`Stash`] to create a new [`Consignment`] for the given set of seals
-    /// (`endpoints`) under some specific [`ContractId`], starting from a graph
-    /// vertex `node`. If the node is state transition, we must also include
-    /// `anchor` information.
-    fn consign(
-        &self,
-        contract_id: ContractId,
-        bundle: TransitionBundle,
-        anchor: Option<&Anchor<lnpbp4::MerkleProof>>,
-        endpoints: &BTreeSet<SealEndpoint>,
-    ) -> Result<Consignment, Self::Error>;
-
-    /// When we have received data from other peer (which usually relate to our
-    /// newly owned state, like assets) we do `accept` a [`Consignment`],
-    /// and it gets into the known data.
-    fn accept(
-        &mut self,
-        consignment: &Consignment,
-        known_seals: &[seal::Revealed],
-    ) -> Result<(), Self::Error>;
-
-    /// Acquire knowledge from a given disclosure (**enclose** procedure)
-    fn enclose(&mut self, disclosure: &Disclosure) -> Result<(), Self::Error>;
 
     /// Clears all data that are not related to the contract state owned by
     /// us in this moment — under all known contracts. Uses provided

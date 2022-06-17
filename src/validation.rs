@@ -20,9 +20,10 @@ use commit_verify::{lnpbp4, CommitConceal};
 use wallet::onchain::ResolveTx;
 
 use super::schema::{NodeType, OccurrencesError};
-use super::{schema, seal, AssignmentVec, Consignment, ContractId, Node, NodeId, Schema, SchemaId};
+use super::{schema, seal, AssignmentVec, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
-use crate::{BundleId, GraphApi, SealEndpoint};
+use crate::stash::Consignment;
+use crate::{BundleId, Extension, SealEndpoint, TransitionBundle};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -241,38 +242,38 @@ pub enum Info {
     UncheckableConfidentialStateData(NodeId, u16),
 }
 
-pub struct Validator<'validator, R: ResolveTx> {
-    consignment: &'validator Consignment,
+pub struct Validator<'consignment, C: Consignment<'consignment>, R: ResolveTx> {
+    consignment: &'consignment C,
 
     status: Status,
 
     schema_id: SchemaId,
     genesis_id: NodeId,
     contract_id: ContractId,
-    node_index: BTreeMap<NodeId, &'validator dyn Node>,
-    anchor_index: BTreeMap<NodeId, &'validator Anchor<lnpbp4::MerkleProof>>,
-    end_transitions: Vec<(&'validator dyn Node, BundleId)>,
+    node_index: BTreeMap<NodeId, &'consignment dyn Node>,
+    anchor_index: BTreeMap<NodeId, &'consignment Anchor<lnpbp4::MerkleProof>>,
+    end_transitions: Vec<(&'consignment dyn Node, BundleId)>,
     validation_index: BTreeSet<NodeId>,
 
     resolver: R,
 }
 
-impl<'validator, R: ResolveTx> Validator<'validator, R> {
-    fn init(consignment: &'validator Consignment, resolver: R) -> Self {
+impl<'consignment, C: Consignment<'consignment>, R: ResolveTx> Validator<'consignment, C, R> {
+    fn init(consignment: &'consignment C, resolver: R) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
 
         // Frequently used computation-heavy data
-        let genesis_id = consignment.genesis.node_id();
-        let contract_id = consignment.genesis.contract_id();
-        let schema_id = consignment.genesis.schema_id();
+        let genesis_id = consignment.genesis().node_id();
+        let contract_id = consignment.genesis().contract_id();
+        let schema_id = consignment.genesis().schema_id();
 
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
         let mut anchor_index = BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
-        for (anchor, bundle) in &*consignment.anchored_bundles {
-            if !bundle.validate() {
+        for (anchor, bundle) in consignment.anchored_bundles() {
+            if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
             for transition in bundle.known_transitions() {
@@ -281,9 +282,9 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                 anchor_index.insert(node_id, anchor);
             }
         }
-        node_index.insert(genesis_id, &consignment.genesis);
-        for extension in &*consignment.state_extensions {
-            let node_id = extension.node_id();
+        node_index.insert(genesis_id, consignment.genesis());
+        for extension in consignment.state_extensions() {
+            let node_id = Extension::node_id(extension);
             node_index.insert(node_id, extension);
         }
 
@@ -292,11 +293,11 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         // we would like to detect any potential issues with the consignment
         // structure and notify user about them (in form of generated warnings)
         let mut end_transitions = Vec::<(&dyn Node, BundleId)>::new();
-        for (bundle_id, seal_endpoint) in &consignment.endpoints {
-            let transitions = match consignment.known_transitions_by_bundle_id(*bundle_id) {
+        for (bundle_id, seal_endpoint) in consignment.endpoints() {
+            let transitions = match consignment.known_transitions_by_bundle_id(bundle_id) {
                 Ok(transitions) => transitions,
                 Err(_) => {
-                    status.add_failure(Failure::BundleInvalid(*bundle_id));
+                    status.add_failure(Failure::BundleInvalid(bundle_id));
                     continue;
                 }
             };
@@ -313,9 +314,9 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                         .count()
                         > 0
                     {
-                        status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
+                        status.add_warning(Warning::EndpointDuplication(node_id, seal_endpoint));
                     } else {
-                        end_transitions.push((transition, *bundle_id));
+                        end_transitions.push((transition, bundle_id));
                     }
                 } else {
                     // We generate just a warning here because it's up to a user
@@ -323,7 +324,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
                     // endpoint list
                     status.add_warning(Warning::EndpointTransitionSealNotFound(
                         node_id,
-                        *seal_endpoint,
+                        seal_endpoint,
                     ));
                 }
             }
@@ -357,15 +358,10 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
     /// the status object, but the validation continues for the rest of the
     /// consignment data. This can help it debugging and detecting all problems
     /// with the consignment.
-    pub fn validate(
-        schema: &Schema,
-        root: Option<&Schema>,
-        consignment: &'validator Consignment,
-        resolver: R,
-    ) -> Status {
+    pub fn validate(consignment: &'consignment C, resolver: R) -> Status {
         let mut validator = Validator::init(consignment, resolver);
 
-        validator.validate_schema(schema, root);
+        validator.validate_schema(consignment.schema(), consignment.root_schema());
         // We must return here, since if the schema is not valid there is no
         // reason to validate contract nodes against it: it will produce a
         // plenty of errors
@@ -373,7 +369,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
             return validator.status;
         }
 
-        validator.validate_contract(schema);
+        validator.validate_contract(consignment.schema());
 
         // Done. Returning status report with all possible failures, issues,
         // warnings and notifications about transactions we were unable to
@@ -404,7 +400,8 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         }
 
         // [VALIDATION]: Validate genesis
-        self.status += schema.validate(&self.node_index, &self.consignment.genesis, &schema.script);
+        self.status +=
+            schema.validate(&self.node_index, self.consignment.genesis(), &schema.script);
         self.validation_index.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
@@ -430,7 +427,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
     fn validate_branch(
         &mut self,
         schema: &Schema,
-        node: &'validator dyn Node,
+        node: &'consignment dyn Node,
         bundle_id: BundleId,
     ) {
         let mut queue: VecDeque<&dyn Node> = VecDeque::new();
@@ -524,9 +521,9 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
 
     fn validate_graph_node(
         &mut self,
-        node: &'validator dyn Node,
+        node: &'consignment dyn Node,
         bundle_id: BundleId,
-        anchor: &'validator Anchor<lnpbp4::MerkleProof>,
+        anchor: &'consignment Anchor<lnpbp4::MerkleProof>,
     ) {
         let txid = anchor.txid;
         let node_id = node.node_id();
@@ -628,7 +625,7 @@ impl<'validator, R: ResolveTx> Validator<'validator, R> {
         node_id: NodeId,
         ancestor_id: NodeId,
         assignment_type: schema::OwnedRightType,
-        variant: &'validator AssignmentVec,
+        variant: &'consignment AssignmentVec,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
