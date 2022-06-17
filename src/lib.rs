@@ -66,7 +66,6 @@ macro_rules! test_garbage_exhaustive {
     );
 }
 
-pub mod bech32;
 pub mod contract;
 pub mod schema;
 pub mod stash;
@@ -99,9 +98,8 @@ pub mod prelude {
     pub use validation::{Validator, Validity};
     pub use vm::Validate;
 
-    pub use super::bech32::{Bech32, FromBech32, ToBech32};
     use super::*;
-    pub use super::{bech32, schema, vm};
+    pub use super::{schema, vm};
 }
 
 pub use prelude::*;

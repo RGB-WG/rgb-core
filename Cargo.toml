@@ -45,7 +45,6 @@ aluvm = { version = "~0.6.0", features = ["std", "strict_encoding"] }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.28.1", features = ["rand"] }
-bech32 = "~0.9.0"
 # Core rust projects
 # ------------------
 #   This strange naming is a workaround for cargo inability to define required
@@ -62,10 +61,6 @@ lazy_static = "~1.4.0" # TODO: Replace lazy_static with once_cell
 #    updates w/o checking them manually. Should Elements Project secpk256k-zkp
 #    accept bulletproofs code, we will switch to it
 grin_secp256k1zkp = { version = "=0.7.11" }
-#    Used in RGB data Bech32 encodings
-deflate = "~0.8.6" # TODO: Remove dependecy
-inflate = "~0.4.5" # TODO: Remove dependecy
-chrono = "~0.4.19" # TODO: Remove dependecy
 
 [dev-dependencies]
 serde_json = "1"

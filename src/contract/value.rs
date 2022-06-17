@@ -184,22 +184,7 @@ impl Ord for Revealed {
 #[derive(Clone, Debug, AsAny, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Confidential {
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            serialize_with = "crate::bech32::to_bech32_str",
-            deserialize_with = "crate::bech32::from_bech32_str"
-        )
-    )]
     pub commitment: pedersen::Commitment,
-
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            serialize_with = "crate::bech32::to_bech32_str",
-            deserialize_with = "crate::bech32::from_bech32_str"
-        )
-    )]
     pub bulletproof: pedersen::RangeProof,
 }
 

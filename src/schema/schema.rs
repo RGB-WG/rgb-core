@@ -10,23 +10,25 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::str::FromStr;
 
 use amplify::flags::FlagVec;
 use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
+use lnpbp::bech32::{FromBech32Str, ToBech32String};
 use stens::{TypeRef, TypeSystem};
 
 use super::{ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, TransitionSchema};
 use crate::schema::StateSchema;
 use crate::script::OverrideRules;
-#[cfg(feature = "serde")]
-use crate::Bech32;
-use crate::{ToBech32, ValidationScript};
+use crate::ValidationScript;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = u16;
 pub type ExtensionType = u16;
 pub type TransitionType = u16;
+
+pub const RGB_SCHEMA_ID_HRP: &str = "rgbsh";
 
 static MIDSTATE_SHEMA_ID: [u8; 32] = [
     0x81, 0x73, 0x33, 0x7c, 0xcb, 0xc4, 0x8b, 0xd1, 0x24, 0x89, 0x65, 0xcd, 0xd0, 0xcd, 0xb6, 0xc8,
@@ -44,15 +46,15 @@ impl sha256t::Tag for SchemaIdTag {
     }
 }
 
+impl lnpbp::bech32::Strategy for SchemaIdTag {
+    const HRP: &'static str = RGB_SCHEMA_ID_HRP;
+    type Strategy = lnpbp::bech32::strategies::UsingStrictEncoding;
+}
+
 /// Commitment-based schema identifier used for committing to the schema type
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", try_from = "Bech32", into = "Bech32")
-)]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
 #[derive(StrictEncode, StrictDecode)]
-#[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[wrapper(Debug)]
 #[display(SchemaId::to_bech32_string)]
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
 
@@ -61,6 +63,67 @@ where Msg: AsRef<[u8]>
 {
     #[inline]
     fn commit(msg: &Msg) -> SchemaId { SchemaId::hash(msg) }
+}
+
+impl lnpbp::bech32::Strategy for SchemaId {
+    const HRP: &'static str = RGB_SCHEMA_ID_HRP;
+    type Strategy = lnpbp::bech32::strategies::UsingStrictEncoding;
+}
+
+// TODO: Make this part of `lnpbp::bech32`
+#[cfg(feature = "serde")]
+impl serde::Serialize for SchemaId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: serde::Serializer {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&self.to_bech32_string())
+        } else {
+            serializer.serialize_bytes(&self[..])
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for SchemaId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        struct Visitor;
+        impl serde::de::Visitor<'_> for Visitor {
+            type Value = SchemaId;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(formatter, "Bech32 string with `{}` HRP", RGB_SCHEMA_ID_HRP)
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where E: serde::de::Error {
+                SchemaId::from_str(v).map_err(serde::de::Error::custom)
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where E: serde::de::Error {
+                self.visit_str(&v)
+            }
+
+            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+            where E: serde::de::Error {
+                SchemaId::from_slice(&v)
+                    .map_err(|_| serde::de::Error::invalid_length(v.len(), &"32 bytes"))
+            }
+        }
+
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(Visitor)
+        } else {
+            deserializer.deserialize_byte_buf(Visitor)
+        }
+    }
+}
+
+impl FromStr for SchemaId {
+    type Err = lnpbp::bech32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> { SchemaId::from_bech32_str(s) }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -81,7 +144,6 @@ pub struct Schema {
     /// nature of client-side-validation which does not allow upgrades).
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub rgb_features: FlagVec,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub root_id: SchemaId,
 
     pub type_system: TypeSystem,

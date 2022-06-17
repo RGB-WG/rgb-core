@@ -11,6 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io;
+use std::str::FromStr;
 
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
@@ -19,6 +20,7 @@ use commit_verify::{
     commit_encode, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
     ToMerkleSource,
 };
+use lnpbp::bech32::{FromBech32Str, ToBech32String};
 use lnpbp::chain::Chain;
 
 use super::{
@@ -29,9 +31,16 @@ use crate::reveal::{self, MergeReveal};
 use crate::schema::{
     ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, TransitionType,
 };
-#[cfg(feature = "serde")]
-use crate::Bech32;
-use crate::{schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId, ToBech32};
+use crate::{schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId};
+
+/// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
+/// the value of two concatenated SHA256 hashes for `rgb:node` prefix string.
+static MIDSTATE_NODE_ID: [u8; 32] = [
+    0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc, 0xbd, 0x5a, 0x58,
+    0x55, 0x6a, 0xe2, 0x16, 0xa5, 0xee, 0xb7, 0x3c, 0x1, 0xe0, 0x86, 0x91, 0x22, 0x43, 0x12, 0x9f,
+];
+
+pub const RGB_CONTRACT_ID_HRP: &str = "rgb";
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display("{node_id}:{output_no}")]
@@ -41,13 +50,6 @@ pub struct NodeOutpoint {
     pub node_id: NodeId,
     pub output_no: u16,
 }
-
-/// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
-/// the value of two concatenated SHA256 hashes for `rgb:node` prefix string.
-static MIDSTATE_NODE_ID: [u8; 32] = [
-    0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc, 0xbd, 0x5a, 0x58,
-    0x55, 0x6a, 0xe2, 0x16, 0xa5, 0xee, 0xb7, 0x3c, 0x1, 0xe0, 0x86, 0x91, 0x22, 0x43, 0x12, 0x9f,
-];
 
 /// Tag used for [`NodeId`] and [`ContractId`] hash types
 pub struct NodeIdTag;
@@ -60,11 +62,16 @@ impl sha256t::Tag for NodeIdTag {
     }
 }
 
+impl lnpbp::bech32::Strategy for NodeIdTag {
+    const HRP: &'static str = RGB_CONTRACT_ID_HRP;
+    type Strategy = lnpbp::bech32::strategies::UsingStrictEncoding;
+}
+
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[wrapper(Debug, Display, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[wrapper(Debug, Display)]
 pub struct NodeId(sha256t::Hash<NodeIdTag>);
 
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for NodeId
@@ -79,13 +86,8 @@ impl commit_encode::Strategy for NodeId {
 }
 
 /// Unique contract identifier equivalent to the contract genesis commitment
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", try_from = "Bech32", into = "Bech32")
-)]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
-#[wrapper(Debug, LowerHex, Index, IndexRange, IndexFrom, IndexTo, IndexFull)]
+#[wrapper(Debug)]
 #[display(ContractId::to_bech32_string)]
 pub struct ContractId(sha256t::Hash<NodeIdTag>);
 
@@ -109,6 +111,71 @@ impl From<ContractId> for lnpbp::chain::AssetId {
 
 impl commit_encode::Strategy for ContractId {
     type Strategy = commit_encode::strategies::UsingStrict;
+}
+
+impl lnpbp::bech32::Strategy for ContractId {
+    const HRP: &'static str = RGB_CONTRACT_ID_HRP;
+    type Strategy = lnpbp::bech32::strategies::UsingStrictEncoding;
+}
+
+// TODO: Make this part of `lnpbp::bech32`
+#[cfg(feature = "serde")]
+impl serde::Serialize for ContractId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: serde::Serializer {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&self.to_bech32_string())
+        } else {
+            serializer.serialize_bytes(&self[..])
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for ContractId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        struct Visitor;
+        impl serde::de::Visitor<'_> for Visitor {
+            type Value = ContractId;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(
+                    formatter,
+                    "Bech32 string with `{}` HRP",
+                    RGB_CONTRACT_ID_HRP
+                )
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where E: serde::de::Error {
+                ContractId::from_str(v).map_err(serde::de::Error::custom)
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where E: serde::de::Error {
+                self.visit_str(&v)
+            }
+
+            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+            where E: serde::de::Error {
+                ContractId::from_slice(&v)
+                    .map_err(|_| serde::de::Error::invalid_length(v.len(), &"32 bytes"))
+            }
+        }
+
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(Visitor)
+        } else {
+            deserializer.deserialize_byte_buf(Visitor)
+        }
+    }
+}
+
+impl FromStr for ContractId {
+    type Err = lnpbp::bech32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> { ContractId::from_bech32_str(s) }
 }
 
 /// RGB contract node API, defined as trait
