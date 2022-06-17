@@ -37,10 +37,10 @@ path = "src/lib.rs"
 amplify = { version = "~3.12.0", features = ["apfloat"] }
 bp-core = { version = "~0.7.0" }
 lnpbp = { version = "~0.7.0", features = ["zip"] }
-stens = "0.3.2"
+stens = "~0.3.2"
 strict_encoding = { version = "~1.8.8", features = ["crypto", "chrono", "bitcoin", "float"] }
 commit_verify = { version = "~0.7.0", features = ["rand", "bulletproofs"] }
-descriptor-wallet = "0.7.1"
+descriptor-wallet = "~0.7.1"
 aluvm = { version = "~0.6.0", features = ["std", "strict_encoding"] }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
