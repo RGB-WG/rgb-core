@@ -212,34 +212,10 @@ mod test {
     ];
 
     #[test]
-    #[should_panic(expected = "UnsupportedDataStructure")]
-    fn test_garbage_df_format1() {
-        let bytes: Vec<u8> =
-            vec![0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255];
-        DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "UnsupportedDataStructure")]
-    fn test_garbage_df_format2() {
+    #[should_panic(expected = r#"EnumValueNotKnown("DiscreteFiniteFieldFormat", 1)"#)]
+    fn test_garbage_df_format() {
         let bytes: Vec<u8> =
             vec![1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255];
-        DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "UnsupportedDataStructure")]
-    fn test_garbage_df_format3() {
-        let bytes: Vec<u8> =
-            vec![1, 8, 0, 0, 0, 0, 0, 0, 0, 1, 255, 255, 255, 255, 255, 255, 255, 255];
-        DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "UnsupportedDataStructure")]
-    fn test_garbage_df_format4() {
-        let bytes: Vec<u8> =
-            vec![1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 127];
         DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
     }
 

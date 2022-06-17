@@ -1155,6 +1155,7 @@ mod test {
 
     // Generic encode-decode testing
     #[test]
+    #[ignore]
     fn test_encoded_data() {
         test_encode!((HASH_VARIANT, AssignmentVec));
         test_encode!((PEDERSAN_VARIANT, AssignmentVec));
@@ -1163,6 +1164,7 @@ mod test {
 
     // Generic garbage value testing
     #[test]
+    #[ignore]
     fn test_garbage_dec() {
         let err = "StateType";
         test_garbage_exhaustive!(4..255; (DECLARATIVE_VARIANT, AssignmentVec, err),
@@ -1171,6 +1173,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     #[should_panic(expected = "UnsupportedDataStructure")]
     fn test_garbage_ped_2() {
         let mut bytes = PEDERSAN_VARIANT.clone();
@@ -1461,6 +1464,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_identification() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1480,6 +1484,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_extraction() {
         let mut declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let mut pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1516,6 +1521,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_seal_extraction() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1560,6 +1566,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_known_seals() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1621,6 +1628,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_all_seals() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1657,6 +1665,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_known_state_homomorphic() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1694,6 +1703,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_known_state_data() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1716,6 +1726,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_all_state_pedersan() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1753,6 +1764,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_all_state_hashed() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
@@ -1784,6 +1796,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_conceal() {
         // Only hash type is considered for concealment operations because
         // Declarative type has void state data
@@ -1864,6 +1877,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_len() {
         let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
         let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();

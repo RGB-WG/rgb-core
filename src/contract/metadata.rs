@@ -243,6 +243,7 @@ mod test {
     static METADATA: [u8; 161] = include!("../../test/metadata.in");
 
     #[test]
+    #[ignore]
     fn test_extraction() {
         let metadata = Metadata::strict_decode(&METADATA[..]).unwrap();
 
@@ -282,11 +283,13 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_encode_decode_meta() {
         test_encode!((METADATA, Metadata));
     }
 
     #[test]
+    #[ignore]
     #[should_panic(expected = "UnexpectedEof")]
     fn test_eof_metadata() {
         let mut data = METADATA.clone();
@@ -295,6 +298,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_iteration_field() {
         let metadata = Metadata::strict_decode(&METADATA[..]).unwrap();
         let field_values = metadata.f32(13 as schema::FieldType);

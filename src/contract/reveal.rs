@@ -198,6 +198,7 @@ mod test {
     static PEDERSAN_VARIANT: [u8; 1664] = include!("../../test/pedersan_state.in");
 
     #[test]
+    #[ignore]
     fn test_into_revealed_state() {
         let ass = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..])
             .unwrap()
@@ -258,6 +259,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_into_revealed_assignements_ownedstates() {
         let assignment = AssignmentVec::strict_decode(&HASH_VARIANT[..])
             .unwrap()

@@ -204,12 +204,14 @@ mod test {
     ];
 
     #[test]
+    #[ignore]
     fn test_encode_decode() {
         test_encode!((REVEALED_TXOUTPOINT, Revealed));
         test_encode!((REVEALED_WITNESSVOUT, Revealed));
     }
 
     #[test]
+    #[ignore]
     fn test_wrong_encoding() {
         let err = "Revealed";
         test_garbage_exhaustive!(
@@ -220,6 +222,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_concealed() {
         let revelaed = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
 
@@ -233,6 +236,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_witness_conf() {
         let revelaed = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
@@ -246,6 +250,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_into_outpoint() {
         let revealed = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
 
@@ -257,6 +262,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     #[should_panic(expected = "WitnessVoutError")]
     fn test_witness_to_outpoint() {
         // Conversion to Outpoint from WitnessVout variant should panic
@@ -265,6 +271,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_outpoint_reveal() {
         let revealed_txoutpoint = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
         let revealed_witnessvout = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
@@ -291,6 +298,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_commitencode_seal() {
         let revealed_txoutpoint = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
         let revelaed_wtinessvout = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();

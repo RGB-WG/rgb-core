@@ -104,6 +104,7 @@ mod test {
     static PSBT: [u8; 462] = include!("../../test/test_transaction.psbt");
 
     #[test]
+    #[ignore]
     fn test_psbt() {
         // Create some dummy NodeId and ContractId for the test
         let genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
