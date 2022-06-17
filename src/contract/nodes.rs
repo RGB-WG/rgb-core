@@ -22,6 +22,7 @@ use commit_verify::{
 };
 use lnpbp::bech32::{FromBech32Str, ToBech32String};
 use lnpbp::chain::Chain;
+use once_cell::sync::Lazy;
 
 use super::{
     AssignmentVec, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner, ParentOwnedRights,
@@ -32,6 +33,9 @@ use crate::schema::{
     ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, TransitionType,
 };
 use crate::{schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId};
+
+static EMPTY_OWNED_RIGHTS: Lazy<ParentOwnedRights> = Lazy::new(|| ParentOwnedRights::default());
+static EMPTY_PUBLIC_RIGHTS: Lazy<ParentPublicRights> = Lazy::new(|| ParentPublicRights::default());
 
 /// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
 /// the value of two concatenated SHA256 hashes for `rgb:node` prefix string.
@@ -574,20 +578,10 @@ impl Node for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &ParentOwnedRights {
-        lazy_static! {
-            static ref PARENT_EMPTY: ParentOwnedRights = ParentOwnedRights::default();
-        }
-        &PARENT_EMPTY
-    }
+    fn parent_owned_rights(&self) -> &ParentOwnedRights { &EMPTY_OWNED_RIGHTS }
 
     #[inline]
-    fn parent_public_rights(&self) -> &ParentPublicRights {
-        lazy_static! {
-            static ref PARENT_EMPTY: ParentPublicRights = ParentPublicRights::default();
-        }
-        &PARENT_EMPTY
-    }
+    fn parent_public_rights(&self) -> &ParentPublicRights { &EMPTY_PUBLIC_RIGHTS }
 
     #[inline]
     fn metadata(&self) -> &Metadata { &self.metadata }
@@ -625,12 +619,7 @@ impl Node for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &ParentOwnedRights {
-        lazy_static! {
-            static ref PARENT_EMPTY: ParentOwnedRights = ParentOwnedRights::default();
-        }
-        &PARENT_EMPTY
-    }
+    fn parent_owned_rights(&self) -> &ParentOwnedRights { &EMPTY_OWNED_RIGHTS }
 
     #[inline]
     fn parent_public_rights(&self) -> &ParentPublicRights { &self.parent_public_rights }

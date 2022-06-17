@@ -11,6 +11,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use once_cell::sync::Lazy;
+
 use super::{ExtensionType, FieldType, Occurrences, TransitionType};
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -103,10 +105,9 @@ pub struct TransitionSchema {
     pub public_rights: PublicRightsStructure,
 }
 
-lazy_static! {
-    static ref EMPTY_OWNED_RIGHTS: OwnedRightsStructure = OwnedRightsStructure::new();
-    static ref EMPTY_PUBLIC_RIGHTS: PublicRightsStructure = PublicRightsStructure::new();
-}
+static EMPTY_OWNED_RIGHTS: Lazy<OwnedRightsStructure> = Lazy::new(|| OwnedRightsStructure::new());
+static EMPTY_PUBLIC_RIGHTS: Lazy<PublicRightsStructure> =
+    Lazy::new(|| PublicRightsStructure::new());
 
 impl NodeSchema for GenesisSchema {
     #[inline]

@@ -18,6 +18,7 @@ use std::io;
 use amplify::AsAny;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{CommitConceal, CommitEncode, ConsensusCommit};
+use once_cell::sync::Lazy;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
@@ -27,9 +28,8 @@ use super::{
 use crate::contract::container;
 use crate::{ConfidentialDataError, StateRetrievalError};
 
-lazy_static! {
-    pub(super) static ref EMPTY_ASSIGNMENT_VEC: AssignmentVec = AssignmentVec::default();
-}
+pub(super) static EMPTY_ASSIGNMENT_VEC: Lazy<AssignmentVec> =
+    Lazy::new(|| AssignmentVec::default());
 
 /// Categories of the state
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]

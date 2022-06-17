@@ -35,6 +35,7 @@ pub use assignments::{
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
+use once_cell::sync::Lazy;
 pub use reveal::MergeReveal;
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
@@ -42,11 +43,9 @@ pub use seal::{IntoRevealedSeal, SealEndpoint};
 use secp256k1zkp::Secp256k1 as Secp256k1zkp;
 pub use value::{AtomicValue, HomomorphicBulletproofGrin};
 
-lazy_static! {
-    /// Secp256k1zpk context object
-    pub(crate) static ref SECP256K1_ZKP: Secp256k1zkp =
-        Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit);
-}
+/// Secp256k1zpk context object
+pub(crate) static SECP256K1_ZKP: Lazy<Secp256k1zkp> =
+    Lazy::new(|| Secp256k1zkp::with_caps(secp256k1zkp::ContextFlag::Commit));
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
