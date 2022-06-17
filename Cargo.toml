@@ -1,9 +1,9 @@
 [package]
 name = "rgb-core"
-version = "0.7.0-rc.1"
+version = "0.8.0"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
-description = "RGB Core Library: private & scalable client-validated smart contracts for Bitcoin & Lightning"
+description = "RGB Core Library: consensus & verification for private & scalable client-validated smart contracts on Bitcoin & Lightning"
 repository = "https://github.com/RGB-WG/rgb-core"
 homepage = "https://rgb.network"
 keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "lnp-bp"]
@@ -75,7 +75,7 @@ chrono = "~0.4.19"
 #    accept bulletproofs code, we will switch to it
 grin_secp256k1zkp = { version = "=0.7.11" }
 # Optional features used only by a binary
-clap = { version = "3.1", optional = true, features = ["derive"] }
+clap = { version = "~3.1.18", optional = true, features = ["derive"] }
 serde_yaml = { version = "0.8", optional = true }
 serde_json = { version = "1", optional = true }
 

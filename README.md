@@ -1,96 +1,86 @@
 # RGB Core Library
 
-![Build](https://github.com/rgb-org/rgb-core/workflows/Build/badge.svg)
-![Tests](https://github.com/rgb-org/rgb-core/workflows/Tests/badge.svg)
-![Lints](https://github.com/rgb-org/rgb-core/workflows/Lints/badge.svg)
-[![codecov](https://codecov.io/gh/rgb-org/rgb-core/branch/master/graph/badge.svg)](https://codecov.io/gh/rgb-org/rgb-core)
+![Build](https://github.com/RGB-WG/rgb-core/workflows/Build/badge.svg)
+![Tests](https://github.com/RGB-WG/rgb-core/workflows/Tests/badge.svg)
+![Lints](https://github.com/RGB-WG/rgb-core/workflows/Lints/badge.svg)
+[![codecov](https://codecov.io/gh/RGB-WG/rgb-core/branch/master/graph/badge.svg)](https://codecov.io/gh/RGB-WG/rgb-core)
 
 [![crates.io](https://img.shields.io/crates/v/rgb-core)](https://crates.io/crates/rgb-core)
 [![Docs](https://docs.rs/rgb-core/badge.svg)](https://docs.rs/rgb-core)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Rust library implementing confidential & scalable client-validated smart 
-contracts for Bitcoin & Lightning.
+RGB is confidential & scalable client-validated smart contracts for Bitcoin & 
+Lightning. To learn more about RGB please check [RGB blueprint][Blueprint] and
+[RGB FAQ][FAQ] websites.
+
+RGB Core library provides consensus-critical and validation code for RGB. 
+It is a standard implementation, jointly with [LNP/BP Standards][LNPBPs] 
+defining RGB consensus and validation rules.
+
+The consensus-critical code library is shared with the following libraries:
+1. [Client-side-validation Foundation Lib][Foundation]. It is
+   non-bitcoin-specific library, covering concepts related to
+   client-side-validation (commitments, single-use-seals abstracted from
+   bitcoin, consensus-critical data encoding protocols).
+2. [BP Core Lib][BP]. This is client-side-validation applied to bitcoin protocol
+   with deterministic bitcoin commitments (tapret) and TXO-based
+   single-use-seals.
+3. [AluVM virtual machine][AluVM] used by RGB for Turing-complete smart contract
+   functionality.
+
+The development of the project is supported and managed by [LNP/BP Standards 
+Association][Association]. The design of RGB smart contract system and 
+implementation of this and underlying consensus libraries was done in 2019-2022 
+by [Dr Maxim Orlovsky][Max] basing or earlier ideas of client-side-validation 
+and RGB as "assets for bitcoin and LN" by [Peter Todd][Todd] and 
+[Giacomo Zucco][Zucco]. Upon the release of RGBv1 the protocol will be immutable
+and this library will accept only bugfixes; i.e. it will be ossified by 
+requiring consensus ACK for the new changes across the large set of maintainers.
 
 The current list of the projects based on the library include:
-* [RGB Node](https://github.com/LNP-BP/rgb-node): standalone & embeddable node
-  for running RGB
-* [RGB SDK](https://github.com/LNP-BP/rgb-sdk): SDK for developing mobile, web,
-  desktop & server-side wallets and doing other forms of software integration 
-  with RGB Node
+* [RGB Standard Lib][RGB Std]: library providing high-level RGB smart contract
+  API in rust.
+* [RGB Node][RGB Node]: standalone & embeddable node for running RGB.
+* [MyCitadel Node][MyCitadel Node]: wallet node providing RGB smart contract
+  functionality integrated with Lightning network, bitcoin blockchain indexers, 
+  decentralized data storage and propagation (Storm) and wallet services. It can
+  run as embedded, desktop, server or cloud-based node.
 
-To learn more about the technologies enabled by the library please check:
-* [RGB Technology Internals](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/)
-* [LNP/BP Nodes Initiative](https://github.com/LNP-BP/FAQ/blob/master/Presentation%20slides/LNP-BP%20Nodes%20Initiative.pdf)
+## Use
 
-The development of the library projects is supported by [LNP/BP Standards 
-Association](https://github.com/LNP-BP).
+Minimum supported rust compiler version (MSRV): 1.59, rust 2022 edition.
 
-Previously the code of the library was part of [LNP/BP Core Library](https://github.com/LNP-BP/rust-lnpbp)
-but later was extracted into a separate library in this repository via fork.
-The reasons for that were the facts that LNP/BP Core Lib has a lot of usage
-outside RGB project scope, and the overall dependencies & feature management
-complexity, compile times etc grow significantly. Another reason is the need for
-different review policies & security requirements (LNP/BP Core Lib may be more
-experimental than RGB).
-
-The library is based on other projects:
-* [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin)
-* [bitcoin_hashes](https://github.com/rust-bitcoin/bitcoin_hashes)
-* [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)
-* [rust-secp256k1-zkp](https://github.com/ElementsProject/rust-secp256k1-zkp) 
-  for Pedersen commitments and Bulletproofs used in confidential state inside 
-  RGB protocols
-* [rust-miniscript](https://github.com/rust-bitcoin/rust-miniscript)
-* [rust-lnpbp](https://github.com/LNP-BP/rust-lnpbp) LNP/BP Core Library
-
-## Install
-
-Minimum supported rust compiler version (MSRV): 1.41.1 (if used without tokio)
-
-```shell script
-git clone https://github.com/rgb-org/rgb-core
-cd rgb-core
-cargo build --release --all-features
-```
-
-The library can be found in `target/release` directory.
-
-You can run full test suite with:
-
-```
-./contrib/test.sh
-```
-
-Please refer to the [`cargo` documentation](https://doc.rust-lang.org/stable/cargo/) 
-for more detailed instructions. 
-
-### Use library in other projects
-
-Add these lines to your `Cargo.toml` file at the very end of the `[dependecies]`
-section:
+The library can be integrated into other rust projects via `Cargo.toml` 
+`[dependecies]` section:
 
 ```toml
-rgb-core = "~0.7.0"
+rgb-core = "~0.8.0"
 ```
-
 
 ## Contributing
 
-Contribution guidelines can be found in a separate 
-[CONTRIBUTING](CONTRIBUTING.md) file
-
-
-## More information
-
-### Policy on Altcoins/Altchains
+Currently, library functionality is freezed and as a part of ossification only
+bugfixes are accepted.
 
 Altcoins and "blockchains" other than Bitcoin blockchain/Bitcoin protocols are 
 not supported and not planned to be supported; pull requests targeting them will 
 be declined.
 
-### Licensing
+## License
 
 See [LICENCE](LICENSE) file.
 
+
+[LNPBPs]: https://github.com/LNP-BP/LNPBPs
+[Association]: https://lnp-bp.org
+[Blueprint]: https://rgb.network
+[Foundation]: https://github.com/LNP-BP/client_side_validation
+[BP]: https://github.com/BP-WG/bp-core
+[AluVM]: https://github.com/Internet2-WG/rust-aluvm
+[RGB Std]: https://rgbfaq.com
+[RGB Node]: https://github.com/RGB-WG/rgb-node
+[MyCitadel Node]: https://github.com/MyCitadel/mycitadel-node
+[Max]: https://github.com/dr-orlovsky
+[Todd]: https://petertodd.org/
+[Zucco]: https://giacomozucco.com/
