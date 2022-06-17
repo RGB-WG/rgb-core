@@ -38,7 +38,7 @@ type MetadataInner = BTreeMap<schema::FieldType, Vec<data::Revealed>>;
 #[derive(StrictEncode, StrictDecode)]
 pub struct Metadata(MetadataInner);
 
-// TODO: Improve other iterators for contract collection types.
+// TODO #107: Improve other iterators for contract collection types.
 impl<'me> IntoIterator for &'me Metadata {
     type Item = (&'me schema::FieldType, &'me Vec<data::Revealed>);
     type IntoIter = std::collections::btree_map::Iter<'me, schema::FieldType, Vec<data::Revealed>>;

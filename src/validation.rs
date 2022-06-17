@@ -54,17 +54,6 @@ impl AddAssign for Status {
     }
 }
 
-// TODO #43: (new) With rust `try_trait` stabilization re-implement using
-//       `Try` trait
-// impl Try for Status {
-//    type Ok = Status;
-//    type Error = Failure;
-//    pub fn into_result(self) -> Result<Self::Ok, Self::Error> {
-//        unimplemented!()
-//    }
-//    pub fn from_ok(v: Self::Ok) -> Self {
-//        v
-//    }
 impl Status {
     pub fn from_error(v: Failure) -> Self {
         Status {
