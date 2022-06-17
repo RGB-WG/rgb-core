@@ -66,7 +66,7 @@ grin_secp256k1zkp = { version = "=0.7.11" }
 serde_json = "1"
 
 [features]
-default = ["serde"]
+default = []
 all = ["serde", "wallet"]
 wallet = ["bp-core/wallet"]
 serde = ["serde_crate", "serde_with", "half/serialize",
