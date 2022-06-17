@@ -30,7 +30,6 @@ mod anchor;
 mod graph;
 mod stash;
 mod bundle;
-mod iter;
 mod consignment;
 
 #[cfg(feature = "wallet")]
@@ -39,5 +38,4 @@ pub use anchor::ConcealAnchors;
 pub use bundle::{BundleId, ConcealTransitions, TransitionBundle};
 pub use consignment::{AnchoredBundle, Consignment, ConsignmentEndpoint};
 pub use graph::{ConsistencyError, GraphApi};
-pub use iter::MeshIter;
 pub use stash::Stash;
