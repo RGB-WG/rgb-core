@@ -28,6 +28,8 @@ The consensus-critical code library is shared with the following libraries:
    single-use-seals.
 3. [AluVM virtual machine][AluVM] used by RGB for Turing-complete smart contract
    functionality.
+4. [Encoding schema][StenS], defining structured data types used in RGB smart
+   contracts.
 
 The development of the project is supported and managed by [LNP/BP Standards 
 Association][Association]. The design of RGB smart contract system and 
@@ -75,10 +77,12 @@ See [LICENCE](LICENSE) file.
 [LNPBPs]: https://github.com/LNP-BP/LNPBPs
 [Association]: https://lnp-bp.org
 [Blueprint]: https://rgb.network
+[FAQ]: https://rgbfaq.com
 [Foundation]: https://github.com/LNP-BP/client_side_validation
 [BP]: https://github.com/BP-WG/bp-core
 [AluVM]: https://github.com/Internet2-WG/rust-aluvm
-[RGB Std]: https://rgbfaq.com
+[StenS]: https://github.com/Internet2-WG/rust-stens
+[RGB Std]: https://github.com/RGB-WG/rgb-std
 [RGB Node]: https://github.com/RGB-WG/rgb-node
 [MyCitadel Node]: https://github.com/MyCitadel/mycitadel-node
 [Max]: https://github.com/dr-orlovsky
