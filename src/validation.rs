@@ -418,7 +418,7 @@ impl<'consignment, C: Consignment<'consignment>, R: ResolveTx> Validator<'consig
         // but still good to report the user that the consignment is not perfect
         for node_id in self
             .validation_index
-            .difference(&self.consignment.node_ids())
+            .difference(self.consignment.node_ids())
         {
             self.status.add_warning(Warning::ExcessiveNode(*node_id));
         }

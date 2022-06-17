@@ -432,10 +432,7 @@ mod _validation {
                 });
 
             for (field_type_id, occ) in metadata_structure {
-                let set = metadata
-                    .get(field_type_id)
-                    .cloned()
-                    .unwrap_or_else(BTreeSet::new);
+                let set = metadata.get(field_type_id).cloned().unwrap_or_default();
 
                 // Checking number of field occurrences
                 if let Err(err) = occ.check(set.len() as u16) {

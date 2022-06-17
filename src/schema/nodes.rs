@@ -105,9 +105,8 @@ pub struct TransitionSchema {
     pub public_rights: PublicRightsStructure,
 }
 
-static EMPTY_OWNED_RIGHTS: Lazy<OwnedRightsStructure> = Lazy::new(|| OwnedRightsStructure::new());
-static EMPTY_PUBLIC_RIGHTS: Lazy<PublicRightsStructure> =
-    Lazy::new(|| PublicRightsStructure::new());
+static EMPTY_OWNED_RIGHTS: Lazy<OwnedRightsStructure> = Lazy::new(OwnedRightsStructure::new);
+static EMPTY_PUBLIC_RIGHTS: Lazy<PublicRightsStructure> = Lazy::new(PublicRightsStructure::new);
 
 impl NodeSchema for GenesisSchema {
     #[inline]

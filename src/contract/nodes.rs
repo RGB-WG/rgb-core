@@ -34,8 +34,8 @@ use crate::schema::{
 };
 use crate::{schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId};
 
-static EMPTY_OWNED_RIGHTS: Lazy<ParentOwnedRights> = Lazy::new(|| ParentOwnedRights::default());
-static EMPTY_PUBLIC_RIGHTS: Lazy<ParentPublicRights> = Lazy::new(|| ParentPublicRights::default());
+static EMPTY_OWNED_RIGHTS: Lazy<ParentOwnedRights> = Lazy::new(ParentOwnedRights::default);
+static EMPTY_PUBLIC_RIGHTS: Lazy<ParentPublicRights> = Lazy::new(ParentPublicRights::default);
 
 /// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
 /// the value of two concatenated SHA256 hashes for `rgb:node` prefix string.
@@ -358,7 +358,7 @@ pub trait Node: AsAny {
             .owned_rights_by_type(assignment_type)
             .map(AssignmentVec::revealed_seals)
             .transpose()?
-            .unwrap_or_else(Vec::new))
+            .unwrap_or_default())
     }
 
     #[inline]

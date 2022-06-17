@@ -28,8 +28,7 @@ use super::{
 use crate::contract::container;
 use crate::{ConfidentialDataError, StateRetrievalError};
 
-pub(super) static EMPTY_ASSIGNMENT_VEC: Lazy<AssignmentVec> =
-    Lazy::new(|| AssignmentVec::default());
+pub(super) static EMPTY_ASSIGNMENT_VEC: Lazy<AssignmentVec> = Lazy::new(AssignmentVec::default);
 
 /// Categories of the state
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
