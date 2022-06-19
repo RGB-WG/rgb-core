@@ -12,7 +12,6 @@
 mod assignments;
 #[macro_use]
 pub mod data;
-pub mod allocation;
 mod conceal;
 mod metadata;
 pub mod nodes;
@@ -22,15 +21,10 @@ pub mod seal;
 pub mod value;
 pub mod container;
 
-pub use allocation::{
-    AllocatedValue, Allocation, AllocationMap, AllocationValueMap, AllocationValueVec,
-    EndpointValueMap, IntoSealValueMap, OutpointValue, OutpointValueMap, OutpointValueVec,
-    SealValueMap, UtxobValue,
-};
 pub(self) use assignments::EMPTY_ASSIGNMENT_VEC;
 pub use assignments::{
-    Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy, HashStrategy,
-    PedersenStrategy, RevealedState, State, StateType,
+    Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy, EndpointValueMap,
+    HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State, StateType,
 };
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;

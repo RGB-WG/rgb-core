@@ -11,7 +11,7 @@
 
 use core::cmp::Ordering;
 use core::fmt::Debug;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::hash::Hasher;
 use std::io;
 
@@ -22,13 +22,18 @@ use once_cell::sync::Lazy;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
-    data, seal, value, ConcealSeals, ConcealState, EndpointValueMap, NoDataError, SealEndpoint,
-    SealValueMap, SECP256K1_ZKP,
+    data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint, SECP256K1_ZKP,
 };
 use crate::contract::container;
-use crate::{ConfidentialDataError, StateRetrievalError};
+use crate::{AtomicValue, ConfidentialDataError, StateRetrievalError};
 
 pub(super) static EMPTY_ASSIGNMENT_VEC: Lazy<AssignmentVec> = Lazy::new(AssignmentVec::default);
+
+/// Allocation map using unique set of seal definitions
+pub type SealValueMap = BTreeMap<seal::Revealed, AtomicValue>;
+
+/// Allocation map using unique set of blinded consignment endpoints
+pub type EndpointValueMap = BTreeMap<SealEndpoint, AtomicValue>;
 
 /// Categories of the state
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -68,8 +73,8 @@ impl Default for AssignmentVec {
 impl AssignmentVec {
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
-        allocations_ours: SealValueMap,
-        allocations_theirs: EndpointValueMap,
+        allocations_ours: BTreeMap<seal::Revealed, AtomicValue>,
+        allocations_theirs: BTreeMap<SealEndpoint, AtomicValue>,
     ) -> Self {
         if allocations_ours.len() + allocations_theirs.len() == 0 {
             return Self::DiscreteFiniteField(vec![]);
