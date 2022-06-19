@@ -31,6 +31,6 @@ macro_rules! type_map {
 #[macro_export]
 macro_rules! field {
     ($type:ident, $value:expr) => {
-        bset![::rgb::data::Revealed::$type($value)]
+        vec![::rgb::data::Revealed::$type($value)]
     };
 }
