@@ -133,8 +133,6 @@ pub struct Schema {
     /// Feature flags control which of the available RGB features are allowed
     /// for smart contracts created under this schema.
     ///
-    /// RGBv1 defines that this structure must contain no flags set.
-    ///
     /// NB: This is not the same as RGB protocol versioning: feature flag set
     /// is specific to a particular RGB protocol version. The only currently
     /// defined RGB version is RGBv1; future versions may change the whole
