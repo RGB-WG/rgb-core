@@ -23,8 +23,9 @@ pub mod container;
 
 pub(self) use assignments::EMPTY_ASSIGNMENT_VEC;
 pub use assignments::{
-    Assignment, AssignmentVec, ConfidentialState, DeclarativeStrategy, EndpointValueMap,
-    HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State, StateType,
+    Assignment, AssignmentVec, ConfidentialState, ContainerStrategy, DeclarativeStrategy,
+    EndpointValueMap, HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State,
+    StateType,
 };
 pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;

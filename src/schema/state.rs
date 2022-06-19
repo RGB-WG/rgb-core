@@ -24,6 +24,7 @@ pub enum StateType {
     Declarative = 0,
     DiscreteFiniteField = 1,
     CustomData = 2,
+    DataContainer = 3,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -38,6 +39,7 @@ pub enum StateSchema {
     Declarative,
     DiscreteFiniteField(DiscreteFiniteFieldFormat),
     CustomData(TypeRef),
+    DataContainer,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -67,6 +69,7 @@ mod _validation {
     use commit_verify::CommitConceal;
 
     use super::*;
+    use crate::contract::ContainerStrategy;
     use crate::schema::OwnedRightType;
     use crate::{
         validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy, State,
@@ -140,6 +143,15 @@ mod _validation {
                                 }
                             }
                         }
+                        StateSchema::DataContainer => {
+                            if a.downcast_ref::<<ContainerStrategy as State>::Confidential>()
+                                .is_none()
+                            {
+                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                    assignment_id,
+                                ));
+                            }
+                        }
                     }
                 }
                 Assignment::Revealed { assigned_state, .. }
@@ -179,6 +191,15 @@ mod _validation {
                                     // TODO: [validation] validate type schema
                                     // status += format.validate(assignment_id, data);
                                 }
+                            }
+                        }
+                        StateSchema::DataContainer => {
+                            if a.downcast_ref::<<ContainerStrategy as State>::Revealed>()
+                                .is_none()
+                            {
+                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                    assignment_id,
+                                ));
                             }
                         }
                     }
