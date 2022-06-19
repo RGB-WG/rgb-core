@@ -75,7 +75,7 @@ chrono = "~0.4.19"
 #    accept bulletproofs code, we will switch to it
 grin_secp256k1zkp = { version = "=0.7.11" }
 # Optional features used only by a binary
-clap = { version = "3.1", optional = true, features = ["derive"] }
+clap = { version = "~3.1.18", optional = true, features = ["derive"] }
 serde_yaml = { version = "0.8", optional = true }
 serde_json = { version = "1", optional = true }
 
