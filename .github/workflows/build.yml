@@ -30,6 +30,8 @@ jobs:
       fail-fast: false
       matrix:
         feature:
+          - wallet
+          - cli
           - serde
     steps:
       - uses: actions/checkout@v2
