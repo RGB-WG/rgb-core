@@ -76,8 +76,8 @@ pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
     pub use contract::{
         data, reveal, seal, value, Assignment, AssignmentVec, AtomicValue, ConcealSeals,
-        ConcealState, ConfidentialDataError, ConfidentialState, ContainerStrategy, ContractId,
-        DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
+        ConcealState, ConfidentialDataError, ConfidentialState, ContainerId, ContainerStrategy,
+        ContractId, DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
         HomomorphicBulletproofGrin, IntoRevealedSeal, MergeReveal, Metadata, NoDataError, Node,
         NodeId, NodeOutpoint, OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
         PublicRights, RevealedState, SealEndpoint, SealValueMap, State, StateRetrievalError,

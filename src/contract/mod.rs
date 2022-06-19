@@ -28,6 +28,7 @@ pub use assignments::{
     StateType,
 };
 pub use conceal::{ConcealSeals, ConcealState};
+pub use container::ContainerId;
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 use once_cell::sync::Lazy;
