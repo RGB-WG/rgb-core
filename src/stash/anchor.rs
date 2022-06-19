@@ -19,8 +19,9 @@ use bitcoin::hashes::Hash;
 #[cfg(feature = "wallet")]
 use bp::dbc::anchor::Error;
 use bp::dbc::Anchor;
+use commit_verify::lnpbp4;
 #[cfg(feature = "wallet")]
-use commit_verify::{lnpbp4, TaggedHash};
+use commit_verify::TaggedHash;
 #[cfg(feature = "wallet")]
 use wallet::psbt::Psbt;
 
