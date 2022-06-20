@@ -9,7 +9,7 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::io::Write;
 
 use bitcoin::hashes::{sha256, sha256t, Hash};
@@ -131,17 +131,28 @@ impl From<BTreeMap<Transition, BTreeSet<u16>>> for TransitionBundle {
 
 impl<'me> IntoIterator for &'me TransitionBundle {
     type Item = (&'me Transition, &'me BTreeSet<u16>);
-    type IntoIter = std::collections::btree_map::Iter<'me, Transition, BTreeSet<u16>>;
+    type IntoIter = btree_map::Iter<'me, Transition, BTreeSet<u16>>;
 
     fn into_iter(self) -> Self::IntoIter { self.revealed.iter() }
+}
+
+impl IntoIterator for TransitionBundle {
+    type Item = (Transition, BTreeSet<u16>);
+    type IntoIter = btree_map::IntoIter<Transition, BTreeSet<u16>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.revealed.into_iter() }
 }
 
 impl TransitionBundle {
     pub fn bundle_id(&self) -> BundleId { self.consensus_commit() }
 
-    pub fn known_transitions(
-        &self,
-    ) -> std::collections::btree_map::Keys<Transition, BTreeSet<u16>> {
+    pub fn concealed_iter(&self) -> btree_map::Iter<NodeId, BTreeSet<u16>> { self.concealed.iter() }
+
+    pub fn into_concealed_iter(self) -> btree_map::IntoIter<NodeId, BTreeSet<u16>> {
+        self.concealed.into_iter()
+    }
+
+    pub fn known_transitions(&self) -> btree_map::Keys<Transition, BTreeSet<u16>> {
         self.revealed.keys()
     }
 
