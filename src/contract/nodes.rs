@@ -47,7 +47,8 @@ static MIDSTATE_NODE_ID: [u8; 32] = [
 pub const RGB_CONTRACT_ID_HRP: &str = "rgb";
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[display("{node_id}:{output_no}")]
+#[derive(StrictEncode, StrictDecode)]
+#[display("{node_id}/{output_no}")]
 /// RGB contract node output pointer, defined by the node ID and output
 /// number.
 pub struct NodeOutpoint {
