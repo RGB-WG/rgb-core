@@ -72,6 +72,12 @@ impl lnpbp::bech32::Strategy for NodeIdTag {
     type Strategy = lnpbp::bech32::strategies::UsingStrictEncoding;
 }
 
+impl NodeOutpoint {
+    pub fn new(node_id: NodeId, output_no: u16) -> NodeOutpoint {
+        NodeOutpoint { node_id, output_no }
+    }
+}
+
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
