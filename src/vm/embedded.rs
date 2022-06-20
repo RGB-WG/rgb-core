@@ -406,10 +406,7 @@ mod node {
                 (AssignmentVec::Declarative(_), AssignmentVec::Declarative(_)) => {
                     // This is valid, so passing validation step
                 }
-                (
-                    AssignmentVec::DiscreteFiniteField(prev),
-                    AssignmentVec::DiscreteFiniteField(curr),
-                ) => {
+                (AssignmentVec::Fungible(prev), AssignmentVec::Fungible(curr)) => {
                     for (prev, curr) in prev.iter().zip(curr.iter()) {
                         if let (Some(prev), Some(curr)) =
                             (prev.as_revealed_state(), curr.as_revealed_state())
@@ -424,7 +421,7 @@ mod node {
                         }
                     }
                 }
-                (AssignmentVec::CustomData(prev), AssignmentVec::CustomData(curr)) => {
+                (AssignmentVec::NonFungible(prev), AssignmentVec::NonFungible(curr)) => {
                     for (prev, curr) in prev.iter().zip(curr.iter()) {
                         if prev.to_confidential_state() != curr.to_confidential_state() {
                             return Err(HandlerError::NonEqualState);

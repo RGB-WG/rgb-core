@@ -139,23 +139,20 @@ impl MergeReveal for AssignmentVec {
                     Ok(AssignmentVec::Declarative(result))
                 }
 
-                (
-                    AssignmentVec::DiscreteFiniteField(first_vec),
-                    AssignmentVec::DiscreteFiniteField(second_vec),
-                ) => {
+                (AssignmentVec::Fungible(first_vec), AssignmentVec::Fungible(second_vec)) => {
                     let mut result = Vec::with_capacity(first_vec.len());
                     for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
                         result.push(first.merge_reveal(second)?);
                     }
-                    Ok(AssignmentVec::DiscreteFiniteField(result))
+                    Ok(AssignmentVec::Fungible(result))
                 }
 
-                (AssignmentVec::CustomData(first_vec), AssignmentVec::CustomData(second_vec)) => {
+                (AssignmentVec::NonFungible(first_vec), AssignmentVec::NonFungible(second_vec)) => {
                     let mut result = Vec::with_capacity(first_vec.len());
                     for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
                         result.push(first.merge_reveal(second)?);
                     }
-                    Ok(AssignmentVec::CustomData(result))
+                    Ok(AssignmentVec::NonFungible(result))
                 }
                 // No other patterns possible, should not reach here
                 _ => {
@@ -283,13 +280,13 @@ mod test {
 
         // Create assignment for testing
         let test_variant_1 = vec![rev.clone(), conf_seal, conf_state, conf.clone()];
-        let assignment_1 = AssignmentVec::CustomData(test_variant_1.clone());
+        let assignment_1 = AssignmentVec::NonFungible(test_variant_1.clone());
 
         // Create assignment 2 for testing
         // which is reverse of assignment 1
         let mut test_variant_2 = test_variant_1.clone();
         test_variant_2.reverse();
-        let assignmnet_2 = AssignmentVec::CustomData(test_variant_2);
+        let assignmnet_2 = AssignmentVec::NonFungible(test_variant_2);
 
         // Performing merge revelaing
         let merged = assignment_1
@@ -305,7 +302,7 @@ mod test {
         // Test against confidential merging
         // Confidential + Anything = Anything
         let test_variant_3 = vec![conf.clone(), conf.clone(), conf.clone(), conf.clone()];
-        let assignment_3 = AssignmentVec::CustomData(test_variant_3);
+        let assignment_3 = AssignmentVec::NonFungible(test_variant_3);
 
         // merge with assignment 1
         let merged = assignment_3
@@ -327,7 +324,7 @@ mod test {
 
         // after merge operation all the states will be revealed
         let states = vec![rev.clone(), rev.clone(), rev.clone(), rev.clone()];
-        let assgn = AssignmentVec::CustomData(states);
+        let assgn = AssignmentVec::NonFungible(states);
         let expected_rights: OwnedRights = bmap! {1u16 => assgn}.into();
 
         assert_eq!(merged, expected_rights);

@@ -999,12 +999,12 @@ mod test {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    AssignmentVec::DiscreteFiniteField(set) => {
+                    AssignmentVec::Fungible(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    AssignmentVec::CustomData(set) => {
+                    AssignmentVec::NonFungible(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }

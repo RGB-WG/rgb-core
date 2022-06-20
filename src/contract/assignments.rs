@@ -61,8 +61,8 @@ pub enum StateType {
 )]
 pub enum AssignmentVec {
     Declarative(Vec<Assignment<DeclarativeStrategy>>),
-    DiscreteFiniteField(Vec<Assignment<PedersenStrategy>>),
-    CustomData(Vec<Assignment<HashStrategy>>),
+    Fungible(Vec<Assignment<PedersenStrategy>>),
+    NonFungible(Vec<Assignment<HashStrategy>>),
     Attachment(Vec<Assignment<AttachmentStrategy>>),
 }
 
@@ -77,7 +77,7 @@ impl AssignmentVec {
         allocations_theirs: BTreeMap<SealEndpoint, AtomicValue>,
     ) -> Self {
         if allocations_ours.len() + allocations_theirs.len() == 0 {
-            return Self::DiscreteFiniteField(vec![]);
+            return Self::Fungible(vec![]);
         }
 
         // Generate random blinding factors
@@ -148,15 +148,15 @@ impl AssignmentVec {
             }
         }));
 
-        Self::DiscreteFiniteField(set)
+        Self::Fungible(set)
     }
 
     #[inline]
     pub fn state_type(&self) -> StateType {
         match self {
             AssignmentVec::Declarative(_) => StateType::Declarative,
-            AssignmentVec::DiscreteFiniteField(_) => StateType::Value,
-            AssignmentVec::CustomData(_) => StateType::Data,
+            AssignmentVec::Fungible(_) => StateType::Value,
+            AssignmentVec::NonFungible(_) => StateType::Data,
             AssignmentVec::Attachment(_) => StateType::Attachment,
         }
     }
@@ -165,10 +165,10 @@ impl AssignmentVec {
     pub fn is_declarative(&self) -> bool { matches!(self, AssignmentVec::Declarative(_)) }
 
     #[inline]
-    pub fn has_value(&self) -> bool { matches!(self, AssignmentVec::DiscreteFiniteField(_)) }
+    pub fn has_value(&self) -> bool { matches!(self, AssignmentVec::Fungible(_)) }
 
     #[inline]
-    pub fn has_data(&self) -> bool { matches!(self, AssignmentVec::CustomData(_)) }
+    pub fn has_data(&self) -> bool { matches!(self, AssignmentVec::NonFungible(_)) }
 
     #[inline]
     pub fn declarative_assignment_vec_mut(
@@ -183,7 +183,7 @@ impl AssignmentVec {
     #[inline]
     pub fn value_assignment_vec_mut(&mut self) -> Option<&mut Vec<Assignment<PedersenStrategy>>> {
         match self {
-            AssignmentVec::DiscreteFiniteField(set) => Some(set),
+            AssignmentVec::Fungible(set) => Some(set),
             _ => None,
         }
     }
@@ -191,7 +191,7 @@ impl AssignmentVec {
     #[inline]
     pub fn data_assignment_vec_mut(&mut self) -> Option<&mut Vec<Assignment<HashStrategy>>> {
         match self {
-            AssignmentVec::CustomData(set) => Some(set),
+            AssignmentVec::NonFungible(set) => Some(set),
             _ => None,
         }
     }
@@ -217,7 +217,7 @@ impl AssignmentVec {
     #[inline]
     pub fn to_value_assignment_vec(&self) -> Vec<Assignment<PedersenStrategy>> {
         match self {
-            AssignmentVec::DiscreteFiniteField(set) => set.clone(),
+            AssignmentVec::Fungible(set) => set.clone(),
             _ => Default::default(),
         }
     }
@@ -225,7 +225,7 @@ impl AssignmentVec {
     #[inline]
     pub fn to_data_assignment_vec(&self) -> Vec<Assignment<HashStrategy>> {
         match self {
-            AssignmentVec::CustomData(set) => set.clone(),
+            AssignmentVec::NonFungible(set) => set.clone(),
             _ => Default::default(),
         }
     }
@@ -241,7 +241,7 @@ impl AssignmentVec {
     #[inline]
     pub fn into_value_assignment_vec(self) -> Vec<Assignment<PedersenStrategy>> {
         match self {
-            AssignmentVec::DiscreteFiniteField(set) => set,
+            AssignmentVec::Fungible(set) => set,
             _ => Default::default(),
         }
     }
@@ -249,7 +249,7 @@ impl AssignmentVec {
     #[inline]
     pub fn into_data_assignment_vec(self) -> Vec<Assignment<HashStrategy>> {
         match self {
-            AssignmentVec::CustomData(set) => set,
+            AssignmentVec::NonFungible(set) => set,
             _ => Default::default(),
         }
     }
@@ -262,10 +262,10 @@ impl AssignmentVec {
             AssignmentVec::Declarative(vec) => {
                 vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
             }
-            AssignmentVec::DiscreteFiniteField(vec) => {
+            AssignmentVec::Fungible(vec) => {
                 vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
             }
-            AssignmentVec::CustomData(vec) => {
+            AssignmentVec::NonFungible(vec) => {
                 vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
             }
             AssignmentVec::Attachment(vec) => {
@@ -277,10 +277,8 @@ impl AssignmentVec {
     pub fn revealed_seals(&self) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
         let list: Vec<_> = match self {
             AssignmentVec::Declarative(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
-            AssignmentVec::DiscreteFiniteField(s) => {
-                s.iter().map(Assignment::<_>::revealed_seal).collect()
-            }
-            AssignmentVec::CustomData(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
+            AssignmentVec::Fungible(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
+            AssignmentVec::NonFungible(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
             AssignmentVec::Attachment(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
         };
         let len = list.len();
@@ -297,11 +295,11 @@ impl AssignmentVec {
                 .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
-            AssignmentVec::DiscreteFiniteField(s) => s
+            AssignmentVec::Fungible(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
-            AssignmentVec::CustomData(s) => s
+            AssignmentVec::NonFungible(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
@@ -318,11 +316,11 @@ impl AssignmentVec {
                 .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
-            AssignmentVec::DiscreteFiniteField(s) => s
+            AssignmentVec::Fungible(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
-            AssignmentVec::CustomData(s) => s
+            AssignmentVec::NonFungible(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
@@ -335,9 +333,7 @@ impl AssignmentVec {
 
     pub fn as_revealed_state_values(&self) -> Result<Vec<&value::Revealed>, StateRetrievalError> {
         let list = match self {
-            AssignmentVec::DiscreteFiniteField(s) => {
-                s.iter().map(Assignment::<_>::as_revealed_state)
-            }
+            AssignmentVec::Fungible(s) => s.iter().map(Assignment::<_>::as_revealed_state),
             _ => return Err(StateRetrievalError::StateTypeMismatch),
         };
         let len = list.len();
@@ -350,7 +346,7 @@ impl AssignmentVec {
 
     pub fn as_revealed_state_data(&self) -> Result<Vec<&data::Revealed>, StateRetrievalError> {
         let list = match self {
-            AssignmentVec::CustomData(s) => s.iter().map(Assignment::<_>::as_revealed_state),
+            AssignmentVec::NonFungible(s) => s.iter().map(Assignment::<_>::as_revealed_state),
             _ => return Err(StateRetrievalError::StateTypeMismatch),
         };
         let len = list.len();
@@ -364,11 +360,11 @@ impl AssignmentVec {
     pub fn filter_revealed_state_values(&self) -> Vec<&value::Revealed> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::DiscreteFiniteField(s) => s
+            AssignmentVec::Fungible(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
-            AssignmentVec::CustomData(_) => vec![],
+            AssignmentVec::NonFungible(_) => vec![],
             AssignmentVec::Attachment(_) => vec![],
         }
     }
@@ -376,8 +372,8 @@ impl AssignmentVec {
     pub fn filter_revealed_state_data(&self) -> Vec<&data::Revealed> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::DiscreteFiniteField(_) => vec![],
-            AssignmentVec::CustomData(s) => s
+            AssignmentVec::Fungible(_) => vec![],
+            AssignmentVec::NonFungible(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
@@ -388,8 +384,8 @@ impl AssignmentVec {
     pub fn filter_revealed_data_containers(&self) -> Vec<&attachment::Revealed> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::DiscreteFiniteField(_) => vec![],
-            AssignmentVec::CustomData(_) => vec![],
+            AssignmentVec::Fungible(_) => vec![],
+            AssignmentVec::NonFungible(_) => vec![],
             AssignmentVec::Attachment(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
@@ -400,11 +396,11 @@ impl AssignmentVec {
     pub fn to_confidential_state_pedersen(&self) -> Vec<value::Confidential> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::DiscreteFiniteField(s) => s
+            AssignmentVec::Fungible(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_state)
                 .collect(),
-            AssignmentVec::CustomData(_) => vec![],
+            AssignmentVec::NonFungible(_) => vec![],
             AssignmentVec::Attachment(_) => vec![],
         }
     }
@@ -412,8 +408,8 @@ impl AssignmentVec {
     pub fn to_confidential_state_hashed(&self) -> Vec<data::Confidential> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::DiscreteFiniteField(_) => vec![],
-            AssignmentVec::CustomData(s) => s
+            AssignmentVec::Fungible(_) => vec![],
+            AssignmentVec::NonFungible(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_state)
                 .collect(),
@@ -424,8 +420,8 @@ impl AssignmentVec {
     pub fn to_confidential_state_containers(&self) -> Vec<attachment::Confidential> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::DiscreteFiniteField(_) => vec![],
-            AssignmentVec::CustomData(_) => vec![],
+            AssignmentVec::Fungible(_) => vec![],
+            AssignmentVec::NonFungible(_) => vec![],
             AssignmentVec::Attachment(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_state)
@@ -438,7 +434,7 @@ impl AssignmentVec {
         &self,
     ) -> Result<Vec<(seal::Revealed, &value::Revealed)>, StateRetrievalError> {
         match self {
-            AssignmentVec::DiscreteFiniteField(vec) => {
+            AssignmentVec::Fungible(vec) => {
                 let unfiltered: Vec<_> = vec
                     .iter()
                     .filter_map(|assignment| {
@@ -462,7 +458,7 @@ impl AssignmentVec {
         &self,
     ) -> Result<Vec<(seal::Revealed, &data::Revealed)>, StateRetrievalError> {
         match self {
-            AssignmentVec::CustomData(vec) => {
+            AssignmentVec::NonFungible(vec) => {
                 let unfiltered: Vec<_> = vec
                     .iter()
                     .filter_map(|assignment| {
@@ -508,8 +504,8 @@ impl AssignmentVec {
     pub fn is_empty(&self) -> bool {
         match self {
             AssignmentVec::Declarative(set) => set.is_empty(),
-            AssignmentVec::DiscreteFiniteField(set) => set.is_empty(),
-            AssignmentVec::CustomData(set) => set.is_empty(),
+            AssignmentVec::Fungible(set) => set.is_empty(),
+            AssignmentVec::NonFungible(set) => set.is_empty(),
             AssignmentVec::Attachment(set) => set.is_empty(),
         }
     }
@@ -517,8 +513,8 @@ impl AssignmentVec {
     pub fn len(&self) -> usize {
         match self {
             AssignmentVec::Declarative(set) => set.len(),
-            AssignmentVec::DiscreteFiniteField(set) => set.len(),
-            AssignmentVec::CustomData(set) => set.len(),
+            AssignmentVec::Fungible(set) => set.len(),
+            AssignmentVec::NonFungible(set) => set.len(),
             AssignmentVec::Attachment(set) => set.len(),
         }
     }
@@ -533,8 +529,8 @@ impl AssignmentVec {
         let mut counter = 0;
         match self {
             AssignmentVec::Declarative(_) => {}
-            AssignmentVec::DiscreteFiniteField(set) => {
-                *self = AssignmentVec::DiscreteFiniteField(
+            AssignmentVec::Fungible(set) => {
+                *self = AssignmentVec::Fungible(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -544,8 +540,8 @@ impl AssignmentVec {
                         .collect(),
                 );
             }
-            AssignmentVec::CustomData(set) => {
-                *self = AssignmentVec::CustomData(
+            AssignmentVec::NonFungible(set) => {
+                *self = AssignmentVec::NonFungible(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -576,11 +572,11 @@ impl AssignmentVec {
                 .iter()
                 .map(Assignment::<DeclarativeStrategy>::consensus_commit)
                 .collect(),
-            AssignmentVec::DiscreteFiniteField(vec) => vec
+            AssignmentVec::Fungible(vec) => vec
                 .iter()
                 .map(Assignment::<PedersenStrategy>::consensus_commit)
                 .collect(),
-            AssignmentVec::CustomData(vec) => vec
+            AssignmentVec::NonFungible(vec) => vec
                 .iter()
                 .map(Assignment::<HashStrategy>::consensus_commit)
                 .collect(),
@@ -596,8 +592,8 @@ impl ConcealSeals for AssignmentVec {
     fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             AssignmentVec::Declarative(data) => data as &mut dyn ConcealSeals,
-            AssignmentVec::DiscreteFiniteField(data) => data as &mut dyn ConcealSeals,
-            AssignmentVec::CustomData(data) => data as &mut dyn ConcealSeals,
+            AssignmentVec::Fungible(data) => data as &mut dyn ConcealSeals,
+            AssignmentVec::NonFungible(data) => data as &mut dyn ConcealSeals,
             AssignmentVec::Attachment(data) => data as &mut dyn ConcealSeals,
         }
         .conceal_seals(seals)
@@ -608,8 +604,8 @@ impl ConcealState for AssignmentVec {
     fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             AssignmentVec::Declarative(data) => data as &mut dyn ConcealState,
-            AssignmentVec::DiscreteFiniteField(data) => data as &mut dyn ConcealState,
-            AssignmentVec::CustomData(data) => data as &mut dyn ConcealState,
+            AssignmentVec::Fungible(data) => data as &mut dyn ConcealState,
+            AssignmentVec::NonFungible(data) => data as &mut dyn ConcealState,
             AssignmentVec::Attachment(data) => data as &mut dyn ConcealState,
         }
         .conceal_state_except(seals)
@@ -2129,7 +2125,7 @@ mod test {
         set.push(assignment_3);
         set.push(assignment_4);
 
-        let pedersen_variant = AssignmentVec::DiscreteFiniteField(set);
+        let pedersen_variant = AssignmentVec::Fungible(set);
 
         // Create Hash variant
         let txid_vec: Vec<bitcoin::Txid> = TXID_VEC
@@ -2169,7 +2165,7 @@ mod test {
         set.push(assignment_3);
         set.push(assignment_4);
 
-        let hash_variant = AssignmentVec::CustomData(set);
+        let hash_variant = AssignmentVec::NonFungible(set);
 
         // Create assignemnts
 

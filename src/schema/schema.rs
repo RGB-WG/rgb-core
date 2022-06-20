@@ -564,10 +564,10 @@ mod _validation {
                     Some(AssignmentVec::Declarative(set)) => set.iter().for_each(|data| {
                         status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
-                    Some(AssignmentVec::DiscreteFiniteField(set)) => set.iter().for_each(|data| {
+                    Some(AssignmentVec::Fungible(set)) => set.iter().for_each(|data| {
                         status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
-                    Some(AssignmentVec::CustomData(set)) => set.iter().for_each(|data| {
+                    Some(AssignmentVec::NonFungible(set)) => set.iter().for_each(|data| {
                         status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
                     Some(AssignmentVec::Attachment(set)) => set.iter().for_each(|data| {
@@ -676,23 +676,21 @@ mod _validation {
                             state.extend(set);
                         }
                     }
-                    Some(AssignmentVec::DiscreteFiniteField(set)) => {
+                    Some(AssignmentVec::Fungible(set)) => {
                         let set = filter(set, indexes);
                         if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert_with(|| {
-                                AssignmentVec::DiscreteFiniteField(Default::default())
-                            })
+                            .or_insert_with(|| AssignmentVec::Fungible(Default::default()))
                             .value_assignment_vec_mut()
                         {
                             state.extend(set);
                         }
                     }
-                    Some(AssignmentVec::CustomData(set)) => {
+                    Some(AssignmentVec::NonFungible(set)) => {
                         let set = filter(set, indexes);
                         if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert_with(|| AssignmentVec::CustomData(Default::default()))
+                            .or_insert_with(|| AssignmentVec::NonFungible(Default::default()))
                             .data_assignment_vec_mut()
                         {
                             state.extend(set);
