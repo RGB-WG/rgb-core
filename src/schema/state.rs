@@ -69,7 +69,7 @@ mod _validation {
     use commit_verify::CommitConceal;
 
     use super::*;
-    use crate::contract::ContainerStrategy;
+    use crate::contract::AttachmentStrategy;
     use crate::schema::OwnedRightType;
     use crate::{
         validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy, State,
@@ -144,7 +144,7 @@ mod _validation {
                             }
                         }
                         StateSchema::DataContainer => {
-                            if a.downcast_ref::<<ContainerStrategy as State>::Confidential>()
+                            if a.downcast_ref::<<AttachmentStrategy as State>::Confidential>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -194,7 +194,7 @@ mod _validation {
                             }
                         }
                         StateSchema::DataContainer => {
-                            if a.downcast_ref::<<ContainerStrategy as State>::Revealed>()
+                            if a.downcast_ref::<<AttachmentStrategy as State>::Revealed>()
                                 .is_none()
                             {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(

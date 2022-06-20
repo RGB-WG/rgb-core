@@ -19,16 +19,16 @@ pub mod reveal;
 mod rights;
 pub mod seal;
 pub mod value;
-pub mod container;
+pub mod attachment;
 
 pub(self) use assignments::EMPTY_ASSIGNMENT_VEC;
 pub use assignments::{
-    Assignment, AssignmentVec, ConfidentialState, ContainerStrategy, DeclarativeStrategy,
+    Assignment, AssignmentVec, AttachmentStrategy, ConfidentialState, DeclarativeStrategy,
     EndpointValueMap, HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State,
     StateType,
 };
+pub use attachment::AttachmentId;
 pub use conceal::{ConcealSeals, ConcealState};
-pub use container::ContainerId;
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 use once_cell::sync::Lazy;
