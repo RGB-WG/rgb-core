@@ -27,8 +27,9 @@ use strict_encoding::strict_serialize;
 use super::{ConfidentialState, RevealedState};
 
 /// Struct using for storing Void (i.e. absent) state
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, AsAny)]
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
+#[display("void")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Void();
 
