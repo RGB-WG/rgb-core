@@ -31,6 +31,14 @@ jobs:
       - id: coverage
         name: Generate coverage
         uses: actions-rs/grcov@0.2-proto
+        with:
+          args: >
+            -t lcov
+            --llvm
+            --ignore-not-existing
+            --ignore "/*"
+            -o ./target/lcov.info
+            ./target/debug/
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
