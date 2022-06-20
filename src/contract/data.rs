@@ -45,10 +45,11 @@ impl CommitEncode for Void {
     fn commit_encode<E: io::Write>(&self, _e: E) -> usize { 0 }
 }
 
-#[derive(Clone, Debug, AsAny)]
+#[derive(Clone, Debug, AsAny, Display)]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(repr = u8)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[display(Debug)]
 pub enum Revealed {
     #[strict_encoding(value = 0x00)]
     U8(u8),
@@ -61,10 +62,13 @@ pub enum Revealed {
     #[strict_encoding(value = 0x04)]
     U128(u128),
     #[strict_encoding(value = 0x05)]
+    #[display("U256({0})")]
     U256(u256),
     #[strict_encoding(value = 0x06)]
+    #[display("U512({0})")]
     U512(u512),
     #[strict_encoding(value = 0x07)]
+    #[display("U1024({0})")]
     U1024(u1024),
 
     #[strict_encoding(value = 0x10)]
@@ -78,17 +82,22 @@ pub enum Revealed {
     #[strict_encoding(value = 0x14)]
     I128(i128),
     #[strict_encoding(value = 0x15)]
+    #[display("I256({0})")]
     I256(i256),
     #[strict_encoding(value = 0x16)]
+    #[display("I512({0})")]
     I512(i512),
     #[strict_encoding(value = 0x17)]
+    #[display("I1024({0})")]
     I1024(i1024),
 
     // TODO #100: Implement tapered float format
     #[strict_encoding(value = 0x30)]
+    #[display("F16B({0})")]
     F16B(bf16),
     #[strict_encoding(value = 0x31)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    #[display("F16({0})")]
     F16(ieee::Half),
     #[strict_encoding(value = 0x32)]
     F32(f32),
@@ -96,19 +105,25 @@ pub enum Revealed {
     F64(f64),
     #[strict_encoding(value = 0x34)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    #[display("F80({0})")]
     F80(ieee::X87DoubleExtended),
     #[strict_encoding(value = 0x35)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    #[display("F128({0})")]
     F128(ieee::Quad),
     #[strict_encoding(value = 0x36)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
+    #[display("F256({0})")]
     F256(ieee::Oct),
 
     #[strict_encoding(value = 0xE0)]
+    #[display("<bytes>")]
     Bytes(Vec<u8>),
     #[strict_encoding(value = 0xEE)]
+    #[display(inner)]
     AsciiString(AsciiString),
     #[strict_encoding(value = 0xEF)]
+    #[display(inner)]
     UnicodeString(String),
 }
 
