@@ -30,7 +30,7 @@ jobs:
           RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
       - id: coverage
         name: Generate coverage
-        uses: actions-rs/grcov@v0.1.5
+        uses: actions-rs/grcov@0.2-proto
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
