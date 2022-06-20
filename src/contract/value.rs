@@ -40,6 +40,10 @@ use super::{ConfidentialState, RevealedState, SECP256K1_ZKP};
 
 pub type AtomicValue = u64;
 
+impl From<Revealed> for AtomicValue {
+    fn from(revealed: Revealed) -> Self { revealed.value }
+}
+
 /// Proof for Pedersen commitment: a blinding key
 #[derive(
     Wrapper,
