@@ -94,9 +94,10 @@ impl Confidential {
     pub fn container_id(&self) -> ContainerId { self.consensus_commit() }
 }
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, AsAny)]
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, AsAny, Display)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[display("{id}~{mime}")]
 pub struct Revealed {
     pub id: ContainerId,
     pub mime: AsciiString,
