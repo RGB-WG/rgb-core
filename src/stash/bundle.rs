@@ -129,22 +129,18 @@ impl From<BTreeMap<Transition, BTreeSet<u16>>> for TransitionBundle {
     }
 }
 
-impl<'me> IntoIterator for &'me TransitionBundle {
-    type Item = (&'me Transition, &'me BTreeSet<u16>);
-    type IntoIter = btree_map::Iter<'me, Transition, BTreeSet<u16>>;
-
-    fn into_iter(self) -> Self::IntoIter { self.revealed.iter() }
-}
-
-impl IntoIterator for TransitionBundle {
-    type Item = (Transition, BTreeSet<u16>);
-    type IntoIter = btree_map::IntoIter<Transition, BTreeSet<u16>>;
-
-    fn into_iter(self) -> Self::IntoIter { self.revealed.into_iter() }
-}
-
 impl TransitionBundle {
+    pub fn len(&self) -> usize { self.concealed.len() + self.revealed.len() }
+
     pub fn bundle_id(&self) -> BundleId { self.consensus_commit() }
+
+    pub fn revealed_iter(&self) -> btree_map::Iter<Transition, BTreeSet<u16>> {
+        self.revealed.iter()
+    }
+
+    pub fn into_revealed_iter(self) -> btree_map::IntoIter<Transition, BTreeSet<u16>> {
+        self.revealed.into_iter()
+    }
 
     pub fn concealed_iter(&self) -> btree_map::Iter<NodeId, BTreeSet<u16>> { self.concealed.iter() }
 
