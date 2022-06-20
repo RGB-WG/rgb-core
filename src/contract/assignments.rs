@@ -909,6 +909,11 @@ where
         }
     }
 
+    #[inline]
+    pub fn to_revealed(&self) -> Option<(seal::Revealed, StateType::Revealed)> {
+        self.clone().into_revealed()
+    }
+
     pub fn into_revealed(self) -> Option<(seal::Revealed, StateType::Revealed)> {
         match self {
             Assignment::Revealed {
