@@ -171,6 +171,9 @@ impl AssignmentVec {
     pub fn has_data(&self) -> bool { matches!(self, AssignmentVec::NonFungible(_)) }
 
     #[inline]
+    pub fn is_attachment(&self) -> bool { matches!(self, AssignmentVec::Attachment(_)) }
+
+    #[inline]
     pub fn declarative_assignment_vec_mut(
         &mut self,
     ) -> Option<&mut Vec<Assignment<DeclarativeStrategy>>> {
@@ -231,6 +234,14 @@ impl AssignmentVec {
     }
 
     #[inline]
+    pub fn to_attachment_assignment_vec(&self) -> Vec<Assignment<AttachmentStrategy>> {
+        match self {
+            AssignmentVec::Attachment(set) => set.clone(),
+            _ => Default::default(),
+        }
+    }
+
+    #[inline]
     pub fn into_declarative_assignment_vec(self) -> Vec<Assignment<DeclarativeStrategy>> {
         match self {
             AssignmentVec::Declarative(set) => set,
@@ -250,6 +261,14 @@ impl AssignmentVec {
     pub fn into_data_assignment_vec(self) -> Vec<Assignment<HashStrategy>> {
         match self {
             AssignmentVec::NonFungible(set) => set,
+            _ => Default::default(),
+        }
+    }
+
+    #[inline]
+    pub fn into_attachment_assignment_vec(self) -> Vec<Assignment<AttachmentStrategy>> {
+        match self {
+            AssignmentVec::Attachment(set) => set,
             _ => Default::default(),
         }
     }
@@ -357,6 +376,21 @@ impl AssignmentVec {
         Ok(filtered)
     }
 
+    pub fn as_revealed_state_attachments(
+        &self,
+    ) -> Result<Vec<&attachment::Revealed>, StateRetrievalError> {
+        let list = match self {
+            AssignmentVec::Attachment(s) => s.iter().map(Assignment::<_>::as_revealed_state),
+            _ => return Err(StateRetrievalError::StateTypeMismatch),
+        };
+        let len = list.len();
+        let filtered: Vec<&attachment::Revealed> = list.flatten().collect();
+        if len != filtered.len() {
+            return Err(StateRetrievalError::ConfidentialData);
+        }
+        Ok(filtered)
+    }
+
     pub fn filter_revealed_state_values(&self) -> Vec<&value::Revealed> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
@@ -381,7 +415,7 @@ impl AssignmentVec {
         }
     }
 
-    pub fn filter_revealed_data_containers(&self) -> Vec<&attachment::Revealed> {
+    pub fn filter_revealed_state_attachments(&self) -> Vec<&attachment::Revealed> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
             AssignmentVec::Fungible(_) => vec![],
@@ -417,7 +451,7 @@ impl AssignmentVec {
         }
     }
 
-    pub fn to_confidential_state_containers(&self) -> Vec<attachment::Confidential> {
+    pub fn to_confidential_state_attachments(&self) -> Vec<attachment::Confidential> {
         match self {
             AssignmentVec::Declarative(_) => vec![],
             AssignmentVec::Fungible(_) => vec![],
@@ -478,7 +512,7 @@ impl AssignmentVec {
     }
 
     #[inline]
-    pub fn as_revealed_owned_containers(
+    pub fn as_revealed_owned_attachments(
         &self,
     ) -> Result<Vec<(seal::Revealed, &attachment::Revealed)>, StateRetrievalError> {
         match self {
