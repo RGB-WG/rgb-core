@@ -287,10 +287,10 @@ impl<'consignment, C: Consignment<'consignment>, R: ResolveTx> Validator<'consig
         // structure and notify user about them (in form of generated warnings)
         let mut end_transitions = Vec::<(&dyn Node, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.endpoints() {
-            let transitions = match consignment.known_transitions_by_bundle_id(bundle_id) {
+            let transitions = match consignment.known_transitions_by_bundle_id(*bundle_id) {
                 Ok(transitions) => transitions,
                 Err(_) => {
-                    status.add_failure(Failure::BundleInvalid(bundle_id));
+                    status.add_failure(Failure::BundleInvalid(*bundle_id));
                     continue;
                 }
             };
@@ -307,9 +307,9 @@ impl<'consignment, C: Consignment<'consignment>, R: ResolveTx> Validator<'consig
                         .count()
                         > 0
                     {
-                        status.add_warning(Warning::EndpointDuplication(node_id, seal_endpoint));
+                        status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
                     } else {
-                        end_transitions.push((transition, bundle_id));
+                        end_transitions.push((transition, *bundle_id));
                     }
                 } else {
                     // We generate just a warning here because it's up to a user
@@ -317,7 +317,7 @@ impl<'consignment, C: Consignment<'consignment>, R: ResolveTx> Validator<'consig
                     // endpoint list
                     status.add_warning(Warning::EndpointTransitionSealNotFound(
                         node_id,
-                        seal_endpoint,
+                        *seal_endpoint,
                     ));
                 }
             }
@@ -411,7 +411,7 @@ impl<'consignment, C: Consignment<'consignment>, R: ResolveTx> Validator<'consig
         // but still good to report the user that the consignment is not perfect
         for node_id in self
             .validation_index
-            .difference(self.consignment.node_ids())
+            .difference(&self.consignment.node_ids())
         {
             self.status.add_warning(Warning::ExcessiveNode(*node_id));
         }

@@ -23,17 +23,17 @@ pub type AnchoredBundle<'me> = (&'me Anchor<lnpbp4::MerkleProof>, &'me Transitio
 
 pub trait Consignment<'consignment>: 'consignment + GraphApi {
     type EndpointIter: Iterator<Item = ConsignmentEndpoint>;
-    type BundleIter: Iterator<Item = AnchoredBundle<'consignment>>;
-    type ExtensionsIter: Iterator<Item = &'consignment Extension>;
+    type BundleIter: Iterator<Item = (Anchor<lnpbp4::MerkleProof>, TransitionBundle)>;
+    type ExtensionsIter: Iterator<Item = Extension>;
 
-    fn schema(&self) -> &Schema;
+    fn schema(&'consignment self) -> &'consignment Schema;
 
-    fn root_schema(&self) -> Option<&Schema>;
+    fn root_schema(&'consignment self) -> Option<&'consignment Schema>;
 
     /// Genesis data
-    fn genesis(&self) -> &Genesis;
+    fn genesis(&'consignment self) -> &'consignment Genesis;
 
-    fn node_ids(&self) -> &BTreeSet<NodeId>;
+    fn node_ids(&'consignment self) -> BTreeSet<NodeId>;
 
     /// The final state ("endpoints") provided by this consignment.
     ///
@@ -44,11 +44,11 @@ pub trait Consignment<'consignment>: 'consignment + GraphApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn endpoints(&self) -> Self::EndpointIter;
+    fn endpoints(&'consignment self) -> Self::EndpointIter;
 
     /// Data on all anchored state transitions contained in the consignment
-    fn anchored_bundles(&self) -> Self::BundleIter;
+    fn anchored_bundles(&'consignment self) -> Self::BundleIter;
 
     /// Data on all state extensions contained in the consignment
-    fn state_extensions(&self) -> Self::ExtensionsIter;
+    fn state_extensions(&'consignment self) -> Self::ExtensionsIter;
 }
