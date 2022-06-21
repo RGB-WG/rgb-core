@@ -28,9 +28,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "3.12.0"
+version = "3.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47cfa6a69eeb140125a63e4f5ae1156a530f8744ea1d35aa1b8b5613e4d8b41d"
+checksum = "e45c604e86700ffea68a7d90c3ffb1508dad1120902f31dbb08afc942cf8acf3"
 dependencies = [
  "amplify_apfloat",
  "amplify_derive",
@@ -1144,9 +1144,9 @@ dependencies = [
 
 [[package]]
 name = "stens"
-version = "0.3.2"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e56c50a9ee6529486f13b8ca5682c4f23260f5900e4f2206cd7be689bb4f095"
+checksum = "dc1e031ab71b85047628043fc99cbd286277b956534fd4f6762cce7cdb26b150"
 dependencies = [
  "amplify",
  "serde",
@@ -1157,9 +1157,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "1.8.9"
+version = "1.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3379d91cf1a6dda3ad54629ae868f0dd65a8fb42fae697c94777253e795a12b3"
+checksum = "796bf3e8abb485e9194d03dfc534221e382f8cf058f417bbd66d5f4dd3b8a0cc"
 dependencies = [
  "amplify",
  "bitcoin",
