@@ -17,13 +17,14 @@ use bitcoin::{Transaction, Txid};
 use bp::dbc::Anchor;
 use bp::seals::txout::TxoSeal;
 use commit_verify::{lnpbp4, CommitConceal};
+use stens::TypeRef;
 use wallet::onchain::ResolveTx;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, AssignmentVec, ContractId, Node, NodeId, Schema, SchemaId};
 use crate::schema::SchemaVerify;
 use crate::stash::Consignment;
-use crate::{BundleId, Extension, SealEndpoint, TransitionBundle};
+use crate::{data, BundleId, Extension, SealEndpoint, TransitionBundle};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -206,6 +207,8 @@ pub enum Failure {
     WitnessNoCommitment(NodeId, Txid),
 
     EndpointTransitionNotFound(NodeId),
+
+    InvalidStateDataType(NodeId, u16, TypeRef, data::Revealed),
 
     /// invalid bulletproofs in {0}:{1}: {2}
     InvalidBulletproofs(NodeId, u16, secp256k1zkp::Error),

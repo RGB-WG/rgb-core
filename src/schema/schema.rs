@@ -188,6 +188,7 @@ mod _validation {
     use commit_verify::CommitConceal;
 
     use super::*;
+    use crate::schema::state::StenValidate;
     use crate::schema::{
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure, SchemaVerify,
     };
@@ -446,14 +447,16 @@ mod _validation {
                 for data in set {
                     let schema_type = data.schema_type();
                     if &schema_type != field
-                        && !matches!((data, field), (data::Revealed::Bytes(_), TypeRef::Named(_)))
+                        && !matches!(
+                            (&data, field),
+                            (data::Revealed::Bytes(_), TypeRef::Named(_))
+                        )
                     {
                         status.add_failure(validation::Failure::SchemaMismatchedDataType(
                             *field_type_id,
                         ));
                     }
-                    // TODO: [validation] validate type serialization for structured types
-                    // status += field.validate(&data);
+                    status += field.validate(node_id, *field_type_id, &data);
                 }
             }
 

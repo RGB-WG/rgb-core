@@ -67,13 +67,97 @@ mod _validation {
 
     use amplify::AsAny;
     use commit_verify::CommitConceal;
+    use stens::{PrimitiveType, TypeConstr};
 
     use super::*;
     use crate::contract::AttachmentStrategy;
     use crate::schema::OwnedRightType;
     use crate::{
-        validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy, State,
+        data, validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy,
+        State,
     };
+
+    pub trait StenValidate {
+        fn validate(
+            &self,
+            node_id: NodeId,
+            schema_type_id: u16,
+            data: &data::Revealed,
+        ) -> validation::Status;
+    }
+
+    impl StenValidate for PrimitiveType {
+        fn validate(
+            &self,
+            node_id: NodeId,
+            schema_type_id: u16,
+            data: &data::Revealed,
+        ) -> validation::Status {
+            let mut status = validation::Status::new();
+            match (self, data) {
+                (PrimitiveType::U8, data::Revealed::U8(_))
+                | (PrimitiveType::U16, data::Revealed::U16(_))
+                | (PrimitiveType::U32, data::Revealed::U32(_))
+                | (PrimitiveType::U64, data::Revealed::U64(_))
+                | (PrimitiveType::U128, data::Revealed::U128(_))
+                | (PrimitiveType::U256, data::Revealed::U256(_))
+                | (PrimitiveType::U512, data::Revealed::U512(_))
+                | (PrimitiveType::U1024, data::Revealed::U1024(_))
+                | (PrimitiveType::I8, data::Revealed::I8(_))
+                | (PrimitiveType::I16, data::Revealed::I16(_))
+                | (PrimitiveType::I32, data::Revealed::I32(_))
+                | (PrimitiveType::I64, data::Revealed::I64(_))
+                | (PrimitiveType::I128, data::Revealed::I128(_))
+                | (PrimitiveType::I256, data::Revealed::I256(_))
+                | (PrimitiveType::I512, data::Revealed::I512(_))
+                | (PrimitiveType::I1024, data::Revealed::I1024(_))
+                | (PrimitiveType::F16b, data::Revealed::F16B(_))
+                | (PrimitiveType::F16, data::Revealed::F16(_))
+                | (PrimitiveType::F32, data::Revealed::F32(_))
+                | (PrimitiveType::F64, data::Revealed::F64(_))
+                | (PrimitiveType::F80, data::Revealed::F80(_))
+                | (PrimitiveType::F128, data::Revealed::F128(_))
+                | (PrimitiveType::F256, data::Revealed::F256(_)) => {}
+                _ => {
+                    status.add_failure(validation::Failure::InvalidStateDataType(
+                        node_id,
+                        schema_type_id,
+                        TypeRef::Primitive(TypeConstr::Plain(self.clone())),
+                        data.clone(),
+                    ));
+                }
+            }
+            status
+        }
+    }
+
+    impl StenValidate for TypeRef {
+        fn validate(
+            &self,
+            node_id: NodeId,
+            schema_type_id: u16,
+            data: &data::Revealed,
+        ) -> validation::Status {
+            let mut status = validation::Status::new();
+            match (self, data) {
+                (TypeRef::Primitive(TypeConstr::Plain(ty)), _) => {
+                    status += ty.validate(node_id, schema_type_id, data);
+                }
+                (TypeRef::Named(ty), data::Revealed::Bytes(_)) => {
+                    // TODO: Validate serialization with stens
+                }
+                _ => {
+                    status.add_failure(validation::Failure::InvalidStateDataType(
+                        node_id,
+                        schema_type_id,
+                        self.clone(),
+                        data.clone(),
+                    ));
+                }
+            }
+            status
+        }
+    }
 
     impl StateSchema {
         pub fn validate<STATE>(
@@ -188,8 +272,7 @@ mod _validation {
                                     );
                                 }
                                 Some(data) => {
-                                    // TODO: [validation] validate type schema
-                                    // status += format.validate(assignment_id, data);
+                                    status += format.validate(*node_id, assignment_id, data);
                                 }
                             }
                         }
@@ -209,6 +292,7 @@ mod _validation {
         }
     }
 }
+pub(super) use _validation::StenValidate;
 
 #[cfg(test)]
 mod test {
