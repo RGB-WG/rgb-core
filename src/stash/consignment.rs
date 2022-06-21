@@ -22,9 +22,9 @@ pub type ConsignmentEndpoint = (BundleId, SealEndpoint);
 pub type AnchoredBundle<'me> = (&'me Anchor<lnpbp4::MerkleProof>, &'me TransitionBundle);
 
 pub trait Consignment<'consignment>: 'consignment + GraphApi {
-    type EndpointIter: Iterator<Item = ConsignmentEndpoint>;
-    type BundleIter: Iterator<Item = (Anchor<lnpbp4::MerkleProof>, TransitionBundle)>;
-    type ExtensionsIter: Iterator<Item = Extension>;
+    type EndpointIter: Iterator<Item = &'consignment ConsignmentEndpoint>;
+    type BundleIter: Iterator<Item = &'consignment (Anchor<lnpbp4::MerkleProof>, TransitionBundle)>;
+    type ExtensionsIter: Iterator<Item = &'consignment Extension>;
 
     fn schema(&'consignment self) -> &'consignment Schema;
 
