@@ -235,7 +235,7 @@ pub enum Info {
     UncheckableConfidentialStateData(NodeId, u16),
 }
 
-pub struct Validator<'consignment, C: Consignment<'consignment>, R: ResolveTx> {
+pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx> {
     consignment: &'consignment C,
 
     status: Status,
@@ -248,11 +248,13 @@ pub struct Validator<'consignment, C: Consignment<'consignment>, R: ResolveTx> {
     end_transitions: Vec<(&'consignment dyn Node, BundleId)>,
     validation_index: BTreeSet<NodeId>,
 
-    resolver: R,
+    resolver: &'resolver R,
 }
 
-impl<'consignment, C: Consignment<'consignment>, R: ResolveTx> Validator<'consignment, C, R> {
-    fn init(consignment: &'consignment C, resolver: R) -> Self {
+impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
+    Validator<'consignment, 'resolver, C, R>
+{
+    fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
@@ -351,7 +353,7 @@ impl<'consignment, C: Consignment<'consignment>, R: ResolveTx> Validator<'consig
     /// the status object, but the validation continues for the rest of the
     /// consignment data. This can help it debugging and detecting all problems
     /// with the consignment.
-    pub fn validate(consignment: &'consignment C, resolver: R) -> Status {
+    pub fn validate(consignment: &'consignment C, resolver: &'resolver R) -> Status {
         let mut validator = Validator::init(consignment, resolver);
 
         validator.validate_schema(consignment.schema(), consignment.root_schema());
