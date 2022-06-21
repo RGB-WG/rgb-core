@@ -64,10 +64,11 @@ pub enum DiscreteFiniteFieldFormat {
 
 mod _validation {
     use core::any::Any;
+    use std::io;
 
     use amplify::AsAny;
     use commit_verify::CommitConceal;
-    use stens::{PrimitiveType, TypeConstr};
+    use stens::{PrimitiveType, TypeConstr, TypeSystem, Validate};
 
     use super::*;
     use crate::contract::AttachmentStrategy;
@@ -80,6 +81,7 @@ mod _validation {
     pub trait StenValidate {
         fn validate(
             &self,
+            type_system: &TypeSystem,
             node_id: NodeId,
             schema_type_id: u16,
             data: &data::Revealed,
@@ -89,6 +91,7 @@ mod _validation {
     impl StenValidate for PrimitiveType {
         fn validate(
             &self,
+            _: &TypeSystem,
             node_id: NodeId,
             schema_type_id: u16,
             data: &data::Revealed,
@@ -134,6 +137,7 @@ mod _validation {
     impl StenValidate for TypeRef {
         fn validate(
             &self,
+            type_system: &TypeSystem,
             node_id: NodeId,
             schema_type_id: u16,
             data: &data::Revealed,
@@ -141,10 +145,19 @@ mod _validation {
             let mut status = validation::Status::new();
             match (self, data) {
                 (TypeRef::Primitive(TypeConstr::Plain(ty)), _) => {
-                    status += ty.validate(node_id, schema_type_id, data);
+                    status +=
+                        StenValidate::validate(ty, type_system, node_id, schema_type_id, data);
                 }
-                (TypeRef::Named(ty), data::Revealed::Bytes(_)) => {
-                    // TODO: Validate serialization with stens
+                (TypeRef::Named(ty), data::Revealed::Bytes(bytes)) => {
+                    let mut cursor = io::Cursor::new(bytes.as_slice());
+                    if !ty.validate(type_system, &mut cursor) {
+                        status.add_failure(validation::Failure::InvalidStateDataValue(
+                            node_id,
+                            schema_type_id,
+                            self.clone(),
+                            bytes.clone(),
+                        ));
+                    }
                 }
                 _ => {
                     status.add_failure(validation::Failure::InvalidStateDataType(
@@ -162,6 +175,7 @@ mod _validation {
     impl StateSchema {
         pub fn validate<STATE>(
             &self,
+            type_system: &TypeSystem,
             node_id: &NodeId,
             assignment_id: OwnedRightType,
             data: &Assignment<STATE>,
@@ -272,7 +286,13 @@ mod _validation {
                                     );
                                 }
                                 Some(data) => {
-                                    status += format.validate(*node_id, assignment_id, data);
+                                    status += StenValidate::validate(
+                                        format,
+                                        type_system,
+                                        *node_id,
+                                        assignment_id,
+                                        data,
+                                    );
                                 }
                             }
                         }
@@ -301,6 +321,7 @@ mod test {
     use bitcoin::hashes::sha256;
     use commit_verify::{CommitConceal, TaggedHash};
     use secp256k1zkp::rand::thread_rng;
+    use stens::TypeSystem;
     use strict_encoding::StrictDecode;
 
     use super::*;
@@ -391,77 +412,78 @@ mod test {
         let hash_format = StateSchema::CustomData(TypeRef::bytes());
 
         // Assert different failure combinations
+        let ts = TypeSystem::default();
         assert_eq!(
             dec_format
-                .validate(&node_id, 3u16, &assignment_ped_rev)
+                .validate(&ts, &node_id, 3u16, &assignment_ped_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             dec_format
-                .validate(&node_id, 3u16, &assignment_ped_conf)
+                .validate(&ts, &node_id, 3u16, &assignment_ped_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             dec_format
-                .validate(&node_id, 3u16, &assignment_hash_rev)
+                .validate(&ts, &node_id, 3u16, &assignment_hash_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             dec_format
-                .validate(&node_id, 3u16, &assignment_hash_conf)
+                .validate(&ts, &node_id, 3u16, &assignment_hash_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
 
         assert_eq!(
             ped_format
-                .validate(&node_id, 3u16, &assignment_dec_rev)
+                .validate(&ts, &node_id, 3u16, &assignment_dec_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             ped_format
-                .validate(&node_id, 3u16, &assignment_dec_conf)
+                .validate(&ts, &node_id, 3u16, &assignment_dec_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             ped_format
-                .validate(&node_id, 3u16, &assignment_hash_rev)
+                .validate(&ts, &node_id, 3u16, &assignment_hash_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             ped_format
-                .validate(&node_id, 3u16, &assignment_hash_conf)
+                .validate(&ts, &node_id, 3u16, &assignment_hash_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
 
         assert_eq!(
             hash_format
-                .validate(&node_id, 3u16, &assignment_dec_rev)
+                .validate(&ts, &node_id, 3u16, &assignment_dec_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             hash_format
-                .validate(&node_id, 3u16, &assignment_dec_conf)
+                .validate(&ts, &node_id, 3u16, &assignment_dec_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             hash_format
-                .validate(&node_id, 3u16, &assignment_ped_rev)
+                .validate(&ts, &node_id, 3u16, &assignment_ped_rev)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );
         assert_eq!(
             hash_format
-                .validate(&node_id, 3u16, &assignment_ped_conf)
+                .validate(&ts, &node_id, 3u16, &assignment_ped_conf)
                 .failures[0],
             Failure::SchemaMismatchedStateType(3)
         );

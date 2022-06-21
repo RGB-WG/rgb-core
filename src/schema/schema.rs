@@ -456,7 +456,7 @@ mod _validation {
                             *field_type_id,
                         ));
                     }
-                    status += field.validate(node_id, *field_type_id, &data);
+                    status += field.validate(&self.type_system, node_id, *field_type_id, &data);
                 }
             }
 
@@ -565,16 +565,20 @@ mod _validation {
                 match owned_rights.get(owned_type_id) {
                     None => {}
                     Some(AssignmentVec::Declarative(set)) => set.iter().for_each(|data| {
-                        status += assignment.validate(&node_id, *owned_type_id, data)
+                        status +=
+                            assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
                     }),
                     Some(AssignmentVec::Fungible(set)) => set.iter().for_each(|data| {
-                        status += assignment.validate(&node_id, *owned_type_id, data)
+                        status +=
+                            assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
                     }),
                     Some(AssignmentVec::NonFungible(set)) => set.iter().for_each(|data| {
-                        status += assignment.validate(&node_id, *owned_type_id, data)
+                        status +=
+                            assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
                     }),
                     Some(AssignmentVec::Attachment(set)) => set.iter().for_each(|data| {
-                        status += assignment.validate(&node_id, *owned_type_id, data)
+                        status +=
+                            assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
                     }),
                 };
             }
