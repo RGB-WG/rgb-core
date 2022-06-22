@@ -72,7 +72,9 @@ mod _validation {
 
     use super::*;
     use crate::contract::AttachmentStrategy;
+    use crate::data::Revealed;
     use crate::schema::OwnedRightType;
+    use crate::validation::Status;
     use crate::{
         data, validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy,
         State,
@@ -134,6 +136,36 @@ mod _validation {
         }
     }
 
+    impl StenValidate for TypeConstr<PrimitiveType> {
+        fn validate(
+            &self,
+            type_system: &TypeSystem,
+            node_id: NodeId,
+            schema_type_id: u16,
+            data: &Revealed,
+        ) -> Status {
+            let mut status = validation::Status::new();
+            match (self, data) {
+                (TypeConstr::Plain(ty), data) => {
+                    status +=
+                        StenValidate::validate(ty, type_system, node_id, schema_type_id, data);
+                }
+                (TypeConstr::List(PrimitiveType::AsciiChar), Revealed::AsciiString(s)) => {}
+                (TypeConstr::List(PrimitiveType::UnicodeChar), Revealed::UnicodeString(s)) => {}
+                (TypeConstr::List(PrimitiveType::U8), Revealed::Bytes(s)) => {}
+                _ => {
+                    status.add_failure(validation::Failure::InvalidStateDataType(
+                        node_id,
+                        schema_type_id,
+                        TypeRef::Primitive(self.clone()),
+                        data.clone(),
+                    ));
+                }
+            }
+            status
+        }
+    }
+
     impl StenValidate for TypeRef {
         fn validate(
             &self,
@@ -144,7 +176,7 @@ mod _validation {
         ) -> validation::Status {
             let mut status = validation::Status::new();
             match (self, data) {
-                (TypeRef::Primitive(TypeConstr::Plain(ty)), _) => {
+                (TypeRef::Primitive(ty), _) => {
                     status +=
                         StenValidate::validate(ty, type_system, node_id, schema_type_id, data);
                 }
