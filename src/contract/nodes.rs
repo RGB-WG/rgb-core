@@ -49,12 +49,13 @@ pub const RGB_CONTRACT_ID_HRP: &str = "rgb";
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
-#[display("{node_id}/{output_no}")]
+#[display("{node_id}/{ty}/{no}")]
 /// RGB contract node output pointer, defined by the node ID and output
 /// number.
 pub struct NodeOutpoint {
     pub node_id: NodeId,
-    pub output_no: u16,
+    pub ty: OwnedRightType,
+    pub no: u16,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
@@ -63,7 +64,8 @@ pub enum OutpointParseError {
     #[from]
     InvalidNodeId(bitcoin::hashes::hex::Error),
 
-    #[from]
+    InvalidType(ParseIntError),
+
     InvalidOutputNo(ParseIntError),
 
     /// invalid node outpoint format ('{0}')
@@ -76,10 +78,11 @@ impl FromStr for NodeOutpoint {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.split('/');
-        match (split.next(), split.next(), split.next()) {
-            (Some(node_id), Some(no), None) => Ok(NodeOutpoint {
+        match (split.next(), split.next(), split.next(), split.next()) {
+            (Some(node_id), Some(ty), Some(no), None) => Ok(NodeOutpoint {
                 node_id: node_id.parse()?,
-                output_no: no.parse()?,
+                ty: ty.parse().map_err(OutpointParseError::InvalidType)?,
+                no: no.parse().map_err(OutpointParseError::InvalidOutputNo)?,
             }),
             _ => Err(OutpointParseError::WrongFormat(s.to_owned())),
         }
@@ -103,8 +106,8 @@ impl lnpbp::bech32::Strategy for NodeIdTag {
 }
 
 impl NodeOutpoint {
-    pub fn new(node_id: NodeId, output_no: u16) -> NodeOutpoint {
-        NodeOutpoint { node_id, output_no }
+    pub fn new(node_id: NodeId, ty: u16, no: u16) -> NodeOutpoint {
+        NodeOutpoint { node_id, ty, no }
     }
 }
 
@@ -319,10 +322,9 @@ pub trait Node: AsAny {
             .iter()
             .flat_map(|(node_id, map)| {
                 let node_id = *node_id;
-                map.values()
-                    .flatten()
-                    .copied()
-                    .map(move |output_no| NodeOutpoint { node_id, output_no })
+                map.iter()
+                    .flat_map(|(ty, vec)| vec.iter().map(|no| (*ty, *no)))
+                    .map(move |(ty, no)| NodeOutpoint { node_id, ty, no })
             })
             .collect()
     }
@@ -339,9 +341,8 @@ pub trait Node: AsAny {
                 let node_id = *node_id;
                 map.iter()
                     .filter(|(t, _)| types.contains(*t))
-                    .flat_map(|(_, outputs)| outputs)
-                    .copied()
-                    .map(move |output_no| NodeOutpoint { node_id, output_no })
+                    .flat_map(|(ty, vec)| vec.iter().map(|no| (*ty, *no)))
+                    .map(move |(ty, no)| NodeOutpoint { node_id, ty, no })
             })
             .collect()
     }
