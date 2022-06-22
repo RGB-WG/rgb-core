@@ -500,7 +500,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
                         // This will not actually happen since we already
-                        // checked that each ancrstor reference has a
+                        // checked that each ancestor reference has a
                         // corresponding node in the code above. But rust
                         // requires to double-check :)
                         self.status.add_failure(Failure::TransitionAbsent(*id));
