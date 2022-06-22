@@ -11,6 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io;
+use std::num::ParseIntError;
 use std::str::FromStr;
 
 use amplify::{AsAny, Wrapper};
@@ -56,6 +57,35 @@ pub struct NodeOutpoint {
     pub output_no: u16,
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display(inner)]
+pub enum OutpointParseError {
+    #[from]
+    InvalidNodeId(bitcoin::hashes::hex::Error),
+
+    #[from]
+    InvalidOutputNo(ParseIntError),
+
+    /// invalid node outpoint format ('{0}')
+    #[display(doc_comments)]
+    WrongFormat(String),
+}
+
+impl FromStr for NodeOutpoint {
+    type Err = OutpointParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split('/');
+        match (split.next(), split.next(), split.next()) {
+            (Some(node_id), Some(no), None) => Ok(NodeOutpoint {
+                node_id: node_id.parse()?,
+                output_no: no.parse()?,
+            }),
+            _ => Err(OutpointParseError::WrongFormat(s.to_owned())),
+        }
+    }
+}
+
 /// Tag used for [`NodeId`] and [`ContractId`] hash types
 pub struct NodeIdTag;
 
@@ -94,6 +124,12 @@ where Msg: AsRef<[u8]>
 
 impl commit_encode::Strategy for NodeId {
     type Strategy = commit_encode::strategies::UsingStrict;
+}
+
+impl FromStr for NodeId {
+    type Err = bitcoin::hashes::hex::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Ok(NodeId::from_inner(s.parse()?)) }
 }
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -876,6 +912,27 @@ mod test {
     fn test_node_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:node");
         assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_NODE_ID);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_genesis_chain() {
+        let genesis = Genesis {
+            schema_id: zero!(),
+            chain: Chain::Testnet3,
+            metadata: empty!(),
+            owned_rights: empty!(),
+            public_rights: empty!(),
+        };
+        let encoded = genesis.strict_serialize().unwrap();
+        let manual = vec![
+            vec![0u8; 32], // zero schema id
+            vec![7u8, 0],  // length of testnet string
+            b"testnet".to_vec(),
+            vec![0u8; 6], // three zero-length arrays
+        ];
+        let manual: Vec<u8> = manual.into_iter().flatten().collect();
+        assert_eq!(encoded, manual);
     }
 
     // Making sure that <https://github.com/LNP-BP/LNPBPs/issues/58>
