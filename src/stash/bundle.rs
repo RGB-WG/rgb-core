@@ -145,6 +145,31 @@ impl TransitionBundle {
 
     pub fn bundle_id(&self) -> BundleId { self.consensus_commit() }
 
+    pub fn node_ids(&self) -> BTreeSet<NodeId> {
+        self.concealed
+            .keys()
+            .copied()
+            .chain(self.revealed.keys().map(Transition::node_id))
+            .collect()
+    }
+
+    pub fn contains_id(&self, node_id: NodeId) -> bool {
+        self.is_concealed(node_id) || self.is_revealed(node_id)
+    }
+
+    pub fn inputs_for(&self, node_id: NodeId) -> Option<&BTreeSet<u16>> {
+        self.revealed
+            .iter()
+            .find_map(|(ts, inputs)| if ts.node_id() == node_id { Some(inputs) } else { None })
+            .or_else(|| self.concealed.get(&node_id))
+    }
+
+    pub fn is_revealed(&self, node_id: NodeId) -> bool {
+        self.revealed.keys().any(|ts| ts.node_id() == node_id)
+    }
+
+    pub fn is_concealed(&self, node_id: NodeId) -> bool { self.concealed.contains_key(&node_id) }
+
     pub fn reveal_transition(
         &mut self,
         transition: Transition,
