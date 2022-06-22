@@ -129,10 +129,49 @@ impl From<BTreeMap<Transition, BTreeSet<u16>>> for TransitionBundle {
     }
 }
 
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum RevealError {
+    /// the provided input set is invalid, since bundle id changes after the reveal operation
+    InvalidInputSet,
+    /// the provided input set is invalid, not matching input set which is already known
+    InputsNotMatch,
+    /// the provided state transition is not a part of the bundle
+    UnrelatedTransition,
+}
+
 impl TransitionBundle {
     pub fn len(&self) -> usize { self.concealed.len() + self.revealed.len() }
 
     pub fn bundle_id(&self) -> BundleId { self.consensus_commit() }
+
+    pub fn reveal_transition(
+        &mut self,
+        transition: Transition,
+        inputs: BTreeSet<u16>,
+    ) -> Result<bool, RevealError> {
+        let id = transition.node_id();
+        if self.concealed.contains_key(&id) {
+            let bundle_id = self.bundle_id();
+            let mut clone = self.clone();
+            clone.concealed.remove(&id);
+            clone.revealed.insert(transition, inputs);
+            if clone.bundle_id() != bundle_id {
+                Err(RevealError::InvalidInputSet)
+            } else {
+                *self = clone;
+                Ok(true)
+            }
+        } else if let Some(existing_inputs) = self.revealed.get(&transition) {
+            if existing_inputs != &inputs {
+                Err(RevealError::InputsNotMatch)
+            } else {
+                Ok(false)
+            }
+        } else {
+            Err(RevealError::UnrelatedTransition)
+        }
+    }
 
     pub fn revealed_iter(&self) -> btree_map::Iter<Transition, BTreeSet<u16>> {
         self.revealed.iter()
