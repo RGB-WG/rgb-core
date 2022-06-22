@@ -29,7 +29,7 @@
 mod anchor;
 mod graph;
 mod stash;
-mod bundle;
+pub mod bundle;
 mod consignment;
 
 #[cfg(feature = "wallet")]
