@@ -132,7 +132,7 @@ impl From<BTreeMap<Transition, BTreeSet<u16>>> for TransitionBundle {
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum RevealError {
-    /// the provided input set is invalid, since bundle id changes after the reveal operation
+    /// the provided input set is invalid, since bundle is invalidated by after the reveal operation
     InvalidInputSet,
     /// the provided input set is invalid, not matching input set which is already known
     InputsNotMatch,
@@ -157,6 +157,8 @@ impl TransitionBundle {
             clone.concealed.remove(&id);
             clone.revealed.insert(transition, inputs);
             if clone.bundle_id() != bundle_id {
+                Err(RevealError::InvalidInputSet)
+            } else if !clone.validate() {
                 Err(RevealError::InvalidInputSet)
             } else {
                 *self = clone;
