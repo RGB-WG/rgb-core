@@ -273,6 +273,35 @@ impl AssignmentVec {
         }
     }
 
+    pub fn revealed_seal_outputs(&self) -> Vec<(seal::Revealed, u16)> {
+        match self {
+            AssignmentVec::Declarative(s) => s
+                .iter()
+                .map(Assignment::<_>::revealed_seal)
+                .enumerate()
+                .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
+                .collect(),
+            AssignmentVec::Fungible(s) => s
+                .iter()
+                .map(Assignment::<_>::revealed_seal)
+                .enumerate()
+                .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
+                .collect(),
+            AssignmentVec::NonFungible(s) => s
+                .iter()
+                .map(Assignment::<_>::revealed_seal)
+                .enumerate()
+                .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
+                .collect(),
+            AssignmentVec::Attachment(s) => s
+                .iter()
+                .map(Assignment::<_>::revealed_seal)
+                .enumerate()
+                .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
+                .collect(),
+        }
+    }
+
     /// If seal definition does not exist, returns [`NoDataError`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
     /// seal data packed as `Ok(Some(`[`seal::Revealed`]`))`
