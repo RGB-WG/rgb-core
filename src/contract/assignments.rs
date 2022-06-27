@@ -890,6 +890,33 @@ where
     StateType::Confidential: PartialEq + Eq,
     StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
+    pub fn with_seal_replaced(assignment: &Self, seal_definition: seal::Revealed) -> Self {
+        match assignment {
+            Assignment::Confidential {
+                seal_definition: _,
+                assigned_state,
+            }
+            | Assignment::ConfidentialAmount {
+                seal_definition: _,
+                assigned_state,
+            } => Assignment::ConfidentialAmount {
+                seal_definition,
+                assigned_state: assigned_state.clone(),
+            },
+            Assignment::ConfidentialSeal {
+                seal_definition: _,
+                assigned_state,
+            }
+            | Assignment::Revealed {
+                seal_definition: _,
+                assigned_state,
+            } => Assignment::Revealed {
+                seal_definition,
+                assigned_state: assigned_state.clone(),
+            },
+        }
+    }
+
     pub fn to_confidential_seal(&self) -> seal::Confidential {
         match self {
             Assignment::Revealed {
