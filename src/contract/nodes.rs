@@ -16,6 +16,8 @@ use std::str::FromStr;
 
 use amplify::{AsAny, Wrapper};
 use bitcoin::hashes::{sha256, sha256t, Hash};
+use bitcoin::{OutPoint, Txid};
+use bp::seals::txout::TxoSeal;
 use commit_verify::lnpbp4::ProtocolId;
 use commit_verify::{
     commit_encode, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
@@ -421,6 +423,19 @@ pub trait Node: AsAny {
         self.owned_rights_by_type(assignment_type)
             .map(AssignmentVec::filter_revealed_seals)
             .unwrap_or_else(Vec::new)
+    }
+
+    fn node_outputs(&self, witness_txid: Txid) -> BTreeMap<NodeOutpoint, OutPoint> {
+        let node_id = self.node_id();
+        let mut res: BTreeMap<NodeOutpoint, OutPoint> = bmap! {};
+        for (ty, assignments) in self.owned_rights() {
+            for (seal, node_output) in assignments.revealed_seal_outputs() {
+                let outpoint = seal.outpoint_or(witness_txid);
+                let node_outpoint = NodeOutpoint::new(node_id, *ty, node_output);
+                res.insert(node_outpoint, outpoint);
+            }
+        }
+        res
     }
 }
 
