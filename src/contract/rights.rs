@@ -62,6 +62,20 @@ impl IntoIterator for OwnedRights {
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
 
+impl<'a> IntoIterator for &'a OwnedRights {
+    type Item = <&'a OwnedRightsInner as IntoIterator>::Item;
+    type IntoIter = <&'a OwnedRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
+impl<'a> IntoIterator for &'a mut OwnedRights {
+    type Item = <&'a mut OwnedRightsInner as IntoIterator>::Item;
+    type IntoIter = <&'a mut OwnedRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter_mut() }
+}
+
 #[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[cfg_attr(
     feature = "serde",
@@ -80,6 +94,13 @@ impl IntoIterator for PublicRights {
     type IntoIter = <PublicRightsInner as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
+impl<'a> IntoIterator for &'a PublicRights {
+    type Item = <&'a PublicRightsInner as IntoIterator>::Item;
+    type IntoIter = <&'a PublicRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
 #[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
@@ -110,6 +131,20 @@ impl IntoIterator for ParentOwnedRights {
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
 
+impl<'a> IntoIterator for &'a ParentOwnedRights {
+    type Item = <&'a ParentOwnedRightsInner as IntoIterator>::Item;
+    type IntoIter = <&'a ParentOwnedRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
+impl<'a> IntoIterator for &'a mut ParentOwnedRights {
+    type Item = <&'a mut ParentOwnedRightsInner as IntoIterator>::Item;
+    type IntoIter = <&'a mut ParentOwnedRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter_mut() }
+}
+
 #[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[cfg_attr(
     feature = "serde",
@@ -136,6 +171,20 @@ impl IntoIterator for ParentPublicRights {
     type IntoIter = <ParentPublicRightsInner as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
+impl<'a> IntoIterator for &'a ParentPublicRights {
+    type Item = <&'a ParentPublicRightsInner as IntoIterator>::Item;
+    type IntoIter = <&'a ParentPublicRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
+impl<'a> IntoIterator for &'a mut ParentPublicRights {
+    type Item = <&'a mut ParentPublicRightsInner as IntoIterator>::Item;
+    type IntoIter = <&'a mut ParentPublicRightsInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter_mut() }
 }
 
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
