@@ -150,9 +150,9 @@ mod _validation {
                     status +=
                         StenValidate::validate(ty, type_system, node_id, schema_type_id, data);
                 }
-                (TypeConstr::List(PrimitiveType::AsciiChar), Revealed::AsciiString(s)) => {}
-                (TypeConstr::List(PrimitiveType::UnicodeChar), Revealed::UnicodeString(s)) => {}
-                (TypeConstr::List(PrimitiveType::U8), Revealed::Bytes(s)) => {}
+                (TypeConstr::List(PrimitiveType::AsciiChar), Revealed::AsciiString(_)) => {}
+                (TypeConstr::List(PrimitiveType::UnicodeChar), Revealed::UnicodeString(_)) => {}
+                (TypeConstr::List(PrimitiveType::U8), Revealed::Bytes(_)) => {}
                 _ => {
                     status.add_failure(validation::Failure::InvalidStateDataType(
                         node_id,
