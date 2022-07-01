@@ -211,7 +211,7 @@ impl<'de> serde::Deserialize<'de> for ContractId {
 
             fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
             where E: serde::de::Error {
-                ContractId::from_slice(&v)
+                ContractId::from_bytes(&v)
                     .map_err(|_| serde::de::Error::invalid_length(v.len(), &"32 bytes"))
             }
         }
@@ -918,6 +918,7 @@ mod test {
     use commit_verify::{tagged_hash, CommitConceal, TaggedHash};
     use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
     use strict_encoding::{strict_serialize, StrictDecode, StrictEncode};
+    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
 
@@ -1063,8 +1064,8 @@ mod test {
     #[test]
     #[ignore]
     fn test_encoding_nodes() {
-        test_encode!((GENESIS, Genesis));
-        test_encode!((TRANSITION, Transition));
+        let _: Genesis = test_vec_decoding_roundtrip(GENESIS).unwrap();
+        let _: Transition = test_vec_decoding_roundtrip(TRANSITION).unwrap();
     }
 
     #[test]

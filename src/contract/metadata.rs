@@ -224,6 +224,7 @@ mod test {
     use commit_verify::{merklize, CommitEncode};
     use secp256k1zkp::rand::{thread_rng, RngCore};
     use strict_encoding::{StrictDecode, StrictEncode};
+    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
     //use lnpbp::commit_verify::CommitVerify;
@@ -280,7 +281,7 @@ mod test {
     #[test]
     #[ignore]
     fn test_encode_decode_meta() {
-        test_encode!((METADATA, Metadata));
+        let _: Metadata = test_vec_decoding_roundtrip(METADATA).unwrap();
     }
 
     #[test]

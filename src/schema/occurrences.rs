@@ -134,6 +134,7 @@ mod _strict_encoding {
 #[cfg(test)]
 mod test {
     use strict_encoding::StrictDecode;
+    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::Occurrences;
 
@@ -243,9 +244,9 @@ mod test {
 
     #[test]
     fn test_encode_occurance() {
-        test_encode!((ONCE, Occurrences), (NONEORONCE, Occurrences));
-
-        test_encode!((NONEUPTO_U16, Occurrences));
+        let _: Occurrences = test_vec_decoding_roundtrip(ONCE).unwrap();
+        let _: Occurrences = test_vec_decoding_roundtrip(NONEORONCE).unwrap();
+        let _: Occurrences = test_vec_decoding_roundtrip(NONEUPTO_U16).unwrap();
     }
 
     #[test]

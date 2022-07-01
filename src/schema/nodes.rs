@@ -238,6 +238,7 @@ mod _verify {
 #[cfg(test)]
 mod test {
     use strict_encoding::StrictDecode;
+    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
     use crate::schema::SchemaVerify;
@@ -263,17 +264,17 @@ mod test {
 
     #[test]
     fn test_genesis_schema_encoding() {
-        test_encode!((GENESIS_SCHEMA, GenesisSchema));
+        let _: GenesisSchema = test_vec_decoding_roundtrip(GENESIS_SCHEMA).unwrap();
     }
 
     #[test]
     fn test_transition_schema_encoding() {
-        test_encode!((TRANSITION_SCHEMA, TransitionSchema));
+        let _: TransitionSchema = test_vec_decoding_roundtrip(TRANSITION_SCHEMA).unwrap();
     }
 
     #[test]
     fn test_extension_schema_encoding() {
-        test_encode!((EXTENSION_SCHEMA, ExtensionSchema));
+        let _: ExtensionSchema = test_vec_decoding_roundtrip(EXTENSION_SCHEMA).unwrap();
     }
 
     #[test]

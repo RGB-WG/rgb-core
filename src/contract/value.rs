@@ -302,6 +302,7 @@ impl Confidential {
 #[cfg(test)]
 mod test {
     use strict_encoding::{strict_deserialize, StrictDecode, StrictEncode};
+    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::super::test::test_confidential;
     use super::*;
@@ -369,9 +370,9 @@ mod test {
     #[test]
     fn test_amount() {
         // Test encoding decoding
-        test_encode!((AMOUNT_65, Revealed));
-        test_encode!((AMOUNT_64, Revealed));
-        test_encode!((CONFIDENTIAL_AMOUNT, Confidential));
+        let _: Revealed = test_vec_decoding_roundtrip(AMOUNT_65).unwrap();
+        let _: Revealed = test_vec_decoding_roundtrip(AMOUNT_64).unwrap();
+        let _: Confidential = test_vec_decoding_roundtrip(CONFIDENTIAL_AMOUNT).unwrap();
 
         // Test commitment
         test_confidential::<Revealed>(&AMOUNT_65, &CONFIDENTIAL_AMOUNT, &CONFIDENTIAL_COMMITMENT);

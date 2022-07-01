@@ -74,8 +74,8 @@ impl AnchorExt for Anchor<lnpbp4::MerkleBlock> {
         let messages = bundles
             .iter()
             .map(|(contract_id, bundle_id)| {
-                let protocol_id = lnpbp4::ProtocolId::from_inner(contract_id.to_bytes());
-                let message = lnpbp4::Message::from_inner(bundle_id.to_bytes());
+                let protocol_id = lnpbp4::ProtocolId::from_inner(contract_id.into_array());
+                let message = lnpbp4::Message::from_inner(bundle_id.into_array());
                 (protocol_id, message)
             })
             .collect::<BTreeMap<_, _>>();

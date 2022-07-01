@@ -161,6 +161,7 @@ mod test {
     use commit_verify::CommitEncode;
     use secp256k1zkp::rand::{thread_rng, RngCore};
     use strict_encoding::{StrictDecode, StrictEncode};
+    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
 
@@ -206,10 +207,11 @@ mod test {
     #[test]
     #[ignore]
     fn test_encode_decode() {
-        test_encode!((REVEALED_TXOUTPOINT, Revealed));
-        test_encode!((REVEALED_WITNESSVOUT, Revealed));
+        let _: Revealed = test_vec_decoding_roundtrip(REVEALED_TXOUTPOINT).unwrap();
+        let _: Revealed = test_vec_decoding_roundtrip(REVEALED_WITNESSVOUT).unwrap();
     }
 
+    /*
     #[test]
     #[ignore]
     fn test_wrong_encoding() {
@@ -220,6 +222,7 @@ mod test {
             (REVEALED_WITNESSVOUT, Revealed, err)
         );
     }
+     */
 
     #[test]
     #[ignore]

@@ -107,7 +107,7 @@ impl<'de> serde::Deserialize<'de> for SchemaId {
 
             fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
             where E: serde::de::Error {
-                SchemaId::from_slice(&v)
+                SchemaId::from_bytes(&v)
                     .map_err(|_| serde::de::Error::invalid_length(v.len(), &"32 bytes"))
             }
         }

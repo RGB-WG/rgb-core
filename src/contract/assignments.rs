@@ -1203,6 +1203,7 @@ mod test {
     use secp256k1zkp::pedersen::Commitment;
     use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
     use secp256k1zkp::{Secp256k1, SecretKey};
+    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::super::{NodeId, OwnedRights, ParentOwnedRights};
     use super::*;
@@ -1268,12 +1269,13 @@ mod test {
     #[test]
     #[ignore]
     fn test_encoded_data() {
-        test_encode!((HASH_VARIANT, AssignmentVec));
-        test_encode!((PEDERSAN_VARIANT, AssignmentVec));
-        test_encode!((DECLARATIVE_VARIANT, AssignmentVec));
+        let _: AssignmentVec = test_vec_decoding_roundtrip(HASH_VARIANT).unwrap();
+        let _: AssignmentVec = test_vec_decoding_roundtrip(PEDERSAN_VARIANT).unwrap();
+        let _: AssignmentVec = test_vec_decoding_roundtrip(DECLARATIVE_VARIANT).unwrap();
     }
 
     // Generic garbage value testing
+    /*
     #[test]
     #[ignore]
     fn test_garbage_dec() {
@@ -1282,6 +1284,7 @@ mod test {
             (HASH_VARIANT, AssignmentVec, err),
             (DECLARATIVE_VARIANT, AssignmentVec, err));
     }
+     */
 
     #[test]
     #[ignore]
@@ -2002,7 +2005,7 @@ mod test {
 
     #[test]
     fn test_encoding_ancestor() {
-        test_encode!((PARENT_RIGHTS, ParentOwnedRights));
+        let _: ParentOwnedRights = test_vec_decoding_roundtrip(PARENT_RIGHTS).unwrap();
     }
 
     #[test]

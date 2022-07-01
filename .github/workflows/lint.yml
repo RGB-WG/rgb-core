@@ -51,7 +51,7 @@ jobs:
           override: true
           components: rust-docs
       - uses: actions-rs/cargo@v1
-        name: Clippy
+        name: Doc
         with:
           command: doc
           args: --workspace --all-features

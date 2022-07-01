@@ -413,7 +413,6 @@ impl Revealed {
 mod test {
     use amplify::Wrapper;
     use commit_verify::tagged_hash;
-    use strict_encoding::StrictDecode;
 
     use super::super::test::test_confidential;
     use super::*;
@@ -498,23 +497,24 @@ mod test {
     }
 
     // Normal encode/decode testing
+    /*
     #[test]
     #[ignore]
     fn test_encoding() {
-        test_encode!(
-            (U_8, Revealed),
-            (U_16, Revealed),
-            (U_32, Revealed),
-            (U_64, Revealed),
-            (I_8, Revealed),
-            (I_16, Revealed),
-            (I_32, Revealed),
-            (I_64, Revealed),
-            (F_32, Revealed),
-            (F_64, Revealed),
-            (BYTES, Revealed),
-            (STRING, Revealed)
-        );
+    test_encode!(
+        (U_8, Revealed),
+        (U_16, Revealed),
+        (U_32, Revealed),
+        (U_64, Revealed),
+        (I_8, Revealed),
+        (I_16, Revealed),
+        (I_32, Revealed),
+        (I_64, Revealed),
+        (F_32, Revealed),
+        (F_64, Revealed),
+        (BYTES, Revealed),
+        (STRING, Revealed)
+    );
     }
 
     // Garbage data encode/decode testing
@@ -537,6 +537,7 @@ mod test {
             (STRING, Revealed, err)
         );
     }
+     */
 
     #[test]
     #[ignore]
