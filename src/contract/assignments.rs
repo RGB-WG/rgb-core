@@ -27,7 +27,7 @@ use super::{
 use crate::contract::attachment;
 use crate::{AtomicValue, ConfidentialDataError, StateRetrievalError};
 
-pub(super) static EMPTY_ASSIGNMENT_VEC: Lazy<AssignmentVec> = Lazy::new(AssignmentVec::default);
+pub(super) static EMPTY_ASSIGNMENTS: Lazy<TypedAssignments> = Lazy::new(TypedAssignments::default);
 
 /// Allocation map using unique set of seal definitions
 pub type SealValueMap = BTreeMap<seal::Revealed, AtomicValue>;
@@ -39,7 +39,7 @@ pub type EndpointValueMap = BTreeMap<SealEndpoint, AtomicValue>;
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub enum StateType {
     /// No state data
-    Declarative,
+    Void,
 
     /// Value-based state, i.e. which can be committed to with a Pedersen
     /// commitment
@@ -59,25 +59,25 @@ pub enum StateType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-pub enum AssignmentVec {
-    Declarative(Vec<Assignment<DeclarativeStrategy>>),
-    Fungible(Vec<Assignment<PedersenStrategy>>),
-    NonFungible(Vec<Assignment<HashStrategy>>),
+pub enum TypedAssignments {
+    Void(Vec<Assignment<DeclarativeStrategy>>),
+    Value(Vec<Assignment<PedersenStrategy>>),
+    Data(Vec<Assignment<HashStrategy>>),
     Attachment(Vec<Assignment<AttachmentStrategy>>),
 }
 
-impl Default for AssignmentVec {
-    fn default() -> Self { AssignmentVec::Declarative(vec![]) }
+impl Default for TypedAssignments {
+    fn default() -> Self { TypedAssignments::Void(vec![]) }
 }
 
-impl AssignmentVec {
+impl TypedAssignments {
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
         allocations_ours: BTreeMap<seal::Revealed, AtomicValue>,
         allocations_theirs: BTreeMap<SealEndpoint, AtomicValue>,
     ) -> Self {
         if allocations_ours.len() + allocations_theirs.len() == 0 {
-            return Self::Fungible(vec![]);
+            return Self::Value(vec![]);
         }
 
         // Generate random blinding factors
@@ -108,9 +108,9 @@ impl AssignmentVec {
         let mut blinding_iter = blinding_factors.into_iter();
         let mut set: Vec<Assignment<_>> = allocations_ours
             .into_iter()
-            .map(|(seal_definition, amount)| Assignment::Revealed {
-                seal_definition,
-                assigned_state: value::Revealed {
+            .map(|(seal, amount)| Assignment::Revealed {
+                seal,
+                state: value::Revealed {
                     value: amount,
                     blinding: blinding_iter
                         .next()
@@ -120,7 +120,7 @@ impl AssignmentVec {
             })
             .collect();
         set.extend(allocations_theirs.into_iter().map(|(seal_proto, amount)| {
-            let assigned_state = value::Revealed {
+            let state = value::Revealed {
                 value: amount,
                 blinding: blinding_iter
                     .next()
@@ -128,57 +128,54 @@ impl AssignmentVec {
                     .into(),
             };
             match seal_proto {
-                SealEndpoint::ConcealedUtxo(seal_definition) => Assignment::ConfidentialSeal {
-                    seal_definition,
-                    assigned_state,
-                },
+                SealEndpoint::ConcealedUtxo(seal) => Assignment::ConfidentialSeal { seal, state },
                 SealEndpoint::WitnessVout {
                     method,
                     vout,
                     blinding,
                 } => Assignment::Revealed {
-                    seal_definition: seal::Revealed {
+                    seal: seal::Revealed {
                         method,
                         txid: None,
                         vout,
                         blinding,
                     },
-                    assigned_state,
+                    state,
                 },
             }
         }));
 
-        Self::Fungible(set)
+        Self::Value(set)
     }
 
     #[inline]
     pub fn state_type(&self) -> StateType {
         match self {
-            AssignmentVec::Declarative(_) => StateType::Declarative,
-            AssignmentVec::Fungible(_) => StateType::Value,
-            AssignmentVec::NonFungible(_) => StateType::Data,
-            AssignmentVec::Attachment(_) => StateType::Attachment,
+            TypedAssignments::Void(_) => StateType::Void,
+            TypedAssignments::Value(_) => StateType::Value,
+            TypedAssignments::Data(_) => StateType::Data,
+            TypedAssignments::Attachment(_) => StateType::Attachment,
         }
     }
 
     #[inline]
-    pub fn is_declarative(&self) -> bool { matches!(self, AssignmentVec::Declarative(_)) }
+    pub fn is_declarative(&self) -> bool { matches!(self, TypedAssignments::Void(_)) }
 
     #[inline]
-    pub fn has_value(&self) -> bool { matches!(self, AssignmentVec::Fungible(_)) }
+    pub fn has_value(&self) -> bool { matches!(self, TypedAssignments::Value(_)) }
 
     #[inline]
-    pub fn has_data(&self) -> bool { matches!(self, AssignmentVec::NonFungible(_)) }
+    pub fn has_data(&self) -> bool { matches!(self, TypedAssignments::Data(_)) }
 
     #[inline]
-    pub fn is_attachment(&self) -> bool { matches!(self, AssignmentVec::Attachment(_)) }
+    pub fn is_attachment(&self) -> bool { matches!(self, TypedAssignments::Attachment(_)) }
 
     #[inline]
     pub fn declarative_assignment_vec_mut(
         &mut self,
     ) -> Option<&mut Vec<Assignment<DeclarativeStrategy>>> {
         match self {
-            AssignmentVec::Declarative(set) => Some(set),
+            TypedAssignments::Void(set) => Some(set),
             _ => None,
         }
     }
@@ -186,7 +183,7 @@ impl AssignmentVec {
     #[inline]
     pub fn value_assignment_vec_mut(&mut self) -> Option<&mut Vec<Assignment<PedersenStrategy>>> {
         match self {
-            AssignmentVec::Fungible(set) => Some(set),
+            TypedAssignments::Value(set) => Some(set),
             _ => None,
         }
     }
@@ -194,7 +191,7 @@ impl AssignmentVec {
     #[inline]
     pub fn data_assignment_vec_mut(&mut self) -> Option<&mut Vec<Assignment<HashStrategy>>> {
         match self {
-            AssignmentVec::NonFungible(set) => Some(set),
+            TypedAssignments::Data(set) => Some(set),
             _ => None,
         }
     }
@@ -204,7 +201,7 @@ impl AssignmentVec {
         &mut self,
     ) -> Option<&mut Vec<Assignment<AttachmentStrategy>>> {
         match self {
-            AssignmentVec::Attachment(set) => Some(set),
+            TypedAssignments::Attachment(set) => Some(set),
             _ => None,
         }
     }
@@ -212,7 +209,7 @@ impl AssignmentVec {
     #[inline]
     pub fn to_declarative_assignment_vec(&self) -> Vec<Assignment<DeclarativeStrategy>> {
         match self {
-            AssignmentVec::Declarative(set) => set.clone(),
+            TypedAssignments::Void(set) => set.clone(),
             _ => Default::default(),
         }
     }
@@ -220,7 +217,7 @@ impl AssignmentVec {
     #[inline]
     pub fn to_value_assignment_vec(&self) -> Vec<Assignment<PedersenStrategy>> {
         match self {
-            AssignmentVec::Fungible(set) => set.clone(),
+            TypedAssignments::Value(set) => set.clone(),
             _ => Default::default(),
         }
     }
@@ -228,7 +225,7 @@ impl AssignmentVec {
     #[inline]
     pub fn to_data_assignment_vec(&self) -> Vec<Assignment<HashStrategy>> {
         match self {
-            AssignmentVec::NonFungible(set) => set.clone(),
+            TypedAssignments::Data(set) => set.clone(),
             _ => Default::default(),
         }
     }
@@ -236,7 +233,7 @@ impl AssignmentVec {
     #[inline]
     pub fn to_attachment_assignment_vec(&self) -> Vec<Assignment<AttachmentStrategy>> {
         match self {
-            AssignmentVec::Attachment(set) => set.clone(),
+            TypedAssignments::Attachment(set) => set.clone(),
             _ => Default::default(),
         }
     }
@@ -244,7 +241,7 @@ impl AssignmentVec {
     #[inline]
     pub fn into_declarative_assignment_vec(self) -> Vec<Assignment<DeclarativeStrategy>> {
         match self {
-            AssignmentVec::Declarative(set) => set,
+            TypedAssignments::Void(set) => set,
             _ => Default::default(),
         }
     }
@@ -252,7 +249,7 @@ impl AssignmentVec {
     #[inline]
     pub fn into_value_assignment_vec(self) -> Vec<Assignment<PedersenStrategy>> {
         match self {
-            AssignmentVec::Fungible(set) => set,
+            TypedAssignments::Value(set) => set,
             _ => Default::default(),
         }
     }
@@ -260,7 +257,7 @@ impl AssignmentVec {
     #[inline]
     pub fn into_data_assignment_vec(self) -> Vec<Assignment<HashStrategy>> {
         match self {
-            AssignmentVec::NonFungible(set) => set,
+            TypedAssignments::Data(set) => set,
             _ => Default::default(),
         }
     }
@@ -268,32 +265,32 @@ impl AssignmentVec {
     #[inline]
     pub fn into_attachment_assignment_vec(self) -> Vec<Assignment<AttachmentStrategy>> {
         match self {
-            AssignmentVec::Attachment(set) => set,
+            TypedAssignments::Attachment(set) => set,
             _ => Default::default(),
         }
     }
 
     pub fn revealed_seal_outputs(&self) -> Vec<(seal::Revealed, u16)> {
         match self {
-            AssignmentVec::Declarative(s) => s
+            TypedAssignments::Void(s) => s
                 .iter()
                 .map(Assignment::<_>::revealed_seal)
                 .enumerate()
                 .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
                 .collect(),
-            AssignmentVec::Fungible(s) => s
+            TypedAssignments::Value(s) => s
                 .iter()
                 .map(Assignment::<_>::revealed_seal)
                 .enumerate()
                 .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
                 .collect(),
-            AssignmentVec::NonFungible(s) => s
+            TypedAssignments::Data(s) => s
                 .iter()
                 .map(Assignment::<_>::revealed_seal)
                 .enumerate()
                 .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
                 .collect(),
-            AssignmentVec::Attachment(s) => s
+            TypedAssignments::Attachment(s) => s
                 .iter()
                 .map(Assignment::<_>::revealed_seal)
                 .enumerate()
@@ -307,16 +304,16 @@ impl AssignmentVec {
     /// seal data packed as `Ok(Some(`[`seal::Revealed`]`))`
     pub fn revealed_seal_at(&self, index: u16) -> Result<Option<seal::Revealed>, NoDataError> {
         Ok(match self {
-            AssignmentVec::Declarative(vec) => {
+            TypedAssignments::Void(vec) => {
                 vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
             }
-            AssignmentVec::Fungible(vec) => {
+            TypedAssignments::Value(vec) => {
                 vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
             }
-            AssignmentVec::NonFungible(vec) => {
+            TypedAssignments::Data(vec) => {
                 vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
             }
-            AssignmentVec::Attachment(vec) => {
+            TypedAssignments::Attachment(vec) => {
                 vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
             }
         })
@@ -324,10 +321,12 @@ impl AssignmentVec {
 
     pub fn revealed_seals(&self) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
         let list: Vec<_> = match self {
-            AssignmentVec::Declarative(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
-            AssignmentVec::Fungible(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
-            AssignmentVec::NonFungible(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
-            AssignmentVec::Attachment(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
+            TypedAssignments::Void(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
+            TypedAssignments::Value(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
+            TypedAssignments::Data(s) => s.iter().map(Assignment::<_>::revealed_seal).collect(),
+            TypedAssignments::Attachment(s) => {
+                s.iter().map(Assignment::<_>::revealed_seal).collect()
+            }
         };
         let len = list.len();
         let filtered: Vec<seal::Revealed> = list.into_iter().flatten().collect();
@@ -339,19 +338,19 @@ impl AssignmentVec {
 
     pub fn filter_revealed_seals(&self) -> Vec<seal::Revealed> {
         match self {
-            AssignmentVec::Declarative(s) => s
+            TypedAssignments::Void(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
-            AssignmentVec::Fungible(s) => s
+            TypedAssignments::Value(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
-            AssignmentVec::NonFungible(s) => s
+            TypedAssignments::Data(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
-            AssignmentVec::Attachment(s) => s
+            TypedAssignments::Attachment(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::revealed_seal)
                 .collect(),
@@ -360,19 +359,19 @@ impl AssignmentVec {
 
     pub fn to_confidential_seals(&self) -> Vec<seal::Confidential> {
         match self {
-            AssignmentVec::Declarative(s) => s
+            TypedAssignments::Void(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
-            AssignmentVec::Fungible(s) => s
+            TypedAssignments::Value(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
-            AssignmentVec::NonFungible(s) => s
+            TypedAssignments::Data(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
-            AssignmentVec::Attachment(s) => s
+            TypedAssignments::Attachment(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_seal)
                 .collect(),
@@ -381,7 +380,7 @@ impl AssignmentVec {
 
     pub fn as_revealed_state_values(&self) -> Result<Vec<&value::Revealed>, StateRetrievalError> {
         let list = match self {
-            AssignmentVec::Fungible(s) => s.iter().map(Assignment::<_>::as_revealed_state),
+            TypedAssignments::Value(s) => s.iter().map(Assignment::<_>::as_revealed_state),
             _ => return Err(StateRetrievalError::StateTypeMismatch),
         };
         let len = list.len();
@@ -394,7 +393,7 @@ impl AssignmentVec {
 
     pub fn as_revealed_state_data(&self) -> Result<Vec<&data::Revealed>, StateRetrievalError> {
         let list = match self {
-            AssignmentVec::NonFungible(s) => s.iter().map(Assignment::<_>::as_revealed_state),
+            TypedAssignments::Data(s) => s.iter().map(Assignment::<_>::as_revealed_state),
             _ => return Err(StateRetrievalError::StateTypeMismatch),
         };
         let len = list.len();
@@ -409,7 +408,7 @@ impl AssignmentVec {
         &self,
     ) -> Result<Vec<&attachment::Revealed>, StateRetrievalError> {
         let list = match self {
-            AssignmentVec::Attachment(s) => s.iter().map(Assignment::<_>::as_revealed_state),
+            TypedAssignments::Attachment(s) => s.iter().map(Assignment::<_>::as_revealed_state),
             _ => return Err(StateRetrievalError::StateTypeMismatch),
         };
         let len = list.len();
@@ -422,34 +421,34 @@ impl AssignmentVec {
 
     pub fn filter_revealed_state_values(&self) -> Vec<&value::Revealed> {
         match self {
-            AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::Fungible(s) => s
+            TypedAssignments::Void(_) => vec![],
+            TypedAssignments::Value(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
-            AssignmentVec::NonFungible(_) => vec![],
-            AssignmentVec::Attachment(_) => vec![],
+            TypedAssignments::Data(_) => vec![],
+            TypedAssignments::Attachment(_) => vec![],
         }
     }
 
     pub fn filter_revealed_state_data(&self) -> Vec<&data::Revealed> {
         match self {
-            AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::Fungible(_) => vec![],
-            AssignmentVec::NonFungible(s) => s
+            TypedAssignments::Void(_) => vec![],
+            TypedAssignments::Value(_) => vec![],
+            TypedAssignments::Data(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
-            AssignmentVec::Attachment(_) => vec![],
+            TypedAssignments::Attachment(_) => vec![],
         }
     }
 
     pub fn filter_revealed_state_attachments(&self) -> Vec<&attachment::Revealed> {
         match self {
-            AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::Fungible(_) => vec![],
-            AssignmentVec::NonFungible(_) => vec![],
-            AssignmentVec::Attachment(s) => s
+            TypedAssignments::Void(_) => vec![],
+            TypedAssignments::Value(_) => vec![],
+            TypedAssignments::Data(_) => vec![],
+            TypedAssignments::Attachment(s) => s
                 .iter()
                 .filter_map(Assignment::<_>::as_revealed_state)
                 .collect(),
@@ -458,34 +457,34 @@ impl AssignmentVec {
 
     pub fn to_confidential_state_pedersen(&self) -> Vec<value::Confidential> {
         match self {
-            AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::Fungible(s) => s
+            TypedAssignments::Void(_) => vec![],
+            TypedAssignments::Value(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_state)
                 .collect(),
-            AssignmentVec::NonFungible(_) => vec![],
-            AssignmentVec::Attachment(_) => vec![],
+            TypedAssignments::Data(_) => vec![],
+            TypedAssignments::Attachment(_) => vec![],
         }
     }
 
     pub fn to_confidential_state_hashed(&self) -> Vec<data::Confidential> {
         match self {
-            AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::Fungible(_) => vec![],
-            AssignmentVec::NonFungible(s) => s
+            TypedAssignments::Void(_) => vec![],
+            TypedAssignments::Value(_) => vec![],
+            TypedAssignments::Data(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_state)
                 .collect(),
-            AssignmentVec::Attachment(_) => vec![],
+            TypedAssignments::Attachment(_) => vec![],
         }
     }
 
     pub fn to_confidential_state_attachments(&self) -> Vec<attachment::Confidential> {
         match self {
-            AssignmentVec::Declarative(_) => vec![],
-            AssignmentVec::Fungible(_) => vec![],
-            AssignmentVec::NonFungible(_) => vec![],
-            AssignmentVec::Attachment(s) => s
+            TypedAssignments::Void(_) => vec![],
+            TypedAssignments::Value(_) => vec![],
+            TypedAssignments::Data(_) => vec![],
+            TypedAssignments::Attachment(s) => s
                 .iter()
                 .map(Assignment::<_>::to_confidential_state)
                 .collect(),
@@ -497,7 +496,7 @@ impl AssignmentVec {
         &self,
     ) -> Result<Vec<(seal::Revealed, &value::Revealed)>, StateRetrievalError> {
         match self {
-            AssignmentVec::Fungible(vec) => {
+            TypedAssignments::Value(vec) => {
                 let unfiltered: Vec<_> = vec
                     .iter()
                     .filter_map(|assignment| {
@@ -521,7 +520,7 @@ impl AssignmentVec {
         &self,
     ) -> Result<Vec<(seal::Revealed, &data::Revealed)>, StateRetrievalError> {
         match self {
-            AssignmentVec::NonFungible(vec) => {
+            TypedAssignments::Data(vec) => {
                 let unfiltered: Vec<_> = vec
                     .iter()
                     .filter_map(|assignment| {
@@ -545,7 +544,7 @@ impl AssignmentVec {
         &self,
     ) -> Result<Vec<(seal::Revealed, &attachment::Revealed)>, StateRetrievalError> {
         match self {
-            AssignmentVec::Attachment(vec) => {
+            TypedAssignments::Attachment(vec) => {
                 let unfiltered: Vec<_> = vec
                     .iter()
                     .filter_map(|assignment| {
@@ -566,19 +565,19 @@ impl AssignmentVec {
 
     pub fn is_empty(&self) -> bool {
         match self {
-            AssignmentVec::Declarative(set) => set.is_empty(),
-            AssignmentVec::Fungible(set) => set.is_empty(),
-            AssignmentVec::NonFungible(set) => set.is_empty(),
-            AssignmentVec::Attachment(set) => set.is_empty(),
+            TypedAssignments::Void(set) => set.is_empty(),
+            TypedAssignments::Value(set) => set.is_empty(),
+            TypedAssignments::Data(set) => set.is_empty(),
+            TypedAssignments::Attachment(set) => set.is_empty(),
         }
     }
 
     pub fn len(&self) -> usize {
         match self {
-            AssignmentVec::Declarative(set) => set.len(),
-            AssignmentVec::Fungible(set) => set.len(),
-            AssignmentVec::NonFungible(set) => set.len(),
-            AssignmentVec::Attachment(set) => set.len(),
+            TypedAssignments::Void(set) => set.len(),
+            TypedAssignments::Value(set) => set.len(),
+            TypedAssignments::Data(set) => set.len(),
+            TypedAssignments::Attachment(set) => set.len(),
         }
     }
 
@@ -591,9 +590,9 @@ impl AssignmentVec {
     ) -> usize {
         let mut counter = 0;
         match self {
-            AssignmentVec::Declarative(_) => {}
-            AssignmentVec::Fungible(set) => {
-                *self = AssignmentVec::Fungible(
+            TypedAssignments::Void(_) => {}
+            TypedAssignments::Value(set) => {
+                *self = TypedAssignments::Value(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -603,8 +602,8 @@ impl AssignmentVec {
                         .collect(),
                 );
             }
-            AssignmentVec::NonFungible(set) => {
-                *self = AssignmentVec::NonFungible(
+            TypedAssignments::Data(set) => {
+                *self = TypedAssignments::Data(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -614,8 +613,8 @@ impl AssignmentVec {
                         .collect(),
                 );
             }
-            AssignmentVec::Attachment(set) => {
-                *self = AssignmentVec::Attachment(
+            TypedAssignments::Attachment(set) => {
+                *self = TypedAssignments::Attachment(
                     set.iter()
                         .map(|assignment| {
                             let mut assignment = assignment.clone();
@@ -631,19 +630,19 @@ impl AssignmentVec {
 
     pub fn consensus_commitments(&self) -> Vec<MerkleNode> {
         match self {
-            AssignmentVec::Declarative(vec) => vec
+            TypedAssignments::Void(vec) => vec
                 .iter()
                 .map(Assignment::<DeclarativeStrategy>::consensus_commit)
                 .collect(),
-            AssignmentVec::Fungible(vec) => vec
+            TypedAssignments::Value(vec) => vec
                 .iter()
                 .map(Assignment::<PedersenStrategy>::consensus_commit)
                 .collect(),
-            AssignmentVec::NonFungible(vec) => vec
+            TypedAssignments::Data(vec) => vec
                 .iter()
                 .map(Assignment::<HashStrategy>::consensus_commit)
                 .collect(),
-            AssignmentVec::Attachment(vec) => vec
+            TypedAssignments::Attachment(vec) => vec
                 .iter()
                 .map(Assignment::<AttachmentStrategy>::consensus_commit)
                 .collect(),
@@ -651,25 +650,25 @@ impl AssignmentVec {
     }
 }
 
-impl ConcealSeals for AssignmentVec {
+impl ConcealSeals for TypedAssignments {
     fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
-            AssignmentVec::Declarative(data) => data as &mut dyn ConcealSeals,
-            AssignmentVec::Fungible(data) => data as &mut dyn ConcealSeals,
-            AssignmentVec::NonFungible(data) => data as &mut dyn ConcealSeals,
-            AssignmentVec::Attachment(data) => data as &mut dyn ConcealSeals,
+            TypedAssignments::Void(data) => data as &mut dyn ConcealSeals,
+            TypedAssignments::Value(data) => data as &mut dyn ConcealSeals,
+            TypedAssignments::Data(data) => data as &mut dyn ConcealSeals,
+            TypedAssignments::Attachment(data) => data as &mut dyn ConcealSeals,
         }
         .conceal_seals(seals)
     }
 }
 
-impl ConcealState for AssignmentVec {
+impl ConcealState for TypedAssignments {
     fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
-            AssignmentVec::Declarative(data) => data as &mut dyn ConcealState,
-            AssignmentVec::Fungible(data) => data as &mut dyn ConcealState,
-            AssignmentVec::NonFungible(data) => data as &mut dyn ConcealState,
-            AssignmentVec::Attachment(data) => data as &mut dyn ConcealState,
+            TypedAssignments::Void(data) => data as &mut dyn ConcealState,
+            TypedAssignments::Value(data) => data as &mut dyn ConcealState,
+            TypedAssignments::Data(data) => data as &mut dyn ConcealState,
+            TypedAssignments::Attachment(data) => data as &mut dyn ConcealState,
         }
         .conceal_state_except(seals)
     }
@@ -682,7 +681,7 @@ pub trait RevealedState:
 {
 }
 
-impl AssignmentVec {
+impl TypedAssignments {
     pub fn u8(&self) -> Vec<u8> {
         self.filter_revealed_state_data()
             .into_iter()
@@ -809,20 +808,20 @@ where
     StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     Confidential {
-        seal_definition: seal::Confidential,
-        assigned_state: StateType::Confidential,
+        seal: seal::Confidential,
+        state: StateType::Confidential,
     },
     Revealed {
-        seal_definition: seal::Revealed,
-        assigned_state: StateType::Revealed,
+        seal: seal::Revealed,
+        state: StateType::Revealed,
     },
     ConfidentialSeal {
-        seal_definition: seal::Confidential,
-        assigned_state: StateType::Revealed,
+        seal: seal::Confidential,
+        state: StateType::Revealed,
     },
     ConfidentialAmount {
-        seal_definition: seal::Revealed,
-        assigned_state: StateType::Confidential,
+        seal: seal::Revealed,
+        state: StateType::Confidential,
     },
 }
 
@@ -890,107 +889,77 @@ where
     StateType::Confidential: PartialEq + Eq,
     StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
-    pub fn with_seal_replaced(assignment: &Self, seal_definition: seal::Revealed) -> Self {
+    pub fn with_seal_replaced(assignment: &Self, seal: seal::Revealed) -> Self {
         match assignment {
-            Assignment::Confidential {
-                seal_definition: _,
-                assigned_state,
-            }
-            | Assignment::ConfidentialAmount {
-                seal_definition: _,
-                assigned_state,
-            } => Assignment::ConfidentialAmount {
-                seal_definition,
-                assigned_state: assigned_state.clone(),
+            Assignment::Confidential { seal: _, state }
+            | Assignment::ConfidentialAmount { seal: _, state } => Assignment::ConfidentialAmount {
+                seal,
+                state: state.clone(),
             },
-            Assignment::ConfidentialSeal {
-                seal_definition: _,
-                assigned_state,
-            }
-            | Assignment::Revealed {
-                seal_definition: _,
-                assigned_state,
-            } => Assignment::Revealed {
-                seal_definition,
-                assigned_state: assigned_state.clone(),
+            Assignment::ConfidentialSeal { seal: _, state }
+            | Assignment::Revealed { seal: _, state } => Assignment::Revealed {
+                seal,
+                state: state.clone(),
             },
         }
     }
 
     pub fn to_confidential_seal(&self) -> seal::Confidential {
         match self {
-            Assignment::Revealed {
-                seal_definition, ..
+            Assignment::Revealed { seal, .. } | Assignment::ConfidentialAmount { seal, .. } => {
+                seal.commit_conceal()
             }
-            | Assignment::ConfidentialAmount {
-                seal_definition, ..
-            } => seal_definition.commit_conceal(),
-            Assignment::Confidential {
-                seal_definition, ..
+            Assignment::Confidential { seal, .. } | Assignment::ConfidentialSeal { seal, .. } => {
+                *seal
             }
-            | Assignment::ConfidentialSeal {
-                seal_definition, ..
-            } => *seal_definition,
         }
     }
 
     pub fn revealed_seal(&self) -> Option<seal::Revealed> {
         match self {
-            Assignment::Revealed {
-                seal_definition, ..
+            Assignment::Revealed { seal, .. } | Assignment::ConfidentialAmount { seal, .. } => {
+                Some(*seal)
             }
-            | Assignment::ConfidentialAmount {
-                seal_definition, ..
-            } => Some(*seal_definition),
             Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => None,
         }
     }
 
     pub fn to_confidential_state(&self) -> StateType::Confidential {
         match self {
-            Assignment::Revealed { assigned_state, .. }
-            | Assignment::ConfidentialSeal { assigned_state, .. } => {
-                assigned_state.commit_conceal().into()
+            Assignment::Revealed { state, .. } | Assignment::ConfidentialSeal { state, .. } => {
+                state.commit_conceal().into()
             }
-            Assignment::Confidential { assigned_state, .. }
-            | Assignment::ConfidentialAmount { assigned_state, .. } => assigned_state.clone(),
+            Assignment::Confidential { state, .. }
+            | Assignment::ConfidentialAmount { state, .. } => state.clone(),
         }
     }
 
     pub fn as_revealed_state(&self) -> Option<&StateType::Revealed> {
         match self {
-            Assignment::Revealed { assigned_state, .. }
-            | Assignment::ConfidentialSeal { assigned_state, .. } => Some(assigned_state),
+            Assignment::Revealed { state, .. } | Assignment::ConfidentialSeal { state, .. } => {
+                Some(state)
+            }
             Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => None,
         }
     }
 
     pub fn as_revealed(&self) -> Option<(&seal::Revealed, &StateType::Revealed)> {
         match self {
-            Assignment::Revealed {
-                seal_definition,
-                assigned_state,
-            } => Some((seal_definition, assigned_state)),
+            Assignment::Revealed { seal, state } => Some((seal, state)),
             _ => None,
         }
     }
 
     pub fn to_revealed(&self) -> Option<(seal::Revealed, StateType::Revealed)> {
         match self {
-            Assignment::Revealed {
-                seal_definition,
-                assigned_state,
-            } => Some((*seal_definition, assigned_state.clone())),
+            Assignment::Revealed { seal, state } => Some((*seal, state.clone())),
             _ => None,
         }
     }
 
     pub fn into_revealed(self) -> Option<(seal::Revealed, StateType::Revealed)> {
         match self {
-            Assignment::Revealed {
-                seal_definition,
-                assigned_state,
-            } => Some((seal_definition, assigned_state)),
+            Assignment::Revealed { seal, state } => Some((seal, state)),
             _ => None,
         }
     }
@@ -1008,26 +977,20 @@ where
 
         let mut counter = 0;
         match self {
-            Assignment::Confidential {
-                seal_definition,
-                assigned_state,
-            } => {
-                if let Some(reveal) = known_seals.get(seal_definition) {
+            Assignment::Confidential { seal, state } => {
+                if let Some(reveal) = known_seals.get(seal) {
                     *self = Assignment::ConfidentialAmount {
-                        seal_definition: *reveal,
-                        assigned_state: assigned_state.clone(),
+                        seal: *reveal,
+                        state: state.clone(),
                     };
                     counter += 1;
                 };
             }
-            Assignment::ConfidentialSeal {
-                seal_definition,
-                assigned_state,
-            } => {
-                if let Some(reveal) = known_seals.get(seal_definition) {
+            Assignment::ConfidentialSeal { seal, state } => {
+                if let Some(reveal) = known_seals.get(seal) {
                     *self = Assignment::Revealed {
-                        seal_definition: *reveal,
-                        assigned_state: assigned_state.clone(),
+                        seal: *reveal,
+                        state: state.clone(),
                     };
                     counter += 1;
                 };
@@ -1050,26 +1013,17 @@ where
     fn commit_conceal(&self) -> Self::ConcealedCommitment {
         match self {
             Assignment::Confidential { .. } => self.clone(),
-            Assignment::ConfidentialAmount {
-                seal_definition,
-                assigned_state,
-            } => Self::Confidential {
-                seal_definition: seal_definition.commit_conceal(),
-                assigned_state: assigned_state.clone(),
+            Assignment::ConfidentialAmount { seal, state } => Self::Confidential {
+                seal: seal.commit_conceal(),
+                state: state.clone(),
             },
-            Assignment::Revealed {
-                seal_definition,
-                assigned_state,
-            } => Self::Confidential {
-                seal_definition: seal_definition.commit_conceal(),
-                assigned_state: assigned_state.commit_conceal().into(),
+            Assignment::Revealed { seal, state } => Self::Confidential {
+                seal: seal.commit_conceal(),
+                state: state.commit_conceal().into(),
             },
-            Assignment::ConfidentialSeal {
-                seal_definition,
-                assigned_state,
-            } => Self::Confidential {
-                seal_definition: *seal_definition,
-                assigned_state: assigned_state.commit_conceal().into(),
+            Assignment::ConfidentialSeal { seal, state } => Self::Confidential {
+                seal: *seal,
+                state: state.commit_conceal().into(),
             },
         }
     }
@@ -1086,28 +1040,22 @@ where
     fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => 0,
-            Assignment::ConfidentialAmount {
-                seal_definition,
-                assigned_state,
-            } => {
-                if seals.contains(&seal_definition.commit_conceal()) {
+            Assignment::ConfidentialAmount { seal, state } => {
+                if seals.contains(&seal.commit_conceal()) {
                     *self = Assignment::<StateType>::Confidential {
-                        assigned_state: assigned_state.clone(),
-                        seal_definition: seal_definition.commit_conceal(),
+                        state: state.clone(),
+                        seal: seal.commit_conceal(),
                     };
                     1
                 } else {
                     0
                 }
             }
-            Assignment::Revealed {
-                seal_definition,
-                assigned_state,
-            } => {
-                if seals.contains(&seal_definition.commit_conceal()) {
+            Assignment::Revealed { seal, state } => {
+                if seals.contains(&seal.commit_conceal()) {
                     *self = Assignment::<StateType>::ConfidentialSeal {
-                        assigned_state: assigned_state.clone(),
-                        seal_definition: seal_definition.commit_conceal(),
+                        state: state.clone(),
+                        seal: seal.commit_conceal(),
                     };
                     1
                 } else {
@@ -1129,30 +1077,24 @@ where
     fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => 0,
-            Assignment::ConfidentialSeal {
-                seal_definition,
-                assigned_state,
-            } => {
-                if seals.contains(seal_definition) {
+            Assignment::ConfidentialSeal { seal, state } => {
+                if seals.contains(seal) {
                     0
                 } else {
                     *self = Assignment::<StateType>::Confidential {
-                        assigned_state: assigned_state.commit_conceal().into(),
-                        seal_definition: *seal_definition,
+                        state: state.commit_conceal().into(),
+                        seal: *seal,
                     };
                     1
                 }
             }
-            Assignment::Revealed {
-                seal_definition,
-                assigned_state,
-            } => {
-                if seals.contains(&seal_definition.commit_conceal()) {
+            Assignment::Revealed { seal, state } => {
+                if seals.contains(&seal.commit_conceal()) {
                     0
                 } else {
                     *self = Assignment::<StateType>::ConfidentialAmount {
-                        assigned_state: assigned_state.commit_conceal().into(),
-                        seal_definition: *seal_definition,
+                        state: state.commit_conceal().into(),
+                        seal: *seal,
                     };
                     1
                 }
@@ -1269,9 +1211,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_encoded_data() {
-        let _: AssignmentVec = test_vec_decoding_roundtrip(HASH_VARIANT).unwrap();
-        let _: AssignmentVec = test_vec_decoding_roundtrip(PEDERSAN_VARIANT).unwrap();
-        let _: AssignmentVec = test_vec_decoding_roundtrip(DECLARATIVE_VARIANT).unwrap();
+        let _: TypedAssignments = test_vec_decoding_roundtrip(HASH_VARIANT).unwrap();
+        let _: TypedAssignments = test_vec_decoding_roundtrip(PEDERSAN_VARIANT).unwrap();
+        let _: TypedAssignments = test_vec_decoding_roundtrip(DECLARATIVE_VARIANT).unwrap();
     }
 
     // Generic garbage value testing
@@ -1293,7 +1235,7 @@ mod test {
         let mut bytes = PEDERSAN_VARIANT.clone();
         bytes[1] = 0x02;
 
-        AssignmentVec::strict_decode(&bytes[..]).unwrap();
+        TypedAssignments::strict_decode(&bytes[..]).unwrap();
     }
 
     fn zero_balance(
@@ -1353,7 +1295,7 @@ mod test {
             .collect();
 
         // Balance both the allocations against input amounts
-        let balanced = AssignmentVec::zero_balanced(input_revealed.clone(), ours, theirs);
+        let balanced = TypedAssignments::zero_balanced(input_revealed.clone(), ours, theirs);
 
         // Extract balanced confidential output amounts
         let outputs: Vec<Commitment> = balanced
@@ -1580,9 +1522,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_identification() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check correct types are being identified
         // and wrong types return false
@@ -1600,9 +1542,10 @@ mod test {
     #[test]
     #[ignore]
     fn test_extraction() {
-        let mut declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let mut pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let mut hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let mut declarative_type =
+            TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let mut pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let mut hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check Correct type extraction works
         assert!(!declarative_type.to_declarative_assignment_vec().is_empty());
@@ -1637,9 +1580,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_seal_extraction() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract a specific Txid from each variants
         let txid_1 = match declarative_type
@@ -1682,9 +1625,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_known_seals() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known Txids from each variants
         let mut dec_txids: Vec<String> = declarative_type
@@ -1744,9 +1687,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_all_seals() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract seals from all variants and conceal them
         let mut dec_hashes: Vec<String> = declarative_type
@@ -1781,9 +1724,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_known_state_homomorphic() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from pedersan type variant
         let states = pedersan_type.filter_revealed_state_values();
@@ -1819,9 +1762,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_known_state_data() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from custom data type variant
         let data_set = hash_type.filter_revealed_state_data();
@@ -1842,9 +1785,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_all_state_pedersan() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data for pedersan type and conceal them
         let conf_amounts = pedersan_type.to_confidential_state_pedersen();
@@ -1880,9 +1823,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_all_state_hashed() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data from hash type variant and conceal them
         let extracted_states = hash_type.to_confidential_state_hashed();
@@ -1916,7 +1859,7 @@ mod test {
         // Declarative type has void state data
         // Pedersan type has very large concealed state data which slows down
         // the test
-        let mut hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let mut hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // CommitConceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
@@ -1993,9 +1936,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_len() {
-        let declarative_type = AssignmentVec::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = AssignmentVec::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // All variants have 4 assignments in them
         assert_eq!(declarative_type.len(), 4);
@@ -2176,23 +2119,23 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<DeclarativeStrategy>::Revealed {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: data::Void(),
+            seal: Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            state: data::Void(),
         };
 
         let assignment_2 = Assignment::<DeclarativeStrategy>::ConfidentialAmount {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[1], 2)),
-            assigned_state: data::Void(),
+            seal: Revealed::from(OutPoint::new(txid_vec[1], 2)),
+            state: data::Void(),
         };
 
         let assignment_3 = Assignment::<DeclarativeStrategy>::ConfidentialSeal {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[2], 3)).commit_conceal(),
-            assigned_state: data::Void(),
+            seal: Revealed::from(OutPoint::new(txid_vec[2], 3)).commit_conceal(),
+            state: data::Void(),
         };
 
         let assignment_4 = Assignment::<DeclarativeStrategy>::Confidential {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[3], 4)).commit_conceal(),
-            assigned_state: data::Void(),
+            seal: Revealed::from(OutPoint::new(txid_vec[3], 4)).commit_conceal(),
+            state: data::Void(),
         };
 
         let mut set = Vec::new();
@@ -2202,7 +2145,7 @@ mod test {
         set.push(assignment_3);
         set.push(assignment_4);
 
-        let declarative_variant = AssignmentVec::Declarative(set);
+        let declarative_variant = TypedAssignments::Void(set);
 
         // Create Pedersan Variant
 
@@ -2212,23 +2155,23 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<PedersenStrategy>::Revealed {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: value::Revealed::with_amount(10u64, &mut rng),
+            seal: Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
         let assignment_2 = Assignment::<PedersenStrategy>::ConfidentialAmount {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[1], 1)),
-            assigned_state: value::Revealed::with_amount(20u64, &mut rng).commit_conceal(),
+            seal: Revealed::from(OutPoint::new(txid_vec[1], 1)),
+            state: value::Revealed::with_amount(20u64, &mut rng).commit_conceal(),
         };
 
         let assignment_3 = Assignment::<PedersenStrategy>::ConfidentialSeal {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[2], 1)).commit_conceal(),
-            assigned_state: value::Revealed::with_amount(30u64, &mut rng),
+            seal: Revealed::from(OutPoint::new(txid_vec[2], 1)).commit_conceal(),
+            state: value::Revealed::with_amount(30u64, &mut rng),
         };
 
         let assignment_4 = Assignment::<PedersenStrategy>::Confidential {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[3], 1)).commit_conceal(),
-            assigned_state: value::Revealed::with_amount(10u64, &mut rng).commit_conceal(),
+            seal: Revealed::from(OutPoint::new(txid_vec[3], 1)).commit_conceal(),
+            state: value::Revealed::with_amount(10u64, &mut rng).commit_conceal(),
         };
 
         let mut set = Vec::new();
@@ -2238,7 +2181,7 @@ mod test {
         set.push(assignment_3);
         set.push(assignment_4);
 
-        let pedersen_variant = AssignmentVec::Fungible(set);
+        let pedersen_variant = TypedAssignments::Value(set);
 
         // Create Hash variant
         let txid_vec: Vec<bitcoin::Txid> = TXID_VEC
@@ -2252,23 +2195,23 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<HashStrategy>::Revealed {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: state_data_vec[0].clone(),
+            seal: Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            state: state_data_vec[0].clone(),
         };
 
         let assignment_2 = Assignment::<HashStrategy>::ConfidentialAmount {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[1], 1)),
-            assigned_state: state_data_vec[1].clone().commit_conceal(),
+            seal: Revealed::from(OutPoint::new(txid_vec[1], 1)),
+            state: state_data_vec[1].clone().commit_conceal(),
         };
 
         let assignment_3 = Assignment::<HashStrategy>::ConfidentialSeal {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[2], 1)).commit_conceal(),
-            assigned_state: state_data_vec[2].clone(),
+            seal: Revealed::from(OutPoint::new(txid_vec[2], 1)).commit_conceal(),
+            state: state_data_vec[2].clone(),
         };
 
         let assignment_4 = Assignment::<HashStrategy>::Confidential {
-            seal_definition: Revealed::from(OutPoint::new(txid_vec[3], 1)).commit_conceal(),
-            assigned_state: state_data_vec[3].clone().commit_conceal(),
+            seal: Revealed::from(OutPoint::new(txid_vec[3], 1)).commit_conceal(),
+            state: state_data_vec[3].clone().commit_conceal(),
         };
 
         let mut set = Vec::new();
@@ -2278,7 +2221,7 @@ mod test {
         set.push(assignment_3);
         set.push(assignment_4);
 
-        let hash_variant = AssignmentVec::NonFungible(set);
+        let hash_variant = TypedAssignments::Data(set);
 
         // Create assignemnts
 

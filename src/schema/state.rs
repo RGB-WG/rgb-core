@@ -219,9 +219,9 @@ mod _validation {
         {
             let mut status = validation::Status::new();
             match data {
-                Assignment::Confidential { assigned_state, .. }
-                | Assignment::ConfidentialAmount { assigned_state, .. } => {
-                    let a: &dyn Any = assigned_state.as_any();
+                Assignment::Confidential { state, .. }
+                | Assignment::ConfidentialAmount { state, .. } => {
+                    let a: &dyn Any = state.as_any();
                     match self {
                         StateSchema::Declarative => {
                             if a.downcast_ref::<<DeclarativeStrategy as State>::Confidential>()
@@ -284,9 +284,8 @@ mod _validation {
                         }
                     }
                 }
-                Assignment::Revealed { assigned_state, .. }
-                | Assignment::ConfidentialSeal { assigned_state, .. } => {
-                    let a: &dyn Any = assigned_state.as_any();
+                Assignment::Revealed { state, .. } | Assignment::ConfidentialSeal { state, .. } => {
+                    let a: &dyn Any = state.as_any();
                     match self {
                         StateSchema::Declarative => {
                             if a.downcast_ref::<<DeclarativeStrategy as State>::Revealed>()
@@ -396,26 +395,26 @@ mod test {
 
         // Create Declarative Assignments
         let assignment_dec_rev = Assignment::<DeclarativeStrategy>::Revealed {
-            seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: data::Void(),
+            seal: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            state: data::Void(),
         };
 
         let assignment_dec_conf = Assignment::<DeclarativeStrategy>::Confidential {
-            seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[1], 2))
+            seal: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[1], 2))
                 .commit_conceal(),
-            assigned_state: data::Void(),
+            state: data::Void(),
         };
 
         // Create Pedersan Assignments
         let assignment_ped_rev = Assignment::<PedersenStrategy>::Revealed {
-            seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: value::Revealed::with_amount(10u64, &mut rng),
+            seal: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
         let assignment_ped_conf = Assignment::<PedersenStrategy>::Confidential {
-            seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[1], 1))
+            seal: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[1], 1))
                 .commit_conceal(),
-            assigned_state: value::Revealed::with_amount(10u64, &mut rng).commit_conceal(),
+            state: value::Revealed::with_amount(10u64, &mut rng).commit_conceal(),
         };
 
         // Create CustomData Assignmnets
@@ -425,14 +424,14 @@ mod test {
             .collect();
 
         let assignment_hash_rev = Assignment::<HashStrategy>::Revealed {
-            seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[0], 1)),
-            assigned_state: state_data_vec[0].clone(),
+            seal: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            state: state_data_vec[0].clone(),
         };
 
         let assignment_hash_conf = Assignment::<HashStrategy>::Confidential {
-            seal_definition: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[1], 1))
+            seal: crate::contract::seal::Revealed::from(OutPoint::new(txid_vec[1], 1))
                 .commit_conceal(),
-            assigned_state: state_data_vec[0].clone().commit_conceal(),
+            state: state_data_vec[0].clone().commit_conceal(),
         };
 
         // Create NodeId amd Stateformats

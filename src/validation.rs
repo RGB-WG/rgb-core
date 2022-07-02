@@ -21,7 +21,7 @@ use stens::TypeRef;
 use wallet::onchain::ResolveTx;
 
 use super::schema::{NodeType, OccurrencesError};
-use super::{schema, seal, AssignmentVec, ContractId, Node, NodeId, Schema, SchemaId};
+use super::{schema, seal, ContractId, Node, NodeId, Schema, SchemaId, TypedAssignments};
 use crate::schema::SchemaVerify;
 use crate::stash::Consignment;
 use crate::{data, BundleId, Extension, SealEndpoint, TransitionBundle};
@@ -620,7 +620,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         node_id: NodeId,
         ancestor_id: NodeId,
         assignment_type: schema::OwnedRightType,
-        variant: &'consignment AssignmentVec,
+        variant: &'consignment TypedAssignments,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->

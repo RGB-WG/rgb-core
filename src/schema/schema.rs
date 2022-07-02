@@ -195,8 +195,8 @@ mod _validation {
     use crate::script::{OverrideRules, ValidationScript};
     use crate::vm::Validate;
     use crate::{
-        data, validation, Assignment, AssignmentVec, Metadata, Node, NodeId, NodeSubtype,
-        OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights, State,
+        data, validation, Assignment, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
+        ParentOwnedRights, ParentPublicRights, PublicRights, State, TypedAssignments,
     };
 
     impl SchemaVerify for Schema {
@@ -485,7 +485,7 @@ mod _validation {
             for (owned_type_id, occ) in owned_rights_structure {
                 let len = owned_rights
                     .get(owned_type_id)
-                    .map(AssignmentVec::len)
+                    .map(TypedAssignments::len)
                     .unwrap_or(0);
 
                 // Checking number of ancestor's assignment occurrences
@@ -545,7 +545,7 @@ mod _validation {
             for (owned_type_id, occ) in owned_rights_structure {
                 let len = owned_rights
                     .get(owned_type_id)
-                    .map(AssignmentVec::len)
+                    .map(TypedAssignments::len)
                     .unwrap_or(0);
 
                 // Checking number of assignment occurrences
@@ -564,19 +564,19 @@ mod _validation {
 
                 match owned_rights.get(owned_type_id) {
                     None => {}
-                    Some(AssignmentVec::Declarative(set)) => set.iter().for_each(|data| {
+                    Some(TypedAssignments::Void(set)) => set.iter().for_each(|data| {
                         status +=
                             assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
                     }),
-                    Some(AssignmentVec::Fungible(set)) => set.iter().for_each(|data| {
+                    Some(TypedAssignments::Value(set)) => set.iter().for_each(|data| {
                         status +=
                             assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
                     }),
-                    Some(AssignmentVec::NonFungible(set)) => set.iter().for_each(|data| {
+                    Some(TypedAssignments::Data(set)) => set.iter().for_each(|data| {
                         status +=
                             assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
                     }),
-                    Some(AssignmentVec::Attachment(set)) => set.iter().for_each(|data| {
+                    Some(TypedAssignments::Attachment(set)) => set.iter().for_each(|data| {
                         status +=
                             assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
                     }),
@@ -673,41 +673,41 @@ mod _validation {
 
             for (type_id, indexes) in details {
                 match parent_node.owned_rights_by_type(*type_id) {
-                    Some(AssignmentVec::Declarative(set)) => {
+                    Some(TypedAssignments::Void(set)) => {
                         let set = filter(set, indexes);
                         if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert_with(|| AssignmentVec::Declarative(Default::default()))
+                            .or_insert_with(|| TypedAssignments::Void(Default::default()))
                             .declarative_assignment_vec_mut()
                         {
                             state.extend(set);
                         }
                     }
-                    Some(AssignmentVec::Fungible(set)) => {
+                    Some(TypedAssignments::Value(set)) => {
                         let set = filter(set, indexes);
                         if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert_with(|| AssignmentVec::Fungible(Default::default()))
+                            .or_insert_with(|| TypedAssignments::Value(Default::default()))
                             .value_assignment_vec_mut()
                         {
                             state.extend(set);
                         }
                     }
-                    Some(AssignmentVec::NonFungible(set)) => {
+                    Some(TypedAssignments::Data(set)) => {
                         let set = filter(set, indexes);
                         if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert_with(|| AssignmentVec::NonFungible(Default::default()))
+                            .or_insert_with(|| TypedAssignments::Data(Default::default()))
                             .data_assignment_vec_mut()
                         {
                             state.extend(set);
                         }
                     }
-                    Some(AssignmentVec::Attachment(set)) => {
+                    Some(TypedAssignments::Attachment(set)) => {
                         let set = filter(set, indexes);
                         if let Some(state) = owned_rights
                             .entry(*type_id)
-                            .or_insert_with(|| AssignmentVec::Attachment(Default::default()))
+                            .or_insert_with(|| TypedAssignments::Attachment(Default::default()))
                             .attachment_assignment_vec_mut()
                         {
                             state.extend(set);

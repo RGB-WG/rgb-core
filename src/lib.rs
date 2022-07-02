@@ -47,13 +47,13 @@ mod macros;
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
     pub use contract::{
-        data, reveal, seal, value, Assignment, AssignmentVec, AtomicValue, AttachmentId,
-        AttachmentStrategy, ConcealSeals, ConcealState, ConfidentialDataError, ConfidentialState,
-        ContractId, DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
+        data, reveal, seal, value, Assignment, AtomicValue, AttachmentId, AttachmentStrategy,
+        ConcealSeals, ConcealState, ConfidentialDataError, ConfidentialState, ContractId,
+        DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
         HomomorphicBulletproofGrin, IntoRevealedSeal, MergeReveal, Metadata, NoDataError, Node,
         NodeId, NodeOutpoint, OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
         PublicRights, RevealedState, SealEndpoint, SealValueMap, State, StateRetrievalError,
-        StateType, Transition,
+        StateType, Transition, TypedAssignments,
     };
     pub use schema::{
         script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,

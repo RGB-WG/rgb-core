@@ -28,8 +28,8 @@ use lnpbp::chain::Chain;
 use once_cell::sync::Lazy;
 
 use super::{
-    AssignmentVec, ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner, ParentOwnedRights,
-    ParentPublicRights, PublicRights, PublicRightsInner,
+    ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner, ParentOwnedRights,
+    ParentPublicRights, PublicRights, PublicRightsInner, TypedAssignments,
 };
 use crate::reveal::{self, MergeReveal};
 use crate::schema::{
@@ -364,7 +364,7 @@ pub trait Node: AsAny {
     }
 
     #[inline]
-    fn owned_rights_by_type(&self, t: OwnedRightType) -> Option<&AssignmentVec> {
+    fn owned_rights_by_type(&self, t: OwnedRightType) -> Option<&TypedAssignments> {
         self.owned_rights()
             .iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
@@ -402,7 +402,7 @@ pub trait Node: AsAny {
     ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
         Ok(self
             .owned_rights_by_type(assignment_type)
-            .map(AssignmentVec::revealed_seals)
+            .map(TypedAssignments::revealed_seals)
             .transpose()?
             .unwrap_or_default())
     }
@@ -421,7 +421,7 @@ pub trait Node: AsAny {
         assignment_type: OwnedRightType,
     ) -> Vec<seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
-            .map(AssignmentVec::filter_revealed_seals)
+            .map(TypedAssignments::filter_revealed_seals)
             .unwrap_or_else(Vec::new)
     }
 
@@ -1074,22 +1074,22 @@ mod test {
         fn conceal_transition(transition: &mut Transition) {
             for (_, assignments) in transition.owned_rights_mut().iter_mut() {
                 match assignments {
-                    AssignmentVec::Declarative(set) => {
+                    TypedAssignments::Void(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    AssignmentVec::Fungible(set) => {
+                    TypedAssignments::Value(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    AssignmentVec::NonFungible(set) => {
+                    TypedAssignments::Data(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }
                     }
-                    AssignmentVec::Attachment(set) => {
+                    TypedAssignments::Attachment(set) => {
                         for assignment in set {
                             *assignment = assignment.commit_conceal();
                         }

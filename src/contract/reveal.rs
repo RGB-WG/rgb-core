@@ -17,7 +17,7 @@ use commit_verify::{CommitConceal, CommitEncode, ToMerkleSource};
 
 use super::OwnedRightsInner;
 use crate::schema::NodeType;
-use crate::{Assignment, AssignmentVec, OwnedRights, State};
+use crate::{Assignment, OwnedRights, State, TypedAssignments};
 
 /// Merge Error generated in merging operation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Error)]
@@ -79,33 +79,15 @@ where
 
                 // ConfidentialAmount + ConfidentialSeal = Revealed
                 (
-                    Assignment::ConfidentialSeal {
-                        assigned_state: state,
-                        ..
-                    },
-                    Assignment::ConfidentialAmount {
-                        seal_definition: seal,
-                        ..
-                    },
-                ) => Ok(Assignment::Revealed {
-                    seal_definition: seal,
-                    assigned_state: state,
-                }),
+                    Assignment::ConfidentialSeal { state, .. },
+                    Assignment::ConfidentialAmount { seal, .. },
+                ) => Ok(Assignment::Revealed { seal, state }),
 
                 // ConfidentialSeal + ConfidentialAmount = Revealed
                 (
-                    Assignment::ConfidentialAmount {
-                        seal_definition: seal,
-                        ..
-                    },
-                    Assignment::ConfidentialSeal {
-                        assigned_state: state,
-                        ..
-                    },
-                ) => Ok(Assignment::Revealed {
-                    seal_definition: seal,
-                    assigned_state: state,
-                }),
+                    Assignment::ConfidentialAmount { seal, .. },
+                    Assignment::ConfidentialSeal { state, .. },
+                ) => Ok(Assignment::Revealed { seal, state }),
 
                 // if self and other is of same variant return self
                 (
@@ -125,34 +107,34 @@ where
     }
 }
 
-impl MergeReveal for AssignmentVec {
+impl MergeReveal for TypedAssignments {
     fn merge_reveal(self, other: Self) -> Result<Self, Error> {
         if self.consensus_commitments() != other.consensus_commitments() {
             Err(Error::AssignmentMismatch)
         } else {
             match (self, other) {
-                (AssignmentVec::Declarative(first_vec), AssignmentVec::Declarative(second_vec)) => {
+                (TypedAssignments::Void(first_vec), TypedAssignments::Void(second_vec)) => {
                     let mut result = Vec::with_capacity(first_vec.len());
                     for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
                         result.push(first.merge_reveal(second)?);
                     }
-                    Ok(AssignmentVec::Declarative(result))
+                    Ok(TypedAssignments::Void(result))
                 }
 
-                (AssignmentVec::Fungible(first_vec), AssignmentVec::Fungible(second_vec)) => {
+                (TypedAssignments::Value(first_vec), TypedAssignments::Value(second_vec)) => {
                     let mut result = Vec::with_capacity(first_vec.len());
                     for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
                         result.push(first.merge_reveal(second)?);
                     }
-                    Ok(AssignmentVec::Fungible(result))
+                    Ok(TypedAssignments::Value(result))
                 }
 
-                (AssignmentVec::NonFungible(first_vec), AssignmentVec::NonFungible(second_vec)) => {
+                (TypedAssignments::Data(first_vec), TypedAssignments::Data(second_vec)) => {
                     let mut result = Vec::with_capacity(first_vec.len());
                     for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
                         result.push(first.merge_reveal(second)?);
                     }
-                    Ok(AssignmentVec::NonFungible(result))
+                    Ok(TypedAssignments::Data(result))
                 }
                 // No other patterns possible, should not reach here
                 _ => {
@@ -197,7 +179,7 @@ mod test {
     #[test]
     #[ignore]
     fn test_into_revealed_state() {
-        let ass = AssignmentVec::strict_decode(&PEDERSAN_VARIANT[..])
+        let ass = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..])
             .unwrap()
             .into_value_assignment_vec();
 
@@ -223,8 +205,8 @@ mod test {
         // Revealed + Confidential Seal = Revealed
         let seal = rev.to_confidential_seal();
         let conf_seal = Assignment::<PedersenStrategy>::ConfidentialSeal {
-            seal_definition: seal,
-            assigned_state: rev.as_revealed_state().unwrap().clone(),
+            seal,
+            state: rev.as_revealed_state().unwrap().clone(),
         };
         merged = rev.clone().merge_reveal(conf_seal.clone()).unwrap();
         assert_eq!(merged, rev);
@@ -258,7 +240,7 @@ mod test {
     #[test]
     #[ignore]
     fn test_into_revealed_assignements_ownedstates() {
-        let assignment = AssignmentVec::strict_decode(&HASH_VARIANT[..])
+        let assignment = TypedAssignments::strict_decode(&HASH_VARIANT[..])
             .unwrap()
             .to_data_assignment_vec();
 
@@ -271,8 +253,8 @@ mod test {
         let seal = rev.to_confidential_seal();
 
         let conf_seal = Assignment::<HashStrategy>::ConfidentialSeal {
-            seal_definition: seal,
-            assigned_state: rev.as_revealed_state().unwrap().clone(),
+            seal,
+            state: rev.as_revealed_state().unwrap().clone(),
         };
 
         let mut conf_state = rev.clone();
@@ -280,13 +262,13 @@ mod test {
 
         // Create assignment for testing
         let test_variant_1 = vec![rev.clone(), conf_seal, conf_state, conf.clone()];
-        let assignment_1 = AssignmentVec::NonFungible(test_variant_1.clone());
+        let assignment_1 = TypedAssignments::Data(test_variant_1.clone());
 
         // Create assignment 2 for testing
         // which is reverse of assignment 1
         let mut test_variant_2 = test_variant_1.clone();
         test_variant_2.reverse();
-        let assignmnet_2 = AssignmentVec::NonFungible(test_variant_2);
+        let assignmnet_2 = TypedAssignments::Data(test_variant_2);
 
         // Performing merge revelaing
         let merged = assignment_1
@@ -302,7 +284,7 @@ mod test {
         // Test against confidential merging
         // Confidential + Anything = Anything
         let test_variant_3 = vec![conf.clone(), conf.clone(), conf.clone(), conf.clone()];
-        let assignment_3 = AssignmentVec::NonFungible(test_variant_3);
+        let assignment_3 = TypedAssignments::Data(test_variant_3);
 
         // merge with assignment 1
         let merged = assignment_3
@@ -324,7 +306,7 @@ mod test {
 
         // after merge operation all the states will be revealed
         let states = vec![rev.clone(), rev.clone(), rev.clone(), rev.clone()];
-        let assgn = AssignmentVec::NonFungible(states);
+        let assgn = TypedAssignments::Data(states);
         let expected_rights: OwnedRights = bmap! {1u16 => assgn}.into();
 
         assert_eq!(merged, expected_rights);

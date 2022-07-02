@@ -21,11 +21,11 @@ pub mod seal;
 pub mod value;
 pub mod attachment;
 
-pub(self) use assignments::EMPTY_ASSIGNMENT_VEC;
+pub(self) use assignments::EMPTY_ASSIGNMENTS;
 pub use assignments::{
-    Assignment, AssignmentVec, AttachmentStrategy, ConfidentialState, DeclarativeStrategy,
-    EndpointValueMap, HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State,
-    StateType,
+    Assignment, AttachmentStrategy, ConfidentialState, DeclarativeStrategy, EndpointValueMap,
+    HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State, StateType,
+    TypedAssignments,
 };
 pub use attachment::AttachmentId;
 pub use conceal::{ConcealSeals, ConcealState};

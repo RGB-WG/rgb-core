@@ -18,8 +18,8 @@ use commit_verify::CommitConceal;
 
 use super::Validate;
 use crate::{
-    schema, validation, value, AssignmentVec, Metadata, NodeId, NodeSubtype, OwnedRights,
-    PublicRights,
+    schema, validation, value, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights,
+    TypedAssignments,
 };
 
 /// Constants which are common to different schemata and can be recognized
@@ -403,10 +403,10 @@ mod node {
             }
 
             match (prev_assignments, curr_assignments) {
-                (AssignmentVec::Declarative(_), AssignmentVec::Declarative(_)) => {
+                (TypedAssignments::Void(_), TypedAssignments::Void(_)) => {
                     // This is valid, so passing validation step
                 }
-                (AssignmentVec::Fungible(prev), AssignmentVec::Fungible(curr)) => {
+                (TypedAssignments::Value(prev), TypedAssignments::Value(curr)) => {
                     for (prev, curr) in prev.iter().zip(curr.iter()) {
                         if let (Some(prev), Some(curr)) =
                             (prev.as_revealed_state(), curr.as_revealed_state())
@@ -421,7 +421,7 @@ mod node {
                         }
                     }
                 }
-                (AssignmentVec::NonFungible(prev), AssignmentVec::NonFungible(curr)) => {
+                (TypedAssignments::Data(prev), TypedAssignments::Data(curr)) => {
                     for (prev, curr) in prev.iter().zip(curr.iter()) {
                         if prev.to_confidential_state() != curr.to_confidential_state() {
                             return Err(HandlerError::NonEqualState);
@@ -473,8 +473,8 @@ mod assignment {
     pub fn validate(
         node_subtype: NodeSubtype,
         owned_rights_type: schema::OwnedRightType,
-        previous_state: &AssignmentVec,
-        current_state: &AssignmentVec,
+        previous_state: &TypedAssignments,
+        current_state: &TypedAssignments,
         _current_meta: &Metadata,
     ) -> Result<(), HandlerError> {
         match (node_subtype, owned_rights_type) {
@@ -496,8 +496,8 @@ mod assignment {
     /// [`crate::schema::constants::STATE_TYPE_OWNED_AMOUNT`] equal to the sum
     /// of the outputs of the same type, plus validates bulletproof data
     fn validate_pedersen_sum(
-        previous_state: &AssignmentVec,
-        current_state: &AssignmentVec,
+        previous_state: &TypedAssignments,
+        current_state: &TypedAssignments,
     ) -> Result<(), HandlerError> {
         let inputs = previous_state
             .to_confidential_state_pedersen()
@@ -524,7 +524,7 @@ mod assignment {
 
     /// Control that multiple rights assigning additive state value do not allow
     /// maximum allowed bit dimensionality
-    fn validate_no_overflow(current_state: &AssignmentVec) -> Result<(), HandlerError> {
+    fn validate_no_overflow(current_state: &TypedAssignments) -> Result<(), HandlerError> {
         current_state
             .as_revealed_state_values()
             .map_err(|_| HandlerError::ConfidentialState)?

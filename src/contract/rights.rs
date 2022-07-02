@@ -19,13 +19,13 @@ use commit_verify::{
 };
 use strict_encoding::StrictEncode;
 
-use super::{AssignmentVec, NodeId, EMPTY_ASSIGNMENT_VEC};
+use super::{NodeId, TypedAssignments, EMPTY_ASSIGNMENTS};
 use crate::schema;
 
 /// Holds definition of valencies for contract nodes, which is a set of
 /// allowed valencies types
 pub(crate) type PublicRightsInner = BTreeSet<schema::PublicRightType>;
-pub(crate) type OwnedRightsInner = BTreeMap<schema::OwnedRightType, AssignmentVec>;
+pub(crate) type OwnedRightsInner = BTreeMap<schema::OwnedRightType, TypedAssignments>;
 pub(crate) type ParentOwnedRightsInner =
     BTreeMap<NodeId, BTreeMap<schema::OwnedRightType, Vec<u16>>>;
 pub(crate) type ParentPublicRightsInner = BTreeMap<NodeId, BTreeSet<schema::PublicRightType>>;
@@ -40,18 +40,19 @@ pub(crate) type ParentPublicRightsInner = BTreeMap<NodeId, BTreeSet<schema::Publ
 pub struct OwnedRights(OwnedRightsInner);
 
 impl OwnedRights {
-    pub fn iter(&self) -> btree_map::Iter<'_, schema::OwnedRightType, AssignmentVec> {
+    pub fn iter(&self) -> btree_map::Iter<'_, schema::OwnedRightType, TypedAssignments> {
         self.0.iter()
     }
 
-    pub fn iter_mut(&mut self) -> btree_map::IterMut<'_, schema::OwnedRightType, AssignmentVec> {
+    pub fn iter_mut(&mut self) -> btree_map::IterMut<'_, schema::OwnedRightType, TypedAssignments> {
         self.0.iter_mut()
     }
 
-    pub fn assignments_by_type(&self, owned_rights_type: schema::OwnedRightType) -> &AssignmentVec {
-        self.0
-            .get(&owned_rights_type)
-            .unwrap_or(&EMPTY_ASSIGNMENT_VEC)
+    pub fn assignments_by_type(
+        &self,
+        owned_rights_type: schema::OwnedRightType,
+    ) -> &TypedAssignments {
+        self.0.get(&owned_rights_type).unwrap_or(&EMPTY_ASSIGNMENTS)
     }
 }
 
