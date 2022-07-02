@@ -119,35 +119,35 @@ pub mod constants {
     pub const TRANSITION_TYPE_IDENTITY_TRANSFER: u16 = 0x01;
 
     /// Transition performing renomination of contract metadata
-    pub const TRANSITION_TYPE_RENOMINATION: u16 = 0x10;
+    pub const TRANSITION_TYPE_RENOMINATION: u16 = 0x1010;
 
     /// [`TransitionType`] that is used by the validation procedures checking
     /// asset inflation (applies to both fungible and non-fungible assets)
-    pub const TRANSITION_TYPE_ISSUE_FUNGIBLE: u16 = 0xA0;
+    pub const TRANSITION_TYPE_ISSUE_FUNGIBLE: u16 = 0x10A0;
 
     /// Transition that defines certain grouping of other issue-related
     /// operations
-    pub const TRANSITION_TYPE_ISSUE_EPOCH: u16 = 0xA1;
+    pub const TRANSITION_TYPE_ISSUE_EPOCH: u16 = 0x10A1;
 
     /// Transition burning some of the issued contract state.
     ///
     /// NB: It is not the same as [`TRANSITION_TYPE_RIGHTS_TERMINATION`], which
     /// terminates ability to utilize some rights (but not the state)
-    pub const TRANSITION_TYPE_ISSUE_BURN: u16 = 0xA2;
+    pub const TRANSITION_TYPE_ISSUE_BURN: u16 = 0x10A2;
 
     /// Transition replacing some of the previously issued state with the new
     /// one
-    pub const TRANSITION_TYPE_ISSUE_REPLACE: u16 = 0xA3;
+    pub const TRANSITION_TYPE_ISSUE_REPLACE: u16 = 0x10A3;
 
     /// Transition issuing NFT token
-    pub const TRANSITION_TYPE_ISSUE_NFT: u16 = 0xAF;
+    pub const TRANSITION_TYPE_ISSUE_NFT: u16 = 0x10AF;
 
     /// Transition performing split of rights assigned to the same UTXO by
     /// a mistake
-    pub const TRANSITION_TYPE_RIGHTS_SPLIT: u16 = 0xF0;
+    pub const TRANSITION_TYPE_RIGHTS_SPLIT: u16 = 0x8000;
 
     /// Transition making certain rights void without executing the right itself
-    pub const TRANSITION_TYPE_RIGHTS_TERMINATION: u16 = 0xFF;
+    pub const TRANSITION_TYPE_RIGHTS_TERMINATION: u16 = 0x8001;
 }
 use constants::*;
 

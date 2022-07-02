@@ -299,21 +299,10 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
             for transition in transitions {
                 let node_id = transition.node_id();
                 // Checking for endpoint definition duplicates
-                if transition
+                if !transition
                     .to_confiential_seals()
                     .contains(&seal_endpoint.commit_conceal())
                 {
-                    if end_transitions
-                        .iter()
-                        .filter(|(n, _)| n.node_id() == node_id)
-                        .count()
-                        > 0
-                    {
-                        status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
-                    } else {
-                        end_transitions.push((transition, *bundle_id));
-                    }
-                } else {
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
                     // endpoint list
@@ -321,6 +310,16 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                         node_id,
                         *seal_endpoint,
                     ));
+                }
+                if end_transitions
+                    .iter()
+                    .filter(|(n, _)| n.node_id() == node_id)
+                    .count()
+                    > 0
+                {
+                    status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
+                } else {
+                    end_transitions.push((transition, *bundle_id));
                 }
             }
         }
