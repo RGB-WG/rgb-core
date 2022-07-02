@@ -66,7 +66,7 @@ than use `wallet` feature, which is non-default:
 
 ```toml
 [dependencies]
-rgb-core = { version = "0.8", features = ["wallet"] }
+rgb-core = "0.8"
 ```
 
 For serialization purposes library provides `serde` feature, which is turned off

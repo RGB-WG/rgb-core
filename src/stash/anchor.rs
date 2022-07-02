@@ -9,24 +9,9 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-#[cfg(feature = "wallet")]
-use std::collections::BTreeMap;
-
-#[cfg(feature = "wallet")]
-use amplify::Wrapper;
-#[cfg(feature = "wallet")]
-use bitcoin::hashes::Hash;
-#[cfg(feature = "wallet")]
-use bp::dbc::anchor::Error;
 use bp::dbc::Anchor;
 use commit_verify::lnpbp4;
-#[cfg(feature = "wallet")]
-use commit_verify::TaggedHash;
-#[cfg(feature = "wallet")]
-use wallet::psbt::Psbt;
 
-#[cfg(feature = "wallet")]
-use crate::BundleId;
 use crate::{reveal, ContractId, MergeReveal};
 
 pub trait ConcealAnchors {
@@ -54,37 +39,6 @@ impl ConcealAnchors for Anchor<lnpbp4::MerkleBlock> {
 impl MergeReveal for Anchor<lnpbp4::MerkleBlock> {
     fn merge_reveal(self, other: Self) -> Result<Self, reveal::Error> {
         self.merge_reveal(other).map_err(reveal::Error::from)
-    }
-}
-
-#[cfg(feature = "wallet")]
-pub trait AnchorExt {
-    fn commit(
-        psbt: &mut Psbt,
-        bundle_id: BTreeMap<ContractId, BundleId>,
-    ) -> Result<Anchor<lnpbp4::MerkleBlock>, Error>;
-}
-
-#[cfg(feature = "wallet")]
-impl AnchorExt for Anchor<lnpbp4::MerkleBlock> {
-    fn commit(
-        psbt: &mut Psbt,
-        bundles: BTreeMap<ContractId, BundleId>,
-    ) -> Result<Anchor<lnpbp4::MerkleBlock>, Error> {
-        let messages = bundles
-            .iter()
-            .map(|(contract_id, bundle_id)| {
-                let protocol_id = lnpbp4::ProtocolId::from_inner(contract_id.into_array());
-                let message = lnpbp4::Message::from_inner(bundle_id.into_array());
-                (protocol_id, message)
-            })
-            .collect::<BTreeMap<_, _>>();
-
-        let anchor = Anchor::commit(psbt, messages)?;
-
-        // TODO: Add contracts and state transition proprietary keys
-
-        Ok(anchor)
     }
 }
 

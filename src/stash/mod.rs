@@ -32,8 +32,6 @@ mod stash;
 pub mod bundle;
 mod consignment;
 
-#[cfg(feature = "wallet")]
-pub use anchor::AnchorExt;
 pub use anchor::ConcealAnchors;
 pub use bundle::{BundleId, ConcealTransitions, TransitionBundle};
 pub use consignment::{AnchoredBundle, Consignment, ConsignmentEndpoint};

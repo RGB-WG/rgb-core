@@ -69,8 +69,7 @@ strict_encoding_test = "0.8.0"
 
 [features]
 default = []
-all = ["serde", "wallet"]
-wallet = ["bp-core/wallet"]
+all = ["serde"]
 serde = ["serde_crate", "serde_with", "half/serialize",
          "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
          "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde", "aluvm/serde",
