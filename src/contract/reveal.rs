@@ -80,19 +80,19 @@ where
                 // ConfidentialAmount + ConfidentialSeal = Revealed
                 (
                     Assignment::ConfidentialSeal { state, .. },
-                    Assignment::ConfidentialAmount { seal, .. },
+                    Assignment::ConfidentialState { seal, .. },
                 ) => Ok(Assignment::Revealed { seal, state }),
 
                 // ConfidentialSeal + ConfidentialAmount = Revealed
                 (
-                    Assignment::ConfidentialAmount { seal, .. },
+                    Assignment::ConfidentialState { seal, .. },
                     Assignment::ConfidentialSeal { state, .. },
                 ) => Ok(Assignment::Revealed { seal, state }),
 
                 // if self and other is of same variant return self
                 (
-                    state @ Assignment::ConfidentialAmount { .. },
-                    Assignment::ConfidentialAmount { .. },
+                    state @ Assignment::ConfidentialState { .. },
+                    Assignment::ConfidentialState { .. },
                 ) => Ok(state),
                 (
                     state @ Assignment::ConfidentialSeal { .. },

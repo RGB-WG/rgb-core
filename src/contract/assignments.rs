@@ -819,7 +819,7 @@ where
         seal: seal::Confidential,
         state: StateType::Revealed,
     },
-    ConfidentialAmount {
+    ConfidentialState {
         seal: seal::Revealed,
         state: StateType::Confidential,
     },
@@ -892,7 +892,7 @@ where
     pub fn with_seal_replaced(assignment: &Self, seal: seal::Revealed) -> Self {
         match assignment {
             Assignment::Confidential { seal: _, state }
-            | Assignment::ConfidentialAmount { seal: _, state } => Assignment::ConfidentialAmount {
+            | Assignment::ConfidentialState { seal: _, state } => Assignment::ConfidentialState {
                 seal,
                 state: state.clone(),
             },
@@ -906,7 +906,7 @@ where
 
     pub fn to_confidential_seal(&self) -> seal::Confidential {
         match self {
-            Assignment::Revealed { seal, .. } | Assignment::ConfidentialAmount { seal, .. } => {
+            Assignment::Revealed { seal, .. } | Assignment::ConfidentialState { seal, .. } => {
                 seal.commit_conceal()
             }
             Assignment::Confidential { seal, .. } | Assignment::ConfidentialSeal { seal, .. } => {
@@ -917,7 +917,7 @@ where
 
     pub fn revealed_seal(&self) -> Option<seal::Revealed> {
         match self {
-            Assignment::Revealed { seal, .. } | Assignment::ConfidentialAmount { seal, .. } => {
+            Assignment::Revealed { seal, .. } | Assignment::ConfidentialState { seal, .. } => {
                 Some(*seal)
             }
             Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => None,
@@ -930,7 +930,7 @@ where
                 state.commit_conceal().into()
             }
             Assignment::Confidential { state, .. }
-            | Assignment::ConfidentialAmount { state, .. } => state.clone(),
+            | Assignment::ConfidentialState { state, .. } => state.clone(),
         }
     }
 
@@ -939,7 +939,7 @@ where
             Assignment::Revealed { state, .. } | Assignment::ConfidentialSeal { state, .. } => {
                 Some(state)
             }
-            Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => None,
+            Assignment::Confidential { .. } | Assignment::ConfidentialState { .. } => None,
         }
     }
 
@@ -979,7 +979,7 @@ where
         match self {
             Assignment::Confidential { seal, state } => {
                 if let Some(reveal) = known_seals.get(seal) {
-                    *self = Assignment::ConfidentialAmount {
+                    *self = Assignment::ConfidentialState {
                         seal: *reveal,
                         state: state.clone(),
                     };
@@ -1013,7 +1013,7 @@ where
     fn commit_conceal(&self) -> Self::ConcealedCommitment {
         match self {
             Assignment::Confidential { .. } => self.clone(),
-            Assignment::ConfidentialAmount { seal, state } => Self::Confidential {
+            Assignment::ConfidentialState { seal, state } => Self::Confidential {
                 seal: seal.commit_conceal(),
                 state: state.clone(),
             },
@@ -1040,7 +1040,7 @@ where
     fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
             Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => 0,
-            Assignment::ConfidentialAmount { seal, state } => {
+            Assignment::ConfidentialState { seal, state } => {
                 if seals.contains(&seal.commit_conceal()) {
                     *self = Assignment::<StateType>::Confidential {
                         state: state.clone(),
@@ -1076,7 +1076,7 @@ where
 {
     fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         match self {
-            Assignment::Confidential { .. } | Assignment::ConfidentialAmount { .. } => 0,
+            Assignment::Confidential { .. } | Assignment::ConfidentialState { .. } => 0,
             Assignment::ConfidentialSeal { seal, state } => {
                 if seals.contains(seal) {
                     0
@@ -1092,7 +1092,7 @@ where
                 if seals.contains(&seal.commit_conceal()) {
                     0
                 } else {
-                    *self = Assignment::<StateType>::ConfidentialAmount {
+                    *self = Assignment::<StateType>::ConfidentialState {
                         state: state.commit_conceal().into(),
                         seal: *seal,
                     };
@@ -2123,7 +2123,7 @@ mod test {
             state: data::Void(),
         };
 
-        let assignment_2 = Assignment::<DeclarativeStrategy>::ConfidentialAmount {
+        let assignment_2 = Assignment::<DeclarativeStrategy>::ConfidentialState {
             seal: Revealed::from(OutPoint::new(txid_vec[1], 2)),
             state: data::Void(),
         };
@@ -2159,7 +2159,7 @@ mod test {
             state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
-        let assignment_2 = Assignment::<PedersenStrategy>::ConfidentialAmount {
+        let assignment_2 = Assignment::<PedersenStrategy>::ConfidentialState {
             seal: Revealed::from(OutPoint::new(txid_vec[1], 1)),
             state: value::Revealed::with_amount(20u64, &mut rng).commit_conceal(),
         };
@@ -2199,7 +2199,7 @@ mod test {
             state: state_data_vec[0].clone(),
         };
 
-        let assignment_2 = Assignment::<HashStrategy>::ConfidentialAmount {
+        let assignment_2 = Assignment::<HashStrategy>::ConfidentialState {
             seal: Revealed::from(OutPoint::new(txid_vec[1], 1)),
             state: state_data_vec[1].clone().commit_conceal(),
         };

@@ -220,7 +220,7 @@ mod _validation {
             let mut status = validation::Status::new();
             match data {
                 Assignment::Confidential { state, .. }
-                | Assignment::ConfidentialAmount { state, .. } => {
+                | Assignment::ConfidentialState { state, .. } => {
                     let a: &dyn Any = state.as_any();
                     match self {
                         StateSchema::Declarative => {
