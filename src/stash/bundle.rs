@@ -49,32 +49,23 @@ impl sha256t::Tag for BundleIdTag {
 pub struct BundleId(sha256t::Hash<BundleIdTag>);
 
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for BundleId
-where
-    Msg: AsRef<[u8]>,
+where Msg: AsRef<[u8]>
 {
     #[inline]
-    fn commit(msg: &Msg) -> BundleId {
-        BundleId::hash(msg)
-    }
+    fn commit(msg: &Msg) -> BundleId { BundleId::hash(msg) }
 }
 
 pub trait ConcealTransitions {
-    fn conceal_transitions(&mut self) -> usize {
-        self.conceal_transitions_except(&[])
-    }
+    fn conceal_transitions(&mut self) -> usize { self.conceal_transitions_except(&[]) }
     fn conceal_transitions_except(&mut self, node_ids: &[NodeId]) -> usize;
 }
 
 impl From<BundleId> for lnpbp4::Message {
-    fn from(id: BundleId) -> Self {
-        lnpbp4::Message::from_inner(id.into_inner())
-    }
+    fn from(id: BundleId) -> Self { lnpbp4::Message::from_inner(id.into_inner()) }
 }
 
 impl From<lnpbp4::Message> for BundleId {
-    fn from(id: lnpbp4::Message) -> Self {
-        BundleId(sha256t::Hash::from_inner(id.into_inner()))
-    }
+    fn from(id: lnpbp4::Message) -> Self { BundleId(sha256t::Hash::from_inner(id.into_inner())) }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
@@ -155,13 +146,19 @@ pub enum RevealError {
 }
 
 impl TransitionBundle {
-    pub fn len(&self) -> usize {
-        self.concealed.len() + self.revealed.len()
+    pub fn with(
+        revealed: BTreeMap<Transition, BTreeSet<u16>>,
+        concealed: BTreeMap<NodeId, BTreeSet<u16>>,
+    ) -> TransitionBundle {
+        TransitionBundle {
+            revealed,
+            concealed,
+        }
     }
 
-    pub fn bundle_id(&self) -> BundleId {
-        self.consensus_commit()
-    }
+    pub fn len(&self) -> usize { self.concealed.len() + self.revealed.len() }
+
+    pub fn bundle_id(&self) -> BundleId { self.consensus_commit() }
 
     pub fn node_ids(&self) -> BTreeSet<NodeId> {
         self.concealed
@@ -186,9 +183,7 @@ impl TransitionBundle {
         self.revealed.keys().any(|ts| ts.node_id() == node_id)
     }
 
-    pub fn is_concealed(&self, node_id: NodeId) -> bool {
-        self.concealed.contains_key(&node_id)
-    }
+    pub fn is_concealed(&self, node_id: NodeId) -> bool { self.concealed.contains_key(&node_id) }
 
     pub fn reveal_transition(&mut self, transition: Transition) -> Result<bool, RevealError> {
         let id = transition.node_id();
@@ -210,9 +205,7 @@ impl TransitionBundle {
         self.revealed.into_iter()
     }
 
-    pub fn concealed_iter(&self) -> btree_map::Iter<NodeId, BTreeSet<u16>> {
-        self.concealed.iter()
-    }
+    pub fn concealed_iter(&self) -> btree_map::Iter<NodeId, BTreeSet<u16>> { self.concealed.iter() }
 
     pub fn into_concealed_iter(self) -> btree_map::IntoIter<NodeId, BTreeSet<u16>> {
         self.concealed.into_iter()
