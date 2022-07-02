@@ -171,7 +171,7 @@ impl TypedAssignments {
     pub fn is_attachment(&self) -> bool { matches!(self, TypedAssignments::Attachment(_)) }
 
     #[inline]
-    pub fn declarative_assignment_vec_mut(
+    pub fn declarative_assignments_mut(
         &mut self,
     ) -> Option<&mut Vec<Assignment<DeclarativeStrategy>>> {
         match self {
@@ -181,7 +181,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn value_assignment_vec_mut(&mut self) -> Option<&mut Vec<Assignment<PedersenStrategy>>> {
+    pub fn value_assignments_mut(&mut self) -> Option<&mut Vec<Assignment<PedersenStrategy>>> {
         match self {
             TypedAssignments::Value(set) => Some(set),
             _ => None,
@@ -189,7 +189,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn data_assignment_vec_mut(&mut self) -> Option<&mut Vec<Assignment<HashStrategy>>> {
+    pub fn data_assignments_mut(&mut self) -> Option<&mut Vec<Assignment<HashStrategy>>> {
         match self {
             TypedAssignments::Data(set) => Some(set),
             _ => None,
@@ -197,7 +197,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn attachment_assignment_vec_mut(
+    pub fn attachment_assignments_mut(
         &mut self,
     ) -> Option<&mut Vec<Assignment<AttachmentStrategy>>> {
         match self {
@@ -207,7 +207,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_declarative_assignment_vec(&self) -> Vec<Assignment<DeclarativeStrategy>> {
+    pub fn to_declarative_assignments(&self) -> Vec<Assignment<DeclarativeStrategy>> {
         match self {
             TypedAssignments::Void(set) => set.clone(),
             _ => Default::default(),
@@ -215,7 +215,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_value_assignment_vec(&self) -> Vec<Assignment<PedersenStrategy>> {
+    pub fn to_value_assignments(&self) -> Vec<Assignment<PedersenStrategy>> {
         match self {
             TypedAssignments::Value(set) => set.clone(),
             _ => Default::default(),
@@ -223,7 +223,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_data_assignment_vec(&self) -> Vec<Assignment<HashStrategy>> {
+    pub fn to_data_assignments(&self) -> Vec<Assignment<HashStrategy>> {
         match self {
             TypedAssignments::Data(set) => set.clone(),
             _ => Default::default(),
@@ -231,7 +231,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_attachment_assignment_vec(&self) -> Vec<Assignment<AttachmentStrategy>> {
+    pub fn to_attachment_assignments(&self) -> Vec<Assignment<AttachmentStrategy>> {
         match self {
             TypedAssignments::Attachment(set) => set.clone(),
             _ => Default::default(),
@@ -239,7 +239,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_declarative_assignment_vec(self) -> Vec<Assignment<DeclarativeStrategy>> {
+    pub fn into_declarative_assignments(self) -> Vec<Assignment<DeclarativeStrategy>> {
         match self {
             TypedAssignments::Void(set) => set,
             _ => Default::default(),
@@ -247,7 +247,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_value_assignment_vec(self) -> Vec<Assignment<PedersenStrategy>> {
+    pub fn into_value_assignments(self) -> Vec<Assignment<PedersenStrategy>> {
         match self {
             TypedAssignments::Value(set) => set,
             _ => Default::default(),
@@ -255,7 +255,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_data_assignment_vec(self) -> Vec<Assignment<HashStrategy>> {
+    pub fn into_data_assignments(self) -> Vec<Assignment<HashStrategy>> {
         match self {
             TypedAssignments::Data(set) => set,
             _ => Default::default(),
@@ -263,7 +263,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_attachment_assignment_vec(self) -> Vec<Assignment<AttachmentStrategy>> {
+    pub fn into_attachment_assignments(self) -> Vec<Assignment<AttachmentStrategy>> {
         match self {
             TypedAssignments::Attachment(set) => set,
             _ => Default::default(),
@@ -1548,33 +1548,30 @@ mod test {
         let mut hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check Correct type extraction works
-        assert!(!declarative_type.to_declarative_assignment_vec().is_empty());
-        assert!(!pedersan_type.to_value_assignment_vec().is_empty());
-        assert!(!hash_type.to_data_assignment_vec().is_empty());
+        assert!(!declarative_type.to_declarative_assignments().is_empty());
+        assert!(!pedersan_type.to_value_assignments().is_empty());
+        assert!(!hash_type.to_data_assignments().is_empty());
 
         // Check wrong type extraction doesn't work
-        assert!(declarative_type.to_value_assignment_vec().is_empty());
-        assert!(declarative_type
-            .clone()
-            .into_data_assignment_vec()
-            .is_empty());
-        assert!(pedersan_type.to_declarative_assignment_vec().is_empty());
-        assert!(pedersan_type.clone().into_data_assignment_vec().is_empty());
-        assert!(hash_type.to_declarative_assignment_vec().is_empty());
-        assert!(hash_type.clone().into_value_assignment_vec().is_empty());
+        assert!(declarative_type.to_value_assignments().is_empty());
+        assert!(declarative_type.clone().into_data_assignments().is_empty());
+        assert!(pedersan_type.to_declarative_assignments().is_empty());
+        assert!(pedersan_type.clone().into_data_assignments().is_empty());
+        assert!(hash_type.to_declarative_assignments().is_empty());
+        assert!(hash_type.clone().into_value_assignments().is_empty());
 
         // Check correct mutable type extraction works
-        assert!(declarative_type.declarative_assignment_vec_mut().is_some());
-        assert!(pedersan_type.value_assignment_vec_mut().is_some());
-        assert!(hash_type.data_assignment_vec_mut().is_some());
+        assert!(declarative_type.declarative_assignments_mut().is_some());
+        assert!(pedersan_type.value_assignments_mut().is_some());
+        assert!(hash_type.data_assignments_mut().is_some());
 
         // Check wrong mutable type extraction doesn't work
-        assert!(declarative_type.value_assignment_vec_mut().is_none());
-        assert!(declarative_type.data_assignment_vec_mut().is_none());
-        assert!(pedersan_type.declarative_assignment_vec_mut().is_none());
-        assert!(pedersan_type.data_assignment_vec_mut().is_none());
-        assert!(hash_type.declarative_assignment_vec_mut().is_none());
-        assert!(hash_type.value_assignment_vec_mut().is_none());
+        assert!(declarative_type.value_assignments_mut().is_none());
+        assert!(declarative_type.data_assignments_mut().is_none());
+        assert!(pedersan_type.declarative_assignments_mut().is_none());
+        assert!(pedersan_type.data_assignments_mut().is_none());
+        assert!(hash_type.declarative_assignments_mut().is_none());
+        assert!(hash_type.value_assignments_mut().is_none());
     }
 
     #[test]
@@ -2245,7 +2242,7 @@ mod test {
         // Hand calculate commitment
         // create individual leaves
         let declarative_leaves: Vec<(schema::OwnedRightType, MerkleNode)> = declarative_variant
-            .to_declarative_assignment_vec()
+            .to_declarative_assignments()
             .iter()
             .map(|assignment| {
                 (
@@ -2256,7 +2253,7 @@ mod test {
             .collect();
 
         let pedersan_leaves: Vec<(schema::OwnedRightType, MerkleNode)> = pedersen_variant
-            .to_value_assignment_vec()
+            .to_value_assignments()
             .iter()
             .map(|assignment| {
                 (
@@ -2267,7 +2264,7 @@ mod test {
             .collect();
 
         let hash_leaves: Vec<(schema::OwnedRightType, MerkleNode)> = hash_variant
-            .to_data_assignment_vec()
+            .to_data_assignments()
             .iter()
             .map(|assignment| {
                 (

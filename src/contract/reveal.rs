@@ -181,7 +181,7 @@ mod test {
     fn test_into_revealed_state() {
         let ass = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..])
             .unwrap()
-            .into_value_assignment_vec();
+            .into_value_assignments();
 
         let rev = ass[1].clone();
 
@@ -242,7 +242,7 @@ mod test {
     fn test_into_revealed_assignements_ownedstates() {
         let assignment = TypedAssignments::strict_decode(&HASH_VARIANT[..])
             .unwrap()
-            .to_data_assignment_vec();
+            .to_data_assignments();
 
         // Get a revealed state
         let rev = assignment[3].clone();
@@ -277,7 +277,7 @@ mod test {
             .unwrap();
 
         // After merging all the states expeected be revealed
-        for state in merged.to_data_assignment_vec() {
+        for state in merged.to_data_assignments() {
             assert_eq!(state, rev);
         }
 

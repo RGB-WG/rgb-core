@@ -678,7 +678,7 @@ mod _validation {
                         if let Some(state) = owned_rights
                             .entry(*type_id)
                             .or_insert_with(|| TypedAssignments::Void(Default::default()))
-                            .declarative_assignment_vec_mut()
+                            .declarative_assignments_mut()
                         {
                             state.extend(set);
                         }
@@ -688,7 +688,7 @@ mod _validation {
                         if let Some(state) = owned_rights
                             .entry(*type_id)
                             .or_insert_with(|| TypedAssignments::Value(Default::default()))
-                            .value_assignment_vec_mut()
+                            .value_assignments_mut()
                         {
                             state.extend(set);
                         }
@@ -698,7 +698,7 @@ mod _validation {
                         if let Some(state) = owned_rights
                             .entry(*type_id)
                             .or_insert_with(|| TypedAssignments::Data(Default::default()))
-                            .data_assignment_vec_mut()
+                            .data_assignments_mut()
                         {
                             state.extend(set);
                         }
@@ -708,7 +708,7 @@ mod _validation {
                         if let Some(state) = owned_rights
                             .entry(*type_id)
                             .or_insert_with(|| TypedAssignments::Attachment(Default::default()))
-                            .attachment_assignment_vec_mut()
+                            .attachment_assignments_mut()
                         {
                             state.extend(set);
                         }
