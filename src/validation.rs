@@ -31,6 +31,7 @@ use crate::{data, BundleId, Extension, SealEndpoint, TransitionBundle};
 #[repr(u8)]
 pub enum Validity {
     Valid,
+    ValidExceptEndpoints,
     UnresolvedTransactions,
     Invalid,
 }
@@ -41,6 +42,7 @@ pub enum Validity {
 #[display(Debug)]
 pub struct Status {
     pub unresolved_txids: Vec<Txid>,
+    pub unmined_endpoint_txids: Vec<Txid>,
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
     pub info: Vec<Info>,
@@ -49,6 +51,8 @@ pub struct Status {
 impl AddAssign for Status {
     fn add_assign(&mut self, rhs: Self) {
         self.unresolved_txids.extend(rhs.unresolved_txids);
+        self.unmined_endpoint_txids
+            .extend(rhs.unmined_endpoint_txids);
         self.failures.extend(rhs.failures);
         self.warnings.extend(rhs.warnings);
         self.info.extend(rhs.info);
@@ -59,6 +63,7 @@ impl Status {
     pub fn from_error(v: Failure) -> Self {
         Status {
             unresolved_txids: vec![],
+            unmined_endpoint_txids: vec![],
             failures: vec![v],
             warnings: vec![],
             info: vec![],
@@ -101,12 +106,18 @@ impl Status {
     }
 
     pub fn validity(&self) -> Validity {
-        if !self.failures.is_empty() {
-            Validity::Invalid
-        } else if !self.unresolved_txids.is_empty() {
-            Validity::UnresolvedTransactions
+        if self.failures.is_empty() {
+            if self.unmined_endpoint_txids.is_empty() {
+                Validity::Valid
+            } else {
+                Validity::ValidExceptEndpoints
+            }
         } else {
-            Validity::Valid
+            if self.unresolved_txids.is_empty() {
+                Validity::Invalid
+            } else {
+                Validity::UnresolvedTransactions
+            }
         }
     }
 }
@@ -204,7 +215,6 @@ pub enum Failure {
     },
 
     WitnessTransactionMissed(Txid),
-    EndpointTransactionMissed(Txid),
     WitnessNoCommitment(NodeId, Txid),
 
     EndpointTransitionNotFound(NodeId),
@@ -226,6 +236,7 @@ pub enum Warning {
     EndpointDuplication(NodeId, SealEndpoint),
     EndpointTransitionSealNotFound(NodeId, SealEndpoint),
     ExcessiveNode(NodeId),
+    EndpointTransactionMissed(Txid),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
@@ -419,8 +430,12 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 {
                     self.status.failures.remove(pos);
                     self.status
-                        .failures
-                        .push(Failure::EndpointTransactionMissed(anchor.txid));
+                        .unresolved_txids
+                        .retain(|txid| *txid != anchor.txid);
+                    self.status.unmined_endpoint_txids.push(anchor.txid);
+                    self.status
+                        .warnings
+                        .push(Warning::EndpointTransactionMissed(anchor.txid));
                 }
             }
         }
