@@ -18,7 +18,7 @@ use commit_verify::{
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use crate::{seal, ConcealSeals, Node, NodeId, RevealSeals, Transition};
+use crate::{seal, ConcealSeals, ConcealState, Node, NodeId, RevealSeals, Transition};
 
 // "rgb:bundle"
 static MIDSTATE_BUNDLE_ID: [u8; 32] = [
@@ -140,6 +140,21 @@ impl ConcealTransitions for TransitionBundle {
         let count = concealed.len();
         self.concealed.extend(concealed);
         count
+    }
+}
+
+impl ConcealState for TransitionBundle {
+    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
+        let mut counter = 0;
+        self.revealed = self
+            .revealed_iter()
+            .map(|(transition, inputs)| {
+                let mut transition = transition.clone();
+                counter += transition.conceal_state_except(seals);
+                (transition, inputs.clone())
+            })
+            .collect::<BTreeMap<_, _>>();
+        counter
     }
 }
 
