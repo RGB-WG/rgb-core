@@ -30,7 +30,6 @@ jobs:
       fail-fast: false
       matrix:
         feature:
-          - wallet
           - serde
     steps:
       - uses: actions/checkout@v2
