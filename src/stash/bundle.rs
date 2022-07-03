@@ -10,13 +10,13 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{btree_map, BTreeMap, BTreeSet};
-use std::io::Write;
+use std::io::{Read, Write};
 
 use bitcoin::hashes::{sha256, sha256t, Hash};
 use commit_verify::{
     lnpbp4, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
 };
-use strict_encoding::StrictEncode;
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::{Node, NodeId, Transition};
 
@@ -80,11 +80,23 @@ pub enum RevealError {
 pub struct NoDataError;
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(StrictEncode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct TransitionBundle {
     revealed: BTreeMap<Transition, BTreeSet<u16>>,
     concealed: BTreeMap<NodeId, BTreeSet<u16>>,
+}
+
+impl StrictDecode for TransitionBundle {
+    fn strict_decode<D: Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
+        let bundle = strict_decode_self!(d; revealed, concealed);
+        if bundle.revealed.is_empty() && bundle.concealed.is_empty() {
+            return Err(strict_encoding::Error::DataIntegrityError(s!(
+                "transition bundle without any transitions"
+            )));
+        }
+        Ok(bundle)
+    }
 }
 
 impl CommitEncode for TransitionBundle {
