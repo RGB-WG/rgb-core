@@ -269,7 +269,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
         let mut anchor_index = BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
         for (anchor, bundle) in consignment.anchored_bundles() {
-            if !TransitionBundle::validate(&bundle) {
+            if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
             for transition in bundle.known_transitions() {

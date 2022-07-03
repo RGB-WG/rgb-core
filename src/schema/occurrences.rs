@@ -55,13 +55,6 @@ impl Occurrences {
 
     pub fn check(&self, count: u16) -> Result<(), OccurrencesError> {
         let orig_count = count;
-        if count > u16::MAX.into() {
-            Err(OccurrencesError {
-                min: self.min_value().into(),
-                max: self.max_value().into(),
-                found: count.into(),
-            })?
-        }
         match self {
             Occurrences::Once if count == 1 => Ok(()),
             Occurrences::NoneOrOnce if count <= 1 => Ok(()),
@@ -72,9 +65,9 @@ impl Occurrences {
             Occurrences::Exactly(val) if count == *val => Ok(()),
             Occurrences::Range(range) if range.contains(&count) => Ok(()),
             _ => Err(OccurrencesError {
-                min: self.min_value().into(),
-                max: self.max_value().into(),
-                found: orig_count.into(),
+                min: self.min_value(),
+                max: self.max_value(),
+                found: orig_count,
             }),
         }
     }
@@ -101,8 +94,8 @@ mod _strict_encoding {
             let (min, max) = match self {
                 Occurrences::NoneOrOnce => (0, 1),
                 Occurrences::Once => (1, 1),
-                Occurrences::NoneOrMore => (0, core::u16::MAX.into()),
-                Occurrences::OnceOrMore => (1, core::u16::MAX.into()),
+                Occurrences::NoneOrMore => (0, core::u16::MAX),
+                Occurrences::OnceOrMore => (1, core::u16::MAX),
                 Occurrences::NoneOrUpTo(max) => (0, *max),
                 Occurrences::OnceOrUpTo(max) => (1, *max),
                 Occurrences::Exactly(val) => (*val, *val),

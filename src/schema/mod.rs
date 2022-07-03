@@ -10,6 +10,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 mod nodes;
+#[allow(clippy::module_inception)]
 mod schema;
 pub mod script;
 mod state;

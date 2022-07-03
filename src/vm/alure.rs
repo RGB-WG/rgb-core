@@ -9,6 +9,8 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#![allow(clippy::unusual_byte_groupings)]
+
 use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
@@ -36,6 +38,7 @@ impl InstructionSet for RgbIsa {
     }
 
     // TODO: Implement
+    #[allow(unused_variables)]
     fn exec(&self, regs: &mut CoreRegs, site: LibSite) -> ExecStep { ExecStep::Next }
 }
 
@@ -54,7 +57,7 @@ impl Bytecode for RgbIsa {
         }
     }
 
-    fn write_args<W>(&self, writer: &mut W) -> Result<(), BytecodeError>
+    fn write_args<W>(&self, _writer: &mut W) -> Result<(), BytecodeError>
     where W: Write {
         match self {
             RgbIsa::Noop => {}
@@ -85,6 +88,7 @@ impl<'script> Runtime<'script> {
 }
 
 impl<'script> Validate for Runtime<'script> {
+    #[allow(unused_variables)]
     fn validate(
         &self,
         node_id: NodeId,

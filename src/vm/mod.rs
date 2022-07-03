@@ -26,6 +26,7 @@ use crate::{
 /// RGB schema validation routines.
 pub trait Validate {
     /// Validates state change in a contract node.
+    #[allow(clippy::too_many_arguments)]
     fn validate(
         &self,
         node_id: NodeId,

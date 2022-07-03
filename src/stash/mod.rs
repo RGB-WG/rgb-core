@@ -28,6 +28,7 @@
 
 mod anchor;
 mod graph;
+#[allow(clippy::module_inception)]
 mod stash;
 pub mod bundle;
 mod consignment;

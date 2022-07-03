@@ -127,7 +127,7 @@ mod _validation {
                     status.add_failure(validation::Failure::InvalidStateDataType(
                         node_id,
                         schema_type_id,
-                        TypeRef::Primitive(TypeConstr::Plain(self.clone())),
+                        TypeRef::Primitive(TypeConstr::Plain(*self)),
                         data.clone(),
                     ));
                 }

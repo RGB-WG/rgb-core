@@ -606,6 +606,7 @@ mod _validation {
             status
         }
 
+        #[allow(clippy::too_many_arguments)]
         fn validate_state_evolution(
             &self,
             node_id: NodeId,
