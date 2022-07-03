@@ -204,6 +204,7 @@ pub enum Failure {
     },
 
     WitnessTransactionMissed(Txid),
+    EndpointTransactionMissed(Txid),
     WitnessNoCommitment(NodeId, Txid),
 
     EndpointTransitionNotFound(NodeId),
@@ -405,6 +406,23 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         //               for each endpoint; and validate them independently.
         for (node, bundle_id) in self.end_transitions.clone() {
             self.validate_branch(schema, node, bundle_id);
+        }
+        // Replace missed (not yet mined) endpoint witness transaction failures
+        // with a dedicated type
+        for (node, _) in &self.end_transitions {
+            if let Some(anchor) = self.anchor_index.get(&node.node_id()) {
+                if let Some(pos) = self
+                    .status
+                    .failures
+                    .iter()
+                    .position(|f| f == &Failure::WitnessTransactionMissed(anchor.txid))
+                {
+                    self.status.failures.remove(pos);
+                    self.status
+                        .failures
+                        .push(Failure::EndpointTransactionMissed(anchor.txid));
+                }
+            }
         }
 
         // Generate warning if some of the transitions within the consignment
