@@ -18,7 +18,7 @@ use commit_verify::{
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use crate::{seal, ConcealSeals, Node, NodeId, Transition};
+use crate::{seal, ConcealSeals, Node, NodeId, RevealSeals, Transition};
 
 // "rgb:bundle"
 static MIDSTATE_BUNDLE_ID: [u8; 32] = [
@@ -158,21 +158,15 @@ impl ConcealSeals for TransitionBundle {
     }
 }
 
-impl TransitionBundle {
-    /// Reveals previously known seal information (replacing blind UTXOs with
-    /// unblind ones). Function is used when a peer receives consignments
-    /// containing concealed seals for the outputs owned by the peer
-    pub fn reveal_seals<'a>(
-        &mut self,
-        known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
-    ) -> usize {
+impl RevealSeals for TransitionBundle {
+    fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize {
         let mut counter = 0;
         self.revealed = self
             .revealed_iter()
             .map(|(transition, inputs)| {
                 let mut transition = transition.clone();
                 for (_, assignment) in transition.owned_rights_mut().iter_mut() {
-                    counter += assignment.reveal_seals(known_seals.clone());
+                    counter += assignment.reveal_seals(known_seals);
                 }
                 (transition, inputs.clone())
             })

@@ -17,7 +17,18 @@ use commit_verify::{CommitConceal, CommitEncode, ToMerkleSource};
 
 use super::OwnedRightsInner;
 use crate::schema::NodeType;
-use crate::{Assignment, OwnedRights, State, TypedAssignments};
+use crate::{seal, Assignment, OwnedRights, State, TypedAssignments};
+
+pub trait RevealSeals {
+    /// Reveals previously known seal information (replacing blind UTXOs with
+    /// unblind ones). Function is used when a peer receives consignments
+    /// containing concealed seals for the outputs owned by the peer.
+    ///
+    /// # Returns
+    ///
+    /// Total number of seals revealed inside the data structure during the operation.
+    fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize;
+}
 
 /// Merge Error generated in merging operation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Error)]

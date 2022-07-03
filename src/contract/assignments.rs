@@ -25,7 +25,7 @@ use super::{
     data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint, SECP256K1_ZKP,
 };
 use crate::contract::attachment;
-use crate::{AtomicValue, ConfidentialDataError, StateRetrievalError};
+use crate::{AtomicValue, ConfidentialDataError, RevealSeals, StateRetrievalError};
 
 pub(super) static EMPTY_ASSIGNMENTS: Lazy<TypedAssignments> = Lazy::new(TypedAssignments::default);
 
@@ -581,53 +581,6 @@ impl TypedAssignments {
         }
     }
 
-    /// Reveals previously known seal information (replacing blind UTXOs with
-    /// explicit ones). Function is used when a peer receives consignment
-    /// containing concealed seals for the outputs owned by the peer
-    pub fn reveal_seals<'a>(
-        &mut self,
-        known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
-    ) -> usize {
-        let mut counter = 0;
-        match self {
-            TypedAssignments::Void(_) => {}
-            TypedAssignments::Value(set) => {
-                *self = TypedAssignments::Value(
-                    set.iter()
-                        .map(|assignment| {
-                            let mut assignment = assignment.clone();
-                            counter += assignment.reveal_seals(known_seals.clone());
-                            assignment
-                        })
-                        .collect(),
-                );
-            }
-            TypedAssignments::Data(set) => {
-                *self = TypedAssignments::Data(
-                    set.iter()
-                        .map(|assignment| {
-                            let mut assignment = assignment.clone();
-                            counter += assignment.reveal_seals(known_seals.clone());
-                            assignment
-                        })
-                        .collect(),
-                );
-            }
-            TypedAssignments::Attachment(set) => {
-                *self = TypedAssignments::Attachment(
-                    set.iter()
-                        .map(|assignment| {
-                            let mut assignment = assignment.clone();
-                            counter += assignment.reveal_seals(known_seals.clone());
-                            assignment
-                        })
-                        .collect(),
-                );
-            }
-        }
-        counter
-    }
-
     pub fn consensus_commitments(&self) -> Vec<MerkleNode> {
         match self {
             TypedAssignments::Void(vec) => vec
@@ -647,6 +600,49 @@ impl TypedAssignments {
                 .map(Assignment::<AttachmentStrategy>::consensus_commit)
                 .collect(),
         }
+    }
+}
+
+impl RevealSeals for TypedAssignments {
+    fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize {
+        let mut counter = 0;
+        match self {
+            TypedAssignments::Void(_) => {}
+            TypedAssignments::Value(set) => {
+                *self = TypedAssignments::Value(
+                    set.iter()
+                        .map(|assignment| {
+                            let mut assignment = assignment.clone();
+                            counter += assignment.reveal_seals(known_seals);
+                            assignment
+                        })
+                        .collect(),
+                );
+            }
+            TypedAssignments::Data(set) => {
+                *self = TypedAssignments::Data(
+                    set.iter()
+                        .map(|assignment| {
+                            let mut assignment = assignment.clone();
+                            counter += assignment.reveal_seals(known_seals);
+                            assignment
+                        })
+                        .collect(),
+                );
+            }
+            TypedAssignments::Attachment(set) => {
+                *self = TypedAssignments::Attachment(
+                    set.iter()
+                        .map(|assignment| {
+                            let mut assignment = assignment.clone();
+                            counter += assignment.reveal_seals(known_seals);
+                            assignment
+                        })
+                        .collect(),
+                );
+            }
+        }
+        counter
     }
 }
 
@@ -963,42 +959,6 @@ where
             _ => None,
         }
     }
-
-    /// Reveals previously known seal information (replacing blind UTXOs with
-    /// unblind ones). Function is used when a peer receives consignment
-    /// containing concealed seals for the outputs owned by the peer
-    pub fn reveal_seals<'a>(
-        &mut self,
-        known_seals: impl Iterator<Item = &'a seal::Revealed>,
-    ) -> usize {
-        let known_seals: HashMap<seal::Confidential, seal::Revealed> = known_seals
-            .map(|rev| (rev.commit_conceal(), *rev))
-            .collect();
-
-        let mut counter = 0;
-        match self {
-            Assignment::Confidential { seal, state } => {
-                if let Some(reveal) = known_seals.get(seal) {
-                    *self = Assignment::ConfidentialState {
-                        seal: *reveal,
-                        state: state.clone(),
-                    };
-                    counter += 1;
-                };
-            }
-            Assignment::ConfidentialSeal { seal, state } => {
-                if let Some(reveal) = known_seals.get(seal) {
-                    *self = Assignment::Revealed {
-                        seal: *reveal,
-                        state: state.clone(),
-                    };
-                    counter += 1;
-                };
-            }
-            _ => {}
-        }
-        counter
-    }
 }
 
 impl<StateType> CommitConceal for Assignment<StateType>
@@ -1026,6 +986,46 @@ where
                 state: state.commit_conceal().into(),
             },
         }
+    }
+}
+
+impl<StateType> RevealSeals for Assignment<StateType>
+where
+    StateType: State,
+    StateType::Revealed: CommitConceal,
+    StateType::Confidential: PartialEq + Eq,
+    <StateType as State>::Confidential:
+        From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
+{
+    fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize {
+        let known_seals: HashMap<seal::Confidential, seal::Revealed> = known_seals
+            .iter()
+            .map(|rev| (rev.commit_conceal(), *rev))
+            .collect();
+
+        let mut counter = 0;
+        match self {
+            Assignment::Confidential { seal, state } => {
+                if let Some(reveal) = known_seals.get(seal) {
+                    *self = Assignment::ConfidentialState {
+                        seal: *reveal,
+                        state: state.clone(),
+                    };
+                    counter += 1;
+                };
+            }
+            Assignment::ConfidentialSeal { seal, state } => {
+                if let Some(reveal) = known_seals.get(seal) {
+                    *self = Assignment::Revealed {
+                        seal: *reveal,
+                        state: state.clone(),
+                    };
+                    counter += 1;
+                };
+            }
+            _ => {}
+        }
+        counter
     }
 }
 

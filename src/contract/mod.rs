@@ -32,7 +32,7 @@ pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 use once_cell::sync::Lazy;
-pub use reveal::MergeReveal;
+pub use reveal::{MergeReveal, RevealSeals};
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
 pub use seal::{IntoRevealedSeal, SealEndpoint};

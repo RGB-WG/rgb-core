@@ -52,8 +52,8 @@ pub mod prelude {
         DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
         HomomorphicBulletproofGrin, IntoRevealedSeal, MergeReveal, Metadata, NoDataError, Node,
         NodeId, NodeOutpoint, OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
-        PublicRights, RevealedState, SealEndpoint, SealValueMap, State, StateRetrievalError,
-        StateType, Transition, TypedAssignments,
+        PublicRights, RevealSeals, RevealedState, SealEndpoint, SealValueMap, State,
+        StateRetrievalError, StateType, Transition, TypedAssignments,
     };
     pub use schema::{
         script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
