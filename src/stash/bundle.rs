@@ -68,6 +68,17 @@ impl From<lnpbp4::Message> for BundleId {
     fn from(id: lnpbp4::Message) -> Self { BundleId(sha256t::Hash::from_inner(id.into_inner())) }
 }
 
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum RevealError {
+    /// the provided state transition is not a part of the bundle
+    UnrelatedTransition,
+}
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display("attempt to construct transition bundle with no transitions given")]
+pub struct NoDataError;
+
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -120,42 +131,48 @@ impl ConcealTransitions for TransitionBundle {
     }
 }
 
-impl From<BTreeMap<Transition, BTreeSet<u16>>> for TransitionBundle {
-    fn from(revealed: BTreeMap<Transition, BTreeSet<u16>>) -> Self {
-        TransitionBundle {
+impl TryFrom<BTreeMap<Transition, BTreeSet<u16>>> for TransitionBundle {
+    type Error = NoDataError;
+
+    fn try_from(revealed: BTreeMap<Transition, BTreeSet<u16>>) -> Result<Self, Self::Error> {
+        if revealed.is_empty() {
+            return Err(NoDataError);
+        }
+        Ok(TransitionBundle {
             revealed,
             concealed: empty!(),
-        }
+        })
     }
 }
 
-impl From<BTreeMap<NodeId, BTreeSet<u16>>> for TransitionBundle {
-    fn from(concealed: BTreeMap<NodeId, BTreeSet<u16>>) -> Self {
-        TransitionBundle {
+impl TryFrom<BTreeMap<NodeId, BTreeSet<u16>>> for TransitionBundle {
+    type Error = NoDataError;
+    fn try_from(concealed: BTreeMap<NodeId, BTreeSet<u16>>) -> Result<Self, Self::Error> {
+        if concealed.is_empty() {
+            return Err(NoDataError);
+        }
+        Ok(TransitionBundle {
             revealed: empty!(),
             concealed,
-        }
+        })
     }
-}
-
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
-#[display(doc_comments)]
-pub enum RevealError {
-    /// the provided state transition is not a part of the bundle
-    UnrelatedTransition,
 }
 
 impl TransitionBundle {
     pub fn with(
         revealed: BTreeMap<Transition, BTreeSet<u16>>,
         concealed: BTreeMap<NodeId, BTreeSet<u16>>,
-    ) -> TransitionBundle {
-        TransitionBundle {
+    ) -> Result<TransitionBundle, NoDataError> {
+        if revealed.is_empty() && concealed.is_empty() {
+            return Err(NoDataError);
+        }
+        Ok(TransitionBundle {
             revealed,
             concealed,
-        }
+        })
     }
 
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize { self.concealed.len() + self.revealed.len() }
 
     pub fn bundle_id(&self) -> BundleId { self.consensus_commit() }
