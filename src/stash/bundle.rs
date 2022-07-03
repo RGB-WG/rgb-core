@@ -18,7 +18,7 @@ use commit_verify::{
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use crate::{Node, NodeId, Transition};
+use crate::{seal, ConcealSeals, Node, NodeId, Transition};
 
 // "rgb:bundle"
 static MIDSTATE_BUNDLE_ID: [u8; 32] = [
@@ -140,6 +140,44 @@ impl ConcealTransitions for TransitionBundle {
         let count = concealed.len();
         self.concealed.extend(concealed);
         count
+    }
+}
+
+impl ConcealSeals for TransitionBundle {
+    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
+        let mut counter = 0;
+        self.revealed = self
+            .revealed_iter()
+            .map(|(transition, inputs)| {
+                let mut transition = transition.clone();
+                counter += transition.conceal_seals(seals);
+                (transition, inputs.clone())
+            })
+            .collect::<BTreeMap<_, _>>();
+        counter
+    }
+}
+
+impl TransitionBundle {
+    /// Reveals previously known seal information (replacing blind UTXOs with
+    /// unblind ones). Function is used when a peer receives consignments
+    /// containing concealed seals for the outputs owned by the peer
+    pub fn reveal_seals<'a>(
+        &mut self,
+        known_seals: impl Iterator<Item = &'a seal::Revealed> + Clone,
+    ) -> usize {
+        let mut counter = 0;
+        self.revealed = self
+            .revealed_iter()
+            .map(|(transition, inputs)| {
+                let mut transition = transition.clone();
+                for (_, assignment) in transition.owned_rights_mut().iter_mut() {
+                    counter += assignment.reveal_seals(known_seals.clone());
+                }
+                (transition, inputs.clone())
+            })
+            .collect::<BTreeMap<_, _>>();
+        counter
     }
 }
 
