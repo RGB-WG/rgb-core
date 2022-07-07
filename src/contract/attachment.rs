@@ -48,7 +48,7 @@ impl sha256t::Tag for AttachmentIdTag {
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
 #[derive(StrictEncode, StrictDecode)]
-#[wrapper(Debug, Display)]
+#[wrapper(Debug, Display, BorrowSlice)]
 pub struct AttachmentId(sha256t::Hash<AttachmentIdTag>);
 
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for AttachmentId
@@ -77,7 +77,7 @@ impl sha256t::Tag for ConfidentialAttachmentTag {
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
-#[wrapper(Debug, Display)]
+#[wrapper(Debug, Display, BorrowSlice)]
 pub struct Confidential(sha256t::Hash<ConfidentialAttachmentTag>);
 
 impl commit_encode::Strategy for Confidential {

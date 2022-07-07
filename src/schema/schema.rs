@@ -54,7 +54,7 @@ impl lnpbp::bech32::Strategy for SchemaIdTag {
 /// Commitment-based schema identifier used for committing to the schema type
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
 #[derive(StrictEncode, StrictDecode)]
-#[wrapper(Debug)]
+#[wrapper(Debug, BorrowSlice)]
 #[display(SchemaId::to_bech32_string)]
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
 

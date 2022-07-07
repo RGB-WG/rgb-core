@@ -66,7 +66,7 @@ impl From<Revealed> for AtomicValue {
     serde(crate = "serde_crate", transparent)
 )]
 #[display(LowerHex)]
-#[wrapper(FromStr, LowerHex, UpperHex)]
+#[wrapper(FromStr, LowerHex, UpperHex, BorrowSlice)]
 pub struct BlindingFactor(Slice32);
 
 impl AsRef<[u8]> for BlindingFactor {

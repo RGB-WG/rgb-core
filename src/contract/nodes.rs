@@ -117,7 +117,7 @@ impl NodeOutpoint {
 /// to the commitment hash
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[wrapper(Debug, Display)]
+#[wrapper(Debug, Display, BorrowSlice)]
 pub struct NodeId(sha256t::Hash<NodeIdTag>);
 
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for NodeId
@@ -139,7 +139,7 @@ impl FromStr for NodeId {
 
 /// Unique contract identifier equivalent to the contract genesis commitment
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
-#[wrapper(Debug)]
+#[wrapper(Debug, BorrowSlice)]
 #[display(ContractId::to_bech32_string)]
 pub struct ContractId(sha256t::Hash<NodeIdTag>);
 

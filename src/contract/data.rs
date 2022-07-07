@@ -215,7 +215,7 @@ impl sha256t::Tag for ConfidentialTag {
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[wrapper(Debug, Display)]
+#[wrapper(Debug, Display, BorrowSlice)]
 pub struct Confidential(sha256t::Hash<ConfidentialTag>);
 
 impl commit_encode::Strategy for Confidential {

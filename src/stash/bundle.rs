@@ -45,7 +45,7 @@ impl sha256t::Tag for BundleIdTag {
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
 #[derive(StrictEncode, StrictDecode)]
-#[wrapper(Debug, Display)]
+#[wrapper(Debug, Display, BorrowSlice)]
 pub struct BundleId(sha256t::Hash<BundleIdTag>);
 
 impl<Msg> CommitVerify<Msg, PrehashedProtocol> for BundleId
