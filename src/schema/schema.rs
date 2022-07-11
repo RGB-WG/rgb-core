@@ -188,7 +188,7 @@ mod _validation {
     use commit_verify::CommitConceal;
 
     use super::*;
-    use crate::schema::state::StenValidate;
+    use crate::schema::state::StenVerify;
     use crate::schema::{
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure, SchemaVerify,
     };
@@ -449,14 +449,14 @@ mod _validation {
                     if &schema_type != field
                         && !matches!(
                             (&data, field),
-                            (data::Revealed::Bytes(_), TypeRef::Named(_))
+                            (data::Revealed::Bytes(_), TypeRef::NameRef(_))
                         )
                     {
                         status.add_failure(validation::Failure::SchemaMismatchedDataType(
                             *field_type_id,
                         ));
                     }
-                    status += field.validate(&self.type_system, node_id, *field_type_id, &data);
+                    status += field.verify(&self.type_system, node_id, *field_type_id, &data);
                 }
             }
 

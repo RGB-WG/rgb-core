@@ -68,7 +68,7 @@ mod _validation {
 
     use amplify::AsAny;
     use commit_verify::CommitConceal;
-    use stens::{PrimitiveType, TypeConstr, TypeSystem, Validate};
+    use stens::{PrimitiveType, TypeConstr, TypeSystem, Verify};
 
     use super::*;
     use crate::contract::AttachmentStrategy;
@@ -80,8 +80,8 @@ mod _validation {
         State,
     };
 
-    pub trait StenValidate {
-        fn validate(
+    pub trait StenVerify {
+        fn verify(
             &self,
             type_system: &TypeSystem,
             node_id: NodeId,
@@ -90,8 +90,8 @@ mod _validation {
         ) -> validation::Status;
     }
 
-    impl StenValidate for PrimitiveType {
-        fn validate(
+    impl StenVerify for PrimitiveType {
+        fn verify(
             &self,
             _: &TypeSystem,
             node_id: NodeId,
@@ -127,7 +127,7 @@ mod _validation {
                     status.add_failure(validation::Failure::InvalidStateDataType(
                         node_id,
                         schema_type_id,
-                        TypeRef::Primitive(TypeConstr::Plain(*self)),
+                        TypeRef::InPlace(TypeConstr::Plain(*self)),
                         data.clone(),
                     ));
                 }
@@ -136,8 +136,8 @@ mod _validation {
         }
     }
 
-    impl StenValidate for TypeConstr<PrimitiveType> {
-        fn validate(
+    impl StenVerify for TypeConstr<PrimitiveType> {
+        fn verify(
             &self,
             type_system: &TypeSystem,
             node_id: NodeId,
@@ -147,8 +147,7 @@ mod _validation {
             let mut status = validation::Status::new();
             match (self, data) {
                 (TypeConstr::Plain(ty), data) => {
-                    status +=
-                        StenValidate::validate(ty, type_system, node_id, schema_type_id, data);
+                    status += StenVerify::verify(ty, type_system, node_id, schema_type_id, data);
                 }
                 (TypeConstr::List(PrimitiveType::AsciiChar), Revealed::AsciiString(_)) => {}
                 (TypeConstr::List(PrimitiveType::UnicodeChar), Revealed::UnicodeString(_)) => {}
@@ -157,7 +156,7 @@ mod _validation {
                     status.add_failure(validation::Failure::InvalidStateDataType(
                         node_id,
                         schema_type_id,
-                        TypeRef::Primitive(self.clone()),
+                        TypeRef::InPlace(self.clone()),
                         data.clone(),
                     ));
                 }
@@ -166,8 +165,8 @@ mod _validation {
         }
     }
 
-    impl StenValidate for TypeRef {
-        fn validate(
+    impl StenVerify for TypeRef {
+        fn verify(
             &self,
             type_system: &TypeSystem,
             node_id: NodeId,
@@ -176,13 +175,12 @@ mod _validation {
         ) -> validation::Status {
             let mut status = validation::Status::new();
             match (self, data) {
-                (TypeRef::Primitive(ty), _) => {
-                    status +=
-                        StenValidate::validate(ty, type_system, node_id, schema_type_id, data);
+                (TypeRef::InPlace(ty), _) => {
+                    status += StenVerify::verify(ty, type_system, node_id, schema_type_id, data);
                 }
-                (TypeRef::Named(ty), data::Revealed::Bytes(bytes)) => {
+                (TypeRef::NameRef(ty), data::Revealed::Bytes(bytes)) => {
                     let mut cursor = io::Cursor::new(bytes.as_slice());
-                    if !ty.validate(type_system, &mut cursor) {
+                    if !ty.verify(type_system, &mut cursor) {
                         status.add_failure(validation::Failure::InvalidStateDataValue(
                             node_id,
                             schema_type_id,
@@ -317,7 +315,7 @@ mod _validation {
                                     );
                                 }
                                 Some(data) => {
-                                    status += StenValidate::validate(
+                                    status += StenVerify::verify(
                                         format,
                                         type_system,
                                         *node_id,
@@ -343,7 +341,7 @@ mod _validation {
         }
     }
 }
-pub(super) use _validation::StenValidate;
+pub(super) use _validation::StenVerify;
 
 #[cfg(test)]
 mod test {
