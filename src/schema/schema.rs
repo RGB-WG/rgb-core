@@ -377,6 +377,9 @@ mod _validation {
 
             let mut status = validation::Status::new();
 
+            // Validate type system
+            status += self.validate_type_system();
+
             let parent_owned_rights =
                 extract_parent_owned_rights(all_nodes, node.parent_owned_rights(), &mut status);
             let parent_public_rights =
@@ -409,6 +412,16 @@ mod _validation {
                 node.metadata(),
                 script,
             );
+            status
+        }
+
+        fn validate_type_system(&self) -> validation::Status {
+            let mut status = validation::Status::new();
+            if let Err(inconsistencies) = self.type_system.validate() {
+                for err in inconsistencies {
+                    status.add_failure(validation::Failure::SchemaTypeSystem(err));
+                }
+            }
             status
         }
 

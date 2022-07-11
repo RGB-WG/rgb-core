@@ -966,7 +966,7 @@ dependencies = [
 
 [[package]]
 name = "rgb-core"
-version = "0.8.0-rc.4"
+version = "0.8.0-rc.5"
 dependencies = [
  "aluvm",
  "amplify",
@@ -1147,9 +1147,9 @@ dependencies = [
 
 [[package]]
 name = "stens"
-version = "0.6.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aae17309dd1394a843119f8750e030f76e7486f1cccb2e326cb48a04355ac50"
+checksum = "6e4804a8a3d876fc0933294ff3d30c5353107ac88dfbab9d4283305b496c02ae"
 dependencies = [
  "amplify",
  "serde",

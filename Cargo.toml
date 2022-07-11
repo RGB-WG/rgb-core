@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.8.0-rc.4"
+version = "0.8.0-rc.5"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: consensus & verification for private & scalable client-validated smart contracts on Bitcoin & Lightning"
@@ -38,7 +38,7 @@ path = "src/lib.rs"
 amplify = { version = "~3.12.1", features = ["apfloat"] }
 bp-core = { version = "~0.8.0-beta.1" }
 lnpbp = { version = "~0.8.0", features = ["zip"] }
-stens = "~0.6.0"
+stens = "~0.7.1"
 strict_encoding = { version = "~0.8.0", features = ["crypto", "chrono", "bitcoin", "float"] }
 commit_verify = { version = "~0.8.0", features = ["rand", "bulletproofs"] }
 descriptor-wallet = "~0.8.0"

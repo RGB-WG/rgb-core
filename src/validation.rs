@@ -177,6 +177,8 @@ pub enum Failure {
     SchemaScriptOverrideDenied,
     SchemaScriptVmChangeDenied,
 
+    SchemaTypeSystem(stens::TypeInconsistency),
+
     BundleInvalid(BundleId),
 
     TransitionAbsent(NodeId),
