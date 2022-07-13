@@ -28,9 +28,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "3.12.1"
+version = "3.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e45c604e86700ffea68a7d90c3ffb1508dad1120902f31dbb08afc942cf8acf3"
+checksum = "116019a174e912931d5b19ca7ab6a22596d12cdb1320358fad3368f0aba135a9"
 dependencies = [
  "amplify_apfloat",
  "amplify_derive",
@@ -966,7 +966,7 @@ dependencies = [
 
 [[package]]
 name = "rgb-core"
-version = "0.8.0-rc.5"
+version = "0.8.0-rc.6"
 dependencies = [
  "aluvm",
  "amplify",
