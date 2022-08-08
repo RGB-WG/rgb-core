@@ -588,7 +588,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 //               commitment
                 if anchor
                     .verify(self.contract_id, bundle_id.into(), witness_tx.clone())
-                    .is_ok()
+                    .is_err()
                 {
                     // TODO: Save error details
                     // The node is not committed to bitcoin transaction graph!
