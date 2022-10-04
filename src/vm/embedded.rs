@@ -84,6 +84,12 @@ pub mod constants {
     /// reserves. Must contain [`bitcoin::OutPoint`] consensus-encoded data
     pub const FIELD_TYPE_LOCK_UTXO: u16 = 0xC1;
 
+    /// Description of the asset
+    pub const FIELD_TYPE_DESCRIPTION: u16 = 0xC2;
+
+    /// Parent ID of the asset
+    pub const FIELD_TYPE_PARENT_ID: u16 = 0xC3;
+
     // --------
 
     /// Renomination of the contract parameters
@@ -100,6 +106,9 @@ pub mod constants {
     /// NB: STATE_TYPE_OWNERSHIP_RIGHT + N where N = 1..9 are reserved for
     ///     custom forms of ownership (like "engraved ownership" for NFT tokens)
     pub const STATE_TYPE_OWNERSHIP_RIGHT: u16 = 0xA1;
+
+    /// Right to engrave an NFT token
+    pub const STATE_TYPE_ENGRAVING_RIGHT: u16 = 0xA2;
 
     /// Right to define epochs of asset replacement
     pub const STATE_TYPE_ISSUE_EPOCH_RIGHT: u16 = 0xAA;
@@ -138,6 +147,9 @@ pub mod constants {
     /// Transition replacing some of the previously issued state with the new
     /// one
     pub const TRANSITION_TYPE_ISSUE_REPLACE: u16 = 0x10A3;
+
+    /// Transition engraving an NFT token
+    pub const TRANSITION_TYPE_ENGRAVING: u16 = 0x10A4;
 
     /// Transition issuing NFT token
     pub const TRANSITION_TYPE_ISSUE_NFT: u16 = 0x10AF;
