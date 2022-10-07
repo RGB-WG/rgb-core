@@ -147,6 +147,17 @@ impl MergeReveal for TypedAssignments {
                     }
                     Ok(TypedAssignments::Data(result))
                 }
+
+                (
+                    TypedAssignments::Attachment(first_vec),
+                    TypedAssignments::Attachment(second_vec),
+                ) => {
+                    let mut result = Vec::with_capacity(first_vec.len());
+                    for (first, second) in first_vec.into_iter().zip(second_vec.into_iter()) {
+                        result.push(first.merge_reveal(second)?);
+                    }
+                    Ok(TypedAssignments::Attachment(result))
+                }
                 // No other patterns possible, should not reach here
                 _ => {
                     unreachable!("Assignments::consensus_commitments is broken")
