@@ -64,8 +64,8 @@ pub trait IntoRevealedSeal {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_order)]
+#[derive(ConfinedEncode, ConfinedDecode)]
+#[confined_encoding(by_order)]
 pub enum SealEndpoint {
     /// External transaction output in concealed form (see
     /// [`seal::Confidential`])
@@ -159,9 +159,9 @@ mod test {
     use bitcoin::OutPoint;
     use bp::seals::txout::TxoSeal;
     use commit_verify::CommitEncode;
+    use confined_encoding::{ConfinedDecode, ConfinedEncode};
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use secp256k1zkp::rand::{thread_rng, RngCore};
-    use strict_encoding::{StrictDecode, StrictEncode};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
 
@@ -227,13 +227,15 @@ mod test {
     #[test]
     #[ignore]
     fn test_concealed() {
-        let revelaed = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revelaed = Revealed::confined_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
 
         let concealed = revelaed.commit_conceal();
 
         // Strict encoding of Confidential data
         let mut confidential_encoded = vec![];
-        concealed.strict_encode(&mut confidential_encoded).unwrap();
+        concealed
+            .confined_encode(&mut confidential_encoded)
+            .unwrap();
 
         assert_eq!(CONCEALED_TXOUTPOINT.to_vec(), confidential_encoded);
     }
@@ -241,13 +243,15 @@ mod test {
     #[test]
     #[ignore]
     fn test_witness_conf() {
-        let revelaed = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+        let revelaed = Revealed::confined_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
         let concealed = revelaed.commit_conceal();
 
         // Strict encoding Confidential data
         let mut confidential_encoded = vec![];
-        concealed.strict_encode(&mut confidential_encoded).unwrap();
+        concealed
+            .confined_encode(&mut confidential_encoded)
+            .unwrap();
 
         assert_eq!(CONCEALED_WITNESSVOUT.to_vec(), confidential_encoded);
     }
@@ -255,11 +259,11 @@ mod test {
     #[test]
     #[ignore]
     fn test_into_outpoint() {
-        let revealed = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revealed = Revealed::confined_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
 
         let outpoint = OutPoint::try_from(revealed.clone()).unwrap();
 
-        let coded = OutPoint::strict_decode(&OUTPOINT[..]).unwrap();
+        let coded = OutPoint::confined_decode(&OUTPOINT[..]).unwrap();
 
         assert_eq!(coded, outpoint);
     }
@@ -269,15 +273,15 @@ mod test {
     #[should_panic(expected = "WitnessVoutError")]
     fn test_witness_to_outpoint() {
         // Conversion to Outpoint from WitnessVout variant should panic
-        let revealed = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+        let revealed = Revealed::confined_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
         bitcoin::OutPoint::try_from(revealed).unwrap();
     }
 
     #[test]
     #[ignore]
     fn test_outpoint_reveal() {
-        let revealed_txoutpoint = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
-        let revealed_witnessvout = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+        let revealed_txoutpoint = Revealed::confined_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revealed_witnessvout = Revealed::confined_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
         // Data used for constructing above seals
         let txid = bitcoin::Txid::from_hex(
@@ -303,8 +307,8 @@ mod test {
     #[test]
     #[ignore]
     fn test_commitencode_seal() {
-        let revealed_txoutpoint = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
-        let revelaed_wtinessvout = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
+        let revealed_txoutpoint = Revealed::confined_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
+        let revelaed_wtinessvout = Revealed::confined_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
         let mut commit1 = vec![];
         revealed_txoutpoint.commit_encode(&mut commit1);
@@ -341,13 +345,13 @@ mod test {
         let mut txout_new = vec![];
         revealed_txout
             .commit_conceal()
-            .strict_encode(&mut txout_new)
+            .confined_encode(&mut txout_new)
             .unwrap();
 
         let mut witness_new = vec![];
         revealed_witness
             .commit_conceal()
-            .strict_encode(&mut witness_new)
+            .confined_encode(&mut witness_new)
             .unwrap();
 
         assert_eq!(txout_orig, txout_new);

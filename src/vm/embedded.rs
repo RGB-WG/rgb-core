@@ -380,7 +380,7 @@ mod node {
             .cloned()
             .ok_or(HandlerError::BrokenSchema)?;
         // let _descriptor =
-        //     descriptors::Expanded::strict_deserialize(descriptor_data)
+        //     descriptors::Expanded::confined_deserialize(descriptor_data)
         //        .map_err(|_| HandlerError::DataEncoding)?;
         // TODO #81: Implement blockchain access for the VM
         Err(HandlerError::NotImplemented)

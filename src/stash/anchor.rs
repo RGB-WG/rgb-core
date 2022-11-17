@@ -48,7 +48,7 @@ mod test {
 
     use bitcoin::consensus::deserialize;
     use bitcoin::util::psbt::PartiallySignedTransaction;
-    use strict_encoding::StrictDecode;
+    use confined_encoding::ConfinedDecode;
 
     use super::*;
     use crate::contract::{Genesis, Node};
@@ -62,7 +62,7 @@ mod test {
     #[ignore]
     fn test_psbt() {
         // Create some dummy NodeId and ContractId for the test
-        let genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
+        let genesis = Genesis::confined_decode(&GENESIS[..]).unwrap();
 
         let contract_id = genesis.contract_id();
 

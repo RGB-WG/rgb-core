@@ -73,7 +73,18 @@ impl Occurrences {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    ConfinedEncode,
+    ConfinedDecode
+)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display(Debug)]
 pub struct OccurrencesError {
@@ -82,15 +93,15 @@ pub struct OccurrencesError {
     pub found: u16,
 }
 
-mod _strict_encoding {
+mod _confined_encoding {
     use std::io;
 
-    use strict_encoding::{Error, StrictDecode, StrictEncode};
+    use confined_encoding::{ConfinedDecode, ConfinedEncode, Error};
 
     use super::*;
 
-    impl StrictEncode for Occurrences {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+    impl ConfinedEncode for Occurrences {
+        fn confined_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
             let (min, max) = match self {
                 Occurrences::NoneOrOnce => (0, 1),
                 Occurrences::Once => (1, 1),
@@ -101,15 +112,15 @@ mod _strict_encoding {
                 Occurrences::Exactly(val) => (*val, *val),
                 Occurrences::Range(range) => (*range.start(), *range.end()),
             };
-            Ok(min.strict_encode(&mut e)? + max.strict_encode(&mut e)?)
+            Ok(min.confined_encode(&mut e)? + max.confined_encode(&mut e)?)
         }
     }
 
-    impl StrictDecode for Occurrences {
+    impl ConfinedDecode for Occurrences {
         #[allow(unused_comparisons)]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let min = u16::strict_decode(&mut d)?;
-            let max = u16::strict_decode(&mut d)?;
+        fn confined_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            let min = u16::confined_decode(&mut d)?;
+            let max = u16::confined_decode(&mut d)?;
             Ok(match (min, max) {
                 (0, 1) => Occurrences::NoneOrOnce,
                 (1, 1) => Occurrences::Once,
@@ -126,8 +137,8 @@ mod _strict_encoding {
 
 #[cfg(test)]
 mod test {
-    use strict_encoding::StrictDecode;
-    use strict_encoding_test::test_vec_decoding_roundtrip;
+    use confined_encoding::ConfinedDecode;
+    use confined_encoding_test::test_vec_decoding_roundtrip;
 
     use super::Occurrences;
 
@@ -250,11 +261,11 @@ mod test {
         once_upto_u8[0] = 0x01;
         once_upto_u16[0] = 0x01;
 
-        let dec2: Occurrences = Occurrences::strict_decode(&once_upto_u16[..]).unwrap();
+        let dec2: Occurrences = Occurrences::confined_decode(&once_upto_u16[..]).unwrap();
 
         assert_eq!(dec2, Occurrences::OnceOrMore);
 
-        let wc2: Occurrences = Occurrences::strict_decode(&once_upto_u8[..]).unwrap();
+        let wc2: Occurrences = Occurrences::confined_decode(&once_upto_u8[..]).unwrap();
 
         assert_eq!(wc2, Occurrences::OnceOrUpTo(255));
     }

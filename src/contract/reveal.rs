@@ -188,7 +188,7 @@ impl MergeReveal for OwnedRights {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::strict_encoding::StrictDecode;
+    use crate::confined_encoding::ConfinedDecode;
     use crate::{ConcealState, HashStrategy, PedersenStrategy};
 
     // Hard coded test vectors of Assignment Variants
@@ -201,7 +201,7 @@ mod test {
     #[test]
     #[ignore]
     fn test_into_revealed_state() {
-        let ass = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..])
+        let ass = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..])
             .unwrap()
             .into_value_assignments();
 
@@ -262,7 +262,7 @@ mod test {
     #[test]
     #[ignore]
     fn test_into_revealed_assignements_ownedstates() {
-        let assignment = TypedAssignments::strict_decode(&HASH_VARIANT[..])
+        let assignment = TypedAssignments::confined_decode(&HASH_VARIANT[..])
             .unwrap()
             .to_data_assignments();
 

@@ -69,28 +69,28 @@ pub struct ConfidentialDataError;
 #[cfg(test)]
 pub(crate) mod test {
     use commit_verify::{CommitConceal, CommitEncode};
-    use strict_encoding::{StrictDecode, StrictEncode};
+    use confined_encoding::{ConfinedDecode, ConfinedEncode};
 
     pub fn test_confidential<T>(data: &[u8], encoded: &[u8], commitment: &[u8])
     where
-        T: CommitConceal + StrictDecode + StrictEncode + Clone + CommitEncode,
-        <T as CommitConceal>::ConcealedCommitment: StrictDecode + StrictEncode + Eq,
+        T: CommitConceal + ConfinedDecode + ConfinedEncode + Clone + CommitEncode,
+        <T as CommitConceal>::ConcealedCommitment: ConfinedDecode + ConfinedEncode + Eq,
     {
         // Create the Revealed Structure from data bytes
-        let revealed = T::strict_decode(data).unwrap();
+        let revealed = T::confined_decode(data).unwrap();
 
         // CommitConceal the Revealed structure into Confidential
         let confidential = revealed.commit_conceal();
 
-        // Strict_encode Confidential data
+        // confined_encode Confidential data
         let mut confidential_encoded = vec![];
         confidential
-            .strict_encode(&mut confidential_encoded)
+            .confined_encode(&mut confidential_encoded)
             .unwrap();
 
-        // strict_encode Revealed data
+        // confined_encode Revealed data
         let mut revealed_encoded: Vec<u8> = vec![];
-        revealed.strict_encode(&mut revealed_encoded).unwrap();
+        revealed.confined_encode(&mut revealed_encoded).unwrap();
 
         // Assert encoded Confidential matches precomputed vector
         assert_eq!(encoded, &confidential_encoded[..]);

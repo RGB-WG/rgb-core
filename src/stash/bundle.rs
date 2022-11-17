@@ -16,7 +16,7 @@ use bitcoin::hashes::{sha256, sha256t, Hash};
 use commit_verify::{
     lnpbp4, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
 };
-use strict_encoding::{StrictDecode, StrictEncode};
+use confined_encoding::{ConfinedDecode, ConfinedEncode};
 
 use crate::{seal, ConcealSeals, ConcealState, Node, NodeId, RevealSeals, Transition};
 
@@ -44,7 +44,7 @@ impl sha256t::Tag for BundleIdTag {
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct BundleId(sha256t::Hash<BundleIdTag>);
 
@@ -80,18 +80,18 @@ pub enum RevealError {
 pub struct NoDataError;
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
-#[derive(StrictEncode)]
+#[derive(ConfinedEncode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct TransitionBundle {
     revealed: BTreeMap<Transition, BTreeSet<u16>>,
     concealed: BTreeMap<NodeId, BTreeSet<u16>>,
 }
 
-impl StrictDecode for TransitionBundle {
-    fn strict_decode<D: Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        let bundle = strict_decode_self!(d; revealed, concealed);
+impl ConfinedDecode for TransitionBundle {
+    fn confined_decode<D: Read>(mut d: D) -> Result<Self, confined_encoding::Error> {
+        let bundle = confined_decode_self!(d; revealed, concealed);
         if bundle.revealed.is_empty() && bundle.concealed.is_empty() {
-            return Err(strict_encoding::Error::DataIntegrityError(s!(
+            return Err(confined_encoding::Error::DataIntegrityError(s!(
                 "transition bundle without any transitions"
             )));
         }
@@ -107,10 +107,10 @@ impl CommitEncode for TransitionBundle {
         let mut count = 0usize;
         for (node_id, inputs) in concealed.concealed {
             count += node_id
-                .strict_encode(&mut e)
+                .confined_encode(&mut e)
                 .expect("memory encoders do not fail");
             count += inputs
-                .strict_encode(&mut e)
+                .confined_encode(&mut e)
                 .expect("memory encoders do not fail");
         }
         count

@@ -28,8 +28,8 @@ pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurrences>;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value)]
+#[derive(ConfinedEncode, ConfinedDecode)]
+#[confined_encoding(by_value)]
 #[repr(u8)]
 /// Node type: genesis, extensions and state transitions
 pub enum NodeType {
@@ -77,7 +77,7 @@ pub trait NodeSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
@@ -87,7 +87,7 @@ pub struct GenesisSchema {
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
     pub extends: PublicRightsStructure,
@@ -97,7 +97,7 @@ pub struct ExtensionSchema {
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
     pub closes: OwnedRightsStructure,
@@ -237,8 +237,8 @@ mod _verify {
 
 #[cfg(test)]
 mod test {
-    use strict_encoding::StrictDecode;
-    use strict_encoding_test::test_vec_decoding_roundtrip;
+    use confined_encoding::ConfinedDecode;
+    use confined_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
     use crate::schema::SchemaVerify;
@@ -279,7 +279,7 @@ mod test {
 
     #[test]
     fn test_node_for_genesis() {
-        let genesis_schema = GenesisSchema::strict_decode(&GENESIS_SCHEMA[..]).unwrap();
+        let genesis_schema = GenesisSchema::confined_decode(&GENESIS_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
         valencies.insert(1u16);
@@ -303,7 +303,7 @@ mod test {
 
     #[test]
     fn test_node_for_transition() {
-        let transition_schema = TransitionSchema::strict_decode(&TRANSITION_SCHEMA[..]).unwrap();
+        let transition_schema = TransitionSchema::confined_decode(&TRANSITION_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
         valencies.insert(1u16);
@@ -330,7 +330,7 @@ mod test {
 
     #[test]
     fn test_node_for_extension() {
-        let extension_schema = ExtensionSchema::strict_decode(&EXTENSION_SCHEMA[..]).unwrap();
+        let extension_schema = ExtensionSchema::confined_decode(&EXTENSION_SCHEMA[..]).unwrap();
 
         let mut valencies = PublicRightsStructure::new();
         valencies.insert(1u16);

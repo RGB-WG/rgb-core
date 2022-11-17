@@ -34,15 +34,15 @@ pub enum VmType {
 /// Virtual machine and machine-specific script data.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value, repr = u8)]
+#[derive(ConfinedEncode, ConfinedDecode)]
+#[confined_encoding(by_value, repr = u8)]
 pub enum ValidationScript {
     /// Embedded code (not a virtual machine) which is the part of this RGB
     /// Core Library. Using this option results in the fact that the schema
     /// does not commit to the actual validating code and the validation logic
     /// may change in the future (like to be patched) with new RGB Core Lib
     /// releases.
-    #[strict_encoding(value = 0x00)]
+    #[confined_encoding(value = 0x00)]
     Embedded,
 
     /// AluVM: pure functional register-based virtual machine designed for RGB
@@ -54,7 +54,7 @@ pub enum ValidationScript {
     ///
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
-    #[strict_encoding(value = 0x01)]
+    #[confined_encoding(value = 0x01)]
     AluVM(alure::ValidationScript),
 }
 
@@ -86,7 +86,7 @@ impl ValidationScript {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "kebab-case")
 )]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[repr(u8)]
 pub enum OverrideRules {
     #[display("deny")]

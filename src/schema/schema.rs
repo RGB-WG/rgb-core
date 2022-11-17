@@ -53,7 +53,7 @@ impl lnpbp::bech32::Strategy for SchemaIdTag {
 
 /// Commitment-based schema identifier used for committing to the schema type
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[wrapper(Debug, BorrowSlice)]
 #[display(SchemaId::to_bech32_string)]
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
@@ -127,7 +127,7 @@ impl FromStr for SchemaId {
 }
 
 #[derive(Clone, Debug, Default)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Schema {
     /// Feature flags control which of the available RGB features are allowed
@@ -759,7 +759,7 @@ mod _validation {
 pub(crate) mod test {
     use amplify::Wrapper;
     use commit_verify::tagged_hash;
-    use strict_encoding::*;
+    use confined_encoding::*;
 
     use super::*;
     use crate::schema::*;
@@ -897,7 +897,7 @@ pub(crate) mod test {
     #[test]
     fn test_schema_encoding_decoding() {
         let schema = schema();
-        let encoded = strict_serialize(&schema).unwrap();
+        let encoded = confined_serialize(&schema).unwrap();
         let encoded_standard: Vec<u8> = vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 17, 254, 1, 0, 0, 17, 254, 2, 0, 0, 17, 255, 3, 0,
@@ -914,7 +914,7 @@ pub(crate) mod test {
         ];
         assert_eq!(encoded, encoded_standard);
 
-        let decoded = Schema::strict_decode(&encoded[..]).unwrap();
+        let decoded = Schema::confined_decode(&encoded[..]).unwrap();
         assert_eq!(decoded, schema);
     }
 }

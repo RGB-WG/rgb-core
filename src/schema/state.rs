@@ -12,8 +12,8 @@
 use stens::TypeRef;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value, repr = u8)]
+#[derive(ConfinedEncode, ConfinedDecode)]
+#[confined_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -28,8 +28,8 @@ pub enum StateType {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_order)]
+#[derive(ConfinedEncode, ConfinedDecode)]
+#[confined_encoding(by_order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -43,8 +43,8 @@ pub enum StateSchema {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value, repr = u8)]
+#[derive(ConfinedEncode, ConfinedDecode)]
+#[confined_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -349,9 +349,9 @@ mod test {
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::hashes::sha256;
     use commit_verify::{CommitConceal, TaggedHash};
+    use confined_encoding::ConfinedDecode;
     use secp256k1zkp::rand::thread_rng;
     use stens::TypeSystem;
-    use strict_encoding::StrictDecode;
 
     use super::*;
     use crate::contract::{data, value, NodeId};
@@ -371,7 +371,7 @@ mod test {
     fn test_garbage_df_format() {
         let bytes: Vec<u8> =
             vec![1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255];
-        DiscreteFiniteFieldFormat::strict_decode(&bytes[..]).unwrap();
+        DiscreteFiniteFieldFormat::confined_decode(&bytes[..]).unwrap();
     }
 
     #[test]

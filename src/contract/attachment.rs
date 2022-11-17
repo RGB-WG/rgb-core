@@ -13,8 +13,8 @@ use bitcoin::hashes::{sha256, sha256t};
 use commit_verify::{
     commit_encode, CommitConceal, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
 };
+use confined_encoding::{confined_serialize, ConfinedEncode};
 use stens::AsciiString;
-use strict_encoding::{strict_serialize, StrictEncode};
 
 use crate::{ConfidentialState, RevealedState};
 
@@ -47,7 +47,7 @@ impl sha256t::Tag for AttachmentIdTag {
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct AttachmentId(sha256t::Hash<AttachmentIdTag>);
 
@@ -76,7 +76,7 @@ impl sha256t::Tag for ConfidentialAttachmentTag {
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct Confidential(sha256t::Hash<ConfidentialAttachmentTag>);
 
@@ -95,7 +95,7 @@ impl Confidential {
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, AsAny, Display)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display("{id}~{mime}")]
 pub struct Revealed {
@@ -109,7 +109,7 @@ impl CommitConceal for Revealed {
 
     fn commit_conceal(&self) -> Self::ConcealedCommitment {
         Confidential::hash(
-            &strict_serialize(self).expect("Encoding of predefined data types must not fail"),
+            &confined_serialize(self).expect("Encoding of predefined data types must not fail"),
         )
     }
 }

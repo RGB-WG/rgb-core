@@ -20,13 +20,13 @@
     dead_code,
     //missing_docs
 )]
-// TODO: Upgrade tests to use new strict_encoding_test crate
+// TODO: Upgrade tests to use new confined_encoding_test crate
 #![cfg_attr(test, allow(deprecated))]
 
 #[macro_use]
 extern crate amplify;
 #[macro_use]
-extern crate strict_encoding;
+extern crate confined_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]

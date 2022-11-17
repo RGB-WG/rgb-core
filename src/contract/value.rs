@@ -57,8 +57,8 @@ impl From<Revealed> for AtomicValue {
     Debug,
     Display,
     From,
-    StrictEncode,
-    StrictDecode
+    ConfinedEncode,
+    ConfinedDecode
 )]
 #[cfg_attr(
     feature = "serde",
@@ -90,7 +90,7 @@ impl FromHex for BlindingFactor {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display("{value}#{blinding}")]
 pub struct Revealed {
@@ -185,7 +185,7 @@ impl Ord for Revealed {
     }
 }
 
-#[derive(Clone, Debug, AsAny, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, AsAny, ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Confidential {
     pub commitment: pedersen::Commitment,
@@ -301,8 +301,8 @@ impl Confidential {
 
 #[cfg(test)]
 mod test {
-    use strict_encoding::{strict_deserialize, StrictDecode, StrictEncode};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
+    use confined_encoding::{confined_deserialize, ConfinedDecode, ConfinedEncode};
+    use confined_encoding_test::test_vec_decoding_roundtrip;
 
     use super::super::test::test_confidential;
     use super::*;
@@ -378,14 +378,14 @@ mod test {
         test_confidential::<Revealed>(&AMOUNT_65, &CONFIDENTIAL_AMOUNT, &CONFIDENTIAL_COMMITMENT);
 
         // Test comparison
-        let revealed_64 = Revealed::strict_decode(&AMOUNT_64[..]).unwrap();
-        let old_revealed = Revealed::strict_decode(&AMOUNT_65[..]).unwrap();
+        let revealed_64 = Revealed::confined_decode(&AMOUNT_64[..]).unwrap();
+        let old_revealed = Revealed::confined_decode(&AMOUNT_65[..]).unwrap();
         assert_eq!(revealed_64.cmp(&old_revealed), Ordering::Less);
         assert_eq!(
             revealed_64.partial_cmp(&old_revealed).unwrap(),
             Ordering::Less
         );
-        let coded_conf = Confidential::strict_decode(&CONFIDENTIAL_AMOUNT[..]).unwrap();
+        let coded_conf = Confidential::confined_decode(&CONFIDENTIAL_AMOUNT[..]).unwrap();
         let old_conf = old_revealed.commit_conceal();
         let new_conf = revealed_64.commit_conceal();
         assert_eq!(coded_conf, old_conf);
@@ -398,7 +398,7 @@ mod test {
         let new_commit = new_conf.commitment;
         let sum = old_conf.add(new_commit);
         let commit_sum =
-            secp256k1zkp::pedersen::Commitment::strict_decode(&COMMIT_SUM[..]).unwrap();
+            secp256k1zkp::pedersen::Commitment::confined_decode(&COMMIT_SUM[..]).unwrap();
         assert_eq!(sum, commit_sum);
     }
 
@@ -481,7 +481,7 @@ mod test {
         let mut handmade_bytes = vec![0x08u8];
         handmade_bytes.extend(&[0x0u8; 32]);
         let handmade_commit =
-            secp256k1zkp::pedersen::Commitment::strict_decode(&handmade_bytes[..]).unwrap();
+            secp256k1zkp::pedersen::Commitment::confined_decode(&handmade_bytes[..]).unwrap();
 
         assert_eq!(handmade_commit, zero_commit);
     }
@@ -491,7 +491,7 @@ mod test {
     fn test_pederson() {
         let mut bytes = COMMIT_SUM.clone().to_vec();
         bytes.append(&mut [0u8, 0u8].to_vec());
-        let _: secp256k1zkp::pedersen::Commitment = strict_deserialize(&bytes).unwrap();
+        let _: secp256k1zkp::pedersen::Commitment = confined_deserialize(&bytes).unwrap();
     }
 
     // We ignore this test for now since we are not checking blinding factor to
@@ -502,31 +502,31 @@ mod test {
     #[ignore]
     #[should_panic(expected = "DataIntegrityError")]
     fn test_blinding() {
-        let blind = Revealed::strict_decode(&AMOUNT_64[..]).unwrap().blinding;
+        let blind = Revealed::confined_decode(&AMOUNT_64[..]).unwrap().blinding;
 
         let mut buff = vec![];
-        blind.strict_encode(&mut buff).unwrap();
+        blind.confined_encode(&mut buff).unwrap();
 
         buff[0] = 0x10u8;
 
-        BlindingFactor::strict_decode(&buff[..]).unwrap();
+        BlindingFactor::confined_decode(&buff[..]).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "DataIntegrityError")]
     fn test_rangeproof() {
-        let proof = Confidential::strict_decode(&CONFIDENTIAL_AMOUNT[..])
+        let proof = Confidential::confined_decode(&CONFIDENTIAL_AMOUNT[..])
             .unwrap()
             .bulletproof;
 
         let mut buff = vec![];
-        proof.strict_encode(&mut buff).unwrap();
+        proof.confined_encode(&mut buff).unwrap();
 
         let mut pad = vec![0u8; 4465];
         buff.append(&mut pad);
         buff[0] = 0x14u8;
         buff[1] = 0x14u8;
 
-        secp256k1zkp::pedersen::RangeProof::strict_decode(&buff[..]).unwrap();
+        secp256k1zkp::pedersen::RangeProof::confined_decode(&buff[..]).unwrap();
     }
 }

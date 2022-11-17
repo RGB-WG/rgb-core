@@ -18,8 +18,8 @@ use std::io;
 use amplify::AsAny;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{CommitConceal, CommitEncode, ConsensusCommit};
+use confined_encoding::{ConfinedDecode, ConfinedEncode};
 use once_cell::sync::Lazy;
-use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
     data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint, SECP256K1_ZKP,
@@ -53,7 +53,7 @@ pub enum StateType {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -670,10 +670,10 @@ impl ConcealState for TypedAssignments {
     }
 }
 
-pub trait ConfidentialState: StrictEncode + StrictDecode + Debug + Clone + AsAny {}
+pub trait ConfidentialState: ConfinedEncode + ConfinedDecode + Debug + Clone + AsAny {}
 
 pub trait RevealedState:
-    StrictEncode + StrictDecode + Debug + CommitConceal + Clone + AsAny
+    ConfinedEncode + ConfinedDecode + Debug + CommitConceal + Clone + AsAny
 {
 }
 
@@ -789,7 +789,7 @@ impl State for AttachmentStrategy {
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
 #[derive(Clone, Debug)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -1105,7 +1105,7 @@ where
 
 // We can't use `UsingConceal` strategy here since it relies on the
 // `commit_encode` of the concealed type, and here the concealed type is again
-// `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
+// `OwnedState`, leading to a recurrency. So we use `confined_encode` of the
 // concealed data.
 impl<StateType> CommitEncode for Assignment<StateType>
 where
@@ -1115,7 +1115,7 @@ where
     StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn commit_encode<E: io::Write>(&self, e: E) -> usize {
-        self.commit_conceal().strict_encode(e).expect(
+        self.commit_conceal().confined_encode(e).expect(
             "Strict encoding must not fail for types implementing \
              ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
         )
@@ -1142,10 +1142,10 @@ mod test {
     use bp::seals::txout::TxoSeal;
     use commit_verify::merkle::MerkleNode;
     use commit_verify::{merklize, CommitConceal, CommitEncode, ToMerkleSource};
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use secp256k1zkp::pedersen::Commitment;
     use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
     use secp256k1zkp::{Secp256k1, SecretKey};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::super::{NodeId, OwnedRights, ParentOwnedRights};
     use super::*;
@@ -1235,7 +1235,7 @@ mod test {
         let mut bytes = PEDERSAN_VARIANT.clone();
         bytes[1] = 0x02;
 
-        TypedAssignments::strict_decode(&bytes[..]).unwrap();
+        TypedAssignments::confined_decode(&bytes[..]).unwrap();
     }
 
     fn zero_balance(
@@ -1522,9 +1522,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_identification() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check correct types are being identified
         // and wrong types return false
@@ -1543,9 +1543,9 @@ mod test {
     #[ignore]
     fn test_extraction() {
         let mut declarative_type =
-            TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let mut pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let mut hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+            TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let mut pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let mut hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Check Correct type extraction works
         assert!(!declarative_type.to_declarative_assignments().is_empty());
@@ -1577,9 +1577,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_seal_extraction() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract a specific Txid from each variants
         let txid_1 = match declarative_type
@@ -1622,9 +1622,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_known_seals() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known Txids from each variants
         let mut dec_txids: Vec<String> = declarative_type
@@ -1684,9 +1684,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_all_seals() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract seals from all variants and conceal them
         let mut dec_hashes: Vec<String> = declarative_type
@@ -1721,9 +1721,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_known_state_homomorphic() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from pedersan type variant
         let states = pedersan_type.filter_revealed_state_values();
@@ -1759,9 +1759,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_known_state_data() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract known states from custom data type variant
         let data_set = hash_type.filter_revealed_state_data();
@@ -1782,9 +1782,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_all_state_pedersan() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data for pedersan type and conceal them
         let conf_amounts = pedersan_type.to_confidential_state_pedersen();
@@ -1820,9 +1820,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_all_state_hashed() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // Extract state data from hash type variant and conceal them
         let extracted_states = hash_type.to_confidential_state_hashed();
@@ -1856,7 +1856,7 @@ mod test {
         // Declarative type has void state data
         // Pedersan type has very large concealed state data which slows down
         // the test
-        let mut hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let mut hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // CommitConceal all without any exception
         // This will create 2 Confidential and 2 ConfidentialState type
@@ -1933,9 +1933,9 @@ mod test {
     #[test]
     #[ignore]
     fn test_len() {
-        let declarative_type = TypedAssignments::strict_decode(&DECLARATIVE_VARIANT[..]).unwrap();
-        let pedersan_type = TypedAssignments::strict_decode(&PEDERSAN_VARIANT[..]).unwrap();
-        let hash_type = TypedAssignments::strict_decode(&HASH_VARIANT[..]).unwrap();
+        let declarative_type = TypedAssignments::confined_decode(&DECLARATIVE_VARIANT[..]).unwrap();
+        let pedersan_type = TypedAssignments::confined_decode(&PEDERSAN_VARIANT[..]).unwrap();
+        let hash_type = TypedAssignments::confined_decode(&HASH_VARIANT[..]).unwrap();
 
         // All variants have 4 assignments in them
         assert_eq!(declarative_type.len(), 4);
@@ -1953,7 +1953,7 @@ mod test {
     fn test_garbage_ancestor() {
         let mut data = PARENT_RIGHTS.clone();
         data[0] = 0x36 as u8;
-        ParentOwnedRights::strict_decode(&data[..]).unwrap();
+        ParentOwnedRights::confined_decode(&data[..]).unwrap();
     }
 
     // This doesn't use the merkelize() function
@@ -1983,9 +1983,11 @@ mod test {
 
         // Encode the leaf via strict encoding
         let mut encoded_leaf = vec![];
-        NodeId::default().strict_encode(&mut encoded_leaf).unwrap();
-        ty.strict_encode(&mut encoded_leaf).unwrap();
-        0u16.strict_encode(&mut encoded_leaf).unwrap();
+        NodeId::default()
+            .confined_encode(&mut encoded_leaf)
+            .unwrap();
+        ty.confined_encode(&mut encoded_leaf).unwrap();
+        0u16.confined_encode(&mut encoded_leaf).unwrap();
 
         // take the hash of the encoded data as a MerkleNode
         let merkle_node = MerkleNode::hash(&encoded_leaf[..]);
@@ -2008,8 +2010,8 @@ mod test {
         let tag_hash = sha256::Hash::hash(tag.as_bytes());
         engine2.input(&tag_hash[..]);
         engine2.input(&tag_hash[..]);
-        m.strict_encode(&mut engine2).unwrap();
-        0u8.strict_encode(&mut engine2).unwrap();
+        m.confined_encode(&mut engine2).unwrap();
+        0u8.confined_encode(&mut engine2).unwrap();
         MerkleNode::from_engine(engine2)
     }
     */
@@ -2086,9 +2088,9 @@ mod test {
             .into_iter()
             .map(|item| -> MerkleNode {
                 let mut e = vec![];
-                item.0.strict_encode(&mut e).unwrap();
-                item.1.strict_encode(&mut e).unwrap();
-                item.2.strict_encode(&mut e).unwrap();
+                item.0.confined_encode(&mut e).unwrap();
+                item.1.confined_encode(&mut e).unwrap();
+                item.2.confined_encode(&mut e).unwrap();
 
                 MerkleNode::hash(&e[..])
             })

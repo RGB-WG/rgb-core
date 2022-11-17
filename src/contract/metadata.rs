@@ -35,7 +35,7 @@ type MetadataInner = BTreeMap<schema::FieldType, Vec<data::Revealed>>;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct Metadata(MetadataInner);
 
 // TODO #107: Improve other iterators for contract collection types.
@@ -46,7 +46,7 @@ impl<'me> IntoIterator for &'me Metadata {
     fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, ConfinedEncode, ConfinedDecode)]
 pub struct MetadataLeaf(pub schema::FieldType, pub data::Revealed);
 impl commit_encode::Strategy for MetadataLeaf {
     type Strategy = commit_encode::strategies::UsingStrict;
@@ -222,9 +222,9 @@ mod test {
     use bitcoin::hashes::Hash;
     use commit_verify::merkle::MerkleNode;
     use commit_verify::{merklize, CommitEncode};
+    use confined_encoding::{ConfinedDecode, ConfinedEncode};
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use secp256k1zkp::rand::{thread_rng, RngCore};
-    use strict_encoding::{StrictDecode, StrictEncode};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
     //use lnpbp::commit_verify::CommitVerify;
@@ -241,7 +241,7 @@ mod test {
     #[test]
     #[ignore]
     fn test_extraction() {
-        let metadata = Metadata::strict_decode(&METADATA[..]).unwrap();
+        let metadata = Metadata::confined_decode(&METADATA[..]).unwrap();
 
         let field_type = 13 as schema::FieldType;
 
@@ -290,13 +290,13 @@ mod test {
     fn test_eof_metadata() {
         let mut data = METADATA.clone();
         data[0] = 0x36 as u8;
-        Metadata::strict_decode(&data[..]).unwrap();
+        Metadata::confined_decode(&data[..]).unwrap();
     }
 
     #[test]
     #[ignore]
     fn test_iteration_field() {
-        let metadata = Metadata::strict_decode(&METADATA[..]).unwrap();
+        let metadata = Metadata::confined_decode(&METADATA[..]).unwrap();
         let field_values = metadata.f32(13 as schema::FieldType);
 
         assert_eq!(field_values.into_iter().sum::<f32>(), 5f32);
@@ -360,7 +360,7 @@ mod test {
         // create MerkleNodes from each leaf
         let nodes: Vec<MerkleNode> = vec_4
             .iter()
-            .map(|item| MerkleNode::hash(&StrictEncode::strict_serialize(item).unwrap()))
+            .map(|item| MerkleNode::hash(&ConfinedEncode::confined_serialize(item).unwrap()))
             .collect();
 
         // compute merkle root of all the nodes

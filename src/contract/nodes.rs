@@ -50,7 +50,7 @@ static MIDSTATE_NODE_ID: [u8; 32] = [
 pub const RGB_CONTRACT_ID_HRP: &str = "rgb";
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[display("{node_id}/{ty}/{no}")]
 /// RGB contract node output pointer, defined by the node ID and output
 /// number.
@@ -450,7 +450,7 @@ pub struct Genesis {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
     extension_type: ExtensionType,
@@ -462,7 +462,7 @@ pub struct Extension {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     transition_type: TransitionType,
@@ -809,12 +809,12 @@ impl Transition {
     pub fn transition_type(&self) -> schema::TransitionType { self.transition_type }
 }
 
-mod _strict_encoding {
+mod _confined_encoding {
     use std::io;
 
-    use strict_encoding::{
-        strategies, strict_deserialize, strict_serialize, Error, Strategy, StrictDecode,
-        StrictEncode,
+    use confined_encoding::{
+        confined_deserialize, confined_serialize, strategies, ConfinedDecode, ConfinedEncode,
+        Error, Strategy,
     };
 
     use super::*;
@@ -834,8 +834,8 @@ mod _strict_encoding {
     impl CommitEncode for Genesis {
         fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
             let mut encoder = || -> Result<_, Error> {
-                let mut len = self.schema_id.strict_encode(&mut e)?;
-                len += self.chain.as_genesis_hash().strict_encode(&mut e)?;
+                let mut len = self.schema_id.confined_encode(&mut e)?;
+                len += self.chain.as_genesis_hash().confined_encode(&mut e)?;
                 len += self
                     .metadata
                     .to_merkle_source()
@@ -857,10 +857,10 @@ mod _strict_encoding {
         }
     }
 
-    impl StrictEncode for Genesis {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            let chain_params = strict_serialize(&self.chain)?;
-            Ok(strict_encode_list!(e;
+    impl ConfinedEncode for Genesis {
+        fn confined_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            let chain_params = confined_serialize(&self.chain)?;
+            Ok(confined_encode_list!(e;
                 self.schema_id,
                 // ![NETWORK-CRITICAL]: Chain params fields may update, so we
                 //                      will serialize chain parameters in all
@@ -879,10 +879,10 @@ mod _strict_encoding {
         }
     }
 
-    impl StrictDecode for Genesis {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let schema_id = SchemaId::strict_decode(&mut d)?;
-            let chain_params_no = usize::strict_decode(&mut d)?;
+    impl ConfinedDecode for Genesis {
+        fn confined_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            let schema_id = SchemaId::confined_decode(&mut d)?;
+            let chain_params_no = usize::confined_decode(&mut d)?;
             if chain_params_no < 1 {
                 Err(Error::ValueOutOfRange(
                     "genesis must contain at least one `chain_param` data structure",
@@ -890,15 +890,15 @@ mod _strict_encoding {
                     0,
                 ))?
             }
-            let chain_data = Vec::<u8>::strict_decode(&mut d)?;
-            let chain = strict_deserialize(&chain_data)?;
+            let chain_data = Vec::<u8>::confined_decode(&mut d)?;
+            let chain = confined_deserialize(&chain_data)?;
             for _ in 1..chain_params_no {
                 // Ignoring the rest of chain parameters
-                let _ = Vec::<u8>::strict_decode(&mut d)?;
+                let _ = Vec::<u8>::confined_decode(&mut d)?;
             }
-            let metadata = Metadata::strict_decode(&mut d)?;
-            let assignments = OwnedRightsInner::strict_decode(&mut d)?;
-            let valencies = PublicRightsInner::strict_decode(&mut d)?;
+            let metadata = Metadata::confined_decode(&mut d)?;
+            let assignments = OwnedRightsInner::confined_decode(&mut d)?;
+            let valencies = PublicRightsInner::confined_decode(&mut d)?;
             Ok(Self {
                 schema_id,
                 chain,
@@ -916,9 +916,9 @@ mod test {
 
     use bitcoin::hashes::hex::ToHex;
     use commit_verify::{tagged_hash, CommitConceal, TaggedHash};
+    use confined_encoding::{confined_serialize, ConfinedDecode, ConfinedEncode};
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
-    use strict_encoding::{strict_serialize, StrictDecode, StrictEncode};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
 
@@ -941,7 +941,7 @@ mod test {
             owned_rights: empty!(),
             public_rights: empty!(),
         };
-        let encoded = genesis.strict_serialize().unwrap();
+        let encoded = genesis.confined_serialize().unwrap();
         let manual = vec![
             vec![0u8; 32], // zero schema id
             vec![7u8, 0],  // length of testnet string
@@ -965,12 +965,12 @@ mod test {
             public_rights: Default::default(),
         };
         assert_ne!(
-            strict_serialize(&genesis).unwrap(),
+            confined_serialize(&genesis).unwrap(),
             genesis.clone().consensus_commit().to_vec()
         );
 
         let mut encoder = vec![];
-        genesis.schema_id.strict_encode(&mut encoder).unwrap();
+        genesis.schema_id.confined_encode(&mut encoder).unwrap();
         encoder.write_all(GENESIS_HASH_MAINNET).unwrap();
         genesis
             .metadata
@@ -1003,25 +1003,28 @@ mod test {
         let mut encoder = vec![];
         transition
             .transition_type
-            .strict_encode(&mut encoder)
+            .confined_encode(&mut encoder)
             .unwrap();
-        transition.metadata.strict_encode(&mut encoder).unwrap();
+        transition.metadata.confined_encode(&mut encoder).unwrap();
         transition
             .parent_owned_rights
-            .strict_encode(&mut encoder)
+            .confined_encode(&mut encoder)
             .unwrap();
-        transition.owned_rights.strict_encode(&mut encoder).unwrap();
+        transition
+            .owned_rights
+            .confined_encode(&mut encoder)
+            .unwrap();
         transition
             .parent_public_rights
-            .strict_encode(&mut encoder)
+            .confined_encode(&mut encoder)
             .unwrap();
         transition
             .public_rights
-            .strict_encode(&mut encoder)
+            .confined_encode(&mut encoder)
             .unwrap();
 
         let mut encoder1 = vec![];
-        transition.clone().strict_encode(&mut encoder1).unwrap();
+        transition.clone().confined_encode(&mut encoder1).unwrap();
 
         assert_eq!(encoder, encoder1);
 
@@ -1098,7 +1101,7 @@ mod test {
             }
         }
 
-        let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
+        let transition = Transition::confined_decode(&TRANSITION[..]).unwrap();
         let mut concealed_transition = transition.clone();
         conceal_transition(&mut concealed_transition);
 
@@ -1108,8 +1111,8 @@ mod test {
     #[test]
     #[ignore]
     fn test_node_attributes() {
-        let genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
-        let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
+        let genesis = Genesis::confined_decode(&GENESIS[..]).unwrap();
+        let transition = Transition::confined_decode(&TRANSITION[..]).unwrap();
 
         // Typeid/Nodeid test
         assert_eq!(
@@ -1284,8 +1287,8 @@ mod test {
     #[test]
     #[ignore]
     fn test_autoconceal_node() {
-        let mut genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
-        let mut transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
+        let mut genesis = Genesis::confined_decode(&GENESIS[..]).unwrap();
+        let mut transition = Transition::confined_decode(&TRANSITION[..]).unwrap();
 
         assert_eq!(
             genesis.clone().consensus_commit(),
@@ -1317,7 +1320,7 @@ mod test {
     #[ignore]
     #[cfg(feature = "serde")]
     fn test_id_serde() {
-        let genesis: Genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
+        let genesis: Genesis = Genesis::confined_decode(&GENESIS[..]).unwrap();
         let contract_id = genesis.contract_id();
         assert_eq!(
             contract_id.to_string(),
@@ -1332,7 +1335,7 @@ mod test {
     #[test]
     #[ignore]
     fn test_genesis_impl() {
-        let genesis: Genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
+        let genesis: Genesis = Genesis::confined_decode(&GENESIS[..]).unwrap();
 
         let contractid = genesis.contract_id();
         let schemaid = genesis.schema_id();
