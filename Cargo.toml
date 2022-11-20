@@ -40,7 +40,7 @@ bp-core = { version = "~0.8.1" }
 lnpbp = { version = "~0.8.0", features = ["zip"] }
 stens = "~0.7.1"
 strict_encoding = { version = "~0.8.0", features = ["crypto", "chrono", "bitcoin", "float"] }
-commit_verify = { version = "~0.8.0", features = ["rand", "bulletproofs"] }
+commit_verify = { version = "~0.8.1", features = ["rand", "bulletproofs"] }
 descriptor-wallet = "~0.8.0"
 aluvm = { version = "~0.7.0", features = ["std", "strict_encoding"] }
 # Dependencies on core rust-bitcoin ecosystem projects
