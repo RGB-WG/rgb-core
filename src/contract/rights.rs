@@ -17,7 +17,6 @@ use commit_verify::merkle::MerkleNode;
 use commit_verify::{
     commit_encode, ConsensusCommit, ConsensusMerkleCommit, MerkleSource, ToMerkleSource,
 };
-use strict_encoding::StrictEncode;
 
 use super::{NodeId, TypedAssignments, EMPTY_ASSIGNMENTS};
 use crate::schema;
@@ -36,7 +35,7 @@ pub(crate) type ParentPublicRightsInner = BTreeMap<NodeId, BTreeSet<schema::Publ
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct OwnedRights(OwnedRightsInner);
 
 impl OwnedRights {
@@ -83,7 +82,7 @@ impl<'a> IntoIterator for &'a mut OwnedRights {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct PublicRights(PublicRightsInner);
 
 impl PublicRights {
@@ -110,7 +109,7 @@ impl<'a> IntoIterator for &'a PublicRights {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct ParentOwnedRights(ParentOwnedRightsInner);
 
 impl ParentOwnedRights {
@@ -152,7 +151,7 @@ impl<'a> IntoIterator for &'a mut ParentOwnedRights {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct ParentPublicRights(ParentPublicRightsInner);
 
 impl ParentPublicRights {
@@ -188,7 +187,8 @@ impl<'a> IntoIterator for &'a mut ParentPublicRights {
     fn into_iter(self) -> Self::IntoIter { self.0.iter_mut() }
 }
 
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct PublicRightsLeaf(pub schema::PublicRightType);
 impl commit_encode::Strategy for PublicRightsLeaf {
     type Strategy = commit_encode::strategies::UsingStrict;
@@ -211,7 +211,8 @@ impl ToMerkleSource for PublicRights {
     }
 }
 
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
 impl commit_encode::Strategy for OwnedRightsLeaf {
     type Strategy = commit_encode::strategies::UsingStrict;
@@ -238,7 +239,8 @@ impl ToMerkleSource for OwnedRights {
     }
 }
 
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct ParentPublicRightsLeaf(pub NodeId, pub schema::PublicRightType);
 impl commit_encode::Strategy for ParentPublicRightsLeaf {
     type Strategy = commit_encode::strategies::UsingStrict;
@@ -263,7 +265,8 @@ impl ToMerkleSource for ParentPublicRights {
     }
 }
 
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 pub struct ParentOwnedRightsLeaf(pub NodeId, pub schema::OwnedRightType, pub u16);
 impl commit_encode::Strategy for ParentOwnedRightsLeaf {
     type Strategy = commit_encode::strategies::UsingStrict;

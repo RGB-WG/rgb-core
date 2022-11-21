@@ -51,6 +51,7 @@ pub const RGB_CONTRACT_ID_HRP: &str = "rgb";
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[display("{node_id}/{ty}/{no}")]
 /// RGB contract node output pointer, defined by the node ID and output
 /// number.
@@ -450,7 +451,7 @@ pub struct Genesis {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
     extension_type: ExtensionType,
@@ -462,7 +463,7 @@ pub struct Extension {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     transition_type: TransitionType,
@@ -809,12 +810,12 @@ impl Transition {
     pub fn transition_type(&self) -> schema::TransitionType { self.transition_type }
 }
 
-mod _strict_encoding {
+mod _confined_encoding {
     use std::io;
 
-    use strict_encoding::{
-        strategies, strict_deserialize, strict_serialize, Error, Strategy, StrictDecode,
-        StrictEncode,
+    use confined_encoding::{
+        confined_deserialize, confined_serialize, strategies, ConfinedDecode, ConfinedEncode,
+        Error, Strategy,
     };
 
     use super::*;
@@ -834,8 +835,8 @@ mod _strict_encoding {
     impl CommitEncode for Genesis {
         fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
             let mut encoder = || -> Result<_, Error> {
-                let mut len = self.schema_id.strict_encode(&mut e)?;
-                len += self.chain.as_genesis_hash().strict_encode(&mut e)?;
+                let mut len = self.schema_id.confined_encode(&mut e)?;
+                len += self.chain.as_genesis_hash().confined_encode(&mut e)?;
                 len += self
                     .metadata
                     .to_merkle_source()
@@ -857,9 +858,9 @@ mod _strict_encoding {
         }
     }
 
-    impl StrictEncode for Genesis {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            let chain_params = strict_serialize(&self.chain)?;
+    impl ConfinedEncode for Genesis {
+        fn confined_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
+            let chain_params = confined_serialize(&self.chain)?;
             Ok(strict_encode_list!(e;
                 self.schema_id,
                 // ![NETWORK-CRITICAL]: Chain params fields may update, so we
@@ -879,10 +880,10 @@ mod _strict_encoding {
         }
     }
 
-    impl StrictDecode for Genesis {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let schema_id = SchemaId::strict_decode(&mut d)?;
-            let chain_params_no = usize::strict_decode(&mut d)?;
+    impl ConfinedDecode for Genesis {
+        fn confined_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
+            let schema_id = SchemaId::confined_decode(&mut d)?;
+            let chain_params_no = usize::confined_decode(&mut d)?;
             if chain_params_no < 1 {
                 Err(Error::ValueOutOfRange(
                     "genesis must contain at least one `chain_param` data structure",
@@ -890,15 +891,15 @@ mod _strict_encoding {
                     0,
                 ))?
             }
-            let chain_data = Vec::<u8>::strict_decode(&mut d)?;
-            let chain = strict_deserialize(&chain_data)?;
+            let chain_data = Vec::<u8>::confined_decode(&mut d)?;
+            let chain = confined_deserialize(&chain_data)?;
             for _ in 1..chain_params_no {
                 // Ignoring the rest of chain parameters
-                let _ = Vec::<u8>::strict_decode(&mut d)?;
+                let _ = Vec::<u8>::confined_decode(&mut d)?;
             }
-            let metadata = Metadata::strict_decode(&mut d)?;
-            let assignments = OwnedRightsInner::strict_decode(&mut d)?;
-            let valencies = PublicRightsInner::strict_decode(&mut d)?;
+            let metadata = Metadata::confined_decode(&mut d)?;
+            let assignments = OwnedRightsInner::confined_decode(&mut d)?;
+            let valencies = PublicRightsInner::confined_decode(&mut d)?;
             Ok(Self {
                 schema_id,
                 chain,
@@ -916,9 +917,9 @@ mod test {
 
     use bitcoin::hashes::hex::ToHex;
     use commit_verify::{tagged_hash, CommitConceal, TaggedHash};
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
     use strict_encoding::{strict_serialize, StrictDecode, StrictEncode};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
 

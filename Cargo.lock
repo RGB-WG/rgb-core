@@ -944,6 +944,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "stens",
+ "strict_encoding 2.0.0-alpha.2",
 ]
 
 [[package]]

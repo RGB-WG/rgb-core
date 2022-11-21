@@ -237,8 +237,8 @@ mod _verify {
 
 #[cfg(test)]
 mod test {
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use strict_encoding::StrictDecode;
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
     use crate::schema::SchemaVerify;

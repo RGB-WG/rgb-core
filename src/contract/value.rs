@@ -45,21 +45,9 @@ impl From<Revealed> for AtomicValue {
 }
 
 /// Proof for Pedersen commitment: a blinding key
-#[derive(
-    Wrapper,
-    Copy,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -91,6 +79,7 @@ impl FromHex for BlindingFactor {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display("{value}#{blinding}")]
 pub struct Revealed {
@@ -185,7 +174,8 @@ impl Ord for Revealed {
     }
 }
 
-#[derive(Clone, Debug, AsAny, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, AsAny)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Confidential {
     pub commitment: pedersen::Commitment,
@@ -301,8 +291,8 @@ impl Confidential {
 
 #[cfg(test)]
 mod test {
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use strict_encoding::{strict_deserialize, StrictDecode, StrictEncode};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::super::test::test_confidential;
     use super::*;

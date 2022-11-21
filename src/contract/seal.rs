@@ -159,9 +159,9 @@ mod test {
     use bitcoin::OutPoint;
     use bp::seals::txout::TxoSeal;
     use commit_verify::CommitEncode;
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use secp256k1zkp::rand::{thread_rng, RngCore};
     use strict_encoding::{StrictDecode, StrictEncode};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::*;
 

@@ -18,8 +18,8 @@ use std::io;
 use amplify::AsAny;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{CommitConceal, CommitEncode, ConsensusCommit};
+use confined_encoding::{ConfinedDecode, ConfinedEncode};
 use once_cell::sync::Lazy;
-use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{
     data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint, SECP256K1_ZKP,
@@ -53,7 +53,7 @@ pub enum StateType {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -670,10 +670,10 @@ impl ConcealState for TypedAssignments {
     }
 }
 
-pub trait ConfidentialState: StrictEncode + StrictDecode + Debug + Clone + AsAny {}
+pub trait ConfidentialState: ConfinedEncode + ConfinedDecode + Debug + Clone + AsAny {}
 
 pub trait RevealedState:
-    StrictEncode + StrictDecode + Debug + CommitConceal + Clone + AsAny
+    ConfinedEncode + ConfinedDecode + Debug + CommitConceal + Clone + AsAny
 {
 }
 
@@ -789,7 +789,7 @@ impl State for AttachmentStrategy {
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
 #[derive(Clone, Debug)]
-#[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -1142,10 +1142,10 @@ mod test {
     use bp::seals::txout::TxoSeal;
     use commit_verify::merkle::MerkleNode;
     use commit_verify::{merklize, CommitConceal, CommitEncode, ToMerkleSource};
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use secp256k1zkp::pedersen::Commitment;
     use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
     use secp256k1zkp::{Secp256k1, SecretKey};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::super::{NodeId, OwnedRights, ParentOwnedRights};
     use super::*;

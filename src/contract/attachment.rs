@@ -48,6 +48,7 @@ impl sha256t::Tag for AttachmentIdTag {
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
 #[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct AttachmentId(sha256t::Hash<AttachmentIdTag>);
 
@@ -77,6 +78,7 @@ impl sha256t::Tag for ConfidentialAttachmentTag {
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct Confidential(sha256t::Hash<ConfidentialAttachmentTag>);
 
@@ -96,6 +98,7 @@ impl Confidential {
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, AsAny, Display)]
 #[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display("{id}~{mime}")]
 pub struct Revealed {

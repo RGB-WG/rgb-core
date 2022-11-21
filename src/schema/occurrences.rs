@@ -126,8 +126,8 @@ mod _strict_encoding {
 
 #[cfg(test)]
 mod test {
+    use confined_encoding_test::test_vec_decoding_roundtrip;
     use strict_encoding::StrictDecode;
-    use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::Occurrences;
 

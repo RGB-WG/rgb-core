@@ -31,6 +31,7 @@ use super::{ConfidentialState, RevealedState};
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[display("void")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Void();
@@ -49,94 +50,94 @@ impl CommitEncode for Void {
 }
 
 #[derive(Clone, Debug, AsAny, Display)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(repr = u8)]
+#[derive(ConfinedEncode, ConfinedDecode)]
+#[confined_encoding(repr = u8)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub enum Revealed {
-    #[strict_encoding(value = 0x00)]
+    #[confined_encoding(value = 0x00)]
     #[display("{0}", alt = "U8({0})")]
     U8(u8),
-    #[strict_encoding(value = 0x01)]
+    #[confined_encoding(value = 0x01)]
     #[display("{0}", alt = "U16({0})")]
     U16(u16),
-    #[strict_encoding(value = 0x02)]
+    #[confined_encoding(value = 0x02)]
     #[display("{0}", alt = "U32({0})")]
     U32(u32),
-    #[strict_encoding(value = 0x03)]
+    #[confined_encoding(value = 0x03)]
     #[display("{0}", alt = "U64({0})")]
     U64(u64),
-    #[strict_encoding(value = 0x04)]
+    #[confined_encoding(value = 0x04)]
     #[display("{0}", alt = "U128({0})")]
     U128(u128),
-    #[strict_encoding(value = 0x05)]
+    #[confined_encoding(value = 0x05)]
     #[display("{0}", alt = "U256({0})")]
     U256(u256),
-    #[strict_encoding(value = 0x06)]
+    #[confined_encoding(value = 0x06)]
     #[display("{0}", alt = "U512({0})")]
     U512(u512),
-    #[strict_encoding(value = 0x07)]
+    #[confined_encoding(value = 0x07)]
     #[display("{0}", alt = "U1024({0})")]
     U1024(u1024),
 
-    #[strict_encoding(value = 0x10)]
+    #[confined_encoding(value = 0x10)]
     #[display("{0}", alt = "I8({0})")]
     I8(i8),
-    #[strict_encoding(value = 0x11)]
+    #[confined_encoding(value = 0x11)]
     #[display("{0}", alt = "I16({0})")]
     I16(i16),
-    #[strict_encoding(value = 0x12)]
+    #[confined_encoding(value = 0x12)]
     #[display("{0}", alt = "I32({0})")]
     I32(i32),
-    #[strict_encoding(value = 0x13)]
+    #[confined_encoding(value = 0x13)]
     #[display("{0}", alt = "I64({0})")]
     I64(i64),
-    #[strict_encoding(value = 0x14)]
+    #[confined_encoding(value = 0x14)]
     #[display("{0}", alt = "I128({0})")]
     I128(i128),
-    #[strict_encoding(value = 0x15)]
+    #[confined_encoding(value = 0x15)]
     #[display("{0}", alt = "I256({0})")]
     I256(i256),
-    #[strict_encoding(value = 0x16)]
+    #[confined_encoding(value = 0x16)]
     #[display("{0}", alt = "I512({0})")]
     I512(i512),
-    #[strict_encoding(value = 0x17)]
+    #[confined_encoding(value = 0x17)]
     #[display("{0}", alt = "I1024({0})")]
     I1024(i1024),
 
     // TODO #100: Implement tapered float format
-    #[strict_encoding(value = 0x30)]
+    #[confined_encoding(value = 0x30)]
     #[display("{0}", alt = "F16B({0})")]
     F16B(bf16),
-    #[strict_encoding(value = 0x31)]
+    #[confined_encoding(value = 0x31)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     #[display("{0}", alt = "F16({0})")]
     F16(ieee::Half),
-    #[strict_encoding(value = 0x32)]
+    #[confined_encoding(value = 0x32)]
     #[display("{0}", alt = "F32({0})")]
     F32(f32),
-    #[strict_encoding(value = 0x33)]
+    #[confined_encoding(value = 0x33)]
     #[display("{0}", alt = "F64({0})")]
     F64(f64),
-    #[strict_encoding(value = 0x34)]
+    #[confined_encoding(value = 0x34)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     #[display("{0}", alt = "F80({0})")]
     F80(ieee::X87DoubleExtended),
-    #[strict_encoding(value = 0x35)]
+    #[confined_encoding(value = 0x35)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     #[display("{0}", alt = "F128({0})")]
     F128(ieee::Quad),
-    #[strict_encoding(value = 0x36)]
+    #[confined_encoding(value = 0x36)]
     #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     #[display("{0}", alt = "F256({0})")]
     F256(ieee::Oct),
 
-    #[strict_encoding(value = 0xE0)]
+    #[confined_encoding(value = 0xE0)]
     #[display("<bytes>", alt = "bytes(...)")]
     Bytes(Vec<u8>),
-    #[strict_encoding(value = 0xEE)]
+    #[confined_encoding(value = 0xEE)]
     #[display("{0}", alt = "ascii({0})")]
     AsciiString(AsciiString),
-    #[strict_encoding(value = 0xEF)]
+    #[confined_encoding(value = 0xEF)]
     #[display("{0}", alt = "string({0})")]
     UnicodeString(String),
 }
@@ -214,6 +215,7 @@ impl sha256t::Tag for ConfidentialTag {
 /// Blind version of transaction outpoint-based single-use-seal
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
 #[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct Confidential(sha256t::Hash<ConfidentialTag>);

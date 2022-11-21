@@ -128,6 +128,7 @@ impl FromStr for SchemaId {
 
 #[derive(Clone, Debug, Default)]
 #[derive(StrictEncode, StrictDecode)]
+#[derive(ConfinedEncode, ConfinedDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Schema {
     /// Feature flags control which of the available RGB features are allowed
