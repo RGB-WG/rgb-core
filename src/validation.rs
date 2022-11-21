@@ -36,7 +36,7 @@ pub enum Validity {
     Invalid,
 }
 
-#[derive(Clone, Debug, Display, Default, ConfinedEncode, ConfinedDecode)]
+#[derive(Clone, Debug, Display, Default, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #42: Display via YAML
 #[display(Debug)]
@@ -122,7 +122,7 @@ impl Status {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, ConfinedEncode, ConfinedDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
@@ -230,7 +230,7 @@ pub enum Failure {
     ScriptFailure(NodeId),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, ConfinedEncode, ConfinedDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
@@ -241,7 +241,7 @@ pub enum Warning {
     EndpointTransactionMissed(Txid),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, ConfinedEncode, ConfinedDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]

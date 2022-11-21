@@ -40,6 +40,7 @@ bp-core = { version = "~0.9.0-alpha.1" }
 lnpbp = { version = "~0.9.0-alpha.1", features = ["zip"] }
 stens = "~0.7.1"
 confined_encoding = "~0.9.0-alpha.2"
+strict_encoding = "2.0.0-alpha.2"
 commit_verify = { version = "~0.9.0-alpha.1", features = ["rand", "bulletproofs"] }
 descriptor-wallet = "~0.9.0-alpha.1"
 aluvm = { version = "~0.7.0", features = ["std", "strict_encoding"] }

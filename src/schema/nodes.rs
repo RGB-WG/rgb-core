@@ -29,6 +29,7 @@ pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurrences>;
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 #[derive(ConfinedEncode, ConfinedDecode)]
+#[derive(StrictEncode, StrictDecode)]
 #[confined_encoding(by_value)]
 #[repr(u8)]
 /// Node type: genesis, extensions and state transitions
