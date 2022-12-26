@@ -1271,7 +1271,7 @@ mod test {
         let ours: SealValueMap = zip_data
             .map(|(txid, amount)| {
                 (
-                    Revealed::from(OutPoint::new(*txid, rng.gen_range(0, 10))),
+                    Revealed::from(OutPoint::new(*txid, rng.gen_range(0..=10))),
                     amount.clone(),
                 )
             })
@@ -1287,7 +1287,7 @@ mod test {
             .map(|(txid, amount)| {
                 (
                     SealEndpoint::ConcealedUtxo(
-                        Revealed::from(OutPoint::new(*txid, rng.gen_range(0, 10))).commit_conceal(),
+                        Revealed::from(OutPoint::new(*txid, rng.gen_range(0..=10))).commit_conceal(),
                     ),
                     amount.clone(),
                 )
@@ -1455,13 +1455,13 @@ mod test {
         // Randomly distributed between ours and theirs allocation
         for _ in 0..5 {
             // Randomly generate number of amounts between 1 to 20
-            let input_length = rng.gen_range(1, 20);
+            let input_length = rng.gen_range(1..=20);
 
             // Randomly fill the amount vector
             let mut input_amounts = vec![0; input_length];
             for index in 0..input_length {
                 // keep the amount value low for faster testing
-                input_amounts[index] = rng.gen_range::<u64>(100_000, 100_000_000_000);
+                input_amounts[index] = rng.gen_range::<u64, _>(100_000..=100_000_000_000);
             }
             let input_sum: u64 = input_amounts.iter().sum();
 
@@ -1469,12 +1469,12 @@ mod test {
             // input.sum() = output.sum(), but
             // input.count() != output.count()
 
-            let mut output_amounts = vec![0u64; rng.gen_range(1, 20)];
+            let mut output_amounts = vec![0u64; rng.gen_range(1..=20)];
             let output_length = output_amounts.len();
 
             // Add random values to output amounts until the last element
             for index in 0..output_length - 1 {
-                output_amounts[index] = rng.gen_range::<u64>(100_000, 100_000_000_000);
+                output_amounts[index] = rng.gen_range::<u64, _>(100_000..=100_000_000_000);
             }
             let output_sum: u64 = output_amounts.iter().sum();
 
@@ -1490,7 +1490,7 @@ mod test {
             let (inputs, outputs) = zero_balance(
                 &input_amounts[..],
                 &output_amounts[..],
-                rng.gen_range(0, output_length),
+                rng.gen_range(0..=output_length),
             );
             // Check if test passes
             assert!(value::Confidential::verify_commit_sum(
