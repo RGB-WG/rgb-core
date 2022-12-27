@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.9.0-rc.1"
+version = "0.9.0-rc.2"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: consensus & verification for private & scalable client-validated smart contracts on Bitcoin & Lightning"
@@ -39,10 +39,10 @@ amplify = { version = "~3.13.0", features = ["apfloat"] }
 bp-core = { version = "~0.9.0-rc.1" }
 lnpbp = { version = "~0.9.0-rc.1", features = ["zip"] }
 stens = "~0.9.0-rc.1"
-strict_encoding = { version = "~0.9.0-rc.1", features = ["crypto", "chrono", "bitcoin", "float"] }
+strict_encoding = { version = "~0.9.0-rc.2", features = ["crypto", "chrono", "bitcoin", "float"] }
 commit_verify = { version = "~0.9.0-rc.1", features = ["rand", "bulletproofs"] }
 descriptor-wallet = "~0.9.0-rc.1"
-aluvm = { version = "~0.9.0-rc.1", features = ["std", "strict_encoding"] }
+aluvm = { version = "~0.9.0-rc.2", features = ["std", "strict_encoding"] }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
 bitcoin = { version = "~0.29.2", features = ["rand"] }
