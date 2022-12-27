@@ -1287,7 +1287,8 @@ mod test {
             .map(|(txid, amount)| {
                 (
                     SealEndpoint::ConcealedUtxo(
-                        Revealed::from(OutPoint::new(*txid, rng.gen_range(0..=10))).commit_conceal(),
+                        Revealed::from(OutPoint::new(*txid, rng.gen_range(0..=10)))
+                            .commit_conceal(),
                     ),
                     amount.clone(),
                 )
