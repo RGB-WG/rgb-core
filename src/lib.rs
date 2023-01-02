@@ -31,10 +31,9 @@ extern crate strict_encoding;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_with;
+pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
-
-pub use secp256k1zkp;
 
 pub mod contract;
 pub mod schema;

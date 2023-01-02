@@ -1,11 +1,11 @@
 [package]
 name = "rgb-core"
-version = "0.8.0"
+version = "0.9.0-rc.2"
 license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: consensus & verification for private & scalable client-validated smart contracts on Bitcoin & Lightning"
 repository = "https://github.com/RGB-WG/rgb-core"
-homepage = "https://rgb.network"
+homepage = "https://rgb.tech"
 keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "lnp-bp"]
 categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
@@ -36,41 +36,42 @@ path = "src/lib.rs"
 # Dependencies on other LNP/BP repositories
 # -----------------------------------------
 amplify = { version = "~3.13.0", features = ["apfloat"] }
-bp-core = { version = "~0.8.0" }
-lnpbp = { version = "~0.8.0", features = ["zip"] }
-stens = "~0.7.1"
-strict_encoding = { version = "~0.8.0", features = ["crypto", "chrono", "bitcoin", "float"] }
-commit_verify = { version = "~0.8.0", features = ["rand", "bulletproofs"] }
-descriptor-wallet = "~0.8.0"
-aluvm = { version = "~0.7.0", features = ["std", "strict_encoding"] }
+bp-core = { version = "~0.9.0-rc.1" }
+lnpbp = { version = "~0.9.0-rc.1", features = ["zip"] }
+stens = "~0.9.0-rc.1"
+strict_encoding = { version = "~0.9.0-rc.2", features = ["crypto", "chrono", "bitcoin", "float"] }
+commit_verify = { version = "~0.9.0-rc.1", features = ["rand", "bulletproofs"] }
+descriptor-wallet = "~0.9.0-rc.1"
+aluvm = { version = "~0.9.0-rc.2", features = ["std", "strict_encoding"] }
 # Dependencies on core rust-bitcoin ecosystem projects
 # ----------------------------------------------------
-bitcoin = { version = "~0.28.1", features = ["rand"] }
+bitcoin = { version = "~0.29.2", features = ["rand"] }
 # Core rust projects
 # ------------------
 #   This strange naming is a workaround for cargo inability to define required
 #   features for a dependency. See
 #   <https://github.com/rust-lang/api-guidelines/issues/180> for the explanation
 #   and references.
-half = "~1.8.2"
+half = "~2.1.0"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
-serde_with = { version = "1.8", features = ["hex"], optional = true }
+serde_with = { version = "1.14", features = ["hex"], optional = true }
 once_cell = "1.12.0"
 # Other dependencies:
 # ------------------------------
 #    We are of no control of what's happening in Grin and would like to prevent
 #    updates w/o checking them manually. Should Elements Project secpk256k-zkp
 #    accept bulletproofs code, we will switch to it
-grin_secp256k1zkp = { version = "=0.7.11" }
+secp256k1zkp = { version = "0.9.0-rc.1", package = "lnpbp_secp256k1zkp", features = ["keygen"] }
 
 [dev-dependencies]
 serde_json = "1"
-strict_encoding_test = "0.8.0"
+strict_encoding_test = "0.9.0-rc.1"
 
 [features]
 default = []
 all = ["serde"]
-serde = ["serde_crate", "serde_with", "half/serialize",
+serde = ["serde_crate", "serde_with", "half/serde",
          "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
          "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde", "aluvm/serde",
-         "bitcoin/use-serde"]
+         "secp256k1zkp/serde",
+         "bitcoin/serde"]

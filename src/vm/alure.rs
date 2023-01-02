@@ -57,7 +57,7 @@ impl Bytecode for RgbIsa {
         }
     }
 
-    fn write_args<W>(&self, _writer: &mut W) -> Result<(), BytecodeError>
+    fn encode_args<W>(&self, _writer: &mut W) -> Result<(), BytecodeError>
     where W: Write {
         match self {
             RgbIsa::Noop => {}
@@ -65,7 +65,7 @@ impl Bytecode for RgbIsa {
         Ok(())
     }
 
-    fn read<R>(reader: &mut R) -> Result<Self, CodeEofError>
+    fn decode<R>(reader: &mut R) -> Result<Self, CodeEofError>
     where
         Self: Sized,
         R: Read,
