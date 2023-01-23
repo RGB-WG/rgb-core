@@ -261,6 +261,7 @@ pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: R
     anchor_index: BTreeMap<NodeId, &'consignment Anchor<lnpbp4::MerkleProof>>,
     end_transitions: Vec<(&'consignment dyn Node, BundleId)>,
     validation_index: BTreeSet<NodeId>,
+    anchor_validation_index: BTreeSet<NodeId>,
 
     resolver: &'resolver R,
 }
@@ -343,6 +344,10 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // schema validations for transitions.
         let validation_index = BTreeSet::<NodeId>::new();
 
+        // Index used to avoid repeated validations of the same
+        // anchor+transition pairs
+        let anchor_validation_index = BTreeSet::<NodeId>::new();
+
         Self {
             consignment,
             status,
@@ -353,6 +358,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
             anchor_index,
             end_transitions,
             validation_index,
+            anchor_validation_index,
             resolver,
         }
     }
@@ -488,19 +494,21 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
             // reporting failure (see below) - with the except of genesis and
             // extension nodes, which does not have a corresponding anchor
             if let Some(anchor) = self.anchor_index.get(&node_id).cloned() {
-                // Ok, now we have the `node` and the `anchor`, let's do all
-                // required checks
+                if !self.anchor_validation_index.contains(&node_id) {
+                    // Ok, now we have the `node` and the `anchor`, let's do all
+                    // required checks
 
-                // [VALIDATION]: Check that transition is committed into the
-                //               anchor. This must be done with
-                //               deterministic bitcoin commitments & LNPBP-4
-                if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
-                    self.status
-                        .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.txid));
+                    // [VALIDATION]: Check that transition is committed into the
+                    //               anchor. This must be done with
+                    //               deterministic bitcoin commitments & LNPBP-4
+                    if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
+                        self.status
+                            .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.txid));
+                    }
+
+                    self.validate_graph_node(node, bundle_id, anchor);
+                    self.anchor_validation_index.insert(node_id);
                 }
-
-                self.validate_graph_node(node, bundle_id, anchor);
-
             // Ouch, we are out of that multi-level nested cycles :)
             } else if node_type != NodeType::Genesis && node_type != NodeType::StateExtension {
                 // This point is actually unreachable: b/c of the
