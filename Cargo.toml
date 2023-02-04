@@ -48,7 +48,6 @@ bp-primitives = "0.10.0-beta.1"
 #   features for a dependency. See
 #   <https://github.com/rust-lang/api-guidelines/issues/180> for the explanation
 #   and references.
-half = "~2.2.1"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.14", features = ["hex"], optional = true }
 serde_json = "1" # TODO: Remove
@@ -62,7 +61,7 @@ strict_encoding_test = "0.9.0"
 [features]
 default = []
 all = ["serde"]
-serde = ["serde_crate", "serde_with", "half/serde",
+serde = ["serde_crate", "serde_with",
          "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
          "bp-core/serde", "aluvm/serde",
          "secp256k1-zkp/serde", "bp-primitives/serde"]

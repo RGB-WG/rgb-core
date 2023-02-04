@@ -538,7 +538,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b4af3693f1b705df946e9fe5631932443781d0aabb423b62fcd4d73f6d2fd0"
 dependencies = [
  "crunchy",
- "serde",
 ]
 
 [[package]]
@@ -772,7 +771,6 @@ dependencies = [
  "bp-core",
  "bp-primitives",
  "commit_verify 0.9.0",
- "half",
  "once_cell",
  "secp256k1-zkp",
  "serde",
