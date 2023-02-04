@@ -23,6 +23,7 @@ use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint};
 use crate::contract::attachment;
+use crate::value::BlindingFactor;
 use crate::{AtomicValue, ConfidentialDataError, RevealSeals, StateRetrievalError};
 
 pub(super) static EMPTY_ASSIGNMENTS: Lazy<TypedAssignments> = Lazy::new(TypedAssignments::default);
@@ -68,6 +69,39 @@ impl Default for TypedAssignments {
     fn default() -> Self { TypedAssignments::Void(vec![]) }
 }
 
+/// Errors happening during [`TypedAssignments::zero_balanced`] procedure. All
+/// of them indicate either invalid/crafted input arguments, or failures in the
+/// source of randomness.
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum MalformedInput {
+    /// both our and their allocations are empty; at least one value must be
+    /// provided in any of them.
+    NoOutput,
+
+    /// random number generator produced non-random blinding factor {0} which is
+    /// an inverse of the sum of the previously produced keys.
+    RandomInverseKeys,
+
+    /// one of inputs has an invalid blinding factor {0} exceeding field prime
+    /// order.
+    InvalidInputBlinding(BlindingFactor),
+
+    /// invalid input blinding factors, which sum up to the inversion of their
+    /// own selves.
+    MalformedInputBlindings,
+
+    /// blinding factors provided as an input are invalid; specifically they sum
+    /// above the prime field order. This means the attempt to spend an invalid
+    /// contract state; check that your program use validated data only.
+    InputBlindingsInvalid,
+
+    /// sum of randomly generated blinding factors perfectly equals the sum of
+    /// input blinding factors. This indicates that the random generator is
+    /// failed or hacked.
+    RandomnessFailure,
+}
+
 impl TypedAssignments {
     /// # Panics
     ///
@@ -78,11 +112,11 @@ impl TypedAssignments {
         inputs: Vec<value::Revealed>,
         allocations_ours: BTreeMap<seal::Revealed, AtomicValue>,
         allocations_theirs: BTreeMap<SealEndpoint, AtomicValue>,
-    ) -> Self {
+    ) -> Result<Self, MalformedInput> {
         use secp256k1_zkp::{Scalar, SecretKey};
 
         if allocations_ours.len() + allocations_theirs.len() == 0 {
-            return Self::Value(vec![]);
+            return Err(MalformedInput::NoOutput);
         }
 
         // Generate random blinding factors
@@ -96,17 +130,17 @@ impl TypedAssignments {
             let bf = SecretKey::new(&mut rng);
             blinding_output_sum = bf
                 .add_tweak(&blinding_output_sum)
-                .expect("two random keys are inversion of each other")
+                .map_err(|_| MalformedInput::RandomInverseKeys)?
                 .into();
             blinding_factors.push(bf);
         }
-        let blinding_input_sum = inputs.iter().fold(Scalar::ZERO, |acc, val| {
+        let blinding_input_sum = inputs.iter().try_fold(Scalar::ZERO, |acc, val| {
             let sk = SecretKey::from_slice(val.blinding.as_ref())
-                .expect("input has a blinding factor above group order");
+                .map_err(|_| MalformedInput::InvalidInputBlinding(val.blinding))?;
             sk.add_tweak(&acc)
-                .expect("invalid input blinding factor: inversion of a subset of other blindings")
-                .into()
-        });
+                .map_err(|_| MalformedInput::MalformedInputBlindings)
+                .map(Scalar::from)
+        })?;
 
         if inputs.is_empty() {
             // if we have no inputs, we assign a random last blinding factor
@@ -114,10 +148,11 @@ impl TypedAssignments {
         } else {
             // the last blinding factor must be a correction value
             let input_sum = SecretKey::from_slice(&blinding_input_sum.to_be_bytes())
-                .expect("sum of output blinding factors overflows curve order");
+                .map_err(|_| MalformedInput::InputBlindingsInvalid)?;
             let mut blinding_correction = input_sum.negate();
-            blinding_correction = blinding_correction.add_tweak(&blinding_output_sum)
-                .expect("sum of randomly generated blinding factors perfectly equal to the sum of input blinding factors");
+            blinding_correction = blinding_correction
+                .add_tweak(&blinding_output_sum)
+                .map_err(|_| MalformedInput::RandomnessFailure)?;
             // We need the last factor to be equal to the difference
             blinding_factors.push(blinding_correction.negate());
         }
@@ -162,7 +197,7 @@ impl TypedAssignments {
             }
         }));
 
-        Self::Value(set)
+        Ok(Self::Value(set))
     }
 
     #[inline]
@@ -1313,7 +1348,8 @@ mod test {
             .collect();
 
         // Balance both the allocations against input amounts
-        let balanced = TypedAssignments::zero_balanced(input_revealed.clone(), ours, theirs);
+        let balanced =
+            TypedAssignments::zero_balanced(input_revealed.clone(), ours, theirs).unwrap();
 
         // Extract balanced confidential output amounts
         let outputs: Vec<Commitment> = balanced
