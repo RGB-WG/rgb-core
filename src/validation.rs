@@ -224,8 +224,8 @@ pub enum Failure {
     InvalidStateDataType(NodeId, u16, TypeRef, data::Revealed),
     InvalidStateDataValue(NodeId, u16, TypeRef, Vec<u8>),
 
-    /// invalid bulletproofs in {0}:{1}: {2}
-    InvalidBulletproofs(NodeId, u16, secp256k1zkp::Error),
+    /// invalid bulletproofs in {0}:{1}
+    InvalidBulletproofs(NodeId, u16),
 
     ScriptFailure(NodeId),
 }

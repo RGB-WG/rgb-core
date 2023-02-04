@@ -239,7 +239,6 @@ mod _validation {
                                     status.add_failure(validation::Failure::InvalidBulletproofs(
                                         *node_id,
                                         assignment_id,
-                                        err,
                                     ));
                                 }
                             } else {
