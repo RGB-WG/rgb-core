@@ -30,11 +30,11 @@ use std::str::FromStr;
 use amplify::hex::{Error, FromHex};
 use amplify::{Slice32, Wrapper};
 use bitcoin::hashes::sha256::Midstate;
+use bitcoin::secp256k1;
 use commit_verify::{commit_encode, CommitConceal, CommitEncode, CommitVerify, CommitmentProtocol};
 use secp256k1zkp;
 pub use secp256k1zkp::pedersen;
 use secp256k1zkp::rand::{Rng, RngCore};
-use secp256k1zkp::SecretKey;
 
 use super::{ConfidentialState, RevealedState, SECP256K1_ZKP};
 
@@ -75,11 +75,24 @@ impl AsRef<[u8]> for BlindingFactor {
 }
 
 impl From<secp256k1zkp::SecretKey> for BlindingFactor {
-    fn from(key: SecretKey) -> Self { Self::from_inner(Slice32::from_inner(key.0)) }
+    fn from(key: secp256k1zkp::SecretKey) -> Self { Self::from_inner(Slice32::from_inner(key.0)) }
 }
 
 impl From<BlindingFactor> for secp256k1zkp::SecretKey {
-    fn from(bf: BlindingFactor) -> Self { SecretKey(bf.into_inner().into_inner()) }
+    fn from(bf: BlindingFactor) -> Self { secp256k1zkp::SecretKey(bf.into_inner().into_inner()) }
+}
+
+impl From<secp256k1::SecretKey> for BlindingFactor {
+    fn from(key: secp256k1::SecretKey) -> Self {
+        Self::from_inner(Slice32::from_inner(*key.as_ref()))
+    }
+}
+
+impl From<BlindingFactor> for secp256k1::SecretKey {
+    fn from(bf: BlindingFactor) -> Self {
+        secp256k1::SecretKey::from_slice(bf.into_inner().as_inner())
+            .expect("blinding factor is an invalid secret key")
+    }
 }
 
 impl FromHex for BlindingFactor {

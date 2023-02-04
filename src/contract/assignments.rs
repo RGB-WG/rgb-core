@@ -16,15 +16,14 @@ use std::hash::Hasher;
 use std::io;
 
 use amplify::AsAny;
+use bitcoin::secp256k1;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{CommitConceal, CommitEncode, ConsensusCommit};
 use once_cell::sync::Lazy;
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use super::{
-    data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint, SECP256K1_ZKP,
-};
-use crate::contract::attachment;
+use super::{data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint};
+use crate::contract::{attachment, SECP256K1_ZKP};
 use crate::{AtomicValue, ConfidentialDataError, RevealSeals, StateRetrievalError};
 
 pub(super) static EMPTY_ASSIGNMENTS: Lazy<TypedAssignments> = Lazy::new(TypedAssignments::default);
@@ -93,14 +92,19 @@ impl TypedAssignments {
         // We need the last factor to be equal to the difference
         let mut blinding_inputs: Vec<_> = inputs.iter().map(|inp| inp.blinding.into()).collect();
         if blinding_inputs.is_empty() {
-            blinding_inputs.push(secp256k1zkp::key::ONE_KEY);
+            blinding_inputs.push(secp256k1::ONE_KEY);
         }
 
         // the last blinding factor must be a correction value
         if !blinding_factors.is_empty() {
             blinding_factors.pop();
+            let inputs = blinding_inputs
+                .clone()
+                .into_iter()
+                .map(|key| secp256k1zkp::SecretKey(*key.as_ref()))
+                .collect();
             let blinding_correction = SECP256K1_ZKP
-                .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
+                .blind_sum(inputs, blinding_factors.clone())
                 .expect("SECP256K1_ZKP failure has negligible probability");
             blinding_factors.push(blinding_correction);
         }

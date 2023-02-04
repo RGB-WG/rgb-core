@@ -235,7 +235,7 @@ mod _validation {
                                 a.downcast_ref::<<PedersenStrategy as State>::Confidential>()
                             {
                                 // [SECURITY-CRITICAL]: Bulletproofs validation
-                                if let Err(err) = value.verify_bullet_proof() {
+                                if let Err(_) = value.verify_bullet_proof() {
                                     status.add_failure(validation::Failure::InvalidBulletproofs(
                                         *node_id,
                                         assignment_id,
