@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use amplify::flags::FlagVec;
 use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
+use commit_verify::{CommitVerify, PrehashedProtocol, TaggedHash};
 
 use super::{ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, TransitionSchema};
 use crate::schema::StateSchema;
@@ -44,7 +44,6 @@ impl sha256t::Tag for SchemaIdTag {
 /// Commitment-based schema identifier used for committing to the schema type
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, BorrowSlice)]
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
 
@@ -56,7 +55,6 @@ where Msg: AsRef<[u8]>
 }
 
 #[derive(Clone, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Schema {
     /// Feature flags control which of the available RGB features are allowed
@@ -95,13 +93,6 @@ pub struct Schema {
 impl Schema {
     #[inline]
     pub fn schema_id(&self) -> SchemaId { self.clone().consensus_commit() }
-}
-
-impl ConsensusCommit for Schema {
-    type Commitment = SchemaId;
-}
-impl commit_encode::Strategy for Schema {
-    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl PartialEq for Schema {

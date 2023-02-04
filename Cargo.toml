@@ -37,7 +37,6 @@ path = "src/lib.rs"
 # -----------------------------------------
 amplify = { version = "~3.13.0", features = ["apfloat"] }
 bp-core = { version = "~0.9.0" }
-strict_encoding = { version = "~0.9.0", features = ["crypto", "chrono", "bitcoin", "float"] }
 commit_verify = { version = "~0.9.0", features = ["rand", "bulletproofs"] }
 bitcoin_hashes = "0.11.0"
 bp-primitives = "0.10.0-beta.1"
@@ -61,6 +60,6 @@ strict_encoding_test = "0.9.0"
 default = []
 all = ["serde"]
 serde = ["serde_crate", "serde_with",
-         "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
+         "amplify/serde", "commit_verify/serde",
          "bp-core/serde",
          "secp256k1-zkp/serde", "bp-primitives/serde"]

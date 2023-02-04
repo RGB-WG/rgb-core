@@ -14,10 +14,6 @@
 use std::collections::BTreeMap;
 
 use amplify::Wrapper;
-use commit_verify::merkle::MerkleNode;
-use commit_verify::{
-    commit_encode, ConsensusCommit, ConsensusMerkleCommit, MerkleSource, ToMerkleSource,
-};
 
 use super::data;
 use crate::schema;
@@ -31,7 +27,6 @@ type MetadataInner = BTreeMap<schema::FieldType, Vec<data::Revealed>>;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
 pub struct Metadata(MetadataInner);
 
 // TODO #107: Improve other iterators for contract collection types.
@@ -42,30 +37,8 @@ impl<'me> IntoIterator for &'me Metadata {
     fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub struct MetadataLeaf(pub schema::FieldType, pub data::Revealed);
-impl commit_encode::Strategy for MetadataLeaf {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-impl ConsensusCommit for MetadataLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for MetadataLeaf {
-    const MERKLE_NODE_PREFIX: &'static str = "metadata";
-}
-impl ToMerkleSource for Metadata {
-    type Leaf = MetadataLeaf;
-
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .flat_map(|(type_id, i)| {
-                i.iter()
-                    .map(move |data| MetadataLeaf(*type_id, data.clone()))
-            })
-            .collect()
-    }
-}
 
 #[cfg(test)]
 mod test {

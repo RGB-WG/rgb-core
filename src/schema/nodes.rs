@@ -28,8 +28,6 @@ pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurrences>;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value)]
 #[repr(u8)]
 /// Node type: genesis, extensions and state transitions
 pub enum NodeType {
@@ -77,7 +75,6 @@ pub trait NodeSchema {
 }
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
@@ -87,7 +84,6 @@ pub struct GenesisSchema {
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
     pub extends: PublicRightsStructure,
@@ -97,7 +93,6 @@ pub struct ExtensionSchema {
 
 #[derive(Clone, PartialEq, Debug, Default, AsAny)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
     pub closes: OwnedRightsStructure,

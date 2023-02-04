@@ -32,7 +32,6 @@ use bitcoin_hashes::{sha256, Hash};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode, CommitVerify, CommitmentProtocol};
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::{PedersenCommitment, SECP256K1};
-use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{ConfidentialState, RevealedState};
 
@@ -43,21 +42,7 @@ impl From<Revealed> for AtomicValue {
 }
 
 /// Proof for Pedersen commitment: a blinding key
-#[derive(
-    Wrapper,
-    Copy,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -93,7 +78,6 @@ impl FromHex for BlindingFactor {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display("{value}#{blinding}")]
 pub struct Revealed {
@@ -208,6 +192,7 @@ pub struct Confidential {
 
 impl ConfidentialState for Confidential {}
 
+/*
 impl StrictEncode for Confidential {
     fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
         let len = self.bulletproof.len() as u16;
@@ -230,6 +215,7 @@ impl StrictDecode for Confidential {
         })
     }
 }
+ */
 
 impl CommitEncode for Confidential {
     fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {

@@ -19,7 +19,6 @@ use amplify::AsAny;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{CommitConceal, CommitEncode, ConsensusCommit};
 use once_cell::sync::Lazy;
-use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint};
 use crate::contract::attachment;
@@ -52,7 +51,6 @@ pub enum StateType {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -710,12 +708,9 @@ impl ConcealState for TypedAssignments {
     }
 }
 
-pub trait ConfidentialState: StrictEncode + StrictDecode + Debug + Clone + AsAny {}
+pub trait ConfidentialState: Debug + Clone + AsAny {}
 
-pub trait RevealedState:
-    StrictEncode + StrictDecode + Debug + CommitConceal + Clone + AsAny
-{
-}
+pub trait RevealedState: Debug + CommitConceal + Clone + AsAny {}
 
 pub trait State: Debug {
     type Confidential: ConfidentialState;
@@ -754,7 +749,6 @@ impl State for AttachmentStrategy {
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
 #[derive(Clone, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

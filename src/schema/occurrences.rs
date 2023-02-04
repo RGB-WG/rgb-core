@@ -73,55 +73,13 @@ impl Occurrences {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display(Debug)]
 pub struct OccurrencesError {
     pub min: u16,
     pub max: u16,
     pub found: u16,
-}
-
-mod _strict_encoding {
-    use std::io;
-
-    use strict_encoding::{Error, StrictDecode, StrictEncode};
-
-    use super::*;
-
-    impl StrictEncode for Occurrences {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            let (min, max) = match self {
-                Occurrences::NoneOrOnce => (0, 1),
-                Occurrences::Once => (1, 1),
-                Occurrences::NoneOrMore => (0, core::u16::MAX),
-                Occurrences::OnceOrMore => (1, core::u16::MAX),
-                Occurrences::NoneOrUpTo(max) => (0, *max),
-                Occurrences::OnceOrUpTo(max) => (1, *max),
-                Occurrences::Exactly(val) => (*val, *val),
-                Occurrences::Range(range) => (*range.start(), *range.end()),
-            };
-            Ok(min.strict_encode(&mut e)? + max.strict_encode(&mut e)?)
-        }
-    }
-
-    impl StrictDecode for Occurrences {
-        #[allow(unused_comparisons)]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let min = u16::strict_decode(&mut d)?;
-            let max = u16::strict_decode(&mut d)?;
-            Ok(match (min, max) {
-                (0, 1) => Occurrences::NoneOrOnce,
-                (1, 1) => Occurrences::Once,
-                (0, max) if max == ::core::u16::MAX => Occurrences::NoneOrMore,
-                (1, max) if max == ::core::u16::MAX => Occurrences::OnceOrMore,
-                (0, max) if max > 0 => Occurrences::NoneOrUpTo(max),
-                (1, max) if max > 0 => Occurrences::OnceOrUpTo(max),
-                (min, max) if min == max => Occurrences::Exactly(min),
-                (min, max) => Occurrences::Range(min..=max),
-            })
-        }
-    }
 }
 
 #[cfg(test)]

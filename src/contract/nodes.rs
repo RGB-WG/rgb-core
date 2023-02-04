@@ -10,7 +10,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
@@ -19,10 +18,7 @@ use bc::{Outpoint, Txid};
 use bitcoin_hashes::{sha256, sha256t, Hash};
 use bp::seals::txout::TxoSeal;
 use commit_verify::lnpbp4::ProtocolId;
-use commit_verify::{
-    commit_encode, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
-    ToMerkleSource,
-};
+use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
 use once_cell::sync::Lazy;
 
 use super::{
@@ -51,7 +47,6 @@ static MIDSTATE_NODE_ID: [u8; 32] = [
 pub const RGB_CONTRACT_ID_HRP: &str = "rgb";
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[display("{node_id}/{ty}/{no}")]
 /// RGB contract node output pointer, defined by the node ID and output
 /// number.
@@ -377,7 +372,6 @@ pub struct Genesis {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
     extension_type: ExtensionType,
@@ -389,7 +383,6 @@ pub struct Extension {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     transition_type: TransitionType,
@@ -398,78 +391,6 @@ pub struct Transition {
     owned_rights: OwnedRights,
     parent_public_rights: ParentPublicRights,
     public_rights: PublicRights,
-}
-
-impl ConsensusCommit for Genesis {
-    type Commitment = NodeId;
-}
-
-impl ConsensusCommit for Extension {
-    type Commitment = NodeId;
-}
-
-impl ConsensusCommit for Transition {
-    type Commitment = NodeId;
-}
-
-impl CommitEncode for Extension {
-    fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
-        let mut len = self.extension_type.commit_encode(&mut e);
-        len += self.contract_id.commit_encode(&mut e);
-        len += self
-            .metadata
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len += self
-            .owned_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len += self
-            .parent_public_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len += self
-            .public_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len
-    }
-}
-
-impl CommitEncode for Transition {
-    fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
-        let mut len = self.transition_type.commit_encode(&mut e);
-        len += self
-            .metadata
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len += self
-            .parent_owned_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len += self
-            .owned_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len += self
-            .parent_public_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len += self
-            .public_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut e);
-        len
-    }
 }
 
 impl ConcealState for Genesis {
@@ -736,107 +657,6 @@ impl Transition {
     pub fn transition_type(&self) -> schema::TransitionType { self.transition_type }
 }
 
-mod _strict_encoding {
-    use std::io;
-
-    use strict_encoding::{
-        strategies, strict_deserialize, strict_serialize, Error, Strategy, StrictDecode,
-        StrictEncode,
-    };
-
-    use super::*;
-
-    impl Strategy for NodeId {
-        type Strategy = strategies::Wrapped;
-    }
-
-    impl Strategy for ContractId {
-        type Strategy = strategies::Wrapped;
-    }
-
-    // ![CONSENSUS-CRITICAL]: Commit encode is different for genesis from strict
-    //                        encode since we only commit to chain genesis block
-    //                        hash and not all chain parameters.
-    // See <https://github.com/LNP-BP/LNPBPs/issues/58> for details.
-    impl CommitEncode for Genesis {
-        fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
-            let mut encoder = || -> Result<_, Error> {
-                let mut len = self.schema_id.strict_encode(&mut e)?;
-                len += self.chain.strict_encode(&mut e)?;
-                len += self
-                    .metadata
-                    .to_merkle_source()
-                    .consensus_commit()
-                    .commit_encode(&mut e);
-                len += self
-                    .owned_rights
-                    .to_merkle_source()
-                    .consensus_commit()
-                    .commit_encode(&mut e);
-                len += self
-                    .public_rights
-                    .to_merkle_source()
-                    .consensus_commit()
-                    .commit_encode(&mut e);
-                Ok(len)
-            };
-            encoder().expect("Strict encoding of genesis data must not fail")
-        }
-    }
-
-    impl StrictEncode for Genesis {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            let chain_params = strict_serialize(&self.chain)?;
-            Ok(strict_encode_list!(e;
-                self.schema_id,
-                // ![NETWORK-CRITICAL]: Chain params fields may update, so we
-                //                      will serialize chain parameters in all
-                //                      known/legacy formats for compatibility.
-                //                      Thus, they are serialized as a vector
-                //                      of byte strings, each one representing
-                //                      a next version of chain parameters
-                //                      representation.
-                // <https://github.com/LNP-BP/rust-lnpbp/issues/114>
-                1usize,
-                chain_params,
-                self.metadata,
-                self.owned_rights,
-                self.public_rights
-            ))
-        }
-    }
-
-    impl StrictDecode for Genesis {
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let schema_id = SchemaId::strict_decode(&mut d)?;
-            let chain_params_no = usize::strict_decode(&mut d)?;
-            if chain_params_no < 1 {
-                Err(Error::ValueOutOfRange(
-                    "genesis must contain at least one `chain_param` data structure",
-                    1u128..(core::u16::MAX as u128),
-                    0,
-                ))?
-            }
-            let chain_data = Vec::<u8>::strict_decode(&mut d)?;
-            let chain = strict_deserialize(&chain_data)?;
-            for _ in 1..chain_params_no {
-                // Ignoring the rest of chain parameters
-                let _ = Vec::<u8>::strict_decode(&mut d)?;
-            }
-            let metadata = Metadata::strict_decode(&mut d)?;
-            let assignments = OwnedRightsInner::strict_decode(&mut d)?;
-            let valencies = PublicRightsInner::strict_decode(&mut d)?;
-            Ok(Self {
-                schema_id,
-                chain,
-                metadata,
-                owned_rights: assignments.into(),
-                public_rights: valencies.into(),
-            })
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::io::Write;
@@ -849,150 +669,10 @@ mod test {
 
     use super::*;
 
-    static TRANSITION: [u8; 2349] = include!("../../test/transition.in");
-    static GENESIS: [u8; 2447] = include!("../../test/genesis.in");
-
     #[test]
     fn test_node_id_midstate() {
         let midstate = tagged_hash::Midstate::with(b"rgb:node");
         assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_NODE_ID);
-    }
-
-    #[ignore]
-    #[test]
-    fn test_genesis_chain() {
-        let genesis = Genesis {
-            schema_id: zero!(),
-            chain: Chain::Testnet3,
-            metadata: empty!(),
-            owned_rights: empty!(),
-            public_rights: empty!(),
-        };
-        let encoded = genesis.strict_serialize().unwrap();
-        let manual = vec![
-            vec![0u8; 32], // zero schema id
-            vec![7u8, 0],  // length of testnet string
-            b"testnet".to_vec(),
-            vec![0u8; 6], // three zero-length arrays
-        ];
-        let manual: Vec<u8> = manual.into_iter().flatten().collect();
-        assert_eq!(encoded, manual);
-    }
-
-    // Making sure that <https://github.com/LNP-BP/LNPBPs/issues/58>
-    // is fulfilled and we do not occasionally commit to all chain
-    // parameters (which may vary and change with time) in RGB contract id
-    #[test]
-    fn test_genesis_commit_ne_strict() {
-        let genesis = Genesis {
-            schema_id: Default::default(),
-            chain: Chain::Mainnet,
-            metadata: Default::default(),
-            owned_rights: Default::default(),
-            public_rights: Default::default(),
-        };
-        assert_ne!(
-            strict_serialize(&genesis).unwrap(),
-            genesis.clone().consensus_commit().to_vec()
-        );
-
-        let mut encoder = vec![];
-        genesis.schema_id.strict_encode(&mut encoder).unwrap();
-        encoder.write_all(GENESIS_HASH_MAINNET).unwrap();
-        genesis
-            .metadata
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut encoder);
-        genesis
-            .owned_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut encoder);
-        genesis
-            .public_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut encoder);
-        assert_eq!(genesis.consensus_commit(), NodeId::commit(&encoder));
-
-        // TODO: Add data to transition testcase
-        let transition = Transition {
-            transition_type: Default::default(),
-            metadata: Default::default(),
-            parent_owned_rights: Default::default(),
-            owned_rights: Default::default(),
-            parent_public_rights: Default::default(),
-            public_rights: Default::default(),
-        };
-
-        // Strict encode
-        let mut encoder = vec![];
-        transition
-            .transition_type
-            .strict_encode(&mut encoder)
-            .unwrap();
-        transition.metadata.strict_encode(&mut encoder).unwrap();
-        transition
-            .parent_owned_rights
-            .strict_encode(&mut encoder)
-            .unwrap();
-        transition.owned_rights.strict_encode(&mut encoder).unwrap();
-        transition
-            .parent_public_rights
-            .strict_encode(&mut encoder)
-            .unwrap();
-        transition
-            .public_rights
-            .strict_encode(&mut encoder)
-            .unwrap();
-
-        let mut encoder1 = vec![];
-        transition.clone().strict_encode(&mut encoder1).unwrap();
-
-        assert_eq!(encoder, encoder1);
-
-        // Commit encode
-        let transition2 = transition.clone();
-        let mut encoder2 = vec![];
-        transition2.transition_type.commit_encode(&mut encoder2);
-        transition2
-            .metadata
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut encoder2);
-        transition2
-            .parent_owned_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut encoder2);
-        transition2
-            .owned_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut encoder2);
-        transition2
-            .parent_public_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut encoder2);
-        transition2
-            .public_rights
-            .to_merkle_source()
-            .consensus_commit()
-            .commit_encode(&mut encoder2);
-
-        let mut encoder3 = vec![];
-        transition.clone().commit_encode(&mut encoder3);
-
-        assert_eq!(encoder2, encoder3);
-    }
-
-    #[test]
-    #[ignore]
-    fn test_encoding_nodes() {
-        let _: Genesis = test_vec_decoding_roundtrip(GENESIS).unwrap();
-        let _: Transition = test_vec_decoding_roundtrip(TRANSITION).unwrap();
     }
 
     #[test]

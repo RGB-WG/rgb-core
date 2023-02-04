@@ -14,8 +14,6 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract node level
 
-use commit_verify::commit_encode;
-
 use crate::vm::alure;
 
 /// Virtual machine types.
@@ -30,8 +28,6 @@ pub enum VmType {
 /// Virtual machine and machine-specific script data.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value, repr = u8)]
 pub enum ValidationScript {
     /// AluVM: pure functional register-based virtual machine designed for RGB
     /// and multiparty computing.
@@ -42,12 +38,7 @@ pub enum ValidationScript {
     ///
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
-    #[strict_encoding(value = 0x00)]
     AluVM(alure::ValidationScript),
-}
-
-impl commit_encode::Strategy for ValidationScript {
-    type Strategy = commit_encode::strategies::UsingStrict;
 }
 
 impl ValidationScript {
@@ -68,7 +59,6 @@ impl ValidationScript {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "kebab-case")
 )]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum OverrideRules {
     #[display("deny")]

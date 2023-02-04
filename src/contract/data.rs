@@ -18,13 +18,11 @@ use std::io;
 use amplify::AsAny;
 use bitcoin_hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode, TaggedHash};
-use strict_encoding::strict_serialize;
 
 use super::{ConfidentialState, RevealedState};
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
 #[display("void")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Void();
@@ -43,7 +41,6 @@ impl CommitEncode for Void {
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Revealed(Vec<u8>);
 
@@ -81,7 +78,6 @@ impl sha256t::Tag for ConfidentialTag {
 
 /// Blind version of transaction outpoint-based single-use-seal
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct Confidential(sha256t::Hash<ConfidentialTag>);

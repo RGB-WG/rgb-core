@@ -14,10 +14,6 @@ use std::collections::{btree_map, btree_set, BTreeMap, BTreeSet};
 
 use amplify::Wrapper;
 use commit_verify::merkle::MerkleNode;
-use commit_verify::{
-    commit_encode, ConsensusCommit, ConsensusMerkleCommit, MerkleSource, ToMerkleSource,
-};
-use strict_encoding::StrictEncode;
 
 use super::{NodeId, TypedAssignments, EMPTY_ASSIGNMENTS};
 use crate::schema;
@@ -36,7 +32,6 @@ pub(crate) type ParentPublicRightsInner = BTreeMap<NodeId, BTreeSet<schema::Publ
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
 pub struct OwnedRights(OwnedRightsInner);
 
 impl OwnedRights {
@@ -83,7 +78,6 @@ impl<'a> IntoIterator for &'a mut OwnedRights {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
 pub struct PublicRights(PublicRightsInner);
 
 impl PublicRights {
@@ -110,7 +104,6 @@ impl<'a> IntoIterator for &'a PublicRights {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
 pub struct ParentOwnedRights(ParentOwnedRightsInner);
 
 impl ParentOwnedRights {
@@ -152,7 +145,6 @@ impl<'a> IntoIterator for &'a mut ParentOwnedRights {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(StrictEncode, StrictDecode)]
 pub struct ParentPublicRights(ParentPublicRightsInner);
 
 impl ParentPublicRights {
@@ -188,105 +180,14 @@ impl<'a> IntoIterator for &'a mut ParentPublicRights {
     fn into_iter(self) -> Self::IntoIter { self.0.iter_mut() }
 }
 
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct PublicRightsLeaf(pub schema::PublicRightType);
-impl commit_encode::Strategy for PublicRightsLeaf {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-impl ConsensusCommit for PublicRightsLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for PublicRightsLeaf {
-    const MERKLE_NODE_PREFIX: &'static str = "public_right";
-}
-impl ToMerkleSource for PublicRights {
-    type Leaf = PublicRightsLeaf;
 
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .copied()
-            .map(PublicRightsLeaf)
-            .collect()
-    }
-}
-
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct OwnedRightsLeaf(pub schema::OwnedRightType, pub MerkleNode);
-impl commit_encode::Strategy for OwnedRightsLeaf {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-impl ConsensusCommit for OwnedRightsLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for OwnedRightsLeaf {
-    const MERKLE_NODE_PREFIX: &'static str = "owned_right";
-}
-impl ToMerkleSource for OwnedRights {
-    type Leaf = OwnedRightsLeaf;
 
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .flat_map(|(type_id, assignment)| {
-                assignment
-                    .consensus_commitments()
-                    .into_iter()
-                    .map(move |commitment| OwnedRightsLeaf(*type_id, commitment))
-            })
-            .collect()
-    }
-}
-
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct ParentPublicRightsLeaf(pub NodeId, pub schema::PublicRightType);
-impl commit_encode::Strategy for ParentPublicRightsLeaf {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-impl ConsensusCommit for ParentPublicRightsLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for ParentPublicRightsLeaf {
-    const MERKLE_NODE_PREFIX: &'static str = "parent_public_right";
-}
-impl ToMerkleSource for ParentPublicRights {
-    type Leaf = ParentPublicRightsLeaf;
 
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .flat_map(|(node_id, i)| {
-                i.iter()
-                    .map(move |type_id| ParentPublicRightsLeaf(node_id.copy(), *type_id))
-            })
-            .collect()
-    }
-}
-
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct ParentOwnedRightsLeaf(pub NodeId, pub schema::OwnedRightType, pub u16);
-impl commit_encode::Strategy for ParentOwnedRightsLeaf {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-impl ConsensusCommit for ParentOwnedRightsLeaf {
-    type Commitment = MerkleNode;
-}
-impl ConsensusMerkleCommit for ParentOwnedRightsLeaf {
-    const MERKLE_NODE_PREFIX: &'static str = "parent_owned_right";
-}
-impl ToMerkleSource for ParentOwnedRights {
-    type Leaf = ParentOwnedRightsLeaf;
-
-    fn to_merkle_source(&self) -> MerkleSource<Self::Leaf> {
-        self.as_inner()
-            .iter()
-            .flat_map(|(node_id, i)| {
-                i.iter().flat_map(move |(type_id, prev_outs)| {
-                    prev_outs.iter().map(move |prev_out| {
-                        ParentOwnedRightsLeaf(node_id.copy(), *type_id, *prev_out)
-                    })
-                })
-            })
-            .collect()
-    }
-}

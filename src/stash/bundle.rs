@@ -10,13 +10,9 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::collections::{btree_map, BTreeMap, BTreeSet};
-use std::io::{Read, Write};
 
 use bitcoin_hashes::{sha256, sha256t, Hash};
-use commit_verify::{
-    lnpbp4, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
-};
-use strict_encoding::{StrictDecode, StrictEncode};
+use commit_verify::{lnpbp4, CommitVerify, PrehashedProtocol, TaggedHash};
 
 use crate::{seal, ConcealSeals, ConcealState, Node, NodeId, RevealSeals, Transition};
 
@@ -44,7 +40,6 @@ impl sha256t::Tag for BundleIdTag {
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct BundleId(sha256t::Hash<BundleIdTag>);
 
@@ -80,13 +75,13 @@ pub enum RevealError {
 pub struct NoDataError;
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
-#[derive(StrictEncode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct TransitionBundle {
     revealed: BTreeMap<Transition, BTreeSet<u16>>,
     concealed: BTreeMap<NodeId, BTreeSet<u16>>,
 }
 
+/*
 impl StrictDecode for TransitionBundle {
     fn strict_decode<D: Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
         let bundle = strict_decode_self!(d; revealed, concealed);
@@ -98,28 +93,7 @@ impl StrictDecode for TransitionBundle {
         Ok(bundle)
     }
 }
-
-impl CommitEncode for TransitionBundle {
-    fn commit_encode<E: Write>(&self, mut e: E) -> usize {
-        let mut concealed = self.clone();
-        concealed.conceal_transitions();
-
-        let mut count = 0usize;
-        for (node_id, inputs) in concealed.concealed {
-            count += node_id
-                .strict_encode(&mut e)
-                .expect("memory encoders do not fail");
-            count += inputs
-                .strict_encode(&mut e)
-                .expect("memory encoders do not fail");
-        }
-        count
-    }
-}
-
-impl ConsensusCommit for TransitionBundle {
-    type Commitment = BundleId;
-}
+ */
 
 impl ConcealTransitions for TransitionBundle {
     fn conceal_transitions_except(&mut self, node_ids: &[NodeId]) -> usize {

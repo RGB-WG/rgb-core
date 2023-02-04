@@ -10,8 +10,6 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -26,8 +24,6 @@ pub enum StateType {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -41,8 +37,6 @@ pub enum StateSchema {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

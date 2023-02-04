@@ -10,10 +10,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::{
-    commit_encode, CommitConceal, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
-};
-use strict_encoding::{strict_serialize, StrictEncode};
+use commit_verify::{commit_encode, CommitConceal, CommitVerify, PrehashedProtocol, TaggedHash};
 
 use crate::{ConfidentialState, RevealedState};
 
@@ -46,7 +43,6 @@ impl sha256t::Tag for AttachmentIdTag {
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct AttachmentId(sha256t::Hash<AttachmentIdTag>);
 
@@ -75,17 +71,8 @@ impl sha256t::Tag for ConfidentialAttachmentTag {
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From, AsAny)]
-#[derive(StrictEncode, StrictDecode)]
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct Confidential(sha256t::Hash<ConfidentialAttachmentTag>);
-
-impl commit_encode::Strategy for Confidential {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-
-impl ConsensusCommit for Confidential {
-    type Commitment = AttachmentId;
-}
 
 impl ConfidentialState for Confidential {}
 
@@ -94,7 +81,6 @@ impl Confidential {
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, AsAny, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display("{id}~{mime}")]
 pub struct Revealed {
