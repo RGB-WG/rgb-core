@@ -1180,9 +1180,9 @@ where
 mod test {
     use std::collections::BTreeMap;
 
-    use bitcoin::blockdata::transaction::OutPoint;
-    use bitcoin::hashes::hex::{FromHex, ToHex};
-    use bitcoin::hashes::{sha256, Hash};
+    use bitcoin::blockdata::transaction::Outpoint;
+    use bitcoin_hashes::hex::{FromHex, ToHex};
+    use bitcoin_hashes::{sha256, Hash};
     use bp::seals::txout::TxoSeal;
     use commit_verify::merkle::MerkleNode;
     use commit_verify::{merklize, CommitConceal, CommitEncode, ToMerkleSource};
@@ -1314,7 +1314,7 @@ mod test {
         let ours: SealValueMap = zip_data
             .map(|(txid, amount)| {
                 (
-                    Revealed::from(OutPoint::new(*txid, rng.gen_range(0..=10))),
+                    Revealed::from(Outpoint::new(*txid, rng.gen_range(0..=10))),
                     amount.clone(),
                 )
             })
@@ -1330,7 +1330,7 @@ mod test {
             .map(|(txid, amount)| {
                 (
                     SealEndpoint::ConcealedUtxo(
-                        Revealed::from(OutPoint::new(*txid, rng.gen_range(0..=10)))
+                        Revealed::from(Outpoint::new(*txid, rng.gen_range(0..=10)))
                             .commit_conceal(),
                     ),
                     amount.clone(),
@@ -2170,22 +2170,22 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<DeclarativeStrategy>::Revealed {
-            seal: Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            seal: Revealed::from(Outpoint::new(txid_vec[0], 1)),
             state: data::Void(),
         };
 
         let assignment_2 = Assignment::<DeclarativeStrategy>::ConfidentialState {
-            seal: Revealed::from(OutPoint::new(txid_vec[1], 2)),
+            seal: Revealed::from(Outpoint::new(txid_vec[1], 2)),
             state: data::Void(),
         };
 
         let assignment_3 = Assignment::<DeclarativeStrategy>::ConfidentialSeal {
-            seal: Revealed::from(OutPoint::new(txid_vec[2], 3)).commit_conceal(),
+            seal: Revealed::from(Outpoint::new(txid_vec[2], 3)).commit_conceal(),
             state: data::Void(),
         };
 
         let assignment_4 = Assignment::<DeclarativeStrategy>::Confidential {
-            seal: Revealed::from(OutPoint::new(txid_vec[3], 4)).commit_conceal(),
+            seal: Revealed::from(Outpoint::new(txid_vec[3], 4)).commit_conceal(),
             state: data::Void(),
         };
 
@@ -2206,22 +2206,22 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<PedersenStrategy>::Revealed {
-            seal: Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            seal: Revealed::from(Outpoint::new(txid_vec[0], 1)),
             state: value::Revealed::with_amount(10u64, &mut rng),
         };
 
         let assignment_2 = Assignment::<PedersenStrategy>::ConfidentialState {
-            seal: Revealed::from(OutPoint::new(txid_vec[1], 1)),
+            seal: Revealed::from(Outpoint::new(txid_vec[1], 1)),
             state: value::Revealed::with_amount(20u64, &mut rng).commit_conceal(),
         };
 
         let assignment_3 = Assignment::<PedersenStrategy>::ConfidentialSeal {
-            seal: Revealed::from(OutPoint::new(txid_vec[2], 1)).commit_conceal(),
+            seal: Revealed::from(Outpoint::new(txid_vec[2], 1)).commit_conceal(),
             state: value::Revealed::with_amount(30u64, &mut rng),
         };
 
         let assignment_4 = Assignment::<PedersenStrategy>::Confidential {
-            seal: Revealed::from(OutPoint::new(txid_vec[3], 1)).commit_conceal(),
+            seal: Revealed::from(Outpoint::new(txid_vec[3], 1)).commit_conceal(),
             state: value::Revealed::with_amount(10u64, &mut rng).commit_conceal(),
         };
 
@@ -2246,22 +2246,22 @@ mod test {
             .collect();
 
         let assignment_1 = Assignment::<HashStrategy>::Revealed {
-            seal: Revealed::from(OutPoint::new(txid_vec[0], 1)),
+            seal: Revealed::from(Outpoint::new(txid_vec[0], 1)),
             state: state_data_vec[0].clone(),
         };
 
         let assignment_2 = Assignment::<HashStrategy>::ConfidentialState {
-            seal: Revealed::from(OutPoint::new(txid_vec[1], 1)),
+            seal: Revealed::from(Outpoint::new(txid_vec[1], 1)),
             state: state_data_vec[1].clone().commit_conceal(),
         };
 
         let assignment_3 = Assignment::<HashStrategy>::ConfidentialSeal {
-            seal: Revealed::from(OutPoint::new(txid_vec[2], 1)).commit_conceal(),
+            seal: Revealed::from(Outpoint::new(txid_vec[2], 1)).commit_conceal(),
             state: state_data_vec[2].clone(),
         };
 
         let assignment_4 = Assignment::<HashStrategy>::Confidential {
-            seal: Revealed::from(OutPoint::new(txid_vec[3], 1)).commit_conceal(),
+            seal: Revealed::from(Outpoint::new(txid_vec[3], 1)).commit_conceal(),
             state: state_data_vec[3].clone().commit_conceal(),
         };
 

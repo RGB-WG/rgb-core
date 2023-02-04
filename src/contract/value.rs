@@ -27,9 +27,8 @@ use std::str::FromStr;
 // that we do not use the standard secp256k1zkp library
 use amplify::hex::{Error, FromHex};
 use amplify::{Slice32, Wrapper};
-use bitcoin::hashes::sha256::Midstate;
-use bitcoin::hashes::{sha256, Hash};
-use bitcoin::secp256k1;
+use bitcoin_hashes::sha256::Midstate;
+use bitcoin_hashes::{sha256, Hash};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode, CommitVerify, CommitmentProtocol};
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::{PedersenCommitment, SECP256K1};
@@ -73,15 +72,15 @@ impl AsRef<[u8]> for BlindingFactor {
     fn as_ref(&self) -> &[u8] { &self.0[..] }
 }
 
-impl From<secp256k1::SecretKey> for BlindingFactor {
-    fn from(key: secp256k1::SecretKey) -> Self {
+impl From<secp256k1_zkp::SecretKey> for BlindingFactor {
+    fn from(key: secp256k1_zkp::SecretKey) -> Self {
         Self::from_inner(Slice32::from_inner(*key.as_ref()))
     }
 }
 
-impl From<BlindingFactor> for secp256k1::SecretKey {
+impl From<BlindingFactor> for secp256k1_zkp::SecretKey {
     fn from(bf: BlindingFactor) -> Self {
-        secp256k1::SecretKey::from_slice(bf.into_inner().as_inner())
+        secp256k1_zkp::SecretKey::from_slice(bf.into_inner().as_inner())
             .expect("blinding factor is an invalid secret key")
     }
 }
@@ -259,7 +258,7 @@ impl CommitVerify<Revealed, Bulletproofs> for Confidential {
         let value = revealed.value;
 
         // TODO: Check that we create a correct generator value.
-        let g = secp256k1::PublicKey::from_secret_key(SECP256K1, &secp256k1::ONE_KEY);
+        let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &secp256k1_zkp::ONE_KEY);
         let h = sha256::Hash::hash(&g.serialize_uncompressed());
         let tag = Tag::from(h.into_inner());
         let generator = Generator::new_unblinded(SECP256K1, tag);

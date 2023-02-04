@@ -34,6 +34,8 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
+pub(crate) mod temp;
+
 pub mod contract;
 pub mod schema;
 pub mod stash;

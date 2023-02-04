@@ -63,7 +63,7 @@ pub mod constants {
     pub const FIELD_TYPE_BURN_SUPPLY: u16 = 0xB0;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
-    /// burn. Must contain [`bitcoin::OutPoint`] consensus-encoded data.
+    /// burn. Must contain [`bc::Outpoint`] consensus-encoded data.
     pub const FIELD_TYPE_BURN_UTXO: u16 = 0xB1;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
@@ -81,7 +81,7 @@ pub mod constants {
     pub const FIELD_TYPE_LOCK_DESCRIPTOR: u16 = 0xC0;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
-    /// reserves. Must contain [`bitcoin::OutPoint`] consensus-encoded data
+    /// reserves. Must contain [`bc::Outpoint`] consensus-encoded data
     pub const FIELD_TYPE_LOCK_UTXO: u16 = 0xC1;
 
     /// Description of the asset
@@ -216,8 +216,6 @@ pub enum HandlerError {
 /// Embedded action handlers for contract nodes processed by the embedded state
 /// machine
 mod node {
-    use bitcoin::secp256k1;
-
     use super::*;
 
     pub fn validate(
@@ -316,7 +314,7 @@ mod node {
         inputs.push(
             value::Revealed {
                 value: issued,
-                blinding: secp256k1::ONE_KEY.into(),
+                blinding: secp256k1_zkp::ONE_KEY.into(),
             }
             .commit_conceal()
             .commitment,

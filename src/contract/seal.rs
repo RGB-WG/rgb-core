@@ -27,7 +27,7 @@
 //!
 //! | **Type name**      | **Lib** | **Witness vout** | **Blinding**    | **Confidential** | **String serialization**              | **Use case**                      |
 //! | ------------------ | ------- | ----------- | -------------------- | ---------------- | ------------------------------------- | --------------------------------- |
-//! | [`OutPoint`]       | Bitcoin | No          | No                   | No               | `<txid>:<vout>`                       | Genesis control rights            |
+//! | [`Outpoint`]       | Bitcoin | No          | No                   | No               | `<txid>:<vout>`                       | Genesis control rights            |
 //! | [`RevealedSeal`]   | BP Core | No          | Yes                  | No               | `<method>:<txid>|~:<vout>#<blinding>` | Stash                             |
 //! | [`ConcealedSeal`]  | BP Core | Implicit?   | Implicit             | Yes              | `txob1...`                            | External payments                 |
 //! | [`ExplicitSeal`]   | BP Core | Yes         | Yes                  | No               | `<method>:<txid>|~:<vout>`              | Internal                          |
@@ -36,11 +36,11 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::secp256k1::rand::RngCore;
 use bp::seals::txout::blind::{ConcealedSeal, ParseError, RevealedSeal};
 pub use bp::seals::txout::blind::{ConcealedSeal as Confidential, RevealedSeal as Revealed};
 use bp::seals::txout::CloseMethod;
 use commit_verify::CommitConceal;
+use secp256k1_zkp::rand::RngCore;
 
 /// Trait for types supporting conversion to a [`RevealedSeal`]
 pub trait IntoRevealedSeal {
@@ -155,8 +155,8 @@ impl FromStr for SealEndpoint {
 mod test {
     use std::convert::TryFrom;
 
-    use bitcoin::hashes::hex::FromHex;
-    use bitcoin::OutPoint;
+    use bc::{Outpoint, Txid};
+    use bitcoin_hashes::hex::FromHex;
     use bp::seals::txout::TxoSeal;
     use commit_verify::CommitEncode;
     use secp256k1_zkp::rand::{thread_rng, RngCore};
@@ -257,9 +257,9 @@ mod test {
     fn test_into_outpoint() {
         let revealed = Revealed::strict_decode(&REVEALED_TXOUTPOINT[..]).unwrap();
 
-        let outpoint = OutPoint::try_from(revealed.clone()).unwrap();
+        let outpoint = Outpoint::try_from(revealed.clone()).unwrap();
 
-        let coded = OutPoint::strict_decode(&OUTPOINT[..]).unwrap();
+        let coded = Outpoint::strict_decode(&OUTPOINT[..]).unwrap();
 
         assert_eq!(coded, outpoint);
     }
@@ -270,7 +270,7 @@ mod test {
     fn test_witness_to_outpoint() {
         // Conversion to Outpoint from WitnessVout variant should panic
         let revealed = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
-        bitcoin::OutPoint::try_from(revealed).unwrap();
+        bc::Outpoint::try_from(revealed).unwrap();
     }
 
     #[test]
@@ -280,10 +280,9 @@ mod test {
         let revealed_witnessvout = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
 
         // Data used for constructing above seals
-        let txid = bitcoin::Txid::from_hex(
-            "201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e",
-        )
-        .unwrap();
+        let txid =
+            Txid::from_hex("201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e")
+                .unwrap();
 
         let blinding: u64 = 13457965799463774082;
 
@@ -323,7 +322,7 @@ mod test {
         )
         .unwrap();
         let vout = rng.next_u32();
-        let revealed_txout = Revealed::from(OutPoint::new(txid, vout));
+        let revealed_txout = Revealed::from(Outpoint::new(txid, vout));
 
         let revealed_witness = Revealed {
             method: CloseMethod::TapretFirst,

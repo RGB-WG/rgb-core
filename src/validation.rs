@@ -13,18 +13,18 @@ use core::iter::FromIterator;
 use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use bitcoin::{Transaction, Txid};
+use bc::{Tx, Txid};
 use bp::dbc::Anchor;
 use bp::seals::txout::TxoSeal;
 use commit_verify::{lnpbp4, CommitConceal};
 use stens::TypeRef;
-use wallet::onchain::ResolveTx;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, ContractId, Node, NodeId, Schema, SchemaId, TypedAssignments};
 use crate::schema::SchemaVerify;
 use crate::stash::Consignment;
-use crate::{data, BundleId, Extension, SealEndpoint, TransitionBundle};
+use crate::temp::ResolveTx;
+use crate::{data, outpoint, tx, txid, BundleId, Extension, SealEndpoint, TransitionBundle};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -36,7 +36,8 @@ pub enum Validity {
     Invalid,
 }
 
-#[derive(Clone, Debug, Display, Default, StrictEncode, StrictDecode)]
+#[derive(Clone, Debug, Display, Default)]
+//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #42: Display via YAML
 #[display(Debug)]
@@ -122,7 +123,8 @@ impl Status {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
@@ -206,7 +208,7 @@ pub enum Failure {
         ancestor_id: NodeId,
         assignment_type: schema::OwnedRightType,
         seal_index: u16,
-        outpoint: bitcoin::OutPoint,
+        outpoint: bc::Outpoint,
     },
 
     ExtensionAbsent(NodeId),
@@ -230,7 +232,8 @@ pub enum Failure {
     ScriptFailure(NodeId),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
@@ -241,7 +244,8 @@ pub enum Warning {
     EndpointTransactionMissed(Txid),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
@@ -434,16 +438,16 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                     .status
                     .failures
                     .iter()
-                    .position(|f| f == &Failure::WitnessTransactionMissed(anchor.txid))
+                    .position(|f| f == &Failure::WitnessTransactionMissed(txid!(anchor.txid)))
                 {
                     self.status.failures.remove(pos);
                     self.status
                         .unresolved_txids
-                        .retain(|txid| *txid != anchor.txid);
-                    self.status.unmined_endpoint_txids.push(anchor.txid);
+                        .retain(|txid| *txid != txid!(anchor.txid));
+                    self.status.unmined_endpoint_txids.push(txid!(anchor.txid));
                     self.status
                         .warnings
-                        .push(Warning::EndpointTransactionMissed(anchor.txid));
+                        .push(Warning::EndpointTransactionMissed(txid!(anchor.txid)));
                 }
             }
         }
@@ -502,8 +506,10 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                     //               anchor. This must be done with
                     //               deterministic bitcoin commitments & LNPBP-4
                     if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
-                        self.status
-                            .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.txid));
+                        self.status.add_failure(Failure::TransitionNotInAnchor(
+                            node_id,
+                            txid!(anchor.txid),
+                        ));
                     }
 
                     self.validate_graph_node(node, bundle_id, anchor);
@@ -562,7 +568,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         bundle_id: BundleId,
         anchor: &'consignment Anchor<lnpbp4::MerkleProof>,
     ) {
-        let txid = anchor.txid;
+        let txid = txid!(anchor.txid);
         let node_id = node.node_id();
 
         // Check that the anchor is committed into a transaction spending all of
@@ -595,7 +601,12 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 // [VALIDATION]: Checking anchor deterministic bitcoin
                 //               commitment
                 if anchor
-                    .verify(self.contract_id, bundle_id.into(), witness_tx.clone())
+                    .verify(
+                        self.contract_id,
+                        bundle_id.into(),
+                        // TODO: Remove this temporary conversion fix
+                        tx!(&witness_tx),
+                    )
                     .is_err()
                 {
                     // TODO: Save error details
@@ -658,7 +669,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
     // TODO #45: Move part of logic into single-use-seals and bitcoin seals
     fn validate_witness_input(
         &mut self,
-        witness_tx: &Transaction,
+        witness_tx: &Tx,
         node_id: NodeId,
         ancestor_id: NodeId,
         assignment_type: schema::OwnedRightType,
@@ -702,20 +713,21 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 None,
             ) => {
                 // We are at genesis, so the outpoint must contain tx
-                Some(bitcoin::OutPoint::new(txid, vout))
+                Some(bc::Outpoint::new(txid!(txid), vout))
             }
             (Ok(Some(_)), None) => {
                 // This can't happen, since if we have a node in the index
                 // and the node is not genesis, we always have an anchor
                 unreachable!()
             }
-            (Ok(Some(seal)), Some(anchor)) => Some(seal.outpoint_or(anchor.txid)), /* -> ... so we can check that the bitcoin transaction
-                                                                                    * references it as one of its inputs */
+            /* -> ... so we can check that the bitcoin transaction
+             * references it as one of its inputs */
+            (Ok(Some(seal)), Some(anchor)) => Some(outpoint!(seal.outpoint_or(anchor.txid))),
         } {
             if !witness_tx
-                .input
+                .inputs
                 .iter()
-                .any(|txin| txin.previous_output == outpoint)
+                .any(|txin| txin.prev_output == outpoint)
             {
                 // Another failure: we do not spend one of the transition
                 // ancestors in the witness transaction. The consignment is
