@@ -34,19 +34,20 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-pub(crate) mod temp;
+// pub(crate) mod temp;
 
-pub mod contract;
+// pub mod contract;
 pub mod schema;
-pub mod stash;
-pub mod validation;
-pub mod vm;
-#[macro_use]
-mod macros;
+// pub mod stash;
+// pub mod verify;
+// pub mod validation;
+// pub mod vm;
+// #[macro_use]
+// mod macros;
 
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
-    pub use contract::{
+    /*pub use contract::{
         data, reveal, seal, value, Assignment, AtomicValue, AttachmentId, AttachmentStrategy,
         Bulletproofs, ConcealSeals, ConcealState, ConfidentialDataError, ConfidentialState,
         ContractId, DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
@@ -54,20 +55,22 @@ pub mod prelude {
         OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights,
         RevealSeals, RevealedState, SealEndpoint, SealValueMap, State, StateRetrievalError,
         StateType, Transition, TypedAssignments,
-    };
+    };*/
     pub use schema::{
         script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
         PublicRightsStructure, Schema, SchemaId, ValidationScript, VmType,
     };
-    pub use stash::{
+
+    pub use super::schema;
+    /*pub use stash::{
         bundle, AnchoredBundle, BundleId, ConcealAnchors, ConcealTransitions, Consignment,
         ConsignmentEndpoint, ConsistencyError, GraphApi, Stash, TransitionBundle,
     };
     pub use validation::{Validator, Validity};
     pub use vm::Validate;
 
-    use super::*;
-    pub use super::{schema, vm};
+    pub use super::{vm};
+    use super::*;*/
 }
 
 pub use prelude::*;

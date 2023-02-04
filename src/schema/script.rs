@@ -14,8 +14,6 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract node level
 
-use crate::vm::alure;
-
 /// Virtual machine types.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(Debug)]
@@ -38,7 +36,7 @@ pub enum ValidationScript {
     ///
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
-    AluVM(alure::ValidationScript),
+    AluVM(Vec<u8>),
 }
 
 impl ValidationScript {

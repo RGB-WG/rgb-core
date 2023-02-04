@@ -24,8 +24,3 @@ pub use occurrences::{Occurrences, OccurrencesError};
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{ValidationScript, VmType};
 pub use state::{DiscreteFiniteFieldFormat, StateSchema, StateType};
-
-/// Trait used for internal schema validation against some root schema
-pub trait SchemaVerify {
-    fn schema_verify(&self, root: &Self) -> crate::validation::Status;
-}
