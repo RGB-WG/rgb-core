@@ -26,8 +26,8 @@
 use bitcoin::OutPoint;
 use bp::dbc::{Anchor, AnchorId};
 use commit_verify::lnpbp4;
-use wallet::onchain::ResolveTx;
 
+use crate::temp::ResolveTx;
 use crate::{ContractId, Extension, Genesis, NodeId, Schema, SchemaId, Transition};
 
 /// Top-level structure used by client wallets to manage all known RGB smart

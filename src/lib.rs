@@ -42,6 +42,7 @@ pub mod validation;
 pub mod vm;
 #[macro_use]
 mod macros;
+pub(crate) mod temp;
 
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};

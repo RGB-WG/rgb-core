@@ -18,12 +18,12 @@ use bp::dbc::Anchor;
 use bp::seals::txout::TxoSeal;
 use commit_verify::{lnpbp4, CommitConceal};
 use stens::TypeRef;
-use wallet::onchain::ResolveTx;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, ContractId, Node, NodeId, Schema, SchemaId, TypedAssignments};
 use crate::schema::SchemaVerify;
 use crate::stash::Consignment;
+use crate::temp::ResolveTx;
 use crate::{data, BundleId, Extension, SealEndpoint, TransitionBundle};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
