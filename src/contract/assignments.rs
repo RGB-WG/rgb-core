@@ -103,11 +103,6 @@ pub enum MalformedInput {
 }
 
 impl TypedAssignments {
-    /// # Panics
-    ///
-    /// If inputs has invalid blinding factor values, like above the group order
-    /// or being inversion of some other subset of the blinding factors coming
-    /// from the input.
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
         allocations_ours: BTreeMap<seal::Revealed, AtomicValue>,
@@ -160,42 +155,35 @@ impl TypedAssignments {
         let mut blinding_iter = blinding_factors.into_iter();
         let mut set: Vec<Assignment<_>> = allocations_ours
             .into_iter()
-            .map(|(seal, amount)| Assignment::Revealed {
-                seal,
-                state: value::Revealed {
-                    value: amount,
-                    blinding: blinding_iter
-                        .next()
-                        .expect("Internal inconsistency in `AssignmentsVariant::zero_balanced`")
-                        .into(),
-                },
+            .zip(blinding_iter.by_ref())
+            .map(|((seal, amount), blinding)| {
+                Assignment::revealed(seal, value::Revealed::with(amount, blinding))
             })
             .collect();
-        set.extend(allocations_theirs.into_iter().map(|(seal_proto, amount)| {
-            let state = value::Revealed {
-                value: amount,
-                blinding: blinding_iter
-                    .next()
-                    .expect("Internal inconsistency in `AssignmentsVariant::zero_balanced`")
-                    .into(),
-            };
-            match seal_proto {
-                SealEndpoint::ConcealedUtxo(seal) => Assignment::ConfidentialSeal { seal, state },
-                SealEndpoint::WitnessVout {
-                    method,
-                    vout,
-                    blinding,
-                } => Assignment::Revealed {
-                    seal: seal::Revealed {
+        set.extend(allocations_theirs.into_iter().zip(blinding_iter).map(
+            |((seal_proto, amount), blinding)| {
+                let state = value::Revealed::with(amount, blinding);
+                match seal_proto {
+                    SealEndpoint::ConcealedUtxo(seal) => {
+                        Assignment::ConfidentialSeal { seal, state }
+                    }
+                    SealEndpoint::WitnessVout {
                         method,
-                        txid: None,
                         vout,
                         blinding,
+                    } => Assignment::Revealed {
+                        // TODO: Add convenience constructor to `seal::Revealed`
+                        seal: seal::Revealed {
+                            method,
+                            txid: None,
+                            vout,
+                            blinding,
+                        },
+                        state,
                     },
-                    state,
-                },
-            }
-        }));
+                }
+            },
+        ));
 
         Ok(Self::Value(set))
     }
@@ -937,6 +925,10 @@ where
     StateType::Confidential: PartialEq + Eq,
     StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
+    pub fn revealed(seal: seal::Revealed, state: StateType::Revealed) -> Self {
+        Assignment::Revealed { seal, state }
+    }
+
     pub fn with_seal_replaced(assignment: &Self, seal: seal::Revealed) -> Self {
         match assignment {
             Assignment::Confidential { seal: _, state }

@@ -114,6 +114,16 @@ pub struct Revealed {
     pub blinding: BlindingFactor,
 }
 
+impl Revealed {
+    /// Convenience constructor.
+    pub fn with(value: AtomicValue, blinding: impl Into<BlindingFactor>) -> Self {
+        Self {
+            value,
+            blinding: blinding.into(),
+        }
+    }
+}
+
 /// Error parsing RGB revealed value from string. The string must has form of
 /// `<value>#<hex_blinding_factor>`
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From)]
