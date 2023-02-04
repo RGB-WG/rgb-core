@@ -20,13 +20,13 @@ path = "src/lib.rs"
 [dependencies]
 amplify = { version = "~4.0.0-beta.11", features = ["apfloat"] }
 bp-core = { version = "~0.10.0-beta.1" }
+strict_encoding = "2.0.0-beta.5"
+strict_types = "1.0.0-beta.2"
+aluvm = "0.10.0-alpha.1"
 commit_verify = { version = "~0.10.0-beta.2", features = ["rand"] }
-bitcoin_hashes = "0.11.0"
+baid58 = "~0.1.0"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
-serde_with = { version = "1.14", features = ["hex"], optional = true } # TODO: Remove
-serde_json = "1" # TODO: Remove
-once_cell = "1.12.0"
-secp256k1-zkp = { version = "0.7.0", features = ["rand-std", "global-context"] }
+secp256k1-zkp = { version = "~0.7.0", features = ["rand-std", "global-context"] }
 
 [dev-dependencies]
 serde_json = "1"
@@ -35,7 +35,10 @@ strict_encoding_test = "0.9.0"
 [features]
 default = []
 all = ["serde"]
-serde = ["serde_crate", "serde_with",
-         "amplify/serde", "commit_verify/serde",
-         "bp-core/serde",
-         "secp256k1-zkp/serde"]
+serde = [
+    "serde_crate",
+    "amplify/serde",
+    "commit_verify/serde",
+    "bp-core/serde",
+    "secp256k1-zkp/serde"
+]

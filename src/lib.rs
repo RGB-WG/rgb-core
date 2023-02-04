@@ -25,16 +25,14 @@
 
 #[macro_use]
 extern crate amplify;
-// #[macro_use]
-// extern crate strict_encoding;
+#[macro_use]
+extern crate strict_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]
-extern crate serde_with;
-#[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-// pub(crate) mod temp;
+pub(crate) mod ext;
 
 // pub mod contract;
 pub mod schema;
@@ -44,6 +42,8 @@ pub mod schema;
 // pub mod vm;
 // #[macro_use]
 // mod macros;
+
+pub const LIB_NAME_RGB: &str = "RGB";
 
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
@@ -57,7 +57,7 @@ pub mod prelude {
         StateType, Transition, TypedAssignments,
     };*/
     pub use schema::{
-        script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
+        ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
         PublicRightsStructure, Schema, SchemaId, ValidationScript, VmType,
     };
 

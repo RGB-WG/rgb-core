@@ -11,8 +11,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use once_cell::sync::Lazy;
-
 use super::{ExtensionType, FieldType, Occurrences, TransitionType};
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
@@ -100,18 +98,17 @@ pub struct TransitionSchema {
     pub public_rights: PublicRightsStructure,
 }
 
-static EMPTY_OWNED_RIGHTS: Lazy<OwnedRightsStructure> = Lazy::new(OwnedRightsStructure::new);
-static EMPTY_PUBLIC_RIGHTS: Lazy<PublicRightsStructure> = Lazy::new(PublicRightsStructure::new);
-
 impl NodeSchema for GenesisSchema {
     #[inline]
     fn node_type(&self) -> NodeType { NodeType::Genesis }
     #[inline]
     fn metadata(&self) -> &MetadataStructure { &self.metadata }
     #[inline]
-    fn closes(&self) -> &OwnedRightsStructure { &EMPTY_OWNED_RIGHTS }
+    fn closes(&self) -> &OwnedRightsStructure {
+        panic!("genesis can't close previous single-use-seals")
+    }
     #[inline]
-    fn extends(&self) -> &PublicRightsStructure { &EMPTY_PUBLIC_RIGHTS }
+    fn extends(&self) -> &PublicRightsStructure { panic!("genesis can't extend previous state") }
     #[inline]
     fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
     #[inline]
@@ -124,7 +121,9 @@ impl NodeSchema for ExtensionSchema {
     #[inline]
     fn metadata(&self) -> &MetadataStructure { &self.metadata }
     #[inline]
-    fn closes(&self) -> &OwnedRightsStructure { &EMPTY_OWNED_RIGHTS }
+    fn closes(&self) -> &OwnedRightsStructure {
+        panic!("extension can't close previous single-use-seals")
+    }
     #[inline]
     fn extends(&self) -> &PublicRightsStructure { &self.extends }
     #[inline]
@@ -141,7 +140,9 @@ impl NodeSchema for TransitionSchema {
     #[inline]
     fn closes(&self) -> &OwnedRightsStructure { &self.closes }
     #[inline]
-    fn extends(&self) -> &PublicRightsStructure { &EMPTY_PUBLIC_RIGHTS }
+    fn extends(&self) -> &PublicRightsStructure {
+        panic!("state transitions can't extend previous state")
+    }
     #[inline]
     fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
     #[inline]

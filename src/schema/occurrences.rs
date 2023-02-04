@@ -84,18 +84,7 @@ pub struct OccurrencesError {
 
 #[cfg(test)]
 mod test {
-    use strict_encoding::StrictDecode;
-    use strict_encoding_test::test_vec_decoding_roundtrip;
-
     use super::Occurrences;
-
-    static ONCE: [u8; 4] = [1, 0, 1, 0];
-
-    static NONEORONCE: [u8; 4] = [0, 0, 1, 0];
-
-    static NONEUPTO_U8: [u8; 4] = [0, 0, 255, 0];
-
-    static NONEUPTO_U16: [u8; 4] = [0, 0, 255, 255];
 
     #[test]
     fn test_once_check_count() {
@@ -191,29 +180,5 @@ mod test {
     fn test_none_or_up_to_42_large() {
         let occurence: Occurrences = Occurrences::NoneOrUpTo(42);
         occurence.check(43).unwrap();
-    }
-
-    #[test]
-    fn test_encode_occurance() {
-        let _: Occurrences = test_vec_decoding_roundtrip(ONCE).unwrap();
-        let _: Occurrences = test_vec_decoding_roundtrip(NONEORONCE).unwrap();
-        let _: Occurrences = test_vec_decoding_roundtrip(NONEUPTO_U16).unwrap();
-    }
-
-    #[test]
-    fn test_encode_occurance_2() {
-        let mut once_upto_u8 = NONEUPTO_U8.clone();
-        let mut once_upto_u16 = NONEUPTO_U16.clone();
-
-        once_upto_u8[0] = 0x01;
-        once_upto_u16[0] = 0x01;
-
-        let dec2: Occurrences = Occurrences::strict_decode(&once_upto_u16[..]).unwrap();
-
-        assert_eq!(dec2, Occurrences::OnceOrMore);
-
-        let wc2: Occurrences = Occurrences::strict_decode(&once_upto_u8[..]).unwrap();
-
-        assert_eq!(wc2, Occurrences::OnceOrUpTo(255));
     }
 }

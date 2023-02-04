@@ -11,40 +11,50 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use amplify::flags::FlagVec;
-use bitcoin_hashes::{sha256, sha256t};
+use amplify::Bytes32;
+use baid58::ToBaid58;
+use commit_verify::{strategies, CommitStrategy};
 
-use super::{ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, TransitionSchema};
-use crate::schema::StateSchema;
-use crate::script::OverrideRules;
-use crate::ValidationScript;
+use super::script::OverrideRules;
+use super::{
+    ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema, TransitionSchema,
+    ValidationScript,
+};
+use crate::ext::RawArray;
+use crate::LIB_NAME_RGB;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = u16;
 pub type ExtensionType = u16;
 pub type TransitionType = u16;
 
-static MIDSTATE_SHEMA_ID: [u8; 32] = [
-    0x81, 0x73, 0x33, 0x7c, 0xcb, 0xc4, 0x8b, 0xd1, 0x24, 0x89, 0x65, 0xcd, 0xd0, 0xcd, 0xb6, 0xc8,
-    0x7a, 0xa2, 0x14, 0x81, 0x7d, 0x57, 0x39, 0x22, 0x28, 0x90, 0x74, 0x8f, 0x26, 0x75, 0x8e, 0xea,
-];
+/// Schema identifier.
+///
+/// Schema identifier commits to all of the schema data.
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[wrapper(Deref, BorrowSlice, FromStr, Hex, Index, RangeOps)]
+#[display(Self::to_baid58)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct SchemaId(
+    #[from]
+    #[from([u8; 32])]
+    Bytes32,
+);
 
-/// Tag used for [`SchemaId`] hash type
-pub struct SchemaIdTag;
-
-impl sha256t::Tag for SchemaIdTag {
-    #[inline]
-    fn engine() -> sha256::HashEngine {
-        let midstate = sha256::Midstate::from_inner(MIDSTATE_SHEMA_ID);
-        sha256::HashEngine::from_midstate(midstate, 64)
-    }
+impl CommitStrategy for SchemaId {
+    type Strategy = strategies::Strict;
 }
 
-/// Commitment-based schema identifier used for committing to the schema type
-#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[wrapper(Debug, BorrowSlice)]
-pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
+impl ToBaid58<32> for SchemaId {
+    const HRP: &'static str = "sch";
+    fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
+}
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -59,8 +69,7 @@ pub struct Schema {
     /// or do other backward-incompatible changes (RGB protocol versions are
     /// not interoperable and backward-incompatible by definitions and the
     /// nature of client-side-validation which does not allow upgrades).
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
-    pub rgb_features: FlagVec,
+    pub rgb_features: u16,
     pub root_id: SchemaId,
 
     pub type_system: Vec<u8>, // TODO: TypeSystem,
@@ -92,3 +101,27 @@ impl PartialEq for Schema {
 }
 
 impl Eq for Schema {}
+
+#[cfg(test)]
+mod test {
+    use strict_encoding::StrictDumb;
+
+    use super::*;
+
+    #[test]
+    fn display() {
+        let dumb = SchemaId::strict_dumb();
+        assert_eq!(dumb.to_string(), "11111111111111111111111111111111");
+        assert_eq!(
+            &format!("{dumb::^#}"),
+            "sch:11111111111111111111111111111111#dallas-liter-marco"
+        );
+
+        let less_dumb = SchemaId::from_raw_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
+        assert_eq!(less_dumb.to_string(), "5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz");
+        assert_eq!(
+            &format!("{less_dumb::^#}"),
+            "sch:5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz#hotel-urgent-child"
+        );
+    }
+}
