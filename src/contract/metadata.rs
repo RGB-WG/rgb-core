@@ -222,7 +222,7 @@ mod test {
     use bitcoin::hashes::Hash;
     use commit_verify::merkle::MerkleNode;
     use commit_verify::{merklize, CommitEncode};
-    use secp256k1zkp::rand::{thread_rng, RngCore};
+    use secp256k1_zkp::rand::{thread_rng, RngCore};
     use strict_encoding::{StrictDecode, StrictEncode};
     use strict_encoding_test::test_vec_decoding_roundtrip;
 

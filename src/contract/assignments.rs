@@ -1186,9 +1186,8 @@ mod test {
     use bp::seals::txout::TxoSeal;
     use commit_verify::merkle::MerkleNode;
     use commit_verify::{merklize, CommitConceal, CommitEncode, ToMerkleSource};
-    use secp256k1zkp::pedersen::Commitment;
-    use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
-    use secp256k1zkp::{Secp256k1, SecretKey};
+    use secp256k1_zkp::rand::{thread_rng, Rng, RngCore};
+    use secp256k1_zkp::{PedersenCommitment, SecretKey};
     use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::super::{NodeId, OwnedRights, ParentOwnedRights};
@@ -1286,7 +1285,7 @@ mod test {
         input_amounts: &[u64],
         output_amounts: &[u64],
         partition: usize,
-    ) -> (Vec<Commitment>, Vec<Commitment>) {
+    ) -> (Vec<PedersenCommitment>, Vec<PedersenCommitment>) {
         let mut rng = thread_rng();
 
         // Create revealed amount from input amounts
@@ -1344,14 +1343,14 @@ mod test {
             TypedAssignments::zero_balanced(input_revealed.clone(), ours, theirs).unwrap();
 
         // Extract balanced confidential output amounts
-        let outputs: Vec<Commitment> = balanced
+        let outputs: Vec<PedersenCommitment> = balanced
             .to_confidential_state_pedersen()
             .iter()
             .map(|confidential| confidential.commitment)
             .collect();
 
         // Create confidential input amounts
-        let inputs: Vec<Commitment> = input_revealed
+        let inputs: Vec<PedersenCommitment> = input_revealed
             .iter()
             .map(|revealed| revealed.commit_conceal().commitment)
             .collect();
@@ -1789,11 +1788,11 @@ mod test {
         // Check blinding factor matches with precomputed values
         assert_eq!(
             SecretKey::from(states[0].blinding),
-            SecretKey::from_slice(&Secp256k1::new(), &blind_1[..]).unwrap()
+            SecretKey::from_slice(&blind_1[..]).unwrap()
         );
         assert_eq!(
             SecretKey::from(states[1].blinding),
-            SecretKey::from_slice(&Secp256k1::new(), &blind_2[..]).unwrap()
+            SecretKey::from_slice(&blind_2[..]).unwrap()
         );
 
         // Check no values returned for declarative and custom data type
@@ -1838,24 +1837,33 @@ mod test {
         // Check extracted values matches with precomputed values
         assert_eq!(
             conf_amounts[0].commitment,
-            Commitment::from_vec(
-                Vec::from_hex("08cc48fa5e5cb1d2d2465bd8c437c0e00514abd813f9a7dd506a778405a2c43bc0")
-                    .unwrap()
+            PedersenCommitment::from_slice(
+                &Vec::from_hex(
+                    "08cc48fa5e5cb1d2d2465bd8c437c0e00514abd813f9a7dd506a778405a2c43bc0"
+                )
+                .unwrap()
             )
+            .unwrap()
         );
         assert_eq!(
             conf_amounts[1].commitment,
-            Commitment::from_vec(
-                Vec::from_hex("091e1b9e7605fc214806f3af3eba13947b91f47bac729f5def5e8fbd530112bed1")
-                    .unwrap()
+            PedersenCommitment::from_slice(
+                &Vec::from_hex(
+                    "091e1b9e7605fc214806f3af3eba13947b91f47bac729f5def5e8fbd530112bed1"
+                )
+                .unwrap()
             )
+            .unwrap()
         );
         assert_eq!(
             conf_amounts[2].commitment,
-            Commitment::from_vec(
-                Vec::from_hex("089775f829c8adad92ada17b5931edf63064d54678f4eb9a6fdfe8e4cb5d95f6f4")
-                    .unwrap()
+            PedersenCommitment::from_slice(
+                &Vec::from_hex(
+                    "089775f829c8adad92ada17b5931edf63064d54678f4eb9a6fdfe8e4cb5d95f6f4"
+                )
+                .unwrap()
             )
+            .unwrap()
         );
 
         // Check no values returned for declarative and hash type

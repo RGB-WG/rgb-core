@@ -349,7 +349,7 @@ mod test {
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::hashes::sha256;
     use commit_verify::{CommitConceal, TaggedHash};
-    use secp256k1zkp::rand::thread_rng;
+    use secp256k1_zkp::rand::thread_rng;
     use stens::TypeSystem;
     use strict_encoding::StrictDecode;
 
