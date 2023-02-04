@@ -24,7 +24,7 @@
 
 use std::collections::BTreeSet;
 
-use bitcoin::{OutPoint, Txid};
+use bc::{Outpoint, Txid};
 use bp::dbc::AnchorId;
 
 use crate::schema::OwnedRightType;
@@ -135,7 +135,7 @@ pub trait GraphApi {
     ///   the closed seals. If seals are present, but have a different type, a
     ///   error is returned
     /// - `witness`: witness transaction id, needed for generating full
-    ///   [`bitcoin::OutPoint`] data for single-use-seal definitions providing
+    ///   [`bc::Outpoint`] data for single-use-seal definitions providing
     ///   relative seals to the witness transaction (see [crate::seal::Revealed]
     ///   for the details).
     ///
@@ -168,5 +168,5 @@ pub trait GraphApi {
         node_id: NodeId,
         owned_right_type: impl Into<OwnedRightType>,
         witness: Txid,
-    ) -> Result<BTreeSet<OutPoint>, ConsistencyError>;
+    ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
 }

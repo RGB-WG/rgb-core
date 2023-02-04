@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 
 use amplify::flags::FlagVec;
-use bitcoin::hashes::{sha256, sha256t};
+use bitcoin_hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
 use lnpbp::bech32::{FromBech32Str, ToBech32String};
 use stens::{TypeRef, TypeSystem};

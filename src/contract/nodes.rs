@@ -15,8 +15,8 @@ use std::num::ParseIntError;
 use std::str::FromStr;
 
 use amplify::{AsAny, Wrapper};
-use bitcoin::hashes::{sha256, sha256t, Hash};
-use bitcoin::{OutPoint, Txid};
+use bc::{Outpoint, Txid};
+use bitcoin_hashes::{sha256, sha256t, Hash};
 use bp::seals::txout::TxoSeal;
 use commit_verify::lnpbp4::ProtocolId;
 use commit_verify::{
@@ -35,7 +35,9 @@ use crate::reveal::{self, MergeReveal};
 use crate::schema::{
     ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, TransitionType,
 };
-use crate::{schema, seal, ConfidentialDataError, Metadata, PublicRightType, SchemaId};
+use crate::{
+    outpoint, schema, seal, txid, ConfidentialDataError, Metadata, PublicRightType, SchemaId,
+};
 
 static EMPTY_OWNED_RIGHTS: Lazy<ParentOwnedRights> = Lazy::new(ParentOwnedRights::default);
 static EMPTY_PUBLIC_RIGHTS: Lazy<ParentPublicRights> = Lazy::new(ParentPublicRights::default);
@@ -64,7 +66,7 @@ pub struct NodeOutpoint {
 #[display(inner)]
 pub enum OutpointParseError {
     #[from]
-    InvalidNodeId(bitcoin::hashes::hex::Error),
+    InvalidNodeId(bitcoin_hashes::hex::Error),
 
     InvalidType(ParseIntError),
 
@@ -132,7 +134,7 @@ impl commit_encode::Strategy for NodeId {
 }
 
 impl FromStr for NodeId {
-    type Err = bitcoin::hashes::hex::Error;
+    type Err = bitcoin_hashes::hex::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> { Ok(NodeId::from_inner(s.parse()?)) }
 }
@@ -425,14 +427,14 @@ pub trait Node: AsAny {
             .unwrap_or_else(Vec::new)
     }
 
-    fn node_outputs(&self, witness_txid: Txid) -> BTreeMap<NodeOutpoint, OutPoint> {
+    fn node_outputs(&self, witness_txid: Txid) -> BTreeMap<NodeOutpoint, Outpoint> {
         let node_id = self.node_id();
-        let mut res: BTreeMap<NodeOutpoint, OutPoint> = bmap! {};
+        let mut res: BTreeMap<NodeOutpoint, Outpoint> = bmap! {};
         for (ty, assignments) in self.owned_rights() {
             for (seal, node_output) in assignments.revealed_seal_outputs() {
-                let outpoint = seal.outpoint_or(witness_txid);
+                let outpoint = seal.outpoint_or(txid!(witness_txid));
                 let node_outpoint = NodeOutpoint::new(node_id, *ty, node_output);
-                res.insert(node_outpoint, outpoint);
+                res.insert(node_outpoint, outpoint!(outpoint));
             }
         }
         res
@@ -914,7 +916,7 @@ mod _strict_encoding {
 mod test {
     use std::io::Write;
 
-    use bitcoin::hashes::hex::ToHex;
+    use bitcoin_hashes::hex::ToHex;
     use commit_verify::{tagged_hash, CommitConceal, TaggedHash};
     use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
     use strict_encoding::{strict_serialize, StrictDecode, StrictEncode};

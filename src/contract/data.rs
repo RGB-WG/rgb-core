@@ -20,7 +20,7 @@ use std::io;
 use amplify::num::apfloat::ieee;
 use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::AsAny;
-use bitcoin::hashes::{sha256, sha256t};
+use bitcoin_hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode, TaggedHash};
 use half::bf16;
 use stens::{AsciiString, PrimitiveType, TypeRef};

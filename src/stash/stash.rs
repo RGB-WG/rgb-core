@@ -23,7 +23,7 @@
 //! NB: Stash implementations must be able to operate multiple independent RGB
 //! contract.
 
-use bitcoin::OutPoint;
+use bc::Outpoint;
 use bp::dbc::{Anchor, AnchorId};
 use commit_verify::lnpbp4;
 
@@ -118,6 +118,6 @@ pub trait Stash {
     fn prune(
         &mut self,
         tx_resolver: &mut impl ResolveTx,
-        ownership_resolver: impl Fn(OutPoint) -> bool,
+        ownership_resolver: impl Fn(Outpoint) -> bool,
     ) -> Result<usize, Self::Error>;
 }

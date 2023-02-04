@@ -35,6 +35,8 @@ pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
+pub(crate) mod temp;
+
 pub mod contract;
 pub mod schema;
 pub mod stash;
@@ -42,7 +44,6 @@ pub mod validation;
 pub mod vm;
 #[macro_use]
 mod macros;
-pub(crate) mod temp;
 
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};

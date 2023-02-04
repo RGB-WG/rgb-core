@@ -13,7 +13,7 @@
 
 use std::iter::Filter;
 
-use bitcoin::{OutPoint, Txid};
+use bitcoin::{Outpoint, Txid};
 
 use crate::schema::OwnedRightType;
 use crate::stash::iter::{ConsTsIter, TransitionIterator};
@@ -54,10 +54,10 @@ where State: StateTypes
     output: NodeOutput,
 
     /// The seal closed by the operation
-    closed_seal: OutPoint,
+    closed_seal: Outpoint,
 
     /// The new seal defined by the operation
-    defined_seal: OutPoint,
+    defined_seal: Outpoint,
 
     /// Previous state (invalidated by the operation)
     prev_state: &'container State::Revealed,
@@ -66,7 +66,7 @@ where State: StateTypes
     next_state: &'container State::Revealed,
 
     /// Transaction output operating as a single-use-seal closing witness
-    witness: OutPoint,
+    witness: Outpoint,
 }
 
 #[derive(Eq, PartialEq, Debug)]
