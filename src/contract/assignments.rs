@@ -16,14 +16,13 @@ use std::hash::Hasher;
 use std::io;
 
 use amplify::AsAny;
-use bitcoin::secp256k1;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{CommitConceal, CommitEncode, ConsensusCommit};
 use once_cell::sync::Lazy;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint};
-use crate::contract::{attachment, SECP256K1_ZKP};
+use crate::contract::attachment;
 use crate::{AtomicValue, ConfidentialDataError, RevealSeals, StateRetrievalError};
 
 pub(super) static EMPTY_ASSIGNMENTS: Lazy<TypedAssignments> = Lazy::new(TypedAssignments::default);
@@ -70,43 +69,57 @@ impl Default for TypedAssignments {
 }
 
 impl TypedAssignments {
+    /// # Panics
+    ///
+    /// If inputs has invalid blinding factor values, like above the group order
+    /// or being inversion of some other subset of the blinding factors coming
+    /// from the input.
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
         allocations_ours: BTreeMap<seal::Revealed, AtomicValue>,
         allocations_theirs: BTreeMap<SealEndpoint, AtomicValue>,
     ) -> Self {
+        use secp256k1_zkp::{Scalar, SecretKey};
+
         if allocations_ours.len() + allocations_theirs.len() == 0 {
             return Self::Value(vec![]);
         }
 
         // Generate random blinding factors
-        let mut rng = bitcoin::secp256k1::rand::thread_rng();
+        let mut rng = secp256k1_zkp::rand::thread_rng();
         // We will compute the last blinding factors from all others so they
         // sum up to 0, so we need to generate only n - 1 random factors
         let count = allocations_theirs.len() + allocations_ours.len();
         let mut blinding_factors = Vec::<_>::with_capacity(count);
-        for _ in 0..count {
-            blinding_factors.push(secp256k1zkp::SecretKey::new(&SECP256K1_ZKP, &mut rng));
+        let mut blinding_output_sum = Scalar::ZERO;
+        for _ in 0..(count - 1) {
+            let bf = SecretKey::new(&mut rng);
+            blinding_output_sum = bf
+                .add_tweak(&blinding_output_sum)
+                .expect("two random keys are inversion of each other")
+                .into();
+            blinding_factors.push(bf);
         }
+        let blinding_input_sum = inputs.iter().fold(Scalar::ZERO, |acc, val| {
+            let sk = SecretKey::from_slice(val.blinding.as_ref())
+                .expect("input has a blinding factor above group order");
+            sk.add_tweak(&acc)
+                .expect("invalid input blinding factor: inversion of a subset of other blindings")
+                .into()
+        });
 
-        // We need the last factor to be equal to the difference
-        let mut blinding_inputs: Vec<_> = inputs.iter().map(|inp| inp.blinding.into()).collect();
-        if blinding_inputs.is_empty() {
-            blinding_inputs.push(secp256k1::ONE_KEY);
-        }
-
-        // the last blinding factor must be a correction value
-        if !blinding_factors.is_empty() {
-            blinding_factors.pop();
-            let inputs = blinding_inputs
-                .clone()
-                .into_iter()
-                .map(|key| secp256k1zkp::SecretKey(*key.as_ref()))
-                .collect();
-            let blinding_correction = SECP256K1_ZKP
-                .blind_sum(inputs, blinding_factors.clone())
-                .expect("SECP256K1_ZKP failure has negligible probability");
-            blinding_factors.push(blinding_correction);
+        if inputs.is_empty() {
+            // if we have no inputs, we assign a random last blinding factor
+            blinding_factors.push(SecretKey::new(&mut rng));
+        } else {
+            // the last blinding factor must be a correction value
+            let input_sum = SecretKey::from_slice(&blinding_input_sum.to_be_bytes())
+                .expect("sum of output blinding factors overflows curve order");
+            let mut blinding_correction = input_sum.negate();
+            blinding_correction = blinding_correction.add_tweak(&blinding_output_sum)
+                .expect("sum of randomly generated blinding factors perfectly equal to the sum of input blinding factors");
+            // We need the last factor to be equal to the difference
+            blinding_factors.push(blinding_correction.negate());
         }
 
         let mut blinding_iter = blinding_factors.into_iter();

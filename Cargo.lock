@@ -873,6 +873,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd403e9f0569b4131ab3fc9fa24a17775331b39382efd2cde851fdca655e3520"
 dependencies = [
+ "rand",
  "secp256k1",
  "secp256k1-zkp-sys",
  "serde",
