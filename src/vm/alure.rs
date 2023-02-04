@@ -11,6 +11,7 @@
 
 #![allow(clippy::unusual_byte_groupings)]
 
+/*
 use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
@@ -18,10 +19,12 @@ use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::program::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::CoreRegs;
 use aluvm::Vm;
+ */
 
 use crate::validation::Failure;
 use crate::{Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, Validate};
 
+/*
 pub const INSTR_NOOP: u8 = 0b11_000_000;
 pub const INSTR_ISAE_FROM: u8 = 0b11_000_000;
 pub const INSTR_ISAE_TO: u8 = 0b11_000_000;
@@ -76,10 +79,12 @@ impl Bytecode for RgbIsa {
         })
     }
 }
+*/
 
-pub type ValidationScript = aluvm::Program<RgbIsa>;
+pub type ValidationScript = Vec<u8>; // aluvm::Program<RgbIsa>;
 
 pub struct Runtime<'script> {
+    #[allow(dead_code)]
     script: &'script ValidationScript,
 }
 
@@ -100,11 +105,14 @@ impl<'script> Validate for Runtime<'script> {
         current_meta: &Metadata,
     ) -> Result<(), Failure> {
         // TODO: Implement validation with AluVM
+        /*
         let mut vm = Vm::<RgbIsa>::new();
         if vm.run(self.script) {
             Ok(())
         } else {
             Err(Failure::ScriptFailure(node_id))
         }
+         */
+        Ok(())
     }
 }

@@ -39,7 +39,6 @@ amplify = { version = "~3.13.0", features = ["apfloat"] }
 bp-core = { version = "~0.9.0" }
 strict_encoding = { version = "~0.9.0", features = ["crypto", "chrono", "bitcoin", "float"] }
 commit_verify = { version = "~0.9.0", features = ["rand", "bulletproofs"] }
-aluvm = { version = "~0.9.0", features = ["std", "strict_encoding"] }
 bitcoin_hashes = "0.11.0"
 bp-primitives = "0.10.0-beta.1"
 # Core rust projects
@@ -63,5 +62,5 @@ default = []
 all = ["serde"]
 serde = ["serde_crate", "serde_with",
          "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
-         "bp-core/serde", "aluvm/serde",
+         "bp-core/serde",
          "secp256k1-zkp/serde", "bp-primitives/serde"]
