@@ -778,7 +778,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "stens",
  "strict_encoding 0.9.0",
  "strict_encoding_test",
 ]
@@ -973,19 +972,6 @@ checksum = "ebd1b177894da2a2d9120208c3386066af06a488255caabc5de8ddca22dbc3ce"
 dependencies = [
  "quote",
  "syn",
-]
-
-[[package]]
-name = "stens"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12dfcfcd8b29e9cca1e0c1f1bcd03f91704cd16bfd49301d937bd56379b76b10"
-dependencies = [
- "amplify 3.13.0",
- "serde",
- "serde_with",
- "serde_yaml 0.9.17",
- "strict_encoding 0.9.0",
 ]
 
 [[package]]

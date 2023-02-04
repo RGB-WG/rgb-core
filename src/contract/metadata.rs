@@ -13,15 +13,11 @@
 
 use std::collections::BTreeMap;
 
-use amplify::num::apfloat::ieee;
-use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::Wrapper;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{
     commit_encode, ConsensusCommit, ConsensusMerkleCommit, MerkleSource, ToMerkleSource,
 };
-use half::bf16;
-use stens::AsciiString;
 
 use super::data;
 use crate::schema;
@@ -68,151 +64,6 @@ impl ToMerkleSource for Metadata {
                     .map(move |data| MetadataLeaf(*type_id, data.clone()))
             })
             .collect()
-    }
-}
-
-impl Metadata {
-    pub fn u8(&self, field_type: impl Into<schema::FieldType>) -> Vec<u8> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::u8).collect())
-            .unwrap_or_default()
-    }
-    pub fn u16(&self, field_type: impl Into<schema::FieldType>) -> Vec<u16> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::u16).collect())
-            .unwrap_or_default()
-    }
-    pub fn u32(&self, field_type: impl Into<schema::FieldType>) -> Vec<u32> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::u32).collect())
-            .unwrap_or_default()
-    }
-    pub fn u64(&self, field_type: impl Into<schema::FieldType>) -> Vec<u64> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::u64).collect())
-            .unwrap_or_default()
-    }
-    pub fn u128(&self, field_type: impl Into<schema::FieldType>) -> Vec<u128> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::u128).collect())
-            .unwrap_or_default()
-    }
-    pub fn u256(&self, field_type: impl Into<schema::FieldType>) -> Vec<u256> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::u256).collect())
-            .unwrap_or_default()
-    }
-    pub fn u512(&self, field_type: impl Into<schema::FieldType>) -> Vec<u512> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::u512).collect())
-            .unwrap_or_default()
-    }
-    pub fn u1024(&self, field_type: impl Into<schema::FieldType>) -> Vec<u1024> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::u1024).collect())
-            .unwrap_or_default()
-    }
-
-    pub fn i8(&self, field_type: impl Into<schema::FieldType>) -> Vec<i8> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::i8).collect())
-            .unwrap_or_default()
-    }
-    pub fn i16(&self, field_type: impl Into<schema::FieldType>) -> Vec<i16> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::i16).collect())
-            .unwrap_or_default()
-    }
-    pub fn i32(&self, field_type: impl Into<schema::FieldType>) -> Vec<i32> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::i32).collect())
-            .unwrap_or_default()
-    }
-    pub fn i64(&self, field_type: impl Into<schema::FieldType>) -> Vec<i64> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::i64).collect())
-            .unwrap_or_default()
-    }
-    pub fn i128(&self, field_type: impl Into<schema::FieldType>) -> Vec<i128> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::i128).collect())
-            .unwrap_or_default()
-    }
-    pub fn i256(&self, field_type: impl Into<schema::FieldType>) -> Vec<i256> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::i256).collect())
-            .unwrap_or_default()
-    }
-    pub fn i512(&self, field_type: impl Into<schema::FieldType>) -> Vec<i512> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::i512).collect())
-            .unwrap_or_default()
-    }
-    pub fn i1024(&self, field_type: impl Into<schema::FieldType>) -> Vec<i1024> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::i1024).collect())
-            .unwrap_or_default()
-    }
-
-    pub fn f16b(&self, field_type: impl Into<schema::FieldType>) -> Vec<bf16> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::f16b).collect())
-            .unwrap_or_default()
-    }
-    pub fn f16(&self, field_type: impl Into<schema::FieldType>) -> Vec<ieee::Half> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::f16).collect())
-            .unwrap_or_default()
-    }
-    pub fn f32(&self, field_type: impl Into<schema::FieldType>) -> Vec<f32> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::f32).collect())
-            .unwrap_or_default()
-    }
-    pub fn f64(&self, field_type: impl Into<schema::FieldType>) -> Vec<f64> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::f64).collect())
-            .unwrap_or_default()
-    }
-    pub fn f80(&self, field_type: impl Into<schema::FieldType>) -> Vec<ieee::X87DoubleExtended> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::f80).collect())
-            .unwrap_or_default()
-    }
-    pub fn f128(&self, field_type: impl Into<schema::FieldType>) -> Vec<ieee::Quad> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::f128).collect())
-            .unwrap_or_default()
-    }
-    pub fn f256(&self, field_type: impl Into<schema::FieldType>) -> Vec<ieee::Oct> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::f256).collect())
-            .unwrap_or_default()
-    }
-    // TODO #100: Implement tapered float format
-
-    pub fn bytes(&self, field_type: impl Into<schema::FieldType>) -> Vec<Vec<u8>> {
-        self.get(&field_type.into())
-            .map(|set| set.iter().filter_map(data::Revealed::bytes).collect())
-            .unwrap_or_default()
-    }
-    pub fn ascii_string(&self, field_type: impl Into<schema::FieldType>) -> Vec<AsciiString> {
-        self.get(&field_type.into())
-            .map(|set| {
-                set.iter()
-                    .filter_map(data::Revealed::ascii_string)
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-    pub fn unicode_string(&self, field_type: impl Into<schema::FieldType>) -> Vec<String> {
-        self.get(&field_type.into())
-            .map(|set| {
-                set.iter()
-                    .filter_map(data::Revealed::unicode_string)
-                    .collect()
-            })
-            .unwrap_or_default()
     }
 }
 

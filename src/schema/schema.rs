@@ -14,7 +14,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use amplify::flags::FlagVec;
 use bitcoin_hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
-use stens::{TypeRef, TypeSystem};
 
 use super::{ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, TransitionSchema};
 use crate::schema::StateSchema;
@@ -56,7 +55,7 @@ where Msg: AsRef<[u8]>
     fn commit(msg: &Msg) -> SchemaId { SchemaId::hash(msg) }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Schema {
@@ -74,8 +73,8 @@ pub struct Schema {
     pub rgb_features: FlagVec,
     pub root_id: SchemaId,
 
-    pub type_system: TypeSystem,
-    pub field_types: BTreeMap<FieldType, TypeRef>,
+    pub type_system: Vec<u8>, // TODO: TypeSystem,
+    pub field_types: BTreeMap<FieldType, ()>,
     pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,
     pub public_right_types: BTreeSet<PublicRightType>,
     pub genesis: GenesisSchema,
@@ -118,14 +117,13 @@ mod _validation {
     use commit_verify::CommitConceal;
 
     use super::*;
-    use crate::schema::state::StenVerify;
     use crate::schema::{
         MetadataStructure, OwnedRightsStructure, PublicRightsStructure, SchemaVerify,
     };
     use crate::script::{OverrideRules, ValidationScript};
     use crate::vm::Validate;
     use crate::{
-        data, validation, Assignment, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
+        validation, Assignment, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
         ParentOwnedRights, ParentPublicRights, PublicRights, State, TypedAssignments,
     };
 
@@ -346,12 +344,13 @@ mod _validation {
         }
 
         fn validate_type_system(&self) -> validation::Status {
-            let mut status = validation::Status::new();
-            if let Err(inconsistencies) = self.type_system.validate() {
-                for err in inconsistencies {
-                    status.add_failure(validation::Failure::SchemaTypeSystem(err));
+            let status = validation::Status::new();
+            // TODO: Validate type system
+            /*if let Err(inconsistencies) = self.type_system.validate() {
+                for _err in inconsistencies {
+                    status.add_failure(validation::Failure::SchemaTypeSystem(/*err*/));
                 }
-            }
+            }*/
             status
         }
 
@@ -385,21 +384,18 @@ mod _validation {
                     ));
                 }
 
-                let field = self.field_types.get(field_type_id)
+                let _field = self.field_types.get(field_type_id)
                     .expect("If the field were absent, the schema would not be able to pass the internal validation and we would not reach this point");
-                for data in set {
+                for _data in set {
+                    // TODO: Run strict type validation
+                    /*
                     let schema_type = data.schema_type();
-                    if &schema_type != field
-                        && !matches!(
-                            (&data, field),
-                            (data::Revealed::Bytes(_), TypeRef::NameRef(_))
-                        )
-                    {
-                        status.add_failure(validation::Failure::SchemaMismatchedDataType(
-                            *field_type_id,
-                        ));
-                    }
+
+                    status.add_failure(validation::Failure::SchemaMismatchedDataType(
+                        *field_type_id,
+                    ));
                     status += field.verify(&self.type_system, node_id, *field_type_id, &data);
+                     */
                 }
             }
 
@@ -508,20 +504,16 @@ mod _validation {
                 match owned_rights.get(owned_type_id) {
                     None => {}
                     Some(TypedAssignments::Void(set)) => set.iter().for_each(|data| {
-                        status +=
-                            assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
+                        status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
                     Some(TypedAssignments::Value(set)) => set.iter().for_each(|data| {
-                        status +=
-                            assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
+                        status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
                     Some(TypedAssignments::Data(set)) => set.iter().for_each(|data| {
-                        status +=
-                            assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
+                        status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
                     Some(TypedAssignments::Attachment(set)) => set.iter().for_each(|data| {
-                        status +=
-                            assignment.validate(&self.type_system, &node_id, *owned_type_id, data)
+                        status += assignment.validate(&node_id, *owned_type_id, data)
                     }),
                 };
             }

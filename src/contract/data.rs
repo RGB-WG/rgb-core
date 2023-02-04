@@ -12,18 +12,12 @@
 #![allow(clippy::unnecessary_cast)]
 
 use core::any::Any;
-use core::cmp::Ordering;
 use core::fmt::Debug;
-use std::hash::Hasher;
 use std::io;
 
-use amplify::num::apfloat::ieee;
-use amplify::num::{i1024, i256, i512, u1024, u256, u512};
 use amplify::AsAny;
 use bitcoin_hashes::{sha256, sha256t};
 use commit_verify::{commit_encode, CommitConceal, CommitEncode, TaggedHash};
-use half::bf16;
-use stens::{AsciiString, PrimitiveType, TypeRef};
 use strict_encoding::strict_serialize;
 
 use super::{ConfidentialState, RevealedState};
@@ -48,98 +42,10 @@ impl CommitEncode for Void {
     fn commit_encode<E: io::Write>(&self, _e: E) -> usize { 0 }
 }
 
-#[derive(Clone, Debug, AsAny, Display)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, AsAny)]
 #[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(repr = u8)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub enum Revealed {
-    #[strict_encoding(value = 0x00)]
-    #[display("{0}", alt = "U8({0})")]
-    U8(u8),
-    #[strict_encoding(value = 0x01)]
-    #[display("{0}", alt = "U16({0})")]
-    U16(u16),
-    #[strict_encoding(value = 0x02)]
-    #[display("{0}", alt = "U32({0})")]
-    U32(u32),
-    #[strict_encoding(value = 0x03)]
-    #[display("{0}", alt = "U64({0})")]
-    U64(u64),
-    #[strict_encoding(value = 0x04)]
-    #[display("{0}", alt = "U128({0})")]
-    U128(u128),
-    #[strict_encoding(value = 0x05)]
-    #[display("{0}", alt = "U256({0})")]
-    U256(u256),
-    #[strict_encoding(value = 0x06)]
-    #[display("{0}", alt = "U512({0})")]
-    U512(u512),
-    #[strict_encoding(value = 0x07)]
-    #[display("{0}", alt = "U1024({0})")]
-    U1024(u1024),
-
-    #[strict_encoding(value = 0x10)]
-    #[display("{0}", alt = "I8({0})")]
-    I8(i8),
-    #[strict_encoding(value = 0x11)]
-    #[display("{0}", alt = "I16({0})")]
-    I16(i16),
-    #[strict_encoding(value = 0x12)]
-    #[display("{0}", alt = "I32({0})")]
-    I32(i32),
-    #[strict_encoding(value = 0x13)]
-    #[display("{0}", alt = "I64({0})")]
-    I64(i64),
-    #[strict_encoding(value = 0x14)]
-    #[display("{0}", alt = "I128({0})")]
-    I128(i128),
-    #[strict_encoding(value = 0x15)]
-    #[display("{0}", alt = "I256({0})")]
-    I256(i256),
-    #[strict_encoding(value = 0x16)]
-    #[display("{0}", alt = "I512({0})")]
-    I512(i512),
-    #[strict_encoding(value = 0x17)]
-    #[display("{0}", alt = "I1024({0})")]
-    I1024(i1024),
-
-    // TODO #100: Implement tapered float format
-    #[strict_encoding(value = 0x30)]
-    #[display("{0}", alt = "F16B({0})")]
-    F16B(bf16),
-    #[strict_encoding(value = 0x31)]
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
-    #[display("{0}", alt = "F16({0})")]
-    F16(ieee::Half),
-    #[strict_encoding(value = 0x32)]
-    #[display("{0}", alt = "F32({0})")]
-    F32(f32),
-    #[strict_encoding(value = 0x33)]
-    #[display("{0}", alt = "F64({0})")]
-    F64(f64),
-    #[strict_encoding(value = 0x34)]
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
-    #[display("{0}", alt = "F80({0})")]
-    F80(ieee::X87DoubleExtended),
-    #[strict_encoding(value = 0x35)]
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
-    #[display("{0}", alt = "F128({0})")]
-    F128(ieee::Quad),
-    #[strict_encoding(value = 0x36)]
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
-    #[display("{0}", alt = "F256({0})")]
-    F256(ieee::Oct),
-
-    #[strict_encoding(value = 0xE0)]
-    #[display("<bytes>", alt = "bytes(...)")]
-    Bytes(Vec<u8>),
-    #[strict_encoding(value = 0xEE)]
-    #[display("{0}", alt = "ascii({0})")]
-    AsciiString(AsciiString),
-    #[strict_encoding(value = 0xEF)]
-    #[display("{0}", alt = "string({0})")]
-    UnicodeString(String),
-}
+pub struct Revealed(Vec<u8>);
 
 impl RevealedState for Revealed {}
 
@@ -154,44 +60,6 @@ impl CommitConceal for Revealed {
 }
 impl commit_encode::Strategy for Revealed {
     type Strategy = commit_encode::strategies::UsingConceal;
-}
-
-impl PartialEq for Revealed {
-    fn eq(&self, other: &Self) -> bool {
-        let some = strict_serialize(self).expect("Encoding of predefined data types must not fail");
-        let other =
-            strict_serialize(other).expect("Encoding of predefined data types must not fail");
-        some.eq(&other)
-    }
-}
-
-impl Eq for Revealed {}
-
-impl std::hash::Hash for Revealed {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(&self.commit_conceal().commit_serialize())
-    }
-}
-
-impl PartialOrd for Revealed {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let some = strict_serialize(self).expect("Encoding of predefined data types must not fail");
-        let other =
-            strict_serialize(other).expect("Encoding of predefined data types must not fail");
-        some.partial_cmp(&other)
-    }
-}
-
-impl Ord for Revealed {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or_else(|| {
-            let some =
-                strict_serialize(self).expect("Encoding of predefined data types must not fail");
-            let other =
-                strict_serialize(other).expect("Encoding of predefined data types must not fail");
-            some.cmp(&other)
-        })
-    }
 }
 
 // "rgb:data:confidential"
@@ -226,200 +94,6 @@ impl ConfidentialState for Confidential {}
 
 impl AsAny for Confidential {
     fn as_any(&self) -> &dyn Any { self as &dyn Any }
-}
-
-impl Revealed {
-    pub fn u8(&self) -> Option<u8> {
-        match self {
-            Revealed::U8(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn u16(&self) -> Option<u16> {
-        match self {
-            Revealed::U16(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn u32(&self) -> Option<u32> {
-        match self {
-            Revealed::U32(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn u64(&self) -> Option<u64> {
-        match self {
-            Revealed::U64(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn u128(&self) -> Option<u128> {
-        match self {
-            Revealed::U128(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn u256(&self) -> Option<u256> {
-        match self {
-            Revealed::U256(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn u512(&self) -> Option<u512> {
-        match self {
-            Revealed::U512(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn u1024(&self) -> Option<u1024> {
-        match self {
-            Revealed::U1024(val) => Some(*val),
-            _ => None,
-        }
-    }
-
-    pub fn i8(&self) -> Option<i8> {
-        match self {
-            Revealed::I8(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn i16(&self) -> Option<i16> {
-        match self {
-            Revealed::I16(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn i32(&self) -> Option<i32> {
-        match self {
-            Revealed::I32(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn i64(&self) -> Option<i64> {
-        match self {
-            Revealed::I64(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn i128(&self) -> Option<i128> {
-        match self {
-            Revealed::I128(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn i256(&self) -> Option<i256> {
-        match self {
-            Revealed::I256(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn i512(&self) -> Option<i512> {
-        match self {
-            Revealed::I512(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn i1024(&self) -> Option<i1024> {
-        match self {
-            Revealed::I1024(val) => Some(*val),
-            _ => None,
-        }
-    }
-
-    pub fn f16b(&self) -> Option<bf16> {
-        match self {
-            Revealed::F16B(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn f16(&self) -> Option<ieee::Half> {
-        match self {
-            Revealed::F16(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn f32(&self) -> Option<f32> {
-        match self {
-            Revealed::F32(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn f64(&self) -> Option<f64> {
-        match self {
-            Revealed::F64(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn f80(&self) -> Option<ieee::X87DoubleExtended> {
-        match self {
-            Revealed::F80(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn f128(&self) -> Option<ieee::Quad> {
-        match self {
-            Revealed::F128(val) => Some(*val),
-            _ => None,
-        }
-    }
-    pub fn f256(&self) -> Option<ieee::Oct> {
-        match self {
-            Revealed::F256(val) => Some(*val),
-            _ => None,
-        }
-    }
-    // TODO #100: Implement tapered float format
-
-    pub fn bytes(&self) -> Option<Vec<u8>> {
-        match self {
-            Revealed::Bytes(val) => Some(val.clone()),
-            _ => None,
-        }
-    }
-    pub fn ascii_string(&self) -> Option<AsciiString> {
-        match self {
-            Revealed::AsciiString(val) => Some(val.clone()),
-            _ => None,
-        }
-    }
-    pub fn unicode_string(&self) -> Option<String> {
-        match self {
-            Revealed::UnicodeString(val) => Some(val.clone()),
-            _ => None,
-        }
-    }
-
-    pub fn schema_type(&self) -> TypeRef {
-        match self {
-            Revealed::U8(_) => TypeRef::u8(),
-            Revealed::U16(_) => TypeRef::u16(),
-            Revealed::U32(_) => TypeRef::u32(),
-            Revealed::U64(_) => TypeRef::u64(),
-            Revealed::U128(_) => TypeRef::u128(),
-            Revealed::U256(_) => TypeRef::InPlace(PrimitiveType::U256.into()),
-            Revealed::U512(_) => TypeRef::InPlace(PrimitiveType::U512.into()),
-            Revealed::U1024(_) => TypeRef::InPlace(PrimitiveType::U1024.into()),
-            Revealed::I8(_) => TypeRef::i8(),
-            Revealed::I16(_) => TypeRef::i16(),
-            Revealed::I32(_) => TypeRef::i32(),
-            Revealed::I64(_) => TypeRef::i64(),
-            Revealed::I128(_) => TypeRef::i128(),
-            Revealed::I256(_) => TypeRef::InPlace(PrimitiveType::I256.into()),
-            Revealed::I512(_) => TypeRef::InPlace(PrimitiveType::I512.into()),
-            Revealed::I1024(_) => TypeRef::InPlace(PrimitiveType::I1024.into()),
-            Revealed::F16B(_) => TypeRef::InPlace(PrimitiveType::F16b.into()),
-            Revealed::F16(_) => TypeRef::InPlace(PrimitiveType::F16.into()),
-            Revealed::F32(_) => TypeRef::f32(),
-            Revealed::F64(_) => TypeRef::f64(),
-            Revealed::F80(_) => TypeRef::InPlace(PrimitiveType::F80.into()),
-            Revealed::F128(_) => TypeRef::InPlace(PrimitiveType::F128.into()),
-            Revealed::F256(_) => TypeRef::InPlace(PrimitiveType::F256.into()),
-            Revealed::Bytes(_) => TypeRef::bytes(),
-            Revealed::AsciiString(_) => TypeRef::ascii_string(),
-            Revealed::UnicodeString(_) => TypeRef::unicode_string(),
-        }
-    }
 }
 
 #[cfg(test)]

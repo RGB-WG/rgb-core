@@ -22,10 +22,6 @@ use crate::vm::alure;
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(Debug)]
 pub enum VmType {
-    /// Embedded code (not a virtual machine) which is the part of this RGB
-    /// Core Library.
-    Embedded,
-
     /// AluVM: pure functional register-based virtual machine designed for RGB
     /// and multiparty computing.
     AluVM,
@@ -37,14 +33,6 @@ pub enum VmType {
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(by_value, repr = u8)]
 pub enum ValidationScript {
-    /// Embedded code (not a virtual machine) which is the part of this RGB
-    /// Core Library. Using this option results in the fact that the schema
-    /// does not commit to the actual validating code and the validation logic
-    /// may change in the future (like to be patched) with new RGB Core Lib
-    /// releases.
-    #[strict_encoding(value = 0x00)]
-    Embedded,
-
     /// AluVM: pure functional register-based virtual machine designed for RGB
     /// and multiparty computing.
     ///
@@ -54,13 +42,8 @@ pub enum ValidationScript {
     ///
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
-    #[strict_encoding(value = 0x01)]
+    #[strict_encoding(value = 0x00)]
     AluVM(alure::ValidationScript),
-}
-
-impl Default for ValidationScript {
-    // TODO: Update default VM type to AluVM in RGBv1 release
-    fn default() -> Self { ValidationScript::Embedded }
 }
 
 impl commit_encode::Strategy for ValidationScript {
@@ -70,7 +53,6 @@ impl commit_encode::Strategy for ValidationScript {
 impl ValidationScript {
     pub fn vm_type(&self) -> VmType {
         match self {
-            ValidationScript::Embedded => VmType::Embedded,
             ValidationScript::AluVM(_) => VmType::AluVM,
         }
     }

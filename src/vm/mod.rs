@@ -13,10 +13,10 @@
 //!
 //! Concrete virtual machine implementations must be wrapped into this API
 
-pub mod embedded;
+// pub mod embedded;
 pub mod alure;
 
-pub use embedded::EmbeddedVm;
+// pub use embedded::EmbeddedVm;
 
 use crate::{
     validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, ValidationScript,
@@ -51,15 +51,6 @@ impl Validate for ValidationScript {
         current_meta: &Metadata,
     ) -> Result<(), validation::Failure> {
         match self {
-            ValidationScript::Embedded => EmbeddedVm::new().validate(
-                node_id,
-                node_subtype,
-                previous_owned_rights,
-                current_owned_rights,
-                previous_public_rights,
-                current_public_rights,
-                current_meta,
-            ),
             ValidationScript::AluVM(script) => alure::Runtime::new(script).validate(
                 node_id,
                 node_subtype,

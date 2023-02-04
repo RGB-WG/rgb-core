@@ -17,7 +17,6 @@ use bc::{Tx, Txid};
 use bp::dbc::Anchor;
 use bp::seals::txout::TxoSeal;
 use commit_verify::{lnpbp4, CommitConceal};
-use stens::TypeRef;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, ContractId, Node, NodeId, Schema, SchemaId, TypedAssignments};
@@ -179,7 +178,7 @@ pub enum Failure {
     SchemaScriptOverrideDenied,
     SchemaScriptVmChangeDenied,
 
-    SchemaTypeSystem(stens::TypeInconsistency),
+    SchemaTypeSystem(/* TODO: use error from strict types */),
 
     BundleInvalid(BundleId),
 
@@ -223,8 +222,8 @@ pub enum Failure {
 
     EndpointTransitionNotFound(NodeId),
 
-    InvalidStateDataType(NodeId, u16, TypeRef, data::Revealed),
-    InvalidStateDataValue(NodeId, u16, TypeRef, Vec<u8>),
+    InvalidStateDataType(NodeId, u16, /* TODO: Use strict type */ data::Revealed),
+    InvalidStateDataValue(NodeId, u16, /* TODO: Use strict type */ Vec<u8>),
 
     /// invalid bulletproofs in {0}:{1}: {3}
     InvalidBulletproofs(NodeId, u16, String),

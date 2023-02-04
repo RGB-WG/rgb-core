@@ -9,8 +9,6 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use stens::TypeRef;
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(by_value, repr = u8)]
@@ -38,7 +36,7 @@ pub enum StateType {
 pub enum StateSchema {
     Declarative,
     DiscreteFiniteField(DiscreteFiniteFieldFormat),
-    CustomData(TypeRef),
+    CustomData(/* TODO: Insert strict types type */),
     DataContainer,
 }
 
@@ -64,148 +62,21 @@ pub enum DiscreteFiniteFieldFormat {
 
 mod _validation {
     use core::any::Any;
-    use std::io;
 
     use amplify::AsAny;
     use commit_verify::CommitConceal;
-    use stens::{PrimitiveType, TypeConstr, TypeSystem, Verify};
 
     use super::*;
     use crate::contract::AttachmentStrategy;
-    use crate::data::Revealed;
     use crate::schema::OwnedRightType;
-    use crate::validation::Status;
     use crate::{
-        data, validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy,
-        State,
+        validation, Assignment, DeclarativeStrategy, HashStrategy, NodeId, PedersenStrategy, State,
     };
-
-    pub trait StenVerify {
-        fn verify(
-            &self,
-            type_system: &TypeSystem,
-            node_id: NodeId,
-            schema_type_id: u16,
-            data: &data::Revealed,
-        ) -> validation::Status;
-    }
-
-    impl StenVerify for PrimitiveType {
-        fn verify(
-            &self,
-            _: &TypeSystem,
-            node_id: NodeId,
-            schema_type_id: u16,
-            data: &data::Revealed,
-        ) -> validation::Status {
-            let mut status = validation::Status::new();
-            match (self, data) {
-                (PrimitiveType::U8, data::Revealed::U8(_))
-                | (PrimitiveType::U16, data::Revealed::U16(_))
-                | (PrimitiveType::U32, data::Revealed::U32(_))
-                | (PrimitiveType::U64, data::Revealed::U64(_))
-                | (PrimitiveType::U128, data::Revealed::U128(_))
-                | (PrimitiveType::U256, data::Revealed::U256(_))
-                | (PrimitiveType::U512, data::Revealed::U512(_))
-                | (PrimitiveType::U1024, data::Revealed::U1024(_))
-                | (PrimitiveType::I8, data::Revealed::I8(_))
-                | (PrimitiveType::I16, data::Revealed::I16(_))
-                | (PrimitiveType::I32, data::Revealed::I32(_))
-                | (PrimitiveType::I64, data::Revealed::I64(_))
-                | (PrimitiveType::I128, data::Revealed::I128(_))
-                | (PrimitiveType::I256, data::Revealed::I256(_))
-                | (PrimitiveType::I512, data::Revealed::I512(_))
-                | (PrimitiveType::I1024, data::Revealed::I1024(_))
-                | (PrimitiveType::F16b, data::Revealed::F16B(_))
-                | (PrimitiveType::F16, data::Revealed::F16(_))
-                | (PrimitiveType::F32, data::Revealed::F32(_))
-                | (PrimitiveType::F64, data::Revealed::F64(_))
-                | (PrimitiveType::F80, data::Revealed::F80(_))
-                | (PrimitiveType::F128, data::Revealed::F128(_))
-                | (PrimitiveType::F256, data::Revealed::F256(_)) => {}
-                _ => {
-                    status.add_failure(validation::Failure::InvalidStateDataType(
-                        node_id,
-                        schema_type_id,
-                        TypeRef::InPlace(TypeConstr::Plain(*self)),
-                        data.clone(),
-                    ));
-                }
-            }
-            status
-        }
-    }
-
-    impl StenVerify for TypeConstr<PrimitiveType> {
-        fn verify(
-            &self,
-            type_system: &TypeSystem,
-            node_id: NodeId,
-            schema_type_id: u16,
-            data: &Revealed,
-        ) -> Status {
-            let mut status = validation::Status::new();
-            match (self, data) {
-                (TypeConstr::Plain(ty), data) => {
-                    status += StenVerify::verify(ty, type_system, node_id, schema_type_id, data);
-                }
-                (TypeConstr::List(PrimitiveType::AsciiChar), Revealed::AsciiString(_)) => {}
-                (TypeConstr::List(PrimitiveType::UnicodeChar), Revealed::UnicodeString(_)) => {}
-                (TypeConstr::List(PrimitiveType::U8), Revealed::Bytes(_)) => {}
-                _ => {
-                    status.add_failure(validation::Failure::InvalidStateDataType(
-                        node_id,
-                        schema_type_id,
-                        TypeRef::InPlace(self.clone()),
-                        data.clone(),
-                    ));
-                }
-            }
-            status
-        }
-    }
-
-    impl StenVerify for TypeRef {
-        fn verify(
-            &self,
-            type_system: &TypeSystem,
-            node_id: NodeId,
-            schema_type_id: u16,
-            data: &data::Revealed,
-        ) -> validation::Status {
-            let mut status = validation::Status::new();
-            match (self, data) {
-                (TypeRef::InPlace(ty), _) => {
-                    status += StenVerify::verify(ty, type_system, node_id, schema_type_id, data);
-                }
-                (TypeRef::NameRef(ty), data::Revealed::Bytes(bytes)) => {
-                    let mut cursor = io::Cursor::new(bytes.as_slice());
-                    if !ty.verify(type_system, &mut cursor) {
-                        status.add_failure(validation::Failure::InvalidStateDataValue(
-                            node_id,
-                            schema_type_id,
-                            self.clone(),
-                            bytes.clone(),
-                        ));
-                    }
-                }
-                _ => {
-                    status.add_failure(validation::Failure::InvalidStateDataType(
-                        node_id,
-                        schema_type_id,
-                        self.clone(),
-                        data.clone(),
-                    ));
-                }
-            }
-            status
-        }
-    }
 
     impl StateSchema {
         pub fn validate<STATE>(
             &self,
-            type_system: &TypeSystem,
+            // type_system: &TypeSystem,
             node_id: &NodeId,
             assignment_id: OwnedRightType,
             data: &Assignment<STATE>,
@@ -252,7 +123,7 @@ mod _validation {
                             //       add information to the status like with
                             //       hashed data below
                         }
-                        StateSchema::CustomData(_) => {
+                        StateSchema::CustomData() => {
                             match a.downcast_ref::<<HashStrategy as State>::Confidential>() {
                                 None => {
                                     status.add_failure(
@@ -305,7 +176,7 @@ mod _validation {
                             // TODO #15: When other homomorphic formats will be added,
                             //       add type check like with hashed data below
                         }
-                        StateSchema::CustomData(format) => {
+                        StateSchema::CustomData(/*format*/) => {
                             match a.downcast_ref::<<HashStrategy as State>::Revealed>() {
                                 None => {
                                     status.add_failure(
@@ -314,14 +185,8 @@ mod _validation {
                                         ),
                                     );
                                 }
-                                Some(data) => {
-                                    status += StenVerify::verify(
-                                        format,
-                                        type_system,
-                                        *node_id,
-                                        assignment_id,
-                                        data,
-                                    );
+                                Some(_data) => {
+                                    // TODO: run strict type validation
                                 }
                             }
                         }
@@ -341,7 +206,6 @@ mod _validation {
         }
     }
 }
-pub(super) use _validation::StenVerify;
 
 #[cfg(test)]
 mod test {

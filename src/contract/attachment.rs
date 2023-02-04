@@ -13,7 +13,6 @@ use bitcoin_hashes::{sha256, sha256t};
 use commit_verify::{
     commit_encode, CommitConceal, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
 };
-use stens::AsciiString;
 use strict_encoding::{strict_serialize, StrictEncode};
 
 use crate::{ConfidentialState, RevealedState};
@@ -100,7 +99,7 @@ impl Confidential {
 #[display("{id}~{mime}")]
 pub struct Revealed {
     pub id: AttachmentId,
-    pub mime: AsciiString,
+    pub mime: String,
     pub salt: u64,
 }
 
