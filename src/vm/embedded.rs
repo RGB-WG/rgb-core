@@ -216,6 +216,8 @@ pub enum HandlerError {
 /// Embedded action handlers for contract nodes processed by the embedded state
 /// machine
 mod node {
+    use bitcoin::secp256k1;
+
     use super::*;
 
     pub fn validate(
@@ -314,7 +316,7 @@ mod node {
         inputs.push(
             value::Revealed {
                 value: issued,
-                blinding: secp256k1zkp::key::ONE_KEY.into(),
+                blinding: secp256k1::ONE_KEY.into(),
             }
             .commit_conceal()
             .commitment,

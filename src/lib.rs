@@ -31,7 +31,6 @@ extern crate strict_encoding;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_with;
-pub extern crate secp256k1zkp;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
@@ -47,12 +46,12 @@ pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
     pub use contract::{
         data, reveal, seal, value, Assignment, AtomicValue, AttachmentId, AttachmentStrategy,
-        ConcealSeals, ConcealState, ConfidentialDataError, ConfidentialState, ContractId,
-        DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
-        HomomorphicBulletproofGrin, IntoRevealedSeal, MergeReveal, Metadata, NoDataError, Node,
-        NodeId, NodeOutpoint, OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
-        PublicRights, RevealSeals, RevealedState, SealEndpoint, SealValueMap, State,
-        StateRetrievalError, StateType, Transition, TypedAssignments,
+        Bulletproofs, ConcealSeals, ConcealState, ConfidentialDataError, ConfidentialState,
+        ContractId, DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
+        IntoRevealedSeal, MergeReveal, Metadata, NoDataError, Node, NodeId, NodeOutpoint,
+        OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights,
+        RevealSeals, RevealedState, SealEndpoint, SealValueMap, State, StateRetrievalError,
+        StateType, Transition, TypedAssignments,
     };
     pub use schema::{
         script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,

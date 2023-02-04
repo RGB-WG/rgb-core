@@ -56,12 +56,7 @@ half = "~2.1.0"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.14", features = ["hex"], optional = true }
 once_cell = "1.12.0"
-# Other dependencies:
-# ------------------------------
-#    We are of no control of what's happening in Grin and would like to prevent
-#    updates w/o checking them manually. Should Elements Project secpk256k-zkp
-#    accept bulletproofs code, we will switch to it
-secp256k1zkp = { version = "0.9.0", package = "lnpbp_secp256k1zkp", features = ["keygen"] }
+secp256k1-zkp = { version = "0.7.0", features = ["rand-std", "global-context"] }
 
 [dev-dependencies]
 serde_json = "1"
@@ -73,5 +68,5 @@ all = ["serde"]
 serde = ["serde_crate", "serde_with", "half/serde",
          "amplify/serde", "commit_verify/serde", "strict_encoding/serde",
          "lnpbp/serde", "amplify/serde", "descriptor-wallet/serde", "bp-core/serde", "stens/serde", "aluvm/serde",
-         "secp256k1zkp/serde",
+         "secp256k1-zkp/serde",
          "bitcoin/serde"]

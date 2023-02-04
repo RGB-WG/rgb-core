@@ -21,10 +21,9 @@ use commit_verify::{CommitConceal, CommitEncode, ConsensusCommit};
 use once_cell::sync::Lazy;
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use super::{
-    data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint, SECP256K1_ZKP,
-};
+use super::{data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint};
 use crate::contract::attachment;
+use crate::value::BlindingFactor;
 use crate::{AtomicValue, ConfidentialDataError, RevealSeals, StateRetrievalError};
 
 pub(super) static EMPTY_ASSIGNMENTS: Lazy<TypedAssignments> = Lazy::new(TypedAssignments::default);
@@ -70,82 +69,123 @@ impl Default for TypedAssignments {
     fn default() -> Self { TypedAssignments::Void(vec![]) }
 }
 
+/// Errors happening during [`TypedAssignments::zero_balanced`] procedure. All
+/// of them indicate either invalid/crafted input arguments, or failures in the
+/// source of randomness.
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum MalformedInput {
+    /// both our and their allocations are empty; at least one value must be
+    /// provided in any of them.
+    NoOutput,
+
+    /// random number generator produced non-random blinding factor {0} which is
+    /// an inverse of the sum of the previously produced keys.
+    RandomInverseKeys,
+
+    /// one of inputs has an invalid blinding factor {0} exceeding field prime
+    /// order.
+    InvalidInputBlinding(BlindingFactor),
+
+    /// invalid input blinding factors, which sum up to the inversion of their
+    /// own selves.
+    MalformedInputBlindings,
+
+    /// blinding factors provided as an input are invalid; specifically they sum
+    /// above the prime field order. This means the attempt to spend an invalid
+    /// contract state; check that your program use validated data only.
+    InputBlindingsInvalid,
+
+    /// sum of randomly generated blinding factors perfectly equals the sum of
+    /// input blinding factors. This indicates that the random generator is
+    /// failed or hacked.
+    RandomnessFailure,
+}
+
 impl TypedAssignments {
     pub fn zero_balanced(
         inputs: Vec<value::Revealed>,
         allocations_ours: BTreeMap<seal::Revealed, AtomicValue>,
         allocations_theirs: BTreeMap<SealEndpoint, AtomicValue>,
-    ) -> Self {
+    ) -> Result<Self, MalformedInput> {
+        use secp256k1_zkp::{Scalar, SecretKey};
+
         if allocations_ours.len() + allocations_theirs.len() == 0 {
-            return Self::Value(vec![]);
+            return Err(MalformedInput::NoOutput);
         }
 
         // Generate random blinding factors
-        let mut rng = bitcoin::secp256k1::rand::thread_rng();
+        let mut rng = secp256k1_zkp::rand::thread_rng();
         // We will compute the last blinding factors from all others so they
         // sum up to 0, so we need to generate only n - 1 random factors
         let count = allocations_theirs.len() + allocations_ours.len();
         let mut blinding_factors = Vec::<_>::with_capacity(count);
-        for _ in 0..count {
-            blinding_factors.push(secp256k1zkp::SecretKey::new(&SECP256K1_ZKP, &mut rng));
+        let mut blinding_output_sum = Scalar::ZERO;
+        for _ in 0..(count - 1) {
+            let bf = SecretKey::new(&mut rng);
+            blinding_output_sum = bf
+                .add_tweak(&blinding_output_sum)
+                .map_err(|_| MalformedInput::RandomInverseKeys)?
+                .into();
+            blinding_factors.push(bf);
         }
+        let blinding_input_sum = inputs.iter().try_fold(Scalar::ZERO, |acc, val| {
+            let sk = SecretKey::from_slice(val.blinding.as_ref())
+                .map_err(|_| MalformedInput::InvalidInputBlinding(val.blinding))?;
+            sk.add_tweak(&acc)
+                .map_err(|_| MalformedInput::MalformedInputBlindings)
+                .map(Scalar::from)
+        })?;
 
-        // We need the last factor to be equal to the difference
-        let mut blinding_inputs: Vec<_> = inputs.iter().map(|inp| inp.blinding.into()).collect();
-        if blinding_inputs.is_empty() {
-            blinding_inputs.push(secp256k1zkp::key::ONE_KEY);
-        }
-
-        // the last blinding factor must be a correction value
-        if !blinding_factors.is_empty() {
-            blinding_factors.pop();
-            let blinding_correction = SECP256K1_ZKP
-                .blind_sum(blinding_inputs.clone(), blinding_factors.clone())
-                .expect("SECP256K1_ZKP failure has negligible probability");
-            blinding_factors.push(blinding_correction);
+        if inputs.is_empty() {
+            // if we have no inputs, we assign a random last blinding factor
+            blinding_factors.push(SecretKey::new(&mut rng));
+        } else {
+            // the last blinding factor must be a correction value
+            let input_sum = SecretKey::from_slice(&blinding_input_sum.to_be_bytes())
+                .map_err(|_| MalformedInput::InputBlindingsInvalid)?;
+            let mut blinding_correction = input_sum.negate();
+            blinding_correction = blinding_correction
+                .add_tweak(&blinding_output_sum)
+                .map_err(|_| MalformedInput::RandomnessFailure)?;
+            // We need the last factor to be equal to the difference
+            blinding_factors.push(blinding_correction.negate());
         }
 
         let mut blinding_iter = blinding_factors.into_iter();
         let mut set: Vec<Assignment<_>> = allocations_ours
             .into_iter()
-            .map(|(seal, amount)| Assignment::Revealed {
-                seal,
-                state: value::Revealed {
-                    value: amount,
-                    blinding: blinding_iter
-                        .next()
-                        .expect("Internal inconsistency in `AssignmentsVariant::zero_balanced`")
-                        .into(),
-                },
+            .zip(blinding_iter.by_ref())
+            .map(|((seal, amount), blinding)| {
+                Assignment::revealed(seal, value::Revealed::with(amount, blinding))
             })
             .collect();
-        set.extend(allocations_theirs.into_iter().map(|(seal_proto, amount)| {
-            let state = value::Revealed {
-                value: amount,
-                blinding: blinding_iter
-                    .next()
-                    .expect("Internal inconsistency in `AssignmentsVariant::zero_balanced`")
-                    .into(),
-            };
-            match seal_proto {
-                SealEndpoint::ConcealedUtxo(seal) => Assignment::ConfidentialSeal { seal, state },
-                SealEndpoint::WitnessVout {
-                    method,
-                    vout,
-                    blinding,
-                } => Assignment::Revealed {
-                    seal: seal::Revealed {
+        set.extend(allocations_theirs.into_iter().zip(blinding_iter).map(
+            |((seal_proto, amount), blinding)| {
+                let state = value::Revealed::with(amount, blinding);
+                match seal_proto {
+                    SealEndpoint::ConcealedUtxo(seal) => {
+                        Assignment::ConfidentialSeal { seal, state }
+                    }
+                    SealEndpoint::WitnessVout {
                         method,
-                        txid: None,
                         vout,
                         blinding,
+                    } => Assignment::Revealed {
+                        // TODO: Add convenience constructor to `seal::Revealed`
+                        seal: seal::Revealed {
+                            method,
+                            txid: None,
+                            vout,
+                            blinding,
+                        },
+                        state,
                     },
-                    state,
-                },
-            }
-        }));
+                }
+            },
+        ));
 
-        Self::Value(set)
+        Ok(Self::Value(set))
     }
 
     #[inline]
@@ -885,6 +925,10 @@ where
     StateType::Confidential: PartialEq + Eq,
     StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
+    pub fn revealed(seal: seal::Revealed, state: StateType::Revealed) -> Self {
+        Assignment::Revealed { seal, state }
+    }
+
     pub fn with_seal_replaced(assignment: &Self, seal: seal::Revealed) -> Self {
         match assignment {
             Assignment::Confidential { seal: _, state }
@@ -1142,9 +1186,8 @@ mod test {
     use bp::seals::txout::TxoSeal;
     use commit_verify::merkle::MerkleNode;
     use commit_verify::{merklize, CommitConceal, CommitEncode, ToMerkleSource};
-    use secp256k1zkp::pedersen::Commitment;
-    use secp256k1zkp::rand::{thread_rng, Rng, RngCore};
-    use secp256k1zkp::{Secp256k1, SecretKey};
+    use secp256k1_zkp::rand::{thread_rng, Rng, RngCore};
+    use secp256k1_zkp::{PedersenCommitment, SecretKey};
     use strict_encoding_test::test_vec_decoding_roundtrip;
 
     use super::super::{NodeId, OwnedRights, ParentOwnedRights};
@@ -1242,7 +1285,7 @@ mod test {
         input_amounts: &[u64],
         output_amounts: &[u64],
         partition: usize,
-    ) -> (Vec<Commitment>, Vec<Commitment>) {
+    ) -> (Vec<PedersenCommitment>, Vec<PedersenCommitment>) {
         let mut rng = thread_rng();
 
         // Create revealed amount from input amounts
@@ -1296,17 +1339,18 @@ mod test {
             .collect();
 
         // Balance both the allocations against input amounts
-        let balanced = TypedAssignments::zero_balanced(input_revealed.clone(), ours, theirs);
+        let balanced =
+            TypedAssignments::zero_balanced(input_revealed.clone(), ours, theirs).unwrap();
 
         // Extract balanced confidential output amounts
-        let outputs: Vec<Commitment> = balanced
+        let outputs: Vec<PedersenCommitment> = balanced
             .to_confidential_state_pedersen()
             .iter()
             .map(|confidential| confidential.commitment)
             .collect();
 
         // Create confidential input amounts
-        let inputs: Vec<Commitment> = input_revealed
+        let inputs: Vec<PedersenCommitment> = input_revealed
             .iter()
             .map(|revealed| revealed.commit_conceal().commitment)
             .collect();
@@ -1744,11 +1788,11 @@ mod test {
         // Check blinding factor matches with precomputed values
         assert_eq!(
             SecretKey::from(states[0].blinding),
-            SecretKey::from_slice(&Secp256k1::new(), &blind_1[..]).unwrap()
+            SecretKey::from_slice(&blind_1[..]).unwrap()
         );
         assert_eq!(
             SecretKey::from(states[1].blinding),
-            SecretKey::from_slice(&Secp256k1::new(), &blind_2[..]).unwrap()
+            SecretKey::from_slice(&blind_2[..]).unwrap()
         );
 
         // Check no values returned for declarative and custom data type
@@ -1793,24 +1837,33 @@ mod test {
         // Check extracted values matches with precomputed values
         assert_eq!(
             conf_amounts[0].commitment,
-            Commitment::from_vec(
-                Vec::from_hex("08cc48fa5e5cb1d2d2465bd8c437c0e00514abd813f9a7dd506a778405a2c43bc0")
-                    .unwrap()
+            PedersenCommitment::from_slice(
+                &Vec::from_hex(
+                    "08cc48fa5e5cb1d2d2465bd8c437c0e00514abd813f9a7dd506a778405a2c43bc0"
+                )
+                .unwrap()
             )
+            .unwrap()
         );
         assert_eq!(
             conf_amounts[1].commitment,
-            Commitment::from_vec(
-                Vec::from_hex("091e1b9e7605fc214806f3af3eba13947b91f47bac729f5def5e8fbd530112bed1")
-                    .unwrap()
+            PedersenCommitment::from_slice(
+                &Vec::from_hex(
+                    "091e1b9e7605fc214806f3af3eba13947b91f47bac729f5def5e8fbd530112bed1"
+                )
+                .unwrap()
             )
+            .unwrap()
         );
         assert_eq!(
             conf_amounts[2].commitment,
-            Commitment::from_vec(
-                Vec::from_hex("089775f829c8adad92ada17b5931edf63064d54678f4eb9a6fdfe8e4cb5d95f6f4")
-                    .unwrap()
+            PedersenCommitment::from_slice(
+                &Vec::from_hex(
+                    "089775f829c8adad92ada17b5931edf63064d54678f4eb9a6fdfe8e4cb5d95f6f4"
+                )
+                .unwrap()
             )
+            .unwrap()
         );
 
         // Check no values returned for declarative and hash type
