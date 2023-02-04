@@ -23,8 +23,6 @@ use commit_verify::{
     commit_encode, CommitEncode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash,
     ToMerkleSource,
 };
-use lnpbp::bech32::{FromBech32Str, ToBech32String};
-use lnpbp::chain::Chain;
 use once_cell::sync::Lazy;
 
 use super::{
@@ -35,6 +33,7 @@ use crate::reveal::{self, MergeReveal};
 use crate::schema::{
     ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, TransitionType,
 };
+use crate::temp::Chain;
 use crate::{
     outpoint, schema, seal, txid, ConfidentialDataError, Metadata, PublicRightType, SchemaId,
 };
@@ -104,11 +103,6 @@ impl sha256t::Tag for NodeIdTag {
     }
 }
 
-impl lnpbp::bech32::Strategy for NodeIdTag {
-    const HRP: &'static str = RGB_CONTRACT_ID_HRP;
-    type Strategy = lnpbp::bech32::strategies::UsingStrictEncoding;
-}
-
 impl NodeOutpoint {
     pub fn new(node_id: NodeId, ty: u16, no: u16) -> NodeOutpoint {
         NodeOutpoint { node_id, ty, no }
@@ -140,9 +134,9 @@ impl FromStr for NodeId {
 }
 
 /// Unique contract identifier equivalent to the contract genesis commitment
-#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Display, From)]
+#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
 #[wrapper(Debug, BorrowSlice)]
-#[display(ContractId::to_bech32_string)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct ContractId(sha256t::Hash<NodeIdTag>);
 
 impl From<ContractId> for ProtocolId {
@@ -159,77 +153,8 @@ impl From<ProtocolId> for ContractId {
     }
 }
 
-impl From<ContractId> for lnpbp::chain::AssetId {
-    fn from(id: ContractId) -> Self { Self::from_inner(id.into_inner().into_inner()) }
-}
-
 impl commit_encode::Strategy for ContractId {
     type Strategy = commit_encode::strategies::UsingStrict;
-}
-
-impl lnpbp::bech32::Strategy for ContractId {
-    const HRP: &'static str = RGB_CONTRACT_ID_HRP;
-    type Strategy = lnpbp::bech32::strategies::UsingStrictEncoding;
-}
-
-// TODO: Make this part of `lnpbp::bech32`
-#[cfg(feature = "serde")]
-impl serde::Serialize for ContractId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where S: serde::Serializer {
-        if serializer.is_human_readable() {
-            serializer.serialize_str(&self.to_bech32_string())
-        } else {
-            serializer.serialize_bytes(&self[..])
-        }
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for ContractId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: serde::Deserializer<'de> {
-        struct Visitor;
-        impl serde::de::Visitor<'_> for Visitor {
-            type Value = ContractId;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(
-                    formatter,
-                    "Bech32 string with `{}` HRP",
-                    RGB_CONTRACT_ID_HRP
-                )
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where E: serde::de::Error {
-                ContractId::from_str(v).map_err(serde::de::Error::custom)
-            }
-
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where E: serde::de::Error {
-                self.visit_str(&v)
-            }
-
-            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-            where E: serde::de::Error {
-                ContractId::from_bytes(&v)
-                    .map_err(|_| serde::de::Error::invalid_length(v.len(), &"32 bytes"))
-            }
-        }
-
-        if deserializer.is_human_readable() {
-            deserializer.deserialize_str(Visitor)
-        } else {
-            deserializer.deserialize_byte_buf(Visitor)
-        }
-    }
-}
-
-impl FromStr for ContractId {
-    type Err = lnpbp::bech32::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> { ContractId::from_bech32_str(s) }
 }
 
 /// RGB contract node API, defined as trait
@@ -837,7 +762,7 @@ mod _strict_encoding {
         fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
             let mut encoder = || -> Result<_, Error> {
                 let mut len = self.schema_id.strict_encode(&mut e)?;
-                len += self.chain.as_genesis_hash().strict_encode(&mut e)?;
+                len += self.chain.strict_encode(&mut e)?;
                 len += self
                     .metadata
                     .to_merkle_source()

@@ -34,3 +34,21 @@ pub struct TxResolverError(Txid);
 pub trait ResolveTx {
     fn resolve_tx(&self, txid: Txid) -> Result<Tx, TxResolverError>;
 }
+
+// TODO: Change values according to the standard
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_value, repr = u32)]
+#[repr(u32)]
+pub enum Chain {
+    #[default]
+    #[display("mainnet")]
+    Bitcoin = 0x00,
+    #[display("testnet")]
+    Testnet3 = 0x8000_0000,
+    #[display("regtest")]
+    Regtest = 0x8000_0001,
+    #[display("signet")]
+    Signet = 0x8000_0002,
+}
