@@ -17,7 +17,7 @@ use std::io;
 
 use amplify::AsAny;
 use commit_verify::merkle::MerkleNode;
-use commit_verify::{CommitConceal, CommitEncode, ConsensusCommit};
+use commit_verify::CommitEncode;
 use once_cell::sync::Lazy;
 
 use super::{data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint};

@@ -11,8 +11,9 @@
 
 use std::collections::{btree_map, BTreeMap, BTreeSet};
 
+use amplify::Wrapper;
 use bitcoin_hashes::{sha256, sha256t, Hash};
-use commit_verify::{lnpbp4, CommitVerify, PrehashedProtocol, TaggedHash};
+use commit_verify::{mpc, CommitVerify, UntaggedProtocol};
 
 use crate::{seal, ConcealSeals, ConcealState, Node, NodeId, RevealSeals, Transition};
 
@@ -43,7 +44,7 @@ impl sha256t::Tag for BundleIdTag {
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct BundleId(sha256t::Hash<BundleIdTag>);
 
-impl<Msg> CommitVerify<Msg, PrehashedProtocol> for BundleId
+impl<Msg> CommitVerify<Msg, UntaggedProtocol> for BundleId
 where Msg: AsRef<[u8]>
 {
     #[inline]
@@ -55,12 +56,12 @@ pub trait ConcealTransitions {
     fn conceal_transitions_except(&mut self, node_ids: &[NodeId]) -> usize;
 }
 
-impl From<BundleId> for lnpbp4::Message {
-    fn from(id: BundleId) -> Self { lnpbp4::Message::from_inner(id.into_inner()) }
+impl From<BundleId> for mpc::Message {
+    fn from(id: BundleId) -> Self { mpc::Message::from_inner(id.into_inner()) }
 }
 
-impl From<lnpbp4::Message> for BundleId {
-    fn from(id: lnpbp4::Message) -> Self { BundleId(sha256t::Hash::from_inner(id.into_inner())) }
+impl From<mpc::Message> for BundleId {
+    fn from(id: mpc::Message) -> Self { BundleId(sha256t::Hash::from_inner(id.into_inner())) }
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]

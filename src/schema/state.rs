@@ -58,7 +58,6 @@ mod _validation {
     use core::any::Any;
 
     use amplify::AsAny;
-    use commit_verify::CommitConceal;
 
     use super::*;
     use crate::contract::AttachmentStrategy;

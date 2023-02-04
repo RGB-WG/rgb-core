@@ -13,7 +13,6 @@ use std::collections::BTreeMap;
 
 use amplify::Wrapper;
 use bp::dbc;
-use commit_verify::{CommitConceal, CommitEncode, ToMerkleSource};
 
 use super::OwnedRightsInner;
 use crate::schema::NodeType;

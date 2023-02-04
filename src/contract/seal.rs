@@ -39,7 +39,6 @@ use std::str::FromStr;
 use bp::seals::txout::blind::{ConcealedSeal, ParseError, RevealedSeal};
 pub use bp::seals::txout::blind::{ConcealedSeal as Confidential, RevealedSeal as Revealed};
 use bp::seals::txout::CloseMethod;
-use commit_verify::CommitConceal;
 use secp256k1_zkp::rand::RngCore;
 
 /// Trait for types supporting conversion to a [`RevealedSeal`]
@@ -153,9 +152,9 @@ impl FromStr for SealEndpoint {
 mod test {
     use std::convert::TryFrom;
 
-    use bc::{Outpoint, Txid};
     use bitcoin_hashes::hex::FromHex;
     use bp::seals::txout::TxoSeal;
+    use bp::{Outpoint, Txid};
     use commit_verify::CommitEncode;
     use secp256k1_zkp::rand::{thread_rng, RngCore};
     use strict_encoding::{StrictDecode, StrictEncode};
@@ -268,7 +267,7 @@ mod test {
     fn test_witness_to_outpoint() {
         // Conversion to Outpoint from WitnessVout variant should panic
         let revealed = Revealed::strict_decode(&REVEALED_WITNESSVOUT[..]).unwrap();
-        bc::Outpoint::try_from(revealed).unwrap();
+        bp::Outpoint::try_from(revealed).unwrap();
     }
 
     #[test]

@@ -24,8 +24,8 @@
 
 use std::collections::BTreeSet;
 
-use bc::{Outpoint, Txid};
 use bp::dbc::AnchorId;
+use bp::{Outpoint, Txid};
 
 use crate::schema::OwnedRightType;
 use crate::{BundleId, Extension, Node, NodeId, NodeOutpoint, Transition, TransitionBundle};
@@ -135,7 +135,7 @@ pub trait GraphApi {
     ///   the closed seals. If seals are present, but have a different type, a
     ///   error is returned
     /// - `witness`: witness transaction id, needed for generating full
-    ///   [`bc::Outpoint`] data for single-use-seal definitions providing
+    ///   [`bp::Outpoint`] data for single-use-seal definitions providing
     ///   relative seals to the witness transaction (see [crate::seal::Revealed]
     ///   for the details).
     ///

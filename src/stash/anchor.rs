@@ -10,7 +10,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bp::dbc::Anchor;
-use commit_verify::lnpbp4;
+use commit_verify::mpc;
 
 use crate::{reveal, ContractId, MergeReveal};
 
@@ -18,25 +18,25 @@ pub trait ConcealAnchors {
     fn conceal_anchors_except(
         &mut self,
         contracts: impl AsRef<[ContractId]>,
-    ) -> Result<usize, lnpbp4::LeafNotKnown>;
+    ) -> Result<usize, mpc::LeafNotKnown>;
 }
 
-impl ConcealAnchors for Anchor<lnpbp4::MerkleBlock> {
+impl ConcealAnchors for Anchor<mpc::MerkleBlock> {
     fn conceal_anchors_except(
         &mut self,
         contracts: impl AsRef<[ContractId]>,
-    ) -> Result<usize, lnpbp4::LeafNotKnown> {
+    ) -> Result<usize, mpc::LeafNotKnown> {
         let protocols = contracts
             .as_ref()
             .iter()
             .copied()
-            .map(lnpbp4::ProtocolId::from)
+            .map(mpc::ProtocolId::from)
             .collect::<Vec<_>>();
         self.conceal_except(protocols)
     }
 }
 
-impl MergeReveal for Anchor<lnpbp4::MerkleBlock> {
+impl MergeReveal for Anchor<mpc::MerkleBlock> {
     fn merge_reveal(self, other: Self) -> Result<Self, reveal::Error> {
         self.merge_reveal(other).map_err(reveal::Error::from)
     }

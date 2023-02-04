@@ -10,7 +10,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::{commit_encode, CommitConceal, CommitVerify, PrehashedProtocol, TaggedHash};
+use commit_verify::{CommitVerify, UntaggedProtocol};
 
 use crate::{ConfidentialState, RevealedState};
 
@@ -46,7 +46,7 @@ impl sha256t::Tag for AttachmentIdTag {
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct AttachmentId(sha256t::Hash<AttachmentIdTag>);
 
-impl<Msg> CommitVerify<Msg, PrehashedProtocol> for AttachmentId
+impl<Msg> CommitVerify<Msg, UntaggedProtocol> for AttachmentId
 where Msg: AsRef<[u8]>
 {
     #[inline]

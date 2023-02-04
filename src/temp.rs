@@ -1,6 +1,6 @@
 //! Temporary module for refactoring period
 
-use bc::{Tx, Txid};
+use bp::{Tx, Txid};
 
 #[macro_export]
 macro_rules! txid {
@@ -12,7 +12,7 @@ macro_rules! txid {
 #[macro_export]
 macro_rules! outpoint {
     ($old:expr) => {
-        bc::Outpoint {
+        bp::Outpoint {
             txid: txid!($old.txid),
             vout: $old.vout.into(),
         }

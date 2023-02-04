@@ -14,11 +14,11 @@ use std::num::ParseIntError;
 use std::str::FromStr;
 
 use amplify::{AsAny, Wrapper};
-use bc::{Outpoint, Txid};
 use bitcoin_hashes::{sha256, sha256t, Hash};
 use bp::seals::txout::TxoSeal;
-use commit_verify::lnpbp4::ProtocolId;
-use commit_verify::{commit_encode, CommitVerify, ConsensusCommit, PrehashedProtocol, TaggedHash};
+use bp::{Outpoint, Txid};
+use commit_verify::mpc::ProtocolId;
+use commit_verify::{CommitVerify, UntaggedProtocol};
 use once_cell::sync::Lazy;
 
 use super::{
@@ -111,7 +111,7 @@ impl NodeOutpoint {
 #[wrapper(Debug, Display, BorrowSlice)]
 pub struct NodeId(sha256t::Hash<NodeIdTag>);
 
-impl<Msg> CommitVerify<Msg, PrehashedProtocol> for NodeId
+impl<Msg> CommitVerify<Msg, UntaggedProtocol> for NodeId
 where Msg: AsRef<[u8]>
 {
     #[inline]

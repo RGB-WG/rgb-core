@@ -13,10 +13,10 @@ use core::iter::FromIterator;
 use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use bc::{Tx, Txid};
 use bp::dbc::Anchor;
 use bp::seals::txout::TxoSeal;
-use commit_verify::{lnpbp4, CommitConceal};
+use bp::{Tx, Txid};
+use commit_verify::mpc;
 
 use super::schema::{NodeType, OccurrencesError};
 use super::{schema, seal, ContractId, Node, NodeId, Schema, SchemaId, TypedAssignments};
@@ -207,7 +207,7 @@ pub enum Failure {
         ancestor_id: NodeId,
         assignment_type: schema::OwnedRightType,
         seal_index: u16,
-        outpoint: bc::Outpoint,
+        outpoint: bp::Outpoint,
     },
 
     ExtensionAbsent(NodeId),
@@ -261,7 +261,7 @@ pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: R
     genesis_id: NodeId,
     contract_id: ContractId,
     node_index: BTreeMap<NodeId, &'consignment dyn Node>,
-    anchor_index: BTreeMap<NodeId, &'consignment Anchor<lnpbp4::MerkleProof>>,
+    anchor_index: BTreeMap<NodeId, &'consignment Anchor<mpc::MerkleProof>>,
     end_transitions: Vec<(&'consignment dyn Node, BundleId)>,
     validation_index: BTreeSet<NodeId>,
     anchor_validation_index: BTreeSet<NodeId>,
@@ -284,7 +284,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
 
         // Create indexes
         let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
-        let mut anchor_index = BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
+        let mut anchor_index = BTreeMap::<NodeId, &Anchor<mpc::MerkleProof>>::new();
         for (anchor, bundle) in consignment.anchored_bundles() {
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
@@ -565,7 +565,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         &mut self,
         node: &'consignment dyn Node,
         bundle_id: BundleId,
-        anchor: &'consignment Anchor<lnpbp4::MerkleProof>,
+        anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
         let txid = txid!(anchor.txid);
         let node_id = node.node_id();
@@ -712,7 +712,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 None,
             ) => {
                 // We are at genesis, so the outpoint must contain tx
-                Some(bc::Outpoint::new(txid!(txid), vout))
+                Some(bp::Outpoint::new(txid!(txid), vout))
             }
             (Ok(Some(_)), None) => {
                 // This can't happen, since if we have a node in the index

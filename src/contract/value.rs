@@ -26,10 +26,10 @@ use std::str::FromStr;
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
 use amplify::hex::{Error, FromHex};
-use amplify::{Slice32, Wrapper};
+use amplify::Wrapper;
 use bitcoin_hashes::sha256::Midstate;
 use bitcoin_hashes::{sha256, Hash};
-use commit_verify::{commit_encode, CommitConceal, CommitEncode, CommitVerify, CommitmentProtocol};
+use commit_verify::{CommitEncode, CommitVerify, CommitmentProtocol};
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::{PedersenCommitment, SECP256K1};
 

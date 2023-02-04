@@ -63,7 +63,7 @@ pub mod constants {
     pub const FIELD_TYPE_BURN_SUPPLY: u16 = 0xB0;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
-    /// burn. Must contain [`bc::Outpoint`] consensus-encoded data.
+    /// burn. Must contain [`bp::Outpoint`] consensus-encoded data.
     pub const FIELD_TYPE_BURN_UTXO: u16 = 0xB1;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
@@ -81,7 +81,7 @@ pub mod constants {
     pub const FIELD_TYPE_LOCK_DESCRIPTOR: u16 = 0xC0;
 
     /// [`FieldType`] that is used by validation procedures checking proofs of
-    /// reserves. Must contain [`bc::Outpoint`] consensus-encoded data
+    /// reserves. Must contain [`bp::Outpoint`] consensus-encoded data
     pub const FIELD_TYPE_LOCK_UTXO: u16 = 0xC1;
 
     /// Description of the asset

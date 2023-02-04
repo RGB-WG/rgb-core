@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use amplify::flags::FlagVec;
 use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::{CommitVerify, PrehashedProtocol, TaggedHash};
+use commit_verify::CommitVerify;
 
 use super::{ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, TransitionSchema};
 use crate::schema::StateSchema;
@@ -47,7 +47,7 @@ impl sha256t::Tag for SchemaIdTag {
 #[wrapper(Debug, BorrowSlice)]
 pub struct SchemaId(sha256t::Hash<SchemaIdTag>);
 
-impl<Msg> CommitVerify<Msg, PrehashedProtocol> for SchemaId
+impl<Msg> CommitVerify<Msg, UntaggedProtocol> for SchemaId
 where Msg: AsRef<[u8]>
 {
     #[inline]
@@ -104,8 +104,6 @@ impl Eq for Schema {}
 // TODO #73: Move to validation module and refactor that module into a directory
 mod _validation {
     use std::collections::BTreeSet;
-
-    use commit_verify::CommitConceal;
 
     use super::*;
     use crate::schema::{

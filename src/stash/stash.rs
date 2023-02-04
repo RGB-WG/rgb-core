@@ -23,9 +23,9 @@
 //! NB: Stash implementations must be able to operate multiple independent RGB
 //! contract.
 
-use bc::Outpoint;
 use bp::dbc::{Anchor, AnchorId};
-use commit_verify::lnpbp4;
+use bp::Outpoint;
+use commit_verify::mpc;
 
 use crate::temp::ResolveTx;
 use crate::{ContractId, Extension, Genesis, NodeId, Schema, SchemaId, Transition};
@@ -49,7 +49,7 @@ pub trait Stash {
     /// Iterator implementation able to run over all contract geneses
     type GenesisIterator: Iterator<Item = Genesis>;
     /// Iterator implementation able to run over all known anchors
-    type AnchorIterator: Iterator<Item = Anchor<lnpbp4::MerkleBlock>>;
+    type AnchorIterator: Iterator<Item = Anchor<mpc::MerkleBlock>>;
     /// Iterator implementation able to run over all state transitions under
     /// particular contract
     type TransitionIterator: Iterator<Item = Transition>;
@@ -91,7 +91,7 @@ pub trait Stash {
     /// contracts to which this anchor is related to may be known from the
     /// anchor data, unless they are kept in the confidential form. See
     /// [`Anchor`] documentation for the details.
-    fn get_anchor(&self, anchor_id: AnchorId) -> Result<Anchor<lnpbp4::MerkleBlock>, Self::Error>;
+    fn get_anchor(&self, anchor_id: AnchorId) -> Result<Anchor<mpc::MerkleBlock>, Self::Error>;
 
     /// Iterator over all contract geneses (i.e. iterator over all known RGB
     /// contracts).

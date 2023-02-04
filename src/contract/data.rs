@@ -17,7 +17,7 @@ use std::io;
 
 use amplify::AsAny;
 use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::{commit_encode, CommitConceal, CommitEncode, TaggedHash};
+use commit_verify::CommitEncode;
 
 use super::{ConfidentialState, RevealedState};
 

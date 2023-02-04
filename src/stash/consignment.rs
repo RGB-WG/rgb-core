@@ -11,7 +11,7 @@
 
 use std::collections::BTreeSet;
 
-use commit_verify::lnpbp4;
+use commit_verify::mpc;
 
 use crate::{
     Anchor, BundleId, Extension, Genesis, GraphApi, NodeId, Schema, SealEndpoint, TransitionBundle,
@@ -19,11 +19,11 @@ use crate::{
 
 pub type ConsignmentEndpoint = (BundleId, SealEndpoint);
 
-pub type AnchoredBundle<'me> = (&'me Anchor<lnpbp4::MerkleProof>, &'me TransitionBundle);
+pub type AnchoredBundle<'me> = (&'me Anchor<mpc::MerkleProof>, &'me TransitionBundle);
 
 pub trait Consignment<'consignment>: 'consignment + GraphApi {
     type EndpointIter: Iterator<Item = &'consignment ConsignmentEndpoint>;
-    type BundleIter: Iterator<Item = &'consignment (Anchor<lnpbp4::MerkleProof>, TransitionBundle)>;
+    type BundleIter: Iterator<Item = &'consignment (Anchor<mpc::MerkleProof>, TransitionBundle)>;
     type ExtensionsIter: Iterator<Item = &'consignment Extension>;
 
     fn schema(&'consignment self) -> &'consignment Schema;
