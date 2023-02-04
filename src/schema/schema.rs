@@ -15,7 +15,6 @@ use amplify::Bytes32;
 use baid58::ToBaid58;
 use commit_verify::{strategies, CommitStrategy};
 
-use super::script::OverrideRules;
 use super::{
     ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema, TransitionSchema,
     ValidationScript,
@@ -82,13 +81,6 @@ pub struct Schema {
 
     /// Validation code.
     pub script: ValidationScript,
-
-    /// Defines whether subschemata are allowed to replace (override) the code
-    ///
-    /// Subschemata not overriding the main schema code MUST set the virtual
-    /// machine type to the same as in the parent schema and set byte code
-    /// to be empty (zero-length)
-    pub override_rules: OverrideRules,
 }
 
 impl Schema {

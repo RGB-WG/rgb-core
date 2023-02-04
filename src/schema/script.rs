@@ -46,32 +46,3 @@ impl ValidationScript {
         }
     }
 }
-
-/// VM and script overwrite rules by subschemata.
-///
-/// Defines whether subschemata are allowed to replace (overwrite) the type of
-/// VM and scripts.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "kebab-case")
-)]
-#[repr(u8)]
-pub enum OverrideRules {
-    #[display("deny")]
-    /// Denies overwrites
-    Deny = 0u8,
-
-    #[display("allow-same-vm")]
-    /// Allows overwrite only if the same VM is used
-    AllowSameVm = 1u8,
-
-    #[display("allow-any-vm")]
-    /// Allows overwrite of both executable code and type of VM
-    AllowAnyVm = 2u8,
-}
-
-impl Default for OverrideRules {
-    fn default() -> Self { OverrideRules::Deny }
-}
