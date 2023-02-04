@@ -18,10 +18,10 @@ name = "rgb"
 path = "src/lib.rs"
 
 [dependencies]
-amplify = { version = "~4.0.0-beta.11", features = ["apfloat"] }
+amplify = { version = "~4.0.0-beta.13", features = ["apfloat"] }
 bp-core = { version = "~0.10.0-beta.1" }
 strict_encoding = "2.0.0-beta.5"
-strict_types = "1.0.0-beta.2"
+strict_types = "1.0.0-beta.3"
 aluvm = "0.10.0-alpha.1"
 commit_verify = { version = "~0.10.0-beta.2", features = ["rand"] }
 baid58 = "~0.1.0"
@@ -38,7 +38,10 @@ all = ["serde"]
 serde = [
     "serde_crate",
     "amplify/serde",
+    "strict_encoding/serde",
+    "strict_types/serde",
     "commit_verify/serde",
     "bp-core/serde",
+    "aluvm/serde",
     "secp256k1-zkp/serde"
 ]

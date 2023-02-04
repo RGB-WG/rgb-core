@@ -11,18 +11,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use amplify::Bytes32;
+use amplify::{Bytes32, RawArray};
 use baid58::ToBaid58;
 use commit_verify::{strategies, CommitStrategy};
+use strict_types::SemId;
 
 use super::{
     ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema, TransitionSchema,
     ValidationScript,
 };
-use crate::ext::RawArray;
 use crate::LIB_NAME_RGB;
 
-// Here we can use usize since encoding/decoding makes sure that it's u16
 pub type FieldType = u16;
 pub type ExtensionType = u16;
 pub type TransitionType = u16;
@@ -69,16 +68,17 @@ pub struct Schema {
     /// not interoperable and backward-incompatible by definitions and the
     /// nature of client-side-validation which does not allow upgrades).
     pub rgb_features: u16,
-    pub root_id: SchemaId,
+    pub subset_of: Option<SchemaId>,
 
-    pub type_system: Vec<u8>, // TODO: TypeSystem,
-    pub field_types: BTreeMap<FieldType, ()>,
+    pub field_types: BTreeMap<FieldType, SemId>,
     pub owned_right_types: BTreeMap<OwnedRightType, StateSchema>,
     pub public_right_types: BTreeSet<PublicRightType>,
     pub genesis: GenesisSchema,
     pub extensions: BTreeMap<ExtensionType, ExtensionSchema>,
     pub transitions: BTreeMap<TransitionType, TransitionSchema>,
 
+    /// Type system
+    pub type_system: Vec<u8>, // TODO: TypeSystem,
     /// Validation code.
     pub script: ValidationScript,
 }

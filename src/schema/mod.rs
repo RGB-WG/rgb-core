@@ -23,4 +23,4 @@ pub use nodes::{
 pub use occurrences::{Occurrences, OccurrencesError};
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
 pub use script::{ValidationScript, VmType};
-pub use state::{DiscreteFiniteFieldFormat, StateSchema, StateType};
+pub use state::{DiscreteFiniteFieldFormat, StateSchema};
