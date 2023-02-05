@@ -1,21 +1,20 @@
 [package]
 name = "rgb-core"
 version = "0.10.0-alpha.1"
-license = "MIT"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
-description = "RGB Core Library: consensus & verification for private & scalable client-validated smart contracts on Bitcoin & Lightning"
+description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
 homepage = "https://rgb.tech"
 keywords = ["bitcoin", "lightning", "rgb", "smart-contracts", "lnp-bp"]
 categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
+license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.59.0"
-exclude = [".github", "contrib"]
+rust-version = "1.66.0"
+exclude = [".github"]
 
 [lib]
 name = "rgb"
-path = "src/lib.rs"
 
 [dependencies]
 amplify = "~4.0.0-beta.13"
