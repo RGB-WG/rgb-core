@@ -25,7 +25,8 @@ use core::fmt::Debug;
 use std::collections::HashMap;
 use std::io;
 
-use commit_verify::{CommitEncode, Conceal};
+use commit_verify::merkle::MerkleNode;
+use commit_verify::{CommitEncode, CommitmentId, Conceal};
 use strict_encoding::{StrictEncode, StrictWriter};
 
 use super::{
@@ -416,6 +417,17 @@ where
         let w = StrictWriter::with(u32::MAX as usize, e);
         self.conceal().strict_encode(w).ok();
     }
+}
+
+impl<StateType> CommitmentId for Assignment<StateType>
+where
+    Self: Clone,
+    StateType: State,
+    StateType::Confidential: PartialEq + Eq,
+    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+{
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:owned-state:v1#23A";
+    type Id = MerkleNode;
 }
 
 #[cfg(test)]

@@ -20,21 +20,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::cmp::Ordering;
-use core::fmt::Debug;
-use std::collections::{BTreeMap, HashMap};
-use std::hash::Hasher;
-use std::io;
-
-use amplify::AsAny;
+use amplify::confinement::{Confined, TinyVec};
 use commit_verify::merkle::MerkleNode;
-use commit_verify::CommitEncode;
-use once_cell::sync::Lazy;
+use commit_verify::CommitmentId;
 
-use super::{data, seal, value, ConcealSeals, ConcealState, NoDataError, SealEndpoint};
-use crate::contract::attachment;
-use crate::value::BlindingFactor;
-use crate::{AtomicValue, ConfidentialDataError, RevealSeals, StateRetrievalError};
+use crate::contract::owned_state::{
+    AttachmentStrategy, DeclarativeStrategy, HashStrategy, PedersenStrategy,
+};
+use crate::contract::{
+    attachment, data, seal, value, Assignment, ConcealSeals, ConcealState, ConfidentialDataError,
+    NoDataError, RevealSeals, StateRetrievalError, StateType,
+};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(
@@ -43,14 +39,15 @@ use crate::{AtomicValue, ConfidentialDataError, RevealSeals, StateRetrievalError
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
 pub enum TypedAssignments {
-    Void(Vec<Assignment<DeclarativeStrategy>>),
-    Value(Vec<Assignment<PedersenStrategy>>),
-    Data(Vec<Assignment<HashStrategy>>),
-    Attachment(Vec<Assignment<AttachmentStrategy>>),
+    // TODO: Consider using non-empty variants
+    Void(TinyVec<Assignment<DeclarativeStrategy>>),
+    Value(TinyVec<Assignment<PedersenStrategy>>),
+    Data(TinyVec<Assignment<HashStrategy>>),
+    Attachment(TinyVec<Assignment<AttachmentStrategy>>),
 }
 
 impl Default for TypedAssignments {
-    fn default() -> Self { TypedAssignments::Void(vec![]) }
+    fn default() -> Self { TypedAssignments::Void(default!()) }
 }
 
 impl TypedAssignments {
@@ -77,43 +74,7 @@ impl TypedAssignments {
     pub fn is_attachment(&self) -> bool { matches!(self, TypedAssignments::Attachment(_)) }
 
     #[inline]
-    pub fn declarative_assignments_mut(
-        &mut self,
-    ) -> Option<&mut Vec<Assignment<DeclarativeStrategy>>> {
-        match self {
-            TypedAssignments::Void(set) => Some(set),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn value_assignments_mut(&mut self) -> Option<&mut Vec<Assignment<PedersenStrategy>>> {
-        match self {
-            TypedAssignments::Value(set) => Some(set),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn data_assignments_mut(&mut self) -> Option<&mut Vec<Assignment<HashStrategy>>> {
-        match self {
-            TypedAssignments::Data(set) => Some(set),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn attachment_assignments_mut(
-        &mut self,
-    ) -> Option<&mut Vec<Assignment<AttachmentStrategy>>> {
-        match self {
-            TypedAssignments::Attachment(set) => Some(set),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn to_declarative_assignments(&self) -> Vec<Assignment<DeclarativeStrategy>> {
+    pub fn to_declarative_assignments(&self) -> TinyVec<Assignment<DeclarativeStrategy>> {
         match self {
             TypedAssignments::Void(set) => set.clone(),
             _ => Default::default(),
@@ -121,7 +82,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_value_assignments(&self) -> Vec<Assignment<PedersenStrategy>> {
+    pub fn to_value_assignments(&self) -> TinyVec<Assignment<PedersenStrategy>> {
         match self {
             TypedAssignments::Value(set) => set.clone(),
             _ => Default::default(),
@@ -129,7 +90,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_data_assignments(&self) -> Vec<Assignment<HashStrategy>> {
+    pub fn to_data_assignments(&self) -> TinyVec<Assignment<HashStrategy>> {
         match self {
             TypedAssignments::Data(set) => set.clone(),
             _ => Default::default(),
@@ -137,7 +98,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_attachment_assignments(&self) -> Vec<Assignment<AttachmentStrategy>> {
+    pub fn to_attachment_assignments(&self) -> TinyVec<Assignment<AttachmentStrategy>> {
         match self {
             TypedAssignments::Attachment(set) => set.clone(),
             _ => Default::default(),
@@ -145,7 +106,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_declarative_assignments(self) -> Vec<Assignment<DeclarativeStrategy>> {
+    pub fn into_declarative_assignments(self) -> TinyVec<Assignment<DeclarativeStrategy>> {
         match self {
             TypedAssignments::Void(set) => set,
             _ => Default::default(),
@@ -153,7 +114,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_value_assignments(self) -> Vec<Assignment<PedersenStrategy>> {
+    pub fn into_value_assignments(self) -> TinyVec<Assignment<PedersenStrategy>> {
         match self {
             TypedAssignments::Value(set) => set,
             _ => Default::default(),
@@ -161,7 +122,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_data_assignments(self) -> Vec<Assignment<HashStrategy>> {
+    pub fn into_data_assignments(self) -> TinyVec<Assignment<HashStrategy>> {
         match self {
             TypedAssignments::Data(set) => set,
             _ => Default::default(),
@@ -169,7 +130,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_attachment_assignments(self) -> Vec<Assignment<AttachmentStrategy>> {
+    pub fn into_attachment_assignments(self) -> TinyVec<Assignment<AttachmentStrategy>> {
         match self {
             TypedAssignments::Attachment(set) => set,
             _ => Default::default(),
@@ -487,23 +448,23 @@ impl TypedAssignments {
         }
     }
 
-    pub fn consensus_commitments(&self) -> Vec<MerkleNode> {
+    pub fn commitment_leaves(&self) -> Vec<MerkleNode> {
         match self {
             TypedAssignments::Void(vec) => vec
                 .iter()
-                .map(Assignment::<DeclarativeStrategy>::consensus_commit)
+                .map(Assignment::<DeclarativeStrategy>::commitment_id)
                 .collect(),
             TypedAssignments::Value(vec) => vec
                 .iter()
-                .map(Assignment::<PedersenStrategy>::consensus_commit)
+                .map(Assignment::<PedersenStrategy>::commitment_id)
                 .collect(),
             TypedAssignments::Data(vec) => vec
                 .iter()
-                .map(Assignment::<HashStrategy>::consensus_commit)
+                .map(Assignment::<HashStrategy>::commitment_id)
                 .collect(),
             TypedAssignments::Attachment(vec) => vec
                 .iter()
-                .map(Assignment::<AttachmentStrategy>::consensus_commit)
+                .map(Assignment::<AttachmentStrategy>::commitment_id)
                 .collect(),
         }
     }
@@ -516,35 +477,32 @@ impl RevealSeals for TypedAssignments {
             TypedAssignments::Void(_) => {}
             TypedAssignments::Value(set) => {
                 *self = TypedAssignments::Value(
-                    set.iter()
-                        .map(|assignment| {
-                            let mut assignment = assignment.clone();
-                            counter += assignment.reveal_seals(known_seals);
-                            assignment
-                        })
-                        .collect(),
+                    Confined::try_from_iter(set.iter().map(|assignment| {
+                        let mut assignment = assignment.clone();
+                        counter += assignment.reveal_seals(known_seals);
+                        assignment
+                    }))
+                    .expect("same size"),
                 );
             }
             TypedAssignments::Data(set) => {
                 *self = TypedAssignments::Data(
-                    set.iter()
-                        .map(|assignment| {
-                            let mut assignment = assignment.clone();
-                            counter += assignment.reveal_seals(known_seals);
-                            assignment
-                        })
-                        .collect(),
+                    Confined::try_from_iter(set.iter().map(|assignment| {
+                        let mut assignment = assignment.clone();
+                        counter += assignment.reveal_seals(known_seals);
+                        assignment
+                    }))
+                    .expect("same size"),
                 );
             }
             TypedAssignments::Attachment(set) => {
                 *self = TypedAssignments::Attachment(
-                    set.iter()
-                        .map(|assignment| {
-                            let mut assignment = assignment.clone();
-                            counter += assignment.reveal_seals(known_seals);
-                            assignment
-                        })
-                        .collect(),
+                    Confined::try_from_iter(set.iter().map(|assignment| {
+                        let mut assignment = assignment.clone();
+                        counter += assignment.reveal_seals(known_seals);
+                        assignment
+                    }))
+                    .expect("same size"),
                 );
             }
         }

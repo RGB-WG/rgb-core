@@ -23,17 +23,18 @@
 pub mod seal;
 
 mod reveal_conceal;
-// pub mod reveal+merge;
+// pub mod reveal_merge;
 
 pub mod value;
 pub mod attachment;
 pub mod data;
 mod global_state;
 mod owned_state;
-// mod assignments;
+mod assignments;
 // mod rights;
 // pub mod nodes;
 
+pub use assignments::TypedAssignments;
 pub use attachment::AttachId;
 pub use global_state::{FieldValues, Metadata};
 pub use owned_state::{Assignment, State, StateType};
@@ -46,11 +47,6 @@ pub use value::{
 };
 
 /*pub(self) use assignments::EMPTY_ASSIGNMENTS;
-pub use assignments::{
-    Assignment, AttachmentStrategy, ConfidentialState, DeclarativeStrategy, EndpointValueMap,
-    HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State, StateType,
-    TypedAssignments,
-};
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
