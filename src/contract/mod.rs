@@ -28,10 +28,10 @@ mod conceal;
 pub mod value;
 pub mod attachment;
 pub mod data;
+mod metadata;
 // mod assignments;
-// mod metadata;
-// pub mod nodes;
 // mod rights;
+// pub mod nodes;
 
 pub use attachment::AttachId;
 pub use conceal::{ConcealSeals, ConcealState};
