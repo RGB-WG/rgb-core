@@ -119,7 +119,8 @@ impl Schema {
     pub fn schema_id(&self) -> SchemaId { self.commitment_id() }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Display, Default)]
+#[display(inner)]
 pub struct SchemaFlags(FlagVec);
 
 impl StrictType for SchemaFlags {
@@ -137,7 +138,17 @@ impl StrictEncode for SchemaFlags {
 }
 impl StrictDecode for SchemaFlags {
     fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
-        reader.read_tuple(|r| r.read_field().map(|vec| Self(FlagVec::from_inner(vec))))
+        let flags =
+            reader.read_tuple(|r| r.read_field().map(|vec| Self(FlagVec::from_inner(vec))))?;
+        if !flags.0.is_empty() {
+            Err(DecodeError::DataIntegrityError(format!(
+                "unsupported schema flags potentially belonging to a future RGB version. Please \
+                 update your software, or, if the problem persists, contact your vendor providing \
+                 the following flag information: {flags}"
+            )))
+        } else {
+            Ok(flags)
+        }
     }
 }
 
