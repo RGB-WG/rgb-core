@@ -28,6 +28,18 @@ use amplify::confinement::{Collection, Confined};
 
 use super::seal;
 
+pub trait RevealSeals {
+    /// Reveals previously known seal information (replacing blind UTXOs with
+    /// unblind ones). Function is used when a peer receives consignments
+    /// containing concealed seals for the outputs owned by the peer.
+    ///
+    /// # Returns
+    ///
+    /// Total number of seals revealed inside the data structure during the
+    /// operation.
+    fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize;
+}
+
 /// Trait which must be implemented by all data structures having seals in their
 /// hierarchy.
 pub trait ConcealSeals {

@@ -22,19 +22,23 @@
 
 pub mod seal;
 
-mod conceal;
-// pub mod reveal;
+mod reveal_conceal;
+// pub mod reveal+merge;
 
 pub mod value;
 pub mod attachment;
 pub mod data;
-mod metadata;
+mod global_state;
+mod owned_state;
 // mod assignments;
 // mod rights;
 // pub mod nodes;
 
 pub use attachment::AttachId;
-pub use conceal::{ConcealSeals, ConcealState};
+pub use global_state::{FieldValues, Metadata};
+pub use owned_state::{Assignment, State, StateType};
+pub use reveal_conceal::{ConcealSeals, ConcealState, RevealSeals};
+use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 // pub use reveal::{MergeReveal, RevealSeals};
 pub use value::{
     BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
@@ -47,7 +51,6 @@ pub use assignments::{
     HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State, StateType,
     TypedAssignments,
 };
-pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
@@ -56,11 +59,20 @@ pub use seal::{IntoRevealedSeal, SealEndpoint};
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
-pub trait ConfidentialState: core::fmt::Debug + Clone + amplify::AsAny {}
+pub trait ConfidentialState:
+    core::fmt::Debug + StrictDumb + StrictEncode + StrictDecode + Clone + amplify::AsAny
+{
+}
 
 /// Marker trait for types of state holding explicit state data.
 pub trait RevealedState:
-    core::fmt::Debug + commit_verify::Conceal + Clone + amplify::AsAny
+    core::fmt::Debug
+    + StrictDumb
+    + commit_verify::Conceal
+    + StrictEncode
+    + StrictDecode
+    + Clone
+    + amplify::AsAny
 {
 }
 
