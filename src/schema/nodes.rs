@@ -9,16 +9,17 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::collections::{BTreeMap, BTreeSet};
+use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 
 use super::{ExtensionType, FieldType, Occurrences, TransitionType};
+use crate::LIB_NAME_RGB;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
 pub type OwnedRightType = u16;
 pub type PublicRightType = u16;
-pub type MetadataStructure = BTreeMap<FieldType, Occurrences>;
-pub type PublicRightsStructure = BTreeSet<PublicRightType>;
-pub type OwnedRightsStructure = BTreeMap<OwnedRightType, Occurrences>;
+pub type MetadataStructure = TinyOrdMap<FieldType, Occurrences>;
+pub type PublicRightsStructure = TinyOrdSet<PublicRightType>;
+pub type OwnedRightsStructure = TinyOrdMap<OwnedRightType, Occurrences>;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[cfg_attr(
@@ -72,7 +73,9 @@ pub trait NodeSchema {
     fn public_rights(&self) -> &PublicRightsStructure;
 }
 
-#[derive(Clone, PartialEq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct GenesisSchema {
     pub metadata: MetadataStructure,
@@ -80,7 +83,9 @@ pub struct GenesisSchema {
     pub public_rights: PublicRightsStructure,
 }
 
-#[derive(Clone, PartialEq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct ExtensionSchema {
     pub metadata: MetadataStructure,
@@ -89,7 +94,9 @@ pub struct ExtensionSchema {
     pub public_rights: PublicRightsStructure,
 }
 
-#[derive(Clone, PartialEq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct TransitionSchema {
     pub metadata: MetadataStructure,
