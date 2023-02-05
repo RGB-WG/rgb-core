@@ -27,8 +27,7 @@ mod conceal;
 
 pub mod value;
 pub mod attachment;
-// #[macro_use]
-// pub mod data;
+pub mod data;
 // mod assignments;
 // mod metadata;
 // pub mod nodes;

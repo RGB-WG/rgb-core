@@ -20,18 +20,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::any::Any;
 use core::fmt::Debug;
-use std::io;
 
-use amplify::AsAny;
-use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::CommitEncode;
+use amplify::confinement::SmallVec;
+use amplify::{AsAny, Bytes32};
+use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
 
 use super::{ConfidentialState, RevealedState};
+use crate::LIB_NAME_RGB;
 
 /// Struct using for storing Void (i.e. absent) state
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, AsAny)]
+#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, AsAny)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[display("void")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Void();
@@ -40,43 +41,54 @@ impl ConfidentialState for Void {}
 
 impl RevealedState for Void {}
 
-impl CommitConceal for Void {
-    type ConcealedCommitment = Void;
-
-    fn commit_conceal(&self) -> Self::ConcealedCommitment { self.clone() }
+impl Conceal for Void {
+    type Concealed = Void;
+    fn conceal(&self) -> Self::Concealed { *self }
+}
+impl CommitStrategy for Void {
+    type Strategy = commit_verify::strategies::Strict;
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, AsAny)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct Revealed(Vec<u8>);
+pub struct Revealed(SmallVec<u8>);
 
 impl RevealedState for Revealed {}
 
-impl CommitConceal for Revealed {
-    type ConcealedCommitment = Confidential;
-
-    fn commit_conceal(&self) -> Self::ConcealedCommitment {
-        Confidential::hash(
-            &strict_serialize(self).expect("Encoding of predefined data types must not fail"),
-        )
-    }
+impl Conceal for Revealed {
+    type Concealed = Confidential;
+    fn conceal(&self) -> Self::Concealed { Confidential::commit(self) }
 }
-impl commit_encode::Strategy for Revealed {
-    type Strategy = commit_encode::strategies::UsingConceal;
+impl CommitStrategy for Revealed {
+    type Strategy = commit_verify::strategies::ConcealStrict;
 }
 
-/// Blind version of transaction outpoint-based single-use-seal
-#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[wrapper(Debug, Display, BorrowSlice)]
-pub struct Confidential(sha256t::Hash<ConfidentialTag>);
-
-impl commit_encode::Strategy for Confidential {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
+/// Confidential version of an structured state data.
+///
+/// See also revealed version [`Revealed`].
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, AsAny)]
+#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct Confidential(
+    #[from]
+    #[from([u8; 32])]
+    Bytes32,
+);
 
 impl ConfidentialState for Confidential {}
 
-impl AsAny for Confidential {
-    fn as_any(&self) -> &dyn Any { self as &dyn Any }
+impl CommitStrategy for Confidential {
+    type Strategy = commit_verify::strategies::Strict;
+}
+
+impl CommitVerify<Revealed, StrictEncodedProtocol> for Confidential {
+    fn commit(revealed: &Revealed) -> Self { Bytes32::commit(revealed).into() }
 }
