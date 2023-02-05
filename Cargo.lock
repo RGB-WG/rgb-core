@@ -20,9 +20,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "4.0.0-beta.13"
+version = "4.0.0-beta.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4030ef5731f8cab39af812fc4df7a29b2a46bd40fe5dd5b903865a27368e85"
+checksum = "a2cc2aa6bd36c9cd67fdebb50adf4ec4551ef58420a5700227e2bde5e64384d9"
 dependencies = [
  "amplify_apfloat",
  "amplify_derive",
@@ -196,8 +196,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.10.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75939aecb6e7ad3e30622d8fba00ccdf3cdc78f2325840629ee53cd792548be9"
+source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
 dependencies = [
  "amplify",
  "bp-dbc",
@@ -212,8 +211,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.10.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d67f8173cc60f6671df19a170021a4f3a179f828b2114ba0415124dd8abd07f"
+source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
 dependencies = [
  "amplify",
  "bp-primitives",
@@ -226,8 +224,7 @@ dependencies = [
 [[package]]
 name = "bp-primitives"
 version = "0.10.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aab03dbc8e2cf19594d3a267cccfc0fd2595ce0818babf39b9e817cb7683e1e4"
+source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
 dependencies = [
  "amplify",
  "commit_verify",
@@ -239,8 +236,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.10.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "463f314e2c6370104c40356fc96cd464bd0f02aba1a2ffd83dc524e4ecf58d41"
+source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
 dependencies = [
  "amplify",
  "baid58",
@@ -248,6 +244,7 @@ dependencies = [
  "bp-primitives",
  "commit_verify",
  "rand",
+ "serde",
  "single_use_seals",
  "strict_encoding",
 ]
@@ -302,8 +299,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.10.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7ce27ce9d56cac2631f9701984dc4fd162abbd7b563d97e4440db56f7282cc9"
+source = "git+https://github.com/LNP-BP/client_side_validation#54332543981486178dd6536a5b1ace50cf20ac71"
 dependencies = [
  "amplify",
  "bitcoin_hashes",
@@ -818,9 +814,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.91"
+version = "1.0.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "877c235533714907a8c2464236f5c4b2a17262ef1bd71f38f35ea592c8da6883"
+checksum = "7434af0dc1cbd59268aa98b4c22c131c0584d2232f6fb166efb993e2832e896a"
 dependencies = [
  "itoa",
  "ryu",

@@ -20,38 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Single-use-seal API specific for RGB implementation
-//!
-//! Based on LNP/BP client-side-validation single-use-seals API (see
-//! [`lnpbp::seals`]). RGB single-use-seal implementation differs in the fact
-//! that seals are organized into a graph; thus a seal may be defined as
-//! pointing witness transaction closing some other seal, which is meaningless
-//! with LNP/BP seals.
-//!
-//! Single-use-seals in RGB are used for holding assigned state, i.e. *state* +
-//! *seal definition* = *assignment*. Closing of the single-use-seal invalidates
-//! the assigned state.
-//!
-//! Single-use-seals in RGB can have multiple forms because of the
-//! confidentiality options and ability to be linked to the witness transaction
-//! closing previous seal in RGB state evolution graph.
-//!
-//! | **Type name**      | **Lib** | **Witness vout** | **Blinding**    |
-//! **Confidential** | **String serialization**              | **Use case**
-//! | | ------------------ | ------- | ----------- | -------------------- |
-//! ---------------- | ------------------------------------- |
-//! --------------------------------- | | [`Outpoint`]       | Bitcoin | No
-//! | No                   | No               | `<txid>:<vout>`
-//! | Genesis control rights            | | [`RevealedSeal`]   | BP Core | No
-//! | Yes                  | No               |
-//! `<method>:<txid>|~:<vout>#<blinding>` | Stash                             |
-//! | [`ConcealedSeal`]  | BP Core | Implicit?   | Implicit             | Yes
-//! | `txob1...`                            | External payments
-//! | | [`ExplicitSeal`]   | BP Core | Yes         | Yes                  | No
-//! | `<method>:<txid>|~:<vout>`              | Internal
-//! | | [`SealEndpoint`]   | RGB     | Yes         | Explicit or implicit |
-//! Could be         | `txob1...|<method>:~:<vout>#blinding` | Consignments
-//! |
+#![doc = include_str!("../../doc/seals.md")]
 
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -59,12 +28,96 @@ use std::str::FromStr;
 use bp::seals::txout::blind::{ConcealedSeal, ParseError, RevealedSeal};
 pub use bp::seals::txout::blind::{ConcealedSeal as Confidential, RevealedSeal as Revealed};
 use bp::seals::txout::CloseMethod;
+use bp::secp256k1::rand::thread_rng;
+use bp::Vout;
+use commit_verify::Conceal;
 use secp256k1_zkp::rand::RngCore;
+
+use crate::LIB_NAME_RGB;
 
 /// Trait for types supporting conversion to a [`RevealedSeal`]
 pub trait IntoRevealedSeal {
     /// Converts seal into [`RevealedSeal`] type.
     fn into_revealed_seal(self) -> RevealedSeal;
+}
+
+/// Seal definition which re-uses witness transaction id of some other seal,
+/// which is not known at the moment of seal construction. Thus, the definition
+/// has only information about output number.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct VoutSeal {
+    /// Commitment to the specific seal close method [`CloseMethod`] which must
+    /// be used to close this seal.
+    pub method: CloseMethod,
+
+    /// Tx output number, which should be always known.
+    pub vout: Vout,
+
+    /// Blinding factor providing confidentiality of the seal definition.
+    /// Prevents rainbow table bruteforce attack based on the existing
+    /// blockchain txid set.
+    pub blinding: u64,
+}
+
+impl VoutSeal {
+    /// Creates new seal definition for the provided output number and seal
+    /// closing method. Uses `thread_rng` to initialize blinding factor.
+    #[inline]
+    pub fn new(method: CloseMethod, vout: impl Into<Vout>) -> Self {
+        VoutSeal::with(method, vout, thread_rng().next_u64())
+    }
+
+    /// Creates new opret-seal seal definition for the provided output number
+    /// and seal closing method. Uses `thread_rng` to initialize blinding
+    /// factor.
+    #[inline]
+    pub fn new_opret(vout: impl Into<Vout>) -> Self { VoutSeal::new(CloseMethod::OpretFirst, vout) }
+
+    /// Creates new tapret-seal seal definition for the provided output number
+    /// and seal closing method. Uses `thread_rng` to initialize blinding
+    /// factor.
+    #[inline]
+    pub fn new_tapret(vout: impl Into<Vout>) -> Self {
+        VoutSeal::new(CloseMethod::TapretFirst, vout)
+    }
+
+    /// Reconstructs previously defined opret seal given an output number and a
+    /// previously generated blinding factor.
+    #[inline]
+    pub fn with_opret(vout: impl Into<Vout>, blinding: u64) -> Self {
+        VoutSeal::with(CloseMethod::OpretFirst, vout, blinding)
+    }
+
+    /// Reconstructs previously defined tapret seal given an output number and a
+    /// previously generated blinding factor.
+    #[inline]
+    pub fn with_tapret(vout: impl Into<Vout>, blinding: u64) -> Self {
+        VoutSeal::with(CloseMethod::TapretFirst, vout, blinding)
+    }
+
+    /// Reconstructs previously defined seal given method, an output number and
+    /// a previously generated blinding factor.
+    #[inline]
+    pub fn with(method: CloseMethod, vout: impl Into<Vout>, blinding: u64) -> Self {
+        VoutSeal {
+            method,
+            vout: vout.into(),
+            blinding,
+        }
+    }
+}
+
+impl From<VoutSeal> for RevealedSeal {
+    fn from(seal: VoutSeal) -> Self {
+        RevealedSeal::with_vout(seal.method, seal.vout, seal.blinding)
+    }
 }
 
 /// Seal endpoint is a confidential seal which may be linked to the witness
@@ -78,82 +131,60 @@ pub trait IntoRevealedSeal {
 /// Seal endpoint is required in situations where sender assigns state to the
 /// witness transaction output on behalf of receiver
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = { Self::ConcealedUtxo(strict_dumb!()) })]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "snake_case")
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum SealEndpoint {
     /// External transaction output in concealed form (see
     /// [`seal::Confidential`])
     #[from]
+    #[strict_type(tag = 0)]
     ConcealedUtxo(ConcealedSeal),
 
     /// Seal contained within the witness transaction
-    WitnessVout {
-        method: CloseMethod,
-        vout: u32,
-        blinding: u64,
-    },
+    #[strict_type(tag = 1)]
+    WitnessVout(VoutSeal),
 }
 
 impl From<RevealedSeal> for SealEndpoint {
     fn from(seal: RevealedSeal) -> Self {
         match seal.txid {
-            None => SealEndpoint::WitnessVout {
-                method: seal.method,
-                vout: seal.vout,
-                blinding: seal.blinding,
-            },
-            Some(_) => SealEndpoint::ConcealedUtxo(seal.commit_conceal()),
+            None => {
+                SealEndpoint::WitnessVout(VoutSeal::with(seal.method, seal.vout, seal.blinding))
+            }
+            Some(_) => SealEndpoint::ConcealedUtxo(seal.conceal()),
         }
     }
 }
 
 impl SealEndpoint {
-    /// Constructs [`SealEndpoint`] for the witness transaction output using
-    /// provided random number generator for creating blinding factor
-    pub fn with(method: CloseMethod, vout: u32, rng: &mut impl RngCore) -> SealEndpoint {
-        SealEndpoint::WitnessVout {
-            method,
-            vout,
-            blinding: rng.next_u64(),
-        }
+    /// Constructs [`SealEndpoint`] for the witness transaction. Uses
+    /// `thread_rng` to initialize blinding factor.
+    pub fn new_vout(method: CloseMethod, vout: impl Into<Vout>) -> SealEndpoint {
+        SealEndpoint::WitnessVout(VoutSeal::new(method, vout))
     }
 }
 
-impl CommitConceal for SealEndpoint {
-    type ConcealedCommitment = Confidential;
+impl Conceal for SealEndpoint {
+    type Concealed = Confidential;
 
-    fn commit_conceal(&self) -> Self::ConcealedCommitment {
+    fn conceal(&self) -> Self::Concealed {
         match *self {
             SealEndpoint::ConcealedUtxo(hash) => hash,
-            SealEndpoint::WitnessVout {
-                method,
-                vout,
-                blinding,
-            } => RevealedSeal {
-                method,
-                txid: None,
-                vout,
-                blinding,
-            }
-            .commit_conceal(),
+            SealEndpoint::WitnessVout(seal) => RevealedSeal::from(seal).conceal(),
         }
     }
 }
 
 impl Display for SealEndpoint {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            SealEndpoint::ConcealedUtxo(seal) => Display::fmt(seal, f),
-            SealEndpoint::WitnessVout {
-                method,
-                vout,
-                blinding,
-            } => {
-                write!(f, "{}:~:{}#{}", method, vout, blinding)
-            }
+        match *self {
+            SealEndpoint::ConcealedUtxo(ref seal) => Display::fmt(seal, f),
+            SealEndpoint::WitnessVout(seal) => Display::fmt(&RevealedSeal::from(seal), f),
         }
     }
 }

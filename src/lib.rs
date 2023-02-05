@@ -40,7 +40,7 @@ extern crate strict_encoding;
 #[macro_use]
 extern crate serde_crate as serde;
 
-// pub mod contract;
+pub mod contract;
 pub mod schema;
 // pub mod stash;
 // pub mod validation;

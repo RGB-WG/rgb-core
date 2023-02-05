@@ -20,55 +20,60 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod assignments;
-#[macro_use]
-pub mod data;
-mod conceal;
-mod metadata;
-pub mod nodes;
-pub mod reveal;
-mod rights;
 pub mod seal;
-pub mod value;
-pub mod attachment;
 
-pub(self) use assignments::EMPTY_ASSIGNMENTS;
+mod conceal;
+// pub mod reveal;
+
+// #[macro_use]
+// pub mod data;
+// mod assignments;
+// mod metadata;
+// pub mod nodes;
+// mod rights;
+// pub mod value;
+// pub mod attachment;
+
+pub use conceal::{ConcealSeals, ConcealState};
+// pub use reveal::{MergeReveal, RevealSeals};
+
+/*pub(self) use assignments::EMPTY_ASSIGNMENTS;
 pub use assignments::{
     Assignment, AttachmentStrategy, ConfidentialState, DeclarativeStrategy, EndpointValueMap,
     HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State, StateType,
     TypedAssignments,
 };
 pub use attachment::AttachmentId;
-pub use conceal::{ConcealSeals, ConcealState};
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
-pub use reveal::{MergeReveal, RevealSeals};
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
 pub use seal::{IntoRevealedSeal, SealEndpoint};
 pub use value::{AtomicValue, Bulletproofs};
+*/
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From)]
+/// Errors retrieving state data.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum StateRetrievalError {
-    /// The requested state has a mismatched data type
+    /// the requested state has a mismatched data type.
     StateTypeMismatch,
 
-    /// Some of the requested data are confidential, when they must be present
-    /// in revealed form
+    /// some of the requested data are confidential, when they must be present
+    /// in revealed form.
     #[from(ConfidentialDataError)]
     ConfidentialData,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
-/// The requested data are not present
+/// the requested data are not present.
 pub struct NoDataError;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
-/// Some of the requested data are confidential, when they must be present in
-/// revealed form
+/// some of the requested data are confidential, when they must be present in
+/// revealed form.
 pub struct ConfidentialDataError;
 
 #[cfg(test)]
