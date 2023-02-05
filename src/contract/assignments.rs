@@ -20,19 +20,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use amplify::confinement::{Confined, TinyVec};
+use amplify::confinement::{Confined, MediumVec};
 use commit_verify::merkle::MerkleNode;
 use commit_verify::CommitmentId;
 
-use crate::contract::owned_state::{
-    AttachmentStrategy, DeclarativeStrategy, HashStrategy, PedersenStrategy,
-};
-use crate::contract::{
+use super::owned_state::{AttachmentStrategy, DeclarativeStrategy, HashStrategy, PedersenStrategy};
+use super::{
     attachment, data, seal, value, Assignment, ConcealSeals, ConcealState, ConfidentialDataError,
     NoDataError, RevealSeals, StateRetrievalError, StateType,
 };
+use crate::LIB_NAME_RGB;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Void(strict_dumb!()))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -40,14 +41,14 @@ use crate::contract::{
 )]
 pub enum TypedAssignments {
     // TODO: Consider using non-empty variants
-    Void(TinyVec<Assignment<DeclarativeStrategy>>),
-    Value(TinyVec<Assignment<PedersenStrategy>>),
-    Data(TinyVec<Assignment<HashStrategy>>),
-    Attachment(TinyVec<Assignment<AttachmentStrategy>>),
-}
-
-impl Default for TypedAssignments {
-    fn default() -> Self { TypedAssignments::Void(default!()) }
+    #[strict_type(tag = 0x00)]
+    Void(MediumVec<Assignment<DeclarativeStrategy>>),
+    #[strict_type(tag = 0x01)]
+    Value(MediumVec<Assignment<PedersenStrategy>>),
+    #[strict_type(tag = 0x02)]
+    Data(MediumVec<Assignment<HashStrategy>>),
+    #[strict_type(tag = 0xFF)]
+    Attachment(MediumVec<Assignment<AttachmentStrategy>>),
 }
 
 impl TypedAssignments {
@@ -74,7 +75,7 @@ impl TypedAssignments {
     pub fn is_attachment(&self) -> bool { matches!(self, TypedAssignments::Attachment(_)) }
 
     #[inline]
-    pub fn to_declarative_assignments(&self) -> TinyVec<Assignment<DeclarativeStrategy>> {
+    pub fn to_declarative_assignments(&self) -> MediumVec<Assignment<DeclarativeStrategy>> {
         match self {
             TypedAssignments::Void(set) => set.clone(),
             _ => Default::default(),
@@ -82,7 +83,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_value_assignments(&self) -> TinyVec<Assignment<PedersenStrategy>> {
+    pub fn to_value_assignments(&self) -> MediumVec<Assignment<PedersenStrategy>> {
         match self {
             TypedAssignments::Value(set) => set.clone(),
             _ => Default::default(),
@@ -90,7 +91,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_data_assignments(&self) -> TinyVec<Assignment<HashStrategy>> {
+    pub fn to_data_assignments(&self) -> MediumVec<Assignment<HashStrategy>> {
         match self {
             TypedAssignments::Data(set) => set.clone(),
             _ => Default::default(),
@@ -98,7 +99,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn to_attachment_assignments(&self) -> TinyVec<Assignment<AttachmentStrategy>> {
+    pub fn to_attachment_assignments(&self) -> MediumVec<Assignment<AttachmentStrategy>> {
         match self {
             TypedAssignments::Attachment(set) => set.clone(),
             _ => Default::default(),
@@ -106,7 +107,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_declarative_assignments(self) -> TinyVec<Assignment<DeclarativeStrategy>> {
+    pub fn into_declarative_assignments(self) -> MediumVec<Assignment<DeclarativeStrategy>> {
         match self {
             TypedAssignments::Void(set) => set,
             _ => Default::default(),
@@ -114,7 +115,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_value_assignments(self) -> TinyVec<Assignment<PedersenStrategy>> {
+    pub fn into_value_assignments(self) -> MediumVec<Assignment<PedersenStrategy>> {
         match self {
             TypedAssignments::Value(set) => set,
             _ => Default::default(),
@@ -122,7 +123,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_data_assignments(self) -> TinyVec<Assignment<HashStrategy>> {
+    pub fn into_data_assignments(self) -> MediumVec<Assignment<HashStrategy>> {
         match self {
             TypedAssignments::Data(set) => set,
             _ => Default::default(),
@@ -130,7 +131,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_attachment_assignments(self) -> TinyVec<Assignment<AttachmentStrategy>> {
+    pub fn into_attachment_assignments(self) -> MediumVec<Assignment<AttachmentStrategy>> {
         match self {
             TypedAssignments::Attachment(set) => set,
             _ => Default::default(),
