@@ -22,6 +22,7 @@
 
 mod graph;
 mod vm;
+mod subschema;
 
 use core::iter::FromIterator;
 use core::ops::AddAssign;
