@@ -49,10 +49,6 @@ pub struct AttachId(
     Bytes32,
 );
 
-impl CommitStrategy for AttachId {
-    type Strategy = commit_verify::strategies::Strict;
-}
-
 impl ToBaid58<32> for AttachId {
     const HRI: &'static str = "att";
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }

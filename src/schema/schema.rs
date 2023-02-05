@@ -64,10 +64,6 @@ pub struct SchemaId(
     Bytes32,
 );
 
-impl CommitStrategy for SchemaId {
-    type Strategy = commit_verify::strategies::Strict;
-}
-
 impl ToBaid58<32> for SchemaId {
     const HRI: &'static str = "sch";
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
