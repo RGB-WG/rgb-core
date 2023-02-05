@@ -83,14 +83,3 @@ impl Bytecode for RgbIsa {
         })
     }
 }
-
-pub type AluLib = aluvm::Program<RgbIsa>;
-
-pub struct Runtime<'script> {
-    #[allow(dead_code)]
-    lib: &'script AluLib,
-}
-
-impl<'script> Runtime<'script> {
-    pub fn new(lib: &'script AluLib) -> Self { Runtime { lib } }
-}

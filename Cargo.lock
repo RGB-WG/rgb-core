@@ -16,6 +16,7 @@ dependencies = [
  "paste",
  "secp256k1 0.26.0",
  "serde",
+ "strict_encoding",
 ]
 
 [[package]]

@@ -21,9 +21,8 @@
 // limitations under the License.
 
 use crate::validation::Failure;
-use crate::{
-    validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, ValidationScript,
-};
+use crate::vm::Runtime;
+use crate::{validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, Scripts};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
@@ -42,7 +41,7 @@ pub trait Validate {
     ) -> Result<(), validation::Failure>;
 }
 
-impl Validate for ValidationScript {
+impl Validate for Scripts {
     fn validate(
         &self,
         node_id: NodeId,
@@ -54,7 +53,7 @@ impl Validate for ValidationScript {
         current_meta: &Metadata,
     ) -> Result<(), validation::Failure> {
         match self {
-            ValidationScript::AluVM(script) => alure::Runtime::new(script).validate(
+            Scripts::AluVM(script) => Runtime::new(script).validate(
                 node_id,
                 node_subtype,
                 previous_owned_rights,

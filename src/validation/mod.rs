@@ -21,6 +21,7 @@
 // limitations under the License.
 
 mod graph;
+mod vm;
 
 use core::iter::FromIterator;
 use core::ops::AddAssign;
