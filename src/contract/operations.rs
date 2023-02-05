@@ -24,54 +24,43 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-use amplify::{AsAny, Wrapper};
-use bitcoin_hashes::{sha256, sha256t, Hash};
+use amplify::confinement::{TinyOrdMap, TinyOrdSet, TinyVec};
+use amplify::hex::{FromHex, ToHex};
+use amplify::{hex, AsAny, Bytes32, RawArray, Wrapper};
+use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::seals::txout::TxoSeal;
-use bp::{Outpoint, Txid};
-use commit_verify::mpc::ProtocolId;
-use commit_verify::{CommitVerify, UntaggedProtocol};
-use once_cell::sync::Lazy;
+use bp::{Chain, Outpoint, Txid};
+use commit_verify::{mpc, CommitStrategy, CommitmentId};
 
-use super::{
-    ConcealSeals, ConcealState, OwnedRights, OwnedRightsInner, ParentOwnedRights,
-    ParentPublicRights, PublicRights, PublicRightsInner, TypedAssignments,
-};
-use crate::reveal::{self, MergeReveal};
+use super::{seal, ConcealSeals, ConcealState, ConfidentialDataError, Metadata, TypedAssignments};
 use crate::schema::{
-    ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, TransitionType,
+    self, ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, PublicRightType,
+    SchemaId, TransitionType,
 };
-use crate::temp::Chain;
-use crate::{
-    outpoint, schema, seal, txid, ConfidentialDataError, Metadata, PublicRightType, SchemaId,
-};
+use crate::LIB_NAME_RGB;
 
-static EMPTY_OWNED_RIGHTS: Lazy<ParentOwnedRights> = Lazy::new(ParentOwnedRights::default);
-static EMPTY_PUBLIC_RIGHTS: Lazy<ParentPublicRights> = Lazy::new(ParentPublicRights::default);
-
-/// Midstate for a tagged hash engine. Equals to a single SHA256 hash of
-/// the value of two concatenated SHA256 hashes for `rgb:node` prefix string.
-static MIDSTATE_NODE_ID: [u8; 32] = [
-    0x90, 0xd0, 0xc4, 0x9b, 0xa6, 0xb8, 0xa, 0x5b, 0xbc, 0xba, 0x19, 0x9, 0xdc, 0xbd, 0x5a, 0x58,
-    0x55, 0x6a, 0xe2, 0x16, 0xa5, 0xee, 0xb7, 0x3c, 0x1, 0xe0, 0x86, 0x91, 0x22, 0x43, 0x12, 0x9f,
-];
-
-pub const RGB_CONTRACT_ID_HRP: &str = "rgb";
-
+/// RGB contract node output pointer, defined by the node ID and output number.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[display("{node_id}/{ty}/{no}")]
-/// RGB contract node output pointer, defined by the node ID and output
-/// number.
 pub struct NodeOutpoint {
     pub node_id: NodeId,
     pub ty: OwnedRightType,
     pub no: u16,
 }
 
+impl NodeOutpoint {
+    pub fn new(node_id: NodeId, ty: u16, no: u16) -> NodeOutpoint {
+        NodeOutpoint { node_id, ty, no }
+    }
+}
+
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display(inner)]
 pub enum OutpointParseError {
     #[from]
-    InvalidNodeId(bitcoin_hashes::hex::Error),
+    InvalidNodeId(amplify::hex::Error),
 
     InvalidType(ParseIntError),
 
@@ -98,67 +87,68 @@ impl FromStr for NodeOutpoint {
     }
 }
 
-/// Tag used for [`NodeId`] and [`ContractId`] hash types
-pub struct NodeIdTag;
-
-impl sha256t::Tag for NodeIdTag {
-    #[inline]
-    fn engine() -> sha256::HashEngine {
-        let midstate = sha256::Midstate::from_inner(MIDSTATE_NODE_ID);
-        sha256::HashEngine::from_midstate(midstate, 64)
-    }
-}
-
-impl NodeOutpoint {
-    pub fn new(node_id: NodeId, ty: u16, no: u16) -> NodeOutpoint {
-        NodeOutpoint { node_id, ty, no }
-    }
-}
+pub type PublicRights = TinyOrdSet<schema::PublicRightType>;
+pub type OwnedRights = TinyOrdMap<schema::OwnedRightType, TypedAssignments>;
+pub type ParentOwnedRights = TinyOrdMap<NodeId, TinyOrdMap<schema::OwnedRightType, TinyVec<u16>>>;
+pub type ParentPublicRights = TinyOrdMap<NodeId, TinyOrdSet<schema::PublicRightType>>;
 
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[wrapper(Debug, Display, BorrowSlice)]
-pub struct NodeId(sha256t::Hash<NodeIdTag>);
-
-impl<Msg> CommitVerify<Msg, UntaggedProtocol> for NodeId
-where Msg: AsRef<[u8]>
-{
-    #[inline]
-    fn commit(msg: &Msg) -> NodeId { NodeId::hash(msg) }
-}
-
-impl commit_encode::Strategy for NodeId {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
+#[display(Self::to_hex)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct NodeId(
+    #[from]
+    #[from([u8; 32])]
+    Bytes32,
+);
 
 impl FromStr for NodeId {
-    type Err = bitcoin_hashes::hex::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Ok(NodeId::from_inner(s.parse()?)) }
+    type Err = hex::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
 }
 
 /// Unique contract identifier equivalent to the contract genesis commitment
-#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[wrapper(Debug, BorrowSlice)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct ContractId(sha256t::Hash<NodeIdTag>);
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
+#[display(Self::to_baid58)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct ContractId(
+    #[from]
+    #[from([u8; 32])]
+    Bytes32,
+);
 
-impl From<ContractId> for ProtocolId {
-    fn from(contract_id: ContractId) -> Self {
-        ProtocolId::from_inner(contract_id.into_inner().into_inner())
-    }
+impl ToBaid58<32> for ContractId {
+    const HRI: &'static str = "rgb";
+    fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
+}
+impl FromBaid58<32> for ContractId {}
+
+impl FromStr for ContractId {
+    type Err = Baid58ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_str(s) }
 }
 
-impl From<ProtocolId> for ContractId {
-    fn from(protocol_id: ProtocolId) -> Self {
-        ContractId::from_inner(<ContractId as Wrapper>::Inner::from_inner(protocol_id.into_inner()))
-    }
+impl From<mpc::ProtocolId> for ContractId {
+    fn from(id: mpc::ProtocolId) -> Self { ContractId(id.into_inner()) }
 }
 
-impl commit_encode::Strategy for ContractId {
-    type Strategy = commit_encode::strategies::UsingStrict;
+impl From<ContractId> for mpc::ProtocolId {
+    fn from(id: ContractId) -> Self { mpc::ProtocolId::from_inner(id.into_inner()) }
 }
 
 /// RGB contract node API, defined as trait
@@ -232,7 +222,7 @@ pub trait Node: AsAny {
     fn parent_public_right_types(&self) -> Vec<PublicRightType> {
         self.parent_public_rights()
             .values()
-            .flat_map(BTreeSet::iter)
+            .flat_map(|v| v.iter())
             .copied()
             .collect()
     }
@@ -284,7 +274,7 @@ pub trait Node: AsAny {
     fn parent_owned_right_types(&self) -> Vec<OwnedRightType> {
         self.parent_owned_rights()
             .values()
-            .flat_map(BTreeMap::keys)
+            .flat_map(|v| v.keys())
             .copied()
             .collect()
     }
@@ -361,16 +351,18 @@ pub trait Node: AsAny {
         let mut res: BTreeMap<NodeOutpoint, Outpoint> = bmap! {};
         for (ty, assignments) in self.owned_rights() {
             for (seal, node_output) in assignments.revealed_seal_outputs() {
-                let outpoint = seal.outpoint_or(txid!(witness_txid));
+                let outpoint = seal.outpoint_or(witness_txid);
                 let node_outpoint = NodeOutpoint::new(node_id, *ty, node_output);
-                res.insert(node_outpoint, outpoint!(outpoint));
+                res.insert(node_outpoint, outpoint);
             }
         }
         res
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Genesis {
     schema_id: SchemaId,
@@ -380,7 +372,9 @@ pub struct Genesis {
     public_rights: PublicRights,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
     extension_type: ExtensionType,
@@ -391,21 +385,22 @@ pub struct Extension {
     public_rights: PublicRights,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     transition_type: TransitionType,
     metadata: Metadata,
     parent_owned_rights: ParentOwnedRights,
     owned_rights: OwnedRights,
-    parent_public_rights: ParentPublicRights,
     public_rights: PublicRights,
 }
 
 impl ConcealState for Genesis {
     fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().iter_mut() {
+        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
             count += assignment.conceal_state_except(seals);
         }
         count
@@ -415,7 +410,7 @@ impl ConcealState for Genesis {
 impl ConcealState for Extension {
     fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().iter_mut() {
+        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
             count += assignment.conceal_state_except(seals);
         }
         count
@@ -425,8 +420,18 @@ impl ConcealState for Extension {
 impl ConcealState for Transition {
     fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().iter_mut() {
+        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
             count += assignment.conceal_state_except(seals);
+        }
+        count
+    }
+}
+
+impl ConcealSeals for Genesis {
+    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
+        let mut count = 0;
+        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
+            count += assignment.conceal_seals(seals);
         }
         count
     }
@@ -435,41 +440,51 @@ impl ConcealState for Transition {
 impl ConcealSeals for Transition {
     fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
         let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().iter_mut() {
+        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
             count += assignment.conceal_seals(seals);
         }
         count
     }
 }
 
-impl MergeReveal for Genesis {
-    fn merge_reveal(mut self, other: Self) -> Result<Self, reveal::Error> {
-        if self.consensus_commit() != other.consensus_commit() {
-            return Err(reveal::Error::NodeMismatch(NodeType::Genesis));
+impl ConcealSeals for Extension {
+    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
+        let mut count = 0;
+        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
+            count += assignment.conceal_seals(seals);
         }
-        self.owned_rights = self.owned_rights.merge_reveal(other.owned_rights)?;
-        Ok(self)
+        count
     }
 }
 
-impl MergeReveal for Transition {
-    fn merge_reveal(mut self, other: Self) -> Result<Self, reveal::Error> {
-        if self.consensus_commit() != other.consensus_commit() {
-            return Err(reveal::Error::NodeMismatch(NodeType::StateTransition));
-        }
-        self.owned_rights = self.owned_rights.merge_reveal(other.owned_rights)?;
-        Ok(self)
-    }
+impl CommitStrategy for Genesis {
+    // TODO: Use merklization
+    type Strategy = commit_verify::strategies::Strict;
 }
 
-impl MergeReveal for Extension {
-    fn merge_reveal(mut self, other: Self) -> Result<Self, reveal::Error> {
-        if self.consensus_commit() != other.consensus_commit() {
-            return Err(reveal::Error::NodeMismatch(NodeType::StateExtension));
-        }
-        self.owned_rights = self.owned_rights.merge_reveal(other.owned_rights)?;
-        Ok(self)
-    }
+impl CommitmentId for Genesis {
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:genesis:v01#202302";
+    type Id = ContractId;
+}
+
+impl CommitStrategy for Transition {
+    // TODO: Use merklization
+    type Strategy = commit_verify::strategies::Strict;
+}
+
+impl CommitmentId for Transition {
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v01#32A";
+    type Id = NodeId;
+}
+
+impl CommitStrategy for Extension {
+    // TODO: Use merklization
+    type Strategy = commit_verify::strategies::Strict;
+}
+
+impl CommitmentId for Extension {
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:extension:v01#2023";
+    type Id = NodeId;
 }
 
 impl Node for Genesis {
@@ -480,7 +495,7 @@ impl Node for Genesis {
     fn subtype(&self) -> NodeSubtype { NodeSubtype::Genesis }
 
     #[inline]
-    fn node_id(&self) -> NodeId { self.clone().consensus_commit() }
+    fn node_id(&self) -> NodeId { NodeId(self.commitment_id().into_inner()) }
 
     #[inline]
     fn contract_id(&self) -> Option<ContractId> {
@@ -494,10 +509,14 @@ impl Node for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &ParentOwnedRights { &EMPTY_OWNED_RIGHTS }
+    fn parent_owned_rights(&self) -> &ParentOwnedRights {
+        panic!("genesis can't close previous single-use-seals")
+    }
 
     #[inline]
-    fn parent_public_rights(&self) -> &ParentPublicRights { &EMPTY_PUBLIC_RIGHTS }
+    fn parent_public_rights(&self) -> &ParentPublicRights {
+        panic!("genesis can't extend previous state")
+    }
 
     #[inline]
     fn metadata(&self) -> &Metadata { &self.metadata }
@@ -523,7 +542,7 @@ impl Node for Extension {
     fn subtype(&self) -> NodeSubtype { NodeSubtype::StateExtension(self.extension_type) }
 
     #[inline]
-    fn node_id(&self) -> NodeId { self.clone().consensus_commit() }
+    fn node_id(&self) -> NodeId { self.commitment_id() }
 
     #[inline]
     fn contract_id(&self) -> Option<ContractId> { Some(self.contract_id) }
@@ -535,7 +554,9 @@ impl Node for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &ParentOwnedRights { &EMPTY_OWNED_RIGHTS }
+    fn parent_owned_rights(&self) -> &ParentOwnedRights {
+        panic!("extension can't close previous single-use-seals")
+    }
 
     #[inline]
     fn parent_public_rights(&self) -> &ParentPublicRights { &self.parent_public_rights }
@@ -564,7 +585,7 @@ impl Node for Transition {
     fn subtype(&self) -> NodeSubtype { NodeSubtype::StateTransition(self.transition_type) }
 
     #[inline]
-    fn node_id(&self) -> NodeId { self.clone().consensus_commit() }
+    fn node_id(&self) -> NodeId { self.commitment_id() }
 
     #[inline]
     fn contract_id(&self) -> Option<ContractId> { None }
@@ -579,7 +600,9 @@ impl Node for Transition {
     fn parent_owned_rights(&self) -> &ParentOwnedRights { &self.parent_owned_rights }
 
     #[inline]
-    fn parent_public_rights(&self) -> &ParentPublicRights { &self.parent_public_rights }
+    fn parent_public_rights(&self) -> &ParentPublicRights {
+        panic!("state transitions can't extend previous state")
+    }
 
     #[inline]
     fn metadata(&self) -> &Metadata { &self.metadata }
@@ -602,15 +625,15 @@ impl Genesis {
         schema_id: SchemaId,
         chain: Chain,
         metadata: Metadata,
-        owned_rights: OwnedRightsInner,
-        public_rights: PublicRightsInner,
+        owned_rights: OwnedRights,
+        public_rights: PublicRights,
     ) -> Self {
         Self {
             schema_id,
             chain,
             metadata,
-            owned_rights: owned_rights.into(),
-            public_rights: public_rights.into(),
+            owned_rights,
+            public_rights,
         }
     }
 
@@ -648,7 +671,6 @@ impl Transition {
     pub fn with(
         transition_type: impl Into<schema::TransitionType>,
         metadata: Metadata,
-        parent_public_rights: ParentPublicRights,
         owned_rights: OwnedRights,
         public_rights: PublicRights,
         parent_owned_rights: ParentOwnedRights,
@@ -656,7 +678,6 @@ impl Transition {
         Self {
             transition_type: transition_type.into(),
             metadata,
-            parent_public_rights,
             parent_owned_rights,
             owned_rights,
             public_rights,
@@ -664,302 +685,4 @@ impl Transition {
     }
 
     pub fn transition_type(&self) -> schema::TransitionType { self.transition_type }
-}
-
-#[cfg(test)]
-mod test {
-    use std::io::Write;
-
-    use bitcoin_hashes::hex::ToHex;
-    use commit_verify::{tagged_hash, CommitConceal, TaggedHash};
-    use lnpbp::chain::{Chain, GENESIS_HASH_MAINNET};
-    use strict_encoding::{strict_serialize, StrictDecode, StrictEncode};
-    use strict_encoding_test::test_vec_decoding_roundtrip;
-
-    use super::*;
-
-    #[test]
-    fn test_node_id_midstate() {
-        let midstate = tagged_hash::Midstate::with(b"rgb:node");
-        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_NODE_ID);
-    }
-
-    #[test]
-    #[ignore]
-    fn test_transition_node_id() {
-        fn conceal_transition(transition: &mut Transition) {
-            for (_, assignments) in transition.owned_rights_mut().iter_mut() {
-                match assignments {
-                    TypedAssignments::Void(set) => {
-                        for assignment in set {
-                            *assignment = assignment.commit_conceal();
-                        }
-                    }
-                    TypedAssignments::Value(set) => {
-                        for assignment in set {
-                            *assignment = assignment.commit_conceal();
-                        }
-                    }
-                    TypedAssignments::Data(set) => {
-                        for assignment in set {
-                            *assignment = assignment.commit_conceal();
-                        }
-                    }
-                    TypedAssignments::Attachment(set) => {
-                        for assignment in set {
-                            *assignment = assignment.commit_conceal();
-                        }
-                    }
-                }
-            }
-        }
-
-        let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
-        let mut concealed_transition = transition.clone();
-        conceal_transition(&mut concealed_transition);
-
-        assert_eq!(transition.node_id(), concealed_transition.node_id());
-    }
-
-    #[test]
-    #[ignore]
-    fn test_node_attributes() {
-        let genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
-        let transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
-
-        // Typeid/Nodeid test
-        assert_eq!(
-            genesis.node_id().to_hex(),
-            "977e9d7344aec3f01aca1a05b3f328fe91aa252481433e7cd87b22dbb48cd01c"
-        );
-        assert_eq!(
-            transition.node_id().to_hex(),
-            "52776d37dfce78a3d075f8c79c2c40ed6d95d271c74f7aea910c17218255aa68"
-        );
-
-        assert_eq!(genesis.transition_type(), None);
-        assert_eq!(transition.transition_type(), 10);
-
-        // Ancestor test
-
-        assert_eq!(genesis.parent_owned_rights(), &ParentOwnedRights::default());
-
-        let ancestor_trn = transition.parent_owned_rights();
-        let assignments = ancestor_trn
-            .get(
-                &NodeId::from_hex(
-                    "060ef58d940a75e43d139d55a5e4d3264dc9eb4f773bffc5729019e47ed27ef5",
-                )
-                .unwrap(),
-            )
-            .unwrap();
-        assert_eq!(assignments.get(&1u16).unwrap(), &[1u16, 2u16, 3u16, 4u16, 5u16].to_vec());
-        assert_eq!(assignments.get(&2u16).unwrap(), &[10u16, 20u16, 30u16, 40u16, 50u16].to_vec());
-        assert_eq!(
-            assignments.get(&3u16).unwrap(),
-            &[100u16, 200u16, 300u16, 400u16, 500u16].to_vec()
-        );
-
-        // Metadata test
-
-        let gen_meta = genesis.metadata();
-
-        let tran_meta = transition.metadata();
-
-        assert_eq!(gen_meta, tran_meta);
-
-        let u8_from_gen = gen_meta.u8(13 as schema::FieldType);
-
-        assert_eq!(u8_from_gen, [2u8, 3u8].to_vec());
-
-        let string_from_tran = tran_meta.unicode_string(13 as schema::FieldType);
-
-        assert_eq!(string_from_tran[0], "One Random String".to_string());
-
-        // Assignments test
-
-        let gen_assignments = genesis.owned_rights();
-        let tran_assingmnets = transition.owned_rights();
-
-        assert_eq!(gen_assignments, tran_assingmnets);
-
-        assert!(gen_assignments.get(&1u16).unwrap().is_declarative());
-        assert!(gen_assignments.get(&2u16).unwrap().has_value());
-        assert!(tran_assingmnets.get(&3u16).unwrap().has_data());
-
-        let seal1 = gen_assignments
-            .get(&2u16)
-            .unwrap()
-            .revealed_seal_at(1)
-            .unwrap()
-            .unwrap();
-
-        let txid = seal1.txid.unwrap();
-
-        assert_eq!(
-            txid.to_hex(),
-            "201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e".to_string()
-        );
-
-        let seal2 = tran_assingmnets
-            .get(&3u16)
-            .unwrap()
-            .revealed_seal_at(1)
-            .unwrap()
-            .unwrap();
-
-        let txid = seal2.txid.unwrap();
-
-        assert_eq!(
-            txid.to_hex(),
-            "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06".to_string()
-        );
-
-        // Field Types
-        let gen_fields = genesis.field_types();
-        let tran_fields = transition.field_types();
-
-        assert_eq!(gen_fields, tran_fields);
-
-        assert_eq!(gen_fields, vec![13u16]);
-
-        // Assignment types
-        let gen_ass_types = genesis.owned_right_types();
-        let tran_ass_types = transition.owned_right_types();
-
-        assert_eq!(gen_ass_types, tran_ass_types);
-
-        assert_eq!(gen_ass_types, bset![1u16, 2, 3]);
-
-        // assignment by types
-        let assignment_gen = genesis.owned_rights_by_type(3).unwrap();
-        let assignment_tran = transition.owned_rights_by_type(1).unwrap();
-
-        assert!(assignment_gen.has_data());
-        assert!(assignment_tran.is_declarative());
-
-        // All seal confidentials
-        let gen_seals = genesis.to_confiential_seals();
-        let tran_seals = transition.to_confiential_seals();
-
-        assert_eq!(gen_seals, tran_seals);
-
-        assert_eq!(
-            gen_seals[0].to_hex(),
-            "6b3c1bee0bd431f53e6c099890fdaf51b8556a6dcd61c6150ca055d0e1d4a524".to_string()
-        );
-        assert_eq!(
-            tran_seals[3].to_hex(),
-            "58f3ea4817a12aa6f1007d5b3d24dd2940ce40f8498029e05f1dc6465b3d65b4".to_string()
-        );
-
-        // Known seals
-        let known_gen_seals = genesis.filter_revealed_seals();
-        let known_seals_tran = transition.filter_revealed_seals();
-
-        assert_eq!(known_gen_seals, known_seals_tran);
-
-        let txid1 = known_gen_seals[2].txid.unwrap();
-
-        let txid2 = known_gen_seals[3].txid.unwrap();
-
-        assert_eq!(
-            txid1.to_hex(),
-            "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06".to_string()
-        );
-        assert_eq!(
-            txid2.to_hex(),
-            "201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e".to_string()
-        );
-
-        // Known seals by type
-        let dec_gen_seals = genesis.filter_revealed_seals_by_type(1);
-        let hash_tran_seals = transition.filter_revealed_seals_by_type(3);
-
-        let txid1 = dec_gen_seals[0].txid.unwrap();
-
-        assert_eq!(
-            txid1.to_hex(),
-            "f57ed27ee4199072c5ff3b774febc94d26d3e4a5559d133de4750a948df50e06".to_string()
-        );
-
-        let txid2 = hash_tran_seals[1].txid.unwrap();
-
-        assert_eq!(
-            txid2.to_hex(),
-            "201fdd1e2b62d7b6938271295118ee181f1bac5e57d9f4528925650d36d3af8e".to_string()
-        );
-    }
-
-    #[test]
-    #[ignore]
-    fn test_autoconceal_node() {
-        let mut genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
-        let mut transition = Transition::strict_decode(&TRANSITION[..]).unwrap();
-
-        assert_eq!(
-            genesis.clone().consensus_commit(),
-            NodeId::from_hex("977e9d7344aec3f01aca1a05b3f328fe91aa252481433e7cd87b22dbb48cd01c")
-                .unwrap()
-        );
-        assert_eq!(
-            transition.clone().consensus_commit(),
-            NodeId::from_hex("52776d37dfce78a3d075f8c79c2c40ed6d95d271c74f7aea910c17218255aa68")
-                .unwrap()
-        );
-
-        genesis.conceal_state();
-        transition.conceal_state();
-
-        assert_eq!(
-            genesis.clone().consensus_commit(),
-            NodeId::from_hex("977e9d7344aec3f01aca1a05b3f328fe91aa252481433e7cd87b22dbb48cd01c")
-                .unwrap()
-        );
-        assert_eq!(
-            transition.clone().consensus_commit(),
-            NodeId::from_hex("52776d37dfce78a3d075f8c79c2c40ed6d95d271c74f7aea910c17218255aa68")
-                .unwrap()
-        );
-    }
-
-    #[test]
-    #[ignore]
-    #[cfg(feature = "serde")]
-    fn test_id_serde() {
-        let genesis: Genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
-        let contract_id = genesis.contract_id();
-        assert_eq!(
-            contract_id.to_string(),
-            "rgb1rnggedxmyfaaslp7gwqjgfd2j8lz3uanq5dv5xhscwhyguua06tskhgfdg"
-        );
-        assert_eq!(
-            serde_json::to_string(&contract_id).unwrap(),
-            "\"rgb1rnggedxmyfaaslp7gwqjgfd2j8lz3uanq5dv5xhscwhyguua06tskhgfdg\""
-        );
-    }
-
-    #[test]
-    #[ignore]
-    fn test_genesis_impl() {
-        let genesis: Genesis = Genesis::strict_decode(&GENESIS[..]).unwrap();
-
-        let contractid = genesis.contract_id();
-        let schemaid = genesis.schema_id();
-        let chain = genesis.chain();
-
-        assert_eq!(
-            contractid,
-            ContractId::from_hex(
-                "977e9d7344aec3f01aca1a05b3f328fe91aa252481433e7cd87b22dbb48cd01c"
-            )
-            .unwrap()
-        );
-        assert_eq!(
-            schemaid,
-            SchemaId::from_hex("8eafd3360d65258952f4d9575eac1b1f18ee185129718293b6d7622b1edd1f20")
-                .unwrap()
-        );
-        assert_eq!(chain, &Chain::Mainnet);
-    }
 }
