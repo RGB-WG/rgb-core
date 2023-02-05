@@ -38,10 +38,10 @@ use std::io::Write;
 use std::num::ParseIntError;
 use std::ops::Deref;
 
+use amplify::hex::{Error, FromHex, ToHex};
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
-use amplify::{Array, AsAny, Bytes32, Wrapper};
-use baid58::ToBaid58;
+use amplify::{hex, Array, AsAny, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use bp::Sha256;
 use commit_verify::{CommitEncode, CommitStrategy, CommitVerify, Conceal, UntaggedProtocol};
@@ -63,7 +63,7 @@ use crate::LIB_NAME_RGB;
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum ValueAtom {
     /// 64-bit value.
@@ -91,8 +91,7 @@ impl FromStr for ValueAtom {
 /// Knowledge of the blinding factor is important to reproduce the commitment
 /// process if the original value is kept.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[display(Self::to_baid58)]
-// TODO: Implement FromStr
+#[display(Self::to_hex)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -107,9 +106,21 @@ impl Deref for BlindingFactor {
     fn deref(&self) -> &Self::Target { self.0.as_inner() }
 }
 
-impl ToBaid58<32> for BlindingFactor {
-    const HRP: &'static str = "blfc";
-    fn to_baid58_payload(&self) -> [u8; 32] { self.0.into_inner() }
+impl ToHex for BlindingFactor {
+    fn to_hex(&self) -> String { self.0.to_hex() }
+}
+
+impl FromHex for BlindingFactor {
+    fn from_hex(s: &str) -> Result<Self, Error> { Bytes32::from_hex(s).map(Self) }
+    fn from_byte_iter<I>(_: I) -> Result<Self, Error>
+    where I: Iterator<Item = Result<u8, Error>> + ExactSizeIterator + DoubleEndedIterator {
+        unreachable!()
+    }
+}
+
+impl FromStr for BlindingFactor {
+    type Err = hex::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
 }
 
 impl From<secp256k1_zkp::SecretKey> for BlindingFactor {
@@ -321,7 +332,7 @@ impl Default for RangeProof {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct Confidential {
     /// Pedersen commitment to the original [`ValueAtom`].

@@ -22,12 +22,13 @@
 
 use std::cmp::Ordering;
 use std::io;
+use std::str::FromStr;
 
 use amplify::confinement::{MediumVec, TinyOrdMap, TinyOrdSet};
 use amplify::flags::FlagVec;
 use amplify::{Bytes32, RawArray};
-use baid58::ToBaid58;
-use commit_verify::{strategies, CommitStrategy, CommitmentId};
+use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
+use commit_verify::{CommitStrategy, CommitmentId};
 use strict_encoding::{
     DecodeError, ReadTuple, StrictDecode, StrictEncode, StrictProduct, StrictTuple, StrictType,
     TypeName, TypedRead, TypedWrite, WriteTuple,
@@ -48,7 +49,7 @@ pub type TransitionType = u16;
 ///
 /// Schema identifier commits to all of the schema data.
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
-#[wrapper(Deref, BorrowSlice, FromStr, Hex, Index, RangeOps)]
+#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[display(Self::to_baid58)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -64,12 +65,18 @@ pub struct SchemaId(
 );
 
 impl CommitStrategy for SchemaId {
-    type Strategy = strategies::Strict;
+    type Strategy = commit_verify::strategies::Strict;
 }
 
 impl ToBaid58<32> for SchemaId {
-    const HRP: &'static str = "sch";
+    const HRI: &'static str = "sch";
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
+}
+impl FromBaid58<32> for SchemaId {}
+
+impl FromStr for SchemaId {
+    type Err = Baid58ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_str(s) }
 }
 
 #[derive(Clone, Eq, Debug)]
@@ -117,7 +124,7 @@ impl PartialOrd for Schema {
 }
 
 impl CommitStrategy for Schema {
-    type Strategy = strategies::Strict;
+    type Strategy = commit_verify::strategies::Strict;
 }
 
 impl CommitmentId for Schema {

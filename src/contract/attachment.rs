@@ -20,117 +20,117 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin_hashes::{sha256, sha256t};
-use commit_verify::{CommitVerify, UntaggedProtocol};
+use std::str::FromStr;
 
-use crate::{ConfidentialState, RevealedState};
+use amplify::confinement::TinyString;
+use amplify::{Bytes32, RawArray};
+use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
+use bp::secp256k1::rand::{thread_rng, RngCore};
+use bp::Sha256;
+use commit_verify::{CommitStrategy, CommitVerify, Conceal, UntaggedProtocol};
+use strict_encoding::{StrictEncode, StrictWriter};
 
-// "rgb:container:id"
-static MIDSTATE_ATTACHMENT_ID: [u8; 32] = [
-    12, 61, 136, 60, 191, 129, 135, 229, 141, 35, 41, 161, 203, 125, 0, 101, 109, 136, 50, 236, 7,
-    101, 59, 39, 148, 207, 63, 236, 255, 48, 24, 171,
-];
-// "rgb:container:confidential"
-static MIDSTATE_CONFIDENTIAL_ATTACHMENT: [u8; 32] = [
-    91, 91, 44, 25, 205, 155, 231, 106, 244, 163, 175, 204, 49, 17, 129, 52, 227, 151, 9, 5, 246,
-    42, 1, 226, 126, 43, 141, 177, 84, 100, 61, 108,
-];
-
-/// Tag used for [`AttachmentId`] hash type
-pub struct AttachmentIdTag;
-
-impl sha256t::Tag for AttachmentIdTag {
-    #[inline]
-    fn engine() -> sha256::HashEngine {
-        let midstate = sha256::Midstate::from_inner(MIDSTATE_ATTACHMENT_ID);
-        sha256::HashEngine::from_midstate(midstate, 64)
-    }
-}
+use super::{ConfidentialState, RevealedState};
+use crate::LIB_NAME_RGB;
 
 /// Unique data attachment identifier
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From, AsAny)]
+#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
+#[display(Self::to_baid58)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From)]
-#[wrapper(Debug, Display, BorrowSlice)]
-pub struct AttachmentId(sha256t::Hash<AttachmentIdTag>);
+pub struct AttachId(
+    #[from]
+    #[from([u8; 32])]
+    Bytes32,
+);
 
-impl<Msg> CommitVerify<Msg, UntaggedProtocol> for AttachmentId
-where Msg: AsRef<[u8]>
-{
-    #[inline]
-    fn commit(msg: &Msg) -> AttachmentId { AttachmentId::hash(msg) }
+impl CommitStrategy for AttachId {
+    type Strategy = commit_verify::strategies::Strict;
 }
 
-/// Tag used for [`Confidential`] hash type
-pub struct ConfidentialAttachmentTag;
+impl ToBaid58<32> for AttachId {
+    const HRI: &'static str = "att";
+    fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
+}
+impl FromBaid58<32> for AttachId {}
 
-impl sha256t::Tag for ConfidentialAttachmentTag {
-    #[inline]
-    fn engine() -> sha256::HashEngine {
-        let midstate = sha256::Midstate::from_inner(MIDSTATE_CONFIDENTIAL_ATTACHMENT);
-        sha256::HashEngine::from_midstate(midstate, 64)
-    }
+impl FromStr for AttachId {
+    type Err = Baid58ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_str(s) }
 }
 
-/// Confidential representation of data attachment information
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-#[derive(Wrapper, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From, AsAny)]
-#[wrapper(Debug, Display, BorrowSlice)]
-pub struct Confidential(sha256t::Hash<ConfidentialAttachmentTag>);
-
-impl ConfidentialState for Confidential {}
-
-impl Confidential {
-    pub fn attachment_id(&self) -> AttachmentId { self.consensus_commit() }
-}
-
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, AsAny, Display)]
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display("{id}~{mime}")]
 pub struct Revealed {
-    pub id: AttachmentId,
-    pub mime: String,
+    pub id: AttachId,
+    /// We do not enforce a MIME standard since non-standard types can be also
+    /// used
+    pub media_type: TinyString,
     pub salt: u64,
 }
 
-impl CommitConceal for Revealed {
-    type ConcealedCommitment = Confidential;
-
-    fn commit_conceal(&self) -> Self::ConcealedCommitment {
-        Confidential::hash(
-            &strict_serialize(self).expect("Encoding of predefined data types must not fail"),
-        )
+impl Revealed {
+    /// Creates new revealed attachment for the attachment id and MIME type.
+    /// Uses `thread_rng` to initialize [`Revealed::salt`].
+    pub fn new(id: AttachId, media_type: impl Into<TinyString>) -> Self {
+        Self {
+            id,
+            media_type: media_type.into(),
+            salt: thread_rng().next_u64(),
+        }
     }
-}
-impl commit_encode::Strategy for Revealed {
-    type Strategy = commit_encode::strategies::UsingConceal;
 }
 
 impl RevealedState for Revealed {}
 
-#[cfg(test)]
-mod test {
-    use amplify::Wrapper;
-    use commit_verify::tagged_hash;
+impl Conceal for Revealed {
+    type Concealed = Confidential;
 
-    use super::*;
+    fn conceal(&self) -> Self::Concealed { Confidential::commit(self) }
+}
+impl CommitStrategy for Revealed {
+    type Strategy = commit_verify::strategies::ConcealStrict;
+}
 
-    #[test]
-    fn test_attachment_id_midstate() {
-        let midstate = tagged_hash::Midstate::with(b"rgb:container:id");
-        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_ATTACHMENT_ID);
-    }
+/// Confidential version of an attachment information.
+///
+/// See also revealed version [`Revealed`].
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, AsAny)]
+#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct Confidential(
+    #[from]
+    #[from([u8; 32])]
+    Bytes32,
+);
 
-    #[test]
-    fn test_confidential_midstate() {
-        let midstate = tagged_hash::Midstate::with(b"rgb:container:confidential");
-        assert_eq!(midstate.into_inner().into_inner(), MIDSTATE_CONFIDENTIAL_ATTACHMENT);
+impl ConfidentialState for Confidential {}
+
+impl CommitStrategy for Confidential {
+    type Strategy = commit_verify::strategies::Strict;
+}
+
+// TODO: Consider changing untagged protocol to a tagged version
+impl CommitVerify<Revealed, UntaggedProtocol> for Confidential {
+    fn commit(msg: &Revealed) -> Self {
+        // TODO: Move this algo together with Sha256 type to client_side_validation
+        let mut engine = Sha256::default();
+        let w = StrictWriter::with(u32::MAX as usize, &mut engine);
+        msg.strict_encode(w).ok();
+        engine.finish().into()
     }
 }

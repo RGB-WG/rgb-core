@@ -138,6 +138,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "baid58"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a05192bd44b6cced6d9f89b98d82fba5d1df844332e34d4888ec6ba5b28a487"
+dependencies = [
+ "base58",
+ "blake3",
+ "mnemonic",
+]
+
+[[package]]
 name = "base58"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -239,7 +250,7 @@ version = "0.10.0-beta.1"
 source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.1.0",
  "bp-dbc",
  "bp-primitives",
  "commit_verify",
@@ -601,6 +612,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "mime"
+version = "0.3.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a60c7ce501c71e03a9c9c0d35b861413ae925bd979cc7a4e30d060069aaac8d"
+
+[[package]]
 name = "mnemonic"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -710,9 +727,10 @@ version = "0.10.0-alpha.1"
 dependencies = [
  "aluvm",
  "amplify",
- "baid58",
+ "baid58 0.2.0",
  "bp-core",
  "commit_verify",
+ "mime",
  "secp256k1-zkp",
  "serde",
  "strict_encoding",
@@ -916,7 +934,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11170f93c7f969209d86c4a3a6a7a6b333772890a7303647e5e055800840df9b"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.1.0",
  "blake3",
  "half",
  "serde",

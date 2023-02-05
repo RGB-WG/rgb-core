@@ -26,16 +26,21 @@ mod conceal;
 // pub mod reveal;
 
 pub mod value;
+pub mod attachment;
 // #[macro_use]
 // pub mod data;
 // mod assignments;
 // mod metadata;
 // pub mod nodes;
 // mod rights;
-// pub mod attachment;
 
+pub use attachment::AttachId;
 pub use conceal::{ConcealSeals, ConcealState};
 // pub use reveal::{MergeReveal, RevealSeals};
+pub use value::{
+    BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
+    ValueAtom,
+};
 
 /*pub(self) use assignments::EMPTY_ASSIGNMENTS;
 pub use assignments::{
@@ -43,17 +48,12 @@ pub use assignments::{
     HashStrategy, PedersenStrategy, RevealedState, SealValueMap, State, StateType,
     TypedAssignments,
 };
-pub use attachment::AttachmentId;
 pub use metadata::Metadata;
 pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
 pub use seal::{IntoRevealedSeal, SealEndpoint};
 */
-pub use value::{
-    BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
-    ValueAtom,
-};
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
