@@ -1,13 +1,24 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use core::cmp::Ordering;
 use core::fmt::Debug;
@@ -825,8 +836,8 @@ where
     StateType::Confidential: From<<StateType::Revealed as CommitConceal>::ConcealedCommitment>,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.to_confidential_seal() == other.to_confidential_seal()
-            && self.to_confidential_state() == other.to_confidential_state()
+        self.to_confidential_seal() == other.to_confidential_seal() &&
+            self.to_confidential_state() == other.to_confidential_state()
     }
 }
 
@@ -850,13 +861,13 @@ where
 
     pub fn with_seal_replaced(assignment: &Self, seal: seal::Revealed) -> Self {
         match assignment {
-            Assignment::Confidential { seal: _, state }
-            | Assignment::ConfidentialState { seal: _, state } => Assignment::ConfidentialState {
+            Assignment::Confidential { seal: _, state } |
+            Assignment::ConfidentialState { seal: _, state } => Assignment::ConfidentialState {
                 seal,
                 state: state.clone(),
             },
-            Assignment::ConfidentialSeal { seal: _, state }
-            | Assignment::Revealed { seal: _, state } => Assignment::Revealed {
+            Assignment::ConfidentialSeal { seal: _, state } |
+            Assignment::Revealed { seal: _, state } => Assignment::Revealed {
                 seal,
                 state: state.clone(),
             },
@@ -888,8 +899,8 @@ where
             Assignment::Revealed { state, .. } | Assignment::ConfidentialSeal { state, .. } => {
                 state.commit_conceal().into()
             }
-            Assignment::Confidential { state, .. }
-            | Assignment::ConfidentialState { state, .. } => state.clone(),
+            Assignment::Confidential { state, .. } |
+            Assignment::ConfidentialState { state, .. } => state.clone(),
         }
     }
 
@@ -1079,8 +1090,8 @@ where
 {
     fn commit_encode<E: io::Write>(&self, e: E) -> usize {
         self.commit_conceal().strict_encode(e).expect(
-            "Strict encoding must not fail for types implementing \
-             ConsensusCommit via marker trait ConsensusCommitFromStrictEncoding",
+            "Strict encoding must not fail for types implementing ConsensusCommit via marker \
+             trait ConsensusCommitFromStrictEncoding",
         )
     }
 }
@@ -1232,10 +1243,7 @@ mod test {
         // Create our allocations
         let ours: SealValueMap = zip_data
             .map(|(txid, amount)| {
-                (
-                    Revealed::from(Outpoint::new(*txid, rng.gen_range(0..=10))),
-                    amount.clone(),
-                )
+                (Revealed::from(Outpoint::new(*txid, rng.gen_range(0..=10))), amount.clone())
             })
             .collect();
 
@@ -1288,11 +1296,7 @@ mod test {
 
     #[test]
     fn test_zero_balance_nonoverflow() {
-        assert!(zero_balance_verify(
-            &[core::u64::MAX, 1],
-            &[1, core::u64::MAX],
-            1
-        ));
+        assert!(zero_balance_verify(&[core::u64::MAX, 1], &[1, core::u64::MAX], 1));
         assert!(zero_balance_verify(
             &[core::u64::MAX, core::u64::MAX],
             &[core::u64::MAX, core::u64::MAX],
@@ -1364,11 +1368,7 @@ mod test {
         }
 
         // Test when ours is empty
-        assert!(zero_balance_verify(
-            &multiple_amounts[2],
-            &multiple_amounts[2],
-            0
-        ));
+        assert!(zero_balance_verify(&multiple_amounts[2], &multiple_amounts[2], 0));
 
         // Test when theirs is empty
         assert!(zero_balance_verify(
@@ -1404,11 +1404,7 @@ mod test {
             2
         ));
         assert!(!zero_balance_verify(&[1, 2, 3, 4], &[1, 2, 3, 5], 2));
-        assert!(!zero_balance_verify(
-            &[1, 2, 3, 0],
-            &[1, 2, 3, core::u64::MAX],
-            2
-        ));
+        assert!(!zero_balance_verify(&[1, 2, 3, 0], &[1, 2, 3, core::u64::MAX], 2));
     }
 
     #[test]
@@ -1457,10 +1453,7 @@ mod test {
                 rng.gen_range(0..=output_length),
             );
             // Check if test passes
-            assert!(value::Confidential::verify_commit_sum(
-                inputs.clone(),
-                outputs.clone()
-            ));
+            assert!(value::Confidential::verify_commit_sum(inputs.clone(), outputs.clone()));
 
             // Check non-equivalent amounts do not verify
             if input_length > 1 {
@@ -1876,10 +1869,7 @@ mod test {
             .collect();
 
         // Check extracted values matches with precomputed values
-        assert_eq!(
-            all_seals_confidential.to_vec(),
-            extracted_seals_confidential
-        );
+        assert_eq!(all_seals_confidential.to_vec(), extracted_seals_confidential);
 
         // Precomputed concealed state data of all 4 assignments
         let all_state_confidential = [
@@ -1897,10 +1887,7 @@ mod test {
             .collect();
 
         // Check extracted values matches with precomputed values
-        assert_eq!(
-            all_state_confidential.to_vec(),
-            extracted_state_confidential
-        );
+        assert_eq!(all_state_confidential.to_vec(), extracted_state_confidential);
     }
 
     #[test]
@@ -2218,10 +2205,7 @@ mod test {
             .to_declarative_assignments()
             .iter()
             .map(|assignment| {
-                (
-                    type1,
-                    MerkleNode::hash(&CommitEncode::commit_serialize(assignment)),
-                )
+                (type1, MerkleNode::hash(&CommitEncode::commit_serialize(assignment)))
             })
             .collect();
 
@@ -2229,10 +2213,7 @@ mod test {
             .to_value_assignments()
             .iter()
             .map(|assignment| {
-                (
-                    type2,
-                    MerkleNode::hash(&CommitEncode::commit_serialize(assignment)),
-                )
+                (type2, MerkleNode::hash(&CommitEncode::commit_serialize(assignment)))
             })
             .collect();
 
@@ -2240,10 +2221,7 @@ mod test {
             .to_data_assignments()
             .iter()
             .map(|assignment| {
-                (
-                    type3,
-                    MerkleNode::hash(&CommitEncode::commit_serialize(assignment)),
-                )
+                (type3, MerkleNode::hash(&CommitEncode::commit_serialize(assignment)))
             })
             .collect();
 

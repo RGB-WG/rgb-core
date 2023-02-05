@@ -1,13 +1,24 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use core::iter::FromIterator;
 use core::ops::AddAssign;
@@ -105,8 +116,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 if end_transitions
                     .iter()
                     .filter(|(n, _)| n.node_id() == node_id)
-                    .count()
-                    > 0
+                    .count() >
+                    0
                 {
                     status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
                 } else {
@@ -449,53 +460,52 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
-        if let Some(outpoint) = match (
-            variant.revealed_seal_at(seal_index),
-            self.anchor_index.get(&ancestor_id),
-        ) {
-            (Err(_), _) => {
-                self.status.add_failure(Failure::TransitionParentWrongSeal {
-                    node_id,
-                    ancestor_id,
-                    assignment_type,
-                    seal_index,
-                });
-                None
-            }
-            (Ok(None), _) => {
-                // Everything is ok, but we have incomplete data (confidential),
-                // thus can't do a full verification and have to report the
-                // failure
-                eprintln!("{:#?}", variant);
-                self.status
-                    .add_failure(Failure::TransitionParentConfidentialSeal {
+        if let Some(outpoint) =
+            match (variant.revealed_seal_at(seal_index), self.anchor_index.get(&ancestor_id)) {
+                (Err(_), _) => {
+                    self.status.add_failure(Failure::TransitionParentWrongSeal {
                         node_id,
                         ancestor_id,
                         assignment_type,
                         seal_index,
                     });
-                None
+                    None
+                }
+                (Ok(None), _) => {
+                    // Everything is ok, but we have incomplete data (confidential),
+                    // thus can't do a full verification and have to report the
+                    // failure
+                    eprintln!("{:#?}", variant);
+                    self.status
+                        .add_failure(Failure::TransitionParentConfidentialSeal {
+                            node_id,
+                            ancestor_id,
+                            assignment_type,
+                            seal_index,
+                        });
+                    None
+                }
+                (
+                    Ok(Some(seal::Revealed {
+                        txid: Some(txid),
+                        vout,
+                        ..
+                    })),
+                    None,
+                ) => {
+                    // We are at genesis, so the outpoint must contain tx
+                    Some(bp::Outpoint::new(txid!(txid), vout))
+                }
+                (Ok(Some(_)), None) => {
+                    // This can't happen, since if we have a node in the index
+                    // and the node is not genesis, we always have an anchor
+                    unreachable!()
+                }
+                /* -> ... so we can check that the bitcoin transaction
+                 * references it as one of its inputs */
+                (Ok(Some(seal)), Some(anchor)) => Some(outpoint!(seal.outpoint_or(anchor.txid))),
             }
-            (
-                Ok(Some(seal::Revealed {
-                    txid: Some(txid),
-                    vout,
-                    ..
-                })),
-                None,
-            ) => {
-                // We are at genesis, so the outpoint must contain tx
-                Some(bp::Outpoint::new(txid!(txid), vout))
-            }
-            (Ok(Some(_)), None) => {
-                // This can't happen, since if we have a node in the index
-                // and the node is not genesis, we always have an anchor
-                unreachable!()
-            }
-            /* -> ... so we can check that the bitcoin transaction
-             * references it as one of its inputs */
-            (Ok(Some(seal)), Some(anchor)) => Some(outpoint!(seal.outpoint_or(anchor.txid))),
-        } {
+        {
             if !witness_tx
                 .inputs
                 .iter()

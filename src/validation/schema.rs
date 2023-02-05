@@ -1,3 +1,25 @@
+// RGB Core Library: consensus layer for RGB smart contracts.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /// Trait used for internal schema validation against some root schema
 pub trait SchemaVerify {
     fn schema_verify(&self, root: &Self) -> crate::validation::Status;
@@ -230,7 +252,7 @@ mod _validation {
                                     node_id,
                                     transition_type,
                                 ),
-                            )
+                            );
                         }
                         Some(transition_type) => transition_type,
                     };
@@ -260,7 +282,7 @@ mod _validation {
                                     node_id,
                                     extension_type,
                                 ),
-                            )
+                            );
                         }
                         Some(extension_type) => extension_type,
                     };
@@ -357,8 +379,10 @@ mod _validation {
                     ));
                 }
 
-                let _field = self.field_types.get(field_type_id)
-                    .expect("If the field were absent, the schema would not be able to pass the internal validation and we would not reach this point");
+                let _field = self.field_types.get(field_type_id).expect(
+                    "If the field were absent, the schema would not be able to pass the internal \
+                     validation and we would not reach this point",
+                );
                 for _data in set {
                     // TODO: Run strict type validation
                     /*
@@ -469,10 +493,10 @@ mod _validation {
                     ));
                 }
 
-                let assignment = &self
-                    .owned_right_types
-                    .get(owned_type_id)
-                    .expect("If the assignment were absent, the schema would not be able to pass the internal validation and we would not reach this point");
+                let assignment = &self.owned_right_types.get(owned_type_id).expect(
+                    "If the assignment were absent, the schema would not be able to pass the \
+                     internal validation and we would not reach this point",
+                );
 
                 match owned_rights.get(owned_type_id) {
                     None => {}
@@ -677,8 +701,8 @@ mod _validation {
         {
             let mut status = validation::Status::new();
             match data {
-                Assignment::Confidential { state, .. }
-                | Assignment::ConfidentialState { state, .. } => {
+                Assignment::Confidential { state, .. } |
+                Assignment::ConfidentialState { state, .. } => {
                     let a: &dyn Any = state.as_any();
                     match self {
                         StateSchema::Declarative => {
@@ -708,7 +732,8 @@ mod _validation {
                                 ));
                             }
 
-                            // TODO: When other homomorphic formats will be added,
+                            // TODO: When other homomorphic formats will be
+                            // added,
                             //       add information to the status like with
                             //       hashed data below
                         }

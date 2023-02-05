@@ -1,13 +1,24 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use std::collections::BTreeMap;
 
@@ -25,7 +36,8 @@ pub trait RevealSeals {
     ///
     /// # Returns
     ///
-    /// Total number of seals revealed inside the data structure during the operation.
+    /// Total number of seals revealed inside the data structure during the
+    /// operation.
     fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize;
 }
 
@@ -42,7 +54,8 @@ pub enum Error {
     /// OwnedRights has different commitment ids and can't be reveal-merged
     OwnedRightsMismatch,
 
-    /// Anchors has different commitment ids and can't be reveal-merged. Details: {0}
+    /// Anchors has different commitment ids and can't be reveal-merged.
+    /// Details: {0}
     #[from]
     AnchorsMismatch(dbc::anchor::MergeError),
 
@@ -84,8 +97,8 @@ where
         } else {
             match (self, other) {
                 // Anything + Revealed = Revealed
-                (_, state @ Assignment::Revealed { .. })
-                | (state @ Assignment::Revealed { .. }, _) => Ok(state),
+                (_, state @ Assignment::Revealed { .. }) |
+                (state @ Assignment::Revealed { .. }, _) => Ok(state),
 
                 // ConfidentialAmount + ConfidentialSeal = Revealed
                 (
@@ -110,8 +123,8 @@ where
                 ) => Ok(state),
 
                 // Anything + Confidential = Anything
-                (state, Assignment::Confidential { .. })
-                | (Assignment::Confidential { .. }, state) => Ok(state),
+                (state, Assignment::Confidential { .. }) |
+                (Assignment::Confidential { .. }, state) => Ok(state),
             }
         }
     }

@@ -1,13 +1,24 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::num::ParseIntError;
@@ -142,9 +153,7 @@ impl From<ContractId> for ProtocolId {
 
 impl From<ProtocolId> for ContractId {
     fn from(protocol_id: ProtocolId) -> Self {
-        ContractId::from_inner(<ContractId as Wrapper>::Inner::from_inner(
-            protocol_id.into_inner(),
-        ))
+        ContractId::from_inner(<ContractId as Wrapper>::Inner::from_inner(protocol_id.into_inner()))
     }
 }
 
@@ -744,14 +753,8 @@ mod test {
                 .unwrap(),
             )
             .unwrap();
-        assert_eq!(
-            assignments.get(&1u16).unwrap(),
-            &[1u16, 2u16, 3u16, 4u16, 5u16].to_vec()
-        );
-        assert_eq!(
-            assignments.get(&2u16).unwrap(),
-            &[10u16, 20u16, 30u16, 40u16, 50u16].to_vec()
-        );
+        assert_eq!(assignments.get(&1u16).unwrap(), &[1u16, 2u16, 3u16, 4u16, 5u16].to_vec());
+        assert_eq!(assignments.get(&2u16).unwrap(), &[10u16, 20u16, 30u16, 40u16, 50u16].to_vec());
         assert_eq!(
             assignments.get(&3u16).unwrap(),
             &[100u16, 200u16, 300u16, 400u16, 500u16].to_vec()
