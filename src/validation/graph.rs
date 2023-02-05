@@ -23,23 +23,18 @@
 //! Common API for accessing RGB contract node graph, including individual state
 //! transitions, extensions, genesis, outputs, assignments & single-use-seal
 //! data.
-//!
-//! Implemented by all storage-managing [`rgb::stash`] structures, including:
-//! - [`Consignment`]
-//! - [`Disclosure`]
-//!
-//! [`Stash`] API is the alternative form of API used by stash implementations,
-//! which may operate much larger volumes of client-side-validated data, which
-//! may not fit into the memory, and thus using specially-designed iterators and
-//! different storage drivers returning driver-specific error types.
 
 use std::collections::BTreeSet;
 
 use bp::dbc::AnchorId;
 use bp::{Outpoint, Txid};
+use commit_verify::mpc;
 
 use crate::schema::OwnedRightType;
-use crate::{BundleId, Extension, Node, NodeId, NodeOutpoint, Transition, TransitionBundle};
+use crate::{
+    Anchor, BundleId, Extension, Genesis, Node, NodeId, NodeOutpoint, Schema, SealEndpoint,
+    Transition, TransitionBundle,
+};
 
 /// Errors accessing graph data via [`GraphApi`].
 ///
@@ -180,4 +175,36 @@ pub trait GraphApi {
         owned_right_type: impl Into<OwnedRightType>,
         witness: Txid,
     ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
+}
+
+pub trait Consignment<'consignment>: 'consignment + GraphApi {
+    type EndpointIter: Iterator<Item = &'consignment (BundleId, SealEndpoint)>;
+    type BundleIter: Iterator<Item = &'consignment (Anchor<mpc::MerkleProof>, TransitionBundle)>;
+    type ExtensionsIter: Iterator<Item = &'consignment Extension>;
+
+    fn schema(&'consignment self) -> &'consignment Schema;
+
+    fn root_schema(&'consignment self) -> Option<&'consignment Schema>;
+
+    /// Genesis data
+    fn genesis(&'consignment self) -> &'consignment Genesis;
+
+    fn node_ids(&'consignment self) -> BTreeSet<NodeId>;
+
+    /// The final state ("endpoints") provided by this consignment.
+    ///
+    /// There are two reasons for having endpoints:
+    /// - navigation towards genesis from the final state is more
+    ///   computationally efficient, since state transition/extension graph is
+    ///   directed towards genesis (like bitcoin transaction graph)
+    /// - if the consignment contains concealed state (known by the receiver),
+    ///   it will be computationally inefficient to understand which of the
+    ///   state transitions represent the final state
+    fn endpoints(&'consignment self) -> Self::EndpointIter;
+
+    /// Data on all anchored state transitions contained in the consignment
+    fn anchored_bundles(&'consignment self) -> Self::BundleIter;
+
+    /// Data on all state extensions contained in the consignment
+    fn state_extensions(&'consignment self) -> Self::ExtensionsIter;
 }

@@ -30,7 +30,7 @@ use crate::LIB_NAME_RGB;
 /// Unique state transition bundle identifier equivalent to the bundle
 /// commitment hash
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
-#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
+#[wrapper(Deref, BorrowSlice, Display, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
