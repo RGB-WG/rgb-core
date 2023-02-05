@@ -61,7 +61,7 @@ pub mod prelude {
     };*/
     pub use schema::{
         ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
-        PublicRightsStructure, Schema, SchemaId, ValidationScript, VmType,
+        PublicRightsStructure, Schema, SchemaId, Scripts, VmType,
     };
 
     pub use super::schema;
@@ -69,11 +69,10 @@ pub mod prelude {
         bundle, AnchoredBundle, BundleId, ConcealAnchors, ConcealTransitions, Consignment,
         ConsignmentEndpoint, ConsistencyError, GraphApi, Stash, TransitionBundle,
     };
-    pub use validation::{Validator, Validity};
-    pub use vm::Validate;
-
-    pub use super::{vm};
-    use super::*;*/
+    pub use validation::{Validator, Validity, Validate};
+     */
+    pub use super::vm;
+    // use super::*;
 }
 
 pub use prelude::*;

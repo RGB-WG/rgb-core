@@ -35,8 +35,8 @@ use strict_encoding::{
 use strict_types::SemId;
 
 use super::{
-    ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, StateSchema, TransitionSchema,
-    ValidationScript,
+    ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, Scripts, StateSchema,
+    TransitionSchema,
 };
 use crate::LIB_NAME_RGB;
 
@@ -101,7 +101,7 @@ pub struct Schema {
     /// Type system
     pub type_system: MediumVec<u8>, // TODO: TypeSystem,
     /// Validation code.
-    pub script: ValidationScript,
+    pub script: Scripts,
 }
 
 impl PartialEq for Schema {
