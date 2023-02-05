@@ -40,3 +40,6 @@ serde = [
     "aluvm/serde",
     "secp256k1-zkp/serde"
 ]
+
+[package.metadata.docs.rs]
+features = [ "all" ]

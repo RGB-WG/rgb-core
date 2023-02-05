@@ -20,8 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![recursion_limit = "256"]
-// Coding conventions
 #![deny(
     non_upper_case_globals,
     non_camel_case_types,
@@ -29,10 +27,9 @@
     unused_mut,
     unused_imports,
     dead_code,
-    //missing_docs
+    // TODO: Uncomment missing_docs
 )]
-// TODO: Upgrade tests to use new strict_encoding_test crate
-#![cfg_attr(test, allow(deprecated))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 #[macro_use]
 extern crate amplify;
