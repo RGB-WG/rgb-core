@@ -25,13 +25,13 @@ pub mod seal;
 mod conceal;
 // pub mod reveal;
 
+pub mod value;
 // #[macro_use]
 // pub mod data;
 // mod assignments;
 // mod metadata;
 // pub mod nodes;
 // mod rights;
-// pub mod value;
 // pub mod attachment;
 
 pub use conceal::{ConcealSeals, ConcealState};
@@ -49,8 +49,21 @@ pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Tran
 pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
 pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
 pub use seal::{IntoRevealedSeal, SealEndpoint};
-pub use value::{AtomicValue, Bulletproofs};
 */
+pub use value::{
+    BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
+    ValueAtom,
+};
+
+/// Marker trait for types of state which are just a commitment to the actual
+/// state data.
+pub trait ConfidentialState: core::fmt::Debug + Clone + amplify::AsAny {}
+
+/// Marker trait for types of state holding explicit state data.
+pub trait RevealedState:
+    core::fmt::Debug + commit_verify::Conceal + Clone + amplify::AsAny
+{
+}
 
 /// Errors retrieving state data.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error, From)]
@@ -80,6 +93,8 @@ pub struct ConfidentialDataError;
 pub(crate) mod test {
     use commit_verify::{CommitConceal, CommitEncode};
     use strict_encoding::{StrictDecode, StrictEncode};
+
+    pub use super::value::test_helpers::*;
 
     pub fn test_confidential<T>(data: &[u8], encoded: &[u8], commitment: &[u8])
     where

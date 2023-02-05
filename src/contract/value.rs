@@ -31,77 +31,141 @@
 //! using elliptic curve homomorphic cryptography such as Pedesen commitments.
 
 use core::cmp::Ordering;
+use core::fmt::Debug;
+use core::str::FromStr;
 use std::io;
-use std::str::FromStr;
+use std::io::Write;
+use std::num::ParseIntError;
+use std::ops::Deref;
 
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
-use amplify::hex::{Error, FromHex};
-use amplify::Wrapper;
-use bitcoin_hashes::sha256::Midstate;
-use bitcoin_hashes::{sha256, Hash};
-use commit_verify::{CommitEncode, CommitVerify, CommitmentProtocol};
+use amplify::{Array, AsAny, Bytes32, Wrapper};
+use baid58::ToBaid58;
+use bp::secp256k1::rand::thread_rng;
+use bp::Sha256;
+use commit_verify::{CommitEncode, CommitStrategy, CommitVerify, Conceal, UntaggedProtocol};
 use secp256k1_zkp::rand::{Rng, RngCore};
-use secp256k1_zkp::{PedersenCommitment, SECP256K1};
+use secp256k1_zkp::SECP256K1;
+use strict_encoding::{
+    DecodeError, ReadTuple, StrictDecode, StrictDumb, StrictEncode, TypedRead, TypedWrite,
+    WriteTuple,
+};
 
 use super::{ConfidentialState, RevealedState};
+use crate::LIB_NAME_RGB;
 
-pub type AtomicValue = u64;
-
-impl From<Revealed> for AtomicValue {
-    fn from(revealed: Revealed) -> Self { revealed.value }
-}
-
-/// Proof for Pedersen commitment: a blinding key
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+/// An atom of an additive state, which thus can be monomorphically encrypted.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[display(inner)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
+    serde(crate = "serde_crate", rename = "camelCase")
 )]
-#[display(LowerHex)]
-#[wrapper(FromStr, LowerHex, UpperHex, BorrowSlice)]
-pub struct BlindingFactor(Slice32);
+pub enum ValueAtom {
+    /// 64-bit value.
+    #[from]
+    #[strict_type(tag = 8)] // Matches strict types U64 primitive value
+    Bits64(u64),
+    // When/if adding more variants do not forget to re-write FromStr impl
+}
 
-impl AsRef<[u8]> for BlindingFactor {
-    #[inline]
-    fn as_ref(&self) -> &[u8] { &self.0[..] }
+impl Default for ValueAtom {
+    fn default() -> Self { ValueAtom::Bits64(0) }
+}
+
+impl From<Revealed> for ValueAtom {
+    fn from(revealed: Revealed) -> Self { revealed.value }
+}
+
+impl FromStr for ValueAtom {
+    type Err = ParseIntError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { s.parse().map(ValueAtom::Bits64) }
+}
+
+/// Blinding factor used in creating Pedersen commitment to an [`AtomicValue`].
+///
+/// Knowledge of the blinding factor is important to reproduce the commitment
+/// process if the original value is kept.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display(Self::to_baid58)]
+// TODO: Implement FromStr
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", from = "secp256k1_zkp::SecretKey")
+)]
+pub struct BlindingFactor(Bytes32);
+
+impl Deref for BlindingFactor {
+    type Target = [u8; 32];
+    fn deref(&self) -> &Self::Target { self.0.as_inner() }
+}
+
+impl ToBaid58<32> for BlindingFactor {
+    const HRP: &'static str = "blfc";
+    fn to_baid58_payload(&self) -> [u8; 32] { self.0.into_inner() }
 }
 
 impl From<secp256k1_zkp::SecretKey> for BlindingFactor {
-    fn from(key: secp256k1_zkp::SecretKey) -> Self {
-        Self::from_inner(Slice32::from_inner(*key.as_ref()))
-    }
+    fn from(key: secp256k1_zkp::SecretKey) -> Self { Self(Bytes32::from_inner(*key.as_ref())) }
 }
 
 impl From<BlindingFactor> for secp256k1_zkp::SecretKey {
     fn from(bf: BlindingFactor) -> Self {
-        secp256k1_zkp::SecretKey::from_slice(bf.into_inner().as_inner())
+        secp256k1_zkp::SecretKey::from_slice(bf.0.as_inner())
             .expect("blinding factor is an invalid secret key")
     }
 }
 
-impl FromHex for BlindingFactor {
-    fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
-    where I: Iterator<Item = Result<u8, Error>> + ExactSizeIterator + DoubleEndedIterator {
-        Slice32::from_byte_iter(iter).map(BlindingFactor::from_inner)
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display(doc_comments)]
+/// value provided for a blinding factor overflows prime field order for
+/// Secp256k1 curve.
+pub struct FieldOrderOverflow;
+
+impl TryFrom<[u8; 32]> for BlindingFactor {
+    type Error = FieldOrderOverflow;
+
+    fn try_from(array: [u8; 32]) -> Result<Self, Self::Error> {
+        secp256k1_zkp::SecretKey::from_slice(&array)
+            .map_err(|_| FieldOrderOverflow)
+            .map(Self::from)
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, AsAny)]
+/// State item for a homomorphically-encryptable state.
+///
+/// Consists of the 64-bit value and
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display("{value}#{blinding}")]
 pub struct Revealed {
     /// Original value in smallest indivisible units
-    pub value: AtomicValue,
+    pub value: ValueAtom,
 
     /// Blinding factor used in Pedersen commitment
     pub blinding: BlindingFactor,
 }
 
 impl Revealed {
+    /// Constructs new state using the provided value and random generator for
+    /// creating blinding factor.
+    pub fn new<R: Rng + RngCore>(value: ValueAtom, rng: &mut R) -> Self {
+        Self {
+            value,
+            blinding: BlindingFactor::from(secp256k1_zkp::SecretKey::new(rng)),
+        }
+    }
+
     /// Convenience constructor.
-    pub fn with(value: AtomicValue, blinding: impl Into<BlindingFactor>) -> Self {
+    pub fn with(value: ValueAtom, blinding: impl Into<BlindingFactor>) -> Self {
         Self {
             value,
             blinding: blinding.into(),
@@ -109,69 +173,22 @@ impl Revealed {
     }
 }
 
-/// Error parsing RGB revealed value from string. The string must has form of
-/// `<value>#<hex_blinding_factor>`
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From)]
-#[display(doc_comments)]
-pub enum RevealedParseError {
-    /// No `#` separator between value and blinding factor found while
-    /// parsing RGB revealed value
-    NoSeparator,
-
-    /// No blinding factor is present within RGB revealed value string
-    /// representation
-    NoBlindingFactor,
-
-    /// Extra component within RGB revealed value string representation
-    /// following value and blinding factor
-    ExtraComponent,
-
-    /// Error parsing atomic value representation of RGB revealed value, which
-    /// has to be an integer
-    #[from(std::num::ParseIntError)]
-    AtomicInt,
-
-    /// Error parsing Pedersen commitment inside RGB revealed value string
-    /// representation. The commitment must be a hex-encoded
-    #[from(amplify::hex::Error)]
-    PedersenHex,
-}
-
-impl FromStr for Revealed {
-    type Err = RevealedParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split('#');
-        match (split.next(), split.next(), split.next()) {
-            (Some(v), Some(b), None) => Ok(Revealed {
-                value: v.parse()?,
-                blinding: BlindingFactor::from_hex(b)?,
-            }),
-            (None, ..) => Err(RevealedParseError::NoSeparator),
-            (Some(_), None, _) => Err(RevealedParseError::NoBlindingFactor),
-            (_, _, Some(_)) => Err(RevealedParseError::ExtraComponent),
-        }
-    }
-}
-
-impl Revealed {
-    pub fn with_amount<R: Rng + RngCore>(amount: AtomicValue, rng: &mut R) -> Self {
-        Self {
-            value: amount,
-            blinding: BlindingFactor::from(secp256k1_zkp::SecretKey::new(rng)),
-        }
-    }
-}
-
 impl RevealedState for Revealed {}
 
-impl CommitConceal for Revealed {
-    type ConcealedCommitment = Confidential;
+impl Conceal for Revealed {
+    type Concealed = Confidential;
 
-    fn commit_conceal(&self) -> Self::ConcealedCommitment { Confidential::commit(self) }
+    fn conceal(&self) -> Self::Concealed {
+        // TODO: Remove panic upon integration of bulletproofs library
+        panic!(
+            "current version of RGB Core doesn't support production of bulletproofs. The method \
+             leading to this panic must not be used for now."
+        );
+        // Confidential::commit(self)
+    }
 }
-impl commit_encode::Strategy for Revealed {
-    type Strategy = commit_encode::strategies::UsingConceal;
+impl CommitStrategy for Revealed {
+    type Strategy = commit_verify::strategies::ConcealStrict;
 }
 
 impl PartialOrd for Revealed {
@@ -193,108 +210,175 @@ impl Ord for Revealed {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash, AsAny)]
+/// Opaque type holding pedersen commitment for an [`ValueAtom`].
+#[derive(Wrapper, Copy, Clone, Eq, PartialEq, Hash, Debug, From)]
+#[wrapper(Deref, FromStr, Display, LowerHex)]
+#[derive(StrictType)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct PedersenCommitment(secp256k1_zkp::PedersenCommitment);
+
+impl StrictDumb for PedersenCommitment {
+    fn strict_dumb() -> Self {
+        secp256k1_zkp::PedersenCommitment::from_slice(&[1u8; 32])
+            .expect("hardcoded pedersen commitment value")
+            .into()
+    }
+}
+
+impl StrictEncode for PedersenCommitment {
+    fn strict_encode<W: TypedWrite>(&self, writer: W) -> io::Result<W> {
+        writer.write_tuple::<Self>(|w| Ok(w.write_field(&self.0.serialize())?.complete()))
+    }
+}
+
+impl StrictDecode for PedersenCommitment {
+    fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
+        reader.read_tuple(|r| {
+            let commitment = r.read_field::<[u8; 33]>()?;
+            secp256k1_zkp::PedersenCommitment::from_slice(&commitment)
+                .map_err(|_| {
+                    DecodeError::DataIntegrityError(s!("invalid pedersen commitment data"))
+                })
+                .map(PedersenCommitment::from_inner)
+        })
+    }
+}
+
+impl CommitStrategy for PedersenCommitment {
+    type Strategy = commit_verify::strategies::Strict;
+}
+
+impl CommitVerify<Revealed, UntaggedProtocol> for PedersenCommitment {
+    fn commit(revealed: &Revealed) -> Self {
+        use secp256k1_zkp::{Generator, Tag, Tweak};
+
+        let blinding = Tweak::from_inner(revealed.blinding.0.into_inner())
+            .expect("type guarantees of BlindingFactor are broken");
+        let value = match revealed.value {
+            ValueAtom::Bits64(value) => value,
+        };
+
+        // TODO: Check that we create correct generator value.
+        let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &secp256k1_zkp::ONE_KEY);
+        let h = Sha256::digest(&g.serialize_uncompressed());
+        let tag = Tag::from(h);
+        let generator = Generator::new_unblinded(SECP256K1, tag);
+
+        secp256k1_zkp::PedersenCommitment::new(&SECP256K1, value, blinding, generator).into()
+    }
+}
+
+/// A dumb placeholder for a future bulletproofs.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct NoiseDumb(Array<u8, 512>);
+
+impl Default for NoiseDumb {
+    fn default() -> Self {
+        let mut dumb = [0u8; 512];
+        thread_rng().fill(&mut dumb);
+        NoiseDumb(dumb.into())
+    }
+}
+
+/// Range proof value.
+///
+/// Range proofs must be used alongside [`PedersenCommitment`]s to ensure that
+/// the value do not overflow on arithmetic operations with the commitments.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+pub enum RangeProof {
+    /// Value used when bulletproofs library is not available.
+    ///
+    /// Always fails validation if no source value is given.
+    #[strict_type(tag = 0xFF)]
+    Placeholder(NoiseDumb),
+}
+
+impl Default for RangeProof {
+    fn default() -> Self { RangeProof::Placeholder(default!()) }
+}
+
+/// Confidential version of the additive state.
+///
+/// See also revealed version [`Revealed`].
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename = "camelCase")
+)]
 pub struct Confidential {
-    // TODO: make fields private to provide type guarantees on the data validity
+    /// Pedersen commitment to the original [`ValueAtom`].
     pub commitment: PedersenCommitment,
-    pub bulletproof: Box<[u8]>,
+    /// Range proof for the [`ValueAtom`] not exceeding type boundaries.
+    pub range_proof: RangeProof,
 }
 
 impl ConfidentialState for Confidential {}
 
-/*
-impl StrictEncode for Confidential {
-    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        let len = self.bulletproof.len() as u16;
-        self.commitment.serialize().strict_encode(&mut e)?;
-        self.bulletproof.strict_encode(e)?;
-        Ok(len as usize + 33 + 2)
-    }
-}
-
-impl StrictDecode for Confidential {
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        let commitment = <[u8; 33]>::strict_decode(&mut d)?;
-        let commitment = PedersenCommitment::from_slice(&commitment).map_err(|_| {
-            strict_encoding::Error::DataIntegrityError(s!("invalid pedersen commitment data"))
-        })?;
-        let bulletproof = Box::<[u8]>::strict_decode(d)?;
-        Ok(Self {
-            commitment,
-            bulletproof,
-        })
-    }
-}
- */
-
-impl CommitEncode for Confidential {
-    fn commit_encode<E: io::Write>(&self, mut e: E) -> usize {
-        // We do not commit to the bulletproof!
-        self.commitment.serialize().as_ref().commit_encode(&mut e)
-    }
-}
-
-/// Commitment protocol
-pub enum Bulletproofs {}
-
-impl CommitmentProtocol for Bulletproofs {
-    const HASH_TAG_MIDSTATE: Option<Midstate> = None;
-}
-
-impl CommitVerify<Revealed, Bulletproofs> for Confidential {
-    fn commit(revealed: &Revealed) -> Self {
-        use secp256k1_zkp::{Generator, Tag, Tweak};
-
-        // TODO: provide type-level guarantees on Revealed that the blinding
-        //       factor is valid by making fields private and checking the value
-        //       on deserialization
-        let blinding = Tweak::from_inner(revealed.blinding.0.into_inner())
-            .map_err(|_| BulletproofsError::InvalidBlinding(revealed.blinding))
-            .expect("the provided blinding factor is faked");
-        let value = revealed.value;
-
-        // TODO: Check that we create a correct generator value.
-        let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &secp256k1_zkp::ONE_KEY);
-        let h = sha256::Hash::hash(&g.serialize_uncompressed());
-        let tag = Tag::from(h.into_inner());
-        let generator = Generator::new_unblinded(SECP256K1, tag);
-
-        let commitment = PedersenCommitment::new(&SECP256K1, value, blinding, generator);
-        Confidential {
-            commitment,
-            // TODO: We can't produce valid bulletproofs today
-            bulletproof: Box::default(),
+impl Confidential {
+    /// Verifies bulletproof against the commitment.
+    pub fn verify(&self) -> bool {
+        match self.range_proof {
+            RangeProof::Placeholder(_) => false,
         }
     }
 }
 
-#[derive(Copy, Clone, Debug, Display, Error)]
+impl CommitEncode for Confidential {
+    fn commit_encode(&self, e: &mut impl Write) {
+        // We do not commit to the range proofs!
+        self.commitment.commit_encode(e)
+    }
+}
+
+/// Errors verifying range proofs.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Display, Error)]
 #[display(doc_comments)]
-pub enum BulletproofsError {
+pub enum RangeProofError {
     /// invalid blinding factor {0}.
     InvalidBlinding(BlindingFactor),
 
     /// bulletproofs verification is not implemented in RGB Core v0.10. Please
     /// update your software and try again, or ask your software producer to use
     /// latest RGB release.
-    Unimplemented,
+    BulletproofsAbsent,
 }
 
 impl Confidential {
-    pub fn verify_bullet_proof(&self) -> Result<bool, BulletproofsError> {
-        Err(BulletproofsError::Unimplemented)
+    /// Verifies validity of the range proof.
+    pub fn verify_range_proof(&self) -> Result<bool, RangeProofError> {
+        Err(RangeProofError::BulletproofsAbsent)
     }
+}
 
-    pub fn verify_commit_sum(
-        positive: Vec<PedersenCommitment>,
-        negative: Vec<PedersenCommitment>,
+#[cfg(test)]
+pub(crate) mod test_helpers {
+    use super::*;
+
+    pub fn verify_commit_sum<C: Into<secp256k1_zkp::PedersenCommitment>>(
+        positive: impl IntoIterator<Item = C>,
+        negative: impl IntoIterator<Item = C>,
     ) -> bool {
-        secp256k1_zkp::verify_commitments_sum_to_equal(
-            secp256k1_zkp::SECP256K1,
-            &positive,
-            &negative,
-        )
+        let positive = positive.into_iter().map(C::into).collect::<Vec<_>>();
+        let negative = negative.into_iter().map(C::into).collect::<Vec<_>>();
+        secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &positive, &negative)
     }
 }
 
@@ -360,7 +444,7 @@ mod test {
         assert_ne!(old_conf, new_conf);
 
         // Test confidential addition
-        assert!(coded_conf.verify_bullet_proof().is_ok());
+        assert!(coded_conf.verify_range_proof().is_ok());
     }
 
     #[test]
@@ -409,8 +493,8 @@ mod test {
             .collect();
 
         assert!(Confidential::verify_commit_sum(
-            commitments[..positive.len()].to_vec(),
-            commitments[positive.len()..].to_vec()
+            commitments[..positive.len()],
+            commitments[positive.len()..]
         ));
 
         // Create Revealed amounts with wrong positive values
@@ -434,8 +518,8 @@ mod test {
 
         // Ensure commit sum verification fails for wrong positive values
         assert!(!Confidential::verify_commit_sum(
-            wrong_commitments[..positive.len()].to_vec(),
-            wrong_commitments[positive.len()..].to_vec()
+            wrong_commitments[..positive.len()],
+            wrong_commitments[positive.len()..]
         ));
     }
 

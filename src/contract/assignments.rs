@@ -719,10 +719,6 @@ impl ConcealState for TypedAssignments {
     }
 }
 
-pub trait ConfidentialState: Debug + Clone + AsAny {}
-
-pub trait RevealedState: Debug + CommitConceal + Clone + AsAny {}
-
 pub trait State: Debug {
     type Confidential: ConfidentialState;
     type Revealed: RevealedState;
@@ -1453,22 +1449,19 @@ mod test {
                 rng.gen_range(0..=output_length),
             );
             // Check if test passes
-            assert!(value::Confidential::verify_commit_sum(inputs.clone(), outputs.clone()));
+            assert!(value::Confidential::verify_commit_sum(&inputs, &outputs));
 
             // Check non-equivalent amounts do not verify
             if input_length > 1 {
                 assert_eq!(
-                    value::Confidential::verify_commit_sum(
-                        inputs[..(input_length - 1)].to_vec(),
-                        outputs
-                    ),
+                    value::Confidential::verify_commit_sum(&inputs[..(input_length - 1)], &outputs),
                     false
                 );
             } else if output_length > 1 {
                 assert_eq!(
                     value::Confidential::verify_commit_sum(
-                        inputs,
-                        outputs[..(output_length - 1)].to_vec()
+                        &inputs,
+                        &outputs[..(output_length - 1)]
                     ),
                     false
                 );

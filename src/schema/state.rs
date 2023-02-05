@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use strict_encoding::constants::U64;
 use strict_types::SemId;
 
 use crate::LIB_NAME_RGB;
@@ -58,5 +59,5 @@ pub enum StateSchema {
 #[repr(u8)]
 pub enum DiscreteFiniteFieldFormat {
     #[default]
-    Unsigned64Bit = 64,
+    Unsigned64Bit = U64.into_code(),
 }
