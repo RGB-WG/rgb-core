@@ -14,6 +14,10 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract node level
 
+use amplify::confinement::MediumVec;
+
+use crate::LIB_NAME_RGB;
+
 /// Virtual machine types.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(Debug)]
@@ -25,6 +29,8 @@ pub enum VmType {
 
 /// Virtual machine and machine-specific script data.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = order)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub enum ValidationScript {
     /// AluVM: pure functional register-based virtual machine designed for RGB
@@ -36,7 +42,11 @@ pub enum ValidationScript {
     ///
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
-    AluVM(Vec<u8>),
+    AluVM(MediumVec<u8>),
+}
+
+impl Default for ValidationScript {
+    fn default() -> Self { ValidationScript::AluVM(none!()) }
 }
 
 impl ValidationScript {
