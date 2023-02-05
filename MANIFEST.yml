@@ -1,0 +1,14 @@
+Name: strict_encoding
+Type: Library
+Kind: Free software
+License: Apache-2.0
+Language: Rust
+Compiler: 1.66
+Author: Maxim Orlovsky
+Maintained: UBIDECO Institute, Switzerland
+Maintainers:
+  Maxim Orlovsky:
+    GitHub: @dr-orlovsky
+    GPG: EAE730CEC0C663763F028A5860094BAF18A26EC9
+    SSH: BoSGFzbyOKC7Jm28MJElFboGepihCpHop60nS8OoG/A
+    EMail: dr@orlovsky.ch
