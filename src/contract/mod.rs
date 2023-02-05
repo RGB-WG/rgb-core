@@ -22,7 +22,7 @@
 
 pub mod seal;
 
-mod reveal_conceal;
+mod conceal;
 // pub mod reveal_merge;
 
 pub mod value;
@@ -31,27 +31,19 @@ pub mod data;
 mod global_state;
 mod owned_state;
 mod assignments;
-// mod rights;
-// pub mod nodes;
+pub mod operations;
 
 pub use assignments::TypedAssignments;
 pub use attachment::AttachId;
+pub use conceal::{ConcealSeals, ConcealState, RevealSeals};
 pub use global_state::{FieldValues, Metadata};
 pub use owned_state::{Assignment, State, StateType};
-pub use reveal_conceal::{ConcealSeals, ConcealState, RevealSeals};
+pub use seal::{IntoRevealedSeal, SealEndpoint};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
-// pub use reveal::{MergeReveal, RevealSeals};
 pub use value::{
     BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
     ValueAtom,
 };
-
-/*pub(self) use assignments::EMPTY_ASSIGNMENTS;
-pub use nodes::{ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, Transition};
-pub use rights::{OwnedRights, ParentOwnedRights, ParentPublicRights, PublicRights};
-pub(crate) use rights::{OwnedRightsInner, PublicRightsInner};
-pub use seal::{IntoRevealedSeal, SealEndpoint};
-*/
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
