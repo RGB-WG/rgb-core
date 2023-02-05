@@ -32,9 +32,6 @@ use aluvm::reg::CoreRegs;
 use aluvm::Vm;
  */
 
-use crate::validation::Failure;
-use crate::{Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, Validate};
-
 /*
 pub const INSTR_NOOP: u8 = 0b11_000_000;
 pub const INSTR_ISAE_FROM: u8 = 0b11_000_000;
@@ -101,29 +98,4 @@ pub struct Runtime<'script> {
 
 impl<'script> Runtime<'script> {
     pub fn new(script: &'script ValidationScript) -> Self { Runtime { script } }
-}
-
-impl<'script> Validate for Runtime<'script> {
-    #[allow(unused_variables)]
-    fn validate(
-        &self,
-        node_id: NodeId,
-        node_subtype: NodeSubtype,
-        previous_owned_rights: &OwnedRights,
-        current_owned_rights: &OwnedRights,
-        previous_public_rights: &PublicRights,
-        current_public_rights: &PublicRights,
-        current_meta: &Metadata,
-    ) -> Result<(), Failure> {
-        // TODO: Implement validation with AluVM
-        /*
-        let mut vm = Vm::<RgbIsa>::new();
-        if vm.run(self.script) {
-            Ok(())
-        } else {
-            Err(Failure::ScriptFailure(node_id))
-        }
-         */
-        Ok(())
-    }
 }

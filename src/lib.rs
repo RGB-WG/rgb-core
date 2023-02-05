@@ -40,16 +40,11 @@ extern crate strict_encoding;
 #[macro_use]
 extern crate serde_crate as serde;
 
-pub(crate) mod ext;
-
 // pub mod contract;
 pub mod schema;
 // pub mod stash;
-// pub mod verify;
 // pub mod validation;
-// pub mod vm;
-// #[macro_use]
-// mod macros;
+pub mod vm;
 
 pub const LIB_NAME_RGB: &str = "RGB";
 
