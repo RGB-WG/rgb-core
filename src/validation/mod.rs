@@ -25,7 +25,8 @@ use core::ops::AddAssign;
 
 use bp::Txid;
 
-use super::schema::{self, NodeType, OccurrencesError, SchemaId};
+use crate::schema::{self, NodeType, SchemaId};
+use crate::{data, BundleId, NodeId, OccurrencesMismatch, SealEndpoint};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -173,9 +174,9 @@ pub enum Failure {
     SchemaMismatchedDataType(u16),
     SchemaMismatchedStateType(schema::OwnedRightType),
 
-    SchemaMetaOccurrencesError(NodeId, schema::FieldType, OccurrencesError),
-    SchemaParentOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesError),
-    SchemaOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesError),
+    SchemaMetaOccurrencesError(NodeId, schema::FieldType, OccurrencesMismatch),
+    SchemaParentOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesMismatch),
+    SchemaOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesMismatch),
 
     SchemaScriptOverrideDenied,
     SchemaScriptVmChangeDenied,

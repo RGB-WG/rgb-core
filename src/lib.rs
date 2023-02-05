@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(unused_braces)] // Rust compiler can't properly parse derivation macros
 #![deny(
     non_upper_case_globals,
     non_camel_case_types,
@@ -43,26 +44,15 @@ extern crate serde_crate as serde;
 pub mod contract;
 pub mod schema;
 // pub mod stash;
-// pub mod validation;
+pub mod validation;
 pub mod vm;
 
 pub const LIB_NAME_RGB: &str = "RGB";
 
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
-    /*pub use contract::{
-        data, reveal, seal, value, Assignment, AtomicValue, AttachmentId, AttachmentStrategy,
-        Bulletproofs, ConcealSeals, ConcealState, ConfidentialDataError, ConfidentialState,
-        ContractId, DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
-        IntoRevealedSeal, MergeReveal, Metadata, NoDataError, Node, NodeId, NodeOutpoint,
-        OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy, PublicRights,
-        RevealSeals, RevealedState, SealEndpoint, SealValueMap, State, StateRetrievalError,
-        StateType, Transition, TypedAssignments,
-    };*/
-    pub use schema::{
-        ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
-        PublicRightsStructure, Schema, SchemaId, Scripts, VmType,
-    };
+    pub use contract::*;
+    pub use schema::*;
 
     pub use super::schema;
     /*pub use stash::{
@@ -72,7 +62,7 @@ pub mod prelude {
     pub use validation::{Validator, Validity, Validate};
      */
     pub use super::vm;
-    // use super::*;
+    use super::*;
 }
 
 pub use prelude::*;

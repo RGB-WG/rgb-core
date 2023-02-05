@@ -27,7 +27,7 @@ use commit_verify::CommitmentId;
 use super::owned_state::{AttachmentStrategy, DeclarativeStrategy, HashStrategy, PedersenStrategy};
 use super::{
     attachment, data, seal, value, Assignment, ConcealSeals, ConcealState, ConfidentialDataError,
-    NoDataError, RevealSeals, StateRetrievalError, StateType,
+    RevealSeals, StateRetrievalError, StateType, UnknownDataError,
 };
 use crate::LIB_NAME_RGB;
 
@@ -167,23 +167,27 @@ impl TypedAssignments {
         }
     }
 
-    /// If seal definition does not exist, returns [`NoDataError`]. If the
+    /// If seal definition does not exist, returns [`UnknownDataError`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
     /// seal data packed as `Ok(Some(`[`seal::Revealed`]`))`
-    pub fn revealed_seal_at(&self, index: u16) -> Result<Option<seal::Revealed>, NoDataError> {
+    pub fn revealed_seal_at(&self, index: u16) -> Result<Option<seal::Revealed>, UnknownDataError> {
         Ok(match self {
-            TypedAssignments::Void(vec) => {
-                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
-            }
-            TypedAssignments::Value(vec) => {
-                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
-            }
-            TypedAssignments::Data(vec) => {
-                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
-            }
-            TypedAssignments::Attachment(vec) => {
-                vec.get(index as usize).ok_or(NoDataError)?.revealed_seal()
-            }
+            TypedAssignments::Void(vec) => vec
+                .get(index as usize)
+                .ok_or(UnknownDataError)?
+                .revealed_seal(),
+            TypedAssignments::Value(vec) => vec
+                .get(index as usize)
+                .ok_or(UnknownDataError)?
+                .revealed_seal(),
+            TypedAssignments::Data(vec) => vec
+                .get(index as usize)
+                .ok_or(UnknownDataError)?
+                .revealed_seal(),
+            TypedAssignments::Attachment(vec) => vec
+                .get(index as usize)
+                .ok_or(UnknownDataError)?
+                .revealed_seal(),
         })
     }
 

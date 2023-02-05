@@ -23,7 +23,6 @@
 pub mod seal;
 
 mod conceal;
-// pub mod reveal_merge;
 
 pub mod value;
 pub mod attachment;
@@ -31,15 +30,20 @@ pub mod data;
 mod global_state;
 mod owned_state;
 mod assignments;
-pub mod operations;
+mod operations;
+mod bundle;
 
 pub use assignments::TypedAssignments;
 pub use attachment::AttachId;
+pub use bundle::{BundleId, ConcealTransitions, TransitionBundle};
 pub use conceal::{ConcealSeals, ConcealState, RevealSeals};
 pub use global_state::{FieldValues, Metadata};
+pub use operations::{
+    ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, OutpointParseError, OwnedRights,
+    ParentOwnedRights, ParentPublicRights, PublicRights, Transition,
+};
 pub use owned_state::{Assignment, State, StateType};
 pub use seal::{IntoRevealedSeal, SealEndpoint};
-use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 pub use value::{
     BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
     ValueAtom,
@@ -48,19 +52,24 @@ pub use value::{
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
 pub trait ConfidentialState:
-    core::fmt::Debug + StrictDumb + StrictEncode + StrictDecode + Clone + amplify::AsAny
+    core::fmt::Debug
+    + strict_encoding::StrictDumb
+    + strict_encoding::StrictEncode
+    + strict_encoding::StrictDecode
+    + amplify::AsAny
+    + Clone
 {
 }
 
 /// Marker trait for types of state holding explicit state data.
 pub trait RevealedState:
     core::fmt::Debug
-    + StrictDumb
+    + strict_encoding::StrictDumb
+    + strict_encoding::StrictEncode
+    + strict_encoding::StrictDecode
     + commit_verify::Conceal
-    + StrictEncode
-    + StrictDecode
-    + Clone
     + amplify::AsAny
+    + Clone
 {
 }
 
@@ -80,61 +89,10 @@ pub enum StateRetrievalError {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 /// the requested data are not present.
-pub struct NoDataError;
+pub struct UnknownDataError;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 /// some of the requested data are confidential, when they must be present in
 /// revealed form.
 pub struct ConfidentialDataError;
-
-#[cfg(test)]
-pub(crate) mod test {
-    use commit_verify::{CommitConceal, CommitEncode};
-    use strict_encoding::{StrictDecode, StrictEncode};
-
-    pub use super::value::test_helpers::*;
-
-    pub fn test_confidential<T>(data: &[u8], encoded: &[u8], commitment: &[u8])
-    where
-        T: CommitConceal + StrictDecode + StrictEncode + Clone + CommitEncode,
-        <T as CommitConceal>::ConcealedCommitment: StrictDecode + StrictEncode + Eq,
-    {
-        // Create the Revealed Structure from data bytes
-        let revealed = T::strict_decode(data).unwrap();
-
-        // CommitConceal the Revealed structure into Confidential
-        let confidential = revealed.commit_conceal();
-
-        // Strict_encode Confidential data
-        let mut confidential_encoded = vec![];
-        confidential
-            .strict_encode(&mut confidential_encoded)
-            .unwrap();
-
-        // strict_encode Revealed data
-        let mut revealed_encoded: Vec<u8> = vec![];
-        revealed.strict_encode(&mut revealed_encoded).unwrap();
-
-        // Assert encoded Confidential matches precomputed vector
-        assert_eq!(encoded, &confidential_encoded[..]);
-
-        // Assert encoded Confidential and Revealed are not equal
-        assert_ne!(confidential_encoded.to_vec(), revealed_encoded);
-
-        // commit_encode Revealed structure
-        let mut commit_encoded_revealed = vec![];
-        revealed.clone().commit_encode(&mut commit_encoded_revealed);
-
-        if encoded == commitment {
-            // Assert commit_encode and encoded Confidential matches
-            assert_eq!(commit_encoded_revealed, confidential_encoded);
-        } else {
-            // Assert commit_encode and encoded Confidential does not match
-            assert_ne!(commit_encoded_revealed, confidential_encoded);
-        }
-
-        // Assert commit_encode and precomputed Confidential matches
-        assert_eq!(commit_encoded_revealed, commitment);
-    }
-}

@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::num::ParseIntError;
 use std::str::FromStr;
@@ -395,6 +396,15 @@ pub struct Transition {
     parent_owned_rights: ParentOwnedRights,
     owned_rights: OwnedRights,
     public_rights: PublicRights,
+}
+
+// TODO: Remove after TransitionBundling refactoring
+impl Ord for Transition {
+    fn cmp(&self, other: &Self) -> Ordering { self.node_id().cmp(&other.node_id()) }
+}
+
+impl PartialOrd for Transition {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl ConcealState for Genesis {

@@ -381,20 +381,6 @@ impl Confidential {
 }
 
 #[cfg(test)]
-pub(crate) mod test_helpers {
-    use super::*;
-
-    pub fn verify_commit_sum<C: Into<secp256k1_zkp::PedersenCommitment>>(
-        positive: impl IntoIterator<Item = C>,
-        negative: impl IntoIterator<Item = C>,
-    ) -> bool {
-        let positive = positive.into_iter().map(C::into).collect::<Vec<_>>();
-        let negative = negative.into_iter().map(C::into).collect::<Vec<_>>();
-        secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &positive, &negative)
-    }
-}
-
-#[cfg(test)]
 mod test {
     use secp256k1_zkp::{rand, Scalar, SecretKey};
     use strict_encoding::{StrictDecode, StrictEncode};
