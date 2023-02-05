@@ -36,9 +36,9 @@ use crate::LIB_NAME_RGB;
 pub enum StateSchema {
     #[strict_type(dumb)]
     Declarative,
-    DiscreteFiniteField(DiscreteFiniteFieldFormat),
-    CustomData(SemId),
-    DataContainer,
+    Arithmetic(ValueType),
+    Structured(SemId),
+    Attachment,
 }
 
 /// Today we support only a single format of confidential data, because of the
@@ -57,7 +57,7 @@ pub enum StateSchema {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[repr(u8)]
-pub enum DiscreteFiniteFieldFormat {
+pub enum ValueType {
     #[default]
     Unsigned64Bit = U64.into_code(),
 }
