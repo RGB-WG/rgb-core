@@ -207,7 +207,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.10.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
+source = "git+https://github.com/BP-WG/bp-core#6546e537afdd1bab120748a0bc3f92167367a8e6"
 dependencies = [
  "amplify",
  "bp-dbc",
@@ -222,7 +222,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.10.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
+source = "git+https://github.com/BP-WG/bp-core#6546e537afdd1bab120748a0bc3f92167367a8e6"
 dependencies = [
  "amplify",
  "bp-primitives",
@@ -235,7 +235,7 @@ dependencies = [
 [[package]]
 name = "bp-primitives"
 version = "0.10.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
+source = "git+https://github.com/BP-WG/bp-core#6546e537afdd1bab120748a0bc3f92167367a8e6"
 dependencies = [
  "amplify",
  "commit_verify",
@@ -247,7 +247,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.10.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core#12d2c69149058a1e715490b85e1d50ce6ede0ba2"
+source = "git+https://github.com/BP-WG/bp-core#6546e537afdd1bab120748a0bc3f92167367a8e6"
 dependencies = [
  "amplify",
  "baid58 0.1.0",
@@ -310,10 +310,9 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/LNP-BP/client_side_validation#54332543981486178dd6536a5b1ace50cf20ac71"
+source = "git+https://github.com/LNP-BP/client_side_validation#4e0d5b3e89055b7ce2d7013d82a97f9d0eae58bd"
 dependencies = [
  "amplify",
- "bitcoin_hashes",
  "rand",
  "serde",
  "strict_encoding",

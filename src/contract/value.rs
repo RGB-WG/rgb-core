@@ -43,8 +43,9 @@ use amplify::hex::{Error, FromHex, ToHex};
 // that we do not use the standard secp256k1zkp library
 use amplify::{hex, Array, AsAny, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
-use bp::Sha256;
-use commit_verify::{CommitEncode, CommitStrategy, CommitVerify, Conceal, UntaggedProtocol};
+use commit_verify::{
+    CommitEncode, CommitStrategy, CommitVerify, Conceal, Sha256, UntaggedProtocol,
+};
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
 use strict_encoding::{

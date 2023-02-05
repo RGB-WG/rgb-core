@@ -26,9 +26,8 @@ use amplify::confinement::TinyString;
 use amplify::{Bytes32, RawArray};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::secp256k1::rand::{thread_rng, RngCore};
-use bp::Sha256;
-use commit_verify::{CommitStrategy, CommitVerify, Conceal, UntaggedProtocol};
-use strict_encoding::{StrictEncode, StrictWriter};
+use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
+use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, RevealedState};
 use crate::LIB_NAME_RGB;
@@ -124,13 +123,6 @@ impl CommitStrategy for Confidential {
     type Strategy = commit_verify::strategies::Strict;
 }
 
-// TODO: Consider changing untagged protocol to a tagged version
-impl CommitVerify<Revealed, UntaggedProtocol> for Confidential {
-    fn commit(msg: &Revealed) -> Self {
-        // TODO: Move this algo together with Sha256 type to client_side_validation
-        let mut engine = Sha256::default();
-        let w = StrictWriter::with(u32::MAX as usize, &mut engine);
-        msg.strict_encode(w).ok();
-        engine.finish().into()
-    }
+impl CommitVerify<Revealed, StrictEncodedProtocol> for Confidential {
+    fn commit(revealed: &Revealed) -> Self { Bytes32::commit(revealed).into() }
 }
