@@ -32,8 +32,8 @@ use commit_verify::mpc;
 
 use crate::schema::OwnedRightType;
 use crate::{
-    Anchor, BundleId, Extension, Genesis, Node, NodeId, NodeOutpoint, Schema, SealEndpoint,
-    Transition, TransitionBundle,
+    seal, Anchor, BundleId, Extension, Genesis, Node, NodeId, NodeOutpoint, Schema, Transition,
+    TransitionBundle,
 };
 
 /// Errors accessing graph data via [`GraphApi`].
@@ -178,7 +178,7 @@ pub trait GraphApi {
 }
 
 pub trait Consignment<'consignment>: 'consignment + GraphApi {
-    type EndpointIter: Iterator<Item = &'consignment (BundleId, SealEndpoint)>;
+    type EndpointIter: Iterator<Item = &'consignment (BundleId, seal::Confidential)>;
     type BundleIter: Iterator<Item = &'consignment (Anchor<mpc::MerkleProof>, TransitionBundle)>;
     type ExtensionsIter: Iterator<Item = &'consignment Extension>;
 

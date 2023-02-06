@@ -34,7 +34,7 @@ use bp::Txid;
 pub use verify::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, NodeType, SchemaId};
-use crate::{data, BundleId, NodeId, OccurrencesMismatch, SealEndpoint};
+use crate::{data, seal, BundleId, NodeId, OccurrencesMismatch};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -248,8 +248,8 @@ pub enum Failure {
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
-    EndpointDuplication(NodeId, SealEndpoint),
-    EndpointTransitionSealNotFound(NodeId, SealEndpoint),
+    EndpointDuplication(NodeId, seal::Confidential),
+    EndpointTransitionSealNotFound(NodeId, seal::Confidential),
     ExcessiveNode(NodeId),
     EndpointTransactionMissed(Txid),
 }

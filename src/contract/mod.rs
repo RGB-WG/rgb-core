@@ -20,8 +20,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod seal;
-
+pub mod seal {
+    pub use bp::seals::txout::blind::{ConcealedSeal as Confidential, RevealedSeal as Revealed};
+}
 pub mod value;
 pub mod attachment;
 pub mod data;
@@ -40,7 +41,6 @@ pub use operations::{
     ParentOwnedRights, ParentPublicRights, PublicRights, Transition,
 };
 pub use owned_state::{Assignment, State, StateType};
-pub use seal::SealEndpoint;
 pub use value::{
     BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
     ValueAtom,

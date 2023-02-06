@@ -25,7 +25,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use bp::dbc::Anchor;
 use bp::seals::txout::TxoSeal;
 use bp::{Tx, Txid};
-use commit_verify::{mpc, Conceal};
+use commit_verify::mpc;
 
 use super::graph::Consignment;
 use super::schema::NodeType;
@@ -110,10 +110,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
             for transition in transitions {
                 let node_id = transition.node_id();
                 // Checking for endpoint definition duplicates
-                if !transition
-                    .to_confiential_seals()
-                    .contains(&seal_endpoint.conceal())
-                {
+                if !transition.to_confiential_seals().contains(&seal_endpoint) {
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
                     // endpoint list
