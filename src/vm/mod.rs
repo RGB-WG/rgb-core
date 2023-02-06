@@ -29,12 +29,12 @@ pub mod isa;
 
 pub type AluLib = aluvm::Program<isa::RgbIsa>;
 
-pub struct Runtime<'script> {
+pub struct AluRuntime<'script> {
     #[allow(dead_code)]
     lib: &'script AluLib,
 }
 
-impl<'script> Runtime<'script> {
+impl<'script> AluRuntime<'script> {
     pub fn new(_lib: &'script [u8]) -> Self {
         todo!() /* Runtime { lib } */
     }

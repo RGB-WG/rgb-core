@@ -75,39 +75,7 @@ impl TypedAssignments {
     pub fn is_attachment(&self) -> bool { matches!(self, TypedAssignments::Attachment(_)) }
 
     #[inline]
-    pub fn to_declarative_assignments(&self) -> MediumVec<Assignment<DeclarativeStrategy>> {
-        match self {
-            TypedAssignments::Void(set) => set.clone(),
-            _ => Default::default(),
-        }
-    }
-
-    #[inline]
-    pub fn to_value_assignments(&self) -> MediumVec<Assignment<PedersenStrategy>> {
-        match self {
-            TypedAssignments::Value(set) => set.clone(),
-            _ => Default::default(),
-        }
-    }
-
-    #[inline]
-    pub fn to_data_assignments(&self) -> MediumVec<Assignment<HashStrategy>> {
-        match self {
-            TypedAssignments::Data(set) => set.clone(),
-            _ => Default::default(),
-        }
-    }
-
-    #[inline]
-    pub fn to_attachment_assignments(&self) -> MediumVec<Assignment<AttachmentStrategy>> {
-        match self {
-            TypedAssignments::Attachment(set) => set.clone(),
-            _ => Default::default(),
-        }
-    }
-
-    #[inline]
-    pub fn into_declarative_assignments(self) -> MediumVec<Assignment<DeclarativeStrategy>> {
+    pub fn as_declarative_assignments(&self) -> &[Assignment<DeclarativeStrategy>] {
         match self {
             TypedAssignments::Void(set) => set,
             _ => Default::default(),
@@ -115,7 +83,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_value_assignments(self) -> MediumVec<Assignment<PedersenStrategy>> {
+    pub fn as_value_assignments(&self) -> &[Assignment<PedersenStrategy>] {
         match self {
             TypedAssignments::Value(set) => set,
             _ => Default::default(),
@@ -123,7 +91,7 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_data_assignments(self) -> MediumVec<Assignment<HashStrategy>> {
+    pub fn as_data_assignments(&self) -> &[Assignment<HashStrategy>] {
         match self {
             TypedAssignments::Data(set) => set,
             _ => Default::default(),
@@ -131,10 +99,48 @@ impl TypedAssignments {
     }
 
     #[inline]
-    pub fn into_attachment_assignments(self) -> MediumVec<Assignment<AttachmentStrategy>> {
+    pub fn as_attachment_assignments(&self) -> &[Assignment<AttachmentStrategy>] {
         match self {
             TypedAssignments::Attachment(set) => set,
             _ => Default::default(),
+        }
+    }
+
+    #[inline]
+    pub fn as_declarative_assignments_mut(
+        &mut self,
+    ) -> Option<&mut MediumVec<Assignment<DeclarativeStrategy>>> {
+        match self {
+            TypedAssignments::Void(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn as_value_assignments_mut(
+        &mut self,
+    ) -> Option<&mut MediumVec<Assignment<PedersenStrategy>>> {
+        match self {
+            TypedAssignments::Value(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn as_data_assignments_mut(&mut self) -> Option<&mut MediumVec<Assignment<HashStrategy>>> {
+        match self {
+            TypedAssignments::Data(set) => Some(set),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn as_attachment_assignments_mut(
+        &mut self,
+    ) -> Option<&mut MediumVec<Assignment<AttachmentStrategy>>> {
+        match self {
+            TypedAssignments::Attachment(set) => Some(set),
+            _ => None,
         }
     }
 

@@ -23,6 +23,7 @@
 mod graph;
 mod vm;
 mod subschema;
+mod model;
 mod state;
 
 use core::iter::FromIterator;

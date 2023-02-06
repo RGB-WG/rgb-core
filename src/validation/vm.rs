@@ -21,12 +21,12 @@
 // limitations under the License.
 
 use crate::validation::Failure;
-use crate::vm::Runtime;
+use crate::vm::AluRuntime;
 use crate::{validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, Scripts};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
-pub trait Validate {
+pub trait VirtualMachine {
     /// Validates state change in a contract node.
     #[allow(clippy::too_many_arguments)]
     fn validate(
@@ -41,7 +41,7 @@ pub trait Validate {
     ) -> Result<(), validation::Failure>;
 }
 
-impl Validate for Scripts {
+impl VirtualMachine for Scripts {
     fn validate(
         &self,
         node_id: NodeId,
@@ -53,7 +53,7 @@ impl Validate for Scripts {
         current_meta: &Metadata,
     ) -> Result<(), validation::Failure> {
         match self {
-            Scripts::AluVM(script) => Runtime::new(script).validate(
+            Scripts::AluVM(script) => AluRuntime::new(script).validate(
                 node_id,
                 node_subtype,
                 previous_owned_rights,
@@ -66,7 +66,7 @@ impl Validate for Scripts {
     }
 }
 
-impl<'script> Validate for Runtime<'script> {
+impl<'script> VirtualMachine for AluRuntime<'script> {
     #[allow(unused_variables)]
     fn validate(
         &self,
