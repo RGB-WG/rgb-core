@@ -26,7 +26,7 @@ use amplify::confinement::Confined;
 use amplify::Wrapper;
 use commit_verify::Conceal;
 
-use crate::schema::{MetadataStructure, OwnedRightsStructure, PublicRightsStructure};
+use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
@@ -43,8 +43,8 @@ impl Schema {
     ) -> validation::Status {
         let node_id = node.id();
 
-        let empty_owned_structure = OwnedRightsStructure::default();
-        let empty_public_structure = PublicRightsStructure::default();
+        let empty_owned_structure = AssignmentSchema::default();
+        let empty_public_structure = ValencySchema::default();
         let (
             metadata_structure,
             parent_owned_structure,
@@ -63,11 +63,11 @@ impl Schema {
                  */
 
                 (
-                    &self.genesis.metadata,
+                    &self.genesis.global_state,
                     &empty_owned_structure,
                     &empty_public_structure,
-                    &self.genesis.owned_rights,
-                    &self.genesis.public_rights,
+                    &self.genesis.owned_state,
+                    &self.genesis.valencies,
                 )
             }
             (Some(transition_type), None) => {
@@ -93,11 +93,11 @@ impl Schema {
                 };
 
                 (
-                    &transition_type.metadata,
+                    &transition_type.global_state,
                     &transition_type.closes,
                     &empty_public_structure,
-                    &transition_type.owned_rights,
-                    &transition_type.public_rights,
+                    &transition_type.owned_state,
+                    &transition_type.valencies,
                 )
             }
             (None, Some(extension_type)) => {
@@ -123,11 +123,11 @@ impl Schema {
                 };
 
                 (
-                    &extension_type.metadata,
+                    &extension_type.global_state,
                     &empty_owned_structure,
-                    &extension_type.extends,
-                    &extension_type.owned_rights,
-                    &extension_type.extends,
+                    &extension_type.redeems,
+                    &extension_type.owned_state,
+                    &extension_type.redeems,
                 )
             }
             _ => unreachable!("Node can't be extension and state transition at the same time"),
@@ -187,7 +187,7 @@ impl Schema {
         &self,
         node_id: OpId,
         metadata: &GlobalState,
-        metadata_structure: &MetadataStructure,
+        metadata_structure: &GlobalSchema,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -217,7 +217,7 @@ impl Schema {
                 ));
             }
 
-            let _field = self.field_types.get(field_type_id).expect(
+            let _field = self.global_types.get(field_type_id).expect(
                 "If the field were absent, the schema would not be able to pass the internal \
                  validation and we would not reach this point",
             );
@@ -241,7 +241,7 @@ impl Schema {
         &self,
         node_id: OpId,
         owned_rights: &OwnedState,
-        owned_rights_structure: &OwnedRightsStructure,
+        owned_rights_structure: &AssignmentSchema,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -279,7 +279,7 @@ impl Schema {
         &self,
         node_id: OpId,
         public_rights: &Valencies,
-        public_rights_structure: &PublicRightsStructure,
+        public_rights_structure: &ValencySchema,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -299,7 +299,7 @@ impl Schema {
         &self,
         node_id: OpId,
         owned_rights: &OwnedState,
-        owned_rights_structure: &OwnedRightsStructure,
+        owned_rights_structure: &AssignmentSchema,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -329,7 +329,7 @@ impl Schema {
                 ));
             }
 
-            let assignment = &self.owned_right_types.get(owned_type_id).expect(
+            let assignment = &self.owned_types.get(owned_type_id).expect(
                 "If the assignment were absent, the schema would not be able to pass the internal \
                  validation and we would not reach this point",
             );
@@ -358,7 +358,7 @@ impl Schema {
         &self,
         node_id: OpId,
         public_rights: &Valencies,
-        public_rights_structure: &PublicRightsStructure,
+        public_rights_structure: &ValencySchema,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 

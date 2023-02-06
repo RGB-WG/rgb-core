@@ -36,7 +36,7 @@ use crate::LIB_NAME_RGB;
 pub enum StateSchema {
     #[strict_type(dumb)]
     Declarative,
-    Arithmetic(ValueType),
+    Fungible(FungibleType),
     Structured(SemId),
     Attachment,
 }
@@ -57,7 +57,7 @@ pub enum StateSchema {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[repr(u8)]
-pub enum ValueType {
+pub enum FungibleType {
     #[default]
     Unsigned64Bit = U64.into_code(),
 }

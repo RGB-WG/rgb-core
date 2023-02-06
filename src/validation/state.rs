@@ -26,7 +26,7 @@ use amplify::AsAny;
 use commit_verify::Conceal;
 
 use crate::contract::state::{AttachmentPair, DeclarativePair, FungiblePair, StructuredPair};
-use crate::schema::OwnedRightType;
+use crate::schema::OwnedStateType;
 use crate::{validation, AssignedState, OpId, StatePair, StateSchema};
 
 impl StateSchema {
@@ -34,7 +34,7 @@ impl StateSchema {
         &self,
         // type_system: &TypeSystem,
         node_id: &OpId,
-        assignment_id: OwnedRightType,
+        assignment_id: OwnedStateType,
         data: &AssignedState<STATE>,
     ) -> validation::Status
     where
@@ -57,7 +57,7 @@ impl StateSchema {
                             ));
                         }
                     }
-                    StateSchema::Arithmetic(_) => {
+                    StateSchema::Fungible(_) => {
                         if let Some(value) =
                             a.downcast_ref::<<FungiblePair as StatePair>::Confidential>()
                         {
@@ -118,7 +118,7 @@ impl StateSchema {
                             ));
                         }
                     }
-                    StateSchema::Arithmetic(_format) => {
+                    StateSchema::Fungible(_format) => {
                         if a.downcast_ref::<<FungiblePair as StatePair>::Revealed>()
                             .is_none()
                         {

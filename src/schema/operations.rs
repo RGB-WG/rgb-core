@@ -22,15 +22,15 @@
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 
-use super::{ExtensionType, FieldType, Occurrences, TransitionType};
+use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
 use crate::LIB_NAME_RGB;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type OwnedRightType = u16;
-pub type PublicRightType = u16;
-pub type MetadataStructure = TinyOrdMap<FieldType, Occurrences>;
-pub type PublicRightsStructure = TinyOrdSet<PublicRightType>;
-pub type OwnedRightsStructure = TinyOrdMap<OwnedRightType, Occurrences>;
+pub type OwnedStateType = u16;
+pub type ValencyType = u16;
+pub type GlobalSchema = TinyOrdMap<GlobalStateType, Occurrences>;
+pub type ValencySchema = TinyOrdSet<ValencyType>;
+pub type AssignmentSchema = TinyOrdMap<OwnedStateType, Occurrences>;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[cfg_attr(
@@ -75,13 +75,13 @@ pub enum OpFullType {
 }
 
 /// Trait defining common API for all node type schemata
-pub trait NodeSchema {
-    fn node_type(&self) -> OpType;
-    fn metadata(&self) -> &MetadataStructure;
-    fn closes(&self) -> &OwnedRightsStructure;
-    fn extends(&self) -> &PublicRightsStructure;
-    fn owned_rights(&self) -> &OwnedRightsStructure;
-    fn public_rights(&self) -> &PublicRightsStructure;
+pub trait OpSchema {
+    fn op_type(&self) -> OpType;
+    fn global_state(&self) -> &GlobalSchema;
+    fn closes(&self) -> &AssignmentSchema;
+    fn redeems(&self) -> &ValencySchema;
+    fn owned_state(&self) -> &AssignmentSchema;
+    fn valencies(&self) -> &ValencySchema;
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
@@ -89,9 +89,9 @@ pub trait NodeSchema {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct GenesisSchema {
-    pub metadata: MetadataStructure,
-    pub owned_rights: OwnedRightsStructure,
-    pub public_rights: PublicRightsStructure,
+    pub global_state: GlobalSchema,
+    pub owned_state: AssignmentSchema,
+    pub valencies: ValencySchema,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
@@ -99,10 +99,10 @@ pub struct GenesisSchema {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct ExtensionSchema {
-    pub metadata: MetadataStructure,
-    pub extends: PublicRightsStructure,
-    pub owned_rights: OwnedRightsStructure,
-    pub public_rights: PublicRightsStructure,
+    pub global_state: GlobalSchema,
+    pub redeems: ValencySchema,
+    pub owned_state: AssignmentSchema,
+    pub valencies: ValencySchema,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
@@ -110,59 +110,57 @@ pub struct ExtensionSchema {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct TransitionSchema {
-    pub metadata: MetadataStructure,
-    pub closes: OwnedRightsStructure,
-    pub owned_rights: OwnedRightsStructure,
-    pub public_rights: PublicRightsStructure,
+    pub global_state: GlobalSchema,
+    pub closes: AssignmentSchema,
+    pub owned_state: AssignmentSchema,
+    pub valencies: ValencySchema,
 }
 
-impl NodeSchema for GenesisSchema {
+impl OpSchema for GenesisSchema {
     #[inline]
-    fn node_type(&self) -> OpType { OpType::Genesis }
+    fn op_type(&self) -> OpType { OpType::Genesis }
     #[inline]
-    fn metadata(&self) -> &MetadataStructure { &self.metadata }
+    fn global_state(&self) -> &GlobalSchema { &self.global_state }
     #[inline]
-    fn closes(&self) -> &OwnedRightsStructure {
+    fn closes(&self) -> &AssignmentSchema {
         panic!("genesis can't close previous single-use-seals")
     }
     #[inline]
-    fn extends(&self) -> &PublicRightsStructure { panic!("genesis can't extend previous state") }
+    fn redeems(&self) -> &ValencySchema { panic!("genesis can't redeem valencies") }
     #[inline]
-    fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
+    fn owned_state(&self) -> &AssignmentSchema { &self.owned_state }
     #[inline]
-    fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
+    fn valencies(&self) -> &ValencySchema { &self.valencies }
 }
 
-impl NodeSchema for ExtensionSchema {
+impl OpSchema for ExtensionSchema {
     #[inline]
-    fn node_type(&self) -> OpType { OpType::StateExtension }
+    fn op_type(&self) -> OpType { OpType::StateExtension }
     #[inline]
-    fn metadata(&self) -> &MetadataStructure { &self.metadata }
+    fn global_state(&self) -> &GlobalSchema { &self.global_state }
     #[inline]
-    fn closes(&self) -> &OwnedRightsStructure {
+    fn closes(&self) -> &AssignmentSchema {
         panic!("extension can't close previous single-use-seals")
     }
     #[inline]
-    fn extends(&self) -> &PublicRightsStructure { &self.extends }
+    fn redeems(&self) -> &ValencySchema { &self.redeems }
     #[inline]
-    fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
+    fn owned_state(&self) -> &AssignmentSchema { &self.owned_state }
     #[inline]
-    fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
+    fn valencies(&self) -> &ValencySchema { &self.valencies }
 }
 
-impl NodeSchema for TransitionSchema {
+impl OpSchema for TransitionSchema {
     #[inline]
-    fn node_type(&self) -> OpType { OpType::StateTransition }
+    fn op_type(&self) -> OpType { OpType::StateTransition }
     #[inline]
-    fn metadata(&self) -> &MetadataStructure { &self.metadata }
+    fn global_state(&self) -> &GlobalSchema { &self.global_state }
     #[inline]
-    fn closes(&self) -> &OwnedRightsStructure { &self.closes }
+    fn closes(&self) -> &AssignmentSchema { &self.closes }
     #[inline]
-    fn extends(&self) -> &PublicRightsStructure {
-        panic!("state transitions can't extend previous state")
-    }
+    fn redeems(&self) -> &ValencySchema { panic!("state transitions can't redeem valencies") }
     #[inline]
-    fn owned_rights(&self) -> &OwnedRightsStructure { &self.owned_rights }
+    fn owned_state(&self) -> &AssignmentSchema { &self.owned_state }
     #[inline]
-    fn public_rights(&self) -> &PublicRightsStructure { &self.public_rights }
+    fn valencies(&self) -> &ValencySchema { &self.valencies }
 }

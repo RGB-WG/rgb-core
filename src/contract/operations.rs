@@ -32,7 +32,7 @@ use commit_verify::{mpc, CommitStrategy, CommitmentId};
 
 use super::{GlobalState, TypedState};
 use crate::schema::{
-    self, ExtensionType, OpFullType, OpType, OwnedRightType, SchemaId, TransitionType,
+    self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
 use crate::LIB_NAME_RGB;
 
@@ -43,7 +43,7 @@ use crate::LIB_NAME_RGB;
 #[display("{op}/{ty}/{no}")]
 pub struct PrevAssignment {
     pub op: OpId,
-    pub ty: OwnedRightType,
+    pub ty: OwnedStateType,
     pub no: u16,
 }
 
@@ -51,10 +51,10 @@ impl PrevAssignment {
     pub fn new(op: OpId, ty: u16, no: u16) -> PrevAssignment { PrevAssignment { op, ty, no } }
 }
 
-pub type Valencies = TinyOrdSet<schema::PublicRightType>;
-pub type OwnedState = TinyOrdMap<schema::OwnedRightType, TypedState>;
-pub type PrevState = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedRightType, TinyVec<u16>>>;
-pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::PublicRightType>>;
+pub type Valencies = TinyOrdSet<schema::ValencyType>;
+pub type OwnedState = TinyOrdMap<schema::OwnedStateType, TypedState>;
+pub type PrevState = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
+pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
 
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
@@ -179,7 +179,7 @@ pub trait Operation: AsAny {
     fn valencies(&self) -> &Valencies;
     fn valencies_mut(&mut self) -> &mut Valencies;
 
-    fn owned_state_by_type(&self, t: OwnedRightType) -> Option<&TypedState> {
+    fn owned_state_by_type(&self, t: OwnedStateType) -> Option<&TypedState> {
         self.owned_state()
             .iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
@@ -287,7 +287,7 @@ impl Operation for Genesis {
     fn prev_state(&self) -> &PrevState { panic!("genesis can't close previous single-use-seals") }
 
     #[inline]
-    fn redeemed(&self) -> &Redeemed { panic!("genesis can't extend previous state") }
+    fn redeemed(&self) -> &Redeemed { panic!("genesis can't redeem valencies") }
 
     #[inline]
     fn global_state(&self) -> &GlobalState { &self.global_state }
@@ -369,7 +369,7 @@ impl Operation for Transition {
     fn prev_state(&self) -> &PrevState { &self.prev_state }
 
     #[inline]
-    fn redeemed(&self) -> &Redeemed { panic!("state transitions can't extend previous state") }
+    fn redeemed(&self) -> &Redeemed { panic!("state transitions can't redeem valencies") }
 
     #[inline]
     fn global_state(&self) -> &GlobalState { &self.global_state }

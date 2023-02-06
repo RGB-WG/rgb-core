@@ -30,7 +30,7 @@ use bp::dbc::AnchorId;
 use bp::{Outpoint, Txid};
 use commit_verify::mpc;
 
-use crate::schema::OwnedRightType;
+use crate::schema::OwnedStateType;
 use crate::{
     seal, Anchor, BundleId, Extension, Genesis, OpId, Operation, PrevAssignment, Schema,
     Transition, TransitionBundle,
@@ -58,7 +58,7 @@ pub enum ConsistencyError {
     AnchorAbsent(AnchorId),
 
     /// No seals of the provided type {0} are closed by transition id {1}
-    NoSealsClosed(OwnedRightType, OpId),
+    NoSealsClosed(OwnedStateType, OpId),
 
     /// Output {0} is not present in the storage
     OutputNotPresent(PrevAssignment),
@@ -172,7 +172,7 @@ pub trait GraphApi {
     fn seals_closed_with(
         &self,
         node_id: OpId,
-        owned_right_type: impl Into<OwnedRightType>,
+        owned_right_type: impl Into<OwnedStateType>,
         witness: Txid,
     ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
 }

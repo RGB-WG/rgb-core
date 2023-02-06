@@ -460,7 +460,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         witness_tx: &Tx,
         node_id: OpId,
         ancestor_id: OpId,
-        assignment_type: schema::OwnedRightType,
+        assignment_type: schema::OwnedStateType,
         variant: &'consignment TypedState,
         seal_index: u16,
     ) {

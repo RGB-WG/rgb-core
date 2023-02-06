@@ -36,12 +36,12 @@ use strict_encoding::{
 use strict_types::SemId;
 
 use super::{
-    ExtensionSchema, GenesisSchema, OwnedRightType, PublicRightType, Script, StateSchema,
-    TransitionSchema,
+    ExtensionSchema, GenesisSchema, OwnedStateType, Script, StateSchema, TransitionSchema,
+    ValencyType,
 };
 use crate::LIB_NAME_RGB;
 
-pub type FieldType = u16;
+pub type GlobalStateType = u16;
 pub type ExtensionType = u16;
 pub type TransitionType = u16;
 
@@ -94,9 +94,9 @@ pub struct Schema {
     pub rgb_features: SchemaFlags,
     pub subset_of: Option<SchemaId>,
 
-    pub field_types: TinyOrdMap<FieldType, SemId>,
-    pub owned_right_types: TinyOrdMap<OwnedRightType, StateSchema>,
-    pub public_right_types: TinyOrdSet<PublicRightType>,
+    pub global_types: TinyOrdMap<GlobalStateType, SemId>,
+    pub owned_types: TinyOrdMap<OwnedStateType, StateSchema>,
+    pub valency_types: TinyOrdSet<ValencyType>,
     pub genesis: GenesisSchema,
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,

@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{validation, NodeSchema, Schema};
+use crate::{validation, OpSchema, Schema};
 
 /// Trait used for internal schema validation against some root schema
 pub trait SchemaVerify {
@@ -35,8 +35,8 @@ impl SchemaVerify for Schema {
             status.add_failure(validation::Failure::SchemaRootHierarchy(other_root));
         }
 
-        for (field_type, data_format) in &self.field_types {
-            match root.field_types.get(field_type) {
+        for (field_type, data_format) in &self.global_types {
+            match root.global_types.get(field_type) {
                 None => {
                     status.add_failure(validation::Failure::SchemaRootNoFieldTypeMatch(*field_type))
                 }
@@ -47,8 +47,8 @@ impl SchemaVerify for Schema {
             };
         }
 
-        for (assignments_type, state_schema) in &self.owned_right_types {
-            match root.owned_right_types.get(assignments_type) {
+        for (assignments_type, state_schema) in &self.owned_types {
+            match root.owned_types.get(assignments_type) {
                 None => status.add_failure(validation::Failure::SchemaRootNoOwnedRightTypeMatch(
                     *assignments_type,
                 )),
@@ -59,8 +59,8 @@ impl SchemaVerify for Schema {
             };
         }
 
-        for valencies_type in &self.public_right_types {
-            match root.public_right_types.contains(valencies_type) {
+        for valencies_type in &self.valency_types {
+            match root.valency_types.contains(valencies_type) {
                 false => status.add_failure(validation::Failure::SchemaRootNoPublicRightTypeMatch(
                     *valencies_type,
                 )),
@@ -94,14 +94,14 @@ impl SchemaVerify for Schema {
 }
 
 impl<T> SchemaVerify for T
-where T: NodeSchema
+where T: OpSchema
 {
     fn schema_verify(&self, root: &Self) -> validation::Status {
         let mut status = validation::Status::new();
-        let node_type = self.node_type();
+        let node_type = self.op_type();
 
-        for (field_type, occ) in self.metadata() {
-            match root.metadata().get(field_type) {
+        for (field_type, occ) in self.global_state() {
+            match root.global_state().get(field_type) {
                 None => status.add_failure(validation::Failure::SchemaRootNoMetadataMatch(
                     node_type,
                     *field_type,
@@ -131,8 +131,8 @@ where T: NodeSchema
             };
         }
 
-        for (assignments_type, occ) in self.owned_rights() {
-            match root.owned_rights().get(assignments_type) {
+        for (assignments_type, occ) in self.owned_state() {
+            match root.owned_state().get(assignments_type) {
                 None => status.add_failure(validation::Failure::SchemaRootNoOwnedRightsMatch(
                     node_type,
                     *assignments_type,
@@ -144,8 +144,8 @@ where T: NodeSchema
             };
         }
 
-        for valencies_type in self.extends() {
-            if !root.extends().contains(valencies_type) {
+        for valencies_type in self.redeems() {
+            if !root.redeems().contains(valencies_type) {
                 status.add_failure(validation::Failure::SchemaRootNoParentPublicRightsMatch(
                     node_type,
                     *valencies_type,
@@ -153,8 +153,8 @@ where T: NodeSchema
             }
         }
 
-        for valencies_type in self.public_rights() {
-            if !root.public_rights().contains(valencies_type) {
+        for valencies_type in self.valencies() {
+            if !root.valencies().contains(valencies_type) {
                 status.add_failure(validation::Failure::SchemaRootNoPublicRightsMatch(
                     node_type,
                     *valencies_type,

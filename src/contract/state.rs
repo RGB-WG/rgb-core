@@ -62,7 +62,7 @@ impl StrictDumb for FieldValues {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct GlobalState(TinyOrdMap<schema::FieldType, FieldValues>);
+pub struct GlobalState(TinyOrdMap<schema::GlobalStateType, FieldValues>);
 
 /// Categories of the state
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
