@@ -30,8 +30,13 @@ use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitmentId, Conceal};
 use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
-use super::{attachment, data, seal, value, ConfidentialState, RevealedState, UnknownDataError};
+use super::{attachment, data, seal, value, ConfidentialState, RevealedState};
 use crate::{schema, LIB_NAME_RGB};
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
+#[display(doc_comments)]
+/// the requested data are not present.
+pub struct UnknownDataError;
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]

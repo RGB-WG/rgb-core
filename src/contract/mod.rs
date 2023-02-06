@@ -65,27 +65,3 @@ pub trait RevealedState:
     + Clone
 {
 }
-
-/// Errors retrieving state data.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error, From)]
-#[display(doc_comments)]
-pub enum StateRetrievalError {
-    /// the requested state has a mismatched data type.
-    StateTypeMismatch,
-
-    /// some of the requested data are confidential, when they must be present
-    /// in revealed form.
-    #[from(ConfidentialDataError)]
-    ConfidentialData,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
-#[display(doc_comments)]
-/// the requested data are not present.
-pub struct UnknownDataError;
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
-#[display(doc_comments)]
-/// some of the requested data are confidential, when they must be present in
-/// revealed form.
-pub struct ConfidentialDataError;
