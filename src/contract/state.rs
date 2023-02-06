@@ -27,7 +27,7 @@ use std::{io, vec};
 use amplify::confinement::{Confined, MediumVec, TinyOrdMap, U8};
 use amplify::Wrapper;
 use commit_verify::merkle::{MerkleLeaves, MerkleNode};
-use commit_verify::{CommitEncode, CommitmentId, Conceal};
+use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
 use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
 use super::{attachment, data, seal, value, ConfidentialState, RevealedState};
@@ -515,6 +515,11 @@ impl TypedState {
                 .collect(),
         }
     }
+}
+
+impl CommitStrategy for TypedState {
+    type Strategy =
+        commit_verify::strategies::Merklize<{ u128::from_be_bytes(*b"rgb:state:owned*") }>;
 }
 
 impl MerkleLeaves for TypedState {

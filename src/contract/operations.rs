@@ -21,6 +21,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::io::Write;
 use std::str::FromStr;
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet, TinyVec};
@@ -28,7 +29,8 @@ use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, AsAny, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
-use commit_verify::{mpc, CommitStrategy, CommitmentId};
+use commit_verify::{mpc, CommitEncode, CommitStrategy, CommitmentId};
+use strict_encoding::{StrictEncode, StrictWriter};
 
 use super::{GlobalState, TypedState};
 use crate::schema::{
@@ -52,9 +54,31 @@ impl PrevAssignment {
 }
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
-pub type OwnedState = TinyOrdMap<schema::OwnedStateType, TypedState>;
 pub type PrevState = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
 pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
+
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct OwnedState(TinyOrdMap<schema::OwnedStateType, TypedState>);
+
+impl CommitEncode for OwnedState {
+    fn commit_encode(&self, mut e: &mut impl Write) {
+        let w = StrictWriter::with(u32::MAX as usize, &mut e);
+        self.0.len_u8().strict_encode(w).ok();
+        for (ty, state) in &self.0 {
+            let w = StrictWriter::with(u32::MAX as usize, &mut e);
+            ty.strict_encode(w).ok();
+            state.commit_encode(e);
+        }
+    }
+}
 
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
@@ -233,7 +257,6 @@ impl PartialOrd for Transition {
 }
 
 impl CommitStrategy for Genesis {
-    // TODO: Use merklization
     type Strategy = commit_verify::strategies::Strict;
 }
 
@@ -243,7 +266,6 @@ impl CommitmentId for Genesis {
 }
 
 impl CommitStrategy for Transition {
-    // TODO: Use merklization
     type Strategy = commit_verify::strategies::Strict;
 }
 
@@ -253,7 +275,6 @@ impl CommitmentId for Transition {
 }
 
 impl CommitStrategy for Extension {
-    // TODO: Use merklization
     type Strategy = commit_verify::strategies::Strict;
 }
 

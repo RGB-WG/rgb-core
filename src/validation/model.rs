@@ -463,6 +463,7 @@ fn extract_prev_state(
     }
     Confined::try_from(owned_state)
         .expect("collections is assembled from another collection with the same size requirements")
+        .into()
 }
 
 fn extract_redeemed_valencies(
