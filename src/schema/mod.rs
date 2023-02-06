@@ -28,7 +28,7 @@ mod state;
 mod occurrences;
 
 pub use nodes::{
-    ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeSubtype, NodeType,
+    ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, OpFullType, OpType,
     OwnedRightType, OwnedRightsStructure, PublicRightType, PublicRightsStructure, TransitionSchema,
 };
 pub use occurrences::{Occurrences, OccurrencesMismatch};

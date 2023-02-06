@@ -27,13 +27,13 @@ use commit_verify::Conceal;
 
 use crate::contract::state::{AttachmentPair, DeclarativePair, FungiblePair, StructuredPair};
 use crate::schema::OwnedRightType;
-use crate::{validation, AssignedState, NodeId, StatePair, StateSchema};
+use crate::{validation, AssignedState, OpId, StatePair, StateSchema};
 
 impl StateSchema {
     pub fn validate<STATE>(
         &self,
         // type_system: &TypeSystem,
-        node_id: &NodeId,
+        node_id: &OpId,
         assignment_id: OwnedRightType,
         data: &AssignedState<STATE>,
     ) -> validation::Status

@@ -32,8 +32,8 @@ use commit_verify::mpc;
 
 use crate::schema::OwnedRightType;
 use crate::{
-    seal, Anchor, BundleId, Extension, Genesis, Node, NodeId, NodeOutpoint, Schema, Transition,
-    TransitionBundle,
+    seal, Anchor, BundleId, Extension, Genesis, OpId, Operation, PrevAssignment, Schema,
+    Transition, TransitionBundle,
 };
 
 /// Errors accessing graph data via [`GraphApi`].
@@ -49,26 +49,26 @@ pub enum ConsistencyError {
     BundleIdAbsent(BundleId),
 
     /// Transition with id {0} is not present in the storage/container
-    TransitionAbsent(NodeId),
+    TransitionAbsent(OpId),
 
     /// Extension with id {0} is not present in the storage/container
-    ExtensionAbsent(NodeId),
+    ExtensionAbsent(OpId),
 
     /// Anchor with id {0} is not present in the storage/container
     AnchorAbsent(AnchorId),
 
     /// No seals of the provided type {0} are closed by transition id {1}
-    NoSealsClosed(OwnedRightType, NodeId),
+    NoSealsClosed(OwnedRightType, OpId),
 
     /// Output {0} is not present in the storage
-    OutputNotPresent(NodeOutpoint),
+    OutputNotPresent(PrevAssignment),
 
     /// Seal definition for {0} is confidential while was required to be in
     /// revealed state
-    ConfidentialSeal(NodeOutpoint),
+    ConfidentialSeal(PrevAssignment),
 
     /// The provided node with id {0} is not an endpoint of the consignment
-    NotEndpoint(NodeId),
+    NotEndpoint(OpId),
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -84,7 +84,7 @@ pub enum ConsistencyError {
 pub trait GraphApi {
     /// Returns reference to a node (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
-    fn node_by_id(&self, node_id: NodeId) -> Option<&dyn Node>;
+    fn node_by_id(&self, node_id: OpId) -> Option<&dyn Operation>;
 
     fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
 
@@ -103,7 +103,7 @@ pub trait GraphApi {
     ///   type
     /// - [`Error::TransitionAbsent`] when node with the given id is absent from
     ///   the storage/container
-    fn transition_by_id(&self, node_id: NodeId) -> Result<&Transition, ConsistencyError>;
+    fn transition_by_id(&self, node_id: OpId) -> Result<&Transition, ConsistencyError>;
 
     /// Returns reference to a state extension, if known, matching the provided
     /// id. If id is unknown, or corresponds to other type of the node (genesis
@@ -115,7 +115,7 @@ pub trait GraphApi {
     ///   type
     /// - [`Error::ExtensionAbsent`] when node with the given id is absent from
     ///   the storage/container
-    fn extension_by_id(&self, node_id: NodeId) -> Result<&Extension, ConsistencyError>;
+    fn extension_by_id(&self, node_id: OpId) -> Result<&Extension, ConsistencyError>;
 
     /// Returns reference to a state transition, like
     /// [`GraphApi::transition_by_id`], extended with [`Txid`] of the witness
@@ -130,7 +130,7 @@ pub trait GraphApi {
     ///   the storage/container
     fn transition_witness_by_id(
         &self,
-        node_id: NodeId,
+        node_id: OpId,
     ) -> Result<(&Transition, Txid), ConsistencyError>;
 
     /// Resolves seals closed by a given node with the given owned rights type
@@ -171,7 +171,7 @@ pub trait GraphApi {
     ///   closed seal, when the revealed data are required
     fn seals_closed_with(
         &self,
-        node_id: NodeId,
+        node_id: OpId,
         owned_right_type: impl Into<OwnedRightType>,
         witness: Txid,
     ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
@@ -189,7 +189,7 @@ pub trait Consignment<'consignment>: 'consignment + GraphApi {
     /// Genesis data
     fn genesis(&'consignment self) -> &'consignment Genesis;
 
-    fn node_ids(&'consignment self) -> BTreeSet<NodeId>;
+    fn node_ids(&'consignment self) -> BTreeSet<OpId>;
 
     /// The final state ("endpoints") provided by this consignment.
     ///

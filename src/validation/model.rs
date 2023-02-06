@@ -30,18 +30,18 @@ use crate::schema::{MetadataStructure, OwnedRightsStructure, PublicRightsStructu
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    validation, AssignedState, FieldValues, GlobalState, Node, NodeId, NodeSubtype, OwnedState,
+    validation, AssignedState, FieldValues, GlobalState, OpFullType, OpId, Operation, OwnedState,
     PrevState, Redeemed, Schema, Script, StatePair, TypedState, Valencies,
 };
 
 impl Schema {
     pub fn validate(
         &self,
-        all_nodes: &BTreeMap<NodeId, &dyn Node>,
-        node: &dyn Node,
+        all_nodes: &BTreeMap<OpId, &dyn Operation>,
+        node: &dyn Operation,
         script: &Script,
     ) -> validation::Status {
-        let node_id = node.node_id();
+        let node_id = node.id();
 
         let empty_owned_structure = OwnedRightsStructure::default();
         let empty_public_structure = PublicRightsStructure::default();
@@ -139,10 +139,10 @@ impl Schema {
         status += self.validate_type_system();
 
         let parent_owned_rights =
-            extract_parent_owned_rights(all_nodes, node.parent_owned_rights(), &mut status);
+            extract_parent_owned_rights(all_nodes, node.prev_state(), &mut status);
         let parent_public_rights =
-            extract_parent_public_rights(all_nodes, node.parent_public_rights(), &mut status);
-        status += self.validate_meta(node_id, node.metadata(), metadata_structure);
+            extract_parent_public_rights(all_nodes, node.redeemed(), &mut status);
+        status += self.validate_meta(node_id, node.global_state(), metadata_structure);
         status += self.validate_parent_owned_rights(
             node_id,
             &parent_owned_rights,
@@ -153,20 +153,20 @@ impl Schema {
             &parent_public_rights,
             parent_public_structure,
         );
-        status += self.validate_owned_rights(node_id, node.owned_rights(), assignments_structure);
-        status += self.validate_public_rights(node_id, node.public_rights(), valencies_structure);
+        status += self.validate_owned_rights(node_id, node.owned_state(), assignments_structure);
+        status += self.validate_public_rights(node_id, node.valencies(), valencies_structure);
 
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the node data match the schema, so
         // scripts are not required to validate the structure of the state
         status += self.validate_state_evolution(
             node_id,
-            node.subtype(),
+            node.full_type(),
             &parent_owned_rights,
-            node.owned_rights(),
+            node.owned_state(),
             &parent_public_rights,
-            node.public_rights(),
-            node.metadata(),
+            node.valencies(),
+            node.global_state(),
             script,
         );
         status
@@ -185,7 +185,7 @@ impl Schema {
 
     fn validate_meta(
         &self,
-        node_id: NodeId,
+        node_id: OpId,
         metadata: &GlobalState,
         metadata_structure: &MetadataStructure,
     ) -> validation::Status {
@@ -239,7 +239,7 @@ impl Schema {
 
     fn validate_parent_owned_rights(
         &self,
-        node_id: NodeId,
+        node_id: OpId,
         owned_rights: &OwnedState,
         owned_rights_structure: &OwnedRightsStructure,
     ) -> validation::Status {
@@ -277,7 +277,7 @@ impl Schema {
 
     fn validate_parent_public_rights(
         &self,
-        node_id: NodeId,
+        node_id: OpId,
         public_rights: &Valencies,
         public_rights_structure: &PublicRightsStructure,
     ) -> validation::Status {
@@ -297,7 +297,7 @@ impl Schema {
 
     fn validate_owned_rights(
         &self,
-        node_id: NodeId,
+        node_id: OpId,
         owned_rights: &OwnedState,
         owned_rights_structure: &OwnedRightsStructure,
     ) -> validation::Status {
@@ -356,7 +356,7 @@ impl Schema {
 
     fn validate_public_rights(
         &self,
-        node_id: NodeId,
+        node_id: OpId,
         public_rights: &Valencies,
         public_rights_structure: &PublicRightsStructure,
     ) -> validation::Status {
@@ -377,8 +377,8 @@ impl Schema {
     #[allow(clippy::too_many_arguments)]
     fn validate_state_evolution(
         &self,
-        node_id: NodeId,
-        node_subtype: NodeSubtype,
+        node_id: OpId,
+        node_subtype: OpFullType,
         parent_owned_rights: &OwnedState,
         owned_rights: &OwnedState,
         parent_public_rights: &Valencies,
@@ -412,7 +412,7 @@ impl Schema {
 }
 
 fn extract_parent_owned_rights(
-    nodes: &BTreeMap<NodeId, &dyn Node>,
+    nodes: &BTreeMap<OpId, &dyn Operation>,
     parent_owned_rights: &PrevState,
     status: &mut validation::Status,
 ) -> OwnedState {
@@ -445,7 +445,7 @@ fn extract_parent_owned_rights(
         }
 
         for (type_id, indexes) in details {
-            match parent_node.owned_rights_by_type(*type_id) {
+            match parent_node.owned_state_by_type(*type_id) {
                 Some(TypedState::Declarative(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_rights
@@ -499,7 +499,7 @@ fn extract_parent_owned_rights(
 }
 
 fn extract_parent_public_rights(
-    nodes: &BTreeMap<NodeId, &dyn Node>,
+    nodes: &BTreeMap<OpId, &dyn Operation>,
     parent_public_rights: &Redeemed,
     status: &mut validation::Status,
 ) -> Valencies {

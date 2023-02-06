@@ -33,8 +33,8 @@ use core::ops::AddAssign;
 use bp::Txid;
 pub use verify::{ResolveTx, TxResolverError, Validator};
 
-use crate::schema::{self, NodeType, SchemaId};
-use crate::{data, seal, BundleId, NodeId, OccurrencesMismatch};
+use crate::schema::{self, OpType, SchemaId};
+use crate::{data, seal, BundleId, OccurrencesMismatch, OpId};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -151,19 +151,19 @@ pub enum Failure {
     SchemaRootNoTransitionTypeMatch(schema::TransitionType),
     SchemaRootNoExtensionTypeMatch(schema::ExtensionType),
 
-    SchemaRootNoMetadataMatch(NodeType, schema::FieldType),
-    SchemaRootNoParentOwnedRightsMatch(NodeType, schema::OwnedRightType),
-    SchemaRootNoParentPublicRightsMatch(NodeType, schema::PublicRightType),
-    SchemaRootNoOwnedRightsMatch(NodeType, schema::OwnedRightType),
-    SchemaRootNoPublicRightsMatch(NodeType, schema::PublicRightType),
+    SchemaRootNoMetadataMatch(OpType, schema::FieldType),
+    SchemaRootNoParentOwnedRightsMatch(OpType, schema::OwnedRightType),
+    SchemaRootNoParentPublicRightsMatch(OpType, schema::PublicRightType),
+    SchemaRootNoOwnedRightsMatch(OpType, schema::OwnedRightType),
+    SchemaRootNoPublicRightsMatch(OpType, schema::PublicRightType),
 
-    SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
-    SchemaUnknownTransitionType(NodeId, schema::TransitionType),
-    SchemaUnknownFieldType(NodeId, schema::FieldType),
-    SchemaUnknownOwnedRightType(NodeId, schema::OwnedRightType),
-    SchemaUnknownPublicRightType(NodeId, schema::PublicRightType),
+    SchemaUnknownExtensionType(OpId, schema::ExtensionType),
+    SchemaUnknownTransitionType(OpId, schema::TransitionType),
+    SchemaUnknownFieldType(OpId, schema::FieldType),
+    SchemaUnknownOwnedRightType(OpId, schema::OwnedRightType),
+    SchemaUnknownPublicRightType(OpId, schema::PublicRightType),
 
-    SchemaDeniedScriptExtension(NodeId),
+    SchemaDeniedScriptExtension(OpId),
 
     SchemaMetaValueTooSmall(schema::FieldType),
     SchemaMetaValueTooLarge(schema::FieldType),
@@ -182,9 +182,9 @@ pub enum Failure {
     SchemaMismatchedDataType(u16),
     SchemaMismatchedStateType(schema::OwnedRightType),
 
-    SchemaMetaOccurrencesError(NodeId, schema::FieldType, OccurrencesMismatch),
-    SchemaParentOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesMismatch),
-    SchemaOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesMismatch),
+    SchemaMetaOccurrencesError(OpId, schema::FieldType, OccurrencesMismatch),
+    SchemaParentOwnedRightOccurrencesError(OpId, schema::OwnedRightType, OccurrencesMismatch),
+    SchemaOwnedRightOccurrencesError(OpId, schema::OwnedRightType, OccurrencesMismatch),
 
     SchemaScriptOverrideDenied,
     SchemaScriptVmChangeDenied,
@@ -193,53 +193,53 @@ pub enum Failure {
 
     BundleInvalid(BundleId),
 
-    TransitionAbsent(NodeId),
-    TransitionNotAnchored(NodeId),
-    TransitionNotInAnchor(NodeId, Txid),
+    TransitionAbsent(OpId),
+    TransitionNotAnchored(OpId),
+    TransitionNotInAnchor(OpId, Txid),
     TransitionParentWrongSealType {
-        node_id: NodeId,
-        ancestor_id: NodeId,
+        node_id: OpId,
+        ancestor_id: OpId,
         assignment_type: schema::OwnedRightType,
     },
     TransitionParentWrongSeal {
-        node_id: NodeId,
-        ancestor_id: NodeId,
+        node_id: OpId,
+        ancestor_id: OpId,
         assignment_type: schema::OwnedRightType,
         seal_index: u16,
     },
     TransitionParentConfidentialSeal {
-        node_id: NodeId,
-        ancestor_id: NodeId,
+        node_id: OpId,
+        ancestor_id: OpId,
         assignment_type: schema::OwnedRightType,
         seal_index: u16,
     },
     TransitionParentIsNotWitnessInput {
-        node_id: NodeId,
-        ancestor_id: NodeId,
+        node_id: OpId,
+        ancestor_id: OpId,
         assignment_type: schema::OwnedRightType,
         seal_index: u16,
         outpoint: bp::Outpoint,
     },
 
-    ExtensionAbsent(NodeId),
+    ExtensionAbsent(OpId),
     ExtensionParentWrongValenciesType {
-        node_id: NodeId,
-        ancestor_id: NodeId,
+        node_id: OpId,
+        ancestor_id: OpId,
         valencies_type: schema::PublicRightType,
     },
 
     WitnessTransactionMissed(Txid),
-    WitnessNoCommitment(NodeId, Txid),
+    WitnessNoCommitment(OpId, Txid),
 
-    EndpointTransitionNotFound(NodeId),
+    EndpointTransitionNotFound(OpId),
 
-    InvalidStateDataType(NodeId, u16, /* TODO: Use strict type */ data::Revealed),
-    InvalidStateDataValue(NodeId, u16, /* TODO: Use strict type */ Vec<u8>),
+    InvalidStateDataType(OpId, u16, /* TODO: Use strict type */ data::Revealed),
+    InvalidStateDataValue(OpId, u16, /* TODO: Use strict type */ Vec<u8>),
 
     /// invalid bulletproofs in {0}:{1}: {3}
-    InvalidBulletproofs(NodeId, u16, String),
+    InvalidBulletproofs(OpId, u16, String),
 
-    ScriptFailure(NodeId),
+    ScriptFailure(OpId),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
@@ -248,9 +248,9 @@ pub enum Failure {
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
-    EndpointDuplication(NodeId, seal::Confidential),
-    EndpointTransitionSealNotFound(NodeId, seal::Confidential),
-    ExcessiveNode(NodeId),
+    EndpointDuplication(OpId, seal::Confidential),
+    EndpointTransitionSealNotFound(OpId, seal::Confidential),
+    ExcessiveNode(OpId),
     EndpointTransactionMissed(Txid),
 }
 
@@ -260,5 +260,5 @@ pub enum Warning {
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {
-    UncheckableConfidentialStateData(NodeId, u16),
+    UncheckableConfidentialStateData(OpId, u16),
 }

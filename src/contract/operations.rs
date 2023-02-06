@@ -21,8 +21,6 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
-use std::num::ParseIntError;
 use std::str::FromStr;
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet, TinyVec};
@@ -32,10 +30,9 @@ use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
 use commit_verify::{mpc, CommitStrategy, CommitmentId};
 
-use super::{seal, GlobalState, TypedState};
+use super::{GlobalState, TypedState};
 use crate::schema::{
-    self, ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, PublicRightType,
-    SchemaId, TransitionType,
+    self, ExtensionType, OpFullType, OpType, OwnedRightType, SchemaId, TransitionType,
 };
 use crate::LIB_NAME_RGB;
 
@@ -43,54 +40,21 @@ use crate::LIB_NAME_RGB;
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[display("{node_id}/{ty}/{no}")]
-pub struct NodeOutpoint {
-    pub node_id: NodeId,
+#[display("{op}/{ty}/{no}")]
+pub struct PrevAssignment {
+    pub op: OpId,
     pub ty: OwnedRightType,
     pub no: u16,
 }
 
-impl NodeOutpoint {
-    pub fn new(node_id: NodeId, ty: u16, no: u16) -> NodeOutpoint {
-        NodeOutpoint { node_id, ty, no }
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
-#[display(inner)]
-pub enum OutpointParseError {
-    #[from]
-    InvalidNodeId(amplify::hex::Error),
-
-    InvalidType(ParseIntError),
-
-    InvalidOutputNo(ParseIntError),
-
-    /// invalid node outpoint format ('{0}')
-    #[display(doc_comments)]
-    WrongFormat(String),
-}
-
-impl FromStr for NodeOutpoint {
-    type Err = OutpointParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split('/');
-        match (split.next(), split.next(), split.next(), split.next()) {
-            (Some(node_id), Some(ty), Some(no), None) => Ok(NodeOutpoint {
-                node_id: node_id.parse()?,
-                ty: ty.parse().map_err(OutpointParseError::InvalidType)?,
-                no: no.parse().map_err(OutpointParseError::InvalidOutputNo)?,
-            }),
-            _ => Err(OutpointParseError::WrongFormat(s.to_owned())),
-        }
-    }
+impl PrevAssignment {
+    pub fn new(op: OpId, ty: u16, no: u16) -> PrevAssignment { PrevAssignment { op, ty, no } }
 }
 
 pub type Valencies = TinyOrdSet<schema::PublicRightType>;
 pub type OwnedState = TinyOrdMap<schema::OwnedRightType, TypedState>;
-pub type PrevState = TinyOrdMap<NodeId, TinyOrdMap<schema::OwnedRightType, TinyVec<u16>>>;
-pub type Redeemed = TinyOrdMap<NodeId, TinyOrdSet<schema::PublicRightType>>;
+pub type PrevState = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedRightType, TinyVec<u16>>>;
+pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::PublicRightType>>;
 
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
@@ -104,13 +68,13 @@ pub type Redeemed = TinyOrdMap<NodeId, TinyOrdSet<schema::PublicRightType>>;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct NodeId(
+pub struct OpId(
     #[from]
     #[from([u8; 32])]
     Bytes32,
 );
 
-impl FromStr for NodeId {
+impl FromStr for OpId {
     type Err = hex::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
 }
@@ -153,27 +117,27 @@ impl From<ContractId> for mpc::ProtocolId {
 
 /// RGB contract node API, defined as trait
 ///
-/// Implemented by all contract node types (see [`NodeType`]):
+/// Implemented by all contract node types (see [`OpType`]):
 /// - Genesis ([`Genesis`])
 /// - State transitions ([`Transitions`])
 /// - Public state extensions ([`Extensions`])
-pub trait Node: AsAny {
-    /// Returns type of the node (see [`NodeType`]). Unfortunately, this can't
+pub trait Operation: AsAny {
+    /// Returns type of the node (see [`OpType`]). Unfortunately, this can't
     /// be just a const, since it will break our ability to convert concrete
     /// `Node` types into `&dyn Node` (entities implementing traits with const
     /// definitions can't be made into objects)
-    fn node_type(&self) -> NodeType;
+    fn op_type(&self) -> OpType;
 
     /// Returns full contract node type information
-    fn subtype(&self) -> NodeSubtype;
+    fn full_type(&self) -> OpFullType;
 
-    /// Returns [`NodeId`], which is a hash of this node commitment
+    /// Returns [`OpId`], which is a hash of this node commitment
     /// serialization
-    fn node_id(&self) -> NodeId;
+    fn id(&self) -> OpId;
 
     /// Returns [`Option::Some`]`(`[`ContractId`]`)`, which is a hash of
     /// genesis.
-    /// - For genesis node, this hash is byte-equal to [`NodeId`] (however
+    /// - For genesis node, this hash is byte-equal to [`OpId`] (however
     ///   displayed in a reverse manner, to introduce semantical distinction)
     /// - For extension node function returns id of the genesis, to which this
     ///   node commits to
@@ -192,7 +156,7 @@ pub trait Node: AsAny {
 
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract node.
-    fn metadata(&self) -> &GlobalState;
+    fn global_state(&self) -> &GlobalState;
 
     /// Returns reference to information about the owned rights in form of
     /// [`PrevState`] wrapper structure which this node updates with
@@ -200,7 +164,7 @@ pub trait Node: AsAny {
     ///
     /// This is always an empty `Vec` for [`Genesis`] and [`Extension`] node
     /// types.
-    fn parent_owned_rights(&self) -> &PrevState;
+    fn prev_state(&self) -> &PrevState;
 
     /// Returns reference to information about the public rights (in form of
     /// [`Redeemed`] wrapper structure), defined with "parent" state
@@ -209,94 +173,16 @@ pub trait Node: AsAny {
     /// ("parent public rights").
     ///
     /// This is always an empty `Vec` for [`Genesis`].
-    fn parent_public_rights(&self) -> &Redeemed;
-    fn owned_rights(&self) -> &OwnedState;
-    fn owned_rights_mut(&mut self) -> &mut OwnedState;
-    fn public_rights(&self) -> &Valencies;
-    fn public_rights_mut(&mut self) -> &mut Valencies;
+    fn redeemed(&self) -> &Redeemed;
+    fn owned_state(&self) -> &OwnedState;
+    fn owned_state_mut(&mut self) -> &mut OwnedState;
+    fn valencies(&self) -> &Valencies;
+    fn valencies_mut(&mut self) -> &mut Valencies;
 
-    #[inline]
-    fn field_types(&self) -> Vec<FieldType> { self.metadata().keys().copied().collect() }
-
-    #[inline]
-    fn parent_public_right_types(&self) -> Vec<PublicRightType> {
-        self.parent_public_rights()
-            .values()
-            .flat_map(|v| v.iter())
-            .copied()
-            .collect()
-    }
-
-    #[inline]
-    fn parent_by_public_right_type(&self, t: PublicRightType) -> Vec<NodeId> {
-        self.parent_public_rights()
-            .iter()
-            .filter(|(_, t2)| t2.contains(&t))
-            .map(|(node_id, _)| *node_id)
-            .collect()
-    }
-
-    /// For genesis and public state extensions always returns an empty list.
-    /// While public state extension do have parent nodes, they do not contain
-    /// indexed rights.
-    #[inline]
-    fn parent_outputs(&self) -> Vec<NodeOutpoint> {
-        self.parent_owned_rights()
-            .iter()
-            .flat_map(|(node_id, map)| {
-                let node_id = *node_id;
-                map.iter()
-                    .flat_map(|(ty, vec)| vec.iter().map(|no| (*ty, *no)))
-                    .map(move |(ty, no)| NodeOutpoint { node_id, ty, no })
-            })
-            .collect()
-    }
-
-    #[inline]
-    fn parent_outputs_by_type(&self, t: OwnedRightType) -> Vec<NodeOutpoint> {
-        self.parent_outputs_by_types(&[t])
-    }
-
-    fn parent_outputs_by_types(&self, types: &[OwnedRightType]) -> Vec<NodeOutpoint> {
-        self.parent_owned_rights()
-            .iter()
-            .flat_map(|(node_id, map)| {
-                let node_id = *node_id;
-                map.iter()
-                    .filter(|(t, _)| types.contains(*t))
-                    .flat_map(|(ty, vec)| vec.iter().map(|no| (*ty, *no)))
-                    .map(move |(ty, no)| NodeOutpoint { node_id, ty, no })
-            })
-            .collect()
-    }
-
-    #[inline]
-    fn parent_owned_right_types(&self) -> Vec<OwnedRightType> {
-        self.parent_owned_rights()
-            .values()
-            .flat_map(|v| v.keys())
-            .copied()
-            .collect()
-    }
-
-    #[inline]
-    fn owned_right_types(&self) -> BTreeSet<OwnedRightType> {
-        self.owned_rights().keys().cloned().collect()
-    }
-
-    #[inline]
-    fn owned_rights_by_type(&self, t: OwnedRightType) -> Option<&TypedState> {
-        self.owned_rights()
+    fn owned_state_by_type(&self, t: OwnedRightType) -> Option<&TypedState> {
+        self.owned_state()
             .iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
-    }
-
-    #[inline]
-    fn to_confiential_seals(&self) -> Vec<seal::Confidential> {
-        self.owned_rights()
-            .iter()
-            .flat_map(|(_, assignment)| assignment.to_confidential_seals())
-            .collect()
     }
 }
 
@@ -305,11 +191,11 @@ pub trait Node: AsAny {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Genesis {
-    schema_id: SchemaId,
-    chain: Chain,
-    metadata: GlobalState,
-    owned_rights: OwnedState,
-    public_rights: Valencies,
+    pub schema_id: SchemaId,
+    pub chain: Chain,
+    pub global_state: GlobalState,
+    pub owned_state: OwnedState,
+    pub valencies: Valencies,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
@@ -317,12 +203,12 @@ pub struct Genesis {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
-    extension_type: ExtensionType,
-    contract_id: ContractId,
-    metadata: GlobalState,
-    owned_rights: OwnedState,
-    parent_public_rights: Redeemed,
-    public_rights: Valencies,
+    pub extension_type: ExtensionType,
+    pub contract_id: ContractId,
+    pub global_state: GlobalState,
+    pub owned_state: OwnedState,
+    pub redeemed: Redeemed,
+    pub valencies: Valencies,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
@@ -330,16 +216,16 @@ pub struct Extension {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
-    transition_type: TransitionType,
-    metadata: GlobalState,
-    parent_owned_rights: PrevState,
-    owned_rights: OwnedState,
-    public_rights: Valencies,
+    pub transition_type: TransitionType,
+    pub global_state: GlobalState,
+    pub prev_state: PrevState,
+    pub owned_state: OwnedState,
+    pub valencies: Valencies,
 }
 
 // TODO: Remove after TransitionBundling refactoring
 impl Ord for Transition {
-    fn cmp(&self, other: &Self) -> Ordering { self.node_id().cmp(&other.node_id()) }
+    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
 }
 
 impl PartialOrd for Transition {
@@ -363,7 +249,7 @@ impl CommitStrategy for Transition {
 
 impl CommitmentId for Transition {
     const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v01#32A";
-    type Id = NodeId;
+    type Id = OpId;
 }
 
 impl CommitStrategy for Extension {
@@ -373,22 +259,22 @@ impl CommitStrategy for Extension {
 
 impl CommitmentId for Extension {
     const TAG: [u8; 32] = *b"urn:lnpbp:rgb:extension:v01#2023";
-    type Id = NodeId;
+    type Id = OpId;
 }
 
-impl Node for Genesis {
+impl Operation for Genesis {
     #[inline]
-    fn node_type(&self) -> NodeType { NodeType::Genesis }
+    fn op_type(&self) -> OpType { OpType::Genesis }
 
     #[inline]
-    fn subtype(&self) -> NodeSubtype { NodeSubtype::Genesis }
+    fn full_type(&self) -> OpFullType { OpFullType::Genesis }
 
     #[inline]
-    fn node_id(&self) -> NodeId { NodeId(self.commitment_id().into_inner()) }
+    fn id(&self) -> OpId { OpId(self.commitment_id().into_inner()) }
 
     #[inline]
     fn contract_id(&self) -> Option<ContractId> {
-        Some(ContractId::from_inner(self.node_id().into_inner()))
+        Some(ContractId::from_inner(self.id().into_inner()))
     }
 
     #[inline]
@@ -398,38 +284,36 @@ impl Node for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &PrevState {
-        panic!("genesis can't close previous single-use-seals")
-    }
+    fn prev_state(&self) -> &PrevState { panic!("genesis can't close previous single-use-seals") }
 
     #[inline]
-    fn parent_public_rights(&self) -> &Redeemed { panic!("genesis can't extend previous state") }
+    fn redeemed(&self) -> &Redeemed { panic!("genesis can't extend previous state") }
 
     #[inline]
-    fn metadata(&self) -> &GlobalState { &self.metadata }
+    fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn owned_rights(&self) -> &OwnedState { &self.owned_rights }
+    fn owned_state(&self) -> &OwnedState { &self.owned_state }
 
     #[inline]
-    fn owned_rights_mut(&mut self) -> &mut OwnedState { &mut self.owned_rights }
+    fn owned_state_mut(&mut self) -> &mut OwnedState { &mut self.owned_state }
 
     #[inline]
-    fn public_rights(&self) -> &Valencies { &self.public_rights }
+    fn valencies(&self) -> &Valencies { &self.valencies }
 
     #[inline]
-    fn public_rights_mut(&mut self) -> &mut Valencies { &mut self.public_rights }
+    fn valencies_mut(&mut self) -> &mut Valencies { &mut self.valencies }
 }
 
-impl Node for Extension {
+impl Operation for Extension {
     #[inline]
-    fn node_type(&self) -> NodeType { NodeType::StateExtension }
+    fn op_type(&self) -> OpType { OpType::StateExtension }
 
     #[inline]
-    fn subtype(&self) -> NodeSubtype { NodeSubtype::StateExtension(self.extension_type) }
+    fn full_type(&self) -> OpFullType { OpFullType::StateExtension(self.extension_type) }
 
     #[inline]
-    fn node_id(&self) -> NodeId { self.commitment_id() }
+    fn id(&self) -> OpId { self.commitment_id() }
 
     #[inline]
     fn contract_id(&self) -> Option<ContractId> { Some(self.contract_id) }
@@ -441,38 +325,36 @@ impl Node for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &PrevState {
-        panic!("extension can't close previous single-use-seals")
-    }
+    fn prev_state(&self) -> &PrevState { panic!("extension can't close previous single-use-seals") }
 
     #[inline]
-    fn parent_public_rights(&self) -> &Redeemed { &self.parent_public_rights }
+    fn redeemed(&self) -> &Redeemed { &self.redeemed }
 
     #[inline]
-    fn metadata(&self) -> &GlobalState { &self.metadata }
+    fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn owned_rights(&self) -> &OwnedState { &self.owned_rights }
+    fn owned_state(&self) -> &OwnedState { &self.owned_state }
 
     #[inline]
-    fn owned_rights_mut(&mut self) -> &mut OwnedState { &mut self.owned_rights }
+    fn owned_state_mut(&mut self) -> &mut OwnedState { &mut self.owned_state }
 
     #[inline]
-    fn public_rights(&self) -> &Valencies { &self.public_rights }
+    fn valencies(&self) -> &Valencies { &self.valencies }
 
     #[inline]
-    fn public_rights_mut(&mut self) -> &mut Valencies { &mut self.public_rights }
+    fn valencies_mut(&mut self) -> &mut Valencies { &mut self.valencies }
 }
 
-impl Node for Transition {
+impl Operation for Transition {
     #[inline]
-    fn node_type(&self) -> NodeType { NodeType::StateTransition }
+    fn op_type(&self) -> OpType { OpType::StateTransition }
 
     #[inline]
-    fn subtype(&self) -> NodeSubtype { NodeSubtype::StateTransition(self.transition_type) }
+    fn full_type(&self) -> OpFullType { OpFullType::StateTransition(self.transition_type) }
 
     #[inline]
-    fn node_id(&self) -> NodeId { self.commitment_id() }
+    fn id(&self) -> OpId { self.commitment_id() }
 
     #[inline]
     fn contract_id(&self) -> Option<ContractId> { None }
@@ -484,92 +366,28 @@ impl Node for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &PrevState { &self.parent_owned_rights }
+    fn prev_state(&self) -> &PrevState { &self.prev_state }
 
     #[inline]
-    fn parent_public_rights(&self) -> &Redeemed {
-        panic!("state transitions can't extend previous state")
-    }
+    fn redeemed(&self) -> &Redeemed { panic!("state transitions can't extend previous state") }
 
     #[inline]
-    fn metadata(&self) -> &GlobalState { &self.metadata }
+    fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn owned_rights(&self) -> &OwnedState { &self.owned_rights }
+    fn owned_state(&self) -> &OwnedState { &self.owned_state }
 
     #[inline]
-    fn owned_rights_mut(&mut self) -> &mut OwnedState { &mut self.owned_rights }
+    fn owned_state_mut(&mut self) -> &mut OwnedState { &mut self.owned_state }
 
     #[inline]
-    fn public_rights(&self) -> &Valencies { &self.public_rights }
+    fn valencies(&self) -> &Valencies { &self.valencies }
 
     #[inline]
-    fn public_rights_mut(&mut self) -> &mut Valencies { &mut self.public_rights }
+    fn valencies_mut(&mut self) -> &mut Valencies { &mut self.valencies }
 }
 
 impl Genesis {
-    pub fn with(
-        schema_id: SchemaId,
-        chain: Chain,
-        metadata: GlobalState,
-        owned_rights: OwnedState,
-        public_rights: Valencies,
-    ) -> Self {
-        Self {
-            schema_id,
-            chain,
-            metadata,
-            owned_rights,
-            public_rights,
-        }
-    }
-
     #[inline]
-    pub fn contract_id(&self) -> ContractId { ContractId::from_inner(self.node_id().into_inner()) }
-
-    #[inline]
-    pub fn schema_id(&self) -> SchemaId { self.schema_id }
-
-    #[inline]
-    pub fn chain(&self) -> &Chain { &self.chain }
-}
-
-impl Extension {
-    pub fn with(
-        extension_type: ExtensionType,
-        contract_id: ContractId,
-        metadata: GlobalState,
-        owned_rights: OwnedState,
-        parent_public_rights: Redeemed,
-        public_rights: Valencies,
-    ) -> Self {
-        Self {
-            extension_type,
-            contract_id,
-            metadata,
-            parent_public_rights,
-            owned_rights,
-            public_rights,
-        }
-    }
-}
-
-impl Transition {
-    pub fn with(
-        transition_type: impl Into<schema::TransitionType>,
-        metadata: GlobalState,
-        owned_rights: OwnedState,
-        public_rights: Valencies,
-        parent_owned_rights: PrevState,
-    ) -> Self {
-        Self {
-            transition_type: transition_type.into(),
-            metadata,
-            parent_owned_rights,
-            owned_rights,
-            public_rights,
-        }
-    }
-
-    pub fn transition_type(&self) -> schema::TransitionType { self.transition_type }
+    pub fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
 }

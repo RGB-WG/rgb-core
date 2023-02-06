@@ -33,8 +33,8 @@ mod bundle;
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use operations::{
-    ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, OutpointParseError, OwnedState,
-    PrevState, Redeemed, Transition, Valencies,
+    ContractId, Extension, Genesis, OpId, Operation, OwnedState, PrevAssignment, PrevState,
+    Redeemed, Transition, Valencies,
 };
 pub use state::{AssignedState, FieldValues, GlobalState, StatePair, StateType, TypedState};
 pub use value::{

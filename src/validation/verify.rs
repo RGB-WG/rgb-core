@@ -28,11 +28,11 @@ use bp::{Tx, Txid};
 use commit_verify::mpc;
 
 use super::graph::Consignment;
-use super::schema::NodeType;
+use super::schema::OpType;
 use super::{Failure, Status, Validity, Warning};
 use crate::validation::subschema::SchemaVerify;
 use crate::{
-    schema, seal, BundleId, ContractId, Extension, Node, NodeId, Schema, SchemaId,
+    schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId,
     TransitionBundle, TypedState,
 };
 
@@ -51,13 +51,13 @@ pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: R
     status: Status,
 
     schema_id: SchemaId,
-    genesis_id: NodeId,
+    genesis_id: OpId,
     contract_id: ContractId,
-    node_index: BTreeMap<NodeId, &'consignment dyn Node>,
-    anchor_index: BTreeMap<NodeId, &'consignment Anchor<mpc::MerkleProof>>,
-    end_transitions: Vec<(&'consignment dyn Node, BundleId)>,
-    validation_index: BTreeSet<NodeId>,
-    anchor_validation_index: BTreeSet<NodeId>,
+    node_index: BTreeMap<OpId, &'consignment dyn Operation>,
+    anchor_index: BTreeMap<OpId, &'consignment Anchor<mpc::MerkleProof>>,
+    end_transitions: Vec<(&'consignment dyn Operation, BundleId)>,
+    validation_index: BTreeSet<OpId>,
+    anchor_validation_index: BTreeSet<OpId>,
 
     resolver: &'resolver R,
 }
@@ -71,26 +71,26 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         let mut status = Status::default();
 
         // Frequently used computation-heavy data
-        let genesis_id = consignment.genesis().node_id();
+        let genesis_id = consignment.genesis().id();
         let contract_id = consignment.genesis().contract_id();
-        let schema_id = consignment.genesis().schema_id();
+        let schema_id = consignment.genesis().schema_id;
 
         // Create indexes
-        let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
-        let mut anchor_index = BTreeMap::<NodeId, &Anchor<mpc::MerkleProof>>::new();
+        let mut node_index = BTreeMap::<OpId, &dyn Operation>::new();
+        let mut anchor_index = BTreeMap::<OpId, &Anchor<mpc::MerkleProof>>::new();
         for (anchor, bundle) in consignment.anchored_bundles() {
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
             for transition in bundle.revealed.keys() {
-                let node_id = transition.node_id();
+                let node_id = transition.id();
                 node_index.insert(node_id, transition);
                 anchor_index.insert(node_id, anchor);
             }
         }
         node_index.insert(genesis_id, consignment.genesis());
         for extension in consignment.state_extensions() {
-            let node_id = Extension::node_id(extension);
+            let node_id = Extension::id(extension);
             node_index.insert(node_id, extension);
         }
 
@@ -98,7 +98,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // This is pretty simple operation; it takes a lot of code because
         // we would like to detect any potential issues with the consignment
         // structure and notify user about them (in form of generated warnings)
-        let mut end_transitions = Vec::<(&dyn Node, BundleId)>::new();
+        let mut end_transitions = Vec::<(&dyn Operation, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.endpoints() {
             let transitions = match consignment.known_transitions_by_bundle_id(*bundle_id) {
                 Ok(transitions) => transitions,
@@ -108,9 +108,15 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 }
             };
             for transition in transitions {
-                let node_id = transition.node_id();
+                let node_id = transition.id();
                 // Checking for endpoint definition duplicates
-                if !transition.to_confiential_seals().contains(&seal_endpoint) {
+                if !transition
+                    .owned_state()
+                    .values()
+                    .map(TypedState::to_confidential_seals)
+                    .flatten()
+                    .any(|seal| seal == *seal_endpoint)
+                {
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
                     // endpoint list
@@ -121,7 +127,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 }
                 if end_transitions
                     .iter()
-                    .filter(|(n, _)| n.node_id() == node_id)
+                    .filter(|(n, _)| n.id() == node_id)
                     .count() >
                     0
                 {
@@ -135,11 +141,11 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // Validation index is used to check that all transitions presented
         // in the consignment were validated. Also, we use it to avoid double
         // schema validations for transitions.
-        let validation_index = BTreeSet::<NodeId>::new();
+        let validation_index = BTreeSet::<OpId>::new();
 
         // Index used to avoid repeated validations of the same
         // anchor+transition pairs
-        let anchor_validation_index = BTreeSet::<NodeId>::new();
+        let anchor_validation_index = BTreeSet::<OpId>::new();
 
         Self {
             consignment,
@@ -222,7 +228,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // Replace missed (not yet mined) endpoint witness transaction failures
         // with a dedicated type
         for (node, _) in &self.end_transitions {
-            if let Some(anchor) = self.anchor_index.get(&node.node_id()) {
+            if let Some(anchor) = self.anchor_index.get(&node.id()) {
                 if let Some(pos) = self
                     .status
                     .failures
@@ -255,10 +261,10 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
     fn validate_branch(
         &mut self,
         schema: &Schema,
-        node: &'consignment dyn Node,
+        node: &'consignment dyn Operation,
         bundle_id: BundleId,
     ) {
-        let mut queue: VecDeque<&dyn Node> = VecDeque::new();
+        let mut queue: VecDeque<&dyn Operation> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a
         // recursions we utilize queue to keep the track of the upstream
@@ -272,8 +278,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // checking in the code below:
         queue.push_back(node);
         while let Some(node) = queue.pop_front() {
-            let node_id = node.node_id();
-            let node_type = node.node_type();
+            let node_id = node.id();
+            let node_type = node.op_type();
 
             // [VALIDATION]: Verify node against the schema. Here we check
             //               only a single node, not state evolution (it
@@ -303,7 +309,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                     self.anchor_validation_index.insert(node_id);
                 }
                 // Ouch, we are out of that multi-level nested cycles :)
-            } else if node_type != NodeType::Genesis && node_type != NodeType::StateExtension {
+            } else if node_type != OpType::Genesis && node_type != OpType::StateExtension {
                 // This point is actually unreachable: b/c of the
                 // consignment structure, each state transition
                 // has a corresponding anchor. So if we've got here there
@@ -314,8 +320,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
 
             // Now, we must collect all parent nodes and add them to the
             // verification queue
-            let parent_nodes_1: Vec<&dyn Node> = node
-                .parent_owned_rights()
+            let parent_nodes_1: Vec<&dyn Operation> = node
+                .prev_state()
                 .iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
@@ -329,8 +335,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 })
                 .collect();
 
-            let parent_nodes_2: Vec<&dyn Node> = node
-                .parent_public_rights()
+            let parent_nodes_2: Vec<&dyn Operation> = node
+                .redeemed()
                 .iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
@@ -351,12 +357,12 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
 
     fn validate_graph_node(
         &mut self,
-        node: &'consignment dyn Node,
+        node: &'consignment dyn Operation,
         bundle_id: BundleId,
         anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
         let txid = anchor.txid;
-        let node_id = node.node_id();
+        let node_id = node.id();
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.
@@ -401,7 +407,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
 
                 // Checking that bitcoin transaction closes seals defined by
                 // transition ancestors.
-                for (ancestor_id, assignments) in node.parent_owned_rights().iter() {
+                for (ancestor_id, assignments) in node.prev_state().iter() {
                     let ancestor_id = *ancestor_id;
                     let ancestor_node =
                         if let Some(ancestor_node) = self.node_index.get(&ancestor_id) {
@@ -419,7 +425,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                         let assignment_type = *assignment_type;
 
                         let variant = if let Some(variant) =
-                            ancestor_node.owned_rights_by_type(assignment_type)
+                            ancestor_node.owned_state_by_type(assignment_type)
                         {
                             variant
                         } else {
@@ -452,8 +458,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
     fn validate_witness_input(
         &mut self,
         witness_tx: &Tx,
-        node_id: NodeId,
-        ancestor_id: NodeId,
+        node_id: OpId,
+        ancestor_id: OpId,
         assignment_type: schema::OwnedRightType,
         variant: &'consignment TypedState,
         seal_index: u16,

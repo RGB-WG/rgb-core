@@ -24,7 +24,7 @@ use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{Bytes32, Wrapper};
 use commit_verify::{mpc, CommitStrategy, CommitmentId};
 
-use super::{NodeId, Transition};
+use super::{OpId, Transition};
 use crate::LIB_NAME_RGB;
 
 /// Unique state transition bundle identifier equivalent to the bundle
@@ -59,7 +59,7 @@ impl From<mpc::Message> for BundleId {
 pub struct TransitionBundle {
     // TODO: #141 Provide type guarantees on the sum of revealed and concealed transitions
     pub revealed: TinyOrdMap<Transition, TinyOrdSet<u16>>,
-    pub concealed: TinyOrdMap<NodeId, TinyOrdSet<u16>>,
+    pub concealed: TinyOrdMap<OpId, TinyOrdSet<u16>>,
 }
 
 impl CommitStrategy for TransitionBundle {

@@ -40,7 +40,7 @@ pub type OwnedRightsStructure = TinyOrdMap<OwnedRightType, Occurrences>;
 )]
 #[repr(u8)]
 /// Node type: genesis, extensions and state transitions
-pub enum NodeType {
+pub enum OpType {
     /// Genesis node: single node per contract, defining contract and
     /// committing to a specific schema and underlying chain hash
     #[display("genesis")]
@@ -63,7 +63,7 @@ pub enum NodeType {
 /// Aggregated type used to supply full contract node type and transition/state
 /// extension type information
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-pub enum NodeSubtype {
+pub enum OpFullType {
     /// Genesis node (no subtypes)
     Genesis,
 
@@ -76,7 +76,7 @@ pub enum NodeSubtype {
 
 /// Trait defining common API for all node type schemata
 pub trait NodeSchema {
-    fn node_type(&self) -> NodeType;
+    fn node_type(&self) -> OpType;
     fn metadata(&self) -> &MetadataStructure;
     fn closes(&self) -> &OwnedRightsStructure;
     fn extends(&self) -> &PublicRightsStructure;
@@ -118,7 +118,7 @@ pub struct TransitionSchema {
 
 impl NodeSchema for GenesisSchema {
     #[inline]
-    fn node_type(&self) -> NodeType { NodeType::Genesis }
+    fn node_type(&self) -> OpType { OpType::Genesis }
     #[inline]
     fn metadata(&self) -> &MetadataStructure { &self.metadata }
     #[inline]
@@ -135,7 +135,7 @@ impl NodeSchema for GenesisSchema {
 
 impl NodeSchema for ExtensionSchema {
     #[inline]
-    fn node_type(&self) -> NodeType { NodeType::StateExtension }
+    fn node_type(&self) -> OpType { OpType::StateExtension }
     #[inline]
     fn metadata(&self) -> &MetadataStructure { &self.metadata }
     #[inline]
@@ -152,7 +152,7 @@ impl NodeSchema for ExtensionSchema {
 
 impl NodeSchema for TransitionSchema {
     #[inline]
-    fn node_type(&self) -> NodeType { NodeType::StateTransition }
+    fn node_type(&self) -> OpType { OpType::StateTransition }
     #[inline]
     fn metadata(&self) -> &MetadataStructure { &self.metadata }
     #[inline]
