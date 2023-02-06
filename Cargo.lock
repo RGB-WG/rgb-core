@@ -207,8 +207,9 @@ dependencies = [
 
 [[package]]
 name = "bp-core"
-version = "0.10.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core#2dcbb11d34ab87dfbd04f2a2c56fd427279e5cee"
+version = "0.10.0-beta.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df303019e413ee932020d096590ff65329842a89b08b30ad073d2091ce2fcb45"
 dependencies = [
  "amplify",
  "bp-dbc",
@@ -222,8 +223,9 @@ dependencies = [
 
 [[package]]
 name = "bp-dbc"
-version = "0.10.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core#2dcbb11d34ab87dfbd04f2a2c56fd427279e5cee"
+version = "0.10.0-beta.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aa49d853e43fafe58f8157669e28f92d1920a9cbf2a416fab2300a7ff074fe8"
 dependencies = [
  "amplify",
  "bp-primitives",
@@ -235,8 +237,9 @@ dependencies = [
 
 [[package]]
 name = "bp-primitives"
-version = "0.10.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core#2dcbb11d34ab87dfbd04f2a2c56fd427279e5cee"
+version = "0.10.0-beta.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51e8c5a805cc58b0f6fb9ba81b20632bde1ee2844ee5513ad35aad2371a83b45"
 dependencies = [
  "amplify",
  "commit_verify",
@@ -247,11 +250,12 @@ dependencies = [
 
 [[package]]
 name = "bp-seals"
-version = "0.10.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core#2dcbb11d34ab87dfbd04f2a2c56fd427279e5cee"
+version = "0.10.0-beta.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfeddf854d81ba9f5e7cfe68987e3eac976674b041b9f877b04d88f97268b851"
 dependencies = [
  "amplify",
- "baid58 0.1.0",
+ "baid58 0.2.0",
  "bp-dbc",
  "bp-primitives",
  "commit_verify",
@@ -310,8 +314,9 @@ dependencies = [
 
 [[package]]
 name = "commit_verify"
-version = "0.10.0-beta.2"
-source = "git+https://github.com/LNP-BP/client_side_validation#4e0d5b3e89055b7ce2d7013d82a97f9d0eae58bd"
+version = "0.10.0-beta.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "072e9eeca63f7e23387f17f7b897042a66399f4e6965525c69559acace91b2b0"
 dependencies = [
  "amplify",
  "rand",
@@ -723,7 +728,7 @@ dependencies = [
 
 [[package]]
 name = "rgb-core"
-version = "0.10.0-alpha.1"
+version = "0.10.0-beta.1"
 dependencies = [
  "aluvm",
  "amplify",

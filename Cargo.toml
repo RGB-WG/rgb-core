@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.10.0-alpha.1"
+version = "0.10.0-beta.1"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -17,7 +17,7 @@ exclude = [".github"]
 name = "rgb"
 
 [dependencies]
-amplify = "~4.0.0-beta.13"
+amplify = "~4.0.0-beta.15"
 strict_encoding = "2.0.0-rc.1"
 strict_types = "1.0.0-beta.3"
 aluvm = { version = "0.10.0-alpha.1", features = ["strict_encoding"] }
@@ -44,7 +44,3 @@ serde = [
 
 [package.metadata.docs.rs]
 features = [ "all" ]
-
-[patch.crates-io]
-bp-core = { git = "https://github.com/BP-WG/bp-core" }
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation" }
