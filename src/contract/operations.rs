@@ -178,6 +178,9 @@ pub trait Operation: AsAny {
     /// [`Option::None`] for genesis and trate transitions
     fn extension_type(&self) -> Option<ExtensionType>;
 
+    /// Returns metadata associated with the operation, if any.
+    fn metadata(&self) -> Option<&[u8]>;
+
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract node.
     fn global_state(&self) -> &GlobalState;
@@ -217,6 +220,7 @@ pub trait Operation: AsAny {
 pub struct Genesis {
     pub schema_id: SchemaId,
     pub chain: Chain,
+    pub metadata: Option<TinyVec<u8>>,
     pub global_state: GlobalState,
     pub owned_state: OwnedState,
     pub valencies: Valencies,
@@ -229,6 +233,7 @@ pub struct Genesis {
 pub struct Extension {
     pub extension_type: ExtensionType,
     pub contract_id: ContractId,
+    pub metadata: Option<TinyVec<u8>>,
     pub global_state: GlobalState,
     pub owned_state: OwnedState,
     pub redeemed: Redeemed,
@@ -241,6 +246,7 @@ pub struct Extension {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     pub transition_type: TransitionType,
+    pub metadata: Option<TinyVec<u8>>,
     pub global_state: GlobalState,
     pub prev_state: PrevState,
     pub owned_state: OwnedState,
@@ -305,13 +311,16 @@ impl Operation for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
+    fn metadata(&self) -> Option<&[u8]> { self.metadata.as_ref().map(TinyVec::as_ref) }
+
+    #[inline]
+    fn global_state(&self) -> &GlobalState { &self.global_state }
+
+    #[inline]
     fn prev_state(&self) -> &PrevState { panic!("genesis can't close previous single-use-seals") }
 
     #[inline]
     fn redeemed(&self) -> &Redeemed { panic!("genesis can't redeem valencies") }
-
-    #[inline]
-    fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
     fn owned_state(&self) -> &OwnedState { &self.owned_state }
@@ -346,13 +355,16 @@ impl Operation for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
+    fn metadata(&self) -> Option<&[u8]> { self.metadata.as_ref().map(TinyVec::as_ref) }
+
+    #[inline]
+    fn global_state(&self) -> &GlobalState { &self.global_state }
+
+    #[inline]
     fn prev_state(&self) -> &PrevState { panic!("extension can't close previous single-use-seals") }
 
     #[inline]
     fn redeemed(&self) -> &Redeemed { &self.redeemed }
-
-    #[inline]
-    fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
     fn owned_state(&self) -> &OwnedState { &self.owned_state }
@@ -387,13 +399,16 @@ impl Operation for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
+    fn metadata(&self) -> Option<&[u8]> { self.metadata.as_ref().map(TinyVec::as_ref) }
+
+    #[inline]
+    fn global_state(&self) -> &GlobalState { &self.global_state }
+
+    #[inline]
     fn prev_state(&self) -> &PrevState { &self.prev_state }
 
     #[inline]
     fn redeemed(&self) -> &Redeemed { panic!("state transitions can't redeem valencies") }
-
-    #[inline]
-    fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
     fn owned_state(&self) -> &OwnedState { &self.owned_state }

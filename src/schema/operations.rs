@@ -21,6 +21,7 @@
 // limitations under the License.
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
+use strict_types::SemId;
 
 use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
 use crate::LIB_NAME_RGB;
@@ -77,6 +78,7 @@ pub enum OpFullType {
 /// Trait defining common API for all node type schemata
 pub trait OpSchema {
     fn op_type(&self) -> OpType;
+    fn metadata(&self) -> Option<SemId>;
     fn global_state(&self) -> &GlobalSchema;
     fn closes(&self) -> &AssignmentSchema;
     fn redeems(&self) -> &ValencySchema;
@@ -89,6 +91,7 @@ pub trait OpSchema {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct GenesisSchema {
+    pub metadata: Option<SemId>,
     pub global_state: GlobalSchema,
     pub owned_state: AssignmentSchema,
     pub valencies: ValencySchema,
@@ -99,6 +102,7 @@ pub struct GenesisSchema {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct ExtensionSchema {
+    pub metadata: Option<SemId>,
     pub global_state: GlobalSchema,
     pub redeems: ValencySchema,
     pub owned_state: AssignmentSchema,
@@ -110,6 +114,7 @@ pub struct ExtensionSchema {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct TransitionSchema {
+    pub metadata: Option<SemId>,
     pub global_state: GlobalSchema,
     pub closes: AssignmentSchema,
     pub owned_state: AssignmentSchema,
@@ -119,6 +124,8 @@ pub struct TransitionSchema {
 impl OpSchema for GenesisSchema {
     #[inline]
     fn op_type(&self) -> OpType { OpType::Genesis }
+    #[inline]
+    fn metadata(&self) -> Option<SemId> { self.metadata }
     #[inline]
     fn global_state(&self) -> &GlobalSchema { &self.global_state }
     #[inline]
@@ -137,6 +144,8 @@ impl OpSchema for ExtensionSchema {
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateExtension }
     #[inline]
+    fn metadata(&self) -> Option<SemId> { self.metadata }
+    #[inline]
     fn global_state(&self) -> &GlobalSchema { &self.global_state }
     #[inline]
     fn closes(&self) -> &AssignmentSchema {
@@ -153,6 +162,8 @@ impl OpSchema for ExtensionSchema {
 impl OpSchema for TransitionSchema {
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateTransition }
+    #[inline]
+    fn metadata(&self) -> Option<SemId> { self.metadata }
     #[inline]
     fn global_state(&self) -> &GlobalSchema { &self.global_state }
     #[inline]
