@@ -28,7 +28,7 @@ pub mod value;
 pub mod attachment;
 pub mod data;
 mod global_state;
-mod owned_state;
+pub mod owned_state;
 mod assignments;
 mod operations;
 mod bundle;
