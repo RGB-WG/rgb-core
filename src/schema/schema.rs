@@ -90,7 +90,7 @@ pub struct Schema {
     /// or do other backward-incompatible changes (RGB protocol versions are
     /// not interoperable and backward-incompatible by definitions and the
     /// nature of client-side-validation which does not allow upgrades).
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub rgb_features: SchemaFlags,
     pub subset_of: Option<SchemaId>,
 
