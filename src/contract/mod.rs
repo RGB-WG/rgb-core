@@ -27,18 +27,16 @@ pub mod value;
 pub mod attachment;
 pub mod data;
 pub mod state;
-mod assignments;
 mod operations;
 mod bundle;
 
-pub use assignments::TypedState;
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use operations::{
     ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, OutpointParseError, OwnedState,
     PrevState, Redeemed, Transition, Valencies,
 };
-pub use state::{AssignedState, FieldValues, GlobalState, StatePair, StateType};
+pub use state::{AssignedState, FieldValues, GlobalState, StatePair, StateType, TypedState};
 pub use value::{
     BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
     ValueAtom,
