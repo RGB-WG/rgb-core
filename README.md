@@ -8,7 +8,7 @@
 [![crates.io](https://img.shields.io/crates/v/rgb-core)](https://crates.io/crates/rgb-core)
 [![Docs](https://docs.rs/rgb-core/badge.svg)](https://docs.rs/rgb-core)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Apache-2 licensed](https://img.shields.io/crates/l/rgb-core)](./LICENSE)
 
 RGB is confidential & scalable client-validated smart contracts for Bitcoin & 
 Lightning. To learn more about RGB please check [RGB blueprint][Blueprint] and

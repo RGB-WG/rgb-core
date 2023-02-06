@@ -1,34 +1,40 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //! Common API for accessing RGB contract node graph, including individual state
 //! transitions, extensions, genesis, outputs, assignments & single-use-seal
 //! data.
-//!
-//! Implemented by all storage-managing [`rgb::stash`] structures, including:
-//! - [`Consignment`]
-//! - [`Disclosure`]
-//!
-//! [`Stash`] API is the alternative form of API used by stash implementations,
-//! which may operate much larger volumes of client-side-validated data, which
-//! may not fit into the memory, and thus using specially-designed iterators and
-//! different storage drivers returning driver-specific error types.
 
 use std::collections::BTreeSet;
 
-use bitcoin::{OutPoint, Txid};
 use bp::dbc::AnchorId;
+use bp::{Outpoint, Txid};
+use commit_verify::mpc;
 
-use crate::schema::OwnedRightType;
-use crate::{BundleId, Extension, Node, NodeId, NodeOutpoint, Transition, TransitionBundle};
+use crate::schema::OwnedStateType;
+use crate::{
+    seal, Anchor, BundleId, Extension, Genesis, OpId, Operation, PrevAssignment, Schema,
+    Transition, TransitionBundle,
+};
 
 /// Errors accessing graph data via [`GraphApi`].
 ///
@@ -43,26 +49,26 @@ pub enum ConsistencyError {
     BundleIdAbsent(BundleId),
 
     /// Transition with id {0} is not present in the storage/container
-    TransitionAbsent(NodeId),
+    TransitionAbsent(OpId),
 
     /// Extension with id {0} is not present in the storage/container
-    ExtensionAbsent(NodeId),
+    ExtensionAbsent(OpId),
 
     /// Anchor with id {0} is not present in the storage/container
     AnchorAbsent(AnchorId),
 
     /// No seals of the provided type {0} are closed by transition id {1}
-    NoSealsClosed(OwnedRightType, NodeId),
+    NoSealsClosed(OwnedStateType, OpId),
 
     /// Output {0} is not present in the storage
-    OutputNotPresent(NodeOutpoint),
+    OutputNotPresent(PrevAssignment),
 
     /// Seal definition for {0} is confidential while was required to be in
     /// revealed state
-    ConfidentialSeal(NodeOutpoint),
+    ConfidentialSeal(PrevAssignment),
 
     /// The provided node with id {0} is not an endpoint of the consignment
-    NotEndpoint(NodeId),
+    NotEndpoint(OpId),
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -78,7 +84,7 @@ pub enum ConsistencyError {
 pub trait GraphApi {
     /// Returns reference to a node (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
-    fn node_by_id(&self, node_id: NodeId) -> Option<&dyn Node>;
+    fn node_by_id(&self, node_id: OpId) -> Option<&dyn Operation>;
 
     fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
 
@@ -97,7 +103,7 @@ pub trait GraphApi {
     ///   type
     /// - [`Error::TransitionAbsent`] when node with the given id is absent from
     ///   the storage/container
-    fn transition_by_id(&self, node_id: NodeId) -> Result<&Transition, ConsistencyError>;
+    fn transition_by_id(&self, node_id: OpId) -> Result<&Transition, ConsistencyError>;
 
     /// Returns reference to a state extension, if known, matching the provided
     /// id. If id is unknown, or corresponds to other type of the node (genesis
@@ -109,7 +115,7 @@ pub trait GraphApi {
     ///   type
     /// - [`Error::ExtensionAbsent`] when node with the given id is absent from
     ///   the storage/container
-    fn extension_by_id(&self, node_id: NodeId) -> Result<&Extension, ConsistencyError>;
+    fn extension_by_id(&self, node_id: OpId) -> Result<&Extension, ConsistencyError>;
 
     /// Returns reference to a state transition, like
     /// [`GraphApi::transition_by_id`], extended with [`Txid`] of the witness
@@ -124,7 +130,7 @@ pub trait GraphApi {
     ///   the storage/container
     fn transition_witness_by_id(
         &self,
-        node_id: NodeId,
+        node_id: OpId,
     ) -> Result<(&Transition, Txid), ConsistencyError>;
 
     /// Resolves seals closed by a given node with the given owned rights type
@@ -135,7 +141,7 @@ pub trait GraphApi {
     ///   the closed seals. If seals are present, but have a different type, a
     ///   error is returned
     /// - `witness`: witness transaction id, needed for generating full
-    ///   [`bitcoin::OutPoint`] data for single-use-seal definitions providing
+    ///   [`bp::Outpoint`] data for single-use-seal definitions providing
     ///   relative seals to the witness transaction (see [crate::seal::Revealed]
     ///   for the details).
     ///
@@ -165,8 +171,40 @@ pub trait GraphApi {
     ///   closed seal, when the revealed data are required
     fn seals_closed_with(
         &self,
-        node_id: NodeId,
-        owned_right_type: impl Into<OwnedRightType>,
+        node_id: OpId,
+        owned_right_type: impl Into<OwnedStateType>,
         witness: Txid,
-    ) -> Result<BTreeSet<OutPoint>, ConsistencyError>;
+    ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
+}
+
+pub trait Consignment<'consignment>: 'consignment + GraphApi {
+    type EndpointIter: Iterator<Item = &'consignment (BundleId, seal::Confidential)>;
+    type BundleIter: Iterator<Item = &'consignment (Anchor<mpc::MerkleProof>, TransitionBundle)>;
+    type ExtensionsIter: Iterator<Item = &'consignment Extension>;
+
+    fn schema(&'consignment self) -> &'consignment Schema;
+
+    fn root_schema(&'consignment self) -> Option<&'consignment Schema>;
+
+    /// Genesis data
+    fn genesis(&'consignment self) -> &'consignment Genesis;
+
+    fn node_ids(&'consignment self) -> BTreeSet<OpId>;
+
+    /// The final state ("endpoints") provided by this consignment.
+    ///
+    /// There are two reasons for having endpoints:
+    /// - navigation towards genesis from the final state is more
+    ///   computationally efficient, since state transition/extension graph is
+    ///   directed towards genesis (like bitcoin transaction graph)
+    /// - if the consignment contains concealed state (known by the receiver),
+    ///   it will be computationally inefficient to understand which of the
+    ///   state transitions represent the final state
+    fn endpoints(&'consignment self) -> Self::EndpointIter;
+
+    /// Data on all anchored state transitions contained in the consignment
+    fn anchored_bundles(&'consignment self) -> Self::BundleIter;
+
+    /// Data on all state extensions contained in the consignment
+    fn state_extensions(&'consignment self) -> Self::ExtensionsIter;
 }

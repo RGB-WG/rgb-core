@@ -1,17 +1,36 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
+use std::io;
 use std::ops::RangeInclusive;
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+use strict_encoding::{
+    DecodeError, ReadStruct, StrictDecode, StrictEncode, StrictProduct, StrictStruct, StrictType,
+    TypeName, TypedRead, TypedWrite, WriteStruct,
+};
+
+use crate::LIB_NAME_RGB;
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -19,6 +38,7 @@ use std::ops::RangeInclusive;
 )]
 #[repr(u8)]
 pub enum Occurrences {
+    #[default]
     Once,
     NoneOrOnce,
     NoneOrMore,
@@ -53,7 +73,7 @@ impl Occurrences {
         }
     }
 
-    pub fn check(&self, count: u16) -> Result<(), OccurrencesError> {
+    pub fn check(&self, count: u16) -> Result<(), OccurrencesMismatch> {
         let orig_count = count;
         match self {
             Occurrences::Once if count == 1 => Ok(()),
@@ -64,7 +84,7 @@ impl Occurrences {
             Occurrences::NoneOrUpTo(max) if count <= *max => Ok(()),
             Occurrences::Exactly(val) if count == *val => Ok(()),
             Occurrences::Range(range) if range.contains(&count) => Ok(()),
-            _ => Err(OccurrencesError {
+            _ => Err(OccurrencesMismatch {
                 min: self.min_value(),
                 max: self.max_value(),
                 found: orig_count,
@@ -73,71 +93,77 @@ impl Occurrences {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display, StrictEncode, StrictDecode)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum OccurrencesError {
+    /// unable to construct occurrences value with both minimum and maximum
+    /// number set to zero.
+    Zero,
+
+    /// unable to construct occurrences value with minimum number exceeding
+    /// maximum
+    MinExceedsMax,
+}
+
+impl TryFrom<RangeInclusive<u16>> for Occurrences {
+    type Error = OccurrencesError;
+
+    fn try_from(range: RangeInclusive<u16>) -> Result<Self, Self::Error> {
+        Ok(match (*range.start(), *range.end()) {
+            (0, 0) => return Err(OccurrencesError::Zero),
+            (a, b) if a > b => return Err(OccurrencesError::MinExceedsMax),
+            (0, 1) => Occurrences::NoneOrOnce,
+            (1, 1) => Occurrences::Once,
+            (0, u16::MAX) => Occurrences::NoneOrMore,
+            (1, u16::MAX) => Occurrences::OnceOrMore,
+            (0, max) => Occurrences::NoneOrUpTo(max),
+            (1, max) => Occurrences::OnceOrUpTo(max),
+            (a, b) if a == b => Occurrences::Exactly(a),
+            (min, max) => Occurrences::Range(min..=max),
+        })
+    }
+}
+
+impl StrictType for Occurrences {
+    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB;
+    fn strict_name() -> Option<TypeName> { Some(tn!("Occurrences")) }
+}
+impl StrictProduct for Occurrences {}
+impl StrictStruct for Occurrences {
+    const ALL_FIELDS: &'static [&'static str] = &["min", "max"];
+}
+impl StrictEncode for Occurrences {
+    fn strict_encode<W: TypedWrite>(&self, writer: W) -> io::Result<W> {
+        writer.write_struct::<Self>(|w| {
+            Ok(w.write_field(fname!("min"), &self.min_value())?
+                .write_field(fname!("max"), &self.max_value())?
+                .complete())
+        })
+    }
+}
+impl StrictDecode for Occurrences {
+    fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
+        reader.read_struct(|r| {
+            let min = r.read_field(fname!("min"))?;
+            let max = r.read_field(fname!("max"))?;
+            Occurrences::try_from(min..=max)
+                .map_err(|err| DecodeError::DataIntegrityError(err.to_string()))
+        })
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 #[display(Debug)]
-pub struct OccurrencesError {
+pub struct OccurrencesMismatch {
     pub min: u16,
     pub max: u16,
     pub found: u16,
 }
 
-mod _strict_encoding {
-    use std::io;
-
-    use strict_encoding::{Error, StrictDecode, StrictEncode};
-
-    use super::*;
-
-    impl StrictEncode for Occurrences {
-        fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, Error> {
-            let (min, max) = match self {
-                Occurrences::NoneOrOnce => (0, 1),
-                Occurrences::Once => (1, 1),
-                Occurrences::NoneOrMore => (0, core::u16::MAX),
-                Occurrences::OnceOrMore => (1, core::u16::MAX),
-                Occurrences::NoneOrUpTo(max) => (0, *max),
-                Occurrences::OnceOrUpTo(max) => (1, *max),
-                Occurrences::Exactly(val) => (*val, *val),
-                Occurrences::Range(range) => (*range.start(), *range.end()),
-            };
-            Ok(min.strict_encode(&mut e)? + max.strict_encode(&mut e)?)
-        }
-    }
-
-    impl StrictDecode for Occurrences {
-        #[allow(unused_comparisons)]
-        fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-            let min = u16::strict_decode(&mut d)?;
-            let max = u16::strict_decode(&mut d)?;
-            Ok(match (min, max) {
-                (0, 1) => Occurrences::NoneOrOnce,
-                (1, 1) => Occurrences::Once,
-                (0, max) if max == ::core::u16::MAX => Occurrences::NoneOrMore,
-                (1, max) if max == ::core::u16::MAX => Occurrences::OnceOrMore,
-                (0, max) if max > 0 => Occurrences::NoneOrUpTo(max),
-                (1, max) if max > 0 => Occurrences::OnceOrUpTo(max),
-                (min, max) if min == max => Occurrences::Exactly(min),
-                (min, max) => Occurrences::Range(min..=max),
-            })
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use strict_encoding::StrictDecode;
-    use strict_encoding_test::test_vec_decoding_roundtrip;
-
     use super::Occurrences;
-
-    static ONCE: [u8; 4] = [1, 0, 1, 0];
-
-    static NONEORONCE: [u8; 4] = [0, 0, 1, 0];
-
-    static NONEUPTO_U8: [u8; 4] = [0, 0, 255, 0];
-
-    static NONEUPTO_U16: [u8; 4] = [0, 0, 255, 255];
 
     #[test]
     fn test_once_check_count() {
@@ -145,13 +171,13 @@ mod test {
         occurence.check(1).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 1, max: 1, found: 0 }")]
+    #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 1, found: 0 }")]
     fn test_once_check_count_fail_zero() {
         let occurence: Occurrences = Occurrences::Once;
         occurence.check(0).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 1, max: 1, found: 2 }")]
+    #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 1, found: 2 }")]
     fn test_once_check_count_fail_two() {
         let occurence: Occurrences = Occurrences::Once;
         occurence.check(2).unwrap();
@@ -168,7 +194,7 @@ mod test {
         occurence.check(0).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 0, max: 1, found: 2 }")]
+    #[should_panic(expected = "OccurrencesMismatch { min: 0, max: 1, found: 2 }")]
     fn test_none_or_once_check_count_fail_two() {
         let occurence: Occurrences = Occurrences::NoneOrOnce;
         occurence.check(2).unwrap();
@@ -185,7 +211,7 @@ mod test {
         occurence.check(core::u16::MAX).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 1, max: 65535, found: 0 }")]
+    #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 65535, found: 0 }")]
     fn test_once_or_up_to_none_fail_zero() {
         let occurence: Occurrences = Occurrences::OnceOrMore;
         occurence.check(0).unwrap();
@@ -196,13 +222,13 @@ mod test {
         occurence.check(42).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 1, max: 42, found: 43 }")]
+    #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 42, found: 43 }")]
     fn test_once_or_up_to_42_large() {
         let occurence: Occurrences = Occurrences::OnceOrUpTo(42);
         occurence.check(43).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 1, max: 42, found: 0 }")]
+    #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 42, found: 0 }")]
     fn test_once_or_up_to_42_fail_zero() {
         let occurence: Occurrences = Occurrences::OnceOrUpTo(42);
         occurence.check(0).unwrap();
@@ -229,33 +255,9 @@ mod test {
         occurence.check(42).unwrap();
     }
     #[test]
-    #[should_panic(expected = "OccurrencesError { min: 0, max: 42, found: 43 }")]
+    #[should_panic(expected = "OccurrencesMismatch { min: 0, max: 42, found: 43 }")]
     fn test_none_or_up_to_42_large() {
         let occurence: Occurrences = Occurrences::NoneOrUpTo(42);
         occurence.check(43).unwrap();
-    }
-
-    #[test]
-    fn test_encode_occurance() {
-        let _: Occurrences = test_vec_decoding_roundtrip(ONCE).unwrap();
-        let _: Occurrences = test_vec_decoding_roundtrip(NONEORONCE).unwrap();
-        let _: Occurrences = test_vec_decoding_roundtrip(NONEUPTO_U16).unwrap();
-    }
-
-    #[test]
-    fn test_encode_occurance_2() {
-        let mut once_upto_u8 = NONEUPTO_U8.clone();
-        let mut once_upto_u16 = NONEUPTO_U16.clone();
-
-        once_upto_u8[0] = 0x01;
-        once_upto_u16[0] = 0x01;
-
-        let dec2: Occurrences = Occurrences::strict_decode(&once_upto_u16[..]).unwrap();
-
-        assert_eq!(dec2, Occurrences::OnceOrMore);
-
-        let wc2: Occurrences = Occurrences::strict_decode(&once_upto_u8[..]).unwrap();
-
-        assert_eq!(wc2, Occurrences::OnceOrUpTo(255));
     }
 }

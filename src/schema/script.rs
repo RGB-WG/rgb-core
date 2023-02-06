@@ -1,31 +1,38 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #![allow(clippy::unnecessary_cast)]
 
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract node level
 
-use commit_verify::commit_encode;
+use amplify::confinement::MediumVec;
 
-use crate::vm::alure;
+use crate::LIB_NAME_RGB;
 
 /// Virtual machine types.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(Debug)]
 pub enum VmType {
-    /// Embedded code (not a virtual machine) which is the part of this RGB
-    /// Core Library.
-    Embedded,
-
     /// AluVM: pure functional register-based virtual machine designed for RGB
     /// and multiparty computing.
     AluVM,
@@ -33,18 +40,10 @@ pub enum VmType {
 
 /// Virtual machine and machine-specific script data.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = order)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(by_value, repr = u8)]
-pub enum ValidationScript {
-    /// Embedded code (not a virtual machine) which is the part of this RGB
-    /// Core Library. Using this option results in the fact that the schema
-    /// does not commit to the actual validating code and the validation logic
-    /// may change in the future (like to be patched) with new RGB Core Lib
-    /// releases.
-    #[strict_encoding(value = 0x00)]
-    Embedded,
-
+pub enum Script {
     /// AluVM: pure functional register-based virtual machine designed for RGB
     /// and multiparty computing.
     ///
@@ -54,54 +53,17 @@ pub enum ValidationScript {
     ///
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
-    #[strict_encoding(value = 0x01)]
-    AluVM(alure::ValidationScript),
+    AluVM(MediumVec<u8>),
 }
 
-impl Default for ValidationScript {
-    // TODO: Update default VM type to AluVM in RGBv1 release
-    fn default() -> Self { ValidationScript::Embedded }
+impl Default for Script {
+    fn default() -> Self { Script::AluVM(none!()) }
 }
 
-impl commit_encode::Strategy for ValidationScript {
-    type Strategy = commit_encode::strategies::UsingStrict;
-}
-
-impl ValidationScript {
+impl Script {
     pub fn vm_type(&self) -> VmType {
         match self {
-            ValidationScript::Embedded => VmType::Embedded,
-            ValidationScript::AluVM(_) => VmType::AluVM,
+            Script::AluVM(_) => VmType::AluVM,
         }
     }
-}
-
-/// VM and script overwrite rules by subschemata.
-///
-/// Defines whether subschemata are allowed to replace (overwrite) the type of
-/// VM and scripts.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "kebab-case")
-)]
-#[derive(StrictEncode, StrictDecode)]
-#[repr(u8)]
-pub enum OverrideRules {
-    #[display("deny")]
-    /// Denies overwrites
-    Deny = 0u8,
-
-    #[display("allow-same-vm")]
-    /// Allows overwrite only if the same VM is used
-    AllowSameVm = 1u8,
-
-    #[display("allow-any-vm")]
-    /// Allows overwrite of both executable code and type of VM
-    AllowAnyVm = 2u8,
-}
-
-impl Default for OverrideRules {
-    fn default() -> Self { OverrideRules::Deny }
 }

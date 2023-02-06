@@ -15,5 +15,5 @@ participation.
 Actions within the technical scope of the project (code quality, spamming etc),
 as well as interaction with other maintainers and contributors of course is
 a factor of the access to the project development and lifecycle. The decision in
-these cases will be maid by the project maintainers, with the right of veto or
+these cases will be made by the project maintainers, with the right of veto or
 overriding vote reserved for the original project author, Maxim Orlovsky.

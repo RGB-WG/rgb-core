@@ -1,252 +1,48 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-use core::iter::FromIterator;
-use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use bitcoin::{Transaction, Txid};
 use bp::dbc::Anchor;
 use bp::seals::txout::TxoSeal;
-use commit_verify::{lnpbp4, CommitConceal};
-use stens::TypeRef;
-use wallet::onchain::ResolveTx;
+use bp::{Tx, Txid};
+use commit_verify::mpc;
 
-use super::schema::{NodeType, OccurrencesError};
-use super::{schema, seal, ContractId, Node, NodeId, Schema, SchemaId, TypedAssignments};
-use crate::schema::SchemaVerify;
-use crate::stash::Consignment;
-use crate::{data, BundleId, Extension, SealEndpoint, TransitionBundle};
+use super::graph::Consignment;
+use super::schema::OpType;
+use super::{Failure, Status, Validity, Warning};
+use crate::validation::subschema::SchemaVerify;
+use crate::{
+    schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId,
+    TransitionBundle, TypedState,
+};
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display(Debug)]
-#[repr(u8)]
-pub enum Validity {
-    Valid,
-    ValidExceptEndpoints,
-    UnresolvedTransactions,
-    Invalid,
-}
+#[derive(Debug, Display, Error)]
+#[display(doc_comments)]
+/// transaction {0} is not mined
+pub struct TxResolverError(Txid);
 
-#[derive(Clone, Debug, Display, Default, StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-// TODO #42: Display via YAML
-#[display(Debug)]
-pub struct Status {
-    pub unresolved_txids: Vec<Txid>,
-    pub unmined_endpoint_txids: Vec<Txid>,
-    pub failures: Vec<Failure>,
-    pub warnings: Vec<Warning>,
-    pub info: Vec<Info>,
-}
-
-impl AddAssign for Status {
-    fn add_assign(&mut self, rhs: Self) {
-        self.unresolved_txids.extend(rhs.unresolved_txids);
-        self.unmined_endpoint_txids
-            .extend(rhs.unmined_endpoint_txids);
-        self.failures.extend(rhs.failures);
-        self.warnings.extend(rhs.warnings);
-        self.info.extend(rhs.info);
-    }
-}
-
-impl Status {
-    pub fn from_error(v: Failure) -> Self {
-        Status {
-            unresolved_txids: vec![],
-            unmined_endpoint_txids: vec![],
-            failures: vec![v],
-            warnings: vec![],
-            info: vec![],
-        }
-    }
-}
-
-impl FromIterator<Failure> for Status {
-    fn from_iter<T: IntoIterator<Item = Failure>>(iter: T) -> Self {
-        Self {
-            failures: iter.into_iter().collect(),
-            ..Self::default()
-        }
-    }
-}
-
-impl Status {
-    pub fn new() -> Self { Self::default() }
-
-    pub fn with_failure(failure: Failure) -> Self {
-        Self {
-            failures: vec![failure],
-            ..Self::default()
-        }
-    }
-
-    pub fn add_failure(&mut self, failure: Failure) -> &Self {
-        self.failures.push(failure);
-        self
-    }
-
-    pub fn add_warning(&mut self, warning: Warning) -> &Self {
-        self.warnings.push(warning);
-        self
-    }
-
-    pub fn add_info(&mut self, info: Info) -> &Self {
-        self.info.push(info);
-        self
-    }
-
-    pub fn validity(&self) -> Validity {
-        if self.failures.is_empty() {
-            if self.unmined_endpoint_txids.is_empty() {
-                Validity::Valid
-            } else {
-                Validity::ValidExceptEndpoints
-            }
-        } else {
-            if self.unresolved_txids.is_empty() {
-                Validity::Invalid
-            } else {
-                Validity::UnresolvedTransactions
-            }
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-// TODO #44: (v0.3) convert to detailed error description using doc_comments
-#[display(Debug)]
-pub enum Failure {
-    SchemaUnknown(SchemaId),
-    /// schema is a subschema, so root schema {0} must be provided for the
-    /// validation
-    SchemaRootRequired(SchemaId),
-    /// Root schema for this schema has another root, which is prohibited
-    SchemaRootHierarchy(SchemaId),
-    SchemaRootNoFieldTypeMatch(schema::FieldType),
-    SchemaRootNoOwnedRightTypeMatch(schema::OwnedRightType),
-    SchemaRootNoPublicRightTypeMatch(schema::PublicRightType),
-    SchemaRootNoTransitionTypeMatch(schema::TransitionType),
-    SchemaRootNoExtensionTypeMatch(schema::ExtensionType),
-
-    SchemaRootNoMetadataMatch(NodeType, schema::FieldType),
-    SchemaRootNoParentOwnedRightsMatch(NodeType, schema::OwnedRightType),
-    SchemaRootNoParentPublicRightsMatch(NodeType, schema::PublicRightType),
-    SchemaRootNoOwnedRightsMatch(NodeType, schema::OwnedRightType),
-    SchemaRootNoPublicRightsMatch(NodeType, schema::PublicRightType),
-
-    SchemaUnknownExtensionType(NodeId, schema::ExtensionType),
-    SchemaUnknownTransitionType(NodeId, schema::TransitionType),
-    SchemaUnknownFieldType(NodeId, schema::FieldType),
-    SchemaUnknownOwnedRightType(NodeId, schema::OwnedRightType),
-    SchemaUnknownPublicRightType(NodeId, schema::PublicRightType),
-
-    SchemaDeniedScriptExtension(NodeId),
-
-    SchemaMetaValueTooSmall(schema::FieldType),
-    SchemaMetaValueTooLarge(schema::FieldType),
-    SchemaStateValueTooSmall(schema::OwnedRightType),
-    SchemaStateValueTooLarge(schema::OwnedRightType),
-
-    SchemaWrongEnumValue {
-        field_or_state_type: u16,
-        unexpected: u8,
-    },
-    SchemaWrongDataLength {
-        field_or_state_type: u16,
-        max_expected: u16,
-        found: usize,
-    },
-    SchemaMismatchedDataType(u16),
-    SchemaMismatchedStateType(schema::OwnedRightType),
-
-    SchemaMetaOccurrencesError(NodeId, schema::FieldType, OccurrencesError),
-    SchemaParentOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesError),
-    SchemaOwnedRightOccurrencesError(NodeId, schema::OwnedRightType, OccurrencesError),
-
-    SchemaScriptOverrideDenied,
-    SchemaScriptVmChangeDenied,
-
-    SchemaTypeSystem(stens::TypeInconsistency),
-
-    BundleInvalid(BundleId),
-
-    TransitionAbsent(NodeId),
-    TransitionNotAnchored(NodeId),
-    TransitionNotInAnchor(NodeId, Txid),
-    TransitionParentWrongSealType {
-        node_id: NodeId,
-        ancestor_id: NodeId,
-        assignment_type: schema::OwnedRightType,
-    },
-    TransitionParentWrongSeal {
-        node_id: NodeId,
-        ancestor_id: NodeId,
-        assignment_type: schema::OwnedRightType,
-        seal_index: u16,
-    },
-    TransitionParentConfidentialSeal {
-        node_id: NodeId,
-        ancestor_id: NodeId,
-        assignment_type: schema::OwnedRightType,
-        seal_index: u16,
-    },
-    TransitionParentIsNotWitnessInput {
-        node_id: NodeId,
-        ancestor_id: NodeId,
-        assignment_type: schema::OwnedRightType,
-        seal_index: u16,
-        outpoint: bitcoin::OutPoint,
-    },
-
-    ExtensionAbsent(NodeId),
-    ExtensionParentWrongValenciesType {
-        node_id: NodeId,
-        ancestor_id: NodeId,
-        valencies_type: schema::PublicRightType,
-    },
-
-    WitnessTransactionMissed(Txid),
-    WitnessNoCommitment(NodeId, Txid),
-
-    EndpointTransitionNotFound(NodeId),
-
-    InvalidStateDataType(NodeId, u16, TypeRef, data::Revealed),
-    InvalidStateDataValue(NodeId, u16, TypeRef, Vec<u8>),
-
-    /// invalid bulletproofs in {0}:{1}: {2}
-    InvalidBulletproofs(NodeId, u16, secp256k1zkp::Error),
-
-    ScriptFailure(NodeId),
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-// TODO #44: (v0.3) convert to detailed descriptions using doc_comments
-#[display(Debug)]
-pub enum Warning {
-    EndpointDuplication(NodeId, SealEndpoint),
-    EndpointTransitionSealNotFound(NodeId, SealEndpoint),
-    ExcessiveNode(NodeId),
-    EndpointTransactionMissed(Txid),
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-// TODO #44: (v0.3) convert to detailed descriptions using doc_comments
-#[display(Debug)]
-pub enum Info {
-    UncheckableConfidentialStateData(NodeId, u16),
+pub trait ResolveTx {
+    fn resolve_tx(&self, txid: Txid) -> Result<Tx, TxResolverError>;
 }
 
 pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx> {
@@ -255,13 +51,13 @@ pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: R
     status: Status,
 
     schema_id: SchemaId,
-    genesis_id: NodeId,
+    genesis_id: OpId,
     contract_id: ContractId,
-    node_index: BTreeMap<NodeId, &'consignment dyn Node>,
-    anchor_index: BTreeMap<NodeId, &'consignment Anchor<lnpbp4::MerkleProof>>,
-    end_transitions: Vec<(&'consignment dyn Node, BundleId)>,
-    validation_index: BTreeSet<NodeId>,
-    anchor_validation_index: BTreeSet<NodeId>,
+    node_index: BTreeMap<OpId, &'consignment dyn Operation>,
+    anchor_index: BTreeMap<OpId, &'consignment Anchor<mpc::MerkleProof>>,
+    end_transitions: Vec<(&'consignment dyn Operation, BundleId)>,
+    validation_index: BTreeSet<OpId>,
+    anchor_validation_index: BTreeSet<OpId>,
 
     resolver: &'resolver R,
 }
@@ -275,26 +71,26 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         let mut status = Status::default();
 
         // Frequently used computation-heavy data
-        let genesis_id = consignment.genesis().node_id();
+        let genesis_id = consignment.genesis().id();
         let contract_id = consignment.genesis().contract_id();
-        let schema_id = consignment.genesis().schema_id();
+        let schema_id = consignment.genesis().schema_id;
 
         // Create indexes
-        let mut node_index = BTreeMap::<NodeId, &dyn Node>::new();
-        let mut anchor_index = BTreeMap::<NodeId, &Anchor<lnpbp4::MerkleProof>>::new();
+        let mut node_index = BTreeMap::<OpId, &dyn Operation>::new();
+        let mut anchor_index = BTreeMap::<OpId, &Anchor<mpc::MerkleProof>>::new();
         for (anchor, bundle) in consignment.anchored_bundles() {
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
-            for transition in bundle.known_transitions() {
-                let node_id = transition.node_id();
+            for transition in bundle.revealed.keys() {
+                let node_id = transition.id();
                 node_index.insert(node_id, transition);
                 anchor_index.insert(node_id, anchor);
             }
         }
         node_index.insert(genesis_id, consignment.genesis());
         for extension in consignment.state_extensions() {
-            let node_id = Extension::node_id(extension);
+            let node_id = Extension::id(extension);
             node_index.insert(node_id, extension);
         }
 
@@ -302,7 +98,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // This is pretty simple operation; it takes a lot of code because
         // we would like to detect any potential issues with the consignment
         // structure and notify user about them (in form of generated warnings)
-        let mut end_transitions = Vec::<(&dyn Node, BundleId)>::new();
+        let mut end_transitions = Vec::<(&dyn Operation, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.endpoints() {
             let transitions = match consignment.known_transitions_by_bundle_id(*bundle_id) {
                 Ok(transitions) => transitions,
@@ -312,11 +108,13 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 }
             };
             for transition in transitions {
-                let node_id = transition.node_id();
+                let node_id = transition.id();
                 // Checking for endpoint definition duplicates
                 if !transition
-                    .to_confiential_seals()
-                    .contains(&seal_endpoint.commit_conceal())
+                    .owned_state()
+                    .values()
+                    .flat_map(TypedState::to_confidential_seals)
+                    .any(|seal| seal == *seal_endpoint)
                 {
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
@@ -328,9 +126,9 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 }
                 if end_transitions
                     .iter()
-                    .filter(|(n, _)| n.node_id() == node_id)
-                    .count()
-                    > 0
+                    .filter(|(n, _)| n.id() == node_id)
+                    .count() >
+                    0
                 {
                     status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
                 } else {
@@ -342,11 +140,11 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // Validation index is used to check that all transitions presented
         // in the consignment were validated. Also, we use it to avoid double
         // schema validations for transitions.
-        let validation_index = BTreeSet::<NodeId>::new();
+        let validation_index = BTreeSet::<OpId>::new();
 
         // Index used to avoid repeated validations of the same
         // anchor+transition pairs
-        let anchor_validation_index = BTreeSet::<NodeId>::new();
+        let anchor_validation_index = BTreeSet::<OpId>::new();
 
         Self {
             consignment,
@@ -395,9 +193,9 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // Validating schema against root schema
         if let Some(root) = root {
             self.status += schema.schema_verify(root);
-        } else if schema.root_id != default!() {
+        } else if let Some(root_id) = schema.subset_of {
             self.status
-                .add_failure(Failure::SchemaRootRequired(schema.root_id));
+                .add_failure(Failure::SchemaRootRequired(root_id));
         }
     }
 
@@ -429,7 +227,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // Replace missed (not yet mined) endpoint witness transaction failures
         // with a dedicated type
         for (node, _) in &self.end_transitions {
-            if let Some(anchor) = self.anchor_index.get(&node.node_id()) {
+            if let Some(anchor) = self.anchor_index.get(&node.id()) {
                 if let Some(pos) = self
                     .status
                     .failures
@@ -462,10 +260,10 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
     fn validate_branch(
         &mut self,
         schema: &Schema,
-        node: &'consignment dyn Node,
+        node: &'consignment dyn Operation,
         bundle_id: BundleId,
     ) {
-        let mut queue: VecDeque<&dyn Node> = VecDeque::new();
+        let mut queue: VecDeque<&dyn Operation> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a
         // recursions we utilize queue to keep the track of the upstream
@@ -479,8 +277,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // checking in the code below:
         queue.push_back(node);
         while let Some(node) = queue.pop_front() {
-            let node_id = node.node_id();
-            let node_type = node.node_type();
+            let node_id = node.id();
+            let node_type = node.op_type();
 
             // [VALIDATION]: Verify node against the schema. Here we check
             //               only a single node, not state evolution (it
@@ -509,8 +307,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                     self.validate_graph_node(node, bundle_id, anchor);
                     self.anchor_validation_index.insert(node_id);
                 }
-            // Ouch, we are out of that multi-level nested cycles :)
-            } else if node_type != NodeType::Genesis && node_type != NodeType::StateExtension {
+                // Ouch, we are out of that multi-level nested cycles :)
+            } else if node_type != OpType::Genesis && node_type != OpType::StateExtension {
                 // This point is actually unreachable: b/c of the
                 // consignment structure, each state transition
                 // has a corresponding anchor. So if we've got here there
@@ -521,8 +319,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
 
             // Now, we must collect all parent nodes and add them to the
             // verification queue
-            let parent_nodes_1: Vec<&dyn Node> = node
-                .parent_owned_rights()
+            let parent_nodes_1: Vec<&dyn Operation> = node
+                .prev_state()
                 .iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
@@ -536,8 +334,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 })
                 .collect();
 
-            let parent_nodes_2: Vec<&dyn Node> = node
-                .parent_public_rights()
+            let parent_nodes_2: Vec<&dyn Operation> = node
+                .redeemed()
                 .iter()
                 .filter_map(|(id, _)| {
                     self.node_index.get(id).cloned().or_else(|| {
@@ -558,12 +356,12 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
 
     fn validate_graph_node(
         &mut self,
-        node: &'consignment dyn Node,
+        node: &'consignment dyn Operation,
         bundle_id: BundleId,
-        anchor: &'consignment Anchor<lnpbp4::MerkleProof>,
+        anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
         let txid = anchor.txid;
-        let node_id = node.node_id();
+        let node_id = node.id();
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.
@@ -595,7 +393,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 // [VALIDATION]: Checking anchor deterministic bitcoin
                 //               commitment
                 if anchor
-                    .verify(self.contract_id, bundle_id.into(), witness_tx.clone())
+                    .verify(self.contract_id, bundle_id.into(), &witness_tx)
                     .is_err()
                 {
                     // TODO: Save error details
@@ -608,7 +406,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
 
                 // Checking that bitcoin transaction closes seals defined by
                 // transition ancestors.
-                for (ancestor_id, assignments) in node.parent_owned_rights().iter() {
+                for (ancestor_id, assignments) in node.prev_state().iter() {
                     let ancestor_id = *ancestor_id;
                     let ancestor_node =
                         if let Some(ancestor_node) = self.node_index.get(&ancestor_id) {
@@ -626,7 +424,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                         let assignment_type = *assignment_type;
 
                         let variant = if let Some(variant) =
-                            ancestor_node.owned_rights_by_type(assignment_type)
+                            ancestor_node.owned_state_by_type(assignment_type)
                         {
                             variant
                         } else {
@@ -658,64 +456,63 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
     // TODO #45: Move part of logic into single-use-seals and bitcoin seals
     fn validate_witness_input(
         &mut self,
-        witness_tx: &Transaction,
-        node_id: NodeId,
-        ancestor_id: NodeId,
-        assignment_type: schema::OwnedRightType,
-        variant: &'consignment TypedAssignments,
+        witness_tx: &Tx,
+        node_id: OpId,
+        ancestor_id: OpId,
+        assignment_type: schema::OwnedStateType,
+        variant: &'consignment TypedState,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
-        if let Some(outpoint) = match (
-            variant.revealed_seal_at(seal_index),
-            self.anchor_index.get(&ancestor_id),
-        ) {
-            (Err(_), _) => {
-                self.status.add_failure(Failure::TransitionParentWrongSeal {
-                    node_id,
-                    ancestor_id,
-                    assignment_type,
-                    seal_index,
-                });
-                None
-            }
-            (Ok(None), _) => {
-                // Everything is ok, but we have incomplete data (confidential),
-                // thus can't do a full verification and have to report the
-                // failure
-                eprintln!("{:#?}", variant);
-                self.status
-                    .add_failure(Failure::TransitionParentConfidentialSeal {
+        if let Some(outpoint) =
+            match (variant.revealed_seal_at(seal_index), self.anchor_index.get(&ancestor_id)) {
+                (Err(_), _) => {
+                    self.status.add_failure(Failure::TransitionParentWrongSeal {
                         node_id,
                         ancestor_id,
                         assignment_type,
                         seal_index,
                     });
-                None
+                    None
+                }
+                (Ok(None), _) => {
+                    // Everything is ok, but we have incomplete data (confidential),
+                    // thus can't do a full verification and have to report the
+                    // failure
+                    self.status
+                        .add_failure(Failure::TransitionParentConfidentialSeal {
+                            node_id,
+                            ancestor_id,
+                            assignment_type,
+                            seal_index,
+                        });
+                    None
+                }
+                (
+                    Ok(Some(seal::Revealed {
+                        txid: Some(txid),
+                        vout,
+                        ..
+                    })),
+                    None,
+                ) => {
+                    // We are at genesis, so the outpoint must contain tx
+                    Some(bp::Outpoint::new(txid, vout))
+                }
+                (Ok(Some(_)), None) => {
+                    // This can't happen, since if we have a node in the index
+                    // and the node is not genesis, we always have an anchor
+                    unreachable!()
+                }
+                /* -> ... so we can check that the bitcoin transaction
+                 * references it as one of its inputs */
+                (Ok(Some(seal)), Some(anchor)) => Some(seal.outpoint_or(anchor.txid)),
             }
-            (
-                Ok(Some(seal::Revealed {
-                    txid: Some(txid),
-                    vout,
-                    ..
-                })),
-                None,
-            ) => {
-                // We are at genesis, so the outpoint must contain tx
-                Some(bitcoin::OutPoint::new(txid, vout))
-            }
-            (Ok(Some(_)), None) => {
-                // This can't happen, since if we have a node in the index
-                // and the node is not genesis, we always have an anchor
-                unreachable!()
-            }
-            (Ok(Some(seal)), Some(anchor)) => Some(seal.outpoint_or(anchor.txid)), /* -> ... so we can check that the bitcoin transaction
-                                                                                    * references it as one of its inputs */
-        } {
+        {
             if !witness_tx
-                .input
+                .inputs
                 .iter()
-                .any(|txin| txin.previous_output == outpoint)
+                .any(|txin| txin.prev_output == outpoint)
             {
                 // Another failure: we do not spend one of the transition
                 // ancestors in the witness transaction. The consignment is

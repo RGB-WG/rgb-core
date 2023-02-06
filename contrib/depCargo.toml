@@ -1,5 +1,0 @@
-# This is an add-on that must be added to any dependency using this library
-
-rgb-core = { path = "..", features = ["all"] }
-
-[workspace]

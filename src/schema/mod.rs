@@ -1,31 +1,37 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-mod nodes;
+mod operations;
 #[allow(clippy::module_inception)]
 mod schema;
 pub mod script;
 mod state;
-mod occurrences;
+mod util;
 
-pub use nodes::{
-    ExtensionSchema, GenesisSchema, MetadataStructure, NodeSchema, NodeSubtype, NodeType,
-    OwnedRightType, OwnedRightsStructure, PublicRightType, PublicRightsStructure, TransitionSchema,
+pub use operations::{
+    AssignmentSchema, ExtensionSchema, GenesisSchema, GlobalSchema, OpFullType, OpSchema, OpType,
+    OwnedStateType, TransitionSchema, ValencySchema, ValencyType,
 };
-pub use occurrences::{Occurrences, OccurrencesError};
-pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
-pub use script::{ValidationScript, VmType};
-pub use state::{DiscreteFiniteFieldFormat, StateSchema, StateType};
-
-/// Trait used for internal schema validation against some root schema
-pub trait SchemaVerify {
-    fn schema_verify(&self, root: &Self) -> crate::validation::Status;
-}
+pub use schema::{ExtensionType, GlobalStateType, Schema, SchemaId, TransitionType};
+pub use script::{Script, VmType};
+pub use state::{FungibleType, StateSchema};
+pub use util::{Occurrences, OccurrencesMismatch};

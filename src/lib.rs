@@ -1,16 +1,26 @@
-// RGB Core Library: a reference implementation of RGB smart contract standards.
-// Written in 2019-2022 by
-//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
+// RGB Core Library: consensus layer for RGB smart contracts.
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+//
+// Copyright (C) 2019-2023 LNP/BP Standards Association. All rights reserved.
+// Copyright (C) 2019-2023 Dr Maxim Orlovsky. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#![recursion_limit = "256"]
-// Coding conventions
+#![allow(unused_braces)] // Rust compiler can't properly parse derivation macros
 #![deny(
     non_upper_case_globals,
     non_camel_case_types,
@@ -18,10 +28,9 @@
     unused_mut,
     unused_imports,
     dead_code,
-    //missing_docs
+    // TODO: Uncomment missing_docs
 )]
-// TODO: Upgrade tests to use new strict_encoding_test crate
-#![cfg_attr(test, allow(deprecated))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 #[macro_use]
 extern crate amplify;
@@ -30,43 +39,59 @@ extern crate strict_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]
-extern crate serde_with;
-pub extern crate secp256k1zkp;
-#[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
 pub mod contract;
 pub mod schema;
-pub mod stash;
+// pub mod stash;
 pub mod validation;
 pub mod vm;
-#[macro_use]
-mod macros;
+
+pub const LIB_NAME_RGB: &str = "RGB";
 
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
-    pub use contract::{
-        data, reveal, seal, value, Assignment, AtomicValue, AttachmentId, AttachmentStrategy,
-        ConcealSeals, ConcealState, ConfidentialDataError, ConfidentialState, ContractId,
-        DeclarativeStrategy, EndpointValueMap, Extension, Genesis, HashStrategy,
-        HomomorphicBulletproofGrin, IntoRevealedSeal, MergeReveal, Metadata, NoDataError, Node,
-        NodeId, NodeOutpoint, OwnedRights, ParentOwnedRights, ParentPublicRights, PedersenStrategy,
-        PublicRights, RevealSeals, RevealedState, SealEndpoint, SealValueMap, State,
-        StateRetrievalError, StateType, Transition, TypedAssignments,
-    };
-    pub use schema::{
-        script, ExtensionSchema, ExtensionType, NodeSubtype, NodeType, PublicRightType,
-        PublicRightsStructure, Schema, SchemaId, ValidationScript, VmType,
-    };
-    pub use stash::{
+    pub use contract::*;
+    pub use schema::*;
+
+    pub use super::schema;
+    /*pub use stash::{
         bundle, AnchoredBundle, BundleId, ConcealAnchors, ConcealTransitions, Consignment,
         ConsignmentEndpoint, ConsistencyError, GraphApi, Stash, TransitionBundle,
     };
-    pub use validation::{Validator, Validity};
-    pub use vm::Validate;
-
+    pub use validation::{Validator, Validity, Validate};
+     */
+    pub use super::vm;
     use super::*;
-    pub use super::{schema, vm};
 }
 
 pub use prelude::*;
+
+/// Fast-forward version code
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
+#[display("v0.10.0+{0}")]
+#[derive(StrictType, StrictEncode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+pub struct Ffv(u16);
+
+mod _ffv {
+    use strict_encoding::{DecodeError, ReadTuple, StrictDecode, TypedRead};
+
+    use crate::Ffv;
+
+    impl StrictDecode for Ffv {
+        fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
+            let ffv = reader.read_tuple(|r| r.read_field().map(Self))?;
+            if ffv != Ffv::default() {
+                Err(DecodeError::DataIntegrityError(format!(
+                    "unsupported fast-forward version code belonging to a future RGB version. \
+                     Please update your software, or, if the problem persists, contact your \
+                     vendor providing the following version information: {ffv}"
+                )))
+            } else {
+                Ok(ffv)
+            }
+        }
+    }
+}
