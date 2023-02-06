@@ -20,15 +20,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::vec;
+
 use amplify::confinement::MediumVec;
-use commit_verify::merkle::MerkleNode;
+use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::CommitmentId;
 
 use super::state::{AttachmentPair, DeclarativePair, FungiblePair, StructuredPair};
-use super::{
-    attachment, data, seal, value, AssignedState, ConfidentialDataError, StateRetrievalError,
-    StateType, UnknownDataError,
-};
+use super::{seal, AssignedState, StateType, UnknownDataError};
 use crate::LIB_NAME_RGB;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -52,6 +51,24 @@ pub enum TypedState {
 }
 
 impl TypedState {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            TypedState::Declarative(set) => set.is_empty(),
+            TypedState::Fungible(set) => set.is_empty(),
+            TypedState::Structured(set) => set.is_empty(),
+            TypedState::Attachment(set) => set.is_empty(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            TypedState::Declarative(set) => set.len(),
+            TypedState::Fungible(set) => set.len(),
+            TypedState::Structured(set) => set.len(),
+            TypedState::Attachment(set) => set.len(),
+        }
+    }
+
     #[inline]
     pub fn state_type(&self) -> StateType {
         match self {
@@ -138,35 +155,6 @@ impl TypedState {
         }
     }
 
-    pub fn revealed_seal_outputs(&self) -> Vec<(seal::Revealed, u16)> {
-        match self {
-            TypedState::Declarative(s) => s
-                .iter()
-                .map(AssignedState::<_>::revealed_seal)
-                .enumerate()
-                .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
-                .collect(),
-            TypedState::Fungible(s) => s
-                .iter()
-                .map(AssignedState::<_>::revealed_seal)
-                .enumerate()
-                .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
-                .collect(),
-            TypedState::Structured(s) => s
-                .iter()
-                .map(AssignedState::<_>::revealed_seal)
-                .enumerate()
-                .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
-                .collect(),
-            TypedState::Attachment(s) => s
-                .iter()
-                .map(AssignedState::<_>::revealed_seal)
-                .enumerate()
-                .filter_map(|(no, seal)| seal.map(|s| (s, no as u16)))
-                .collect(),
-        }
-    }
-
     /// If seal definition does not exist, returns [`UnknownDataError`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
     /// seal data packed as `Ok(Some(`[`seal::Revealed`]`))`
@@ -191,42 +179,6 @@ impl TypedState {
         })
     }
 
-    pub fn revealed_seals(&self) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
-        let list: Vec<_> = match self {
-            TypedState::Declarative(s) => s.iter().map(AssignedState::<_>::revealed_seal).collect(),
-            TypedState::Fungible(s) => s.iter().map(AssignedState::<_>::revealed_seal).collect(),
-            TypedState::Structured(s) => s.iter().map(AssignedState::<_>::revealed_seal).collect(),
-            TypedState::Attachment(s) => s.iter().map(AssignedState::<_>::revealed_seal).collect(),
-        };
-        let len = list.len();
-        let filtered: Vec<seal::Revealed> = list.into_iter().flatten().collect();
-        if len != filtered.len() {
-            return Err(ConfidentialDataError);
-        }
-        Ok(filtered)
-    }
-
-    pub fn filter_revealed_seals(&self) -> Vec<seal::Revealed> {
-        match self {
-            TypedState::Declarative(s) => s
-                .iter()
-                .filter_map(AssignedState::<_>::revealed_seal)
-                .collect(),
-            TypedState::Fungible(s) => s
-                .iter()
-                .filter_map(AssignedState::<_>::revealed_seal)
-                .collect(),
-            TypedState::Structured(s) => s
-                .iter()
-                .filter_map(AssignedState::<_>::revealed_seal)
-                .collect(),
-            TypedState::Attachment(s) => s
-                .iter()
-                .filter_map(AssignedState::<_>::revealed_seal)
-                .collect(),
-        }
-    }
-
     pub fn to_confidential_seals(&self) -> Vec<seal::Confidential> {
         match self {
             TypedState::Declarative(s) => s
@@ -247,230 +199,31 @@ impl TypedState {
                 .collect(),
         }
     }
+}
 
-    // --------------------
+impl MerkleLeaves for TypedState {
+    type Leaf = MerkleNode;
+    type LeafIter = vec::IntoIter<MerkleNode>;
 
-    pub fn revealed_fungible_state(&self) -> Result<Vec<&value::Revealed>, StateRetrievalError> {
-        let list = match self {
-            TypedState::Fungible(s) => s.iter().map(AssignedState::<_>::as_revealed_state),
-            _ => return Err(StateRetrievalError::StateTypeMismatch),
-        };
-        let len = list.len();
-        let filtered: Vec<&value::Revealed> = list.flatten().collect();
-        if len != filtered.len() {
-            return Err(StateRetrievalError::ConfidentialData);
-        }
-        Ok(filtered)
-    }
-
-    pub fn revealed_structured_state(&self) -> Result<Vec<&data::Revealed>, StateRetrievalError> {
-        let list = match self {
-            TypedState::Structured(s) => s.iter().map(AssignedState::<_>::as_revealed_state),
-            _ => return Err(StateRetrievalError::StateTypeMismatch),
-        };
-        let len = list.len();
-        let filtered: Vec<&data::Revealed> = list.flatten().collect();
-        if len != filtered.len() {
-            return Err(StateRetrievalError::ConfidentialData);
-        }
-        Ok(filtered)
-    }
-
-    pub fn revealed_attachments(&self) -> Result<Vec<&attachment::Revealed>, StateRetrievalError> {
-        let list = match self {
-            TypedState::Attachment(s) => s.iter().map(AssignedState::<_>::as_revealed_state),
-            _ => return Err(StateRetrievalError::StateTypeMismatch),
-        };
-        let len = list.len();
-        let filtered: Vec<&attachment::Revealed> = list.flatten().collect();
-        if len != filtered.len() {
-            return Err(StateRetrievalError::ConfidentialData);
-        }
-        Ok(filtered)
-    }
-
-    pub fn filter_revealed_fungible_state(&self) -> Vec<&value::Revealed> {
-        match self {
-            TypedState::Declarative(_) => vec![],
-            TypedState::Fungible(s) => s
-                .iter()
-                .filter_map(AssignedState::<_>::as_revealed_state)
-                .collect(),
-            TypedState::Structured(_) => vec![],
-            TypedState::Attachment(_) => vec![],
-        }
-    }
-
-    pub fn filter_revealed_structured_state(&self) -> Vec<&data::Revealed> {
-        match self {
-            TypedState::Declarative(_) => vec![],
-            TypedState::Fungible(_) => vec![],
-            TypedState::Structured(s) => s
-                .iter()
-                .filter_map(AssignedState::<_>::as_revealed_state)
-                .collect(),
-            TypedState::Attachment(_) => vec![],
-        }
-    }
-
-    pub fn filter_revealed_attachments(&self) -> Vec<&attachment::Revealed> {
-        match self {
-            TypedState::Declarative(_) => vec![],
-            TypedState::Fungible(_) => vec![],
-            TypedState::Structured(_) => vec![],
-            TypedState::Attachment(s) => s
-                .iter()
-                .filter_map(AssignedState::<_>::as_revealed_state)
-                .collect(),
-        }
-    }
-
-    pub fn to_confidential_fungible_state(&self) -> Vec<value::Confidential> {
-        match self {
-            TypedState::Declarative(_) => vec![],
-            TypedState::Fungible(s) => s
-                .iter()
-                .map(AssignedState::<_>::to_confidential_state)
-                .collect(),
-            TypedState::Structured(_) => vec![],
-            TypedState::Attachment(_) => vec![],
-        }
-    }
-
-    pub fn to_confidential_structured_state(&self) -> Vec<data::Confidential> {
-        match self {
-            TypedState::Declarative(_) => vec![],
-            TypedState::Fungible(_) => vec![],
-            TypedState::Structured(s) => s
-                .iter()
-                .map(AssignedState::<_>::to_confidential_state)
-                .collect(),
-            TypedState::Attachment(_) => vec![],
-        }
-    }
-
-    pub fn to_confidential_attachments(&self) -> Vec<attachment::Confidential> {
-        match self {
-            TypedState::Declarative(_) => vec![],
-            TypedState::Fungible(_) => vec![],
-            TypedState::Structured(_) => vec![],
-            TypedState::Attachment(s) => s
-                .iter()
-                .map(AssignedState::<_>::to_confidential_state)
-                .collect(),
-        }
-    }
-
-    #[inline]
-    pub fn revealed_fungible_assignments(
-        &self,
-    ) -> Result<Vec<(seal::Revealed, &value::Revealed)>, StateRetrievalError> {
-        match self {
-            TypedState::Fungible(vec) => {
-                let unfiltered: Vec<_> = vec
-                    .iter()
-                    .filter_map(|assignment| {
-                        assignment.revealed_seal().and_then(|seal| {
-                            assignment.as_revealed_state().map(|state| (seal, state))
-                        })
-                    })
-                    .collect();
-                if unfiltered.len() != vec.len() {
-                    Err(StateRetrievalError::ConfidentialData)
-                } else {
-                    Ok(unfiltered)
-                }
-            }
-            _ => Err(StateRetrievalError::StateTypeMismatch),
-        }
-    }
-
-    #[inline]
-    pub fn revealed_structured_assignments(
-        &self,
-    ) -> Result<Vec<(seal::Revealed, &data::Revealed)>, StateRetrievalError> {
-        match self {
-            TypedState::Structured(vec) => {
-                let unfiltered: Vec<_> = vec
-                    .iter()
-                    .filter_map(|assignment| {
-                        assignment.revealed_seal().and_then(|seal| {
-                            assignment.as_revealed_state().map(|state| (seal, state))
-                        })
-                    })
-                    .collect();
-                if unfiltered.len() != vec.len() {
-                    Err(StateRetrievalError::ConfidentialData)
-                } else {
-                    Ok(unfiltered)
-                }
-            }
-            _ => Err(StateRetrievalError::StateTypeMismatch),
-        }
-    }
-
-    #[inline]
-    pub fn revealed_attachment_assignments(
-        &self,
-    ) -> Result<Vec<(seal::Revealed, &attachment::Revealed)>, StateRetrievalError> {
-        match self {
-            TypedState::Attachment(vec) => {
-                let unfiltered: Vec<_> = vec
-                    .iter()
-                    .filter_map(|assignment| {
-                        assignment.revealed_seal().and_then(|seal| {
-                            assignment.as_revealed_state().map(|state| (seal, state))
-                        })
-                    })
-                    .collect();
-                if unfiltered.len() != vec.len() {
-                    Err(StateRetrievalError::ConfidentialData)
-                } else {
-                    Ok(unfiltered)
-                }
-            }
-            _ => Err(StateRetrievalError::StateTypeMismatch),
-        }
-    }
-
-    // ---------------
-
-    pub fn is_empty(&self) -> bool {
-        match self {
-            TypedState::Declarative(set) => set.is_empty(),
-            TypedState::Fungible(set) => set.is_empty(),
-            TypedState::Structured(set) => set.is_empty(),
-            TypedState::Attachment(set) => set.is_empty(),
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        match self {
-            TypedState::Declarative(set) => set.len(),
-            TypedState::Fungible(set) => set.len(),
-            TypedState::Structured(set) => set.len(),
-            TypedState::Attachment(set) => set.len(),
-        }
-    }
-
-    pub fn commitment_leaves(&self) -> Vec<MerkleNode> {
+    fn merkle_leaves(&self) -> Self::LeafIter {
         match self {
             TypedState::Declarative(vec) => vec
                 .iter()
                 .map(AssignedState::<DeclarativePair>::commitment_id)
-                .collect(),
+                .collect::<Vec<_>>(),
             TypedState::Fungible(vec) => vec
                 .iter()
                 .map(AssignedState::<FungiblePair>::commitment_id)
-                .collect(),
+                .collect::<Vec<_>>(),
             TypedState::Structured(vec) => vec
                 .iter()
                 .map(AssignedState::<StructuredPair>::commitment_id)
-                .collect(),
+                .collect::<Vec<_>>(),
             TypedState::Attachment(vec) => vec
                 .iter()
                 .map(AssignedState::<AttachmentPair>::commitment_id)
-                .collect(),
+                .collect::<Vec<_>>(),
         }
+        .into_iter()
     }
 }

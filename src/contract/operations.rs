@@ -21,7 +21,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
@@ -29,11 +29,10 @@ use amplify::confinement::{TinyOrdMap, TinyOrdSet, TinyVec};
 use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, AsAny, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
-use bp::seals::txout::TxoSeal;
-use bp::{Chain, Outpoint, Txid};
+use bp::Chain;
 use commit_verify::{mpc, CommitStrategy, CommitmentId};
 
-use super::{seal, ConfidentialDataError, GlobalState, TypedState};
+use super::{seal, GlobalState, TypedState};
 use crate::schema::{
     self, ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, PublicRightType,
     SchemaId, TransitionType,
@@ -298,66 +297,6 @@ pub trait Node: AsAny {
             .iter()
             .flat_map(|(_, assignment)| assignment.to_confidential_seals())
             .collect()
-    }
-
-    #[inline]
-    fn revealed_seals(&self) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
-        let unfiltered = self
-            .owned_rights()
-            .iter()
-            .map(|(_, assignment)| assignment.revealed_seals())
-            .collect::<Vec<_>>();
-        if unfiltered.contains(&Err(ConfidentialDataError)) {
-            return Err(ConfidentialDataError);
-        }
-        Ok(unfiltered
-            .into_iter()
-            .filter_map(Result::ok)
-            .flat_map(Vec::into_iter)
-            .collect())
-    }
-
-    #[inline]
-    fn revealed_seals_by_type(
-        &self,
-        assignment_type: OwnedRightType,
-    ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
-        Ok(self
-            .owned_rights_by_type(assignment_type)
-            .map(TypedState::revealed_seals)
-            .transpose()?
-            .unwrap_or_default())
-    }
-
-    #[inline]
-    fn filter_revealed_seals(&self) -> Vec<seal::Revealed> {
-        self.owned_rights()
-            .iter()
-            .flat_map(|(_, assignment)| assignment.filter_revealed_seals())
-            .collect()
-    }
-
-    #[inline]
-    fn filter_revealed_seals_by_type(
-        &self,
-        assignment_type: OwnedRightType,
-    ) -> Vec<seal::Revealed> {
-        self.owned_rights_by_type(assignment_type)
-            .map(TypedState::filter_revealed_seals)
-            .unwrap_or_else(Vec::new)
-    }
-
-    fn node_outputs(&self, witness_txid: Txid) -> BTreeMap<NodeOutpoint, Outpoint> {
-        let node_id = self.node_id();
-        let mut res: BTreeMap<NodeOutpoint, Outpoint> = bmap! {};
-        for (ty, assignments) in self.owned_rights() {
-            for (seal, node_output) in assignments.revealed_seal_outputs() {
-                let outpoint = seal.outpoint_or(witness_txid);
-                let node_outpoint = NodeOutpoint::new(node_id, *ty, node_output);
-                res.insert(node_outpoint, outpoint);
-            }
-        }
-        res
     }
 }
 
