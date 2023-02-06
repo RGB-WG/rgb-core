@@ -36,7 +36,7 @@ pub use operations::{
     ContractId, Extension, Genesis, OpId, Operation, OwnedState, PrevAssignment, PrevState,
     Redeemed, Transition, Valencies,
 };
-pub use state::{AssignedState, FieldValues, GlobalState, StatePair, StateType, TypedState};
+pub use state::{AssignedState, GlobalState, GlobalValues, StatePair, StateType, TypedState};
 pub use value::{
     BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
     ValueAtom,

@@ -47,9 +47,9 @@ pub struct UnknownDataError;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct FieldValues(Confined<Vec<data::Revealed>, 1, U8>);
+pub struct GlobalValues(Confined<Vec<data::Revealed>, 1, U8>);
 
-impl StrictDumb for FieldValues {
+impl StrictDumb for GlobalValues {
     fn strict_dumb() -> Self { Self(confined_vec!(data::Revealed::strict_dumb())) }
 }
 
@@ -62,7 +62,7 @@ impl StrictDumb for FieldValues {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct GlobalState(TinyOrdMap<schema::GlobalStateType, FieldValues>);
+pub struct GlobalState(TinyOrdMap<schema::GlobalStateType, GlobalValues>);
 
 /// Categories of the state
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
