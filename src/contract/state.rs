@@ -31,7 +31,7 @@ use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
 use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
-use super::{attachment, data, seal, value, ConfidentialState, RevealedState};
+use super::{attachment, data, fungible, seal, ConfidentialState, RevealedState};
 use crate::{schema, LIB_NAME_RGB};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
@@ -97,8 +97,8 @@ impl StatePair for DeclarativePair {
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct FungiblePair;
 impl StatePair for FungiblePair {
-    type Confidential = value::Confidential;
-    type Revealed = value::Revealed;
+    type Confidential = fungible::Confidential;
+    type Revealed = fungible::Revealed;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]

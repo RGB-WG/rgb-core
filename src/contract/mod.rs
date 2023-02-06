@@ -23,7 +23,7 @@
 pub mod seal {
     pub use bp::seals::txout::blind::{ConcealedSeal as Confidential, RevealedSeal as Revealed};
 }
-pub mod value;
+pub mod fungible;
 pub mod attachment;
 pub mod data;
 pub mod state;
@@ -34,15 +34,15 @@ use std::hash::Hash;
 
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
+pub use fungible::{
+    BlindingFactor, FieldOrderOverflow, Fungible, NoiseDumb, PedersenCommitment, RangeProof,
+    RangeProofError,
+};
 pub use operations::{
     ContractId, Extension, Genesis, OpId, Operation, OwnedState, PrevAssignment, PrevState,
     Redeemed, Transition, Valencies,
 };
 pub use state::{AssignedState, GlobalState, GlobalValues, StatePair, StateType, TypedState};
-pub use value::{
-    BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
-    ValueAtom,
-};
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
