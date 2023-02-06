@@ -30,6 +30,8 @@ pub mod state;
 mod operations;
 mod bundle;
 
+use std::hash::Hash;
+
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use operations::{
@@ -50,6 +52,7 @@ pub trait ConfidentialState:
     + strict_encoding::StrictEncode
     + strict_encoding::StrictDecode
     + amplify::AsAny
+    + Hash
     + Clone
 {
 }

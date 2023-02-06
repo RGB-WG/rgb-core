@@ -155,14 +155,13 @@ impl Schema {
     }
 
     fn validate_type_system(&self) -> validation::Status {
-        let status = validation::Status::new();
+        validation::Status::new()
         // TODO: Validate type system
         /*if let Err(inconsistencies) = self.type_system.validate() {
             for _err in inconsistencies {
                 status.add_failure(validation::Failure::SchemaTypeSystem(/*err*/));
             }
         }*/
-        status
     }
 
     fn validate_global_state(

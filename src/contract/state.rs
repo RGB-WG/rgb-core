@@ -22,6 +22,7 @@
 
 use core::cmp::Ordering;
 use core::fmt::Debug;
+use std::hash::{Hash, Hasher};
 use std::{io, vec};
 
 use amplify::confinement::{Confined, MediumVec, TinyOrdMap, U8};
@@ -117,7 +118,7 @@ impl StatePair for AttachmentPair {
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
-#[derive(Clone, Hash, Debug)]
+#[derive(Clone, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(
     lib = LIB_NAME_RGB,
@@ -205,6 +206,18 @@ where
     Pair::Confidential: PartialEq + Eq,
     Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
+}
+
+impl<Pair> Hash for AssignedState<Pair>
+where
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.to_confidential_seal().hash(state);
+        self.to_confidential_state().hash(state);
+    }
 }
 
 impl<Pair> AssignedState<Pair>

@@ -123,12 +123,10 @@ impl Status {
             } else {
                 Validity::ValidExceptEndpoints
             }
+        } else if self.unresolved_txids.is_empty() {
+            Validity::Invalid
         } else {
-            if self.unresolved_txids.is_empty() {
-                Validity::Invalid
-            } else {
-                Validity::UnresolvedTransactions
-            }
+            Validity::UnresolvedTransactions
         }
     }
 }

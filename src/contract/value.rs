@@ -271,9 +271,7 @@ impl CommitVerify<Revealed, UntaggedProtocol> for PedersenCommitment {
 
         let blinding = Tweak::from_inner(revealed.blinding.0.into_inner())
             .expect("type guarantees of BlindingFactor are broken");
-        let value = match revealed.value {
-            ValueAtom::Bits64(value) => value,
-        };
+        let ValueAtom::Bits64(value) = revealed.value;
 
         // TODO: Check that we create correct generator value.
         let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &secp256k1_zkp::ONE_KEY);
@@ -281,7 +279,7 @@ impl CommitVerify<Revealed, UntaggedProtocol> for PedersenCommitment {
         let tag = Tag::from(h);
         let generator = Generator::new_unblinded(SECP256K1, tag);
 
-        secp256k1_zkp::PedersenCommitment::new(&SECP256K1, value, blinding, generator).into()
+        secp256k1_zkp::PedersenCommitment::new(SECP256K1, value, blinding, generator).into()
     }
 }
 

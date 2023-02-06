@@ -113,8 +113,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 if !transition
                     .owned_state()
                     .values()
-                    .map(TypedState::to_confidential_seals)
-                    .flatten()
+                    .flat_map(TypedState::to_confidential_seals)
                     .any(|seal| seal == *seal_endpoint)
                 {
                     // We generate just a warning here because it's up to a user
@@ -480,7 +479,6 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                     // Everything is ok, but we have incomplete data (confidential),
                     // thus can't do a full verification and have to report the
                     // failure
-                    eprintln!("{:#?}", variant);
                     self.status
                         .add_failure(Failure::TransitionParentConfidentialSeal {
                             node_id,
