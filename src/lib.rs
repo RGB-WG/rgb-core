@@ -66,3 +66,32 @@ pub mod prelude {
 }
 
 pub use prelude::*;
+
+/// Fast-forward version code
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
+#[display("v0.10.0+{0}")]
+#[derive(StrictType, StrictEncode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+pub struct Ffv(u16);
+
+mod _ffv {
+    use strict_encoding::{DecodeError, ReadTuple, StrictDecode, TypedRead};
+
+    use crate::Ffv;
+
+    impl StrictDecode for Ffv {
+        fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
+            let ffv = reader.read_tuple(|r| r.read_field().map(Self))?;
+            if ffv != Ffv::default() {
+                Err(DecodeError::DataIntegrityError(format!(
+                    "unsupported fast-forward version code belonging to a future RGB version. \
+                     Please update your software, or, if the problem persists, contact your \
+                     vendor providing the following version information: {ffv}"
+                )))
+            } else {
+                Ok(ffv)
+            }
+        }
+    }
+}

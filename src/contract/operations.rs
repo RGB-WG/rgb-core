@@ -36,7 +36,7 @@ use super::{GlobalState, TypedState};
 use crate::schema::{
     self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
-use crate::LIB_NAME_RGB;
+use crate::{Ffv, LIB_NAME_RGB};
 
 /// RGB contract node output pointer, defined by the node ID and output number.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -218,6 +218,7 @@ pub trait Operation: AsAny {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Genesis {
+    pub ffv: Ffv,
     pub schema_id: SchemaId,
     pub chain: Chain,
     pub metadata: Option<TinyVec<u8>>,
@@ -231,6 +232,7 @@ pub struct Genesis {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Extension {
+    pub ffv: Ffv,
     pub extension_type: ExtensionType,
     pub contract_id: ContractId,
     pub metadata: Option<TinyVec<u8>>,
@@ -245,6 +247,7 @@ pub struct Extension {
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
+    pub ffv: Ffv,
     pub transition_type: TransitionType,
     pub metadata: Option<TinyVec<u8>>,
     pub global_state: GlobalState,
