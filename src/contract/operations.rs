@@ -33,7 +33,7 @@ use bp::seals::txout::TxoSeal;
 use bp::{Chain, Outpoint, Txid};
 use commit_verify::{mpc, CommitStrategy, CommitmentId};
 
-use super::{seal, ConcealSeals, ConcealState, ConfidentialDataError, Metadata, TypedAssignments};
+use super::{seal, ConfidentialDataError, Metadata, TypedAssignments};
 use crate::schema::{
     self, ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, PublicRightType,
     SchemaId, TransitionType,
@@ -405,66 +405,6 @@ impl Ord for Transition {
 
 impl PartialOrd for Transition {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl ConcealState for Genesis {
-    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
-        let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
-            count += assignment.conceal_state_except(seals);
-        }
-        count
-    }
-}
-
-impl ConcealState for Extension {
-    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
-        let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
-            count += assignment.conceal_state_except(seals);
-        }
-        count
-    }
-}
-
-impl ConcealState for Transition {
-    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
-        let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
-            count += assignment.conceal_state_except(seals);
-        }
-        count
-    }
-}
-
-impl ConcealSeals for Genesis {
-    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
-        let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
-            count += assignment.conceal_seals(seals);
-        }
-        count
-    }
-}
-
-impl ConcealSeals for Transition {
-    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
-        let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
-            count += assignment.conceal_seals(seals);
-        }
-        count
-    }
-}
-
-impl ConcealSeals for Extension {
-    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
-        let mut count = 0;
-        for (_, assignment) in self.owned_rights_mut().keyed_values_mut() {
-            count += assignment.conceal_seals(seals);
-        }
-        count
-    }
 }
 
 impl CommitStrategy for Genesis {

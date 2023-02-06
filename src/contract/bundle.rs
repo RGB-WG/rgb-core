@@ -20,11 +20,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use amplify::confinement::{Confined, TinyOrdMap, TinyOrdSet};
+use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{Bytes32, Wrapper};
 use commit_verify::{mpc, CommitStrategy, CommitmentId};
 
-use super::{seal, ConcealSeals, ConcealState, Node, NodeId, RevealSeals, Transition};
+use super::{NodeId, Transition};
 use crate::LIB_NAME_RGB;
 
 /// Unique state transition bundle identifier equivalent to the bundle
@@ -44,11 +44,6 @@ pub struct BundleId(
     Bytes32,
 );
 
-pub trait ConcealTransitions {
-    fn conceal_transitions(&mut self) -> usize { self.conceal_transitions_except(&[]) }
-    fn conceal_transitions_except(&mut self, node_ids: &[NodeId]) -> usize;
-}
-
 impl From<BundleId> for mpc::Message {
     fn from(id: BundleId) -> Self { mpc::Message::from_inner(id.into_inner()) }
 }
@@ -65,70 +60,6 @@ pub struct TransitionBundle {
     // TODO: #141 Provide type guarantees on the sum of revealed and concealed transitions
     pub revealed: TinyOrdMap<Transition, TinyOrdSet<u16>>,
     pub concealed: TinyOrdMap<NodeId, TinyOrdSet<u16>>,
-}
-
-impl ConcealTransitions for TransitionBundle {
-    fn conceal_transitions_except(&mut self, node_ids: &[NodeId]) -> usize {
-        let mut concealed = bmap! {};
-        self.revealed =
-            Confined::try_from_iter(self.revealed.iter().filter_map(|(transition, inputs)| {
-                let node_id = transition.node_id();
-                if !node_ids.contains(&node_id) {
-                    concealed.insert(node_id, inputs.clone());
-                    None
-                } else {
-                    Some((transition.clone(), inputs.clone()))
-                }
-            }))
-            .expect("same size");
-        let count = concealed.len();
-        self.concealed.extend(concealed).expect("todo: issue #141");
-        count
-    }
-}
-
-impl ConcealState for TransitionBundle {
-    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
-        let mut counter = 0;
-        self.revealed =
-            Confined::try_from_iter(self.revealed.iter().map(|(transition, inputs)| {
-                let mut transition = transition.clone();
-                counter += transition.conceal_state_except(seals);
-                (transition, inputs.clone())
-            }))
-            .expect("same size");
-        counter
-    }
-}
-
-impl ConcealSeals for TransitionBundle {
-    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
-        let mut counter = 0;
-        self.revealed =
-            Confined::try_from_iter(self.revealed.iter().map(|(transition, inputs)| {
-                let mut transition = transition.clone();
-                counter += transition.conceal_seals(seals);
-                (transition, inputs.clone())
-            }))
-            .expect("same size");
-        counter
-    }
-}
-
-impl RevealSeals for TransitionBundle {
-    fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize {
-        let mut counter = 0;
-        self.revealed =
-            Confined::try_from_iter(self.revealed.iter().map(|(transition, inputs)| {
-                let mut transition = transition.clone();
-                for (_, assignment) in transition.owned_rights_mut().keyed_values_mut() {
-                    counter += assignment.reveal_seals(known_seals);
-                }
-                (transition, inputs.clone())
-            }))
-            .expect("same size");
-        counter
-    }
 }
 
 impl CommitStrategy for TransitionBundle {

@@ -20,14 +20,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use amplify::confinement::{Confined, MediumVec};
+use amplify::confinement::MediumVec;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::CommitmentId;
 
 use super::owned_state::{AttachmentStrategy, DeclarativeStrategy, HashStrategy, PedersenStrategy};
 use super::{
-    attachment, data, seal, value, Assignment, ConcealSeals, ConcealState, ConfidentialDataError,
-    RevealSeals, StateRetrievalError, StateType, UnknownDataError,
+    attachment, data, seal, value, Assignment, ConfidentialDataError, StateRetrievalError,
+    StateType, UnknownDataError,
 };
 use crate::LIB_NAME_RGB;
 
@@ -478,69 +478,5 @@ impl TypedAssignments {
                 .map(Assignment::<AttachmentStrategy>::commitment_id)
                 .collect(),
         }
-    }
-}
-
-impl RevealSeals for TypedAssignments {
-    fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize {
-        let mut counter = 0;
-        match self {
-            TypedAssignments::Void(_) => {}
-            TypedAssignments::Value(set) => {
-                *self = TypedAssignments::Value(
-                    Confined::try_from_iter(set.iter().map(|assignment| {
-                        let mut assignment = assignment.clone();
-                        counter += assignment.reveal_seals(known_seals);
-                        assignment
-                    }))
-                    .expect("same size"),
-                );
-            }
-            TypedAssignments::Data(set) => {
-                *self = TypedAssignments::Data(
-                    Confined::try_from_iter(set.iter().map(|assignment| {
-                        let mut assignment = assignment.clone();
-                        counter += assignment.reveal_seals(known_seals);
-                        assignment
-                    }))
-                    .expect("same size"),
-                );
-            }
-            TypedAssignments::Attachment(set) => {
-                *self = TypedAssignments::Attachment(
-                    Confined::try_from_iter(set.iter().map(|assignment| {
-                        let mut assignment = assignment.clone();
-                        counter += assignment.reveal_seals(known_seals);
-                        assignment
-                    }))
-                    .expect("same size"),
-                );
-            }
-        }
-        counter
-    }
-}
-
-impl ConcealSeals for TypedAssignments {
-    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
-        match self {
-            TypedAssignments::Void(data) => data as &mut dyn ConcealSeals,
-            TypedAssignments::Value(data) => data as &mut dyn ConcealSeals,
-            TypedAssignments::Data(data) => data as &mut dyn ConcealSeals,
-            TypedAssignments::Attachment(data) => data as &mut dyn ConcealSeals,
-        }
-        .conceal_seals(seals)
-    }
-}
-
-impl ConcealState for TypedAssignments {
-    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
-        match self {
-            TypedAssignments::Void(data) => data as &mut dyn ConcealState,
-            TypedAssignments::Value(data) => data as &mut dyn ConcealState,
-            TypedAssignments::Data(data) => data as &mut dyn ConcealState,
-            TypedAssignments::Attachment(data) => data as &mut dyn ConcealState,
-        }
-        .conceal_state_except(seals)
     }
 }

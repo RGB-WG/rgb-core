@@ -22,8 +22,6 @@
 
 pub mod seal;
 
-mod conceal;
-
 pub mod value;
 pub mod attachment;
 pub mod data;
@@ -35,8 +33,7 @@ mod bundle;
 
 pub use assignments::TypedAssignments;
 pub use attachment::AttachId;
-pub use bundle::{BundleId, ConcealTransitions, TransitionBundle};
-pub use conceal::{ConcealSeals, ConcealState, RevealSeals};
+pub use bundle::{BundleId, TransitionBundle};
 pub use global_state::{FieldValues, Metadata};
 pub use operations::{
     ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, OutpointParseError, OwnedRights,

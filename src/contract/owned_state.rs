@@ -22,17 +22,13 @@
 
 use core::cmp::Ordering;
 use core::fmt::Debug;
-use std::collections::HashMap;
 use std::io;
 
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{CommitEncode, CommitmentId, Conceal};
 use strict_encoding::{StrictEncode, StrictWriter};
 
-use super::{
-    attachment, data, seal, value, ConcealSeals, ConcealState, ConfidentialState, RevealSeals,
-    RevealedState,
-};
+use super::{attachment, data, seal, value, ConfidentialState, RevealedState};
 use crate::LIB_NAME_RGB;
 
 /// Categories of the state
@@ -287,117 +283,6 @@ where
                 seal: *seal,
                 state: state.conceal().into(),
             },
-        }
-    }
-}
-
-impl<StateType> RevealSeals for Assignment<StateType>
-where
-    StateType: State,
-    StateType::Revealed: Conceal,
-    StateType::Confidential: PartialEq + Eq,
-    <StateType as State>::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
-{
-    fn reveal_seals(&mut self, known_seals: &[seal::Revealed]) -> usize {
-        let known_seals: HashMap<seal::Confidential, seal::Revealed> = known_seals
-            .iter()
-            .map(|rev| (rev.conceal(), *rev))
-            .collect();
-
-        let mut counter = 0;
-        match self {
-            Assignment::Confidential { seal, state } => {
-                if let Some(reveal) = known_seals.get(seal) {
-                    *self = Assignment::ConfidentialState {
-                        seal: *reveal,
-                        state: state.clone(),
-                    };
-                    counter += 1;
-                };
-            }
-            Assignment::ConfidentialSeal { seal, state } => {
-                if let Some(reveal) = known_seals.get(seal) {
-                    *self = Assignment::Revealed {
-                        seal: *reveal,
-                        state: state.clone(),
-                    };
-                    counter += 1;
-                };
-            }
-            _ => {}
-        }
-        counter
-    }
-}
-
-impl<StateType> ConcealSeals for Assignment<StateType>
-where
-    StateType: State,
-    StateType::Revealed: Conceal,
-    StateType::Confidential: PartialEq + Eq,
-    <StateType as State>::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
-{
-    fn conceal_seals(&mut self, seals: &[seal::Confidential]) -> usize {
-        match self {
-            Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => 0,
-            Assignment::ConfidentialState { seal, state } => {
-                if seals.contains(&seal.conceal()) {
-                    *self = Assignment::<StateType>::Confidential {
-                        state: state.clone(),
-                        seal: seal.conceal(),
-                    };
-                    1
-                } else {
-                    0
-                }
-            }
-            Assignment::Revealed { seal, state } => {
-                if seals.contains(&seal.conceal()) {
-                    *self = Assignment::<StateType>::ConfidentialSeal {
-                        state: state.clone(),
-                        seal: seal.conceal(),
-                    };
-                    1
-                } else {
-                    0
-                }
-            }
-        }
-    }
-}
-
-impl<StateType> ConcealState for Assignment<StateType>
-where
-    StateType: State,
-    StateType::Revealed: Conceal,
-    StateType::Confidential: PartialEq + Eq,
-    <StateType as State>::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
-{
-    fn conceal_state_except(&mut self, seals: &[seal::Confidential]) -> usize {
-        match self {
-            Assignment::Confidential { .. } | Assignment::ConfidentialState { .. } => 0,
-            Assignment::ConfidentialSeal { seal, state } => {
-                if seals.contains(seal) {
-                    0
-                } else {
-                    *self = Assignment::<StateType>::Confidential {
-                        state: state.conceal().into(),
-                        seal: *seal,
-                    };
-                    1
-                }
-            }
-            Assignment::Revealed { seal, state } => {
-                if seals.contains(&seal.conceal()) {
-                    0
-                } else {
-                    *self = Assignment::<StateType>::ConfidentialState {
-                        state: state.conceal().into(),
-                        seal: *seal,
-                    };
-                    1
-                }
-            }
         }
     }
 }
