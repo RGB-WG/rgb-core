@@ -25,11 +25,13 @@ mod vm;
 mod subschema;
 mod model;
 mod state;
+mod verify;
 
 use core::iter::FromIterator;
 use core::ops::AddAssign;
 
 use bp::Txid;
+pub use verify::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, NodeType, SchemaId};
 use crate::{data, BundleId, NodeId, OccurrencesMismatch, SealEndpoint};

@@ -22,7 +22,7 @@
 
 use crate::validation::Failure;
 use crate::vm::AluRuntime;
-use crate::{validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, Scripts};
+use crate::{validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, Script};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
@@ -41,7 +41,7 @@ pub trait VirtualMachine {
     ) -> Result<(), validation::Failure>;
 }
 
-impl VirtualMachine for Scripts {
+impl VirtualMachine for Script {
     fn validate(
         &self,
         node_id: NodeId,
@@ -53,7 +53,7 @@ impl VirtualMachine for Scripts {
         current_meta: &Metadata,
     ) -> Result<(), validation::Failure> {
         match self {
-            Scripts::AluVM(script) => AluRuntime::new(script).validate(
+            Script::AluVM(script) => AluRuntime::new(script).validate(
                 node_id,
                 node_subtype,
                 previous_owned_rights,

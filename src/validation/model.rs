@@ -31,7 +31,7 @@ use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
     validation, Assignment, FieldValues, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
-    ParentOwnedRights, ParentPublicRights, PublicRights, Schema, State, TypedAssignments,
+    ParentOwnedRights, ParentPublicRights, PublicRights, Schema, Script, State, TypedAssignments,
 };
 
 impl Schema {
@@ -39,7 +39,7 @@ impl Schema {
         &self,
         all_nodes: &BTreeMap<NodeId, &dyn Node>,
         node: &dyn Node,
-        vm: AluRuntime,
+        script: &Script,
     ) -> validation::Status {
         let node_id = node.node_id();
 
@@ -155,6 +155,7 @@ impl Schema {
         );
         status += self.validate_owned_rights(node_id, node.owned_rights(), assignments_structure);
         status += self.validate_public_rights(node_id, node.public_rights(), valencies_structure);
+
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the node data match the schema, so
         // scripts are not required to validate the structure of the state
@@ -166,7 +167,7 @@ impl Schema {
             &parent_public_rights,
             node.public_rights(),
             node.metadata(),
-            vm,
+            script,
         );
         status
     }
@@ -383,12 +384,16 @@ impl Schema {
         parent_public_rights: &PublicRights,
         public_rights: &PublicRights,
         metadata: &Metadata,
-        vm: AluRuntime,
+        script: &Script,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
         // We do not validate public rights, since they do not have an
         // associated state and there is nothing to validate beyond schema
+
+        let vm = match script {
+            Script::AluVM(lib) => Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine>,
+        };
 
         if let Err(err) = vm.validate(
             node_id,

@@ -33,5 +33,5 @@ pub use nodes::{
 };
 pub use occurrences::{Occurrences, OccurrencesMismatch};
 pub use schema::{ExtensionType, FieldType, Schema, SchemaId, TransitionType};
-pub use script::{Scripts, VmType};
+pub use script::{Script, VmType};
 pub use state::{StateSchema, ValueType};

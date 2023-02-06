@@ -43,7 +43,7 @@ pub enum VmType {
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = order)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub enum Scripts {
+pub enum Script {
     /// AluVM: pure functional register-based virtual machine designed for RGB
     /// and multiparty computing.
     ///
@@ -56,14 +56,14 @@ pub enum Scripts {
     AluVM(MediumVec<u8>),
 }
 
-impl Default for Scripts {
-    fn default() -> Self { Scripts::AluVM(none!()) }
+impl Default for Script {
+    fn default() -> Self { Script::AluVM(none!()) }
 }
 
-impl Scripts {
+impl Script {
     pub fn vm_type(&self) -> VmType {
         match self {
-            Scripts::AluVM(_) => VmType::AluVM,
+            Script::AluVM(_) => VmType::AluVM,
         }
     }
 }

@@ -20,21 +20,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::iter::FromIterator;
-use core::ops::AddAssign;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
 use bp::seals::txout::TxoSeal;
 use bp::{Tx, Txid};
-use commit_verify::mpc;
+use commit_verify::{mpc, Conceal};
 
-use super::schema::{NodeType, OccurrencesError};
-use super::{schema, seal, ContractId, Node, NodeId, Schema, SchemaId, TypedAssignments};
-use crate::schema::SchemaVerify;
-use crate::stash::Consignment;
-use crate::temp::ResolveTx;
-use crate::{data, outpoint, tx, txid, BundleId, Extension, SealEndpoint, TransitionBundle};
+use super::graph::Consignment;
+use super::schema::NodeType;
+use super::{Failure, Status, Validity, Warning};
+use crate::validation::subschema::SchemaVerify;
+use crate::{
+    schema, seal, BundleId, ContractId, Extension, Node, NodeId, Schema, SchemaId,
+    TransitionBundle, TypedAssignments,
+};
+
+#[derive(Debug, Display, Error)]
+#[display(doc_comments)]
+/// transaction {0} is not mined
+pub struct TxResolverError(Txid);
+
+pub trait ResolveTx {
+    fn resolve_tx(&self, txid: Txid) -> Result<Tx, TxResolverError>;
+}
 
 pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx> {
     consignment: &'consignment C,
@@ -73,7 +82,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
-            for transition in bundle.known_transitions() {
+            for transition in bundle.revealed.keys() {
                 let node_id = transition.node_id();
                 node_index.insert(node_id, transition);
                 anchor_index.insert(node_id, anchor);
@@ -103,7 +112,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 // Checking for endpoint definition duplicates
                 if !transition
                     .to_confiential_seals()
-                    .contains(&seal_endpoint.commit_conceal())
+                    .contains(&seal_endpoint.conceal())
                 {
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
@@ -182,9 +191,9 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         // Validating schema against root schema
         if let Some(root) = root {
             self.status += schema.schema_verify(root);
-        } else if schema.root_id != default!() {
+        } else if let Some(root_id) = schema.subset_of {
             self.status
-                .add_failure(Failure::SchemaRootRequired(schema.root_id));
+                .add_failure(Failure::SchemaRootRequired(root_id));
         }
     }
 
@@ -221,16 +230,16 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                     .status
                     .failures
                     .iter()
-                    .position(|f| f == &Failure::WitnessTransactionMissed(txid!(anchor.txid)))
+                    .position(|f| f == &Failure::WitnessTransactionMissed(anchor.txid))
                 {
                     self.status.failures.remove(pos);
                     self.status
                         .unresolved_txids
-                        .retain(|txid| *txid != txid!(anchor.txid));
-                    self.status.unmined_endpoint_txids.push(txid!(anchor.txid));
+                        .retain(|txid| *txid != anchor.txid);
+                    self.status.unmined_endpoint_txids.push(anchor.txid);
                     self.status
                         .warnings
-                        .push(Warning::EndpointTransactionMissed(txid!(anchor.txid)));
+                        .push(Warning::EndpointTransactionMissed(anchor.txid));
                 }
             }
         }
@@ -289,10 +298,8 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                     //               anchor. This must be done with
                     //               deterministic bitcoin commitments & LNPBP-4
                     if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
-                        self.status.add_failure(Failure::TransitionNotInAnchor(
-                            node_id,
-                            txid!(anchor.txid),
-                        ));
+                        self.status
+                            .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.txid));
                     }
 
                     self.validate_graph_node(node, bundle_id, anchor);
@@ -351,7 +358,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         bundle_id: BundleId,
         anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
-        let txid = txid!(anchor.txid);
+        let txid = anchor.txid;
         let node_id = node.node_id();
 
         // Check that the anchor is committed into a transaction spending all of
@@ -384,12 +391,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 // [VALIDATION]: Checking anchor deterministic bitcoin
                 //               commitment
                 if anchor
-                    .verify(
-                        self.contract_id,
-                        bundle_id.into(),
-                        // TODO: Remove this temporary conversion fix
-                        tx!(&witness_tx),
-                    )
+                    .verify(self.contract_id, bundle_id.into(), &witness_tx)
                     .is_err()
                 {
                     // TODO: Save error details
@@ -494,7 +496,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                     None,
                 ) => {
                     // We are at genesis, so the outpoint must contain tx
-                    Some(bp::Outpoint::new(txid!(txid), vout))
+                    Some(bp::Outpoint::new(txid, vout))
                 }
                 (Ok(Some(_)), None) => {
                     // This can't happen, since if we have a node in the index
@@ -503,7 +505,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
                 }
                 /* -> ... so we can check that the bitcoin transaction
                  * references it as one of its inputs */
-                (Ok(Some(seal)), Some(anchor)) => Some(outpoint!(seal.outpoint_or(anchor.txid))),
+                (Ok(Some(seal)), Some(anchor)) => Some(seal.outpoint_or(anchor.txid)),
             }
         {
             if !witness_tx
