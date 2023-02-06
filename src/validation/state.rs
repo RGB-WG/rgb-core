@@ -25,11 +25,9 @@ use core::any::Any;
 use amplify::AsAny;
 use commit_verify::Conceal;
 
-use crate::contract::owned_state::{
-    AttachmentStrategy, DeclarativeStrategy, HashStrategy, PedersenStrategy,
-};
+use crate::contract::state::{AttachmentPair, DeclarativePair, FungiblePair, StructuredPair};
 use crate::schema::OwnedRightType;
-use crate::{validation, Assignment, NodeId, State, StateSchema};
+use crate::{validation, AssignedState, NodeId, StatePair, StateSchema};
 
 impl StateSchema {
     pub fn validate<STATE>(
@@ -37,21 +35,21 @@ impl StateSchema {
         // type_system: &TypeSystem,
         node_id: &NodeId,
         assignment_id: OwnedRightType,
-        data: &Assignment<STATE>,
+        data: &AssignedState<STATE>,
     ) -> validation::Status
     where
-        STATE: State,
+        STATE: StatePair,
         STATE::Confidential: PartialEq + Eq,
         STATE::Confidential: From<<STATE::Revealed as Conceal>::Concealed>,
     {
         let mut status = validation::Status::new();
         match data {
-            Assignment::Confidential { state, .. } |
-            Assignment::ConfidentialState { state, .. } => {
+            AssignedState::Confidential { state, .. } |
+            AssignedState::ConfidentialState { state, .. } => {
                 let a: &dyn Any = state.as_any();
                 match self {
                     StateSchema::Declarative => {
-                        if a.downcast_ref::<<DeclarativeStrategy as State>::Confidential>()
+                        if a.downcast_ref::<<DeclarativePair as StatePair>::Confidential>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -61,7 +59,7 @@ impl StateSchema {
                     }
                     StateSchema::Arithmetic(_) => {
                         if let Some(value) =
-                            a.downcast_ref::<<PedersenStrategy as State>::Confidential>()
+                            a.downcast_ref::<<FungiblePair as StatePair>::Confidential>()
                         {
                             // [SECURITY-CRITICAL]: Bulletproofs validation
                             if let Err(err) = value.verify_range_proof() {
@@ -81,25 +79,23 @@ impl StateSchema {
                         //       add information to the status like with hashed
                         //       data below
                     }
-                    StateSchema::Structured(_) => {
-                        match a.downcast_ref::<<HashStrategy as State>::Confidential>() {
-                            None => {
-                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                    assignment_id,
-                                ));
-                            }
-                            Some(_) => {
-                                status.add_info(
-                                    validation::Info::UncheckableConfidentialStateData(
-                                        *node_id,
-                                        assignment_id,
-                                    ),
-                                );
-                            }
+                    StateSchema::Structured(_) => match a
+                        .downcast_ref::<<StructuredPair as StatePair>::Confidential>()
+                    {
+                        None => {
+                            status.add_failure(validation::Failure::SchemaMismatchedStateType(
+                                assignment_id,
+                            ));
                         }
-                    }
+                        Some(_) => {
+                            status.add_info(validation::Info::UncheckableConfidentialStateData(
+                                *node_id,
+                                assignment_id,
+                            ));
+                        }
+                    },
                     StateSchema::Attachment => {
-                        if a.downcast_ref::<<AttachmentStrategy as State>::Confidential>()
+                        if a.downcast_ref::<<AttachmentPair as StatePair>::Confidential>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -109,11 +105,12 @@ impl StateSchema {
                     }
                 }
             }
-            Assignment::Revealed { state, .. } | Assignment::ConfidentialSeal { state, .. } => {
+            AssignedState::Revealed { state, .. } |
+            AssignedState::ConfidentialSeal { state, .. } => {
                 let a: &dyn Any = state.as_any();
                 match self {
                     StateSchema::Declarative => {
-                        if a.downcast_ref::<<DeclarativeStrategy as State>::Revealed>()
+                        if a.downcast_ref::<<DeclarativePair as StatePair>::Revealed>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -122,7 +119,7 @@ impl StateSchema {
                         }
                     }
                     StateSchema::Arithmetic(_format) => {
-                        if a.downcast_ref::<<PedersenStrategy as State>::Revealed>()
+                        if a.downcast_ref::<<FungiblePair as StatePair>::Revealed>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -134,7 +131,7 @@ impl StateSchema {
                         // like with hashed data below
                     }
                     StateSchema::Structured(_semid) => {
-                        match a.downcast_ref::<<HashStrategy as State>::Revealed>() {
+                        match a.downcast_ref::<<StructuredPair as StatePair>::Revealed>() {
                             None => {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
                                     assignment_id,
@@ -146,7 +143,7 @@ impl StateSchema {
                         }
                     }
                     StateSchema::Attachment => {
-                        if a.downcast_ref::<<AttachmentStrategy as State>::Revealed>()
+                        if a.downcast_ref::<<AttachmentPair as StatePair>::Revealed>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(

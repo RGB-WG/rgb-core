@@ -33,7 +33,7 @@ use super::{Failure, Status, Validity, Warning};
 use crate::validation::subschema::SchemaVerify;
 use crate::{
     schema, seal, BundleId, ContractId, Extension, Node, NodeId, Schema, SchemaId,
-    TransitionBundle, TypedAssignments,
+    TransitionBundle, TypedState,
 };
 
 #[derive(Debug, Display, Error)]
@@ -455,7 +455,7 @@ impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
         node_id: NodeId,
         ancestor_id: NodeId,
         assignment_type: schema::OwnedRightType,
-        variant: &'consignment TypedAssignments,
+        variant: &'consignment TypedState,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->

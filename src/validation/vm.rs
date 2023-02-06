@@ -22,7 +22,7 @@
 
 use crate::validation::Failure;
 use crate::vm::AluRuntime;
-use crate::{validation, Metadata, NodeId, NodeSubtype, OwnedRights, PublicRights, Script};
+use crate::{validation, GlobalState, NodeId, NodeSubtype, OwnedState, Script, Valencies};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
@@ -33,11 +33,11 @@ pub trait VirtualMachine {
         &self,
         node_id: NodeId,
         node_subtype: NodeSubtype,
-        previous_owned_rights: &OwnedRights,
-        current_owned_rights: &OwnedRights,
-        previous_public_rights: &PublicRights,
-        current_public_rights: &PublicRights,
-        current_meta: &Metadata,
+        previous_owned_rights: &OwnedState,
+        current_owned_rights: &OwnedState,
+        previous_public_rights: &Valencies,
+        current_public_rights: &Valencies,
+        current_meta: &GlobalState,
     ) -> Result<(), validation::Failure>;
 }
 
@@ -46,11 +46,11 @@ impl VirtualMachine for Script {
         &self,
         node_id: NodeId,
         node_subtype: NodeSubtype,
-        previous_owned_rights: &OwnedRights,
-        current_owned_rights: &OwnedRights,
-        previous_public_rights: &PublicRights,
-        current_public_rights: &PublicRights,
-        current_meta: &Metadata,
+        previous_owned_rights: &OwnedState,
+        current_owned_rights: &OwnedState,
+        previous_public_rights: &Valencies,
+        current_public_rights: &Valencies,
+        current_meta: &GlobalState,
     ) -> Result<(), validation::Failure> {
         match self {
             Script::AluVM(script) => AluRuntime::new(script).validate(
@@ -72,11 +72,11 @@ impl<'script> VirtualMachine for AluRuntime<'script> {
         &self,
         node_id: NodeId,
         node_subtype: NodeSubtype,
-        previous_owned_rights: &OwnedRights,
-        current_owned_rights: &OwnedRights,
-        previous_public_rights: &PublicRights,
-        current_public_rights: &PublicRights,
-        current_meta: &Metadata,
+        previous_owned_rights: &OwnedState,
+        current_owned_rights: &OwnedState,
+        previous_public_rights: &Valencies,
+        current_public_rights: &Valencies,
+        current_meta: &GlobalState,
     ) -> Result<(), Failure> {
         // TODO: Implement validation with AluVM
         /*

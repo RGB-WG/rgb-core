@@ -30,8 +30,8 @@ use crate::schema::{MetadataStructure, OwnedRightsStructure, PublicRightsStructu
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    validation, Assignment, FieldValues, Metadata, Node, NodeId, NodeSubtype, OwnedRights,
-    ParentOwnedRights, ParentPublicRights, PublicRights, Schema, Script, State, TypedAssignments,
+    validation, AssignedState, FieldValues, GlobalState, Node, NodeId, NodeSubtype, OwnedState,
+    PrevState, Redeemed, Schema, Script, StatePair, TypedState, Valencies,
 };
 
 impl Schema {
@@ -186,7 +186,7 @@ impl Schema {
     fn validate_meta(
         &self,
         node_id: NodeId,
-        metadata: &Metadata,
+        metadata: &GlobalState,
         metadata_structure: &MetadataStructure,
     ) -> validation::Status {
         let mut status = validation::Status::new();
@@ -240,7 +240,7 @@ impl Schema {
     fn validate_parent_owned_rights(
         &self,
         node_id: NodeId,
-        owned_rights: &OwnedRights,
+        owned_rights: &OwnedState,
         owned_rights_structure: &OwnedRightsStructure,
     ) -> validation::Status {
         let mut status = validation::Status::new();
@@ -259,7 +259,7 @@ impl Schema {
         for (owned_type_id, occ) in owned_rights_structure {
             let len = owned_rights
                 .get(owned_type_id)
-                .map(TypedAssignments::len)
+                .map(TypedState::len)
                 .unwrap_or(0);
 
             // Checking number of ancestor's assignment occurrences
@@ -278,7 +278,7 @@ impl Schema {
     fn validate_parent_public_rights(
         &self,
         node_id: NodeId,
-        public_rights: &PublicRights,
+        public_rights: &Valencies,
         public_rights_structure: &PublicRightsStructure,
     ) -> validation::Status {
         let mut status = validation::Status::new();
@@ -298,7 +298,7 @@ impl Schema {
     fn validate_owned_rights(
         &self,
         node_id: NodeId,
-        owned_rights: &OwnedRights,
+        owned_rights: &OwnedState,
         owned_rights_structure: &OwnedRightsStructure,
     ) -> validation::Status {
         let mut status = validation::Status::new();
@@ -317,7 +317,7 @@ impl Schema {
         for (owned_type_id, occ) in owned_rights_structure {
             let len = owned_rights
                 .get(owned_type_id)
-                .map(TypedAssignments::len)
+                .map(TypedState::len)
                 .unwrap_or(0);
 
             // Checking number of assignment occurrences
@@ -336,16 +336,16 @@ impl Schema {
 
             match owned_rights.get(owned_type_id) {
                 None => {}
-                Some(TypedAssignments::Void(set)) => set
+                Some(TypedState::Declarative(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(&node_id, *owned_type_id, data)),
-                Some(TypedAssignments::Value(set)) => set
+                Some(TypedState::Fungible(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(&node_id, *owned_type_id, data)),
-                Some(TypedAssignments::Data(set)) => set
+                Some(TypedState::Structured(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(&node_id, *owned_type_id, data)),
-                Some(TypedAssignments::Attachment(set)) => set
+                Some(TypedState::Attachment(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(&node_id, *owned_type_id, data)),
             };
@@ -357,7 +357,7 @@ impl Schema {
     fn validate_public_rights(
         &self,
         node_id: NodeId,
-        public_rights: &PublicRights,
+        public_rights: &Valencies,
         public_rights_structure: &PublicRightsStructure,
     ) -> validation::Status {
         let mut status = validation::Status::new();
@@ -379,11 +379,11 @@ impl Schema {
         &self,
         node_id: NodeId,
         node_subtype: NodeSubtype,
-        parent_owned_rights: &OwnedRights,
-        owned_rights: &OwnedRights,
-        parent_public_rights: &PublicRights,
-        public_rights: &PublicRights,
-        metadata: &Metadata,
+        parent_owned_rights: &OwnedState,
+        owned_rights: &OwnedState,
+        parent_public_rights: &Valencies,
+        public_rights: &Valencies,
+        metadata: &GlobalState,
         script: &Script,
     ) -> validation::Status {
         let mut status = validation::Status::new();
@@ -413,9 +413,9 @@ impl Schema {
 
 fn extract_parent_owned_rights(
     nodes: &BTreeMap<NodeId, &dyn Node>,
-    parent_owned_rights: &ParentOwnedRights,
+    parent_owned_rights: &PrevState,
     status: &mut validation::Status,
-) -> OwnedRights {
+) -> OwnedState {
     let mut owned_rights = bmap! {};
     for (id, details) in parent_owned_rights.iter() {
         let parent_node = match nodes.get(id) {
@@ -426,9 +426,9 @@ fn extract_parent_owned_rights(
             Some(node) => node,
         };
 
-        fn filter<STATE>(set: &[Assignment<STATE>], indexes: &[u16]) -> Vec<Assignment<STATE>>
+        fn filter<STATE>(set: &[AssignedState<STATE>], indexes: &[u16]) -> Vec<AssignedState<STATE>>
         where
-            STATE: State + Clone,
+            STATE: StatePair + Clone,
             STATE::Confidential: PartialEq + Eq,
             STATE::Confidential: From<<STATE::Revealed as Conceal>::Concealed>,
         {
@@ -446,42 +446,42 @@ fn extract_parent_owned_rights(
 
         for (type_id, indexes) in details {
             match parent_node.owned_rights_by_type(*type_id) {
-                Some(TypedAssignments::Void(set)) => {
+                Some(TypedState::Declarative(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_rights
                         .entry(*type_id)
-                        .or_insert_with(|| TypedAssignments::Void(Default::default()))
-                        .as_declarative_assignments_mut()
+                        .or_insert_with(|| TypedState::Declarative(Default::default()))
+                        .as_declarative_mut()
                     {
                         state.extend(set).expect("same size");
                     }
                 }
-                Some(TypedAssignments::Value(set)) => {
+                Some(TypedState::Fungible(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_rights
                         .entry(*type_id)
-                        .or_insert_with(|| TypedAssignments::Value(Default::default()))
-                        .as_value_assignments_mut()
+                        .or_insert_with(|| TypedState::Fungible(Default::default()))
+                        .as_fungible_mut()
                     {
                         state.extend(set).expect("same size");
                     }
                 }
-                Some(TypedAssignments::Data(set)) => {
+                Some(TypedState::Structured(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_rights
                         .entry(*type_id)
-                        .or_insert_with(|| TypedAssignments::Data(Default::default()))
-                        .as_data_assignments_mut()
+                        .or_insert_with(|| TypedState::Structured(Default::default()))
+                        .as_structured_mut()
                     {
                         state.extend(set).expect("same size");
                     }
                 }
-                Some(TypedAssignments::Attachment(set)) => {
+                Some(TypedState::Attachment(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_rights
                         .entry(*type_id)
-                        .or_insert_with(|| TypedAssignments::Attachment(Default::default()))
-                        .as_attachment_assignments_mut()
+                        .or_insert_with(|| TypedState::Attachment(Default::default()))
+                        .as_attachment_mut()
                     {
                         state.extend(set).expect("same size");
                     }
@@ -500,10 +500,10 @@ fn extract_parent_owned_rights(
 
 fn extract_parent_public_rights(
     nodes: &BTreeMap<NodeId, &dyn Node>,
-    parent_public_rights: &ParentPublicRights,
+    parent_public_rights: &Redeemed,
     status: &mut validation::Status,
-) -> PublicRights {
-    let mut public_rights = PublicRights::default();
+) -> Valencies {
+    let mut public_rights = Valencies::default();
     for (id, public_right_types) in parent_public_rights.iter() {
         if nodes.get(id).is_none() {
             status.add_failure(validation::Failure::TransitionAbsent(*id));

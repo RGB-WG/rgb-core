@@ -33,7 +33,7 @@ use bp::seals::txout::TxoSeal;
 use bp::{Chain, Outpoint, Txid};
 use commit_verify::{mpc, CommitStrategy, CommitmentId};
 
-use super::{seal, ConfidentialDataError, Metadata, TypedAssignments};
+use super::{seal, ConfidentialDataError, GlobalState, TypedState};
 use crate::schema::{
     self, ExtensionType, FieldType, NodeSubtype, NodeType, OwnedRightType, PublicRightType,
     SchemaId, TransitionType,
@@ -88,10 +88,10 @@ impl FromStr for NodeOutpoint {
     }
 }
 
-pub type PublicRights = TinyOrdSet<schema::PublicRightType>;
-pub type OwnedRights = TinyOrdMap<schema::OwnedRightType, TypedAssignments>;
-pub type ParentOwnedRights = TinyOrdMap<NodeId, TinyOrdMap<schema::OwnedRightType, TinyVec<u16>>>;
-pub type ParentPublicRights = TinyOrdMap<NodeId, TinyOrdSet<schema::PublicRightType>>;
+pub type Valencies = TinyOrdSet<schema::PublicRightType>;
+pub type OwnedState = TinyOrdMap<schema::OwnedRightType, TypedState>;
+pub type PrevState = TinyOrdMap<NodeId, TinyOrdMap<schema::OwnedRightType, TinyVec<u16>>>;
+pub type Redeemed = TinyOrdMap<NodeId, TinyOrdSet<schema::PublicRightType>>;
 
 /// Unique node (genesis, extensions & state transition) identifier equivalent
 /// to the commitment hash
@@ -191,30 +191,30 @@ pub trait Node: AsAny {
     /// [`Option::None`] for genesis and trate transitions
     fn extension_type(&self) -> Option<ExtensionType>;
 
-    /// Returns reference to a full set of metadata (in form of [`Metadata`]
+    /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract node.
-    fn metadata(&self) -> &Metadata;
+    fn metadata(&self) -> &GlobalState;
 
     /// Returns reference to information about the owned rights in form of
-    /// [`ParentOwnedRights`] wrapper structure which this node updates with
+    /// [`PrevState`] wrapper structure which this node updates with
     /// state transition ("parent owned rights").
     ///
     /// This is always an empty `Vec` for [`Genesis`] and [`Extension`] node
     /// types.
-    fn parent_owned_rights(&self) -> &ParentOwnedRights;
+    fn parent_owned_rights(&self) -> &PrevState;
 
     /// Returns reference to information about the public rights (in form of
-    /// [`ParentPublicRights`] wrapper structure), defined with "parent" state
+    /// [`Redeemed`] wrapper structure), defined with "parent" state
     /// extensions (i.e. those finalized with the current state transition) or
     /// referenced by another state extension, which this node updates
     /// ("parent public rights").
     ///
     /// This is always an empty `Vec` for [`Genesis`].
-    fn parent_public_rights(&self) -> &ParentPublicRights;
-    fn owned_rights(&self) -> &OwnedRights;
-    fn owned_rights_mut(&mut self) -> &mut OwnedRights;
-    fn public_rights(&self) -> &PublicRights;
-    fn public_rights_mut(&mut self) -> &mut PublicRights;
+    fn parent_public_rights(&self) -> &Redeemed;
+    fn owned_rights(&self) -> &OwnedState;
+    fn owned_rights_mut(&mut self) -> &mut OwnedState;
+    fn public_rights(&self) -> &Valencies;
+    fn public_rights_mut(&mut self) -> &mut Valencies;
 
     #[inline]
     fn field_types(&self) -> Vec<FieldType> { self.metadata().keys().copied().collect() }
@@ -286,7 +286,7 @@ pub trait Node: AsAny {
     }
 
     #[inline]
-    fn owned_rights_by_type(&self, t: OwnedRightType) -> Option<&TypedAssignments> {
+    fn owned_rights_by_type(&self, t: OwnedRightType) -> Option<&TypedState> {
         self.owned_rights()
             .iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
@@ -324,7 +324,7 @@ pub trait Node: AsAny {
     ) -> Result<Vec<seal::Revealed>, ConfidentialDataError> {
         Ok(self
             .owned_rights_by_type(assignment_type)
-            .map(TypedAssignments::revealed_seals)
+            .map(TypedState::revealed_seals)
             .transpose()?
             .unwrap_or_default())
     }
@@ -343,7 +343,7 @@ pub trait Node: AsAny {
         assignment_type: OwnedRightType,
     ) -> Vec<seal::Revealed> {
         self.owned_rights_by_type(assignment_type)
-            .map(TypedAssignments::filter_revealed_seals)
+            .map(TypedState::filter_revealed_seals)
             .unwrap_or_else(Vec::new)
     }
 
@@ -368,9 +368,9 @@ pub trait Node: AsAny {
 pub struct Genesis {
     schema_id: SchemaId,
     chain: Chain,
-    metadata: Metadata,
-    owned_rights: OwnedRights,
-    public_rights: PublicRights,
+    metadata: GlobalState,
+    owned_rights: OwnedState,
+    public_rights: Valencies,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
@@ -380,10 +380,10 @@ pub struct Genesis {
 pub struct Extension {
     extension_type: ExtensionType,
     contract_id: ContractId,
-    metadata: Metadata,
-    owned_rights: OwnedRights,
-    parent_public_rights: ParentPublicRights,
-    public_rights: PublicRights,
+    metadata: GlobalState,
+    owned_rights: OwnedState,
+    parent_public_rights: Redeemed,
+    public_rights: Valencies,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
@@ -392,10 +392,10 @@ pub struct Extension {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Transition {
     transition_type: TransitionType,
-    metadata: Metadata,
-    parent_owned_rights: ParentOwnedRights,
-    owned_rights: OwnedRights,
-    public_rights: PublicRights,
+    metadata: GlobalState,
+    parent_owned_rights: PrevState,
+    owned_rights: OwnedState,
+    public_rights: Valencies,
 }
 
 // TODO: Remove after TransitionBundling refactoring
@@ -459,29 +459,27 @@ impl Node for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &ParentOwnedRights {
+    fn parent_owned_rights(&self) -> &PrevState {
         panic!("genesis can't close previous single-use-seals")
     }
 
     #[inline]
-    fn parent_public_rights(&self) -> &ParentPublicRights {
-        panic!("genesis can't extend previous state")
-    }
+    fn parent_public_rights(&self) -> &Redeemed { panic!("genesis can't extend previous state") }
 
     #[inline]
-    fn metadata(&self) -> &Metadata { &self.metadata }
+    fn metadata(&self) -> &GlobalState { &self.metadata }
 
     #[inline]
-    fn owned_rights(&self) -> &OwnedRights { &self.owned_rights }
+    fn owned_rights(&self) -> &OwnedState { &self.owned_rights }
 
     #[inline]
-    fn owned_rights_mut(&mut self) -> &mut OwnedRights { &mut self.owned_rights }
+    fn owned_rights_mut(&mut self) -> &mut OwnedState { &mut self.owned_rights }
 
     #[inline]
-    fn public_rights(&self) -> &PublicRights { &self.public_rights }
+    fn public_rights(&self) -> &Valencies { &self.public_rights }
 
     #[inline]
-    fn public_rights_mut(&mut self) -> &mut PublicRights { &mut self.public_rights }
+    fn public_rights_mut(&mut self) -> &mut Valencies { &mut self.public_rights }
 }
 
 impl Node for Extension {
@@ -504,27 +502,27 @@ impl Node for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &ParentOwnedRights {
+    fn parent_owned_rights(&self) -> &PrevState {
         panic!("extension can't close previous single-use-seals")
     }
 
     #[inline]
-    fn parent_public_rights(&self) -> &ParentPublicRights { &self.parent_public_rights }
+    fn parent_public_rights(&self) -> &Redeemed { &self.parent_public_rights }
 
     #[inline]
-    fn metadata(&self) -> &Metadata { &self.metadata }
+    fn metadata(&self) -> &GlobalState { &self.metadata }
 
     #[inline]
-    fn owned_rights(&self) -> &OwnedRights { &self.owned_rights }
+    fn owned_rights(&self) -> &OwnedState { &self.owned_rights }
 
     #[inline]
-    fn owned_rights_mut(&mut self) -> &mut OwnedRights { &mut self.owned_rights }
+    fn owned_rights_mut(&mut self) -> &mut OwnedState { &mut self.owned_rights }
 
     #[inline]
-    fn public_rights(&self) -> &PublicRights { &self.public_rights }
+    fn public_rights(&self) -> &Valencies { &self.public_rights }
 
     #[inline]
-    fn public_rights_mut(&mut self) -> &mut PublicRights { &mut self.public_rights }
+    fn public_rights_mut(&mut self) -> &mut Valencies { &mut self.public_rights }
 }
 
 impl Node for Transition {
@@ -547,36 +545,36 @@ impl Node for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn parent_owned_rights(&self) -> &ParentOwnedRights { &self.parent_owned_rights }
+    fn parent_owned_rights(&self) -> &PrevState { &self.parent_owned_rights }
 
     #[inline]
-    fn parent_public_rights(&self) -> &ParentPublicRights {
+    fn parent_public_rights(&self) -> &Redeemed {
         panic!("state transitions can't extend previous state")
     }
 
     #[inline]
-    fn metadata(&self) -> &Metadata { &self.metadata }
+    fn metadata(&self) -> &GlobalState { &self.metadata }
 
     #[inline]
-    fn owned_rights(&self) -> &OwnedRights { &self.owned_rights }
+    fn owned_rights(&self) -> &OwnedState { &self.owned_rights }
 
     #[inline]
-    fn owned_rights_mut(&mut self) -> &mut OwnedRights { &mut self.owned_rights }
+    fn owned_rights_mut(&mut self) -> &mut OwnedState { &mut self.owned_rights }
 
     #[inline]
-    fn public_rights(&self) -> &PublicRights { &self.public_rights }
+    fn public_rights(&self) -> &Valencies { &self.public_rights }
 
     #[inline]
-    fn public_rights_mut(&mut self) -> &mut PublicRights { &mut self.public_rights }
+    fn public_rights_mut(&mut self) -> &mut Valencies { &mut self.public_rights }
 }
 
 impl Genesis {
     pub fn with(
         schema_id: SchemaId,
         chain: Chain,
-        metadata: Metadata,
-        owned_rights: OwnedRights,
-        public_rights: PublicRights,
+        metadata: GlobalState,
+        owned_rights: OwnedState,
+        public_rights: Valencies,
     ) -> Self {
         Self {
             schema_id,
@@ -601,10 +599,10 @@ impl Extension {
     pub fn with(
         extension_type: ExtensionType,
         contract_id: ContractId,
-        metadata: Metadata,
-        owned_rights: OwnedRights,
-        parent_public_rights: ParentPublicRights,
-        public_rights: PublicRights,
+        metadata: GlobalState,
+        owned_rights: OwnedState,
+        parent_public_rights: Redeemed,
+        public_rights: Valencies,
     ) -> Self {
         Self {
             extension_type,
@@ -620,10 +618,10 @@ impl Extension {
 impl Transition {
     pub fn with(
         transition_type: impl Into<schema::TransitionType>,
-        metadata: Metadata,
-        owned_rights: OwnedRights,
-        public_rights: PublicRights,
-        parent_owned_rights: ParentOwnedRights,
+        metadata: GlobalState,
+        owned_rights: OwnedState,
+        public_rights: Valencies,
+        parent_owned_rights: PrevState,
     ) -> Self {
         Self {
             transition_type: transition_type.into(),

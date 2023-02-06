@@ -24,12 +24,40 @@ use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::io;
 
+use amplify::confinement::{Confined, TinyOrdMap, U8};
+use amplify::Wrapper;
 use commit_verify::merkle::MerkleNode;
 use commit_verify::{CommitEncode, CommitmentId, Conceal};
-use strict_encoding::{StrictEncode, StrictWriter};
+use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
 use super::{attachment, data, seal, value, ConfidentialState, RevealedState};
-use crate::LIB_NAME_RGB;
+use crate::{schema, LIB_NAME_RGB};
+
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[wrapper(Deref)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct FieldValues(Confined<Vec<data::Revealed>, 1, U8>);
+
+impl StrictDumb for FieldValues {
+    fn strict_dumb() -> Self { Self(confined_vec!(data::Revealed::strict_dumb())) }
+}
+
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct GlobalState(TinyOrdMap<schema::FieldType, FieldValues>);
 
 /// Categories of the state
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -39,43 +67,44 @@ pub enum StateType {
 
     /// Value-based state, i.e. which can be committed to with a Pedersen
     /// commitment
-    Value,
+    Fungible,
 
     /// State defined with custom data
-    Data,
+    Structured,
 
     /// Attached data container
     Attachment,
 }
-pub trait State: Debug {
+
+pub trait StatePair: Debug {
     type Confidential: ConfidentialState;
     type Revealed: RevealedState;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct DeclarativeStrategy;
-impl State for DeclarativeStrategy {
+pub struct DeclarativePair;
+impl StatePair for DeclarativePair {
     type Confidential = data::Void;
     type Revealed = data::Void;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct PedersenStrategy;
-impl State for PedersenStrategy {
+pub struct FungiblePair;
+impl StatePair for FungiblePair {
     type Confidential = value::Confidential;
     type Revealed = value::Revealed;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct HashStrategy;
-impl State for HashStrategy {
+pub struct StructuredPair;
+impl StatePair for StructuredPair {
     type Confidential = data::Confidential;
     type Revealed = data::Revealed;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct AttachmentStrategy;
-impl State for AttachmentStrategy {
+pub struct AttachmentPair;
+impl StatePair for AttachmentPair {
     type Confidential = attachment::Confidential;
     type Revealed = attachment::Revealed;
 }
@@ -95,33 +124,33 @@ impl State for AttachmentStrategy {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "snake_case")
 )]
-pub enum Assignment<StateType>
+pub enum AssignedState<Pair>
 where
-    StateType: State,
+    Pair: StatePair,
     // Deterministic ordering requires Eq operation, so the confidential
     // state must have it
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
     #[strict_type(tag = 0x00)]
     Confidential {
         seal: seal::Confidential,
-        state: StateType::Confidential,
+        state: Pair::Confidential,
     },
     #[strict_type(tag = 0x04)]
     Revealed {
         seal: seal::Revealed,
-        state: StateType::Revealed,
+        state: Pair::Revealed,
     },
     #[strict_type(tag = 0x02)]
     ConfidentialSeal {
         seal: seal::Confidential,
-        state: StateType::Revealed,
+        state: Pair::Revealed,
     },
     #[strict_type(tag = 0x01)]
     ConfidentialState {
         seal: seal::Revealed,
-        state: StateType::Confidential,
+        state: Pair::Confidential,
     },
 }
 
@@ -129,11 +158,11 @@ where
 // Assignment indexes are part of the transition ancestor's commitment, so
 // here we use deterministic ordering based on hash values of the concealed
 // seal data contained within the assignment
-impl<StateType> PartialOrd for Assignment<StateType>
+impl<Pair> PartialOrd for AssignedState<Pair>
 where
-    StateType: State,
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.to_confidential_seal()
@@ -141,11 +170,11 @@ where
     }
 }
 
-impl<StateType> Ord for Assignment<StateType>
+impl<Pair> Ord for AssignedState<Pair>
 where
-    StateType: State,
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.to_confidential_seal()
@@ -153,11 +182,11 @@ where
     }
 }
 
-impl<StateType> PartialEq for Assignment<StateType>
+impl<Pair> PartialEq for AssignedState<Pair>
 where
-    StateType: State,
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
     fn eq(&self, other: &Self) -> bool {
         self.to_confidential_seal() == other.to_confidential_seal() &&
@@ -165,33 +194,35 @@ where
     }
 }
 
-impl<StateType> Eq for Assignment<StateType>
+impl<Pair> Eq for AssignedState<Pair>
 where
-    StateType: State,
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
 }
 
-impl<StateType> Assignment<StateType>
+impl<Pair> AssignedState<Pair>
 where
-    StateType: State,
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
-    pub fn revealed(seal: seal::Revealed, state: StateType::Revealed) -> Self {
-        Assignment::Revealed { seal, state }
+    pub fn revealed(seal: seal::Revealed, state: Pair::Revealed) -> Self {
+        AssignedState::Revealed { seal, state }
     }
 
     pub fn with_seal_replaced(assignment: &Self, seal: seal::Revealed) -> Self {
         match assignment {
-            Assignment::Confidential { seal: _, state } |
-            Assignment::ConfidentialState { seal: _, state } => Assignment::ConfidentialState {
-                seal,
-                state: state.clone(),
-            },
-            Assignment::ConfidentialSeal { seal: _, state } |
-            Assignment::Revealed { seal: _, state } => Assignment::Revealed {
+            AssignedState::Confidential { seal: _, state } |
+            AssignedState::ConfidentialState { seal: _, state } => {
+                AssignedState::ConfidentialState {
+                    seal,
+                    state: state.clone(),
+                }
+            }
+            AssignedState::ConfidentialSeal { seal: _, state } |
+            AssignedState::Revealed { seal: _, state } => AssignedState::Revealed {
                 seal,
                 state: state.clone(),
             },
@@ -200,86 +231,81 @@ where
 
     pub fn to_confidential_seal(&self) -> seal::Confidential {
         match self {
-            Assignment::Revealed { seal, .. } | Assignment::ConfidentialState { seal, .. } => {
-                seal.conceal()
-            }
-            Assignment::Confidential { seal, .. } | Assignment::ConfidentialSeal { seal, .. } => {
-                *seal
-            }
+            AssignedState::Revealed { seal, .. } |
+            AssignedState::ConfidentialState { seal, .. } => seal.conceal(),
+            AssignedState::Confidential { seal, .. } |
+            AssignedState::ConfidentialSeal { seal, .. } => *seal,
         }
     }
 
     pub fn revealed_seal(&self) -> Option<seal::Revealed> {
         match self {
-            Assignment::Revealed { seal, .. } | Assignment::ConfidentialState { seal, .. } => {
-                Some(*seal)
-            }
-            Assignment::Confidential { .. } | Assignment::ConfidentialSeal { .. } => None,
+            AssignedState::Revealed { seal, .. } |
+            AssignedState::ConfidentialState { seal, .. } => Some(*seal),
+            AssignedState::Confidential { .. } | AssignedState::ConfidentialSeal { .. } => None,
         }
     }
 
-    pub fn to_confidential_state(&self) -> StateType::Confidential {
+    pub fn to_confidential_state(&self) -> Pair::Confidential {
         match self {
-            Assignment::Revealed { state, .. } | Assignment::ConfidentialSeal { state, .. } => {
-                state.conceal().into()
-            }
-            Assignment::Confidential { state, .. } |
-            Assignment::ConfidentialState { state, .. } => state.clone(),
+            AssignedState::Revealed { state, .. } |
+            AssignedState::ConfidentialSeal { state, .. } => state.conceal().into(),
+            AssignedState::Confidential { state, .. } |
+            AssignedState::ConfidentialState { state, .. } => state.clone(),
         }
     }
 
-    pub fn as_revealed_state(&self) -> Option<&StateType::Revealed> {
+    pub fn as_revealed_state(&self) -> Option<&Pair::Revealed> {
         match self {
-            Assignment::Revealed { state, .. } | Assignment::ConfidentialSeal { state, .. } => {
-                Some(state)
-            }
-            Assignment::Confidential { .. } | Assignment::ConfidentialState { .. } => None,
+            AssignedState::Revealed { state, .. } |
+            AssignedState::ConfidentialSeal { state, .. } => Some(state),
+            AssignedState::Confidential { .. } | AssignedState::ConfidentialState { .. } => None,
         }
     }
 
-    pub fn as_revealed(&self) -> Option<(&seal::Revealed, &StateType::Revealed)> {
+    pub fn as_revealed(&self) -> Option<(&seal::Revealed, &Pair::Revealed)> {
         match self {
-            Assignment::Revealed { seal, state } => Some((seal, state)),
+            AssignedState::Revealed { seal, state } => Some((seal, state)),
             _ => None,
         }
     }
 
-    pub fn to_revealed(&self) -> Option<(seal::Revealed, StateType::Revealed)> {
+    pub fn to_revealed(&self) -> Option<(seal::Revealed, Pair::Revealed)> {
         match self {
-            Assignment::Revealed { seal, state } => Some((*seal, state.clone())),
+            AssignedState::Revealed { seal, state } => Some((*seal, state.clone())),
             _ => None,
         }
     }
 
-    pub fn into_revealed(self) -> Option<(seal::Revealed, StateType::Revealed)> {
+    pub fn into_revealed(self) -> Option<(seal::Revealed, Pair::Revealed)> {
         match self {
-            Assignment::Revealed { seal, state } => Some((seal, state)),
+            AssignedState::Revealed { seal, state } => Some((seal, state)),
             _ => None,
         }
     }
 }
 
-impl<StateType> Conceal for Assignment<StateType>
+impl<Pair> Conceal for AssignedState<Pair>
 where
     Self: Clone,
-    StateType: State,
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
     type Concealed = Self;
 
     fn conceal(&self) -> Self::Concealed {
         match self {
-            Assignment::Confidential { .. } => self.clone(),
-            Assignment::ConfidentialState { seal, state } => Self::Confidential {
+            AssignedState::Confidential { .. } => self.clone(),
+            AssignedState::ConfidentialState { seal, state } => Self::Confidential {
                 seal: seal.conceal(),
                 state: state.clone(),
             },
-            Assignment::Revealed { seal, state } => Self::Confidential {
+            AssignedState::Revealed { seal, state } => Self::Confidential {
                 seal: seal.conceal(),
                 state: state.conceal().into(),
             },
-            Assignment::ConfidentialSeal { seal, state } => Self::Confidential {
+            AssignedState::ConfidentialSeal { seal, state } => Self::Confidential {
                 seal: *seal,
                 state: state.conceal().into(),
             },
@@ -291,12 +317,12 @@ where
 // `commit_encode` of the concealed type, and here the concealed type is again
 // `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
 // concealed data.
-impl<StateType> CommitEncode for Assignment<StateType>
+impl<Pair> CommitEncode for AssignedState<Pair>
 where
     Self: Clone,
-    StateType: State,
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
     fn commit_encode(&self, e: &mut impl io::Write) {
         let w = StrictWriter::with(u32::MAX as usize, e);
@@ -304,12 +330,12 @@ where
     }
 }
 
-impl<StateType> CommitmentId for Assignment<StateType>
+impl<Pair> CommitmentId for AssignedState<Pair>
 where
     Self: Clone,
-    StateType: State,
-    StateType::Confidential: PartialEq + Eq,
-    StateType::Confidential: From<<StateType::Revealed as Conceal>::Concealed>,
+    Pair: StatePair,
+    Pair::Confidential: PartialEq + Eq,
+    Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
     const TAG: [u8; 32] = *b"urn:lnpbp:rgb:owned-state:v1#23A";
     type Id = MerkleNode;

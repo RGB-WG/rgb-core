@@ -26,21 +26,19 @@ pub mod seal {
 pub mod value;
 pub mod attachment;
 pub mod data;
-mod global_state;
-pub mod owned_state;
+pub mod state;
 mod assignments;
 mod operations;
 mod bundle;
 
-pub use assignments::TypedAssignments;
+pub use assignments::TypedState;
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
-pub use global_state::{FieldValues, Metadata};
 pub use operations::{
-    ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, OutpointParseError, OwnedRights,
-    ParentOwnedRights, ParentPublicRights, PublicRights, Transition,
+    ContractId, Extension, Genesis, Node, NodeId, NodeOutpoint, OutpointParseError, OwnedState,
+    PrevState, Redeemed, Transition, Valencies,
 };
-pub use owned_state::{Assignment, State, StateType};
+pub use state::{AssignedState, FieldValues, GlobalState, StatePair, StateType};
 pub use value::{
     BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
     ValueAtom,
