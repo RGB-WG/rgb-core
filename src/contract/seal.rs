@@ -35,12 +35,6 @@ use secp256k1_zkp::rand::RngCore;
 
 use crate::LIB_NAME_RGB;
 
-/// Trait for types supporting conversion to a [`RevealedSeal`]
-pub trait IntoRevealedSeal {
-    /// Converts seal into [`RevealedSeal`] type.
-    fn into_revealed_seal(self) -> RevealedSeal;
-}
-
 /// Seal definition which re-uses witness transaction id of some other seal,
 /// which is not known at the moment of seal construction. Thus, the definition
 /// has only information about output number.

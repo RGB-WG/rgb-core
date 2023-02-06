@@ -40,7 +40,7 @@ pub use operations::{
     ParentOwnedRights, ParentPublicRights, PublicRights, Transition,
 };
 pub use owned_state::{Assignment, State, StateType};
-pub use seal::{IntoRevealedSeal, SealEndpoint};
+pub use seal::SealEndpoint;
 pub use value::{
     BlindingFactor, FieldOrderOverflow, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError,
     ValueAtom,
