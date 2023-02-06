@@ -21,9 +21,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "4.0.0-beta.15"
+version = "4.0.0-beta.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2cc2aa6bd36c9cd67fdebb50adf4ec4551ef58420a5700227e2bde5e64384d9"
+checksum = "7c7d15aa00ea61afb3b4ca628e9bade69766994d67644cf57a7e7194b77fe30c"
 dependencies = [
  "amplify_apfloat",
  "amplify_derive",
@@ -40,9 +40,9 @@ dependencies = [
 
 [[package]]
 name = "amplify_apfloat"
-version = "0.1.4"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a958199f6993a34e74b9d22b22709e5c6e527e901d7083b24f0a532445dbfc84"
+checksum = "f5b7f29fad2a3def5dfbfed0da85b886eb927a18fe0296c06e39880b7a96db05"
 dependencies = [
  "amplify_num",
  "bitflags",
@@ -126,17 +126,6 @@ name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
-
-[[package]]
-name = "baid58"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16db9f8a10cac6c74b78f8922bfb4b3eb5bbbed4734fb9fa8218af32b5e381f4"
-dependencies = [
- "base58",
- "blake3",
- "mnemonic",
-]
 
 [[package]]
 name = "baid58"
@@ -255,7 +244,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfeddf854d81ba9f5e7cfe68987e3eac976674b041b9f877b04d88f97268b851"
 dependencies = [
  "amplify",
- "baid58 0.2.0",
+ "baid58",
  "bp-dbc",
  "bp-primitives",
  "commit_verify",
@@ -732,7 +721,7 @@ version = "0.10.0-beta.1"
 dependencies = [
  "aluvm",
  "amplify",
- "baid58 0.2.0",
+ "baid58",
  "bp-core",
  "commit_verify",
  "mime",
@@ -910,8 +899,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding"
 version = "2.0.0-rc.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0e6e5cd3593dc19835c8caa34db3400ac2e69a6044f1086b5802b2bd51e1067"
+source = "git+https://github.com/strict-types/strict-encoding#b0e39d92c04acdb081114016ca67c7a3b11795a6"
 dependencies = [
  "amplify",
  "half",
@@ -922,8 +910,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding_derive"
 version = "2.0.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cb9b35c9d7429212d20ae38bb86ecbc6cd3b3ccf5db6a12d1e2aafa7cedf5b0"
+source = "git+https://github.com/strict-types/strict-encoding#b0e39d92c04acdb081114016ca67c7a3b11795a6"
 dependencies = [
  "amplify_syn 2.0.0-beta.1",
  "heck",
@@ -935,11 +922,10 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "1.0.0-beta.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11170f93c7f969209d86c4a3a6a7a6b333772890a7303647e5e055800840df9b"
+source = "git+https://github.com/strict-types/strict-types#36958bfadc11ff7fb126b8a0136e08f4c0705bed"
 dependencies = [
  "amplify",
- "baid58 0.1.0",
+ "baid58",
  "blake3",
  "half",
  "serde",
