@@ -15,9 +15,10 @@ exclude = [".github"]
 
 [lib]
 name = "rgb"
+crate-type = ["cdylib", "rlib"] # We need this for WASM
 
 [dependencies]
-amplify = "~4.0.0-beta.15"
+amplify = "~4.0.0-beta.17"
 strict_encoding = "2.0.0-rc.1"
 strict_types = "1.0.0-beta.3"
 aluvm = { version = "0.10.0-alpha.1", features = ["strict_encoding"] }
@@ -41,6 +42,14 @@ serde = [
     "aluvm/serde",
     "secp256k1-zkp/use-serde"
 ]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+rand = { version = "0.8.4", optional = true }
+getrandom = { version = "0.2", features = ["js"] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = [ "all" ]

@@ -24,3 +24,18 @@ jobs:
         with:
           command: test
           args: --workspace --all-features --no-fail-fast
+  wasm-testing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - uses: Swatinem/rust-cache@v2
+      - uses: jetli/wasm-pack-action@v0.3.0
+      - name: Add wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Test in headless Chrome
+        run: wasm-pack test --headless --chrome
