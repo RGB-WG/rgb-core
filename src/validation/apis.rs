@@ -178,19 +178,24 @@ pub trait ContainerApi {
     ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
 }
 
-pub trait HistoryApi<'container>: 'container + ContainerApi {
-    type EndpointIter: Iterator<Item = &'container (BundleId, seal::Confidential)>;
-    type BundleIter: Iterator<Item = &'container (Anchor<mpc::MerkleProof>, TransitionBundle)>;
-    type ExtensionsIter: Iterator<Item = &'container Extension>;
+pub trait HistoryApi: ContainerApi {
+    type EndpointIter<'container>: Iterator<Item = &'container (BundleId, seal::Confidential)>
+    where Self: 'container;
+    type BundleIter<'container>: Iterator<
+        Item = &'container (Anchor<mpc::MerkleProof>, TransitionBundle),
+    >
+    where Self: 'container;
+    type ExtensionsIter<'container>: Iterator<Item = &'container Extension>
+    where Self: 'container;
 
-    fn schema(&'container self) -> &'container Schema;
+    fn schema(&self) -> &Schema;
 
-    fn root_schema(&'container self) -> Option<&'container Schema>;
+    fn root_schema(&self) -> Option<&Schema>;
 
     /// Genesis data
-    fn genesis(&'container self) -> &'container Genesis;
+    fn genesis(&self) -> &Genesis;
 
-    fn node_ids(&'container self) -> BTreeSet<OpId>;
+    fn node_ids(&self) -> BTreeSet<OpId>;
 
     /// The final state ("endpoints") provided by this consignment.
     ///
@@ -201,11 +206,11 @@ pub trait HistoryApi<'container>: 'container + ContainerApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn endpoints(&'container self) -> Self::EndpointIter;
+    fn endpoints(&self) -> Self::EndpointIter<'_>;
 
     /// Data on all anchored state transitions contained in the consignment
-    fn anchored_bundles(&'container self) -> Self::BundleIter;
+    fn anchored_bundles(&self) -> Self::BundleIter<'_>;
 
     /// Data on all state extensions contained in the consignment
-    fn state_extensions(&'container self) -> Self::ExtensionsIter;
+    fn state_extensions(&self) -> Self::ExtensionsIter<'_>;
 }
