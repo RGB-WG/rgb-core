@@ -26,12 +26,13 @@ pub mod seal {
 pub mod fungible;
 pub mod attachment;
 pub mod data;
-pub mod state;
+pub mod assignment;
 mod operations;
 mod bundle;
 
 use std::hash::Hash;
 
+pub use assignment::{AssignedState, GlobalState, GlobalValues, StatePair, StateType, TypedState};
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use fungible::{
@@ -42,7 +43,6 @@ pub use operations::{
     ContractId, Extension, Genesis, OpId, Operation, OwnedState, PrevAssignment, PrevState,
     Redeemed, Transition, Valencies,
 };
-pub use state::{AssignedState, GlobalState, GlobalValues, StatePair, StateType, TypedState};
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.

@@ -25,7 +25,7 @@ use core::any::Any;
 use amplify::AsAny;
 use commit_verify::Conceal;
 
-use crate::contract::state::{AttachmentPair, DeclarativePair, FungiblePair, StructuredPair};
+use crate::contract::assignment::{AttachmentPair, DeclarativePair, FungiblePair, StructuredPair};
 use crate::schema::OwnedStateType;
 use crate::{validation, AssignedState, OpId, StatePair, StateSchema};
 
