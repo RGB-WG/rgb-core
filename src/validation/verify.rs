@@ -27,7 +27,7 @@ use bp::seals::txout::TxoSeal;
 use bp::{Tx, Txid};
 use commit_verify::mpc;
 
-use super::graph::Consignment;
+use super::apis::HistoryApi;
 use super::schema::OpType;
 use super::{Failure, Status, Validity, Warning};
 use crate::validation::subschema::SchemaVerify;
@@ -45,7 +45,7 @@ pub trait ResolveTx {
     fn resolve_tx(&self, txid: Txid) -> Result<Tx, TxResolverError>;
 }
 
-pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx> {
+pub struct Validator<'consignment, 'resolver, C: HistoryApi<'consignment>, R: ResolveTx> {
     consignment: &'consignment C,
 
     status: Status,
@@ -62,7 +62,7 @@ pub struct Validator<'consignment, 'resolver, C: Consignment<'consignment>, R: R
     resolver: &'resolver R,
 }
 
-impl<'consignment, 'resolver, C: Consignment<'consignment>, R: ResolveTx>
+impl<'consignment, 'resolver, C: HistoryApi<'consignment>, R: ResolveTx>
     Validator<'consignment, 'resolver, C, R>
 {
     fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {

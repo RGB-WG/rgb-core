@@ -43,7 +43,6 @@ extern crate serde_crate as serde;
 
 pub mod contract;
 pub mod schema;
-// pub mod stash;
 pub mod validation;
 pub mod vm;
 
@@ -54,15 +53,8 @@ pub mod prelude {
     pub use contract::*;
     pub use schema::*;
 
-    pub use super::schema;
-    /*pub use stash::{
-        bundle, AnchoredBundle, BundleId, ConcealAnchors, ConcealTransitions, Consignment,
-        ConsignmentEndpoint, ConsistencyError, GraphApi, Stash, TransitionBundle,
-    };
-    pub use validation::{Validator, Validity, Validate};
-     */
-    pub use super::vm;
     use super::*;
+    pub use super::{schema, vm};
 }
 
 pub use prelude::*;

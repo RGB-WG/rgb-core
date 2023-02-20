@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod graph;
+mod apis;
 mod vm;
 mod subschema;
 mod model;
@@ -30,6 +30,7 @@ mod verify;
 use core::iter::FromIterator;
 use core::ops::AddAssign;
 
+pub use apis::{ConsistencyError, ContainerApi, HistoryApi};
 use bp::Txid;
 pub use verify::{ResolveTx, TxResolverError, Validator};
 

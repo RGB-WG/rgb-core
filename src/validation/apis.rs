@@ -36,7 +36,7 @@ use crate::{
     Transition, TransitionBundle,
 };
 
-/// Errors accessing graph data via [`GraphApi`].
+/// Errors accessing graph data via [`ContainerApi`].
 ///
 /// All this errors imply internal inconsistency in the underlying data: they
 /// are malformed (forged or damaged) and were not validated. The other reason
@@ -78,10 +78,10 @@ pub enum ConsistencyError {
 /// The function does not verify the internal consistency, schema conformance or
 /// validation status of the RGB contract data withing the storage or container;
 /// these checks must be performed as a separate step before calling any of the
-/// [`GraphApi`] methods. If the methods are called on non-validated/unchecked
-/// data this may result in returned [`Error`] or [`Option::None`] values from
-/// the API methods.
-pub trait GraphApi {
+/// [`ContainerApi`] methods. If the methods are called on
+/// non-validated/unchecked data this may result in returned [`Error`] or
+/// [`Option::None`] values from the API methods.
+pub trait ContainerApi {
     /// Returns reference to a node (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
     fn node_by_id(&self, node_id: OpId) -> Option<&dyn Operation>;
@@ -118,9 +118,10 @@ pub trait GraphApi {
     fn extension_by_id(&self, node_id: OpId) -> Result<&Extension, ConsistencyError>;
 
     /// Returns reference to a state transition, like
-    /// [`GraphApi::transition_by_id`], extended with [`Txid`] of the witness
-    /// transaction. If the node id is unknown, or corresponds to other type of
-    /// the node (genesis or state extensions) a error is returned.
+    /// [`ContainerApi::transition_by_id`], extended with [`Txid`] of the
+    /// witness transaction. If the node id is unknown, or corresponds to
+    /// other type of the node (genesis or state extensions) a error is
+    /// returned.
     ///
     /// # Errors
     ///
@@ -177,19 +178,19 @@ pub trait GraphApi {
     ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
 }
 
-pub trait Consignment<'consignment>: 'consignment + GraphApi {
-    type EndpointIter: Iterator<Item = &'consignment (BundleId, seal::Confidential)>;
-    type BundleIter: Iterator<Item = &'consignment (Anchor<mpc::MerkleProof>, TransitionBundle)>;
-    type ExtensionsIter: Iterator<Item = &'consignment Extension>;
+pub trait HistoryApi<'container>: 'container + ContainerApi {
+    type EndpointIter: Iterator<Item = &'container (BundleId, seal::Confidential)>;
+    type BundleIter: Iterator<Item = &'container (Anchor<mpc::MerkleProof>, TransitionBundle)>;
+    type ExtensionsIter: Iterator<Item = &'container Extension>;
 
-    fn schema(&'consignment self) -> &'consignment Schema;
+    fn schema(&'container self) -> &'container Schema;
 
-    fn root_schema(&'consignment self) -> Option<&'consignment Schema>;
+    fn root_schema(&'container self) -> Option<&'container Schema>;
 
     /// Genesis data
-    fn genesis(&'consignment self) -> &'consignment Genesis;
+    fn genesis(&'container self) -> &'container Genesis;
 
-    fn node_ids(&'consignment self) -> BTreeSet<OpId>;
+    fn node_ids(&'container self) -> BTreeSet<OpId>;
 
     /// The final state ("endpoints") provided by this consignment.
     ///
@@ -200,11 +201,11 @@ pub trait Consignment<'consignment>: 'consignment + GraphApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn endpoints(&'consignment self) -> Self::EndpointIter;
+    fn endpoints(&'container self) -> Self::EndpointIter;
 
     /// Data on all anchored state transitions contained in the consignment
-    fn anchored_bundles(&'consignment self) -> Self::BundleIter;
+    fn anchored_bundles(&'container self) -> Self::BundleIter;
 
     /// Data on all state extensions contained in the consignment
-    fn state_extensions(&'consignment self) -> Self::ExtensionsIter;
+    fn state_extensions(&'container self) -> Self::ExtensionsIter;
 }
