@@ -51,14 +51,14 @@ The current list of the projects based on the library include:
 
 ## Use
 
-Minimum supported rust compiler version (MSRV): 1.59, rust 2022 edition.
+Minimum supported rust compiler version (MSRV): 1.66, rust 2021 edition.
 
 The library can be integrated into other rust projects via `Cargo.toml` 
 `[dependecies]` section:
 
 ```toml
 [dependencies]
-rgb-core = "0.8"
+rgb-core = "0.10"
 ```
 
 If the library will be used for wallet applications and work with PSBT files,
@@ -66,7 +66,7 @@ than use `wallet` feature, which is non-default:
 
 ```toml
 [dependencies]
-rgb-core = "0.8"
+rgb-core = "0.10"
 ```
 
 For serialization purposes library provides `serde` feature, which is turned off
