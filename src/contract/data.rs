@@ -21,21 +21,31 @@
 // limitations under the License.
 
 use core::fmt::Debug;
+use std::io;
 
 use amplify::confinement::SmallVec;
 use amplify::{AsAny, Bytes32};
 use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
+use strict_encoding::{DecodeError, StrictDecode, StrictEncode, StrictType, TypedRead, TypedWrite};
 
 use super::{ConfidentialState, RevealedState};
 use crate::LIB_NAME_RGB;
 
 /// Struct using for storing Void (i.e. absent) state
-#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, AsAny)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Default, AsAny)]
 #[display("void")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct Void();
+pub struct Void;
+
+impl StrictType for Void {
+    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB;
+}
+impl StrictEncode for Void {
+    fn strict_encode<W: TypedWrite>(&self, writer: W) -> io::Result<W> { Ok(writer) }
+}
+impl StrictDecode for Void {
+    fn strict_decode(_reader: &mut impl TypedRead) -> Result<Self, DecodeError> { Ok(Void) }
+}
 
 impl ConfidentialState for Void {}
 
