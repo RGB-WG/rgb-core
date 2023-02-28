@@ -23,25 +23,31 @@
 #[macro_use]
 extern crate amplify;
 #[macro_use]
-extern crate strict_encoding;
+extern crate strict_types;
 
 use std::str::FromStr;
 
-use rgb::{SchemaId, LIB_NAME_RGB};
+use bp::LIB_NAME_BP;
+use rgb::{Extension, Genesis, Schema, Transition, LIB_NAME_RGB};
 use strict_encoding::STRICT_TYPES_LIB;
-use strict_types::typelib::build::LibBuilder;
+use strict_types::typelib::LibBuilder;
 use strict_types::{Dependency, TypeLibId};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sty_id =
         TypeLibId::from_str("9PAgDBAAAGt41sxDmkmXksGHYbVuz4N2zcFiyPnVqQbv#mama-jumbo-sinatra")?;
     let imports = bmap! {
-        libname!(STRICT_TYPES_LIB) => (libname!(STRICT_TYPES_LIB), Dependency::with(sty_id, libname!(STRICT_TYPES_LIB), (0,1,0)))
+        libname!(STRICT_TYPES_LIB) => (lib_alias!(STRICT_TYPES_LIB), Dependency::with(sty_id, libname!(STRICT_TYPES_LIB), (0,10,0))),
+        libname!(LIB_NAME_BP) => (lib_alias!(LIB_NAME_BP), Dependency::with(sty_id, libname!(LIB_NAME_BP), (0,10,0)))
     };
 
     let lib = LibBuilder::new(libname!(LIB_NAME_RGB))
-        .process::<SchemaId>()?
+        .process::<Schema>()?
+        .process::<Genesis>()?
+        .process::<Transition>()?
+        .process::<Extension>()?
         .compile(imports)?;
+    // TODO: Support TransitionBundle
     let id = lib.id();
 
     println!(
