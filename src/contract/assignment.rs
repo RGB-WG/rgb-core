@@ -128,7 +128,7 @@ impl StatePair for AttachmentPair {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "snake_case")
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum AssignedState<Pair>
 where
@@ -365,7 +365,7 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "snake_case")
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum TypedState {
     // TODO: Consider using non-empty variants

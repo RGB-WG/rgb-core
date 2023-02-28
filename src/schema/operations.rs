@@ -37,7 +37,7 @@ pub type AssignmentSchema = TinyOrdMap<OwnedStateType, Occurrences>;
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "snake_case")
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[repr(u8)]
 /// Node type: genesis, extensions and state transitions
