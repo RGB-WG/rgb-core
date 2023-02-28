@@ -236,7 +236,7 @@ pub struct PedersenCommitment(secp256k1_zkp::PedersenCommitment);
 
 impl StrictDumb for PedersenCommitment {
     fn strict_dumb() -> Self {
-        secp256k1_zkp::PedersenCommitment::from_slice(&[1u8; 32])
+        secp256k1_zkp::PedersenCommitment::from_slice(&[0x08; 33])
             .expect("hardcoded pedersen commitment value")
             .into()
     }
