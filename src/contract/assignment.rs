@@ -143,7 +143,7 @@ where
         seal: seal::Confidential,
         state: Pair::Confidential,
     },
-    #[strict_type(tag = 0x04)]
+    #[strict_type(tag = 0x03)]
     Revealed {
         seal: seal::Revealed,
         state: Pair::Revealed,
