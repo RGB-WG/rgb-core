@@ -140,6 +140,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
+
+[[package]]
 name = "bech32"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -186,8 +192,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.10.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df303019e413ee932020d096590ff65329842a89b08b30ad073d2091ce2fcb45"
+source = "git+https://github.com/BP-WG/bp-core#434124c7c1ffdbd73474033d609c2355cb759f60"
 dependencies = [
  "amplify",
  "bp-dbc",
@@ -202,8 +207,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.10.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aa49d853e43fafe58f8157669e28f92d1920a9cbf2a416fab2300a7ff074fe8"
+source = "git+https://github.com/BP-WG/bp-core#434124c7c1ffdbd73474033d609c2355cb759f60"
 dependencies = [
  "amplify",
  "bp-primitives",
@@ -216,8 +220,7 @@ dependencies = [
 [[package]]
 name = "bp-primitives"
 version = "0.10.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51e8c5a805cc58b0f6fb9ba81b20632bde1ee2844ee5513ad35aad2371a83b45"
+source = "git+https://github.com/BP-WG/bp-core#434124c7c1ffdbd73474033d609c2355cb759f60"
 dependencies = [
  "amplify",
  "commit_verify",
@@ -229,8 +232,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.10.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfeddf854d81ba9f5e7cfe68987e3eac976674b041b9f877b04d88f97268b851"
+source = "git+https://github.com/BP-WG/bp-core#434124c7c1ffdbd73474033d609c2355cb759f60"
 dependencies = [
  "amplify",
  "baid58",
@@ -863,7 +865,7 @@ version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30d904179146de381af4c93d3af6ca4984b3152db687dacb9c3c35e86f39809c"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "chrono",
  "hex",
  "indexmap",
@@ -910,7 +912,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding"
 version = "2.0.0-rc.1"
-source = "git+https://github.com/strict-types/strict-encoding#c88294b089e2b6c02a8fb56528a8b1a317cc9ab0"
+source = "git+https://github.com/strict-types/strict-encoding#7a1f9bf078c8ecd5004f581c7f544416dd5234cc"
 dependencies = [
  "amplify",
  "half",
@@ -921,7 +923,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding_derive"
 version = "2.0.0-beta.2"
-source = "git+https://github.com/strict-types/strict-encoding#c88294b089e2b6c02a8fb56528a8b1a317cc9ab0"
+source = "git+https://github.com/strict-types/strict-encoding#7a1f9bf078c8ecd5004f581c7f544416dd5234cc"
 dependencies = [
  "amplify_syn",
  "heck",
@@ -933,10 +935,11 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "1.0.0-beta.3"
-source = "git+https://github.com/strict-types/strict-types#16986e2dbd64d3e9e960f213a552784f50f929bb"
+source = "git+https://github.com/strict-types/strict-types#862874dd6fe1d0a62ebc6a081a8df299deb4e30e"
 dependencies = [
  "amplify",
  "baid58",
+ "base64 0.21.0",
  "blake3",
  "half",
  "serde",

@@ -17,6 +17,10 @@ exclude = [".github"]
 name = "rgb"
 crate-type = ["cdylib", "rlib"] # We need this for WASM
 
+[[bin]]
+name = "rgbcore-stl"
+required-features = ["stl"]
+
 [dependencies]
 amplify = "~4.0.0-beta.18"
 strict_encoding = "2.0.0-rc.1"
@@ -31,7 +35,8 @@ serde_crate = { package = "serde", version = "1", features = ["derive"], optiona
 
 [features]
 default = []
-all = ["serde"]
+all = ["serde", "stl"]
+stl = ["strict_types/base64"]
 serde = [
     "serde_crate",
     "amplify/serde",
@@ -57,3 +62,4 @@ features = [ "all" ]
 [patch.crates-io]
 strict_encoding = { git = "https://github.com/strict-types/strict-encoding" }
 strict_types = { git = "https://github.com/strict-types/strict-types" }
+bp-core = { git = "https://github.com/BP-WG/bp-core" }
