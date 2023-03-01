@@ -25,9 +25,9 @@ use core::any::Any;
 use amplify::AsAny;
 use commit_verify::Conceal;
 
-use crate::contract::assignment::{AttachmentPair, DeclarativePair, FungiblePair, StructuredPair};
+use crate::contract::assignment::{Attach, Fungible, Right, State};
 use crate::schema::OwnedStateType;
-use crate::{validation, AssignedState, OpId, StatePair, StateSchema};
+use crate::{validation, Assign, OpId, StatePair, StateSchema};
 
 impl StateSchema {
     pub fn validate<STATE>(
@@ -35,7 +35,7 @@ impl StateSchema {
         // type_system: &TypeSystem,
         node_id: &OpId,
         assignment_id: OwnedStateType,
-        data: &AssignedState<STATE>,
+        data: &Assign<STATE>,
     ) -> validation::Status
     where
         STATE: StatePair,
@@ -44,12 +44,11 @@ impl StateSchema {
     {
         let mut status = validation::Status::new();
         match data {
-            AssignedState::Confidential { state, .. } |
-            AssignedState::ConfidentialState { state, .. } => {
+            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
                 let a: &dyn Any = state.as_any();
                 match self {
                     StateSchema::Declarative => {
-                        if a.downcast_ref::<<DeclarativePair as StatePair>::Confidential>()
+                        if a.downcast_ref::<<Right as StatePair>::Confidential>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -59,7 +58,7 @@ impl StateSchema {
                     }
                     StateSchema::Fungible(_) => {
                         if let Some(value) =
-                            a.downcast_ref::<<FungiblePair as StatePair>::Confidential>()
+                            a.downcast_ref::<<Fungible as StatePair>::Confidential>()
                         {
                             // [SECURITY-CRITICAL]: Bulletproofs validation
                             if let Err(err) = value.verify_range_proof() {
@@ -80,7 +79,7 @@ impl StateSchema {
                         //       data below
                     }
                     StateSchema::Structured(_) => match a
-                        .downcast_ref::<<StructuredPair as StatePair>::Confidential>()
+                        .downcast_ref::<<State as StatePair>::Confidential>()
                     {
                         None => {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -95,7 +94,7 @@ impl StateSchema {
                         }
                     },
                     StateSchema::Attachment => {
-                        if a.downcast_ref::<<AttachmentPair as StatePair>::Confidential>()
+                        if a.downcast_ref::<<Attach as StatePair>::Confidential>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -105,21 +104,18 @@ impl StateSchema {
                     }
                 }
             }
-            AssignedState::Revealed { state, .. } |
-            AssignedState::ConfidentialSeal { state, .. } => {
+            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 let a: &dyn Any = state.as_any();
                 match self {
                     StateSchema::Declarative => {
-                        if a.downcast_ref::<<DeclarativePair as StatePair>::Revealed>()
-                            .is_none()
-                        {
+                        if a.downcast_ref::<<Right as StatePair>::Revealed>().is_none() {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
                                 assignment_id,
                             ));
                         }
                     }
                     StateSchema::Fungible(_format) => {
-                        if a.downcast_ref::<<FungiblePair as StatePair>::Revealed>()
+                        if a.downcast_ref::<<Fungible as StatePair>::Revealed>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(
@@ -131,7 +127,7 @@ impl StateSchema {
                         // like with hashed data below
                     }
                     StateSchema::Structured(_semid) => {
-                        match a.downcast_ref::<<StructuredPair as StatePair>::Revealed>() {
+                        match a.downcast_ref::<<State as StatePair>::Revealed>() {
                             None => {
                                 status.add_failure(validation::Failure::SchemaMismatchedStateType(
                                     assignment_id,
@@ -143,7 +139,7 @@ impl StateSchema {
                         }
                     }
                     StateSchema::Attachment => {
-                        if a.downcast_ref::<<AttachmentPair as StatePair>::Revealed>()
+                        if a.downcast_ref::<<Attach as StatePair>::Revealed>()
                             .is_none()
                         {
                             status.add_failure(validation::Failure::SchemaMismatchedStateType(

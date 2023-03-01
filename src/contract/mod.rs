@@ -32,11 +32,11 @@ mod bundle;
 
 use std::hash::Hash;
 
-pub use assignment::{AssignedState, GlobalState, GlobalValues, StatePair, StateType, TypedState};
+pub use assignment::{Assign, GlobalState, GlobalValues, StatePair, StateType, TypedState};
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use fungible::{
-    BlindingFactor, FieldOrderOverflow, Fungible, NoiseDumb, PedersenCommitment, RangeProof,
+    BlindingFactor, FieldOrderOverflow, FungibleState, NoiseDumb, PedersenCommitment, RangeProof,
     RangeProofError,
 };
 pub use operations::{

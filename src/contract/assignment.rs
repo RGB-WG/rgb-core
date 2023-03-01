@@ -88,29 +88,29 @@ pub trait StatePair: Debug {
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct DeclarativePair;
-impl StatePair for DeclarativePair {
-    type Confidential = data::Void;
-    type Revealed = data::Void;
+pub struct Right;
+impl StatePair for Right {
+    type Confidential = data::VoidState;
+    type Revealed = data::VoidState;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct FungiblePair;
-impl StatePair for FungiblePair {
+pub struct Fungible;
+impl StatePair for Fungible {
     type Confidential = fungible::Confidential;
     type Revealed = fungible::Revealed;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct StructuredPair;
-impl StatePair for StructuredPair {
+pub struct State;
+impl StatePair for State {
     type Confidential = data::Confidential;
     type Revealed = data::Revealed;
 }
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct AttachmentPair;
-impl StatePair for AttachmentPair {
+pub struct Attach;
+impl StatePair for Attach {
     type Confidential = attachment::Confidential;
     type Revealed = attachment::Revealed;
 }
@@ -130,7 +130,7 @@ impl StatePair for AttachmentPair {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum AssignedState<Pair>
+pub enum Assign<Pair>
 where
     Pair: StatePair,
     // Deterministic ordering requires Eq operation, so the confidential
@@ -164,7 +164,7 @@ where
 // Assignment indexes are part of the transition ancestor's commitment, so
 // here we use deterministic ordering based on hash values of the concealed
 // seal data contained within the assignment
-impl<Pair> PartialOrd for AssignedState<Pair>
+impl<Pair> PartialOrd for Assign<Pair>
 where
     Pair: StatePair,
     Pair::Confidential: PartialEq + Eq,
@@ -176,7 +176,7 @@ where
     }
 }
 
-impl<Pair> Ord for AssignedState<Pair>
+impl<Pair> Ord for Assign<Pair>
 where
     Pair: StatePair,
     Pair::Confidential: PartialEq + Eq,
@@ -188,7 +188,7 @@ where
     }
 }
 
-impl<Pair> PartialEq for AssignedState<Pair>
+impl<Pair> PartialEq for Assign<Pair>
 where
     Pair: StatePair,
     Pair::Confidential: PartialEq + Eq,
@@ -200,7 +200,7 @@ where
     }
 }
 
-impl<Pair> Eq for AssignedState<Pair>
+impl<Pair> Eq for Assign<Pair>
 where
     Pair: StatePair,
     Pair::Confidential: PartialEq + Eq,
@@ -208,7 +208,7 @@ where
 {
 }
 
-impl<Pair> Hash for AssignedState<Pair>
+impl<Pair> Hash for Assign<Pair>
 where
     Pair: StatePair,
     Pair::Confidential: PartialEq + Eq,
@@ -220,90 +220,89 @@ where
     }
 }
 
-impl<Pair> AssignedState<Pair>
+impl<Pair> Assign<Pair>
 where
     Pair: StatePair,
     Pair::Confidential: PartialEq + Eq,
     Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
 {
     pub fn revealed(seal: seal::Revealed, state: Pair::Revealed) -> Self {
-        AssignedState::Revealed { seal, state }
+        Assign::Revealed { seal, state }
     }
 
     pub fn with_seal_replaced(assignment: &Self, seal: seal::Revealed) -> Self {
         match assignment {
-            AssignedState::Confidential { seal: _, state } |
-            AssignedState::ConfidentialState { seal: _, state } => {
-                AssignedState::ConfidentialState {
+            Assign::Confidential { seal: _, state } |
+            Assign::ConfidentialState { seal: _, state } => Assign::ConfidentialState {
+                seal,
+                state: state.clone(),
+            },
+            Assign::ConfidentialSeal { seal: _, state } | Assign::Revealed { seal: _, state } => {
+                Assign::Revealed {
                     seal,
                     state: state.clone(),
                 }
             }
-            AssignedState::ConfidentialSeal { seal: _, state } |
-            AssignedState::Revealed { seal: _, state } => AssignedState::Revealed {
-                seal,
-                state: state.clone(),
-            },
         }
     }
 
     pub fn to_confidential_seal(&self) -> seal::Confidential {
         match self {
-            AssignedState::Revealed { seal, .. } |
-            AssignedState::ConfidentialState { seal, .. } => seal.conceal(),
-            AssignedState::Confidential { seal, .. } |
-            AssignedState::ConfidentialSeal { seal, .. } => *seal,
+            Assign::Revealed { seal, .. } | Assign::ConfidentialState { seal, .. } => {
+                seal.conceal()
+            }
+            Assign::Confidential { seal, .. } | Assign::ConfidentialSeal { seal, .. } => *seal,
         }
     }
 
     pub fn revealed_seal(&self) -> Option<seal::Revealed> {
         match self {
-            AssignedState::Revealed { seal, .. } |
-            AssignedState::ConfidentialState { seal, .. } => Some(*seal),
-            AssignedState::Confidential { .. } | AssignedState::ConfidentialSeal { .. } => None,
+            Assign::Revealed { seal, .. } | Assign::ConfidentialState { seal, .. } => Some(*seal),
+            Assign::Confidential { .. } | Assign::ConfidentialSeal { .. } => None,
         }
     }
 
     pub fn to_confidential_state(&self) -> Pair::Confidential {
         match self {
-            AssignedState::Revealed { state, .. } |
-            AssignedState::ConfidentialSeal { state, .. } => state.conceal().into(),
-            AssignedState::Confidential { state, .. } |
-            AssignedState::ConfidentialState { state, .. } => state.clone(),
+            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
+                state.conceal().into()
+            }
+            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
+                state.clone()
+            }
         }
     }
 
     pub fn as_revealed_state(&self) -> Option<&Pair::Revealed> {
         match self {
-            AssignedState::Revealed { state, .. } |
-            AssignedState::ConfidentialSeal { state, .. } => Some(state),
-            AssignedState::Confidential { .. } | AssignedState::ConfidentialState { .. } => None,
+            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => Some(state),
+            Assign::Confidential { .. } | Assign::ConfidentialState { .. } => None,
         }
     }
 
     pub fn as_revealed(&self) -> Option<(&seal::Revealed, &Pair::Revealed)> {
         match self {
-            AssignedState::Revealed { seal, state } => Some((seal, state)),
+            Assign::Revealed { seal, state } => Some((seal, state)),
             _ => None,
         }
     }
 
     pub fn to_revealed(&self) -> Option<(seal::Revealed, Pair::Revealed)> {
         match self {
-            AssignedState::Revealed { seal, state } => Some((*seal, state.clone())),
+            Assign::Revealed { seal, state } => Some((*seal, state.clone())),
             _ => None,
         }
     }
 
     pub fn into_revealed(self) -> Option<(seal::Revealed, Pair::Revealed)> {
         match self {
-            AssignedState::Revealed { seal, state } => Some((seal, state)),
+            Assign::Revealed { seal, state } => Some((seal, state)),
             _ => None,
         }
     }
 }
 
-impl<Pair> Conceal for AssignedState<Pair>
+impl<Pair> Conceal for Assign<Pair>
 where
     Self: Clone,
     Pair: StatePair,
@@ -314,16 +313,16 @@ where
 
     fn conceal(&self) -> Self::Concealed {
         match self {
-            AssignedState::Confidential { .. } => self.clone(),
-            AssignedState::ConfidentialState { seal, state } => Self::Confidential {
+            Assign::Confidential { .. } => self.clone(),
+            Assign::ConfidentialState { seal, state } => Self::Confidential {
                 seal: seal.conceal(),
                 state: state.clone(),
             },
-            AssignedState::Revealed { seal, state } => Self::Confidential {
+            Assign::Revealed { seal, state } => Self::Confidential {
                 seal: seal.conceal(),
                 state: state.conceal().into(),
             },
-            AssignedState::ConfidentialSeal { seal, state } => Self::Confidential {
+            Assign::ConfidentialSeal { seal, state } => Self::Confidential {
                 seal: *seal,
                 state: state.conceal().into(),
             },
@@ -335,7 +334,7 @@ where
 // `commit_encode` of the concealed type, and here the concealed type is again
 // `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
 // concealed data.
-impl<Pair> CommitEncode for AssignedState<Pair>
+impl<Pair> CommitEncode for Assign<Pair>
 where
     Self: Clone,
     Pair: StatePair,
@@ -348,7 +347,7 @@ where
     }
 }
 
-impl<Pair> CommitmentId for AssignedState<Pair>
+impl<Pair> CommitmentId for Assign<Pair>
 where
     Self: Clone,
     Pair: StatePair,
@@ -370,13 +369,13 @@ where
 pub enum TypedState {
     // TODO: Consider using non-empty variants
     #[strict_type(tag = 0x00)]
-    Declarative(MediumVec<AssignedState<DeclarativePair>>),
+    Declarative(MediumVec<Assign<Right>>),
     #[strict_type(tag = 0x01)]
-    Fungible(MediumVec<AssignedState<FungiblePair>>),
+    Fungible(MediumVec<Assign<Fungible>>),
     #[strict_type(tag = 0x02)]
-    Structured(MediumVec<AssignedState<StructuredPair>>),
+    Structured(MediumVec<Assign<State>>),
     #[strict_type(tag = 0xFF)]
-    Attachment(MediumVec<AssignedState<AttachmentPair>>),
+    Attachment(MediumVec<Assign<Attach>>),
 }
 
 impl TypedState {
@@ -421,7 +420,7 @@ impl TypedState {
     pub fn is_attachment(&self) -> bool { matches!(self, TypedState::Attachment(_)) }
 
     #[inline]
-    pub fn as_declarative(&self) -> &[AssignedState<DeclarativePair>] {
+    pub fn as_declarative(&self) -> &[Assign<Right>] {
         match self {
             TypedState::Declarative(set) => set,
             _ => Default::default(),
@@ -429,7 +428,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_fungible(&self) -> &[AssignedState<FungiblePair>] {
+    pub fn as_fungible(&self) -> &[Assign<Fungible>] {
         match self {
             TypedState::Fungible(set) => set,
             _ => Default::default(),
@@ -437,7 +436,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_structured(&self) -> &[AssignedState<StructuredPair>] {
+    pub fn as_structured(&self) -> &[Assign<State>] {
         match self {
             TypedState::Structured(set) => set,
             _ => Default::default(),
@@ -445,7 +444,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_attachment(&self) -> &[AssignedState<AttachmentPair>] {
+    pub fn as_attachment(&self) -> &[Assign<Attach>] {
         match self {
             TypedState::Attachment(set) => set,
             _ => Default::default(),
@@ -453,7 +452,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_declarative_mut(&mut self) -> Option<&mut MediumVec<AssignedState<DeclarativePair>>> {
+    pub fn as_declarative_mut(&mut self) -> Option<&mut MediumVec<Assign<Right>>> {
         match self {
             TypedState::Declarative(set) => Some(set),
             _ => None,
@@ -461,7 +460,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_fungible_mut(&mut self) -> Option<&mut MediumVec<AssignedState<FungiblePair>>> {
+    pub fn as_fungible_mut(&mut self) -> Option<&mut MediumVec<Assign<Fungible>>> {
         match self {
             TypedState::Fungible(set) => Some(set),
             _ => None,
@@ -469,7 +468,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_structured_mut(&mut self) -> Option<&mut MediumVec<AssignedState<StructuredPair>>> {
+    pub fn as_structured_mut(&mut self) -> Option<&mut MediumVec<Assign<State>>> {
         match self {
             TypedState::Structured(set) => Some(set),
             _ => None,
@@ -477,7 +476,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_attachment_mut(&mut self) -> Option<&mut MediumVec<AssignedState<AttachmentPair>>> {
+    pub fn as_attachment_mut(&mut self) -> Option<&mut MediumVec<Assign<Attach>>> {
         match self {
             TypedState::Attachment(set) => Some(set),
             _ => None,
@@ -510,22 +509,10 @@ impl TypedState {
 
     pub fn to_confidential_seals(&self) -> Vec<seal::Confidential> {
         match self {
-            TypedState::Declarative(s) => s
-                .iter()
-                .map(AssignedState::<_>::to_confidential_seal)
-                .collect(),
-            TypedState::Fungible(s) => s
-                .iter()
-                .map(AssignedState::<_>::to_confidential_seal)
-                .collect(),
-            TypedState::Structured(s) => s
-                .iter()
-                .map(AssignedState::<_>::to_confidential_seal)
-                .collect(),
-            TypedState::Attachment(s) => s
-                .iter()
-                .map(AssignedState::<_>::to_confidential_seal)
-                .collect(),
+            TypedState::Declarative(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
+            TypedState::Fungible(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
+            TypedState::Structured(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
+            TypedState::Attachment(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
         }
     }
 }
@@ -543,19 +530,19 @@ impl MerkleLeaves for TypedState {
         match self {
             TypedState::Declarative(vec) => vec
                 .iter()
-                .map(AssignedState::<DeclarativePair>::commitment_id)
+                .map(Assign::<Right>::commitment_id)
                 .collect::<Vec<_>>(),
             TypedState::Fungible(vec) => vec
                 .iter()
-                .map(AssignedState::<FungiblePair>::commitment_id)
+                .map(Assign::<Fungible>::commitment_id)
                 .collect::<Vec<_>>(),
             TypedState::Structured(vec) => vec
                 .iter()
-                .map(AssignedState::<StructuredPair>::commitment_id)
+                .map(Assign::<State>::commitment_id)
                 .collect::<Vec<_>>(),
             TypedState::Attachment(vec) => vec
                 .iter()
-                .map(AssignedState::<AttachmentPair>::commitment_id)
+                .map(Assign::<Attach>::commitment_id)
                 .collect::<Vec<_>>(),
         }
         .into_iter()

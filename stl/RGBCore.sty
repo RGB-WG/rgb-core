@@ -1,5 +1,5 @@
 {-
-  Id: Whqm2uisM4sLFuQTGj9cVNHW3YMpub1cPVFMWCi25Nb
+  Id: 39qnZe8V8aXjrMtzAciwLynucGCN43ZeVm7H7GNwixc8
   Name: RGBCore
   Description: Consensus layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
@@ -7,17 +7,17 @@
   License: Apache-2.0
 -}
 
-typelib RGB -- artist_tunnel_radical_Whqm2uisM4sLFuQTGj9cVNHW3YMpub1cPVFMWCi25Nb
+typelib RGB -- rider_comrade_final_39qnZe8V8aXjrMtzAciwLynucGCN43ZeVm7H7GNwixc8
 
 import ford_lola_silicon_4F7Jgi9L55LqH1eNkUmLRFbRJ9nhcDRHbCXpp2buuTub as BPCore
 import oberon_parker_cobra_GVur9D96gWvVkXNkss6nTXn3qyLG4tvT3G7AeLwFZACo as Bitcoin
 import eric_pablo_junior_6dNLcuqHACv1yYndmvNnXHuP7g3DV4qVkSf9tou6cDBm as StrictTypes
 
 
-data AssignedState_AttachmentPair :: confidential (seal BPCore.ConcealedSeal, state ConcealedAttach) | confidentialState (seal BPCore.RevealedSeal, state ConcealedAttach) | confidentialSeal (seal BPCore.ConcealedSeal, state RevealedAttach) | revealed (seal BPCore.RevealedSeal, state RevealedAttach)
-data AssignedState_DeclarativePair :: confidential (seal BPCore.ConcealedSeal, state Void) | confidentialState (seal BPCore.RevealedSeal, state Void) | confidentialSeal (seal BPCore.ConcealedSeal, state Void) | revealed (seal BPCore.RevealedSeal, state Void)
-data AssignedState_FungiblePair :: confidential (seal BPCore.ConcealedSeal, state ConcealedFungible) | confidentialState (seal BPCore.RevealedSeal, state ConcealedFungible) | confidentialSeal (seal BPCore.ConcealedSeal, state RevealedFungible) | revealed (seal BPCore.RevealedSeal, state RevealedFungible)
-data AssignedState_StructuredPair :: confidential (seal BPCore.ConcealedSeal, state ConcealedData) | confidentialState (seal BPCore.RevealedSeal, state ConcealedData) | confidentialSeal (seal BPCore.ConcealedSeal, state RevealedData) | revealed (seal BPCore.RevealedSeal, state RevealedData)
+data AssignAttach     :: confidential (seal BPCore.ConcealedSeal, state ConcealedAttach) | confidentialState (seal BPCore.RevealedSeal, state ConcealedAttach) | confidentialSeal (seal BPCore.ConcealedSeal, state RevealedAttach) | revealed (seal BPCore.RevealedSeal, state RevealedAttach)
+data AssignFungible   :: confidential (seal BPCore.ConcealedSeal, state ConcealedFungible) | confidentialState (seal BPCore.RevealedSeal, state ConcealedFungible) | confidentialSeal (seal BPCore.ConcealedSeal, state RevealedFungible) | revealed (seal BPCore.RevealedSeal, state RevealedFungible)
+data AssignRight      :: confidential (seal BPCore.ConcealedSeal, state VoidState) | confidentialState (seal BPCore.RevealedSeal, state VoidState) | confidentialSeal (seal BPCore.ConcealedSeal, state VoidState) | revealed (seal BPCore.RevealedSeal, state VoidState)
+data AssignState      :: confidential (seal BPCore.ConcealedSeal, state ConcealedData) | confidentialState (seal BPCore.RevealedSeal, state ConcealedData) | confidentialSeal (seal BPCore.ConcealedSeal, state RevealedData) | revealed (seal BPCore.RevealedSeal, state RevealedData)
 data AttachId         :: [U8 ^ 32]
 data BlindingFactor   :: [U8 ^ 32]
 data BundleItem       :: inputs {U16 ^ ..0xff}, transition Transition?
@@ -28,7 +28,7 @@ data ContractId       :: [U8 ^ 32]
 data Extension        :: ffv Ffv, extensionType U16, contractId ContractId, metadata [U8 ^ ..0xff]?, globalState GlobalState, ownedState OwnedState, redeemed {[Byte ^ 32] -> ^ ..0xff {U16 ^ ..0xff}}, valencies {U16 ^ ..0xff}
 data ExtensionSchema  :: metadata StrictTypes.SemId?, globalState {U16 -> ^ ..0xff Occurrences}, redeems {U16 ^ ..0xff}, ownedState {U16 -> ^ ..0xff Occurrences}, valencies {U16 ^ ..0xff}
 data Ffv              :: U16
-data Fungible         :: bits64:8 U64
+data FungibleState    :: bits64:8 U64
 data FungibleType     :: unsigned64Bit:8
 data Genesis          :: ffv Ffv, schemaId SchemaId, chain Bitcoin.Chain, metadata [U8 ^ ..0xff]?, globalState GlobalState, ownedState OwnedState, valencies {U16 ^ ..0xff}
 data GenesisSchema    :: metadata StrictTypes.SemId?, globalState {U16 -> ^ ..0xff Occurrences}, ownedState {U16 -> ^ ..0xff Occurrences}, valencies {U16 ^ ..0xff}
@@ -42,7 +42,7 @@ data PedersenCommitment :: [U8 ^ 33]
 data RangeProof       :: placeholder:255 NoiseDumb
 data RevealedAttach   :: id AttachId, mediaType U8, salt U64
 data RevealedData     :: [U8]
-data RevealedFungible :: value Fungible, blinding BlindingFactor
+data RevealedFungible :: value FungibleState, blinding BlindingFactor
 data Schema           :: ffv Ffv, subsetOf SchemaId?, globalTypes {U16 -> ^ ..0xff StrictTypes.SemId}, ownedTypes {U16 -> ^ ..0xff StateSchema}, valencyTypes {U16 ^ ..0xff}, genesis GenesisSchema, extensions {U16 -> ^ ..0xff ExtensionSchema}, transitions {U16 -> ^ ..0xff TransitionSchema}, typeSystem [U8 ^ ..0xffffff], script Script
 data SchemaId         :: [U8 ^ 32]
 data Script           :: aluVm [U8 ^ ..0xffffff]
@@ -50,6 +50,6 @@ data StateSchema      :: declarative () | fungible FungibleType | structured Str
 data Transition       :: ffv Ffv, transitionType U16, metadata [U8 ^ ..0xff]?, globalState GlobalState, prevState {[Byte ^ 32] -> ^ ..0xff {U16 -> ^ ..0xff [U16 ^ ..0xff]}}, ownedState OwnedState, valencies {U16 ^ ..0xff}
 data TransitionBundle :: {[Byte ^ 32] -> ^ ..0xff BundleItem}
 data TransitionSchema :: metadata StrictTypes.SemId?, globalState {U16 -> ^ ..0xff Occurrences}, closes {U16 -> ^ ..0xff Occurrences}, ownedState {U16 -> ^ ..0xff Occurrences}, valencies {U16 ^ ..0xff}
-data TypedState       :: declarative [AssignedState_DeclarativePair ^ ..0xffffff] | fungible [AssignedState_FungiblePair ^ ..0xffffff] | structured [AssignedState_StructuredPair ^ ..0xffffff] | attachment:255 [AssignedState_AttachmentPair ^ ..0xffffff]
-data Void             :: ()
+data TypedState       :: declarative [AssignRight ^ ..0xffffff] | fungible [AssignFungible ^ ..0xffffff] | structured [AssignState ^ ..0xffffff] | attachment:255 [AssignAttach ^ ..0xffffff]
+data VoidState        :: ()
 

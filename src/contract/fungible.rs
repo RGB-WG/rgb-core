@@ -66,7 +66,7 @@ use crate::LIB_NAME_RGB;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum Fungible {
+pub enum FungibleState {
     /// 64-bit value.
     #[from]
     #[strict_type(tag = 8)] // Matches strict types U64 primitive value
@@ -74,17 +74,17 @@ pub enum Fungible {
     // When/if adding more variants do not forget to re-write FromStr impl
 }
 
-impl Default for Fungible {
-    fn default() -> Self { Fungible::Bits64(0) }
+impl Default for FungibleState {
+    fn default() -> Self { FungibleState::Bits64(0) }
 }
 
-impl From<Revealed> for Fungible {
+impl From<Revealed> for FungibleState {
     fn from(revealed: Revealed) -> Self { revealed.value }
 }
 
-impl FromStr for Fungible {
+impl FromStr for FungibleState {
     type Err = ParseIntError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> { s.parse().map(Fungible::Bits64) }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { s.parse().map(FungibleState::Bits64) }
 }
 
 /// Blinding factor used in creating Pedersen commitment to an [`AtomicValue`].
@@ -160,7 +160,7 @@ impl TryFrom<[u8; 32]> for BlindingFactor {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Revealed {
     /// Original value in smallest indivisible units
-    pub value: Fungible,
+    pub value: FungibleState,
 
     /// Blinding factor used in Pedersen commitment
     pub blinding: BlindingFactor,
@@ -169,7 +169,7 @@ pub struct Revealed {
 impl Revealed {
     /// Constructs new state using the provided value and random generator for
     /// creating blinding factor.
-    pub fn new<R: Rng + RngCore>(value: Fungible, rng: &mut R) -> Self {
+    pub fn new<R: Rng + RngCore>(value: FungibleState, rng: &mut R) -> Self {
         Self {
             value,
             blinding: BlindingFactor::from(secp256k1_zkp::SecretKey::new(rng)),
@@ -177,7 +177,7 @@ impl Revealed {
     }
 
     /// Convenience constructor.
-    pub fn with(value: Fungible, blinding: impl Into<BlindingFactor>) -> Self {
+    pub fn with(value: FungibleState, blinding: impl Into<BlindingFactor>) -> Self {
         Self {
             value,
             blinding: blinding.into(),
@@ -222,7 +222,7 @@ impl Ord for Revealed {
     }
 }
 
-/// Opaque type holding pedersen commitment for an [`Fungible`].
+/// Opaque type holding pedersen commitment for an [`FungibleState`].
 #[derive(Wrapper, Copy, Clone, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, FromStr, Display, LowerHex)]
 #[derive(StrictType)]
@@ -271,7 +271,7 @@ impl CommitVerify<Revealed, UntaggedProtocol> for PedersenCommitment {
 
         let blinding = Tweak::from_inner(revealed.blinding.0.into_inner())
             .expect("type guarantees of BlindingFactor are broken");
-        let Fungible::Bits64(value) = revealed.value;
+        let FungibleState::Bits64(value) = revealed.value;
 
         // TODO: Check that we create correct generator value.
         let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &secp256k1_zkp::ONE_KEY);
@@ -334,9 +334,9 @@ impl Default for RangeProof {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct Confidential {
-    /// Pedersen commitment to the original [`Fungible`].
+    /// Pedersen commitment to the original [`FungibleState`].
     pub commitment: PedersenCommitment,
-    /// Range proof for the [`Fungible`] not exceeding type boundaries.
+    /// Range proof for the [`FungibleState`] not exceeding type boundaries.
     pub range_proof: RangeProof,
 }
 

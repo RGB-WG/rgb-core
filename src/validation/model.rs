@@ -30,7 +30,7 @@ use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    validation, AssignedState, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
+    validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
     PrevState, Redeemed, Schema, Script, StatePair, TypedState, Valencies,
 };
 
@@ -392,7 +392,7 @@ fn extract_prev_state(
             Some(node) => node,
         };
 
-        fn filter<Pair>(set: &[AssignedState<Pair>], indexes: &[u16]) -> Vec<AssignedState<Pair>>
+        fn filter<Pair>(set: &[Assign<Pair>], indexes: &[u16]) -> Vec<Assign<Pair>>
         where
             Pair: StatePair + Clone,
             Pair::Confidential: PartialEq + Eq,

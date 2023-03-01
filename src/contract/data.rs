@@ -36,17 +36,17 @@ use crate::LIB_NAME_RGB;
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct Void(());
+pub struct VoidState(());
 
-impl ConfidentialState for Void {}
+impl ConfidentialState for VoidState {}
 
-impl RevealedState for Void {}
+impl RevealedState for VoidState {}
 
-impl Conceal for Void {
-    type Concealed = Void;
+impl Conceal for VoidState {
+    type Concealed = VoidState;
     fn conceal(&self) -> Self::Concealed { *self }
 }
-impl CommitStrategy for Void {
+impl CommitStrategy for VoidState {
     type Strategy = commit_verify::strategies::Strict;
 }
 
