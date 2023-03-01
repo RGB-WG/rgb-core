@@ -41,11 +41,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
     let sty_id =
-        TypeLibId::from_str("eric_pablo_junior_6dNLcuqHACv1yYndmvNnXHuP7g3DV4qVkSf9tou6cDBm")?;
+        TypeLibId::from_str("subject_leonid_rudolf_3VG9Cjoyx9MMAY2y4EZBgX9YQoyMngFfNrGLAUFbzQFU")?;
     let bitcoin_id =
         TypeLibId::from_str("oberon_parker_cobra_GVur9D96gWvVkXNkss6nTXn3qyLG4tvT3G7AeLwFZACo")?;
     let bpcore_id =
-        TypeLibId::from_str("ford_lola_silicon_4F7Jgi9L55LqH1eNkUmLRFbRJ9nhcDRHbCXpp2buuTub")?;
+        TypeLibId::from_str("gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta")?;
 
     let imports = bmap! {
         libname!(STRICT_TYPES_LIB) => (lib_alias!(STRICT_TYPES_LIB), Dependency::with(sty_id, libname!(STRICT_TYPES_LIB), (0,10,0))),
