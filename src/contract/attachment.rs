@@ -62,7 +62,7 @@ impl FromStr for AttachId {
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB, rename = "RevealedAttach")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Revealed {
     pub id: AttachId,
@@ -101,7 +101,7 @@ impl CommitStrategy for Revealed {
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, AsAny)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedAttach")]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

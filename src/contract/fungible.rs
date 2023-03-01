@@ -156,7 +156,7 @@ impl TryFrom<[u8; 32]> for BlindingFactor {
 /// Consists of the 64-bit value and
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB, rename = "RevealedFungible")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Revealed {
     /// Original value in smallest indivisible units
@@ -327,7 +327,7 @@ impl Default for RangeProof {
 /// See also revealed version [`Revealed`].
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedFungible")]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

@@ -61,7 +61,7 @@ impl CommitStrategy for Void {
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB, rename = "RevealedData")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Revealed(SmallVec<u8>);
 
@@ -81,7 +81,7 @@ impl CommitStrategy for Revealed {
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, AsAny)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedData")]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
