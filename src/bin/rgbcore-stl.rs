@@ -28,14 +28,14 @@ extern crate strict_types;
 use std::str::FromStr;
 
 use bp::LIB_NAME_BP;
-use rgb::{Extension, Genesis, Schema, Transition, LIB_NAME_RGB};
+use rgb::{Extension, Genesis, Schema, TransitionBundle, LIB_NAME_RGB};
 use strict_encoding::STRICT_TYPES_LIB;
 use strict_types::typelib::LibBuilder;
 use strict_types::{Dependency, TypeLibId};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sty_id =
-        TypeLibId::from_str("9PAgDBAAAGt41sxDmkmXksGHYbVuz4N2zcFiyPnVqQbv#mama-jumbo-sinatra")?;
+        TypeLibId::from_str("5mWmf6wrAeNy4VgKwiqAaePHJEV9JUjsTeSyTwseo5wW#logic-drum-magenta")?;
     let imports = bmap! {
         libname!(STRICT_TYPES_LIB) => (lib_alias!(STRICT_TYPES_LIB), Dependency::with(sty_id, libname!(STRICT_TYPES_LIB), (0,10,0))),
         libname!(LIB_NAME_BP) => (lib_alias!(LIB_NAME_BP), Dependency::with(sty_id, libname!(LIB_NAME_BP), (0,10,0)))
@@ -44,10 +44,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lib = LibBuilder::new(libname!(LIB_NAME_RGB))
         .process::<Schema>()?
         .process::<Genesis>()?
-        .process::<Transition>()?
+        .process::<TransitionBundle>()?
         .process::<Extension>()?
         .compile(imports)?;
-    // TODO: Support TransitionBundle
     let id = lib.id();
 
     println!(

@@ -21,9 +21,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "4.0.0-beta.17"
+version = "4.0.0-beta.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72eaf6c304959bf74ba94973ebea642729f583000ef77e7139844642cc066004"
+checksum = "7b52c4d735bf8fdf9d0d177ba22d0ca21f14c79bda216e3a1a6d882eb3d79112"
 dependencies = [
  "amplify_apfloat",
  "amplify_derive",
@@ -910,7 +910,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding"
 version = "2.0.0-rc.1"
-source = "git+https://github.com/strict-types/strict-encoding#61ff3b78d37c737c0c2993c3cee951d2090c0a4c"
+source = "git+https://github.com/strict-types/strict-encoding#c88294b089e2b6c02a8fb56528a8b1a317cc9ab0"
 dependencies = [
  "amplify",
  "half",
@@ -921,7 +921,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding_derive"
 version = "2.0.0-beta.2"
-source = "git+https://github.com/strict-types/strict-encoding#61ff3b78d37c737c0c2993c3cee951d2090c0a4c"
+source = "git+https://github.com/strict-types/strict-encoding#c88294b089e2b6c02a8fb56528a8b1a317cc9ab0"
 dependencies = [
  "amplify_syn",
  "heck",
@@ -933,7 +933,7 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "1.0.0-beta.3"
-source = "git+https://github.com/strict-types/strict-types#b2a2f1deb22ae702893813d987670d31c2aa6096"
+source = "git+https://github.com/strict-types/strict-types#16986e2dbd64d3e9e960f213a552784f50f929bb"
 dependencies = [
  "amplify",
  "baid58",
