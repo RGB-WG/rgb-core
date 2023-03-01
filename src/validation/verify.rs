@@ -82,7 +82,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
-            for transition in bundle.revealed.keys() {
+            for transition in bundle.values().filter_map(|item| item.transition.as_ref()) {
                 let node_id = transition.id();
                 node_index.insert(node_id, transition);
                 anchor_index.insert(node_id, anchor);

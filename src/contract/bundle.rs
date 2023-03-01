@@ -22,7 +22,7 @@
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{Bytes32, Wrapper};
-use commit_verify::{mpc, CommitStrategy, CommitmentId};
+use commit_verify::{mpc, CommitStrategy, CommitmentId, Conceal};
 
 use super::{OpId, Transition};
 use crate::LIB_NAME_RGB;
@@ -56,10 +56,41 @@ impl From<mpc::Message> for BundleId {
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct TransitionBundle {
-    // TODO: #141 Provide type guarantees on the sum of revealed and concealed transitions
-    pub revealed: TinyOrdMap<Transition, TinyOrdSet<u16>>,
-    pub concealed: TinyOrdMap<OpId, TinyOrdSet<u16>>,
+pub struct BundleItem {
+    pub inputs: TinyOrdSet<u16>,
+    pub transition: Option<Transition>,
+}
+
+impl CommitStrategy for BundleItem {
+    type Strategy = commit_verify::strategies::ConcealStrict;
+}
+
+impl Conceal for BundleItem {
+    type Concealed = Self;
+
+    fn conceal(&self) -> Self::Concealed {
+        BundleItem {
+            inputs: self.inputs.clone(),
+            transition: None,
+        }
+    }
+}
+
+#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Debug, From, AsAny)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+pub struct TransitionBundle(TinyOrdMap<OpId, BundleItem>);
+
+impl Conceal for TransitionBundle {
+    type Concealed = Self;
+
+    fn conceal(&self) -> Self::Concealed {
+        let concealed = self.iter().map(|(id, item)| (*id, item.conceal()));
+        TransitionBundle(TinyOrdMap::try_from_iter(concealed).expect("same size"))
+    }
 }
 
 impl CommitStrategy for TransitionBundle {
@@ -72,26 +103,17 @@ impl CommitmentId for TransitionBundle {
 }
 
 impl TransitionBundle {
-    #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize { self.concealed.len() + self.revealed.len() }
-
     pub fn bundle_id(&self) -> BundleId { self.commitment_id() }
 }
 
 impl TransitionBundle {
     pub fn validate(&self) -> bool {
         let mut used_inputs = bset! {};
-        for set in self.revealed.values() {
-            if used_inputs.intersection(set).count() > 0 {
+        for item in self.values() {
+            if used_inputs.intersection(&item.inputs).count() > 0 {
                 return false;
             }
-            used_inputs.extend(set);
-        }
-        for set in self.concealed.values() {
-            if used_inputs.intersection(set).count() > 0 {
-                return false;
-            }
-            used_inputs.extend(set);
+            used_inputs.extend(&item.inputs);
         }
         true
     }
