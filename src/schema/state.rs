@@ -61,3 +61,12 @@ pub enum FungibleType {
     #[default]
     Unsigned64Bit = U64.into_code(),
 }
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+pub struct GlobalStateSchema {
+    pub sem_id: SemId,
+    pub max_items: u16,
+}

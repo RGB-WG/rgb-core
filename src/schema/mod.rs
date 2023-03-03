@@ -33,5 +33,5 @@ pub use operations::{
 };
 pub use schema::{ExtensionType, GlobalStateType, Schema, SchemaId, TransitionType};
 pub use script::{Script, VmType};
-pub use state::{FungibleType, StateSchema};
+pub use state::{FungibleType, GlobalStateSchema, StateSchema};
 pub use util::{Occurrences, OccurrencesMismatch};

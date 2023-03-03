@@ -28,13 +28,12 @@ use amplify::{Bytes32, RawArray};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use commit_verify::{CommitStrategy, CommitmentId};
 use strict_encoding::{StrictDecode, StrictEncode, StrictType};
-use strict_types::SemId;
 
 use super::{
     ExtensionSchema, GenesisSchema, OwnedStateType, Script, StateSchema, TransitionSchema,
     ValencyType,
 };
-use crate::{Ffv, LIB_NAME_RGB};
+use crate::{Ffv, GlobalStateSchema, LIB_NAME_RGB};
 
 pub type GlobalStateType = u16;
 pub type ExtensionType = u16;
@@ -78,7 +77,7 @@ pub struct Schema {
     pub ffv: Ffv,
     pub subset_of: Option<SchemaId>,
 
-    pub global_types: TinyOrdMap<GlobalStateType, SemId>,
+    pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<OwnedStateType, StateSchema>,
     pub valency_types: TinyOrdSet<ValencyType>,
     pub genesis: GenesisSchema,
