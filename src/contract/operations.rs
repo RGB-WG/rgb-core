@@ -24,7 +24,7 @@ use std::cmp::Ordering;
 use std::io::Write;
 use std::str::FromStr;
 
-use amplify::confinement::{SmallVec, TinyOrdMap, TinyOrdSet, TinyVec};
+use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet, TinyVec};
 use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, AsAny, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
@@ -179,7 +179,7 @@ pub trait Operation: AsAny {
     fn extension_type(&self) -> Option<ExtensionType>;
 
     /// Returns metadata associated with the operation, if any.
-    fn metadata(&self) -> Option<&[u8]>;
+    fn metadata(&self) -> Option<&SmallBlob>;
 
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract node.
@@ -225,7 +225,7 @@ pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
     pub chain: Chain,
-    pub metadata: Option<TinyVec<u8>>,
+    pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
     pub owned_state: OwnedState,
     pub valencies: Valencies,
@@ -243,7 +243,7 @@ pub struct Extension {
     pub ffv: Ffv,
     pub extension_type: ExtensionType,
     pub contract_id: ContractId,
-    pub metadata: Option<TinyVec<u8>>,
+    pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
     pub owned_state: OwnedState,
     pub redeemed: Redeemed,
@@ -261,7 +261,7 @@ pub struct Extension {
 pub struct Transition {
     pub ffv: Ffv,
     pub transition_type: TransitionType,
-    pub metadata: Option<SmallVec<u8>>,
+    pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
     pub prev_state: PrevState,
     pub owned_state: OwnedState,
@@ -326,7 +326,7 @@ impl Operation for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> Option<&[u8]> { self.metadata.as_ref().map(TinyVec::as_ref) }
+    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
 
     #[inline]
     fn global_state(&self) -> &GlobalState { &self.global_state }
@@ -370,7 +370,7 @@ impl Operation for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn metadata(&self) -> Option<&[u8]> { self.metadata.as_ref().map(TinyVec::as_ref) }
+    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
 
     #[inline]
     fn global_state(&self) -> &GlobalState { &self.global_state }
@@ -414,7 +414,7 @@ impl Operation for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> Option<&[u8]> { self.metadata.as_ref().map(SmallVec::as_ref) }
+    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
 
     #[inline]
     fn global_state(&self) -> &GlobalState { &self.global_state }
