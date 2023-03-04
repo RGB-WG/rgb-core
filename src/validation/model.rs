@@ -22,7 +22,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use amplify::confinement::Confined;
+use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
 use commit_verify::Conceal;
 
@@ -360,6 +360,7 @@ impl Schema {
 pub struct OpInfo<'op> {
     pub id: OpId,
     pub ty: OpFullType,
+    pub metadata: Option<&'op SmallBlob>,
     pub prev_state: &'op OwnedState,
     pub owned_state: &'op OwnedState,
     pub redeemed: &'op Valencies,
@@ -377,6 +378,7 @@ impl<'op> OpInfo<'op> {
         OpInfo {
             id,
             ty: op.full_type(),
+            metadata: op.metadata(),
             prev_state,
             owned_state: op.owned_state(),
             redeemed,
