@@ -19,16 +19,3 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-//! API for interfacing different virtual machines
-//!
-//! Concrete virtual machine implementations must be wrapped into this API
-
-// pub mod embedded;
-pub mod isa_state;
-pub mod isa_timechain;
-mod script;
-mod runtime;
-
-pub use runtime::AluRuntime;
-pub use script::{AluScript, EntryPoint, LIBS_MAX_TOTAL};
