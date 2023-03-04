@@ -29,6 +29,7 @@ use std::io::stdout;
 use std::str::FromStr;
 use std::{env, fs, io};
 
+use aluvm::LIB_NAME_ALUVM;
 use amplify::num::u24;
 use bp::dbc::LIB_NAME_BPCORE;
 use bp::LIB_NAME_BITCOIN;
@@ -46,11 +47,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         TypeLibId::from_str("oberon_parker_cobra_GVur9D96gWvVkXNkss6nTXn3qyLG4tvT3G7AeLwFZACo")?;
     let bpcore_id =
         TypeLibId::from_str("gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta")?;
+    let aluvm_id =
+        TypeLibId::from_str("gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta")?;
 
     let imports = bmap! {
         libname!(STRICT_TYPES_LIB) => (lib_alias!(STRICT_TYPES_LIB), Dependency::with(sty_id, libname!(STRICT_TYPES_LIB), (0,10,0))),
         libname!(LIB_NAME_BITCOIN) => (lib_alias!(LIB_NAME_BITCOIN), Dependency::with(bitcoin_id, libname!(LIB_NAME_BITCOIN), (0,10,0))),
         libname!(LIB_NAME_BPCORE) => (lib_alias!(LIB_NAME_BPCORE), Dependency::with(bpcore_id, libname!(LIB_NAME_BITCOIN), (0,10,0))),
+        libname!(LIB_NAME_ALUVM) => (lib_alias!(LIB_NAME_ALUVM), Dependency::with(bpcore_id, libname!(LIB_NAME_ALUVM), (0,10,0))),
     };
 
     let lib = LibBuilder::new(libname!(LIB_NAME_RGB))
