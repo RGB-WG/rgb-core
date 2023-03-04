@@ -169,6 +169,7 @@ impl<'script> AluRuntime<'script> {
                 self.run(EntryPoint::ValidateTransition(ty), &regs, info)?;
             }
             OpFullType::StateExtension(ty) => {
+                // TODO: set up registries
                 self.run(EntryPoint::ValidateExtension(ty), &regs, info)?;
             }
         }

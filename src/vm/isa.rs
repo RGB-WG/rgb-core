@@ -25,6 +25,7 @@
 use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
+use aluvm::isa;
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::CoreRegs;
@@ -33,8 +34,10 @@ pub const INSTR_PCVS: u8 = 0b11_001_000;
 // NB: For now we prohibit all other ISAE than this one. More ISAEs can be
 // allowed in a future with fast-forwards.
 pub use aluvm::isa::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
+use amplify::Wrapper;
 
 use crate::validation::OpInfo;
+use crate::{Assign, TypedState};
 // pub const INSTR_ISAE_FROM: u8 = 0b11_000_000;
 // pub const INSTR_ISAE_TO: u8 = 0b11_000_000;
 
@@ -78,10 +81,59 @@ impl InstructionSet for RgbIsa {
         bset! {"RGB"}
     }
 
-    // TODO: Implement
-    #[allow(unused_variables)]
-    fn exec(&self, regs: &mut CoreRegs, site: LibSite, _context: &Self::Context<'_>) -> ExecStep {
-        ExecStep::Next
+    fn exec(&self, regs: &mut CoreRegs, site: LibSite, context: &Self::Context<'_>) -> ExecStep {
+        macro_rules! fail {
+            () => {{
+                isa::ControlFlowOp::Fail.exec(regs, site, &());
+                return ExecStep::Stop;
+            }};
+        }
+
+        match self {
+            RgbIsa::PcVs(state_type) => {
+                if !context.prev_state.contains_key(state_type) &&
+                    !context.owned_state.contains_key(state_type)
+                {
+                    return ExecStep::Next;
+                }
+
+                let Some(prev_state) = context.prev_state.get(state_type) else {
+                    fail!()
+                };
+                let Some(new_state) = context.owned_state.get(state_type) else {
+                    fail!()
+                };
+
+                let inputs = match prev_state {
+                    TypedState::Fungible(state) => state
+                        .iter()
+                        .map(Assign::to_confidential_state)
+                        .map(|s| s.commitment.into_inner())
+                        .collect::<Vec<_>>(),
+                    _ => fail!(),
+                };
+                let outputs = match new_state {
+                    TypedState::Fungible(state) => state
+                        .iter()
+                        .map(Assign::to_confidential_state)
+                        .map(|s| s.commitment.into_inner())
+                        .collect::<Vec<_>>(),
+                    _ => fail!(),
+                };
+
+                if !secp256k1_zkp::verify_commitments_sum_to_equal(
+                    secp256k1_zkp::SECP256K1,
+                    &inputs,
+                    &outputs,
+                ) {
+                    fail!()
+                }
+
+                ExecStep::Next
+            }
+            // All other future unsupported operations, which must set `st0` to `false`.
+            _ => fail!(),
+        }
     }
 }
 
