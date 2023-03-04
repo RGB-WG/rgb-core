@@ -47,13 +47,9 @@ impl<'script> AluRuntime<'script> {
                 self.run(EntryPoint::ValidateGenesis, &regs, info)?;
             }
             OpFullType::StateTransition(ty) => {
-                regs.nums
-                    .insert((RegAFR::A(RegA::A16), Reg32::Reg1), info.ty.subtype().into());
                 self.run(EntryPoint::ValidateTransition(ty), &regs, info)?;
             }
             OpFullType::StateExtension(ty) => {
-                regs.nums
-                    .insert((RegAFR::A(RegA::A16), Reg32::Reg1), info.ty.subtype().into());
                 self.run(EntryPoint::ValidateExtension(ty), &regs, info)?;
             }
         }
