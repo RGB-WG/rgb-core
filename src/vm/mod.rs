@@ -162,20 +162,20 @@ impl<'script> AluRuntime<'script> {
         match info.ty {
             OpFullType::Genesis => {
                 // TODO: set up registries
-                self.run(EntryPoint::ValidateGenesis, &regs)?;
+                self.run(EntryPoint::ValidateGenesis, &regs, info)?;
             }
             OpFullType::StateTransition(ty) => {
                 // TODO: set up registries
-                self.run(EntryPoint::ValidateTransition(ty), &regs)?;
+                self.run(EntryPoint::ValidateTransition(ty), &regs, info)?;
             }
             OpFullType::StateExtension(ty) => {
-                self.run(EntryPoint::ValidateExtension(ty), &regs)?;
+                self.run(EntryPoint::ValidateExtension(ty), &regs, info)?;
             }
         }
 
         for ty in info.global.keys() {
             // TODO: set up registries
-            self.run(EntryPoint::ValidateGlobalState(*ty), &regs)?;
+            self.run(EntryPoint::ValidateGlobalState(*ty), &regs, info)?;
         }
 
         let used_state = info
@@ -186,13 +186,13 @@ impl<'script> AluRuntime<'script> {
             .collect::<BTreeSet<_>>();
         for ty in used_state {
             // TODO: set up registries
-            self.run(EntryPoint::ValidateGlobalState(ty), &regs)?;
+            self.run(EntryPoint::ValidateGlobalState(ty), &regs, info)?;
         }
 
         Ok(())
     }
 
-    fn run(&self, entry: EntryPoint, regs: &RegSetup) -> Result<(), String> {
+    fn run(&self, entry: EntryPoint, regs: &RegSetup, info: &OpInfo) -> Result<(), String> {
         let mut vm = Vm::new();
 
         for ((reg, idx), val) in &regs.nums {
@@ -206,7 +206,7 @@ impl<'script> AluRuntime<'script> {
         }
 
         match self.script.entry_points.get(&entry) {
-            Some(site) => match vm.call(self.script, *site) {
+            Some(site) => match vm.call(self.script, *site, info) {
                 true => Ok(()),
                 false => Err(vm
                     .registers

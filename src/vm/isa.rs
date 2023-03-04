@@ -33,6 +33,8 @@ pub const INSTR_PCVS: u8 = 0b11_001_000;
 // NB: For now we prohibit all other ISAE than this one. More ISAEs can be
 // allowed in a future with fast-forwards.
 pub use aluvm::isa::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
+
+use crate::validation::OpInfo;
 // pub const INSTR_ISAE_FROM: u8 = 0b11_000_000;
 // pub const INSTR_ISAE_TO: u8 = 0b11_000_000;
 
@@ -70,13 +72,17 @@ pub enum RgbIsa {
 }
 
 impl InstructionSet for RgbIsa {
+    type Context<'ctx> = OpInfo<'ctx>;
+
     fn isa_ids() -> BTreeSet<&'static str> {
         bset! {"RGB"}
     }
 
     // TODO: Implement
     #[allow(unused_variables)]
-    fn exec(&self, regs: &mut CoreRegs, site: LibSite) -> ExecStep { ExecStep::Next }
+    fn exec(&self, regs: &mut CoreRegs, site: LibSite, _context: &Self::Context<'_>) -> ExecStep {
+        ExecStep::Next
+    }
 }
 
 impl Bytecode for RgbIsa {
