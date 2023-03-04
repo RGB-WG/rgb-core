@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         libname!(STRICT_TYPES_LIB) => (lib_alias!(STRICT_TYPES_LIB), Dependency::with(sty_id, libname!(STRICT_TYPES_LIB), (0,10,0))),
         libname!(LIB_NAME_BITCOIN) => (lib_alias!(LIB_NAME_BITCOIN), Dependency::with(bitcoin_id, libname!(LIB_NAME_BITCOIN), (0,10,0))),
         libname!(LIB_NAME_BPCORE) => (lib_alias!(LIB_NAME_BPCORE), Dependency::with(bpcore_id, libname!(LIB_NAME_BITCOIN), (0,10,0))),
-        libname!(LIB_NAME_ALUVM) => (lib_alias!(LIB_NAME_ALUVM), Dependency::with(bpcore_id, libname!(LIB_NAME_ALUVM), (0,10,0))),
+        libname!(LIB_NAME_ALUVM) => (lib_alias!(LIB_NAME_ALUVM), Dependency::with(aluvm_id, libname!(LIB_NAME_ALUVM), (0,10,0))),
     };
 
     let lib = LibBuilder::new(libname!(LIB_NAME_RGB))

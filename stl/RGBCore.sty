@@ -1,5 +1,5 @@
 {-
-  Id: 39qnZe8V8aXjrMtzAciwLynucGCN43ZeVm7H7GNwixc8
+  Id: 4ehbEH9C5H4LkqwHURAetPzthDaqMEwpVKT5eyJQuEko
   Name: RGBCore
   Description: Consensus layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
@@ -7,13 +7,15 @@
   License: Apache-2.0
 -}
 
-typelib RGB -- rider_comrade_final_39qnZe8V8aXjrMtzAciwLynucGCN43ZeVm7H7GNwixc8
+typelib RGB -- iris_sonata_silk_4ehbEH9C5H4LkqwHURAetPzthDaqMEwpVKT5eyJQuEko
 
+import gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta as AluVM
 import gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta as BPCore
 import oberon_parker_cobra_GVur9D96gWvVkXNkss6nTXn3qyLG4tvT3G7AeLwFZACo as Bitcoin
 import subject_leonid_rudolf_3VG9Cjoyx9MMAY2y4EZBgX9YQoyMngFfNrGLAUFbzQFU as StrictTypes
 
 
+data AluScript        :: libs AluVM.LibId, entryPoints {[Byte ^ 3] -> AluVM.LibSite}
 data AssignAttach     :: confidential (seal BPCore.ConcealedSeal, state ConcealedAttach)
                        | confidentialState (seal BPCore.RevealedSeal, state ConcealedAttach)
                        | confidentialSeal (seal BPCore.ConcealedSeal, state RevealedAttach)
@@ -40,7 +42,7 @@ data ContractId       :: [U8 ^ 32]
 data Extension        :: ffv Ffv
                        , extensionType U16
                        , contractId ContractId
-                       , metadata [U8 ^ ..0xff]?
+                       , metadata [U8]?
                        , globalState GlobalState
                        , ownedState OwnedState
                        , redeemed {[Byte ^ 32] -> ^ ..0xff {U16 ^ ..0xff}}
@@ -56,7 +58,7 @@ data FungibleType     :: unsigned64Bit:8
 data Genesis          :: ffv Ffv
                        , schemaId SchemaId
                        , chain Bitcoin.Chain
-                       , metadata [U8 ^ ..0xff]?
+                       , metadata [U8]?
                        , globalState GlobalState
                        , ownedState OwnedState
                        , valencies {U16 ^ ..0xff}
@@ -65,6 +67,7 @@ data GenesisSchema    :: metadata StrictTypes.SemId?
                        , ownedState {U16 -> ^ ..0xff Occurrences}
                        , valencies {U16 ^ ..0xff}
 data GlobalState      :: {U16 -> ^ ..0xff GlobalValues}
+data GlobalStateSchema :: semId StrictTypes.SemId, maxItems U16
 data GlobalValues     :: [RevealedData ^ 1..0xff]
 data NoiseDumb        :: [U8 ^ 512]
 data Occurrences      :: min U16, max U16
@@ -79,7 +82,7 @@ data RevealedData     :: [U8]
 data RevealedFungible :: value FungibleState, blinding BlindingFactor
 data Schema           :: ffv Ffv
                        , subsetOf SchemaId?
-                       , globalTypes {U16 -> ^ ..0xff StrictTypes.SemId}
+                       , globalTypes {U16 -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {U16 -> ^ ..0xff StateSchema}
                        , valencyTypes {U16 ^ ..0xff}
                        , genesis GenesisSchema
@@ -88,14 +91,14 @@ data Schema           :: ffv Ffv
                        , typeSystem [U8 ^ ..0xffffff]
                        , script Script
 data SchemaId         :: [U8 ^ 32]
-data Script           :: aluVm [U8 ^ ..0xffffff]
+data Script           :: aluVm AluScript
 data StateSchema      :: declarative ()
                        | fungible FungibleType
                        | structured StrictTypes.SemId
                        | attachment ()
 data Transition       :: ffv Ffv
                        , transitionType U16
-                       , metadata [U8 ^ ..0xff]?
+                       , metadata [U8]?
                        , globalState GlobalState
                        , prevState {[Byte ^ 32] -> ^ ..0xff {U16 -> ^ ..0xff [U16 ^ ..0xff]}}
                        , ownedState OwnedState
@@ -106,9 +109,9 @@ data TransitionSchema :: metadata StrictTypes.SemId?
                        , closes {U16 -> ^ ..0xff Occurrences}
                        , ownedState {U16 -> ^ ..0xff Occurrences}
                        , valencies {U16 ^ ..0xff}
-data TypedState       :: declarative [AssignRight ^ ..0xffffff]
-                       | fungible [AssignFungible ^ ..0xffffff]
-                       | structured [AssignState ^ ..0xffffff]
-                       | attachment:255 [AssignAttach ^ ..0xffffff]
+data TypedState       :: declarative [AssignRight]
+                       | fungible [AssignFungible]
+                       | structured [AssignState]
+                       | attachment:255 [AssignAttach]
 data VoidState        :: ()
 
