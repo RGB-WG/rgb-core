@@ -29,35 +29,16 @@ use aluvm::isa;
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg16, RegA, RegS};
-use amplify::Wrapper;
-
-pub const INSTR_CNP: u8 = 0b11_000_000;
-pub const INSTR_CNS: u8 = 0b11_000_001;
-pub const INSTR_CNG: u8 = 0b11_000_010;
-pub const INSTR_CNC: u8 = 0b11_000_011;
-pub const INSTR_LDP: u8 = 0b11_000_100;
-pub const INSTR_LDS: u8 = 0b11_000_101;
-pub const INSTR_LDF: u8 = 0b11_000_110;
-// Reserved 0b11_000_111
-pub const INSTR_LDG: u8 = 0b11_001_000;
-pub const INSTR_LDC: u8 = 0b11_001_001;
-pub const INSTR_LDM: u8 = 0b11_001_010;
-
-pub const INSTR_PCVS: u8 = 0b11_010_000;
-
-// NB: For now we prohibit all other ISAE than this one. More ISAEs can be
-// allowed in a future with fast-forwards.
-pub use aluvm::isa::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
 use amplify::num::u4;
+use amplify::Wrapper;
 use strict_encoding::StrictSerialize;
 
+use super::opcodes::*;
 use crate::validation::OpInfo;
 use crate::{Assign, TypedState};
-// pub const INSTR_ISAE_FROM: u8 = 0b11_000_000;
-// pub const INSTR_ISAE_TO: u8 = 0b11_000_000;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-pub enum RgbIsa {
+pub enum ContractOp {
     /// Counts number of inputs (previous state entries) of the provided type
     /// and assigns the number to the destination `a16` register.
     #[display("cnp      {0},a16{1}")]
@@ -146,7 +127,6 @@ pub enum RgbIsa {
     /// to `false`.
     #[display("pcvs     {0}")]
     PcVs(u16),
-
     /*
     /// Verifies corrected sum of pedersen commitments adding a value taken from `RegR` to the list
     /// of inputs (negatives).
@@ -157,12 +137,10 @@ pub enum RgbIsa {
     Fail(u8),
 }
 
-impl InstructionSet for RgbIsa {
+impl InstructionSet for ContractOp {
     type Context<'ctx> = OpInfo<'ctx>;
 
-    fn isa_ids() -> BTreeSet<&'static str> {
-        bset! {"RGB"}
-    }
+    fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
     fn exec(&self, regs: &mut CoreRegs, site: LibSite, context: &Self::Context<'_>) -> ExecStep {
         macro_rules! fail {
@@ -173,28 +151,28 @@ impl InstructionSet for RgbIsa {
         }
 
         match self {
-            RgbIsa::CnP(state_type, reg) => {
+            ContractOp::CnP(state_type, reg) => {
                 regs.set(
                     RegA::A16,
                     *reg,
                     context.prev_state.get(state_type).map(|a| a.len() as u32),
                 );
             }
-            RgbIsa::CnS(state_type, reg) => {
+            ContractOp::CnS(state_type, reg) => {
                 regs.set(
                     RegA::A16,
                     *reg,
                     context.owned_state.get(state_type).map(|a| a.len() as u32),
                 );
             }
-            RgbIsa::CnG(state_type, reg) => {
+            ContractOp::CnG(state_type, reg) => {
                 regs.set(RegA::A16, *reg, context.global.get(state_type).map(|a| a.len_u8()));
             }
-            RgbIsa::CnC(_state_type, _reg) => {
+            ContractOp::CnC(_state_type, _reg) => {
                 // TODO: implement global contract state
                 fail!()
             }
-            RgbIsa::LdP(state_type, index, reg) => {
+            ContractOp::LdP(state_type, index, reg) => {
                 let Some(Ok(state)) = context
                     .prev_state
                     .get(state_type)
@@ -207,7 +185,7 @@ impl InstructionSet for RgbIsa {
                 });
                 regs.set_s(*reg, state);
             }
-            RgbIsa::LdS(state_type, index, reg) => {
+            ContractOp::LdS(state_type, index, reg) => {
                 let Some(Ok(state)) = context
                     .owned_state
                     .get(state_type)
@@ -220,7 +198,7 @@ impl InstructionSet for RgbIsa {
                 });
                 regs.set_s(*reg, state);
             }
-            RgbIsa::LdF(state_type, index, reg) => {
+            ContractOp::LdF(state_type, index, reg) => {
                 let Some(Ok(state)) = context
                     .owned_state
                     .get(state_type)
@@ -229,7 +207,7 @@ impl InstructionSet for RgbIsa {
                 };
                 regs.set(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
             }
-            RgbIsa::LdG(state_type, index, reg) => {
+            ContractOp::LdG(state_type, index, reg) => {
                 let Some(state) = context
                     .global
                     .get(state_type)
@@ -238,15 +216,15 @@ impl InstructionSet for RgbIsa {
                 };
                 regs.set_s(*reg, Some(state.as_inner()));
             }
-            RgbIsa::LdC(_state_type, _index, _reg) => {
+            ContractOp::LdC(_state_type, _index, _reg) => {
                 // TODO: implement global contract state
                 fail!()
             }
-            RgbIsa::LdM(reg) => {
+            ContractOp::LdM(reg) => {
                 regs.set_s(*reg, context.metadata);
             }
 
-            RgbIsa::PcVs(state_type) => {
+            ContractOp::PcVs(state_type) => {
                 if !context.prev_state.contains_key(state_type) &&
                     !context.owned_state.contains_key(state_type)
                 {
@@ -293,105 +271,110 @@ impl InstructionSet for RgbIsa {
     }
 }
 
-impl Bytecode for RgbIsa {
+impl Bytecode for ContractOp {
     fn byte_count(&self) -> u16 {
         match self {
-            RgbIsa::CnP(_, _) | RgbIsa::CnS(_, _) | RgbIsa::CnG(_, _) | RgbIsa::CnC(_, _) => 3,
+            ContractOp::CnP(_, _) |
+            ContractOp::CnS(_, _) |
+            ContractOp::CnG(_, _) |
+            ContractOp::CnC(_, _) => 3,
 
-            RgbIsa::LdP(_, _, _) |
-            RgbIsa::LdS(_, _, _) |
-            RgbIsa::LdF(_, _, _) |
-            RgbIsa::LdC(_, _, _) => 5,
-            RgbIsa::LdG(_, _, _) => 4,
-            RgbIsa::LdM(_) => 1,
+            ContractOp::LdP(_, _, _) |
+            ContractOp::LdS(_, _, _) |
+            ContractOp::LdF(_, _, _) |
+            ContractOp::LdC(_, _, _) => 5,
+            ContractOp::LdG(_, _, _) => 4,
+            ContractOp::LdM(_) => 1,
 
-            RgbIsa::PcVs(_) => 2,
-            RgbIsa::Fail(_) => 0,
+            ContractOp::PcVs(_) => 2,
+
+            ContractOp::Fail(_) => 0,
         }
     }
 
-    fn instr_range() -> RangeInclusive<u8> { INSTR_ISAE_FROM..=INSTR_ISAE_TO }
+    fn instr_range() -> RangeInclusive<u8> { INSTR_CNP..=0b11_001_111 }
 
     fn instr_byte(&self) -> u8 {
         match self {
-            RgbIsa::CnP(_, _) => INSTR_CNP,
-            RgbIsa::CnS(_, _) => INSTR_CNS,
-            RgbIsa::CnG(_, _) => INSTR_CNG,
-            RgbIsa::CnC(_, _) => INSTR_CNC,
+            ContractOp::CnP(_, _) => INSTR_CNP,
+            ContractOp::CnS(_, _) => INSTR_CNS,
+            ContractOp::CnG(_, _) => INSTR_CNG,
+            ContractOp::CnC(_, _) => INSTR_CNC,
 
-            RgbIsa::LdP(_, _, _) => INSTR_LDP,
-            RgbIsa::LdS(_, _, _) => INSTR_LDS,
-            RgbIsa::LdF(_, _, _) => INSTR_LDF,
-            RgbIsa::LdG(_, _, _) => INSTR_LDG,
-            RgbIsa::LdC(_, _, _) => INSTR_LDC,
-            RgbIsa::LdM(_) => INSTR_LDM,
+            ContractOp::LdP(_, _, _) => INSTR_LDP,
+            ContractOp::LdS(_, _, _) => INSTR_LDS,
+            ContractOp::LdF(_, _, _) => INSTR_LDF,
+            ContractOp::LdG(_, _, _) => INSTR_LDG,
+            ContractOp::LdC(_, _, _) => INSTR_LDC,
+            ContractOp::LdM(_) => INSTR_LDM,
 
-            RgbIsa::PcVs(_) => INSTR_PCVS,
+            ContractOp::PcVs(_) => INSTR_PCVS,
 
-            RgbIsa::Fail(other) => *other,
+            ContractOp::Fail(other) => *other,
         }
     }
 
     fn encode_args<W>(&self, writer: &mut W) -> Result<(), BytecodeError>
     where W: Write {
         match self {
-            RgbIsa::CnP(state_type, reg) => {
+            ContractOp::CnP(state_type, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            RgbIsa::CnS(state_type, reg) => {
+            ContractOp::CnS(state_type, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            RgbIsa::CnG(state_type, reg) => {
+            ContractOp::CnG(state_type, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            RgbIsa::CnC(state_type, reg) => {
+            ContractOp::CnC(state_type, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            RgbIsa::LdP(state_type, index, reg) => {
-                writer.write_u16(*state_type)?;
-                writer.write_u16(*index)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
-            }
-            RgbIsa::LdS(state_type, index, reg) => {
+            ContractOp::LdP(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u16(*index)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            RgbIsa::LdF(state_type, index, reg) => {
+            ContractOp::LdS(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u16(*index)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            RgbIsa::LdG(state_type, index, reg) => {
+            ContractOp::LdF(state_type, index, reg) => {
+                writer.write_u16(*state_type)?;
+                writer.write_u16(*index)?;
+                writer.write_u4(reg)?;
+                writer.write_u4(u4::ZERO)?;
+            }
+            ContractOp::LdG(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u8(*index)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            RgbIsa::LdC(state_type, index, reg) => {
+            ContractOp::LdC(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u16(*index)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            RgbIsa::LdM(reg) => {
+            ContractOp::LdM(reg) => {
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
 
-            RgbIsa::PcVs(state_type) => writer.write_u16(*state_type)?,
-            RgbIsa::Fail(_) => {}
+            ContractOp::PcVs(state_type) => writer.write_u16(*state_type)?,
+
+            ContractOp::Fail(_) => {}
         }
         Ok(())
     }
@@ -455,7 +438,8 @@ impl Bytecode for RgbIsa {
             }
 
             INSTR_PCVS => Self::PcVs(reader.read_u16()?),
-            other => Self::Fail(other),
+
+            x => Self::Fail(x),
         })
     }
 }

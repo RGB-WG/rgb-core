@@ -24,11 +24,15 @@
 //!
 //! Concrete virtual machine implementations must be wrapped into this API
 
-// pub mod embedded;
-pub mod isa_state;
-pub mod isa_timechain;
+pub mod opcodes;
+mod isa;
+mod op_contract;
+mod op_timechain;
 mod script;
 mod runtime;
 
+pub use isa::RgbIsa;
+pub use op_contract::ContractOp;
+pub use op_timechain::TimechainOp;
 pub use runtime::AluRuntime;
 pub use script::{AluScript, EntryPoint, LIBS_MAX_TOTAL};

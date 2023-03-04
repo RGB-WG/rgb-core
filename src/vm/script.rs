@@ -32,7 +32,7 @@ use strict_encoding::{
     TypedRead, TypedWrite, WriteStruct,
 };
 
-use crate::vm::isa_state::RgbIsa;
+use crate::vm::RgbIsa;
 use crate::{ExtensionType, GlobalStateType, OwnedStateType, TransitionType, LIB_NAME_RGB};
 
 /// Maximum total number of libraries which may be used by a single program;
