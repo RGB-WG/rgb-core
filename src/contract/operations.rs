@@ -24,7 +24,7 @@ use std::cmp::Ordering;
 use std::io::Write;
 use std::str::FromStr;
 
-use amplify::confinement::{TinyOrdMap, TinyOrdSet, TinyVec};
+use amplify::confinement::{SmallVec, TinyOrdMap, TinyOrdSet, TinyVec};
 use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, AsAny, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
@@ -261,7 +261,7 @@ pub struct Extension {
 pub struct Transition {
     pub ffv: Ffv,
     pub transition_type: TransitionType,
-    pub metadata: Option<TinyVec<u8>>,
+    pub metadata: Option<SmallVec<u8>>,
     pub global_state: GlobalState,
     pub prev_state: PrevState,
     pub owned_state: OwnedState,
@@ -414,7 +414,7 @@ impl Operation for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> Option<&[u8]> { self.metadata.as_ref().map(TinyVec::as_ref) }
+    fn metadata(&self) -> Option<&[u8]> { self.metadata.as_ref().map(SmallVec::as_ref) }
 
     #[inline]
     fn global_state(&self) -> &GlobalState { &self.global_state }
