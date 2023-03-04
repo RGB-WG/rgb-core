@@ -515,6 +515,20 @@ impl TypedState {
             TypedState::Attachment(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
         }
     }
+
+    pub fn revealed_state_at(&self, index: u16) -> Result<Option<SmallVec<u8>>, UnknownDataError> {
+        match self {
+            TypedState::Structured(vec) => Ok(vec
+                .get(index as usize)
+                .ok_or(UnknownDataError)?
+                .as_revealed_state()
+                .map(|s| {
+                    data::Revealed::to_strict_serialized::<{ u16::MAX as usize }>(s)
+                        .expect("type guarantees")
+                })),
+            _ => Err(UnknownDataError),
+        }
+    }
 }
 
 impl CommitStrategy for TypedState {
