@@ -74,3 +74,19 @@ pub struct GlobalStateSchema {
     pub sem_id: SemId,
     pub max_items: u16,
 }
+
+impl GlobalStateSchema {
+    pub fn once(sem_id: SemId) -> Self {
+        GlobalStateSchema {
+            sem_id,
+            max_items: 1,
+        }
+    }
+
+    pub fn many(sem_id: SemId) -> Self {
+        GlobalStateSchema {
+            sem_id,
+            max_items: u16::MAX,
+        }
+    }
+}
