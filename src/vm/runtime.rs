@@ -23,7 +23,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use aluvm::data::{ByteStr, Number};
-use aluvm::reg::{Reg32, RegAFR, RegS};
+use aluvm::reg::{Reg32, RegA, RegAFR, RegS};
 use aluvm::Vm;
 
 use crate::validation::OpInfo;
@@ -38,25 +38,27 @@ impl<'script> AluRuntime<'script> {
     pub fn new(script: &'script AluScript) -> Self { AluRuntime { script } }
 
     pub fn run_validations(&self, info: &OpInfo) -> Result<(), String> {
-        let regs = RegSetup::default();
+        let mut regs = RegSetup::default();
 
         match info.ty {
             OpFullType::Genesis => {
-                // TODO: set up registries
+                regs.nums
+                    .insert((RegAFR::A(RegA::A16), Reg32::Reg1), (info.subschema as u8).into());
                 self.run(EntryPoint::ValidateGenesis, &regs, info)?;
             }
             OpFullType::StateTransition(ty) => {
-                // TODO: set up registries
+                regs.nums
+                    .insert((RegAFR::A(RegA::A16), Reg32::Reg1), info.ty.subtype().into());
                 self.run(EntryPoint::ValidateTransition(ty), &regs, info)?;
             }
             OpFullType::StateExtension(ty) => {
-                // TODO: set up registries
+                regs.nums
+                    .insert((RegAFR::A(RegA::A16), Reg32::Reg1), info.ty.subtype().into());
                 self.run(EntryPoint::ValidateExtension(ty), &regs, info)?;
             }
         }
 
         for ty in info.global.keys() {
-            // TODO: set up registries
             self.run(EntryPoint::ValidateGlobalState(*ty), &regs, info)?;
         }
 
@@ -67,7 +69,6 @@ impl<'script> AluRuntime<'script> {
             .copied()
             .collect::<BTreeSet<_>>();
         for ty in used_state {
-            // TODO: set up registries
             self.run(EntryPoint::ValidateGlobalState(ty), &regs, info)?;
         }
 

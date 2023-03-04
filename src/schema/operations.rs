@@ -75,6 +75,16 @@ pub enum OpFullType {
     StateExtension(ExtensionType),
 }
 
+impl OpFullType {
+    pub fn subtype(self) -> u16 {
+        match self {
+            OpFullType::Genesis => 0,
+            OpFullType::StateTransition(ty) => ty,
+            OpFullType::StateExtension(ty) => ty,
+        }
+    }
+}
+
 /// Trait defining common API for all node type schemata
 pub trait OpSchema {
     fn op_type(&self) -> OpType;

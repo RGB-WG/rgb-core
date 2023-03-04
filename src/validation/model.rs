@@ -137,7 +137,7 @@ impl Schema {
         status += self.validate_owned_state(id, op.owned_state(), assign_schema);
         status += self.validate_valencies(id, op.valencies(), valency_schema);
 
-        let op_info = OpInfo::with(id, op, &prev_state, &redeemed);
+        let op_info = OpInfo::with(id, self.subset_of.is_some(), op, &prev_state, &redeemed);
 
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the node data match the schema, so
@@ -358,6 +358,7 @@ impl Schema {
 }
 
 pub struct OpInfo<'op> {
+    pub subschema: bool,
     pub id: OpId,
     pub ty: OpFullType,
     pub metadata: Option<&'op SmallBlob>,
@@ -371,12 +372,14 @@ pub struct OpInfo<'op> {
 impl<'op> OpInfo<'op> {
     pub fn with(
         id: OpId,
+        subschema: bool,
         op: &'op dyn Operation,
         prev_state: &'op OwnedState,
         redeemed: &'op Valencies,
     ) -> Self {
         OpInfo {
             id,
+            subschema,
             ty: op.full_type(),
             metadata: op.metadata(),
             prev_state,
