@@ -20,73 +20,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::validation::Failure;
+use crate::validation::OpInfo;
 use crate::vm::AluRuntime;
-use crate::{validation, GlobalState, OpFullType, OpId, OwnedState, Script, Valencies};
+use crate::{validation, Script};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
-pub trait VirtualMachine {
+pub trait VirtualMachine<'script> {
     /// Validates state change in a contract node.
-    #[allow(clippy::too_many_arguments)]
-    fn validate(
-        &self,
-        node_id: OpId,
-        node_subtype: OpFullType,
-        previous_owned_rights: &OwnedState,
-        current_owned_rights: &OwnedState,
-        previous_public_rights: &Valencies,
-        current_public_rights: &Valencies,
-        current_meta: &GlobalState,
-    ) -> Result<(), validation::Failure>;
+    fn validate(&'script self, info: OpInfo) -> Result<(), validation::Failure>;
 }
 
-impl VirtualMachine for Script {
-    fn validate(
-        &self,
-        node_id: OpId,
-        node_subtype: OpFullType,
-        previous_owned_rights: &OwnedState,
-        current_owned_rights: &OwnedState,
-        previous_public_rights: &Valencies,
-        current_public_rights: &Valencies,
-        current_meta: &GlobalState,
-    ) -> Result<(), validation::Failure> {
+impl<'script> VirtualMachine<'script> for Script {
+    fn validate(&'script self, info: OpInfo) -> Result<(), validation::Failure> {
         match self {
-            Script::AluVM(script) => AluRuntime::new(script).validate(
-                node_id,
-                node_subtype,
-                previous_owned_rights,
-                current_owned_rights,
-                previous_public_rights,
-                current_public_rights,
-                current_meta,
-            ),
+            Script::AluVM(script) => AluRuntime::new(script).validate(info),
         }
     }
 }
 
-impl<'script> VirtualMachine for AluRuntime<'script> {
-    #[allow(unused_variables)]
-    fn validate(
-        &self,
-        node_id: OpId,
-        node_subtype: OpFullType,
-        previous_owned_rights: &OwnedState,
-        current_owned_rights: &OwnedState,
-        previous_public_rights: &Valencies,
-        current_public_rights: &Valencies,
-        current_meta: &GlobalState,
-    ) -> Result<(), Failure> {
-        // TODO: Implement validation with AluVM
-        /*
-        let mut vm = Vm::<RgbIsa>::new();
-        if vm.run(self.script) {
-            Ok(())
-        } else {
-            Err(Failure::ScriptFailure(node_id))
-        }
-         */
-        Ok(())
+impl<'script> VirtualMachine<'script> for AluRuntime<'script> {
+    fn validate(&self, info: OpInfo) -> Result<(), validation::Failure> {
+        let id = info.id;
+        self.run_validations(&info)
+            .map_err(|msg| validation::Failure::ScriptFailure(id, msg))
     }
 }

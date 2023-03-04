@@ -24,11 +24,13 @@
 //!
 //! Concrete virtual machine implementations must be wrapped into this API
 
-use std::collections::{btree_map, BTreeMap};
+use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::io;
 
 use aluvm::data::encoding::{Decode, Encode};
+use aluvm::data::{ByteStr, Number};
 use aluvm::library::{Lib, LibId, LibSite};
+use aluvm::reg::{Reg32, RegAFR, RegS};
 use aluvm::{Program, Vm};
 use amplify::confinement::{Confined, SmallBlob, SmallOrdMap, TinyOrdMap};
 use strict_encoding::{
@@ -36,8 +38,11 @@ use strict_encoding::{
     TypedRead, TypedWrite, WriteStruct,
 };
 
+use crate::validation::OpInfo;
 use crate::vm::isa::RgbIsa;
-use crate::{ExtensionType, GlobalStateType, OwnedStateType, TransitionType, LIB_NAME_RGB};
+use crate::{
+    ExtensionType, GlobalStateType, OpFullType, OwnedStateType, TransitionType, LIB_NAME_RGB,
+};
 
 // pub mod embedded;
 pub mod isa;
@@ -151,11 +156,71 @@ pub struct AluRuntime<'script> {
 impl<'script> AluRuntime<'script> {
     pub fn new(script: &'script AluScript) -> Self { AluRuntime { script } }
 
-    pub fn run(&self, entry: EntryPoint) -> bool {
+    pub fn run_validations(&self, info: &OpInfo) -> Result<(), String> {
+        let regs = RegSetup::default();
+
+        match info.ty {
+            OpFullType::Genesis => {
+                // TODO: set up registries
+                self.run(EntryPoint::ValidateGenesis, &regs)?;
+            }
+            OpFullType::StateTransition(ty) => {
+                // TODO: set up registries
+                self.run(EntryPoint::ValidateTransition(ty), &regs)?;
+            }
+            OpFullType::StateExtension(ty) => {
+                self.run(EntryPoint::ValidateExtension(ty), &regs)?;
+            }
+        }
+
+        for ty in info.global.keys() {
+            // TODO: set up registries
+            self.run(EntryPoint::ValidateGlobalState(*ty), &regs)?;
+        }
+
+        let used_state = info
+            .owned_state
+            .keys()
+            .chain(info.prev_state.keys())
+            .copied()
+            .collect::<BTreeSet<_>>();
+        for ty in used_state {
+            // TODO: set up registries
+            self.run(EntryPoint::ValidateGlobalState(ty), &regs)?;
+        }
+
+        Ok(())
+    }
+
+    fn run(&self, entry: EntryPoint, regs: &RegSetup) -> Result<(), String> {
         let mut vm = Vm::new();
+
+        for ((reg, idx), val) in &regs.nums {
+            vm.registers.set(*reg, *idx, *val);
+        }
+        for (reg, val) in &regs.data {
+            vm.registers.set_s(
+                *reg,
+                Some(ByteStr::try_from(val.as_ref()).expect("state must be less than 2^16 bytes")),
+            );
+        }
+
         match self.script.entry_points.get(&entry) {
-            Some(site) => vm.call(self.script, *site),
-            None => true,
+            Some(site) => match vm.call(self.script, *site) {
+                true => Ok(()),
+                false => Err(vm
+                    .registers
+                    .get_s(0)
+                    .and_then(|bs| String::from_utf8(bs.to_vec()).ok())
+                    .unwrap_or_else(|| s!("unspecified error"))),
+            },
+            None => Ok(()),
         }
     }
+}
+
+#[derive(Debug, Default)]
+struct RegSetup {
+    pub nums: BTreeMap<(RegAFR, Reg32), Number>,
+    pub data: BTreeMap<RegS, Vec<u8>>,
 }

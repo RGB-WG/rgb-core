@@ -28,18 +28,17 @@ use commit_verify::Conceal;
 
 use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
-use crate::vm::AluRuntime;
 use crate::{
     validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
-    PrevState, Redeemed, Schema, Script, StatePair, TypedState, Valencies,
+    PrevState, Redeemed, Schema, StatePair, TypedState, Valencies,
 };
 
 impl Schema {
-    pub fn validate(
+    pub fn validate<'script>(
         &self,
         all_ops: &BTreeMap<OpId, &dyn Operation>,
         op: &dyn Operation,
-        script: &Script,
+        vm: &dyn VirtualMachine<'script>,
     ) -> validation::Status {
         let id = op.id();
 
@@ -138,19 +137,12 @@ impl Schema {
         status += self.validate_owned_state(id, op.owned_state(), assign_schema);
         status += self.validate_valencies(id, op.valencies(), valency_schema);
 
+        let op_info = OpInfo::with(id, op, &prev_state, &redeemed);
+
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the node data match the schema, so
         // scripts are not required to validate the structure of the state
-        status += self.validate_state_evolution(
-            id,
-            op.full_type(),
-            &prev_state,
-            op.owned_state(),
-            &redeemed,
-            op.valencies(),
-            op.global_state(),
-            script,
-        );
+        status += self.validate_state_evolution(op_info, vm);
         status
     }
 
@@ -347,33 +339,50 @@ impl Schema {
         status
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn validate_state_evolution(
+    fn validate_state_evolution<'script>(
         &self,
-        id: OpId,
-        ty: OpFullType,
-        prev_state: &OwnedState,
-        owned_state: &OwnedState,
-        redeemed: &Valencies,
-        valencies: &Valencies,
-        global: &GlobalState,
-        script: &Script,
+        op_info: OpInfo,
+        vm: &dyn VirtualMachine<'script>,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
         // We do not validate public rights, since they do not have an
         // associated state and there is nothing to validate beyond schema
 
-        let vm = match script {
-            Script::AluVM(lib) => Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine>,
-        };
-
-        if let Err(err) = vm.validate(id, ty, prev_state, owned_state, redeemed, valencies, global)
-        {
+        if let Err(err) = vm.validate(op_info) {
             status.add_failure(err);
         }
 
         status
+    }
+}
+
+pub(crate) struct OpInfo<'op> {
+    pub id: OpId,
+    pub ty: OpFullType,
+    pub prev_state: &'op OwnedState,
+    pub owned_state: &'op OwnedState,
+    pub redeemed: &'op Valencies,
+    pub valencies: &'op Valencies,
+    pub global: &'op GlobalState,
+}
+
+impl<'op> OpInfo<'op> {
+    pub fn with(
+        id: OpId,
+        op: &'op dyn Operation,
+        prev_state: &'op OwnedState,
+        redeemed: &'op Valencies,
+    ) -> Self {
+        OpInfo {
+            id,
+            ty: op.full_type(),
+            prev_state,
+            owned_state: op.owned_state(),
+            redeemed,
+            valencies: op.valencies(),
+            global: op.global_state(),
+        }
     }
 }
 

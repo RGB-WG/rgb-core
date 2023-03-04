@@ -32,6 +32,7 @@ use core::ops::AddAssign;
 
 pub use apis::{ConsistencyError, ContainerApi, HistoryApi};
 use bp::Txid;
+pub(crate) use model::OpInfo;
 pub use verify::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, OpType, SchemaId};
@@ -246,7 +247,8 @@ pub enum Failure {
     /// invalid bulletproofs in {0}:{1}: {3}
     InvalidBulletproofs(OpId, u16, String),
 
-    ScriptFailure(OpId),
+    /// operation {0} is invalid: {1}
+    ScriptFailure(OpId, String),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]

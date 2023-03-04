@@ -31,8 +31,10 @@ use super::apis::HistoryApi;
 use super::schema::OpType;
 use super::{Failure, Status, Validity, Warning};
 use crate::validation::subschema::SchemaVerify;
+use crate::validation::vm::VirtualMachine;
+use crate::vm::AluRuntime;
 use crate::{
-    schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId,
+    schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId, Script,
     TransitionBundle, TypedState,
 };
 
@@ -59,6 +61,7 @@ pub struct Validator<'consignment, 'resolver, C: HistoryApi, R: ResolveTx> {
     validation_index: BTreeSet<OpId>,
     anchor_validation_index: BTreeSet<OpId>,
 
+    vm: Box<dyn VirtualMachine<'consignment>>,
     resolver: &'resolver R,
 }
 
@@ -146,6 +149,10 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         // anchor+transition pairs
         let anchor_validation_index = BTreeSet::<OpId>::new();
 
+        let vm = match &consignment.schema().script {
+            Script::AluVM(lib) => Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine>,
+        };
+
         Self {
             consignment,
             status,
@@ -157,6 +164,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             end_transitions,
             validation_index,
             anchor_validation_index,
+            vm,
             resolver,
         }
     }
@@ -213,7 +221,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
         // [VALIDATION]: Validate genesis
         self.status +=
-            schema.validate(&self.node_index, self.consignment.genesis(), &schema.script);
+            schema.validate(&self.node_index, self.consignment.genesis(), self.vm.as_ref());
         self.validation_index.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
@@ -284,7 +292,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             //               only a single node, not state evolution (it
             //               will be checked lately)
             if !self.validation_index.contains(&node_id) {
-                self.status += schema.validate(&self.node_index, node, &schema.script);
+                self.status += schema.validate(&self.node_index, node, self.vm.as_ref());
                 self.validation_index.insert(node_id);
             }
 
