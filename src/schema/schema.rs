@@ -23,11 +23,12 @@
 use std::cmp::Ordering;
 use std::str::FromStr;
 
-use amplify::confinement::{MediumVec, TinyOrdMap, TinyOrdSet};
+use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{Bytes32, RawArray};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use commit_verify::{CommitStrategy, CommitmentId};
 use strict_encoding::{StrictDecode, StrictEncode, StrictType};
+use strict_types::TypeSystem;
 
 use super::{
     ExtensionSchema, GenesisSchema, OwnedStateType, Script, StateSchema, TransitionSchema,
@@ -89,7 +90,7 @@ pub struct Schema {
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
     /// Type system
-    pub type_system: MediumVec<u8>, // TODO: TypeSystem,
+    pub type_system: TypeSystem,
     /// Validation code.
     pub script: Script,
 }
