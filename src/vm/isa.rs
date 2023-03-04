@@ -28,7 +28,7 @@ use std::ops::RangeInclusive;
 use aluvm::isa;
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
-use aluvm::reg::{CoreRegs, Reg16, RegS};
+use aluvm::reg::{CoreRegs, Reg16, RegA, RegS};
 use amplify::Wrapper;
 
 pub const INSTR_CNP: u8 = 0b11_000_000;
@@ -46,7 +46,7 @@ pub const INSTR_PCVS: u8 = 0b11_010_000;
 // NB: For now we prohibit all other ISAE than this one. More ISAEs can be
 // allowed in a future with fast-forwards.
 pub use aluvm::isa::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
-use amplify::num::{u24, u4};
+use amplify::num::u4;
 
 use crate::validation::OpInfo;
 use crate::{Assign, TypedState};
@@ -56,13 +56,13 @@ use crate::{Assign, TypedState};
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum RgbIsa {
     /// Counts number of inputs (previous state entries) of the provided type
-    /// and assigns the number to the destination `a32` register.
-    #[display("cnp      {0},a32{1}")]
+    /// and assigns the number to the destination `a16` register.
+    #[display("cnp      {0},a16{1}")]
     CnP(u16, Reg16),
 
     /// Counts number of outputs (owned state entries) of the provided type
-    /// and assigns the number to the destination `a32` register.
-    #[display("cns      {0},a32{1}")]
+    /// and assigns the number to the destination `a16` register.
+    #[display("cns      {0},a16{1}")]
     CnS(u16, Reg16),
 
     /// Counts number of inputs (previous state entries) of the provided type
@@ -71,33 +71,36 @@ pub enum RgbIsa {
     CnG(u16, Reg16),
 
     /// Counts number of inputs (previous state entries) of the provided type
-    /// and assigns the number to the destination `a32` register.
-    #[display("cnc      {0},a32{1}")]
+    /// and assigns the number to the destination `a16` register.
+    #[display("cnc      {0},a16{1}")]
     CnC(u16, Reg16),
 
     /// Loads input (previous) state with type id from the first argument and
     /// index from the second argument into a register provided in the third
     /// argument.
     ///
-    /// If the state is absent or concealed sets destination to `None`.
-    /// Does not modify content of `st0` register.
+    /// If the state is absent or is not a structured state sets `st0` to
+    /// `false` and terminates the program.
+    ///
+    /// If the state at the index is concealed, sets destination to `None`.
     #[display("ldp      {0},{1},{2}")]
-    LdP(u16, u24, RegS),
+    LdP(u16, u16, RegS),
 
     /// Loads owned state with type id from the first argument and index from
     /// the second argument into a register provided in the third argument.
     ///
-    /// If the state is absent or concealed sets destination to `None`.
-    /// Does not modify content of `st0` register.
+    /// If the state is absent or is not a structured state sets `st0` to
+    /// `false` and terminates the program.
+    ///
+    /// If the state at the index is concealed, sets destination to `None`.
     #[display("lds      {0},{1},{2}")]
-    LdS(u16, u24, RegS),
+    LdS(u16, u16, RegS),
 
     /// Loads global state from the current operation with type id from the
     /// first argument and index from the second argument into a register
     /// provided in the third argument.
     ///
-    /// If the state is absent or concealed sets destination to `None`.
-    /// Does not modify content of `st0` register.
+    /// If the state is absent sets `st0` to `false` and terminates the program.
     #[display("ldg      {0},{1},{2}")]
     LdG(u16, u8, RegS),
 
@@ -108,7 +111,7 @@ pub enum RgbIsa {
     /// If the state is absent or concealed sets destination to `None`.
     /// Does not modify content of `st0` register.
     #[display("ldc      {0},{1},{2}")]
-    LdC(u16, u24, RegS),
+    LdC(u16, u16, RegS),
 
     /// Loads operation metadata into a register provided in the third argument.
     ///
@@ -155,6 +158,62 @@ impl InstructionSet for RgbIsa {
         }
 
         match self {
+            RgbIsa::CnP(state_type, reg) => {
+                regs.set(
+                    RegA::A16,
+                    *reg,
+                    context.prev_state.get(state_type).map(|a| a.len() as u32),
+                );
+            }
+            RgbIsa::CnS(state_type, reg) => {
+                regs.set(
+                    RegA::A16,
+                    *reg,
+                    context.owned_state.get(state_type).map(|a| a.len() as u32),
+                );
+            }
+            RgbIsa::CnG(state_type, reg) => {
+                regs.set(RegA::A16, *reg, context.global.get(state_type).map(|a| a.len_u8()));
+            }
+            RgbIsa::CnC(_state_type, _reg) => {
+                // TODO: implement global contract state
+                fail!()
+            }
+            RgbIsa::LdP(state_type, index, reg) => {
+                let Some(Ok(state)) = context
+                    .prev_state
+                    .get(state_type)
+                    .map(|a| a.revealed_state_at(*index)) else {
+                    fail!()
+                };
+                regs.set_s(*reg, state);
+            }
+            RgbIsa::LdS(state_type, index, reg) => {
+                let Some(Ok(state)) = context
+                    .owned_state
+                    .get(state_type)
+                    .map(|a| a.revealed_state_at(*index)) else {
+                    fail!()
+                };
+                regs.set_s(*reg, state);
+            }
+            RgbIsa::LdG(state_type, index, reg) => {
+                let Some(state) = context
+                    .global
+                    .get(state_type)
+                    .and_then(|a| a.get(*index as usize)) else {
+                    fail!()
+                };
+                regs.set_s(*reg, Some(state.as_inner()));
+            }
+            RgbIsa::LdC(_state_type, _index, _reg) => {
+                // TODO: implement global contract state
+                fail!()
+            }
+            RgbIsa::LdM(reg) => {
+                regs.set_s(*reg, context.metadata);
+            }
+
             RgbIsa::PcVs(state_type) => {
                 if !context.prev_state.contains_key(state_type) &&
                     !context.owned_state.contains_key(state_type)
@@ -193,12 +252,12 @@ impl InstructionSet for RgbIsa {
                 ) {
                     fail!()
                 }
-
-                ExecStep::Next
             }
+
             // All other future unsupported operations, which must set `st0` to `false`.
             _ => fail!(),
         }
+        ExecStep::Next
     }
 }
 
@@ -207,7 +266,7 @@ impl Bytecode for RgbIsa {
         match self {
             RgbIsa::CnP(_, _) | RgbIsa::CnS(_, _) | RgbIsa::CnG(_, _) | RgbIsa::CnC(_, _) => 3,
 
-            RgbIsa::LdP(_, _, _) | RgbIsa::LdS(_, _, _) | RgbIsa::LdC(_, _, _) => 6,
+            RgbIsa::LdP(_, _, _) | RgbIsa::LdS(_, _, _) | RgbIsa::LdC(_, _, _) => 5,
             RgbIsa::LdG(_, _, _) => 4,
             RgbIsa::LdM(_) => 1,
 
@@ -262,13 +321,13 @@ impl Bytecode for RgbIsa {
             }
             RgbIsa::LdP(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u24(*index)?;
+                writer.write_u16(*index)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
             RgbIsa::LdS(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u24(*index)?;
+                writer.write_u16(*index)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
@@ -280,7 +339,7 @@ impl Bytecode for RgbIsa {
             }
             RgbIsa::LdC(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u24(*index)?;
+                writer.write_u16(*index)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
@@ -323,12 +382,12 @@ impl Bytecode for RgbIsa {
             }
 
             INSTR_LDP => {
-                let i = Self::LdP(reader.read_u16()?, reader.read_u24()?, reader.read_u4()?.into());
+                let i = Self::LdP(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_LDS => {
-                let i = Self::LdS(reader.read_u16()?, reader.read_u24()?, reader.read_u4()?.into());
+                let i = Self::LdS(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
@@ -338,7 +397,7 @@ impl Bytecode for RgbIsa {
                 i
             }
             INSTR_LDC => {
-                let i = Self::LdC(reader.read_u16()?, reader.read_u24()?, reader.read_u4()?.into());
+                let i = Self::LdC(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
