@@ -28,8 +28,8 @@ use aluvm::library::{Lib, LibId, LibSite};
 use aluvm::Program;
 use amplify::confinement::{Confined, SmallBlob, SmallOrdMap, TinyOrdMap};
 use strict_encoding::{
-    DecodeError, ReadStruct, StrictDecode, StrictEncode, StrictProduct, StrictStruct, StrictType,
-    TypedRead, TypedWrite, WriteStruct,
+    DecodeError, ReadStruct, StrictDecode, StrictEncode, StrictProduct, StrictStruct, StrictTuple,
+    StrictType, TypedRead, TypedWrite, WriteStruct,
 };
 
 use crate::vm::RgbIsa;
@@ -40,8 +40,8 @@ use crate::{ExtensionType, GlobalStateType, OwnedStateType, TransitionType, LIB_
 pub const LIBS_MAX_TOTAL: usize = 1024;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = order)]
+#[derive(StrictDumb)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -54,6 +54,45 @@ pub enum EntryPoint {
     ValidateExtension(ExtensionType),
     ValidateGlobalState(GlobalStateType),
     ValidateOwnedState(OwnedStateType),
+}
+
+impl StrictType for EntryPoint {
+    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB;
+}
+impl StrictProduct for EntryPoint {}
+impl StrictTuple for EntryPoint {
+    const FIELD_COUNT: u8 = 1;
+}
+impl StrictEncode for EntryPoint {
+    fn strict_encode<W: TypedWrite>(&self, writer: W) -> io::Result<W> {
+        let mut val = [0u8; 3];
+        let (ty, subty) = match self {
+            EntryPoint::ValidateGenesis => (0, 0u16),
+            EntryPoint::ValidateTransition(ty) => (1, *ty),
+            EntryPoint::ValidateExtension(ty) => (2, *ty),
+            EntryPoint::ValidateGlobalState(ty) => (3, *ty),
+            EntryPoint::ValidateOwnedState(ty) => (4, *ty),
+        };
+        val[0] = ty;
+        val[1..].copy_from_slice(&subty.to_le_bytes());
+        val.strict_encode(writer)
+    }
+}
+impl StrictDecode for EntryPoint {
+    fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
+        let val = <[u8; 3]>::strict_decode(reader)?;
+        let mut ty = [0u8; 2];
+        ty.copy_from_slice(&val[1..]);
+        let ty = u16::from_le_bytes(ty);
+        Ok(match val[0] {
+            0 => EntryPoint::ValidateGenesis,
+            1 => EntryPoint::ValidateTransition(ty),
+            2 => EntryPoint::ValidateExtension(ty),
+            3 => EntryPoint::ValidateGlobalState(ty),
+            4 => EntryPoint::ValidateOwnedState(ty),
+            x => return Err(DecodeError::EnumTagNotKnown(s!("EntryPoint"), x)),
+        })
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
