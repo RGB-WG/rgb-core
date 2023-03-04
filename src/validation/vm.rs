@@ -26,20 +26,20 @@ use crate::{validation, Script};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
-pub trait VirtualMachine<'script> {
+pub trait VirtualMachine {
     /// Validates state change in a contract node.
-    fn validate(&'script self, info: OpInfo) -> Result<(), validation::Failure>;
+    fn validate(&self, info: OpInfo) -> Result<(), validation::Failure>;
 }
 
-impl<'script> VirtualMachine<'script> for Script {
-    fn validate(&'script self, info: OpInfo) -> Result<(), validation::Failure> {
+impl VirtualMachine for Script {
+    fn validate(&self, info: OpInfo) -> Result<(), validation::Failure> {
         match self {
             Script::AluVM(script) => AluRuntime::new(script).validate(info),
         }
     }
 }
 
-impl<'script> VirtualMachine<'script> for AluRuntime<'script> {
+impl<'script> VirtualMachine for AluRuntime<'script> {
     fn validate(&self, info: OpInfo) -> Result<(), validation::Failure> {
         let id = info.id;
         self.run_validations(&info)

@@ -61,7 +61,7 @@ pub struct Validator<'consignment, 'resolver, C: HistoryApi, R: ResolveTx> {
     validation_index: BTreeSet<OpId>,
     anchor_validation_index: BTreeSet<OpId>,
 
-    vm: Box<dyn VirtualMachine<'consignment>>,
+    vm: Box<dyn VirtualMachine + 'consignment>,
     resolver: &'resolver R,
 }
 
@@ -150,7 +150,9 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         let anchor_validation_index = BTreeSet::<OpId>::new();
 
         let vm = match &consignment.schema().script {
-            Script::AluVM(lib) => Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine>,
+            Script::AluVM(lib) => {
+                Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine + 'consignment>
+            }
         };
 
         Self {

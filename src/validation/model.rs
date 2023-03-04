@@ -38,7 +38,7 @@ impl Schema {
         &self,
         all_ops: &BTreeMap<OpId, &dyn Operation>,
         op: &dyn Operation,
-        vm: &dyn VirtualMachine<'script>,
+        vm: &dyn VirtualMachine,
     ) -> validation::Status {
         let id = op.id();
 
@@ -339,10 +339,10 @@ impl Schema {
         status
     }
 
-    fn validate_state_evolution<'script>(
+    fn validate_state_evolution(
         &self,
         op_info: OpInfo,
-        vm: &dyn VirtualMachine<'script>,
+        vm: &dyn VirtualMachine,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -357,7 +357,7 @@ impl Schema {
     }
 }
 
-pub(crate) struct OpInfo<'op> {
+pub struct OpInfo<'op> {
     pub id: OpId,
     pub ty: OpFullType,
     pub prev_state: &'op OwnedState,
