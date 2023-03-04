@@ -37,9 +37,11 @@ pub const INSTR_CNG: u8 = 0b11_000_010;
 pub const INSTR_CNC: u8 = 0b11_000_011;
 pub const INSTR_LDP: u8 = 0b11_000_100;
 pub const INSTR_LDS: u8 = 0b11_000_101;
-pub const INSTR_LDG: u8 = 0b11_000_110;
-pub const INSTR_LDC: u8 = 0b11_000_111;
-pub const INSTR_LDM: u8 = 0b11_001_000;
+pub const INSTR_LDF: u8 = 0b11_000_110;
+// Reserved 0b11_000_111
+pub const INSTR_LDG: u8 = 0b11_001_000;
+pub const INSTR_LDC: u8 = 0b11_001_001;
+pub const INSTR_LDM: u8 = 0b11_001_010;
 
 pub const INSTR_PCVS: u8 = 0b11_010_000;
 
@@ -47,6 +49,7 @@ pub const INSTR_PCVS: u8 = 0b11_010_000;
 // allowed in a future with fast-forwards.
 pub use aluvm::isa::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
 use amplify::num::u4;
+use strict_encoding::StrictSerialize;
 
 use crate::validation::OpInfo;
 use crate::{Assign, TypedState};
@@ -86,8 +89,9 @@ pub enum RgbIsa {
     #[display("ldp      {0},{1},{2}")]
     LdP(u16, u16, RegS),
 
-    /// Loads owned state with type id from the first argument and index from
-    /// the second argument into a register provided in the third argument.
+    /// Loads owned structured state with type id from the first argument and
+    /// index from the second argument into a register provided in the third
+    /// argument.
     ///
     /// If the state is absent or is not a structured state sets `st0` to
     /// `false` and terminates the program.
@@ -95,6 +99,17 @@ pub enum RgbIsa {
     /// If the state at the index is concealed, sets destination to `None`.
     #[display("lds      {0},{1},{2}")]
     LdS(u16, u16, RegS),
+
+    /// Loads owned fungible state with type id from the first argument and
+    /// index from the second argument into `a64` register provided in the third
+    /// argument.
+    ///
+    /// If the state is absent or is not a fungible state sets `st0` to
+    /// `false` and terminates the program.
+    ///
+    /// If the state at the index is concealed, sets destination to `None`.
+    #[display("ldf      {0},{1},a64{2}")]
+    LdF(u16, u16, Reg16),
 
     /// Loads global state from the current operation with type id from the
     /// first argument and index from the second argument into a register
@@ -183,19 +198,36 @@ impl InstructionSet for RgbIsa {
                 let Some(Ok(state)) = context
                     .prev_state
                     .get(state_type)
-                    .map(|a| a.revealed_state_at(*index)) else {
+                    .map(|a| a.as_structured_state_at(*index)) else {
                     fail!()
                 };
+                let state = state.map(|s| {
+                    s.to_strict_serialized::<{ u16::MAX as usize }>()
+                        .expect("type guarantees")
+                });
                 regs.set_s(*reg, state);
             }
             RgbIsa::LdS(state_type, index, reg) => {
                 let Some(Ok(state)) = context
                     .owned_state
                     .get(state_type)
-                    .map(|a| a.revealed_state_at(*index)) else {
+                    .map(|a| a.as_structured_state_at(*index)) else {
                     fail!()
                 };
+                let state = state.map(|s| {
+                    s.to_strict_serialized::<{ u16::MAX as usize }>()
+                        .expect("type guarantees")
+                });
                 regs.set_s(*reg, state);
+            }
+            RgbIsa::LdF(state_type, index, reg) => {
+                let Some(Ok(state)) = context
+                    .owned_state
+                    .get(state_type)
+                    .map(|a| a.as_fungible_state_at(*index)) else {
+                    fail!()
+                };
+                regs.set(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
             }
             RgbIsa::LdG(state_type, index, reg) => {
                 let Some(state) = context
@@ -266,7 +298,10 @@ impl Bytecode for RgbIsa {
         match self {
             RgbIsa::CnP(_, _) | RgbIsa::CnS(_, _) | RgbIsa::CnG(_, _) | RgbIsa::CnC(_, _) => 3,
 
-            RgbIsa::LdP(_, _, _) | RgbIsa::LdS(_, _, _) | RgbIsa::LdC(_, _, _) => 5,
+            RgbIsa::LdP(_, _, _) |
+            RgbIsa::LdS(_, _, _) |
+            RgbIsa::LdF(_, _, _) |
+            RgbIsa::LdC(_, _, _) => 5,
             RgbIsa::LdG(_, _, _) => 4,
             RgbIsa::LdM(_) => 1,
 
@@ -286,6 +321,7 @@ impl Bytecode for RgbIsa {
 
             RgbIsa::LdP(_, _, _) => INSTR_LDP,
             RgbIsa::LdS(_, _, _) => INSTR_LDS,
+            RgbIsa::LdF(_, _, _) => INSTR_LDF,
             RgbIsa::LdG(_, _, _) => INSTR_LDG,
             RgbIsa::LdC(_, _, _) => INSTR_LDC,
             RgbIsa::LdM(_) => INSTR_LDM,
@@ -326,6 +362,12 @@ impl Bytecode for RgbIsa {
                 writer.write_u4(u4::ZERO)?;
             }
             RgbIsa::LdS(state_type, index, reg) => {
+                writer.write_u16(*state_type)?;
+                writer.write_u16(*index)?;
+                writer.write_u4(reg)?;
+                writer.write_u4(u4::ZERO)?;
+            }
+            RgbIsa::LdF(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u16(*index)?;
                 writer.write_u4(reg)?;
@@ -388,6 +430,11 @@ impl Bytecode for RgbIsa {
             }
             INSTR_LDS => {
                 let i = Self::LdS(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
+                reader.read_u4()?; // Discard garbage bits
+                i
+            }
+            INSTR_LDF => {
+                let i = Self::LdF(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }

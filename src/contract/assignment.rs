@@ -29,7 +29,7 @@ use amplify::confinement::{Confined, SmallVec, TinyOrdMap, U8};
 use amplify::Wrapper;
 use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
-use strict_encoding::{StrictDumb, StrictEncode, StrictSerialize, StrictWriter};
+use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
 use super::{attachment, data, fungible, seal, ConfidentialState, RevealedState};
 use crate::{schema, LIB_NAME_RGB};
@@ -516,16 +516,28 @@ impl TypedState {
         }
     }
 
-    pub fn revealed_state_at(&self, index: u16) -> Result<Option<SmallVec<u8>>, UnknownDataError> {
+    pub fn as_structured_state_at(
+        &self,
+        index: u16,
+    ) -> Result<Option<&data::Revealed>, UnknownDataError> {
         match self {
             TypedState::Structured(vec) => Ok(vec
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
-                .as_revealed_state()
-                .map(|s| {
-                    data::Revealed::to_strict_serialized::<{ u16::MAX as usize }>(s)
-                        .expect("type guarantees")
-                })),
+                .as_revealed_state()),
+            _ => Err(UnknownDataError),
+        }
+    }
+
+    pub fn as_fungible_state_at(
+        &self,
+        index: u16,
+    ) -> Result<Option<&fungible::Revealed>, UnknownDataError> {
+        match self {
+            TypedState::Fungible(vec) => Ok(vec
+                .get(index as usize)
+                .ok_or(UnknownDataError)?
+                .as_revealed_state()),
             _ => Err(UnknownDataError),
         }
     }

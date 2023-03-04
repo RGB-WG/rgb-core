@@ -87,6 +87,18 @@ impl FromStr for FungibleState {
     fn from_str(s: &str) -> Result<Self, Self::Err> { s.parse().map(FungibleState::Bits64) }
 }
 
+impl From<FungibleState> for u64 {
+    fn from(value: FungibleState) -> Self {
+        match value {
+            FungibleState::Bits64(val) => val,
+        }
+    }
+}
+
+impl FungibleState {
+    pub fn as_u64(&self) -> u64 { (*self).into() }
+}
+
 /// Blinding factor used in creating Pedersen commitment to an [`AtomicValue`].
 ///
 /// Knowledge of the blinding factor is important to reproduce the commitment
