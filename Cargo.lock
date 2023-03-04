@@ -677,6 +677,7 @@ dependencies = [
  "aluvm",
  "amplify",
  "baid58",
+ "base64 0.21.0",
  "bp-core",
  "commit_verify",
  "getrandom",
