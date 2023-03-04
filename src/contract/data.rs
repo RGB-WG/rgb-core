@@ -25,7 +25,7 @@ use core::fmt::Debug;
 use amplify::confinement::SmallVec;
 use amplify::{AsAny, Bytes32};
 use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
-use strict_encoding::StrictType;
+use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, RevealedState};
 use crate::LIB_NAME_RGB;
@@ -50,7 +50,7 @@ impl CommitStrategy for VoidState {
     type Strategy = commit_verify::strategies::Strict;
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, AsAny)]
+#[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, From, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "RevealedData")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -65,6 +65,8 @@ impl Conceal for Revealed {
 impl CommitStrategy for Revealed {
     type Strategy = commit_verify::strategies::ConcealStrict;
 }
+
+impl StrictSerialize for Revealed {}
 
 /// Confidential version of an structured state data.
 ///
