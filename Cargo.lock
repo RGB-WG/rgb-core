@@ -5,7 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.10.0-alpha.1"
-source = "git+https://github.com/AluVM/rust-aluvm#26299ce1d74c5df569d6f6352e3647cb55366db2"
+source = "git+https://github.com/AluVM/rust-aluvm#aa7265f69e68bef2cf7670b554d346d6d8b3f4b8"
 dependencies = [
  "amplify",
  "baid58",

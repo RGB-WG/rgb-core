@@ -202,7 +202,9 @@ impl<'script> AluRuntime<'script> {
         for (reg, val) in &regs.data {
             vm.registers.set_s(
                 *reg,
-                Some(ByteStr::try_from(val.as_ref()).expect("state must be less than 2^16 bytes")),
+                Some(
+                    ByteStr::try_from(val.as_slice()).expect("state must be less than 2^16 bytes"),
+                ),
             );
         }
 
