@@ -48,13 +48,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bpcore_id =
         TypeLibId::from_str("gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta")?;
     let aluvm_id =
-        TypeLibId::from_str("gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta")?;
+        TypeLibId::from_str("iris_sonata_silk_4ehbEH9C5H4LkqwHURAetPzthDaqMEwpVKT5eyJQuEko")?;
 
-    let imports = bmap! {
-        libname!(STRICT_TYPES_LIB) => (lib_alias!(STRICT_TYPES_LIB), Dependency::with(sty_id, libname!(STRICT_TYPES_LIB), (0,10,0))),
-        libname!(LIB_NAME_BITCOIN) => (lib_alias!(LIB_NAME_BITCOIN), Dependency::with(bitcoin_id, libname!(LIB_NAME_BITCOIN), (0,10,0))),
-        libname!(LIB_NAME_BPCORE) => (lib_alias!(LIB_NAME_BPCORE), Dependency::with(bpcore_id, libname!(LIB_NAME_BITCOIN), (0,10,0))),
-        libname!(LIB_NAME_ALUVM) => (lib_alias!(LIB_NAME_ALUVM), Dependency::with(aluvm_id, libname!(LIB_NAME_ALUVM), (0,10,0))),
+    let imports = bset! {
+        Dependency::with(sty_id, libname!(STRICT_TYPES_LIB)),
+        Dependency::with(bitcoin_id, libname!(LIB_NAME_BITCOIN)),
+        Dependency::with(bpcore_id, libname!(LIB_NAME_BPCORE)),
+        Dependency::with(aluvm_id, libname!(LIB_NAME_ALUVM)),
     };
 
     let lib = LibBuilder::new(libname!(LIB_NAME_RGB))

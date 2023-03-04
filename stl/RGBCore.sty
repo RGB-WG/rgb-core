@@ -1,5 +1,5 @@
 {-
-  Id: 4ehbEH9C5H4LkqwHURAetPzthDaqMEwpVKT5eyJQuEko
+  Id: B47is8trWkX2b6oMe43i8X6i3ybSS4Y2Wusga51TifWk
   Name: RGBCore
   Description: Consensus layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
@@ -7,12 +7,12 @@
   License: Apache-2.0
 -}
 
-typelib RGB -- iris_sonata_silk_4ehbEH9C5H4LkqwHURAetPzthDaqMEwpVKT5eyJQuEko
+typelib RGB -- andy_parade_candid_B47is8trWkX2b6oMe43i8X6i3ybSS4Y2Wusga51TifWk
 
-import gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta as AluVM
+import subject_leonid_rudolf_3VG9Cjoyx9MMAY2y4EZBgX9YQoyMngFfNrGLAUFbzQFU as StrictTypes
+import iris_sonata_silk_4ehbEH9C5H4LkqwHURAetPzthDaqMEwpVKT5eyJQuEko as AluVM
 import gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta as BPCore
 import oberon_parker_cobra_GVur9D96gWvVkXNkss6nTXn3qyLG4tvT3G7AeLwFZACo as Bitcoin
-import subject_leonid_rudolf_3VG9Cjoyx9MMAY2y4EZBgX9YQoyMngFfNrGLAUFbzQFU as StrictTypes
 
 
 data AluScript        :: libs AluVM.LibId, entryPoints {[Byte ^ 3] -> AluVM.LibSite}
@@ -76,7 +76,7 @@ data OwnedState       :: {U16 -> ^ ..0xff TypedState}
 data PedersenCommitment :: [U8 ^ 33]
 data RangeProof       :: placeholder:255 NoiseDumb
 data RevealedAttach   :: id AttachId
-                       , mediaType U8
+                       , mediaType [Unicode ^ ..0xff]
                        , salt U64
 data RevealedData     :: [U8]
 data RevealedFungible :: value FungibleState, blinding BlindingFactor
