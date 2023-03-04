@@ -1,5 +1,5 @@
 {-
-  Id: B47is8trWkX2b6oMe43i8X6i3ybSS4Y2Wusga51TifWk
+  Id: ELYiLsHv8uU4b8dzhgML9donXBxKddZeRAYouBNqrH4S
   Name: RGBCore
   Description: Consensus layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
@@ -7,7 +7,7 @@
   License: Apache-2.0
 -}
 
-typelib RGB -- andy_parade_candid_B47is8trWkX2b6oMe43i8X6i3ybSS4Y2Wusga51TifWk
+typelib RGB -- arthur_ivory_isabel_ELYiLsHv8uU4b8dzhgML9donXBxKddZeRAYouBNqrH4S
 
 import subject_leonid_rudolf_3VG9Cjoyx9MMAY2y4EZBgX9YQoyMngFfNrGLAUFbzQFU as StrictTypes
 import iris_sonata_silk_4ehbEH9C5H4LkqwHURAetPzthDaqMEwpVKT5eyJQuEko as AluVM
@@ -88,7 +88,7 @@ data Schema           :: ffv Ffv
                        , genesis GenesisSchema
                        , extensions {U16 -> ^ ..0xff ExtensionSchema}
                        , transitions {U16 -> ^ ..0xff TransitionSchema}
-                       , typeSystem [U8 ^ ..0xffffff]
+                       , typeSystem StrictTypes.TypeSystem
                        , script Script
 data SchemaId         :: [U8 ^ 32]
 data Script           :: aluVm AluScript
