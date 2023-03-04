@@ -25,11 +25,11 @@ use core::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::{io, vec};
 
-use amplify::confinement::{Confined, MediumVec, TinyOrdMap, U8};
+use amplify::confinement::{Confined, SmallVec, TinyOrdMap, U8};
 use amplify::Wrapper;
 use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
-use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
+use strict_encoding::{StrictDumb, StrictEncode, StrictSerialize, StrictWriter};
 
 use super::{attachment, data, fungible, seal, ConfidentialState, RevealedState};
 use crate::{schema, LIB_NAME_RGB};
@@ -369,13 +369,13 @@ where
 pub enum TypedState {
     // TODO: Consider using non-empty variants
     #[strict_type(tag = 0x00)]
-    Declarative(MediumVec<Assign<Right>>),
+    Declarative(SmallVec<Assign<Right>>),
     #[strict_type(tag = 0x01)]
-    Fungible(MediumVec<Assign<Fungible>>),
+    Fungible(SmallVec<Assign<Fungible>>),
     #[strict_type(tag = 0x02)]
-    Structured(MediumVec<Assign<State>>),
+    Structured(SmallVec<Assign<State>>),
     #[strict_type(tag = 0xFF)]
-    Attachment(MediumVec<Assign<Attach>>),
+    Attachment(SmallVec<Assign<Attach>>),
 }
 
 impl TypedState {
@@ -452,7 +452,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_declarative_mut(&mut self) -> Option<&mut MediumVec<Assign<Right>>> {
+    pub fn as_declarative_mut(&mut self) -> Option<&mut SmallVec<Assign<Right>>> {
         match self {
             TypedState::Declarative(set) => Some(set),
             _ => None,
@@ -460,7 +460,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_fungible_mut(&mut self) -> Option<&mut MediumVec<Assign<Fungible>>> {
+    pub fn as_fungible_mut(&mut self) -> Option<&mut SmallVec<Assign<Fungible>>> {
         match self {
             TypedState::Fungible(set) => Some(set),
             _ => None,
@@ -468,7 +468,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_structured_mut(&mut self) -> Option<&mut MediumVec<Assign<State>>> {
+    pub fn as_structured_mut(&mut self) -> Option<&mut SmallVec<Assign<State>>> {
         match self {
             TypedState::Structured(set) => Some(set),
             _ => None,
@@ -476,7 +476,7 @@ impl TypedState {
     }
 
     #[inline]
-    pub fn as_attachment_mut(&mut self) -> Option<&mut MediumVec<Assign<Attach>>> {
+    pub fn as_attachment_mut(&mut self) -> Option<&mut SmallVec<Assign<Attach>>> {
         match self {
             TypedState::Attachment(set) => Some(set),
             _ => None,
