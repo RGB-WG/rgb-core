@@ -216,7 +216,11 @@ pub trait Operation: AsAny {
 #[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
@@ -230,7 +234,11 @@ pub struct Genesis {
 #[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub struct Extension {
     pub ffv: Ffv,
     pub extension_type: ExtensionType,
@@ -245,7 +253,11 @@ pub struct Extension {
 #[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub struct Transition {
     pub ffv: Ffv,
     pub transition_type: TransitionType,

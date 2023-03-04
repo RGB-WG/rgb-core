@@ -49,7 +49,11 @@ pub enum Validity {
 
 #[derive(Clone, Debug, Display, Default)]
 //#[derive(StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 // TODO #42: Display via YAML
 #[display(Debug)]
 pub struct Status {
@@ -134,7 +138,11 @@ impl Status {
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 //#[derive(StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 // TODO #44: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
 pub enum Failure {
@@ -243,7 +251,11 @@ pub enum Failure {
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 //#[derive(StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
@@ -255,7 +267,11 @@ pub enum Warning {
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 //#[derive(StrictEncode, StrictDecode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {

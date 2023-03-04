@@ -26,7 +26,7 @@ use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
-use aluvm::program::{CodeEofError, LibSite, Read, Write};
+use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::CoreRegs;
 
 pub const INSTR_PCVS: u8 = 0b11_001_000;

@@ -25,8 +25,7 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract node level
 
-use amplify::confinement::MediumVec;
-
+use crate::vm::AluScript;
 use crate::LIB_NAME_RGB;
 
 /// Virtual machine types.
@@ -42,7 +41,11 @@ pub enum VmType {
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = order)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub enum Script {
     /// AluVM: pure functional register-based virtual machine designed for RGB
     /// and multiparty computing.
@@ -53,7 +56,7 @@ pub enum Script {
     ///
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
-    AluVM(MediumVec<u8>),
+    AluVM(AluScript),
 }
 
 impl Default for Script {

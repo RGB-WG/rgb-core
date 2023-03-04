@@ -63,7 +63,11 @@ impl FromStr for AttachId {
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, AsAny)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "RevealedAttach")]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub struct Revealed {
     pub id: AttachId,
     /// We do not enforce a MIME standard since non-standard types can be also

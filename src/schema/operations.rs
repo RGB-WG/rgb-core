@@ -89,7 +89,11 @@ pub trait OpSchema {
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub struct GenesisSchema {
     pub metadata: Option<SemId>,
     pub global_state: GlobalSchema,
@@ -100,7 +104,11 @@ pub struct GenesisSchema {
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub struct ExtensionSchema {
     pub metadata: Option<SemId>,
     pub global_state: GlobalSchema,
@@ -112,7 +120,11 @@ pub struct ExtensionSchema {
 #[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub struct TransitionSchema {
     pub metadata: Option<SemId>,
     pub global_state: GlobalSchema,
