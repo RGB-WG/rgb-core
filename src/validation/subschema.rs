@@ -24,11 +24,14 @@ use crate::{validation, OpSchema, Schema};
 
 /// Trait used for internal schema validation against some root schema
 pub trait SchemaVerify {
-    fn schema_verify(&self, root: &Self) -> validation::Status;
+    type Root;
+    fn schema_verify(&self, root: &Self::Root) -> validation::Status;
 }
 
-impl SchemaVerify for Schema {
-    fn schema_verify(&self, root: &Schema) -> validation::Status {
+impl SchemaVerify for Schema<Schema<()>> {
+    type Root = Schema<()>;
+
+    fn schema_verify(&self, root: &Schema<()>) -> validation::Status {
         let mut status = validation::Status::new();
 
         if root.subset_of.is_some() {
@@ -96,6 +99,8 @@ impl SchemaVerify for Schema {
 impl<T> SchemaVerify for T
 where T: OpSchema
 {
+    type Root = T;
+
     fn schema_verify(&self, root: &Self) -> validation::Status {
         let mut status = validation::Status::new();
         let node_type = self.op_type();

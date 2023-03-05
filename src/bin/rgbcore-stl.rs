@@ -33,7 +33,7 @@ use aluvm::LIB_NAME_ALUVM;
 use amplify::num::u24;
 use bp::dbc::LIB_NAME_BPCORE;
 use bp::LIB_NAME_BITCOIN;
-use rgb::{Extension, Genesis, Schema, TransitionBundle, LIB_NAME_RGB};
+use rgb::{Extension, Genesis, SubSchema, TransitionBundle, LIB_NAME_RGB};
 use strict_encoding::{StrictEncode, StrictWriter, STRICT_TYPES_LIB};
 use strict_types::typelib::LibBuilder;
 use strict_types::{Dependency, TypeLibId};
@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let lib = LibBuilder::new(libname!(LIB_NAME_RGB))
-        .process::<Schema>()?
+        .process::<SubSchema>()?
         .process::<Genesis>()?
         .process::<TransitionBundle>()?
         .process::<Extension>()?

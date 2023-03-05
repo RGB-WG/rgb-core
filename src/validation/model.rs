@@ -30,10 +30,10 @@ use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
 use crate::{
     validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
-    PrevState, Redeemed, Schema, StatePair, TypedAssign, Valencies,
+    PrevState, Redeemed, Schema, SchemaRoot, StatePair, TypedAssign, Valencies,
 };
 
-impl Schema {
+impl<Root: SchemaRoot> Schema<Root> {
     pub fn validate<'script>(
         &self,
         all_ops: &BTreeMap<OpId, &dyn Operation>,

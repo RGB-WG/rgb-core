@@ -34,8 +34,8 @@ use crate::validation::subschema::SchemaVerify;
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId, Script,
-    TransitionBundle, TypedAssign,
+    schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId, SchemaRoot,
+    Script, SubSchema, TransitionBundle, TypedAssign,
 };
 
 #[derive(Debug, Display, Error)]
@@ -199,14 +199,14 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         validator.status
     }
 
-    fn validate_schema(&mut self, schema: &Schema) {
+    fn validate_schema(&mut self, schema: &SubSchema) {
         // Validating schema against root schema
-        if let Some(root) = schema.subset_of.as_deref() {
+        if let Some(ref root) = schema.subset_of {
             self.status += schema.schema_verify(root);
         }
     }
 
-    fn validate_contract(&mut self, schema: &Schema) {
+    fn validate_contract<Root: SchemaRoot>(&mut self, schema: &Schema<Root>) {
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != self.schema_id {
@@ -264,9 +264,9 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         }
     }
 
-    fn validate_branch(
+    fn validate_branch<Root: SchemaRoot>(
         &mut self,
-        schema: &Schema,
+        schema: &Schema<Root>,
         node: &'consignment dyn Operation,
         bundle_id: BundleId,
     ) {

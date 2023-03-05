@@ -32,7 +32,7 @@ use commit_verify::mpc;
 
 use crate::schema::OwnedStateType;
 use crate::{
-    seal, Anchor, BundleId, Extension, Genesis, OpId, Operation, PrevAssignment, Schema,
+    seal, Anchor, BundleId, Extension, Genesis, OpId, Operation, PrevAssignment, SubSchema,
     Transition, TransitionBundle,
 };
 
@@ -190,7 +190,7 @@ pub trait HistoryApi: ContainerApi {
     type ExtensionsIter<'container>: Iterator<Item = &'container Extension>
     where Self: 'container;
 
-    fn schema(&self) -> &Schema;
+    fn schema(&self) -> &SubSchema;
 
     /// Genesis data
     fn genesis(&self) -> &Genesis;

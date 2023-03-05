@@ -76,7 +76,13 @@ impl FromStr for SchemaId {
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_str(s) }
 }
 
-#[derive(Clone, Eq, Debug, Default)]
+pub trait SchemaRoot: Clone + Eq + StrictType + StrictEncode + StrictDecode + Default {}
+impl SchemaRoot for () {}
+impl SchemaRoot for RootSchema {}
+pub type RootSchema = Schema<()>;
+pub type SubSchema = Schema<RootSchema>;
+
+#[derive(Clone, Eq, Default, Debug)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -84,9 +90,9 @@ impl FromStr for SchemaId {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct Schema {
+pub struct Schema<Root: SchemaRoot> {
     pub ffv: Ffv,
-    pub subset_of: Option<Box<Schema>>,
+    pub subset_of: Option<Root>,
 
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<OwnedStateType, StateSchema>,
@@ -101,37 +107,37 @@ pub struct Schema {
     pub script: Script,
 }
 
-impl PartialEq for Schema {
+impl<Root: SchemaRoot> PartialEq for Schema<Root> {
     fn eq(&self, other: &Self) -> bool { self.schema_id() == other.schema_id() }
 }
 
-impl Ord for Schema {
+impl<Root: SchemaRoot> Ord for Schema<Root> {
     fn cmp(&self, other: &Self) -> Ordering { self.schema_id().cmp(&other.schema_id()) }
 }
 
-impl PartialOrd for Schema {
+impl<Root: SchemaRoot> PartialOrd for Schema<Root> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl CommitStrategy for Schema {
+impl<Root: SchemaRoot> CommitStrategy for Schema<Root> {
     type Strategy = commit_verify::strategies::Strict;
 }
 
-impl CommitmentId for Schema {
+impl<Root: SchemaRoot> CommitmentId for Schema<Root> {
     const TAG: [u8; 32] = *b"urn:lnpbp:rgb:schema:v01#202302A";
     type Id = SchemaId;
 }
 
-impl StrictSerialize for Schema {}
-impl StrictDeserialize for Schema {}
+impl<Root: SchemaRoot> StrictSerialize for Schema<Root> {}
+impl<Root: SchemaRoot> StrictDeserialize for Schema<Root> {}
 
-impl Schema {
+impl<Root: SchemaRoot> Schema<Root> {
     #[inline]
     pub fn schema_id(&self) -> SchemaId { self.commitment_id() }
 }
 
 #[cfg(feature = "base64")]
-impl core::fmt::Display for Schema {
+impl<Root: SchemaRoot> core::fmt::Display for Schema<Root> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         use base64::Engine;
 

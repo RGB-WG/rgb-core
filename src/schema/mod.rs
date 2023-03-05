@@ -33,7 +33,8 @@ pub use operations::{
     OwnedStateType, TransitionSchema, ValencySchema, ValencyType,
 };
 pub use schema::{
-    ExtensionType, GlobalStateType, Schema, SchemaId, SchemaTypeIndex, TransitionType,
+    ExtensionType, GlobalStateType, RootSchema, Schema, SchemaId, SchemaRoot, SchemaTypeIndex,
+    SubSchema, TransitionType,
 };
 pub use script::{Script, VmType};
 pub use state::{FungibleType, GlobalStateSchema, StateSchema};
