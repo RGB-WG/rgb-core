@@ -27,18 +27,20 @@ pub mod fungible;
 pub mod attachment;
 pub mod data;
 pub mod assignment;
+mod global;
 mod operations;
 mod bundle;
 
 use std::hash::Hash;
 
-pub use assignment::{Assign, GlobalState, GlobalValues, StatePair, StateType, TypedAssign};
+pub use assignment::{Assign, StatePair, StateType, TypedAssign};
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use fungible::{
     BlindingFactor, FieldOrderOverflow, FungibleState, NoiseDumb, PedersenCommitment, RangeProof,
     RangeProofError,
 };
+pub use global::{GlobalState, GlobalValues};
 pub use operations::{
     ContractId, Extension, Genesis, OpId, Operation, OwnedState, PrevAssignment, PrevState,
     Redeemed, Transition, Valencies,

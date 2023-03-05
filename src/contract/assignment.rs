@@ -25,45 +25,18 @@ use core::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::{io, vec};
 
-use amplify::confinement::{Confined, SmallVec, TinyOrdMap, U8};
-use amplify::Wrapper;
+use amplify::confinement::SmallVec;
 use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
 use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
 use super::{attachment, data, fungible, seal, ConfidentialState, RevealedState};
-use crate::{schema, LIB_NAME_RGB};
+use crate::LIB_NAME_RGB;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 /// the requested data are not present.
 pub struct UnknownDataError;
-
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
-#[wrapper(Deref)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct GlobalValues(Confined<Vec<data::Revealed>, 1, U8>);
-
-impl StrictDumb for GlobalValues {
-    fn strict_dumb() -> Self { Self(confined_vec!(data::Revealed::strict_dumb())) }
-}
-
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct GlobalState(TinyOrdMap<schema::GlobalStateType, GlobalValues>);
 
 /// Categories of the state
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
