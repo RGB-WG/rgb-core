@@ -66,7 +66,7 @@ pub struct SchemaId(
 );
 
 impl ToBaid58<32> for SchemaId {
-    const HRI: &'static str = "sch";
+    const HRI: &'static str = "rgb-sch";
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
 }
 impl FromBaid58<32> for SchemaId {}
@@ -170,14 +170,14 @@ mod test {
         assert_eq!(dumb.to_string(), "11111111111111111111111111111111");
         assert_eq!(
             &format!("{dumb::^#}"),
-            "sch:11111111111111111111111111111111#dallas-liter-marco"
+            "rgb-sch:11111111111111111111111111111111#sweden-gate-virgo"
         );
 
         let less_dumb = SchemaId::from_raw_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
         assert_eq!(less_dumb.to_string(), "5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz");
         assert_eq!(
             &format!("{less_dumb::^#}"),
-            "sch:5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz#hotel-urgent-child"
+            "rgb-sch:5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz#salami-comedy-cello"
         );
     }
 }
