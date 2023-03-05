@@ -35,7 +35,7 @@ use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
     schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId, Script,
-    TransitionBundle, TypedState,
+    TransitionBundle, TypedAssign,
 };
 
 #[derive(Debug, Display, Error)]
@@ -116,7 +116,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 if !transition
                     .owned_state()
                     .values()
-                    .flat_map(TypedState::to_confidential_seals)
+                    .flat_map(TypedAssign::to_confidential_seals)
                     .any(|seal| seal == *seal_endpoint)
                 {
                     // We generate just a warning here because it's up to a user
@@ -467,7 +467,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         node_id: OpId,
         ancestor_id: OpId,
         assignment_type: schema::OwnedStateType,
-        variant: &'consignment TypedState,
+        variant: &'consignment TypedAssign,
         seal_index: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->

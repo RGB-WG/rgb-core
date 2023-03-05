@@ -35,7 +35,7 @@ use strict_encoding::StrictSerialize;
 
 use super::opcodes::*;
 use crate::validation::OpInfo;
-use crate::{Assign, TypedState};
+use crate::{Assign, TypedAssign};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp {
@@ -239,7 +239,7 @@ impl InstructionSet for ContractOp {
                 };
 
                 let inputs = match prev_state {
-                    TypedState::Fungible(state) => state
+                    TypedAssign::Fungible(state) => state
                         .iter()
                         .map(Assign::to_confidential_state)
                         .map(|s| s.commitment.into_inner())
@@ -247,7 +247,7 @@ impl InstructionSet for ContractOp {
                     _ => fail!(),
                 };
                 let outputs = match new_state {
-                    TypedState::Fungible(state) => state
+                    TypedAssign::Fungible(state) => state
                         .iter()
                         .map(Assign::to_confidential_state)
                         .map(|s| s.commitment.into_inner())

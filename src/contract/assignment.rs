@@ -366,7 +366,7 @@ where
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum TypedState {
+pub enum TypedAssign {
     // TODO: Consider using non-empty variants
     #[strict_type(tag = 0x00)]
     Declarative(SmallVec<Assign<Right>>),
@@ -378,51 +378,51 @@ pub enum TypedState {
     Attachment(SmallVec<Assign<Attach>>),
 }
 
-impl TypedState {
+impl TypedAssign {
     pub fn is_empty(&self) -> bool {
         match self {
-            TypedState::Declarative(set) => set.is_empty(),
-            TypedState::Fungible(set) => set.is_empty(),
-            TypedState::Structured(set) => set.is_empty(),
-            TypedState::Attachment(set) => set.is_empty(),
+            TypedAssign::Declarative(set) => set.is_empty(),
+            TypedAssign::Fungible(set) => set.is_empty(),
+            TypedAssign::Structured(set) => set.is_empty(),
+            TypedAssign::Attachment(set) => set.is_empty(),
         }
     }
 
     pub fn len(&self) -> usize {
         match self {
-            TypedState::Declarative(set) => set.len(),
-            TypedState::Fungible(set) => set.len(),
-            TypedState::Structured(set) => set.len(),
-            TypedState::Attachment(set) => set.len(),
+            TypedAssign::Declarative(set) => set.len(),
+            TypedAssign::Fungible(set) => set.len(),
+            TypedAssign::Structured(set) => set.len(),
+            TypedAssign::Attachment(set) => set.len(),
         }
     }
 
     #[inline]
     pub fn state_type(&self) -> StateType {
         match self {
-            TypedState::Declarative(_) => StateType::Void,
-            TypedState::Fungible(_) => StateType::Fungible,
-            TypedState::Structured(_) => StateType::Structured,
-            TypedState::Attachment(_) => StateType::Attachment,
+            TypedAssign::Declarative(_) => StateType::Void,
+            TypedAssign::Fungible(_) => StateType::Fungible,
+            TypedAssign::Structured(_) => StateType::Structured,
+            TypedAssign::Attachment(_) => StateType::Attachment,
         }
     }
 
     #[inline]
-    pub fn is_declarative(&self) -> bool { matches!(self, TypedState::Declarative(_)) }
+    pub fn is_declarative(&self) -> bool { matches!(self, TypedAssign::Declarative(_)) }
 
     #[inline]
-    pub fn is_fungible(&self) -> bool { matches!(self, TypedState::Fungible(_)) }
+    pub fn is_fungible(&self) -> bool { matches!(self, TypedAssign::Fungible(_)) }
 
     #[inline]
-    pub fn is_structured(&self) -> bool { matches!(self, TypedState::Structured(_)) }
+    pub fn is_structured(&self) -> bool { matches!(self, TypedAssign::Structured(_)) }
 
     #[inline]
-    pub fn is_attachment(&self) -> bool { matches!(self, TypedState::Attachment(_)) }
+    pub fn is_attachment(&self) -> bool { matches!(self, TypedAssign::Attachment(_)) }
 
     #[inline]
     pub fn as_declarative(&self) -> &[Assign<Right>] {
         match self {
-            TypedState::Declarative(set) => set,
+            TypedAssign::Declarative(set) => set,
             _ => Default::default(),
         }
     }
@@ -430,7 +430,7 @@ impl TypedState {
     #[inline]
     pub fn as_fungible(&self) -> &[Assign<Fungible>] {
         match self {
-            TypedState::Fungible(set) => set,
+            TypedAssign::Fungible(set) => set,
             _ => Default::default(),
         }
     }
@@ -438,7 +438,7 @@ impl TypedState {
     #[inline]
     pub fn as_structured(&self) -> &[Assign<State>] {
         match self {
-            TypedState::Structured(set) => set,
+            TypedAssign::Structured(set) => set,
             _ => Default::default(),
         }
     }
@@ -446,7 +446,7 @@ impl TypedState {
     #[inline]
     pub fn as_attachment(&self) -> &[Assign<Attach>] {
         match self {
-            TypedState::Attachment(set) => set,
+            TypedAssign::Attachment(set) => set,
             _ => Default::default(),
         }
     }
@@ -454,7 +454,7 @@ impl TypedState {
     #[inline]
     pub fn as_declarative_mut(&mut self) -> Option<&mut SmallVec<Assign<Right>>> {
         match self {
-            TypedState::Declarative(set) => Some(set),
+            TypedAssign::Declarative(set) => Some(set),
             _ => None,
         }
     }
@@ -462,7 +462,7 @@ impl TypedState {
     #[inline]
     pub fn as_fungible_mut(&mut self) -> Option<&mut SmallVec<Assign<Fungible>>> {
         match self {
-            TypedState::Fungible(set) => Some(set),
+            TypedAssign::Fungible(set) => Some(set),
             _ => None,
         }
     }
@@ -470,7 +470,7 @@ impl TypedState {
     #[inline]
     pub fn as_structured_mut(&mut self) -> Option<&mut SmallVec<Assign<State>>> {
         match self {
-            TypedState::Structured(set) => Some(set),
+            TypedAssign::Structured(set) => Some(set),
             _ => None,
         }
     }
@@ -478,7 +478,7 @@ impl TypedState {
     #[inline]
     pub fn as_attachment_mut(&mut self) -> Option<&mut SmallVec<Assign<Attach>>> {
         match self {
-            TypedState::Attachment(set) => Some(set),
+            TypedAssign::Attachment(set) => Some(set),
             _ => None,
         }
     }
@@ -488,19 +488,19 @@ impl TypedState {
     /// seal data packed as `Ok(Some(`[`seal::Revealed`]`))`
     pub fn revealed_seal_at(&self, index: u16) -> Result<Option<seal::Revealed>, UnknownDataError> {
         Ok(match self {
-            TypedState::Declarative(vec) => vec
+            TypedAssign::Declarative(vec) => vec
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
                 .revealed_seal(),
-            TypedState::Fungible(vec) => vec
+            TypedAssign::Fungible(vec) => vec
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
                 .revealed_seal(),
-            TypedState::Structured(vec) => vec
+            TypedAssign::Structured(vec) => vec
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
                 .revealed_seal(),
-            TypedState::Attachment(vec) => vec
+            TypedAssign::Attachment(vec) => vec
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
                 .revealed_seal(),
@@ -509,10 +509,12 @@ impl TypedState {
 
     pub fn to_confidential_seals(&self) -> Vec<seal::Confidential> {
         match self {
-            TypedState::Declarative(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
-            TypedState::Fungible(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
-            TypedState::Structured(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
-            TypedState::Attachment(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
+            TypedAssign::Declarative(s) => {
+                s.iter().map(Assign::<_>::to_confidential_seal).collect()
+            }
+            TypedAssign::Fungible(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
+            TypedAssign::Structured(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
+            TypedAssign::Attachment(s) => s.iter().map(Assign::<_>::to_confidential_seal).collect(),
         }
     }
 
@@ -521,7 +523,7 @@ impl TypedState {
         index: u16,
     ) -> Result<Option<&data::Revealed>, UnknownDataError> {
         match self {
-            TypedState::Structured(vec) => Ok(vec
+            TypedAssign::Structured(vec) => Ok(vec
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
                 .as_revealed_state()),
@@ -534,7 +536,7 @@ impl TypedState {
         index: u16,
     ) -> Result<Option<&fungible::Revealed>, UnknownDataError> {
         match self {
-            TypedState::Fungible(vec) => Ok(vec
+            TypedAssign::Fungible(vec) => Ok(vec
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
                 .as_revealed_state()),
@@ -543,30 +545,30 @@ impl TypedState {
     }
 }
 
-impl CommitStrategy for TypedState {
+impl CommitStrategy for TypedAssign {
     type Strategy =
         commit_verify::strategies::Merklize<{ u128::from_be_bytes(*b"rgb:state:owned*") }>;
 }
 
-impl MerkleLeaves for TypedState {
+impl MerkleLeaves for TypedAssign {
     type Leaf = MerkleNode;
     type LeafIter = vec::IntoIter<MerkleNode>;
 
     fn merkle_leaves(&self) -> Self::LeafIter {
         match self {
-            TypedState::Declarative(vec) => vec
+            TypedAssign::Declarative(vec) => vec
                 .iter()
                 .map(Assign::<Right>::commitment_id)
                 .collect::<Vec<_>>(),
-            TypedState::Fungible(vec) => vec
+            TypedAssign::Fungible(vec) => vec
                 .iter()
                 .map(Assign::<Fungible>::commitment_id)
                 .collect::<Vec<_>>(),
-            TypedState::Structured(vec) => vec
+            TypedAssign::Structured(vec) => vec
                 .iter()
                 .map(Assign::<State>::commitment_id)
                 .collect::<Vec<_>>(),
-            TypedState::Attachment(vec) => vec
+            TypedAssign::Attachment(vec) => vec
                 .iter()
                 .map(Assign::<Attach>::commitment_id)
                 .collect::<Vec<_>>(),
