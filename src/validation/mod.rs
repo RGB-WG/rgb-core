@@ -152,7 +152,7 @@ pub enum Failure {
     /// validation
     SchemaRootRequired(SchemaId),
     /// Root schema for this schema has another root, which is prohibited
-    SchemaRootHierarchy(SchemaId),
+    SchemaRootHierarchy,
     SchemaRootNoFieldTypeMatch(schema::GlobalStateType),
     SchemaRootNoOwnedRightTypeMatch(schema::OwnedStateType),
     SchemaRootNoPublicRightTypeMatch(schema::ValencyType),

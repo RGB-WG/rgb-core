@@ -76,8 +76,8 @@ impl FromStr for SchemaId {
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_str(s) }
 }
 
-#[derive(Clone, Eq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(Clone, Eq, Debug, Default)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
@@ -86,7 +86,7 @@ impl FromStr for SchemaId {
 )]
 pub struct Schema {
     pub ffv: Ffv,
-    pub subset_of: Option<SchemaId>,
+    pub subset_of: Option<Box<Schema>>,
 
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<OwnedStateType, StateSchema>,

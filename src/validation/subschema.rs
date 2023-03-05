@@ -24,15 +24,15 @@ use crate::{validation, OpSchema, Schema};
 
 /// Trait used for internal schema validation against some root schema
 pub trait SchemaVerify {
-    fn schema_verify(&self, root: &Self) -> crate::validation::Status;
+    fn schema_verify(&self, root: &Self) -> validation::Status;
 }
 
 impl SchemaVerify for Schema {
     fn schema_verify(&self, root: &Schema) -> validation::Status {
         let mut status = validation::Status::new();
 
-        if let Some(other_root) = root.subset_of {
-            status.add_failure(validation::Failure::SchemaRootHierarchy(other_root));
+        if root.subset_of.is_some() {
+            status.add_failure(validation::Failure::SchemaRootHierarchy);
         }
 
         for (field_type, data_format) in &self.global_types {

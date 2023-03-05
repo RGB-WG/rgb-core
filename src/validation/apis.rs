@@ -192,8 +192,6 @@ pub trait HistoryApi: ContainerApi {
 
     fn schema(&self) -> &Schema;
 
-    fn root_schema(&self) -> Option<&Schema>;
-
     /// Genesis data
     fn genesis(&self) -> &Genesis;
 

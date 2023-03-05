@@ -183,7 +183,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
     pub fn validate(consignment: &'consignment C, resolver: &'resolver R) -> Status {
         let mut validator = Validator::init(consignment, resolver);
 
-        validator.validate_schema(consignment.schema(), consignment.root_schema());
+        validator.validate_schema(consignment.schema());
         // We must return here, since if the schema is not valid there is no
         // reason to validate contract nodes against it: it will produce a
         // plenty of errors
@@ -199,13 +199,10 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         validator.status
     }
 
-    fn validate_schema(&mut self, schema: &Schema, root: Option<&Schema>) {
+    fn validate_schema(&mut self, schema: &Schema) {
         // Validating schema against root schema
-        if let Some(root) = root {
+        if let Some(root) = schema.subset_of.as_deref() {
             self.status += schema.schema_verify(root);
-        } else if let Some(root_id) = schema.subset_of {
-            self.status
-                .add_failure(Failure::SchemaRootRequired(root_id));
         }
     }
 
