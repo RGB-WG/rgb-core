@@ -179,10 +179,12 @@ pub trait ContainerApi {
 }
 
 pub trait HistoryApi: ContainerApi {
-    type EndpointIter<'container>: Iterator<Item = &'container (BundleId, seal::Confidential)>
+    type EndpointIter<'container>: Iterator<
+        Item = (&'container BundleId, &'container seal::Confidential),
+    >
     where Self: 'container;
     type BundleIter<'container>: Iterator<
-        Item = &'container (Anchor<mpc::MerkleProof>, TransitionBundle),
+        Item = (&'container Anchor<mpc::MerkleProof>, &'container TransitionBundle),
     >
     where Self: 'container;
     type ExtensionsIter<'container>: Iterator<Item = &'container Extension>
