@@ -25,8 +25,9 @@ mod operations;
 mod schema;
 pub mod script;
 mod state;
-mod util;
+mod occurrences;
 
+pub use occurrences::{Occurrences, OccurrencesMismatch};
 pub use operations::{
     AssignmentSchema, ExtensionSchema, GenesisSchema, GlobalSchema, OpFullType, OpSchema, OpType,
     OwnedStateType, TransitionSchema, ValencySchema, ValencyType,
@@ -36,4 +37,3 @@ pub use schema::{
 };
 pub use script::{Script, VmType};
 pub use state::{FungibleType, GlobalStateSchema, StateSchema};
-pub use util::{Occurrences, OccurrencesMismatch};
