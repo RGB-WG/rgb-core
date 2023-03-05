@@ -25,8 +25,9 @@ use strict_encoding::StrictDumb;
 
 use crate::{data, schema, LIB_NAME_RGB};
 
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -40,8 +41,9 @@ impl StrictDumb for GlobalValues {
     fn strict_dumb() -> Self { Self(confined_vec!(data::Revealed::strict_dumb())) }
 }
 
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
+#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Default, Debug, From)]
 #[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
