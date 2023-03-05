@@ -36,6 +36,12 @@ use super::{
 };
 use crate::{Ffv, GlobalStateSchema, LIB_NAME_RGB};
 
+pub trait SchemaTypeIndex:
+    Copy + Eq + Ord + Default + StrictType + StrictEncode + StrictDecode
+{
+}
+impl SchemaTypeIndex for u16 {}
+
 pub type GlobalStateType = u16;
 pub type ExtensionType = u16;
 pub type TransitionType = u16;
