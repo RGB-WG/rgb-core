@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use amplify::confinement;
 use amplify::confinement::{Confined, TinyOrdMap, U8};
 use strict_encoding::StrictDumb;
 
@@ -41,6 +42,10 @@ impl StrictDumb for GlobalValues {
     fn strict_dumb() -> Self { Self(confined_vec!(data::Revealed::strict_dumb())) }
 }
 
+impl GlobalValues {
+    pub fn with(state: data::Revealed) -> Self { GlobalValues(Confined::with(state)) }
+}
+
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Default, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
@@ -52,3 +57,16 @@ impl StrictDumb for GlobalValues {
     serde(crate = "serde_crate", transparent)
 )]
 pub struct GlobalState(TinyOrdMap<schema::GlobalStateType, GlobalValues>);
+
+impl GlobalState {
+    pub fn add_state(
+        &mut self,
+        ty: schema::GlobalStateType,
+        state: data::Revealed,
+    ) -> Result<(), confinement::Error> {
+        match self.0.get_mut(&ty) {
+            Some(vec) => vec.push(state),
+            None => self.insert(ty, GlobalValues::with(state)).map(|_| ()),
+        }
+    }
+}

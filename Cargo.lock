@@ -19,9 +19,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "4.0.0-beta.18"
+version = "4.0.0-beta.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b52c4d735bf8fdf9d0d177ba22d0ca21f14c79bda216e3a1a6d882eb3d79112"
+checksum = "015181670696f32b43334da39fa4e8926b8b2d154acc4aa26614c42a667a1b84"
 dependencies = [
  "amplify_apfloat",
  "amplify_derive",
@@ -69,9 +69,9 @@ dependencies = [
 
 [[package]]
 name = "amplify_syn"
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e3db5cb96f8f18a9566a975c521b77485f6f8e3e8d866d0f52369446ba31274"
+checksum = "fa4ba0b995a9379a410822026a2bedbba790197dd7cb980954fb64b14476bb8d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -181,7 +181,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core#fe916a0a5195905d1752171a8df65542bd638add"
+source = "git+https://github.com/BP-WG/bp-core#93ec82d7f4db3be1b9c7fe14d446d3f184617ed3"
 dependencies = [
  "amplify",
  "bp-dbc",
@@ -196,7 +196,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core#fe916a0a5195905d1752171a8df65542bd638add"
+source = "git+https://github.com/BP-WG/bp-core#93ec82d7f4db3be1b9c7fe14d446d3f184617ed3"
 dependencies = [
  "amplify",
  "bp-primitives",
@@ -209,7 +209,7 @@ dependencies = [
 [[package]]
 name = "bp-primitives"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core#fe916a0a5195905d1752171a8df65542bd638add"
+source = "git+https://github.com/BP-WG/bp-core#93ec82d7f4db3be1b9c7fe14d446d3f184617ed3"
 dependencies = [
  "amplify",
  "commit_verify",
@@ -221,7 +221,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core#fe916a0a5195905d1752171a8df65542bd638add"
+source = "git+https://github.com/BP-WG/bp-core#93ec82d7f4db3be1b9c7fe14d446d3f184617ed3"
 dependencies = [
  "amplify",
  "baid58",
@@ -874,7 +874,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding"
 version = "2.0.0-rc.1"
-source = "git+https://github.com/strict-types/strict-encoding#902bd8fcca4292b40be32262b8a48af33ec8728e"
+source = "git+https://github.com/strict-types/strict-encoding#fe998b25072c73b77bdaa83766b6a93ca8ff06f4"
 dependencies = [
  "amplify",
  "half",
@@ -884,8 +884,8 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding_derive"
-version = "2.0.0-beta.2"
-source = "git+https://github.com/strict-types/strict-encoding#902bd8fcca4292b40be32262b8a48af33ec8728e"
+version = "2.0.0-beta.3"
+source = "git+https://github.com/strict-types/strict-encoding#fe998b25072c73b77bdaa83766b6a93ca8ff06f4"
 dependencies = [
  "amplify_syn",
  "heck",
@@ -897,7 +897,7 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "1.0.0-beta.3"
-source = "git+https://github.com/strict-types/strict-types#f0647560281bc0595fc06eee9dbba7f1483b81c9"
+source = "git+https://github.com/strict-types/strict-types#be7b1b5a04fde705c0e3f67ee66d8c75ec3a4938"
 dependencies = [
  "amplify",
  "baid58",
