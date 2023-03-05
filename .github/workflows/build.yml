@@ -30,8 +30,6 @@ jobs:
       fail-fast: false
       matrix:
         feature:
-          - stl
-          - base64
           - serde
     steps:
       - uses: actions/checkout@v2

@@ -65,26 +65,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compile(imports)?;
     let id = lib.id();
 
-    let ext = match args.get(2).map(String::as_str) {
-        Some("-b") => "stl",
-        Some("-h") => "asc.stl",
+    let ext = match args.get(1).map(String::as_str) {
+        Some("--stl") => "stl",
+        Some("--sty") => "sty",
         _ => "sty",
     };
     let filename = args
-        .get(3)
+        .get(2)
         .cloned()
         .unwrap_or_else(|| format!("stl/RGBCore.{ext}"));
     let mut file = match args.len() {
-        2 => Box::new(stdout()) as Box<dyn io::Write>,
-        3 | 4 => Box::new(fs::File::create(filename)?) as Box<dyn io::Write>,
+        1 => Box::new(stdout()) as Box<dyn io::Write>,
+        2 | 3 => Box::new(fs::File::create(filename)?) as Box<dyn io::Write>,
         _ => panic!("invalid argument count"),
     };
     match ext {
         "stl" => {
             lib.strict_encode(StrictWriter::with(u24::MAX.into_usize(), file))?;
-        }
-        "asc.stl" => {
-            writeln!(file, "{lib:X}")?;
         }
         _ => {
             writeln!(

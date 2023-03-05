@@ -17,10 +17,6 @@ exclude = [".github"]
 name = "rgb"
 crate-type = ["cdylib", "rlib"] # We need this for WASM
 
-[[bin]]
-name = "rgbcore-stl"
-required-features = ["stl"]
-
 [dependencies]
 amplify = "~4.0.0-beta.18"
 strict_encoding = "2.0.0-rc.1"
@@ -30,14 +26,12 @@ commit_verify = { version = "~0.10.0-beta.2", features = ["rand"] }
 bp-core = { version = "~0.10.0-beta.1" }
 secp256k1-zkp = { version = "~0.7.0", features = ["use-rand", "rand-std", "global-context"] }
 baid58 = "~0.2.0"
-base64 = { version = "0.21.0", optional = true }
 mime = "0.3.16"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 
 [features]
 default = []
-all = ["serde", "stl", "base64"]
-stl = ["strict_types/base64"]
+all = ["serde"]
 serde = [
     "serde_crate",
     "amplify/serde",

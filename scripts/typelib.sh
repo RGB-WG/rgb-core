@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
 
-cargo run --features stl rgbcore-stl -s
-cargo run --features stl rgbcore-stl -b
-cargo run --features stl rgbcore-stl -h
+cargo run --bin rgbcore-stl -- --sty
+cargo run --bin rgbcore-stl -- --stl

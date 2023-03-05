@@ -136,34 +136,6 @@ impl<Root: SchemaRoot> Schema<Root> {
     pub fn schema_id(&self) -> SchemaId { self.commitment_id() }
 }
 
-#[cfg(feature = "base64")]
-impl<Root: SchemaRoot> core::fmt::Display for Schema<Root> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        use base64::Engine;
-
-        let id = self.schema_id();
-
-        writeln!(f, "----- BEGIN RGB SCHEMA -----")?;
-        writeln!(f, "Id: {}", id)?;
-        writeln!(f, "Checksum: {}", id.to_baid58().mnemonic())?;
-        writeln!(f)?;
-
-        let data = self.to_strict_serialized::<0xFFFFFF>().expect("in-memory");
-        let engine = base64::engine::general_purpose::STANDARD;
-        let data = engine.encode(data);
-        let mut data = data.as_str();
-        while data.len() >= 76 {
-            let (line, rest) = data.split_at(76);
-            writeln!(f, "{}", line)?;
-            data = rest;
-        }
-        writeln!(f, "{}", data)?;
-
-        writeln!(f, "\n----- END RGB SCHEMA -----")?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod test {
     use strict_encoding::StrictDumb;
