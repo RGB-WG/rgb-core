@@ -181,17 +181,17 @@ pub struct Revealed {
 impl Revealed {
     /// Constructs new state using the provided value and random generator for
     /// creating blinding factor.
-    pub fn new<R: Rng + RngCore>(value: FungibleState, rng: &mut R) -> Self {
+    pub fn new<R: Rng + RngCore>(value: impl Into<FungibleState>, rng: &mut R) -> Self {
         Self {
-            value,
+            value: value.into(),
             blinding: BlindingFactor::from(secp256k1_zkp::SecretKey::new(rng)),
         }
     }
 
     /// Convenience constructor.
-    pub fn with(value: FungibleState, blinding: impl Into<BlindingFactor>) -> Self {
+    pub fn with(value: impl Into<FungibleState>, blinding: impl Into<BlindingFactor>) -> Self {
         Self {
-            value,
+            value: value.into(),
             blinding: blinding.into(),
         }
     }
