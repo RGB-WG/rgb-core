@@ -166,7 +166,7 @@ impl InstructionSet for ContractOp {
                 );
             }
             ContractOp::CnG(state_type, reg) => {
-                regs.set(RegA::A16, *reg, context.global.get(state_type).map(|a| a.len_u8()));
+                regs.set(RegA::A16, *reg, context.global.get(state_type).map(|a| a.len_u16()));
             }
             ContractOp::CnC(_state_type, _reg) => {
                 // TODO: implement global contract state

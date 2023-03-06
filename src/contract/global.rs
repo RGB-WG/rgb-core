@@ -21,7 +21,7 @@
 // limitations under the License.
 
 use amplify::confinement;
-use amplify::confinement::{Confined, TinyOrdMap, U8};
+use amplify::confinement::{Confined, TinyOrdMap, U16};
 use strict_encoding::StrictDumb;
 
 use crate::{data, schema, LIB_NAME_RGB};
@@ -36,7 +36,7 @@ use crate::{data, schema, LIB_NAME_RGB};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct GlobalValues(Confined<Vec<data::Revealed>, 1, U8>);
+pub struct GlobalValues(Confined<Vec<data::Revealed>, 1, U16>);
 
 impl StrictDumb for GlobalValues {
     fn strict_dumb() -> Self { Self(confined_vec!(data::Revealed::strict_dumb())) }
