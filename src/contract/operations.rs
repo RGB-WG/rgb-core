@@ -187,9 +187,7 @@ pub trait Operation: AsAny {
     /// This is always an empty `Vec` for [`Genesis`].
     fn redeemed(&self) -> &Redeemed;
     fn owned_state(&self) -> &OwnedState;
-    fn owned_state_mut(&mut self) -> &mut OwnedState;
     fn valencies(&self) -> &Valencies;
-    fn valencies_mut(&mut self) -> &mut Valencies;
 
     fn owned_state_by_type(&self, t: OwnedStateType) -> Option<&TypedAssigns> {
         self.owned_state()
@@ -326,13 +324,7 @@ impl Operation for Genesis {
     fn owned_state(&self) -> &OwnedState { &self.owned_state }
 
     #[inline]
-    fn owned_state_mut(&mut self) -> &mut OwnedState { &mut self.owned_state }
-
-    #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
-
-    #[inline]
-    fn valencies_mut(&mut self) -> &mut Valencies { &mut self.valencies }
 }
 
 impl Operation for Extension {
@@ -370,13 +362,7 @@ impl Operation for Extension {
     fn owned_state(&self) -> &OwnedState { &self.owned_state }
 
     #[inline]
-    fn owned_state_mut(&mut self) -> &mut OwnedState { &mut self.owned_state }
-
-    #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
-
-    #[inline]
-    fn valencies_mut(&mut self) -> &mut Valencies { &mut self.valencies }
 }
 
 impl Operation for Transition {
@@ -414,13 +400,7 @@ impl Operation for Transition {
     fn owned_state(&self) -> &OwnedState { &self.owned_state }
 
     #[inline]
-    fn owned_state_mut(&mut self) -> &mut OwnedState { &mut self.owned_state }
-
-    #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
-
-    #[inline]
-    fn valencies_mut(&mut self) -> &mut Valencies { &mut self.valencies }
 }
 
 impl Genesis {
