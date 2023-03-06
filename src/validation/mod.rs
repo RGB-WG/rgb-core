@@ -25,7 +25,7 @@ mod vm;
 mod subschema;
 mod model;
 mod state;
-mod verify;
+mod validator;
 
 use core::iter::FromIterator;
 use core::ops::AddAssign;
@@ -33,7 +33,7 @@ use core::ops::AddAssign;
 pub use apis::{ConsistencyError, ContainerApi, HistoryApi};
 use bp::Txid;
 pub(crate) use model::OpInfo;
-pub use verify::{ResolveTx, TxResolverError, Validator};
+pub use validator::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, OpType, SchemaId};
 use crate::state::Opout;
