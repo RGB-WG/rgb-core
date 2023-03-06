@@ -158,7 +158,7 @@ impl<Root: SchemaRoot> Schema<Root> {
 
     fn validate_global_state(
         &self,
-        op_id: OpId,
+        opid: OpId,
         global: &GlobalState,
         global_schema: &GlobalSchema,
     ) -> validation::Status {
@@ -169,7 +169,7 @@ impl<Root: SchemaRoot> Schema<Root> {
             .collect::<BTreeSet<_>>()
             .difference(&global_schema.keys().collect())
             .for_each(|field_id| {
-                status.add_failure(validation::Failure::SchemaUnknownFieldType(op_id, **field_id));
+                status.add_failure(validation::Failure::SchemaUnknownFieldType(opid, **field_id));
             });
 
         for (global_id, occ) in global_schema {
@@ -183,7 +183,7 @@ impl<Root: SchemaRoot> Schema<Root> {
             // Checking number of field occurrences
             if let Err(err) = occ.check(set.len() as u16) {
                 status.add_failure(validation::Failure::SchemaMetaOccurrencesError(
-                    op_id, *global_id, err,
+                    opid, *global_id, err,
                 ));
             }
 

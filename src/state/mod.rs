@@ -78,15 +78,19 @@ impl StateTrait for attachment::Revealed {
 #[display("{op}/{ty}/{no}")]
 /// RGB contract operation output pointer, defined by the operation ID and
 /// output number.
-pub struct OpOut {
+pub struct Opout {
     pub op: OpId,
     pub ty: OwnedStateType,
     pub no: u16,
 }
 
+impl Opout {
+    pub fn new(op: OpId, ty: u16, no: u16) -> Opout { Opout { op, ty, no } }
+}
+
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display(inner)]
-pub enum OutpointParseError {
+pub enum OpoutParseError {
     #[from]
     InvalidNodeId(hex::Error),
 
@@ -99,24 +103,20 @@ pub enum OutpointParseError {
     WrongFormat(String),
 }
 
-impl FromStr for OpOut {
-    type Err = OutpointParseError;
+impl FromStr for Opout {
+    type Err = OpoutParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.split('/');
         match (split.next(), split.next(), split.next(), split.next()) {
-            (Some(op), Some(ty), Some(no), None) => Ok(OpOut {
+            (Some(op), Some(ty), Some(no), None) => Ok(Opout {
                 op: op.parse()?,
-                ty: ty.parse().map_err(OutpointParseError::InvalidType)?,
-                no: no.parse().map_err(OutpointParseError::InvalidOutputNo)?,
+                ty: ty.parse().map_err(OpoutParseError::InvalidType)?,
+                no: no.parse().map_err(OpoutParseError::InvalidOutputNo)?,
             }),
-            _ => Err(OutpointParseError::WrongFormat(s.to_owned())),
+            _ => Err(OpoutParseError::WrongFormat(s.to_owned())),
         }
     }
-}
-
-impl OpOut {
-    pub fn new(op: OpId, ty: u16, no: u16) -> OpOut { OpOut { op, ty, no } }
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -127,37 +127,37 @@ impl OpOut {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct AssignedState<State>
+pub struct OutputAssignment<State>
 where State: StateTrait
 {
-    pub op_out: OpOut,
+    pub opout: Opout,
     pub seal: Outpoint,
     pub state: State,
 }
 
-impl<State> AssignedState<State>
+impl<State> OutputAssignment<State>
 where State: StateTrait
 {
     pub fn with(
         seal: seal::Revealed,
         witness_txid: Txid,
         state: State,
-        op_id: OpId,
+        opid: OpId,
         ty: OwnedStateType,
         no: u16,
     ) -> Self {
-        AssignedState {
-            op_out: OpOut::new(op_id, ty, no),
+        OutputAssignment {
+            opout: Opout::new(opid, ty, no),
             seal: seal.outpoint_or(witness_txid),
             state,
         }
     }
 }
 
-pub type OwnedRight = AssignedState<VoidState>;
-pub type OwnedValue = AssignedState<fungible::Revealed>;
-pub type OwnedData = AssignedState<data::Revealed>;
-pub type OwnedAttachment = AssignedState<attachment::Revealed>;
+pub type RightsOutput = OutputAssignment<VoidState>;
+pub type FungibleOutput = OutputAssignment<fungible::Revealed>;
+pub type DataOutput = OutputAssignment<data::Revealed>;
+pub type AttachOutput = OutputAssignment<attachment::Revealed>;
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 // #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -177,13 +177,13 @@ pub struct ContractState {
     )]*/
     pub global: BTreeMap<OpId, BTreeMap<GlobalStateType, Vec<data::Revealed>>>,
     // #[cfg_attr(feature = "serde", serde(with = "As::<BTreeSet<DisplayFromStr>>"))]
-    pub rights: BTreeSet<OwnedRight>,
+    pub rights: BTreeSet<RightsOutput>,
     // #[cfg_attr(feature = "serde", serde(with = "As::<BTreeSet<DisplayFromStr>>"))]
-    pub fungibles: BTreeSet<OwnedValue>,
+    pub fungibles: BTreeSet<FungibleOutput>,
     // #[cfg_attr(feature = "serde", serde(with = "As::<BTreeSet<DisplayFromStr>>"))]
-    pub data: BTreeSet<OwnedData>,
+    pub data: BTreeSet<DataOutput>,
     // #[cfg_attr(feature = "serde", serde(with = "As::<BTreeSet<DisplayFromStr>>"))]
-    pub attach: BTreeSet<OwnedAttachment>,
+    pub attach: BTreeSet<AttachOutput>,
 }
 
 impl ContractState {
@@ -203,24 +203,24 @@ impl ContractState {
             data: empty!(),
             attach: empty!(),
         };
-        state.add_node(Txid::all_zeros(), genesis);
+        state.add_operation(Txid::all_zeros(), genesis);
         state
     }
 
     pub fn add_transition(&mut self, txid: Txid, transition: &Transition) {
-        self.add_node(txid, transition);
+        self.add_operation(txid, transition);
     }
 
     pub fn add_extension(&mut self, extension: &Extension) {
-        self.add_node(Txid::all_zeros(), extension);
+        self.add_operation(Txid::all_zeros(), extension);
     }
 
-    fn add_node(&mut self, txid: Txid, op: &impl Operation) {
-        let op_id = op.id();
+    fn add_operation(&mut self, txid: Txid, op: &impl Operation) {
+        let opid = op.id();
 
         for (ty, meta) in op.global_state() {
             self.global
-                .entry(op_id)
+                .entry(opid)
                 .or_default()
                 .entry(*ty)
                 .or_default()
@@ -228,9 +228,9 @@ impl ContractState {
         }
 
         fn process<S: StateTrait>(
-            contract_state: &mut BTreeSet<AssignedState<S>>,
+            contract_state: &mut BTreeSet<OutputAssignment<S>>,
             assignments: &[Assign<S::StateType>],
-            op_id: OpId,
+            opid: OpId,
             ty: OwnedStateType,
             txid: Txid,
         ) where
@@ -243,26 +243,26 @@ impl ContractState {
                 .filter_map(|(n, a)| a.to_revealed().map(|(seal, state)| (n, seal, state)))
             {
                 let assigned_state =
-                    AssignedState::with(seal, txid, state.into(), op_id, ty, no as u16);
+                    OutputAssignment::with(seal, txid, state.into(), opid, ty, no as u16);
                 contract_state.insert(assigned_state);
             }
         }
 
         // Remove invalidated state
         for output in op.parent_outputs() {
-            if let Some(o) = self.rights.iter().find(|r| r.op_out == output) {
+            if let Some(o) = self.rights.iter().find(|r| r.opout == output) {
                 let o = o.clone(); // need this b/c of borrow checker
                 self.rights.remove(&o);
             }
-            if let Some(o) = self.fungibles.iter().find(|r| r.op_out == output) {
+            if let Some(o) = self.fungibles.iter().find(|r| r.opout == output) {
                 let o = o.clone();
                 self.fungibles.remove(&o);
             }
-            if let Some(o) = self.data.iter().find(|r| r.op_out == output) {
+            if let Some(o) = self.data.iter().find(|r| r.opout == output) {
                 let o = o.clone();
                 self.data.remove(&o);
             }
-            if let Some(o) = self.attach.iter().find(|r| r.op_out == output) {
+            if let Some(o) = self.attach.iter().find(|r| r.opout == output) {
                 let o = o.clone();
                 self.attach.remove(&o);
             }
@@ -271,16 +271,16 @@ impl ContractState {
         for (ty, assignments) in op.owned_state().iter() {
             match assignments {
                 TypedAssign::Declarative(assignments) => {
-                    process(&mut self.rights, &assignments, op_id, *ty, txid)
+                    process(&mut self.rights, &assignments, opid, *ty, txid)
                 }
                 TypedAssign::Fungible(assignments) => {
-                    process(&mut self.fungibles, &assignments, op_id, *ty, txid)
+                    process(&mut self.fungibles, &assignments, opid, *ty, txid)
                 }
                 TypedAssign::Structured(assignments) => {
-                    process(&mut self.data, &assignments, op_id, *ty, txid)
+                    process(&mut self.data, &assignments, opid, *ty, txid)
                 }
                 TypedAssign::Attachment(assignments) => {
-                    process(&mut self.attach, &assignments, op_id, *ty, txid)
+                    process(&mut self.attach, &assignments, opid, *ty, txid)
                 }
             }
         }
