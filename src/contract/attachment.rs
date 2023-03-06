@@ -88,7 +88,9 @@ impl Revealed {
     }
 }
 
-impl RevealedState for Revealed {}
+impl RevealedState for Revealed {
+    type Confidential = Confidential;
+}
 
 impl Conceal for Revealed {
     type Concealed = Confidential;

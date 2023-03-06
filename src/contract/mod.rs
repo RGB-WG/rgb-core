@@ -33,7 +33,7 @@ mod bundle;
 
 use std::hash::Hash;
 
-pub use assignment::{Assign, StatePair, StateType, TypedAssigns};
+pub use assignment::{Assign, StateType, TypedAssigns};
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use fungible::{
@@ -54,6 +54,7 @@ pub trait ConfidentialState:
     + strict_encoding::StrictEncode
     + strict_encoding::StrictDecode
     + amplify::AsAny
+    + Eq
     + Hash
     + Clone
 {
@@ -65,8 +66,11 @@ pub trait RevealedState:
     + strict_encoding::StrictDumb
     + strict_encoding::StrictEncode
     + strict_encoding::StrictDecode
-    + commit_verify::Conceal
+    + commit_verify::Conceal<Concealed = Self::Confidential>
     + amplify::AsAny
+    + Eq
+    + Ord
     + Clone
 {
+    type Confidential: ConfidentialState;
 }

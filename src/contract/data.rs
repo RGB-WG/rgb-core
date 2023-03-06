@@ -40,7 +40,9 @@ pub struct VoidState(());
 
 impl ConfidentialState for VoidState {}
 
-impl RevealedState for VoidState {}
+impl RevealedState for VoidState {
+    type Confidential = VoidState;
+}
 
 impl Conceal for VoidState {
     type Concealed = VoidState;
@@ -56,7 +58,9 @@ impl CommitStrategy for VoidState {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Revealed(SmallVec<u8>);
 
-impl RevealedState for Revealed {}
+impl RevealedState for Revealed {
+    type Confidential = Confidential;
+}
 
 impl Conceal for Revealed {
     type Concealed = Confidential;

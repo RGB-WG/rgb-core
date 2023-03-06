@@ -31,41 +31,14 @@ use std::str::FromStr;
 use amplify::hex;
 use bp::seals::txout::TxoSeal;
 use bp::{Outpoint, Txid};
-use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::data::VoidState;
 use crate::{
-    assignment, attachment, data, fungible, seal, Assign, ContractId, Extension, Genesis,
-    GlobalStateType, OpId, Operation, OwnedStateType, SchemaId, StatePair, Transition,
-    TypedAssigns, LIB_NAME_RGB,
+    attachment, data, fungible, seal, Assign, ContractId, Extension, Genesis, GlobalStateType,
+    OpId, Operation, OwnedStateType, RevealedState, SchemaId, Transition, TypedAssigns,
+    LIB_NAME_RGB,
 };
-
-pub trait StateTrait:
-    Clone
-    + Eq
-    + Ord
-    + Hash
-    + Debug
-    + StrictDumb
-    + StrictEncode
-    + StrictDecode
-    + From<<Self::StateType as StatePair>::Revealed>
-{
-    type StateType: StatePair;
-}
-impl StateTrait for VoidState {
-    type StateType = assignment::Right;
-}
-impl StateTrait for fungible::Revealed {
-    type StateType = assignment::Fungible;
-}
-impl StateTrait for data::Revealed {
-    type StateType = assignment::State;
-}
-impl StateTrait for attachment::Revealed {
-    type StateType = assignment::Attach;
-}
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -127,17 +100,13 @@ impl FromStr for Opout {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct OutputAssignment<State>
-where State: StateTrait
-{
+pub struct OutputAssignment<State: RevealedState> {
     pub opout: Opout,
     pub seal: Outpoint,
     pub state: State,
 }
 
-impl<State> OutputAssignment<State>
-where State: StateTrait
-{
+impl<State: RevealedState> OutputAssignment<State> {
     pub fn with(
         seal: seal::Revealed,
         witness_txid: Txid,
@@ -227,16 +196,13 @@ impl ContractState {
                 .extend(meta.iter().cloned());
         }
 
-        fn process<S: StateTrait>(
-            contract_state: &mut BTreeSet<OutputAssignment<S>>,
-            assignments: &[Assign<S::StateType>],
+        fn process<State: RevealedState>(
+            contract_state: &mut BTreeSet<OutputAssignment<State>>,
+            assignments: &[Assign<State>],
             opid: OpId,
             ty: OwnedStateType,
             txid: Txid,
-        ) where
-            <S::StateType as StatePair>::Confidential:
-                Eq + From<<<S::StateType as StatePair>::Revealed as Conceal>::Concealed>,
-        {
+        ) {
             for (no, seal, state) in assignments
                 .iter()
                 .enumerate()

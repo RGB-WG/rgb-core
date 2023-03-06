@@ -24,14 +24,13 @@ use std::collections::BTreeSet;
 
 use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
-use commit_verify::Conceal;
 
 use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
 use crate::validation::HistoryApi;
 use crate::{
     validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
-    PrevOuts, Redeemed, Schema, SchemaRoot, StatePair, TypedAssigns, Valencies,
+    PrevOuts, Redeemed, RevealedState, Schema, SchemaRoot, TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -410,12 +409,10 @@ fn extract_prev_state<C: HistoryApi>(
             Some(op) => op,
         };
 
-        fn filter<Pair>(set: &[Assign<Pair>], indexes: &[u16]) -> Vec<Assign<Pair>>
-        where
-            Pair: StatePair + Clone,
-            Pair::Confidential: PartialEq + Eq,
-            Pair::Confidential: From<<Pair::Revealed as Conceal>::Concealed>,
-        {
+        fn filter<State: RevealedState>(
+            set: &[Assign<State>],
+            indexes: &[u16],
+        ) -> Vec<Assign<State>> {
             set.iter()
                 .enumerate()
                 .filter_map(|(index, item)| {
