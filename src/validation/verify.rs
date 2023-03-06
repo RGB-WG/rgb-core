@@ -90,10 +90,10 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             }
         }
 
-        // Collect all endpoint transitions
-        // This is pretty simple operation; it takes a lot of code because
-        // we would like to detect any potential issues with the consignment
-        // structure and notify user about them (in form of generated warnings)
+        // Collect all endpoint transitions.
+        // This is pretty simple operation; it takes a lot of code because we would like
+        // to detect any potential issues with the consignment structure and notify user
+        // about them (in form of generated warnings)
         let mut end_transitions = Vec::<(&Transition, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.endpoints() {
             let transitions = match consignment.known_transitions_by_bundle_id(*bundle_id) {
@@ -112,9 +112,8 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     .flat_map(TypedAssigns::to_confidential_seals)
                     .any(|seal| seal == *seal_endpoint)
                 {
-                    // We generate just a warning here because it's up to a user
-                    // to decide whether to accept consignment with wrong
-                    // endpoint list
+                    // We generate just a warning here because it's up to a user to decide whether
+                    // to accept consignment with wrong endpoint list
                     status
                         .add_warning(Warning::EndpointTransitionSealNotFound(opid, *seal_endpoint));
                 }
@@ -131,13 +130,12 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             }
         }
 
-        // Validation index is used to check that all transitions presented
-        // in the consignment were validated. Also, we use it to avoid double
-        // schema validations for transitions.
+        // Validation index is used to check that all transitions presented in the
+        // consignment were validated. Also, we use it to avoid double schema
+        // validations for transitions.
         let validation_index = BTreeSet::<OpId>::new();
 
-        // Index used to avoid repeated validations of the same
-        // anchor+transition pairs
+        // Index used to avoid repeated validations of the same anchor+transition pairs
         let anchor_validation_index = BTreeSet::<OpId>::new();
 
         let vm = match &consignment.schema().script {
@@ -174,18 +172,16 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         let mut validator = Validator::init(consignment, resolver);
 
         validator.validate_schema(consignment.schema());
-        // We must return here, since if the schema is not valid there is no
-        // reason to validate contract nodes against it: it will produce a
-        // plenty of errors
+        // We must return here, since if the schema is not valid there is no reason to
+        // validate contract nodes against it: it will produce a plenty of errors
         if validator.status.validity() == Validity::Invalid {
             return validator.status;
         }
 
         validator.validate_contract(consignment.schema());
 
-        // Done. Returning status report with all possible failures, issues,
-        // warnings and notifications about transactions we were unable to
-        // obtain.
+        // Done. Returning status report with all possible failures, issues, warnings
+        // and notifications about transactions we were unable to obtain.
         validator.status
     }
 
@@ -202,9 +198,9 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         if schema.schema_id() != self.schema_id {
             self.status
                 .add_failure(Failure::SchemaUnknown(self.schema_id));
-            // Unlike other failures, here we return immediatelly, since there
-            // is no point to validate all consignment data against an invalid
-            // schema: it will result in a plenty of meaningless errors
+            // Unlike other failures, here we return immediatelly, since there is no point
+            // to validate all consignment data against an invalid schema: it will result in
+            // a plenty of meaningless errors
             return;
         }
 
@@ -215,9 +211,9 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing operation
         //               graph up to genesis for each one of them.
-        // NB: We are not aiming to validate the consignment as a whole, but
-        // instead treat it as a superposition of subgraphs, one for each
-        // endpoint; and validate them independently.
+        // NB: We are not aiming to validate the consignment as a whole, but instead
+        // treat it as a superposition of subgraphs, one for each endpoint; and validate
+        // them independently.
         for (operation, bundle_id) in self.end_transitions.clone() {
             self.validate_branch(schema, operation, bundle_id);
         }
@@ -243,9 +239,9 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             }
         }
 
-        // Generate warning if some of the transitions within the consignment
-        // were excessive (i.e. not part of validation_index). Nothing critical,
-        // but still good to report the user that the consignment is not perfect
+        // Generate warning if some of the transitions within the consignment were
+        // excessive (i.e. not part of validation_index). Nothing critical, but still
+        // good to report the user that the consignment is not perfect
         for opid in self.consignment.op_ids_except(&self.validation_index) {
             self.status.add_warning(Warning::ExcessiveNode(opid));
         }
@@ -259,40 +255,38 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
     ) {
         let mut queue: VecDeque<&Transition> = VecDeque::new();
 
-        // Instead of constructing complex graph structures or using a
-        // recursions we utilize queue to keep the track of the upstream
-        // (ancestor) nodes and make sure that ve have validated each one
-        // of them up to genesis. The graph is valid when each of its nodes
-        // and each of its edges is valid, i.e. when all individual nodes
-        // has passed validation against the schema (we track that fact with
-        // `validation_index`) and each of the operation ancestor state change to
-        // a given operation is valid against the schema + committed into bitcoin
-        // transaction graph with proper anchor. That is what we are
+        // Instead of constructing complex graph structures or using a recursions we
+        // utilize queue to keep the track of the upstream (ancestor) nodes and make
+        // sure that ve have validated each one of them up to genesis. The graph is
+        // valid when each of its nodes and each of its edges is valid, i.e. when all
+        // individual nodes has passed validation against the schema (we track
+        // that fact with `validation_index`) and each of the operation ancestor state
+        // change to a given operation is valid against the schema + committed
+        // into bitcoin transaction graph with proper anchor. That is what we are
         // checking in the code below:
         queue.push_back(transition);
         while let Some(operation) = queue.pop_front() {
             let opid = operation.id();
             let node_type = operation.op_type();
 
-            // [VALIDATION]: Verify operation against the schema. Here we check
-            //               only a single operation, not state evolution (it
-            //               will be checked lately)
+            // [VALIDATION]: Verify operation against the schema. Here we check only a single
+            //               operation, not state evolution (it will be checked lately)
             if !self.validation_index.contains(&opid) {
                 self.status += schema.validate(self.consignment, operation, self.vm.as_ref());
                 self.validation_index.insert(opid);
             }
 
-            // Making sure we do have a corresponding anchor; otherwise
-            // reporting failure (see below) - with the except of genesis and
-            // extension nodes, which does not have a corresponding anchor
+            // Making sure we do have a corresponding anchor; otherwise reporting failure
+            // (see below) - with the except of genesis and extension nodes, which does not
+            // have a corresponding anchor
             if let Some(anchor) = self.anchor_index.get(&opid).cloned() {
                 if !self.anchor_validation_index.contains(&opid) {
                     // Ok, now we have the `operation` and the `anchor`, let's do all
                     // required checks
 
-                    // [VALIDATION]: Check that transition is committed into the
-                    //               anchor. This must be done with
-                    //               deterministic bitcoin commitments & LNPBP-4
+                    // [VALIDATION]: Check that transition is committed into the anchor.
+                    //               This must be done with deterministic bitcoin commitments &
+                    //               LNPBP-4.
                     if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
                         self.status
                             .add_failure(Failure::TransitionNotInAnchor(opid, anchor.txid));
@@ -301,26 +295,22 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     self.validate_graph_node(operation, bundle_id, anchor);
                     self.anchor_validation_index.insert(opid);
                 }
-                // Ouch, we are out of that multi-level nested cycles :)
             } else if node_type != OpType::Genesis && node_type != OpType::StateExtension {
-                // This point is actually unreachable: b/c of the
-                // consignment structure, each state transition
-                // has a corresponding anchor. So if we've got here there
-                // is something broken with LNP/BP core library.
+                // This point is actually unreachable: b/c of the consignment structure, each
+                // state transition has a corresponding anchor. So if we've got here there is
+                // something broken with LNP/BP core library.
                 self.status
                     .add_failure(Failure::TransitionNotAnchored(opid));
             }
 
-            // Now, we must collect all parent nodes and add them to the
-            // verification queue
+            // Now, we must collect all parent nodes and add them to the verification queue
             let parent_nodes_1: Vec<&Transition> = operation
                 .prev_state()
                 .iter()
                 .filter_map(|(id, _)| {
                     self.consignment.transition(*id).ok().or_else(|| {
-                        // This will not actually happen since we already
-                        // checked that each ancrstor reference has a
-                        // corresponding operation in the code above. But rust
+                        // This will not actually happen since we already checked that each ancestor
+                        // reference has a corresponding operation in the code above. But rust
                         // requires to double-check :)
                         self.status.add_failure(Failure::TransitionAbsent(*id));
                         None
@@ -333,9 +323,8 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 .iter()
                 .filter_map(|(id, _)| {
                     self.consignment.transition(*id).ok().or_else(|| {
-                        // This will not actually happen since we already
-                        // checked that each ancestor reference has a
-                        // corresponding operation in the code above. But rust
+                        // This will not actually happen since we already checked that each ancestor
+                        // reference has a corresponding operation in the code above. But rust
                         // requires to double-check :)
                         self.status.add_failure(Failure::TransitionAbsent(*id));
                         None
@@ -357,55 +346,48 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         let txid = anchor.txid;
         let opid = transition.id();
 
-        // Check that the anchor is committed into a transaction spending all of
-        // the transition inputs.
+        // Check that the anchor is committed into a transaction spending all of the
+        // transition inputs.
         match self.resolver.resolve_tx(txid) {
             Err(_) => {
-                // We wre unable to retrieve corresponding transaction, so can't
-                // check. Reporting this incident and continuing further.
-                // Why this happens? No connection to Bitcoin Core, Electrum or
-                // other backend etc. So this is not a failure in a strict
-                // sense, however we can't be sure that the
-                // consignment is valid. That's why we keep the
-                // track of such information in a separate place
-                // (`unresolved_txids` field of the validation
-                // status object).
+                // We wre unable to retrieve corresponding transaction, so can't check.
+                // Reporting this incident and continuing further. Why this happens? No
+                // connection to Bitcoin Core, Electrum or other backend etc. So this is not a
+                // failure in a strict sense, however we can't be sure that the consignment is
+                // valid. That's why we keep the track of such information in a separate place
+                // (`unresolved_txids` field of the validation status object).
                 self.status.unresolved_txids.push(txid);
-                // This also can mean that there is no known transaction with the
-                // id provided by the anchor, i.e. consignment is invalid. We
-                // are proceeding with further validation in order to detect the
-                // rest of problems (and reporting the failure!)
+                // This also can mean that there is no known transaction with the id provided by
+                // the anchor, i.e. consignment is invalid. We are proceeding with further
+                // validation in order to detect the rest of problems (and reporting the
+                // failure!)
                 self.status
                     .add_failure(Failure::WitnessTransactionMissed(txid));
             }
             Ok(witness_tx) => {
-                // Ok, now we have the transaction and fee information for a
-                // single state change from some ancestors array to the
-                // currently validated transition operation: that's everything
-                // required to do the complete validation
+                // Ok, now we have the transaction and fee information for a single state change
+                // from some ancestors array to the currently validated transition operation:
+                // that's everything required to do the complete validation
 
-                // [VALIDATION]: Checking anchor deterministic bitcoin
-                //               commitment
+                // [VALIDATION]: Checking anchor deterministic bitcoin commitment
                 if anchor
                     .verify(self.contract_id, bundle_id.into(), &witness_tx)
                     .is_err()
                 {
                     // TODO: Save error details
                     // The operation is not committed to bitcoin transaction graph!
-                    // Ultimate failure. But continuing to detect the rest
-                    // (after reporting it).
+                    // Ultimate failure. But continuing to detect the rest (after reporting it).
                     self.status
                         .add_failure(Failure::WitnessNoCommitment(opid, txid));
                 }
 
-                // Checking that witness transaction closes seals defined by
-                // transition previous outputs.
+                // Checking that witness transaction closes seals defined by transition previous
+                // outputs.
                 for (prev_id, prev_outs) in transition.prev_state().iter() {
                     let prev_id = *prev_id;
                     let Some(prev_op) = self.consignment.operation(prev_id) else {
-                        // Node, referenced as the ancestor, was not found
-                        // in the consignment. Usually this means that the
-                        // consignment data are broken
+                        // Node, referenced as the ancestor, was not found in the consignment. 
+                        // Usually this means that the consignment data are broken
                         self.status
                             .add_failure(Failure::OperationAbsent(prev_id));
                         continue;
@@ -441,9 +423,8 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             return
         };
         let Some(seal) = seal else {
-            // Everything is ok, but we have incomplete data (confidential),
-            // thus can't do a full verification and have to report the
-            // failure
+            // Everything is ok, but we have incomplete data (confidential), thus can't do a 
+            // full verification and have to report the failure
             self.status
                 .add_failure(Failure::ConfidentialSeal(prev_out));
             return
@@ -465,10 +446,9 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             .iter()
             .any(|txin| txin.prev_output == outpoint)
         {
-            // Another failure: we do not spend one of the transition
-            // ancestors in the witness transaction. The consignment is
-            // clearly invalid; reporting this and processing to other
-            // potential issues.
+            // Another failure: we do not spend one of the transition ancestors in the
+            // witness transaction. The consignment is clearly invalid; reporting this and
+            // processing to other potential issues.
             self.status.add_failure(Failure::UnclosedSeal {
                 opid,
                 prev_out,
