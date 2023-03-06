@@ -289,7 +289,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     //               LNPBP-4.
                     if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
                         self.status
-                            .add_failure(Failure::TransitionNotInAnchor(opid, anchor.txid));
+                            .add_failure(Failure::NotInAnchor(opid, anchor.txid));
                     }
 
                     self.validate_graph_node(operation, bundle_id, anchor);
@@ -298,9 +298,8 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             } else if node_type != OpType::Genesis && node_type != OpType::StateExtension {
                 // This point is actually unreachable: b/c of the consignment structure, each
                 // state transition has a corresponding anchor. So if we've got here there is
-                // something broken with LNP/BP core library.
-                self.status
-                    .add_failure(Failure::TransitionNotAnchored(opid));
+                // something broken with the consignment provider.
+                self.status.add_failure(Failure::NotAnchored(opid));
             }
 
             // Now, we must collect all parent nodes and add them to the verification queue

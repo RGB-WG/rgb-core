@@ -404,7 +404,7 @@ fn extract_prev_state<C: HistoryApi>(
     for (id, details) in prev_state.iter() {
         let prev_op = match consignment.operation(*id) {
             None => {
-                status.add_failure(validation::Failure::TransitionAbsent(*id));
+                status.add_failure(validation::Failure::OperationAbsent(*id));
                 continue;
             }
             Some(op) => op,
@@ -491,7 +491,7 @@ fn extract_redeemed_valencies<C: HistoryApi>(
     let mut public_rights = Valencies::default();
     for (id, valencies) in redeemed.iter() {
         if consignment.has_operation(*id) {
-            status.add_failure(validation::Failure::TransitionAbsent(*id));
+            status.add_failure(validation::Failure::OperationAbsent(*id));
         } else {
             public_rights
                 .extend(valencies.iter().copied())

@@ -200,15 +200,15 @@ pub enum Failure {
 
     SchemaTypeSystem(/* TODO: use error from strict types */),
 
+    OperationAbsent(OpId),
+    TransitionAbsent(OpId),
     BundleInvalid(BundleId),
 
-    OperationAbsent(OpId),
-
-    TransitionAbsent(OpId),
-    TransitionNotAnchored(OpId),
-    TransitionNotInAnchor(OpId, Txid),
-
     // Errors checking seal closing
+    /// transition {0} is not anchored.
+    NotAnchored(OpId),
+    /// anchor for transition {0} doesn't commit to the actual transition data.
+    NotInAnchor(OpId, Txid),
     /// transition {op} references state type {ty} absent in the outputs of
     /// previous state transition {prev_id}.
     NoPrevState {
@@ -216,7 +216,7 @@ pub enum Failure {
         prev_id: OpId,
         state_type: schema::OwnedStateType,
     },
-    /// transition {0} references non-existing previous output {1}
+    /// transition {0} references non-existing previous output {1}.
     NoPrevOut(OpId, Opout),
     /// seal {0} present in the history is confidential and can't be validated.
     ConfidentialSeal(Opout),
@@ -231,7 +231,7 @@ pub enum Failure {
     /// only in state transitions).
     UnexpectedWitnessSeal(Opout),
 
-    ExtensionAbsent(OpId),
+    // TODO: Check why the error type is not used
     ExtensionParentWrongValenciesType {
         opid: OpId,
         ancestor_id: OpId,
