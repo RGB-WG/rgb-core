@@ -44,8 +44,8 @@ pub use fungible::{
 };
 pub use global::{GlobalState, GlobalValues};
 pub use operations::{
-    ContractId, Extension, Genesis, OpId, Operation, OwnedState, PrevOuts, Redeemed, Transition,
-    Valencies,
+    ContractId, Extension, Genesis, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed,
+    Transition, Valencies,
 };
 
 /// Marker trait for types of state which are just a commitment to the actual

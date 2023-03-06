@@ -390,3 +390,100 @@ impl Operation for Transition {
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
 }
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
+pub enum OpRef<'op> {
+    Genesis(&'op Genesis),
+    Transition(&'op Transition),
+    Extension(&'op Extension),
+}
+
+impl<'op> Operation for OpRef<'op> {
+    fn op_type(&self) -> OpType {
+        match self {
+            OpRef::Genesis(op) => op.op_type(),
+            OpRef::Transition(op) => op.op_type(),
+            OpRef::Extension(op) => op.op_type(),
+        }
+    }
+
+    fn full_type(&self) -> OpFullType {
+        match self {
+            OpRef::Genesis(op) => op.full_type(),
+            OpRef::Transition(op) => op.full_type(),
+            OpRef::Extension(op) => op.full_type(),
+        }
+    }
+
+    fn id(&self) -> OpId {
+        match self {
+            OpRef::Genesis(op) => op.id(),
+            OpRef::Transition(op) => op.id(),
+            OpRef::Extension(op) => op.id(),
+        }
+    }
+
+    fn transition_type(&self) -> Option<TransitionType> {
+        match self {
+            OpRef::Genesis(op) => op.transition_type(),
+            OpRef::Transition(op) => op.transition_type(),
+            OpRef::Extension(op) => op.transition_type(),
+        }
+    }
+
+    fn extension_type(&self) -> Option<ExtensionType> {
+        match self {
+            OpRef::Genesis(op) => op.extension_type(),
+            OpRef::Transition(op) => op.extension_type(),
+            OpRef::Extension(op) => op.extension_type(),
+        }
+    }
+
+    fn metadata(&self) -> Option<&SmallBlob> {
+        match self {
+            OpRef::Genesis(op) => op.metadata(),
+            OpRef::Transition(op) => op.metadata(),
+            OpRef::Extension(op) => op.metadata(),
+        }
+    }
+
+    fn global_state(&self) -> &GlobalState {
+        match self {
+            OpRef::Genesis(op) => op.global_state(),
+            OpRef::Transition(op) => op.global_state(),
+            OpRef::Extension(op) => op.global_state(),
+        }
+    }
+
+    fn prev_state(&self) -> &PrevOuts {
+        match self {
+            OpRef::Genesis(op) => op.prev_state(),
+            OpRef::Transition(op) => op.prev_state(),
+            OpRef::Extension(op) => op.prev_state(),
+        }
+    }
+
+    fn redeemed(&self) -> &Redeemed {
+        match self {
+            OpRef::Genesis(op) => op.redeemed(),
+            OpRef::Transition(op) => op.redeemed(),
+            OpRef::Extension(op) => op.redeemed(),
+        }
+    }
+
+    fn owned_state(&self) -> &OwnedState {
+        match self {
+            OpRef::Genesis(op) => op.owned_state(),
+            OpRef::Transition(op) => op.owned_state(),
+            OpRef::Extension(op) => op.owned_state(),
+        }
+    }
+
+    fn valencies(&self) -> &Valencies {
+        match self {
+            OpRef::Genesis(op) => op.valencies(),
+            OpRef::Transition(op) => op.valencies(),
+            OpRef::Extension(op) => op.valencies(),
+        }
+    }
+}
