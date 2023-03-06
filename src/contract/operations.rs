@@ -65,8 +65,8 @@ impl CommitEncode for OwnedState {
     }
 }
 
-/// Unique node (genesis, extensions & state transition) identifier equivalent
-/// to the commitment hash
+/// Unique operation (genesis, extensions & state transition) identifier
+/// equivalent to the commitment hash
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[display(Self::to_hex)]
@@ -124,64 +124,64 @@ impl From<ContractId> for mpc::ProtocolId {
     fn from(id: ContractId) -> Self { mpc::ProtocolId::from_inner(id.into_inner()) }
 }
 
-/// RGB contract node API, defined as trait
+/// RGB contract operation API, defined as trait
 ///
-/// Implemented by all contract node types (see [`OpType`]):
+/// Implemented by all contract operation types (see [`OpType`]):
 /// - Genesis ([`Genesis`])
 /// - State transitions ([`Transitions`])
 /// - Public state extensions ([`Extensions`])
 pub trait Operation: AsAny {
-    /// Returns type of the node (see [`OpType`]). Unfortunately, this can't
-    /// be just a const, since it will break our ability to convert concrete
-    /// `Node` types into `&dyn Node` (entities implementing traits with const
-    /// definitions can't be made into objects)
+    /// Returns type of the operation (see [`OpType`]). Unfortunately, this
+    /// can't be just a const, since it will break our ability to convert
+    /// concrete `Node` types into `&dyn Node` (entities implementing traits
+    /// with const definitions can't be made into objects)
     fn op_type(&self) -> OpType;
 
-    /// Returns full contract node type information
+    /// Returns full contract operation type information
     fn full_type(&self) -> OpFullType;
 
-    /// Returns [`OpId`], which is a hash of this node commitment
+    /// Returns [`OpId`], which is a hash of this operation commitment
     /// serialization
     fn id(&self) -> OpId;
 
     /// Returns [`Option::Some`]`(`[`ContractId`]`)`, which is a hash of
     /// genesis.
-    /// - For genesis node, this hash is byte-equal to [`OpId`] (however
-    ///   displayed in a reverse manner, to introduce semantical distinction)
-    /// - For extension node function returns id of the genesis, to which this
-    ///   node commits to
-    /// - For state transition function returns [`Option::None`], since they do
-    ///   not keep this information; it must be deduced through state transition
-    ///   graph
+    /// - For genesis, this hash is byte-equal to [`OpId`] (however displayed in
+    ///   a reverse manner, to introduce semantical distinction)
+    /// - For extensions, function returns id of the genesis, to which this
+    ///   operation commits to
+    /// - For state transitions, function returns [`Option::None`], since they
+    ///   do not keep this information; it must be deduced through state
+    ///   transition graph
     fn contract_id(&self) -> Option<ContractId>;
 
     /// Returns [`Option::Some`]`(`[`TransitionType`]`)` for transitions or
-    /// [`Option::None`] for genesis and extension node types
+    /// [`Option::None`] for genesis and extension operation types
     fn transition_type(&self) -> Option<TransitionType>;
 
     /// Returns [`Option::Some`]`(`[`ExtensionType`]`)` for extension nodes or
-    /// [`Option::None`] for genesis and trate transitions
+    /// [`Option::None`] for genesis and state transitions
     fn extension_type(&self) -> Option<ExtensionType>;
 
     /// Returns metadata associated with the operation, if any.
     fn metadata(&self) -> Option<&SmallBlob>;
 
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
-    /// wrapper structure) for the contract node.
+    /// wrapper structure) for the contract operation.
     fn global_state(&self) -> &GlobalState;
 
     /// Returns reference to information about the owned rights in form of
-    /// [`PrevState`] wrapper structure which this node updates with
+    /// [`PrevState`] wrapper structure which this operation updates with
     /// state transition ("parent owned rights").
     ///
-    /// This is always an empty `Vec` for [`Genesis`] and [`Extension`] node
-    /// types.
+    /// This is always an empty `Vec` for [`Genesis`] and [`Extension`]
+    /// operation types.
     fn prev_state(&self) -> &PrevState;
 
     /// Returns reference to information about the public rights (in form of
     /// [`Redeemed`] wrapper structure), defined with "parent" state
     /// extensions (i.e. those finalized with the current state transition) or
-    /// referenced by another state extension, which this node updates
+    /// referenced by another state extension, which this operation updates
     /// ("parent public rights").
     ///
     /// This is always an empty `Vec` for [`Genesis`].

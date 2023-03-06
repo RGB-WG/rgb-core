@@ -140,7 +140,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         let op_info = OpInfo::with(id, self.subset_of.is_some(), op, &prev_state, &redeemed);
 
         // We need to run scripts as the very last step, since before that
-        // we need to make sure that the node data match the schema, so
+        // we need to make sure that the operation data match the schema, so
         // scripts are not required to validate the structure of the state
         status += self.validate_state_evolution(op_info, vm);
         status
@@ -199,7 +199,7 @@ impl<Root: SchemaRoot> Schema<Root> {
                 status.add_failure(validation::Failure::SchemaMismatchedDataType(
                     *field_type_id,
                 ));
-                status += field.verify(&self.type_system, node_id, *field_type_id, &data);
+                status += field.verify(&self.type_system, opid, *field_type_id, &data);
                  */
             }
         }
@@ -403,7 +403,7 @@ fn extract_prev_state(
                 status.add_failure(validation::Failure::TransitionAbsent(*id));
                 continue;
             }
-            Some(node) => node,
+            Some(op) => op,
         };
 
         fn filter<Pair>(set: &[Assign<Pair>], indexes: &[u16]) -> Vec<Assign<Pair>>
@@ -468,8 +468,8 @@ fn extract_prev_state(
                 }
                 None => {
                     // Presence of the required owned rights type in the
-                    // parent node was already validated; we have nothing to
-                    // report here
+                    // parent operation was already validated; we have nothing
+                    // to report here
                 }
             }
         }

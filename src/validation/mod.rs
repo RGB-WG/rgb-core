@@ -205,24 +205,24 @@ pub enum Failure {
     TransitionNotAnchored(OpId),
     TransitionNotInAnchor(OpId, Txid),
     TransitionParentWrongSealType {
-        node_id: OpId,
+        opid: OpId,
         ancestor_id: OpId,
         assignment_type: schema::OwnedStateType,
     },
     TransitionParentWrongSeal {
-        node_id: OpId,
+        opid: OpId,
         ancestor_id: OpId,
         assignment_type: schema::OwnedStateType,
         seal_index: u16,
     },
     TransitionParentConfidentialSeal {
-        node_id: OpId,
+        opid: OpId,
         ancestor_id: OpId,
         assignment_type: schema::OwnedStateType,
         seal_index: u16,
     },
     TransitionParentIsNotWitnessInput {
-        node_id: OpId,
+        opid: OpId,
         ancestor_id: OpId,
         assignment_type: schema::OwnedStateType,
         seal_index: u16,
@@ -231,7 +231,7 @@ pub enum Failure {
 
     ExtensionAbsent(OpId),
     ExtensionParentWrongValenciesType {
-        node_id: OpId,
+        opid: OpId,
         ancestor_id: OpId,
         valencies_type: schema::ValencyType,
     },

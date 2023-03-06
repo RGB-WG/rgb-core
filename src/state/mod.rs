@@ -98,7 +98,7 @@ pub enum OpoutParseError {
 
     InvalidOutputNo(ParseIntError),
 
-    /// invalid node outpoint format ('{0}')
+    /// invalid operation outpoint format ('{0}')
     #[display(doc_comments)]
     WrongFormat(String),
 }

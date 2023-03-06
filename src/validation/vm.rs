@@ -27,7 +27,7 @@ use crate::{validation, Script};
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
 pub trait VirtualMachine {
-    /// Validates state change in a contract node.
+    /// Validates state change in a contract operation.
     fn validate(&self, info: OpInfo) -> Result<(), validation::Failure>;
 }
 

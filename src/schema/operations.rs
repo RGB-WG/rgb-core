@@ -42,7 +42,7 @@ pub type AssignmentSchema = TinyOrdMap<OwnedStateType, Occurrences>;
 #[repr(u8)]
 /// Node type: genesis, extensions and state transitions
 pub enum OpType {
-    /// Genesis node: single node per contract, defining contract and
+    /// Genesis: single operation per contract, defining contract and
     /// committing to a specific schema and underlying chain hash
     #[display("genesis")]
     Genesis = 0,
@@ -61,17 +61,17 @@ pub enum OpType {
     StateTransition = 2,
 }
 
-/// Aggregated type used to supply full contract node type and transition/state
-/// extension type information
+/// Aggregated type used to supply full contract operation type and
+/// transition/state extension type information
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub enum OpFullType {
-    /// Genesis node (no subtypes)
+    /// Genesis operation (no subtypes)
     Genesis,
 
-    /// State transition contract node, subtyped by transition type
+    /// State transition contract operation, subtyped by transition type
     StateTransition(TransitionType),
 
-    /// State extension contract node, subtyped by extension type
+    /// State extension contract operation, subtyped by extension type
     StateExtension(ExtensionType),
 }
 
@@ -85,7 +85,7 @@ impl OpFullType {
     }
 }
 
-/// Trait defining common API for all node type schemata
+/// Trait defining common API for all operation type schemata
 pub trait OpSchema {
     fn op_type(&self) -> OpType;
     fn metadata(&self) -> Option<SemId>;

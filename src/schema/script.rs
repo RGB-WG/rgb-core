@@ -23,7 +23,7 @@
 #![allow(clippy::unnecessary_cast)]
 
 //! Components related to the scripting system used by schema or applied at the
-//! specific contract node level
+//! specific contract operation level
 
 use crate::vm::AluScript;
 use crate::LIB_NAME_RGB;

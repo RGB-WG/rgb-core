@@ -55,7 +55,7 @@ pub struct Validator<'consignment, 'resolver, C: HistoryApi, R: ResolveTx> {
     schema_id: SchemaId,
     genesis_id: OpId,
     contract_id: ContractId,
-    node_index: BTreeMap<OpId, &'consignment dyn Operation>,
+    op_index: BTreeMap<OpId, &'consignment dyn Operation>,
     anchor_index: BTreeMap<OpId, &'consignment Anchor<mpc::MerkleProof>>,
     end_transitions: Vec<(&'consignment Transition, BundleId)>,
     validation_index: BTreeSet<OpId>,
@@ -79,22 +79,22 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         let schema_id = consignment.genesis().schema_id;
 
         // Create indexes
-        let mut node_index = BTreeMap::<OpId, &dyn Operation>::new();
+        let mut op_index = BTreeMap::<OpId, &dyn Operation>::new();
         let mut anchor_index = BTreeMap::<OpId, &Anchor<mpc::MerkleProof>>::new();
         for (anchor, bundle) in consignment.anchored_bundles() {
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
             for transition in bundle.values().filter_map(|item| item.transition.as_ref()) {
-                let node_id = transition.id();
-                node_index.insert(node_id, transition);
-                anchor_index.insert(node_id, anchor);
+                let opid = transition.id();
+                op_index.insert(opid, transition);
+                anchor_index.insert(opid, anchor);
             }
         }
-        node_index.insert(genesis_id, consignment.genesis());
+        op_index.insert(genesis_id, consignment.genesis());
         for extension in consignment.state_extensions() {
-            let node_id = Extension::id(extension);
-            node_index.insert(node_id, extension);
+            let opid = Extension::id(extension);
+            op_index.insert(opid, extension);
         }
 
         // Collect all endpoint transitions
@@ -111,7 +111,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 }
             };
             for transition in transitions {
-                let node_id = transition.id();
+                let opid = transition.id();
                 // Checking for endpoint definition duplicates
                 if !transition
                     .owned_state()
@@ -122,18 +122,16 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     // We generate just a warning here because it's up to a user
                     // to decide whether to accept consignment with wrong
                     // endpoint list
-                    status.add_warning(Warning::EndpointTransitionSealNotFound(
-                        node_id,
-                        *seal_endpoint,
-                    ));
+                    status
+                        .add_warning(Warning::EndpointTransitionSealNotFound(opid, *seal_endpoint));
                 }
                 if end_transitions
                     .iter()
-                    .filter(|(n, _)| n.id() == node_id)
+                    .filter(|(n, _)| n.id() == opid)
                     .count() >
                     0
                 {
-                    status.add_warning(Warning::EndpointDuplication(node_id, *seal_endpoint));
+                    status.add_warning(Warning::EndpointDuplication(opid, *seal_endpoint));
                 } else {
                     end_transitions.push((transition, *bundle_id));
                 }
@@ -161,7 +159,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             schema_id,
             genesis_id,
             contract_id,
-            node_index,
+            op_index,
             anchor_index,
             end_transitions,
             validation_index,
@@ -220,21 +218,21 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
         // [VALIDATION]: Validate genesis
         self.status +=
-            schema.validate(&self.node_index, self.consignment.genesis(), self.vm.as_ref());
+            schema.validate(&self.op_index, self.consignment.genesis(), self.vm.as_ref());
         self.validation_index.insert(self.genesis_id);
 
-        // [VALIDATION]: Iterating over each endpoint, reconstructing node graph
-        //               up to genesis for each one of them. NB: We are not
-        //               aiming to validate the consignment as a whole, but
-        //               instead treat it as a superposition of subgraphs, one
-        //               for each endpoint; and validate them independently.
-        for (node, bundle_id) in self.end_transitions.clone() {
-            self.validate_branch(schema, node, bundle_id);
+        // [VALIDATION]: Iterating over each endpoint, reconstructing operation
+        //               graph up to genesis for each one of them.
+        // NB: We are not aiming to validate the consignment as a whole, but
+        // instead treat it as a superposition of subgraphs, one for each
+        // endpoint; and validate them independently.
+        for (operation, bundle_id) in self.end_transitions.clone() {
+            self.validate_branch(schema, operation, bundle_id);
         }
         // Replace missed (not yet mined) endpoint witness transaction failures
         // with a dedicated type
-        for (node, _) in &self.end_transitions {
-            if let Some(anchor) = self.anchor_index.get(&node.id()) {
+        for (operation, _) in &self.end_transitions {
+            if let Some(anchor) = self.anchor_index.get(&operation.id()) {
                 if let Some(pos) = self
                     .status
                     .failures
@@ -256,18 +254,15 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         // Generate warning if some of the transitions within the consignment
         // were excessive (i.e. not part of validation_index). Nothing critical,
         // but still good to report the user that the consignment is not perfect
-        for node_id in self
-            .validation_index
-            .difference(&self.consignment.node_ids())
-        {
-            self.status.add_warning(Warning::ExcessiveNode(*node_id));
+        for opid in self.validation_index.difference(&self.consignment.op_ids()) {
+            self.status.add_warning(Warning::ExcessiveNode(*opid));
         }
     }
 
     fn validate_branch<Root: SchemaRoot>(
         &mut self,
         schema: &Schema<Root>,
-        node: &'consignment Transition,
+        operation: &'consignment Transition,
         bundle_id: BundleId,
     ) {
         let mut queue: VecDeque<&Transition> = VecDeque::new();
@@ -278,29 +273,29 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         // of them up to genesis. The graph is valid when each of its nodes
         // and each of its edges is valid, i.e. when all individual nodes
         // has passed validation against the schema (we track that fact with
-        // `validation_index`) and each of the node ancestor state change to
-        // a given node is valid against the schema + committed into bitcoin
+        // `validation_index`) and each of the operation ancestor state change to
+        // a given operation is valid against the schema + committed into bitcoin
         // transaction graph with proper anchor. That is what we are
         // checking in the code below:
-        queue.push_back(node);
-        while let Some(node) = queue.pop_front() {
-            let node_id = node.id();
-            let node_type = node.op_type();
+        queue.push_back(operation);
+        while let Some(operation) = queue.pop_front() {
+            let opid = operation.id();
+            let node_type = operation.op_type();
 
-            // [VALIDATION]: Verify node against the schema. Here we check
-            //               only a single node, not state evolution (it
+            // [VALIDATION]: Verify operation against the schema. Here we check
+            //               only a single operation, not state evolution (it
             //               will be checked lately)
-            if !self.validation_index.contains(&node_id) {
-                self.status += schema.validate(&self.node_index, node, self.vm.as_ref());
-                self.validation_index.insert(node_id);
+            if !self.validation_index.contains(&opid) {
+                self.status += schema.validate(&self.op_index, operation, self.vm.as_ref());
+                self.validation_index.insert(opid);
             }
 
             // Making sure we do have a corresponding anchor; otherwise
             // reporting failure (see below) - with the except of genesis and
             // extension nodes, which does not have a corresponding anchor
-            if let Some(anchor) = self.anchor_index.get(&node_id).cloned() {
-                if !self.anchor_validation_index.contains(&node_id) {
-                    // Ok, now we have the `node` and the `anchor`, let's do all
+            if let Some(anchor) = self.anchor_index.get(&opid).cloned() {
+                if !self.anchor_validation_index.contains(&opid) {
+                    // Ok, now we have the `operation` and the `anchor`, let's do all
                     // required checks
 
                     // [VALIDATION]: Check that transition is committed into the
@@ -308,11 +303,11 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     //               deterministic bitcoin commitments & LNPBP-4
                     if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
                         self.status
-                            .add_failure(Failure::TransitionNotInAnchor(node_id, anchor.txid));
+                            .add_failure(Failure::TransitionNotInAnchor(opid, anchor.txid));
                     }
 
-                    self.validate_graph_node(node, bundle_id, anchor);
-                    self.anchor_validation_index.insert(node_id);
+                    self.validate_graph_node(operation, bundle_id, anchor);
+                    self.anchor_validation_index.insert(opid);
                 }
                 // Ouch, we are out of that multi-level nested cycles :)
             } else if node_type != OpType::Genesis && node_type != OpType::StateExtension {
@@ -321,22 +316,22 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 // has a corresponding anchor. So if we've got here there
                 // is something broken with LNP/BP core library.
                 self.status
-                    .add_failure(Failure::TransitionNotAnchored(node_id));
+                    .add_failure(Failure::TransitionNotAnchored(opid));
             }
 
             // Now, we must collect all parent nodes and add them to the
             // verification queue
-            let parent_nodes_1: Vec<&Transition> = node
+            let parent_nodes_1: Vec<&Transition> = operation
                 .prev_state()
                 .iter()
                 .filter_map(|(id, _)| {
-                    self.node_index
+                    self.op_index
                         .get(id)
                         .map(|ts| ts.as_any().downcast_ref().expect("state transition"))
                         .or_else(|| {
                             // This will not actually happen since we already
                             // checked that each ancrstor reference has a
-                            // corresponding node in the code above. But rust
+                            // corresponding operation in the code above. But rust
                             // requires to double-check :)
                             self.status.add_failure(Failure::TransitionAbsent(*id));
                             None
@@ -344,17 +339,17 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 })
                 .collect();
 
-            let parent_nodes_2: Vec<&Transition> = node
+            let parent_nodes_2: Vec<&Transition> = operation
                 .redeemed()
                 .iter()
                 .filter_map(|(id, _)| {
-                    self.node_index
+                    self.op_index
                         .get(id)
                         .map(|ts| ts.as_any().downcast_ref().expect("state transition"))
                         .or_else(|| {
                             // This will not actually happen since we already
                             // checked that each ancestor reference has a
-                            // corresponding node in the code above. But rust
+                            // corresponding operation in the code above. But rust
                             // requires to double-check :)
                             self.status.add_failure(Failure::TransitionAbsent(*id));
                             None
@@ -369,12 +364,12 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
     fn validate_graph_node(
         &mut self,
-        node: &'consignment Transition,
+        operation: &'consignment Transition,
         bundle_id: BundleId,
         anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
         let txid = anchor.txid;
-        let node_id = node.id();
+        let opid = operation.id();
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.
@@ -400,7 +395,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             Ok(witness_tx) => {
                 // Ok, now we have the transaction and fee information for a
                 // single state change from some ancestors array to the
-                // currently validated transition node: that's everything
+                // currently validated transition operation: that's everything
                 // required to do the complete validation
 
                 // [VALIDATION]: Checking anchor deterministic bitcoin
@@ -410,28 +405,28 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     .is_err()
                 {
                     // TODO: Save error details
-                    // The node is not committed to bitcoin transaction graph!
+                    // The operation is not committed to bitcoin transaction graph!
                     // Ultimate failure. But continuing to detect the rest
                     // (after reporting it).
                     self.status
-                        .add_failure(Failure::WitnessNoCommitment(node_id, txid));
+                        .add_failure(Failure::WitnessNoCommitment(opid, txid));
                 }
 
                 // Checking that bitcoin transaction closes seals defined by
                 // transition ancestors.
-                for (ancestor_id, assignments) in node.prev_state().iter() {
+                for (ancestor_id, assignments) in operation.prev_state().iter() {
                     let ancestor_id = *ancestor_id;
-                    let ancestor_node =
-                        if let Some(ancestor_node) = self.node_index.get(&ancestor_id) {
-                            *ancestor_node
-                        } else {
-                            // Node, referenced as the ancestor, was not found
-                            // in the consignment. Usually this means that the
-                            // consignment data are broken
-                            self.status
-                                .add_failure(Failure::TransitionAbsent(ancestor_id));
-                            continue;
-                        };
+                    let ancestor_node = if let Some(ancestor_node) = self.op_index.get(&ancestor_id)
+                    {
+                        *ancestor_node
+                    } else {
+                        // Node, referenced as the ancestor, was not found
+                        // in the consignment. Usually this means that the
+                        // consignment data are broken
+                        self.status
+                            .add_failure(Failure::TransitionAbsent(ancestor_id));
+                        continue;
+                    };
 
                     for (assignment_type, assignment_indexes) in assignments {
                         let assignment_type = *assignment_type;
@@ -443,7 +438,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                         } else {
                             self.status
                                 .add_failure(Failure::TransitionParentWrongSealType {
-                                    node_id,
+                                    opid,
                                     ancestor_id,
                                     assignment_type,
                                 });
@@ -453,7 +448,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                         for seal_index in assignment_indexes {
                             self.validate_witness_input(
                                 &witness_tx,
-                                node_id,
+                                opid,
                                 ancestor_id,
                                 assignment_type,
                                 variant,
@@ -470,7 +465,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
     fn validate_witness_input(
         &mut self,
         witness_tx: &Tx,
-        node_id: OpId,
+        opid: OpId,
         ancestor_id: OpId,
         assignment_type: schema::OwnedStateType,
         variant: &'consignment TypedAssign,
@@ -481,7 +476,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             match (variant.revealed_seal_at(seal_index), self.anchor_index.get(&ancestor_id)) {
                 (Err(_), _) => {
                     self.status.add_failure(Failure::TransitionParentWrongSeal {
-                        node_id,
+                        opid,
                         ancestor_id,
                         assignment_type,
                         seal_index,
@@ -494,7 +489,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     // failure
                     self.status
                         .add_failure(Failure::TransitionParentConfidentialSeal {
-                            node_id,
+                            opid,
                             ancestor_id,
                             assignment_type,
                             seal_index,
@@ -513,8 +508,8 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     Some(bp::Outpoint::new(txid, vout))
                 }
                 (Ok(Some(_)), None) => {
-                    // This can't happen, since if we have a node in the index
-                    // and the node is not genesis, we always have an anchor
+                    // This can't happen, since if we have a operation in the index
+                    // and the operation is not genesis, we always have an anchor
                     unreachable!()
                 }
                 /* -> ... so we can check that the bitcoin transaction
@@ -533,7 +528,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 // potential issues.
                 self.status
                     .add_failure(Failure::TransitionParentIsNotWitnessInput {
-                        node_id,
+                        opid,
                         ancestor_id,
                         assignment_type,
                         seal_index,

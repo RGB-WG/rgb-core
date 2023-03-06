@@ -33,7 +33,7 @@ impl StateSchema {
     pub fn validate<STATE>(
         &self,
         // type_system: &TypeSystem,
-        node_id: &OpId,
+        opid: &OpId,
         assignment_id: OwnedStateType,
         data: &Assign<STATE>,
     ) -> validation::Status
@@ -63,7 +63,7 @@ impl StateSchema {
                             // [SECURITY-CRITICAL]: Bulletproofs validation
                             if let Err(err) = value.verify_range_proof() {
                                 status.add_failure(validation::Failure::InvalidBulletproofs(
-                                    *node_id,
+                                    *opid,
                                     assignment_id,
                                     err.to_string(),
                                 ));
@@ -88,7 +88,7 @@ impl StateSchema {
                         }
                         Some(_) => {
                             status.add_info(validation::Info::UncheckableConfidentialStateData(
-                                *node_id,
+                                *opid,
                                 assignment_id,
                             ));
                         }

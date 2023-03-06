@@ -20,9 +20,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Common API for accessing RGB contract node graph, including individual state
-//! transitions, extensions, genesis, outputs, assignments & single-use-seal
-//! data.
+//! Common API for accessing RGB contract operation graph, including individual
+//! state transitions, extensions, genesis, outputs, assignments &
+//! single-use-seal data.
 
 use std::collections::BTreeSet;
 
@@ -67,7 +67,7 @@ pub enum ConsistencyError {
     /// state
     ConfidentialSeal,
 
-    /// The provided node with id {0} is not an endpoint of the consignment
+    /// The provided operation with id {0} is not an endpoint of the consignment
     NotEndpoint(OpId),
 }
 
@@ -82,9 +82,9 @@ pub enum ConsistencyError {
 /// non-validated/unchecked data this may result in returned [`Error`] or
 /// [`Option::None`] values from the API methods.
 pub trait ContainerApi {
-    /// Returns reference to a node (genesis, state transition or state
+    /// Returns reference to a operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
-    fn node_by_id(&self, node_id: OpId) -> Option<&dyn Operation>;
+    fn node_by_id(&self, opid: OpId) -> Option<&dyn Operation>;
 
     fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
 
@@ -94,50 +94,50 @@ pub trait ContainerApi {
     ) -> Result<Vec<&Transition>, ConsistencyError>;
 
     /// Returns reference to a state transition, if known, matching the provided
-    /// id. If id is unknown, or corresponds to other type of the node (genesis
-    /// or state extensions) a error is returned.
+    /// id. If id is unknown, or corresponds to other type of the operation
+    /// (genesis or state extensions) a error is returned.
     ///
     /// # Errors
     ///
-    /// - [`Error::WrongNodeType`] when node is present, but has some other node
-    ///   type
-    /// - [`Error::TransitionAbsent`] when node with the given id is absent from
-    ///   the storage/container
-    fn transition_by_id(&self, node_id: OpId) -> Result<&Transition, ConsistencyError>;
+    /// - [`Error::WrongNodeType`] when operation is present, but has some other
+    ///   operation type
+    /// - [`Error::TransitionAbsent`] when operation with the given id is absent
+    ///   from the storage/container
+    fn transition_by_id(&self, opid: OpId) -> Result<&Transition, ConsistencyError>;
 
     /// Returns reference to a state extension, if known, matching the provided
-    /// id. If id is unknown, or corresponds to other type of the node (genesis
-    /// or state transition) a error is returned.
+    /// id. If id is unknown, or corresponds to other type of the operation
+    /// (genesis or state transition) a error is returned.
     ///
     /// # Errors
     ///
-    /// - [`Error::WrongNodeType`] when node is present, but has some other node
-    ///   type
-    /// - [`Error::ExtensionAbsent`] when node with the given id is absent from
-    ///   the storage/container
-    fn extension_by_id(&self, node_id: OpId) -> Result<&Extension, ConsistencyError>;
+    /// - [`Error::WrongNodeType`] when operation is present, but has some other
+    ///   operation type
+    /// - [`Error::ExtensionAbsent`] when operation with the given id is absent
+    ///   from the storage/container
+    fn extension_by_id(&self, opid: OpId) -> Result<&Extension, ConsistencyError>;
 
     /// Returns reference to a state transition, like
     /// [`ContainerApi::transition_by_id`], extended with [`Txid`] of the
-    /// witness transaction. If the node id is unknown, or corresponds to
-    /// other type of the node (genesis or state extensions) a error is
+    /// witness transaction. If the operation id is unknown, or corresponds to
+    /// other type of the operation (genesis or state extensions) a error is
     /// returned.
     ///
     /// # Errors
     ///
-    /// - [`Error::WrongNodeType`] when node is present, but has some other node
-    ///   type
-    /// - [`Error::TransitionAbsent`] when node with the given id is absent from
-    ///   the storage/container
-    fn transition_witness_by_id(
-        &self,
-        node_id: OpId,
-    ) -> Result<(&Transition, Txid), ConsistencyError>;
+    /// - [`Error::WrongNodeType`] when operation is present, but has some other
+    ///   operation type
+    /// - [`Error::TransitionAbsent`] when operation with the given id is absent
+    ///   from the storage/container
+    fn transition_witness_by_id(&self, opid: OpId)
+    -> Result<(&Transition, Txid), ConsistencyError>;
 
-    /// Resolves seals closed by a given node with the given owned rights type
+    /// Resolves seals closed by a given operation with the given owned rights
+    /// type
     ///
     /// # Arguments
-    /// - `node_id`: node identifier closing previously defined single-use-seals
+    /// - `opid`: operation identifier closing previously defined
+    ///   single-use-seals
     /// - `owned_right_type`: type of the owned rights which must be assigned to
     ///   the closed seals. If seals are present, but have a different type, a
     ///   error is returned
@@ -150,18 +150,18 @@ pub trait ContainerApi {
     ///
     /// Returns a set of bitcoin transaction outpoints, which were defined as
     /// single-use-seals by RGB contract nodes, which were closed by the
-    /// provided `node_id`, and which had an assigned state of type
+    /// provided `opid`, and which had an assigned state of type
     /// `owned_right_type`.
     ///
     /// # Errors
     ///
-    /// - [`Error::TransitionAbsent`], if either `node_id` or one of its inputs
-    ///   are not present in the storage or container
-    /// - [`Error::OutputNotPresent`], if parent node, specified as an input for
-    ///   the `node_id` does not contain the output with type
-    ///   `owned_rights_type` and the number referenced by the node. Means that
-    ///   the data in the container or storage are not valid/consistent.
-    /// - [`Error::NoSealsClosed`], if the `node_id` does not closes any of the
+    /// - [`Error::TransitionAbsent`], if either `opid` or one of its inputs are
+    ///   not present in the storage or container
+    /// - [`Error::OutputNotPresent`], if parent operation, specified as an
+    ///   input for the `opid` does not contain the output with type
+    ///   `owned_rights_type` and the number referenced by the operation. Means
+    ///   that the data in the container or storage are not valid/consistent.
+    /// - [`Error::NoSealsClosed`], if the `opid` does not closes any of the
     ///   seals with the provided `owned_rights_type`. Usually means that the
     ///   logic of the schema class library does not matches the actual schema
     ///   requirement, or that the container or data storage is not validated
@@ -172,7 +172,7 @@ pub trait ContainerApi {
     ///   closed seal, when the revealed data are required
     fn seals_closed_with(
         &self,
-        node_id: OpId,
+        opid: OpId,
         owned_right_type: impl Into<OwnedStateType>,
         witness: Txid,
     ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
@@ -195,7 +195,7 @@ pub trait HistoryApi: ContainerApi {
     /// Genesis data
     fn genesis(&self) -> &Genesis;
 
-    fn node_ids(&self) -> BTreeSet<OpId>;
+    fn op_ids(&self) -> BTreeSet<OpId>;
 
     /// The final state ("endpoints") provided by this consignment.
     ///
