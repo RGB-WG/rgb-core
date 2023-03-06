@@ -123,8 +123,8 @@ impl StateSchema {
                             ));
                         }
                         // TODO #15: When other homomorphic formats will be
-                        // added,       add type check
-                        // like with hashed data below
+                        //           added, add type check like with hashed data
+                        //           below
                     }
                     StateSchema::Structured(_semid) => {
                         match a.downcast_ref::<<State as StatePair>::Revealed>() {
@@ -134,7 +134,7 @@ impl StateSchema {
                                 ));
                             }
                             Some(_data) => {
-                                // TODO: #137 run strict type validation
+                                // TODO #137: run strict type validation
                             }
                         }
                     }
