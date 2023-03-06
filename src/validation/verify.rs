@@ -30,12 +30,13 @@ use commit_verify::mpc;
 use super::apis::HistoryApi;
 use super::schema::OpType;
 use super::{Failure, Status, Validity, Warning};
+use crate::state::Opout;
 use crate::validation::subschema::SchemaVerify;
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    schema, seal, BundleId, ContractId, OpId, Operation, Schema, SchemaId, SchemaRoot, Script,
-    SubSchema, Transition, TransitionBundle, TypedAssign,
+    BundleId, ContractId, OpId, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
+    Transition, TransitionBundle, TypedAssigns,
 };
 
 #[derive(Debug, Display, Error)]
@@ -108,7 +109,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 if !transition
                     .owned_state()
                     .values()
-                    .flat_map(TypedAssign::to_confidential_seals)
+                    .flat_map(TypedAssigns::to_confidential_seals)
                     .any(|seal| seal == *seal_endpoint)
                 {
                     // We generate just a warning here because it's up to a user
@@ -397,8 +398,8 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                         .add_failure(Failure::WitnessNoCommitment(opid, txid));
                 }
 
-                // Checking that bitcoin transaction closes seals defined by
-                // transition ancestors.
+                // Checking that witness transaction closes seals defined by
+                // transition previous outputs.
                 for (prev_id, prev_outs) in transition.prev_state().iter() {
                     let prev_id = *prev_id;
                     let Some(prev_op) = self.consignment.operation(prev_id) else {
@@ -414,23 +415,13 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                         let state_type = *state_type;
 
                         let Some(variant) = prev_op.owned_state_by_type(state_type) else {
-                            self.status.add_failure(Failure::ParentWrongSealType {
-                                opid,
-                                prev_id,
-                                state_type,
-                            });
+                            self.status.add_failure(Failure::NoPrevState { opid, prev_id, state_type });
                             continue;
                         };
 
                         for out_no in outs {
-                            self.validate_witness_input(
-                                &witness_tx,
-                                opid,
-                                prev_id,
-                                state_type,
-                                variant,
-                                *out_no,
-                            );
+                            let prev_out = Opout::new(prev_id, state_type, *out_no);
+                            self.validate_prev_out(&witness_tx, opid, prev_out, variant);
                         }
                     }
                 }
@@ -438,84 +429,51 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         }
     }
 
-    // TODO #45: Move part of logic into single-use-seals and bitcoin seals
-    fn validate_witness_input(
+    fn validate_prev_out(
         &mut self,
         witness_tx: &Tx,
         opid: OpId,
-        prev_id: OpId,
-        state_type: schema::OwnedStateType,
-        variant: &'consignment TypedAssign,
-        out_no: u16,
+        prev_out: Opout,
+        variant: &'consignment TypedAssigns,
     ) {
+        let Ok(seal) = variant.revealed_seal_at(prev_out.no) else {
+            self.status.add_failure(Failure::NoPrevOut(opid,prev_out));
+            return
+        };
+        let Some(seal) = seal else {
+            // Everything is ok, but we have incomplete data (confidential),
+            // thus can't do a full verification and have to report the
+            // failure
+            self.status
+                .add_failure(Failure::ConfidentialSeal(prev_out));
+            return
+        };
+
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
-        if let Some(outpoint) =
-            match (variant.revealed_seal_at(out_no), self.anchor_index.get(&prev_id)) {
-                (Err(_), _) => {
-                    self.status.add_failure(Failure::TransitionParentWrongSeal {
-                        opid,
-                        prev_id,
-                        state_type,
-                        out_no,
-                    });
-                    None
-                }
-                (Ok(None), _) => {
-                    // Everything is ok, but we have incomplete data (confidential),
-                    // thus can't do a full verification and have to report the
-                    // failure
-                    self.status
-                        .add_failure(Failure::TransitionParentConfidentialSeal {
-                            opid,
-                            prev_id,
-                            state_type,
-                            out_no,
-                        });
-                    None
-                }
-                (
-                    Ok(Some(seal::Revealed {
-                        txid: Some(txid),
-                        vout,
-                        ..
-                    })),
-                    None,
-                ) => {
-                    // We are at genesis, so the outpoint must contain tx
-                    Some(bp::Outpoint::new(txid, vout))
-                }
-                (Ok(Some(seal)), None) => {
-                    // This happens only for state extensions, which always has
-                    // txid for seal definitions.
-                    seal.outpoint().or_else(|| {
-                        self.status
-                            .add_failure(Failure::ExtensionWitnessSeal(opid, out_no));
-                        None
-                    })
-                }
-                /* -> ... so we can check that the bitcoin transaction
-                 * references it as one of its inputs */
-                (Ok(Some(seal)), Some(anchor)) => Some(seal.outpoint_or(anchor.txid)),
-            }
+        let outpoint = if let Some(anchor) = self.anchor_index.get(&prev_out.op) {
+            seal.outpoint_or(anchor.txid)
+        } else if let Some(outpoint) = seal.outpoint() {
+            outpoint
+        } else {
+            self.status
+                .add_failure(Failure::UnexpectedWitnessSeal(prev_out));
+            return;
+        };
+
+        if !witness_tx
+            .inputs
+            .iter()
+            .any(|txin| txin.prev_output == outpoint)
         {
-            if !witness_tx
-                .inputs
-                .iter()
-                .any(|txin| txin.prev_output == outpoint)
-            {
-                // Another failure: we do not spend one of the transition
-                // ancestors in the witness transaction. The consignment is
-                // clearly invalid; reporting this and processing to other
-                // potential issues.
-                self.status
-                    .add_failure(Failure::TransitionParentIsNotWitnessInput {
-                        opid,
-                        prev_id,
-                        state_type,
-                        out_no,
-                        outpoint,
-                    });
-            }
+            // Another failure: we do not spend one of the transition
+            // ancestors in the witness transaction. The consignment is
+            // clearly invalid; reporting this and processing to other
+            // potential issues.
+            self.status.add_failure(Failure::UnclosedSeal {
+                opid,
+                prev_out,
+                outpoint,
+            });
         }
     }
 }

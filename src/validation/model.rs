@@ -31,7 +31,7 @@ use crate::validation::vm::VirtualMachine;
 use crate::validation::HistoryApi;
 use crate::{
     validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
-    PrevOuts, Redeemed, Schema, SchemaRoot, StatePair, TypedAssign, Valencies,
+    PrevOuts, Redeemed, Schema, SchemaRoot, StatePair, TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -230,7 +230,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         for (owned_type_id, occ) in assign_schema {
             let len = owned_state
                 .get(owned_type_id)
-                .map(TypedAssign::len)
+                .map(TypedAssigns::len)
                 .unwrap_or(0);
 
             // Checking number of ancestor's assignment occurrences
@@ -286,7 +286,10 @@ impl<Root: SchemaRoot> Schema<Root> {
             });
 
         for (state_id, occ) in assign_schema {
-            let len = owned_state.get(state_id).map(TypedAssign::len).unwrap_or(0);
+            let len = owned_state
+                .get(state_id)
+                .map(TypedAssigns::len)
+                .unwrap_or(0);
 
             // Checking number of assignment occurrences
             if let Err(err) = occ.check(len as u16) {
@@ -302,16 +305,16 @@ impl<Root: SchemaRoot> Schema<Root> {
 
             match owned_state.get(state_id) {
                 None => {}
-                Some(TypedAssign::Declarative(set)) => set
+                Some(TypedAssigns::Declarative(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(&id, *state_id, data)),
-                Some(TypedAssign::Fungible(set)) => set
+                Some(TypedAssigns::Fungible(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(&id, *state_id, data)),
-                Some(TypedAssign::Structured(set)) => set
+                Some(TypedAssigns::Structured(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(&id, *state_id, data)),
-                Some(TypedAssign::Attachment(set)) => set
+                Some(TypedAssigns::Attachment(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(&id, *state_id, data)),
             };
@@ -427,41 +430,41 @@ fn extract_prev_state<C: HistoryApi>(
 
         for (state_id, indexes) in details {
             match prev_op.owned_state_by_type(*state_id) {
-                Some(TypedAssign::Declarative(set)) => {
+                Some(TypedAssigns::Declarative(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_state
                         .entry(*state_id)
-                        .or_insert_with(|| TypedAssign::Declarative(Default::default()))
+                        .or_insert_with(|| TypedAssigns::Declarative(Default::default()))
                         .as_declarative_mut()
                     {
                         state.extend(set).expect("same size");
                     }
                 }
-                Some(TypedAssign::Fungible(set)) => {
+                Some(TypedAssigns::Fungible(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_state
                         .entry(*state_id)
-                        .or_insert_with(|| TypedAssign::Fungible(Default::default()))
+                        .or_insert_with(|| TypedAssigns::Fungible(Default::default()))
                         .as_fungible_mut()
                     {
                         state.extend(set).expect("same size");
                     }
                 }
-                Some(TypedAssign::Structured(set)) => {
+                Some(TypedAssigns::Structured(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_state
                         .entry(*state_id)
-                        .or_insert_with(|| TypedAssign::Structured(Default::default()))
+                        .or_insert_with(|| TypedAssigns::Structured(Default::default()))
                         .as_structured_mut()
                     {
                         state.extend(set).expect("same size");
                     }
                 }
-                Some(TypedAssign::Attachment(set)) => {
+                Some(TypedAssigns::Attachment(set)) => {
                     let set = filter(set, indexes);
                     if let Some(state) = owned_state
                         .entry(*state_id)
-                        .or_insert_with(|| TypedAssign::Attachment(Default::default()))
+                        .or_insert_with(|| TypedAssigns::Attachment(Default::default()))
                         .as_attachment_mut()
                     {
                         state.extend(set).expect("same size");

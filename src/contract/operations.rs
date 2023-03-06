@@ -32,7 +32,7 @@ use bp::Chain;
 use commit_verify::{mpc, CommitEncode, CommitStrategy, CommitmentId};
 use strict_encoding::{StrictEncode, StrictWriter};
 
-use super::{GlobalState, TypedAssign};
+use super::{GlobalState, TypedAssigns};
 use crate::schema::{
     self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
@@ -51,7 +51,7 @@ pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct OwnedState(TinyOrdMap<schema::OwnedStateType, TypedAssign>);
+pub struct OwnedState(TinyOrdMap<schema::OwnedStateType, TypedAssigns>);
 
 impl CommitEncode for OwnedState {
     fn commit_encode(&self, mut e: &mut impl Write) {
@@ -191,7 +191,7 @@ pub trait Operation: AsAny {
     fn valencies(&self) -> &Valencies;
     fn valencies_mut(&mut self) -> &mut Valencies;
 
-    fn owned_state_by_type(&self, t: OwnedStateType) -> Option<&TypedAssign> {
+    fn owned_state_by_type(&self, t: OwnedStateType) -> Option<&TypedAssigns> {
         self.owned_state()
             .iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })

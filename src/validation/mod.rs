@@ -36,6 +36,7 @@ pub(crate) use model::OpInfo;
 pub use verify::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, OpType, SchemaId};
+use crate::state::Opout;
 use crate::{data, seal, BundleId, OccurrencesMismatch, OpId};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -206,30 +207,29 @@ pub enum Failure {
     TransitionAbsent(OpId),
     TransitionNotAnchored(OpId),
     TransitionNotInAnchor(OpId, Txid),
-    ParentWrongSealType {
+
+    // Errors checking seal closing
+    /// transition {op} references state type {ty} absent in the outputs of
+    /// previous state transition {prev_id}.
+    NoPrevState {
         opid: OpId,
         prev_id: OpId,
         state_type: schema::OwnedStateType,
     },
-    TransitionParentWrongSeal {
+    /// transition {0} references non-existing previous output {1}
+    NoPrevOut(OpId, Opout),
+    /// seal {0} present in the history is confidential and can't be validated.
+    ConfidentialSeal(Opout),
+    /// witness transaction of {opid} doesn't closes referenced seal {outpoint}.
+    UnclosedSeal {
         opid: OpId,
-        prev_id: OpId,
-        state_type: schema::OwnedStateType,
-        out_no: u16,
-    },
-    TransitionParentConfidentialSeal {
-        opid: OpId,
-        prev_id: OpId,
-        state_type: schema::OwnedStateType,
-        out_no: u16,
-    },
-    TransitionParentIsNotWitnessInput {
-        opid: OpId,
-        prev_id: OpId,
-        state_type: schema::OwnedStateType,
-        out_no: u16,
+        prev_out: Opout,
         outpoint: bp::Outpoint,
     },
+    /// genesis or state extension output {0} defines seal which doesn't
+    /// specifies transaction id (so-called witness seal, which can be present
+    /// only in state transitions).
+    UnexpectedWitnessSeal(Opout),
 
     ExtensionAbsent(OpId),
     ExtensionParentWrongValenciesType {
@@ -237,9 +237,6 @@ pub enum Failure {
         ancestor_id: OpId,
         valencies_type: schema::ValencyType,
     },
-    /// state extension {0} defines seal at index {1} which doesn't specifies
-    /// transaction id.
-    ExtensionWitnessSeal(OpId, u16),
 
     WitnessTransactionMissed(Txid),
     WitnessNoCommitment(OpId, Txid),

@@ -37,8 +37,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::data::VoidState;
 use crate::{
     assignment, attachment, data, fungible, seal, Assign, ContractId, Extension, Genesis,
-    GlobalStateType, OpId, Operation, OwnedStateType, SchemaId, StatePair, Transition, TypedAssign,
-    LIB_NAME_RGB,
+    GlobalStateType, OpId, Operation, OwnedStateType, SchemaId, StatePair, Transition,
+    TypedAssigns, LIB_NAME_RGB,
 };
 
 pub trait StateTrait:
@@ -270,16 +270,16 @@ impl ContractState {
 
         for (ty, assignments) in op.owned_state().iter() {
             match assignments {
-                TypedAssign::Declarative(assignments) => {
+                TypedAssigns::Declarative(assignments) => {
                     process(&mut self.rights, &assignments, opid, *ty, txid)
                 }
-                TypedAssign::Fungible(assignments) => {
+                TypedAssigns::Fungible(assignments) => {
                     process(&mut self.fungibles, &assignments, opid, *ty, txid)
                 }
-                TypedAssign::Structured(assignments) => {
+                TypedAssigns::Structured(assignments) => {
                     process(&mut self.data, &assignments, opid, *ty, txid)
                 }
-                TypedAssign::Attachment(assignments) => {
+                TypedAssigns::Attachment(assignments) => {
                     process(&mut self.attach, &assignments, opid, *ty, txid)
                 }
             }
