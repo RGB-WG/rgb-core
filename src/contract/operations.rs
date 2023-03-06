@@ -39,7 +39,7 @@ use crate::schema::{
 use crate::{Ffv, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
-pub type PrevState = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
+pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
 pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
@@ -171,12 +171,12 @@ pub trait Operation: AsAny {
     fn global_state(&self) -> &GlobalState;
 
     /// Returns reference to information about the owned rights in form of
-    /// [`PrevState`] wrapper structure which this operation updates with
+    /// [`PrevOuts`] wrapper structure which this operation updates with
     /// state transition ("parent owned rights").
     ///
     /// This is always an empty `Vec` for [`Genesis`] and [`Extension`]
     /// operation types.
-    fn prev_state(&self) -> &PrevState;
+    fn prev_state(&self) -> &PrevOuts;
 
     /// Returns reference to information about the public rights (in form of
     /// [`Redeemed`] wrapper structure), defined with "parent" state
@@ -248,7 +248,7 @@ pub struct Transition {
     pub transition_type: TransitionType,
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
-    pub prev_state: PrevState,
+    pub prev_state: PrevOuts,
     pub owned_state: OwnedState,
     pub valencies: Valencies,
 }
@@ -317,7 +317,7 @@ impl Operation for Genesis {
     fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn prev_state(&self) -> &PrevState { panic!("genesis can't close previous single-use-seals") }
+    fn prev_state(&self) -> &PrevOuts { panic!("genesis can't close previous single-use-seals") }
 
     #[inline]
     fn redeemed(&self) -> &Redeemed { panic!("genesis can't redeem valencies") }
@@ -361,7 +361,7 @@ impl Operation for Extension {
     fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn prev_state(&self) -> &PrevState { panic!("extension can't close previous single-use-seals") }
+    fn prev_state(&self) -> &PrevOuts { panic!("extension can't close previous single-use-seals") }
 
     #[inline]
     fn redeemed(&self) -> &Redeemed { &self.redeemed }
@@ -405,7 +405,7 @@ impl Operation for Transition {
     fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn prev_state(&self) -> &PrevState { &self.prev_state }
+    fn prev_state(&self) -> &PrevOuts { &self.prev_state }
 
     #[inline]
     fn redeemed(&self) -> &Redeemed { panic!("state transitions can't redeem valencies") }

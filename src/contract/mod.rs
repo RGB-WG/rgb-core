@@ -42,7 +42,7 @@ pub use fungible::{
 };
 pub use global::{GlobalState, GlobalValues};
 pub use operations::{
-    ContractId, Extension, Genesis, OpId, Operation, OwnedState, PrevState, Redeemed, Transition,
+    ContractId, Extension, Genesis, OpId, Operation, OwnedState, PrevOuts, Redeemed, Transition,
     Valencies,
 };
 

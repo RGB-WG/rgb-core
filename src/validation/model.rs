@@ -31,7 +31,7 @@ use crate::validation::vm::VirtualMachine;
 use crate::validation::HistoryApi;
 use crate::{
     validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
-    PrevState, Redeemed, Schema, SchemaRoot, StatePair, TypedAssign, Valencies,
+    PrevOuts, Redeemed, Schema, SchemaRoot, StatePair, TypedAssign, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -394,7 +394,7 @@ impl<'op> OpInfo<'op> {
 
 fn extract_prev_state<C: HistoryApi>(
     consignment: &C,
-    prev_state: &PrevState,
+    prev_state: &PrevOuts,
     status: &mut validation::Status,
 ) -> OwnedState {
     let mut owned_state = bmap! {};

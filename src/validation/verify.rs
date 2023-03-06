@@ -349,12 +349,12 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
     fn validate_graph_node(
         &mut self,
-        operation: &'consignment Transition,
+        transition: &'consignment Transition,
         bundle_id: BundleId,
         anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
         let txid = anchor.txid;
-        let opid = operation.id();
+        let opid = transition.id();
 
         // Check that the anchor is committed into a transaction spending all of
         // the transition inputs.
@@ -399,44 +399,37 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
                 // Checking that bitcoin transaction closes seals defined by
                 // transition ancestors.
-                for (ancestor_id, assignments) in operation.prev_state().iter() {
-                    let ancestor_id = *ancestor_id;
-                    let ancestor_node =
-                        if let Some(ancestor_node) = self.consignment.operation(ancestor_id) {
-                            ancestor_node
-                        } else {
-                            // Node, referenced as the ancestor, was not found
-                            // in the consignment. Usually this means that the
-                            // consignment data are broken
-                            self.status
-                                .add_failure(Failure::OperationAbsent(ancestor_id));
-                            continue;
-                        };
+                for (prev_id, prev_outs) in transition.prev_state().iter() {
+                    let prev_id = *prev_id;
+                    let Some(prev_op) = self.consignment.operation(prev_id) else {
+                        // Node, referenced as the ancestor, was not found
+                        // in the consignment. Usually this means that the
+                        // consignment data are broken
+                        self.status
+                            .add_failure(Failure::OperationAbsent(prev_id));
+                        continue;
+                    };
 
-                    for (assignment_type, assignment_indexes) in assignments {
-                        let assignment_type = *assignment_type;
+                    for (state_type, outs) in prev_outs {
+                        let state_type = *state_type;
 
-                        let variant = if let Some(variant) =
-                            ancestor_node.owned_state_by_type(assignment_type)
-                        {
-                            variant
-                        } else {
-                            self.status.add_failure(Failure::AncestorWrongSealType {
+                        let Some(variant) = prev_op.owned_state_by_type(state_type) else {
+                            self.status.add_failure(Failure::ParentWrongSealType {
                                 opid,
-                                ancestor_id,
-                                assignment_type,
+                                prev_id,
+                                state_type,
                             });
                             continue;
                         };
 
-                        for seal_index in assignment_indexes {
+                        for out_no in outs {
                             self.validate_witness_input(
                                 &witness_tx,
                                 opid,
-                                ancestor_id,
-                                assignment_type,
+                                prev_id,
+                                state_type,
                                 variant,
-                                *seal_index,
+                                *out_no,
                             );
                         }
                     }
@@ -450,20 +443,20 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         &mut self,
         witness_tx: &Tx,
         opid: OpId,
-        ancestor_id: OpId,
-        assignment_type: schema::OwnedStateType,
+        prev_id: OpId,
+        state_type: schema::OwnedStateType,
         variant: &'consignment TypedAssign,
-        seal_index: u16,
+        out_no: u16,
     ) {
         // Getting bitcoin transaction outpoint for the current ancestor ... ->
         if let Some(outpoint) =
-            match (variant.revealed_seal_at(seal_index), self.anchor_index.get(&ancestor_id)) {
+            match (variant.revealed_seal_at(out_no), self.anchor_index.get(&prev_id)) {
                 (Err(_), _) => {
                     self.status.add_failure(Failure::TransitionParentWrongSeal {
                         opid,
-                        ancestor_id,
-                        assignment_type,
-                        seal_index,
+                        prev_id,
+                        state_type,
+                        out_no,
                     });
                     None
                 }
@@ -474,9 +467,9 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     self.status
                         .add_failure(Failure::TransitionParentConfidentialSeal {
                             opid,
-                            ancestor_id,
-                            assignment_type,
-                            seal_index,
+                            prev_id,
+                            state_type,
+                            out_no,
                         });
                     None
                 }
@@ -496,7 +489,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     // txid for seal definitions.
                     seal.outpoint().or_else(|| {
                         self.status
-                            .add_failure(Failure::ExtensionWitnessSeal(opid, seal_index));
+                            .add_failure(Failure::ExtensionWitnessSeal(opid, out_no));
                         None
                     })
                 }
@@ -517,9 +510,9 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 self.status
                     .add_failure(Failure::TransitionParentIsNotWitnessInput {
                         opid,
-                        ancestor_id,
-                        assignment_type,
-                        seal_index,
+                        prev_id,
+                        state_type,
+                        out_no,
                         outpoint,
                     });
             }
