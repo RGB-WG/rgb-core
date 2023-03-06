@@ -28,7 +28,6 @@ use bp::{Tx, Txid};
 use commit_verify::mpc;
 
 use super::apis::HistoryApi;
-use super::schema::OpType;
 use super::{Failure, Status, Validity, Warning};
 use crate::state::Opout;
 use crate::validation::subschema::SchemaVerify;
@@ -265,14 +264,13 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         // into bitcoin transaction graph with proper anchor. That is what we are
         // checking in the code below:
         queue.push_back(transition);
-        while let Some(operation) = queue.pop_front() {
-            let opid = operation.id();
-            let node_type = operation.op_type();
+        while let Some(transition) = queue.pop_front() {
+            let opid = transition.id();
 
             // [VALIDATION]: Verify operation against the schema. Here we check only a single
             //               operation, not state evolution (it will be checked lately)
             if !self.validation_index.contains(&opid) {
-                self.status += schema.validate(self.consignment, operation, self.vm.as_ref());
+                self.status += schema.validate(self.consignment, transition, self.vm.as_ref());
                 self.validation_index.insert(opid);
             }
 
@@ -292,22 +290,21 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                             .add_failure(Failure::NotInAnchor(opid, anchor.txid));
                     }
 
-                    self.validate_graph_node(operation, bundle_id, anchor);
+                    self.validate_graph_node(transition, bundle_id, anchor);
                     self.anchor_validation_index.insert(opid);
                 }
-            } else if node_type != OpType::Genesis && node_type != OpType::StateExtension {
-                // This point is actually unreachable: b/c of the consignment structure, each
-                // state transition has a corresponding anchor. So if we've got here there is
-                // something broken with the consignment provider.
+            } else {
+                // If we've got here there is something broken with the consignment provider.
                 self.status.add_failure(Failure::NotAnchored(opid));
             }
 
+            // TODO: Add transitions referenced through extensions to the queue
             // Now, we must collect all parent nodes and add them to the verification queue
-            let parent_nodes_1: Vec<&Transition> = operation
-                .prev_state()
+            let parent_nodes: Vec<&Transition> = transition
+                .prev_state
                 .iter()
                 .filter_map(|(id, _)| {
-                    self.consignment.transition(*id).ok().or_else(|| {
+                    self.consignment.operation(*id).or_else(|| {
                         // This will not actually happen since we already checked that each ancestor
                         // reference has a corresponding operation in the code above. But rust
                         // requires to double-check :)
@@ -317,22 +314,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 })
                 .collect();
 
-            let parent_nodes_2: Vec<&Transition> = operation
-                .redeemed()
-                .iter()
-                .filter_map(|(id, _)| {
-                    self.consignment.transition(*id).ok().or_else(|| {
-                        // This will not actually happen since we already checked that each ancestor
-                        // reference has a corresponding operation in the code above. But rust
-                        // requires to double-check :)
-                        self.status.add_failure(Failure::TransitionAbsent(*id));
-                        None
-                    })
-                })
-                .collect();
-
-            queue.extend(parent_nodes_1);
-            queue.extend(parent_nodes_2);
+            queue.extend(parent_nodes);
         }
     }
 
