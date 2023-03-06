@@ -43,6 +43,7 @@ extern crate serde_crate as serde;
 
 pub mod contract;
 pub mod schema;
+pub mod state;
 pub mod validation;
 pub mod vm;
 

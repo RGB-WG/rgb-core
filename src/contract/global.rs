@@ -20,6 +20,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::btree_map;
+
 use amplify::confinement;
 use amplify::confinement::{Confined, TinyOrdMap, U16};
 use strict_encoding::StrictDumb;
@@ -69,4 +71,11 @@ impl GlobalState {
             None => self.insert(ty, GlobalValues::with(state)).map(|_| ()),
         }
     }
+}
+
+impl<'a> IntoIterator for &'a GlobalState {
+    type Item = (&'a schema::GlobalStateType, &'a GlobalValues);
+    type IntoIter = btree_map::Iter<'a, schema::GlobalStateType, GlobalValues>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
