@@ -33,7 +33,9 @@ mod bundle;
 
 use std::hash::Hash;
 
-pub use assignment::{Assign, StateType, TypedAssigns};
+pub use assignment::{
+    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateType, TypedAssigns,
+};
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use fungible::{

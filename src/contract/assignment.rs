@@ -56,6 +56,11 @@ pub enum StateType {
     Attachment,
 }
 
+pub type AssignRights = Assign<VoidState>;
+pub type AssignFungible = Assign<fungible::Revealed>;
+pub type AssignData = Assign<data::Revealed>;
+pub type AssignAttach = Assign<attachment::Revealed>;
+
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
@@ -255,13 +260,13 @@ where Self: Clone
 pub enum TypedAssigns {
     // TODO: Consider using non-empty variants
     #[strict_type(tag = 0x00)]
-    Declarative(SmallVec<Assign<VoidState>>),
+    Declarative(SmallVec<AssignRights>),
     #[strict_type(tag = 0x01)]
-    Fungible(SmallVec<Assign<fungible::Revealed>>),
+    Fungible(SmallVec<AssignFungible>),
     #[strict_type(tag = 0x02)]
-    Structured(SmallVec<Assign<data::Revealed>>),
+    Structured(SmallVec<AssignData>),
     #[strict_type(tag = 0xFF)]
-    Attachment(SmallVec<Assign<attachment::Revealed>>),
+    Attachment(SmallVec<AssignAttach>),
 }
 
 impl TypedAssigns {
@@ -306,7 +311,7 @@ impl TypedAssigns {
     pub fn is_attachment(&self) -> bool { matches!(self, TypedAssigns::Attachment(_)) }
 
     #[inline]
-    pub fn as_declarative(&self) -> &[Assign<VoidState>] {
+    pub fn as_declarative(&self) -> &[AssignRights] {
         match self {
             TypedAssigns::Declarative(set) => set,
             _ => Default::default(),
@@ -314,7 +319,7 @@ impl TypedAssigns {
     }
 
     #[inline]
-    pub fn as_fungible(&self) -> &[Assign<fungible::Revealed>] {
+    pub fn as_fungible(&self) -> &[AssignFungible] {
         match self {
             TypedAssigns::Fungible(set) => set,
             _ => Default::default(),
@@ -322,7 +327,7 @@ impl TypedAssigns {
     }
 
     #[inline]
-    pub fn as_structured(&self) -> &[Assign<data::Revealed>] {
+    pub fn as_structured(&self) -> &[AssignData] {
         match self {
             TypedAssigns::Structured(set) => set,
             _ => Default::default(),
@@ -330,7 +335,7 @@ impl TypedAssigns {
     }
 
     #[inline]
-    pub fn as_attachment(&self) -> &[Assign<attachment::Revealed>] {
+    pub fn as_attachment(&self) -> &[AssignAttach] {
         match self {
             TypedAssigns::Attachment(set) => set,
             _ => Default::default(),
@@ -338,7 +343,7 @@ impl TypedAssigns {
     }
 
     #[inline]
-    pub fn as_declarative_mut(&mut self) -> Option<&mut SmallVec<Assign<VoidState>>> {
+    pub fn as_declarative_mut(&mut self) -> Option<&mut SmallVec<AssignRights>> {
         match self {
             TypedAssigns::Declarative(set) => Some(set),
             _ => None,
@@ -346,7 +351,7 @@ impl TypedAssigns {
     }
 
     #[inline]
-    pub fn as_fungible_mut(&mut self) -> Option<&mut SmallVec<Assign<fungible::Revealed>>> {
+    pub fn as_fungible_mut(&mut self) -> Option<&mut SmallVec<AssignFungible>> {
         match self {
             TypedAssigns::Fungible(set) => Some(set),
             _ => None,
@@ -354,7 +359,7 @@ impl TypedAssigns {
     }
 
     #[inline]
-    pub fn as_structured_mut(&mut self) -> Option<&mut SmallVec<Assign<data::Revealed>>> {
+    pub fn as_structured_mut(&mut self) -> Option<&mut SmallVec<AssignData>> {
         match self {
             TypedAssigns::Structured(set) => Some(set),
             _ => None,
@@ -362,7 +367,7 @@ impl TypedAssigns {
     }
 
     #[inline]
-    pub fn as_attachment_mut(&mut self) -> Option<&mut SmallVec<Assign<attachment::Revealed>>> {
+    pub fn as_attachment_mut(&mut self) -> Option<&mut SmallVec<AssignAttach>> {
         match self {
             TypedAssigns::Attachment(set) => Some(set),
             _ => None,
@@ -448,19 +453,19 @@ impl MerkleLeaves for TypedAssigns {
         match self {
             TypedAssigns::Declarative(vec) => vec
                 .iter()
-                .map(Assign::<VoidState>::commitment_id)
+                .map(AssignRights::commitment_id)
                 .collect::<Vec<_>>(),
             TypedAssigns::Fungible(vec) => vec
                 .iter()
-                .map(Assign::<fungible::Revealed>::commitment_id)
+                .map(AssignFungible::commitment_id)
                 .collect::<Vec<_>>(),
             TypedAssigns::Structured(vec) => vec
                 .iter()
-                .map(Assign::<data::Revealed>::commitment_id)
+                .map(AssignData::commitment_id)
                 .collect::<Vec<_>>(),
             TypedAssigns::Attachment(vec) => vec
                 .iter()
-                .map(Assign::<attachment::Revealed>::commitment_id)
+                .map(AssignAttach::commitment_id)
                 .collect::<Vec<_>>(),
         }
         .into_iter()
