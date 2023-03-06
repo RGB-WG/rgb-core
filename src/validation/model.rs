@@ -29,7 +29,7 @@ use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
 use crate::validation::HistoryApi;
 use crate::{
-    validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
+    validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, OpRef, Operation, OwnedState,
     PrevOuts, Redeemed, RevealedState, Schema, SchemaRoot, TypedAssigns, Valencies,
 };
 
@@ -37,7 +37,7 @@ impl<Root: SchemaRoot> Schema<Root> {
     pub fn validate<'script, C: HistoryApi>(
         &self,
         consignment: &C,
-        op: &dyn Operation,
+        op: OpRef,
         vm: &dyn VirtualMachine,
     ) -> validation::Status {
         let id = op.id();
@@ -128,12 +128,22 @@ impl<Root: SchemaRoot> Schema<Root> {
 
         // Validate type system
         status += self.validate_type_system();
-
-        let prev_state = extract_prev_state(consignment, op.prev_state(), &mut status);
-        let redeemed = extract_redeemed_valencies(consignment, op.redeemed(), &mut status);
         status += self.validate_global_state(id, op.global_state(), global_schema);
-        status += self.validate_prev_state(id, &prev_state, owned_schema);
-        status += self.validate_redeemed(id, &redeemed, redeem_schema);
+        let prev_state = if let OpRef::Transition(ref transition) = op {
+            let prev_state = extract_prev_state(consignment, &transition.prev_state, &mut status);
+            status += self.validate_prev_state(id, &prev_state, owned_schema);
+            prev_state
+        } else {
+            OwnedState::default()
+        };
+        let redeemed = if let OpRef::Extension(ref extension) = op {
+            let redeemed =
+                extract_redeemed_valencies(consignment, &extension.redeemed, &mut status);
+            status += self.validate_redeemed(id, &redeemed, redeem_schema);
+            redeemed
+        } else {
+            Valencies::default()
+        };
         status += self.validate_owned_state(id, op.owned_state(), assign_schema);
         status += self.validate_valencies(id, op.valencies(), valency_schema);
 
@@ -376,7 +386,7 @@ impl<'op> OpInfo<'op> {
     pub fn with(
         id: OpId,
         subschema: bool,
-        op: &'op dyn Operation,
+        op: OpRef<'op>,
         prev_state: &'op OwnedState,
         redeemed: &'op Valencies,
     ) -> Self {

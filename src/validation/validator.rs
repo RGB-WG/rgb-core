@@ -34,7 +34,7 @@ use crate::validation::subschema::SchemaVerify;
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    BundleId, ContractId, OpId, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
+    BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
     Transition, TransitionBundle, TypedAssigns,
 };
 
@@ -204,8 +204,11 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         }
 
         // [VALIDATION]: Validate genesis
-        self.status +=
-            schema.validate(self.consignment, self.consignment.genesis(), self.vm.as_ref());
+        self.status += schema.validate(
+            self.consignment,
+            OpRef::Genesis(self.consignment.genesis()),
+            self.vm.as_ref(),
+        );
         self.validation_index.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing operation
@@ -252,7 +255,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         transition: &'consignment Transition,
         bundle_id: BundleId,
     ) {
-        let mut queue: VecDeque<&Transition> = VecDeque::new();
+        let mut queue: VecDeque<OpRef> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a recursions we
         // utilize queue to keep the track of the upstream (ancestor) nodes and make
@@ -263,62 +266,77 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         // change to a given operation is valid against the schema + committed
         // into bitcoin transaction graph with proper anchor. That is what we are
         // checking in the code below:
-        queue.push_back(transition);
-        while let Some(transition) = queue.pop_front() {
-            let opid = transition.id();
+        queue.push_back(OpRef::Transition(transition));
+        while let Some(operation) = queue.pop_front() {
+            let opid = operation.id();
 
             // [VALIDATION]: Verify operation against the schema. Here we check only a single
             //               operation, not state evolution (it will be checked lately)
             if !self.validation_index.contains(&opid) {
-                self.status += schema.validate(self.consignment, transition, self.vm.as_ref());
+                self.status += schema.validate(self.consignment, operation, self.vm.as_ref());
                 self.validation_index.insert(opid);
             }
 
-            // Making sure we do have a corresponding anchor; otherwise reporting failure
-            // (see below) - with the except of genesis and extension nodes, which does not
-            // have a corresponding anchor
-            if let Some(anchor) = self.anchor_index.get(&opid).cloned() {
-                if !self.anchor_validation_index.contains(&opid) {
-                    // Ok, now we have the `operation` and the `anchor`, let's do all
-                    // required checks
+            match operation {
+                OpRef::Genesis(_) => {
+                    // nothing to add to the queue here
+                }
+                OpRef::Transition(ref transition) => {
+                    // Making sure we do have a corresponding anchor; otherwise reporting failure
+                    // (see below) - with the except of genesis and extension nodes, which does not
+                    // have a corresponding anchor
+                    if let Some(anchor) = self.anchor_index.get(&opid).cloned() {
+                        if !self.anchor_validation_index.contains(&opid) {
+                            // Ok, now we have the `operation` and the `anchor`, let's do all
+                            // required checks
 
-                    // [VALIDATION]: Check that transition is committed into the anchor.
-                    //               This must be done with deterministic bitcoin commitments &
-                    //               LNPBP-4.
-                    if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
-                        self.status
-                            .add_failure(Failure::NotInAnchor(opid, anchor.txid));
+                            // [VALIDATION]: Check that transition is committed into the anchor.
+                            //               This must be done with deterministic bitcoin
+                            // commitments &               LNPBP-4.
+                            if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
+                                self.status
+                                    .add_failure(Failure::NotInAnchor(opid, anchor.txid));
+                            }
+
+                            self.validate_transition(transition, bundle_id, anchor);
+                            self.anchor_validation_index.insert(opid);
+                        }
+                    } else {
+                        // If we've got here there is something broken with the consignment
+                        // provider.
+                        self.status.add_failure(Failure::NotAnchored(opid));
                     }
 
-                    self.validate_graph_node(transition, bundle_id, anchor);
-                    self.anchor_validation_index.insert(opid);
+                    // Now, we must collect all parent nodes and add them to the verification queue
+                    let parent_nodes = transition.prev_state.iter().filter_map(|(prev_id, _)| {
+                        self.consignment.operation(*prev_id).or_else(|| {
+                            // This will not actually happen since we already checked that each
+                            // ancestor reference has a corresponding
+                            // operation in the code above. But rust
+                            // requires to double-check :)
+                            self.status.add_failure(Failure::TransitionAbsent(*prev_id));
+                            None
+                        })
+                    });
+
+                    queue.extend(parent_nodes);
                 }
-            } else {
-                // If we've got here there is something broken with the consignment provider.
-                self.status.add_failure(Failure::NotAnchored(opid));
+                OpRef::Extension(ref extension) => {
+                    for (prev_id, valencies) in &extension.redeemed {
+                        for valency in valencies {
+                            let Some(prev_op) = self.consignment.operation(*prev_id) else {
+                                self.status.add_failure(Failure::ValencyNoParent { opid, prev_id: *prev_id, valency: *valency });
+                                continue;
+                            };
+                            queue.push_back(prev_op);
+                        }
+                    }
+                }
             }
-
-            // TODO: Add transitions referenced through extensions to the queue
-            // Now, we must collect all parent nodes and add them to the verification queue
-            let parent_nodes: Vec<&Transition> = transition
-                .prev_state
-                .iter()
-                .filter_map(|(id, _)| {
-                    self.consignment.operation(*id).or_else(|| {
-                        // This will not actually happen since we already checked that each ancestor
-                        // reference has a corresponding operation in the code above. But rust
-                        // requires to double-check :)
-                        self.status.add_failure(Failure::TransitionAbsent(*id));
-                        None
-                    })
-                })
-                .collect();
-
-            queue.extend(parent_nodes);
         }
     }
 
-    fn validate_graph_node(
+    fn validate_transition(
         &mut self,
         transition: &'consignment Transition,
         bundle_id: BundleId,
@@ -355,7 +373,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     .verify(self.contract_id, bundle_id.into(), &witness_tx)
                     .is_err()
                 {
-                    // TODO: Save error details
+                    // TODO: Add more details to the error message
                     // The operation is not committed to bitcoin transaction graph!
                     // Ultimate failure. But continuing to detect the rest (after reporting it).
                     self.status

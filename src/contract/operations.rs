@@ -158,23 +158,6 @@ pub trait Operation: AsAny {
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract operation.
     fn global_state(&self) -> &GlobalState;
-
-    /// Returns reference to information about the owned rights in form of
-    /// [`PrevOuts`] wrapper structure which this operation updates with
-    /// state transition ("parent owned rights").
-    ///
-    /// This is always an empty `Vec` for [`Genesis`] and [`Extension`]
-    /// operation types.
-    fn prev_state(&self) -> &PrevOuts;
-
-    /// Returns reference to information about the public rights (in form of
-    /// [`Redeemed`] wrapper structure), defined with "parent" state
-    /// extensions (i.e. those finalized with the current state transition) or
-    /// referenced by another state extension, which this operation updates
-    /// ("parent public rights").
-    ///
-    /// This is always an empty `Vec` for [`Genesis`].
-    fn redeemed(&self) -> &Redeemed;
     fn owned_state(&self) -> &OwnedState;
     fn valencies(&self) -> &Valencies;
 
@@ -281,9 +264,23 @@ impl Genesis {
     pub fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
 }
 
+impl Transition {
+    /// Returns reference to information about the owned rights in form of
+    /// [`PrevOuts`] wrapper structure which this operation updates with
+    /// state transition ("parent owned rights").
+    pub fn prev_state(&self) -> &PrevOuts { &self.prev_state }
+}
+
 impl Extension {
     #[inline]
     pub fn contract_id(&self) -> ContractId { self.contract_id }
+
+    /// Returns reference to information about the public rights (in form of
+    /// [`Redeemed`] wrapper structure), defined with "parent" state
+    /// extensions (i.e. those finalized with the current state transition) or
+    /// referenced by another state extension, which this operation updates
+    /// ("parent public rights").
+    pub fn redeemed(&self) -> &Redeemed { &self.redeemed }
 }
 
 impl Operation for Genesis {
@@ -307,12 +304,6 @@ impl Operation for Genesis {
 
     #[inline]
     fn global_state(&self) -> &GlobalState { &self.global_state }
-
-    #[inline]
-    fn prev_state(&self) -> &PrevOuts { panic!("genesis can't close previous single-use-seals") }
-
-    #[inline]
-    fn redeemed(&self) -> &Redeemed { panic!("genesis can't redeem valencies") }
 
     #[inline]
     fn owned_state(&self) -> &OwnedState { &self.owned_state }
@@ -344,12 +335,6 @@ impl Operation for Extension {
     fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn prev_state(&self) -> &PrevOuts { panic!("extension can't close previous single-use-seals") }
-
-    #[inline]
-    fn redeemed(&self) -> &Redeemed { &self.redeemed }
-
-    #[inline]
     fn owned_state(&self) -> &OwnedState { &self.owned_state }
 
     #[inline]
@@ -377,12 +362,6 @@ impl Operation for Transition {
 
     #[inline]
     fn global_state(&self) -> &GlobalState { &self.global_state }
-
-    #[inline]
-    fn prev_state(&self) -> &PrevOuts { &self.prev_state }
-
-    #[inline]
-    fn redeemed(&self) -> &Redeemed { panic!("state transitions can't redeem valencies") }
 
     #[inline]
     fn owned_state(&self) -> &OwnedState { &self.owned_state }
@@ -452,22 +431,6 @@ impl<'op> Operation for OpRef<'op> {
             OpRef::Genesis(op) => op.global_state(),
             OpRef::Transition(op) => op.global_state(),
             OpRef::Extension(op) => op.global_state(),
-        }
-    }
-
-    fn prev_state(&self) -> &PrevOuts {
-        match self {
-            OpRef::Genesis(op) => op.prev_state(),
-            OpRef::Transition(op) => op.prev_state(),
-            OpRef::Extension(op) => op.prev_state(),
-        }
-    }
-
-    fn redeemed(&self) -> &Redeemed {
-        match self {
-            OpRef::Genesis(op) => op.redeemed(),
-            OpRef::Transition(op) => op.redeemed(),
-            OpRef::Extension(op) => op.redeemed(),
         }
     }
 

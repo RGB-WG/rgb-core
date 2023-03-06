@@ -37,7 +37,7 @@ pub use validator::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, OpType, SchemaId};
 use crate::state::Opout;
-use crate::{data, seal, BundleId, OccurrencesMismatch, OpId};
+use crate::{data, seal, BundleId, OccurrencesMismatch, OpId, ValencyType};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -231,10 +231,18 @@ pub enum Failure {
     /// only in state transitions).
     UnexpectedWitnessSeal(Opout),
 
+    /// valency {valency} redeemed by state extension {opid} references
+    /// non-existing operation {prev_id}
+    ValencyNoParent {
+        opid: OpId,
+        prev_id: OpId,
+        valency: ValencyType,
+    },
+
     // TODO: Check why the error type is not used
     ExtensionParentWrongValenciesType {
         opid: OpId,
-        ancestor_id: OpId,
+        prev_id: OpId,
         valencies_type: schema::ValencyType,
     },
 

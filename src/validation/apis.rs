@@ -32,7 +32,7 @@ use commit_verify::mpc;
 
 use crate::schema::OwnedStateType;
 use crate::{
-    seal, Anchor, BundleId, Extension, Genesis, OpId, Operation, SubSchema, Transition,
+    seal, Anchor, BundleId, Extension, Genesis, OpId, OpRef, SubSchema, Transition,
     TransitionBundle,
 };
 
@@ -84,7 +84,7 @@ pub enum ConsistencyError {
 pub trait ContainerApi {
     /// Returns reference to a operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
-    fn operation(&self, opid: OpId) -> Option<&dyn Operation>;
+    fn operation(&self, opid: OpId) -> Option<OpRef>;
 
     fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
 
