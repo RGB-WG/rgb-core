@@ -84,7 +84,7 @@ pub enum ConsistencyError {
 pub trait ContainerApi {
     /// Returns reference to a operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
-    fn node_by_id(&self, opid: OpId) -> Option<&dyn Operation>;
+    fn operation(&self, opid: OpId) -> Option<&dyn Operation>;
 
     fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
 
@@ -103,7 +103,7 @@ pub trait ContainerApi {
     ///   operation type
     /// - [`Error::TransitionAbsent`] when operation with the given id is absent
     ///   from the storage/container
-    fn transition_by_id(&self, opid: OpId) -> Result<&Transition, ConsistencyError>;
+    fn transition(&self, opid: OpId) -> Result<&Transition, ConsistencyError>;
 
     /// Returns reference to a state extension, if known, matching the provided
     /// id. If id is unknown, or corresponds to other type of the operation
@@ -115,10 +115,10 @@ pub trait ContainerApi {
     ///   operation type
     /// - [`Error::ExtensionAbsent`] when operation with the given id is absent
     ///   from the storage/container
-    fn extension_by_id(&self, opid: OpId) -> Result<&Extension, ConsistencyError>;
+    fn extension(&self, opid: OpId) -> Result<&Extension, ConsistencyError>;
 
     /// Returns reference to a state transition, like
-    /// [`ContainerApi::transition_by_id`], extended with [`Txid`] of the
+    /// [`ContainerApi::transition`], extended with [`Txid`] of the
     /// witness transaction. If the operation id is unknown, or corresponds to
     /// other type of the operation (genesis or state extensions) a error is
     /// returned.
@@ -129,8 +129,7 @@ pub trait ContainerApi {
     ///   operation type
     /// - [`Error::TransitionAbsent`] when operation with the given id is absent
     ///   from the storage/container
-    fn transition_witness_by_id(&self, opid: OpId)
-    -> Result<(&Transition, Txid), ConsistencyError>;
+    fn transition_witness(&self, opid: OpId) -> Result<(&Transition, Txid), ConsistencyError>;
 
     /// Resolves seals closed by a given operation with the given owned rights
     /// type
@@ -179,6 +178,7 @@ pub trait ContainerApi {
 }
 
 pub trait HistoryApi: ContainerApi {
+    type OpIdIter: Iterator<Item = OpId>;
     type EndpointIter<'container>: Iterator<
         Item = (&'container BundleId, &'container seal::Confidential),
     >
@@ -195,7 +195,9 @@ pub trait HistoryApi: ContainerApi {
     /// Genesis data
     fn genesis(&self) -> &Genesis;
 
-    fn op_ids(&self) -> BTreeSet<OpId>;
+    fn op_ids_except(&self, ids: &impl IntoIterator<Item = OpId>) -> Self::OpIdIter;
+
+    fn has_operation(&self, opid: OpId) -> bool;
 
     /// The final state ("endpoints") provided by this consignment.
     ///

@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
@@ -28,15 +28,16 @@ use commit_verify::Conceal;
 
 use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
+use crate::validation::HistoryApi;
 use crate::{
     validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, Operation, OwnedState,
     PrevState, Redeemed, Schema, SchemaRoot, StatePair, TypedAssign, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
-    pub fn validate<'script>(
+    pub fn validate<'script, C: HistoryApi>(
         &self,
-        all_ops: &BTreeMap<OpId, &dyn Operation>,
+        consignment: &C,
         op: &dyn Operation,
         vm: &dyn VirtualMachine,
     ) -> validation::Status {
@@ -129,8 +130,8 @@ impl<Root: SchemaRoot> Schema<Root> {
         // Validate type system
         status += self.validate_type_system();
 
-        let prev_state = extract_prev_state(all_ops, op.prev_state(), &mut status);
-        let redeemed = extract_redeemed_valencies(all_ops, op.redeemed(), &mut status);
+        let prev_state = extract_prev_state(consignment, op.prev_state(), &mut status);
+        let redeemed = extract_redeemed_valencies(consignment, op.redeemed(), &mut status);
         status += self.validate_global_state(id, op.global_state(), global_schema);
         status += self.validate_prev_state(id, &prev_state, owned_schema);
         status += self.validate_redeemed(id, &redeemed, redeem_schema);
@@ -391,14 +392,14 @@ impl<'op> OpInfo<'op> {
     }
 }
 
-fn extract_prev_state(
-    ops: &BTreeMap<OpId, &dyn Operation>,
+fn extract_prev_state<C: HistoryApi>(
+    consignment: &C,
     prev_state: &PrevState,
     status: &mut validation::Status,
 ) -> OwnedState {
     let mut owned_state = bmap! {};
     for (id, details) in prev_state.iter() {
-        let prev_op = match ops.get(id) {
+        let prev_op = match consignment.operation(*id) {
             None => {
                 status.add_failure(validation::Failure::TransitionAbsent(*id));
                 continue;
@@ -479,14 +480,14 @@ fn extract_prev_state(
         .into()
 }
 
-fn extract_redeemed_valencies(
-    operations: &BTreeMap<OpId, &dyn Operation>,
+fn extract_redeemed_valencies<C: HistoryApi>(
+    consignment: &C,
     redeemed: &Redeemed,
     status: &mut validation::Status,
 ) -> Valencies {
     let mut public_rights = Valencies::default();
     for (id, valencies) in redeemed.iter() {
-        if operations.get(id).is_none() {
+        if consignment.has_operation(*id) {
             status.add_failure(validation::Failure::TransitionAbsent(*id));
         } else {
             public_rights

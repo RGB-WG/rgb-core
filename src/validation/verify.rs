@@ -34,8 +34,8 @@ use crate::validation::subschema::SchemaVerify;
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId, SchemaRoot,
-    Script, SubSchema, Transition, TransitionBundle, TypedAssign,
+    schema, seal, BundleId, ContractId, OpId, Operation, Schema, SchemaId, SchemaRoot, Script,
+    SubSchema, Transition, TransitionBundle, TypedAssign,
 };
 
 #[derive(Debug, Display, Error)]
@@ -55,7 +55,6 @@ pub struct Validator<'consignment, 'resolver, C: HistoryApi, R: ResolveTx> {
     schema_id: SchemaId,
     genesis_id: OpId,
     contract_id: ContractId,
-    op_index: BTreeMap<OpId, &'consignment dyn Operation>,
     anchor_index: BTreeMap<OpId, &'consignment Anchor<mpc::MerkleProof>>,
     end_transitions: Vec<(&'consignment Transition, BundleId)>,
     validation_index: BTreeSet<OpId>,
@@ -79,7 +78,6 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         let schema_id = consignment.genesis().schema_id;
 
         // Create indexes
-        let mut op_index = BTreeMap::<OpId, &dyn Operation>::new();
         let mut anchor_index = BTreeMap::<OpId, &Anchor<mpc::MerkleProof>>::new();
         for (anchor, bundle) in consignment.anchored_bundles() {
             if !TransitionBundle::validate(bundle) {
@@ -87,14 +85,8 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             }
             for transition in bundle.values().filter_map(|item| item.transition.as_ref()) {
                 let opid = transition.id();
-                op_index.insert(opid, transition);
                 anchor_index.insert(opid, anchor);
             }
-        }
-        op_index.insert(genesis_id, consignment.genesis());
-        for extension in consignment.state_extensions() {
-            let opid = Extension::id(extension);
-            op_index.insert(opid, extension);
         }
 
         // Collect all endpoint transitions
@@ -159,7 +151,6 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             schema_id,
             genesis_id,
             contract_id,
-            op_index,
             anchor_index,
             end_transitions,
             validation_index,
@@ -218,7 +209,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
         // [VALIDATION]: Validate genesis
         self.status +=
-            schema.validate(&self.op_index, self.consignment.genesis(), self.vm.as_ref());
+            schema.validate(self.consignment, self.consignment.genesis(), self.vm.as_ref());
         self.validation_index.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing operation
@@ -254,15 +245,15 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         // Generate warning if some of the transitions within the consignment
         // were excessive (i.e. not part of validation_index). Nothing critical,
         // but still good to report the user that the consignment is not perfect
-        for opid in self.validation_index.difference(&self.consignment.op_ids()) {
-            self.status.add_warning(Warning::ExcessiveNode(*opid));
+        for opid in self.consignment.op_ids_except(&self.validation_index) {
+            self.status.add_warning(Warning::ExcessiveNode(opid));
         }
     }
 
     fn validate_branch<Root: SchemaRoot>(
         &mut self,
         schema: &Schema<Root>,
-        operation: &'consignment Transition,
+        transition: &'consignment Transition,
         bundle_id: BundleId,
     ) {
         let mut queue: VecDeque<&Transition> = VecDeque::new();
@@ -277,7 +268,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         // a given operation is valid against the schema + committed into bitcoin
         // transaction graph with proper anchor. That is what we are
         // checking in the code below:
-        queue.push_back(operation);
+        queue.push_back(transition);
         while let Some(operation) = queue.pop_front() {
             let opid = operation.id();
             let node_type = operation.op_type();
@@ -286,7 +277,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
             //               only a single operation, not state evolution (it
             //               will be checked lately)
             if !self.validation_index.contains(&opid) {
-                self.status += schema.validate(&self.op_index, operation, self.vm.as_ref());
+                self.status += schema.validate(self.consignment, operation, self.vm.as_ref());
                 self.validation_index.insert(opid);
             }
 
@@ -325,17 +316,14 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 .prev_state()
                 .iter()
                 .filter_map(|(id, _)| {
-                    self.op_index
-                        .get(id)
-                        .map(|ts| ts.as_any().downcast_ref().expect("state transition"))
-                        .or_else(|| {
-                            // This will not actually happen since we already
-                            // checked that each ancrstor reference has a
-                            // corresponding operation in the code above. But rust
-                            // requires to double-check :)
-                            self.status.add_failure(Failure::TransitionAbsent(*id));
-                            None
-                        })
+                    self.consignment.transition(*id).ok().or_else(|| {
+                        // This will not actually happen since we already
+                        // checked that each ancrstor reference has a
+                        // corresponding operation in the code above. But rust
+                        // requires to double-check :)
+                        self.status.add_failure(Failure::TransitionAbsent(*id));
+                        None
+                    })
                 })
                 .collect();
 
@@ -343,17 +331,14 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 .redeemed()
                 .iter()
                 .filter_map(|(id, _)| {
-                    self.op_index
-                        .get(id)
-                        .map(|ts| ts.as_any().downcast_ref().expect("state transition"))
-                        .or_else(|| {
-                            // This will not actually happen since we already
-                            // checked that each ancestor reference has a
-                            // corresponding operation in the code above. But rust
-                            // requires to double-check :)
-                            self.status.add_failure(Failure::TransitionAbsent(*id));
-                            None
-                        })
+                    self.consignment.transition(*id).ok().or_else(|| {
+                        // This will not actually happen since we already
+                        // checked that each ancestor reference has a
+                        // corresponding operation in the code above. But rust
+                        // requires to double-check :)
+                        self.status.add_failure(Failure::TransitionAbsent(*id));
+                        None
+                    })
                 })
                 .collect();
 
@@ -416,17 +401,17 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 // transition ancestors.
                 for (ancestor_id, assignments) in operation.prev_state().iter() {
                     let ancestor_id = *ancestor_id;
-                    let ancestor_node = if let Some(ancestor_node) = self.op_index.get(&ancestor_id)
-                    {
-                        *ancestor_node
-                    } else {
-                        // Node, referenced as the ancestor, was not found
-                        // in the consignment. Usually this means that the
-                        // consignment data are broken
-                        self.status
-                            .add_failure(Failure::TransitionAbsent(ancestor_id));
-                        continue;
-                    };
+                    let ancestor_node =
+                        if let Some(ancestor_node) = self.consignment.operation(ancestor_id) {
+                            ancestor_node
+                        } else {
+                            // Node, referenced as the ancestor, was not found
+                            // in the consignment. Usually this means that the
+                            // consignment data are broken
+                            self.status
+                                .add_failure(Failure::OperationAbsent(ancestor_id));
+                            continue;
+                        };
 
                     for (assignment_type, assignment_indexes) in assignments {
                         let assignment_type = *assignment_type;
@@ -436,12 +421,11 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                         {
                             variant
                         } else {
-                            self.status
-                                .add_failure(Failure::TransitionParentWrongSealType {
-                                    opid,
-                                    ancestor_id,
-                                    assignment_type,
-                                });
+                            self.status.add_failure(Failure::AncestorWrongSealType {
+                                opid,
+                                ancestor_id,
+                                assignment_type,
+                            });
                             continue;
                         };
 

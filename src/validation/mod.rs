@@ -201,10 +201,12 @@ pub enum Failure {
 
     BundleInvalid(BundleId),
 
+    OperationAbsent(OpId),
+
     TransitionAbsent(OpId),
     TransitionNotAnchored(OpId),
     TransitionNotInAnchor(OpId, Txid),
-    TransitionParentWrongSealType {
+    AncestorWrongSealType {
         opid: OpId,
         ancestor_id: OpId,
         assignment_type: schema::OwnedStateType,
