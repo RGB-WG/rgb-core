@@ -144,17 +144,6 @@ pub trait Operation: AsAny {
     /// serialization
     fn id(&self) -> OpId;
 
-    /// Returns [`Option::Some`]`(`[`ContractId`]`)`, which is a hash of
-    /// genesis.
-    /// - For genesis, this hash is byte-equal to [`OpId`] (however displayed in
-    ///   a reverse manner, to introduce semantical distinction)
-    /// - For extensions, function returns id of the genesis, to which this
-    ///   operation commits to
-    /// - For state transitions, function returns [`Option::None`], since they
-    ///   do not keep this information; it must be deduced through state
-    ///   transition graph
-    fn contract_id(&self) -> Option<ContractId>;
-
     /// Returns [`Option::Some`]`(`[`TransitionType`]`)` for transitions or
     /// [`Option::None`] for genesis and extension operation types
     fn transition_type(&self) -> Option<TransitionType>;
@@ -287,6 +276,16 @@ impl CommitmentId for Extension {
     type Id = OpId;
 }
 
+impl Genesis {
+    #[inline]
+    pub fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
+}
+
+impl Extension {
+    #[inline]
+    pub fn contract_id(&self) -> ContractId { self.contract_id }
+}
+
 impl Operation for Genesis {
     #[inline]
     fn op_type(&self) -> OpType { OpType::Genesis }
@@ -296,11 +295,6 @@ impl Operation for Genesis {
 
     #[inline]
     fn id(&self) -> OpId { OpId(self.commitment_id().into_inner()) }
-
-    #[inline]
-    fn contract_id(&self) -> Option<ContractId> {
-        Some(ContractId::from_inner(self.id().into_inner()))
-    }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { None }
@@ -338,9 +332,6 @@ impl Operation for Extension {
     fn id(&self) -> OpId { self.commitment_id() }
 
     #[inline]
-    fn contract_id(&self) -> Option<ContractId> { Some(self.contract_id) }
-
-    #[inline]
     fn transition_type(&self) -> Option<TransitionType> { None }
 
     #[inline]
@@ -376,9 +367,6 @@ impl Operation for Transition {
     fn id(&self) -> OpId { self.commitment_id() }
 
     #[inline]
-    fn contract_id(&self) -> Option<ContractId> { None }
-
-    #[inline]
     fn transition_type(&self) -> Option<TransitionType> { Some(self.transition_type) }
 
     #[inline]
@@ -401,9 +389,4 @@ impl Operation for Transition {
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
-}
-
-impl Genesis {
-    #[inline]
-    pub fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
 }
