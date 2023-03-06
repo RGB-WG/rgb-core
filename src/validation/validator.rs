@@ -328,6 +328,16 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                                 self.status.add_failure(Failure::ValencyNoParent { opid, prev_id: *prev_id, valency: *valency });
                                 continue;
                             };
+
+                            if !prev_op.valencies().contains(valency) {
+                                self.status.add_failure(Failure::NoPrevValency {
+                                    opid,
+                                    prev_id: *prev_id,
+                                    valency: *valency,
+                                });
+                                continue;
+                            }
+
                             queue.push_back(prev_op);
                         }
                     }

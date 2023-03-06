@@ -37,7 +37,7 @@ pub use validator::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, OpType, SchemaId};
 use crate::state::Opout;
-use crate::{data, seal, BundleId, OccurrencesMismatch, OpId, ValencyType};
+use crate::{data, seal, BundleId, OccurrencesMismatch, OpId};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -236,14 +236,14 @@ pub enum Failure {
     ValencyNoParent {
         opid: OpId,
         prev_id: OpId,
-        valency: ValencyType,
+        valency: schema::ValencyType,
     },
-
-    // TODO: Check why the error type is not used
-    ExtensionParentWrongValenciesType {
+    /// state extension {opid} references valency {valency} absent in the parent
+    /// {prev_id}.
+    NoPrevValency {
         opid: OpId,
         prev_id: OpId,
-        valencies_type: schema::ValencyType,
+        valency: schema::ValencyType,
     },
 
     WitnessTransactionMissed(Txid),
