@@ -35,7 +35,7 @@ use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
     schema, seal, BundleId, ContractId, Extension, OpId, Operation, Schema, SchemaId, SchemaRoot,
-    Script, SubSchema, TransitionBundle, TypedAssign,
+    Script, SubSchema, Transition, TransitionBundle, TypedAssign,
 };
 
 #[derive(Debug, Display, Error)]
@@ -57,7 +57,7 @@ pub struct Validator<'consignment, 'resolver, C: HistoryApi, R: ResolveTx> {
     contract_id: ContractId,
     node_index: BTreeMap<OpId, &'consignment dyn Operation>,
     anchor_index: BTreeMap<OpId, &'consignment Anchor<mpc::MerkleProof>>,
-    end_transitions: Vec<(&'consignment dyn Operation, BundleId)>,
+    end_transitions: Vec<(&'consignment Transition, BundleId)>,
     validation_index: BTreeSet<OpId>,
     anchor_validation_index: BTreeSet<OpId>,
 
@@ -101,7 +101,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         // This is pretty simple operation; it takes a lot of code because
         // we would like to detect any potential issues with the consignment
         // structure and notify user about them (in form of generated warnings)
-        let mut end_transitions = Vec::<(&dyn Operation, BundleId)>::new();
+        let mut end_transitions = Vec::<(&Transition, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.endpoints() {
             let transitions = match consignment.known_transitions_by_bundle_id(*bundle_id) {
                 Ok(transitions) => transitions,
@@ -267,10 +267,10 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
     fn validate_branch<Root: SchemaRoot>(
         &mut self,
         schema: &Schema<Root>,
-        node: &'consignment dyn Operation,
+        node: &'consignment Transition,
         bundle_id: BundleId,
     ) {
-        let mut queue: VecDeque<&dyn Operation> = VecDeque::new();
+        let mut queue: VecDeque<&Transition> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a
         // recursions we utilize queue to keep the track of the upstream
@@ -326,33 +326,39 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
             // Now, we must collect all parent nodes and add them to the
             // verification queue
-            let parent_nodes_1: Vec<&dyn Operation> = node
+            let parent_nodes_1: Vec<&Transition> = node
                 .prev_state()
                 .iter()
                 .filter_map(|(id, _)| {
-                    self.node_index.get(id).cloned().or_else(|| {
-                        // This will not actually happen since we already
-                        // checked that each ancrstor reference has a
-                        // corresponding node in the code above. But rust
-                        // requires to double-check :)
-                        self.status.add_failure(Failure::TransitionAbsent(*id));
-                        None
-                    })
+                    self.node_index
+                        .get(id)
+                        .map(|ts| ts.as_any().downcast_ref().expect("state transition"))
+                        .or_else(|| {
+                            // This will not actually happen since we already
+                            // checked that each ancrstor reference has a
+                            // corresponding node in the code above. But rust
+                            // requires to double-check :)
+                            self.status.add_failure(Failure::TransitionAbsent(*id));
+                            None
+                        })
                 })
                 .collect();
 
-            let parent_nodes_2: Vec<&dyn Operation> = node
+            let parent_nodes_2: Vec<&Transition> = node
                 .redeemed()
                 .iter()
                 .filter_map(|(id, _)| {
-                    self.node_index.get(id).cloned().or_else(|| {
-                        // This will not actually happen since we already
-                        // checked that each ancestor reference has a
-                        // corresponding node in the code above. But rust
-                        // requires to double-check :)
-                        self.status.add_failure(Failure::TransitionAbsent(*id));
-                        None
-                    })
+                    self.node_index
+                        .get(id)
+                        .map(|ts| ts.as_any().downcast_ref().expect("state transition"))
+                        .or_else(|| {
+                            // This will not actually happen since we already
+                            // checked that each ancestor reference has a
+                            // corresponding node in the code above. But rust
+                            // requires to double-check :)
+                            self.status.add_failure(Failure::TransitionAbsent(*id));
+                            None
+                        })
                 })
                 .collect();
 
@@ -363,7 +369,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
 
     fn validate_graph_node(
         &mut self,
-        node: &'consignment dyn Operation,
+        node: &'consignment Transition,
         bundle_id: BundleId,
         anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
