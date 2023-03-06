@@ -38,21 +38,6 @@ use crate::schema::{
 };
 use crate::{Ffv, LIB_NAME_RGB};
 
-/// RGB contract node output pointer, defined by the node ID and output number.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[display("{op}/{ty}/{no}")]
-pub struct PrevAssignment {
-    pub op: OpId,
-    pub ty: OwnedStateType,
-    pub no: u16,
-}
-
-impl PrevAssignment {
-    pub fn new(op: OpId, ty: u16, no: u16) -> PrevAssignment { PrevAssignment { op, ty, no } }
-}
-
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 pub type PrevState = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
 pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;

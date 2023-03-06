@@ -32,8 +32,8 @@ use commit_verify::mpc;
 
 use crate::schema::OwnedStateType;
 use crate::{
-    seal, Anchor, BundleId, Extension, Genesis, OpId, Operation, PrevAssignment, SubSchema,
-    Transition, TransitionBundle,
+    seal, Anchor, BundleId, Extension, Genesis, OpId, Operation, SubSchema, Transition,
+    TransitionBundle,
 };
 
 /// Errors accessing graph data via [`ContainerApi`].
@@ -60,12 +60,12 @@ pub enum ConsistencyError {
     /// No seals of the provided type {0} are closed by transition id {1}
     NoSealsClosed(OwnedStateType, OpId),
 
-    /// Output {0} is not present in the storage
-    OutputNotPresent(PrevAssignment),
+    /// Output is not present in the storage
+    OutputNotPresent,
 
-    /// Seal definition for {0} is confidential while was required to be in
-    /// revealed state
-    ConfidentialSeal(PrevAssignment),
+    /// Seal definition is confidential while was required to be in revealed
+    /// state
+    ConfidentialSeal,
 
     /// The provided node with id {0} is not an endpoint of the consignment
     NotEndpoint(OpId),
