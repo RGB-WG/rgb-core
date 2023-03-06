@@ -237,6 +237,9 @@ pub enum Failure {
         ancestor_id: OpId,
         valencies_type: schema::ValencyType,
     },
+    /// state extension {0} defines seal at index {1} which doesn't specifies
+    /// transaction id.
+    ExtensionWitnessSeal(OpId, u16),
 
     WitnessTransactionMissed(Txid),
     WitnessNoCommitment(OpId, Txid),

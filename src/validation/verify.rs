@@ -491,10 +491,14 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     // We are at genesis, so the outpoint must contain tx
                     Some(bp::Outpoint::new(txid, vout))
                 }
-                (Ok(Some(_)), None) => {
-                    // This can't happen, since if we have a operation in the index
-                    // and the operation is not genesis, we always have an anchor
-                    unreachable!()
+                (Ok(Some(seal)), None) => {
+                    // This happens only for state extensions, which always has
+                    // txid for seal definitions.
+                    seal.outpoint().or_else(|| {
+                        self.status
+                            .add_failure(Failure::ExtensionWitnessSeal(opid, seal_index));
+                        None
+                    })
                 }
                 /* -> ... so we can check that the bitcoin transaction
                  * references it as one of its inputs */
