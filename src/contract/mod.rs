@@ -38,8 +38,8 @@ pub use assignments::{
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use contract::{
-    AttachOutput, ContractHistory, DataOutput, FungibleOutput, Opout, OpoutParseError,
-    OutputAssignment, RightsOutput,
+    AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, Opout,
+    OpoutParseError, OutputAssignment, RightsOutput,
 };
 pub use fungible::{
     BlindingFactor, FieldOrderOverflow, FungibleState, NoiseDumb, PedersenCommitment, RangeProof,

@@ -26,9 +26,10 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::num::ParseIntError;
+use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
-use amplify::confinement::{LargeOrdMap, LargeOrdSet, TinyOrdMap};
+use amplify::confinement::{LargeOrdMap, LargeOrdSet, SmallVec, TinyOrdMap};
 use amplify::hex;
 use bp::seals::txout::TxoSeal;
 use bp::{Outpoint, Txid};
@@ -38,7 +39,7 @@ use crate::data::VoidState;
 use crate::{
     attachment, data, fungible, Assign, Assignments, AssignmentsRef, AssignmentsType, ContractId,
     ExposedSeal, ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, SchemaId,
-    Transition, TypedAssigns, LIB_NAME_RGB,
+    SubSchema, Transition, TypedAssigns, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -219,7 +220,7 @@ pub type AttachOutput = OutputAssignment<attachment::Revealed>;
 /// schema.
 ///
 /// To access the valid contract state use [`Contract`] APIs.
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Getters, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -231,6 +232,7 @@ pub struct ContractHistory {
     schema_id: SchemaId,
     root_schema_id: Option<SchemaId>,
     contract_id: ContractId,
+    #[getter(skip)]
     global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalIdx, data::Revealed>>,
     rights: LargeOrdSet<RightsOutput>,
     fungibles: LargeOrdSet<FungibleOutput>,
@@ -398,5 +400,50 @@ impl ContractHistory {
                 }
             }
         }
+    }
+}
+
+/// Contract state is an in-memory structure providing API to read structured
+/// data from the [`ContractHistory`].
+#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct ContractState {
+    pub schema: SubSchema,
+    pub history: ContractHistory,
+}
+
+impl Deref for ContractState {
+    type Target = ContractHistory;
+    fn deref(&self) -> &Self::Target { &self.history }
+}
+
+impl DerefMut for ContractState {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.history }
+}
+
+impl ContractState {
+    /// # Panics
+    ///
+    /// If the specified state type is not part of the schema.
+    pub unsafe fn global_unchecked(
+        &self,
+        state_type: GlobalStateType,
+    ) -> SmallVec<&data::Revealed> {
+        let schema = self
+            .schema
+            .global_types
+            .get(&state_type)
+            .expect("global type is not in the schema");
+        let Some(state) = self.global.get(&state_type) else {
+            return SmallVec::new()
+        };
+        let iter = state.values().take(schema.max_items as usize);
+        SmallVec::try_from_iter(iter).expect("same size as previous confined collection")
     }
 }
