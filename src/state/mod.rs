@@ -107,7 +107,7 @@ pub struct OutputAssignment<State: RevealedState> {
 }
 
 impl<State: RevealedState> OutputAssignment<State> {
-    pub fn with<Seal: TxoSeal>(
+    pub fn with_witness<Seal: TxoSeal>(
         seal: Seal,
         witness_txid: Txid,
         state: State,
@@ -118,6 +118,21 @@ impl<State: RevealedState> OutputAssignment<State> {
         OutputAssignment {
             opout: Opout::new(opid, ty, no),
             seal: seal.outpoint_or(witness_txid),
+            state,
+        }
+    }
+
+    // TODO: Refactor
+    pub fn with<Seal: TxoSeal>(
+        seal: Seal,
+        state: State,
+        opid: OpId,
+        ty: OwnedStateType,
+        no: u16,
+    ) -> Self {
+        OutputAssignment {
+            opout: Opout::new(opid, ty, no),
+            seal: seal.outpoint().unwrap(),
             state,
         }
     }
@@ -172,19 +187,17 @@ impl ContractState {
             data: empty!(),
             attach: empty!(),
         };
-        state.add_operation(Txid::all_zeros(), genesis);
+        state.add_operation(None, genesis);
         state
     }
 
     pub fn add_transition(&mut self, txid: Txid, transition: &Transition) {
-        self.add_operation(txid, transition);
+        self.add_operation(Some(txid), transition);
     }
 
-    pub fn add_extension(&mut self, extension: &Extension) {
-        self.add_operation(Txid::all_zeros(), extension);
-    }
+    pub fn add_extension(&mut self, extension: &Extension) { self.add_operation(None, extension); }
 
-    fn add_operation(&mut self, txid: Txid, op: &impl Operation) {
+    fn add_operation(&mut self, txid: Option<Txid>, op: &impl Operation) {
         let opid = op.id();
 
         for (ty, meta) in op.global_state() {
@@ -201,15 +214,18 @@ impl ContractState {
             assignments: &[Assign<State, Seal>],
             opid: OpId,
             ty: OwnedStateType,
-            txid: Txid,
+            txid: Option<Txid>,
         ) {
             for (no, seal, state) in assignments
                 .iter()
                 .enumerate()
                 .filter_map(|(n, a)| a.to_revealed().map(|(seal, state)| (n, seal, state)))
             {
-                let assigned_state =
-                    OutputAssignment::with(seal, txid, state.into(), opid, ty, no as u16);
+                let assigned_state = if let Some(txid) = txid {
+                    OutputAssignment::with_witness(seal, txid, state.into(), opid, ty, no as u16)
+                } else {
+                    OutputAssignment::with(seal, state.into(), opid, ty, no as u16)
+                };
                 contract_state.insert(assigned_state);
             }
         }
