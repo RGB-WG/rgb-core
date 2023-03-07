@@ -23,7 +23,6 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
-use bp::seals::txout::TxoSeal;
 use bp::{Tx, Txid};
 use commit_verify::mpc;
 
@@ -34,8 +33,8 @@ use crate::validation::subschema::SchemaVerify;
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
-    Transition, TransitionBundle, TypedAssigns,
+    BundleId, ContractId, OpId, OpRef, Operation, RevealedSeal, Schema, SchemaId, SchemaRoot,
+    Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
 };
 
 #[derive(Debug, Display, Error)]
@@ -420,12 +419,12 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         }
     }
 
-    fn validate_prev_out(
+    fn validate_prev_out<Seal: RevealedSeal>(
         &mut self,
         witness_tx: &Tx,
         opid: OpId,
         prev_out: Opout,
-        variant: &'consignment TypedAssigns,
+        variant: &'consignment TypedAssigns<Seal>,
     ) {
         let Ok(seal) = variant.revealed_seal_at(prev_out.no) else {
             self.status.add_failure(Failure::NoPrevOut(opid,prev_out));

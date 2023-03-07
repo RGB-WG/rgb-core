@@ -30,7 +30,7 @@ use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
 use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
-use super::{attachment, data, fungible, seal, RevealedState};
+use super::{attachment, data, fungible, RevealedState};
 use crate::data::VoidState;
 use crate::{RevealedSeal, LIB_NAME_RGB};
 
@@ -269,7 +269,7 @@ where Self: Clone
                  serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
-pub enum TypedAssigns<Seal: RevealedSeal = seal::Revealed> {
+pub enum TypedAssigns<Seal: RevealedSeal> {
     // TODO: Consider using non-empty variants
     #[strict_type(tag = 0x00)]
     Declarative(SmallVec<AssignRights<Seal>>),

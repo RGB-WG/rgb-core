@@ -27,7 +27,7 @@
 use std::collections::BTreeSet;
 
 use bp::dbc::AnchorId;
-use bp::{Outpoint, Txid};
+use bp::Txid;
 use commit_verify::mpc;
 
 use crate::schema::OwnedStateType;
@@ -174,7 +174,7 @@ pub trait ContainerApi {
         opid: OpId,
         owned_right_type: impl Into<OwnedStateType>,
         witness: Txid,
-    ) -> Result<BTreeSet<Outpoint>, ConsistencyError>;
+    ) -> Result<BTreeSet<seal::Revealed>, ConsistencyError>;
 }
 
 pub trait HistoryApi: ContainerApi {

@@ -36,24 +36,34 @@ use super::{GlobalState, TypedAssigns};
 use crate::schema::{
     self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
-use crate::{Ffv, LIB_NAME_RGB};
+use crate::{seal, Ffv, RevealedSeal, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
 pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
 
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
+    serde(
+        crate = "serde_crate",
+        transparent,
+        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned, Seal::Confidential: \
+                 serde::Serialize + serde::de::DeserializeOwned"
+    )
 )]
-pub struct OwnedState(TinyOrdMap<schema::OwnedStateType, TypedAssigns>);
+pub struct OwnedState<Seal>(TinyOrdMap<schema::OwnedStateType, TypedAssigns<Seal>>)
+where Seal: RevealedSeal;
 
-impl CommitEncode for OwnedState {
+impl<Seal: RevealedSeal> Default for OwnedState<Seal> {
+    fn default() -> Self { Self(empty!()) }
+}
+
+impl<Seal: RevealedSeal> CommitEncode for OwnedState<Seal> {
     fn commit_encode(&self, mut e: &mut impl Write) {
         let w = StrictWriter::with(u32::MAX as usize, &mut e);
         self.0.len_u8().strict_encode(w).ok();
@@ -131,6 +141,8 @@ impl From<ContractId> for mpc::ProtocolId {
 /// - State transitions ([`Transitions`])
 /// - Public state extensions ([`Extensions`])
 pub trait Operation: AsAny {
+    type Seal: RevealedSeal;
+
     /// Returns type of the operation (see [`OpType`]). Unfortunately, this
     /// can't be just a const, since it will break our ability to convert
     /// concrete `Node` types into `&dyn Node` (entities implementing traits
@@ -158,10 +170,10 @@ pub trait Operation: AsAny {
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract operation.
     fn global_state(&self) -> &GlobalState;
-    fn owned_state(&self) -> &OwnedState;
+    fn owned_state(&self) -> &OwnedState<Self::Seal>;
     fn valencies(&self) -> &Valencies;
 
-    fn owned_state_by_type(&self, t: OwnedStateType) -> Option<&TypedAssigns> {
+    fn owned_state_by_type(&self, t: OwnedStateType) -> Option<&TypedAssigns<Self::Seal>> {
         self.owned_state()
             .iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
@@ -182,7 +194,7 @@ pub struct Genesis {
     pub chain: Chain,
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
-    pub owned_state: OwnedState,
+    pub owned_state: OwnedState<seal::Revealed>,
     pub valencies: Valencies,
 }
 
@@ -200,7 +212,7 @@ pub struct Extension {
     pub contract_id: ContractId,
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
-    pub owned_state: OwnedState,
+    pub owned_state: OwnedState<seal::Revealed>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
 }
@@ -219,7 +231,7 @@ pub struct Transition {
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
     pub prev_state: PrevOuts,
-    pub owned_state: OwnedState,
+    pub owned_state: OwnedState<seal::Revealed>,
     pub valencies: Valencies,
 }
 
@@ -284,6 +296,8 @@ impl Extension {
 }
 
 impl Operation for Genesis {
+    type Seal = seal::Revealed;
+
     #[inline]
     fn op_type(&self) -> OpType { OpType::Genesis }
 
@@ -306,13 +320,15 @@ impl Operation for Genesis {
     fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn owned_state(&self) -> &OwnedState { &self.owned_state }
+    fn owned_state(&self) -> &OwnedState<Self::Seal> { &self.owned_state }
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
 }
 
 impl Operation for Extension {
+    type Seal = seal::Revealed;
+
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateExtension }
 
@@ -335,13 +351,15 @@ impl Operation for Extension {
     fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn owned_state(&self) -> &OwnedState { &self.owned_state }
+    fn owned_state(&self) -> &OwnedState<Self::Seal> { &self.owned_state }
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
 }
 
 impl Operation for Transition {
+    type Seal = seal::Revealed;
+
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateTransition }
 
@@ -364,7 +382,7 @@ impl Operation for Transition {
     fn global_state(&self) -> &GlobalState { &self.global_state }
 
     #[inline]
-    fn owned_state(&self) -> &OwnedState { &self.owned_state }
+    fn owned_state(&self) -> &OwnedState<Self::Seal> { &self.owned_state }
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
@@ -378,6 +396,8 @@ pub enum OpRef<'op> {
 }
 
 impl<'op> Operation for OpRef<'op> {
+    type Seal = seal::Revealed;
+
     fn op_type(&self) -> OpType {
         match self {
             OpRef::Genesis(op) => op.op_type(),
@@ -434,7 +454,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn owned_state(&self) -> &OwnedState {
+    fn owned_state(&self) -> &OwnedState<Self::Seal> {
         match self {
             OpRef::Genesis(op) => op.owned_state(),
             OpRef::Transition(op) => op.owned_state(),

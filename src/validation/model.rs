@@ -29,8 +29,9 @@ use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
 use crate::validation::HistoryApi;
 use crate::{
-    validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, OpRef, Operation, OwnedState,
-    PrevOuts, Redeemed, RevealedSeal, RevealedState, Schema, SchemaRoot, TypedAssigns, Valencies,
+    seal, validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, OpRef, Operation,
+    OwnedState, PrevOuts, Redeemed, RevealedSeal, RevealedState, Schema, SchemaRoot, TypedAssigns,
+    Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -217,10 +218,10 @@ impl<Root: SchemaRoot> Schema<Root> {
         status
     }
 
-    fn validate_prev_state(
+    fn validate_prev_state<Seal: RevealedSeal>(
         &self,
         id: OpId,
-        owned_state: &OwnedState,
+        owned_state: &OwnedState<Seal>,
         assign_schema: &AssignmentSchema,
     ) -> validation::Status {
         let mut status = validation::Status::new();
@@ -275,10 +276,10 @@ impl<Root: SchemaRoot> Schema<Root> {
         status
     }
 
-    fn validate_owned_state(
+    fn validate_owned_state<Seal: RevealedSeal>(
         &self,
         id: OpId,
-        owned_state: &OwnedState,
+        owned_state: &OwnedState<Seal>,
         assign_schema: &AssignmentSchema,
     ) -> validation::Status {
         let mut status = validation::Status::new();
@@ -375,8 +376,8 @@ pub struct OpInfo<'op> {
     pub id: OpId,
     pub ty: OpFullType,
     pub metadata: Option<&'op SmallBlob>,
-    pub prev_state: &'op OwnedState,
-    pub owned_state: &'op OwnedState,
+    pub prev_state: &'op OwnedState<seal::Revealed>,
+    pub owned_state: &'op OwnedState<seal::Revealed>,
     pub redeemed: &'op Valencies,
     pub valencies: &'op Valencies,
     pub global: &'op GlobalState,
@@ -387,7 +388,7 @@ impl<'op> OpInfo<'op> {
         id: OpId,
         subschema: bool,
         op: OpRef<'op>,
-        prev_state: &'op OwnedState,
+        prev_state: &'op OwnedState<seal::Revealed>,
         redeemed: &'op Valencies,
     ) -> Self {
         OpInfo {
@@ -408,7 +409,7 @@ fn extract_prev_state<C: HistoryApi>(
     consignment: &C,
     prev_state: &PrevOuts,
     status: &mut validation::Status,
-) -> OwnedState {
+) -> OwnedState<seal::Revealed> {
     let mut owned_state = bmap! {};
     for (id, details) in prev_state.iter() {
         let prev_op = match consignment.operation(*id) {
