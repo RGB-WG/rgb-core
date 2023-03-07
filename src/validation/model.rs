@@ -28,8 +28,8 @@ use amplify::Wrapper;
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
-    validation, Assign, Assignments, ChainBlindSeal, ExposedSeal, ExposedState, GlobalState,
-    GlobalValues, OpFullType, OpId, OpRef, Operation, PrevOuts, Redeemed, Schema, SchemaRoot,
+    validation, Assign, Assignments, ExposedSeal, ExposedState, GlobalState, GlobalValues,
+    GraphSeal, OpFullType, OpId, OpRef, Operation, PrevOuts, Redeemed, Schema, SchemaRoot,
     TypedAssigns, Valencies,
 };
 
@@ -375,8 +375,8 @@ pub struct OpInfo<'op> {
     pub id: OpId,
     pub ty: OpFullType,
     pub metadata: Option<&'op SmallBlob>,
-    pub prev_state: &'op Assignments<ChainBlindSeal>,
-    pub owned_state: &'op Assignments<ChainBlindSeal>,
+    pub prev_state: &'op Assignments<GraphSeal>,
+    pub owned_state: &'op Assignments<GraphSeal>,
     pub redeemed: &'op Valencies,
     pub valencies: &'op Valencies,
     pub global: &'op GlobalState,
@@ -387,7 +387,7 @@ impl<'op> OpInfo<'op> {
         id: OpId,
         subschema: bool,
         op: &'op OpRef<'op>,
-        prev_state: &'op Assignments<ChainBlindSeal>,
+        prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
     ) -> Self {
         OpInfo {
@@ -408,7 +408,7 @@ fn extract_prev_state<C: ConsignmentApi>(
     consignment: &C,
     prev_state: &PrevOuts,
     status: &mut validation::Status,
-) -> Assignments<ChainBlindSeal> {
+) -> Assignments<GraphSeal> {
     let mut owned_state = bmap! {};
     for (id, details) in prev_state.iter() {
         let prev_op = match consignment.operation(*id) {

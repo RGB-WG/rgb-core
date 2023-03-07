@@ -23,7 +23,9 @@
 use core::fmt::Debug;
 use core::hash::Hash;
 
-pub use bp::seals::txout::blind::{ChainBlindSeal, SecretSeal, SingleBlindSeal};
+pub use bp::seals::txout::blind::{
+    ChainBlindSeal as GraphSeal, SecretSeal, SingleBlindSeal as GenesisSeal,
+};
 pub use bp::seals::txout::TxoSeal;
 use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
@@ -47,11 +49,11 @@ pub trait ExposedSeal:
     type Confidential: ConfidentialSeal;
 }
 
-impl ExposedSeal for ChainBlindSeal {
+impl ExposedSeal for GraphSeal {
     type Confidential = SecretSeal;
 }
 
-impl ExposedSeal for SingleBlindSeal {
+impl ExposedSeal for GenesisSeal {
     type Confidential = SecretSeal;
 }
 

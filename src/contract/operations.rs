@@ -33,12 +33,12 @@ use commit_verify::{mpc, CommitEncode, CommitStrategy, CommitmentId};
 use strict_encoding::{StrictEncode, StrictWriter};
 
 use super::{GlobalState, TypedAssigns};
-use crate::contract::seal::SingleBlindSeal;
+use crate::contract::seal::GenesisSeal;
 use crate::contract::Opout;
 use crate::schema::{
     self, AssignmentsType, ExtensionType, OpFullType, OpType, SchemaId, TransitionType,
 };
-use crate::{ChainBlindSeal, ExposedSeal, Ffv, LIB_NAME_RGB};
+use crate::{ExposedSeal, Ffv, GraphSeal, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentsType, TinyVec<u16>>>;
@@ -200,7 +200,7 @@ pub struct Genesis {
     pub chain: Chain,
     pub metadata: Option<SmallBlob>,
     pub globals: GlobalState,
-    pub assignments: Assignments<SingleBlindSeal>,
+    pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
 }
 
@@ -218,7 +218,7 @@ pub struct Extension {
     pub contract_id: ContractId,
     pub metadata: Option<SmallBlob>,
     pub globals: GlobalState,
-    pub assignments: Assignments<SingleBlindSeal>,
+    pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
 }
@@ -237,7 +237,7 @@ pub struct Transition {
     pub metadata: Option<SmallBlob>,
     pub globals: GlobalState,
     pub inputs: PrevOuts,
-    pub assignments: Assignments<ChainBlindSeal>,
+    pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
 }
 
@@ -302,7 +302,7 @@ impl Extension {
 }
 
 impl Operation for Genesis {
-    type Seal = SingleBlindSeal;
+    type Seal = GenesisSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::Genesis }
@@ -333,7 +333,7 @@ impl Operation for Genesis {
 }
 
 impl Operation for Extension {
-    type Seal = SingleBlindSeal;
+    type Seal = GenesisSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateExtension }
@@ -364,7 +364,7 @@ impl Operation for Extension {
 }
 
 impl Operation for Transition {
-    type Seal = ChainBlindSeal;
+    type Seal = GraphSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateTransition }
@@ -411,7 +411,7 @@ pub enum OpRef<'op> {
 }
 
 impl<'op> Operation for OpRef<'op> {
-    type Seal = ChainBlindSeal;
+    type Seal = GraphSeal;
 
     fn op_type(&self) -> OpType {
         match self {
