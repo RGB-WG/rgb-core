@@ -37,6 +37,7 @@ pub use assignment::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateType, TypedAssigns,
 };
 pub use attachment::AttachId;
+use bp::seals::txout::TxoSeal;
 pub use bundle::{BundleId, TransitionBundle};
 pub use fungible::{
     BlindingFactor, FieldOrderOverflow, FungibleState, NoiseDumb, PedersenCommitment, RangeProof,
@@ -76,3 +77,35 @@ pub trait RevealedState:
 {
     type Confidential: ConfidentialState;
 }
+
+pub trait ConfidentialSeal:
+    core::fmt::Debug
+    + strict_encoding::StrictDumb
+    + strict_encoding::StrictEncode
+    + strict_encoding::StrictDecode
+    + Eq
+    + Ord
+    + Hash
+    + Clone
+{
+}
+
+pub trait RevealedSeal:
+    core::fmt::Debug
+    + strict_encoding::StrictDumb
+    + strict_encoding::StrictEncode
+    + strict_encoding::StrictDecode
+    + commit_verify::Conceal<Concealed = Self::Confidential>
+    + Eq
+    + Ord
+    + Clone
+    + TxoSeal
+{
+    type Confidential: ConfidentialSeal;
+}
+
+impl RevealedSeal for seal::Revealed {
+    type Confidential = seal::Confidential;
+}
+
+impl ConfidentialSeal for seal::Confidential {}

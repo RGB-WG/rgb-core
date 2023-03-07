@@ -30,7 +30,7 @@ use crate::validation::vm::VirtualMachine;
 use crate::validation::HistoryApi;
 use crate::{
     validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, OpRef, Operation, OwnedState,
-    PrevOuts, Redeemed, RevealedState, Schema, SchemaRoot, TypedAssigns, Valencies,
+    PrevOuts, Redeemed, RevealedSeal, RevealedState, Schema, SchemaRoot, TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -419,10 +419,10 @@ fn extract_prev_state<C: HistoryApi>(
             Some(op) => op,
         };
 
-        fn filter<State: RevealedState>(
-            set: &[Assign<State>],
+        fn filter<State: RevealedState, Seal: RevealedSeal>(
+            set: &[Assign<State, Seal>],
             indexes: &[u16],
-        ) -> Vec<Assign<State>> {
+        ) -> Vec<Assign<State, Seal>> {
             set.iter()
                 .enumerate()
                 .filter_map(|(index, item)| {

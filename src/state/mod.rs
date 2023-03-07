@@ -35,8 +35,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::data::VoidState;
 use crate::{
-    attachment, data, fungible, seal, Assign, ContractId, Extension, Genesis, GlobalStateType,
-    OpId, Operation, OwnedStateType, RevealedState, SchemaId, Transition, TypedAssigns,
+    attachment, data, fungible, Assign, ContractId, Extension, Genesis, GlobalStateType, OpId,
+    Operation, OwnedStateType, RevealedSeal, RevealedState, SchemaId, Transition, TypedAssigns,
     LIB_NAME_RGB,
 };
 
@@ -107,8 +107,8 @@ pub struct OutputAssignment<State: RevealedState> {
 }
 
 impl<State: RevealedState> OutputAssignment<State> {
-    pub fn with(
-        seal: seal::Revealed,
+    pub fn with<Seal: TxoSeal>(
+        seal: Seal,
         witness_txid: Txid,
         state: State,
         opid: OpId,
@@ -196,9 +196,9 @@ impl ContractState {
                 .extend(meta.iter().cloned());
         }
 
-        fn process<State: RevealedState>(
+        fn process<State: RevealedState, Seal: RevealedSeal>(
             contract_state: &mut BTreeSet<OutputAssignment<State>>,
-            assignments: &[Assign<State>],
+            assignments: &[Assign<State, Seal>],
             opid: OpId,
             ty: OwnedStateType,
             txid: Txid,
