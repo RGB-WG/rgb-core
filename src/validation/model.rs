@@ -27,15 +27,14 @@ use amplify::Wrapper;
 
 use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
-use crate::validation::HistoryApi;
 use crate::{
-    validation, Assign, BlindSeal, ExposedSeal, ExposedState, GlobalState, GlobalValues,
-    OpFullType, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed, Schema, SchemaRoot,
-    TypedAssigns, Valencies,
+    validation, Assign, BlindSeal, ContractContainer, ExposedSeal, ExposedState, GlobalState,
+    GlobalValues, OpFullType, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed, Schema,
+    SchemaRoot, TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
-    pub fn validate<'script, C: HistoryApi>(
+    pub fn validate<'script, C: ContractContainer>(
         &self,
         consignment: &C,
         op: OpRef,
@@ -405,7 +404,7 @@ impl<'op> OpInfo<'op> {
     }
 }
 
-fn extract_prev_state<C: HistoryApi>(
+fn extract_prev_state<C: ContractContainer>(
     consignment: &C,
     prev_state: &PrevOuts,
     status: &mut validation::Status,
@@ -491,7 +490,7 @@ fn extract_prev_state<C: HistoryApi>(
         .into()
 }
 
-fn extract_redeemed_valencies<C: HistoryApi>(
+fn extract_redeemed_valencies<C: ContractContainer>(
     consignment: &C,
     redeemed: &Redeemed,
     status: &mut validation::Status,

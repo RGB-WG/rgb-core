@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod apis;
 mod vm;
 mod subschema;
 mod model;
@@ -30,7 +29,6 @@ mod validator;
 use core::iter::FromIterator;
 use core::ops::AddAssign;
 
-pub use apis::{ConsistencyError, ContainerApi, HistoryApi};
 use bp::dbc::anchor;
 use bp::{seals, Txid};
 pub(crate) use model::OpInfo;

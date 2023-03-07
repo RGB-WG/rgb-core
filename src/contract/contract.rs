@@ -24,16 +24,13 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
-use std::collections::BTreeSet;
-
 use bp::dbc::AnchorId;
-use bp::Txid;
 use commit_verify::mpc;
 
 use crate::schema::OwnedStateType;
 use crate::{
-    Anchor, BlindSeal, BundleId, Extension, Genesis, OpId, OpRef, SecretSeal, SubSchema,
-    Transition, TransitionBundle,
+    Anchor, BundleId, Extension, Genesis, OpId, OpRef, SecretSeal, SubSchema, Transition,
+    TransitionBundle,
 };
 
 /// Errors accessing graph data via [`ContainerApi`].
@@ -80,18 +77,26 @@ pub enum ConsistencyError {
 /// these checks must be performed as a separate step before calling any of the
 /// [`ContainerApi`] methods. If the methods are called on
 /// non-validated/unchecked data this may result in returned [`Error`] or
-/// [`Option::None`] values from the API methods.
-pub trait ContainerApi {
-    /// Returns reference to a operation (genesis, state transition or state
+/// [`None`] values from the API methods.
+pub trait ContractContainer {
+    type OpIdIter: Iterator<Item = OpId>;
+    type EndpointIter<'container>: Iterator<Item = (&'container BundleId, &'container SecretSeal)>
+    where Self: 'container;
+    type BundleIter<'container>: Iterator<
+        Item = (&'container Anchor<mpc::MerkleProof>, &'container TransitionBundle),
+    >
+    where Self: 'container;
+    type ExtensionsIter<'container>: Iterator<Item = &'container Extension>
+    where Self: 'container;
+
+    fn schema(&self) -> &SubSchema;
+
+    /// Retrieves reference to a operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
     fn operation<'op>(&self, opid: OpId) -> Option<&'op OpRef<'op>>;
 
-    fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
-
-    fn known_transitions_by_bundle_id(
-        &self,
-        bundle_id: BundleId,
-    ) -> Result<Vec<&Transition>, ConsistencyError>;
+    /// Contract genesis.
+    fn genesis(&self) -> &Genesis;
 
     /// Returns reference to a state transition, if known, matching the provided
     /// id. If id is unknown, or corresponds to other type of the operation
@@ -117,86 +122,6 @@ pub trait ContainerApi {
     ///   from the storage/container
     fn extension(&self, opid: OpId) -> Result<&Extension, ConsistencyError>;
 
-    /// Returns reference to a state transition, like
-    /// [`ContainerApi::transition`], extended with [`Txid`] of the
-    /// witness transaction. If the operation id is unknown, or corresponds to
-    /// other type of the operation (genesis or state extensions) a error is
-    /// returned.
-    ///
-    /// # Errors
-    ///
-    /// - [`Error::WrongNodeType`] when operation is present, but has some other
-    ///   operation type
-    /// - [`Error::TransitionAbsent`] when operation with the given id is absent
-    ///   from the storage/container
-    fn transition_witness(&self, opid: OpId) -> Result<(&Transition, Txid), ConsistencyError>;
-
-    /// Resolves seals closed by a given operation with the given owned rights
-    /// type
-    ///
-    /// # Arguments
-    /// - `opid`: operation identifier closing previously defined
-    ///   single-use-seals
-    /// - `owned_right_type`: type of the owned rights which must be assigned to
-    ///   the closed seals. If seals are present, but have a different type, a
-    ///   error is returned
-    /// - `witness`: witness transaction id, needed for generating full
-    ///   [`bp::Outpoint`] data for single-use-seal definitions providing
-    ///   relative seals to the witness transaction (see [crate::BlindSeal] for
-    ///   the details).
-    ///
-    /// # Returns
-    ///
-    /// Returns a set of bitcoin transaction outpoints, which were defined as
-    /// single-use-seals by RGB contract nodes, which were closed by the
-    /// provided `opid`, and which had an assigned state of type
-    /// `owned_right_type`.
-    ///
-    /// # Errors
-    ///
-    /// - [`Error::TransitionAbsent`], if either `opid` or one of its inputs are
-    ///   not present in the storage or container
-    /// - [`Error::OutputNotPresent`], if parent operation, specified as an
-    ///   input for the `opid` does not contain the output with type
-    ///   `owned_rights_type` and the number referenced by the operation. Means
-    ///   that the data in the container or storage are not valid/consistent.
-    /// - [`Error::NoSealsClosed`], if the `opid` does not closes any of the
-    ///   seals with the provided `owned_rights_type`. Usually means that the
-    ///   logic of the schema class library does not matches the actual schema
-    ///   requirement, or that the container or data storage is not validated
-    ///   against the schema and contains data which do not conform to the
-    ///   schema requirements
-    /// - [`Error::ConfidentialSeal`], if the provided data are present and
-    ///   valid, however container/storage has concealed information about the
-    ///   closed seal, when the revealed data are required
-    fn seals_closed_with(
-        &self,
-        opid: OpId,
-        owned_right_type: impl Into<OwnedStateType>,
-        witness: Txid,
-    ) -> Result<BTreeSet<BlindSeal>, ConsistencyError>;
-}
-
-pub trait HistoryApi: ContainerApi {
-    type OpIdIter: Iterator<Item = OpId>;
-    type EndpointIter<'container>: Iterator<Item = (&'container BundleId, &'container SecretSeal)>
-    where Self: 'container;
-    type BundleIter<'container>: Iterator<
-        Item = (&'container Anchor<mpc::MerkleProof>, &'container TransitionBundle),
-    >
-    where Self: 'container;
-    type ExtensionsIter<'container>: Iterator<Item = &'container Extension>
-    where Self: 'container;
-
-    fn schema(&self) -> &SubSchema;
-
-    /// Genesis data
-    fn genesis(&self) -> &Genesis;
-
-    fn op_ids_except(&self, ids: &impl IntoIterator<Item = OpId>) -> Self::OpIdIter;
-
-    fn has_operation(&self, opid: OpId) -> bool;
-
     /// The final state ("endpoints") provided by this consignment.
     ///
     /// There are two reasons for having endpoints:
@@ -213,4 +138,15 @@ pub trait HistoryApi: ContainerApi {
 
     /// Data on all state extensions contained in the consignment
     fn state_extensions(&self) -> Self::ExtensionsIter<'_>;
+
+    fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
+
+    fn op_ids_except(&self, ids: &impl IntoIterator<Item = OpId>) -> Self::OpIdIter;
+
+    fn has_operation(&self, opid: OpId) -> bool;
+
+    fn known_transitions_by_bundle_id(
+        &self,
+        bundle_id: BundleId,
+    ) -> Result<Vec<&Transition>, ConsistencyError>;
 }
