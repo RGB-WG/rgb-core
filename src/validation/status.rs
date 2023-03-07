@@ -146,29 +146,29 @@ pub enum Failure {
     /// Root schema for this schema has another root, which is prohibited
     SchemaRootHierarchy,
     SchemaRootNoFieldTypeMatch(schema::GlobalStateType),
-    SchemaRootNoOwnedRightTypeMatch(schema::OwnedStateType),
+    SchemaRootNoOwnedRightTypeMatch(schema::AssignmentsType),
     SchemaRootNoPublicRightTypeMatch(schema::ValencyType),
     SchemaRootNoTransitionTypeMatch(schema::TransitionType),
     SchemaRootNoExtensionTypeMatch(schema::ExtensionType),
 
     SchemaRootNoMetadataMatch(OpType, schema::GlobalStateType),
-    SchemaRootNoParentOwnedRightsMatch(OpType, schema::OwnedStateType),
+    SchemaRootNoParentOwnedRightsMatch(OpType, schema::AssignmentsType),
     SchemaRootNoParentPublicRightsMatch(OpType, schema::ValencyType),
-    SchemaRootNoOwnedRightsMatch(OpType, schema::OwnedStateType),
+    SchemaRootNoOwnedRightsMatch(OpType, schema::AssignmentsType),
     SchemaRootNoPublicRightsMatch(OpType, schema::ValencyType),
 
     SchemaUnknownExtensionType(OpId, schema::ExtensionType),
     SchemaUnknownTransitionType(OpId, schema::TransitionType),
     SchemaUnknownFieldType(OpId, schema::GlobalStateType),
-    SchemaUnknownOwnedRightType(OpId, schema::OwnedStateType),
+    SchemaUnknownOwnedRightType(OpId, schema::AssignmentsType),
     SchemaUnknownPublicRightType(OpId, schema::ValencyType),
 
     SchemaDeniedScriptExtension(OpId),
 
     SchemaMetaValueTooSmall(schema::GlobalStateType),
     SchemaMetaValueTooLarge(schema::GlobalStateType),
-    SchemaStateValueTooSmall(schema::OwnedStateType),
-    SchemaStateValueTooLarge(schema::OwnedStateType),
+    SchemaStateValueTooSmall(schema::AssignmentsType),
+    SchemaStateValueTooLarge(schema::AssignmentsType),
 
     SchemaWrongEnumValue {
         field_or_state_type: u16,
@@ -182,8 +182,8 @@ pub enum Failure {
     SchemaMismatchedDataType(u16),
 
     SchemaMetaOccurrencesError(OpId, schema::GlobalStateType, OccurrencesMismatch),
-    SchemaParentOwnedRightOccurrencesError(OpId, schema::OwnedStateType, OccurrencesMismatch),
-    SchemaOwnedRightOccurrencesError(OpId, schema::OwnedStateType, OccurrencesMismatch),
+    SchemaParentOwnedRightOccurrencesError(OpId, schema::AssignmentsType, OccurrencesMismatch),
+    SchemaOwnedRightOccurrencesError(OpId, schema::AssignmentsType, OccurrencesMismatch),
 
     SchemaScriptOverrideDenied,
     SchemaScriptVmChangeDenied,
@@ -206,7 +206,7 @@ pub enum Failure {
     NoPrevState {
         opid: OpId,
         prev_id: OpId,
-        state_type: schema::OwnedStateType,
+        state_type: schema::AssignmentsType,
     },
     /// transition {0} references non-existing previous output {1}.
     NoPrevOut(OpId, Opout),
@@ -245,7 +245,7 @@ pub enum Failure {
     /// it to be {expected}.
     StateTypeMismatch {
         opid: OpId,
-        state_type: schema::OwnedStateType,
+        state_type: schema::AssignmentsType,
         expected: StateType,
         found: StateType,
     },
@@ -253,7 +253,7 @@ pub enum Failure {
     /// it to be {expected}.
     FungibleTypeMismatch {
         opid: OpId,
-        state_type: schema::OwnedStateType,
+        state_type: schema::AssignmentsType,
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },

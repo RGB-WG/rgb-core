@@ -35,8 +35,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::data::VoidState;
 use crate::{
-    attachment, data, fungible, Assign, ContractId, ExposedSeal, ExposedState, Extension, Genesis,
-    GlobalStateType, OpId, Operation, OwnedStateType, SchemaId, Transition, TypedAssigns,
+    attachment, data, fungible, Assign, AssignmentsType, ContractId, ExposedSeal, ExposedState,
+    Extension, Genesis, GlobalStateType, OpId, Operation, SchemaId, Transition, TypedAssigns,
     LIB_NAME_RGB,
 };
 
@@ -53,7 +53,7 @@ use crate::{
 /// output number.
 pub struct Opout {
     pub op: OpId,
-    pub ty: OwnedStateType,
+    pub ty: AssignmentsType,
     pub no: u16,
 }
 
@@ -112,7 +112,7 @@ impl<State: ExposedState> OutputAssignment<State> {
         witness_txid: Txid,
         state: State,
         opid: OpId,
-        ty: OwnedStateType,
+        ty: AssignmentsType,
         no: u16,
     ) -> Self {
         OutputAssignment {
@@ -127,7 +127,7 @@ impl<State: ExposedState> OutputAssignment<State> {
         seal: Seal,
         state: State,
         opid: OpId,
-        ty: OwnedStateType,
+        ty: AssignmentsType,
         no: u16,
     ) -> Self {
         OutputAssignment {
@@ -200,7 +200,7 @@ impl ContractState {
     fn add_operation(&mut self, txid: Option<Txid>, op: &impl Operation) {
         let opid = op.id();
 
-        for (ty, meta) in op.global_state() {
+        for (ty, meta) in op.globals() {
             self.global
                 .entry(opid)
                 .or_default()
@@ -213,7 +213,7 @@ impl ContractState {
             contract_state: &mut BTreeSet<OutputAssignment<State>>,
             assignments: &[Assign<State, Seal>],
             opid: OpId,
-            ty: OwnedStateType,
+            ty: AssignmentsType,
             txid: Option<Txid>,
         ) {
             for (no, seal, state) in assignments
@@ -250,7 +250,7 @@ impl ContractState {
             }
         }
 
-        for (ty, assignments) in op.owned_state().iter() {
+        for (ty, assignments) in op.assignments().iter() {
             match assignments {
                 TypedAssigns::Declarative(assignments) => {
                     process(&mut self.rights, &assignments, opid, *ty, txid)

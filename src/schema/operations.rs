@@ -27,11 +27,12 @@ use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
 use crate::LIB_NAME_RGB;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
-pub type OwnedStateType = u16;
+pub type AssignmentsType = u16;
 pub type ValencyType = u16;
 pub type GlobalSchema = TinyOrdMap<GlobalStateType, Occurrences>;
 pub type ValencySchema = TinyOrdSet<ValencyType>;
-pub type AssignmentSchema = TinyOrdMap<OwnedStateType, Occurrences>;
+pub type InputsSchema = TinyOrdMap<AssignmentsType, Occurrences>;
+pub type AssignmentsSchema = TinyOrdMap<AssignmentsType, Occurrences>;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[cfg_attr(
@@ -89,10 +90,10 @@ impl OpFullType {
 pub trait OpSchema {
     fn op_type(&self) -> OpType;
     fn metadata(&self) -> Option<SemId>;
-    fn global_state(&self) -> &GlobalSchema;
-    fn closes(&self) -> &AssignmentSchema;
+    fn globals(&self) -> &GlobalSchema;
+    fn inputs(&self) -> &InputsSchema;
     fn redeems(&self) -> &ValencySchema;
-    fn owned_state(&self) -> &AssignmentSchema;
+    fn assignments(&self) -> &AssignmentsSchema;
     fn valencies(&self) -> &ValencySchema;
 }
 
@@ -106,8 +107,8 @@ pub trait OpSchema {
 )]
 pub struct GenesisSchema {
     pub metadata: Option<SemId>,
-    pub global_state: GlobalSchema,
-    pub owned_state: AssignmentSchema,
+    pub globals: GlobalSchema,
+    pub assignments: AssignmentsSchema,
     pub valencies: ValencySchema,
 }
 
@@ -121,9 +122,9 @@ pub struct GenesisSchema {
 )]
 pub struct ExtensionSchema {
     pub metadata: Option<SemId>,
-    pub global_state: GlobalSchema,
+    pub globals: GlobalSchema,
     pub redeems: ValencySchema,
-    pub owned_state: AssignmentSchema,
+    pub assignments: AssignmentsSchema,
     pub valencies: ValencySchema,
 }
 
@@ -137,9 +138,9 @@ pub struct ExtensionSchema {
 )]
 pub struct TransitionSchema {
     pub metadata: Option<SemId>,
-    pub global_state: GlobalSchema,
-    pub closes: AssignmentSchema,
-    pub owned_state: AssignmentSchema,
+    pub globals: GlobalSchema,
+    pub inputs: InputsSchema,
+    pub assignments: AssignmentsSchema,
     pub valencies: ValencySchema,
 }
 
@@ -149,15 +150,16 @@ impl OpSchema for GenesisSchema {
     #[inline]
     fn metadata(&self) -> Option<SemId> { self.metadata }
     #[inline]
-    fn global_state(&self) -> &GlobalSchema { &self.global_state }
+    fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
-    fn closes(&self) -> &AssignmentSchema {
+    fn inputs(&self) -> &AssignmentsSchema {
+        // TODO: Remove method
         panic!("genesis can't close previous single-use-seals")
     }
     #[inline]
     fn redeems(&self) -> &ValencySchema { panic!("genesis can't redeem valencies") }
     #[inline]
-    fn owned_state(&self) -> &AssignmentSchema { &self.owned_state }
+    fn assignments(&self) -> &AssignmentsSchema { &self.assignments }
     #[inline]
     fn valencies(&self) -> &ValencySchema { &self.valencies }
 }
@@ -168,15 +170,15 @@ impl OpSchema for ExtensionSchema {
     #[inline]
     fn metadata(&self) -> Option<SemId> { self.metadata }
     #[inline]
-    fn global_state(&self) -> &GlobalSchema { &self.global_state }
+    fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
-    fn closes(&self) -> &AssignmentSchema {
+    fn inputs(&self) -> &AssignmentsSchema {
         panic!("extension can't close previous single-use-seals")
     }
     #[inline]
     fn redeems(&self) -> &ValencySchema { &self.redeems }
     #[inline]
-    fn owned_state(&self) -> &AssignmentSchema { &self.owned_state }
+    fn assignments(&self) -> &AssignmentsSchema { &self.assignments }
     #[inline]
     fn valencies(&self) -> &ValencySchema { &self.valencies }
 }
@@ -187,13 +189,13 @@ impl OpSchema for TransitionSchema {
     #[inline]
     fn metadata(&self) -> Option<SemId> { self.metadata }
     #[inline]
-    fn global_state(&self) -> &GlobalSchema { &self.global_state }
+    fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
-    fn closes(&self) -> &AssignmentSchema { &self.closes }
+    fn inputs(&self) -> &AssignmentsSchema { &self.inputs }
     #[inline]
     fn redeems(&self) -> &ValencySchema { panic!("state transitions can't redeem valencies") }
     #[inline]
-    fn owned_state(&self) -> &AssignmentSchema { &self.owned_state }
+    fn assignments(&self) -> &AssignmentsSchema { &self.assignments }
     #[inline]
     fn valencies(&self) -> &ValencySchema { &self.valencies }
 }

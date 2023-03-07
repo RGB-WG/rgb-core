@@ -31,7 +31,7 @@ use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSeria
 use strict_types::TypeSystem;
 
 use super::{
-    ExtensionSchema, GenesisSchema, OwnedStateType, Script, StateSchema, TransitionSchema,
+    AssignmentsType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
     ValencyType,
 };
 use crate::{Ffv, GlobalStateSchema, LIB_NAME_RGB};
@@ -95,7 +95,7 @@ pub struct Schema<Root: SchemaRoot> {
     pub subset_of: Option<Root>,
 
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
-    pub owned_types: TinyOrdMap<OwnedStateType, StateSchema>,
+    pub owned_types: TinyOrdMap<AssignmentsType, StateSchema>,
     pub valency_types: TinyOrdSet<ValencyType>,
     pub genesis: GenesisSchema,
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,

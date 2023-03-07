@@ -103,7 +103,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 let opid = transition.id();
                 // Checking for endpoint definition duplicates
                 if !transition
-                    .owned_state()
+                    .assignments
                     .values()
                     .flat_map(TypedAssigns::to_confidential_seals)
                     .any(|seal| seal == *seal_endpoint)
@@ -305,7 +305,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     }
 
                     // Now, we must collect all parent nodes and add them to the verification queue
-                    let parent_nodes = transition.prev_state.iter().filter_map(|(prev_id, _)| {
+                    let parent_nodes = transition.inputs.iter().filter_map(|(prev_id, _)| {
                         self.consignment.operation(*prev_id).or_else(|| {
                             // This will not actually happen since we already checked that each
                             // ancestor reference has a corresponding
@@ -388,7 +388,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // Checking that witness transaction closes seals defined by transition previous
         // outputs.
         let mut seals = vec![];
-        for (prev_id, prev_outs) in &transition.prev_state {
+        for (prev_id, prev_outs) in &transition.inputs {
             let prev_id = *prev_id;
             let Some(prev_op) = self.consignment.operation(prev_id) else {
                 // Node, referenced as the ancestor, was not found in the consignment. 
@@ -401,7 +401,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             for (state_type, outs) in prev_outs {
                 let state_type = *state_type;
 
-                let Some(variant) = prev_op.owned_state_by_type(state_type) else {
+                let Some(variant) = prev_op.assignments_by_type(state_type) else {
                     self.status.add_failure(Failure::NoPrevState { opid, prev_id, state_type });
                     continue
                 };

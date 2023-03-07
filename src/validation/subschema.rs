@@ -105,8 +105,8 @@ where T: OpSchema
         let mut status = validation::Status::new();
         let node_type = self.op_type();
 
-        for (field_type, occ) in self.global_state() {
-            match root.global_state().get(field_type) {
+        for (field_type, occ) in self.globals() {
+            match root.globals().get(field_type) {
                 None => status.add_failure(validation::Failure::SchemaRootNoMetadataMatch(
                     node_type,
                     *field_type,
@@ -118,8 +118,8 @@ where T: OpSchema
             };
         }
 
-        for (assignments_type, occ) in self.closes() {
-            match root.closes().get(assignments_type) {
+        for (assignments_type, occ) in self.inputs() {
+            match root.inputs().get(assignments_type) {
                 None => {
                     status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
                         node_type,
@@ -136,8 +136,8 @@ where T: OpSchema
             };
         }
 
-        for (assignments_type, occ) in self.owned_state() {
-            match root.owned_state().get(assignments_type) {
+        for (assignments_type, occ) in self.assignments() {
+            match root.assignments().get(assignments_type) {
                 None => status.add_failure(validation::Failure::SchemaRootNoOwnedRightsMatch(
                     node_type,
                     *assignments_type,

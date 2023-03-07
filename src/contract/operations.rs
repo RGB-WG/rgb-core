@@ -36,12 +36,12 @@ use super::{GlobalState, TypedAssigns};
 use crate::contract::seal::SingleBlindSeal;
 use crate::contract::Opout;
 use crate::schema::{
-    self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
+    self, AssignmentsType, ExtensionType, OpFullType, OpType, SchemaId, TransitionType,
 };
 use crate::{ChainBlindSeal, ExposedSeal, Ffv, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
-pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
+pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentsType, TinyVec<u16>>>;
 pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
@@ -58,14 +58,14 @@ pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
                  serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
-pub struct OwnedState<Seal>(TinyOrdMap<schema::OwnedStateType, TypedAssigns<Seal>>)
+pub struct Assignments<Seal>(TinyOrdMap<schema::AssignmentsType, TypedAssigns<Seal>>)
 where Seal: ExposedSeal;
 
-impl<Seal: ExposedSeal> Default for OwnedState<Seal> {
+impl<Seal: ExposedSeal> Default for Assignments<Seal> {
     fn default() -> Self { Self(empty!()) }
 }
 
-impl<Seal: ExposedSeal> CommitEncode for OwnedState<Seal> {
+impl<Seal: ExposedSeal> CommitEncode for Assignments<Seal> {
     fn commit_encode(&self, mut e: &mut impl Write) {
         let w = StrictWriter::with(u32::MAX as usize, &mut e);
         self.0.len_u8().strict_encode(w).ok();
@@ -171,12 +171,11 @@ pub trait Operation {
 
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract operation.
-    fn global_state(&self) -> &GlobalState;
-    fn owned_state(&self) -> &OwnedState<Self::Seal>;
+    fn globals(&self) -> &GlobalState;
     fn valencies(&self) -> &Valencies;
 
-    fn owned_state_by_type(&self, t: OwnedStateType) -> Option<&TypedAssigns<Self::Seal>> {
-        self.owned_state()
+    fn assignments_by_type(&self, t: AssignmentsType) -> Option<&TypedAssigns<Self::Seal>> {
+        self.assignments()
             .iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
     }
@@ -200,8 +199,8 @@ pub struct Genesis {
     pub schema_id: SchemaId,
     pub chain: Chain,
     pub metadata: Option<SmallBlob>,
-    pub global_state: GlobalState,
-    pub owned_state: OwnedState<SingleBlindSeal>,
+    pub globals: GlobalState,
+    pub assignments: Assignments<SingleBlindSeal>,
     pub valencies: Valencies,
 }
 
@@ -218,8 +217,8 @@ pub struct Extension {
     pub extension_type: ExtensionType,
     pub contract_id: ContractId,
     pub metadata: Option<SmallBlob>,
-    pub global_state: GlobalState,
-    pub owned_state: OwnedState<SingleBlindSeal>,
+    pub globals: GlobalState,
+    pub assignments: Assignments<SingleBlindSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
 }
@@ -236,9 +235,9 @@ pub struct Transition {
     pub ffv: Ffv,
     pub transition_type: TransitionType,
     pub metadata: Option<SmallBlob>,
-    pub global_state: GlobalState,
-    pub prev_state: PrevOuts,
-    pub owned_state: OwnedState<ChainBlindSeal>,
+    pub globals: GlobalState,
+    pub inputs: PrevOuts,
+    pub assignments: Assignments<ChainBlindSeal>,
     pub valencies: Valencies,
 }
 
@@ -287,7 +286,7 @@ impl Transition {
     /// Returns reference to information about the owned rights in form of
     /// [`PrevOuts`] wrapper structure which this operation updates with
     /// state transition ("parent owned rights").
-    pub fn prev_state(&self) -> &PrevOuts { &self.prev_state }
+    pub fn prev_state(&self) -> &PrevOuts { &self.inputs }
 }
 
 impl Extension {
@@ -324,10 +323,7 @@ impl Operation for Genesis {
     fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
 
     #[inline]
-    fn global_state(&self) -> &GlobalState { &self.global_state }
-
-    #[inline]
-    fn owned_state(&self) -> &OwnedState<Self::Seal> { &self.owned_state }
+    fn globals(&self) -> &GlobalState { &self.globals }
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
@@ -358,10 +354,7 @@ impl Operation for Extension {
     fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
 
     #[inline]
-    fn global_state(&self) -> &GlobalState { &self.global_state }
-
-    #[inline]
-    fn owned_state(&self) -> &OwnedState<Self::Seal> { &self.owned_state }
+    fn globals(&self) -> &GlobalState { &self.globals }
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
@@ -392,16 +385,13 @@ impl Operation for Transition {
     fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
 
     #[inline]
-    fn global_state(&self) -> &GlobalState { &self.global_state }
-
-    #[inline]
-    fn owned_state(&self) -> &OwnedState<Self::Seal> { &self.owned_state }
+    fn globals(&self) -> &GlobalState { &self.globals }
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
 
     fn prev_outs(&self) -> Vec<Opout> {
-        self.prev_state
+        self.inputs
             .iter()
             .flat_map(|(op, map)| {
                 let op = *op;
@@ -471,19 +461,11 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn global_state(&self) -> &GlobalState {
+    fn globals(&self) -> &GlobalState {
         match self {
-            OpRef::Genesis(op) => op.global_state(),
-            OpRef::Transition(op) => op.global_state(),
-            OpRef::Extension(op) => op.global_state(),
-        }
-    }
-
-    fn owned_state(&self) -> &OwnedState<Self::Seal> {
-        match self {
-            OpRef::Genesis(op) => op.owned_state(),
-            OpRef::Transition(op) => op.owned_state(),
-            OpRef::Extension(op) => op.owned_state(),
+            OpRef::Genesis(op) => op.globals(),
+            OpRef::Transition(op) => op.globals(),
+            OpRef::Extension(op) => op.globals(),
         }
     }
 

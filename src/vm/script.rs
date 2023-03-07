@@ -33,7 +33,7 @@ use strict_encoding::{
 };
 
 use crate::vm::RgbIsa;
-use crate::{ExtensionType, GlobalStateType, OwnedStateType, TransitionType, LIB_NAME_RGB};
+use crate::{AssignmentsType, ExtensionType, GlobalStateType, TransitionType, LIB_NAME_RGB};
 
 /// Maximum total number of libraries which may be used by a single program;
 /// i.e. maximal number of nodes in a library dependency tree.
@@ -53,7 +53,7 @@ pub enum EntryPoint {
     ValidateTransition(TransitionType),
     ValidateExtension(ExtensionType),
     ValidateGlobalState(GlobalStateType),
-    ValidateOwnedState(OwnedStateType),
+    ValidateOwnedState(AssignmentsType),
 }
 
 impl StrictType for EntryPoint {
