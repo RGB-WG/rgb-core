@@ -179,6 +179,11 @@ pub trait Operation {
             .iter()
             .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
     }
+
+    /// For genesis and public state extensions always returns an empty list.
+    /// While public state extension do have parent nodes, they do not contain
+    /// indexed rights.
+    fn prev_outs(&self) -> Vec<Opout>;
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -325,6 +330,9 @@ impl Operation for Genesis {
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
+
+    #[inline]
+    fn prev_outs(&self) -> Vec<Opout> { empty!() }
 }
 
 impl Operation for Extension {
@@ -356,6 +364,9 @@ impl Operation for Extension {
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
+
+    #[inline]
+    fn prev_outs(&self) -> Vec<Opout> { empty!() }
 }
 
 impl Operation for Transition {
@@ -387,6 +398,18 @@ impl Operation for Transition {
 
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
+
+    fn prev_outs(&self) -> Vec<Opout> {
+        self.prev_state
+            .iter()
+            .flat_map(|(op, map)| {
+                let op = *op;
+                map.iter()
+                    .flat_map(|(ty, vec)| vec.iter().map(|no| (*ty, *no)))
+                    .map(move |(ty, no)| Opout { op, ty, no })
+            })
+            .collect()
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -468,6 +491,14 @@ impl<'op> Operation for OpRef<'op> {
             OpRef::Genesis(op) => op.valencies(),
             OpRef::Transition(op) => op.valencies(),
             OpRef::Extension(op) => op.valencies(),
+        }
+    }
+
+    fn prev_outs(&self) -> Vec<Opout> {
+        match self {
+            OpRef::Genesis(op) => op.prev_outs(),
+            OpRef::Transition(op) => op.prev_outs(),
+            OpRef::Extension(op) => op.prev_outs(),
         }
     }
 }

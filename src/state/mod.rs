@@ -231,7 +231,7 @@ impl ContractState {
         }
 
         // Remove invalidated state
-        for output in op.parent_outputs() {
+        for output in op.prev_outs() {
             if let Some(o) = self.rights.iter().find(|r| r.opout == output) {
                 let o = o.clone(); // need this b/c of borrow checker
                 self.rights.remove(&o);
