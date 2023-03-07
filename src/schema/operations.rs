@@ -91,8 +91,8 @@ pub trait OpSchema {
     fn op_type(&self) -> OpType;
     fn metadata(&self) -> Option<SemId>;
     fn globals(&self) -> &GlobalSchema;
-    fn inputs(&self) -> &InputsSchema;
-    fn redeems(&self) -> &ValencySchema;
+    fn inputs(&self) -> Option<&InputsSchema>;
+    fn redeems(&self) -> Option<&ValencySchema>;
     fn assignments(&self) -> &AssignmentsSchema;
     fn valencies(&self) -> &ValencySchema;
 }
@@ -152,12 +152,9 @@ impl OpSchema for GenesisSchema {
     #[inline]
     fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
-    fn inputs(&self) -> &AssignmentsSchema {
-        // TODO: Remove method
-        panic!("genesis can't close previous single-use-seals")
-    }
+    fn inputs(&self) -> Option<&InputsSchema> { None }
     #[inline]
-    fn redeems(&self) -> &ValencySchema { panic!("genesis can't redeem valencies") }
+    fn redeems(&self) -> Option<&ValencySchema> { None }
     #[inline]
     fn assignments(&self) -> &AssignmentsSchema { &self.assignments }
     #[inline]
@@ -172,11 +169,9 @@ impl OpSchema for ExtensionSchema {
     #[inline]
     fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
-    fn inputs(&self) -> &AssignmentsSchema {
-        panic!("extension can't close previous single-use-seals")
-    }
+    fn inputs(&self) -> Option<&InputsSchema> { None }
     #[inline]
-    fn redeems(&self) -> &ValencySchema { &self.redeems }
+    fn redeems(&self) -> Option<&ValencySchema> { Some(&self.redeems) }
     #[inline]
     fn assignments(&self) -> &AssignmentsSchema { &self.assignments }
     #[inline]
@@ -191,9 +186,9 @@ impl OpSchema for TransitionSchema {
     #[inline]
     fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
-    fn inputs(&self) -> &AssignmentsSchema { &self.inputs }
+    fn inputs(&self) -> Option<&AssignmentsSchema> { Some(&self.inputs) }
     #[inline]
-    fn redeems(&self) -> &ValencySchema { panic!("state transitions can't redeem valencies") }
+    fn redeems(&self) -> Option<&ValencySchema> { None }
     #[inline]
     fn assignments(&self) -> &AssignmentsSchema { &self.assignments }
     #[inline]

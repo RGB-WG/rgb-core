@@ -118,22 +118,25 @@ where T: OpSchema
             };
         }
 
-        for (assignments_type, occ) in self.inputs() {
-            match root.inputs().get(assignments_type) {
-                None => {
-                    status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
-                        node_type,
-                        *assignments_type,
-                    ))
-                }
-                Some(root_occ) if occ != root_occ => {
-                    status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
-                        node_type,
-                        *assignments_type,
-                    ))
-                }
-                _ => &status,
-            };
+        if let Some(inputs) = self.inputs() {
+            let root_inputs = root.inputs().expect("generic guarantees");
+            for (assignments_type, occ) in inputs {
+                match root_inputs.get(assignments_type) {
+                    None => {
+                        status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
+                            node_type,
+                            *assignments_type,
+                        ))
+                    }
+                    Some(root_occ) if occ != root_occ => {
+                        status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
+                            node_type,
+                            *assignments_type,
+                        ))
+                    }
+                    _ => &status,
+                };
+            }
         }
 
         for (assignments_type, occ) in self.assignments() {
@@ -149,12 +152,15 @@ where T: OpSchema
             };
         }
 
-        for valencies_type in self.redeems() {
-            if !root.redeems().contains(valencies_type) {
-                status.add_failure(validation::Failure::SchemaRootNoParentPublicRightsMatch(
-                    node_type,
-                    *valencies_type,
-                ));
+        if let Some(redeems) = self.redeems() {
+            let root_redeems = root.redeems().expect("generic guarantees");
+            for valencies_type in redeems {
+                if !root_redeems.contains(valencies_type) {
+                    status.add_failure(validation::Failure::SchemaRootNoParentPublicRightsMatch(
+                        node_type,
+                        *valencies_type,
+                    ));
+                }
             }
         }
 
