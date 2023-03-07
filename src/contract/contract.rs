@@ -403,8 +403,8 @@ impl ContractHistory {
     }
 }
 
-/// Contract state is an in-memory structure providing API to read structured
-/// data from the [`ContractHistory`].
+/// Contract state provides API to read consensus-valid data from the
+/// [`ContractHistory`].
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
