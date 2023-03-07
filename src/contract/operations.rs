@@ -26,7 +26,7 @@ use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet, TinyVec};
 use amplify::hex::{FromHex, ToHex};
-use amplify::{hex, AsAny, Bytes32, RawArray, Wrapper};
+use amplify::{hex, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
 use commit_verify::{mpc, CommitEncode, CommitStrategy, CommitmentId};
@@ -36,6 +36,7 @@ use super::{GlobalState, TypedAssigns};
 use crate::schema::{
     self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
+use crate::state::Opout;
 use crate::{seal, Ffv, RevealedSeal, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
@@ -140,7 +141,7 @@ impl From<ContractId> for mpc::ProtocolId {
 /// - Genesis ([`Genesis`])
 /// - State transitions ([`Transitions`])
 /// - Public state extensions ([`Extensions`])
-pub trait Operation: AsAny {
+pub trait Operation {
     type Seal: RevealedSeal;
 
     /// Returns type of the operation (see [`OpType`]). Unfortunately, this
@@ -180,7 +181,7 @@ pub trait Operation: AsAny {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -198,7 +199,7 @@ pub struct Genesis {
     pub valencies: Valencies,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -217,7 +218,7 @@ pub struct Extension {
     pub valencies: Valencies,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -388,7 +389,7 @@ impl Operation for Transition {
     fn valencies(&self) -> &Valencies { &self.valencies }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum OpRef<'op> {
     Genesis(&'op Genesis),
     Transition(&'op Transition),

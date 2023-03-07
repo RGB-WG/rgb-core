@@ -96,7 +96,7 @@ pub trait OpSchema {
     fn valencies(&self) -> &ValencySchema;
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -111,7 +111,7 @@ pub struct GenesisSchema {
     pub valencies: ValencySchema,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -127,7 +127,7 @@ pub struct ExtensionSchema {
     pub valencies: ValencySchema,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
