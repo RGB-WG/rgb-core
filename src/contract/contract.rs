@@ -22,13 +22,13 @@
 
 //! Extraction of contract state.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-use amplify::confinement::{Confined, U64};
+use amplify::confinement::{LargeOrdMap, LargeOrdSet, TinyOrdMap};
 use amplify::hex;
 use bp::seals::txout::TxoSeal;
 use bp::{Outpoint, Txid};
@@ -37,12 +37,9 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::data::VoidState;
 use crate::{
     attachment, data, fungible, Assign, Assignments, AssignmentsRef, AssignmentsType, ContractId,
-    ExposedSeal, ExposedState, Extension, Genesis, GlobalState, OpId, Operation, SchemaId,
+    ExposedSeal, ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, SchemaId,
     Transition, TypedAssigns, LIB_NAME_RGB,
 };
-
-pub type HugeSet<T> = Confined<BTreeSet<T>, 0, U64>;
-pub type HugeMap<K, V> = Confined<BTreeMap<K, V>, 0, U64>;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -96,7 +93,7 @@ impl FromStr for Opout {
     }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -108,6 +105,29 @@ pub struct OutputAssignment<State: ExposedState> {
     pub opout: Opout,
     pub seal: Outpoint,
     pub state: State,
+}
+
+impl<State: ExposedState> PartialEq for OutputAssignment<State> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.opout == other.opout {
+            debug_assert_eq!(self.seal, other.seal);
+            debug_assert_eq!(self.state, other.state);
+        }
+        self.opout == other.opout
+    }
+}
+
+impl<State: ExposedState> PartialOrd for OutputAssignment<State> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl<State: ExposedState> Ord for OutputAssignment<State> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self == other {
+            return Ordering::Equal;
+        }
+        self.opout.cmp(&other.opout)
+    }
 }
 
 impl<State: ExposedState> OutputAssignment<State> {
@@ -143,11 +163,62 @@ impl<State: ExposedState> OutputAssignment<State> {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[display("{height}/{txid}/{idx}")]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct GlobalIdx {
+    pub height: u32,
+    pub txid: Txid,
+    pub idx: u16,
+}
+
+impl PartialOrd for GlobalIdx {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for GlobalIdx {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self == other {
+            return Ordering::Equal;
+        }
+        if self.height != other.height {
+            return self.height.cmp(&other.height);
+        }
+        if self.txid != other.txid {
+            return self.txid.cmp(&other.txid);
+        }
+        self.idx.cmp(&other.idx)
+    }
+}
+
+impl GlobalIdx {
+    pub fn new(height: u32, txid: Txid, idx: u16) -> Self { GlobalIdx { height, txid, idx } }
+    pub fn genesis(idx: u16) -> Self {
+        GlobalIdx {
+            height: 0,
+            txid: Txid::from([0x00; 32]),
+            idx,
+        }
+    }
+}
+
 pub type RightsOutput = OutputAssignment<VoidState>;
 pub type FungibleOutput = OutputAssignment<fungible::Revealed>;
 pub type DataOutput = OutputAssignment<data::Revealed>;
 pub type AttachOutput = OutputAssignment<attachment::Revealed>;
 
+/// Contract history accumulates raw data from the contract history, extracted
+/// from a series of consignments over the time. It does consensus ordering of
+/// the state data, but it doesn't interpret or validates the state against the
+/// schema.
+///
+/// To access the valid contract state use [`Contract`] APIs.
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -156,25 +227,29 @@ pub type AttachOutput = OutputAssignment<attachment::Revealed>;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct ContractState {
-    pub schema_id: SchemaId,
-    pub root_schema_id: Option<SchemaId>,
-    pub contract_id: ContractId,
-    pub global: HugeMap<OpId, GlobalState>,
-    pub rights: HugeSet<RightsOutput>,
-    pub fungibles: HugeSet<FungibleOutput>,
-    pub data: HugeSet<DataOutput>,
-    pub attach: HugeSet<AttachOutput>,
+pub struct ContractHistory {
+    schema_id: SchemaId,
+    root_schema_id: Option<SchemaId>,
+    contract_id: ContractId,
+    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalIdx, data::Revealed>>,
+    rights: LargeOrdSet<RightsOutput>,
+    fungibles: LargeOrdSet<FungibleOutput>,
+    data: LargeOrdSet<DataOutput>,
+    attach: LargeOrdSet<AttachOutput>,
 }
 
-impl ContractState {
+impl ContractHistory {
+    /// # Panics
+    ///
+    /// If genesis violates RGB consensus rules and wasn't checked against the
+    /// schema before adding to the history.
     pub fn with(
         schema_id: SchemaId,
         root_schema_id: Option<SchemaId>,
         contract_id: ContractId,
         genesis: &Genesis,
     ) -> Self {
-        let mut state = ContractState {
+        let mut state = ContractHistory {
             schema_id,
             root_schema_id,
             contract_id,
@@ -184,33 +259,60 @@ impl ContractState {
             data: empty!(),
             attach: empty!(),
         };
-        state.add_operation(None, genesis);
+        state.update_genesis(genesis);
         state
     }
 
-    pub fn add_transition(&mut self, txid: Txid, transition: &Transition) {
-        self.add_operation(Some(txid), transition);
+    /// # Panics
+    ///
+    /// If genesis violates RGB consensus rules and wasn't checked against the
+    /// schema before adding to the history.
+    pub fn update_genesis(&mut self, genesis: &Genesis) { self.add_operation(None, genesis, None); }
+
+    /// # Panics
+    ///
+    /// If state transition violates RGB consensus rules and wasn't checked
+    /// against the schema before adding to the history.
+    pub fn add_transition(&mut self, transition: &Transition, txid: Txid, height: u32) {
+        self.add_operation(Some(txid), transition, Some((txid, height)));
     }
 
-    pub fn add_extension(&mut self, extension: &Extension) { self.add_operation(None, extension); }
+    /// # Panics
+    ///
+    /// If state extension violates RGB consensus rules and wasn't checked
+    /// against the schema before adding to the history.
+    pub fn add_extension(&mut self, extension: &Extension, txid: Txid, height: u32) {
+        self.add_operation(None, extension, Some((txid, height)));
+    }
 
-    fn add_operation(&mut self, txid: Option<Txid>, op: &impl Operation) {
+    fn add_operation(
+        &mut self,
+        witness_txid: Option<Txid>,
+        op: &impl Operation,
+        ordering: Option<(Txid, u32)>,
+    ) {
         let opid = op.id();
 
         for (ty, state) in op.globals() {
-            let map = match self.global.get_mut(&opid) {
+            let map = match self.global.get_mut(ty) {
                 Some(map) => map,
                 None => {
-                    // TODO: Do not panic here
-                    self.global
-                        .insert(opid, GlobalState::default())
-                        .expect("must be protected by the schema");
-                    self.global.get_mut(&opid).expect("just inserted")
+                    // TODO: Do not panic here if we merge without checking against the schema
+                    self.global.insert(*ty, empty!()).expect(
+                        "consensus rules violation: do not add to the state consignments without \
+                         validation against the schema",
+                    );
+                    self.global.get_mut(ty).expect("just inserted")
                 }
             };
-            // TODO: Remove excessive state
-            map.extend_state(*ty, state.clone())
-                .expect("excessive global state must be removed");
+            for (idx, s) in state.iter().enumerate() {
+                let idx = idx as u16;
+                let glob_idx = ordering
+                    .map(|(txid, height)| GlobalIdx::new(height, txid, idx))
+                    .unwrap_or_else(|| GlobalIdx::genesis(idx));
+                map.insert(glob_idx, s.clone())
+                    .expect("contract global state exceeded 2^32 items, which is unrealistic");
+            }
         }
 
         // Remove invalidated state
@@ -242,19 +344,23 @@ impl ContractState {
         }
 
         match op.assignments() {
-            AssignmentsRef::Genesis(assignments) => self.add_assignments(txid, opid, assignments),
-            AssignmentsRef::Graph(assignments) => self.add_assignments(txid, opid, assignments),
+            AssignmentsRef::Genesis(assignments) => {
+                self.add_assignments(witness_txid, opid, assignments)
+            }
+            AssignmentsRef::Graph(assignments) => {
+                self.add_assignments(witness_txid, opid, assignments)
+            }
         }
     }
 
     fn add_assignments<Seal: ExposedSeal>(
         &mut self,
-        txid: Option<Txid>,
+        witness_txid: Option<Txid>,
         opid: OpId,
         assignments: &Assignments<Seal>,
     ) {
         fn process<State: ExposedState, Seal: ExposedSeal>(
-            contract_state: &mut HugeSet<OutputAssignment<State>>,
+            contract_state: &mut LargeOrdSet<OutputAssignment<State>>,
             assignments: &[Assign<State, Seal>],
             opid: OpId,
             ty: AssignmentsType,
@@ -272,23 +378,23 @@ impl ContractState {
                 };
                 contract_state
                     .push(assigned_state)
-                    .expect("contract state exceeded 2^64 number of items, which is unrealistic");
+                    .expect("contract state exceeded 2^32 items, which is unrealistic");
             }
         }
 
         for (ty, assignments) in assignments.iter() {
             match assignments {
                 TypedAssigns::Declarative(assignments) => {
-                    process(&mut self.rights, &assignments, opid, *ty, txid)
+                    process(&mut self.rights, &assignments, opid, *ty, witness_txid)
                 }
                 TypedAssigns::Fungible(assignments) => {
-                    process(&mut self.fungibles, &assignments, opid, *ty, txid)
+                    process(&mut self.fungibles, &assignments, opid, *ty, witness_txid)
                 }
                 TypedAssigns::Structured(assignments) => {
-                    process(&mut self.data, &assignments, opid, *ty, txid)
+                    process(&mut self.data, &assignments, opid, *ty, witness_txid)
                 }
                 TypedAssigns::Attachment(assignments) => {
-                    process(&mut self.attach, &assignments, opid, *ty, txid)
+                    process(&mut self.attach, &assignments, opid, *ty, witness_txid)
                 }
             }
         }

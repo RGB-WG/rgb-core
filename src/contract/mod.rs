@@ -38,7 +38,7 @@ pub use assignments::{
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
 pub use contract::{
-    AttachOutput, ContractState, DataOutput, FungibleOutput, Opout, OpoutParseError,
+    AttachOutput, ContractHistory, DataOutput, FungibleOutput, Opout, OpoutParseError,
     OutputAssignment, RightsOutput,
 };
 pub use fungible::{
