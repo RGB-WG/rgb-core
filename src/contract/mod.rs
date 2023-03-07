@@ -20,23 +20,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO: Move into seals mod with extensive documentation
 pub use bp::seals::txout::blind::{BlindSeal, SecretSeal};
 
+mod global;
+pub mod data;
 pub mod fungible;
 pub mod attachment;
-pub mod data;
+mod state;
 pub mod assignment;
-mod global;
 mod operations;
 mod bundle;
 mod contract;
 
 pub use assignment::{
-    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateCommitment, StateData,
-    StateType, TypedAssigns,
+    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, TypedAssigns,
 };
 pub use attachment::AttachId;
-use bp::seals::txout::TxoSeal;
 pub use bundle::{BundleId, TransitionBundle};
 pub use contract::{
     AttachOutput, ContractState, DataOutput, FungibleOutput, Opout, OpoutParseError,
@@ -51,38 +51,9 @@ pub use operations::{
     ContractId, Extension, Genesis, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed,
     Transition, Valencies,
 };
+pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 
-/// Marker trait for types of state which are just a commitment to the actual
-/// state data.
-pub trait ConfidentialState:
-    core::fmt::Debug
-    + core::hash::Hash
-    + strict_encoding::StrictDumb
-    + strict_encoding::StrictEncode
-    + strict_encoding::StrictDecode
-    + Eq
-    + Copy
-{
-    fn state_type(&self) -> StateType;
-    fn state_commitment(&self) -> StateCommitment;
-}
-
-/// Marker trait for types of state holding explicit state data.
-pub trait ExposedState:
-    core::fmt::Debug
-    + strict_encoding::StrictDumb
-    + strict_encoding::StrictEncode
-    + strict_encoding::StrictDecode
-    + commit_verify::Conceal<Concealed = Self::Confidential>
-    + Eq
-    + Ord
-    + Clone
-{
-    type Confidential: ConfidentialState;
-    fn state_type(&self) -> StateType;
-    fn state_data(&self) -> StateData;
-}
-
+// TODO: Move into seals mod with extensive documentation
 pub trait ConfidentialSeal:
     core::fmt::Debug
     + core::hash::Hash
@@ -104,7 +75,7 @@ pub trait ExposedSeal:
     + Eq
     + Ord
     + Copy
-    + TxoSeal
+    + bp::seals::txout::TxoSeal
 {
     type Confidential: ConfidentialSeal;
 }
