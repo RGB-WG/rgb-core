@@ -33,11 +33,12 @@ use commit_verify::{mpc, CommitEncode, CommitStrategy, CommitmentId};
 use strict_encoding::{StrictEncode, StrictWriter};
 
 use super::{GlobalState, TypedAssigns};
+use crate::contract::seal::SingleBlindSeal;
 use crate::contract::Opout;
 use crate::schema::{
     self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
-use crate::{BlindSeal, ExposedSeal, Ffv, LIB_NAME_RGB};
+use crate::{ChainBlindSeal, ExposedSeal, Ffv, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
@@ -200,7 +201,7 @@ pub struct Genesis {
     pub chain: Chain,
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
-    pub owned_state: OwnedState<BlindSeal>,
+    pub owned_state: OwnedState<SingleBlindSeal>,
     pub valencies: Valencies,
 }
 
@@ -218,7 +219,7 @@ pub struct Extension {
     pub contract_id: ContractId,
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
-    pub owned_state: OwnedState<BlindSeal>,
+    pub owned_state: OwnedState<SingleBlindSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
 }
@@ -237,7 +238,7 @@ pub struct Transition {
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
     pub prev_state: PrevOuts,
-    pub owned_state: OwnedState<BlindSeal>,
+    pub owned_state: OwnedState<ChainBlindSeal>,
     pub valencies: Valencies,
 }
 
@@ -302,7 +303,7 @@ impl Extension {
 }
 
 impl Operation for Genesis {
-    type Seal = BlindSeal;
+    type Seal = SingleBlindSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::Genesis }
@@ -336,7 +337,7 @@ impl Operation for Genesis {
 }
 
 impl Operation for Extension {
-    type Seal = BlindSeal;
+    type Seal = SingleBlindSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateExtension }
@@ -370,7 +371,7 @@ impl Operation for Extension {
 }
 
 impl Operation for Transition {
-    type Seal = BlindSeal;
+    type Seal = ChainBlindSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateTransition }
@@ -420,7 +421,7 @@ pub enum OpRef<'op> {
 }
 
 impl<'op> Operation for OpRef<'op> {
-    type Seal = BlindSeal;
+    type Seal = ChainBlindSeal;
 
     fn op_type(&self) -> OpType {
         match self {
