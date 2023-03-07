@@ -32,8 +32,8 @@ use commit_verify::mpc;
 
 use crate::schema::OwnedStateType;
 use crate::{
-    seal, Anchor, BundleId, Extension, Genesis, OpId, OpRef, SubSchema, Transition,
-    TransitionBundle,
+    Anchor, BundleId, ConcealedSeal, Extension, Genesis, OpId, OpRef, RevealedSeal, SubSchema,
+    Transition, TransitionBundle,
 };
 
 /// Errors accessing graph data via [`ContainerApi`].
@@ -142,7 +142,7 @@ pub trait ContainerApi {
     ///   error is returned
     /// - `witness`: witness transaction id, needed for generating full
     ///   [`bp::Outpoint`] data for single-use-seal definitions providing
-    ///   relative seals to the witness transaction (see [crate::seal::Revealed]
+    ///   relative seals to the witness transaction (see [crate::RevealedSeal]
     ///   for the details).
     ///
     /// # Returns
@@ -174,13 +174,13 @@ pub trait ContainerApi {
         opid: OpId,
         owned_right_type: impl Into<OwnedStateType>,
         witness: Txid,
-    ) -> Result<BTreeSet<seal::Revealed>, ConsistencyError>;
+    ) -> Result<BTreeSet<RevealedSeal>, ConsistencyError>;
 }
 
 pub trait HistoryApi: ContainerApi {
     type OpIdIter: Iterator<Item = OpId>;
     type EndpointIter<'container>: Iterator<
-        Item = (&'container BundleId, &'container seal::Confidential),
+        Item = (&'container BundleId, &'container ConcealedSeal),
     >
     where Self: 'container;
     type BundleIter<'container>: Iterator<

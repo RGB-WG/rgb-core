@@ -20,9 +20,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod seal {
-    pub use bp::seals::txout::blind::{ConcealedSeal as Confidential, RevealedSeal as Revealed};
-}
+pub use bp::seals::txout::blind::{ConcealedSeal, RevealedSeal};
+
 pub mod fungible;
 pub mod attachment;
 pub mod data;
@@ -30,8 +29,6 @@ pub mod assignment;
 mod global;
 mod operations;
 mod bundle;
-
-use std::hash::Hash;
 
 pub use assignment::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateType, TypedAssigns,
@@ -53,12 +50,12 @@ pub use operations::{
 /// state data.
 pub trait ConfidentialState:
     core::fmt::Debug
+    + core::hash::Hash
     + strict_encoding::StrictDumb
     + strict_encoding::StrictEncode
     + strict_encoding::StrictDecode
     + amplify::AsAny
     + Eq
-    + Hash
     + Clone
 {
 }
@@ -80,12 +77,12 @@ pub trait ExposedState:
 
 pub trait ConfidentialSeal:
     core::fmt::Debug
+    + core::hash::Hash
     + strict_encoding::StrictDumb
     + strict_encoding::StrictEncode
     + strict_encoding::StrictDecode
     + Eq
     + Ord
-    + Hash
     + Copy
 {
 }
@@ -104,8 +101,8 @@ pub trait ExposedSeal:
     type Confidential: ConfidentialSeal;
 }
 
-impl ExposedSeal for seal::Revealed {
-    type Confidential = seal::Confidential;
+impl ExposedSeal for RevealedSeal {
+    type Confidential = ConcealedSeal;
 }
 
-impl ConfidentialSeal for seal::Confidential {}
+impl ConfidentialSeal for ConcealedSeal {}

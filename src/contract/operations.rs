@@ -37,7 +37,7 @@ use crate::schema::{
     self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
 use crate::state::Opout;
-use crate::{seal, ExposedSeal, Ffv, LIB_NAME_RGB};
+use crate::{ExposedSeal, Ffv, RevealedSeal, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
@@ -200,7 +200,7 @@ pub struct Genesis {
     pub chain: Chain,
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
-    pub owned_state: OwnedState<seal::Revealed>,
+    pub owned_state: OwnedState<RevealedSeal>,
     pub valencies: Valencies,
 }
 
@@ -218,7 +218,7 @@ pub struct Extension {
     pub contract_id: ContractId,
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
-    pub owned_state: OwnedState<seal::Revealed>,
+    pub owned_state: OwnedState<RevealedSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
 }
@@ -237,7 +237,7 @@ pub struct Transition {
     pub metadata: Option<SmallBlob>,
     pub global_state: GlobalState,
     pub prev_state: PrevOuts,
-    pub owned_state: OwnedState<seal::Revealed>,
+    pub owned_state: OwnedState<RevealedSeal>,
     pub valencies: Valencies,
 }
 
@@ -302,7 +302,7 @@ impl Extension {
 }
 
 impl Operation for Genesis {
-    type Seal = seal::Revealed;
+    type Seal = RevealedSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::Genesis }
@@ -336,7 +336,7 @@ impl Operation for Genesis {
 }
 
 impl Operation for Extension {
-    type Seal = seal::Revealed;
+    type Seal = RevealedSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateExtension }
@@ -370,7 +370,7 @@ impl Operation for Extension {
 }
 
 impl Operation for Transition {
-    type Seal = seal::Revealed;
+    type Seal = RevealedSeal;
 
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateTransition }
@@ -420,7 +420,7 @@ pub enum OpRef<'op> {
 }
 
 impl<'op> Operation for OpRef<'op> {
-    type Seal = seal::Revealed;
+    type Seal = RevealedSeal;
 
     fn op_type(&self) -> OpType {
         match self {
