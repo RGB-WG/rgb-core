@@ -86,7 +86,7 @@ pub trait ConfidentialSeal:
     + Eq
     + Ord
     + Hash
-    + Clone
+    + Copy
 {
 }
 
@@ -98,7 +98,7 @@ pub trait RevealedSeal:
     + commit_verify::Conceal<Concealed = Self::Confidential>
     + Eq
     + Ord
-    + Clone
+    + Copy
     + TxoSeal
 {
     type Confidential: ConfidentialSeal;
