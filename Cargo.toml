@@ -57,5 +57,7 @@ features = [ "all" ]
 [patch.crates-io]
 strict_encoding = { git = "https://github.com/strict-types/strict-encoding" }
 strict_types = { git = "https://github.com/strict-types/strict-types" }
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation" }
+single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation" }
 bp-core = { git = "https://github.com/BP-WG/bp-core" }
 aluvm = { git = "https://github.com/AluVM/rust-aluvm" }

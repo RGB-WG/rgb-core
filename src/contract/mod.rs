@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use bp::seals::txout::blind::{ConcealedSeal, RevealedSeal};
+pub use bp::seals::txout::blind::{BlindSeal, SecretSeal};
 
 pub mod fungible;
 pub mod attachment;
@@ -101,8 +101,8 @@ pub trait ExposedSeal:
     type Confidential: ConfidentialSeal;
 }
 
-impl ExposedSeal for RevealedSeal {
-    type Confidential = ConcealedSeal;
+impl ExposedSeal for BlindSeal {
+    type Confidential = SecretSeal;
 }
 
-impl ConfidentialSeal for ConcealedSeal {}
+impl ConfidentialSeal for SecretSeal {}

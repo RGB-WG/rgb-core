@@ -175,7 +175,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core#93ec82d7f4db3be1b9c7fe14d446d3f184617ed3"
+source = "git+https://github.com/BP-WG/bp-core#660d773eca8274293627eb196f7955dccff85a36"
 dependencies = [
  "amplify",
  "bp-dbc",
@@ -190,7 +190,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core#93ec82d7f4db3be1b9c7fe14d446d3f184617ed3"
+source = "git+https://github.com/BP-WG/bp-core#660d773eca8274293627eb196f7955dccff85a36"
 dependencies = [
  "amplify",
  "bp-primitives",
@@ -203,7 +203,7 @@ dependencies = [
 [[package]]
 name = "bp-primitives"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core#93ec82d7f4db3be1b9c7fe14d446d3f184617ed3"
+source = "git+https://github.com/BP-WG/bp-core#660d773eca8274293627eb196f7955dccff85a36"
 dependencies = [
  "amplify",
  "commit_verify",
@@ -215,7 +215,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.10.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core#93ec82d7f4db3be1b9c7fe14d446d3f184617ed3"
+source = "git+https://github.com/BP-WG/bp-core#660d773eca8274293627eb196f7955dccff85a36"
 dependencies = [
  "amplify",
  "baid58",
@@ -278,8 +278,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.10.0-beta.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "072e9eeca63f7e23387f17f7b897042a66399f4e6965525c69559acace91b2b0"
+source = "git+https://github.com/LNP-BP/client_side_validation#2751efe09686e8fa71434a656b894fddc7499ef3"
 dependencies = [
  "amplify",
  "rand",
@@ -858,8 +857,7 @@ dependencies = [
 [[package]]
 name = "single_use_seals"
 version = "0.10.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ea7651417b98128263b5c3d2dc836400eecd7f4fba8470d4ca17f129f9a1b4a"
+source = "git+https://github.com/LNP-BP/client_side_validation#2751efe09686e8fa71434a656b894fddc7499ef3"
 dependencies = [
  "amplify_derive",
 ]

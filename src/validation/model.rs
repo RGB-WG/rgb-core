@@ -29,8 +29,8 @@ use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
 use crate::validation::HistoryApi;
 use crate::{
-    validation, Assign, ExposedSeal, ExposedState, GlobalState, GlobalValues, OpFullType, OpId,
-    OpRef, Operation, OwnedState, PrevOuts, Redeemed, RevealedSeal, Schema, SchemaRoot,
+    validation, Assign, BlindSeal, ExposedSeal, ExposedState, GlobalState, GlobalValues,
+    OpFullType, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed, Schema, SchemaRoot,
     TypedAssigns, Valencies,
 };
 
@@ -376,8 +376,8 @@ pub struct OpInfo<'op> {
     pub id: OpId,
     pub ty: OpFullType,
     pub metadata: Option<&'op SmallBlob>,
-    pub prev_state: &'op OwnedState<RevealedSeal>,
-    pub owned_state: &'op OwnedState<RevealedSeal>,
+    pub prev_state: &'op OwnedState<BlindSeal>,
+    pub owned_state: &'op OwnedState<BlindSeal>,
     pub redeemed: &'op Valencies,
     pub valencies: &'op Valencies,
     pub global: &'op GlobalState,
@@ -388,7 +388,7 @@ impl<'op> OpInfo<'op> {
         id: OpId,
         subschema: bool,
         op: &'op OpRef<'op>,
-        prev_state: &'op OwnedState<RevealedSeal>,
+        prev_state: &'op OwnedState<BlindSeal>,
         redeemed: &'op Valencies,
     ) -> Self {
         OpInfo {
@@ -409,7 +409,7 @@ fn extract_prev_state<C: HistoryApi>(
     consignment: &C,
     prev_state: &PrevOuts,
     status: &mut validation::Status,
-) -> OwnedState<RevealedSeal> {
+) -> OwnedState<BlindSeal> {
     let mut owned_state = bmap! {};
     for (id, details) in prev_state.iter() {
         let prev_op = match consignment.operation(*id) {

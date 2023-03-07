@@ -37,7 +37,7 @@ pub use validator::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, OpType, SchemaId};
 use crate::state::Opout;
-use crate::{data, BundleId, ConcealedSeal, OccurrencesMismatch, OpId};
+use crate::{data, BundleId, OccurrencesMismatch, OpId, SecretSeal};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -271,8 +271,8 @@ pub enum Failure {
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Warning {
-    EndpointDuplication(OpId, ConcealedSeal),
-    EndpointTransitionSealNotFound(OpId, ConcealedSeal),
+    EndpointDuplication(OpId, SecretSeal),
+    EndpointTransitionSealNotFound(OpId, SecretSeal),
     ExcessiveNode(OpId),
     EndpointTransactionMissed(Txid),
 }
