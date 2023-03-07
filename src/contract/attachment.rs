@@ -33,7 +33,7 @@ use super::{ConfidentialState, RevealedState};
 use crate::LIB_NAME_RGB;
 
 /// Unique data attachment identifier
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From, AsAny)]
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[display(Self::to_baid58)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

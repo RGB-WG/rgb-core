@@ -52,7 +52,7 @@ impl From<mpc::Message> for BundleId {
     fn from(id: mpc::Message) -> Self { BundleId(id.into_inner()) }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, AsAny)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -76,7 +76,7 @@ impl Conceal for BundleItem {
     }
 }
 
-#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Debug, From, AsAny)]
+#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

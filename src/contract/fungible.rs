@@ -41,7 +41,7 @@ use std::ops::Deref;
 use amplify::hex::{Error, FromHex, ToHex};
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
-use amplify::{hex, Array, AsAny, Bytes32, Wrapper};
+use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use commit_verify::{
     CommitEncode, CommitStrategy, CommitVerify, Conceal, Sha256, UntaggedProtocol,

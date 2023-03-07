@@ -23,7 +23,7 @@
 use core::fmt::Debug;
 
 use amplify::confinement::SmallVec;
-use amplify::{AsAny, Bytes32};
+use amplify::Bytes32;
 use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
 
