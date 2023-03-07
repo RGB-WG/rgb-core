@@ -29,6 +29,7 @@ pub mod assignment;
 mod global;
 mod operations;
 mod bundle;
+pub mod state;
 
 pub use assignment::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateType, TypedAssigns,
@@ -45,6 +46,7 @@ pub use operations::{
     ContractId, Extension, Genesis, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed,
     Transition, Valencies,
 };
+pub use state::ContractState;
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
