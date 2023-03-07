@@ -41,7 +41,7 @@ use crate::{
 /// [`ContainerApi`] methods. If the methods are called on
 /// non-validated/unchecked data this may result in returned [`Error`] or
 /// [`None`] values from the API methods.
-pub trait ContractContainer {
+pub trait ConsignmentApi {
     type OpIdIter: Iterator<Item = OpId>;
     type EndpointIter<'container>: Iterator<Item = (&'container BundleId, &'container SecretSeal)>
     where Self: 'container;

@@ -30,7 +30,6 @@ mod global;
 mod operations;
 mod bundle;
 pub mod state;
-mod contract;
 
 pub use assignment::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateCommitment, StateData,
@@ -39,7 +38,6 @@ pub use assignment::{
 pub use attachment::AttachId;
 use bp::seals::txout::TxoSeal;
 pub use bundle::{BundleId, TransitionBundle};
-pub use contract::ContractContainer;
 pub use fungible::{
     BlindingFactor, FieldOrderOverflow, FungibleState, NoiseDumb, PedersenCommitment, RangeProof,
     RangeProofError,

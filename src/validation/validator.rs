@@ -32,10 +32,11 @@ use super::{Failure, Status, Validity, Warning};
 use crate::state::Opout;
 use crate::validation::subschema::SchemaVerify;
 use crate::validation::vm::VirtualMachine;
+use crate::validation::ConsignmentApi;
 use crate::vm::AluRuntime;
 use crate::{
-    BundleId, ContractContainer, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot,
-    Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
+    BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
+    Transition, TransitionBundle, TypedAssigns,
 };
 
 #[derive(Debug, Display, Error)]
@@ -47,7 +48,7 @@ pub trait ResolveTx {
     fn resolve_tx(&self, txid: Txid) -> Result<Tx, TxResolverError>;
 }
 
-pub struct Validator<'consignment, 'resolver, C: ContractContainer, R: ResolveTx> {
+pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
     consignment: &'consignment C,
 
     status: Status,
@@ -64,7 +65,7 @@ pub struct Validator<'consignment, 'resolver, C: ContractContainer, R: ResolveTx
     resolver: &'resolver R,
 }
 
-impl<'consignment, 'resolver, C: ContractContainer, R: ResolveTx>
+impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
     Validator<'consignment, 'resolver, C, R>
 {
     fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {
