@@ -26,8 +26,8 @@ use core::ops::AddAssign;
 use bp::dbc::anchor;
 use bp::{seals, Txid};
 
+use crate::contract::Opout;
 use crate::schema::{self, OpType, SchemaId};
-use crate::state::Opout;
 use crate::{data, BundleId, OccurrencesMismatch, OpId, SecretSeal, StateType};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]

@@ -33,10 +33,10 @@ use commit_verify::{mpc, CommitEncode, CommitStrategy, CommitmentId};
 use strict_encoding::{StrictEncode, StrictWriter};
 
 use super::{GlobalState, TypedAssigns};
+use crate::contract::Opout;
 use crate::schema::{
     self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
-use crate::state::Opout;
 use crate::{BlindSeal, ExposedSeal, Ffv, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;

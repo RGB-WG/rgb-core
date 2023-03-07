@@ -29,7 +29,7 @@ pub mod assignment;
 mod global;
 mod operations;
 mod bundle;
-pub mod state;
+mod contract;
 
 pub use assignment::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateCommitment, StateData,
@@ -38,6 +38,10 @@ pub use assignment::{
 pub use attachment::AttachId;
 use bp::seals::txout::TxoSeal;
 pub use bundle::{BundleId, TransitionBundle};
+pub use contract::{
+    AttachOutput, ContractState, DataOutput, FungibleOutput, Opout, OpoutParseError,
+    OutputAssignment, RightsOutput,
+};
 pub use fungible::{
     BlindingFactor, FieldOrderOverflow, FungibleState, NoiseDumb, PedersenCommitment, RangeProof,
     RangeProofError,
@@ -47,7 +51,6 @@ pub use operations::{
     ContractId, Extension, Genesis, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed,
     Transition, Valencies,
 };
-pub use state::ContractState;
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
