@@ -20,14 +20,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: Move into seals mod with extensive documentation
-pub use bp::seals::txout::blind::{BlindSeal, SecretSeal};
-
 mod global;
 pub mod data;
 pub mod fungible;
 pub mod attachment;
 mod state;
+mod seal;
 pub mod assignment;
 mod operations;
 mod bundle;
@@ -51,37 +49,5 @@ pub use operations::{
     ContractId, Extension, Genesis, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed,
     Transition, Valencies,
 };
+pub use seal::{BlindSeal, ConfidentialSeal, ExposedSeal, SecretSeal, TxoSeal};
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
-
-// TODO: Move into seals mod with extensive documentation
-pub trait ConfidentialSeal:
-    core::fmt::Debug
-    + core::hash::Hash
-    + strict_encoding::StrictDumb
-    + strict_encoding::StrictEncode
-    + strict_encoding::StrictDecode
-    + Eq
-    + Ord
-    + Copy
-{
-}
-
-pub trait ExposedSeal:
-    core::fmt::Debug
-    + strict_encoding::StrictDumb
-    + strict_encoding::StrictEncode
-    + strict_encoding::StrictDecode
-    + commit_verify::Conceal<Concealed = Self::Confidential>
-    + Eq
-    + Ord
-    + Copy
-    + bp::seals::txout::TxoSeal
-{
-    type Confidential: ConfidentialSeal;
-}
-
-impl ExposedSeal for BlindSeal {
-    type Confidential = SecretSeal;
-}
-
-impl ConfidentialSeal for SecretSeal {}
