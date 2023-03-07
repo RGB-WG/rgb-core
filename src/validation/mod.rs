@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod vm;
+mod script;
 mod subschema;
 mod model;
 mod state;
@@ -30,5 +30,6 @@ mod status;
 
 pub use consignment::ConsignmentApi;
 pub(crate) use model::OpInfo;
+pub use script::VirtualMachine;
 use status::{Failure, Info, Status, Validity, Warning};
 pub use validator::{ResolveTx, TxResolverError, Validator};

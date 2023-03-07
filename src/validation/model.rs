@@ -26,8 +26,7 @@ use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
 
 use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
-use crate::validation::vm::VirtualMachine;
-use crate::validation::ConsignmentApi;
+use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
     validation, Assign, BlindSeal, ExposedSeal, ExposedState, GlobalState, GlobalValues,
     OpFullType, OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed, Schema, SchemaRoot,

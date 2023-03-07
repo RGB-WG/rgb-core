@@ -31,8 +31,7 @@ use single_use_seals::SealWitness;
 use super::{Failure, Status, Validity, Warning};
 use crate::state::Opout;
 use crate::validation::subschema::SchemaVerify;
-use crate::validation::vm::VirtualMachine;
-use crate::validation::ConsignmentApi;
+use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
     BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
