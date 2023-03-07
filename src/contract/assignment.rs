@@ -32,7 +32,7 @@ use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
 use super::{attachment, data, fungible, ExposedState};
 use crate::data::VoidState;
-use crate::{ExposedSeal, LIB_NAME_RGB};
+use crate::{ConfidentialState, ExposedSeal, LIB_NAME_RGB};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
@@ -41,6 +41,11 @@ pub struct UnknownDataError;
 
 /// Categories of the state
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub enum StateType {
     /// No state data
     Void,
@@ -54,6 +59,82 @@ pub enum StateType {
 
     /// Attached data container
     Attachment,
+}
+
+/// Categories of the state
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum StateData {
+    #[strict_type(tag = 0x00, dumb)]
+    Void,
+    #[strict_type(tag = 0x01)]
+    Fungible(fungible::Revealed),
+    #[strict_type(tag = 0x02)]
+    Structured(data::Revealed),
+    #[strict_type(tag = 0xFF)]
+    Attachment(attachment::Revealed),
+}
+
+impl ExposedState for StateData {
+    type Confidential = StateCommitment;
+    fn state_type(&self) -> StateType {
+        match self {
+            StateData::Void => StateType::Void,
+            StateData::Fungible(_) => StateType::Fungible,
+            StateData::Structured(_) => StateType::Structured,
+            StateData::Attachment(_) => StateType::Attachment,
+        }
+    }
+    fn state_data(&self) -> StateData { self.clone() }
+}
+
+impl Conceal for StateData {
+    type Concealed = StateCommitment;
+    fn conceal(&self) -> Self::Concealed {
+        match self {
+            StateData::Void => StateCommitment::Void,
+            StateData::Fungible(value) => StateCommitment::Fungible(value.conceal()),
+            StateData::Structured(data) => StateCommitment::Structured(data.conceal()),
+            StateData::Attachment(attach) => StateCommitment::Attachment(attach.conceal()),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum StateCommitment {
+    #[strict_type(tag = 0x00, dumb)]
+    Void,
+    #[strict_type(tag = 0x01)]
+    Fungible(fungible::Confidential),
+    #[strict_type(tag = 0x02)]
+    Structured(data::Confidential),
+    #[strict_type(tag = 0xFF)]
+    Attachment(attachment::Confidential),
+}
+
+impl ConfidentialState for StateCommitment {
+    fn state_type(&self) -> StateType {
+        match self {
+            StateCommitment::Void => StateType::Void,
+            StateCommitment::Fungible(_) => StateType::Fungible,
+            StateCommitment::Structured(_) => StateType::Structured,
+            StateCommitment::Attachment(_) => StateType::Attachment,
+        }
+    }
+    fn state_commitment(&self) -> StateCommitment { *self }
 }
 
 pub type AssignRights<Seal> = Assign<VoidState, Seal>;

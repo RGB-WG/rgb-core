@@ -30,7 +30,7 @@ use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol
 use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, ExposedState};
-use crate::LIB_NAME_RGB;
+use crate::{StateCommitment, StateData, StateType, LIB_NAME_RGB};
 
 /// Unique data attachment identifier
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
@@ -90,6 +90,8 @@ impl Revealed {
 
 impl ExposedState for Revealed {
     type Confidential = Confidential;
+    fn state_type(&self) -> StateType { StateType::Attachment }
+    fn state_data(&self) -> StateData { StateData::Attachment(self.clone()) }
 }
 
 impl Conceal for Revealed {
@@ -119,7 +121,10 @@ pub struct Confidential(
     Bytes32,
 );
 
-impl ConfidentialState for Confidential {}
+impl ConfidentialState for Confidential {
+    fn state_type(&self) -> StateType { StateType::Attachment }
+    fn state_commitment(&self) -> StateCommitment { StateCommitment::Attachment(*self) }
+}
 
 impl CommitStrategy for Confidential {
     type Strategy = commit_verify::strategies::Strict;

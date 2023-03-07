@@ -33,7 +33,8 @@ pub mod state;
 mod contract;
 
 pub use assignment::{
-    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateType, TypedAssigns,
+    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, StateCommitment, StateData,
+    StateType, TypedAssigns,
 };
 pub use attachment::AttachId;
 use bp::seals::txout::TxoSeal;
@@ -60,8 +61,10 @@ pub trait ConfidentialState:
     + strict_encoding::StrictDecode
     + amplify::AsAny
     + Eq
-    + Clone
+    + Copy
 {
+    fn state_type(&self) -> StateType;
+    fn state_commitment(&self) -> StateCommitment;
 }
 
 /// Marker trait for types of state holding explicit state data.
@@ -77,6 +80,8 @@ pub trait ExposedState:
     + Clone
 {
     type Confidential: ConfidentialState;
+    fn state_type(&self) -> StateType;
+    fn state_data(&self) -> StateData;
 }
 
 pub trait ConfidentialSeal:

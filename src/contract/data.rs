@@ -28,7 +28,7 @@ use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, ExposedState};
-use crate::LIB_NAME_RGB;
+use crate::{StateCommitment, StateData, StateType, LIB_NAME_RGB};
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Default, AsAny)]
@@ -38,10 +38,15 @@ use crate::LIB_NAME_RGB;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct VoidState(());
 
-impl ConfidentialState for VoidState {}
+impl ConfidentialState for VoidState {
+    fn state_type(&self) -> StateType { StateType::Void }
+    fn state_commitment(&self) -> StateCommitment { StateCommitment::Void }
+}
 
 impl ExposedState for VoidState {
     type Confidential = VoidState;
+    fn state_type(&self) -> StateType { StateType::Void }
+    fn state_data(&self) -> StateData { StateData::Void }
 }
 
 impl Conceal for VoidState {
@@ -60,6 +65,8 @@ pub struct Revealed(SmallVec<u8>);
 
 impl ExposedState for Revealed {
     type Confidential = Confidential;
+    fn state_type(&self) -> StateType { StateType::Structured }
+    fn state_data(&self) -> StateData { StateData::Structured(self.clone()) }
 }
 
 impl Conceal for Revealed {
@@ -90,7 +97,10 @@ pub struct Confidential(
     Bytes32,
 );
 
-impl ConfidentialState for Confidential {}
+impl ConfidentialState for Confidential {
+    fn state_type(&self) -> StateType { StateType::Structured }
+    fn state_commitment(&self) -> StateCommitment { StateCommitment::Structured(*self) }
+}
 
 impl CommitStrategy for Confidential {
     type Strategy = commit_verify::strategies::Strict;

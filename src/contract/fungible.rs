@@ -54,7 +54,7 @@ use strict_encoding::{
 };
 
 use super::{ConfidentialState, ExposedState};
-use crate::LIB_NAME_RGB;
+use crate::{schema, StateCommitment, StateData, StateType, LIB_NAME_RGB};
 
 /// An atom of an additive state, which thus can be monomorphically encrypted.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
@@ -205,6 +205,8 @@ impl Revealed {
 
 impl ExposedState for Revealed {
     type Confidential = Confidential;
+    fn state_type(&self) -> StateType { StateType::Fungible }
+    fn state_data(&self) -> StateData { StateData::Fungible(*self) }
 }
 
 impl Conceal for Revealed {
@@ -364,7 +366,10 @@ pub struct Confidential {
     pub range_proof: RangeProof,
 }
 
-impl ConfidentialState for Confidential {}
+impl ConfidentialState for Confidential {
+    fn state_type(&self) -> StateType { StateType::Fungible }
+    fn state_commitment(&self) -> StateCommitment { StateCommitment::Fungible(*self) }
+}
 
 impl Confidential {
     /// Verifies bulletproof against the commitment.
