@@ -162,7 +162,7 @@ impl InstructionSet for ContractOp {
                 regs.set(
                     RegA::A16,
                     *reg,
-                    context.owned_state.get(state_type).map(|a| a.len() as u32),
+                    context.owned_state.get(*state_type).map(|a| a.len() as u32),
                 );
             }
             ContractOp::CnG(state_type, reg) => {
@@ -188,8 +188,8 @@ impl InstructionSet for ContractOp {
             ContractOp::LdS(state_type, index, reg) => {
                 let Some(Ok(state)) = context
                     .owned_state
-                    .get(state_type)
-                    .map(|a| a.as_structured_state_at(*index)) else {
+                    .get(*state_type)
+                    .map(|a| a.into_structured_state_at(*index)) else {
                     fail!()
                 };
                 let state = state.map(|s| {
@@ -201,8 +201,8 @@ impl InstructionSet for ContractOp {
             ContractOp::LdF(state_type, index, reg) => {
                 let Some(Ok(state)) = context
                     .owned_state
-                    .get(state_type)
-                    .map(|a| a.as_fungible_state_at(*index)) else {
+                    .get(*state_type)
+                    .map(|a| a.into_fungible_state_at(*index)) else {
                     fail!()
                 };
                 regs.set(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
@@ -226,7 +226,7 @@ impl InstructionSet for ContractOp {
 
             ContractOp::PcVs(state_type) => {
                 if !context.prev_state.contains_key(state_type) &&
-                    !context.owned_state.contains_key(state_type)
+                    !context.owned_state.has_type(*state_type)
                 {
                     return ExecStep::Next;
                 }
@@ -234,7 +234,7 @@ impl InstructionSet for ContractOp {
                 let Some(prev_state) = context.prev_state.get(state_type) else {
                     fail!()
                 };
-                let Some(new_state) = context.owned_state.get(state_type) else {
+                let Some(new_state) = context.owned_state.get(*state_type) else {
                     fail!()
                 };
 

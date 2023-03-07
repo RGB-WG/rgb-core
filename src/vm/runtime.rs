@@ -60,7 +60,8 @@ impl<'script> AluRuntime<'script> {
 
         let used_state = info
             .owned_state
-            .keys()
+            .types()
+            .iter()
             .chain(info.prev_state.keys())
             .copied()
             .collect::<BTreeSet<_>>();

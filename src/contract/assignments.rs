@@ -22,17 +22,19 @@
 
 use core::cmp::Ordering;
 use core::fmt::Debug;
+use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
 use std::{io, vec};
 
-use amplify::confinement::SmallVec;
+use amplify::confinement::{Confined, SmallVec, TinyOrdMap};
 use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
 use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
 use super::{attachment, data, fungible, ExposedState};
+use crate::contract::seal::GenesisSeal;
 use crate::data::VoidState;
-use crate::{ExposedSeal, StateType, LIB_NAME_RGB};
+use crate::{AssignmentsType, ExposedSeal, GraphSeal, StateType, LIB_NAME_RGB};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
@@ -173,6 +175,13 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
         }
     }
 
+    pub fn into_revealed_state(self) -> Option<State> {
+        match self {
+            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => Some(state),
+            Assign::Confidential { .. } | Assign::ConfidentialState { .. } => None,
+        }
+    }
+
     pub fn as_revealed(&self) -> Option<(&Seal, &State)> {
         match self {
             Assign::Revealed { seal, state } => Some((seal, state)),
@@ -237,6 +246,29 @@ where Self: Clone
 {
     const TAG: [u8; 32] = *b"urn:lnpbp:rgb:owned-state:v1#23A";
     type Id = MerkleNode;
+}
+
+impl<State: ExposedState> Assign<State, GenesisSeal> {
+    pub fn transmutate_seals(&self) -> Assign<State, GraphSeal> {
+        match self {
+            Assign::Confidential { seal, state } => Assign::Confidential {
+                seal: *seal,
+                state: state.clone(),
+            },
+            Assign::ConfidentialSeal { seal, state } => Assign::ConfidentialSeal {
+                seal: *seal,
+                state: state.clone(),
+            },
+            Assign::Revealed { seal, state } => Assign::Revealed {
+                seal: seal.transmutate(),
+                state: state.clone(),
+            },
+            Assign::ConfidentialState { seal, state } => Assign::ConfidentialState {
+                seal: seal.transmutate(),
+                state: state.clone(),
+            },
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -439,6 +471,42 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             _ => Err(UnknownDataError),
         }
     }
+
+    pub fn into_structured_state_at(
+        self,
+        index: u16,
+    ) -> Result<Option<data::Revealed>, UnknownDataError> {
+        match self {
+            TypedAssigns::Structured(vec) => {
+                if index as usize >= vec.len() {
+                    return Err(UnknownDataError);
+                }
+                Ok(vec
+                    .into_inner()
+                    .remove(index as usize)
+                    .into_revealed_state())
+            }
+            _ => Err(UnknownDataError),
+        }
+    }
+
+    pub fn into_fungible_state_at(
+        self,
+        index: u16,
+    ) -> Result<Option<fungible::Revealed>, UnknownDataError> {
+        match self {
+            TypedAssigns::Fungible(vec) => {
+                if index as usize >= vec.len() {
+                    return Err(UnknownDataError);
+                }
+                Ok(vec
+                    .into_inner()
+                    .remove(index as usize)
+                    .into_revealed_state())
+            }
+            _ => Err(UnknownDataError),
+        }
+    }
 }
 
 impl<Seal: ExposedSeal> CommitStrategy for TypedAssigns<Seal> {
@@ -470,5 +538,111 @@ impl<Seal: ExposedSeal> MerkleLeaves for TypedAssigns<Seal> {
                 .collect::<Vec<_>>(),
         }
         .into_iter()
+    }
+}
+
+impl TypedAssigns<GenesisSeal> {
+    pub fn transmutate_seals(&self) -> TypedAssigns<GraphSeal> {
+        match self {
+            TypedAssigns::Declarative(a) => TypedAssigns::Declarative(
+                Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
+                    .expect("same size"),
+            ),
+            TypedAssigns::Fungible(a) => TypedAssigns::Fungible(
+                Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
+                    .expect("same size"),
+            ),
+            TypedAssigns::Structured(a) => TypedAssigns::Structured(
+                Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
+                    .expect("same size"),
+            ),
+            TypedAssigns::Attachment(a) => TypedAssigns::Attachment(
+                Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
+                    .expect("same size"),
+            ),
+        }
+    }
+}
+
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[wrapper(Deref)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(
+        crate = "serde_crate",
+        transparent,
+        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned, Seal::Confidential: \
+                 serde::Serialize + serde::de::DeserializeOwned"
+    )
+)]
+pub struct Assignments<Seal>(TinyOrdMap<AssignmentsType, TypedAssigns<Seal>>)
+where Seal: ExposedSeal;
+
+impl<Seal: ExposedSeal> Default for Assignments<Seal> {
+    fn default() -> Self { Self(empty!()) }
+}
+
+impl<Seal: ExposedSeal> CommitEncode for Assignments<Seal> {
+    fn commit_encode(&self, mut e: &mut impl io::Write) {
+        let w = StrictWriter::with(u32::MAX as usize, &mut e);
+        self.0.len_u8().strict_encode(w).ok();
+        for (ty, state) in &self.0 {
+            let w = StrictWriter::with(u32::MAX as usize, &mut e);
+            ty.strict_encode(w).ok();
+            state.commit_encode(e);
+        }
+    }
+}
+
+impl Assignments<GenesisSeal> {
+    pub fn transmutate_seals(&self) -> Assignments<GraphSeal> {
+        Assignments(
+            Confined::try_from_iter(self.iter().map(|(t, a)| (*t, a.transmutate_seals())))
+                .expect("same size"),
+        )
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, From)]
+pub enum AssignmentsRef<'op> {
+    #[from]
+    Genesis(&'op Assignments<GenesisSeal>),
+
+    #[from]
+    Graph(&'op Assignments<GraphSeal>),
+}
+
+impl AssignmentsRef<'_> {
+    pub fn len(&self) -> usize {
+        match self {
+            AssignmentsRef::Genesis(a) => a.len(),
+            AssignmentsRef::Graph(a) => a.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool { self.len() == 0 }
+
+    pub fn types(&self) -> BTreeSet<AssignmentsType> {
+        match self {
+            AssignmentsRef::Genesis(a) => a.keys().copied().collect(),
+            AssignmentsRef::Graph(a) => a.keys().copied().collect(),
+        }
+    }
+
+    pub fn has_type(&self, t: AssignmentsType) -> bool {
+        match self {
+            AssignmentsRef::Genesis(a) => a.contains_key(&t),
+            AssignmentsRef::Graph(a) => a.contains_key(&t),
+        }
+    }
+
+    pub fn get(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+        match self {
+            AssignmentsRef::Genesis(a) => a.get(&t).map(TypedAssigns::transmutate_seals),
+            AssignmentsRef::Graph(a) => a.get(&t).cloned(),
+        }
     }
 }

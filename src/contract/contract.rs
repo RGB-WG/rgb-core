@@ -35,9 +35,9 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::data::VoidState;
 use crate::{
-    attachment, data, fungible, Assign, AssignmentsType, ContractId, ExposedSeal, ExposedState,
-    Extension, Genesis, GlobalStateType, OpId, Operation, SchemaId, Transition, TypedAssigns,
-    LIB_NAME_RGB,
+    attachment, data, fungible, Assign, Assignments, AssignmentsRef, AssignmentsType, ContractId,
+    ExposedSeal, ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, SchemaId,
+    Transition, TypedAssigns, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -122,8 +122,7 @@ impl<State: ExposedState> OutputAssignment<State> {
         }
     }
 
-    // TODO: Refactor
-    pub fn with<Seal: TxoSeal>(
+    pub fn with_unwrap_txid<Seal: TxoSeal>(
         seal: Seal,
         state: State,
         opid: OpId,
@@ -132,7 +131,9 @@ impl<State: ExposedState> OutputAssignment<State> {
     ) -> Self {
         OutputAssignment {
             opout: Opout::new(opid, ty, no),
-            seal: seal.outpoint().unwrap(),
+            seal: seal
+                .outpoint()
+                .expect("seal must have txid information and come from genesis or state extension"),
             state,
         }
     }
@@ -209,27 +210,6 @@ impl ContractState {
                 .extend(meta.iter().cloned());
         }
 
-        fn process<State: ExposedState, Seal: ExposedSeal>(
-            contract_state: &mut BTreeSet<OutputAssignment<State>>,
-            assignments: &[Assign<State, Seal>],
-            opid: OpId,
-            ty: AssignmentsType,
-            txid: Option<Txid>,
-        ) {
-            for (no, seal, state) in assignments
-                .iter()
-                .enumerate()
-                .filter_map(|(n, a)| a.to_revealed().map(|(seal, state)| (n, seal, state)))
-            {
-                let assigned_state = if let Some(txid) = txid {
-                    OutputAssignment::with_witness(seal, txid, state.into(), opid, ty, no as u16)
-                } else {
-                    OutputAssignment::with(seal, state.into(), opid, ty, no as u16)
-                };
-                contract_state.insert(assigned_state);
-            }
-        }
-
         // Remove invalidated state
         for output in op.prev_outs() {
             if let Some(o) = self.rights.iter().find(|r| r.opout == output) {
@@ -250,7 +230,40 @@ impl ContractState {
             }
         }
 
-        for (ty, assignments) in op.assignments().iter() {
+        match op.assignments() {
+            AssignmentsRef::Genesis(assignments) => self.add_assignments(txid, opid, assignments),
+            AssignmentsRef::Graph(assignments) => self.add_assignments(txid, opid, assignments),
+        }
+    }
+
+    fn add_assignments<Seal: ExposedSeal>(
+        &mut self,
+        txid: Option<Txid>,
+        opid: OpId,
+        assignments: &Assignments<Seal>,
+    ) {
+        fn process<State: ExposedState, Seal: ExposedSeal>(
+            contract_state: &mut BTreeSet<OutputAssignment<State>>,
+            assignments: &[Assign<State, Seal>],
+            opid: OpId,
+            ty: AssignmentsType,
+            txid: Option<Txid>,
+        ) {
+            for (no, seal, state) in assignments
+                .iter()
+                .enumerate()
+                .filter_map(|(n, a)| a.to_revealed().map(|(seal, state)| (n, seal, state)))
+            {
+                let assigned_state = if let Some(txid) = txid {
+                    OutputAssignment::with_witness(seal, txid, state.into(), opid, ty, no as u16)
+                } else {
+                    OutputAssignment::with_unwrap_txid(seal, state.into(), opid, ty, no as u16)
+                };
+                contract_state.insert(assigned_state);
+            }
+        }
+
+        for (ty, assignments) in assignments.iter() {
             match assignments {
                 TypedAssigns::Declarative(assignments) => {
                     process(&mut self.rights, &assignments, opid, *ty, txid)

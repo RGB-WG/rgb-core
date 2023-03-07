@@ -21,7 +21,6 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
-use std::io::Write;
 use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet, TinyVec};
@@ -29,53 +28,18 @@ use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
-use commit_verify::{mpc, CommitEncode, CommitStrategy, CommitmentId};
-use strict_encoding::{StrictEncode, StrictWriter};
+use commit_verify::{mpc, CommitStrategy, CommitmentId};
+use strict_encoding::StrictEncode;
 
-use super::{GlobalState, TypedAssigns};
-use crate::contract::seal::GenesisSeal;
-use crate::contract::Opout;
-use crate::schema::{
-    self, AssignmentsType, ExtensionType, OpFullType, OpType, SchemaId, TransitionType,
+use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
+use crate::{
+    Assignments, AssignmentsRef, AssignmentsType, Ffv, GenesisSeal, GlobalState, GraphSeal, Opout,
+    TypedAssigns, LIB_NAME_RGB,
 };
-use crate::{ExposedSeal, Ffv, GraphSeal, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentsType, TinyVec<u16>>>;
 pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
-
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
-#[wrapper(Deref)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(
-        crate = "serde_crate",
-        transparent,
-        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned, Seal::Confidential: \
-                 serde::Serialize + serde::de::DeserializeOwned"
-    )
-)]
-pub struct Assignments<Seal>(TinyOrdMap<schema::AssignmentsType, TypedAssigns<Seal>>)
-where Seal: ExposedSeal;
-
-impl<Seal: ExposedSeal> Default for Assignments<Seal> {
-    fn default() -> Self { Self(empty!()) }
-}
-
-impl<Seal: ExposedSeal> CommitEncode for Assignments<Seal> {
-    fn commit_encode(&self, mut e: &mut impl Write) {
-        let w = StrictWriter::with(u32::MAX as usize, &mut e);
-        self.0.len_u8().strict_encode(w).ok();
-        for (ty, state) in &self.0 {
-            let w = StrictWriter::with(u32::MAX as usize, &mut e);
-            ty.strict_encode(w).ok();
-            state.commit_encode(e);
-        }
-    }
-}
 
 /// Unique operation (genesis, extensions & state transition) identifier
 /// equivalent to the commitment hash
@@ -143,8 +107,6 @@ impl From<ContractId> for mpc::ProtocolId {
 /// - State transitions ([`Transitions`])
 /// - Public state extensions ([`Extensions`])
 pub trait Operation {
-    type Seal: ExposedSeal;
-
     /// Returns type of the operation (see [`OpType`]). Unfortunately, this
     /// can't be just a const, since it will break our ability to convert
     /// concrete `Node` types into `&dyn Node` (entities implementing traits
@@ -174,11 +136,9 @@ pub trait Operation {
     fn globals(&self) -> &GlobalState;
     fn valencies(&self) -> &Valencies;
 
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<&TypedAssigns<Self::Seal>> {
-        self.assignments()
-            .iter()
-            .find_map(|(t2, a)| if *t2 == t { Some(a) } else { None })
-    }
+    fn assignments(&self) -> AssignmentsRef;
+
+    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>>;
 
     /// For genesis and public state extensions always returns an empty list.
     /// While public state extension do have parent nodes, they do not contain
@@ -302,8 +262,6 @@ impl Extension {
 }
 
 impl Operation for Genesis {
-    type Seal = GenesisSeal;
-
     #[inline]
     fn op_type(&self) -> OpType { OpType::Genesis }
 
@@ -329,12 +287,20 @@ impl Operation for Genesis {
     fn valencies(&self) -> &Valencies { &self.valencies }
 
     #[inline]
+    fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
+
+    #[inline]
+    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+        self.assignments
+            .get(&t)
+            .map(TypedAssigns::transmutate_seals)
+    }
+
+    #[inline]
     fn prev_outs(&self) -> Vec<Opout> { empty!() }
 }
 
 impl Operation for Extension {
-    type Seal = GenesisSeal;
-
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateExtension }
 
@@ -360,12 +326,20 @@ impl Operation for Extension {
     fn valencies(&self) -> &Valencies { &self.valencies }
 
     #[inline]
+    fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
+
+    #[inline]
+    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+        self.assignments
+            .get(&t)
+            .map(TypedAssigns::transmutate_seals)
+    }
+
+    #[inline]
     fn prev_outs(&self) -> Vec<Opout> { empty!() }
 }
 
 impl Operation for Transition {
-    type Seal = GraphSeal;
-
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateTransition }
 
@@ -390,6 +364,14 @@ impl Operation for Transition {
     #[inline]
     fn valencies(&self) -> &Valencies { &self.valencies }
 
+    #[inline]
+    fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
+
+    #[inline]
+    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+        self.assignments.get(&t).cloned()
+    }
+
     fn prev_outs(&self) -> Vec<Opout> {
         self.inputs
             .iter()
@@ -411,8 +393,6 @@ pub enum OpRef<'op> {
 }
 
 impl<'op> Operation for OpRef<'op> {
-    type Seal = GraphSeal;
-
     fn op_type(&self) -> OpType {
         match self {
             OpRef::Genesis(op) => op.op_type(),
@@ -474,6 +454,22 @@ impl<'op> Operation for OpRef<'op> {
             OpRef::Genesis(op) => op.valencies(),
             OpRef::Transition(op) => op.valencies(),
             OpRef::Extension(op) => op.valencies(),
+        }
+    }
+
+    fn assignments(&self) -> AssignmentsRef<'op> {
+        match self {
+            OpRef::Genesis(op) => (&op.assignments).into(),
+            OpRef::Transition(op) => (&op.assignments).into(),
+            OpRef::Extension(op) => (&op.assignments).into(),
+        }
+    }
+
+    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+        match self {
+            OpRef::Genesis(op) => op.assignments_by_type(t),
+            OpRef::Transition(op) => op.assignments_by_type(t),
+            OpRef::Extension(op) => op.assignments_by_type(t),
         }
     }
 

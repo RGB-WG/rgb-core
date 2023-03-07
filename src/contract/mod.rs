@@ -26,13 +26,14 @@ pub mod fungible;
 pub mod attachment;
 mod state;
 mod seal;
-pub mod assignment;
+pub mod assignments;
 mod operations;
 mod bundle;
 mod contract;
 
-pub use assignment::{
-    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, TypedAssigns,
+pub use assignments::{
+    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
+    TypedAssigns,
 };
 pub use attachment::AttachId;
 pub use bundle::{BundleId, TransitionBundle};
@@ -46,8 +47,8 @@ pub use fungible::{
 };
 pub use global::{GlobalState, GlobalValues};
 pub use operations::{
-    Assignments, ContractId, Extension, Genesis, OpId, OpRef, Operation, PrevOuts, Redeemed,
-    Transition, Valencies,
+    ContractId, Extension, Genesis, OpId, OpRef, Operation, PrevOuts, Redeemed, Transition,
+    Valencies,
 };
-pub use seal::{ConfidentialSeal, ExposedSeal, GraphSeal, SecretSeal, TxoSeal};
+pub use seal::{ConfidentialSeal, ExposedSeal, GenesisSeal, GraphSeal, SecretSeal, TxoSeal};
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};

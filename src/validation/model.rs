@@ -28,9 +28,9 @@ use amplify::Wrapper;
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
-    validation, Assign, Assignments, ExposedSeal, ExposedState, GlobalState, GlobalValues,
-    GraphSeal, OpFullType, OpId, OpRef, Operation, PrevOuts, Redeemed, Schema, SchemaRoot,
-    TypedAssigns, Valencies,
+    validation, Assign, Assignments, AssignmentsRef, ExposedSeal, ExposedState, GlobalState,
+    GlobalValues, GraphSeal, OpFullType, OpId, OpRef, Operation, PrevOuts, Redeemed, Schema,
+    SchemaRoot, TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -144,7 +144,15 @@ impl<Root: SchemaRoot> Schema<Root> {
         } else {
             Valencies::default()
         };
-        status += self.validate_owned_state(id, op.assignments(), assign_schema);
+        status += match op.assignments() {
+            AssignmentsRef::Genesis(assignments) => {
+                self.validate_owned_state(id, assignments, assign_schema)
+            }
+            AssignmentsRef::Graph(assignments) => {
+                self.validate_owned_state(id, assignments, assign_schema)
+            }
+        };
+
         status += self.validate_valencies(id, op.valencies(), valency_schema);
 
         let op_info = OpInfo::with(id, self.subset_of.is_some(), &op, &prev_state, &redeemed);
@@ -376,7 +384,7 @@ pub struct OpInfo<'op> {
     pub ty: OpFullType,
     pub metadata: Option<&'op SmallBlob>,
     pub prev_state: &'op Assignments<GraphSeal>,
-    pub owned_state: &'op Assignments<GraphSeal>,
+    pub owned_state: AssignmentsRef<'op>,
     pub redeemed: &'op Valencies,
     pub valencies: &'op Valencies,
     pub global: &'op GlobalState,
@@ -438,7 +446,7 @@ fn extract_prev_state<C: ConsignmentApi>(
         for (state_id, indexes) in details {
             match prev_op.assignments_by_type(*state_id) {
                 Some(TypedAssigns::Declarative(set)) => {
-                    let set = filter(set, indexes);
+                    let set = filter(&set, indexes);
                     if let Some(state) = owned_state
                         .entry(*state_id)
                         .or_insert_with(|| TypedAssigns::Declarative(Default::default()))
@@ -448,7 +456,7 @@ fn extract_prev_state<C: ConsignmentApi>(
                     }
                 }
                 Some(TypedAssigns::Fungible(set)) => {
-                    let set = filter(set, indexes);
+                    let set = filter(&set, indexes);
                     if let Some(state) = owned_state
                         .entry(*state_id)
                         .or_insert_with(|| TypedAssigns::Fungible(Default::default()))
@@ -458,7 +466,7 @@ fn extract_prev_state<C: ConsignmentApi>(
                     }
                 }
                 Some(TypedAssigns::Structured(set)) => {
-                    let set = filter(set, indexes);
+                    let set = filter(&set, indexes);
                     if let Some(state) = owned_state
                         .entry(*state_id)
                         .or_insert_with(|| TypedAssigns::Structured(Default::default()))
@@ -468,7 +476,7 @@ fn extract_prev_state<C: ConsignmentApi>(
                     }
                 }
                 Some(TypedAssigns::Attachment(set)) => {
-                    let set = filter(set, indexes);
+                    let set = filter(&set, indexes);
                     if let Some(state) = owned_state
                         .entry(*state_id)
                         .or_insert_with(|| TypedAssigns::Attachment(Default::default()))
