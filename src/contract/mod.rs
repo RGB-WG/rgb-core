@@ -59,7 +59,6 @@ pub trait ConfidentialState:
     + strict_encoding::StrictDumb
     + strict_encoding::StrictEncode
     + strict_encoding::StrictDecode
-    + amplify::AsAny
     + Eq
     + Copy
 {
@@ -74,7 +73,6 @@ pub trait ExposedState:
     + strict_encoding::StrictEncode
     + strict_encoding::StrictDecode
     + commit_verify::Conceal<Concealed = Self::Confidential>
-    + amplify::AsAny
     + Eq
     + Ord
     + Clone

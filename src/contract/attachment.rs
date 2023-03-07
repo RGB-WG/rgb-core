@@ -60,7 +60,7 @@ impl FromStr for AttachId {
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_str(s) }
 }
 
-#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "RevealedAttach")]
 #[cfg_attr(
@@ -106,7 +106,7 @@ impl CommitStrategy for Revealed {
 /// Confidential version of an attachment information.
 ///
 /// See also revealed version [`Revealed`].
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, AsAny)]
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedAttach")]

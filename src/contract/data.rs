@@ -31,7 +31,7 @@ use super::{ConfidentialState, ExposedState};
 use crate::{StateCommitment, StateData, StateType, LIB_NAME_RGB};
 
 /// Struct using for storing Void (i.e. absent) state
-#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Default, AsAny)]
+#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Default)]
 #[display("void")]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -57,7 +57,7 @@ impl CommitStrategy for VoidState {
     type Strategy = commit_verify::strategies::Strict;
 }
 
-#[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, From, AsAny)]
+#[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "RevealedData")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -82,7 +82,7 @@ impl StrictSerialize for Revealed {}
 /// Confidential version of an structured state data.
 ///
 /// See also revealed version [`Revealed`].
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, AsAny)]
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedData")]

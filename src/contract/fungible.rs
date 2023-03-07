@@ -172,7 +172,7 @@ impl TryFrom<[u8; 32]> for BlindingFactor {
 /// State item for a homomorphically-encryptable state.
 ///
 /// Consists of the 64-bit value and
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "RevealedFungible")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -351,7 +351,7 @@ impl Default for RangeProof {
 /// Confidential version of the additive state.
 ///
 /// See also revealed version [`Revealed`].
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, AsAny)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedFungible")]
 #[cfg_attr(
