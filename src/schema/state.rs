@@ -23,7 +23,7 @@
 use strict_encoding::constants::U64;
 use strict_types::SemId;
 
-use crate::LIB_NAME_RGB;
+use crate::{StateType, LIB_NAME_RGB};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -38,7 +38,19 @@ pub enum StateSchema {
     Declarative,
     Fungible(FungibleType),
     Structured(SemId),
+    // TODO: Add MIME type requirements
     Attachment,
+}
+
+impl StateSchema {
+    pub fn state_type(&self) -> StateType {
+        match self {
+            StateSchema::Declarative => StateType::Void,
+            StateSchema::Fungible(_) => StateType::Fungible,
+            StateSchema::Structured(_) => StateType::Structured,
+            StateSchema::Attachment => StateType::Attachment,
+        }
+    }
 }
 
 /// Today we support only a single format of confidential data, because of the
