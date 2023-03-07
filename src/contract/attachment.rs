@@ -29,7 +29,7 @@ use bp::secp256k1::rand::{thread_rng, RngCore};
 use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::StrictEncode;
 
-use super::{ConfidentialState, RevealedState};
+use super::{ConfidentialState, ExposedState};
 use crate::LIB_NAME_RGB;
 
 /// Unique data attachment identifier
@@ -88,7 +88,7 @@ impl Revealed {
     }
 }
 
-impl RevealedState for Revealed {
+impl ExposedState for Revealed {
     type Confidential = Confidential;
 }
 

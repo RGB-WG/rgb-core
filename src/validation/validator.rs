@@ -33,7 +33,7 @@ use crate::validation::subschema::SchemaVerify;
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    BundleId, ContractId, OpId, OpRef, Operation, RevealedSeal, Schema, SchemaId, SchemaRoot,
+    BundleId, ContractId, ExposedSeal, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot,
     Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
 };
 
@@ -419,7 +419,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         }
     }
 
-    fn validate_prev_out<Seal: RevealedSeal>(
+    fn validate_prev_out<Seal: ExposedSeal>(
         &mut self,
         witness_tx: &Tx,
         opid: OpId,

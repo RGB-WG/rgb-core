@@ -27,11 +27,11 @@ use amplify::AsAny;
 use crate::data::VoidState;
 use crate::schema::OwnedStateType;
 use crate::{
-    attachment, data, fungible, validation, Assign, OpId, RevealedSeal, RevealedState, StateSchema,
+    attachment, data, fungible, validation, Assign, ExposedSeal, ExposedState, OpId, StateSchema,
 };
 
 impl StateSchema {
-    pub fn validate<State: RevealedState, Seal: RevealedSeal>(
+    pub fn validate<State: ExposedState, Seal: ExposedSeal>(
         &self,
         // type_system: &TypeSystem,
         opid: &OpId,

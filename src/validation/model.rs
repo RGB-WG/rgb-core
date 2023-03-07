@@ -29,8 +29,8 @@ use crate::schema::{AssignmentSchema, GlobalSchema, ValencySchema};
 use crate::validation::vm::VirtualMachine;
 use crate::validation::HistoryApi;
 use crate::{
-    seal, validation, Assign, GlobalState, GlobalValues, OpFullType, OpId, OpRef, Operation,
-    OwnedState, PrevOuts, Redeemed, RevealedSeal, RevealedState, Schema, SchemaRoot, TypedAssigns,
+    seal, validation, Assign, ExposedSeal, ExposedState, GlobalState, GlobalValues, OpFullType,
+    OpId, OpRef, Operation, OwnedState, PrevOuts, Redeemed, Schema, SchemaRoot, TypedAssigns,
     Valencies,
 };
 
@@ -218,7 +218,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         status
     }
 
-    fn validate_prev_state<Seal: RevealedSeal>(
+    fn validate_prev_state<Seal: ExposedSeal>(
         &self,
         id: OpId,
         owned_state: &OwnedState<Seal>,
@@ -276,7 +276,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         status
     }
 
-    fn validate_owned_state<Seal: RevealedSeal>(
+    fn validate_owned_state<Seal: ExposedSeal>(
         &self,
         id: OpId,
         owned_state: &OwnedState<Seal>,
@@ -420,7 +420,7 @@ fn extract_prev_state<C: HistoryApi>(
             Some(op) => op,
         };
 
-        fn filter<State: RevealedState, Seal: RevealedSeal>(
+        fn filter<State: ExposedState, Seal: ExposedSeal>(
             set: &[Assign<State, Seal>],
             indexes: &[u16],
         ) -> Vec<Assign<State, Seal>> {

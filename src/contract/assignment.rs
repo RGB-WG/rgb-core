@@ -30,9 +30,9 @@ use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
 use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
-use super::{attachment, data, fungible, RevealedState};
+use super::{attachment, data, fungible, ExposedState};
 use crate::data::VoidState;
-use crate::{RevealedSeal, LIB_NAME_RGB};
+use crate::{ExposedSeal, LIB_NAME_RGB};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
@@ -83,7 +83,7 @@ pub type AssignAttach<Seal> = Assign<attachment::Revealed, Seal>;
                  serde::de::DeserializeOwned"
     )
 )]
-pub enum Assign<State: RevealedState, Seal: RevealedSeal> {
+pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
     #[strict_type(tag = 0x00)]
     Confidential {
         seal: Seal::Confidential,
@@ -107,37 +107,37 @@ pub enum Assign<State: RevealedState, Seal: RevealedSeal> {
 // Assignment indexes are part of the transition ancestor's commitment, so
 // here we use deterministic ordering based on hash values of the concealed
 // seal data contained within the assignment
-impl<State: RevealedState, Seal: RevealedSeal> PartialOrd for Assign<State, Seal> {
+impl<State: ExposedState, Seal: ExposedSeal> PartialOrd for Assign<State, Seal> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.to_confidential_seal()
             .partial_cmp(&other.to_confidential_seal())
     }
 }
 
-impl<State: RevealedState, Seal: RevealedSeal> Ord for Assign<State, Seal> {
+impl<State: ExposedState, Seal: ExposedSeal> Ord for Assign<State, Seal> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.to_confidential_seal()
             .cmp(&other.to_confidential_seal())
     }
 }
 
-impl<State: RevealedState, Seal: RevealedSeal> PartialEq for Assign<State, Seal> {
+impl<State: ExposedState, Seal: ExposedSeal> PartialEq for Assign<State, Seal> {
     fn eq(&self, other: &Self) -> bool {
         self.to_confidential_seal() == other.to_confidential_seal() &&
             self.to_confidential_state() == other.to_confidential_state()
     }
 }
 
-impl<State: RevealedState, Seal: RevealedSeal> Eq for Assign<State, Seal> {}
+impl<State: ExposedState, Seal: ExposedSeal> Eq for Assign<State, Seal> {}
 
-impl<State: RevealedState, Seal: RevealedSeal> Hash for Assign<State, Seal> {
+impl<State: ExposedState, Seal: ExposedSeal> Hash for Assign<State, Seal> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.to_confidential_seal().hash(state);
         self.to_confidential_state().hash(state);
     }
 }
 
-impl<State: RevealedState, Seal: RevealedSeal> Assign<State, Seal> {
+impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn revealed(seal: Seal, state: State) -> Self { Assign::Revealed { seal, state } }
 
     pub fn with_seal_replaced(assignment: &Self, seal: Seal) -> Self {
@@ -212,7 +212,7 @@ impl<State: RevealedState, Seal: RevealedSeal> Assign<State, Seal> {
     }
 }
 
-impl<State: RevealedState, Seal: RevealedSeal> Conceal for Assign<State, Seal>
+impl<State: ExposedState, Seal: ExposedSeal> Conceal for Assign<State, Seal>
 where Self: Clone
 {
     type Concealed = Self;
@@ -240,7 +240,7 @@ where Self: Clone
 // `commit_encode` of the concealed type, and here the concealed type is again
 // `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
 // concealed data.
-impl<State: RevealedState, Seal: RevealedSeal> CommitEncode for Assign<State, Seal>
+impl<State: ExposedState, Seal: ExposedSeal> CommitEncode for Assign<State, Seal>
 where Self: Clone
 {
     fn commit_encode(&self, e: &mut impl io::Write) {
@@ -249,7 +249,7 @@ where Self: Clone
     }
 }
 
-impl<State: RevealedState, Seal: RevealedSeal> CommitmentId for Assign<State, Seal>
+impl<State: ExposedState, Seal: ExposedSeal> CommitmentId for Assign<State, Seal>
 where Self: Clone
 {
     const TAG: [u8; 32] = *b"urn:lnpbp:rgb:owned-state:v1#23A";
@@ -269,7 +269,7 @@ where Self: Clone
                  serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
-pub enum TypedAssigns<Seal: RevealedSeal> {
+pub enum TypedAssigns<Seal: ExposedSeal> {
     // TODO: Consider using non-empty variants
     #[strict_type(tag = 0x00)]
     Declarative(SmallVec<AssignRights<Seal>>),
@@ -281,7 +281,7 @@ pub enum TypedAssigns<Seal: RevealedSeal> {
     Attachment(SmallVec<AssignAttach<Seal>>),
 }
 
-impl<Seal: RevealedSeal> TypedAssigns<Seal> {
+impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn is_empty(&self) -> bool {
         match self {
             TypedAssigns::Declarative(set) => set.is_empty(),
@@ -458,12 +458,12 @@ impl<Seal: RevealedSeal> TypedAssigns<Seal> {
     }
 }
 
-impl<Seal: RevealedSeal> CommitStrategy for TypedAssigns<Seal> {
+impl<Seal: ExposedSeal> CommitStrategy for TypedAssigns<Seal> {
     type Strategy =
         commit_verify::strategies::Merklize<{ u128::from_be_bytes(*b"rgb:state:owned*") }>;
 }
 
-impl<Seal: RevealedSeal> MerkleLeaves for TypedAssigns<Seal> {
+impl<Seal: ExposedSeal> MerkleLeaves for TypedAssigns<Seal> {
     type Leaf = MerkleNode;
     type LeafIter = vec::IntoIter<MerkleNode>;
 

@@ -27,7 +27,7 @@ use amplify::Bytes32;
 use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
 
-use super::{ConfidentialState, RevealedState};
+use super::{ConfidentialState, ExposedState};
 use crate::LIB_NAME_RGB;
 
 /// Struct using for storing Void (i.e. absent) state
@@ -40,7 +40,7 @@ pub struct VoidState(());
 
 impl ConfidentialState for VoidState {}
 
-impl RevealedState for VoidState {
+impl ExposedState for VoidState {
     type Confidential = VoidState;
 }
 
@@ -58,7 +58,7 @@ impl CommitStrategy for VoidState {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct Revealed(SmallVec<u8>);
 
-impl RevealedState for Revealed {
+impl ExposedState for Revealed {
     type Confidential = Confidential;
 }
 

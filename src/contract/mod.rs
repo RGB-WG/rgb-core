@@ -64,7 +64,7 @@ pub trait ConfidentialState:
 }
 
 /// Marker trait for types of state holding explicit state data.
-pub trait RevealedState:
+pub trait ExposedState:
     core::fmt::Debug
     + strict_encoding::StrictDumb
     + strict_encoding::StrictEncode
@@ -90,7 +90,7 @@ pub trait ConfidentialSeal:
 {
 }
 
-pub trait RevealedSeal:
+pub trait ExposedSeal:
     core::fmt::Debug
     + strict_encoding::StrictDumb
     + strict_encoding::StrictEncode
@@ -104,7 +104,7 @@ pub trait RevealedSeal:
     type Confidential: ConfidentialSeal;
 }
 
-impl RevealedSeal for seal::Revealed {
+impl ExposedSeal for seal::Revealed {
     type Confidential = seal::Confidential;
 }
 

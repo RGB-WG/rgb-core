@@ -35,8 +35,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::data::VoidState;
 use crate::{
-    attachment, data, fungible, Assign, ContractId, Extension, Genesis, GlobalStateType, OpId,
-    Operation, OwnedStateType, RevealedSeal, RevealedState, SchemaId, Transition, TypedAssigns,
+    attachment, data, fungible, Assign, ContractId, ExposedSeal, ExposedState, Extension, Genesis,
+    GlobalStateType, OpId, Operation, OwnedStateType, SchemaId, Transition, TypedAssigns,
     LIB_NAME_RGB,
 };
 
@@ -100,13 +100,13 @@ impl FromStr for Opout {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct OutputAssignment<State: RevealedState> {
+pub struct OutputAssignment<State: ExposedState> {
     pub opout: Opout,
     pub seal: Outpoint,
     pub state: State,
 }
 
-impl<State: RevealedState> OutputAssignment<State> {
+impl<State: ExposedState> OutputAssignment<State> {
     pub fn with_witness<Seal: TxoSeal>(
         seal: Seal,
         witness_txid: Txid,
@@ -209,7 +209,7 @@ impl ContractState {
                 .extend(meta.iter().cloned());
         }
 
-        fn process<State: RevealedState, Seal: RevealedSeal>(
+        fn process<State: ExposedState, Seal: ExposedSeal>(
             contract_state: &mut BTreeSet<OutputAssignment<State>>,
             assignments: &[Assign<State, Seal>],
             opid: OpId,

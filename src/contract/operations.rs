@@ -37,7 +37,7 @@ use crate::schema::{
     self, ExtensionType, OpFullType, OpType, OwnedStateType, SchemaId, TransitionType,
 };
 use crate::state::Opout;
-use crate::{seal, Ffv, RevealedSeal, LIB_NAME_RGB};
+use crate::{seal, ExposedSeal, Ffv, LIB_NAME_RGB};
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::OwnedStateType, TinyVec<u16>>>;
@@ -58,13 +58,13 @@ pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
     )
 )]
 pub struct OwnedState<Seal>(TinyOrdMap<schema::OwnedStateType, TypedAssigns<Seal>>)
-where Seal: RevealedSeal;
+where Seal: ExposedSeal;
 
-impl<Seal: RevealedSeal> Default for OwnedState<Seal> {
+impl<Seal: ExposedSeal> Default for OwnedState<Seal> {
     fn default() -> Self { Self(empty!()) }
 }
 
-impl<Seal: RevealedSeal> CommitEncode for OwnedState<Seal> {
+impl<Seal: ExposedSeal> CommitEncode for OwnedState<Seal> {
     fn commit_encode(&self, mut e: &mut impl Write) {
         let w = StrictWriter::with(u32::MAX as usize, &mut e);
         self.0.len_u8().strict_encode(w).ok();
@@ -142,7 +142,7 @@ impl From<ContractId> for mpc::ProtocolId {
 /// - State transitions ([`Transitions`])
 /// - Public state extensions ([`Extensions`])
 pub trait Operation {
-    type Seal: RevealedSeal;
+    type Seal: ExposedSeal;
 
     /// Returns type of the operation (see [`OpType`]). Unfortunately, this
     /// can't be just a const, since it will break our ability to convert

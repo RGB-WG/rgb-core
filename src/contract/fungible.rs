@@ -53,7 +53,7 @@ use strict_encoding::{
     WriteTuple,
 };
 
-use super::{ConfidentialState, RevealedState};
+use super::{ConfidentialState, ExposedState};
 use crate::LIB_NAME_RGB;
 
 /// An atom of an additive state, which thus can be monomorphically encrypted.
@@ -197,7 +197,7 @@ impl Revealed {
     }
 }
 
-impl RevealedState for Revealed {
+impl ExposedState for Revealed {
     type Confidential = Confidential;
 }
 
