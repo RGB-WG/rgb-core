@@ -28,6 +28,7 @@ use std::hash::Hash;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
+use amplify::confinement::{Confined, U64};
 use amplify::hex;
 use bp::seals::txout::TxoSeal;
 use bp::{Outpoint, Txid};
@@ -36,9 +37,12 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::data::VoidState;
 use crate::{
     attachment, data, fungible, Assign, Assignments, AssignmentsRef, AssignmentsType, ContractId,
-    ExposedSeal, ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, SchemaId,
+    ExposedSeal, ExposedState, Extension, Genesis, GlobalState, OpId, Operation, SchemaId,
     Transition, TypedAssigns, LIB_NAME_RGB,
 };
+
+pub type HugeSet<T> = Confined<BTreeSet<T>, 0, U64>;
+pub type HugeMap<K, V> = Confined<BTreeMap<K, V>, 0, U64>;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -144,9 +148,9 @@ pub type FungibleOutput = OutputAssignment<fungible::Revealed>;
 pub type DataOutput = OutputAssignment<data::Revealed>;
 pub type AttachOutput = OutputAssignment<attachment::Revealed>;
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-// #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-// #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -156,19 +160,11 @@ pub struct ContractState {
     pub schema_id: SchemaId,
     pub root_schema_id: Option<SchemaId>,
     pub contract_id: ContractId,
-    /*#[cfg_attr(
-        feature = "serde",
-        serde(with = "As::<BTreeMap<Same, BTreeMap<Same, Vec<DisplayFromStr>>>>")
-    )]*/
-    pub global: BTreeMap<OpId, BTreeMap<GlobalStateType, Vec<data::Revealed>>>,
-    // #[cfg_attr(feature = "serde", serde(with = "As::<BTreeSet<DisplayFromStr>>"))]
-    pub rights: BTreeSet<RightsOutput>,
-    // #[cfg_attr(feature = "serde", serde(with = "As::<BTreeSet<DisplayFromStr>>"))]
-    pub fungibles: BTreeSet<FungibleOutput>,
-    // #[cfg_attr(feature = "serde", serde(with = "As::<BTreeSet<DisplayFromStr>>"))]
-    pub data: BTreeSet<DataOutput>,
-    // #[cfg_attr(feature = "serde", serde(with = "As::<BTreeSet<DisplayFromStr>>"))]
-    pub attach: BTreeSet<AttachOutput>,
+    pub global: HugeMap<OpId, GlobalState>,
+    pub rights: HugeSet<RightsOutput>,
+    pub fungibles: HugeSet<FungibleOutput>,
+    pub data: HugeSet<DataOutput>,
+    pub attach: HugeSet<AttachOutput>,
 }
 
 impl ContractState {
@@ -201,32 +197,47 @@ impl ContractState {
     fn add_operation(&mut self, txid: Option<Txid>, op: &impl Operation) {
         let opid = op.id();
 
-        for (ty, meta) in op.globals() {
-            self.global
-                .entry(opid)
-                .or_default()
-                .entry(*ty)
-                .or_default()
-                .extend(meta.iter().cloned());
+        for (ty, state) in op.globals() {
+            let map = match self.global.get_mut(&opid) {
+                Some(map) => map,
+                None => {
+                    // TODO: Do not panic here
+                    self.global
+                        .insert(opid, GlobalState::default())
+                        .expect("must be protected by the schema");
+                    self.global.get_mut(&opid).expect("just inserted")
+                }
+            };
+            // TODO: Remove excessive state
+            map.extend_state(*ty, state.clone())
+                .expect("excessive global state must be removed");
         }
 
         // Remove invalidated state
         for output in op.prev_outs() {
             if let Some(o) = self.rights.iter().find(|r| r.opout == output) {
                 let o = o.clone(); // need this b/c of borrow checker
-                self.rights.remove(&o);
+                self.rights
+                    .remove(&o)
+                    .expect("collection allows zero elements");
             }
             if let Some(o) = self.fungibles.iter().find(|r| r.opout == output) {
                 let o = o.clone();
-                self.fungibles.remove(&o);
+                self.fungibles
+                    .remove(&o)
+                    .expect("collection allows zero elements");
             }
             if let Some(o) = self.data.iter().find(|r| r.opout == output) {
                 let o = o.clone();
-                self.data.remove(&o);
+                self.data
+                    .remove(&o)
+                    .expect("collection allows zero elements");
             }
             if let Some(o) = self.attach.iter().find(|r| r.opout == output) {
                 let o = o.clone();
-                self.attach.remove(&o);
+                self.attach
+                    .remove(&o)
+                    .expect("collection allows zero elements");
             }
         }
 
@@ -243,7 +254,7 @@ impl ContractState {
         assignments: &Assignments<Seal>,
     ) {
         fn process<State: ExposedState, Seal: ExposedSeal>(
-            contract_state: &mut BTreeSet<OutputAssignment<State>>,
+            contract_state: &mut HugeSet<OutputAssignment<State>>,
             assignments: &[Assign<State, Seal>],
             opid: OpId,
             ty: AssignmentsType,
@@ -259,7 +270,9 @@ impl ContractState {
                 } else {
                     OutputAssignment::with_unwrap_txid(seal, state.into(), opid, ty, no as u16)
                 };
-                contract_state.insert(assigned_state);
+                contract_state
+                    .push(assigned_state)
+                    .expect("contract state exceeded 2^64 number of items, which is unrealistic");
             }
         }
 

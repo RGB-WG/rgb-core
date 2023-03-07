@@ -21,9 +21,10 @@
 // limitations under the License.
 
 use std::collections::btree_map;
+use std::vec;
 
-use amplify::confinement;
 use amplify::confinement::{Confined, TinyOrdMap, U16};
+use amplify::{confinement, Wrapper};
 use strict_encoding::StrictDumb;
 
 use crate::{data, schema, LIB_NAME_RGB};
@@ -48,6 +49,13 @@ impl GlobalValues {
     pub fn with(state: data::Revealed) -> Self { GlobalValues(Confined::with(state)) }
 }
 
+impl IntoIterator for GlobalValues {
+    type Item = data::Revealed;
+    type IntoIter = vec::IntoIter<data::Revealed>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Default, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
@@ -69,6 +77,19 @@ impl GlobalState {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.push(state),
             None => self.insert(ty, GlobalValues::with(state)).map(|_| ()),
+        }
+    }
+
+    pub fn extend_state(
+        &mut self,
+        ty: schema::GlobalStateType,
+        iter: impl IntoIterator<Item = data::Revealed>,
+    ) -> Result<(), confinement::Error> {
+        match self.0.get_mut(&ty) {
+            Some(vec) => vec.extend(iter),
+            None => self
+                .insert(ty, GlobalValues::from_inner(Confined::try_from_iter(iter)?))
+                .map(|_| ()),
         }
     }
 }
