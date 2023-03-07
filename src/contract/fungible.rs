@@ -96,6 +96,12 @@ impl From<FungibleState> for u64 {
 }
 
 impl FungibleState {
+    pub fn fungible_type(&self) -> schema::FungibleType {
+        match self {
+            FungibleState::Bits64(_) => schema::FungibleType::Unsigned64Bit,
+        }
+    }
+
     pub fn as_u64(&self) -> u64 { (*self).into() }
 }
 
