@@ -36,7 +36,7 @@ pub use validator::{ResolveTx, TxResolverError, Validator};
 
 use crate::schema::{self, OpType, SchemaId};
 use crate::state::Opout;
-use crate::{data, BundleId, OccurrencesMismatch, OpId, SecretSeal};
+use crate::{data, BundleId, OccurrencesMismatch, OpId, SecretSeal, StateType};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -188,7 +188,6 @@ pub enum Failure {
         found: usize,
     },
     SchemaMismatchedDataType(u16),
-    SchemaMismatchedStateType(schema::OwnedStateType),
 
     SchemaMetaOccurrencesError(OpId, schema::GlobalStateType, OccurrencesMismatch),
     SchemaParentOwnedRightOccurrencesError(OpId, schema::OwnedStateType, OccurrencesMismatch),
@@ -250,10 +249,26 @@ pub enum Failure {
     },
 
     // Data check errors
+    /// state in {opid}/{state_type} is of {found} type, while schema requires
+    /// it to be {expected}.
+    StateTypeMismatch {
+        opid: OpId,
+        state_type: schema::OwnedStateType,
+        expected: StateType,
+        found: StateType,
+    },
+    /// state in {opid}/{state_type} is of {found} type, while schema requires
+    /// it to be {expected}.
+    FungibleTypeMismatch {
+        opid: OpId,
+        state_type: schema::OwnedStateType,
+        expected: schema::FungibleType,
+        found: schema::FungibleType,
+    },
     InvalidStateDataType(OpId, u16, /* TODO: Use strict type */ data::Revealed),
     InvalidStateDataValue(OpId, u16, /* TODO: Use strict type */ Vec<u8>),
     /// invalid bulletproofs in {0}:{1}: {3}
-    InvalidBulletproofs(OpId, u16, String),
+    BulletproofsInvalid(OpId, u16, String),
     /// operation {0} is invalid: {1}
     ScriptFailure(OpId, String),
 }
@@ -284,5 +299,5 @@ pub enum Warning {
 // TODO #44: (v0.3) convert to detailed descriptions using doc_comments
 #[display(Debug)]
 pub enum Info {
-    UncheckableConfidentialStateData(OpId, u16),
+    UncheckableConfidentialState(OpId, u16),
 }

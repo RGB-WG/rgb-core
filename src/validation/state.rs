@@ -20,14 +20,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::any::Any;
-
-use amplify::AsAny;
-
-use crate::data::VoidState;
 use crate::schema::OwnedStateType;
 use crate::{
-    attachment, data, fungible, validation, Assign, ExposedSeal, ExposedState, OpId, StateSchema,
+    validation, Assign, ConfidentialState, ExposedSeal, ExposedState, OpId, StateCommitment,
+    StateData, StateSchema,
 };
 
 impl StateSchema {
@@ -35,101 +31,73 @@ impl StateSchema {
         &self,
         // type_system: &TypeSystem,
         opid: &OpId,
-        assignment_id: OwnedStateType,
+        state_type: OwnedStateType,
         data: &Assign<State, Seal>,
     ) -> validation::Status {
         let mut status = validation::Status::new();
         match data {
             Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
-                let a: &dyn Any = state.as_any();
-                match self {
-                    StateSchema::Declarative => {
-                        if a.downcast_ref::<VoidState>().is_none() {
-                            status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                assignment_id,
-                            ));
-                        }
-                    }
-                    StateSchema::Fungible(_) => {
-                        if let Some(value) = a.downcast_ref::<fungible::Confidential>() {
-                            // [SECURITY-CRITICAL]: Bulletproofs validation
-                            if let Err(err) = value.verify_range_proof() {
-                                status.add_failure(validation::Failure::InvalidBulletproofs(
-                                    *opid,
-                                    assignment_id,
-                                    err.to_string(),
-                                ));
-                            }
-                        } else {
-                            status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                assignment_id,
-                            ));
-                        }
-
-                        // TODO: When other homomorphic formats will be added,
-                        //       add information to the status like with hashed
-                        //       data below
-                    }
-                    StateSchema::Structured(_) => match a.downcast_ref::<data::Confidential>() {
-                        None => {
-                            status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                assignment_id,
-                            ));
-                        }
-                        Some(_) => {
-                            status.add_info(validation::Info::UncheckableConfidentialStateData(
+                match (self, state.state_commitment()) {
+                    (StateSchema::Declarative, StateCommitment::Void) => {}
+                    (StateSchema::Fungible(_), StateCommitment::Fungible(value)) => {
+                        // [SECURITY-CRITICAL]: Bulletproofs validation
+                        if let Err(err) = value.verify_range_proof() {
+                            status.add_failure(validation::Failure::BulletproofsInvalid(
                                 *opid,
-                                assignment_id,
+                                state_type,
+                                err.to_string(),
                             ));
                         }
-                    },
-                    StateSchema::Attachment => {
-                        if a.downcast_ref::<attachment::Confidential>().is_none() {
-                            status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                assignment_id,
-                            ));
-                        }
+                    }
+                    (StateSchema::Structured(_), StateCommitment::Structured(_)) => {
+                        status.add_info(validation::Info::UncheckableConfidentialState(
+                            *opid, state_type,
+                        ));
+                    }
+                    (StateSchema::Attachment, StateCommitment::Attachment(_)) => {
+                        status.add_info(validation::Info::UncheckableConfidentialState(
+                            *opid, state_type,
+                        ));
+                    }
+                    // all other options are mismatches
+                    (state_schema, found) => {
+                        status.add_failure(validation::Failure::StateTypeMismatch {
+                            opid: *opid,
+                            state_type,
+                            expected: state_schema.state_type(),
+                            found: found.state_type(),
+                        });
                     }
                 }
             }
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
-                let a: &dyn Any = state.as_any();
-                match self {
-                    StateSchema::Declarative => {
-                        if a.downcast_ref::<VoidState>().is_none() {
-                            status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                assignment_id,
-                            ));
-                        }
+                match (self, state.state_data()) {
+                    (StateSchema::Declarative, StateData::Void) => {}
+                    (StateSchema::Attachment, StateData::Attachment(_)) => {
+                        // TODO: Check against MIME type
                     }
-                    StateSchema::Fungible(_format) => {
-                        if a.downcast_ref::<fungible::Revealed>().is_none() {
-                            status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                assignment_id,
-                            ));
-                        }
-                        // TODO #15: When other homomorphic formats will be
-                        //           added, add type check like with hashed data
-                        //           below
+                    (StateSchema::Fungible(schema), StateData::Fungible(v))
+                        if v.value.fungible_type() != *schema =>
+                    {
+                        status.add_failure(validation::Failure::FungibleTypeMismatch {
+                            opid: *opid,
+                            state_type,
+                            expected: *schema,
+                            found: v.value.fungible_type(),
+                        });
                     }
-                    StateSchema::Structured(_semid) => {
-                        match a.downcast_ref::<data::Revealed>() {
-                            None => {
-                                status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                    assignment_id,
-                                ));
-                            }
-                            Some(_data) => {
-                                // TODO #137: run strict type validation
-                            }
-                        }
+                    (StateSchema::Fungible(_), StateData::Fungible(_)) => {}
+                    (StateSchema::Structured(_sem_id), StateData::Structured(_data)) => {
+                        // TODO #137: Run strict type validation
                     }
-                    StateSchema::Attachment => {
-                        if a.downcast_ref::<attachment::Revealed>().is_none() {
-                            status.add_failure(validation::Failure::SchemaMismatchedStateType(
-                                assignment_id,
-                            ));
-                        }
+                    // all other options are mismatches
+                    (state_schema, found) => {
+                        status.add_failure(validation::Failure::StateTypeMismatch {
+                            opid: *opid,
+                            state_type,
+                            expected: state_schema.state_type(),
+                            found: found.state_type(),
+                        });
                     }
                 }
             }
