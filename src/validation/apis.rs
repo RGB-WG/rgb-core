@@ -84,7 +84,7 @@ pub enum ConsistencyError {
 pub trait ContainerApi {
     /// Returns reference to a operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
-    fn operation(&self, opid: OpId) -> Option<OpRef>;
+    fn operation<'op>(&self, opid: OpId) -> Option<&'op OpRef<'op>>;
 
     fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
 

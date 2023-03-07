@@ -148,7 +148,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         status += self.validate_owned_state(id, op.owned_state(), assign_schema);
         status += self.validate_valencies(id, op.valencies(), valency_schema);
 
-        let op_info = OpInfo::with(id, self.subset_of.is_some(), op, &prev_state, &redeemed);
+        let op_info = OpInfo::with(id, self.subset_of.is_some(), &op, &prev_state, &redeemed);
 
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the operation data match the schema, so
@@ -387,7 +387,7 @@ impl<'op> OpInfo<'op> {
     pub fn with(
         id: OpId,
         subschema: bool,
-        op: OpRef<'op>,
+        op: &'op OpRef<'op>,
         prev_state: &'op OwnedState<seal::Revealed>,
         redeemed: &'op Valencies,
     ) -> Self {
