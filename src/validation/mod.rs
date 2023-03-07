@@ -31,7 +31,8 @@ use core::iter::FromIterator;
 use core::ops::AddAssign;
 
 pub use apis::{ConsistencyError, ContainerApi, HistoryApi};
-use bp::Txid;
+use bp::dbc::anchor;
+use bp::{seals, Txid};
 pub(crate) use model::OpInfo;
 pub use validator::{ResolveTx, TxResolverError, Validator};
 
@@ -101,25 +102,25 @@ impl FromIterator<Failure> for Status {
 impl Status {
     pub fn new() -> Self { Self::default() }
 
-    pub fn with_failure(failure: Failure) -> Self {
+    pub fn with_failure(failure: impl Into<Failure>) -> Self {
         Self {
-            failures: vec![failure],
+            failures: vec![failure.into()],
             ..Self::default()
         }
     }
 
-    pub fn add_failure(&mut self, failure: Failure) -> &Self {
-        self.failures.push(failure);
+    pub fn add_failure(&mut self, failure: impl Into<Failure>) -> &Self {
+        self.failures.push(failure.into());
         self
     }
 
-    pub fn add_warning(&mut self, warning: Warning) -> &Self {
-        self.warnings.push(warning);
+    pub fn add_warning(&mut self, warning: impl Into<Warning>) -> &Self {
+        self.warnings.push(warning.into());
         self
     }
 
-    pub fn add_info(&mut self, info: Info) -> &Self {
-        self.info.push(info);
+    pub fn add_info(&mut self, info: impl Into<Info>) -> &Self {
+        self.info.push(info.into());
         self
     }
 
@@ -200,8 +201,10 @@ pub enum Failure {
 
     SchemaTypeSystem(/* TODO: use error from strict types */),
 
+    // Consignment consistency errors
     OperationAbsent(OpId),
     TransitionAbsent(OpId),
+    /// bundle with id {0} is invalid.
     BundleInvalid(BundleId),
 
     // Errors checking seal closing
@@ -220,17 +223,19 @@ pub enum Failure {
     NoPrevOut(OpId, Opout),
     /// seal {0} present in the history is confidential and can't be validated.
     ConfidentialSeal(Opout),
-    /// witness transaction of {opid} doesn't closes referenced seal {outpoint}.
-    UnclosedSeal {
-        opid: OpId,
-        prev_out: Opout,
-        outpoint: bp::Outpoint,
-    },
-    /// genesis or state extension output {0} defines seal which doesn't
-    /// specifies transaction id (so-called witness seal, which can be present
-    /// only in state transitions).
-    UnexpectedWitnessSeal(Opout),
+    /// transition {0} is not a part of multi-protocol commitment for witness
+    /// {1}; anchor is invalid.
+    MpcInvalid(OpId, Txid),
+    /// witness transaction {0} is not known to the transaction resolver.
+    SealNoWitnessTx(Txid),
+    /// transition {0} doesn't close seal with the witness transaction {1}.
+    /// Details: {2}
+    SealInvalid(OpId, Txid, seals::txout::VerifyError),
+    /// transition {0} is not properly anchored to the witness transaction {1}.
+    /// Details: {2}
+    AnchorInvalid(OpId, Txid, anchor::VerifyError),
 
+    // State extensions errors
     /// valency {valency} redeemed by state extension {opid} references
     /// non-existing operation {prev_id}
     ValencyNoParent {
@@ -246,17 +251,11 @@ pub enum Failure {
         valency: schema::ValencyType,
     },
 
-    WitnessTransactionMissed(Txid),
-    WitnessNoCommitment(OpId, Txid),
-
-    EndpointTransitionNotFound(OpId),
-
+    // Data check errors
     InvalidStateDataType(OpId, u16, /* TODO: Use strict type */ data::Revealed),
     InvalidStateDataValue(OpId, u16, /* TODO: Use strict type */ Vec<u8>),
-
     /// invalid bulletproofs in {0}:{1}: {3}
     InvalidBulletproofs(OpId, u16, String),
-
     /// operation {0} is invalid: {1}
     ScriptFailure(OpId, String),
 }

@@ -23,8 +23,10 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
+use bp::seals::txout::Witness;
 use bp::{Tx, Txid};
 use commit_verify::mpc;
+use single_use_seals::SealWitness;
 
 use super::apis::HistoryApi;
 use super::{Failure, Status, Validity, Warning};
@@ -33,8 +35,8 @@ use crate::validation::subschema::SchemaVerify;
 use crate::validation::vm::VirtualMachine;
 use crate::vm::AluRuntime;
 use crate::{
-    BundleId, ContractId, ExposedSeal, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot,
-    Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
+    BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
+    Transition, TransitionBundle, TypedAssigns,
 };
 
 #[derive(Debug, Display, Error)]
@@ -226,7 +228,7 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                     .status
                     .failures
                     .iter()
-                    .position(|f| f == &Failure::WitnessTransactionMissed(anchor.txid))
+                    .position(|f| f == &Failure::SealNoWitnessTx(anchor.txid))
                 {
                     self.status.failures.remove(pos);
                     self.status
@@ -352,7 +354,6 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
         anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
         let txid = anchor.txid;
-        let opid = transition.id();
 
         // Check that the anchor is committed into a transaction spending all of the
         // transition inputs.
@@ -369,99 +370,87 @@ impl<'consignment, 'resolver, C: HistoryApi, R: ResolveTx>
                 // the anchor, i.e. consignment is invalid. We are proceeding with further
                 // validation in order to detect the rest of problems (and reporting the
                 // failure!)
-                self.status
-                    .add_failure(Failure::WitnessTransactionMissed(txid));
+                self.status.add_failure(Failure::SealNoWitnessTx(txid));
             }
             Ok(witness_tx) => {
-                // Ok, now we have the transaction and fee information for a single state change
-                // from some ancestors array to the currently validated transition operation:
-                // that's everything required to do the complete validation
-
-                // [VALIDATION]: Checking anchor deterministic bitcoin commitment
-                if anchor
-                    .verify(self.contract_id, bundle_id.into(), &witness_tx)
-                    .is_err()
-                {
-                    // TODO: Add more details to the error message
-                    // The operation is not committed to bitcoin transaction graph!
-                    // Ultimate failure. But continuing to detect the rest (after reporting it).
-                    self.status
-                        .add_failure(Failure::WitnessNoCommitment(opid, txid));
-                }
-
-                // Checking that witness transaction closes seals defined by transition previous
-                // outputs.
-                for (prev_id, prev_outs) in transition.prev_state().iter() {
-                    let prev_id = *prev_id;
-                    let Some(prev_op) = self.consignment.operation(prev_id) else {
-                        // Node, referenced as the ancestor, was not found in the consignment. 
-                        // Usually this means that the consignment data are broken
-                        self.status
-                            .add_failure(Failure::OperationAbsent(prev_id));
-                        continue;
-                    };
-
-                    for (state_type, outs) in prev_outs {
-                        let state_type = *state_type;
-
-                        let Some(variant) = prev_op.owned_state_by_type(state_type) else {
-                            self.status.add_failure(Failure::NoPrevState { opid, prev_id, state_type });
-                            continue;
-                        };
-
-                        for out_no in outs {
-                            let prev_out = Opout::new(prev_id, state_type, *out_no);
-                            self.validate_prev_out(&witness_tx, opid, prev_out, variant);
-                        }
-                    }
-                }
+                let witness = Witness::with(witness_tx, anchor.clone());
+                self.validate_witness(transition, witness, bundle_id, anchor)
             }
         }
     }
 
-    fn validate_prev_out<Seal: ExposedSeal>(
+    fn validate_witness(
         &mut self,
-        witness_tx: &Tx,
-        opid: OpId,
-        prev_out: Opout,
-        variant: &'consignment TypedAssigns<Seal>,
+        transition: &'consignment Transition,
+        witness: Witness,
+        bundle_id: BundleId,
+        anchor: &'consignment Anchor<mpc::MerkleProof>,
     ) {
-        let Ok(seal) = variant.revealed_seal_at(prev_out.no) else {
-            self.status.add_failure(Failure::NoPrevOut(opid,prev_out));
-            return
-        };
-        let Some(seal) = seal else {
-            // Everything is ok, but we have incomplete data (confidential), thus can't do a 
-            // full verification and have to report the failure
-            self.status
-                .add_failure(Failure::ConfidentialSeal(prev_out));
-            return
-        };
+        let opid = transition.id();
+        let txid = witness.txid;
 
-        // Getting bitcoin transaction outpoint for the current ancestor ... ->
-        let outpoint = if let Some(anchor) = self.anchor_index.get(&prev_out.op) {
-            seal.outpoint_or(anchor.txid)
-        } else if let Some(outpoint) = seal.outpoint() {
-            outpoint
-        } else {
-            self.status
-                .add_failure(Failure::UnexpectedWitnessSeal(prev_out));
-            return;
-        };
+        // Checking that witness transaction closes seals defined by transition previous
+        // outputs.
+        let mut seals = vec![];
+        for (prev_id, prev_outs) in &transition.prev_state {
+            let prev_id = *prev_id;
+            let Some(prev_op) = self.consignment.operation(prev_id) else {
+                // Node, referenced as the ancestor, was not found in the consignment. 
+                // Usually this means that the consignment data are broken
+                self.status
+                    .add_failure(Failure::OperationAbsent(prev_id));
+                continue
+            };
 
-        if !witness_tx
-            .inputs
-            .iter()
-            .any(|txin| txin.prev_output == outpoint)
-        {
-            // Another failure: we do not spend one of the transition ancestors in the
-            // witness transaction. The consignment is clearly invalid; reporting this and
-            // processing to other potential issues.
-            self.status.add_failure(Failure::UnclosedSeal {
-                opid,
-                prev_out,
-                outpoint,
-            });
+            for (state_type, outs) in prev_outs {
+                let state_type = *state_type;
+
+                let Some(variant) = prev_op.owned_state_by_type(state_type) else {
+                    self.status.add_failure(Failure::NoPrevState { opid, prev_id, state_type });
+                    continue
+                };
+
+                for out_no in outs {
+                    let prev_out = Opout::new(prev_id, state_type, *out_no);
+                    let Ok(seal) = variant.revealed_seal_at(prev_out.no) else {
+                        self.status.add_failure(Failure::NoPrevOut(opid,prev_out));
+                        continue
+                    };
+                    let Some(seal) = seal else {
+                        // Everything is ok, but we have incomplete data (confidential), thus can't do a 
+                        // full verification and have to report the failure
+                        self.status
+                            .add_failure(Failure::ConfidentialSeal(prev_out));
+                        continue
+                    };
+                    seals.push(seal)
+                }
+            }
+        }
+
+        let message = mpc::Message::from(bundle_id);
+        match anchor.convolve(self.contract_id, message) {
+            Err(_) => {
+                self.status.add_failure(Failure::MpcInvalid(opid, txid));
+            }
+            Ok(commitment) => {
+                // [VALIDATION]: CHECKING SINGLE-USE-SEALS
+                witness
+                    .verify_many_seals(&seals, &commitment)
+                    .map_err(|err| {
+                        self.status
+                            .add_failure(Failure::SealInvalid(opid, txid, err));
+                    })
+                    .ok();
+            }
+        }
+
+        // [VALIDATION]: Checking anchor deterministic bitcoin commitment
+        if let Err(err) = anchor.verify(self.contract_id, message, &witness.tx) {
+            // The operation is not committed to bitcoin transaction graph!
+            // Ultimate failure. But continuing to detect the rest (after reporting it).
+            self.status
+                .add_failure(Failure::AnchorInvalid(opid, txid, err));
         }
     }
 }
