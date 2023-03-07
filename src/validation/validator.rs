@@ -95,12 +95,9 @@ impl<'consignment, 'resolver, C: ContractContainer, R: ResolveTx>
         // about them (in form of generated warnings)
         let mut end_transitions = Vec::<(&Transition, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.endpoints() {
-            let transitions = match consignment.known_transitions_by_bundle_id(*bundle_id) {
-                Ok(transitions) => transitions,
-                Err(_) => {
-                    status.add_failure(Failure::BundleInvalid(*bundle_id));
-                    continue;
-                }
+            let Some(transitions) = consignment.known_transitions_by_bundle_id(*bundle_id) else {
+                status.add_failure(Failure::BundleInvalid(*bundle_id));
+                continue;
             };
             for transition in transitions {
                 let opid = transition.id();

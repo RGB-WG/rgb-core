@@ -24,49 +24,12 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
-use bp::dbc::AnchorId;
 use commit_verify::mpc;
 
-use crate::schema::OwnedStateType;
 use crate::{
     Anchor, BundleId, Extension, Genesis, OpId, OpRef, SecretSeal, SubSchema, Transition,
     TransitionBundle,
 };
-
-/// Errors accessing graph data via [`ContainerApi`].
-///
-/// All this errors imply internal inconsistency in the underlying data: they
-/// are malformed (forged or damaged) and were not validated. The other reason
-/// for these error are mistakes in the logic of the caller, which may not match
-/// schema used by the contract.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
-#[display(doc_comments)]
-pub enum ConsistencyError {
-    /// Bundle with id {0} is not present in the storage/container
-    BundleIdAbsent(BundleId),
-
-    /// Transition with id {0} is not present in the storage/container
-    TransitionAbsent(OpId),
-
-    /// Extension with id {0} is not present in the storage/container
-    ExtensionAbsent(OpId),
-
-    /// Anchor with id {0} is not present in the storage/container
-    AnchorAbsent(AnchorId),
-
-    /// No seals of the provided type {0} are closed by transition id {1}
-    NoSealsClosed(OwnedStateType, OpId),
-
-    /// Output is not present in the storage
-    OutputNotPresent,
-
-    /// Seal definition is confidential while was required to be in revealed
-    /// state
-    ConfidentialSeal,
-
-    /// The provided operation with id {0} is not an endpoint of the consignment
-    NotEndpoint(OpId),
-}
 
 /// Trait defining common data access API for all storage-related RGB structures
 ///
@@ -108,7 +71,7 @@ pub trait ContractContainer {
     ///   operation type
     /// - [`Error::TransitionAbsent`] when operation with the given id is absent
     ///   from the storage/container
-    fn transition(&self, opid: OpId) -> Result<&Transition, ConsistencyError>;
+    fn transition(&self, opid: OpId) -> Option<&Transition>;
 
     /// Returns reference to a state extension, if known, matching the provided
     /// id. If id is unknown, or corresponds to other type of the operation
@@ -120,7 +83,7 @@ pub trait ContractContainer {
     ///   operation type
     /// - [`Error::ExtensionAbsent`] when operation with the given id is absent
     ///   from the storage/container
-    fn extension(&self, opid: OpId) -> Result<&Extension, ConsistencyError>;
+    fn extension(&self, opid: OpId) -> Option<&Extension>;
 
     /// The final state ("endpoints") provided by this consignment.
     ///
@@ -139,14 +102,11 @@ pub trait ContractContainer {
     /// Data on all state extensions contained in the consignment
     fn state_extensions(&self) -> Self::ExtensionsIter<'_>;
 
-    fn bundle_by_id(&self, bundle_id: BundleId) -> Result<&TransitionBundle, ConsistencyError>;
+    fn bundle_by_id(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
 
     fn op_ids_except(&self, ids: &impl IntoIterator<Item = OpId>) -> Self::OpIdIter;
 
     fn has_operation(&self, opid: OpId) -> bool;
 
-    fn known_transitions_by_bundle_id(
-        &self,
-        bundle_id: BundleId,
-    ) -> Result<Vec<&Transition>, ConsistencyError>;
+    fn known_transitions_by_bundle_id(&self, bundle_id: BundleId) -> Option<Vec<&Transition>>;
 }
