@@ -64,7 +64,7 @@ pub trait ConsignmentApi {
 
     /// Retrieves reference to a operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
-    fn operation<'op>(&self, opid: OpId) -> Option<OpRef<'op>>;
+    fn operation(&self, opid: OpId) -> Option<OpRef>;
 
     /// Contract genesis.
     fn genesis(&self) -> &Genesis;
