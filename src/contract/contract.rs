@@ -272,8 +272,11 @@ pub type AttachOutput = OutputAssignment<attachment::Revealed>;
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct ContractHistory {
+    #[getter(as_copy)]
     schema_id: SchemaId,
+    #[getter(as_copy)]
     root_schema_id: Option<SchemaId>,
+    #[getter(as_copy)]
     contract_id: ContractId,
     #[getter(skip)]
     global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, data::Revealed>>,
