@@ -31,5 +31,5 @@ mod status;
 pub use consignment::ConsignmentApi;
 pub(crate) use model::OpInfo;
 pub use script::VirtualMachine;
-use status::{Failure, Info, Status, Validity, Warning};
+pub use status::{Failure, Info, Status, Validity, Warning};
 pub use validator::{ResolveTx, TxResolverError, Validator};

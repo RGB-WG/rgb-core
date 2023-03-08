@@ -28,8 +28,9 @@ use bp::{Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
+use super::status::{Failure, Warning};
 use super::subschema::SchemaVerify;
-use super::{ConsignmentApi, Failure, Status, Validity, VirtualMachine, Warning};
+use super::{ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::contract::Opout;
 use crate::vm::AluRuntime;
 use crate::{
