@@ -95,4 +95,3 @@ mod _ffv {
 
 // TODO: Validate strict type data
 // TODO: Add parsed global and structured state to the ContractState
-// TODO: Consensus ordering for the global state
