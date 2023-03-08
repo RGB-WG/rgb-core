@@ -94,7 +94,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // to detect any potential issues with the consignment structure and notify user
         // about them (in form of generated warnings)
         let mut end_transitions = Vec::<(&Transition, BundleId)>::new();
-        for (bundle_id, seal_endpoint) in consignment.endpoints() {
+        for (bundle_id, seal_endpoint) in consignment.terminals() {
             let Some(transitions) = consignment.known_transitions_by_bundle_id(bundle_id) else {
                 status.add_failure(Failure::BundleInvalid(bundle_id));
                 continue;

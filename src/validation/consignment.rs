@@ -24,6 +24,8 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use commit_verify::mpc;
 
 use crate::{
@@ -42,16 +44,9 @@ use crate::{
 /// non-validated/unchecked data this may result in returned [`Error`] or
 /// [`None`] values from the API methods.
 pub trait ConsignmentApi {
-    type OpIdIter: Iterator<Item = OpId>;
-
-    type EndpointIter: Iterator<Item = (BundleId, SecretSeal)>;
-
     type BundleIter<'container>: Iterator<
         Item = &'container (Anchor<mpc::MerkleProof>, TransitionBundle),
     >
-    where Self: 'container;
-
-    type ExtensionsIter<'container>: Iterator<Item = &'container Extension>
     where Self: 'container;
 
     fn schema(&self) -> &SubSchema;
@@ -96,17 +91,14 @@ pub trait ConsignmentApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn endpoints(&self) -> Self::EndpointIter;
+    fn terminals(&self) -> BTreeMap<BundleId, SecretSeal>;
 
     /// Data on all anchored state transitions contained in the consignment
     fn anchored_bundles(&self) -> Self::BundleIter<'_>;
 
-    /// Data on all state extensions contained in the consignment
-    fn state_extensions(&self) -> Self::ExtensionsIter<'_>;
-
     fn bundle_by_id(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
 
-    fn op_ids_except(&self, ids: &impl IntoIterator<Item = OpId>) -> Self::OpIdIter;
+    fn op_ids_except(&self, ids: &impl IntoIterator<Item = OpId>) -> BTreeSet<OpId>;
 
     fn has_operation(&self, opid: OpId) -> bool;
 
