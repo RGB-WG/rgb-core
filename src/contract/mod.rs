@@ -25,7 +25,7 @@ pub mod data;
 pub mod fungible;
 pub mod attachment;
 mod state;
-mod seal;
+pub mod seal;
 pub mod assignments;
 mod operations;
 mod bundle;

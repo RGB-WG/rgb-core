@@ -24,7 +24,7 @@ use core::fmt::Debug;
 use core::hash::Hash;
 
 pub use bp::seals::txout::blind::{
-    ChainBlindSeal as GraphSeal, SecretSeal, SingleBlindSeal as GenesisSeal,
+    ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
 };
 pub use bp::seals::txout::TxoSeal;
 use commit_verify::Conceal;
