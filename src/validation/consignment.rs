@@ -109,7 +109,7 @@ pub trait ConsignmentApi {
 
     fn bundle_by_id(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
 
-    fn op_ids_except(&self, ids: &impl IntoIterator<Item = OpId>) -> BTreeSet<OpId>;
+    fn op_ids_except(&self, ids: &BTreeSet<OpId>) -> BTreeSet<OpId>;
 
     fn has_operation(&self, opid: OpId) -> bool;
 
