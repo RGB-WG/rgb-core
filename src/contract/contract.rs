@@ -164,26 +164,26 @@ impl<State: ExposedState> OutputAssignment<State> {
     }
 }
 
+/// Txid and height information ordered according to the RGB consensus rules.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[display("{height}/{txid}/{idx}")]
+#[display("{height}/{txid}")]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct GlobalIdx {
+pub struct OrderedTxid {
     pub height: u32,
     pub txid: Txid,
-    pub idx: u16,
 }
 
-impl PartialOrd for GlobalIdx {
+impl PartialOrd for OrderedTxid {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for GlobalIdx {
+impl Ord for OrderedTxid {
     fn cmp(&self, other: &Self) -> Ordering {
         if self == other {
             return Ordering::Equal;
@@ -191,19 +191,62 @@ impl Ord for GlobalIdx {
         if self.height != other.height {
             return self.height.cmp(&other.height);
         }
-        if self.txid != other.txid {
-            return self.txid.cmp(&other.txid);
-        }
-        self.idx.cmp(&other.idx)
+        self.txid.cmp(&other.txid)
     }
 }
 
-impl GlobalIdx {
-    pub fn new(height: u32, txid: Txid, idx: u16) -> Self { GlobalIdx { height, txid, idx } }
+impl OrderedTxid {
+    pub fn new(height: u32, txid: Txid) -> Self { OrderedTxid { height, txid } }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct GlobalOrd {
+    pub ord_txid: Option<OrderedTxid>,
+    pub idx: u16,
+}
+
+impl PartialOrd for GlobalOrd {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for GlobalOrd {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self == other {
+            return Ordering::Equal;
+        }
+        match (self.ord_txid, &other.ord_txid) {
+            (None, None) => self.idx.cmp(&other.idx),
+            (None, Some(_)) => Ordering::Less,
+            (Some(_), None) => Ordering::Greater,
+            (Some(ord1), Some(ord2)) if ord1 == *ord2 => self.idx.cmp(&other.idx),
+            (Some(ord1), Some(ord2)) => ord1.cmp(ord2),
+        }
+    }
+}
+
+impl GlobalOrd {
+    pub fn new(height: u32, txid: Txid, idx: u16) -> Self {
+        GlobalOrd {
+            ord_txid: Some(OrderedTxid::new(height, txid)),
+            idx,
+        }
+    }
+    pub fn with(ord_txid: OrderedTxid, idx: u16) -> Self {
+        GlobalOrd {
+            ord_txid: Some(ord_txid),
+            idx,
+        }
+    }
     pub fn genesis(idx: u16) -> Self {
-        GlobalIdx {
-            height: 0,
-            txid: Txid::from([0x00; 32]),
+        GlobalOrd {
+            ord_txid: None,
             idx,
         }
     }
@@ -233,7 +276,7 @@ pub struct ContractHistory {
     root_schema_id: Option<SchemaId>,
     contract_id: ContractId,
     #[getter(skip)]
-    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalIdx, data::Revealed>>,
+    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, data::Revealed>>,
     rights: LargeOrdSet<RightsOutput>,
     fungibles: LargeOrdSet<FungibleOutput>,
     data: LargeOrdSet<DataOutput>,
@@ -275,23 +318,23 @@ impl ContractHistory {
     ///
     /// If state transition violates RGB consensus rules and wasn't checked
     /// against the schema before adding to the history.
-    pub fn add_transition(&mut self, transition: &Transition, txid: Txid, height: u32) {
-        self.add_operation(Some(txid), transition, Some((txid, height)));
+    pub fn add_transition(&mut self, transition: &Transition, ord_txid: OrderedTxid) {
+        self.add_operation(Some(ord_txid.txid), transition, Some(ord_txid));
     }
 
     /// # Panics
     ///
     /// If state extension violates RGB consensus rules and wasn't checked
     /// against the schema before adding to the history.
-    pub fn add_extension(&mut self, extension: &Extension, txid: Txid, height: u32) {
-        self.add_operation(None, extension, Some((txid, height)));
+    pub fn add_extension(&mut self, extension: &Extension, ord_txid: OrderedTxid) {
+        self.add_operation(None, extension, Some(ord_txid));
     }
 
     fn add_operation(
         &mut self,
         witness_txid: Option<Txid>,
         op: &impl Operation,
-        ordering: Option<(Txid, u32)>,
+        ord_txid: Option<OrderedTxid>,
     ) {
         let opid = op.id();
 
@@ -309,9 +352,7 @@ impl ContractHistory {
             };
             for (idx, s) in state.iter().enumerate() {
                 let idx = idx as u16;
-                let glob_idx = ordering
-                    .map(|(txid, height)| GlobalIdx::new(height, txid, idx))
-                    .unwrap_or_else(|| GlobalIdx::genesis(idx));
+                let glob_idx = GlobalOrd { ord_txid, idx };
                 map.insert(glob_idx, s.clone())
                     .expect("contract global state exceeded 2^32 items, which is unrealistic");
             }
