@@ -95,8 +95,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // about them (in form of generated warnings)
         let mut end_transitions = Vec::<(&Transition, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.endpoints() {
-            let Some(transitions) = consignment.known_transitions_by_bundle_id(*bundle_id) else {
-                status.add_failure(Failure::BundleInvalid(*bundle_id));
+            let Some(transitions) = consignment.known_transitions_by_bundle_id(bundle_id) else {
+                status.add_failure(Failure::BundleInvalid(bundle_id));
                 continue;
             };
             for transition in transitions {
@@ -106,12 +106,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     .assignments
                     .values()
                     .flat_map(TypedAssigns::to_confidential_seals)
-                    .any(|seal| seal == *seal_endpoint)
+                    .any(|seal| seal == seal_endpoint)
                 {
                     // We generate just a warning here because it's up to a user to decide whether
                     // to accept consignment with wrong endpoint list
                     status
-                        .add_warning(Warning::EndpointTransitionSealNotFound(opid, *seal_endpoint));
+                        .add_warning(Warning::EndpointTransitionSealNotFound(opid, seal_endpoint));
                 }
                 if end_transitions
                     .iter()
@@ -119,9 +119,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     .count() >
                     0
                 {
-                    status.add_warning(Warning::EndpointDuplication(opid, *seal_endpoint));
+                    status.add_warning(Warning::EndpointDuplication(opid, seal_endpoint));
                 } else {
-                    end_transitions.push((transition, *bundle_id));
+                    end_transitions.push((transition, bundle_id));
                 }
             }
         }

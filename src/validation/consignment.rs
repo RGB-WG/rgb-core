@@ -43,12 +43,14 @@ use crate::{
 /// [`None`] values from the API methods.
 pub trait ConsignmentApi {
     type OpIdIter: Iterator<Item = OpId>;
-    type EndpointIter<'container>: Iterator<Item = (&'container BundleId, &'container SecretSeal)>
-    where Self: 'container;
+
+    type EndpointIter: Iterator<Item = (BundleId, SecretSeal)>;
+
     type BundleIter<'container>: Iterator<
-        Item = (&'container Anchor<mpc::MerkleProof>, &'container TransitionBundle),
+        Item = &'container (Anchor<mpc::MerkleProof>, TransitionBundle),
     >
     where Self: 'container;
+
     type ExtensionsIter<'container>: Iterator<Item = &'container Extension>
     where Self: 'container;
 
@@ -94,7 +96,7 @@ pub trait ConsignmentApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn endpoints(&self) -> Self::EndpointIter<'_>;
+    fn endpoints(&self) -> Self::EndpointIter;
 
     /// Data on all anchored state transitions contained in the consignment
     fn anchored_bundles(&self) -> Self::BundleIter<'_>;
