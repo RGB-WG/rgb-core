@@ -335,7 +335,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                                 continue;
                             }
 
-                            queue.push_back(*prev_op);
+                            queue.push_back(prev_op);
                         }
                     }
                 }
