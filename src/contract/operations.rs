@@ -385,10 +385,13 @@ impl Operation for Transition {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
 pub enum OpRef<'op> {
+    #[from]
     Genesis(&'op Genesis),
+    #[from]
     Transition(&'op Transition),
+    #[from]
     Extension(&'op Extension),
 }
 
