@@ -20,19 +20,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{validation, OpSchema, Schema};
+use crate::{validation, OpSchema, Schema, SubSchema};
+
+impl SubSchema {
+    pub fn verify(&self) -> validation::Status {
+        let mut status = validation::Status::new();
+
+        if let Some(ref root) = self.subset_of {
+            status += self.schema_verify(root);
+        }
+
+        // TODO: Verify internal schema consistency
+
+        status
+    }
+}
 
 /// Trait used for internal schema validation against some root schema
-pub trait SchemaVerify {
+pub(crate) trait SchemaVerify {
     type Root;
     fn schema_verify(&self, root: &Self::Root) -> validation::Status;
 }
 
-impl SchemaVerify for Schema<Schema<()>> {
+impl SchemaVerify for SubSchema {
     type Root = Schema<()>;
 
     fn schema_verify(&self, root: &Schema<()>) -> validation::Status {
         let mut status = validation::Status::new();
+
+        if self.subset_of != self.subset_of {
+            panic!("SubSchema::schema_verify called with a root schema not matching subset_of");
+        }
 
         if root.subset_of.is_some() {
             status.add_failure(validation::Failure::SchemaRootHierarchy);
@@ -103,16 +121,16 @@ where T: OpSchema
 
     fn schema_verify(&self, root: &Self) -> validation::Status {
         let mut status = validation::Status::new();
-        let node_type = self.op_type();
+        let op_type = self.op_type();
 
         for (field_type, occ) in self.globals() {
             match root.globals().get(field_type) {
                 None => status.add_failure(validation::Failure::SchemaRootNoMetadataMatch(
-                    node_type,
+                    op_type,
                     *field_type,
                 )),
                 Some(root_occ) if occ != root_occ => status.add_failure(
-                    validation::Failure::SchemaRootNoMetadataMatch(node_type, *field_type),
+                    validation::Failure::SchemaRootNoMetadataMatch(op_type, *field_type),
                 ),
                 _ => &status,
             };
@@ -124,13 +142,13 @@ where T: OpSchema
                 match root_inputs.get(assignments_type) {
                     None => {
                         status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
-                            node_type,
+                            op_type,
                             *assignments_type,
                         ))
                     }
                     Some(root_occ) if occ != root_occ => {
                         status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
-                            node_type,
+                            op_type,
                             *assignments_type,
                         ))
                     }
@@ -142,11 +160,11 @@ where T: OpSchema
         for (assignments_type, occ) in self.assignments() {
             match root.assignments().get(assignments_type) {
                 None => status.add_failure(validation::Failure::SchemaRootNoOwnedRightsMatch(
-                    node_type,
+                    op_type,
                     *assignments_type,
                 )),
                 Some(root_occ) if occ != root_occ => status.add_failure(
-                    validation::Failure::SchemaRootNoOwnedRightsMatch(node_type, *assignments_type),
+                    validation::Failure::SchemaRootNoOwnedRightsMatch(op_type, *assignments_type),
                 ),
                 _ => &status,
             };
@@ -157,7 +175,7 @@ where T: OpSchema
             for valencies_type in redeems {
                 if !root_redeems.contains(valencies_type) {
                     status.add_failure(validation::Failure::SchemaRootNoParentPublicRightsMatch(
-                        node_type,
+                        op_type,
                         *valencies_type,
                     ));
                 }
@@ -167,7 +185,7 @@ where T: OpSchema
         for valencies_type in self.valencies() {
             if !root.valencies().contains(valencies_type) {
                 status.add_failure(validation::Failure::SchemaRootNoPublicRightsMatch(
-                    node_type,
+                    op_type,
                     *valencies_type,
                 ));
             }
