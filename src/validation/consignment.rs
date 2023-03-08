@@ -24,14 +24,27 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use commit_verify::mpc;
 
 use crate::{
     Anchor, BundleId, Extension, Genesis, OpId, OpRef, SecretSeal, SubSchema, Transition,
-    TransitionBundle,
+    TransitionBundle, LIB_NAME_RGB,
 };
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct AnchoredBundle {
+    pub anchor: Anchor<mpc::MerkleProof>,
+    pub bundle: TransitionBundle,
+}
 
 /// Trait defining common data access API for all storage-related RGB structures
 ///
@@ -44,9 +57,7 @@ use crate::{
 /// non-validated/unchecked data this may result in returned [`Error`] or
 /// [`None`] values from the API methods.
 pub trait ConsignmentApi {
-    type BundleIter<'container>: Iterator<
-        Item = &'container (Anchor<mpc::MerkleProof>, TransitionBundle),
-    >
+    type BundleIter<'container>: Iterator<Item = &'container AnchoredBundle>
     where Self: 'container;
 
     fn schema(&self) -> &SubSchema;
@@ -91,7 +102,7 @@ pub trait ConsignmentApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn terminals(&self) -> BTreeMap<BundleId, SecretSeal>;
+    fn terminals(&self) -> BTreeSet<(BundleId, SecretSeal)>;
 
     /// Data on all anchored state transitions contained in the consignment
     fn anchored_bundles(&self) -> Self::BundleIter<'_>;

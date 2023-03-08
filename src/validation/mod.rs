@@ -28,7 +28,7 @@ mod validator;
 mod consignment;
 mod status;
 
-pub use consignment::ConsignmentApi;
+pub use consignment::{AnchoredBundle, ConsignmentApi};
 pub(crate) use model::OpInfo;
 pub use script::VirtualMachine;
 pub use status::{Failure, Info, Status, Validity, Warning};

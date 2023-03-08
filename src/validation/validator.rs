@@ -32,6 +32,7 @@ use super::status::{Failure, Warning};
 use super::subschema::SchemaVerify;
 use super::{ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::contract::Opout;
+use crate::validation::AnchoredBundle;
 use crate::vm::AluRuntime;
 use crate::{
     BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
@@ -79,7 +80,11 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
         // Create indexes
         let mut anchor_index = BTreeMap::<OpId, &Anchor<mpc::MerkleProof>>::new();
-        for (anchor, bundle) in consignment.anchored_bundles() {
+        for AnchoredBundle {
+            ref anchor,
+            ref bundle,
+        } in consignment.anchored_bundles()
+        {
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
