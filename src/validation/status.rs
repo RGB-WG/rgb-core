@@ -263,6 +263,10 @@ pub enum Failure {
     BulletproofsInvalid(OpId, u16, String),
     /// operation {0} is invalid: {1}
     ScriptFailure(OpId, String),
+
+    /// Custom error by external services on top of RGB Core.
+    #[display(inner)]
+    Custom(String),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
@@ -279,6 +283,10 @@ pub enum Warning {
     EndpointTransitionSealNotFound(OpId, SecretSeal),
     ExcessiveNode(OpId),
     EndpointTransactionMissed(Txid),
+
+    /// Custom warning by external services on top of RGB Core.
+    #[display(inner)]
+    Custom(String),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
@@ -292,4 +300,8 @@ pub enum Warning {
 #[display(Debug)]
 pub enum Info {
     UncheckableConfidentialState(OpId, u16),
+
+    /// Custom info by external services on top of RGB Core.
+    #[display(inner)]
+    Custom(String),
 }
