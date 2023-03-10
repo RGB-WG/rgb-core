@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.10.0-beta.1"
+version = "0.10.0-beta.2"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -18,13 +18,13 @@ name = "rgb"
 crate-type = ["cdylib", "rlib"] # We need this for WASM
 
 [dependencies]
-amplify = "~4.0.0-beta.18"
-strict_encoding = "2.0.0-rc.1"
-strict_types = "1.0.0-beta.3"
-aluvm = { version = "0.10.0-alpha.1", features = ["std"] }
-commit_verify = { version = "~0.10.0-beta.2", features = ["rand"] }
-single_use_seals = "0.10.0-beta.2"
-bp-core = { version = "~0.10.0-beta.1" }
+amplify = "~4.0.0-beta.19"
+strict_encoding = "2.0.0-rc.3"
+strict_types = "1.0.0-beta.5"
+aluvm = { version = "0.10.0-beta.1", features = ["std"] }
+commit_verify = { version = "~0.10.0-rc.1", features = ["rand"] }
+single_use_seals = "0.10.0-rc.1"
+bp-core = { version = "~0.10.0-beta.3" }
 secp256k1-zkp = { version = "~0.7.0", features = ["use-rand", "rand-std", "global-context"] }
 baid58 = "~0.2.0"
 mime = "0.3.16"
@@ -54,11 +54,3 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = [ "all" ]
-
-[patch.crates-io]
-strict_encoding = { git = "https://github.com/strict-types/strict-encoding" }
-strict_types = { git = "https://github.com/strict-types/strict-types" }
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation" }
-single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation" }
-bp-core = { git = "https://github.com/BP-WG/bp-core" }
-aluvm = { git = "https://github.com/AluVM/rust-aluvm" }
