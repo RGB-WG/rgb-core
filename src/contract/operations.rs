@@ -40,8 +40,7 @@ use crate::{
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 // TODO: Use internally TinySet
 pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentsType, TinyVec<u16>>>;
-// TODO: Use TinyOrdMap<schema::ValencyType, OpId>
-pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
+pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
 
 /// Unique operation (genesis, extensions & state transition) identifier
 /// equivalent to the commitment hash

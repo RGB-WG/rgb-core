@@ -327,24 +327,22 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     queue.extend(parent_nodes);
                 }
                 OpRef::Extension(ref extension) => {
-                    for (prev_id, valencies) in &extension.redeemed {
-                        for valency in valencies {
-                            let Some(prev_op) = self.consignment.operation(*prev_id) else {
+                    for (valency, prev_id) in &extension.redeemed {
+                        let Some(prev_op) = self.consignment.operation(*prev_id) else {
                                 self.status.add_failure(Failure::ValencyNoParent { opid, prev_id: *prev_id, valency: *valency });
                                 continue;
                             };
 
-                            if !prev_op.valencies().contains(valency) {
-                                self.status.add_failure(Failure::NoPrevValency {
-                                    opid,
-                                    prev_id: *prev_id,
-                                    valency: *valency,
-                                });
-                                continue;
-                            }
-
-                            queue.push_back(prev_op);
+                        if !prev_op.valencies().contains(valency) {
+                            self.status.add_failure(Failure::NoPrevValency {
+                                opid,
+                                prev_id: *prev_id,
+                                valency: *valency,
+                            });
+                            continue;
                         }
+
+                        queue.push_back(prev_op);
                     }
                 }
             }

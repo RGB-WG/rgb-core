@@ -504,13 +504,11 @@ fn extract_redeemed_valencies<C: ConsignmentApi>(
     status: &mut validation::Status,
 ) -> Valencies {
     let mut public_rights = Valencies::default();
-    for (id, valencies) in redeemed.iter() {
+    for (valency, id) in redeemed.iter() {
         if consignment.has_operation(*id) {
             status.add_failure(validation::Failure::OperationAbsent(*id));
         } else {
-            public_rights
-                .extend(valencies.iter().copied())
-                .expect("same size");
+            public_rights.push(*valency).expect("same size");
         }
     }
     public_rights
