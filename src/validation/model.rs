@@ -28,9 +28,9 @@ use amplify::Wrapper;
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
-    validation, Assign, Assignments, AssignmentsRef, ExposedSeal, ExposedState, GlobalState,
-    GlobalValues, GraphSeal, OpFullType, OpId, OpRef, Operation, PrevOuts, Redeemed, Schema,
-    SchemaRoot, TypedAssigns, Valencies,
+    validation, Assignments, AssignmentsRef, ExposedSeal, GlobalState, GlobalValues, GraphSeal,
+    OpFullType, OpId, OpRef, Operation, Opout, PrevOuts, Redeemed, Schema, SchemaRoot,
+    TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -130,7 +130,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         status += self.validate_type_system();
         status += self.validate_global_state(id, op.globals(), global_schema);
         let prev_state = if let OpRef::Transition(ref transition) = op {
-            let prev_state = extract_prev_state(consignment, &transition.inputs, &mut status);
+            let prev_state = extract_prev_state(consignment, id, &transition.inputs, &mut status);
             status += self.validate_prev_state(id, &prev_state, owned_schema);
             prev_state
         } else {
@@ -414,86 +414,84 @@ impl<'op> OpInfo<'op> {
 
 fn extract_prev_state<C: ConsignmentApi>(
     consignment: &C,
+    opid: OpId,
     prev_state: &PrevOuts,
     status: &mut validation::Status,
 ) -> Assignments<GraphSeal> {
-    let mut owned_state = bmap! {};
-    for (id, details) in prev_state.iter() {
-        let prev_op = match consignment.operation(*id) {
+    let mut assignments = bmap! {};
+    for opout in prev_state {
+        let Opout { op, ty, no } = *opout;
+
+        let prev_op = match consignment.operation(op) {
             None => {
-                status.add_failure(validation::Failure::OperationAbsent(*id));
+                status.add_failure(validation::Failure::OperationAbsent(op));
                 continue;
             }
             Some(op) => op,
         };
 
-        fn filter<State: ExposedState, Seal: ExposedSeal>(
-            set: &[Assign<State, Seal>],
-            indexes: &[u16],
-        ) -> Vec<Assign<State, Seal>> {
-            set.iter()
-                .enumerate()
-                .filter_map(|(index, item)| {
-                    if indexes.contains(&(index as u16)) {
-                        Some(item.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect()
-        }
-
-        for (state_id, indexes) in details {
-            match prev_op.assignments_by_type(*state_id) {
-                Some(TypedAssigns::Declarative(set)) => {
-                    let set = filter(&set, indexes);
-                    if let Some(state) = owned_state
-                        .entry(*state_id)
+        let no = no as usize;
+        match prev_op.assignments_by_type(ty) {
+            Some(TypedAssigns::Declarative(mut prev_assignments)) => {
+                if let Ok(prev_assign) = prev_assignments.remove(no) {
+                    if let Some(typed_assigns) = assignments
+                        .entry(ty)
                         .or_insert_with(|| TypedAssigns::Declarative(Default::default()))
                         .as_declarative_mut()
                     {
-                        state.extend(set).expect("same size");
+                        typed_assigns.push(prev_assign).expect("same size");
                     }
+                } else {
+                    status.add_failure(validation::Failure::NoPrevOut(opid, *opout));
                 }
-                Some(TypedAssigns::Fungible(set)) => {
-                    let set = filter(&set, indexes);
-                    if let Some(state) = owned_state
-                        .entry(*state_id)
+            }
+            Some(TypedAssigns::Fungible(mut prev_assignments)) => {
+                if let Ok(prev_assign) = prev_assignments.remove(no) {
+                    if let Some(typed_assigns) = assignments
+                        .entry(ty)
                         .or_insert_with(|| TypedAssigns::Fungible(Default::default()))
                         .as_fungible_mut()
                     {
-                        state.extend(set).expect("same size");
+                        typed_assigns.push(prev_assign).expect("same size");
                     }
+                } else {
+                    status.add_failure(validation::Failure::NoPrevOut(opid, *opout));
                 }
-                Some(TypedAssigns::Structured(set)) => {
-                    let set = filter(&set, indexes);
-                    if let Some(state) = owned_state
-                        .entry(*state_id)
+            }
+            Some(TypedAssigns::Structured(mut prev_assignments)) => {
+                if let Ok(prev_assign) = prev_assignments.remove(no) {
+                    if let Some(typed_assigns) = assignments
+                        .entry(ty)
                         .or_insert_with(|| TypedAssigns::Structured(Default::default()))
                         .as_structured_mut()
                     {
-                        state.extend(set).expect("same size");
+                        typed_assigns.push(prev_assign).expect("same size");
                     }
+                } else {
+                    status.add_failure(validation::Failure::NoPrevOut(opid, *opout));
                 }
-                Some(TypedAssigns::Attachment(set)) => {
-                    let set = filter(&set, indexes);
-                    if let Some(state) = owned_state
-                        .entry(*state_id)
+            }
+            Some(TypedAssigns::Attachment(mut prev_assignments)) => {
+                if let Ok(prev_assign) = prev_assignments.remove(no) {
+                    if let Some(typed_assigns) = assignments
+                        .entry(ty)
                         .or_insert_with(|| TypedAssigns::Attachment(Default::default()))
                         .as_attachment_mut()
                     {
-                        state.extend(set).expect("same size");
+                        typed_assigns.push(prev_assign).expect("same size");
                     }
+                } else {
+                    status.add_failure(validation::Failure::NoPrevOut(opid, *opout));
                 }
-                None => {
-                    // Presence of the required owned rights type in the
-                    // parent operation was already validated; we have nothing
-                    // to report here
-                }
+            }
+            None => {
+                // Presence of the required owned rights type in the
+                // parent operation was already validated; we have nothing
+                // to report here
             }
         }
     }
-    Confined::try_from(owned_state)
+    Confined::try_from(assignments)
         .expect("collections is assembled from another collection with the same size requirements")
         .into()
 }

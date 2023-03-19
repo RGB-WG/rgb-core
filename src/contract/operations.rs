@@ -23,7 +23,7 @@
 use std::cmp::Ordering;
 use std::str::FromStr;
 
-use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet, TinyVec};
+use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
@@ -38,8 +38,7 @@ use crate::{
 };
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
-// TODO: Use internally TinySet
-pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentType, TinyVec<u16>>>;
+pub type PrevOuts = TinyOrdSet<Opout>;
 pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
 
 /// Unique operation (genesis, extensions & state transition) identifier
@@ -144,7 +143,7 @@ pub trait Operation {
     /// For genesis and public state extensions always returns an empty list.
     /// While public state extension do have parent nodes, they do not contain
     /// indexed rights.
-    fn prev_outs(&self) -> Vec<Opout>;
+    fn prev_outs(&self) -> TinyOrdSet<Opout>;
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -299,7 +298,7 @@ impl Operation for Genesis {
     }
 
     #[inline]
-    fn prev_outs(&self) -> Vec<Opout> { empty!() }
+    fn prev_outs(&self) -> TinyOrdSet<Opout> { empty!() }
 }
 
 impl Operation for Extension {
@@ -338,7 +337,7 @@ impl Operation for Extension {
     }
 
     #[inline]
-    fn prev_outs(&self) -> Vec<Opout> { empty!() }
+    fn prev_outs(&self) -> TinyOrdSet<Opout> { empty!() }
 }
 
 impl Operation for Transition {
@@ -374,17 +373,7 @@ impl Operation for Transition {
         self.assignments.get(&t).cloned()
     }
 
-    fn prev_outs(&self) -> Vec<Opout> {
-        self.inputs
-            .iter()
-            .flat_map(|(op, map)| {
-                let op = *op;
-                map.iter()
-                    .flat_map(|(ty, vec)| vec.iter().map(|no| (*ty, *no)))
-                    .map(move |(ty, no)| Opout { op, ty, no })
-            })
-            .collect()
-    }
+    fn prev_outs(&self) -> TinyOrdSet<Opout> { self.inputs.clone() }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
@@ -478,7 +467,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn prev_outs(&self) -> Vec<Opout> {
+    fn prev_outs(&self) -> TinyOrdSet<Opout> {
         match self {
             OpRef::Genesis(op) => op.prev_outs(),
             OpRef::Transition(op) => op.prev_outs(),
