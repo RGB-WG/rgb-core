@@ -46,6 +46,7 @@ pub trait ExposedSeal:
     + Copy
     + TxoSeal
 {
+    // TODO: There must be only a single confidential seal type
     type Confidential: ConfidentialSeal;
 }
 

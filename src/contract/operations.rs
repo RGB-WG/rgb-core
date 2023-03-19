@@ -38,7 +38,9 @@ use crate::{
 };
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
+// TODO: Use internally TinySet
 pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentsType, TinyVec<u16>>>;
+// TODO: Use TinyOrdMap<schema::ValencyType, OpId>
 pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
 
 /// Unique operation (genesis, extensions & state transition) identifier
@@ -194,6 +196,7 @@ pub struct Extension {
 pub struct Transition {
     pub ffv: Ffv,
     pub transition_type: TransitionType,
+    // TODO: Remove optional; empty metadata must be defined as a unit structure
     pub metadata: Option<SmallBlob>,
     pub globals: GlobalState,
     pub inputs: PrevOuts,
