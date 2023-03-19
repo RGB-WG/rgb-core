@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::schema::AssignmentsType;
+use crate::schema::AssignmentType;
 use crate::{
     validation, Assign, ConfidentialState, ExposedSeal, ExposedState, OpId, StateCommitment,
     StateData, StateSchema,
@@ -31,7 +31,7 @@ impl StateSchema {
         &self,
         // type_system: &TypeSystem,
         opid: &OpId,
-        state_type: AssignmentsType,
+        state_type: AssignmentType,
         data: &Assign<State, Seal>,
     ) -> validation::Status {
         let mut status = validation::Status::new();

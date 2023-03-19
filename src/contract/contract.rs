@@ -37,7 +37,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::data::VoidState;
 use crate::{
-    attachment, data, fungible, Assign, Assignments, AssignmentsRef, AssignmentsType, ContractId,
+    attachment, data, fungible, Assign, AssignmentType, Assignments, AssignmentsRef, ContractId,
     ExposedSeal, ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, SchemaId,
     SubSchema, Transition, TypedAssigns, LIB_NAME_RGB,
 };
@@ -55,7 +55,7 @@ use crate::{
 /// output number.
 pub struct Opout {
     pub op: OpId,
-    pub ty: AssignmentsType,
+    pub ty: AssignmentType,
     pub no: u16,
 }
 
@@ -137,7 +137,7 @@ impl<State: ExposedState> OutputAssignment<State> {
         witness_txid: Txid,
         state: State,
         opid: OpId,
-        ty: AssignmentsType,
+        ty: AssignmentType,
         no: u16,
     ) -> Self {
         OutputAssignment {
@@ -151,7 +151,7 @@ impl<State: ExposedState> OutputAssignment<State> {
         seal: Seal,
         state: State,
         opid: OpId,
-        ty: AssignmentsType,
+        ty: AssignmentType,
         no: u16,
     ) -> Self {
         OutputAssignment {
@@ -409,7 +409,7 @@ impl ContractHistory {
             contract_state: &mut LargeOrdSet<OutputAssignment<State>>,
             assignments: &[Assign<State, Seal>],
             opid: OpId,
-            ty: AssignmentsType,
+            ty: AssignmentType,
             txid: Option<Txid>,
         ) {
             for (no, seal, state) in assignments

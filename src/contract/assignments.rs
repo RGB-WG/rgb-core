@@ -34,7 +34,7 @@ use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 use super::{attachment, data, fungible, ExposedState};
 use crate::contract::seal::GenesisSeal;
 use crate::data::VoidState;
-use crate::{AssignmentsType, ExposedSeal, GraphSeal, SecretSeal, StateType, LIB_NAME_RGB};
+use crate::{AssignmentType, ExposedSeal, GraphSeal, SecretSeal, StateType, LIB_NAME_RGB};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
@@ -572,7 +572,7 @@ impl TypedAssigns<GenesisSeal> {
         bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
-pub struct Assignments<Seal>(TinyOrdMap<AssignmentsType, TypedAssigns<Seal>>)
+pub struct Assignments<Seal>(TinyOrdMap<AssignmentType, TypedAssigns<Seal>>)
 where Seal: ExposedSeal;
 
 impl<Seal: ExposedSeal> Default for Assignments<Seal> {
@@ -619,21 +619,21 @@ impl AssignmentsRef<'_> {
 
     pub fn is_empty(&self) -> bool { self.len() == 0 }
 
-    pub fn types(&self) -> BTreeSet<AssignmentsType> {
+    pub fn types(&self) -> BTreeSet<AssignmentType> {
         match self {
             AssignmentsRef::Genesis(a) => a.keys().copied().collect(),
             AssignmentsRef::Graph(a) => a.keys().copied().collect(),
         }
     }
 
-    pub fn has_type(&self, t: AssignmentsType) -> bool {
+    pub fn has_type(&self, t: AssignmentType) -> bool {
         match self {
             AssignmentsRef::Genesis(a) => a.contains_key(&t),
             AssignmentsRef::Graph(a) => a.contains_key(&t),
         }
     }
 
-    pub fn get(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    pub fn get(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         match self {
             AssignmentsRef::Genesis(a) => a.get(&t).map(TypedAssigns::transmutate_seals),
             AssignmentsRef::Graph(a) => a.get(&t).cloned(),

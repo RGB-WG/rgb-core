@@ -33,13 +33,13 @@ use strict_encoding::StrictEncode;
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    Assignments, AssignmentsRef, AssignmentsType, Ffv, GenesisSeal, GlobalState, GraphSeal, Opout,
+    AssignmentType, Assignments, AssignmentsRef, Ffv, GenesisSeal, GlobalState, GraphSeal, Opout,
     TypedAssigns, LIB_NAME_RGB,
 };
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
 // TODO: Use internally TinySet
-pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentsType, TinyVec<u16>>>;
+pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentType, TinyVec<u16>>>;
 pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
 
 /// Unique operation (genesis, extensions & state transition) identifier
@@ -139,7 +139,7 @@ pub trait Operation {
 
     fn assignments(&self) -> AssignmentsRef;
 
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>>;
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>>;
 
     /// For genesis and public state extensions always returns an empty list.
     /// While public state extension do have parent nodes, they do not contain
@@ -292,7 +292,7 @@ impl Operation for Genesis {
     fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
 
     #[inline]
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         self.assignments
             .get(&t)
             .map(TypedAssigns::transmutate_seals)
@@ -331,7 +331,7 @@ impl Operation for Extension {
     fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
 
     #[inline]
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         self.assignments
             .get(&t)
             .map(TypedAssigns::transmutate_seals)
@@ -370,7 +370,7 @@ impl Operation for Transition {
     fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
 
     #[inline]
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         self.assignments.get(&t).cloned()
     }
 
@@ -470,7 +470,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         match self {
             OpRef::Genesis(op) => op.assignments_by_type(t),
             OpRef::Transition(op) => op.assignments_by_type(t),
