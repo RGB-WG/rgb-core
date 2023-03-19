@@ -21,7 +21,6 @@
 // limitations under the License.
 
 use core::fmt::Debug;
-use core::hash::Hash;
 
 pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
@@ -29,11 +28,6 @@ pub use bp::seals::txout::blind::{
 pub use bp::seals::txout::TxoSeal;
 use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
-
-pub trait ConfidentialSeal:
-    Debug + Hash + StrictDumb + StrictEncode + StrictDecode + Eq + Ord + Copy
-{
-}
 
 pub trait ExposedSeal:
     Debug
@@ -51,5 +45,3 @@ pub trait ExposedSeal:
 impl ExposedSeal for GraphSeal {}
 
 impl ExposedSeal for GenesisSeal {}
-
-impl ConfidentialSeal for SecretSeal {}
