@@ -221,7 +221,7 @@ impl InstructionSet for ContractOp {
                 fail!()
             }
             ContractOp::LdM(reg) => {
-                regs.set_s(*reg, context.metadata);
+                regs.set_s(*reg, Some(context.metadata));
             }
 
             ContractOp::PcVs(state_type) => {

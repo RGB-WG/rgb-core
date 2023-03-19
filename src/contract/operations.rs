@@ -129,7 +129,7 @@ pub trait Operation {
     fn extension_type(&self) -> Option<ExtensionType>;
 
     /// Returns metadata associated with the operation, if any.
-    fn metadata(&self) -> Option<&SmallBlob>;
+    fn metadata(&self) -> &SmallBlob;
 
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract operation.
@@ -158,7 +158,7 @@ pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
     pub chain: Chain,
-    pub metadata: Option<SmallBlob>,
+    pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
@@ -176,7 +176,7 @@ pub struct Extension {
     pub ffv: Ffv,
     pub extension_type: ExtensionType,
     pub contract_id: ContractId,
-    pub metadata: Option<SmallBlob>,
+    pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
@@ -195,7 +195,7 @@ pub struct Transition {
     pub ffv: Ffv,
     pub transition_type: TransitionType,
     // TODO: Remove optional; empty metadata must be defined as a unit structure
-    pub metadata: Option<SmallBlob>,
+    pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub inputs: PrevOuts,
     pub assignments: Assignments<GraphSeal>,
@@ -279,7 +279,7 @@ impl Operation for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
+    fn metadata(&self) -> &SmallBlob { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -318,7 +318,7 @@ impl Operation for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
+    fn metadata(&self) -> &SmallBlob { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -357,7 +357,7 @@ impl Operation for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
+    fn metadata(&self) -> &SmallBlob { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -427,7 +427,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn metadata(&self) -> Option<&SmallBlob> {
+    fn metadata(&self) -> &SmallBlob {
         match self {
             OpRef::Genesis(op) => op.metadata(),
             OpRef::Transition(op) => op.metadata(),

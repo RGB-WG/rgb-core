@@ -382,7 +382,7 @@ pub struct OpInfo<'op> {
     pub subschema: bool,
     pub id: OpId,
     pub ty: OpFullType,
-    pub metadata: Option<&'op SmallBlob>,
+    pub metadata: &'op SmallBlob,
     pub prev_state: &'op Assignments<GraphSeal>,
     pub owned_state: AssignmentsRef<'op>,
     pub redeemed: &'op Valencies,
