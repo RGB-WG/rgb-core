@@ -61,10 +61,6 @@ pub struct BundleItem {
     pub transition: Option<Transition>,
 }
 
-impl CommitStrategy for BundleItem {
-    type Strategy = commit_verify::strategies::ConcealStrict;
-}
-
 impl Conceal for BundleItem {
     type Concealed = Self;
 
@@ -94,7 +90,7 @@ impl Conceal for TransitionBundle {
 }
 
 impl CommitStrategy for TransitionBundle {
-    type Strategy = commit_verify::strategies::Strict;
+    type Strategy = commit_verify::strategies::ConcealStrict;
 }
 
 impl CommitmentId for TransitionBundle {
