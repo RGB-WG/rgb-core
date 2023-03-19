@@ -301,12 +301,12 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         }
     }
 
-    pub fn len(&self) -> usize {
+    pub fn len_u16(&self) -> u16 {
         match self {
-            TypedAssigns::Declarative(set) => set.len(),
-            TypedAssigns::Fungible(set) => set.len(),
-            TypedAssigns::Structured(set) => set.len(),
-            TypedAssigns::Attachment(set) => set.len(),
+            TypedAssigns::Declarative(set) => set.len_u16(),
+            TypedAssigns::Fungible(set) => set.len_u16(),
+            TypedAssigns::Structured(set) => set.len_u16(),
+            TypedAssigns::Attachment(set) => set.len_u16(),
         }
     }
 

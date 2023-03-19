@@ -247,7 +247,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         for (owned_type_id, occ) in assign_schema {
             let len = owned_state
                 .get(owned_type_id)
-                .map(TypedAssigns::len)
+                .map(TypedAssigns::len_u16)
                 .unwrap_or(0);
 
             // Checking number of ancestor's assignment occurrences
@@ -305,7 +305,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         for (state_id, occ) in assign_schema {
             let len = owned_state
                 .get(state_id)
-                .map(TypedAssigns::len)
+                .map(TypedAssigns::len_u16)
                 .unwrap_or(0);
 
             // Checking number of assignment occurrences
