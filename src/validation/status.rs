@@ -143,8 +143,6 @@ pub enum Failure {
     /// schema is a subschema, so root schema {0} must be provided for the
     /// validation
     SchemaRootRequired(SchemaId),
-    /// Root schema for this schema has another root, which is prohibited
-    SchemaRootHierarchy,
     SchemaRootNoFieldTypeMatch(schema::GlobalStateType),
     SchemaRootNoOwnedRightTypeMatch(schema::AssignmentType),
     SchemaRootNoPublicRightTypeMatch(schema::ValencyType),

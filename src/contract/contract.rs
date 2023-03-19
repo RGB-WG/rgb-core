@@ -94,7 +94,7 @@ impl FromStr for Opout {
     }
 }
 
-#[derive(Clone, Eq, Hash, Debug)]
+#[derive(Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -263,7 +263,7 @@ pub type AttachOutput = OutputAssignment<attachment::Revealed>;
 /// schema.
 ///
 /// To access the valid contract state use [`Contract`] APIs.
-#[derive(Getters, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Getters, Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
