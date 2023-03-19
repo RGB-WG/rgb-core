@@ -25,7 +25,7 @@ use amplify::{Bytes32, Wrapper};
 use commit_verify::{mpc, CommitStrategy, CommitmentId, Conceal};
 
 use super::{OpId, Transition};
-use crate::{Operation, LIB_NAME_RGB};
+use crate::LIB_NAME_RGB;
 
 /// Unique state transition bundle identifier equivalent to the bundle
 /// commitment hash
@@ -52,63 +52,13 @@ impl From<mpc::Message> for BundleId {
     fn from(id: mpc::Message) -> Self { BundleId(id.into_inner()) }
 }
 
-#[derive(Clone, Eq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Concealed(strict_dumb!()))]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub enum BundledTransition {
-    #[strict_type(tag = 0)]
-    Concealed(OpId),
-    #[strict_type(tag = 1)]
-    Revealed(Transition),
-}
-
-impl PartialEq for BundledTransition {
-    fn eq(&self, other: &Self) -> bool { self.id() == other.id() }
-}
-
-impl CommitStrategy for BundledTransition {
-    type Strategy = commit_verify::strategies::ConcealStrict;
-}
-
-impl Conceal for BundledTransition {
-    type Concealed = Self;
-
-    fn conceal(&self) -> Self {
-        match self {
-            BundledTransition::Revealed(ts) => Self::Concealed(ts.id()),
-            BundledTransition::Concealed(ts) => BundledTransition::Concealed(*ts),
-        }
-    }
-}
-
-impl BundledTransition {
-    pub fn id(&self) -> OpId {
-        match self {
-            BundledTransition::Concealed(id) => *id,
-            BundledTransition::Revealed(ts) => ts.id(),
-        }
-    }
-
-    pub fn as_revealed(&self) -> Option<&Transition> {
-        match self {
-            BundledTransition::Concealed(_) => None,
-            BundledTransition::Revealed(ts) => Some(ts),
-        }
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct BundleItem {
     pub inputs: TinyOrdSet<u16>,
-    pub transition: BundledTransition,
+    pub transition: Option<Transition>,
 }
 
 impl CommitStrategy for BundleItem {
@@ -121,7 +71,7 @@ impl Conceal for BundleItem {
     fn conceal(&self) -> Self::Concealed {
         BundleItem {
             inputs: self.inputs.clone(),
-            transition: self.transition.conceal(),
+            transition: None,
         }
     }
 }

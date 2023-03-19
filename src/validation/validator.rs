@@ -88,10 +88,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
-            for transition in bundle
-                .values()
-                .filter_map(|item| item.transition.as_revealed())
-            {
+            for transition in bundle.values().filter_map(|item| item.transition.as_ref()) {
                 let opid = transition.id();
                 anchor_index.insert(opid, anchor);
             }
