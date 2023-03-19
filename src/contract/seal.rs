@@ -40,22 +40,16 @@ pub trait ExposedSeal:
     + StrictDumb
     + StrictEncode
     + StrictDecode
-    + Conceal<Concealed = Self::Confidential>
+    + Conceal<Concealed = SecretSeal>
     + Eq
     + Ord
     + Copy
     + TxoSeal
 {
-    // TODO: There must be only a single confidential seal type
-    type Confidential: ConfidentialSeal;
 }
 
-impl ExposedSeal for GraphSeal {
-    type Confidential = SecretSeal;
-}
+impl ExposedSeal for GraphSeal {}
 
-impl ExposedSeal for GenesisSeal {
-    type Confidential = SecretSeal;
-}
+impl ExposedSeal for GenesisSeal {}
 
 impl ConfidentialSeal for SecretSeal {}

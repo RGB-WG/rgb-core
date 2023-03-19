@@ -34,7 +34,7 @@ use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 use super::{attachment, data, fungible, ExposedState};
 use crate::contract::seal::GenesisSeal;
 use crate::data::VoidState;
-use crate::{AssignmentsType, ExposedSeal, GraphSeal, StateType, LIB_NAME_RGB};
+use crate::{AssignmentsType, ExposedSeal, GraphSeal, SecretSeal, StateType, LIB_NAME_RGB};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
@@ -62,8 +62,7 @@ pub type AssignAttach<Seal> = Assign<attachment::Revealed, Seal>;
     serde(
         crate = "serde_crate",
         rename_all = "camelCase",
-        bound = "State::Confidential: serde::Serialize + serde::de::DeserializeOwned, \
-                 Seal::Confidential: serde::Serialize + serde::de::DeserializeOwned, State: \
+        bound = "State::Confidential: serde::Serialize + serde::de::DeserializeOwned, State: \
                  serde::Serialize + serde::de::DeserializeOwned, Seal: serde::Serialize + \
                  serde::de::DeserializeOwned"
     )
@@ -71,16 +70,13 @@ pub type AssignAttach<Seal> = Assign<attachment::Revealed, Seal>;
 pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
     #[strict_type(tag = 0x00)]
     Confidential {
-        seal: Seal::Confidential,
+        seal: SecretSeal,
         state: State::Confidential,
     },
     #[strict_type(tag = 0x03)]
     Revealed { seal: Seal, state: State },
     #[strict_type(tag = 0x02)]
-    ConfidentialSeal {
-        seal: Seal::Confidential,
-        state: State,
-    },
+    ConfidentialSeal { seal: SecretSeal, state: State },
     #[strict_type(tag = 0x01)]
     ConfidentialState {
         seal: Seal,
@@ -141,7 +137,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
         }
     }
 
-    pub fn to_confidential_seal(&self) -> Seal::Confidential {
+    pub fn to_confidential_seal(&self) -> SecretSeal {
         match self {
             Assign::Revealed { seal, .. } | Assign::ConfidentialState { seal, .. } => {
                 seal.conceal()
@@ -280,8 +276,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
     serde(
         crate = "serde_crate",
         rename_all = "camelCase",
-        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned, Seal::Confidential: \
-                 serde::Serialize + serde::de::DeserializeOwned"
+        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
 pub enum TypedAssigns<Seal: ExposedSeal> {
@@ -425,7 +420,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         })
     }
 
-    pub fn to_confidential_seals(&self) -> Vec<Seal::Confidential> {
+    pub fn to_confidential_seals(&self) -> Vec<SecretSeal> {
         match self {
             TypedAssigns::Declarative(s) => s
                 .iter()
@@ -574,8 +569,7 @@ impl TypedAssigns<GenesisSeal> {
     serde(
         crate = "serde_crate",
         transparent,
-        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned, Seal::Confidential: \
-                 serde::Serialize + serde::de::DeserializeOwned"
+        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
 pub struct Assignments<Seal>(TinyOrdMap<AssignmentsType, TypedAssigns<Seal>>)
