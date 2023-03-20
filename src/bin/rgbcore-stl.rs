@@ -42,13 +42,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
     let sty_id =
-        TypeLibId::from_str("subject_leonid_rudolf_3VG9Cjoyx9MMAY2y4EZBgX9YQoyMngFfNrGLAUFbzQFU")?;
+        TypeLibId::from_str("gordon_george_magic_7UDb1RpkpgFcP3LhPVqSiAXAFfxoBLxtRSvWYwhy8F7W")?;
     let bitcoin_id =
-        TypeLibId::from_str("oberon_parker_cobra_GVur9D96gWvVkXNkss6nTXn3qyLG4tvT3G7AeLwFZACo")?;
+        TypeLibId::from_str("salsa_peace_patron_26G1K9hm6R2BkzGJwHjLC9cB1JFJiAPCDWrJAoRCrkCg")?;
     let bpcore_id =
-        TypeLibId::from_str("gate_garcia_robin_DsDVAwMKHjQjHHzWzJ4G1pMQ4ygkGUDezDZ5Aj7uJGta")?;
+        TypeLibId::from_str("anvil_spring_bingo_2QoY1v2xJ8rMjtTcWBGHpDriepekxT5uZBPEvwWpBCRk")?;
     let aluvm_id =
-        TypeLibId::from_str("iris_sonata_silk_4ehbEH9C5H4LkqwHURAetPzthDaqMEwpVKT5eyJQuEko")?;
+        TypeLibId::from_str("sardine_ground_beatles_5GpK1xbT5AT8buj9rEh2Tp7iFJf7rr36qmbbaU39aMWD")?;
 
     let imports = bset! {
         Dependency::with(sty_id, libname!(STRICT_TYPES_LIB)),
