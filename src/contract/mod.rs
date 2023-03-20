@@ -50,5 +50,5 @@ pub use operations::{
     ContractId, Extension, Genesis, OpId, OpRef, Operation, PrevOuts, Redeemed, Transition,
     Valencies,
 };
-pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, SecretSeal, TxoSeal};
+pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, SealWitness, SecretSeal, TxoSeal};
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};

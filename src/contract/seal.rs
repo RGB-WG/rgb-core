@@ -26,8 +26,11 @@ pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
 };
 pub use bp::seals::txout::TxoSeal;
+use bp::Txid;
 use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
+
+use crate::LIB_NAME_RGB;
 
 pub trait ExposedSeal:
     Debug
@@ -45,3 +48,22 @@ pub trait ExposedSeal:
 impl ExposedSeal for GraphSeal {}
 
 impl ExposedSeal for GenesisSeal {}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = SealWitness::Genesis)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum SealWitness {
+    #[strict_type(tag = 0)]
+    Genesis,
+
+    #[strict_type(tag = 1)]
+    Present(Txid),
+
+    #[strict_type(tag = 2)]
+    Extension,
+}
