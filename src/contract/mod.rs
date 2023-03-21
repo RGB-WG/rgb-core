@@ -36,7 +36,7 @@ pub use assignments::{
     TypedAssigns,
 };
 pub use attachment::AttachId;
-pub use bundle::{BundleId, TransitionBundle};
+pub use bundle::{BundleId, BundleItem, TransitionBundle};
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
     OpoutParseError, OrderedTxid, OutputAssignment, RightsOutput,
