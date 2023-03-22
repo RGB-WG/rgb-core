@@ -21,40 +21,49 @@
 // limitations under the License.
 
 use core::fmt::Debug;
-use core::hash::Hash;
 
 pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
 };
 pub use bp::seals::txout::TxoSeal;
+use bp::Txid;
 use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-pub trait ConfidentialSeal:
-    Debug + Hash + StrictDumb + StrictEncode + StrictDecode + Eq + Ord + Copy
-{
-}
+use crate::LIB_NAME_RGB;
 
 pub trait ExposedSeal:
     Debug
     + StrictDumb
     + StrictEncode
     + StrictDecode
-    + Conceal<Concealed = Self::Confidential>
+    + Conceal<Concealed = SecretSeal>
     + Eq
     + Ord
     + Copy
     + TxoSeal
 {
-    type Confidential: ConfidentialSeal;
 }
 
-impl ExposedSeal for GraphSeal {
-    type Confidential = SecretSeal;
-}
+impl ExposedSeal for GraphSeal {}
 
-impl ExposedSeal for GenesisSeal {
-    type Confidential = SecretSeal;
-}
+impl ExposedSeal for GenesisSeal {}
 
-impl ConfidentialSeal for SecretSeal {}
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = SealWitness::Genesis)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum SealWitness {
+    #[strict_type(tag = 0)]
+    Genesis,
+
+    #[strict_type(tag = 1)]
+    Present(Txid),
+
+    #[strict_type(tag = 2)]
+    Extension,
+}

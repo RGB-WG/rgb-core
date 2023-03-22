@@ -152,17 +152,13 @@ impl InstructionSet for ContractOp {
 
         match self {
             ContractOp::CnP(state_type, reg) => {
-                regs.set(
-                    RegA::A16,
-                    *reg,
-                    context.prev_state.get(state_type).map(|a| a.len() as u32),
-                );
+                regs.set(RegA::A16, *reg, context.prev_state.get(state_type).map(|a| a.len_u16()));
             }
             ContractOp::CnS(state_type, reg) => {
                 regs.set(
                     RegA::A16,
                     *reg,
-                    context.owned_state.get(*state_type).map(|a| a.len() as u32),
+                    context.owned_state.get(*state_type).map(|a| a.len_u16()),
                 );
             }
             ContractOp::CnG(state_type, reg) => {
@@ -221,7 +217,7 @@ impl InstructionSet for ContractOp {
                 fail!()
             }
             ContractOp::LdM(reg) => {
-                regs.set_s(*reg, context.metadata);
+                regs.set_s(*reg, Some(context.metadata));
             }
 
             ContractOp::PcVs(state_type) => {

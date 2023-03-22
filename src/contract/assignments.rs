@@ -34,7 +34,7 @@ use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 use super::{attachment, data, fungible, ExposedState};
 use crate::contract::seal::GenesisSeal;
 use crate::data::VoidState;
-use crate::{AssignmentsType, ExposedSeal, GraphSeal, StateType, LIB_NAME_RGB};
+use crate::{AssignmentType, ExposedSeal, GraphSeal, SecretSeal, StateType, LIB_NAME_RGB};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
@@ -62,8 +62,7 @@ pub type AssignAttach<Seal> = Assign<attachment::Revealed, Seal>;
     serde(
         crate = "serde_crate",
         rename_all = "camelCase",
-        bound = "State::Confidential: serde::Serialize + serde::de::DeserializeOwned, \
-                 Seal::Confidential: serde::Serialize + serde::de::DeserializeOwned, State: \
+        bound = "State::Confidential: serde::Serialize + serde::de::DeserializeOwned, State: \
                  serde::Serialize + serde::de::DeserializeOwned, Seal: serde::Serialize + \
                  serde::de::DeserializeOwned"
     )
@@ -71,16 +70,13 @@ pub type AssignAttach<Seal> = Assign<attachment::Revealed, Seal>;
 pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
     #[strict_type(tag = 0x00)]
     Confidential {
-        seal: Seal::Confidential,
+        seal: SecretSeal,
         state: State::Confidential,
     },
     #[strict_type(tag = 0x03)]
     Revealed { seal: Seal, state: State },
     #[strict_type(tag = 0x02)]
-    ConfidentialSeal {
-        seal: Seal::Confidential,
-        state: State,
-    },
+    ConfidentialSeal { seal: SecretSeal, state: State },
     #[strict_type(tag = 0x01)]
     ConfidentialState {
         seal: Seal,
@@ -141,7 +137,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
         }
     }
 
-    pub fn to_confidential_seal(&self) -> Seal::Confidential {
+    pub fn to_confidential_seal(&self) -> SecretSeal {
         match self {
             Assign::Revealed { seal, .. } | Assign::ConfidentialState { seal, .. } => {
                 seal.conceal()
@@ -280,8 +276,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
     serde(
         crate = "serde_crate",
         rename_all = "camelCase",
-        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned, Seal::Confidential: \
-                 serde::Serialize + serde::de::DeserializeOwned"
+        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
 pub enum TypedAssigns<Seal: ExposedSeal> {
@@ -306,12 +301,12 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         }
     }
 
-    pub fn len(&self) -> usize {
+    pub fn len_u16(&self) -> u16 {
         match self {
-            TypedAssigns::Declarative(set) => set.len(),
-            TypedAssigns::Fungible(set) => set.len(),
-            TypedAssigns::Structured(set) => set.len(),
-            TypedAssigns::Attachment(set) => set.len(),
+            TypedAssigns::Declarative(set) => set.len_u16(),
+            TypedAssigns::Fungible(set) => set.len_u16(),
+            TypedAssigns::Structured(set) => set.len_u16(),
+            TypedAssigns::Attachment(set) => set.len_u16(),
         }
     }
 
@@ -425,7 +420,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         })
     }
 
-    pub fn to_confidential_seals(&self) -> Vec<Seal::Confidential> {
+    pub fn to_confidential_seals(&self) -> Vec<SecretSeal> {
         match self {
             TypedAssigns::Declarative(s) => s
                 .iter()
@@ -574,11 +569,10 @@ impl TypedAssigns<GenesisSeal> {
     serde(
         crate = "serde_crate",
         transparent,
-        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned, Seal::Confidential: \
-                 serde::Serialize + serde::de::DeserializeOwned"
+        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
-pub struct Assignments<Seal>(TinyOrdMap<AssignmentsType, TypedAssigns<Seal>>)
+pub struct Assignments<Seal>(TinyOrdMap<AssignmentType, TypedAssigns<Seal>>)
 where Seal: ExposedSeal;
 
 impl<Seal: ExposedSeal> Default for Assignments<Seal> {
@@ -625,21 +619,21 @@ impl AssignmentsRef<'_> {
 
     pub fn is_empty(&self) -> bool { self.len() == 0 }
 
-    pub fn types(&self) -> BTreeSet<AssignmentsType> {
+    pub fn types(&self) -> BTreeSet<AssignmentType> {
         match self {
             AssignmentsRef::Genesis(a) => a.keys().copied().collect(),
             AssignmentsRef::Graph(a) => a.keys().copied().collect(),
         }
     }
 
-    pub fn has_type(&self, t: AssignmentsType) -> bool {
+    pub fn has_type(&self, t: AssignmentType) -> bool {
         match self {
             AssignmentsRef::Genesis(a) => a.contains_key(&t),
             AssignmentsRef::Graph(a) => a.contains_key(&t),
         }
     }
 
-    pub fn get(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    pub fn get(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         match self {
             AssignmentsRef::Genesis(a) => a.get(&t).map(TypedAssigns::transmutate_seals),
             AssignmentsRef::Graph(a) => a.get(&t).cloned(),

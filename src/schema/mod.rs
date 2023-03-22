@@ -29,7 +29,7 @@ mod occurrences;
 
 pub use occurrences::{Occurrences, OccurrencesMismatch};
 pub use operations::{
-    AssignmentsSchema, AssignmentsType, ExtensionSchema, GenesisSchema, GlobalSchema, OpFullType,
+    AssignmentType, AssignmentsSchema, ExtensionSchema, GenesisSchema, GlobalSchema, OpFullType,
     OpSchema, OpType, TransitionSchema, ValencySchema, ValencyType,
 };
 pub use schema::{

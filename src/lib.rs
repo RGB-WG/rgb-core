@@ -53,6 +53,7 @@ pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
     pub use contract::*;
     pub use schema::*;
+    pub use validation::AnchoredBundle;
 
     use super::*;
     pub use super::{schema, vm};

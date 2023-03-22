@@ -23,23 +23,23 @@
 use std::cmp::Ordering;
 use std::str::FromStr;
 
-use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet, TinyVec};
+use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
 use commit_verify::{mpc, CommitStrategy, CommitmentId};
-use strict_encoding::StrictEncode;
+use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    Assignments, AssignmentsRef, AssignmentsType, Ffv, GenesisSeal, GlobalState, GraphSeal, Opout,
+    AssignmentType, Assignments, AssignmentsRef, Ffv, GenesisSeal, GlobalState, GraphSeal, Opout,
     TypedAssigns, LIB_NAME_RGB,
 };
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
-pub type PrevOuts = TinyOrdMap<OpId, TinyOrdMap<schema::AssignmentsType, TinyVec<u16>>>;
-pub type Redeemed = TinyOrdMap<OpId, TinyOrdSet<schema::ValencyType>>;
+pub type PrevOuts = TinyOrdSet<Opout>;
+pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
 
 /// Unique operation (genesis, extensions & state transition) identifier
 /// equivalent to the commitment hash
@@ -64,6 +64,12 @@ impl FromStr for OpId {
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
 }
 
+impl OpId {
+    pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
+        Bytes32::from_slice(slice).map(Self)
+    }
+}
+
 /// Unique contract identifier equivalent to the contract genesis commitment
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
@@ -80,6 +86,12 @@ pub struct ContractId(
     #[from([u8; 32])]
     Bytes32,
 );
+
+impl ContractId {
+    pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
+        Bytes32::from_slice(slice).map(Self)
+    }
+}
 
 impl ToBaid58<32> for ContractId {
     const HRI: &'static str = "rgb";
@@ -129,7 +141,7 @@ pub trait Operation {
     fn extension_type(&self) -> Option<ExtensionType>;
 
     /// Returns metadata associated with the operation, if any.
-    fn metadata(&self) -> Option<&SmallBlob>;
+    fn metadata(&self) -> &SmallBlob;
 
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract operation.
@@ -138,12 +150,12 @@ pub trait Operation {
 
     fn assignments(&self) -> AssignmentsRef;
 
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>>;
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>>;
 
     /// For genesis and public state extensions always returns an empty list.
     /// While public state extension do have parent nodes, they do not contain
     /// indexed rights.
-    fn prev_outs(&self) -> Vec<Opout>;
+    fn prev_outs(&self) -> TinyOrdSet<Opout>;
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -158,11 +170,14 @@ pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
     pub chain: Chain,
-    pub metadata: Option<SmallBlob>,
+    pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
 }
+
+impl StrictSerialize for Genesis {}
+impl StrictDeserialize for Genesis {}
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -176,12 +191,15 @@ pub struct Extension {
     pub ffv: Ffv,
     pub extension_type: ExtensionType,
     pub contract_id: ContractId,
-    pub metadata: Option<SmallBlob>,
+    pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
 }
+
+impl StrictSerialize for Extension {}
+impl StrictDeserialize for Extension {}
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -194,12 +212,15 @@ pub struct Extension {
 pub struct Transition {
     pub ffv: Ffv,
     pub transition_type: TransitionType,
-    pub metadata: Option<SmallBlob>,
+    pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub inputs: PrevOuts,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
 }
+
+impl StrictSerialize for Transition {}
+impl StrictDeserialize for Transition {}
 
 // TODO: Remove after TransitionBundling refactoring
 impl Ord for Transition {
@@ -278,7 +299,7 @@ impl Operation for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
+    fn metadata(&self) -> &SmallBlob { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -290,14 +311,14 @@ impl Operation for Genesis {
     fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
 
     #[inline]
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         self.assignments
             .get(&t)
             .map(TypedAssigns::transmutate_seals)
     }
 
     #[inline]
-    fn prev_outs(&self) -> Vec<Opout> { empty!() }
+    fn prev_outs(&self) -> TinyOrdSet<Opout> { empty!() }
 }
 
 impl Operation for Extension {
@@ -317,7 +338,7 @@ impl Operation for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
+    fn metadata(&self) -> &SmallBlob { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -329,14 +350,14 @@ impl Operation for Extension {
     fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
 
     #[inline]
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         self.assignments
             .get(&t)
             .map(TypedAssigns::transmutate_seals)
     }
 
     #[inline]
-    fn prev_outs(&self) -> Vec<Opout> { empty!() }
+    fn prev_outs(&self) -> TinyOrdSet<Opout> { empty!() }
 }
 
 impl Operation for Transition {
@@ -356,7 +377,7 @@ impl Operation for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> Option<&SmallBlob> { self.metadata.as_ref() }
+    fn metadata(&self) -> &SmallBlob { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -368,21 +389,11 @@ impl Operation for Transition {
     fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
 
     #[inline]
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         self.assignments.get(&t).cloned()
     }
 
-    fn prev_outs(&self) -> Vec<Opout> {
-        self.inputs
-            .iter()
-            .flat_map(|(op, map)| {
-                let op = *op;
-                map.iter()
-                    .flat_map(|(ty, vec)| vec.iter().map(|no| (*ty, *no)))
-                    .map(move |(ty, no)| Opout { op, ty, no })
-            })
-            .collect()
-    }
+    fn prev_outs(&self) -> TinyOrdSet<Opout> { self.inputs.clone() }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
@@ -436,7 +447,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn metadata(&self) -> Option<&SmallBlob> {
+    fn metadata(&self) -> &SmallBlob {
         match self {
             OpRef::Genesis(op) => op.metadata(),
             OpRef::Transition(op) => op.metadata(),
@@ -468,7 +479,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn assignments_by_type(&self, t: AssignmentsType) -> Option<TypedAssigns<GraphSeal>> {
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         match self {
             OpRef::Genesis(op) => op.assignments_by_type(t),
             OpRef::Transition(op) => op.assignments_by_type(t),
@@ -476,7 +487,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn prev_outs(&self) -> Vec<Opout> {
+    fn prev_outs(&self) -> TinyOrdSet<Opout> {
         match self {
             OpRef::Genesis(op) => op.prev_outs(),
             OpRef::Transition(op) => op.prev_outs(),

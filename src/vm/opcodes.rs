@@ -20,6 +20,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(clippy::unusual_byte_groupings)]
+
 // CONTRACTS:
 pub const INSTR_CNP: u8 = 0b11_000_000;
 pub const INSTR_CNS: u8 = 0b11_000_001;

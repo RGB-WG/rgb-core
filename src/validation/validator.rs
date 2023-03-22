@@ -88,10 +88,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             if !TransitionBundle::validate(bundle) {
                 status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
             }
-            for transition in bundle
-                .values()
-                .filter_map(|item| item.transition.as_revealed())
-            {
+            for transition in bundle.values().filter_map(|item| item.transition.as_ref()) {
                 let opid = transition.id();
                 anchor_index.insert(opid, anchor);
             }
@@ -313,13 +310,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     }
 
                     // Now, we must collect all parent nodes and add them to the verification queue
-                    let parent_nodes = transition.inputs.iter().filter_map(|(prev_id, _)| {
-                        self.consignment.operation(*prev_id).or_else(|| {
+                    let parent_nodes = transition.inputs.iter().filter_map(|prevout| {
+                        self.consignment.operation(prevout.op).or_else(|| {
                             // This will not actually happen since we already checked that each
-                            // ancestor reference has a corresponding
-                            // operation in the code above. But rust
-                            // requires to double-check :)
-                            self.status.add_failure(Failure::TransitionAbsent(*prev_id));
+                            // ancestor reference has a corresponding operation in the code above.
+                            // But lets double-check :)
+                            self.status
+                                .add_failure(Failure::TransitionAbsent(prevout.op));
                             None
                         })
                     });
@@ -327,24 +324,22 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     queue.extend(parent_nodes);
                 }
                 OpRef::Extension(ref extension) => {
-                    for (prev_id, valencies) in &extension.redeemed {
-                        for valency in valencies {
-                            let Some(prev_op) = self.consignment.operation(*prev_id) else {
+                    for (valency, prev_id) in &extension.redeemed {
+                        let Some(prev_op) = self.consignment.operation(*prev_id) else {
                                 self.status.add_failure(Failure::ValencyNoParent { opid, prev_id: *prev_id, valency: *valency });
                                 continue;
                             };
 
-                            if !prev_op.valencies().contains(valency) {
-                                self.status.add_failure(Failure::NoPrevValency {
-                                    opid,
-                                    prev_id: *prev_id,
-                                    valency: *valency,
-                                });
-                                continue;
-                            }
-
-                            queue.push_back(prev_op);
+                        if !prev_op.valencies().contains(valency) {
+                            self.status.add_failure(Failure::NoPrevValency {
+                                opid,
+                                prev_id: *prev_id,
+                                valency: *valency,
+                            });
+                            continue;
                         }
+
+                        queue.push_back(prev_op);
                     }
                 }
             }
@@ -396,40 +391,34 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // Checking that witness transaction closes seals defined by transition previous
         // outputs.
         let mut seals = vec![];
-        for (prev_id, prev_outs) in &transition.inputs {
-            let prev_id = *prev_id;
-            let Some(prev_op) = self.consignment.operation(prev_id) else {
+        for prev_out in &transition.inputs {
+            let Opout { op, ty, no } = *prev_out;
+
+            let Some(prev_op) = self.consignment.operation(op) else {
                 // Node, referenced as the ancestor, was not found in the consignment. 
                 // Usually this means that the consignment data are broken
                 self.status
-                    .add_failure(Failure::OperationAbsent(prev_id));
+                    .add_failure(Failure::OperationAbsent(op));
                 continue
             };
 
-            for (state_type, outs) in prev_outs {
-                let state_type = *state_type;
+            let Some(variant) = prev_op.assignments_by_type(ty) else {
+                self.status.add_failure(Failure::NoPrevState { opid, prev_id: op, state_type: ty });
+                continue
+            };
 
-                let Some(variant) = prev_op.assignments_by_type(state_type) else {
-                    self.status.add_failure(Failure::NoPrevState { opid, prev_id, state_type });
-                    continue
-                };
-
-                for out_no in outs {
-                    let prev_out = Opout::new(prev_id, state_type, *out_no);
-                    let Ok(seal) = variant.revealed_seal_at(prev_out.no) else {
-                        self.status.add_failure(Failure::NoPrevOut(opid,prev_out));
-                        continue
-                    };
-                    let Some(seal) = seal else {
-                        // Everything is ok, but we have incomplete data (confidential), thus can't do a 
-                        // full verification and have to report the failure
-                        self.status
-                            .add_failure(Failure::ConfidentialSeal(prev_out));
-                        continue
-                    };
-                    seals.push(seal)
-                }
-            }
+            let Ok(seal) = variant.revealed_seal_at(no) else {
+                self.status.add_failure(Failure::NoPrevOut(opid,*prev_out));
+                continue
+            };
+            let Some(seal) = seal else {
+                // Everything is ok, but we have incomplete data (confidential), thus can't do a 
+                // full verification and have to report the failure
+                self.status
+                    .add_failure(Failure::ConfidentialSeal(*prev_out));
+                continue
+            };
+            seals.push(seal)
         }
 
         let message = mpc::Message::from(bundle_id);

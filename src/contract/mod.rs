@@ -36,7 +36,7 @@ pub use assignments::{
     TypedAssigns,
 };
 pub use attachment::AttachId;
-pub use bundle::{BundleId, BundledTransition, TransitionBundle};
+pub use bundle::{BundleId, BundleItem, TransitionBundle};
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
     OpoutParseError, OrderedTxid, OutputAssignment, RightsOutput,
@@ -50,5 +50,5 @@ pub use operations::{
     ContractId, Extension, Genesis, OpId, OpRef, Operation, PrevOuts, Redeemed, Transition,
     Valencies,
 };
-pub use seal::{ConfidentialSeal, ExposedSeal, GenesisSeal, GraphSeal, SecretSeal, TxoSeal};
+pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, SealWitness, SecretSeal, TxoSeal};
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
