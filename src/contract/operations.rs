@@ -29,7 +29,7 @@ use amplify::{hex, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
 use commit_verify::{mpc, CommitStrategy, CommitmentId};
-use strict_encoding::StrictEncode;
+use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
@@ -164,6 +164,9 @@ pub struct Genesis {
     pub valencies: Valencies,
 }
 
+impl StrictSerialize for Genesis {}
+impl StrictDeserialize for Genesis {}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -183,6 +186,9 @@ pub struct Extension {
     pub valencies: Valencies,
 }
 
+impl StrictSerialize for Extension {}
+impl StrictDeserialize for Extension {}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -194,13 +200,15 @@ pub struct Extension {
 pub struct Transition {
     pub ffv: Ffv,
     pub transition_type: TransitionType,
-    // TODO: Remove optional; empty metadata must be defined as a unit structure
     pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub inputs: PrevOuts,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
 }
+
+impl StrictSerialize for Transition {}
+impl StrictDeserialize for Transition {}
 
 // TODO: Remove after TransitionBundling refactoring
 impl Ord for Transition {
