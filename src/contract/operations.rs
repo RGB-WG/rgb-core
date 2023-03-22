@@ -64,6 +64,12 @@ impl FromStr for OpId {
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
 }
 
+impl OpId {
+    pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
+        Bytes32::from_slice(slice).map(Self)
+    }
+}
+
 /// Unique contract identifier equivalent to the contract genesis commitment
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
@@ -80,6 +86,12 @@ pub struct ContractId(
     #[from([u8; 32])]
     Bytes32,
 );
+
+impl ContractId {
+    pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
+        Bytes32::from_slice(slice).map(Self)
+    }
+}
 
 impl ToBaid58<32> for ContractId {
     const HRI: &'static str = "rgb";
