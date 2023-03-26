@@ -34,7 +34,7 @@ use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
     ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, LIB_NAME_RGB};
+use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
 
 pub trait SchemaTypeIndex:
     Copy + Eq + Ord + Default + StrictType + StrictEncode + StrictDecode
@@ -135,6 +135,15 @@ impl<Root: SchemaRoot> StrictDeserialize for Schema<Root> {}
 impl<Root: SchemaRoot> Schema<Root> {
     #[inline]
     pub fn schema_id(&self) -> SchemaId { self.commitment_id() }
+
+    pub fn blank_transition(&self) -> TransitionSchema {
+        let mut schema = TransitionSchema::default();
+        for id in self.owned_types.keys() {
+            schema.inputs.insert(*id, Occurrences::NoneOrMore).ok();
+            schema.assignments.insert(*id, Occurrences::NoneOrMore).ok();
+        }
+        schema
+    }
 }
 
 #[cfg(test)]
