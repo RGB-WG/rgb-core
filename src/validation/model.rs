@@ -177,11 +177,13 @@ impl<Root: SchemaRoot> Schema<Root> {
     fn validate_type_system(&self) -> validation::Status {
         validation::Status::new()
         // TODO: Validate type system
-        /*if let Err(inconsistencies) = self.type_system.validate() {
-            for _err in inconsistencies {
-                status.add_failure(validation::Failure::SchemaTypeSystem(/*err*/));
-            }
-        }*/
+        // Currently, validation is performed at the level of state values, i.e.
+        // if the system is inconsistent (references semantic ids not
+        // present in it) this will be detected during state validation.
+        // We should not prohibit schema with inconsistent type system, instead
+        // we need just to issue warnings here if some of semantic ids are
+        // missed - and add information messages if some excessive semantic ids
+        // are present.
     }
 
     fn validate_metadata(
