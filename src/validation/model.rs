@@ -28,9 +28,9 @@ use amplify::Wrapper;
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
-    validation, Assignments, AssignmentsRef, ExposedSeal, GlobalState, GlobalValues, GraphSeal,
-    OpFullType, OpId, OpRef, Operation, Opout, PrevOuts, Redeemed, Schema, SchemaRoot,
-    TypedAssigns, Valencies, BLANK_TRANSITION_ID,
+    validation, Assignments, AssignmentsRef, ExposedSeal, GlobalState, GlobalStateSchema,
+    GlobalValues, GraphSeal, OpFullType, OpId, OpRef, Operation, Opout, PrevOuts, Redeemed, Schema,
+    SchemaRoot, TypedAssigns, Valencies, BLANK_TRANSITION_ID,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -194,35 +194,43 @@ impl<Root: SchemaRoot> Schema<Root> {
                 ));
             });
 
-        for (global_id, occ) in global_schema {
+        for (type_id, occ) in global_schema {
             let set = global
-                .get(global_id)
+                .get(type_id)
                 .cloned()
                 .map(GlobalValues::into_inner)
                 .map(Confined::unbox)
                 .unwrap_or_default();
 
+            let GlobalStateSchema { sem_id, max_items } = self.global_types.get(type_id).expect(
+                "if the field were absent, the schema would not be able to pass the internal \
+                 validation and we would not reach this point",
+            );
+
             // Checking number of field occurrences
-            if let Err(err) = occ.check(set.len() as u16) {
+            let count = set.len() as u16;
+            if let Err(err) = occ.check(count) {
                 status.add_failure(validation::Failure::SchemaGlobalStateOccurrences(
-                    opid, *global_id, err,
+                    opid, *type_id, err,
+                ));
+            }
+            if count >= *max_items {
+                status.add_failure(validation::Failure::SchemaGlobalStateLimit(
+                    opid, *type_id, count, *max_items,
                 ));
             }
 
-            let _field = self.global_types.get(global_id).expect(
-                "If the field were absent, the schema would not be able to pass the internal \
-                 validation and we would not reach this point",
-            );
-            for _data in set {
-                // TODO: #137 Run strict type validation
-                /*
-                let schema_type = data.schema_type();
-
-                status.add_failure(validation::Failure::SchemaMismatchedDataType(
-                    *field_type_id,
-                ));
-                status += field.verify(&self.type_system, opid, *field_type_id, &data);
-                 */
+            // Validating data types
+            for data in set {
+                if self
+                    .type_system
+                    .strict_deserialize_type(*sem_id, data.as_ref())
+                    .is_err()
+                {
+                    status.add_failure(validation::Failure::SchemaInvalidGlobalValue(
+                        opid, *type_id, *sem_id,
+                    ));
+                };
             }
         }
 
