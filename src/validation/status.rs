@@ -28,7 +28,7 @@ use bp::{seals, Txid};
 
 use crate::contract::Opout;
 use crate::schema::{self, OpType, SchemaId};
-use crate::{data, BundleId, OccurrencesMismatch, OpId, SecretSeal, StateType};
+use crate::{BundleId, OccurrencesMismatch, OpId, SecretSeal, StateType};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -136,8 +136,7 @@ impl Status {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-// TODO #44: (v0.3) convert to detailed error description using doc_comments
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Failure {
     /// schema {actual} provided for the consignment validation doesn't match
     /// schema {expected} used by the contract. This means that the consignment
@@ -204,7 +203,9 @@ pub enum Failure {
     SchemaTypeSystem(/* TODO: use error from strict types */),
 
     // Consignment consistency errors
+    /// operation {0} is absent from the consignment.
     OperationAbsent(OpId),
+    /// state transition {0} is absent from the consignment.
     TransitionAbsent(OpId),
     /// bundle with id {0} is invalid.
     BundleInvalid(BundleId),
@@ -214,8 +215,8 @@ pub enum Failure {
     NotAnchored(OpId),
     /// anchor for transition {0} doesn't commit to the actual transition data.
     NotInAnchor(OpId, Txid),
-    /// transition {op} references state type {ty} absent in the outputs of
-    /// previous state transition {prev_id}.
+    /// transition {opid} references state type {state_type} absent in the
+    /// outputs of previous state transition {prev_id}.
     NoPrevState {
         opid: OpId,
         prev_id: OpId,
@@ -270,9 +271,11 @@ pub enum Failure {
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },
+    /* TODO: Use error type
     InvalidStateDataType(OpId, u16, /* TODO: Use strict type */ data::Revealed),
     InvalidStateDataValue(OpId, u16, /* TODO: Use strict type */ Vec<u8>),
-    /// invalid bulletproofs in {0}:{1}: {3}
+     */
+    /// invalid bulletproofs in {0}:{1}: {2}
     BulletproofsInvalid(OpId, u16, String),
     /// operation {0} is invalid: {1}
     ScriptFailure(OpId, String),

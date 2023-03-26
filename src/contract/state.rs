@@ -54,12 +54,13 @@ pub trait ExposedState:
 }
 
 /// Categories of the state
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
+#[display(lowercase)]
 pub enum StateType {
     /// No state data
     Void,
