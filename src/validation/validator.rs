@@ -115,8 +115,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 {
                     // We generate just a warning here because it's up to a user to decide whether
                     // to accept consignment with wrong endpoint list
-                    status
-                        .add_warning(Warning::EndpointTransitionSealNotFound(opid, seal_endpoint));
+                    status.add_warning(Warning::TerminalSealAbsent(opid, seal_endpoint));
                 }
                 if end_transitions
                     .iter()
@@ -124,7 +123,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     .count() >
                     0
                 {
-                    status.add_warning(Warning::EndpointDuplication(opid, seal_endpoint));
+                    status.add_warning(Warning::TerminalDuplication(opid, seal_endpoint));
                 } else {
                     end_transitions.push((transition, bundle_id));
                 }
@@ -240,7 +239,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     self.status.unmined_endpoint_txids.push(anchor.txid);
                     self.status
                         .warnings
-                        .push(Warning::EndpointTransactionMissed(anchor.txid));
+                        .push(Warning::TerminalWitnessNotMined(anchor.txid));
                 }
             }
         }
@@ -249,7 +248,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // excessive (i.e. not part of validation_index). Nothing critical, but still
         // good to report the user that the consignment is not perfect
         for opid in self.consignment.op_ids_except(&self.validation_index) {
-            self.status.add_warning(Warning::ExcessiveNode(opid));
+            self.status.add_warning(Warning::ExcessiveOperation(opid));
         }
     }
 

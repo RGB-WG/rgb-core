@@ -28,7 +28,7 @@ use bp::{seals, Txid};
 
 use crate::contract::Opout;
 use crate::schema::{self, OpType, SchemaId};
-use crate::{BundleId, OccurrencesMismatch, OpId, SecretSeal, StateType};
+use crate::{AssignmentType, BundleId, OccurrencesMismatch, OpId, SecretSeal, StateType};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -130,7 +130,6 @@ impl Status {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -286,19 +285,23 @@ pub enum Failure {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-// TODO #44: (v0.3) convert to detailed descriptions using doc_comments
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Warning {
-    EndpointDuplication(OpId, SecretSeal),
-    EndpointTransitionSealNotFound(OpId, SecretSeal),
-    ExcessiveNode(OpId),
-    EndpointTransactionMissed(Txid),
+    /// duplicated terminal seal {1} in operation {0}.
+    TerminalDuplication(OpId, SecretSeal),
+    /// terminal seal {1} referencing operation {0} is not present in operation
+    /// assignments.
+    TerminalSealAbsent(OpId, SecretSeal),
+    /// operation {0} present in the consignment is excessive and not a part of
+    /// the validated contract history.
+    ExcessiveOperation(OpId),
+    /// terminal witness transaction {0} is not yet mined.
+    TerminalWitnessNotMined(Txid),
 
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
@@ -306,16 +309,16 @@ pub enum Warning {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-// TODO #44: (v0.3) convert to detailed descriptions using doc_comments
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Info {
-    UncheckableConfidentialState(OpId, u16),
+    /// operation {0} contains state in assignment {1} which is confidential and
+    /// thus was not validated.
+    UncheckableConfidentialState(OpId, AssignmentType),
 
     /// Custom info by external services on top of RGB Core.
     #[display(inner)]
