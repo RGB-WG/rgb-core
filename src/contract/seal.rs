@@ -49,7 +49,7 @@ impl ExposedSeal for GraphSeal {}
 
 impl ExposedSeal for GenesisSeal {}
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = SealWitness::Genesis)]
 #[cfg_attr(
@@ -59,11 +59,14 @@ impl ExposedSeal for GenesisSeal {}
 )]
 pub enum SealWitness {
     #[strict_type(tag = 0)]
+    #[display("~")]
     Genesis,
 
     #[strict_type(tag = 1)]
+    #[display(inner)]
     Present(Txid),
 
     #[strict_type(tag = 2)]
+    #[display("~")]
     Extension,
 }
