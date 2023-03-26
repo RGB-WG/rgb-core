@@ -29,7 +29,6 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::subschema::SchemaVerify;
 use super::{ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::contract::Opout;
 use crate::validation::AnchoredBundle;
@@ -115,8 +114,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 {
                     // We generate just a warning here because it's up to a user to decide whether
                     // to accept consignment with wrong endpoint list
-                    status
-                        .add_warning(Warning::EndpointTransitionSealNotFound(opid, seal_endpoint));
+                    status.add_warning(Warning::TerminalSealAbsent(opid, seal_endpoint));
                 }
                 if end_transitions
                     .iter()
@@ -124,7 +122,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     .count() >
                     0
                 {
-                    status.add_warning(Warning::EndpointDuplication(opid, seal_endpoint));
+                    status.add_warning(Warning::TerminalDuplication(opid, seal_endpoint));
                 } else {
                     end_transitions.push((transition, bundle_id));
                 }
@@ -186,19 +184,16 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         validator.status
     }
 
-    fn validate_schema(&mut self, schema: &SubSchema) {
-        // Validating schema against root schema
-        if let Some(ref root) = schema.subset_of {
-            self.status += schema.schema_verify(root);
-        }
-    }
+    fn validate_schema(&mut self, schema: &SubSchema) { self.status += schema.verify(); }
 
     fn validate_contract<Root: SchemaRoot>(&mut self, schema: &Schema<Root>) {
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != self.schema_id {
-            self.status
-                .add_failure(Failure::SchemaUnknown(self.schema_id));
+            self.status.add_failure(Failure::SchemaMismatch {
+                expected: self.schema_id,
+                actual: schema.schema_id(),
+            });
             // Unlike other failures, here we return immediatelly, since there is no point
             // to validate all consignment data against an invalid schema: it will result in
             // a plenty of meaningless errors
@@ -238,7 +233,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     self.status.unmined_endpoint_txids.push(anchor.txid);
                     self.status
                         .warnings
-                        .push(Warning::EndpointTransactionMissed(anchor.txid));
+                        .push(Warning::TerminalWitnessNotMined(anchor.txid));
                 }
             }
         }
@@ -247,7 +242,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // excessive (i.e. not part of validation_index). Nothing critical, but still
         // good to report the user that the consignment is not perfect
         for opid in self.consignment.op_ids_except(&self.validation_index) {
-            self.status.add_warning(Warning::ExcessiveNode(opid));
+            self.status.add_warning(Warning::ExcessiveOperation(opid));
         }
     }
 

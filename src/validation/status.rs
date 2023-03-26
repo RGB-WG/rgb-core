@@ -25,10 +25,13 @@ use core::ops::AddAssign;
 
 use bp::dbc::anchor;
 use bp::{seals, Txid};
+use strict_types::SemId;
 
 use crate::contract::Opout;
-use crate::schema::{self, OpType, SchemaId};
-use crate::{data, BundleId, OccurrencesMismatch, OpId, SecretSeal, StateType};
+use crate::schema::{self, SchemaId};
+use crate::{
+    AssignmentType, BundleId, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -130,66 +133,117 @@ impl Status {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-// TODO #44: (v0.3) convert to detailed error description using doc_comments
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Failure {
-    SchemaUnknown(SchemaId),
-    /// schema is a subschema, so root schema {0} must be provided for the
-    /// validation
-    SchemaRootRequired(SchemaId),
-    SchemaRootNoFieldTypeMatch(schema::GlobalStateType),
-    SchemaRootNoOwnedRightTypeMatch(schema::AssignmentType),
-    SchemaRootNoPublicRightTypeMatch(schema::ValencyType),
-    SchemaRootNoTransitionTypeMatch(schema::TransitionType),
-    SchemaRootNoExtensionTypeMatch(schema::ExtensionType),
+    /// schema {actual} provided for the consignment validation doesn't match
+    /// schema {expected} used by the contract. This means that the consignment
+    /// is invalid.
+    SchemaMismatch {
+        /// Expected schema id required by the contracts genesis.
+        expected: SchemaId,
+        /// Actual schema id provided by the consignment.
+        actual: SchemaId,
+    },
+    /// schema uses reserved type for the blank state transition.
+    SchemaBlankTransitionRedefined,
 
-    SchemaRootNoMetadataMatch(OpType, schema::GlobalStateType),
-    SchemaRootNoParentOwnedRightsMatch(OpType, schema::AssignmentType),
-    SchemaRootNoParentPublicRightsMatch(OpType, schema::ValencyType),
-    SchemaRootNoOwnedRightsMatch(OpType, schema::AssignmentType),
-    SchemaRootNoPublicRightsMatch(OpType, schema::ValencyType),
+    /// schema global state #{0} uses semantic data type absent in type library
+    /// ({1}).
+    SchemaGlobalSemIdUnknown(schema::GlobalStateType, SemId),
+    /// schema owned state #{0} uses semantic data type absent in type library
+    /// ({1}).
+    SchemaOwnedSemIdUnknown(schema::AssignmentType, SemId),
+    /// schema metadata in {0} uses semantic data type absent in type library
+    /// ({1}).
+    SchemaOpMetaSemIdUnknown(OpFullType, SemId),
 
+    /// schema for {0} has zero inputs.
+    SchemaOpEmptyInputs(OpFullType),
+    /// schema for {0} references undeclared global state type {1}.
+    SchemaOpGlobalTypeUnknown(OpFullType, schema::GlobalStateType),
+    /// schema for {0} references undeclared owned state type {1}.
+    SchemaOpAssignmentTypeUnknown(OpFullType, schema::AssignmentType),
+    /// schema for {0} references undeclared valency type {1}.
+    SchemaOpValencyTypeUnknown(OpFullType, schema::ValencyType),
+
+    /// invalid schema - no match with root schema requirements for global state
+    /// type #{0}.
+    SubschemaGlobalStateMismatch(schema::GlobalStateType),
+    /// invalid schema - no match with root schema requirements for assignment
+    /// type #{0}.
+    SubschemaAssignmentTypeMismatch(schema::AssignmentType),
+    /// invalid schema - no match with root schema requirements for valency
+    /// type #{0}.
+    SubschemaValencyTypeMismatch(schema::ValencyType),
+    /// invalid schema - no match with root schema requirements for transition
+    /// type #{0}.
+    SubschemaTransitionTypeMismatch(schema::TransitionType),
+    /// invalid schema - no match with root schema requirements for extension
+    /// type #{0}.
+    SubschemaExtensionTypeMismatch(schema::ExtensionType),
+
+    /// invalid schema - no match with root schema requirements for metadata
+    /// type (required {expected}, found {actual}).
+    SubschemaOpMetaMismatch {
+        op_type: OpFullType,
+        expected: SemId,
+        actual: SemId,
+    },
+    /// invalid schema - no match with root schema requirements for global state
+    /// type #{1} used in {0}.
+    SubschemaOpGlobalStateMismatch(OpFullType, schema::GlobalStateType),
+    /// invalid schema - no match with root schema requirements for input
+    /// type #{1} used in {0}.
+    SubschemaOpInputMismatch(OpFullType, schema::AssignmentType),
+    /// invalid schema - no match with root schema requirements for redeem
+    /// type #{1} used in {0}.
+    SubschemaOpRedeemMismatch(OpFullType, schema::ValencyType),
+    /// invalid schema - no match with root schema requirements for assignment
+    /// type #{1} used in {0}.
+    SubschemaOpAssignmentsMismatch(OpFullType, schema::AssignmentType),
+    /// invalid schema - no match with root schema requirements for valency
+    /// type #{1} used in {0}.
+    SubschemaOpValencyMismatch(OpFullType, schema::ValencyType),
+
+    /// operation {0} uses invalid state extension type {1}.
     SchemaUnknownExtensionType(OpId, schema::ExtensionType),
+    /// operation {0} uses invalid state transition type {1}.
     SchemaUnknownTransitionType(OpId, schema::TransitionType),
-    SchemaUnknownFieldType(OpId, schema::GlobalStateType),
-    SchemaUnknownOwnedRightType(OpId, schema::AssignmentType),
-    SchemaUnknownPublicRightType(OpId, schema::ValencyType),
+    /// operation {0} uses invalid global state type {1}.
+    SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
+    /// operation {0} uses invalid assignment type {1}.
+    SchemaUnknownAssignmentType(OpId, schema::AssignmentType),
+    /// operation {0} uses invalid valency type {1}.
+    SchemaUnknownValencyType(OpId, schema::ValencyType),
 
-    SchemaDeniedScriptExtension(OpId),
-
-    SchemaMetaValueTooSmall(schema::GlobalStateType),
-    SchemaMetaValueTooLarge(schema::GlobalStateType),
-    SchemaStateValueTooSmall(schema::AssignmentType),
-    SchemaStateValueTooLarge(schema::AssignmentType),
-
-    SchemaWrongEnumValue {
-        field_or_state_type: u16,
-        unexpected: u8,
-    },
-    SchemaWrongDataLength {
-        field_or_state_type: u16,
-        max_expected: u16,
-        found: usize,
-    },
-    SchemaMismatchedDataType(u16),
-
-    SchemaMetaOccurrencesError(OpId, schema::GlobalStateType, OccurrencesMismatch),
-    SchemaParentOwnedRightOccurrencesError(OpId, schema::AssignmentType, OccurrencesMismatch),
-    SchemaOwnedRightOccurrencesError(OpId, schema::AssignmentType, OccurrencesMismatch),
-
-    SchemaScriptOverrideDenied,
-    SchemaScriptVmChangeDenied,
-
-    SchemaTypeSystem(/* TODO: use error from strict types */),
+    /// invalid number of global state entries of type {1} in operation {0} -
+    /// {2}
+    SchemaGlobalStateOccurrences(OpId, schema::GlobalStateType, OccurrencesMismatch),
+    /// number of global state entries of type {1} in operation {0} exceeds
+    /// schema-defined maximum for that global state type ({2} vs {3}).
+    SchemaGlobalStateLimit(OpId, schema::GlobalStateType, u16, u16),
+    /// invalid metadata in operation {0} not matching semantic type id {1}.
+    SchemaInvalidMetadata(OpId, SemId),
+    /// invalid global state value in operation {0}, state type #{1} which does
+    /// not match semantic type id {2}.
+    SchemaInvalidGlobalValue(OpId, schema::GlobalStateType, SemId),
+    /// invalid owned state value in operation {0}, state type #{1} which does
+    /// not match semantic type id {2}.
+    SchemaInvalidOwnedValue(OpId, schema::AssignmentType, SemId),
+    /// invalid number of input entries of type {1} in operation {0} - {2}  
+    SchemaInputOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
+    /// invalid number of assignment entries of type {1} in operation {0} - {2}
+    SchemaAssignmentOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
 
     // Consignment consistency errors
+    /// operation {0} is absent from the consignment.
     OperationAbsent(OpId),
+    /// state transition {0} is absent from the consignment.
     TransitionAbsent(OpId),
     /// bundle with id {0} is invalid.
     BundleInvalid(BundleId),
@@ -199,8 +253,8 @@ pub enum Failure {
     NotAnchored(OpId),
     /// anchor for transition {0} doesn't commit to the actual transition data.
     NotInAnchor(OpId, Txid),
-    /// transition {op} references state type {ty} absent in the outputs of
-    /// previous state transition {prev_id}.
+    /// transition {opid} references state type {state_type} absent in the
+    /// outputs of previous state transition {prev_id}.
     NoPrevState {
         opid: OpId,
         prev_id: OpId,
@@ -249,15 +303,21 @@ pub enum Failure {
     },
     /// state in {opid}/{state_type} is of {found} type, while schema requires
     /// it to be {expected}.
+    MediaTypeMismatch {
+        opid: OpId,
+        state_type: schema::AssignmentType,
+        expected: schema::MediaType,
+        found: schema::MediaType,
+    },
+    /// state in {opid}/{state_type} is of {found} type, while schema requires
+    /// it to be {expected}.
     FungibleTypeMismatch {
         opid: OpId,
         state_type: schema::AssignmentType,
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },
-    InvalidStateDataType(OpId, u16, /* TODO: Use strict type */ data::Revealed),
-    InvalidStateDataValue(OpId, u16, /* TODO: Use strict type */ Vec<u8>),
-    /// invalid bulletproofs in {0}:{1}: {3}
+    /// invalid bulletproofs in {0}:{1}: {2}
     BulletproofsInvalid(OpId, u16, String),
     /// operation {0} is invalid: {1}
     ScriptFailure(OpId, String),
@@ -268,19 +328,23 @@ pub enum Failure {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-// TODO #44: (v0.3) convert to detailed descriptions using doc_comments
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Warning {
-    EndpointDuplication(OpId, SecretSeal),
-    EndpointTransitionSealNotFound(OpId, SecretSeal),
-    ExcessiveNode(OpId),
-    EndpointTransactionMissed(Txid),
+    /// duplicated terminal seal {1} in operation {0}.
+    TerminalDuplication(OpId, SecretSeal),
+    /// terminal seal {1} referencing operation {0} is not present in operation
+    /// assignments.
+    TerminalSealAbsent(OpId, SecretSeal),
+    /// operation {0} present in the consignment is excessive and not a part of
+    /// the validated contract history.
+    ExcessiveOperation(OpId),
+    /// terminal witness transaction {0} is not yet mined.
+    TerminalWitnessNotMined(Txid),
 
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
@@ -288,16 +352,16 @@ pub enum Warning {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
-//#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-// TODO #44: (v0.3) convert to detailed descriptions using doc_comments
-#[display(Debug)]
+#[display(doc_comments)]
 pub enum Info {
-    UncheckableConfidentialState(OpId, u16),
+    /// operation {0} contains state in assignment {1} which is confidential and
+    /// thus was not validated.
+    UncheckableConfidentialState(OpId, AssignmentType),
 
     /// Custom info by external services on top of RGB Core.
     #[display(inner)]

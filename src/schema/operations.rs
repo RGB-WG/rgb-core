@@ -64,15 +64,23 @@ pub enum OpType {
 
 /// Aggregated type used to supply full contract operation type and
 /// transition/state extension type information
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub enum OpFullType {
     /// Genesis operation (no subtypes)
+    #[display("genesis")]
     Genesis,
 
     /// State transition contract operation, subtyped by transition type
+    #[display("state transition #{0}")]
     StateTransition(TransitionType),
 
     /// State extension contract operation, subtyped by extension type
+    #[display("state extension #{0}")]
     StateExtension(ExtensionType),
 }
 
@@ -84,6 +92,10 @@ impl OpFullType {
             OpFullType::StateExtension(ty) => ty,
         }
     }
+
+    pub fn is_transition(self) -> bool { matches!(self, Self::StateTransition(_)) }
+
+    pub fn is_extension(self) -> bool { matches!(self, Self::StateExtension(_)) }
 }
 
 /// Trait defining common API for all operation type schemata

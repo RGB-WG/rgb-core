@@ -25,6 +25,31 @@ use strict_types::SemId;
 
 use crate::{StateType, LIB_NAME_RGB};
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = repr, into_u8, try_from_u8)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[non_exhaustive]
+#[repr(u8)]
+pub enum MediaType {
+    #[display("*/*")]
+    #[strict_type(dumb)]
+    Any = 0xFF,
+    // TODO: Complete MIME type implementation
+}
+
+impl MediaType {
+    pub fn conforms(&self, other: &MediaType) -> bool {
+        match (self, other) {
+            (MediaType::Any, MediaType::Any) => true,
+        }
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = order)]
@@ -38,8 +63,7 @@ pub enum StateSchema {
     Declarative,
     Fungible(FungibleType),
     Structured(SemId),
-    // TODO: Add MIME type requirements
-    Attachment,
+    Attachment(MediaType),
 }
 
 impl StateSchema {
@@ -48,7 +72,7 @@ impl StateSchema {
             StateSchema::Declarative => StateType::Void,
             StateSchema::Fungible(_) => StateType::Fungible,
             StateSchema::Structured(_) => StateType::Structured,
-            StateSchema::Attachment => StateType::Attachment,
+            StateSchema::Attachment(_) => StateType::Attachment,
         }
     }
 }
@@ -60,7 +84,7 @@ impl StateSchema {
 /// future we plan to support more types. We reserve this possibility by
 /// internally encoding [`ConfidentialFormat`] with the same type specification
 /// details as used for [`DateFormat`]
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Display)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = repr, into_u8, try_from_u8)]
 #[cfg_attr(
@@ -71,6 +95,7 @@ impl StateSchema {
 #[repr(u8)]
 pub enum FungibleType {
     #[default]
+    #[display("64bit")]
     Unsigned64Bit = U64.into_code(),
 }
 

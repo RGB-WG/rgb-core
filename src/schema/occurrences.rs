@@ -154,7 +154,7 @@ impl StrictDecode for Occurrences {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-#[display(Debug)]
+#[display("expected from {min} to {max} elements, while {found} were provided")]
 pub struct OccurrencesMismatch {
     pub min: u16,
     pub max: u16,
