@@ -37,4 +37,4 @@ pub use schema::{
     SubSchema, TransitionType, BLANK_TRANSITION_ID,
 };
 pub use script::{Script, VmType};
-pub use state::{FungibleType, GlobalStateSchema, StateSchema};
+pub use state::{FungibleType, GlobalStateSchema, MediaType, StateSchema};

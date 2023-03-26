@@ -303,6 +303,14 @@ pub enum Failure {
     },
     /// state in {opid}/{state_type} is of {found} type, while schema requires
     /// it to be {expected}.
+    MediaTypeMismatch {
+        opid: OpId,
+        state_type: schema::AssignmentType,
+        expected: schema::MediaType,
+        found: schema::MediaType,
+    },
+    /// state in {opid}/{state_type} is of {found} type, while schema requires
+    /// it to be {expected}.
     FungibleTypeMismatch {
         opid: OpId,
         state_type: schema::AssignmentType,

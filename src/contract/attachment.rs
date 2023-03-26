@@ -22,7 +22,6 @@
 
 use std::str::FromStr;
 
-use amplify::confinement::TinyString;
 use amplify::{Bytes32, RawArray};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::secp256k1::rand::{thread_rng, RngCore};
@@ -30,7 +29,7 @@ use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol
 use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, ExposedState};
-use crate::{StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{MediaType, StateCommitment, StateData, StateType, LIB_NAME_RGB};
 
 /// Unique data attachment identifier
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
@@ -72,17 +71,17 @@ pub struct Revealed {
     pub id: AttachId,
     /// We do not enforce a MIME standard since non-standard types can be also
     /// used
-    pub media_type: TinyString,
+    pub media_type: MediaType,
     pub salt: u64,
 }
 
 impl Revealed {
     /// Creates new revealed attachment for the attachment id and MIME type.
     /// Uses `thread_rng` to initialize [`Revealed::salt`].
-    pub fn new(id: AttachId, media_type: impl Into<TinyString>) -> Self {
+    pub fn new(id: AttachId, media_type: MediaType) -> Self {
         Self {
             id,
-            media_type: media_type.into(),
+            media_type,
             salt: thread_rng().next_u64(),
         }
     }

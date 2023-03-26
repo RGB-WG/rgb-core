@@ -56,7 +56,7 @@ impl StateSchema {
                             *opid, state_type,
                         ));
                     }
-                    (StateSchema::Attachment, StateCommitment::Attachment(_)) => {
+                    (StateSchema::Attachment(_), StateCommitment::Attachment(_)) => {
                         status.add_info(validation::Info::UncheckableConfidentialState(
                             *opid, state_type,
                         ));
@@ -75,8 +75,15 @@ impl StateSchema {
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 match (self, state.state_data()) {
                     (StateSchema::Declarative, StateData::Void) => {}
-                    (StateSchema::Attachment, StateData::Attachment(_)) => {
-                        // TODO: Check against MIME type
+                    (StateSchema::Attachment(media_type), StateData::Attachment(attach))
+                        if !attach.media_type.conforms(media_type) =>
+                    {
+                        status.add_failure(validation::Failure::MediaTypeMismatch {
+                            opid: *opid,
+                            state_type,
+                            expected: media_type.clone(),
+                            found: attach.media_type,
+                        });
                     }
                     (StateSchema::Fungible(schema), StateData::Fungible(v))
                         if v.value.fungible_type() != *schema =>
