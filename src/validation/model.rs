@@ -30,7 +30,7 @@ use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
     validation, Assignments, AssignmentsRef, ExposedSeal, GlobalState, GlobalValues, GraphSeal,
     OpFullType, OpId, OpRef, Operation, Opout, PrevOuts, Redeemed, Schema, SchemaRoot,
-    TypedAssigns, Valencies,
+    TypedAssigns, Valencies, BLANK_TRANSITION_ID,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -44,6 +44,7 @@ impl<Root: SchemaRoot> Schema<Root> {
 
         let empty_assign_schema = AssignmentsSchema::default();
         let empty_valency_schema = ValencySchema::default();
+        let blank_transition = self.blank_transition();
         let (global_schema, owned_schema, redeem_schema, assign_schema, valency_schema) =
             match (op.transition_type(), op.extension_type()) {
                 (None, None) => {
@@ -74,7 +75,8 @@ impl<Root: SchemaRoot> Schema<Root> {
                     }
                      */
 
-                    let transition_type = match self.transitions.get(&transition_type) {
+                    let transition_schema = match self.transitions.get(&transition_type) {
+                        None if transition_type == BLANK_TRANSITION_ID => &blank_transition,
                         None => {
                             return validation::Status::with_failure(
                                 validation::Failure::SchemaUnknownTransitionType(
@@ -83,15 +85,15 @@ impl<Root: SchemaRoot> Schema<Root> {
                                 ),
                             );
                         }
-                        Some(transition_type) => transition_type,
+                        Some(transition_schema) => transition_schema,
                     };
 
                     (
-                        &transition_type.globals,
-                        &transition_type.inputs,
+                        &transition_schema.globals,
+                        &transition_schema.inputs,
                         &empty_valency_schema,
-                        &transition_type.assignments,
-                        &transition_type.valencies,
+                        &transition_schema.assignments,
+                        &transition_schema.valencies,
                     )
                 }
                 (None, Some(extension_type)) => {
@@ -104,21 +106,21 @@ impl<Root: SchemaRoot> Schema<Root> {
                     }
                      */
 
-                    let extension_type = match self.extensions.get(&extension_type) {
+                    let extension_schema = match self.extensions.get(&extension_type) {
                         None => {
                             return validation::Status::with_failure(
                                 validation::Failure::SchemaUnknownExtensionType(id, extension_type),
                             );
                         }
-                        Some(extension_type) => extension_type,
+                        Some(extension_schema) => extension_schema,
                     };
 
                     (
-                        &extension_type.globals,
+                        &extension_schema.globals,
                         &empty_assign_schema,
-                        &extension_type.redeems,
-                        &extension_type.assignments,
-                        &extension_type.redeems,
+                        &extension_schema.redeems,
+                        &extension_schema.assignments,
+                        &extension_schema.redeems,
                     )
                 }
                 _ => unreachable!("Node can't be extension and state transition at the same time"),
