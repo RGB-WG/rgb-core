@@ -230,7 +230,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     self.status
                         .unresolved_txids
                         .retain(|txid| *txid != anchor.txid);
-                    self.status.unmined_endpoint_txids.push(anchor.txid);
+                    self.status.unmined_terminals.push(anchor.txid);
                     self.status
                         .warnings
                         .push(Warning::TerminalWitnessNotMined(anchor.txid));

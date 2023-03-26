@@ -22,6 +22,7 @@
 
 use core::iter::FromIterator;
 use core::ops::AddAssign;
+use std::fmt::{self, Display, Formatter};
 
 use bp::dbc::anchor;
 use bp::{seals, Txid};
@@ -34,37 +35,82 @@ use crate::{
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
-#[display(Debug)]
 #[repr(u8)]
 pub enum Validity {
+    #[display("is valid")]
     Valid,
-    ValidExceptEndpoints,
+
+    #[display("has non-mined terminal(s)")]
+    UnminedTerminals,
+
+    #[display("contains unknown witness transactions")]
     UnresolvedTransactions,
+
+    #[display("is NOT valid")]
     Invalid,
 }
 
-#[derive(Clone, Debug, Display, Default)]
-//#[derive(StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-// TODO #42: Display via YAML
-#[display(Debug)]
 pub struct Status {
     pub unresolved_txids: Vec<Txid>,
-    pub unmined_endpoint_txids: Vec<Txid>,
+    pub unmined_terminals: Vec<Txid>,
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
     pub info: Vec<Info>,
 }
 
+impl Display for Status {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Consignment {}", self.validity())?;
+
+        if !self.unresolved_txids.is_empty() {
+            f.write_str("Unknown witness transactions:")?;
+            for txid in &self.unresolved_txids {
+                writeln!(f, "- {txid}")?;
+            }
+        }
+
+        if !self.unmined_terminals.is_empty() {
+            f.write_str("Non-mined terminals:")?;
+            for txid in &self.unmined_terminals {
+                writeln!(f, "- {txid}")?;
+            }
+        }
+
+        if !self.failures.is_empty() {
+            f.write_str("Validation failures:")?;
+            for fail in &self.failures {
+                writeln!(f, "- {fail}")?;
+            }
+        }
+
+        if !self.warnings.is_empty() {
+            f.write_str("Validation failures:")?;
+            for warn in &self.warnings {
+                writeln!(f, "- {warn}")?;
+            }
+        }
+
+        if !self.info.is_empty() {
+            f.write_str("Validation failures:")?;
+            for info in &self.info {
+                writeln!(f, "- {info}")?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl AddAssign for Status {
     fn add_assign(&mut self, rhs: Self) {
         self.unresolved_txids.extend(rhs.unresolved_txids);
-        self.unmined_endpoint_txids
-            .extend(rhs.unmined_endpoint_txids);
+        self.unmined_terminals.extend(rhs.unmined_terminals);
         self.failures.extend(rhs.failures);
         self.warnings.extend(rhs.warnings);
         self.info.extend(rhs.info);
@@ -75,7 +121,7 @@ impl Status {
     pub fn from_error(v: Failure) -> Self {
         Status {
             unresolved_txids: vec![],
-            unmined_endpoint_txids: vec![],
+            unmined_terminals: vec![],
             failures: vec![v],
             warnings: vec![],
             info: vec![],
@@ -119,10 +165,10 @@ impl Status {
 
     pub fn validity(&self) -> Validity {
         if self.failures.is_empty() {
-            if self.unmined_endpoint_txids.is_empty() {
+            if self.unmined_terminals.is_empty() {
                 Validity::Valid
             } else {
-                Validity::ValidExceptEndpoints
+                Validity::UnminedTerminals
             }
         } else if self.unresolved_txids.is_empty() {
             Validity::Invalid
