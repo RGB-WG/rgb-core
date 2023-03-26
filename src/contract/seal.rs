@@ -21,6 +21,7 @@
 // limitations under the License.
 
 use core::fmt::Debug;
+use std::hash::Hash;
 
 pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
@@ -41,6 +42,7 @@ pub trait ExposedSeal:
     + Eq
     + Ord
     + Copy
+    + Hash
     + TxoSeal
 {
 }
