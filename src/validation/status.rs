@@ -146,6 +146,8 @@ pub enum Failure {
         /// Actual schema id provided by the consignment.
         actual: SchemaId,
     },
+    /// schema uses reserved type for the blank state transition.
+    SchemaBlankTransitionRedefined,
 
     /// invalid schema - no match with root schema requirements for global state
     /// type #{0}.

@@ -45,6 +45,7 @@ impl SchemaTypeIndex for u16 {}
 pub type GlobalStateType = u16;
 pub type ExtensionType = u16;
 pub type TransitionType = u16;
+pub const BLANK_TRANSITION_ID: u16 = TransitionType::MAX;
 
 /// Schema identifier.
 ///

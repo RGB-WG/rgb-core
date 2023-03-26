@@ -36,7 +36,7 @@ use crate::validation::AnchoredBundle;
 use crate::vm::AluRuntime;
 use crate::{
     BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
-    Transition, TransitionBundle, TypedAssigns,
+    Transition, TransitionBundle, TypedAssigns, BLANK_TRANSITION_ID,
 };
 
 #[derive(Debug, Display, Error)]
@@ -189,6 +189,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // Validating schema against root schema
         if let Some(ref root) = schema.subset_of {
             self.status += schema.schema_verify(root);
+        }
+
+        // Check that the schema doesn't contain reserved type ids
+        if schema.transitions.contains_key(&BLANK_TRANSITION_ID) {
+            self.status
+                .add_failure(Failure::SchemaBlankTransitionRedefined);
         }
     }
 

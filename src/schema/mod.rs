@@ -34,7 +34,7 @@ pub use operations::{
 };
 pub use schema::{
     ExtensionType, GlobalStateType, RootSchema, Schema, SchemaId, SchemaRoot, SchemaTypeIndex,
-    SubSchema, TransitionType,
+    SubSchema, TransitionType, BLANK_TRANSITION_ID,
 };
 pub use script::{Script, VmType};
 pub use state::{FungibleType, GlobalStateSchema, StateSchema};
