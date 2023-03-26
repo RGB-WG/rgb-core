@@ -24,6 +24,7 @@ use std::collections::BTreeSet;
 
 use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
+use strict_types::SemId;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{ConsignmentApi, VirtualMachine};
@@ -45,91 +46,98 @@ impl<Root: SchemaRoot> Schema<Root> {
         let empty_assign_schema = AssignmentsSchema::default();
         let empty_valency_schema = ValencySchema::default();
         let blank_transition = self.blank_transition();
-        let (global_schema, owned_schema, redeem_schema, assign_schema, valency_schema) =
-            match (op.transition_type(), op.extension_type()) {
-                (None, None) => {
-                    // Right now we do not have actions to implement; but later
-                    // we may have embedded procedures which must be verified
-                    // here
-                    /*
-                    if let Some(procedure) = self.genesis.abi.get(&GenesisAction::NoOp) {
+        let (
+            metadata_schema,
+            global_schema,
+            owned_schema,
+            redeem_schema,
+            assign_schema,
+            valency_schema,
+        ) = match (op.transition_type(), op.extension_type()) {
+            (None, None) => {
+                // Right now we do not have actions to implement; but later
+                // we may have embedded procedures which must be verified
+                // here
+                /*
+                if let Some(procedure) = self.genesis.abi.get(&GenesisAction::NoOp) {
 
-                    }
-                     */
-
-                    (
-                        &self.genesis.globals,
-                        &empty_assign_schema,
-                        &empty_valency_schema,
-                        &self.genesis.assignments,
-                        &self.genesis.valencies,
-                    )
                 }
-                (Some(transition_type), None) => {
-                    // Right now we do not have actions to implement; but later
-                    // we may have embedded procedures which must be verified
-                    // here
-                    /*
-                    if let Some(procedure) = transition_type.abi.get(&TransitionAction::NoOp) {
+                 */
 
-                    }
-                     */
+                (
+                    &self.genesis.metadata,
+                    &self.genesis.globals,
+                    &empty_assign_schema,
+                    &empty_valency_schema,
+                    &self.genesis.assignments,
+                    &self.genesis.valencies,
+                )
+            }
+            (Some(transition_type), None) => {
+                // Right now we do not have actions to implement; but later
+                // we may have embedded procedures which must be verified
+                // here
+                /*
+                if let Some(procedure) = transition_type.abi.get(&TransitionAction::NoOp) {
 
-                    let transition_schema = match self.transitions.get(&transition_type) {
-                        None if transition_type == BLANK_TRANSITION_ID => &blank_transition,
-                        None => {
-                            return validation::Status::with_failure(
-                                validation::Failure::SchemaUnknownTransitionType(
-                                    id,
-                                    transition_type,
-                                ),
-                            );
-                        }
-                        Some(transition_schema) => transition_schema,
-                    };
-
-                    (
-                        &transition_schema.globals,
-                        &transition_schema.inputs,
-                        &empty_valency_schema,
-                        &transition_schema.assignments,
-                        &transition_schema.valencies,
-                    )
                 }
-                (None, Some(extension_type)) => {
-                    // Right now we do not have actions to implement; but later
-                    // we may have embedded procedures which must be verified
-                    // here
-                    /*
-                    if let Some(procedure) = extension_type.abi.get(&ExtensionAction::NoOp) {
+                 */
 
+                let transition_schema = match self.transitions.get(&transition_type) {
+                    None if transition_type == BLANK_TRANSITION_ID => &blank_transition,
+                    None => {
+                        return validation::Status::with_failure(
+                            validation::Failure::SchemaUnknownTransitionType(id, transition_type),
+                        );
                     }
-                     */
+                    Some(transition_schema) => transition_schema,
+                };
 
-                    let extension_schema = match self.extensions.get(&extension_type) {
-                        None => {
-                            return validation::Status::with_failure(
-                                validation::Failure::SchemaUnknownExtensionType(id, extension_type),
-                            );
-                        }
-                        Some(extension_schema) => extension_schema,
-                    };
+                (
+                    &transition_schema.metadata,
+                    &transition_schema.globals,
+                    &transition_schema.inputs,
+                    &empty_valency_schema,
+                    &transition_schema.assignments,
+                    &transition_schema.valencies,
+                )
+            }
+            (None, Some(extension_type)) => {
+                // Right now we do not have actions to implement; but later
+                // we may have embedded procedures which must be verified
+                // here
+                /*
+                if let Some(procedure) = extension_type.abi.get(&ExtensionAction::NoOp) {
 
-                    (
-                        &extension_schema.globals,
-                        &empty_assign_schema,
-                        &extension_schema.redeems,
-                        &extension_schema.assignments,
-                        &extension_schema.redeems,
-                    )
                 }
-                _ => unreachable!("Node can't be extension and state transition at the same time"),
-            };
+                 */
+
+                let extension_schema = match self.extensions.get(&extension_type) {
+                    None => {
+                        return validation::Status::with_failure(
+                            validation::Failure::SchemaUnknownExtensionType(id, extension_type),
+                        );
+                    }
+                    Some(extension_schema) => extension_schema,
+                };
+
+                (
+                    &extension_schema.metadata,
+                    &extension_schema.globals,
+                    &empty_assign_schema,
+                    &extension_schema.redeems,
+                    &extension_schema.assignments,
+                    &extension_schema.redeems,
+                )
+            }
+            _ => unreachable!("Node can't be extension and state transition at the same time"),
+        };
 
         let mut status = validation::Status::new();
 
         // Validate type system
         status += self.validate_type_system();
+        status += self.validate_metadata(id, *metadata_schema, op.metadata());
         status += self.validate_global_state(id, op.globals(), global_schema);
         let prev_state = if let OpRef::Transition(ref transition) = op {
             let prev_state = extract_prev_state(consignment, id, &transition.inputs, &mut status);
@@ -174,6 +182,25 @@ impl<Root: SchemaRoot> Schema<Root> {
                 status.add_failure(validation::Failure::SchemaTypeSystem(/*err*/));
             }
         }*/
+    }
+
+    fn validate_metadata(
+        &self,
+        opid: OpId,
+        sem_id: SemId,
+        metadata: &SmallBlob,
+    ) -> validation::Status {
+        let mut status = validation::Status::new();
+
+        if self
+            .type_system
+            .strict_deserialize_type(sem_id, metadata.as_ref())
+            .is_err()
+        {
+            status.add_failure(validation::Failure::SchemaInvalidMetadata(opid, sem_id));
+        };
+
+        status
     }
 
     fn validate_global_state(

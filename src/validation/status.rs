@@ -227,6 +227,8 @@ pub enum Failure {
     /// number of global state entries of type {1} in operation {0} exceeds
     /// schema-defined maximum for that global state type ({2} vs {3}).
     SchemaGlobalStateLimit(OpId, schema::GlobalStateType, u16, u16),
+    /// invalid metadata in operation {0} not matching semantic type id {1}.
+    SchemaInvalidMetadata(OpId, SemId),
     /// invalid global state value in operation {0}, state type #{1} which does
     /// not match semantic type id {2}.
     SchemaInvalidGlobalValue(OpId, schema::GlobalStateType, SemId),
