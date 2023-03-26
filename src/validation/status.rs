@@ -227,9 +227,12 @@ pub enum Failure {
     /// number of global state entries of type {1} in operation {0} exceeds
     /// schema-defined maximum for that global state type ({2} vs {3}).
     SchemaGlobalStateLimit(OpId, schema::GlobalStateType, u16, u16),
-    /// invalid structured data value in operation {0} global state type #{1}
-    /// not matching semantic type id {2}.
+    /// invalid global state value in operation {0}, state type #{1} which does
+    /// not match semantic type id {2}.
     SchemaInvalidGlobalValue(OpId, schema::GlobalStateType, SemId),
+    /// invalid owned state value in operation {0}, state type #{1} which does
+    /// not match semantic type id {2}.
+    SchemaInvalidOwnedValue(OpId, schema::AssignmentType, SemId),
     /// invalid number of input entries of type {1} in operation {0} - {2}  
     SchemaInputOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
     /// invalid number of assignment entries of type {1} in operation {0} - {2}

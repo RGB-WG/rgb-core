@@ -20,6 +20,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use strict_types::TypeSystem;
+
 use crate::schema::AssignmentType;
 use crate::{
     validation, Assign, ConfidentialState, ExposedSeal, ExposedState, OpId, StateCommitment,
@@ -29,7 +31,7 @@ use crate::{
 impl StateSchema {
     pub fn validate<State: ExposedState, Seal: ExposedSeal>(
         &self,
-        // type_system: &TypeSystem,
+        type_system: &TypeSystem,
         opid: &OpId,
         state_type: AssignmentType,
         data: &Assign<State, Seal>,
@@ -87,8 +89,15 @@ impl StateSchema {
                         });
                     }
                     (StateSchema::Fungible(_), StateData::Fungible(_)) => {}
-                    (StateSchema::Structured(_sem_id), StateData::Structured(_data)) => {
-                        // TODO #137: Run strict type validation
+                    (StateSchema::Structured(sem_id), StateData::Structured(data)) => {
+                        if type_system
+                            .strict_deserialize_type(*sem_id, data.as_ref())
+                            .is_err()
+                        {
+                            status.add_failure(validation::Failure::SchemaInvalidOwnedValue(
+                                *opid, state_type, *sem_id,
+                            ));
+                        };
                     }
                     // all other options are mismatches
                     (state_schema, found) => {

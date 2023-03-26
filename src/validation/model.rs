@@ -334,18 +334,18 @@ impl<Root: SchemaRoot> Schema<Root> {
 
             match owned_state.get(state_id) {
                 None => {}
-                Some(TypedAssigns::Declarative(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(&id, *state_id, data)),
-                Some(TypedAssigns::Fungible(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(&id, *state_id, data)),
-                Some(TypedAssigns::Structured(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(&id, *state_id, data)),
-                Some(TypedAssigns::Attachment(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(&id, *state_id, data)),
+                Some(TypedAssigns::Declarative(set)) => set.iter().for_each(|data| {
+                    status += assignment.validate(&self.type_system, &id, *state_id, data)
+                }),
+                Some(TypedAssigns::Fungible(set)) => set.iter().for_each(|data| {
+                    status += assignment.validate(&self.type_system, &id, *state_id, data)
+                }),
+                Some(TypedAssigns::Structured(set)) => set.iter().for_each(|data| {
+                    status += assignment.validate(&self.type_system, &id, *state_id, data)
+                }),
+                Some(TypedAssigns::Attachment(set)) => set.iter().for_each(|data| {
+                    status += assignment.validate(&self.type_system, &id, *state_id, data)
+                }),
             };
         }
 
