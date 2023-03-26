@@ -52,25 +52,25 @@ impl SchemaVerify for SubSchema {
             panic!("SubSchema::schema_verify called with a root schema not matching subset_of");
         }
 
+        // TODO: Add check for the metadata
+
         for (field_type, data_format) in &self.global_types {
             match root.global_types.get(field_type) {
-                None => {
-                    status.add_failure(validation::Failure::SchemaRootNoFieldTypeMatch(*field_type))
-                }
-                Some(root_data_format) if root_data_format != data_format => {
-                    status.add_failure(validation::Failure::SchemaRootNoFieldTypeMatch(*field_type))
-                }
+                None => status
+                    .add_failure(validation::Failure::SubschemaGlobalStateMismatch(*field_type)),
+                Some(root_data_format) if root_data_format != data_format => status
+                    .add_failure(validation::Failure::SubschemaGlobalStateMismatch(*field_type)),
                 _ => &status,
             };
         }
 
         for (assignments_type, state_schema) in &self.owned_types {
             match root.owned_types.get(assignments_type) {
-                None => status.add_failure(validation::Failure::SchemaRootNoOwnedRightTypeMatch(
+                None => status.add_failure(validation::Failure::SubschemaAssignmentTypeMismatch(
                     *assignments_type,
                 )),
                 Some(root_state_schema) if root_state_schema != state_schema => status.add_failure(
-                    validation::Failure::SchemaRootNoOwnedRightTypeMatch(*assignments_type),
+                    validation::Failure::SubschemaAssignmentTypeMismatch(*assignments_type),
                 ),
                 _ => &status,
             };
@@ -78,7 +78,7 @@ impl SchemaVerify for SubSchema {
 
         for valencies_type in &self.valency_types {
             match root.valency_types.contains(valencies_type) {
-                false => status.add_failure(validation::Failure::SchemaRootNoPublicRightTypeMatch(
+                false => status.add_failure(validation::Failure::SubschemaValencyTypeMismatch(
                     *valencies_type,
                 )),
                 _ => &status,
@@ -91,7 +91,7 @@ impl SchemaVerify for SubSchema {
             if let Some(root_transition_schema) = root.transitions.get(transition_type) {
                 status += transition_schema.schema_verify(root_transition_schema);
             } else {
-                status.add_failure(validation::Failure::SchemaRootNoTransitionTypeMatch(
+                status.add_failure(validation::Failure::SubschemaTransitionTypeMismatch(
                     *transition_type,
                 ));
             }
@@ -100,7 +100,7 @@ impl SchemaVerify for SubSchema {
             if let Some(root_extension_schema) = root.extensions.get(extension_type) {
                 status += extension_schema.schema_verify(root_extension_schema);
             } else {
-                status.add_failure(validation::Failure::SchemaRootNoExtensionTypeMatch(
+                status.add_failure(validation::Failure::SubschemaExtensionTypeMismatch(
                     *extension_type,
                 ));
             }
@@ -119,14 +119,16 @@ where T: OpSchema
         let mut status = validation::Status::new();
         let op_type = self.op_type();
 
+        // TODO: Add check for the metadata
+
         for (field_type, occ) in self.globals() {
             match root.globals().get(field_type) {
-                None => status.add_failure(validation::Failure::SchemaRootNoMetadataMatch(
+                None => status.add_failure(validation::Failure::SubschemaOpGlobalStateMismatch(
                     op_type,
                     *field_type,
                 )),
                 Some(root_occ) if occ != root_occ => status.add_failure(
-                    validation::Failure::SchemaRootNoMetadataMatch(op_type, *field_type),
+                    validation::Failure::SubschemaOpGlobalStateMismatch(op_type, *field_type),
                 ),
                 _ => &status,
             };
@@ -136,18 +138,13 @@ where T: OpSchema
             let root_inputs = root.inputs().expect("generic guarantees");
             for (assignments_type, occ) in inputs {
                 match root_inputs.get(assignments_type) {
-                    None => {
-                        status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
-                            op_type,
-                            *assignments_type,
-                        ))
-                    }
-                    Some(root_occ) if occ != root_occ => {
-                        status.add_failure(validation::Failure::SchemaRootNoParentOwnedRightsMatch(
-                            op_type,
-                            *assignments_type,
-                        ))
-                    }
+                    None => status.add_failure(validation::Failure::SubschemaOpInputMismatch(
+                        op_type,
+                        *assignments_type,
+                    )),
+                    Some(root_occ) if occ != root_occ => status.add_failure(
+                        validation::Failure::SubschemaOpInputMismatch(op_type, *assignments_type),
+                    ),
                     _ => &status,
                 };
             }
@@ -155,12 +152,12 @@ where T: OpSchema
 
         for (assignments_type, occ) in self.assignments() {
             match root.assignments().get(assignments_type) {
-                None => status.add_failure(validation::Failure::SchemaRootNoOwnedRightsMatch(
+                None => status.add_failure(validation::Failure::SubschemaOpAssignmentsMismatch(
                     op_type,
                     *assignments_type,
                 )),
                 Some(root_occ) if occ != root_occ => status.add_failure(
-                    validation::Failure::SchemaRootNoOwnedRightsMatch(op_type, *assignments_type),
+                    validation::Failure::SubschemaOpAssignmentsMismatch(op_type, *assignments_type),
                 ),
                 _ => &status,
             };
@@ -170,7 +167,7 @@ where T: OpSchema
             let root_redeems = root.redeems().expect("generic guarantees");
             for valencies_type in redeems {
                 if !root_redeems.contains(valencies_type) {
-                    status.add_failure(validation::Failure::SchemaRootNoParentPublicRightsMatch(
+                    status.add_failure(validation::Failure::SubschemaOpRedeemMismatch(
                         op_type,
                         *valencies_type,
                     ));
@@ -180,7 +177,7 @@ where T: OpSchema
 
         for valencies_type in self.valencies() {
             if !root.valencies().contains(valencies_type) {
-                status.add_failure(validation::Failure::SchemaRootNoPublicRightsMatch(
+                status.add_failure(validation::Failure::SubschemaOpValencyMismatch(
                     op_type,
                     *valencies_type,
                 ));

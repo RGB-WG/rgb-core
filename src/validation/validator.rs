@@ -197,8 +197,10 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != self.schema_id {
-            self.status
-                .add_failure(Failure::SchemaUnknown(self.schema_id));
+            self.status.add_failure(Failure::SchemaMismatch {
+                expected: self.schema_id,
+                actual: schema.schema_id(),
+            });
             // Unlike other failures, here we return immediatelly, since there is no point
             // to validate all consignment data against an invalid schema: it will result in
             // a plenty of meaningless errors

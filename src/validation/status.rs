@@ -139,53 +139,68 @@ impl Status {
 // TODO #44: (v0.3) convert to detailed error description using doc_comments
 #[display(Debug)]
 pub enum Failure {
-    SchemaUnknown(SchemaId),
-    /// schema is a subschema, so root schema {0} must be provided for the
-    /// validation
-    SchemaRootRequired(SchemaId),
-    SchemaRootNoFieldTypeMatch(schema::GlobalStateType),
-    SchemaRootNoOwnedRightTypeMatch(schema::AssignmentType),
-    SchemaRootNoPublicRightTypeMatch(schema::ValencyType),
-    SchemaRootNoTransitionTypeMatch(schema::TransitionType),
-    SchemaRootNoExtensionTypeMatch(schema::ExtensionType),
+    /// schema {actual} provided for the consignment validation doesn't match
+    /// schema {expected} used by the contract. This means that the consignment
+    /// is invalid.
+    SchemaMismatch {
+        /// Expected schema id required by the contracts genesis.
+        expected: SchemaId,
+        /// Actual schema id provided by the consignment.
+        actual: SchemaId,
+    },
 
-    SchemaRootNoMetadataMatch(OpType, schema::GlobalStateType),
-    SchemaRootNoParentOwnedRightsMatch(OpType, schema::AssignmentType),
-    SchemaRootNoParentPublicRightsMatch(OpType, schema::ValencyType),
-    SchemaRootNoOwnedRightsMatch(OpType, schema::AssignmentType),
-    SchemaRootNoPublicRightsMatch(OpType, schema::ValencyType),
+    /// invalid schema - no match with root schema requirements for global state
+    /// type #{0}.
+    SubschemaGlobalStateMismatch(schema::GlobalStateType),
+    /// invalid schema - no match with root schema requirements for assignment
+    /// type #{0}.
+    SubschemaAssignmentTypeMismatch(schema::AssignmentType),
+    /// invalid schema - no match with root schema requirements for valency
+    /// type #{0}.
+    SubschemaValencyTypeMismatch(schema::ValencyType),
+    /// invalid schema - no match with root schema requirements for transition
+    /// type #{0}.
+    SubschemaTransitionTypeMismatch(schema::TransitionType),
+    /// invalid schema - no match with root schema requirements for extension
+    /// type #{0}.
+    SubschemaExtensionTypeMismatch(schema::ExtensionType),
 
+    /// invalid schema - no match with root schema requirements for global state
+    /// type #{1} used in {0}.
+    SubschemaOpGlobalStateMismatch(OpType, schema::GlobalStateType),
+    /// invalid schema - no match with root schema requirements for input
+    /// type #{1} used in {0}.
+    SubschemaOpInputMismatch(OpType, schema::AssignmentType),
+    /// invalid schema - no match with root schema requirements for redeem
+    /// type #{1} used in {0}.
+    SubschemaOpRedeemMismatch(OpType, schema::ValencyType),
+    /// invalid schema - no match with root schema requirements for assignment
+    /// type #{1} used in {0}.
+    SubschemaOpAssignmentsMismatch(OpType, schema::AssignmentType),
+    /// invalid schema - no match with root schema requirements for valency
+    /// type #{1} used in {0}.
+    SubschemaOpValencyMismatch(OpType, schema::ValencyType),
+
+    /// operation {0} uses invalid state extension type {1}.
     SchemaUnknownExtensionType(OpId, schema::ExtensionType),
+    /// operation {0} uses invalid state transition type {1}.
     SchemaUnknownTransitionType(OpId, schema::TransitionType),
-    SchemaUnknownFieldType(OpId, schema::GlobalStateType),
-    SchemaUnknownOwnedRightType(OpId, schema::AssignmentType),
-    SchemaUnknownPublicRightType(OpId, schema::ValencyType),
+    /// operation {0} uses invalid global state type {1}.
+    SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
+    /// operation {0} uses invalid assignment type {1}.
+    SchemaUnknownAssignmentType(OpId, schema::AssignmentType),
+    /// operation {0} uses invalid valency type {1}.
+    SchemaUnknownValencyType(OpId, schema::ValencyType),
 
-    SchemaDeniedScriptExtension(OpId),
+    /// invalid number of global state entries of type {1} in operation {0} -
+    /// {2}
+    SchemaGlobalStateOccurrences(OpId, schema::GlobalStateType, OccurrencesMismatch),
+    /// invalid number of input entries of type {1} in operation {0} - {2}  
+    SchemaInputOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
+    /// invalid number of assignment entries of type {1} in operation {0} - {2}
+    SchemaAssignmentOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
 
-    SchemaMetaValueTooSmall(schema::GlobalStateType),
-    SchemaMetaValueTooLarge(schema::GlobalStateType),
-    SchemaStateValueTooSmall(schema::AssignmentType),
-    SchemaStateValueTooLarge(schema::AssignmentType),
-
-    SchemaWrongEnumValue {
-        field_or_state_type: u16,
-        unexpected: u8,
-    },
-    SchemaWrongDataLength {
-        field_or_state_type: u16,
-        max_expected: u16,
-        found: usize,
-    },
-    SchemaMismatchedDataType(u16),
-
-    SchemaMetaOccurrencesError(OpId, schema::GlobalStateType, OccurrencesMismatch),
-    SchemaParentOwnedRightOccurrencesError(OpId, schema::AssignmentType, OccurrencesMismatch),
-    SchemaOwnedRightOccurrencesError(OpId, schema::AssignmentType, OccurrencesMismatch),
-
-    SchemaScriptOverrideDenied,
-    SchemaScriptVmChangeDenied,
-
+    /// invalid schema type system.
     SchemaTypeSystem(/* TODO: use error from strict types */),
 
     // Consignment consistency errors

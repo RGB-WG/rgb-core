@@ -187,7 +187,9 @@ impl<Root: SchemaRoot> Schema<Root> {
             .collect::<BTreeSet<_>>()
             .difference(&global_schema.keys().collect())
             .for_each(|field_id| {
-                status.add_failure(validation::Failure::SchemaUnknownFieldType(opid, **field_id));
+                status.add_failure(validation::Failure::SchemaUnknownGlobalStateType(
+                    opid, **field_id,
+                ));
             });
 
         for (global_id, occ) in global_schema {
@@ -200,7 +202,7 @@ impl<Root: SchemaRoot> Schema<Root> {
 
             // Checking number of field occurrences
             if let Err(err) = occ.check(set.len() as u16) {
-                status.add_failure(validation::Failure::SchemaMetaOccurrencesError(
+                status.add_failure(validation::Failure::SchemaGlobalStateOccurrences(
                     opid, *global_id, err,
                 ));
             }
@@ -238,7 +240,7 @@ impl<Root: SchemaRoot> Schema<Root> {
             .collect::<BTreeSet<_>>()
             .difference(&assign_schema.keys().collect())
             .for_each(|owned_type_id| {
-                status.add_failure(validation::Failure::SchemaUnknownOwnedRightType(
+                status.add_failure(validation::Failure::SchemaUnknownAssignmentType(
                     id,
                     **owned_type_id,
                 ));
@@ -252,7 +254,7 @@ impl<Root: SchemaRoot> Schema<Root> {
 
             // Checking number of ancestor's assignment occurrences
             if let Err(err) = occ.check(len as u16) {
-                status.add_failure(validation::Failure::SchemaParentOwnedRightOccurrencesError(
+                status.add_failure(validation::Failure::SchemaInputOccurrences(
                     id,
                     *owned_type_id,
                     err,
@@ -274,7 +276,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         valencies
             .difference(valency_schema)
             .for_each(|public_type_id| {
-                status.add_failure(validation::Failure::SchemaUnknownPublicRightType(
+                status.add_failure(validation::Failure::SchemaUnknownValencyType(
                     id,
                     *public_type_id,
                 ));
@@ -296,7 +298,7 @@ impl<Root: SchemaRoot> Schema<Root> {
             .collect::<BTreeSet<_>>()
             .difference(&assign_schema.keys().collect())
             .for_each(|assignment_type_id| {
-                status.add_failure(validation::Failure::SchemaUnknownOwnedRightType(
+                status.add_failure(validation::Failure::SchemaUnknownAssignmentType(
                     id,
                     **assignment_type_id,
                 ));
@@ -310,7 +312,7 @@ impl<Root: SchemaRoot> Schema<Root> {
 
             // Checking number of assignment occurrences
             if let Err(err) = occ.check(len as u16) {
-                status.add_failure(validation::Failure::SchemaOwnedRightOccurrencesError(
+                status.add_failure(validation::Failure::SchemaAssignmentOccurrences(
                     id, *state_id, err,
                 ));
             }
@@ -351,7 +353,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         valencies
             .difference(valency_schema)
             .for_each(|public_type_id| {
-                status.add_failure(validation::Failure::SchemaUnknownPublicRightType(
+                status.add_failure(validation::Failure::SchemaUnknownValencyType(
                     id,
                     *public_type_id,
                 ));
