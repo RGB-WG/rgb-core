@@ -202,14 +202,13 @@ where T: OpSchema
             });
         }
 
-        for (field_type, occ) in self.globals() {
-            match root.globals().get(field_type) {
+        for (type_id, occ) in self.globals() {
+            match root.globals().get(type_id) {
                 None => status.add_failure(validation::Failure::SubschemaOpGlobalStateMismatch(
-                    op_type,
-                    *field_type,
+                    op_type, *type_id,
                 )),
                 Some(root_occ) if occ != root_occ => status.add_failure(
-                    validation::Failure::SubschemaOpGlobalStateMismatch(op_type, *field_type),
+                    validation::Failure::SubschemaOpGlobalStateMismatch(op_type, *type_id),
                 ),
                 _ => &status,
             };
@@ -217,28 +216,26 @@ where T: OpSchema
 
         if let Some(inputs) = self.inputs() {
             let root_inputs = root.inputs().expect("generic guarantees");
-            for (assignments_type, occ) in inputs {
-                match root_inputs.get(assignments_type) {
+            for (type_id, occ) in inputs {
+                match root_inputs.get(type_id) {
                     None => status.add_failure(validation::Failure::SubschemaOpInputMismatch(
-                        op_type,
-                        *assignments_type,
+                        op_type, *type_id,
                     )),
                     Some(root_occ) if occ != root_occ => status.add_failure(
-                        validation::Failure::SubschemaOpInputMismatch(op_type, *assignments_type),
+                        validation::Failure::SubschemaOpInputMismatch(op_type, *type_id),
                     ),
                     _ => &status,
                 };
             }
         }
 
-        for (assignments_type, occ) in self.assignments() {
-            match root.assignments().get(assignments_type) {
+        for (type_id, occ) in self.assignments() {
+            match root.assignments().get(type_id) {
                 None => status.add_failure(validation::Failure::SubschemaOpAssignmentsMismatch(
-                    op_type,
-                    *assignments_type,
+                    op_type, *type_id,
                 )),
                 Some(root_occ) if occ != root_occ => status.add_failure(
-                    validation::Failure::SubschemaOpAssignmentsMismatch(op_type, *assignments_type),
+                    validation::Failure::SubschemaOpAssignmentsMismatch(op_type, *type_id),
                 ),
                 _ => &status,
             };
@@ -246,21 +243,19 @@ where T: OpSchema
 
         if let Some(redeems) = self.redeems() {
             let root_redeems = root.redeems().expect("generic guarantees");
-            for valencies_type in redeems {
-                if !root_redeems.contains(valencies_type) {
+            for type_id in redeems {
+                if !root_redeems.contains(type_id) {
                     status.add_failure(validation::Failure::SubschemaOpRedeemMismatch(
-                        op_type,
-                        *valencies_type,
+                        op_type, *type_id,
                     ));
                 }
             }
         }
 
-        for valencies_type in self.valencies() {
-            if !root.valencies().contains(valencies_type) {
+        for type_id in self.valencies() {
+            if !root.valencies().contains(type_id) {
                 status.add_failure(validation::Failure::SubschemaOpValencyMismatch(
-                    op_type,
-                    *valencies_type,
+                    op_type, *type_id,
                 ));
             }
         }
