@@ -52,8 +52,6 @@ impl SchemaVerify for SubSchema {
             panic!("SubSchema::schema_verify called with a root schema not matching subset_of");
         }
 
-        // TODO: Add check for the metadata
-
         for (field_type, data_format) in &self.global_types {
             match root.global_types.get(field_type) {
                 None => status
@@ -119,7 +117,13 @@ where T: OpSchema
         let mut status = validation::Status::new();
         let op_type = self.op_type();
 
-        // TODO: Add check for the metadata
+        if self.metadata() != root.metadata() {
+            status.add_failure(validation::Failure::SubschemaOpMetaMismatch {
+                op_type,
+                expected: root.metadata(),
+                actual: self.metadata(),
+            });
+        }
 
         for (field_type, occ) in self.globals() {
             match root.globals().get(field_type) {

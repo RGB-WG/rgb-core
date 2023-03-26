@@ -25,6 +25,7 @@ use core::ops::AddAssign;
 
 use bp::dbc::anchor;
 use bp::{seals, Txid};
+use strict_types::SemId;
 
 use crate::contract::Opout;
 use crate::schema::{self, OpType, SchemaId};
@@ -165,6 +166,13 @@ pub enum Failure {
     /// type #{0}.
     SubschemaExtensionTypeMismatch(schema::ExtensionType),
 
+    /// invalid schema - no match with root schema requirements for metadata
+    /// type (required {expected}, found {actual}).
+    SubschemaOpMetaMismatch {
+        op_type: OpType,
+        expected: SemId,
+        actual: SemId,
+    },
     /// invalid schema - no match with root schema requirements for global state
     /// type #{1} used in {0}.
     SubschemaOpGlobalStateMismatch(OpType, schema::GlobalStateType),
