@@ -20,44 +20,114 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{validation, OpSchema, Schema, SubSchema};
+use crate::validation::Status;
+use crate::{
+    validation, OpFullType, OpSchema, Schema, StateSchema, SubSchema, BLANK_TRANSITION_ID,
+};
 
 impl SubSchema {
     pub fn verify(&self) -> validation::Status {
         let mut status = validation::Status::new();
 
         if let Some(ref root) = self.subset_of {
-            status += self.schema_verify(root);
+            status += self.verify_subschema(root);
         }
 
-        // TODO: Verify internal schema consistency
+        // Validate internal schema consistency
+        status += self.verify_consistency();
 
         status
     }
-}
 
-/// Trait used for internal schema validation against some root schema
-pub(crate) trait SchemaVerify {
-    type Root;
-    fn schema_verify(&self, root: &Self::Root) -> validation::Status;
-}
+    fn verify_consistency(&self) -> validation::Status {
+        let mut status = validation::Status::new();
 
-impl SchemaVerify for SubSchema {
-    type Root = Schema<()>;
+        status += self.verify_operation(OpFullType::Genesis, &self.genesis);
+        for (type_id, schema) in &self.transitions {
+            status += self.verify_operation(OpFullType::StateTransition(*type_id), schema);
+        }
+        for (type_id, schema) in &self.extensions {
+            status += self.verify_operation(OpFullType::StateExtension(*type_id), schema);
+        }
+        // Check that the schema doesn't contain reserved type ids
+        if self.transitions.contains_key(&BLANK_TRANSITION_ID) {
+            status.add_failure(validation::Failure::SchemaBlankTransitionRedefined);
+        }
 
-    fn schema_verify(&self, root: &Schema<()>) -> validation::Status {
+        for (type_id, schema) in &self.global_types {
+            if !self.type_system.contains_key(&schema.sem_id) {
+                status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
+                    *type_id,
+                    schema.sem_id,
+                ));
+            }
+        }
+
+        for (type_id, schema) in &self.owned_types {
+            if let StateSchema::Structured(sem_id) = schema {
+                if !self.type_system.contains_key(sem_id) {
+                    status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
+                        *type_id, *sem_id,
+                    ));
+                }
+            }
+        }
+
+        status
+    }
+
+    fn verify_operation(&self, op_type: OpFullType, schema: &impl OpSchema) -> Status {
+        let mut status = validation::Status::new();
+
+        if !self.type_system.contains_key(&schema.metadata()) {
+            status.add_failure(validation::Failure::SchemaOpMetaSemIdUnknown(
+                op_type,
+                schema.metadata(),
+            ));
+        }
+        if matches!(schema.inputs(), Some(inputs) if inputs.is_empty()) {
+            status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));
+        }
+        if matches!(schema.redeems(), Some(inputs) if inputs.is_empty()) {
+            status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));
+        }
+        for type_id in schema.globals().keys() {
+            if !self.global_types.contains_key(type_id) {
+                status
+                    .add_failure(validation::Failure::SchemaOpGlobalTypeUnknown(op_type, *type_id));
+            }
+        }
+        for type_id in schema.assignments().keys() {
+            if !self.owned_types.contains_key(type_id) {
+                status.add_failure(validation::Failure::SchemaOpAssignmentTypeUnknown(
+                    op_type, *type_id,
+                ));
+            }
+        }
+        for type_id in schema.valencies() {
+            if !self.valency_types.contains(type_id) {
+                status.add_failure(validation::Failure::SchemaOpValencyTypeUnknown(
+                    op_type, *type_id,
+                ));
+            }
+        }
+
+        status
+    }
+
+    fn verify_subschema(&self, root: &Schema<()>) -> validation::Status {
         let mut status = validation::Status::new();
 
         if self.subset_of.as_ref() != Some(root) {
             panic!("SubSchema::schema_verify called with a root schema not matching subset_of");
         }
 
-        for (field_type, data_format) in &self.global_types {
-            match root.global_types.get(field_type) {
+        for (global_type, data_format) in &self.global_types {
+            match root.global_types.get(global_type) {
                 None => status
-                    .add_failure(validation::Failure::SubschemaGlobalStateMismatch(*field_type)),
+                    .add_failure(validation::Failure::SubschemaGlobalStateMismatch(*global_type)),
                 Some(root_data_format) if root_data_format != data_format => status
-                    .add_failure(validation::Failure::SubschemaGlobalStateMismatch(*field_type)),
+                    .add_failure(validation::Failure::SubschemaGlobalStateMismatch(*global_type)),
                 _ => &status,
             };
         }
@@ -83,24 +153,26 @@ impl SchemaVerify for SubSchema {
             };
         }
 
-        status += self.genesis.schema_verify(&root.genesis);
+        status += self
+            .genesis
+            .verify_subschema(OpFullType::Genesis, &root.genesis);
 
-        for (transition_type, transition_schema) in &self.transitions {
-            if let Some(root_transition_schema) = root.transitions.get(transition_type) {
-                status += transition_schema.schema_verify(root_transition_schema);
+        for (type_id, transition_schema) in &self.transitions {
+            if let Some(root_transition_schema) = root.transitions.get(type_id) {
+                status += transition_schema.verify_subschema(
+                    OpFullType::StateTransition(*type_id),
+                    root_transition_schema,
+                );
             } else {
-                status.add_failure(validation::Failure::SubschemaTransitionTypeMismatch(
-                    *transition_type,
-                ));
+                status.add_failure(validation::Failure::SubschemaTransitionTypeMismatch(*type_id));
             }
         }
-        for (extension_type, extension_schema) in &self.extensions {
-            if let Some(root_extension_schema) = root.extensions.get(extension_type) {
-                status += extension_schema.schema_verify(root_extension_schema);
+        for (type_id, extension_schema) in &self.extensions {
+            if let Some(root_extension_schema) = root.extensions.get(type_id) {
+                status += extension_schema
+                    .verify_subschema(OpFullType::StateExtension(*type_id), root_extension_schema);
             } else {
-                status.add_failure(validation::Failure::SubschemaExtensionTypeMismatch(
-                    *extension_type,
-                ));
+                status.add_failure(validation::Failure::SubschemaExtensionTypeMismatch(*type_id));
             }
         }
 
@@ -108,14 +180,19 @@ impl SchemaVerify for SubSchema {
     }
 }
 
+/// Trait used for internal schema validation against some root schema
+pub(crate) trait SchemaVerify {
+    type Root;
+    fn verify_subschema(&self, op_type: OpFullType, root: &Self::Root) -> validation::Status;
+}
+
 impl<T> SchemaVerify for T
 where T: OpSchema
 {
     type Root = T;
 
-    fn schema_verify(&self, root: &Self) -> validation::Status {
+    fn verify_subschema(&self, op_type: OpFullType, root: &Self) -> validation::Status {
         let mut status = validation::Status::new();
-        let op_type = self.op_type();
 
         if self.metadata() != root.metadata() {
             status.add_failure(validation::Failure::SubschemaOpMetaMismatch {

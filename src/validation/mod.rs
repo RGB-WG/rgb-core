@@ -21,7 +21,7 @@
 // limitations under the License.
 
 mod script;
-mod subschema;
+mod schema;
 mod model;
 mod state;
 mod validator;

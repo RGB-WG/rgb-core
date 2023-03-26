@@ -28,8 +28,10 @@ use bp::{seals, Txid};
 use strict_types::SemId;
 
 use crate::contract::Opout;
-use crate::schema::{self, OpType, SchemaId};
-use crate::{AssignmentType, BundleId, OccurrencesMismatch, OpId, SecretSeal, StateType};
+use crate::schema::{self, SchemaId};
+use crate::{
+    AssignmentType, BundleId, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[display(Debug)]
@@ -150,6 +152,25 @@ pub enum Failure {
     /// schema uses reserved type for the blank state transition.
     SchemaBlankTransitionRedefined,
 
+    /// schema global state #{0} uses semantic data type absent in type library
+    /// ({1}).
+    SchemaGlobalSemIdUnknown(schema::GlobalStateType, SemId),
+    /// schema owned state #{0} uses semantic data type absent in type library
+    /// ({1}).
+    SchemaOwnedSemIdUnknown(schema::AssignmentType, SemId),
+    /// schema metadata in {0} uses semantic data type absent in type library
+    /// ({1}).
+    SchemaOpMetaSemIdUnknown(OpFullType, SemId),
+
+    /// schema for {0} has zero inputs.
+    SchemaOpEmptyInputs(OpFullType),
+    /// schema for {0} references undeclared global state type {1}.
+    SchemaOpGlobalTypeUnknown(OpFullType, schema::GlobalStateType),
+    /// schema for {0} references undeclared owned state type {1}.
+    SchemaOpAssignmentTypeUnknown(OpFullType, schema::AssignmentType),
+    /// schema for {0} references undeclared valency type {1}.
+    SchemaOpValencyTypeUnknown(OpFullType, schema::ValencyType),
+
     /// invalid schema - no match with root schema requirements for global state
     /// type #{0}.
     SubschemaGlobalStateMismatch(schema::GlobalStateType),
@@ -169,25 +190,25 @@ pub enum Failure {
     /// invalid schema - no match with root schema requirements for metadata
     /// type (required {expected}, found {actual}).
     SubschemaOpMetaMismatch {
-        op_type: OpType,
+        op_type: OpFullType,
         expected: SemId,
         actual: SemId,
     },
     /// invalid schema - no match with root schema requirements for global state
     /// type #{1} used in {0}.
-    SubschemaOpGlobalStateMismatch(OpType, schema::GlobalStateType),
+    SubschemaOpGlobalStateMismatch(OpFullType, schema::GlobalStateType),
     /// invalid schema - no match with root schema requirements for input
     /// type #{1} used in {0}.
-    SubschemaOpInputMismatch(OpType, schema::AssignmentType),
+    SubschemaOpInputMismatch(OpFullType, schema::AssignmentType),
     /// invalid schema - no match with root schema requirements for redeem
     /// type #{1} used in {0}.
-    SubschemaOpRedeemMismatch(OpType, schema::ValencyType),
+    SubschemaOpRedeemMismatch(OpFullType, schema::ValencyType),
     /// invalid schema - no match with root schema requirements for assignment
     /// type #{1} used in {0}.
-    SubschemaOpAssignmentsMismatch(OpType, schema::AssignmentType),
+    SubschemaOpAssignmentsMismatch(OpFullType, schema::AssignmentType),
     /// invalid schema - no match with root schema requirements for valency
     /// type #{1} used in {0}.
-    SubschemaOpValencyMismatch(OpType, schema::ValencyType),
+    SubschemaOpValencyMismatch(OpFullType, schema::ValencyType),
 
     /// operation {0} uses invalid state extension type {1}.
     SchemaUnknownExtensionType(OpId, schema::ExtensionType),
@@ -207,9 +228,6 @@ pub enum Failure {
     SchemaInputOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
     /// invalid number of assignment entries of type {1} in operation {0} - {2}
     SchemaAssignmentOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
-
-    /// invalid schema type system.
-    SchemaTypeSystem(/* TODO: use error from strict types */),
 
     // Consignment consistency errors
     /// operation {0} is absent from the consignment.
@@ -280,10 +298,6 @@ pub enum Failure {
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },
-    /* TODO: Use error type
-    InvalidStateDataType(OpId, u16, /* TODO: Use strict type */ data::Revealed),
-    InvalidStateDataValue(OpId, u16, /* TODO: Use strict type */ Vec<u8>),
-     */
     /// invalid bulletproofs in {0}:{1}: {2}
     BulletproofsInvalid(OpId, u16, String),
     /// operation {0} is invalid: {1}

@@ -29,14 +29,13 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::subschema::SchemaVerify;
 use super::{ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::contract::Opout;
 use crate::validation::AnchoredBundle;
 use crate::vm::AluRuntime;
 use crate::{
     BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
-    Transition, TransitionBundle, TypedAssigns, BLANK_TRANSITION_ID,
+    Transition, TransitionBundle, TypedAssigns,
 };
 
 #[derive(Debug, Display, Error)]
@@ -185,18 +184,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         validator.status
     }
 
-    fn validate_schema(&mut self, schema: &SubSchema) {
-        // Validating schema against root schema
-        if let Some(ref root) = schema.subset_of {
-            self.status += schema.schema_verify(root);
-        }
-
-        // Check that the schema doesn't contain reserved type ids
-        if schema.transitions.contains_key(&BLANK_TRANSITION_ID) {
-            self.status
-                .add_failure(Failure::SchemaBlankTransitionRedefined);
-        }
-    }
+    fn validate_schema(&mut self, schema: &SubSchema) { self.status += schema.verify(); }
 
     fn validate_contract<Root: SchemaRoot>(&mut self, schema: &Schema<Root>) {
         // [VALIDATION]: Making sure that we were supplied with the schema
