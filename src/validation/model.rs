@@ -243,7 +243,7 @@ impl<Root: SchemaRoot> Schema<Root> {
                     opid, *type_id, err,
                 ));
             }
-            if count >= *max_items {
+            if count > *max_items {
                 status.add_failure(validation::Failure::SchemaGlobalStateLimit(
                     opid, *type_id, count, *max_items,
                 ));
