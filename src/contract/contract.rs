@@ -35,11 +35,11 @@ use bp::seals::txout::TxoSeal;
 use bp::{Outpoint, Txid};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use crate::data::VoidState;
 use crate::{
-    attachment, data, fungible, Assign, AssignmentType, Assignments, AssignmentsRef, ContractId,
-    ExposedSeal, ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, SchemaId,
-    SealWitness, SubSchema, Transition, TypedAssigns, LIB_NAME_RGB,
+    Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
+    Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
+    RevealedValue, SchemaId, SealWitness, SubSchema, Transition, TypedAssigns, VoidState,
+    LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -274,9 +274,9 @@ impl GlobalOrd {
 }
 
 pub type RightsOutput = OutputAssignment<VoidState>;
-pub type FungibleOutput = OutputAssignment<fungible::Revealed>;
-pub type DataOutput = OutputAssignment<data::Revealed>;
-pub type AttachOutput = OutputAssignment<attachment::Revealed>;
+pub type FungibleOutput = OutputAssignment<RevealedValue>;
+pub type DataOutput = OutputAssignment<RevealedData>;
+pub type AttachOutput = OutputAssignment<RevealedAttach>;
 
 /// Contract history accumulates raw data from the contract history, extracted
 /// from a series of consignments over the time. It does consensus ordering of
@@ -300,7 +300,7 @@ pub struct ContractHistory {
     #[getter(as_copy)]
     contract_id: ContractId,
     #[getter(skip)]
-    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, data::Revealed>>,
+    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, RevealedData>>,
     rights: LargeOrdSet<RightsOutput>,
     fungibles: LargeOrdSet<FungibleOutput>,
     data: LargeOrdSet<DataOutput>,
@@ -507,10 +507,7 @@ impl ContractState {
     /// # Panics
     ///
     /// If the specified state type is not part of the schema.
-    pub unsafe fn global_unchecked(
-        &self,
-        state_type: GlobalStateType,
-    ) -> SmallVec<&data::Revealed> {
+    pub unsafe fn global_unchecked(&self, state_type: GlobalStateType) -> SmallVec<&RevealedData> {
         let schema = self
             .schema
             .global_types

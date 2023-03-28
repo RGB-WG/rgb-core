@@ -31,10 +31,12 @@ use commit_verify::merkle::{MerkleLeaves, MerkleNode};
 use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
 use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
-use super::{attachment, data, fungible, ExposedState};
+use super::ExposedState;
 use crate::contract::seal::GenesisSeal;
-use crate::data::VoidState;
-use crate::{AssignmentType, ExposedSeal, GraphSeal, SecretSeal, StateType, LIB_NAME_RGB};
+use crate::{
+    AssignmentType, ExposedSeal, GraphSeal, RevealedAttach, RevealedData, RevealedValue,
+    SecretSeal, StateType, VoidState, LIB_NAME_RGB,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
@@ -42,9 +44,9 @@ use crate::{AssignmentType, ExposedSeal, GraphSeal, SecretSeal, StateType, LIB_N
 pub struct UnknownDataError;
 
 pub type AssignRights<Seal> = Assign<VoidState, Seal>;
-pub type AssignFungible<Seal> = Assign<fungible::Revealed, Seal>;
-pub type AssignData<Seal> = Assign<data::Revealed, Seal>;
-pub type AssignAttach<Seal> = Assign<attachment::Revealed, Seal>;
+pub type AssignFungible<Seal> = Assign<RevealedValue, Seal>;
+pub type AssignData<Seal> = Assign<RevealedData, Seal>;
+pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
 
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
@@ -444,7 +446,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn as_structured_state_at(
         &self,
         index: u16,
-    ) -> Result<Option<&data::Revealed>, UnknownDataError> {
+    ) -> Result<Option<&RevealedData>, UnknownDataError> {
         match self {
             TypedAssigns::Structured(vec) => Ok(vec
                 .get(index as usize)
@@ -457,7 +459,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn as_fungible_state_at(
         &self,
         index: u16,
-    ) -> Result<Option<&fungible::Revealed>, UnknownDataError> {
+    ) -> Result<Option<&RevealedValue>, UnknownDataError> {
         match self {
             TypedAssigns::Fungible(vec) => Ok(vec
                 .get(index as usize)
@@ -470,7 +472,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn into_structured_state_at(
         self,
         index: u16,
-    ) -> Result<Option<data::Revealed>, UnknownDataError> {
+    ) -> Result<Option<RevealedData>, UnknownDataError> {
         match self {
             TypedAssigns::Structured(vec) => {
                 if index as usize >= vec.len() {
@@ -488,7 +490,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn into_fungible_state_at(
         self,
         index: u16,
-    ) -> Result<Option<fungible::Revealed>, UnknownDataError> {
+    ) -> Result<Option<RevealedValue>, UnknownDataError> {
         match self {
             TypedAssigns::Fungible(vec) => {
                 if index as usize >= vec.len() {

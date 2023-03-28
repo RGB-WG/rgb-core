@@ -59,29 +59,29 @@ impl CommitStrategy for VoidState {
 
 #[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, rename = "RevealedData")]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct Revealed(SmallVec<u8>);
+pub struct RevealedData(SmallVec<u8>);
 
-impl ExposedState for Revealed {
-    type Confidential = Confidential;
+impl ExposedState for RevealedData {
+    type Confidential = ConcealedData;
     fn state_type(&self) -> StateType { StateType::Structured }
     fn state_data(&self) -> StateData { StateData::Structured(self.clone()) }
 }
 
-impl Conceal for Revealed {
-    type Concealed = Confidential;
-    fn conceal(&self) -> Self::Concealed { Confidential::commit(self) }
+impl Conceal for RevealedData {
+    type Concealed = ConcealedData;
+    fn conceal(&self) -> Self::Concealed { ConcealedData::commit(self) }
 }
-impl CommitStrategy for Revealed {
+impl CommitStrategy for RevealedData {
     type Strategy = commit_verify::strategies::ConcealStrict;
 }
 
-impl StrictSerialize for Revealed {}
+impl StrictSerialize for RevealedData {}
 
 /// Confidential version of an structured state data.
 ///
-/// See also revealed version [`Revealed`].
+/// See also revealed version [`RevealedData`].
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -91,21 +91,21 @@ impl StrictSerialize for Revealed {}
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Confidential(
+pub struct ConcealedData(
     #[from]
     #[from([u8; 32])]
     Bytes32,
 );
 
-impl ConfidentialState for Confidential {
+impl ConfidentialState for ConcealedData {
     fn state_type(&self) -> StateType { StateType::Structured }
     fn state_commitment(&self) -> StateCommitment { StateCommitment::Structured(*self) }
 }
 
-impl CommitStrategy for Confidential {
+impl CommitStrategy for ConcealedData {
     type Strategy = commit_verify::strategies::Strict;
 }
 
-impl CommitVerify<Revealed, StrictEncodedProtocol> for Confidential {
-    fn commit(revealed: &Revealed) -> Self { Bytes32::commit(revealed).into() }
+impl CommitVerify<RevealedData, StrictEncodedProtocol> for ConcealedData {
+    fn commit(revealed: &RevealedData) -> Self { Bytes32::commit(revealed).into() }
 }

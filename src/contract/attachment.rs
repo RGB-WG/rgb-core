@@ -61,13 +61,13 @@ impl FromStr for AttachId {
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, rename = "RevealedAttach")]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct Revealed {
+pub struct RevealedAttach {
     pub id: AttachId,
     /// We do not enforce a MIME standard since non-standard types can be also
     /// used
@@ -75,9 +75,9 @@ pub struct Revealed {
     pub salt: u64,
 }
 
-impl Revealed {
+impl RevealedAttach {
     /// Creates new revealed attachment for the attachment id and MIME type.
-    /// Uses `thread_rng` to initialize [`Revealed::salt`].
+    /// Uses `thread_rng` to initialize [`RevealedAttach::salt`].
     pub fn new(id: AttachId, media_type: MediaType) -> Self {
         Self {
             id,
@@ -87,48 +87,48 @@ impl Revealed {
     }
 }
 
-impl ExposedState for Revealed {
-    type Confidential = Confidential;
+impl ExposedState for RevealedAttach {
+    type Confidential = ConcealedAttach;
     fn state_type(&self) -> StateType { StateType::Attachment }
     fn state_data(&self) -> StateData { StateData::Attachment(self.clone()) }
 }
 
-impl Conceal for Revealed {
-    type Concealed = Confidential;
+impl Conceal for RevealedAttach {
+    type Concealed = ConcealedAttach;
 
-    fn conceal(&self) -> Self::Concealed { Confidential::commit(self) }
+    fn conceal(&self) -> Self::Concealed { ConcealedAttach::commit(self) }
 }
-impl CommitStrategy for Revealed {
+impl CommitStrategy for RevealedAttach {
     type Strategy = commit_verify::strategies::ConcealStrict;
 }
 
 /// Confidential version of an attachment information.
 ///
-/// See also revealed version [`Revealed`].
+/// See also revealed version [`RevealedAttach`].
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedAttach")]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Confidential(
+pub struct ConcealedAttach(
     #[from]
     #[from([u8; 32])]
     Bytes32,
 );
 
-impl ConfidentialState for Confidential {
+impl ConfidentialState for ConcealedAttach {
     fn state_type(&self) -> StateType { StateType::Attachment }
     fn state_commitment(&self) -> StateCommitment { StateCommitment::Attachment(*self) }
 }
 
-impl CommitStrategy for Confidential {
+impl CommitStrategy for ConcealedAttach {
     type Strategy = commit_verify::strategies::Strict;
 }
 
-impl CommitVerify<Revealed, StrictEncodedProtocol> for Confidential {
-    fn commit(revealed: &Revealed) -> Self { Bytes32::commit(revealed).into() }
+impl CommitVerify<RevealedAttach, StrictEncodedProtocol> for ConcealedAttach {
+    fn commit(revealed: &RevealedAttach) -> Self { Bytes32::commit(revealed).into() }
 }

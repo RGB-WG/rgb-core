@@ -78,8 +78,8 @@ impl Default for FungibleState {
     fn default() -> Self { FungibleState::Bits64(0) }
 }
 
-impl From<Revealed> for FungibleState {
-    fn from(revealed: Revealed) -> Self { revealed.value }
+impl From<RevealedValue> for FungibleState {
+    fn from(revealed: RevealedValue) -> Self { revealed.value }
 }
 
 impl FromStr for FungibleState {
@@ -176,7 +176,7 @@ impl TryFrom<[u8; 32]> for BlindingFactor {
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "RevealedFungible")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct Revealed {
+pub struct RevealedValue {
     /// Original value in smallest indivisible units
     pub value: FungibleState,
 
@@ -184,7 +184,7 @@ pub struct Revealed {
     pub blinding: BlindingFactor,
 }
 
-impl Revealed {
+impl RevealedValue {
     /// Constructs new state using the provided value and random generator for
     /// creating blinding factor.
     pub fn new<R: Rng + RngCore>(value: impl Into<FungibleState>, rng: &mut R) -> Self {
@@ -203,14 +203,14 @@ impl Revealed {
     }
 }
 
-impl ExposedState for Revealed {
-    type Confidential = Confidential;
+impl ExposedState for RevealedValue {
+    type Confidential = ConcealedValue;
     fn state_type(&self) -> StateType { StateType::Fungible }
     fn state_data(&self) -> StateData { StateData::Fungible(*self) }
 }
 
-impl Conceal for Revealed {
-    type Concealed = Confidential;
+impl Conceal for RevealedValue {
+    type Concealed = ConcealedValue;
 
     fn conceal(&self) -> Self::Concealed {
         // TODO: Remove panic upon integration of bulletproofs library
@@ -221,11 +221,11 @@ impl Conceal for Revealed {
         // Confidential::commit(self)
     }
 }
-impl CommitStrategy for Revealed {
+impl CommitStrategy for RevealedValue {
     type Strategy = commit_verify::strategies::ConcealStrict;
 }
 
-impl PartialOrd for Revealed {
+impl PartialOrd for RevealedValue {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.value.partial_cmp(&other.value) {
             None => None,
@@ -235,7 +235,7 @@ impl PartialOrd for Revealed {
     }
 }
 
-impl Ord for Revealed {
+impl Ord for RevealedValue {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.value.cmp(&other.value) {
             Ordering::Equal => self.blinding.0.cmp(&other.blinding.0),
@@ -287,8 +287,8 @@ impl CommitStrategy for PedersenCommitment {
     type Strategy = commit_verify::strategies::Strict;
 }
 
-impl CommitVerify<Revealed, UntaggedProtocol> for PedersenCommitment {
-    fn commit(revealed: &Revealed) -> Self {
+impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
+    fn commit(revealed: &RevealedValue) -> Self {
         use secp256k1_zkp::{Generator, Tag, Tweak};
 
         let blinding = Tweak::from_inner(revealed.blinding.0.into_inner())
@@ -350,7 +350,7 @@ impl Default for RangeProof {
 
 /// Confidential version of the additive state.
 ///
-/// See also revealed version [`Revealed`].
+/// See also revealed version [`RevealedValue`].
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedFungible")]
@@ -359,19 +359,19 @@ impl Default for RangeProof {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct Confidential {
+pub struct ConcealedValue {
     /// Pedersen commitment to the original [`FungibleState`].
     pub commitment: PedersenCommitment,
     /// Range proof for the [`FungibleState`] not exceeding type boundaries.
     pub range_proof: RangeProof,
 }
 
-impl ConfidentialState for Confidential {
+impl ConfidentialState for ConcealedValue {
     fn state_type(&self) -> StateType { StateType::Fungible }
     fn state_commitment(&self) -> StateCommitment { StateCommitment::Fungible(*self) }
 }
 
-impl Confidential {
+impl ConcealedValue {
     /// Verifies bulletproof against the commitment.
     pub fn verify(&self) -> bool {
         match self.range_proof {
@@ -380,7 +380,7 @@ impl Confidential {
     }
 }
 
-impl CommitEncode for Confidential {
+impl CommitEncode for ConcealedValue {
     fn commit_encode(&self, e: &mut impl Write) {
         // We do not commit to the range proofs!
         self.commitment.commit_encode(e)
@@ -400,7 +400,7 @@ pub enum RangeProofError {
     BulletproofsAbsent,
 }
 
-impl Confidential {
+impl ConcealedValue {
     /// Verifies validity of the range proof.
     pub fn verify_range_proof(&self) -> Result<bool, RangeProofError> {
         Err(RangeProofError::BulletproofsAbsent)

@@ -21,9 +21,9 @@
 // limitations under the License.
 
 mod global;
-pub mod data;
-pub mod fungible;
-pub mod attachment;
+mod data;
+mod fungible;
+mod attachment;
 mod state;
 pub mod seal;
 pub mod assignments;
@@ -35,15 +35,16 @@ pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
 };
-pub use attachment::AttachId;
+pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
 pub use bundle::{BundleId, BundleItem, TransitionBundle};
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
     OpoutParseError, OrderedTxid, OutputAssignment, RightsOutput,
 };
+pub use data::{ConcealedData, RevealedData, VoidState};
 pub use fungible::{
-    BlindingFactor, FieldOrderOverflow, FungibleState, NoiseDumb, PedersenCommitment, RangeProof,
-    RangeProofError,
+    BlindingFactor, ConcealedValue, FieldOrderOverflow, FungibleState, NoiseDumb,
+    PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
 };
 pub use global::{GlobalState, GlobalValues};
 pub use operations::{

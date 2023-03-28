@@ -26,7 +26,10 @@ use core::hash::Hash;
 use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use crate::{attachment, data, fungible, LIB_NAME_RGB};
+use crate::{
+    ConcealedAttach, ConcealedData, ConcealedValue, RevealedAttach, RevealedData, RevealedValue,
+    LIB_NAME_RGB,
+};
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
@@ -89,11 +92,11 @@ pub enum StateData {
     #[strict_type(tag = 0x00, dumb)]
     Void,
     #[strict_type(tag = 0x01)]
-    Fungible(fungible::Revealed),
+    Fungible(RevealedValue),
     #[strict_type(tag = 0x02)]
-    Structured(data::Revealed),
+    Structured(RevealedData),
     #[strict_type(tag = 0xFF)]
-    Attachment(attachment::Revealed),
+    Attachment(RevealedAttach),
 }
 
 impl ExposedState for StateData {
@@ -133,11 +136,11 @@ pub enum StateCommitment {
     #[strict_type(tag = 0x00, dumb)]
     Void,
     #[strict_type(tag = 0x01)]
-    Fungible(fungible::Confidential),
+    Fungible(ConcealedValue),
     #[strict_type(tag = 0x02)]
-    Structured(data::Confidential),
+    Structured(ConcealedData),
     #[strict_type(tag = 0xFF)]
-    Attachment(attachment::Confidential),
+    Attachment(ConcealedAttach),
 }
 
 impl ConfidentialState for StateCommitment {
