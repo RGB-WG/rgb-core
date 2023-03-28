@@ -42,11 +42,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
     let sty_id =
-        TypeLibId::from_str("gordon_george_magic_7UDb1RpkpgFcP3LhPVqSiAXAFfxoBLxtRSvWYwhy8F7W")?;
+        TypeLibId::from_str("danube_cotton_kansas_3xcfudRJUuwQ187puYDdNcxGeTpG8AoHyTrfJ9ryo9k6")?;
     let bitcoin_id =
         TypeLibId::from_str("salsa_peace_patron_26G1K9hm6R2BkzGJwHjLC9cB1JFJiAPCDWrJAoRCrkCg")?;
     let bpcore_id =
-        TypeLibId::from_str("anvil_spring_bingo_2QoY1v2xJ8rMjtTcWBGHpDriepekxT5uZBPEvwWpBCRk")?;
+        TypeLibId::from_str("human_alarm_video_Hzm5L9FnBnXfocDtyc1i1PmKs1SYXsBQzL4vtd4BVA4S")?;
     let aluvm_id =
         TypeLibId::from_str("sardine_ground_beatles_5GpK1xbT5AT8buj9rEh2Tp7iFJf7rr36qmbbaU39aMWD")?;
 
