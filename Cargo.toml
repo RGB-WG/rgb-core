@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.10.0-rc.1"
+version = "0.10.0-rc.2"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -19,7 +19,7 @@ crate-type = ["cdylib", "rlib"] # We need this for WASM
 
 [dependencies]
 amplify = "~4.0.0-beta.20"
-strict_encoding = "~2.0.0"
+strict_encoding = "~2.0.1"
 strict_types = "~1.0.0-rc.1"
 aluvm = { version = "~0.10.0-rc.1", features = ["std"] }
 commit_verify = { version = "~0.10.0-rc.3", features = ["rand"] }

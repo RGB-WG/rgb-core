@@ -680,7 +680,7 @@ dependencies = [
 
 [[package]]
 name = "rgb-core"
-version = "0.10.0-rc.1"
+version = "0.10.0-rc.2"
 dependencies = [
  "aluvm",
  "amplify",
@@ -881,9 +881,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ff63df75d779e9005d7790b8e5d9d46d38a6c0ea74a8850f3d3a6b0145a05d9"
+checksum = "10ae02601ebb2537cd9f8d7b7a1e3a2f8f56b73da34ddb03f02a5d99ad80a2e4"
 dependencies = [
  "amplify",
  "half",
