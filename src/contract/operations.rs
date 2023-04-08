@@ -73,7 +73,7 @@ impl OpId {
 /// Unique contract identifier equivalent to the contract genesis commitment
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[display(Self::to_baid58)]
+#[display(Self::to_baid58_string)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -98,6 +98,10 @@ impl ToBaid58<32> for ContractId {
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
 }
 impl FromBaid58<32> for ContractId {}
+
+impl ContractId {
+    fn to_baid58_string(&self) -> String { format!("{:0}", self.to_baid58()) }
+}
 
 impl FromStr for ContractId {
     type Err = Baid58ParseError;

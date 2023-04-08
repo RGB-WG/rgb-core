@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c8b31faf1f2667ba122c49112d3c643588d11e7a999585192c2d492d697bb46"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.2.0",
  "bitcoin_hashes",
  "blake3",
  "half",
@@ -127,6 +127,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "baid58"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe675ca8398044a1076a8237e60540182931807beec840ddfa89f9df9f8c4d9f"
+dependencies = [
+ "base58",
+ "blake3",
+ "mnemonic",
+]
+
+[[package]]
 name = "base58"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -232,7 +243,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24f0598dcb7c3c8c8b983eca9ef0dbfdc86503e5b258918122ac90d88030dcea"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.2.0",
  "bp-dbc",
  "bp-primitives",
  "commit_verify",
@@ -684,7 +695,7 @@ version = "0.10.0-rc.2"
 dependencies = [
  "aluvm",
  "amplify",
- "baid58",
+ "baid58 0.3.0",
  "bp-core",
  "commit_verify",
  "getrandom",
@@ -911,7 +922,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "371701e525f77661673ef2dca749793000162c28eb9745e69499653f61f6a9e2"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.2.0",
  "blake3",
  "half",
  "indexmap",
