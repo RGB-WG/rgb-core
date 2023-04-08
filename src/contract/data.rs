@@ -20,9 +20,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::fmt::Debug;
+use core::fmt::{self, Debug, Display, Formatter};
 
 use amplify::confinement::SmallVec;
+use amplify::hex::ToHex;
 use amplify::Bytes32;
 use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
@@ -78,6 +79,10 @@ impl CommitStrategy for RevealedData {
 }
 
 impl StrictSerialize for RevealedData {}
+
+impl Display for RevealedData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { f.write_str(&self.as_ref().to_hex()) }
+}
 
 /// Confidential version of an structured state data.
 ///
