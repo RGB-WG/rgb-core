@@ -34,7 +34,7 @@ use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
     AssignmentType, Assignments, AssignmentsRef, Ffv, GenesisSeal, GlobalState, GraphSeal, Opout,
-    TypedAssigns, LIB_NAME_RGB,
+    ReservedByte, TypedAssigns, LIB_NAME_RGB,
 };
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
@@ -52,7 +52,16 @@ pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
 #[display("{prev_out}")]
 pub struct Input {
     pub prev_out: Opout,
-    pub reserved: u8,
+    reserved: ReservedByte,
+}
+
+impl Input {
+    pub fn with(prev_out: Opout) -> Input {
+        Input {
+            prev_out,
+            reserved: default!(),
+        }
+    }
 }
 
 /// Unique operation (genesis, extensions & state transition) identifier
