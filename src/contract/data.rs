@@ -24,7 +24,7 @@ use core::fmt::{self, Debug, Display, Formatter};
 
 use amplify::confinement::SmallVec;
 use amplify::hex::ToHex;
-use amplify::Bytes32;
+use amplify::{Bytes32, Wrapper};
 use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
 
@@ -58,7 +58,7 @@ impl CommitStrategy for VoidState {
     type Strategy = commit_verify::strategies::Strict;
 }
 
-#[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, From)]
+#[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -79,6 +79,17 @@ impl CommitStrategy for RevealedData {
 }
 
 impl StrictSerialize for RevealedData {}
+
+impl Debug for RevealedData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let val = match String::from_utf8(self.0.to_inner()) {
+            Ok(s) => s,
+            Err(_) => self.0.to_hex(),
+        };
+
+        f.debug_tuple("RevealedData").field(&val).finish()
+    }
+}
 
 impl Display for RevealedData {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { f.write_str(&self.as_ref().to_hex()) }
