@@ -30,7 +30,7 @@ use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
     validation, Assignments, AssignmentsRef, ExposedSeal, GlobalState, GlobalStateSchema,
-    GlobalValues, GraphSeal, OpFullType, OpId, OpRef, Operation, Opout, PrevOuts, Redeemed, Schema,
+    GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef, Operation, Opout, Redeemed, Schema,
     SchemaRoot, TypedAssigns, Valencies, BLANK_TRANSITION_ID,
 };
 
@@ -456,12 +456,12 @@ impl<'op> OpInfo<'op> {
 fn extract_prev_state<C: ConsignmentApi>(
     consignment: &C,
     opid: OpId,
-    prev_state: &PrevOuts,
+    inputs: &Inputs,
     status: &mut validation::Status,
 ) -> Assignments<GraphSeal> {
     let mut assignments = bmap! {};
-    for opout in prev_state {
-        let Opout { op, ty, no } = *opout;
+    for input in inputs {
+        let Opout { op, ty, no } = input.prev_out;
 
         let prev_op = match consignment.operation(op) {
             None => {
@@ -473,56 +473,56 @@ fn extract_prev_state<C: ConsignmentApi>(
 
         let no = no as usize;
         match prev_op.assignments_by_type(ty) {
-            Some(TypedAssigns::Declarative(mut prev_assignments)) => {
-                if let Ok(prev_assign) = prev_assignments.remove(no) {
+            Some(TypedAssigns::Declarative(prev_assignments)) => {
+                if let Some(prev_assign) = prev_assignments.get(no) {
                     if let Some(typed_assigns) = assignments
                         .entry(ty)
                         .or_insert_with(|| TypedAssigns::Declarative(Default::default()))
                         .as_declarative_mut()
                     {
-                        typed_assigns.push(prev_assign).expect("same size");
+                        typed_assigns.push(prev_assign.clone()).expect("same size");
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, *opout));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
                 }
             }
-            Some(TypedAssigns::Fungible(mut prev_assignments)) => {
-                if let Ok(prev_assign) = prev_assignments.remove(no) {
+            Some(TypedAssigns::Fungible(prev_assignments)) => {
+                if let Some(prev_assign) = prev_assignments.get(no) {
                     if let Some(typed_assigns) = assignments
                         .entry(ty)
                         .or_insert_with(|| TypedAssigns::Fungible(Default::default()))
                         .as_fungible_mut()
                     {
-                        typed_assigns.push(prev_assign).expect("same size");
+                        typed_assigns.push(prev_assign.clone()).expect("same size");
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, *opout));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
                 }
             }
-            Some(TypedAssigns::Structured(mut prev_assignments)) => {
-                if let Ok(prev_assign) = prev_assignments.remove(no) {
+            Some(TypedAssigns::Structured(prev_assignments)) => {
+                if let Some(prev_assign) = prev_assignments.get(no) {
                     if let Some(typed_assigns) = assignments
                         .entry(ty)
                         .or_insert_with(|| TypedAssigns::Structured(Default::default()))
                         .as_structured_mut()
                     {
-                        typed_assigns.push(prev_assign).expect("same size");
+                        typed_assigns.push(prev_assign.clone()).expect("same size");
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, *opout));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
                 }
             }
-            Some(TypedAssigns::Attachment(mut prev_assignments)) => {
-                if let Ok(prev_assign) = prev_assignments.remove(no) {
+            Some(TypedAssigns::Attachment(prev_assignments)) => {
+                if let Some(prev_assign) = prev_assignments.get(no) {
                     if let Some(typed_assigns) = assignments
                         .entry(ty)
                         .or_insert_with(|| TypedAssigns::Attachment(Default::default()))
                         .as_attachment_mut()
                     {
-                        typed_assigns.push(prev_assign).expect("same size");
+                        typed_assigns.push(prev_assign.clone()).expect("same size");
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, *opout));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
                 }
             }
             None => {

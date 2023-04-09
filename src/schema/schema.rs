@@ -52,7 +52,7 @@ pub const BLANK_TRANSITION_ID: u16 = TransitionType::MAX;
 /// Schema identifier commits to all of the schema data.
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[display(Self::to_baid58)]
+#[display(Self::to_baid58_string)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -71,6 +71,14 @@ impl ToBaid58<32> for SchemaId {
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
 }
 impl FromBaid58<32> for SchemaId {}
+
+impl SchemaId {
+    fn to_baid58_string(&self) -> String { format!("{}", self.to_baid58()) }
+    pub fn mnemonic_checksum(&self) -> String {
+        self.to_baid58()
+            .mnemonic_with_case(baid58::MnemonicCase::Kebab)
+    }
+}
 
 impl FromStr for SchemaId {
     type Err = Baid58ParseError;
@@ -156,16 +164,12 @@ mod test {
     fn display() {
         let dumb = SchemaId::strict_dumb();
         assert_eq!(dumb.to_string(), "11111111111111111111111111111111");
-        assert_eq!(
-            &format!("{dumb::^#}"),
-            "rgb-sch:11111111111111111111111111111111#sweden-gate-virgo"
-        );
+        assert_eq!(&format!("{dumb::^#}"), "11111111111111111111111111111111");
+        assert_eq!(dumb.mnemonic_checksum(), "sweden-gate-virgo");
 
         let less_dumb = SchemaId::from_raw_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
         assert_eq!(less_dumb.to_string(), "5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz");
-        assert_eq!(
-            &format!("{less_dumb::^#}"),
-            "rgb-sch:5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz#salami-comedy-cello"
-        );
+        assert_eq!(&format!("{less_dumb::^#}"), "5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz");
+        assert_eq!(less_dumb.mnemonic_checksum(), "salami-comedy-cello");
     }
 }

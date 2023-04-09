@@ -61,6 +61,39 @@ pub mod prelude {
 
 pub use prelude::*;
 
+/// Reserved byte.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
+#[display("reserved")]
+#[derive(StrictType, StrictEncode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct ReservedByte(u8);
+
+mod _reserved {
+    use strict_encoding::{DecodeError, ReadTuple, StrictDecode, TypedRead};
+
+    use crate::ReservedByte;
+
+    impl StrictDecode for ReservedByte {
+        fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
+            let reserved = reader.read_tuple(|r| r.read_field().map(Self))?;
+            if reserved != ReservedByte::default() {
+                Err(DecodeError::DataIntegrityError(format!(
+                    "unsupported reserved byte value indicating a future RGB version. Please \
+                     update your software, or, if the problem persists, contact your vendor \
+                     providing the following version information: {reserved}"
+                )))
+            } else {
+                Ok(reserved)
+            }
+        }
+    }
+}
+
 /// Fast-forward version code
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
 #[display("v0.10.0+{0}")]

@@ -385,26 +385,26 @@ impl ContractHistory {
         }
 
         // Remove invalidated state
-        for output in op.prev_outs() {
-            if let Some(o) = self.rights.iter().find(|r| r.opout == output) {
+        for input in op.inputs() {
+            if let Some(o) = self.rights.iter().find(|r| r.opout == input.prev_out) {
                 let o = o.clone(); // need this b/c of borrow checker
                 self.rights
                     .remove(&o)
                     .expect("collection allows zero elements");
             }
-            if let Some(o) = self.fungibles.iter().find(|r| r.opout == output) {
+            if let Some(o) = self.fungibles.iter().find(|r| r.opout == input.prev_out) {
                 let o = o.clone();
                 self.fungibles
                     .remove(&o)
                     .expect("collection allows zero elements");
             }
-            if let Some(o) = self.data.iter().find(|r| r.opout == output) {
+            if let Some(o) = self.data.iter().find(|r| r.opout == input.prev_out) {
                 let o = o.clone();
                 self.data
                     .remove(&o)
                     .expect("collection allows zero elements");
             }
-            if let Some(o) = self.attach.iter().find(|r| r.opout == output) {
+            if let Some(o) = self.attach.iter().find(|r| r.opout == input.prev_out) {
                 let o = o.clone();
                 self.attach
                     .remove(&o)

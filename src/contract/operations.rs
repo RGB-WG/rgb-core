@@ -34,12 +34,35 @@ use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
     AssignmentType, Assignments, AssignmentsRef, Ffv, GenesisSeal, GlobalState, GraphSeal, Opout,
-    TypedAssigns, LIB_NAME_RGB,
+    ReservedByte, TypedAssigns, LIB_NAME_RGB,
 };
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
-pub type PrevOuts = TinyOrdSet<Opout>;
+pub type Inputs = TinyOrdSet<Input>;
 pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[display("{prev_out}")]
+pub struct Input {
+    pub prev_out: Opout,
+    reserved: ReservedByte,
+}
+
+impl Input {
+    pub fn with(prev_out: Opout) -> Input {
+        Input {
+            prev_out,
+            reserved: default!(),
+        }
+    }
+}
 
 /// Unique operation (genesis, extensions & state transition) identifier
 /// equivalent to the commitment hash
@@ -73,7 +96,7 @@ impl OpId {
 /// Unique contract identifier equivalent to the contract genesis commitment
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[display(Self::to_baid58)]
+#[display(Self::to_baid58_string)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -87,6 +110,13 @@ pub struct ContractId(
     Bytes32,
 );
 
+impl PartialEq<OpId> for ContractId {
+    fn eq(&self, other: &OpId) -> bool { self.to_raw_array() == other.to_raw_array() }
+}
+impl PartialEq<ContractId> for OpId {
+    fn eq(&self, other: &ContractId) -> bool { self.to_raw_array() == other.to_raw_array() }
+}
+
 impl ContractId {
     pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
         Bytes32::from_slice(slice).map(Self)
@@ -98,6 +128,10 @@ impl ToBaid58<32> for ContractId {
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
 }
 impl FromBaid58<32> for ContractId {}
+
+impl ContractId {
+    fn to_baid58_string(&self) -> String { format!("{:0}", self.to_baid58()) }
+}
 
 impl FromStr for ContractId {
     type Err = Baid58ParseError;
@@ -132,6 +166,9 @@ pub trait Operation {
     /// serialization
     fn id(&self) -> OpId;
 
+    /// Returns [`ContractId`] this operation belongs to.
+    fn contract_id(&self) -> ContractId;
+
     /// Returns [`Option::Some`]`(`[`TransitionType`]`)` for transitions or
     /// [`Option::None`] for genesis and extension operation types
     fn transition_type(&self) -> Option<TransitionType>;
@@ -155,7 +192,7 @@ pub trait Operation {
     /// For genesis and public state extensions always returns an empty list.
     /// While public state extension do have parent nodes, they do not contain
     /// indexed rights.
-    fn prev_outs(&self) -> TinyOrdSet<Opout>;
+    fn inputs(&self) -> Inputs;
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -189,8 +226,8 @@ impl StrictDeserialize for Genesis {}
 )]
 pub struct Extension {
     pub ffv: Ffv,
-    pub extension_type: ExtensionType,
     pub contract_id: ContractId,
+    pub extension_type: ExtensionType,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
@@ -211,10 +248,11 @@ impl StrictDeserialize for Extension {}
 )]
 pub struct Transition {
     pub ffv: Ffv,
+    pub contract_id: ContractId,
     pub transition_type: TransitionType,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
-    pub inputs: PrevOuts,
+    pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
 }
@@ -258,22 +296,14 @@ impl CommitmentId for Extension {
     type Id = OpId;
 }
 
-impl Genesis {
-    #[inline]
-    pub fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
-}
-
 impl Transition {
     /// Returns reference to information about the owned rights in form of
-    /// [`PrevOuts`] wrapper structure which this operation updates with
+    /// [`Inputs`] wrapper structure which this operation updates with
     /// state transition ("parent owned rights").
-    pub fn prev_state(&self) -> &PrevOuts { &self.inputs }
+    pub fn prev_state(&self) -> &Inputs { &self.inputs }
 }
 
 impl Extension {
-    #[inline]
-    pub fn contract_id(&self) -> ContractId { self.contract_id }
-
     /// Returns reference to information about the public rights (in form of
     /// [`Redeemed`] wrapper structure), defined with "parent" state
     /// extensions (i.e. those finalized with the current state transition) or
@@ -291,6 +321,9 @@ impl Operation for Genesis {
 
     #[inline]
     fn id(&self) -> OpId { OpId(self.commitment_id().into_inner()) }
+
+    #[inline]
+    fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { None }
@@ -318,7 +351,7 @@ impl Operation for Genesis {
     }
 
     #[inline]
-    fn prev_outs(&self) -> TinyOrdSet<Opout> { empty!() }
+    fn inputs(&self) -> Inputs { empty!() }
 }
 
 impl Operation for Extension {
@@ -330,6 +363,9 @@ impl Operation for Extension {
 
     #[inline]
     fn id(&self) -> OpId { self.commitment_id() }
+
+    #[inline]
+    fn contract_id(&self) -> ContractId { self.contract_id }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { None }
@@ -357,7 +393,7 @@ impl Operation for Extension {
     }
 
     #[inline]
-    fn prev_outs(&self) -> TinyOrdSet<Opout> { empty!() }
+    fn inputs(&self) -> Inputs { empty!() }
 }
 
 impl Operation for Transition {
@@ -369,6 +405,9 @@ impl Operation for Transition {
 
     #[inline]
     fn id(&self) -> OpId { self.commitment_id() }
+
+    #[inline]
+    fn contract_id(&self) -> ContractId { self.contract_id }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { Some(self.transition_type) }
@@ -393,7 +432,7 @@ impl Operation for Transition {
         self.assignments.get(&t).cloned()
     }
 
-    fn prev_outs(&self) -> TinyOrdSet<Opout> { self.inputs.clone() }
+    fn inputs(&self) -> Inputs { self.inputs.clone() }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
@@ -428,6 +467,14 @@ impl<'op> Operation for OpRef<'op> {
             OpRef::Genesis(op) => op.id(),
             OpRef::Transition(op) => op.id(),
             OpRef::Extension(op) => op.id(),
+        }
+    }
+
+    fn contract_id(&self) -> ContractId {
+        match self {
+            OpRef::Genesis(op) => op.contract_id(),
+            OpRef::Transition(op) => op.contract_id(),
+            OpRef::Extension(op) => op.contract_id(),
         }
     }
 
@@ -487,11 +534,11 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn prev_outs(&self) -> TinyOrdSet<Opout> {
+    fn inputs(&self) -> Inputs {
         match self {
-            OpRef::Genesis(op) => op.prev_outs(),
-            OpRef::Transition(op) => op.prev_outs(),
-            OpRef::Extension(op) => op.prev_outs(),
+            OpRef::Genesis(op) => op.inputs(),
+            OpRef::Transition(op) => op.inputs(),
+            OpRef::Extension(op) => op.inputs(),
         }
     }
 }

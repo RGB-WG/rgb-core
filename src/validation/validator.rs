@@ -38,10 +38,14 @@ use crate::{
     Transition, TransitionBundle, TypedAssigns,
 };
 
-#[derive(Debug, Display, Error)]
+#[derive(Clone, Debug, Display, Error, From)]
 #[display(doc_comments)]
-/// transaction {0} is not mined
-pub struct TxResolverError(Txid);
+pub enum TxResolverError {
+    /// transaction {0} is not mined
+    Unknown(Txid),
+    /// unable to retriev transaction {0}, {1}
+    Other(Txid, String),
+}
 
 pub trait ResolveTx {
     fn resolve_tx(&self, txid: Txid) -> Result<Tx, TxResolverError>;
@@ -305,13 +309,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     }
 
                     // Now, we must collect all parent nodes and add them to the verification queue
-                    let parent_nodes = transition.inputs.iter().filter_map(|prevout| {
-                        self.consignment.operation(prevout.op).or_else(|| {
+                    let parent_nodes = transition.inputs.iter().filter_map(|input| {
+                        self.consignment.operation(input.prev_out.op).or_else(|| {
                             // This will not actually happen since we already checked that each
                             // ancestor reference has a corresponding operation in the code above.
                             // But lets double-check :)
                             self.status
-                                .add_failure(Failure::TransitionAbsent(prevout.op));
+                                .add_failure(Failure::TransitionAbsent(input.prev_out.op));
                             None
                         })
                     });
@@ -386,8 +390,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // Checking that witness transaction closes seals defined by transition previous
         // outputs.
         let mut seals = vec![];
-        for prev_out in &transition.inputs {
-            let Opout { op, ty, no } = *prev_out;
+        for input in &transition.inputs {
+            let Opout { op, ty, no } = input.prev_out;
 
             let Some(prev_op) = self.consignment.operation(op) else {
                 // Node, referenced as the ancestor, was not found in the consignment. 
@@ -403,14 +407,14 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             };
 
             let Ok(seal) = variant.revealed_seal_at(no) else {
-                self.status.add_failure(Failure::NoPrevOut(opid,*prev_out));
+                self.status.add_failure(Failure::NoPrevOut(opid,input.prev_out));
                 continue
             };
             let Some(seal) = seal else {
                 // Everything is ok, but we have incomplete data (confidential), thus can't do a 
                 // full verification and have to report the failure
                 self.status
-                    .add_failure(Failure::ConfidentialSeal(*prev_out));
+                    .add_failure(Failure::ConfidentialSeal(input.prev_out));
                 continue
             };
             seals.push(seal)
