@@ -90,6 +90,9 @@ pub struct ContractId(
 impl PartialEq<OpId> for ContractId {
     fn eq(&self, other: &OpId) -> bool { self.to_raw_array() == other.to_raw_array() }
 }
+impl PartialEq<ContractId> for OpId {
+    fn eq(&self, other: &ContractId) -> bool { self.to_raw_array() == other.to_raw_array() }
+}
 
 impl ContractId {
     pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
