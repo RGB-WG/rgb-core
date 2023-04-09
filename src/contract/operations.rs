@@ -143,6 +143,9 @@ pub trait Operation {
     /// serialization
     fn id(&self) -> OpId;
 
+    /// Returns [`ContractId`] this operation belongs to.
+    fn contract_id(&self) -> ContractId;
+
     /// Returns [`Option::Some`]`(`[`TransitionType`]`)` for transitions or
     /// [`Option::None`] for genesis and extension operation types
     fn transition_type(&self) -> Option<TransitionType>;
@@ -200,8 +203,8 @@ impl StrictDeserialize for Genesis {}
 )]
 pub struct Extension {
     pub ffv: Ffv,
-    pub extension_type: ExtensionType,
     pub contract_id: ContractId,
+    pub extension_type: ExtensionType,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
@@ -222,6 +225,7 @@ impl StrictDeserialize for Extension {}
 )]
 pub struct Transition {
     pub ffv: Ffv,
+    pub contract_id: ContractId,
     pub transition_type: TransitionType,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
@@ -269,11 +273,6 @@ impl CommitmentId for Extension {
     type Id = OpId;
 }
 
-impl Genesis {
-    #[inline]
-    pub fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
-}
-
 impl Transition {
     /// Returns reference to information about the owned rights in form of
     /// [`PrevOuts`] wrapper structure which this operation updates with
@@ -282,9 +281,6 @@ impl Transition {
 }
 
 impl Extension {
-    #[inline]
-    pub fn contract_id(&self) -> ContractId { self.contract_id }
-
     /// Returns reference to information about the public rights (in form of
     /// [`Redeemed`] wrapper structure), defined with "parent" state
     /// extensions (i.e. those finalized with the current state transition) or
@@ -302,6 +298,9 @@ impl Operation for Genesis {
 
     #[inline]
     fn id(&self) -> OpId { OpId(self.commitment_id().into_inner()) }
+
+    #[inline]
+    fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { None }
@@ -343,6 +342,9 @@ impl Operation for Extension {
     fn id(&self) -> OpId { self.commitment_id() }
 
     #[inline]
+    fn contract_id(&self) -> ContractId { self.contract_id }
+
+    #[inline]
     fn transition_type(&self) -> Option<TransitionType> { None }
 
     #[inline]
@@ -380,6 +382,9 @@ impl Operation for Transition {
 
     #[inline]
     fn id(&self) -> OpId { self.commitment_id() }
+
+    #[inline]
+    fn contract_id(&self) -> ContractId { self.contract_id }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { Some(self.transition_type) }
@@ -439,6 +444,14 @@ impl<'op> Operation for OpRef<'op> {
             OpRef::Genesis(op) => op.id(),
             OpRef::Transition(op) => op.id(),
             OpRef::Extension(op) => op.id(),
+        }
+    }
+
+    fn contract_id(&self) -> ContractId {
+        match self {
+            OpRef::Genesis(op) => op.contract_id(),
+            OpRef::Transition(op) => op.contract_id(),
+            OpRef::Extension(op) => op.contract_id(),
         }
     }
 
