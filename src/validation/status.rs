@@ -69,35 +69,35 @@ impl Display for Status {
         writeln!(f, "Consignment {}", self.validity())?;
 
         if !self.unresolved_txids.is_empty() {
-            f.write_str("Unknown witness transactions:")?;
+            f.write_str("Unknown witness transactions:\n")?;
             for txid in &self.unresolved_txids {
                 writeln!(f, "- {txid}")?;
             }
         }
 
         if !self.unmined_terminals.is_empty() {
-            f.write_str("Non-mined terminals:")?;
+            f.write_str("Non-mined terminals:\n")?;
             for txid in &self.unmined_terminals {
                 writeln!(f, "- {txid}")?;
             }
         }
 
         if !self.failures.is_empty() {
-            f.write_str("Validation failures:")?;
+            f.write_str("Validation failures:\n")?;
             for fail in &self.failures {
                 writeln!(f, "- {fail}")?;
             }
         }
 
         if !self.warnings.is_empty() {
-            f.write_str("Validation failures:")?;
+            f.write_str("Validation failures:\n")?;
             for warn in &self.warnings {
                 writeln!(f, "- {warn}")?;
             }
         }
 
         if !self.info.is_empty() {
-            f.write_str("Validation failures:")?;
+            f.write_str("Validation failures:\n")?;
             for info in &self.info {
                 writeln!(f, "- {info}")?;
             }

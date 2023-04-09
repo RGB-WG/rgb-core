@@ -38,10 +38,14 @@ use crate::{
     Transition, TransitionBundle, TypedAssigns,
 };
 
-#[derive(Debug, Display, Error)]
+#[derive(Clone, Debug, Display, Error, From)]
 #[display(doc_comments)]
-/// transaction {0} is not mined
-pub struct TxResolverError(Txid);
+pub enum TxResolverError {
+    /// transaction {0} is not mined
+    Unknown(Txid),
+    /// unable to retriev transaction {0}, {1}
+    Other(Txid, String),
+}
 
 pub trait ResolveTx {
     fn resolve_tx(&self, txid: Txid) -> Result<Tx, TxResolverError>;
