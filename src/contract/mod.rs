@@ -48,8 +48,7 @@ pub use fungible::{
 };
 pub use global::{GlobalState, GlobalValues};
 pub use operations::{
-    ContractId, Extension, Genesis, OpId, OpRef, Operation, PrevOuts, Redeemed, Transition,
-    Valencies,
+    ContractId, Extension, Genesis, Inputs, OpId, OpRef, Operation, Redeemed, Transition, Valencies,
 };
 pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, SealWitness, SecretSeal, TxoSeal};
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};

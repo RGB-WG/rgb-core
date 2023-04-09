@@ -38,8 +38,22 @@ use crate::{
 };
 
 pub type Valencies = TinyOrdSet<schema::ValencyType>;
-pub type PrevOuts = TinyOrdSet<Opout>;
+pub type Inputs = TinyOrdSet<Input>;
 pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[display("{prev_out}")]
+pub struct Input {
+    pub prev_out: Opout,
+    pub reserved: u8,
+}
 
 /// Unique operation (genesis, extensions & state transition) identifier
 /// equivalent to the commitment hash
@@ -169,7 +183,7 @@ pub trait Operation {
     /// For genesis and public state extensions always returns an empty list.
     /// While public state extension do have parent nodes, they do not contain
     /// indexed rights.
-    fn prev_outs(&self) -> TinyOrdSet<Opout>;
+    fn inputs(&self) -> Inputs;
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -229,7 +243,7 @@ pub struct Transition {
     pub transition_type: TransitionType,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
-    pub inputs: PrevOuts,
+    pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
 }
@@ -275,9 +289,9 @@ impl CommitmentId for Extension {
 
 impl Transition {
     /// Returns reference to information about the owned rights in form of
-    /// [`PrevOuts`] wrapper structure which this operation updates with
+    /// [`Inputs`] wrapper structure which this operation updates with
     /// state transition ("parent owned rights").
-    pub fn prev_state(&self) -> &PrevOuts { &self.inputs }
+    pub fn prev_state(&self) -> &Inputs { &self.inputs }
 }
 
 impl Extension {
@@ -328,7 +342,7 @@ impl Operation for Genesis {
     }
 
     #[inline]
-    fn prev_outs(&self) -> TinyOrdSet<Opout> { empty!() }
+    fn inputs(&self) -> Inputs { empty!() }
 }
 
 impl Operation for Extension {
@@ -370,7 +384,7 @@ impl Operation for Extension {
     }
 
     #[inline]
-    fn prev_outs(&self) -> TinyOrdSet<Opout> { empty!() }
+    fn inputs(&self) -> Inputs { empty!() }
 }
 
 impl Operation for Transition {
@@ -409,7 +423,7 @@ impl Operation for Transition {
         self.assignments.get(&t).cloned()
     }
 
-    fn prev_outs(&self) -> TinyOrdSet<Opout> { self.inputs.clone() }
+    fn inputs(&self) -> Inputs { self.inputs.clone() }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
@@ -511,11 +525,11 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn prev_outs(&self) -> TinyOrdSet<Opout> {
+    fn inputs(&self) -> Inputs {
         match self {
-            OpRef::Genesis(op) => op.prev_outs(),
-            OpRef::Transition(op) => op.prev_outs(),
-            OpRef::Extension(op) => op.prev_outs(),
+            OpRef::Genesis(op) => op.inputs(),
+            OpRef::Transition(op) => op.inputs(),
+            OpRef::Extension(op) => op.inputs(),
         }
     }
 }
