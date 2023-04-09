@@ -87,6 +87,10 @@ pub struct ContractId(
     Bytes32,
 );
 
+impl PartialEq<OpId> for ContractId {
+    fn eq(&self, other: &OpId) -> bool { self.to_raw_array() == other.to_raw_array() }
+}
+
 impl ContractId {
     pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
         Bytes32::from_slice(slice).map(Self)
