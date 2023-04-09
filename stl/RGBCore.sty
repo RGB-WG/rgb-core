@@ -1,5 +1,5 @@
 {-
-  Id: G93KKQn8zDE7CJwAkdaHcHAdXhFrHbgxnXR6dXLfNSgK
+  Id: dynasty_atlas_germany_CdNmxMHoS1hz6YU72U4e318Q4QBHdqpsF7ELutDXUQKT
   Name: RGBCore
   Description: Consensus layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
@@ -7,7 +7,7 @@
   License: Apache-2.0
 -}
 
-typelib RGB -- ralph_single_client_G93KKQn8zDE7CJwAkdaHcHAdXhFrHbgxnXR6dXLfNSgK
+typelib RGB -- dynasty_atlas_germany_CdNmxMHoS1hz6YU72U4e318Q4QBHdqpsF7ELutDXUQKT
 
 import salsa_peace_patron_26G1K9hm6R2BkzGJwHjLC9cB1JFJiAPCDWrJAoRCrkCg as Bitcoin
 import danube_cotton_kansas_3xcfudRJUuwQ187puYDdNcxGeTpG8AoHyTrfJ9ryo9k6 as StrictTypes
@@ -58,8 +58,8 @@ data ConcealedData    :: [U8 ^ 32]
 data ConcealedFungible :: commitment PedersenCommitment, rangeProof RangeProof
 data ContractId       :: [U8 ^ 32]
 data Extension        :: ffv Ffv
-                       , extensionType U16
                        , contractId ContractId
+                       , extensionType U16
                        , metadata [U8]
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
@@ -87,6 +87,7 @@ data GenesisSchema    :: metadata StrictTypes.SemId
 data GlobalState      :: {U16 -> ^ ..0xff GlobalValues}
 data GlobalStateSchema :: semId StrictTypes.SemId, maxItems U16
 data GlobalValues     :: [RevealedData ^ 1..]
+data Input            :: prevOut Opout, reserved ReservedByte
 data MediaType        :: any:255
 data NoiseDumb        :: [U8 ^ 512]
 data Occurrences      :: min U16, max U16
@@ -96,6 +97,7 @@ data Opout            :: op OpId
                        , no U16
 data PedersenCommitment :: [U8 ^ 33]
 data RangeProof       :: placeholder:255 NoiseDumb
+data ReservedByte     :: U8
 data RevealedAttach   :: id AttachId
                        , mediaType MediaType
                        , salt U64
@@ -128,10 +130,11 @@ data StateSchema      :: declarative ()
                        | structured StrictTypes.SemId
                        | attachment MediaType
 data Transition       :: ffv Ffv
+                       , contractId ContractId
                        , transitionType U16
                        , metadata [U8]
                        , globals GlobalState
-                       , inputs {Opout ^ ..0xff}
+                       , inputs {Input ^ ..0xff}
                        , assignments AssignmentsBlindSealTxPtr
                        , valencies {U16 ^ ..0xff}
 data TransitionBundle :: {[Byte ^ 32] -> ^ ..0xff BundleItem}
