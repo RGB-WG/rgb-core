@@ -90,14 +90,14 @@ impl Display for Status {
         }
 
         if !self.warnings.is_empty() {
-            f.write_str("Validation failures:\n")?;
+            f.write_str("Validation warnings:\n")?;
             for warn in &self.warnings {
                 writeln!(f, "- {warn}")?;
             }
         }
 
         if !self.info.is_empty() {
-            f.write_str("Validation failures:\n")?;
+            f.write_str("Validation info:\n")?;
             for info in &self.info {
                 writeln!(f, "- {info}")?;
             }
