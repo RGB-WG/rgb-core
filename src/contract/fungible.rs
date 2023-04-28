@@ -374,14 +374,14 @@ impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
         let commitment = PedersenCommitment::commit(revealed);
         // TODO: Do actual conceal upon integration of bulletproofs library
         let range_proof = RangeProof::default();
-        let _ = ConcealedValue {
+        eprintln!(
+            "Warning: current version of RGB Core doesn't support production of bulletproofs; \
+             make sure concealed data are not saved since their state will be lost"
+        );
+        ConcealedValue {
             commitment,
             range_proof,
-        };
-        panic!(
-            "current version of RGB Core doesn't support production of bulletproofs. The method \
-             leading to this panic must not be used for now."
-        );
+        }
     }
 }
 
