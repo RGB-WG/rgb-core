@@ -293,6 +293,34 @@ pub enum TypedAssigns<Seal: ExposedSeal> {
     Attachment(SmallVec<AssignAttach<Seal>>),
 }
 
+impl<Seal: ExposedSeal> Conceal for TypedAssigns<Seal> {
+    type Concealed = Self;
+    fn conceal(&self) -> Self::Concealed {
+        match self {
+            TypedAssigns::Declarative(s) => {
+                let concealed_iter = s.iter().map(AssignRights::<Seal>::conceal);
+                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Declarative(inner)
+            }
+            TypedAssigns::Fungible(s) => {
+                let concealed_iter = s.iter().map(AssignFungible::<Seal>::conceal);
+                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Fungible(inner)
+            }
+            TypedAssigns::Structured(s) => {
+                let concealed_iter = s.iter().map(AssignData::<Seal>::conceal);
+                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Structured(inner)
+            }
+            TypedAssigns::Attachment(s) => {
+                let concealed_iter = s.iter().map(AssignAttach::<Seal>::conceal);
+                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Attachment(inner)
+            }
+        }
+    }
+}
+
 impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn is_empty(&self) -> bool {
         match self {

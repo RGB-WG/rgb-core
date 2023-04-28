@@ -28,7 +28,7 @@ use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
-use commit_verify::{mpc, CommitStrategy, CommitmentId};
+use commit_verify::{mpc, CommitStrategy, CommitmentId, Conceal};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
@@ -270,29 +270,65 @@ impl PartialOrd for Transition {
 }
 
 impl CommitStrategy for Genesis {
-    type Strategy = commit_verify::strategies::Strict;
+    type Strategy = commit_verify::strategies::ConcealStrict;
+}
+
+impl Conceal for Genesis {
+    type Concealed = Genesis;
+    fn conceal(&self) -> Self::Concealed {
+        let mut concealed = self.clone();
+        concealed
+            .assignments
+            .keyed_values_mut()
+            .for_each(|(_, a)| *a = a.conceal());
+        concealed
+    }
 }
 
 impl CommitmentId for Genesis {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:genesis:v01#202302";
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:genesis:v02#202304";
     type Id = ContractId;
 }
 
 impl CommitStrategy for Transition {
-    type Strategy = commit_verify::strategies::Strict;
+    type Strategy = commit_verify::strategies::ConcealStrict;
+}
+
+impl Conceal for Transition {
+    type Concealed = Transition;
+    fn conceal(&self) -> Self::Concealed {
+        let mut concealed = self.clone();
+        concealed
+            .assignments
+            .keyed_values_mut()
+            .for_each(|(_, a)| *a = a.conceal());
+        concealed
+    }
 }
 
 impl CommitmentId for Transition {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v01#32A";
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v02#23B";
     type Id = OpId;
 }
 
 impl CommitStrategy for Extension {
-    type Strategy = commit_verify::strategies::Strict;
+    type Strategy = commit_verify::strategies::ConcealStrict;
+}
+
+impl Conceal for Extension {
+    type Concealed = Extension;
+    fn conceal(&self) -> Self::Concealed {
+        let mut concealed = self.clone();
+        concealed
+            .assignments
+            .keyed_values_mut()
+            .for_each(|(_, a)| *a = a.conceal());
+        concealed
+    }
 }
 
 impl CommitmentId for Extension {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:extension:v01#2023";
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:extension:v02#2304";
     type Id = OpId;
 }
 
