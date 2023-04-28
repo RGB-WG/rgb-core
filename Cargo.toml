@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
