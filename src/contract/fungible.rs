@@ -44,7 +44,8 @@ use amplify::hex::{Error, FromHex, ToHex};
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use commit_verify::{
-    CommitEncode, CommitStrategy, CommitVerify, Conceal, Sha256, UntaggedProtocol,
+    CommitEncode, CommitStrategy, CommitVerify, CommitmentProtocol, Conceal, Sha256,
+    UntaggedProtocol,
 };
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
@@ -212,14 +213,7 @@ impl ExposedState for RevealedValue {
 impl Conceal for RevealedValue {
     type Concealed = ConcealedValue;
 
-    fn conceal(&self) -> Self::Concealed {
-        // TODO: Remove panic upon integration of bulletproofs library
-        panic!(
-            "current version of RGB Core doesn't support production of bulletproofs. The method \
-             leading to this panic must not be used for now."
-        );
-        // Confidential::commit(self)
-    }
+    fn conceal(&self) -> Self::Concealed { ConcealedValue::commit(self) }
 }
 impl CommitStrategy for RevealedValue {
     type Strategy = commit_verify::strategies::ConcealStrict;
@@ -348,6 +342,10 @@ impl Default for RangeProof {
     fn default() -> Self { RangeProof::Placeholder(default!()) }
 }
 
+pub struct PedersenProtocol;
+
+impl CommitmentProtocol for PedersenProtocol {}
+
 /// Confidential version of the additive state.
 ///
 /// See also revealed version [`RevealedValue`].
@@ -369,6 +367,22 @@ pub struct ConcealedValue {
 impl ConfidentialState for ConcealedValue {
     fn state_type(&self) -> StateType { StateType::Fungible }
     fn state_commitment(&self) -> StateCommitment { StateCommitment::Fungible(*self) }
+}
+
+impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
+    fn commit(revealed: &RevealedValue) -> Self {
+        let commitment = PedersenCommitment::commit(revealed);
+        // TODO: Do actual conceal upon integration of bulletproofs library
+        let range_proof = RangeProof::default();
+        let _ = ConcealedValue {
+            commitment,
+            range_proof,
+        };
+        panic!(
+            "current version of RGB Core doesn't support production of bulletproofs. The method \
+             leading to this panic must not be used for now."
+        );
+    }
 }
 
 impl ConcealedValue {
