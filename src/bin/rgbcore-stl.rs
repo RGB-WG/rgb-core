@@ -44,9 +44,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sty_id =
         TypeLibId::from_str("danube_cotton_kansas_3xcfudRJUuwQ187puYDdNcxGeTpG8AoHyTrfJ9ryo9k6")?;
     let bitcoin_id =
-        TypeLibId::from_str("salsa_peace_patron_26G1K9hm6R2BkzGJwHjLC9cB1JFJiAPCDWrJAoRCrkCg")?;
-    let bpcore_id =
-        TypeLibId::from_str("human_alarm_video_Hzm5L9FnBnXfocDtyc1i1PmKs1SYXsBQzL4vtd4BVA4S")?;
+        TypeLibId::from_str("panel_chamber_ohio_GWzzfwBqzA5BUVER6hqq3rBdDs6UUJ15w1T8ys6WrNr5")?;
+    let bpcore_id = TypeLibId::from_str(
+        "torpedo_recycle_memphis_G3J7SXkghk9AEaiUzXMa7Vnw441BDScPD1KWdwsrKhao",
+    )?;
     let aluvm_id =
         TypeLibId::from_str("sardine_ground_beatles_5GpK1xbT5AT8buj9rEh2Tp7iFJf7rr36qmbbaU39aMWD")?;
 
