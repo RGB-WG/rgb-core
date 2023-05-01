@@ -420,3 +420,21 @@ impl ConcealedValue {
         Err(RangeProofError::BulletproofsAbsent)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashSet;
+
+    use super::*;
+
+    #[test]
+    fn concealed_commitments_determinism() {
+        let value = RevealedValue::new(15, &mut thread_rng());
+
+        let generators = (0..10)
+            .into_iter()
+            .map(|_| ConcealedValue::commit(&value).commitment)
+            .collect::<HashSet<_>>();
+        assert_eq!(generators.len(), 1);
+    }
+}
