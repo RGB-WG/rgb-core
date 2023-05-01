@@ -541,9 +541,9 @@ impl<Seal: ExposedSeal> CommitStrategy for TypedAssigns<Seal> {
 
 impl<Seal: ExposedSeal> MerkleLeaves for TypedAssigns<Seal> {
     type Leaf = MerkleNode;
-    type LeafIter = vec::IntoIter<MerkleNode>;
+    type LeafIter<'tmp> = vec::IntoIter<MerkleNode> where Self: 'tmp;
 
-    fn merkle_leaves(&self) -> Self::LeafIter {
+    fn merkle_leaves(&self) -> Self::LeafIter<'_> {
         match self {
             TypedAssigns::Declarative(vec) => vec
                 .iter()
