@@ -44,8 +44,7 @@ use amplify::hex::{Error, FromHex, ToHex};
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use commit_verify::{
-    CommitEncode, CommitStrategy, CommitVerify, CommitmentProtocol, Conceal, Sha256,
-    UntaggedProtocol,
+    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, Sha256, UntaggedProtocol,
 };
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
@@ -215,8 +214,14 @@ impl Conceal for RevealedValue {
 
     fn conceal(&self) -> Self::Concealed { ConcealedValue::commit(self) }
 }
-impl CommitStrategy for RevealedValue {
-    type Strategy = commit_verify::strategies::ConcealStrict;
+
+// We need this manual implementation while conceal procedure is inaccessible
+// w/o bulletproofs operational
+impl CommitEncode for RevealedValue {
+    fn commit_encode(&self, e: &mut impl Write) {
+        let commitment = PedersenCommitment::commit(self);
+        commitment.commit_encode(e);
+    }
 }
 
 impl PartialOrd for RevealedValue {
@@ -243,6 +248,8 @@ impl Ord for RevealedValue {
 #[wrapper(Deref, FromStr, Display, LowerHex)]
 #[derive(StrictType)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -275,10 +282,6 @@ impl StrictDecode for PedersenCommitment {
                 .map(PedersenCommitment::from_inner)
         })
     }
-}
-
-impl CommitStrategy for PedersenCommitment {
-    type Strategy = commit_verify::strategies::Strict;
 }
 
 impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
@@ -352,6 +355,7 @@ impl CommitmentProtocol for PedersenProtocol {}
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedFungible")]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -361,6 +365,7 @@ pub struct ConcealedValue {
     /// Pedersen commitment to the original [`FungibleState`].
     pub commitment: PedersenCommitment,
     /// Range proof for the [`FungibleState`] not exceeding type boundaries.
+    #[commit_encode(skip)]
     pub range_proof: RangeProof,
 }
 
@@ -370,14 +375,15 @@ impl ConfidentialState for ConcealedValue {
 }
 
 impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
+    #[allow(dead_code, unreachable_code)]
     fn commit(revealed: &RevealedValue) -> Self {
+        panic!(
+            "Error: current version of RGB Core doesn't support production of bulletproofs; thus, \
+             fungible state must be never concealed"
+        );
         let commitment = PedersenCommitment::commit(revealed);
         // TODO: Do actual conceal upon integration of bulletproofs library
         let range_proof = RangeProof::default();
-        eprintln!(
-            "Warning: current version of RGB Core doesn't support production of bulletproofs; \
-             make sure concealed data are not saved since their state will be lost"
-        );
         ConcealedValue {
             commitment,
             range_proof,
@@ -391,13 +397,6 @@ impl ConcealedValue {
         match self.range_proof {
             RangeProof::Placeholder(_) => false,
         }
-    }
-}
-
-impl CommitEncode for ConcealedValue {
-    fn commit_encode(&self, e: &mut impl Write) {
-        // We do not commit to the range proofs!
-        self.commitment.commit_encode(e)
     }
 }
 

@@ -36,6 +36,8 @@
 extern crate amplify;
 #[macro_use]
 extern crate strict_encoding;
+#[macro_use]
+extern crate commit_verify;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -99,6 +101,8 @@ mod _reserved {
 #[display("v0.10.0+{0}")]
 #[derive(StrictType, StrictEncode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

@@ -25,7 +25,7 @@ use std::str::FromStr;
 use amplify::{Bytes32, RawArray};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::secp256k1::rand::{thread_rng, RngCore};
-use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
+use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, ExposedState};
@@ -62,6 +62,8 @@ impl FromStr for AttachId {
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(conceal, strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -98,9 +100,6 @@ impl Conceal for RevealedAttach {
 
     fn conceal(&self) -> Self::Concealed { ConcealedAttach::commit(self) }
 }
-impl CommitStrategy for RevealedAttach {
-    type Strategy = commit_verify::strategies::ConcealStrict;
-}
 
 /// Confidential version of an attachment information.
 ///
@@ -109,6 +108,8 @@ impl CommitStrategy for RevealedAttach {
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -123,10 +124,6 @@ pub struct ConcealedAttach(
 impl ConfidentialState for ConcealedAttach {
     fn state_type(&self) -> StateType { StateType::Attachment }
     fn state_commitment(&self) -> StateCommitment { StateCommitment::Attachment(*self) }
-}
-
-impl CommitStrategy for ConcealedAttach {
-    type Strategy = commit_verify::strategies::Strict;
 }
 
 impl CommitVerify<RevealedAttach, StrictEncodedProtocol> for ConcealedAttach {

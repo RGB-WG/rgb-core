@@ -226,16 +226,30 @@ where Self: Clone
     }
 }
 
-// We can't use `UsingConceal` strategy here since it relies on the
-// `commit_encode` of the concealed type, and here the concealed type is again
-// `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
-// concealed data.
+// We do not derive here since we omit serialization of the tag: all data are
+// concealed, thus no tag is needed.
 impl<State: ExposedState, Seal: ExposedSeal> CommitEncode for Assign<State, Seal>
 where Self: Clone
 {
     fn commit_encode(&self, e: &mut impl io::Write) {
-        let w = StrictWriter::with(u32::MAX as usize, e);
-        self.conceal().strict_encode(w).ok();
+        match self {
+            Assign::Confidential { seal, state } => {
+                seal.commit_encode(e);
+                state.commit_encode(e);
+            }
+            Assign::ConfidentialState { seal, state } => {
+                seal.commit_encode(e);
+                state.commit_encode(e);
+            }
+            Assign::Revealed { seal, state } => {
+                seal.commit_encode(e);
+                state.commit_encode(e);
+            }
+            Assign::ConfidentialSeal { seal, state } => {
+                seal.commit_encode(e);
+                state.commit_encode(e);
+            }
+        }
     }
 }
 

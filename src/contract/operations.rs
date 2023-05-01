@@ -28,7 +28,7 @@ use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
-use commit_verify::{mpc, CommitStrategy, CommitmentId, Conceal};
+use commit_verify::{mpc, CommitmentId, Conceal};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
@@ -198,6 +198,7 @@ pub trait Operation {
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -219,6 +220,7 @@ impl StrictDeserialize for Genesis {}
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -241,6 +243,7 @@ impl StrictDeserialize for Extension {}
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -269,10 +272,6 @@ impl PartialOrd for Transition {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl CommitStrategy for Genesis {
-    type Strategy = commit_verify::strategies::ConcealStrict;
-}
-
 impl Conceal for Genesis {
     type Concealed = Genesis;
     fn conceal(&self) -> Self::Concealed {
@@ -290,10 +289,6 @@ impl CommitmentId for Genesis {
     type Id = ContractId;
 }
 
-impl CommitStrategy for Transition {
-    type Strategy = commit_verify::strategies::ConcealStrict;
-}
-
 impl Conceal for Transition {
     type Concealed = Transition;
     fn conceal(&self) -> Self::Concealed {
@@ -309,10 +304,6 @@ impl Conceal for Transition {
 impl CommitmentId for Transition {
     const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v02#23B";
     type Id = OpId;
-}
-
-impl CommitStrategy for Extension {
-    type Strategy = commit_verify::strategies::ConcealStrict;
 }
 
 impl Conceal for Extension {

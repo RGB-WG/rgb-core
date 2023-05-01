@@ -57,3 +57,7 @@ features = [ "all" ]
 
 [patch.crates-io]
 commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "commit_encode_derive" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "commit_derive" }
+bp-primitives = { git = "https://github.com/BP-WG/bp-core", branch = "commit_derive" }
+bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "commit_derive" }
+bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "commit_derive" }
