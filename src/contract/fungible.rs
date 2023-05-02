@@ -427,12 +427,16 @@ mod test {
     use super::*;
 
     #[test]
-    fn concealed_commitments_determinism() {
+    fn commitments_determinism() {
         let value = RevealedValue::new(15, &mut thread_rng());
 
         let generators = (0..10)
             .into_iter()
-            .map(|_| ConcealedValue::commit(&value).commitment)
+            .map(|_| {
+                let mut val = vec![];
+                value.commit_encode(&mut val);
+                val
+            })
             .collect::<HashSet<_>>();
         assert_eq!(generators.len(), 1);
     }
