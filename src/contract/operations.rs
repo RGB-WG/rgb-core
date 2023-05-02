@@ -21,6 +21,8 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::collections::{btree_map, btree_set};
+use std::iter;
 use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
@@ -37,9 +39,68 @@ use crate::{
     ReservedByte, TypedAssigns, LIB_NAME_RGB,
 };
 
-pub type Valencies = TinyOrdSet<schema::ValencyType>;
-pub type Inputs = TinyOrdSet<Input>;
-pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct Valencies(TinyOrdSet<schema::ValencyType>);
+
+impl<'a> IntoIterator for &'a Valencies {
+    type Item = schema::ValencyType;
+    type IntoIter = iter::Copied<btree_set::Iter<'a, schema::ValencyType>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
+}
+
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct Redeemed(TinyOrdMap<schema::ValencyType, OpId>);
+
+impl<'a> IntoIterator for &'a Redeemed {
+    type Item = (&'a schema::ValencyType, &'a OpId);
+    type IntoIter = btree_map::Iter<'a, schema::ValencyType, OpId>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct Inputs(TinyOrdSet<Input>);
+
+impl<'a> IntoIterator for &'a Inputs {
+    type Item = Input;
+    type IntoIter = iter::Copied<btree_set::Iter<'a, Input>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
+}
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

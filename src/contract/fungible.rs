@@ -375,7 +375,7 @@ impl ConfidentialState for ConcealedValue {
 }
 
 impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
-    #[allow(dead_code, unreachable_code)]
+    #[allow(dead_code, unreachable_code, unused_variables)]
     fn commit(revealed: &RevealedValue) -> Self {
         panic!(
             "Error: current version of RGB Core doesn't support production of bulletproofs; thus, \

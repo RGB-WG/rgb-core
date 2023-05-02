@@ -385,7 +385,7 @@ impl ContractHistory {
         }
 
         // Remove invalidated state
-        for input in op.inputs() {
+        for input in &op.inputs() {
             if let Some(o) = self.rights.iter().find(|r| r.opout == input.prev_out) {
                 let o = o.clone(); // need this b/c of borrow checker
                 self.rights
