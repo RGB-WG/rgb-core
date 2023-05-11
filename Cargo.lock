@@ -220,7 +220,7 @@ dependencies = [
  "baid58",
  "bp-primitives",
  "commit_verify",
- "secp256k1 0.27.0",
+ "secp256k1",
  "serde",
  "strict_encoding",
 ]
@@ -233,7 +233,7 @@ checksum = "fbfea68e7cf2a2962b609d4de56b8e855ecfe7ca5c2e6deac5ac02289fb5b656"
 dependencies = [
  "amplify",
  "commit_verify",
- "secp256k1 0.27.0",
+ "secp256k1",
  "serde",
  "strict_encoding",
 ]
@@ -746,33 +746,13 @@ checksum = "1792db035ce95be60c3f8853017b3999209281c24e2ba5bc8e59bf97a0c590c1"
 
 [[package]]
 name = "secp256k1"
-version = "0.24.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b1629c9c557ef9b293568b338dddfc8208c98a18c59d722a9d53f859d9c9b62"
-dependencies = [
- "rand",
- "secp256k1-sys 0.6.1",
- "serde",
-]
-
-[[package]]
-name = "secp256k1"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25996b82292a7a57ed3508f052cfff8640d38d32018784acd714758b43da9c8f"
 dependencies = [
  "rand",
- "secp256k1-sys 0.8.1",
+ "secp256k1-sys",
  "serde",
-]
-
-[[package]]
-name = "secp256k1-sys"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83080e2c2fc1006e625be82e5d1eb6a43b7fd9578b617fcc55814daf286bba4b"
-dependencies = [
- "cc",
 ]
 
 [[package]]
@@ -786,24 +766,25 @@ dependencies = [
 
 [[package]]
 name = "secp256k1-zkp"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd403e9f0569b4131ab3fc9fa24a17775331b39382efd2cde851fdca655e3520"
+checksum = "3c07a95044ad86d2bfde4bb9bc99728aad3b311aa4fabea9db3b670846224186"
 dependencies = [
+ "bitcoin-private",
  "rand",
- "secp256k1 0.24.3",
+ "secp256k1",
  "secp256k1-zkp-sys",
  "serde",
 ]
 
 [[package]]
 name = "secp256k1-zkp-sys"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64e7a2beac087c1da2d21018a3b7f043fe2f138654ad9c1518d409061a4a0034"
+checksum = "4237cd927cb5b153fb764b766ced70a7df76d0dacdbaabb49e75bdab03b49c26"
 dependencies = [
  "cc",
- "secp256k1-sys 0.6.1",
+ "secp256k1-sys",
 ]
 
 [[package]]

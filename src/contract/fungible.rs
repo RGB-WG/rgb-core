@@ -293,7 +293,9 @@ impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
         let FungibleState::Bits64(value) = revealed.value;
 
         // TODO: Check that we create correct generator value.
-        let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &secp256k1_zkp::ONE_KEY);
+        let one_key = secp256k1_zkp::SecretKey::from_slice(&secp256k1_zkp::constants::ONE)
+            .expect("secret key from a constant");
+        let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &one_key);
         let h = Sha256::digest(&g.serialize_uncompressed());
         let tag = Tag::from(h);
         let generator = Generator::new_unblinded(SECP256K1, tag);
