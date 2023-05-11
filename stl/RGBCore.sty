@@ -1,5 +1,5 @@
 {-
-  Id: cotton_english_heaven_48Gv7HpZKSbBj6h6xfwzqEDtNMcytjsb3jQwdd2d93Sq
+  Id: orca_famous_unicorn_54LLqJCV8yGPTz6vpJ2vmrU46VR6USUCnXp68hMk4FgS
   Name: RGBCore
   Description: Consensus layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
@@ -7,12 +7,12 @@
   License: Apache-2.0
 -}
 
-typelib RGB -- cotton_english_heaven_48Gv7HpZKSbBj6h6xfwzqEDtNMcytjsb3jQwdd2d93Sq
+typelib RGB -- orca_famous_unicorn_54LLqJCV8yGPTz6vpJ2vmrU46VR6USUCnXp68hMk4FgS
 
+import circus_report_jeep_2bj6eDer24ZBSVq6JgQW2BrARt6vx56vMWzF35J45gzY as Bitcoin
 import danube_cotton_kansas_3xcfudRJUuwQ187puYDdNcxGeTpG8AoHyTrfJ9ryo9k6 as StrictTypes
 import sardine_ground_beatles_5GpK1xbT5AT8buj9rEh2Tp7iFJf7rr36qmbbaU39aMWD as AluVM
-import torpedo_recycle_memphis_G3J7SXkghk9AEaiUzXMa7Vnw441BDScPD1KWdwsrKhao as BPCore
-import panel_chamber_ohio_GWzzfwBqzA5BUVER6hqq3rBdDs6UUJ15w1T8ys6WrNr5 as Bitcoin
+import harlem_null_puma_DxuLX8d9UiMyEJMRJivMFviK1B8t1QWyjywXuDC13iKR as BPCore
 
 
 data AluScript        :: libs AluVM.LibId, entryPoints {[Byte ^ 3] -> AluVM.LibSite}
@@ -63,8 +63,8 @@ data Extension        :: ffv Ffv
                        , metadata [U8]
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
-                       , redeemed {U16 -> ^ ..0xff OpId}
-                       , valencies {U16 ^ ..0xff}
+                       , redeemed Redeemed
+                       , valencies Valencies
 data ExtensionSchema  :: metadata StrictTypes.SemId
                        , globals {U16 -> ^ ..0xff Occurrences}
                        , redeems {U16 ^ ..0xff}
@@ -79,7 +79,7 @@ data Genesis          :: ffv Ffv
                        , metadata [U8]
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
-                       , valencies {U16 ^ ..0xff}
+                       , valencies Valencies
 data GenesisSchema    :: metadata StrictTypes.SemId
                        , globals {U16 -> ^ ..0xff Occurrences}
                        , assignments {U16 -> ^ ..0xff Occurrences}
@@ -88,6 +88,7 @@ data GlobalState      :: {U16 -> ^ ..0xff GlobalValues}
 data GlobalStateSchema :: semId StrictTypes.SemId, maxItems U16
 data GlobalValues     :: [RevealedData ^ 1..]
 data Input            :: prevOut Opout, reserved ReservedByte
+data Inputs           :: {Input ^ ..0xff}
 data MediaType        :: any:255
 data NoiseDumb        :: [U8 ^ 512]
 data Occurrences      :: min U16, max U16
@@ -97,6 +98,7 @@ data Opout            :: op OpId
                        , no U16
 data PedersenCommitment :: [U8 ^ 33]
 data RangeProof       :: placeholder:255 NoiseDumb
+data Redeemed         :: {U16 -> ^ ..0xff OpId}
 data ReservedByte     :: U8
 data RevealedAttach   :: id AttachId
                        , mediaType MediaType
@@ -134,9 +136,9 @@ data Transition       :: ffv Ffv
                        , transitionType U16
                        , metadata [U8]
                        , globals GlobalState
-                       , inputs {Input ^ ..0xff}
+                       , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
-                       , valencies {U16 ^ ..0xff}
+                       , valencies Valencies
 data TransitionBundle :: {[Byte ^ 32] -> ^ ..0xff BundleItem}
 data TransitionSchema :: metadata StrictTypes.SemId
                        , globals {U16 -> ^ ..0xff Occurrences}
@@ -151,5 +153,6 @@ data TypedAssignsBlindSealTxid :: declarative [AssignVoidStateBlindSealTxid]
                        | fungible [AssignRevealedValueBlindSealTxid]
                        | structured [AssignRevealedDataBlindSealTxid]
                        | attachment:255 [AssignRevealedAttachBlindSealTxid]
+data Valencies        :: {U16 ^ ..0xff}
 data VoidState        :: ()
 
