@@ -23,7 +23,7 @@
 use core::fmt::Debug;
 use core::hash::Hash;
 
-use commit_verify::Conceal;
+use commit_verify::{CommitEncode, Conceal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
@@ -34,7 +34,7 @@ use crate::{
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
 pub trait ConfidentialState:
-    Debug + Hash + StrictDumb + StrictEncode + StrictDecode + Eq + Copy
+    Debug + Hash + StrictDumb + StrictEncode + StrictDecode + CommitEncode + Eq + Copy
 {
     fn state_type(&self) -> StateType;
     fn state_commitment(&self) -> StateCommitment;
@@ -47,6 +47,7 @@ pub trait ExposedState:
     + StrictEncode
     + StrictDecode
     + Conceal<Concealed = Self::Confidential>
+    + CommitEncode
     + Eq
     + Ord
     + Clone
@@ -83,6 +84,7 @@ pub enum StateType {
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -127,6 +129,7 @@ impl Conceal for StateData {
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

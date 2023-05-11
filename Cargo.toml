@@ -22,7 +22,7 @@ amplify = "~4.0.0"
 strict_encoding = "~2.1.1"
 strict_types = "~1.1.0"
 aluvm = { version = "~0.10.1", features = ["std"] }
-commit_verify = { version = "~0.10.0", features = ["rand"] }
+commit_verify = { version = "~0.10.1", features = ["rand", "derive"] }
 single_use_seals = "~0.10.0"
 bp-core = { version = "~0.10.1" }
 secp256k1-zkp = { version = "~0.7.0", features = ["use-rand", "rand-std", "global-context"] }
@@ -54,3 +54,10 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = [ "all" ]
+
+[patch.crates-io]
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "commit_encode_derive" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "commit_derive" }
+bp-primitives = { git = "https://github.com/BP-WG/bp-core", branch = "commit_derive" }
+bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "commit_derive" }
+bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "commit_derive" }

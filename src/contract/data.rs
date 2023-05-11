@@ -25,7 +25,7 @@ use core::fmt::{self, Debug, Display, Formatter};
 use amplify::confinement::SmallVec;
 use amplify::hex::ToHex;
 use amplify::{Bytes32, Wrapper};
-use commit_verify::{CommitStrategy, CommitVerify, Conceal, StrictEncodedProtocol};
+use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, ExposedState};
@@ -36,6 +36,8 @@ use crate::{StateCommitment, StateData, StateType, LIB_NAME_RGB};
 #[display("void")]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct VoidState(());
 
@@ -54,13 +56,12 @@ impl Conceal for VoidState {
     type Concealed = VoidState;
     fn conceal(&self) -> Self::Concealed { *self }
 }
-impl CommitStrategy for VoidState {
-    type Strategy = commit_verify::strategies::Strict;
-}
 
 #[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(conceal)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct RevealedData(SmallVec<u8>);
 
@@ -73,9 +74,6 @@ impl ExposedState for RevealedData {
 impl Conceal for RevealedData {
     type Concealed = ConcealedData;
     fn conceal(&self) -> Self::Concealed { ConcealedData::commit(self) }
-}
-impl CommitStrategy for RevealedData {
-    type Strategy = commit_verify::strategies::ConcealStrict;
 }
 
 impl StrictSerialize for RevealedData {}
@@ -102,6 +100,8 @@ impl Display for RevealedData {
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedData")]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -116,10 +116,6 @@ pub struct ConcealedData(
 impl ConfidentialState for ConcealedData {
     fn state_type(&self) -> StateType { StateType::Structured }
     fn state_commitment(&self) -> StateCommitment { StateCommitment::Structured(*self) }
-}
-
-impl CommitStrategy for ConcealedData {
-    type Strategy = commit_verify::strategies::Strict;
 }
 
 impl CommitVerify<RevealedData, StrictEncodedProtocol> for ConcealedData {

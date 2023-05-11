@@ -226,16 +226,30 @@ where Self: Clone
     }
 }
 
-// We can't use `UsingConceal` strategy here since it relies on the
-// `commit_encode` of the concealed type, and here the concealed type is again
-// `OwnedState`, leading to a recurrency. So we use `strict_encode` of the
-// concealed data.
+// We do not derive here since we omit serialization of the tag: all data are
+// concealed, thus no tag is needed.
 impl<State: ExposedState, Seal: ExposedSeal> CommitEncode for Assign<State, Seal>
 where Self: Clone
 {
     fn commit_encode(&self, e: &mut impl io::Write) {
-        let w = StrictWriter::with(u32::MAX as usize, e);
-        self.conceal().strict_encode(w).ok();
+        match self {
+            Assign::Confidential { seal, state } => {
+                seal.commit_encode(e);
+                state.commit_encode(e);
+            }
+            Assign::ConfidentialState { seal, state } => {
+                seal.commit_encode(e);
+                state.commit_encode(e);
+            }
+            Assign::Revealed { seal, state } => {
+                seal.commit_encode(e);
+                state.commit_encode(e);
+            }
+            Assign::ConfidentialSeal { seal, state } => {
+                seal.commit_encode(e);
+                state.commit_encode(e);
+            }
+        }
     }
 }
 
@@ -291,6 +305,34 @@ pub enum TypedAssigns<Seal: ExposedSeal> {
     Structured(SmallVec<AssignData<Seal>>),
     #[strict_type(tag = 0xFF)]
     Attachment(SmallVec<AssignAttach<Seal>>),
+}
+
+impl<Seal: ExposedSeal> Conceal for TypedAssigns<Seal> {
+    type Concealed = Self;
+    fn conceal(&self) -> Self::Concealed {
+        match self {
+            TypedAssigns::Declarative(s) => {
+                let concealed_iter = s.iter().map(AssignRights::<Seal>::conceal);
+                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Declarative(inner)
+            }
+            TypedAssigns::Fungible(s) => {
+                let concealed_iter = s.iter().map(AssignFungible::<Seal>::conceal);
+                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Fungible(inner)
+            }
+            TypedAssigns::Structured(s) => {
+                let concealed_iter = s.iter().map(AssignData::<Seal>::conceal);
+                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Structured(inner)
+            }
+            TypedAssigns::Attachment(s) => {
+                let concealed_iter = s.iter().map(AssignAttach::<Seal>::conceal);
+                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Attachment(inner)
+            }
+        }
+    }
 }
 
 impl<Seal: ExposedSeal> TypedAssigns<Seal> {
@@ -513,9 +555,9 @@ impl<Seal: ExposedSeal> CommitStrategy for TypedAssigns<Seal> {
 
 impl<Seal: ExposedSeal> MerkleLeaves for TypedAssigns<Seal> {
     type Leaf = MerkleNode;
-    type LeafIter = vec::IntoIter<MerkleNode>;
+    type LeafIter<'tmp> = vec::IntoIter<MerkleNode> where Self: 'tmp;
 
-    fn merkle_leaves(&self) -> Self::LeafIter {
+    fn merkle_leaves(&self) -> Self::LeafIter<'_> {
         match self {
             TypedAssigns::Declarative(vec) => vec
                 .iter()

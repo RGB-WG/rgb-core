@@ -28,7 +28,7 @@ pub use bp::seals::txout::blind::{
 };
 pub use bp::seals::txout::TxoSeal;
 use bp::Txid;
-use commit_verify::Conceal;
+use commit_verify::{CommitEncode, Conceal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::LIB_NAME_RGB;
@@ -38,6 +38,7 @@ pub trait ExposedSeal:
     + StrictDumb
     + StrictEncode
     + StrictDecode
+    + CommitEncode
     + Conceal<Concealed = SecretSeal>
     + Eq
     + Ord

@@ -21,6 +21,8 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::collections::{btree_map, btree_set};
+use std::iter;
 use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
@@ -28,7 +30,7 @@ use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, Bytes32, RawArray, Wrapper};
 use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
 use bp::Chain;
-use commit_verify::{mpc, CommitStrategy, CommitmentId};
+use commit_verify::{mpc, CommitmentId, Conceal};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
@@ -37,9 +39,68 @@ use crate::{
     ReservedByte, TypedAssigns, LIB_NAME_RGB,
 };
 
-pub type Valencies = TinyOrdSet<schema::ValencyType>;
-pub type Inputs = TinyOrdSet<Input>;
-pub type Redeemed = TinyOrdMap<schema::ValencyType, OpId>;
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct Valencies(TinyOrdSet<schema::ValencyType>);
+
+impl<'a> IntoIterator for &'a Valencies {
+    type Item = schema::ValencyType;
+    type IntoIter = iter::Copied<btree_set::Iter<'a, schema::ValencyType>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
+}
+
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct Redeemed(TinyOrdMap<schema::ValencyType, OpId>);
+
+impl<'a> IntoIterator for &'a Redeemed {
+    type Item = (&'a schema::ValencyType, &'a OpId);
+    type IntoIter = btree_map::Iter<'a, schema::ValencyType, OpId>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct Inputs(TinyOrdSet<Input>);
+
+impl<'a> IntoIterator for &'a Inputs {
+    type Item = Input;
+    type IntoIter = iter::Copied<btree_set::Iter<'a, Input>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
+}
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -198,6 +259,7 @@ pub trait Operation {
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -219,6 +281,7 @@ impl StrictDeserialize for Genesis {}
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -241,6 +304,7 @@ impl StrictDeserialize for Extension {}
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -269,30 +333,54 @@ impl PartialOrd for Transition {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl CommitStrategy for Genesis {
-    type Strategy = commit_verify::strategies::Strict;
+impl Conceal for Genesis {
+    type Concealed = Genesis;
+    fn conceal(&self) -> Self::Concealed {
+        let mut concealed = self.clone();
+        concealed
+            .assignments
+            .keyed_values_mut()
+            .for_each(|(_, a)| *a = a.conceal());
+        concealed
+    }
 }
 
 impl CommitmentId for Genesis {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:genesis:v01#202302";
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:genesis:v02#202304";
     type Id = ContractId;
 }
 
-impl CommitStrategy for Transition {
-    type Strategy = commit_verify::strategies::Strict;
+impl Conceal for Transition {
+    type Concealed = Transition;
+    fn conceal(&self) -> Self::Concealed {
+        let mut concealed = self.clone();
+        concealed
+            .assignments
+            .keyed_values_mut()
+            .for_each(|(_, a)| *a = a.conceal());
+        concealed
+    }
 }
 
 impl CommitmentId for Transition {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v01#32A";
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v02#23B";
     type Id = OpId;
 }
 
-impl CommitStrategy for Extension {
-    type Strategy = commit_verify::strategies::Strict;
+impl Conceal for Extension {
+    type Concealed = Extension;
+    fn conceal(&self) -> Self::Concealed {
+        let mut concealed = self.clone();
+        concealed
+            .assignments
+            .keyed_values_mut()
+            .for_each(|(_, a)| *a = a.conceal());
+        concealed
+    }
 }
 
 impl CommitmentId for Extension {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:extension:v01#2023";
+    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:extension:v02#2304";
     type Id = OpId;
 }
 

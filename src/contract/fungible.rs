@@ -44,7 +44,7 @@ use amplify::hex::{Error, FromHex, ToHex};
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use commit_verify::{
-    CommitEncode, CommitStrategy, CommitVerify, Conceal, Sha256, UntaggedProtocol,
+    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, Sha256, UntaggedProtocol,
 };
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
@@ -212,17 +212,16 @@ impl ExposedState for RevealedValue {
 impl Conceal for RevealedValue {
     type Concealed = ConcealedValue;
 
-    fn conceal(&self) -> Self::Concealed {
-        // TODO: Remove panic upon integration of bulletproofs library
-        panic!(
-            "current version of RGB Core doesn't support production of bulletproofs. The method \
-             leading to this panic must not be used for now."
-        );
-        // Confidential::commit(self)
-    }
+    fn conceal(&self) -> Self::Concealed { ConcealedValue::commit(self) }
 }
-impl CommitStrategy for RevealedValue {
-    type Strategy = commit_verify::strategies::ConcealStrict;
+
+// We need this manual implementation while conceal procedure is inaccessible
+// w/o bulletproofs operational
+impl CommitEncode for RevealedValue {
+    fn commit_encode(&self, e: &mut impl Write) {
+        let commitment = PedersenCommitment::commit(self);
+        commitment.commit_encode(e);
+    }
 }
 
 impl PartialOrd for RevealedValue {
@@ -249,6 +248,8 @@ impl Ord for RevealedValue {
 #[wrapper(Deref, FromStr, Display, LowerHex)]
 #[derive(StrictType)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -281,10 +282,6 @@ impl StrictDecode for PedersenCommitment {
                 .map(PedersenCommitment::from_inner)
         })
     }
-}
-
-impl CommitStrategy for PedersenCommitment {
-    type Strategy = commit_verify::strategies::Strict;
 }
 
 impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
@@ -348,12 +345,17 @@ impl Default for RangeProof {
     fn default() -> Self { RangeProof::Placeholder(default!()) }
 }
 
+pub struct PedersenProtocol;
+
+impl CommitmentProtocol for PedersenProtocol {}
+
 /// Confidential version of the additive state.
 ///
 /// See also revealed version [`RevealedValue`].
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedFungible")]
+#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -363,6 +365,7 @@ pub struct ConcealedValue {
     /// Pedersen commitment to the original [`FungibleState`].
     pub commitment: PedersenCommitment,
     /// Range proof for the [`FungibleState`] not exceeding type boundaries.
+    #[commit_encode(skip)]
     pub range_proof: RangeProof,
 }
 
@@ -371,19 +374,29 @@ impl ConfidentialState for ConcealedValue {
     fn state_commitment(&self) -> StateCommitment { StateCommitment::Fungible(*self) }
 }
 
+impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
+    #[allow(dead_code, unreachable_code, unused_variables)]
+    fn commit(revealed: &RevealedValue) -> Self {
+        panic!(
+            "Error: current version of RGB Core doesn't support production of bulletproofs; thus, \
+             fungible state must be never concealed"
+        );
+        let commitment = PedersenCommitment::commit(revealed);
+        // TODO: Do actual conceal upon integration of bulletproofs library
+        let range_proof = RangeProof::default();
+        ConcealedValue {
+            commitment,
+            range_proof,
+        }
+    }
+}
+
 impl ConcealedValue {
     /// Verifies bulletproof against the commitment.
     pub fn verify(&self) -> bool {
         match self.range_proof {
             RangeProof::Placeholder(_) => false,
         }
-    }
-}
-
-impl CommitEncode for ConcealedValue {
-    fn commit_encode(&self, e: &mut impl Write) {
-        // We do not commit to the range proofs!
-        self.commitment.commit_encode(e)
     }
 }
 
@@ -404,5 +417,27 @@ impl ConcealedValue {
     /// Verifies validity of the range proof.
     pub fn verify_range_proof(&self) -> Result<bool, RangeProofError> {
         Err(RangeProofError::BulletproofsAbsent)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashSet;
+
+    use super::*;
+
+    #[test]
+    fn commitments_determinism() {
+        let value = RevealedValue::new(15, &mut thread_rng());
+
+        let generators = (0..10)
+            .into_iter()
+            .map(|_| {
+                let mut val = vec![];
+                value.commit_encode(&mut val);
+                val
+            })
+            .collect::<HashSet<_>>();
+        assert_eq!(generators.len(), 1);
     }
 }
