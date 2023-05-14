@@ -17,6 +17,10 @@ exclude = [".github"]
 name = "rgb"
 crate-type = ["cdylib", "rlib"] # We need this for WASM
 
+[[bin]]
+name = "rgbcore-stl"
+required-features = ["stl"]
+
 [dependencies]
 amplify = "~4.0.0"
 strict_encoding = "~2.1.2"
@@ -32,7 +36,8 @@ serde_crate = { package = "serde", version = "1", features = ["derive"], optiona
 
 [features]
 default = []
-all = ["serde"]
+all = ["stl", "serde"]
+stl = ["commit_verify/stl", "bp-core/stl", "aluvm/stl"]
 serde = [
     "serde_crate",
     "amplify/serde",
@@ -54,3 +59,10 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = [ "all" ]
+
+[patch.crates-io]
+strict_encoding = { git = "https://github.com/strict-types/strict-encoding", branch = "stl" }
+strict_types = { git = "https://github.com/strict-types/strict-types", branch = "fix/typesys-builder" }
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "stl" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "stl" }
+aluvm = { git = "https://github.com/AluVM/rust-aluvm" }

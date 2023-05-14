@@ -48,8 +48,8 @@ pub mod contract;
 pub mod schema;
 pub mod validation;
 pub mod vm;
-
-pub const LIB_NAME_RGB: &str = "RGB";
+#[cfg(feature = "stl")]
+pub mod stl;
 
 pub mod prelude {
     pub use bp::dbc::{Anchor, AnchorId};
@@ -62,6 +62,8 @@ pub mod prelude {
 }
 
 pub use prelude::*;
+
+pub const LIB_NAME_RGB: &str = "RGB";
 
 /// Reserved byte.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
