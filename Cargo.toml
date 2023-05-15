@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.10.2"
+version = "0.10.3"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -17,14 +17,18 @@ exclude = [".github"]
 name = "rgb"
 crate-type = ["cdylib", "rlib"] # We need this for WASM
 
+[[bin]]
+name = "rgbcore-stl"
+required-features = ["stl"]
+
 [dependencies]
 amplify = "~4.0.0"
-strict_encoding = "~2.1.2"
-strict_types = "~1.1.1"
-aluvm = { version = "~0.10.1", features = ["std"] }
-commit_verify = { version = "~0.10.1", features = ["rand", "derive"] }
+strict_encoding = "~2.2.0"
+strict_types = "~1.2.0"
+aluvm = { version = "~0.10.2", features = ["std"] }
+commit_verify = { version = "~0.10.2", features = ["rand", "derive"] }
 single_use_seals = "~0.10.0"
-bp-core = { version = "~0.10.2" }
+bp-core = { version = "~0.10.3" }
 secp256k1-zkp = { version = "0.8.0", features = ["use-rand", "rand-std", "global-context"] }
 baid58 = "~0.3.1"
 mime = "~0.3.16"
@@ -32,7 +36,8 @@ serde_crate = { package = "serde", version = "1", features = ["derive"], optiona
 
 [features]
 default = []
-all = ["serde"]
+all = ["stl", "serde"]
+stl = ["commit_verify/stl", "bp-core/stl", "aluvm/stl"]
 serde = [
     "serde_crate",
     "amplify/serde",

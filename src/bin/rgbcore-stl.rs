@@ -20,85 +20,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[macro_use]
-extern crate amplify;
-#[macro_use]
-extern crate strict_types;
+use strict_types::typelib::parse_args;
 
-use std::io::stdout;
-use std::str::FromStr;
-use std::{env, fs, io};
+fn main() {
+    let (format, dir) = parse_args();
 
-use aluvm::LIB_NAME_ALUVM;
-use amplify::num::u24;
-use bp::dbc::LIB_NAME_BPCORE;
-use bp::LIB_NAME_BITCOIN;
-use rgb::{Extension, Genesis, SubSchema, TransitionBundle, LIB_NAME_RGB};
-use strict_encoding::{StrictEncode, StrictWriter, STRICT_TYPES_LIB};
-use strict_types::typelib::LibBuilder;
-use strict_types::{Dependency, TypeLibId};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-
-    let sty_id =
-        TypeLibId::from_str("danube_cotton_kansas_3xcfudRJUuwQ187puYDdNcxGeTpG8AoHyTrfJ9ryo9k6")?;
-    let bitcoin_id =
-        TypeLibId::from_str("circus_report_jeep_2bj6eDer24ZBSVq6JgQW2BrARt6vx56vMWzF35J45gzY")?;
-    let bpcore_id =
-        TypeLibId::from_str("harlem_null_puma_DxuLX8d9UiMyEJMRJivMFviK1B8t1QWyjywXuDC13iKR")?;
-    let aluvm_id =
-        TypeLibId::from_str("sardine_ground_beatles_5GpK1xbT5AT8buj9rEh2Tp7iFJf7rr36qmbbaU39aMWD")?;
-
-    let imports = bset! {
-        Dependency::with(sty_id, libname!(STRICT_TYPES_LIB)),
-        Dependency::with(bitcoin_id, libname!(LIB_NAME_BITCOIN)),
-        Dependency::with(bpcore_id, libname!(LIB_NAME_BPCORE)),
-        Dependency::with(aluvm_id, libname!(LIB_NAME_ALUVM)),
-    };
-
-    let lib = LibBuilder::new(libname!(LIB_NAME_RGB))
-        .process::<SubSchema>()?
-        .process::<Genesis>()?
-        .process::<TransitionBundle>()?
-        .process::<Extension>()?
-        .compile(imports)?;
-    let id = lib.id();
-
-    let ext = match args.get(1).map(String::as_str) {
-        Some("--stl") => "stl",
-        Some("--sty") => "sty",
-        _ => "sty",
-    };
-    let filename = args
-        .get(2)
-        .cloned()
-        .unwrap_or_else(|| format!("stl/RGBCore.{ext}"));
-    let mut file = match args.len() {
-        1 => Box::new(stdout()) as Box<dyn io::Write>,
-        2 | 3 => Box::new(fs::File::create(filename)?) as Box<dyn io::Write>,
-        _ => panic!("invalid argument count"),
-    };
-    match ext {
-        "stl" => {
-            lib.strict_encode(StrictWriter::with(u24::MAX.into_usize(), file))?;
-        }
-        _ => {
-            writeln!(
-                file,
-                "{{-
-  Id: {id}
-  Name: RGBCore
+    rgb::stl::rgb_core_stl()
+        .serialize(
+            format,
+            dir,
+            "0.1.0",
+            Some(
+                "
   Description: Consensus layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
   Copyright (C) 2023 LNP/BP Standards Association. All rights reserved.
-  License: Apache-2.0
--}}
-"
-            )?;
-            writeln!(file, "{lib}")?;
-        }
-    }
-
-    Ok(())
+  License: Apache-2.0",
+            ),
+        )
+        .expect("unable to write to the file");
 }
