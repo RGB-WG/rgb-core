@@ -30,20 +30,20 @@ use strict_types::TypeLib;
 use crate::{Extension, Genesis, SubSchema, TransitionBundle, LIB_NAME_RGB};
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB: &str = "xray_susan_reward_Fvh85VcsTSb2zmdwT13q32Rv9M14nvMaGvCT3JMtRQWf";
+pub const LIB_ID_RGB: &str = "cartel_point_amazon_4QNNifNYm1JEV2AZm4TF3q5GFm6Grs2qD18kWbzLEYMM";
 
 fn _rgb_core_stl() -> Result<TypeLib, TranslateError> {
-    LibBuilder::new(libname!(LIB_NAME_RGB))
-        .transpile::<SubSchema>()
-        .transpile::<Genesis>()
-        .transpile::<TransitionBundle>()
-        .transpile::<Extension>()
-        .compile(bset! {
-            strict_types_stl().to_dependency(),
-            bitcoin_stl().to_dependency(),
-            bp_core_stl().to_dependency(),
-            aluvm_stl().to_dependency()
-        })
+    LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {
+        strict_types_stl().to_dependency(),
+        bitcoin_stl().to_dependency(),
+        bp_core_stl().to_dependency(),
+        aluvm_stl().to_dependency()
+    })
+    .transpile::<SubSchema>()
+    .transpile::<Genesis>()
+    .transpile::<TransitionBundle>()
+    .transpile::<Extension>()
+    .compile()
 }
 
 /// Generates strict type library providing data types for RGB consensus.
