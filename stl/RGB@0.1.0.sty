@@ -1,5 +1,5 @@
 {-
-  Id: xray_susan_reward_Fvh85VcsTSb2zmdwT13q32Rv9M14nvMaGvCT3JMtRQWf
+  Id: fiber_deal_falcon_3NhgEBNcHTwSGZ1zeoGvebAAZrkhxio9HEkc7dYUjaAF
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -8,56 +8,108 @@
   License: Apache-2.0
 -}
 
-typelib RGB -- xray_susan_reward_Fvh85VcsTSb2zmdwT13q32Rv9M14nvMaGvCT3JMtRQWf
+typelib RGB
 
-import collect_equator_sahara_9ar2N9jT1gHk5Ei9b5uoVoVbvWAXFpiWE2Dxg49iMR2R as AluVM
-import cubic_filter_vampire_AqBBP1ZeTXrdAePf6SBcUGbttpvxpHKG7uJLKFkVxtGi as Bitcoin
-import manila_origami_blonde_GUPDJLSfnzeYN8udLa1Z7qFLZ45oiyekN2DR8DRPHqri as BPCore
-import classic_vitamin_turtle_GWq5E83fACXwLpRjdGWCAH1iLA5BvCg3cUWXGD6Uzw29 as StrictTypes
+import carlo_paradox_sharp_8KZV8Qf97nQfiPfrkbzk7jTPhSDQFT2JhrVjMvstS6J8 as BPCore
+-- Imports:
+-- BlindSealTxid := ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE
+-- SecretSeal := VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh
+-- BlindSealTxPtr := AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8
+-- TxPtr := FastIgorStyle0CyRtMpPJkKLX3AdhgY7ZyA7PnYAzCo7yFTeYwwGsUBhn
+-- CloseMethod := AlertCloudArchive0FA1JhsEFKi2LLpuAjuvLA3qiBuEJrwpKyypB9J2aPicr
+
+import figure_radical_liquid_8pj6Q4MDsaQW97omrv5DhAX1yid5Hjmbi8uoBzLQayMh as StrictTypes
+-- Imports:
+-- EnumVariants := TapeFameJudge0bFHn8w5dwS33E4hEVXqZEvFD4RovwhDpABBLkitWu8i
+-- VariantInfoSemId := WonderFinlandPolo02VHiNeGacQAHeReupkxiUfCz36yACzpRLj9UZNNg6CZJ
+-- Primitive := NoisePierreFrance03T3zMmQxuir7TsdjhBLaETJfLH4mr5amAseXDePnzhMT
+-- Variant := SmileCarbonBudget06rAjcbmmmQ3D9sNF3H4gRRsn6VtgZXtHPZkVNtPqdPE5
+-- FieldName := BlondeExportEmpty07B56zEy8agSRneS687Ua1E9wJoxqjNWc1gWhzPFdBiP8
+-- TySemId := UltraModernStory07Cfx84v6h9ydDyUzfzbCweJJg55wMJ72TkbS5dybtSEd
+-- KeyTy := AliasBetweenAirport07cHtfv4Fs2SdpJnaSKnLyeuFGv4E3KeR8Xk6Tv228Yw3
+-- UnnamedFieldsSemId := SloganSummerAppear07mWKWSN4oLP5RHpJp2ofSR2DmPLnoGWnSdaT7XkLjJDL
+-- SemId := StandMailboxBaboon08Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp
+-- Sizing := CairoEverestScreen09jnMbAs5A91zjK9KDrLuFH42WtinmB8GY6JE6BMY31hw
+-- FieldSemId := VenusCanyonMarina0Cha9iVk6HAhidfUntEXfDe9uuHQJatmvWXykmBQsN3zu
+-- UnionVariantsSemId := EnricoHeavyVocal0EGy2QT9A96cNoFmEX2R9AgngqTxKSG3XVtpc3WxciZYw
+-- Ident := DilemmaGreekTibet0Ex6c7e51JEHBavK6CfQmjZoYr6SgPAEKzSxScAFi4epm
+-- NamedFieldsSemId := MixerKineticSilence0FNj4cT6tmEcT3QaSEtg8iZpBf7S5u1sfrnxWbDew3A3z
+-- TypeSystem := EnigmaRoadArcade0HaqyfUvc65u75rjNjqA8hTe8C1tbG3tK5s51DZu2vfaW
+
+import degree_boston_heart_DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo as AluVM
+-- Imports:
+-- LibSite := ContactYellowVision08Q9NNyK2PCcjZ7U7rDGUJBhk8q37hAnWLgSizGLmr56g
+-- LibId := ExhibitBostonArthur0CFdqBJb1FVEwSwuQp47acj2bCFJgJn9J9NKVdoZuG625
+
+import extra_rapid_armada_EXDzvefCHMLgk4KXNvsXsDr2QzgPkxFFUCSEkL3S1ZJL as Bitcoin
+-- Imports:
+-- Vout := OpusDecadeExample03HHRtSJW5fnGkdVW1EVDH7B97Y79WhwvKyyfsaBkuQkk
+-- Chain := ProfitMetalMister06aRP3odHaTGySvSWHjreC8HsbX5ss9LxkQqwcjaoxhpv
+-- Txid := TaxiLearnMalta0C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs
 
 
-data AluScript        :: libs AluVM.LibId, entryPoints {[Byte ^ 3] -> AluVM.LibSite}
-data AssignRevealedAttachBlindSealTxPtr :: confidential (seal BPCore.SecretSeal, state ConcealedAttach)
-                       | confidentialState (seal BPCore.BlindSealTxPtr, state ConcealedAttach)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedAttach)
-                       | revealed (seal BPCore.BlindSealTxPtr, state RevealedAttach)
-data AssignRevealedAttachBlindSealTxid :: confidential (seal BPCore.SecretSeal, state ConcealedAttach)
-                       | confidentialState (seal BPCore.BlindSealTxid, state ConcealedAttach)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedAttach)
-                       | revealed (seal BPCore.BlindSealTxid, state RevealedAttach)
-data AssignRevealedDataBlindSealTxPtr :: confidential (seal BPCore.SecretSeal, state ConcealedData)
-                       | confidentialState (seal BPCore.BlindSealTxPtr, state ConcealedData)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedData)
-                       | revealed (seal BPCore.BlindSealTxPtr, state RevealedData)
-data AssignRevealedDataBlindSealTxid :: confidential (seal BPCore.SecretSeal, state ConcealedData)
-                       | confidentialState (seal BPCore.BlindSealTxid, state ConcealedData)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedData)
-                       | revealed (seal BPCore.BlindSealTxid, state RevealedData)
-data AssignRevealedValueBlindSealTxPtr :: confidential (seal BPCore.SecretSeal, state ConcealedFungible)
-                       | confidentialState (seal BPCore.BlindSealTxPtr, state ConcealedFungible)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedFungible)
-                       | revealed (seal BPCore.BlindSealTxPtr, state RevealedFungible)
-data AssignRevealedValueBlindSealTxid :: confidential (seal BPCore.SecretSeal, state ConcealedFungible)
-                       | confidentialState (seal BPCore.BlindSealTxid, state ConcealedFungible)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedFungible)
-                       | revealed (seal BPCore.BlindSealTxid, state RevealedFungible)
-data AssignVoidStateBlindSealTxPtr :: confidential (seal BPCore.SecretSeal, state VoidState)
-                       | confidentialState (seal BPCore.BlindSealTxPtr, state VoidState)
-                       | confidentialSeal (seal BPCore.SecretSeal, state VoidState)
-                       | revealed (seal BPCore.BlindSealTxPtr, state VoidState)
-data AssignVoidStateBlindSealTxid :: confidential (seal BPCore.SecretSeal, state VoidState)
-                       | confidentialState (seal BPCore.BlindSealTxid, state VoidState)
-                       | confidentialSeal (seal BPCore.SecretSeal, state VoidState)
-                       | revealed (seal BPCore.BlindSealTxid, state VoidState)
+
+-- StingStuartCandid03PcBqBWEJdc94jDf5BPN48dK9ctKLfWLVJzxWYWtp4wb
+data AluScript        :: libs AluVM.LibId {- ExhibitBostonArthur0CFdqBJb1FVEwSwuQp47acj2bCFJgJn9J9NKVdoZuG625 -}, entryPoints {[Byte ^ 3] -> AluVM.LibSite {- ContactYellowVision08Q9NNyK2PCcjZ7U7rDGUJBhk8q37hAnWLgSizGLmr56g -}}
+-- ChariotMarinaCement0GePq4FUFMsg9ST5F9xGw8onGmodG7DvSRn19BCEmtoUo
+data AssignRevealedAttachBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state ConcealedAttach)
+                       | confidentialState (seal BPCore.BlindSealTxPtr {- AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8 -}, state ConcealedAttach)
+                       | confidentialSeal (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state RevealedAttach)
+                       | revealed (seal BPCore.BlindSealTxPtr {- AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8 -}, state RevealedAttach)
+-- SongDelphiStrange03ULvFW9mbxbFR6iWgHL8dkiTSB8PgGbZDSDoG96r6LwD
+data AssignRevealedAttachBlindSealTxid :: confidential (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state ConcealedAttach)
+                       | confidentialState (seal BPCore.BlindSealTxid {- ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE -}, state ConcealedAttach)
+                       | confidentialSeal (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state RevealedAttach)
+                       | revealed (seal BPCore.BlindSealTxid {- ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE -}, state RevealedAttach)
+-- PastaVaticanNatasha0Ex6YVSVtGApLgmof48MpZUXgsaB4ZBXBP2QNFv1BBWYZ
+data AssignRevealedDataBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state ConcealedData)
+                       | confidentialState (seal BPCore.BlindSealTxPtr {- AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8 -}, state ConcealedData)
+                       | confidentialSeal (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state RevealedData)
+                       | revealed (seal BPCore.BlindSealTxPtr {- AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8 -}, state RevealedData)
+-- HotelAnnualMiami0EDmShAA3BjqRs1me5iSUzEaF6PQhKsvbVEtdxfUyuAhS
+data AssignRevealedDataBlindSealTxid :: confidential (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state ConcealedData)
+                       | confidentialState (seal BPCore.BlindSealTxid {- ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE -}, state ConcealedData)
+                       | confidentialSeal (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state RevealedData)
+                       | revealed (seal BPCore.BlindSealTxid {- ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE -}, state RevealedData)
+-- ChanceWizardHeavy0GX9uqARAfKeL4Kf2VggRjVmEX9NLmzMnZR1Xme83eET3
+data AssignRevealedValueBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state ConcealedFungible)
+                       | confidentialState (seal BPCore.BlindSealTxPtr {- AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8 -}, state ConcealedFungible)
+                       | confidentialSeal (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state RevealedFungible)
+                       | revealed (seal BPCore.BlindSealTxPtr {- AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8 -}, state RevealedFungible)
+-- RapidAtomicElement0DfNFuteuzP1PFwu2p7KZx4jUVHwc6AvVaDZ4xaH3y1Ja
+data AssignRevealedValueBlindSealTxid :: confidential (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state ConcealedFungible)
+                       | confidentialState (seal BPCore.BlindSealTxid {- ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE -}, state ConcealedFungible)
+                       | confidentialSeal (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state RevealedFungible)
+                       | revealed (seal BPCore.BlindSealTxid {- ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE -}, state RevealedFungible)
+-- NectarRicardoMotif0Fduqv2hV4s58vgXp93gqYZe7Zjaf8aMeAVpj1udWLMPA
+data AssignVoidStateBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state VoidState)
+                       | confidentialState (seal BPCore.BlindSealTxPtr {- AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8 -}, state VoidState)
+                       | confidentialSeal (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state VoidState)
+                       | revealed (seal BPCore.BlindSealTxPtr {- AntonioCoolYoga09XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8 -}, state VoidState)
+-- DublinNadiaGabriel0762bnEXornAaqA2c9hNAbJbbxabbSTYoxh7fepdpFT3k
+data AssignVoidStateBlindSealTxid :: confidential (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state VoidState)
+                       | confidentialState (seal BPCore.BlindSealTxid {- ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE -}, state VoidState)
+                       | confidentialSeal (seal BPCore.SecretSeal {- VocalWinterMango081NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh -}, state VoidState)
+                       | revealed (seal BPCore.BlindSealTxid {- ArrowNeedleCubic0q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE -}, state VoidState)
+-- TripodBlessChild06jnUE9dFA7Lyc5tFCcqvbAka64k1ASEJu3VXHQdcFN2V
 data AssignmentsBlindSealTxPtr :: {U16 -> ^ ..0xff TypedAssignsBlindSealTxPtr}
+-- NitroJumboInvest0HhrRhDUZ8UGq9Wv69jGDNLRF4J3uQUKtbwv9fsn4uSUp
 data AssignmentsBlindSealTxid :: {U16 -> ^ ..0xff TypedAssignsBlindSealTxid}
+-- TobaccoBrendaEdward09uzoSojhudYvNZYgTmJ5sMwwxzLtdLnfUeudT6Ro8i23
 data AttachId         :: [Byte ^ 32]
+-- TrilogyBalloonSheriff09zzp5XyDaLvZSGhCEWtey1Y7xdD1soEYdGaimjyZexyf
 data BlindingFactor   :: [Byte ^ 32]
+-- ElementStoneCobra08Gjujg1Dk1CV23Pn7CWBdn7vq9rGUS7CZXQmh6MbR4B1
 data BundleItem       :: inputs {U16 ^ ..0xff}, transition Transition?
+-- ItalianSongHarvest0HyVyGxhRswAZ3BHJqx6PKmcEGCUSHaL1Rc7qxxi811qE
 data ConcealedAttach  :: [Byte ^ 32]
+-- DetailPodiumCanvas08YQWVpKJBaYsAwrXvuLDNEDEKRZxfoQJpu1G7X2ZN1tL
 data ConcealedData    :: [Byte ^ 32]
+-- InsectFactorCarlo05UUVzBtqMkymxQmDry4ay4aoXLLojTQQyHGrdSWis3Jt
 data ConcealedFungible :: commitment PedersenCommitment, rangeProof RangeProof
+-- PaintTelexJames0Bho42Xw8wPy2nWxgz6H51rNdBBusaPyrVQT8VypvpZ3w
 data ContractId       :: [Byte ^ 32]
+-- DeclareParkerPremium08FWPS3rgRKKR9RcuhigbVsF7C6aaHckbNptsRMghvBYh
 data Extension        :: ffv Ffv
                        , contractId ContractId
                        , extensionType U16
@@ -66,48 +118,72 @@ data Extension        :: ffv Ffv
                        , assignments AssignmentsBlindSealTxid
                        , redeemed Redeemed
                        , valencies Valencies
-data ExtensionSchema  :: metadata StrictTypes.SemId
+-- BeastManilaStyle067iYChNuFcHJb8MdL6QLu3UN3iBhcowquxQUEVRR8fyT
+data ExtensionSchema  :: metadata StrictTypes.SemId {- StandMailboxBaboon08Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp -}
                        , globals {U16 -> ^ ..0xff Occurrences}
                        , redeems {U16 ^ ..0xff}
                        , assignments {U16 -> ^ ..0xff Occurrences}
                        , valencies {U16 ^ ..0xff}
+-- CarbonCommandDeluxe0FiMEyh3t5FKEsUqVTgQFYJ5XfJF9m2RwKMN9NckympSG
 data Ffv              :: U16
+-- GolfEnigmaAnalog0CD8fR4UCdn4ZE6Y6bNPFkDpXdMCMH1Y8nVPx7NGqqYHB
 data FungibleState    :: bits64:8 U64
+-- RodeoSerialPretty0HpiuYTT7BuhCmoNs2GrwNrHNUx3i3yf6GjDiFphLKeQV
 data FungibleType     :: unsigned64Bit:8
 
+-- ChemistMotorWarning04scakYFRFuZ6bB1QGKBvfV8ZxgSztvLD52ufW9DXBNpL
 data Genesis          :: ffv Ffv
                        , schemaId SchemaId
-                       , chain Bitcoin.Chain
+                       , chain Bitcoin.Chain {- ProfitMetalMister06aRP3odHaTGySvSWHjreC8HsbX5ss9LxkQqwcjaoxhpv -}
                        , metadata [Byte]
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
                        , valencies Valencies
-data GenesisSchema    :: metadata StrictTypes.SemId
+-- SonicNovaProvide0GvvGuP4YdifMMF4EEJ1LvRFkdynnxprngeSkiXKGY17N
+data GenesisSchema    :: metadata StrictTypes.SemId {- StandMailboxBaboon08Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp -}
                        , globals {U16 -> ^ ..0xff Occurrences}
                        , assignments {U16 -> ^ ..0xff Occurrences}
                        , valencies {U16 ^ ..0xff}
+-- SultanPeruVideo0EoJnj2ziA7oichNMM7Gazqe2eYwGvkwyscCgKnGCtuU8
 data GlobalState      :: {U16 -> ^ ..0xff GlobalValues}
-data GlobalStateSchema :: semId StrictTypes.SemId, maxItems U16
+-- StateBorderArmor0ES98zed1FQ1XHZJptvv3ecWF6XFCdQsG1NvtkADYkugP
+data GlobalStateSchema :: semId StrictTypes.SemId {- StandMailboxBaboon08Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp -}, maxItems U16
+-- GyroAuroraMars0AnBpS97EbffL9PYZLfHKESeLoNeosEbLinQM9VqGeG2x
 data GlobalValues     :: [RevealedData ^ 1..]
+-- DemoUraniumSoda0MXcKv35FafL8vRPoxfaZaG96L3bLiNsTtfsJiCLwc23
 data Input            :: prevOut Opout, reserved ReservedByte
+-- PegasusRichardSmile04Pv4CN7nfHbbKyoEBvRVrnihhv7uP8y6QNi6FNRCNjUq
 data Inputs           :: {Input ^ ..0xff}
+-- BenefitSummerGlass05TNhPhpZzE6iDWXaUpdsTAwVsCZj5e9Z8AqFU1ii6HHa
 data MediaType        :: any:255
 
+-- SweetSalamiLetter033ug4TwTBFQxz7D3YdFmwpKET415dv5zQRh5CkavC5fL
 data NoiseDumb        :: [Byte ^ 512]
+-- TitanicRubberEscape04gjtVBchJQ5f1aAzoyxYWeGp6qZi9dPudJCbWKYKhw1a
 data Occurrences      :: min U16, max U16
+-- LightMonsterTomato0B5hRc3ekuQsCAgsk8dmPVfytVDbvECJ3g2ANqrwSLE2p
 data OpId             :: [Byte ^ 32]
+-- VanillaDealTotem0GSmFccVSeMFC6HwwWDciYseMvBWANxXt8Si8ZRLG2p48
 data Opout            :: op OpId
                        , ty U16
                        , no U16
+-- GravityBagelPump05twbh2U5hyaowidwum1iRNCqebBLxTuZTuNPt3SaRT13
 data PedersenCommitment :: [Byte ^ 33]
+-- AvalonSlalomMedical073TpZuiyRWAuV9GRSj9H7tDf3JXwVvmT4teTXhKxdue1
 data RangeProof       :: placeholder:255 NoiseDumb
+-- AmenBalloonCarol02yFKSw4b9ydgvD95xiGnbyDauwyxZ3LdGiS9VQX2ntZg
 data Redeemed         :: {U16 -> ^ ..0xff OpId}
+-- JoshuaVanillaPoint05ezr9uJrSdzez89fTCRWvKwGv6coMmQeXizK371oYdZ2
 data ReservedByte     :: U8
+-- EmpireSectionModular02odg1kiUEtjxBa9MzQmkyDPxKe2hdt6aASEGQTEHAJYU
 data RevealedAttach   :: id AttachId
                        , mediaType MediaType
                        , salt U64
+-- GentleLolaMadonna03DcMJ3YRokNwKN8Cce1ZqsYpiTEuto7EY1szCMEDH97A
 data RevealedData     :: [Byte]
+-- SplitSiliconFiesta07j3XQz367V8aeQcMRK1aYTcbpjhHKCQcWNAJeUuYvVAC
 data RevealedFungible :: value FungibleState, blinding BlindingFactor
+-- HoneySolidBinary03Wcy1ZFB3HPL2NqwUqsKF9UhM8eWjVxFoCAfrzDEDdWN
 data Schema           :: ffv Ffv
                        , subsetOf ()?
                        , globalTypes {U16 -> ^ ..0xff GlobalStateSchema}
@@ -116,9 +192,11 @@ data Schema           :: ffv Ffv
                        , genesis GenesisSchema
                        , extensions {U16 -> ^ ..0xff ExtensionSchema}
                        , transitions {U16 -> ^ ..0xff TransitionSchema}
-                       , typeSystem StrictTypes.TypeSystem
+                       , typeSystem StrictTypes.TypeSystem {- EnigmaRoadArcade0HaqyfUvc65u75rjNjqA8hTe8C1tbG3tK5s51DZu2vfaW -}
                        , script Script
+-- SalaryPlasterNickel0AyzbMn4ux89LLU8ho1L4pQa5TXsmRdHd79oh6SXdrCmd
 data SchemaId         :: [Byte ^ 32]
+-- SheriffIncaCuba067efanDqpDj4fbyuDHoELP3po4LhwRZ9HKJUAiovYLy2
 data SchemaSchema     :: ffv Ffv
                        , subsetOf Schema?
                        , globalTypes {U16 -> ^ ..0xff GlobalStateSchema}
@@ -127,13 +205,16 @@ data SchemaSchema     :: ffv Ffv
                        , genesis GenesisSchema
                        , extensions {U16 -> ^ ..0xff ExtensionSchema}
                        , transitions {U16 -> ^ ..0xff TransitionSchema}
-                       , typeSystem StrictTypes.TypeSystem
+                       , typeSystem StrictTypes.TypeSystem {- EnigmaRoadArcade0HaqyfUvc65u75rjNjqA8hTe8C1tbG3tK5s51DZu2vfaW -}
                        , script Script
+-- PhraseCoupleGround0HyVVQCc7o1wnC3oo1VTHzcpMuVsvzFBTnSFe6xVSiDAV
 data Script           :: aluVm AluScript
+-- NikitaPromiseCollect0tECDKfnyyGZgwoorc1VynUBq9unv34u9WvRBUTduoRK
 data StateSchema      :: declarative ()
                        | fungible FungibleType
-                       | structured StrictTypes.SemId
+                       | structured StrictTypes.SemId {- StandMailboxBaboon08Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp -}
                        | attachment MediaType
+-- ClaudiaPanamaLicense02ASRU1YKjydnDTbLWLCQzV1XzCe15rJihXP61KfrgL5p
 data Transition       :: ffv Ffv
                        , contractId ContractId
                        , transitionType U16
@@ -142,20 +223,26 @@ data Transition       :: ffv Ffv
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
                        , valencies Valencies
+-- GridFerrariControl045NvSBL5BxAw6dW1EDQFWvQWymjyvMhBk96wuXTKn6em
 data TransitionBundle :: {[Byte ^ 32] -> ^ ..0xff BundleItem}
-data TransitionSchema :: metadata StrictTypes.SemId
+-- EthnicJuneSpiral06G2jfCxjg5UPgkgPZSSnQy2147gindeKGjs3SDWbPFcC
+data TransitionSchema :: metadata StrictTypes.SemId {- StandMailboxBaboon08Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp -}
                        , globals {U16 -> ^ ..0xff Occurrences}
                        , inputs {U16 -> ^ ..0xff Occurrences}
                        , assignments {U16 -> ^ ..0xff Occurrences}
                        , valencies {U16 ^ ..0xff}
+-- AnatomyRudolfChild0Gbg8NjDV5x6NnhVzmqksPgAc2hgYzMNcgiu4iHggmQcB
 data TypedAssignsBlindSealTxPtr :: declarative [AssignVoidStateBlindSealTxPtr]
                        | fungible [AssignRevealedValueBlindSealTxPtr]
                        | structured [AssignRevealedDataBlindSealTxPtr]
                        | attachment:255 [AssignRevealedAttachBlindSealTxPtr]
+-- AmigoInfoParole05X4gpjBJD2jiYSSTYrmEb3QZPxHRFDo4TwgUhuZjLVW4
 data TypedAssignsBlindSealTxid :: declarative [AssignVoidStateBlindSealTxid]
                        | fungible [AssignRevealedValueBlindSealTxid]
                        | structured [AssignRevealedDataBlindSealTxid]
                        | attachment:255 [AssignRevealedAttachBlindSealTxid]
+-- LaserRespectGreek0CuTKkWVTMmWsLXdxt9CZ7T2zeeeJP5PNd5fQF8CqfKVG
 data Valencies        :: {U16 ^ ..0xff}
+-- SingleVanillaCake049HkbZvGaJE3phHjLBMQCR3NK1sGA462HJr5BkqQ6YQr
 data VoidState        :: ()
 
