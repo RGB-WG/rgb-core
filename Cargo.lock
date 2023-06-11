@@ -194,7 +194,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.10.3"
-source = "git+https://github.com/BP-WG/bp-core#612ef953964a9073205377f5acc3f96a71dfb5c2"
+source = "git+https://github.com/BP-WG/bp-core?branch=fix/seal-vout#fd1abc0f20c1c23563069a342e5b895556bfefd6"
 dependencies = [
  "amplify",
  "bp-dbc",
@@ -210,7 +210,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.10.3"
-source = "git+https://github.com/BP-WG/bp-core#612ef953964a9073205377f5acc3f96a71dfb5c2"
+source = "git+https://github.com/BP-WG/bp-core?branch=fix/seal-vout#fd1abc0f20c1c23563069a342e5b895556bfefd6"
 dependencies = [
  "amplify",
  "baid58",
@@ -224,7 +224,7 @@ dependencies = [
 [[package]]
 name = "bp-primitives"
 version = "0.10.3"
-source = "git+https://github.com/BP-WG/bp-core#612ef953964a9073205377f5acc3f96a71dfb5c2"
+source = "git+https://github.com/BP-WG/bp-core?branch=fix/seal-vout#fd1abc0f20c1c23563069a342e5b895556bfefd6"
 dependencies = [
  "amplify",
  "commit_verify",
@@ -237,7 +237,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.10.3"
-source = "git+https://github.com/BP-WG/bp-core#612ef953964a9073205377f5acc3f96a71dfb5c2"
+source = "git+https://github.com/BP-WG/bp-core?branch=fix/seal-vout#fd1abc0f20c1c23563069a342e5b895556bfefd6"
 dependencies = [
  "amplify",
  "baid58",

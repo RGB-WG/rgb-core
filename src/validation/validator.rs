@@ -417,7 +417,16 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     .add_failure(Failure::ConfidentialSeal(input.prev_out));
                 continue
             };
-            seals.push(seal)
+
+            match self.anchor_index.get(&op) {
+                Some(anchor) => {
+                    let prev_witness_txid = anchor.txid;
+                    seals.push(seal.resolve(prev_witness_txid))
+                }
+                None => {
+                    self.status.add_warning(Warning::AnchorNotFound(op));
+                }
+            }
         }
 
         let message = mpc::Message::from(bundle_id);
