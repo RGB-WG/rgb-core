@@ -30,7 +30,7 @@ use strict_types::TypeLib;
 use crate::{Extension, Genesis, SubSchema, TransitionBundle, LIB_NAME_RGB};
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB: &str = "cartel_point_amazon_4QNNifNYm1JEV2AZm4TF3q5GFm6Grs2qD18kWbzLEYMM";
+pub const LIB_ID_RGB: &str = "fiber_deal_falcon_3NhgEBNcHTwSGZ1zeoGvebAAZrkhxio9HEkc7dYUjaAF";
 
 fn _rgb_core_stl() -> Result<TypeLib, TranslateError> {
     LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {
