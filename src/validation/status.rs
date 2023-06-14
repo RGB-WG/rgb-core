@@ -382,8 +382,6 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    /// duplicated terminal seal {1} in operation {0}.
-    TerminalDuplication(OpId, SecretSeal),
     /// terminal seal {1} referencing operation {0} is not present in operation
     /// assignments.
     TerminalSealAbsent(OpId, SecretSeal),
