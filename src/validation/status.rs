@@ -390,9 +390,6 @@ pub enum Warning {
     ExcessiveOperation(OpId),
     /// terminal witness transaction {0} is not yet mined.
     TerminalWitnessNotMined(Txid),
-    /// anchor for operation {0} is not found in the index. This is possible an
-    /// internal bug of RGB Core library.
-    AnchorNotFound(OpId),
 
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]

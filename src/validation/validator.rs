@@ -23,7 +23,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
-use bp::seals::txout::Witness;
+use bp::seals::txout::{TxPtr, Witness};
 use bp::{Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
@@ -411,15 +411,17 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 continue
             };
 
-            match self.anchor_index.get(&op) {
-                Some(anchor) => {
+            let seal = match (seal.txid, self.anchor_index.get(&op)) {
+                (TxPtr::WitnessTx, Some(anchor)) => {
                     let prev_witness_txid = anchor.txid;
-                    seals.push(seal.resolve(prev_witness_txid))
+                    seal.resolve(prev_witness_txid)
                 }
-                None => {
-                    self.status.add_warning(Warning::AnchorNotFound(op));
+                (TxPtr::WitnessTx, None) => {
+                    panic!("anchor for the operation {op} was not indexed by the validator");
                 }
-            }
+                (TxPtr::Txid(txid), _) => seal.resolve(txid),
+            };
+            seals.push(seal)
         }
 
         let message = mpc::Message::from(bundle_id);
