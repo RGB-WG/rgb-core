@@ -23,7 +23,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
-use bp::seals::txout::Witness;
+use bp::seals::txout::{TxPtr, Witness};
 use bp::{Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
@@ -120,14 +120,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     // to accept consignment with wrong endpoint list
                     status.add_warning(Warning::TerminalSealAbsent(opid, seal_endpoint));
                 }
-                if end_transitions
-                    .iter()
-                    .filter(|(n, _)| n.id() == opid)
-                    .count() >
-                    0
-                {
-                    status.add_warning(Warning::TerminalDuplication(opid, seal_endpoint));
-                } else {
+                if end_transitions.iter().all(|(n, _)| n.id() != opid) {
                     end_transitions.push((transition, bundle_id));
                 }
             }
@@ -416,6 +409,17 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 self.status
                     .add_failure(Failure::ConfidentialSeal(input.prev_out));
                 continue
+            };
+
+            let seal = match (seal.txid, self.anchor_index.get(&op)) {
+                (TxPtr::WitnessTx, Some(anchor)) => {
+                    let prev_witness_txid = anchor.txid;
+                    seal.resolve(prev_witness_txid)
+                }
+                (TxPtr::WitnessTx, None) => {
+                    panic!("anchor for the operation {op} was not indexed by the validator");
+                }
+                (TxPtr::Txid(txid), _) => seal.resolve(txid),
             };
             seals.push(seal)
         }

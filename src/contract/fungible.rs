@@ -32,11 +32,11 @@
 
 use core::cmp::Ordering;
 use core::fmt::Debug;
+use core::num::ParseIntError;
+use core::ops::Deref;
 use core::str::FromStr;
 use std::io;
 use std::io::Write;
-use std::num::ParseIntError;
-use std::ops::Deref;
 
 use amplify::hex::{Error, FromHex, ToHex};
 // We do not import particular modules to keep aware with namespace prefixes
@@ -44,7 +44,7 @@ use amplify::hex::{Error, FromHex, ToHex};
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use commit_verify::{
-    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, Sha256, UntaggedProtocol,
+    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, Digest, Sha256, UntaggedProtocol,
 };
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
@@ -296,7 +296,7 @@ impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
         let one_key = secp256k1_zkp::SecretKey::from_slice(&secp256k1_zkp::constants::ONE)
             .expect("secret key from a constant");
         let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &one_key);
-        let h = Sha256::digest(&g.serialize_uncompressed());
+        let h: [u8; 32] = Sha256::digest(&g.serialize_uncompressed()).into();
         let tag = Tag::from(h);
         let generator = Generator::new_unblinded(SECP256K1, tag);
 
