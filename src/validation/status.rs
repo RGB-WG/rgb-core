@@ -308,7 +308,8 @@ pub enum Failure {
     },
     /// transition {0} references non-existing previous output {1}.
     NoPrevOut(OpId, Opout),
-    /// seal {0} present in the history is confidential and can't be validated.
+    /// seal defined in the history as a part of operation output {0} is
+    /// confidential and can't be validated.
     ConfidentialSeal(Opout),
     /// transition {0} is not a part of multi-protocol commitment for witness
     /// {1}; anchor is invalid.
@@ -381,8 +382,6 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    /// duplicated terminal seal {1} in operation {0}.
-    TerminalDuplication(OpId, SecretSeal),
     /// terminal seal {1} referencing operation {0} is not present in operation
     /// assignments.
     TerminalSealAbsent(OpId, SecretSeal),

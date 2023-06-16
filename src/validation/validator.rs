@@ -120,14 +120,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     // to accept consignment with wrong endpoint list
                     status.add_warning(Warning::TerminalSealAbsent(opid, seal_endpoint));
                 }
-                if end_transitions
-                    .iter()
-                    .filter(|(n, _)| n.id() == opid)
-                    .count() >
-                    0
-                {
-                    status.add_warning(Warning::TerminalDuplication(opid, seal_endpoint));
-                } else {
+                if end_transitions.iter().all(|(n, _)| n.id() != opid) {
                     end_transitions.push((transition, bundle_id));
                 }
             }
