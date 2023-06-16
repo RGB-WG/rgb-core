@@ -647,7 +647,7 @@ dependencies = [
 
 [[package]]
 name = "rgb-core"
-version = "0.10.3"
+version = "0.10.4"
 dependencies = [
  "aluvm",
  "amplify",
