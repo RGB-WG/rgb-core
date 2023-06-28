@@ -59,7 +59,3 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = [ "all" ]
-
-[patch.crates-io]
-strict_encoding = { git = "https://github.com/strict-types/strict-encoding", branch = "ascii-char" }
-strict_types = { git = "https://github.com/strict-types/strict-types", branch = "restricted-keys" }
