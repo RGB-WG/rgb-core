@@ -20,9 +20,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aluvm::stl::aluvm_stl;
-use bp::bc::stl::bitcoin_stl;
-use bp::stl::bp_core_stl;
+pub use aluvm::stl::aluvm_stl;
+pub use bp::bc::stl::bitcoin_stl;
+pub use bp::stl::bp_core_stl;
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
