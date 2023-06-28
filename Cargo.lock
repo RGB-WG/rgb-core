@@ -866,9 +866,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0be9dd3df80dc083d4e20ac87246a67f42b3a5016375ae5a48f292e85ccfb1bd"
+checksum = "ca43fabd13842577ce6d152047796794e209625ff89d3f2434d99b742eea1c98"
 dependencies = [
  "amplify",
  "half",
@@ -891,9 +891,9 @@ dependencies = [
 
 [[package]]
 name = "strict_types"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e611df6ed5752860c760c94509b838cd225e9e9e5de301517db195cf6f1f2cd"
+checksum = "b4b1669bdf556c9a00a6a9aa9bf76d3ebec83aa4aa3e178bdfd2073157564579"
 dependencies = [
  "amplify",
  "baid58",
@@ -1186,9 +1186,9 @@ dependencies = [
 
 [[package]]
 name = "windows-targets"
-version = "0.48.0"
+version = "0.48.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b1eb6f0cd7c80c79759c929114ef071b87354ce476d9d94271031c0497adfd5"
+checksum = "05d4b17490f70499f20b9e791dcf6a299785ce8af4d709018206dc5b4953e95f"
 dependencies = [
  "windows_aarch64_gnullvm",
  "windows_aarch64_msvc",
