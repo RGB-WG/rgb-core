@@ -456,11 +456,10 @@ dependencies = [
 
 [[package]]
 name = "half"
-version = "2.3.1"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc52e53916c08643f1b56ec082790d1e86a32e58dc5268f897f313fbae7b4872"
+checksum = "6c467d36af040b7b2681f5fddd27427f6da8d3d072f575a265e181d2f8e8d157"
 dependencies = [
- "cfg-if",
  "crunchy",
 ]
 
