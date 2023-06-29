@@ -43,7 +43,9 @@ use amplify::hex::ToHex;
 // that we do not use the standard secp256k1zkp library
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
-use commit_verify::{CommitEncode, CommitVerify, CommitmentProtocol, Conceal, UntaggedProtocol};
+use commit_verify::{
+    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256, UntaggedProtocol,
+};
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
 use strict_encoding::{
@@ -52,7 +54,9 @@ use strict_encoding::{
 };
 
 use super::{ConfidentialState, ExposedState};
-use crate::{schema, StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{
+    schema, AssignmentType, ContractId, StateCommitment, StateData, StateType, LIB_NAME_RGB,
+};
 
 /// An atom of an additive state, which thus can be monomorphically encrypted.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
@@ -128,9 +132,9 @@ pub enum BlindingParseError {
 ///
 /// Knowledge of the blinding factor is important to reproduce the commitment
 /// process if the original value is kept.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default)]
 #[display(Self::to_hex)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
@@ -246,8 +250,12 @@ pub struct RevealedValue {
 impl RevealedValue {
     /// Constructs new state using the provided value using random blinding
     /// factor.
-    pub fn new_random_blinding(value: impl Into<FungibleState>, asset_tag: Bytes32) -> Self {
-        Self::with_blinding(value, BlindingFactor::random(), asset_tag)
+    pub fn new_random_blinding(
+        value: impl Into<FungibleState>,
+        contract_id: ContractId,
+        assignment_type: AssignmentType,
+    ) -> Self {
+        Self::with_blinding(value, BlindingFactor::random(), contract_id, assignment_type)
     }
 
     /// Constructs new state using the provided value and random generator for
@@ -255,21 +263,23 @@ impl RevealedValue {
     pub fn with_random_blinding<R: Rng + RngCore>(
         value: impl Into<FungibleState>,
         rng: &mut R,
-        asset_tag: Bytes32,
+        contract_id: ContractId,
+        assignment_type: AssignmentType,
     ) -> Self {
-        Self {
-            value: value.into(),
-            blinding: BlindingFactor::random_custom(rng),
-            asset_tag,
-        }
+        Self::with_blinding(value, BlindingFactor::random_custom(rng), contract_id, assignment_type)
     }
 
     /// Convenience constructor.
     pub fn with_blinding(
         value: impl Into<FungibleState>,
         blinding: BlindingFactor,
-        asset_tag: Bytes32,
+        contract_id: ContractId,
+        assignment_type: AssignmentType,
     ) -> Self {
+        let mut engine = Sha256::default();
+        engine.input_raw(&contract_id.to_byte_array());
+        engine.input_raw(&assignment_type.to_le_bytes());
+        let asset_tag = engine.finish().into();
         Self {
             value: value.into(),
             blinding,
@@ -490,11 +500,15 @@ impl ConcealedValue {
 mod test {
     use std::collections::HashSet;
 
+    use amplify::ByteArray;
+
     use super::*;
 
     #[test]
     fn commitments_determinism() {
-        let value = RevealedValue::with_random_blinding(15, &mut thread_rng(), Bytes32::zero());
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+
+        let value = RevealedValue::with_random_blinding(15, &mut thread_rng(), tag, 0);
 
         let generators = (0..10)
             .map(|_| {
@@ -510,16 +524,18 @@ mod test {
     #[should_panic]
     fn pedersen_blinding_mismatch() {
         let mut r = thread_rng();
-        let tag = Bytes32::zero();
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
 
-        let a = PedersenCommitment::commit(&RevealedValue::with_random_blinding(15, &mut r, tag))
-            .into_inner();
-        let b = PedersenCommitment::commit(&RevealedValue::with_random_blinding(7, &mut r, tag))
+        let a =
+            PedersenCommitment::commit(&RevealedValue::with_random_blinding(15, &mut r, tag, 0))
+                .into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with_random_blinding(7, &mut r, tag, 0))
             .into_inner();
 
-        let c = PedersenCommitment::commit(&RevealedValue::with_random_blinding(13, &mut r, tag))
-            .into_inner();
-        let d = PedersenCommitment::commit(&RevealedValue::with_random_blinding(9, &mut r, tag))
+        let c =
+            PedersenCommitment::commit(&RevealedValue::with_random_blinding(13, &mut r, tag, 0))
+                .into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with_random_blinding(9, &mut r, tag, 0))
             .into_inner();
 
         assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
@@ -529,16 +545,16 @@ mod test {
     fn pedersen_blinding_same() {
         let blinding =
             BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
-        let tag = Bytes32::zero();
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
 
-        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag))
+        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag, 0))
             .into_inner();
-        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag))
+        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag, 0))
             .into_inner();
 
-        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag))
+        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag, 0))
             .into_inner();
-        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag))
+        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag, 0))
             .into_inner();
 
         assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
@@ -549,17 +565,17 @@ mod test {
     fn pedersen_blinding_same_tag_differ() {
         let blinding =
             BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
-        let tag1 = Bytes32::zero();
-        let tag2 = Bytes32::from_array([1; 32]);
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+        let tag2: ContractId = ContractId::from_byte_array([2u8; 32]);
 
-        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag2))
+        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag2, 0))
             .into_inner();
-        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag1))
+        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag, 0))
             .into_inner();
 
-        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag2))
+        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag2, 0))
             .into_inner();
-        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag1))
+        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag, 0))
             .into_inner();
 
         assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
@@ -569,25 +585,25 @@ mod test {
     fn pedersen_two_tags() {
         let blinding =
             BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
-        let tag1 = Bytes32::zero();
-        let tag2 = Bytes32::from_array([1; 32]);
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+        let tag2: ContractId = ContractId::from_byte_array([2u8; 32]);
 
-        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag2))
+        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag2, 0))
             .into_inner();
-        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag2))
+        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag2, 0))
             .into_inner();
-        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(2, blinding, tag1))
+        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(2, blinding, tag, 0))
             .into_inner();
-        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(4, blinding, tag1))
+        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(4, blinding, tag, 0))
             .into_inner();
 
-        let e = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag2))
+        let e = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag2, 0))
             .into_inner();
-        let f = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag2))
+        let f = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag2, 0))
             .into_inner();
-        let g = PedersenCommitment::commit(&RevealedValue::with_blinding(1, blinding, tag1))
+        let g = PedersenCommitment::commit(&RevealedValue::with_blinding(1, blinding, tag, 0))
             .into_inner();
-        let h = PedersenCommitment::commit(&RevealedValue::with_blinding(5, blinding, tag1))
+        let h = PedersenCommitment::commit(&RevealedValue::with_blinding(5, blinding, tag, 0))
             .into_inner();
 
         assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b, c, d], &[
@@ -597,21 +613,20 @@ mod test {
 
     #[test]
     fn pedersen_blinding_balance() {
-        let tag = Bytes32::from_array([1; 32]);
-
         let blinding1 = BlindingFactor::random();
         let blinding2 = BlindingFactor::random();
         let blinding3 = BlindingFactor::random();
         let blinding4 = BlindingFactor::zero_balanced([blinding1, blinding2], [blinding3]).unwrap();
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
 
-        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding1, tag))
+        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding1, tag, 0))
             .into_inner();
-        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding2, tag))
+        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding2, tag, 0))
             .into_inner();
 
-        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding3, tag))
+        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding3, tag, 0))
             .into_inner();
-        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding4, tag))
+        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding4, tag, 0))
             .into_inner();
 
         assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
