@@ -384,6 +384,10 @@ impl ContractHistory {
             }
         }
 
+        // We skip removing of invalidated state for the cases of re-orgs or unmined witness
+        // transactions committing to the new state.
+        // TODO: Expose an API to prune historic state by witness txid
+        /*
         // Remove invalidated state
         for input in &op.inputs() {
             if let Some(o) = self.rights.iter().find(|r| r.opout == input.prev_out) {
@@ -411,6 +415,7 @@ impl ContractHistory {
                     .expect("collection allows zero elements");
             }
         }
+         */
 
         match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
