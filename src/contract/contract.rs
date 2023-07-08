@@ -384,8 +384,8 @@ impl ContractHistory {
             }
         }
 
-        // We skip removing of invalidated state for the cases of re-orgs or unmined witness
-        // transactions committing to the new state.
+        // We skip removing of invalidated state for the cases of re-orgs or unmined
+        // witness transactions committing to the new state.
         // TODO: Expose an API to prune historic state by witness txid
         /*
         // Remove invalidated state
@@ -519,7 +519,7 @@ impl ContractState {
             .get(&state_type)
             .expect("global type is not in the schema");
         let Some(state) = self.global.get(&state_type) else {
-            return SmallVec::new()
+            return SmallVec::new();
         };
         let iter = state.values().take(schema.max_items as usize);
         SmallVec::try_from_iter(iter).expect("same size as previous confined collection")
