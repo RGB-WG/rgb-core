@@ -23,8 +23,8 @@ required-features = ["stl"]
 
 [dependencies]
 amplify = "~4.0.0"
-strict_encoding = "~2.4.0"
-strict_types = "~1.4.0"
+strict_encoding = "~2.4.2"
+strict_types = "~1.4.2"
 aluvm = { version = "~0.10.3", features = ["std"] }
 commit_verify = { version = "~0.10.3", features = ["rand", "derive"] }
 single_use_seals = "~0.10.0"
