@@ -33,6 +33,7 @@ secp256k1-zkp = { version = "0.8.0", features = ["use-rand", "rand-std", "global
 baid58 = "~0.3.1"
 mime = "~0.3.16"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+half = "~2.2.0" # Required to maintain MSRV
 
 [features]
 default = []

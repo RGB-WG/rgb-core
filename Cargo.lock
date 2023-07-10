@@ -677,6 +677,7 @@ dependencies = [
  "bp-core",
  "commit_verify",
  "getrandom",
+ "half",
  "mime",
  "rand",
  "secp256k1-zkp",
