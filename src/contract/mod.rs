@@ -39,7 +39,7 @@ pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
 pub use bundle::{BundleId, BundleItem, TransitionBundle};
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
-    OpoutParseError, OutputAssignment, RightsOutput, WitnessAnchor,
+    OpoutParseError, OutputAssignment, RightsOutput, WitnessAnchor, WitnessHeight, WitnessOrd,
 };
 pub use data::{ConcealedData, RevealedData, VoidState};
 pub use fungible::{
