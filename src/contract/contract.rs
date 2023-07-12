@@ -25,7 +25,7 @@
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::num::ParseIntError;
+use std::num::{NonZeroU32, ParseIntError};
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
@@ -35,6 +35,7 @@ use bp::seals::txout::TxoSeal;
 use bp::{Outpoint, Txid};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
+use crate::contract::contract::WitnessOrd::OffChain;
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
     Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
@@ -185,39 +186,94 @@ impl<State: ExposedState> OutputAssignment<State> {
     }
 }
 
-/// Txid and height information ordered according to the RGB consensus rules.
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[display("{height}/{txid}")]
+#[strict_type(lib = LIB_NAME_RGB, dumb = { Self(1) })]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct OrderedTxid {
-    pub height: u32,
+#[display(inner)]
+pub struct WitnessHeight(u32);
+
+impl WitnessHeight {
+    pub fn new(height: u32) -> Option<Self> {
+        match height {
+            0 => None,
+            height => Some(WitnessHeight(height)),
+        }
+    }
+
+    pub fn get(&self) -> NonZeroU32 { NonZeroU32::new(self.0).expect("invariant") }
+}
+
+/// RGB consensus information about the current mined height of a witness
+/// transaction defining the ordering of the contract state data.
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = order)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum WitnessOrd {
+    #[display(inner)]
+    OnChain(WitnessHeight),
+
+    #[display("offchain")]
+    #[strict_type(dumb)]
+    OffChain,
+}
+
+impl WitnessOrd {
+    pub fn from_electrum_height(height: u32) -> Self {
+        WitnessHeight::new(height)
+            .map(WitnessOrd::OnChain)
+            .unwrap_or(OffChain)
+    }
+}
+
+/// Txid and height information ordered according to the RGB consensus rules.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[display("{ord}/{txid}")]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct WitnessAnchor {
+    pub ord: WitnessOrd,
     pub txid: Txid,
 }
 
-impl PartialOrd for OrderedTxid {
+impl PartialOrd for WitnessAnchor {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for OrderedTxid {
+impl Ord for WitnessAnchor {
     fn cmp(&self, other: &Self) -> Ordering {
         if self == other {
             return Ordering::Equal;
         }
-        if self.height != other.height {
-            return self.height.cmp(&other.height);
+        if self.ord != other.ord {
+            return self.ord.cmp(&other.ord);
         }
         self.txid.cmp(&other.txid)
     }
 }
 
-impl OrderedTxid {
-    pub fn new(height: u32, txid: Txid) -> Self { OrderedTxid { height, txid } }
+impl WitnessAnchor {
+    pub fn new(ord: WitnessOrd, txid: Txid) -> Self { WitnessAnchor { ord, txid } }
+    pub fn with_electrum_height(height: u32, txid: Txid) -> Self {
+        WitnessAnchor {
+            ord: WitnessOrd::from_electrum_height(height),
+            txid,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -229,7 +285,7 @@ impl OrderedTxid {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalOrd {
-    pub ord_txid: Option<OrderedTxid>,
+    pub ord_txid: Option<WitnessAnchor>,
     pub idx: u16,
 }
 
@@ -253,13 +309,19 @@ impl Ord for GlobalOrd {
 }
 
 impl GlobalOrd {
-    pub fn new(height: u32, txid: Txid, idx: u16) -> Self {
+    pub fn new(ord: WitnessOrd, txid: Txid, idx: u16) -> Self {
         GlobalOrd {
-            ord_txid: Some(OrderedTxid::new(height, txid)),
+            ord_txid: Some(WitnessAnchor::new(ord, txid)),
             idx,
         }
     }
-    pub fn with(ord_txid: OrderedTxid, idx: u16) -> Self {
+    pub fn with_electrum_height(height: u32, txid: Txid, idx: u16) -> Self {
+        GlobalOrd {
+            ord_txid: Some(WitnessAnchor::with_electrum_height(height, txid)),
+            idx,
+        }
+    }
+    pub fn with_anchor(ord_txid: WitnessAnchor, idx: u16) -> Self {
         GlobalOrd {
             ord_txid: Some(ord_txid),
             idx,
@@ -344,7 +406,7 @@ impl ContractHistory {
     ///
     /// If state transition violates RGB consensus rules and wasn't checked
     /// against the schema before adding to the history.
-    pub fn add_transition(&mut self, transition: &Transition, ord_txid: OrderedTxid) {
+    pub fn add_transition(&mut self, transition: &Transition, ord_txid: WitnessAnchor) {
         self.add_operation(SealWitness::Present(ord_txid.txid), transition, Some(ord_txid));
     }
 
@@ -352,7 +414,7 @@ impl ContractHistory {
     ///
     /// If state extension violates RGB consensus rules and wasn't checked
     /// against the schema before adding to the history.
-    pub fn add_extension(&mut self, extension: &Extension, ord_txid: OrderedTxid) {
+    pub fn add_extension(&mut self, extension: &Extension, ord_txid: WitnessAnchor) {
         self.add_operation(SealWitness::Extension, extension, Some(ord_txid));
     }
 
@@ -360,7 +422,7 @@ impl ContractHistory {
         &mut self,
         witness: SealWitness,
         op: &impl Operation,
-        ord_txid: Option<OrderedTxid>,
+        ord_txid: Option<WitnessAnchor>,
     ) {
         let opid = op.id();
 
