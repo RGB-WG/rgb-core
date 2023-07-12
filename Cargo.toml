@@ -10,7 +10,7 @@ categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
 license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.66.0"
+rust-version = "1.67.0" # Due to strict_encoding crate
 exclude = [".github"]
 
 [lib]
@@ -23,17 +23,16 @@ required-features = ["stl"]
 
 [dependencies]
 amplify = "~4.0.0"
-strict_encoding = "~2.4.2"
-strict_types = "~1.4.2"
-aluvm = { version = "~0.10.3", features = ["std"] }
-commit_verify = { version = "~0.10.3", features = ["rand", "derive"] }
+strict_encoding = "~2.5.0"
+strict_types = "~1.5.0"
+aluvm = { version = "~0.10.4", features = ["std"] }
+commit_verify = { version = "~0.10.4", features = ["rand", "derive"] }
 single_use_seals = "~0.10.0"
-bp-core = { version = "~0.10.4" }
+bp-core = { version = "~0.10.5" }
 secp256k1-zkp = { version = "0.8.0", features = ["use-rand", "rand-std", "global-context"] }
 baid58 = "~0.3.1"
 mime = "~0.3.16"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
-half = "~2.2.0" # Required to maintain MSRV
 
 [features]
 default = []
