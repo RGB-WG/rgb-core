@@ -268,6 +268,12 @@ impl Ord for WitnessAnchor {
 
 impl WitnessAnchor {
     pub fn new(ord: WitnessOrd, txid: Txid) -> Self { WitnessAnchor { ord, txid } }
+    pub fn with_mempool(txid: Txid) -> Self {
+        WitnessAnchor {
+            ord: WitnessOrd::OffChain,
+            txid,
+        }
+    }
     pub fn with_electrum_height(height: u32, txid: Txid) -> Self {
         WitnessAnchor {
             ord: WitnessOrd::from_electrum_height(height),
