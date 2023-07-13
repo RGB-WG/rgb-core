@@ -228,7 +228,7 @@ pub enum WitnessOrd {
 }
 
 impl WitnessOrd {
-    pub fn from_electrum_height(height: u32) -> Self {
+    pub fn with_mempool_or_height(height: u32) -> Self {
         WitnessHeight::new(height)
             .map(WitnessOrd::OnChain)
             .unwrap_or(OffChain)
@@ -268,15 +268,15 @@ impl Ord for WitnessAnchor {
 
 impl WitnessAnchor {
     pub fn new(ord: WitnessOrd, txid: Txid) -> Self { WitnessAnchor { ord, txid } }
-    pub fn with_mempool(txid: Txid) -> Self {
+    pub fn from_mempool(txid: Txid) -> Self {
         WitnessAnchor {
             ord: WitnessOrd::OffChain,
             txid,
         }
     }
-    pub fn with_electrum_height(height: u32, txid: Txid) -> Self {
+    pub fn with_mempool_or_height(mempool_or_height: u32, txid: Txid) -> Self {
         WitnessAnchor {
-            ord: WitnessOrd::from_electrum_height(height),
+            ord: WitnessOrd::with_mempool_or_height(mempool_or_height),
             txid,
         }
     }
@@ -323,7 +323,7 @@ impl GlobalOrd {
     }
     pub fn with_electrum_height(height: u32, txid: Txid, idx: u16) -> Self {
         GlobalOrd {
-            ord_txid: Some(WitnessAnchor::with_electrum_height(height, txid)),
+            ord_txid: Some(WitnessAnchor::with_mempool_or_height(height, txid)),
             idx,
         }
     }
