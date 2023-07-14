@@ -25,7 +25,7 @@
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::num::ParseIntError;
+use std::num::{NonZeroU32, ParseIntError};
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
@@ -35,6 +35,7 @@ use bp::seals::txout::TxoSeal;
 use bp::{Outpoint, Txid};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
+use crate::contract::contract::WitnessOrd::OffChain;
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
     Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
@@ -106,15 +107,24 @@ pub struct OutputAssignment<State: ExposedState> {
     pub opout: Opout,
     pub seal: Outpoint,
     pub state: State,
-    // `None` for state extensions
     pub witness: SealWitness,
 }
 
 impl<State: ExposedState> PartialEq for OutputAssignment<State> {
     fn eq(&self, other: &Self) -> bool {
         if self.opout == other.opout {
-            debug_assert_eq!(self.seal, other.seal);
-            debug_assert_eq!(self.state, other.state);
+            if self.seal != other.seal || self.witness != other.witness || self.state != other.state
+            {
+                panic!(
+                    "RGB was provided with an updated operation using different witness \
+                     transaction. This may happen for instance when some ephemeral state (like a \
+                     commitment or HTLC transactions in the lightning channels) is added to the \
+                     stash.\nThis error means the software uses RGB stash in an invalid way and \
+                     has business logic bug which has to be fixed.\nOperation in stash: {:?}\nNew \
+                     operation: {:?}\n",
+                    self, other
+                )
+            }
         }
         self.opout == other.opout
     }
@@ -185,39 +195,100 @@ impl<State: ExposedState> OutputAssignment<State> {
     }
 }
 
-/// Txid and height information ordered according to the RGB consensus rules.
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[display("{height}/{txid}")]
+#[strict_type(lib = LIB_NAME_RGB, dumb = { Self(1) })]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct OrderedTxid {
-    pub height: u32,
+#[display(inner)]
+pub struct WitnessHeight(u32);
+
+impl WitnessHeight {
+    pub fn new(height: u32) -> Option<Self> {
+        match height {
+            0 => None,
+            height => Some(WitnessHeight(height)),
+        }
+    }
+
+    pub fn get(&self) -> NonZeroU32 { NonZeroU32::new(self.0).expect("invariant") }
+}
+
+/// RGB consensus information about the current mined height of a witness
+/// transaction defining the ordering of the contract state data.
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = order)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum WitnessOrd {
+    #[display(inner)]
+    OnChain(WitnessHeight),
+
+    #[display("offchain")]
+    #[strict_type(dumb)]
+    OffChain,
+}
+
+impl WitnessOrd {
+    pub fn with_mempool_or_height(height: u32) -> Self {
+        WitnessHeight::new(height)
+            .map(WitnessOrd::OnChain)
+            .unwrap_or(OffChain)
+    }
+}
+
+/// Txid and height information ordered according to the RGB consensus rules.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[display("{ord}/{txid}")]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct WitnessAnchor {
+    pub ord: WitnessOrd,
     pub txid: Txid,
 }
 
-impl PartialOrd for OrderedTxid {
+impl PartialOrd for WitnessAnchor {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for OrderedTxid {
+impl Ord for WitnessAnchor {
     fn cmp(&self, other: &Self) -> Ordering {
         if self == other {
             return Ordering::Equal;
         }
-        if self.height != other.height {
-            return self.height.cmp(&other.height);
+        if self.ord != other.ord {
+            return self.ord.cmp(&other.ord);
         }
         self.txid.cmp(&other.txid)
     }
 }
 
-impl OrderedTxid {
-    pub fn new(height: u32, txid: Txid) -> Self { OrderedTxid { height, txid } }
+impl WitnessAnchor {
+    pub fn new(ord: WitnessOrd, txid: Txid) -> Self { WitnessAnchor { ord, txid } }
+    pub fn from_mempool(txid: Txid) -> Self {
+        WitnessAnchor {
+            ord: WitnessOrd::OffChain,
+            txid,
+        }
+    }
+    pub fn with_mempool_or_height(mempool_or_height: u32, txid: Txid) -> Self {
+        WitnessAnchor {
+            ord: WitnessOrd::with_mempool_or_height(mempool_or_height),
+            txid,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -229,7 +300,7 @@ impl OrderedTxid {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalOrd {
-    pub ord_txid: Option<OrderedTxid>,
+    pub ord_txid: Option<WitnessAnchor>,
     pub idx: u16,
 }
 
@@ -253,13 +324,19 @@ impl Ord for GlobalOrd {
 }
 
 impl GlobalOrd {
-    pub fn new(height: u32, txid: Txid, idx: u16) -> Self {
+    pub fn new(ord: WitnessOrd, txid: Txid, idx: u16) -> Self {
         GlobalOrd {
-            ord_txid: Some(OrderedTxid::new(height, txid)),
+            ord_txid: Some(WitnessAnchor::new(ord, txid)),
             idx,
         }
     }
-    pub fn with(ord_txid: OrderedTxid, idx: u16) -> Self {
+    pub fn with_electrum_height(height: u32, txid: Txid, idx: u16) -> Self {
+        GlobalOrd {
+            ord_txid: Some(WitnessAnchor::with_mempool_or_height(height, txid)),
+            idx,
+        }
+    }
+    pub fn with_anchor(ord_txid: WitnessAnchor, idx: u16) -> Self {
         GlobalOrd {
             ord_txid: Some(ord_txid),
             idx,
@@ -344,7 +421,7 @@ impl ContractHistory {
     ///
     /// If state transition violates RGB consensus rules and wasn't checked
     /// against the schema before adding to the history.
-    pub fn add_transition(&mut self, transition: &Transition, ord_txid: OrderedTxid) {
+    pub fn add_transition(&mut self, transition: &Transition, ord_txid: WitnessAnchor) {
         self.add_operation(SealWitness::Present(ord_txid.txid), transition, Some(ord_txid));
     }
 
@@ -352,7 +429,7 @@ impl ContractHistory {
     ///
     /// If state extension violates RGB consensus rules and wasn't checked
     /// against the schema before adding to the history.
-    pub fn add_extension(&mut self, extension: &Extension, ord_txid: OrderedTxid) {
+    pub fn add_extension(&mut self, extension: &Extension, ord_txid: WitnessAnchor) {
         self.add_operation(SealWitness::Extension, extension, Some(ord_txid));
     }
 
@@ -360,7 +437,7 @@ impl ContractHistory {
         &mut self,
         witness: SealWitness,
         op: &impl Operation,
-        ord_txid: Option<OrderedTxid>,
+        ord_txid: Option<WitnessAnchor>,
     ) {
         let opid = op.id();
 
@@ -384,6 +461,10 @@ impl ContractHistory {
             }
         }
 
+        // We skip removing of invalidated state for the cases of re-orgs or unmined
+        // witness transactions committing to the new state.
+        // TODO: Expose an API to prune historic state by witness txid
+        /*
         // Remove invalidated state
         for input in &op.inputs() {
             if let Some(o) = self.rights.iter().find(|r| r.opout == input.prev_out) {
@@ -411,6 +492,7 @@ impl ContractHistory {
                     .expect("collection allows zero elements");
             }
         }
+         */
 
         match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
@@ -514,7 +596,7 @@ impl ContractState {
             .get(&state_type)
             .expect("global type is not in the schema");
         let Some(state) = self.global.get(&state_type) else {
-            return SmallVec::new()
+            return SmallVec::new();
         };
         let iter = state.values().take(schema.max_items as usize);
         SmallVec::try_from_iter(iter).expect("same size as previous confined collection")

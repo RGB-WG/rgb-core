@@ -318,9 +318,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 OpRef::Extension(ref extension) => {
                     for (valency, prev_id) in &extension.redeemed {
                         let Some(prev_op) = self.consignment.operation(*prev_id) else {
-                                self.status.add_failure(Failure::ValencyNoParent { opid, prev_id: *prev_id, valency: *valency });
-                                continue;
-                            };
+                            self.status.add_failure(Failure::ValencyNoParent {
+                                opid,
+                                prev_id: *prev_id,
+                                valency: *valency,
+                            });
+                            continue;
+                        };
 
                         if !prev_op.valencies().contains(valency) {
                             self.status.add_failure(Failure::NoPrevValency {
@@ -387,28 +391,32 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             let Opout { op, ty, no } = input.prev_out;
 
             let Some(prev_op) = self.consignment.operation(op) else {
-                // Node, referenced as the ancestor, was not found in the consignment. 
+                // Node, referenced as the ancestor, was not found in the consignment.
                 // Usually this means that the consignment data are broken
-                self.status
-                    .add_failure(Failure::OperationAbsent(op));
-                continue
+                self.status.add_failure(Failure::OperationAbsent(op));
+                continue;
             };
 
             let Some(variant) = prev_op.assignments_by_type(ty) else {
-                self.status.add_failure(Failure::NoPrevState { opid, prev_id: op, state_type: ty });
-                continue
+                self.status.add_failure(Failure::NoPrevState {
+                    opid,
+                    prev_id: op,
+                    state_type: ty,
+                });
+                continue;
             };
 
             let Ok(seal) = variant.revealed_seal_at(no) else {
-                self.status.add_failure(Failure::NoPrevOut(opid,input.prev_out));
-                continue
+                self.status
+                    .add_failure(Failure::NoPrevOut(opid, input.prev_out));
+                continue;
             };
             let Some(seal) = seal else {
-                // Everything is ok, but we have incomplete data (confidential), thus can't do a 
+                // Everything is ok, but we have incomplete data (confidential), thus can't do a
                 // full verification and have to report the failure
                 self.status
                     .add_failure(Failure::ConfidentialSeal(input.prev_out));
-                continue
+                continue;
             };
 
             let seal = match (seal.txid, self.anchor_index.get(&op)) {

@@ -172,7 +172,8 @@ impl InstructionSet for ContractOp {
                 let Some(Ok(state)) = context
                     .prev_state
                     .get(state_type)
-                    .map(|a| a.as_structured_state_at(*index)) else {
+                    .map(|a| a.as_structured_state_at(*index))
+                else {
                     fail!()
                 };
                 let state = state.map(|s| {
@@ -185,7 +186,8 @@ impl InstructionSet for ContractOp {
                 let Some(Ok(state)) = context
                     .owned_state
                     .get(*state_type)
-                    .map(|a| a.into_structured_state_at(*index)) else {
+                    .map(|a| a.into_structured_state_at(*index))
+                else {
                     fail!()
                 };
                 let state = state.map(|s| {
@@ -198,7 +200,8 @@ impl InstructionSet for ContractOp {
                 let Some(Ok(state)) = context
                     .owned_state
                     .get(*state_type)
-                    .map(|a| a.into_fungible_state_at(*index)) else {
+                    .map(|a| a.into_fungible_state_at(*index))
+                else {
                     fail!()
                 };
                 regs.set(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
@@ -207,7 +210,8 @@ impl InstructionSet for ContractOp {
                 let Some(state) = context
                     .global
                     .get(state_type)
-                    .and_then(|a| a.get(*index as usize)) else {
+                    .and_then(|a| a.get(*index as usize))
+                else {
                     fail!()
                 };
                 regs.set_s(*reg, Some(state.as_inner()));
