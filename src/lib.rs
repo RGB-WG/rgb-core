@@ -100,7 +100,7 @@ mod _reserved {
 
 /// Fast-forward version code
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
-#[display("v0.10.0+{0}")]
+#[display("RGB/1.{0}")]
 #[derive(StrictType, StrictEncode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]

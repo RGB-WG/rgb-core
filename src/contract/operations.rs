@@ -191,7 +191,7 @@ impl ToBaid58<32> for ContractId {
 impl FromBaid58<32> for ContractId {}
 
 impl ContractId {
-    fn to_baid58_string(&self) -> String { format!("{:0}", self.to_baid58()) }
+    fn to_baid58_string(&self) -> String { format!("{::^}", self.to_baid58()) }
 }
 
 impl FromStr for ContractId {
@@ -628,5 +628,32 @@ impl<'op> Operation for OpRef<'op> {
             OpRef::Transition(op) => op.inputs(),
             OpRef::Extension(op) => op.inputs(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn contract_id_display() {
+        const ID: &str = "rgb:pkXwpsbaemTWhtSgVDGF25hEijtTAnPjzhB63ZwSehEWvfhF9";
+        let id = ContractId::from_raw_array([0x6c; 32]);
+        assert_eq!(ID.len(), 53);
+        assert_eq!(ID, id.to_string());
+        assert_eq!(ID, id.to_baid58_string());
+    }
+
+    #[test]
+    fn contract_id_from_str() {
+        let id = ContractId::from_raw_array([0x6c; 32]);
+        assert_eq!(
+            Ok(id),
+            ContractId::from_str("rgb:pkXwpsbaemTWhtSgVDGF25hEijtTAnPjzhB63ZwSehEWvfhF9")
+        );
+        assert_eq!(
+            Ok(id),
+            ContractId::from_str("pkXwpsbaemTWhtSgVDGF25hEijtTAnPjzhB63ZwSehEWvfhF9")
+        );
     }
 }
