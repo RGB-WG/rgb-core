@@ -1,12 +1,12 @@
 -----BEGIN STRICT TYPE LIB-----
-Id: memphis_asia_crash_4fGZWR5mH5zZzRZ1r7CSRe776zm3hLBUngfXc4s3vm3V
+Id: urn:ubideco:stl:4fGZWR5mH5zZzRZ1r7CSRe776zm3hLBUngfXc4s3vm3V
 Name: RGB
 Dependencies: 
-  BPCore@cuba_caesar_yellow_2YsxMW6xygK2FxFSbbBLqmzaUSytmLHHNF9DRio5zNr2,
-  StrictTypes@canoe_safari_scholar_5XLKQ1sNryZm9bdFKU2kBY3MPYdZXhchVdQKBbHA3gby,
-  Bitcoin@race_ballet_golf_6GgF7biXPVNcus2FfQj2pQuRzau11rXApMQLfCZhojgi,
-  Std@lagoon_rodent_option_9KALDYR8Nyjq4FdMW6kYoL7vdkWnqPqNuFnmE9qHpNjZ,
-  AluVM@degree_boston_heart_DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo
+  urn:ubideco:stl:2YsxMW6xygK2FxFSbbBLqmzaUSytmLHHNF9DRio5zNr2,
+  urn:ubideco:stl:5XLKQ1sNryZm9bdFKU2kBY3MPYdZXhchVdQKBbHA3gby,
+  urn:ubideco:stl:6GgF7biXPVNcus2FfQj2pQuRzau11rXApMQLfCZhojgi,
+  urn:ubideco:stl:9KALDYR8Nyjq4FdMW6kYoL7vdkWnqPqNuFnmE9qHpNjZ,
+  urn:ubideco:stl:DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo
 
 A1JHQgUXBk5pibwA035ABMB1qXDVJA6Hx9E0fiwbbm7GLsChNwZCUENvcmVDNAOU
 2Bsw4lIokCYe82/5+Kg5UZH1C2leIyoes7dByAtTdHJpY3RUeXBlc05OhPRwFsnl

@@ -34,7 +34,7 @@ use crate::{MediaType, StateCommitment, StateData, StateType, LIB_NAME_RGB};
 /// Unique data attachment identifier
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[display(Self::to_baid58)]
+#[display(Self::to_baid58_string)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -49,14 +49,18 @@ pub struct AttachId(
 );
 
 impl ToBaid58<32> for AttachId {
-    const HRI: &'static str = "att";
+    const HRI: &'static str = "rgb-file";
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
 }
 impl FromBaid58<32> for AttachId {}
-
+impl AttachId {
+    pub fn to_baid58_string(&self) -> String { format!("{::<#}", self.to_baid58()) }
+}
 impl FromStr for AttachId {
     type Err = Baid58ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_str(s) }
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_baid58_str(s.trim_start_matches("rgb-file:"))
+    }
 }
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
@@ -128,4 +132,33 @@ impl ConfidentialState for ConcealedAttach {
 
 impl CommitVerify<RevealedAttach, StrictEncodedProtocol> for ConcealedAttach {
     fn commit(revealed: &RevealedAttach) -> Self { Bytes32::commit(revealed).into() }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn attach_id_display() {
+        const ID: &str =
+            "rgb-file:8JEvTXJ6sD5U4n1p7GEERYMPN9ijjs9ZM4ysJ3qhgyqM#flash-plasma-sinatra";
+        let id = AttachId::from_raw_array([0x6c; 32]);
+        assert_eq!(ID, id.to_string());
+        assert_eq!(ID, id.to_baid58_string());
+    }
+
+    #[test]
+    fn attach_id_from_str() {
+        let id = AttachId::from_raw_array([0x6c; 32]);
+        assert_eq!(
+            Ok(id),
+            AttachId::from_str(
+                "rgb-file:8JEvTXJ6sD5U4n1p7GEERYMPN9ijjs9ZM4ysJ3qhgyqM#flash-plasma-sinatra"
+            )
+        );
+        assert_eq!(
+            Ok(id),
+            AttachId::from_str("rgb-file:8JEvTXJ6sD5U4n1p7GEERYMPN9ijjs9ZM4ysJ3qhgyqM")
+        );
+    }
 }
