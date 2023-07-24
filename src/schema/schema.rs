@@ -165,11 +165,11 @@ mod test {
         let dumb = SchemaId::strict_dumb();
         assert_eq!(dumb.to_string(), "11111111111111111111111111111111");
         assert_eq!(&format!("{dumb::^#}"), "11111111111111111111111111111111");
-        assert_eq!(dumb.mnemonic_checksum(), "sweden-gate-virgo");
+        assert_eq!(dumb.mnemonic_checksum(), "bonus-dexter-navy");
 
         let less_dumb = SchemaId::from_raw_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
         assert_eq!(less_dumb.to_string(), "5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz");
         assert_eq!(&format!("{less_dumb::^#}"), "5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz");
-        assert_eq!(less_dumb.mnemonic_checksum(), "salami-comedy-cello");
+        assert_eq!(less_dumb.mnemonic_checksum(), "karate-alarm-price");
     }
 }

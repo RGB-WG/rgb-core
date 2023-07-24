@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3856ee4be23c8a4b44c4119656e92aeb654c69244290c4c81feb467d49354ce"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.3.2",
  "getrandom",
  "half",
  "paste",
@@ -148,6 +148,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "baid58"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "052064cc0caa02b62c88f06a7237304fb297873c78b6e95addecc3c5ddfce4ae"
+dependencies = [
+ "base58",
+ "blake3",
+ "mnemonic",
+ "sha2",
+]
+
+[[package]]
 name = "base58"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -179,9 +191,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "blake3"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "729b71f35bd3fa1a4c86b85d32c8b9069ea7fe14f7a53cfabb65f62d4265b888"
+checksum = "199c42ab6972d92c9f8995f086273d25c42fc0f7b2a1fcefba465c1352d25ba5"
 dependencies = [
  "arrayref",
  "arrayvec",
@@ -224,7 +236,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bd7e637529d70db7881fcaf2aaa6a09ae8ee1a1e6ca499dbbf041e032ff3f73"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.3.2",
  "bp-primitives",
  "commit_verify",
  "secp256k1",
@@ -253,7 +265,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15f5f82a3813921ffd1d668dbcfd17bcb7c90a08de7af76dffb7b9e77c72c7d0"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.3.2",
  "bp-dbc",
  "bp-primitives",
  "commit_verify",
@@ -340,9 +352,9 @@ dependencies = [
 
 [[package]]
 name = "constant_time_eq"
-version = "0.2.6"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21a53c0a4d288377e7415b53dcfc3c04da5cdc2cc95c8d5ac178b58f0b861ad6"
+checksum = "f7144d30dcf0fafbce74250a3963025d8d52177934239851c917d29f1df280c2"
 
 [[package]]
 name = "core-foundation-sys"
@@ -675,7 +687,7 @@ version = "0.10.5"
 dependencies = [
  "aluvm",
  "amplify",
- "baid58",
+ "baid58 0.4.1",
  "bp-core",
  "commit_verify",
  "getrandom",
@@ -892,12 +904,12 @@ dependencies = [
 
 [[package]]
 name = "strict_types"
-version = "1.5.0"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75574939fc4c5a13ab4f49d06e965a9d4bd0aa1deff4e227a2afb6dbebff1249"
+checksum = "d8a6654c43ed02891b249730856ad6b866fd85d1008aad51b30bd68812798427"
 dependencies = [
  "amplify",
- "baid58",
+ "baid58 0.4.1",
  "base64 0.21.2",
  "half",
  "indexmap 1.9.3",
