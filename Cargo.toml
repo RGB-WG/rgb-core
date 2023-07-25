@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.10.6"
+version = "0.10.7"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -28,9 +28,9 @@ strict_types = "~1.6.0"
 aluvm = { version = "~0.10.5", features = ["std"] }
 commit_verify = { version = "~0.10.5", features = ["rand", "derive"] }
 single_use_seals = "~0.10.0"
-bp-core = { version = "~0.10.6" }
+bp-core = { version = "~0.10.7" }
 secp256k1-zkp = { version = "0.8.0", features = ["use-rand", "rand-std", "global-context"] }
-baid58 = "~0.4.1"
+baid58 = "~0.4.4"
 mime = "~0.3.16"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 

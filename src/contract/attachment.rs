@@ -23,7 +23,7 @@
 use std::str::FromStr;
 
 use amplify::{Bytes32, RawArray};
-use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
+use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use bp::secp256k1::rand::{thread_rng, RngCore};
 use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::StrictEncode;
@@ -49,18 +49,21 @@ pub struct AttachId(
 );
 
 impl ToBaid58<32> for AttachId {
-    const HRI: &'static str = "rgb-file";
+    const HRI: &'static str = "stashfs";
+    const CHUNKING: Option<Chunking> = CHUNKING_32;
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
+    fn to_baid58_string(&self) -> String { self.to_string() }
 }
 impl FromBaid58<32> for AttachId {}
 impl AttachId {
-    pub fn to_baid58_string(&self) -> String { format!("{::<#}", self.to_baid58()) }
+    pub fn to_baid58_string(&self) -> String { format!("{::<#.2}", self.to_baid58()) }
 }
 impl FromStr for AttachId {
     type Err = Baid58ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_baid58_str(s.trim_start_matches("rgb-file:"))
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_chunked_str(s, ':', '#') }
+}
+impl AttachId {
+    pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
 }
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
@@ -141,10 +144,11 @@ mod test {
     #[test]
     fn attach_id_display() {
         const ID: &str =
-            "rgb-file:8JEvTXJ6sD5U4n1p7GEERYMPN9ijjs9ZM4ysJ3qhgyqM#flash-plasma-sinatra";
+            "stashfs:8JEvTX-J6sD5U4n-1p7GEERY-MPN9ijjs-9ZM4ysJ3-qhgyqM#juice-empty-joker";
         let id = AttachId::from_raw_array([0x6c; 32]);
         assert_eq!(ID, id.to_string());
         assert_eq!(ID, id.to_baid58_string());
+        assert_eq!("juice-empty-joker", id.to_mnemonic());
     }
 
     #[test]
@@ -153,12 +157,12 @@ mod test {
         assert_eq!(
             Ok(id),
             AttachId::from_str(
-                "rgb-file:8JEvTXJ6sD5U4n1p7GEERYMPN9ijjs9ZM4ysJ3qhgyqM#flash-plasma-sinatra"
+                "stashfs:8JEvTX-J6sD5U4n-1p7GEERY-MPN9ijjs-9ZM4ysJ3-qhgyqM#juice-empty-joker"
             )
         );
         assert_eq!(
             Ok(id),
-            AttachId::from_str("rgb-file:8JEvTXJ6sD5U4n1p7GEERYMPN9ijjs9ZM4ysJ3qhgyqM")
+            AttachId::from_str("stashfs:8JEvTX-J6sD5U4n-1p7GEERY-MPN9ijjs-9ZM4ysJ3-qhgyqM")
         );
     }
 }
