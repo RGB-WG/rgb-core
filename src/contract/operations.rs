@@ -29,7 +29,7 @@ use std::str::FromStr;
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, Bytes32, RawArray, Wrapper};
-use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58};
+use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
 use bp::Chain;
 use commit_verify::{mpc, CommitmentId, Conceal};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
@@ -184,10 +184,9 @@ impl ContractId {
     }
 }
 
-const CONTRACT_ID_CHUNK_POSITIONS: [u8; 5] = [7, 9, 9, 9, 9];
 impl ToBaid58<32> for ContractId {
     const HRI: &'static str = "rgb";
-    const CHUNKING: Option<Chunking> = Some(Chunking::new(&CONTRACT_ID_CHUNK_POSITIONS, '-'));
+    const CHUNKING: Option<Chunking> = CHUNKING_32CHECKSUM;
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
     fn to_baid58_string(&self) -> String { self.to_string() }
 }
@@ -204,29 +203,7 @@ impl Display for ContractId {
 impl FromStr for ContractId {
     type Err = Baid58ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.contains('-') {
-            let count = s.chars().filter(|c| *c == '-').count();
-            if count != CONTRACT_ID_CHUNK_POSITIONS.len() {
-                return Err(Baid58ParseError::Unparsable(s!("invalid number of chunk separators")));
-            }
-            let mut offset = s
-                .chars()
-                .position(|c| c == ':')
-                .map(|p| p + 1)
-                .unwrap_or_default();
-            for pos in CONTRACT_ID_CHUNK_POSITIONS {
-                offset += pos as usize;
-                if s.as_bytes()[offset] != b'-' {
-                    return Err(Baid58ParseError::Unparsable(s!(
-                        "invalid chunk separator positions"
-                    )));
-                }
-                offset = offset.saturating_add(1);
-            }
-            Self::from_baid58_chunked_str(s, ':', '#')
-        } else {
-            Self::from_baid58_str(s)
-        }
+        Self::from_baid58_maybe_chunked_str(s, ':', '#')
     }
 }
 
