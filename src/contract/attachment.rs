@@ -62,6 +62,9 @@ impl FromStr for AttachId {
     type Err = Baid58ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_chunked_str(s, ':', '#') }
 }
+impl AttachId {
+    pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
+}
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -145,6 +148,7 @@ mod test {
         let id = AttachId::from_raw_array([0x6c; 32]);
         assert_eq!(ID, id.to_string());
         assert_eq!(ID, id.to_baid58_string());
+        assert_eq!("juice-empty-joker", id.to_mnemonic());
     }
 
     #[test]

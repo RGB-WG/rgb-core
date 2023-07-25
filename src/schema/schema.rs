@@ -91,6 +91,9 @@ impl FromStr for SchemaId {
         Self::from_baid58_maybe_chunked_str(s.trim_start_matches("urn:lnp-bp:"), ':', '#')
     }
 }
+impl SchemaId {
+    pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
+}
 
 pub trait SchemaRoot: Clone + Eq + StrictType + StrictEncode + StrictDecode + Default {}
 impl SchemaRoot for () {}
