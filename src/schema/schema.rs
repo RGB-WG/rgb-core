@@ -26,7 +26,7 @@ use std::str::FromStr;
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{Bytes32, RawArray};
-use baid58::{Baid58ParseError, FromBaid58, ToBaid58};
+use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use commit_verify::{CommitStrategy, CommitmentId};
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
 use strict_types::TypeSystem;
@@ -68,23 +68,27 @@ pub struct SchemaId(
 
 impl ToBaid58<32> for SchemaId {
     const HRI: &'static str = "sc";
+    const CHUNKING: Option<Chunking> = CHUNKING_32;
     fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
+    fn to_baid58_string(&self) -> String { self.to_string() }
 }
 impl FromBaid58<32> for SchemaId {}
 impl Display for SchemaId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        if !f.alternate() {
+            f.write_str("urn:lnp-bp:sc:")?;
+        }
         if f.sign_minus() {
-            write!(f, "urn:lnp-bp:{::<}", self.to_baid58())
+            write!(f, "{:.2}", self.to_baid58())
         } else {
-            write!(f, "urn:lnp-bp:{::<#}", self.to_baid58())
+            write!(f, "{:#.2}", self.to_baid58())
         }
     }
 }
-
 impl FromStr for SchemaId {
     type Err = Baid58ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_baid58_str(s.trim_start_matches("urn:lnp-bp:"))
+        Self::from_baid58_maybe_chunked_str(s.trim_start_matches("urn:lnp-bp:"), ':', '#')
     }
 }
 
@@ -168,18 +172,24 @@ mod test {
         let dumb = SchemaId::strict_dumb();
         assert_eq!(
             dumb.to_string(),
-            "urn:lnp-bp:sc:11111111111111111111111111111111#comedy-vega-mary"
+            "urn:lnp-bp:sc:111111-11111111-11111111-11111111-11#comedy-vega-mary"
         );
-        assert_eq!(&format!("{dumb:-}"), "urn:lnp-bp:sc:11111111111111111111111111111111");
+        assert_eq!(&format!("{dumb:-}"), "urn:lnp-bp:sc:111111-11111111-11111111-11111111-11");
 
         let less_dumb = SchemaId::from_raw_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
         assert_eq!(
             less_dumb.to_string(),
-            "urn:lnp-bp:sc:5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz#distant-thermos-arctic"
+            "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#\
+             distant-thermos-arctic"
         );
         assert_eq!(
             &format!("{less_dumb:-}"),
-            "urn:lnp-bp:sc:5ffNUkMTVSnWquPLT6xKb7VmAxUbw8CUNqCkUWsZfkwz"
+            "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz"
         );
+        assert_eq!(
+            &format!("{less_dumb:#}"),
+            "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#distant-thermos-arctic"
+        );
+        assert_eq!(&format!("{less_dumb:-#}"), "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz");
     }
 }

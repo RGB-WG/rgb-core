@@ -30,7 +30,7 @@ commit_verify = { version = "~0.10.5", features = ["rand", "derive"] }
 single_use_seals = "~0.10.0"
 bp-core = { version = "~0.10.6" }
 secp256k1-zkp = { version = "0.8.0", features = ["use-rand", "rand-std", "global-context"] }
-baid58 = "~0.4.3"
+baid58 = "~0.4.4"
 mime = "~0.3.16"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 
