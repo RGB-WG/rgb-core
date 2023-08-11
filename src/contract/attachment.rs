@@ -55,14 +55,12 @@ impl ToBaid58<32> for AttachId {
     fn to_baid58_string(&self) -> String { self.to_string() }
 }
 impl FromBaid58<32> for AttachId {}
-impl AttachId {
-    pub fn to_baid58_string(&self) -> String { format!("{::<#.2}", self.to_baid58()) }
-}
 impl FromStr for AttachId {
     type Err = Baid58ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_chunked_str(s, ':', '#') }
 }
 impl AttachId {
+    pub fn to_baid58_string(&self) -> String { format!("{::<#.2}", self.to_baid58()) }
     pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
 }
 
