@@ -21,7 +21,7 @@
 // limitations under the License.
 
 pub use aluvm::stl::aluvm_stl;
-pub use bp::bc::stl::bitcoin_stl;
+pub use bp::bc::stl::bp_tx_stl;
 pub use bp::stl::bp_core_stl;
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
@@ -37,7 +37,7 @@ fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {
         std_stl().to_dependency(),
         strict_types_stl().to_dependency(),
-        bitcoin_stl().to_dependency(),
+        bp_tx_stl().to_dependency(),
         bp_core_stl().to_dependency(),
         aluvm_stl().to_dependency()
     })

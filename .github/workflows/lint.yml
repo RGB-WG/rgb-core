@@ -39,7 +39,7 @@ jobs:
         name: Clippy
         with:
           command: clippy
-          args: --workspace --all-features --all-targets
+          args: --workspace --all-features --all-targets -- -D warnings
   doc:
     runs-on: ubuntu-latest
     steps:

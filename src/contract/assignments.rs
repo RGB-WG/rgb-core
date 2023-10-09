@@ -91,10 +91,7 @@ pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
 // here we use deterministic ordering based on hash values of the concealed
 // seal data contained within the assignment
 impl<State: ExposedState, Seal: ExposedSeal> PartialOrd for Assign<State, Seal> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.to_confidential_seal()
-            .partial_cmp(&other.to_confidential_seal())
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl<State: ExposedState, Seal: ExposedSeal> Ord for Assign<State, Seal> {
@@ -128,7 +125,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
             Assign::Confidential { seal: _, state } |
             Assign::ConfidentialState { seal: _, state } => Assign::ConfidentialState {
                 seal,
-                state: state.clone(),
+                state: *state,
             },
             Assign::ConfidentialSeal { seal: _, state } | Assign::Revealed { seal: _, state } => {
                 Assign::Revealed {
@@ -160,9 +157,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 state.conceal()
             }
-            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
-                state.clone()
-            }
+            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => *state,
         }
     }
 
@@ -212,7 +207,7 @@ where Self: Clone
             Assign::Confidential { .. } => self.clone(),
             Assign::ConfidentialState { seal, state } => Self::Confidential {
                 seal: seal.conceal(),
-                state: state.clone(),
+                state: *state,
             },
             Assign::Revealed { seal, state } => Self::Confidential {
                 seal: seal.conceal(),
@@ -265,7 +260,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
         match self {
             Assign::Confidential { seal, state } => Assign::Confidential {
                 seal: *seal,
-                state: state.clone(),
+                state: *state,
             },
             Assign::ConfidentialSeal { seal, state } => Assign::ConfidentialSeal {
                 seal: *seal,
@@ -277,7 +272,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
             },
             Assign::ConfidentialState { seal, state } => Assign::ConfidentialState {
                 seal: seal.transmutate(),
-                state: state.clone(),
+                state: *state,
             },
         }
     }

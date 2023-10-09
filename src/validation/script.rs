@@ -28,6 +28,7 @@ use crate::{validation, Script};
 /// RGB schema validation routines.
 pub trait VirtualMachine {
     /// Validates state change in a contract operation.
+    #[allow(clippy::result_large_err)]
     fn validate(&self, info: OpInfo) -> Result<(), validation::Failure>;
 }
 

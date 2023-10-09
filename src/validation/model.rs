@@ -35,7 +35,7 @@ use crate::{
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
-    pub fn validate<'script, C: ConsignmentApi>(
+    pub fn validate<C: ConsignmentApi>(
         &self,
         consignment: &C,
         op: OpRef,
@@ -139,14 +139,14 @@ impl<Root: SchemaRoot> Schema<Root> {
         status += self.validate_type_system();
         status += self.validate_metadata(id, *metadata_schema, op.metadata());
         status += self.validate_global_state(id, op.globals(), global_schema);
-        let prev_state = if let OpRef::Transition(ref transition) = op {
+        let prev_state = if let OpRef::Transition(transition) = op {
             let prev_state = extract_prev_state(consignment, id, &transition.inputs, &mut status);
             status += self.validate_prev_state(id, &prev_state, owned_schema);
             prev_state
         } else {
             Assignments::default()
         };
-        let redeemed = if let OpRef::Extension(ref extension) = op {
+        let redeemed = if let OpRef::Extension(extension) = op {
             let redeemed =
                 extract_redeemed_valencies(consignment, &extension.redeemed, &mut status);
             status += self.validate_redeemed(id, &redeemed, redeem_schema);
@@ -292,7 +292,7 @@ impl<Root: SchemaRoot> Schema<Root> {
                 .unwrap_or(0);
 
             // Checking number of ancestor's assignment occurrences
-            if let Err(err) = occ.check(len as u16) {
+            if let Err(err) = occ.check(len) {
                 status.add_failure(validation::Failure::SchemaInputOccurrences(
                     id,
                     *owned_type_id,
@@ -350,7 +350,7 @@ impl<Root: SchemaRoot> Schema<Root> {
                 .unwrap_or(0);
 
             // Checking number of assignment occurrences
-            if let Err(err) = occ.check(len as u16) {
+            if let Err(err) = occ.check(len) {
                 status.add_failure(validation::Failure::SchemaAssignmentOccurrences(
                     id, *state_id, err,
                 ));
