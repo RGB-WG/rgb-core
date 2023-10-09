@@ -73,3 +73,13 @@ pub enum SealWitness {
     #[display("~")]
     Extension,
 }
+
+impl SealWitness {
+    pub fn txid(&self) -> Option<Txid> {
+        match self {
+            SealWitness::Genesis | SealWitness::Extension => None,
+            SealWitness::Present(txid) => Some(*txid),
+        }
+    }
+    pub fn map_txid<U>(&self, f: impl FnOnce(Txid) -> U) -> Option<U> { self.txid().map(f) }
+}
