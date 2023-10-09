@@ -128,7 +128,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
             Assign::Confidential { seal: _, state } |
             Assign::ConfidentialState { seal: _, state } => Assign::ConfidentialState {
                 seal,
-                state: state.clone(),
+                state: *state,
             },
             Assign::ConfidentialSeal { seal: _, state } | Assign::Revealed { seal: _, state } => {
                 Assign::Revealed {
@@ -160,9 +160,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 state.conceal()
             }
-            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
-                state.clone()
-            }
+            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => *state,
         }
     }
 
@@ -212,7 +210,7 @@ where Self: Clone
             Assign::Confidential { .. } => self.clone(),
             Assign::ConfidentialState { seal, state } => Self::Confidential {
                 seal: seal.conceal(),
-                state: state.clone(),
+                state: *state,
             },
             Assign::Revealed { seal, state } => Self::Confidential {
                 seal: seal.conceal(),
@@ -265,7 +263,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
         match self {
             Assign::Confidential { seal, state } => Assign::Confidential {
                 seal: *seal,
-                state: state.clone(),
+                state: *state,
             },
             Assign::ConfidentialSeal { seal, state } => Assign::ConfidentialSeal {
                 seal: *seal,
@@ -277,7 +275,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
             },
             Assign::ConfidentialState { seal, state } => Assign::ConfidentialState {
                 seal: seal.transmutate(),
-                state: state.clone(),
+                state: *state,
             },
         }
     }

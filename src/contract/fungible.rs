@@ -296,7 +296,7 @@ impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
         let one_key = secp256k1_zkp::SecretKey::from_slice(&secp256k1_zkp::constants::ONE)
             .expect("secret key from a constant");
         let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &one_key);
-        let h: [u8; 32] = Sha256::digest(&g.serialize_uncompressed()).into();
+        let h: [u8; 32] = Sha256::digest(g.serialize_uncompressed()).into();
         let tag = Tag::from(h);
         let generator = Generator::new_unblinded(SECP256K1, tag);
 
@@ -433,7 +433,6 @@ mod test {
         let value = RevealedValue::new(15, &mut thread_rng());
 
         let generators = (0..10)
-            .into_iter()
             .map(|_| {
                 let mut val = vec![];
                 value.commit_encode(&mut val);

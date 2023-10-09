@@ -112,19 +112,19 @@ pub struct OutputAssignment<State: ExposedState> {
 
 impl<State: ExposedState> PartialEq for OutputAssignment<State> {
     fn eq(&self, other: &Self) -> bool {
-        if self.opout == other.opout {
-            if self.seal != other.seal || self.witness != other.witness || self.state != other.state
-            {
-                panic!(
-                    "RGB was provided with an updated operation using different witness \
-                     transaction. This may happen for instance when some ephemeral state (like a \
-                     commitment or HTLC transactions in the lightning channels) is added to the \
-                     stash.\nThis error means the software uses RGB stash in an invalid way and \
-                     has business logic bug which has to be fixed.\nOperation in stash: {:?}\nNew \
-                     operation: {:?}\n",
-                    self, other
-                )
-            }
+        if self.opout == other.opout &&
+            (self.seal != other.seal ||
+                self.witness != other.witness ||
+                self.state != other.state)
+        {
+            panic!(
+                "RGB was provided with an updated operation using different witness transaction. \
+                 This may happen for instance when some ephemeral state (like a commitment or \
+                 HTLC transactions in the lightning channels) is added to the stash.\nThis error \
+                 means the software uses RGB stash in an invalid way and has business logic bug \
+                 which has to be fixed.\nOperation in stash: {:?}\nNew operation: {:?}\n",
+                self, other
+            )
         }
         self.opout == other.opout
     }
@@ -521,19 +521,14 @@ impl ContractHistory {
                 .filter_map(|(n, a)| a.to_revealed().map(|(seal, state)| (n, seal, state)))
             {
                 let assigned_state = match witness {
-                    SealWitness::Present(txid) => OutputAssignment::with_witness(
-                        seal,
-                        txid,
-                        state.into(),
-                        opid,
-                        ty,
-                        no as u16,
-                    ),
+                    SealWitness::Present(txid) => {
+                        OutputAssignment::with_witness(seal, txid, state, opid, ty, no as u16)
+                    }
                     SealWitness::Genesis => {
-                        OutputAssignment::with_genesis(seal, state.into(), opid, ty, no as u16)
+                        OutputAssignment::with_genesis(seal, state, opid, ty, no as u16)
                     }
                     SealWitness::Extension => {
-                        OutputAssignment::with_extension(seal, state.into(), opid, ty, no as u16)
+                        OutputAssignment::with_extension(seal, state, opid, ty, no as u16)
                     }
                 };
                 contract_state
@@ -545,16 +540,16 @@ impl ContractHistory {
         for (ty, assignments) in assignments.iter() {
             match assignments {
                 TypedAssigns::Declarative(assignments) => {
-                    process(&mut self.rights, &assignments, opid, *ty, witness)
+                    process(&mut self.rights, assignments, opid, *ty, witness)
                 }
                 TypedAssigns::Fungible(assignments) => {
-                    process(&mut self.fungibles, &assignments, opid, *ty, witness)
+                    process(&mut self.fungibles, assignments, opid, *ty, witness)
                 }
                 TypedAssigns::Structured(assignments) => {
-                    process(&mut self.data, &assignments, opid, *ty, witness)
+                    process(&mut self.data, assignments, opid, *ty, witness)
                 }
                 TypedAssigns::Attachment(assignments) => {
-                    process(&mut self.attach, &assignments, opid, *ty, witness)
+                    process(&mut self.attach, assignments, opid, *ty, witness)
                 }
             }
         }
@@ -586,7 +581,7 @@ impl DerefMut for ContractState {
 }
 
 impl ContractState {
-    /// # Panics
+    /// # Safety
     ///
     /// If the specified state type is not part of the schema.
     pub unsafe fn global_unchecked(&self, state_type: GlobalStateType) -> SmallVec<&RevealedData> {

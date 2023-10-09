@@ -275,7 +275,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 OpRef::Genesis(_) => {
                     // nothing to add to the queue here
                 }
-                OpRef::Transition(ref transition) => {
+                OpRef::Transition(transition) => {
                     // Making sure we do have a corresponding anchor; otherwise reporting failure
                     // (see below) - with the except of genesis and extension nodes, which does not
                     // have a corresponding anchor
@@ -315,7 +315,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
                     queue.extend(parent_nodes);
                 }
-                OpRef::Extension(ref extension) => {
+                OpRef::Extension(extension) => {
                     for (valency, prev_id) in &extension.redeemed {
                         let Some(prev_op) = self.consignment.operation(*prev_id) else {
                             self.status.add_failure(Failure::ValencyNoParent {

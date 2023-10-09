@@ -81,7 +81,7 @@ impl StateSchema {
                         status.add_failure(validation::Failure::MediaTypeMismatch {
                             opid: *opid,
                             state_type,
-                            expected: media_type.clone(),
+                            expected: *media_type,
                             found: attach.media_type,
                         });
                     }
