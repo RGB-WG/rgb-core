@@ -22,16 +22,16 @@ name = "rgbcore-stl"
 required-features = ["stl"]
 
 [dependencies]
-amplify = "~4.1.1"
-strict_encoding = "~2.6.0"
-strict_types = "~1.6.2"
-aluvm = { version = "~0.10.5", features = ["std"] }
-commit_verify = { version = "~0.10.5", features = ["rand", "derive"] }
-single_use_seals = "~0.10.0"
-bp-core = { version = "~0.10.9" }
+amplify = "~4.5.0"
+strict_encoding = "~2.6.1"
+strict_types = "~1.6.3"
+aluvm = { version = "~0.10.6", features = ["std"] }
+commit_verify = { version = "~0.10.6", features = ["rand", "derive"] }
+single_use_seals = "~0.10.1"
+bp-core = { version = "~0.10.10" }
 secp256k1-zkp = { version = "0.9.2", features = ["rand", "rand-std", "global-context"] }
 baid58 = "~0.4.4"
-mime = "~0.3.16"
+mime = "~0.3.17"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 
 [features]
@@ -59,3 +59,9 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = [ "all" ]
+
+[patch.crates-io]
+bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "consensus" }
+bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "consensus" }
+bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "consensus" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "consensus" }
