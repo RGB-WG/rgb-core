@@ -25,7 +25,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
-use amplify::{Bytes32, RawArray};
+use amplify::{ByteArray, Bytes32};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use commit_verify::{CommitStrategy, CommitmentId};
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
@@ -69,7 +69,7 @@ pub struct SchemaId(
 impl ToBaid58<32> for SchemaId {
     const HRI: &'static str = "sc";
     const CHUNKING: Option<Chunking> = CHUNKING_32;
-    fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
+    fn to_baid58_payload(&self) -> [u8; 32] { self.to_byte_array() }
     fn to_baid58_string(&self) -> String { self.to_string() }
 }
 impl FromBaid58<32> for SchemaId {}
@@ -179,7 +179,7 @@ mod test {
         );
         assert_eq!(&format!("{dumb:-}"), "urn:lnp-bp:sc:111111-11111111-11111111-11111111-11");
 
-        let less_dumb = SchemaId::from_raw_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
+        let less_dumb = SchemaId::from_byte_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
         assert_eq!(
             less_dumb.to_string(),
             "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#\

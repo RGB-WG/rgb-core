@@ -28,7 +28,7 @@ use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::hex::{FromHex, ToHex};
-use amplify::{hex, Bytes32, RawArray, Wrapper};
+use amplify::{hex, ByteArray, Bytes32, Wrapper};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
 use bp::Chain;
 use commit_verify::{mpc, CommitmentId, Conceal};
@@ -150,8 +150,9 @@ impl FromStr for OpId {
 }
 
 impl OpId {
+    // TODO: Add failable version
     pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
-        Bytes32::from_slice(slice).map(Self)
+        Bytes32::copy_from_slice(slice).ok().map(Self)
     }
 }
 
@@ -172,22 +173,23 @@ pub struct ContractId(
 );
 
 impl PartialEq<OpId> for ContractId {
-    fn eq(&self, other: &OpId) -> bool { self.to_raw_array() == other.to_raw_array() }
+    fn eq(&self, other: &OpId) -> bool { self.to_byte_array() == other.to_byte_array() }
 }
 impl PartialEq<ContractId> for OpId {
-    fn eq(&self, other: &ContractId) -> bool { self.to_raw_array() == other.to_raw_array() }
+    fn eq(&self, other: &ContractId) -> bool { self.to_byte_array() == other.to_byte_array() }
 }
 
 impl ContractId {
+    // TODO: Add failable version
     pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
-        Bytes32::from_slice(slice).map(Self)
+        Bytes32::copy_from_slice(slice).ok().map(Self)
     }
 }
 
 impl ToBaid58<32> for ContractId {
     const HRI: &'static str = "rgb";
     const CHUNKING: Option<Chunking> = CHUNKING_32CHECKSUM;
-    fn to_baid58_payload(&self) -> [u8; 32] { self.to_raw_array() }
+    fn to_baid58_payload(&self) -> [u8; 32] { self.to_byte_array() }
     fn to_baid58_string(&self) -> String { self.to_string() }
 }
 impl FromBaid58<32> for ContractId {}
@@ -646,7 +648,7 @@ mod test {
     #[test]
     fn contract_id_display() {
         const ID: &str = "rgb:pkXwpsb-aemTWhtSg-VDGF25hEi-jtTAnPjzh-B63ZwSehE-WvfhF9";
-        let id = ContractId::from_raw_array([0x6c; 32]);
+        let id = ContractId::from_byte_array([0x6c; 32]);
         assert_eq!(ID.len(), 58);
         assert_eq!(ID.replace('-', ""), format!("{id:#}"));
         assert_eq!(ID, id.to_string());
@@ -655,7 +657,7 @@ mod test {
 
     #[test]
     fn contract_id_from_str() {
-        let id = ContractId::from_raw_array([0x6c; 32]);
+        let id = ContractId::from_byte_array([0x6c; 32]);
         assert_eq!(
             Ok(id),
             ContractId::from_str("rgb:pkXwpsb-aemTWhtSg-VDGF25hEi-jtTAnPjzh-B63ZwSehE-WvfhF9")
