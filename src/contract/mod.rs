@@ -29,6 +29,7 @@ pub mod seal;
 pub mod assignments;
 mod operations;
 mod bundle;
+#[allow(clippy::module_inception)]
 mod contract;
 
 pub use assignments::{

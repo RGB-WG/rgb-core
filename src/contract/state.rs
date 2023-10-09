@@ -135,6 +135,7 @@ impl Conceal for StateData {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
+#[allow(clippy::large_enum_variant)]
 pub enum StateCommitment {
     #[strict_type(tag = 0x00, dumb)]
     Void,
