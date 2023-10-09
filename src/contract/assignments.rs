@@ -91,10 +91,7 @@ pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
 // here we use deterministic ordering based on hash values of the concealed
 // seal data contained within the assignment
 impl<State: ExposedState, Seal: ExposedSeal> PartialOrd for Assign<State, Seal> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.to_confidential_seal()
-            .partial_cmp(&other.to_confidential_seal())
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl<State: ExposedState, Seal: ExposedSeal> Ord for Assign<State, Seal> {

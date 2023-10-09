@@ -225,13 +225,7 @@ impl CommitEncode for RevealedValue {
 }
 
 impl PartialOrd for RevealedValue {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self.value.partial_cmp(&other.value) {
-            None => None,
-            Some(Ordering::Equal) => self.blinding.0.partial_cmp(&other.blinding.0),
-            other => other,
-        }
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl Ord for RevealedValue {
