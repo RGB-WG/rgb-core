@@ -193,8 +193,9 @@ dependencies = [
 
 [[package]]
 name = "bp-consensus"
-version = "0.10.10"
-source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
+version = "0.10.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d7b87840e5fc65bcbcd3881e0a0150ecef4a9b18b1356eb7a8a9adc85280c63"
 dependencies = [
  "amplify",
  "chrono",
@@ -207,8 +208,9 @@ dependencies = [
 
 [[package]]
 name = "bp-core"
-version = "0.10.10"
-source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
+version = "0.10.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a8b5219d96064b5d277c166fd5321ce6ee3e8a74e50bf2281d47726f365ead4"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -223,8 +225,9 @@ dependencies = [
 
 [[package]]
 name = "bp-dbc"
-version = "0.10.10"
-source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
+version = "0.10.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e265b111f61acb39cf36778c4da9a3d3c49fcc7a7e4116fd40ab250d598b1280"
 dependencies = [
  "amplify",
  "base85",
@@ -237,8 +240,9 @@ dependencies = [
 
 [[package]]
 name = "bp-seals"
-version = "0.10.10"
-source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
+version = "0.10.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ccb60735209233ece5927a5c66355037af8479104b5ff55371ae4a0f53c96b2"
 dependencies = [
  "amplify",
  "baid58",
@@ -593,7 +597,7 @@ dependencies = [
 
 [[package]]
 name = "rgb-core"
-version = "0.10.7"
+version = "0.10.8"
 dependencies = [
  "aluvm",
  "amplify",
@@ -1093,3 +1097,23 @@ checksum = "037711d82167854aff2018dfd193aa0fef5370f456732f0d5a0c59b0f1b4b907"
 dependencies = [
  "memchr",
 ]
+
+[[patch.unused]]
+name = "bp-consensus"
+version = "0.10.10"
+source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
+
+[[patch.unused]]
+name = "bp-core"
+version = "0.10.10"
+source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
+
+[[patch.unused]]
+name = "bp-dbc"
+version = "0.10.10"
+source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
+
+[[patch.unused]]
+name = "bp-seals"
+version = "0.10.10"
+source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
