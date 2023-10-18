@@ -319,6 +319,8 @@ pub enum Failure {
     /// transition {0} doesn't close seal with the witness transaction {1}.
     /// Details: {2}
     SealInvalid(OpId, Txid, seals::txout::VerifyError),
+    /// transition {0} is not committed in the witness transaction {1}.
+    AnchorNotCommitted(OpId, Txid),
     /// transition {0} is not properly anchored to the witness transaction {1}.
     /// Details: {2}
     AnchorInvalid(OpId, Txid, anchor::VerifyError),
