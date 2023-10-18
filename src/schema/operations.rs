@@ -27,6 +27,7 @@ use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
 use crate::LIB_NAME_RGB;
 
 // Here we can use usize since encoding/decoding makes sure that it's u16
+// TODO: Do custom types
 pub type AssignmentType = u16;
 pub type ValencyType = u16;
 pub type GlobalSchema = TinyOrdMap<GlobalStateType, Occurrences>;

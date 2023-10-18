@@ -66,7 +66,7 @@ impl<'script> AluRuntime<'script> {
             .copied()
             .collect::<BTreeSet<_>>();
         for ty in used_state {
-            self.run(EntryPoint::ValidateGlobalState(ty), &regs, info)?;
+            self.run(EntryPoint::ValidateOwnedState(ty), &regs, info)?;
         }
 
         Ok(())
