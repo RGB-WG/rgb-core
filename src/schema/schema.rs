@@ -43,6 +43,7 @@ pub trait SchemaTypeIndex:
 }
 impl SchemaTypeIndex for u16 {}
 
+// TODO: Do custom types
 pub type GlobalStateType = u16;
 pub type ExtensionType = u16;
 pub type TransitionType = u16;
