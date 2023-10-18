@@ -191,7 +191,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 expected: self.schema_id,
                 actual: schema.schema_id(),
             });
-            // Unlike other failures, here we return immediatelly, since there is no point
+            // Unlike other failures, here we return immediately, since there is no point
             // to validate all consignment data against an invalid schema: it will result in
             // a plenty of meaningless errors
             return;
