@@ -1097,23 +1097,3 @@ checksum = "037711d82167854aff2018dfd193aa0fef5370f456732f0d5a0c59b0f1b4b907"
 dependencies = [
  "memchr",
 ]
-
-[[patch.unused]]
-name = "bp-consensus"
-version = "0.10.10"
-source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
-
-[[patch.unused]]
-name = "bp-core"
-version = "0.10.10"
-source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
-
-[[patch.unused]]
-name = "bp-dbc"
-version = "0.10.10"
-source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
-
-[[patch.unused]]
-name = "bp-seals"
-version = "0.10.10"
-source = "git+https://github.com/BP-WG/bp-core?branch=consensus#48d79c9f210772dbd836aba258fa836169e8c36d"
