@@ -43,9 +43,7 @@ use amplify::hex::{Error, FromHex, ToHex};
 // that we do not use the standard secp256k1zkp library
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
-use commit_verify::{
-    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, Digest, Sha256, UntaggedProtocol,
-};
+use commit_verify::{CommitEncode, CommitVerify, CommitmentProtocol, Conceal, UntaggedProtocol};
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
 use strict_encoding::{
@@ -182,23 +180,36 @@ pub struct RevealedValue {
 
     /// Blinding factor used in Pedersen commitment
     pub blinding: BlindingFactor,
+
+    /// Asset-specific tag preventing mixing assets of different type.
+    pub asset_tag: Bytes32,
 }
 
 impl RevealedValue {
     /// Constructs new state using the provided value and random generator for
     /// creating blinding factor.
-    pub fn new<R: Rng + RngCore>(value: impl Into<FungibleState>, rng: &mut R) -> Self {
+    pub fn new<R: Rng + RngCore>(
+        value: impl Into<FungibleState>,
+        rng: &mut R,
+        asset_tag: Bytes32,
+    ) -> Self {
         Self {
             value: value.into(),
             blinding: BlindingFactor::from(secp256k1_zkp::SecretKey::new(rng)),
+            asset_tag,
         }
     }
 
     /// Convenience constructor.
-    pub fn with(value: impl Into<FungibleState>, blinding: impl Into<BlindingFactor>) -> Self {
+    pub fn with(
+        value: impl Into<FungibleState>,
+        blinding: impl Into<BlindingFactor>,
+        asset_tag: Bytes32,
+    ) -> Self {
         Self {
             value: value.into(),
             blinding: blinding.into(),
+            asset_tag,
         }
     }
 }
@@ -286,12 +297,7 @@ impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
             .expect("type guarantees of BlindingFactor are broken");
         let FungibleState::Bits64(value) = revealed.value;
 
-        // TODO: Check that we create correct generator value.
-        let one_key = secp256k1_zkp::SecretKey::from_slice(&secp256k1_zkp::constants::ONE)
-            .expect("secret key from a constant");
-        let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &one_key);
-        let h: [u8; 32] = Sha256::digest(g.serialize_uncompressed()).into();
-        let tag = Tag::from(h);
+        let tag = Tag::from(revealed.asset_tag.to_byte_array());
         let generator = Generator::new_unblinded(SECP256K1, tag);
 
         secp256k1_zkp::PedersenCommitment::new(SECP256K1, value, blinding, generator).into()
@@ -424,7 +430,7 @@ mod test {
 
     #[test]
     fn commitments_determinism() {
-        let value = RevealedValue::new(15, &mut thread_rng());
+        let value = RevealedValue::new(15, &mut thread_rng(), Bytes32::zero());
 
         let generators = (0..10)
             .map(|_| {
