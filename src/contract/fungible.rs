@@ -113,6 +113,7 @@ pub enum BlindingParseError {
 
     /// blinding factor value is invalid and does not belongs to the Secp256k1
     /// curve field.
+    #[from(FieldOrderOverflow)]
     InvalidFieldElement,
 }
 
@@ -144,9 +145,7 @@ impl FromStr for BlindingFactor {
     type Err = BlindingParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let bytes = Bytes32::from_str(s)?;
-        let sk = secp256k1_zkp::SecretKey::from_slice(bytes.as_slice())
-            .map_err(|_| BlindingParseError::InvalidFieldElement)?;
-        Ok(Self(sk.secret_bytes().into()))
+        Self::try_from(bytes).map_err(BlindingParseError::from)
     }
 }
 
@@ -158,6 +157,24 @@ impl From<BlindingFactor> for secp256k1_zkp::SecretKey {
     fn from(bf: BlindingFactor) -> Self {
         secp256k1_zkp::SecretKey::from_slice(bf.0.as_inner())
             .expect("blinding factor is an invalid secret key")
+    }
+}
+
+impl BlindingFactor {
+    /// Creates a random blinding factor.
+    ///
+    /// # Panics
+    ///
+    /// If random number generator is broken and generates zero value or a value
+    /// above the field order.
+    pub fn random() -> Self {
+        let inner = Bytes32::random();
+        // We know that the probability of generating random value below field order is
+        // negligible, thus if this happens the random number generator is broken and we
+        // can't trust the software, thus should panic.
+        secp256k1_zkp::SecretKey::from_slice(inner.as_slice())
+            .expect("random number generator is broken");
+        Self(inner)
     }
 }
 
@@ -174,6 +191,14 @@ impl TryFrom<[u8; 32]> for BlindingFactor {
         secp256k1_zkp::SecretKey::from_slice(&array)
             .map_err(|_| FieldOrderOverflow)
             .map(Self::from)
+    }
+}
+
+impl TryFrom<Bytes32> for BlindingFactor {
+    type Error = FieldOrderOverflow;
+
+    fn try_from(bytes: Bytes32) -> Result<Self, Self::Error> {
+        Self::try_from(bytes.to_byte_array())
     }
 }
 

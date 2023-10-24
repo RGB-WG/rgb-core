@@ -32,6 +32,7 @@ dependencies = [
  "amplify_num",
  "amplify_syn",
  "ascii",
+ "rand",
  "serde",
  "serde_json",
  "serde_yaml",
