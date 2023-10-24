@@ -441,4 +441,73 @@ mod test {
             .collect::<HashSet<_>>();
         assert_eq!(generators.len(), 1);
     }
+
+    #[test]
+    #[should_panic]
+    fn pedersen_blinding_mismatch() {
+        let mut r = thread_rng();
+        let tag = Bytes32::zero();
+
+        let a = PedersenCommitment::commit(&RevealedValue::new(15, &mut r, tag)).into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::new(7, &mut r, tag)).into_inner();
+
+        let c = PedersenCommitment::commit(&RevealedValue::new(13, &mut r, tag)).into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::new(9, &mut r, tag)).into_inner();
+
+        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
+    }
+
+    #[test]
+    fn pedersen_blinding_same() {
+        let blinding =
+            BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
+        let tag = Bytes32::zero();
+
+        let a = PedersenCommitment::commit(&RevealedValue::with(15, blinding, tag)).into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with(7, blinding, tag)).into_inner();
+
+        let c = PedersenCommitment::commit(&RevealedValue::with(13, blinding, tag)).into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with(9, blinding, tag)).into_inner();
+
+        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
+    }
+
+    #[test]
+    #[should_panic]
+    fn pedersen_blinding_same_tag_differ() {
+        let blinding =
+            BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
+        let tag1 = Bytes32::zero();
+        let tag2 = Bytes32::from_array([1; 32]);
+
+        let a = PedersenCommitment::commit(&RevealedValue::with(15, blinding, tag2)).into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with(7, blinding, tag1)).into_inner();
+
+        let c = PedersenCommitment::commit(&RevealedValue::with(13, blinding, tag2)).into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with(9, blinding, tag1)).into_inner();
+
+        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
+    }
+
+    #[test]
+    fn pedersen_two_tags() {
+        let blinding =
+            BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
+        let tag1 = Bytes32::zero();
+        let tag2 = Bytes32::from_array([1; 32]);
+
+        let a = PedersenCommitment::commit(&RevealedValue::with(15, blinding, tag2)).into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with(7, blinding, tag2)).into_inner();
+        let c = PedersenCommitment::commit(&RevealedValue::with(2, blinding, tag1)).into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with(4, blinding, tag1)).into_inner();
+
+        let e = PedersenCommitment::commit(&RevealedValue::with(13, blinding, tag2)).into_inner();
+        let f = PedersenCommitment::commit(&RevealedValue::with(9, blinding, tag2)).into_inner();
+        let g = PedersenCommitment::commit(&RevealedValue::with(1, blinding, tag1)).into_inner();
+        let h = PedersenCommitment::commit(&RevealedValue::with(5, blinding, tag1)).into_inner();
+
+        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b, c, d], &[
+            e, f, g, h
+        ]))
+    }
 }
