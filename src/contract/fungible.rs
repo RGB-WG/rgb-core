@@ -38,7 +38,7 @@ use core::str::FromStr;
 use std::io;
 use std::io::Write;
 
-use amplify::hex::{Error, FromHex, ToHex};
+use amplify::hex::ToHex;
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
 use amplify::{hex, Array, Bytes32, Wrapper};
@@ -103,6 +103,19 @@ impl FungibleState {
     pub fn as_u64(&self) -> u64 { (*self).into() }
 }
 
+/// Errors parsing string representation of a blinding factor.
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum BlindingParseError {
+    /// invalid blinding factor hex representation - {0}
+    #[from]
+    Hex(hex::Error),
+
+    /// blinding factor value is invalid and does not belongs to the Secp256k1
+    /// curve field.
+    InvalidFieldElement,
+}
+
 /// Blinding factor used in creating Pedersen commitment to an [`AtomicValue`].
 ///
 /// Knowledge of the blinding factor is important to reproduce the commitment
@@ -114,7 +127,7 @@ impl FungibleState {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", from = "secp256k1_zkp::SecretKey")
+    serde(crate = "serde_crate", try_from = "secp256k1_zkp::SecretKey")
 )]
 pub struct BlindingFactor(Bytes32);
 
@@ -127,17 +140,14 @@ impl ToHex for BlindingFactor {
     fn to_hex(&self) -> String { self.0.to_hex() }
 }
 
-impl FromHex for BlindingFactor {
-    fn from_hex(s: &str) -> Result<Self, Error> { Bytes32::from_hex(s).map(Self) }
-    fn from_byte_iter<I>(_: I) -> Result<Self, Error>
-    where I: Iterator<Item = Result<u8, Error>> + ExactSizeIterator + DoubleEndedIterator {
-        unreachable!()
-    }
-}
-
 impl FromStr for BlindingFactor {
-    type Err = hex::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
+    type Err = BlindingParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let bytes = Bytes32::from_str(s)?;
+        let sk = secp256k1_zkp::SecretKey::from_slice(bytes.as_slice())
+            .map_err(|_| BlindingParseError::InvalidFieldElement)?;
+        Ok(Self(sk.secret_bytes().into()))
+    }
 }
 
 impl From<secp256k1_zkp::SecretKey> for BlindingFactor {
