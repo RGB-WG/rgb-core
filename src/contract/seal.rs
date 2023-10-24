@@ -23,12 +23,13 @@
 use core::fmt::Debug;
 use std::hash::Hash;
 
+use amplify::Bytes32;
 pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
 };
 pub use bp::seals::txout::TxoSeal;
-use bp::Txid;
-use commit_verify::{CommitEncode, Conceal};
+use bp::{Outpoint, Txid};
+use commit_verify::{strategies, CommitEncode, Conceal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::LIB_NAME_RGB;
@@ -51,6 +52,77 @@ pub trait ExposedSeal:
 impl ExposedSeal for GraphSeal {}
 
 impl ExposedSeal for GenesisSeal {}
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct SealPreimage(Bytes32);
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct AbraxasSeal {
+    pub block_height: u32,
+    pub seal_index: u16,
+    pub blinding: u128,
+}
+
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[non_exhaustive]
+pub enum SealDefinition<U: ExposedSeal> {
+    #[strict_type(tag = 0x00)]
+    Bitcoin(U),
+    #[strict_type(tag = 0x01)]
+    Liquid(U),
+    #[strict_type(tag = 0x10)]
+    Abraxas(AbraxasSeal),
+    #[strict_type(tag = 0x11)]
+    Prime(SealPreimage),
+}
+
+impl<U: ExposedSeal> Conceal for SealDefinition<U> {
+    type Concealed = SecretSeal;
+
+    fn conceal(&self) -> Self::Concealed { todo!() }
+}
+
+impl<U: ExposedSeal> commit_verify::CommitStrategy for SealDefinition<U> {
+    type Strategy = strategies::ConcealStrict;
+}
+
+impl SealDefinition<GenesisSeal> {
+    pub fn transmutate(self) -> SealDefinition<GraphSeal> {
+        match self {
+            SealDefinition::Bitcoin(seal) => SealDefinition::Bitcoin(seal.transmutate()),
+            SealDefinition::Liquid(seal) => SealDefinition::Liquid(seal.transmutate()),
+            SealDefinition::Abraxas(seal) => SealDefinition::Abraxas(seal),
+            SealDefinition::Prime(seal) => SealDefinition::Prime(seal),
+        }
+    }
+}
+
+impl<U: ExposedSeal> SealDefinition<U> {
+    pub fn outpoint(self) -> Option<Outpoint> { todo!() }
+
+    pub fn outpoint_or(self, txid: Txid) -> Outpoint { todo!() }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

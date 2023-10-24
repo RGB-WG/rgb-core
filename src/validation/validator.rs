@@ -34,8 +34,8 @@ use crate::contract::Opout;
 use crate::validation::AnchoredBundle;
 use crate::vm::AluRuntime;
 use crate::{
-    BundleId, ContractId, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script, SubSchema,
-    Transition, TransitionBundle, TypedAssigns,
+    BundleId, ContractId, GraphSeal, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script,
+    SealDefinition, SubSchema, Transition, TransitionBundle, TypedAssigns,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -419,17 +419,53 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 continue;
             };
 
-            let seal = match (seal.txid, self.anchor_index.get(&op)) {
-                (TxPtr::WitnessTx, Some(anchor)) => {
+            match (seal, self.anchor_index.get(&op)) {
+                (
+                    SealDefinition::Bitcoin(
+                        seal @ GraphSeal {
+                            txid: TxPtr::WitnessTx,
+                            ..
+                        },
+                    ) |
+                    SealDefinition::Liquid(
+                        seal @ GraphSeal {
+                            txid: TxPtr::WitnessTx,
+                            ..
+                        },
+                    ),
+                    Some(anchor),
+                ) => {
                     let prev_witness_txid = anchor.txid;
-                    seal.resolve(prev_witness_txid)
+                    Some(seal.resolve(prev_witness_txid))
                 }
-                (TxPtr::WitnessTx, None) => {
+                (SealDefinition::Bitcoin(_) | SealDefinition::Liquid(_), None) => {
                     panic!("anchor for the operation {op} was not indexed by the validator");
                 }
-                (TxPtr::Txid(txid), _) => seal.resolve(txid),
-            };
-            seals.push(seal)
+                (
+                    SealDefinition::Bitcoin(
+                        seal @ GraphSeal {
+                            txid: TxPtr::Txid(txid),
+                            ..
+                        },
+                    ) |
+                    SealDefinition::Liquid(
+                        seal @ GraphSeal {
+                            txid: TxPtr::Txid(txid),
+                            ..
+                        },
+                    ),
+                    _,
+                ) => Some(seal.resolve(txid)),
+                (SealDefinition::Abraxas(_), _) => {
+                    self.status.add_failure(Failure::UnsupportedAbraxas);
+                    None
+                }
+                (SealDefinition::Prime(_), _) => {
+                    self.status.add_failure(Failure::UnsupportedPrime);
+                    None
+                }
+            }
+            .map(|seal| seals.push(seal));
         }
 
         let message = mpc::Message::from(bundle_id);
