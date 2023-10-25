@@ -419,7 +419,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 continue;
             };
 
-            match (seal, self.anchor_index.get(&op)) {
+            let seal = match (seal, self.anchor_index.get(&op)) {
                 (
                     SealDefinition::Bitcoin(
                         seal @ GraphSeal {
@@ -436,7 +436,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     Some(anchor),
                 ) => {
                     let prev_witness_txid = anchor.txid;
-                    Some(seal.resolve(prev_witness_txid))
+                    seal.resolve(prev_witness_txid)
                 }
                 (SealDefinition::Bitcoin(_) | SealDefinition::Liquid(_), None) => {
                     panic!("anchor for the operation {op} was not indexed by the validator");
@@ -455,17 +455,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                         },
                     ),
                     _,
-                ) => Some(seal.resolve(txid)),
-                (SealDefinition::Abraxas(_), _) => {
-                    self.status.add_failure(Failure::UnsupportedAbraxas);
-                    None
-                }
-                (SealDefinition::Prime(_), _) => {
-                    self.status.add_failure(Failure::UnsupportedPrime);
-                    None
-                }
-            }
-            .map(|seal| seals.push(seal));
+                ) => seal.resolve(txid),
+            };
+            seals.push(seal);
         }
 
         let message = mpc::Message::from(bundle_id);

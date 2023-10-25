@@ -23,7 +23,6 @@
 use core::fmt::Debug;
 use std::hash::Hash;
 
-use amplify::Bytes32;
 pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
 };
@@ -53,6 +52,7 @@ impl ExposedSeal for GraphSeal {}
 
 impl ExposedSeal for GenesisSeal {}
 
+/*
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -62,20 +62,7 @@ impl ExposedSeal for GenesisSeal {}
     serde(crate = "serde_crate", transparent)
 )]
 pub struct SealPreimage(Bytes32);
-
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct AbraxasSeal {
-    pub block_height: u32,
-    pub seal_index: u16,
-    pub blinding: u128,
-}
+ */
 
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -91,10 +78,12 @@ pub enum SealDefinition<U: ExposedSeal> {
     Bitcoin(U),
     #[strict_type(tag = 0x01)]
     Liquid(U),
+    /*
     #[strict_type(tag = 0x10)]
-    Abraxas(AbraxasSeal),
+    Abraxas(SealPreimage),
     #[strict_type(tag = 0x11)]
     Prime(SealPreimage),
+     */
 }
 
 impl<U: ExposedSeal> Conceal for SealDefinition<U> {
@@ -112,8 +101,10 @@ impl SealDefinition<GenesisSeal> {
         match self {
             SealDefinition::Bitcoin(seal) => SealDefinition::Bitcoin(seal.transmutate()),
             SealDefinition::Liquid(seal) => SealDefinition::Liquid(seal.transmutate()),
+            /*
             SealDefinition::Abraxas(seal) => SealDefinition::Abraxas(seal),
             SealDefinition::Prime(seal) => SealDefinition::Prime(seal),
+             */
         }
     }
 }

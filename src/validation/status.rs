@@ -371,11 +371,6 @@ pub enum Failure {
     /// operation {0} is invalid: {1}
     ScriptFailure(OpId, String),
 
-    /// Abraxas is not yet supported as Layer 1.
-    UnsupportedAbraxas,
-    /// Prime is not yet supported as Layer 1.
-    UnsupportedPrime,
-
     /// Custom error by external services on top of RGB Core.
     #[display(inner)]
     Custom(String),
