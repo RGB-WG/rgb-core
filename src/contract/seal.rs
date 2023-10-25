@@ -110,9 +110,19 @@ impl SealDefinition<GenesisSeal> {
 }
 
 impl<U: ExposedSeal> SealDefinition<U> {
-    pub fn outpoint(self) -> Option<Outpoint> { todo!() }
+    #[inline]
+    pub fn outpoint(self) -> Option<Outpoint> {
+        match self {
+            SealDefinition::Bitcoin(seal) | SealDefinition::Liquid(seal) => seal.outpoint(),
+        }
+    }
 
-    pub fn outpoint_or(self, txid: Txid) -> Outpoint { todo!() }
+    #[inline]
+    pub fn outpoint_or(self, txid: Txid) -> Outpoint {
+        match self {
+            SealDefinition::Bitcoin(seal) | SealDefinition::Liquid(seal) => seal.outpoint_or(txid),
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
