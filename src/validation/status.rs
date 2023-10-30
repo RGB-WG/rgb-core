@@ -25,13 +25,15 @@ use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
 use bp::dbc::anchor;
+use bp::seals::txout::blind::ChainBlindSeal;
 use bp::{seals, Txid};
 use strict_types::SemId;
 
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    AssignmentType, BundleId, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
+    AssignmentType, BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SealDefinition,
+    SecretSeal, StateType,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -298,7 +300,7 @@ pub enum Failure {
     /// transition {0} is not anchored.
     NotAnchored(OpId),
     /// anchor for transition {0} doesn't commit to the actual transition data.
-    NotInAnchor(OpId, Txid),
+    NotInAnchor(OpId),
     /// transition {opid} references state type {state_type} absent in the
     /// outputs of previous state transition {prev_id}.
     NoPrevState {
@@ -316,6 +318,11 @@ pub enum Failure {
     MpcInvalid(OpId, Txid),
     /// witness transaction {0} is not known to the transaction resolver.
     SealNoWitnessTx(Txid),
+    /// witness layer 1 {anchor} doesn't match seal definition {seal}.
+    SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
+    /// seal {1:?} is defined on {0} which is not in the set of layers allowed
+    /// by the contract genesis.
+    SealInvalidLayer1(Layer1, SealDefinition<ChainBlindSeal>),
     /// transition {0} doesn't close seal with the witness transaction {1}.
     /// Details: {2}
     SealInvalid(OpId, Txid, seals::txout::VerifyError),

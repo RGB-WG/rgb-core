@@ -36,8 +36,8 @@ use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AssignmentType, Assignments, AssignmentsRef, Ffv, GenesisSeal, GlobalState, GraphSeal, Opout,
-    ReservedByte, TypedAssigns, LIB_NAME_RGB,
+    AltLayer1Set, AssignmentType, Assignments, AssignmentsRef, Ffv, GenesisSeal, GlobalState,
+    GraphSeal, Opout, ReservedByte, TypedAssigns, LIB_NAME_RGB,
 };
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
@@ -279,6 +279,7 @@ pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
     pub chain: Chain,
+    pub alt_layer1: AltLayer1Set,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,

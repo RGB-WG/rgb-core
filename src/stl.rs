@@ -23,27 +23,29 @@
 pub use aluvm::stl::aluvm_stl;
 pub use bp::bc::stl::bp_tx_stl;
 pub use bp::stl::bp_core_stl;
+use commit_verify::stl::commit_verify_stl;
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
-use crate::{Extension, Genesis, SubSchema, TransitionBundle, LIB_NAME_RGB};
+use crate::{AnchoredBundle, Extension, Genesis, SubSchema, LIB_NAME_RGB};
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB: &str =
-    "urn:ubideco:stl:4fGZWR5mH5zZzRZ1r7CSRe776zm3hLBUngfXc4s3vm3V#saturn-flash-emerald";
+    "urn:ubideco:stl:DmN8aZj1dPvAvx5JYfz22azHs5RRbECxmxWoo5LK7E5f#house-herman-poem";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {
         std_stl().to_dependency(),
         strict_types_stl().to_dependency(),
+        commit_verify_stl().to_dependency(),
         bp_tx_stl().to_dependency(),
         bp_core_stl().to_dependency(),
         aluvm_stl().to_dependency()
     })
     .transpile::<SubSchema>()
     .transpile::<Genesis>()
-    .transpile::<TransitionBundle>()
+    .transpile::<AnchoredBundle>()
     .transpile::<Extension>()
     .compile()
 }
