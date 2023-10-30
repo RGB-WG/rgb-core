@@ -25,13 +25,15 @@ use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
 use bp::dbc::anchor;
+use bp::seals::txout::blind::ChainBlindSeal;
 use bp::{seals, Txid};
 use strict_types::SemId;
 
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    AssignmentType, BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
+    AssignmentType, BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SealDefinition,
+    SecretSeal, StateType,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -318,6 +320,9 @@ pub enum Failure {
     SealNoWitnessTx(Txid),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
+    /// seal {1:?} is defined on {0} which is not in the set of layers allowed
+    /// by the contract genesis.
+    SealInvalidLayer1(Layer1, SealDefinition<ChainBlindSeal>),
     /// transition {0} doesn't close seal with the witness transaction {1}.
     /// Details: {2}
     SealInvalid(OpId, Txid, seals::txout::VerifyError),

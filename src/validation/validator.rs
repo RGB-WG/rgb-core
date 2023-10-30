@@ -31,9 +31,9 @@ use super::status::{Failure, Warning};
 use super::{ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
-    Anchor, AnchoredBundle, BundleId, ContractId, GraphSeal, Layer1, OpId, OpRef, Operation, Opout,
-    Schema, SchemaId, SchemaRoot, Script, SealDefinition, SubSchema, Transition, TransitionBundle,
-    TypedAssigns,
+    AltLayer1, Anchor, AnchoredBundle, BundleId, ContractId, GraphSeal, Layer1, OpId, OpRef,
+    Operation, Opout, Schema, SchemaId, SchemaRoot, Script, SealDefinition, SubSchema, Transition,
+    TransitionBundle, TypedAssigns,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -57,6 +57,7 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
     schema_id: SchemaId,
     genesis_id: OpId,
     contract_id: ContractId,
+    layers1: BTreeSet<Layer1>,
     anchor_index: BTreeMap<OpId, &'consignment Anchor>,
     end_transitions: Vec<(&'consignment Transition, BundleId)>,
     validation_index: BTreeSet<OpId>,
@@ -75,9 +76,10 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         let mut status = Status::default();
 
         // Frequently used computation-heavy data
-        let genesis_id = consignment.genesis().id();
-        let contract_id = consignment.genesis().contract_id();
-        let schema_id = consignment.genesis().schema_id;
+        let genesis = consignment.genesis();
+        let genesis_id = genesis.id();
+        let contract_id = genesis.contract_id();
+        let schema_id = genesis.schema_id;
 
         // Create indexes
         let mut anchor_index = BTreeMap::<OpId, &Anchor>::new();
@@ -132,6 +134,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // Index used to avoid repeated validations of the same anchor+transition pairs
         let anchor_validation_index = BTreeSet::<OpId>::new();
 
+        let mut layers1 = bset! { Layer1::Bitcoin };
+        layers1.extend(genesis.alt_layer1.iter().map(AltLayer1::layer1));
+
         let vm = match &consignment.schema().script {
             Script::AluVM(lib) => {
                 Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine + 'consignment>
@@ -144,6 +149,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             schema_id,
             genesis_id,
             contract_id,
+            layers1,
             anchor_index,
             end_transitions,
             validation_index,
@@ -424,56 +430,56 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 continue;
             };
 
-            let seal = match (seal, self.anchor_index.get(&op)) {
+            let Some(anchor) = self.anchor_index.get(&op) else {
+                panic!("anchor for the operation {op} was not indexed by the validator");
+            };
+            if seal.layer1() != anchor.layer1() {
+                self.status.add_failure(Failure::SealWitnessLayer1Mismatch {
+                    seal: seal.layer1(),
+                    anchor: anchor.layer1(),
+                });
+                continue;
+            }
+            if !self.layers1.contains(&seal.layer1()) {
+                self.status
+                    .add_failure(Failure::SealInvalidLayer1(seal.layer1(), seal));
+                continue;
+            }
+
+            let seal = match (seal, anchor) {
                 (
                     SealDefinition::Bitcoin(
                         seal @ GraphSeal {
                             txid: TxPtr::WitnessTx,
                             ..
                         },
-                    ),
-                    Some(Anchor::Bitcoin(anchor)),
-                ) |
-                (
+                    ) |
                     SealDefinition::Liquid(
                         seal @ GraphSeal {
                             txid: TxPtr::WitnessTx,
                             ..
                         },
                     ),
-                    Some(Anchor::Liquid(anchor)),
+                    Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor),
                 ) => {
                     let prev_witness_txid = anchor.txid;
                     seal.resolve(prev_witness_txid)
                 }
-                (SealDefinition::Bitcoin(_) | SealDefinition::Liquid(_), None) => {
-                    panic!("anchor for the operation {op} was not indexed by the validator");
-                }
                 (
                     SealDefinition::Bitcoin(
                         seal @ GraphSeal {
                             txid: TxPtr::Txid(txid),
                             ..
                         },
-                    ),
-                    Some(Anchor::Bitcoin(_)),
-                ) |
-                (
+                    ) |
                     SealDefinition::Liquid(
                         seal @ GraphSeal {
                             txid: TxPtr::Txid(txid),
                             ..
                         },
                     ),
-                    Some(Anchor::Liquid(_)),
+                    Anchor::Bitcoin(_) | Anchor::Liquid(_),
                 ) => seal.resolve(txid),
-                (SealDefinition::Bitcoin(_) | SealDefinition::Liquid(_), Some(anchor)) => {
-                    self.status.add_failure(Failure::SealWitnessLayer1Mismatch {
-                        seal: seal.layer1(),
-                        anchor: anchor.layer1(),
-                    });
-                    continue;
-                }
             };
             seals.push(seal);
         }

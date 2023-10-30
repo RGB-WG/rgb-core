@@ -61,6 +61,8 @@ pub use seal::{
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 
+use crate::Layer1;
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -77,6 +79,14 @@ pub enum AltLayer1 {
     Liquid = 1,
     // Abraxas = 0x10,
     // Prime = 0x11,
+}
+
+impl AltLayer1 {
+    pub fn layer1(&self) -> Layer1 {
+        match self {
+            AltLayer1::Liquid => Layer1::Liquid,
+        }
+    }
 }
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
