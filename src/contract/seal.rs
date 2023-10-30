@@ -31,7 +31,7 @@ use bp::{Outpoint, Txid};
 use commit_verify::{strategies, CommitEncode, Conceal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use crate::LIB_NAME_RGB;
+use crate::{Layer1, LIB_NAME_RGB};
 
 pub trait ExposedSeal:
     Debug
@@ -110,6 +110,13 @@ impl SealDefinition<GenesisSeal> {
 }
 
 impl<U: ExposedSeal> SealDefinition<U> {
+    pub fn layer1(self) -> Layer1 {
+        match self {
+            SealDefinition::Bitcoin(_) => Layer1::Bitcoin,
+            SealDefinition::Liquid(_) => Layer1::Liquid,
+        }
+    }
+
     #[inline]
     pub fn outpoint(self) -> Option<Outpoint> {
         match self {

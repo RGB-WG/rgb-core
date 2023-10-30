@@ -26,25 +26,10 @@
 
 use std::collections::BTreeSet;
 
-use commit_verify::mpc;
-
 use crate::{
-    Anchor, BundleId, Extension, Genesis, OpId, OpRef, SecretSeal, SubSchema, Transition,
-    TransitionBundle, LIB_NAME_RGB,
+    AnchoredBundle, BundleId, Extension, Genesis, OpId, OpRef, SecretSeal, SubSchema, Transition,
+    TransitionBundle,
 };
-
-#[derive(Clone, Eq, PartialEq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct AnchoredBundle {
-    pub anchor: Anchor<mpc::MerkleProof>,
-    pub bundle: TransitionBundle,
-}
 
 /// Trait defining common data access API for all storage-related RGB structures
 ///

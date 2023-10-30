@@ -22,20 +22,18 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use bp::dbc::Anchor;
 use bp::seals::txout::{TxPtr, Witness};
-use bp::{Tx, Txid};
+use bp::{dbc, Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
 use super::{ConsignmentApi, Status, Validity, VirtualMachine};
-use crate::contract::Opout;
-use crate::validation::AnchoredBundle;
 use crate::vm::AluRuntime;
 use crate::{
-    BundleId, ContractId, GraphSeal, OpId, OpRef, Operation, Schema, SchemaId, SchemaRoot, Script,
-    SealDefinition, SubSchema, Transition, TransitionBundle, TypedAssigns,
+    Anchor, AnchoredBundle, BundleId, ContractId, GraphSeal, Layer1, OpId, OpRef, Operation, Opout,
+    Schema, SchemaId, SchemaRoot, Script, SealDefinition, SubSchema, Transition, TransitionBundle,
+    TypedAssigns,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -48,7 +46,7 @@ pub enum TxResolverError {
 }
 
 pub trait ResolveTx {
-    fn resolve_tx(&self, txid: Txid) -> Result<Tx, TxResolverError>;
+    fn resolve_tx(&self, layer1: Layer1, txid: Txid) -> Result<Tx, TxResolverError>;
 }
 
 pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
@@ -59,7 +57,7 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
     schema_id: SchemaId,
     genesis_id: OpId,
     contract_id: ContractId,
-    anchor_index: BTreeMap<OpId, &'consignment Anchor<mpc::MerkleProof>>,
+    anchor_index: BTreeMap<OpId, &'consignment Anchor>,
     end_transitions: Vec<(&'consignment Transition, BundleId)>,
     validation_index: BTreeSet<OpId>,
     anchor_validation_index: BTreeSet<OpId>,
@@ -82,7 +80,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         let schema_id = consignment.genesis().schema_id;
 
         // Create indexes
-        let mut anchor_index = BTreeMap::<OpId, &Anchor<mpc::MerkleProof>>::new();
+        let mut anchor_index = BTreeMap::<OpId, &Anchor>::new();
         for AnchoredBundle {
             ref anchor,
             ref bundle,
@@ -217,6 +215,10 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // with a dedicated type
         for (operation, _) in &self.end_transitions {
             if let Some(anchor) = self.anchor_index.get(&operation.id()) {
+                let anchor = match anchor {
+                    Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
+                };
+
                 if let Some(pos) = self
                     .status
                     .failures
@@ -286,10 +288,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
                             // [VALIDATION]: Check that transition is committed into the anchor.
                             //               This must be done with deterministic bitcoin
-                            // commitments &               LNPBP-4.
+                            //               commitments & LNPBP-4.
                             if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
-                                self.status
-                                    .add_failure(Failure::NotInAnchor(opid, anchor.txid));
+                                self.status.add_failure(Failure::NotInAnchor(opid));
                             }
 
                             self.validate_transition(transition, bundle_id, anchor);
@@ -346,13 +347,17 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         &mut self,
         transition: &'consignment Transition,
         bundle_id: BundleId,
-        anchor: &'consignment Anchor<mpc::MerkleProof>,
+        anchor: &'consignment Anchor,
     ) {
+        let (layer1, anchor) = match anchor {
+            Anchor::Bitcoin(a) | Anchor::Liquid(a) => (anchor.layer1(), a),
+        };
+
         let txid = anchor.txid;
 
         // Check that the anchor is committed into a transaction spending all of the
         // transition inputs.
-        match self.resolver.resolve_tx(txid) {
+        match self.resolver.resolve_tx(layer1, txid) {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't check.
                 // Reporting this incident and continuing further. Why this happens? No
@@ -379,7 +384,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         transition: &'consignment Transition,
         witness: Witness,
         bundle_id: BundleId,
-        anchor: &'consignment Anchor<mpc::MerkleProof>,
+        anchor: &'consignment dbc::Anchor<mpc::MerkleProof>,
     ) {
         let opid = transition.id();
         let txid = witness.txid;
@@ -426,14 +431,17 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                             txid: TxPtr::WitnessTx,
                             ..
                         },
-                    ) |
+                    ),
+                    Some(Anchor::Bitcoin(anchor)),
+                ) |
+                (
                     SealDefinition::Liquid(
                         seal @ GraphSeal {
                             txid: TxPtr::WitnessTx,
                             ..
                         },
                     ),
-                    Some(anchor),
+                    Some(Anchor::Liquid(anchor)),
                 ) => {
                     let prev_witness_txid = anchor.txid;
                     seal.resolve(prev_witness_txid)
@@ -447,15 +455,25 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                             txid: TxPtr::Txid(txid),
                             ..
                         },
-                    ) |
+                    ),
+                    Some(Anchor::Bitcoin(_)),
+                ) |
+                (
                     SealDefinition::Liquid(
                         seal @ GraphSeal {
                             txid: TxPtr::Txid(txid),
                             ..
                         },
                     ),
-                    _,
+                    Some(Anchor::Liquid(_)),
                 ) => seal.resolve(txid),
+                (SealDefinition::Bitcoin(_) | SealDefinition::Liquid(_), Some(anchor)) => {
+                    self.status.add_failure(Failure::SealWitnessLayer1Mismatch {
+                        seal: seal.layer1(),
+                        anchor: anchor.layer1(),
+                    });
+                    continue;
+                }
             };
             seals.push(seal);
         }
