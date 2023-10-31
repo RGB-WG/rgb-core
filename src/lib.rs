@@ -52,10 +52,10 @@ pub mod vm;
 pub mod stl;
 
 pub mod prelude {
-    pub use bp::dbc::{Anchor, AnchorId};
+    pub use bp::dbc::AnchorId;
     pub use contract::*;
     pub use schema::*;
-    pub use validation::AnchoredBundle;
+    pub use validation::{Anchor, AnchoredBundle, Layer1};
 
     use super::*;
     pub use super::{schema, vm};

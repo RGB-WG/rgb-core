@@ -2,6 +2,7 @@
 Id: urn:ubideco:stl:AjePbbRf34u9Vx4iN8uyPZSaS5XC4jnTDpvMDePnerd1
 Name: RGB
 Dependencies: 
+  urn:ubideco:stl:ZtHaBzu9ojbDahaGKEXe5v9DfSDxLERbLkEB23R6Q6V,
   urn:ubideco:stl:2YsxMW6xygK2FxFSbbBLqmzaUSytmLHHNF9DRio5zNr2,
   urn:ubideco:stl:5XLKQ1sNryZm9bdFKU2kBY3MPYdZXhchVdQKBbHA3gby,
   urn:ubideco:stl:6GgF7biXPVNcus2FfQj2pQuRzau11rXApMQLfCZhojgi,

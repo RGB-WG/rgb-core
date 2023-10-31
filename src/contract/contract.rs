@@ -31,7 +31,6 @@ use std::str::FromStr;
 
 use amplify::confinement::{LargeOrdMap, LargeOrdSet, SmallVec, TinyOrdMap};
 use amplify::hex;
-use bp::seals::txout::TxoSeal;
 use bp::{Outpoint, Txid};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
@@ -39,9 +38,30 @@ use crate::contract::contract::WitnessOrd::OffChain;
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
     Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
-    RevealedValue, SchemaId, SealWitness, SubSchema, Transition, TypedAssigns, VoidState,
-    LIB_NAME_RGB,
+    RevealedValue, SchemaId, SealDefinition, SealWitness, SubSchema, Transition, TypedAssigns,
+    VoidState, LIB_NAME_RGB,
 };
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[display(inner)]
+#[non_exhaustive]
+pub enum Output {
+    #[strict_type(tag = 0x00)]
+    Bitcoin(Outpoint),
+    #[strict_type(tag = 0x01)]
+    Liquid(Outpoint),
+    #[strict_type(tag = 0x10)]
+    Abraxas,
+    #[strict_type(tag = 0x11, dumb)]
+    Prime,
+}
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -144,8 +164,8 @@ impl<State: ExposedState> Ord for OutputAssignment<State> {
 }
 
 impl<State: ExposedState> OutputAssignment<State> {
-    pub fn with_witness<Seal: TxoSeal>(
-        seal: Seal,
+    pub fn with_witness<Seal: ExposedSeal>(
+        seal: SealDefinition<Seal>,
         witness_txid: Txid,
         state: State,
         opid: OpId,
@@ -160,8 +180,8 @@ impl<State: ExposedState> OutputAssignment<State> {
         }
     }
 
-    pub fn with_genesis<Seal: TxoSeal>(
-        seal: Seal,
+    pub fn with_genesis<Seal: ExposedSeal>(
+        seal: SealDefinition<Seal>,
         state: State,
         opid: OpId,
         ty: AssignmentType,
@@ -177,8 +197,8 @@ impl<State: ExposedState> OutputAssignment<State> {
         }
     }
 
-    pub fn with_extension<Seal: TxoSeal>(
-        seal: Seal,
+    pub fn with_extension<Seal: ExposedSeal>(
+        seal: SealDefinition<Seal>,
         state: State,
         opid: OpId,
         ty: AssignmentType,
