@@ -42,7 +42,18 @@ impl AssignmentType {
     pub fn to_le_bytes(&self) -> [u8; 2] { self.0.to_le_bytes() }
 }
 
-pub type ValencyType = u16;
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
+#[display(LowerHex)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct ValencyType(u16);
+
 pub type GlobalSchema = TinyOrdMap<GlobalStateType, Occurrences>;
 pub type ValencySchema = TinyOrdSet<ValencyType>;
 pub type InputsSchema = TinyOrdMap<AssignmentType, Occurrences>;
