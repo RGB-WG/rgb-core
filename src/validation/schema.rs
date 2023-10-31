@@ -21,9 +21,7 @@
 // limitations under the License.
 
 use crate::validation::Status;
-use crate::{
-    validation, OpFullType, OpSchema, Schema, StateSchema, SubSchema, BLANK_TRANSITION_ID,
-};
+use crate::{validation, OpFullType, OpSchema, Schema, StateSchema, SubSchema, TransitionType};
 
 impl SubSchema {
     pub fn verify(&self) -> validation::Status {
@@ -50,7 +48,7 @@ impl SubSchema {
             status += self.verify_operation(OpFullType::StateExtension(*type_id), schema);
         }
         // Check that the schema doesn't contain reserved type ids
-        if self.transitions.contains_key(&BLANK_TRANSITION_ID) {
+        if self.transitions.contains_key(&TransitionType::BLANK) {
             status.add_failure(validation::Failure::SchemaBlankTransitionRedefined);
         }
 

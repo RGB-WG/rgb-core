@@ -114,7 +114,7 @@ impl OpFullType {
     pub fn subtype(self) -> u16 {
         match self {
             OpFullType::Genesis => 0,
-            OpFullType::StateTransition(ty) => ty,
+            OpFullType::StateTransition(ty) => ty.to_inner(),
             OpFullType::StateExtension(ty) => ty.to_inner(),
         }
     }

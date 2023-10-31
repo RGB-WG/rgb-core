@@ -61,7 +61,7 @@ impl From<EntryPoint> for u32 {
     fn from(value: EntryPoint) -> Self {
         match value {
             EntryPoint::ValidateGenesis => 0x0C35_u32 << 16,
-            EntryPoint::ValidateTransition(t) => (0x186a_u32 << 16) | t as u32,
+            EntryPoint::ValidateTransition(t) => (0x186a_u32 << 16) | t.to_inner() as u32,
             EntryPoint::ValidateExtension(t) => (0x249f_u32 << 16) | t.to_inner() as u32,
             EntryPoint::ValidateGlobalState(t) => (0x8647_u32 << 16) | t.to_inner() as u32,
             EntryPoint::ValidateOwnedState(t) => (0x927c_u32 << 16) | t.to_inner() as u32,
@@ -77,7 +77,7 @@ impl TryFrom<u32> for EntryPoint {
         let t = (value & 0xFFFF) as u16;
         Ok(match c {
             0x0C35 => EntryPoint::ValidateGenesis,
-            0x186a => EntryPoint::ValidateTransition(t),
+            0x186a => EntryPoint::ValidateTransition(t.into()),
             0x249f => EntryPoint::ValidateExtension(t.into()),
             0x8647 => EntryPoint::ValidateGlobalState(t.into()),
             0x927c => EntryPoint::ValidateOwnedState(t.into()),
@@ -98,7 +98,7 @@ impl StrictEncode for EntryPoint {
         let mut val = [0u8; 3];
         let (ty, subty) = match self {
             EntryPoint::ValidateGenesis => (0, 0u16),
-            EntryPoint::ValidateTransition(ty) => (1, *ty),
+            EntryPoint::ValidateTransition(ty) => (1, ty.to_inner()),
             EntryPoint::ValidateExtension(ty) => (2, ty.to_inner()),
             EntryPoint::ValidateGlobalState(ty) => (3, ty.to_inner()),
             EntryPoint::ValidateOwnedState(ty) => (4, ty.to_inner()),
@@ -116,7 +116,7 @@ impl StrictDecode for EntryPoint {
         let ty = u16::from_le_bytes(ty);
         Ok(match val[0] {
             0 => EntryPoint::ValidateGenesis,
-            1 => EntryPoint::ValidateTransition(ty),
+            1 => EntryPoint::ValidateTransition(ty.into()),
             2 => EntryPoint::ValidateExtension(ty.into()),
             3 => EntryPoint::ValidateGlobalState(ty.into()),
             4 => EntryPoint::ValidateOwnedState(ty.into()),
