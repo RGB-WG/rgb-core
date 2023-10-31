@@ -521,7 +521,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn pedersen_blinding_mismatch() {
         let mut r = thread_rng();
         let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
@@ -538,7 +537,7 @@ mod test {
         let d = PedersenCommitment::commit(&RevealedValue::with_random_blinding(9, &mut r, tag, 0))
             .into_inner();
 
-        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
+        assert!(!secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
     }
 
     #[test]
@@ -561,7 +560,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn pedersen_blinding_same_tag_differ() {
         let blinding =
             BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
@@ -578,7 +576,7 @@ mod test {
         let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag, 0))
             .into_inner();
 
-        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
+        assert!(!secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
     }
 
     #[test]
