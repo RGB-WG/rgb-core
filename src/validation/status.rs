@@ -32,8 +32,7 @@ use strict_types::SemId;
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    AssignmentType, BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SealDefinition,
-    SecretSeal, StateType,
+    BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SealDefinition, SecretSeal, StateType,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -371,12 +370,12 @@ pub enum Failure {
     /// it to be {expected}.
     FungibleTypeMismatch {
         opid: OpId,
-        state_type: AssignmentType,
+        state_type: schema::AssignmentType,
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },
     /// invalid bulletproofs in {0}:{1}: {2}
-    BulletproofsInvalid(OpId, AssignmentType, String),
+    BulletproofsInvalid(OpId, schema::AssignmentType, String),
     /// operation {0} is invalid: {1}
     ScriptFailure(OpId, String),
 
@@ -417,7 +416,7 @@ pub enum Warning {
 pub enum Info {
     /// operation {0} contains state in assignment {1} which is confidential and
     /// thus was not validated.
-    UncheckableConfidentialState(OpId, AssignmentType),
+    UncheckableConfidentialState(OpId, schema::AssignmentType),
 
     /// Custom info by external services on top of RGB Core.
     #[display(inner)]

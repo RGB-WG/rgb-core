@@ -43,8 +43,18 @@ pub trait SchemaTypeIndex:
 }
 impl SchemaTypeIndex for u16 {}
 
-// TODO: Do custom types
-pub type GlobalStateType = u16;
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
+#[display(LowerHex)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct GlobalStateType(u16);
+
 pub type ExtensionType = u16;
 pub type TransitionType = u16;
 pub const BLANK_TRANSITION_ID: u16 = TransitionType::MAX;
