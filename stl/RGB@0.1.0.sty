@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:4fGZWR5mH5zZzRZ1r7CSRe776zm3hLBUngfXc4s3vm3V#saturn-flash-emerald
+  Id: urn:ubideco:stl:AjePbbRf34u9Vx4iN8uyPZSaS5XC4jnTDpvMDePnerd1#medusa-boris-virtual
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -184,8 +184,10 @@ data RevealedAttach   :: id AttachId
                        , salt U64
 -- urn:ubideco:semid:3DcMJ3YRokNwKN8Cce1ZqsYpiTEuto7EY1szCMEDH97A#velvet-david-manual
 data RevealedData     :: [Byte]
--- urn:ubideco:semid:7j3XQz367V8aeQcMRK1aYTcbpjhHKCQcWNAJeUuYvVAC#record-domino-spirit
-data RevealedFungible :: value FungibleState, blinding BlindingFactor
+-- urn:ubideco:semid:GC8sb7Aw4uY6qVvFP3yy7th3onHPtxcqbuqn6pzpvWKN#pirate-evening-neon
+data RevealedFungible :: value FungibleState
+                       , blinding BlindingFactor
+                       , assetTag [Byte ^ 32]
 -- urn:ubideco:semid:4SSnBqnEDnPxoBokzJpFx6XLrdWpRCBVhxmmVt6xsh8Z#gong-version-snow
 data Schema           :: ffv Ffv
                        , subsetOf ()?
