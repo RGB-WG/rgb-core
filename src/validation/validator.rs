@@ -168,10 +168,21 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
     /// the status object, but the validation continues for the rest of the
     /// consignment data. This can help it debugging and detecting all problems
     /// with the consignment.
-    pub fn validate(consignment: &'consignment C, resolver: &'resolver R) -> Status {
+    pub fn validate(consignment: &'consignment C, resolver: &'resolver R, testnet: bool) -> Status {
         let mut validator = Validator::init(consignment, resolver);
 
         validator.validate_schema(consignment.schema());
+
+        // If the network mismatches there is no point in validating the contract since
+        // all witness transactions will be missed. Thus, we return early (however after
+        // schema validation, which is not network-specific).
+        if testnet != validator.consignment.genesis().testnet {
+            validator
+                .status
+                .add_failure(Failure::NetworkMismatch(testnet));
+            return validator.status;
+        }
+
         // We must return here, since if the schema is not valid there is no reason to
         // validate contract nodes against it: it will produce a plenty of errors
         if validator.status.validity() == Validity::Invalid {
