@@ -21,6 +21,7 @@
 // limitations under the License.
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
+use amplify::Wrapper;
 use strict_types::SemId;
 
 use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
@@ -114,7 +115,7 @@ impl OpFullType {
         match self {
             OpFullType::Genesis => 0,
             OpFullType::StateTransition(ty) => ty,
-            OpFullType::StateExtension(ty) => ty,
+            OpFullType::StateExtension(ty) => ty.to_inner(),
         }
     }
 
