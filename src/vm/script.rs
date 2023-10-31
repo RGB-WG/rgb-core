@@ -45,7 +45,7 @@ pub const LIBS_MAX_TOTAL: usize = 1024;
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", into = "u32", try_from = "u32")
 )]
 pub enum EntryPoint {
     #[strict_type(dumb)]
@@ -54,6 +54,35 @@ pub enum EntryPoint {
     ValidateExtension(ExtensionType),
     ValidateGlobalState(GlobalStateType),
     ValidateOwnedState(AssignmentType),
+}
+
+impl From<EntryPoint> for u32 {
+    fn from(value: EntryPoint) -> Self {
+        match value {
+            EntryPoint::ValidateGenesis => 0x0C35_u32 << 16,
+            EntryPoint::ValidateTransition(t) => (0x186a_u32 << 16) | t as u32,
+            EntryPoint::ValidateExtension(t) => (0x249f_u32 << 16) | t as u32,
+            EntryPoint::ValidateGlobalState(t) => (0x8647_u32 << 16) | t as u32,
+            EntryPoint::ValidateOwnedState(t) => (0x927c_u32 << 16) | t as u32,
+        }
+    }
+}
+
+impl TryFrom<u32> for EntryPoint {
+    type Error = std::num::TryFromIntError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        let c = value >> 16;
+        let t = (value & 0xFFFF) as u16;
+        Ok(match c {
+            0x0C35 => EntryPoint::ValidateGenesis,
+            0x186a => EntryPoint::ValidateTransition(t),
+            0x249f => EntryPoint::ValidateExtension(t),
+            0x8647 => EntryPoint::ValidateGlobalState(t),
+            0x927c => EntryPoint::ValidateOwnedState(t),
+            _ => return Err(u8::try_from(0xFFFF).unwrap_err()),
+        })
+    }
 }
 
 impl StrictType for EntryPoint {
