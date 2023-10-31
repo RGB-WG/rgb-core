@@ -38,13 +38,13 @@ use core::str::FromStr;
 use std::io;
 use std::io::Write;
 
-use amplify::hex::{Error, FromHex, ToHex};
+use amplify::hex::ToHex;
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use commit_verify::{
-    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, Digest, Sha256, UntaggedProtocol,
+    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256, UntaggedProtocol,
 };
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
@@ -54,7 +54,9 @@ use strict_encoding::{
 };
 
 use super::{ConfidentialState, ExposedState};
-use crate::{schema, StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{
+    schema, AssignmentType, ContractId, StateCommitment, StateData, StateType, LIB_NAME_RGB,
+};
 
 /// An atom of an additive state, which thus can be monomorphically encrypted.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
@@ -105,18 +107,39 @@ impl FungibleState {
     pub fn as_u64(&self) -> u64 { (*self).into() }
 }
 
+/// value provided for a blinding factor overflows prime field order for
+/// Secp256k1 curve.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error, From)]
+#[display(doc_comments)]
+#[from(secp256k1_zkp::UpstreamError)]
+pub struct InvalidFieldElement;
+
+/// Errors parsing string representation of a blinding factor.
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum BlindingParseError {
+    /// invalid blinding factor hex representation - {0}
+    #[from]
+    Hex(hex::Error),
+
+    /// blinding factor value is invalid and does not belong to the Secp256k1
+    /// curve field.
+    #[from(InvalidFieldElement)]
+    InvalidFieldElement,
+}
+
 /// Blinding factor used in creating Pedersen commitment to an [`AtomicValue`].
 ///
 /// Knowledge of the blinding factor is important to reproduce the commitment
 /// process if the original value is kept.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default)]
 #[display(Self::to_hex)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", from = "secp256k1_zkp::SecretKey")
+    serde(crate = "serde_crate", try_from = "secp256k1_zkp::SecretKey")
 )]
 pub struct BlindingFactor(Bytes32);
 
@@ -129,17 +152,12 @@ impl ToHex for BlindingFactor {
     fn to_hex(&self) -> String { self.0.to_hex() }
 }
 
-impl FromHex for BlindingFactor {
-    fn from_hex(s: &str) -> Result<Self, Error> { Bytes32::from_hex(s).map(Self) }
-    fn from_byte_iter<I>(_: I) -> Result<Self, Error>
-    where I: Iterator<Item = Result<u8, Error>> + ExactSizeIterator + DoubleEndedIterator {
-        unreachable!()
-    }
-}
-
 impl FromStr for BlindingFactor {
-    type Err = hex::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
+    type Err = BlindingParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let bytes = Bytes32::from_str(s)?;
+        Self::try_from(bytes).map_err(BlindingParseError::from)
+    }
 }
 
 impl From<secp256k1_zkp::SecretKey> for BlindingFactor {
@@ -147,25 +165,67 @@ impl From<secp256k1_zkp::SecretKey> for BlindingFactor {
 }
 
 impl From<BlindingFactor> for secp256k1_zkp::SecretKey {
-    fn from(bf: BlindingFactor) -> Self {
-        secp256k1_zkp::SecretKey::from_slice(bf.0.as_inner())
+    fn from(bf: BlindingFactor) -> Self { bf.to_secret_key() }
+}
+
+impl BlindingFactor {
+    /// Creates a random blinding factor.
+    #[inline]
+    pub fn random() -> Self { Self::random_custom(&mut thread_rng()) }
+
+    /// Generates a random blinding factor using custom random number generator.
+    #[inline]
+    pub fn random_custom<R: Rng + RngCore>(rng: &mut R) -> Self {
+        secp256k1_zkp::SecretKey::new(rng).into()
+    }
+
+    /// Generates new blinding factor which balances a given set of negatives
+    /// and positives into zero.
+    ///
+    /// # Errors
+    ///
+    /// If any subset of the negatives or positives are inverses of other
+    /// negatives or positives, or if the balancing factor is zero (sum of
+    /// negatives already equal to the sum of positives).
+    pub fn zero_balanced(
+        negative: impl IntoIterator<Item = BlindingFactor>,
+        positive: impl IntoIterator<Item = BlindingFactor>,
+    ) -> Result<Self, InvalidFieldElement> {
+        let mut blinding_neg_sum = secp256k1_zkp::Scalar::ZERO;
+        let mut blinding_pos_sum = secp256k1_zkp::Scalar::ZERO;
+        for neg in negative {
+            blinding_neg_sum = neg.to_secret_key().add_tweak(&blinding_neg_sum)?.into();
+        }
+        let blinding_neg_sum =
+            secp256k1_zkp::SecretKey::from_slice(&blinding_neg_sum.to_be_bytes())?.negate();
+        for pos in positive {
+            blinding_pos_sum = pos.to_secret_key().add_tweak(&blinding_pos_sum)?.into();
+        }
+        let blinding_correction = blinding_neg_sum.add_tweak(&blinding_pos_sum)?.negate();
+        Ok(blinding_correction.into())
+    }
+
+    fn to_secret_key(self) -> secp256k1_zkp::SecretKey {
+        secp256k1_zkp::SecretKey::from_slice(self.0.as_slice())
             .expect("blinding factor is an invalid secret key")
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error)]
-#[display(doc_comments)]
-/// value provided for a blinding factor overflows prime field order for
-/// Secp256k1 curve.
-pub struct FieldOrderOverflow;
-
 impl TryFrom<[u8; 32]> for BlindingFactor {
-    type Error = FieldOrderOverflow;
+    type Error = InvalidFieldElement;
 
     fn try_from(array: [u8; 32]) -> Result<Self, Self::Error> {
         secp256k1_zkp::SecretKey::from_slice(&array)
-            .map_err(|_| FieldOrderOverflow)
+            .map_err(|_| InvalidFieldElement)
             .map(Self::from)
+    }
+}
+
+impl TryFrom<Bytes32> for BlindingFactor {
+    type Error = InvalidFieldElement;
+
+    fn try_from(bytes: Bytes32) -> Result<Self, Self::Error> {
+        Self::try_from(bytes.to_byte_array())
     }
 }
 
@@ -182,23 +242,48 @@ pub struct RevealedValue {
 
     /// Blinding factor used in Pedersen commitment
     pub blinding: BlindingFactor,
+
+    /// Asset-specific tag preventing mixing assets of different type.
+    pub asset_tag: Bytes32,
 }
 
 impl RevealedValue {
+    /// Constructs new state using the provided value using random blinding
+    /// factor.
+    pub fn new_random_blinding(
+        value: impl Into<FungibleState>,
+        contract_id: ContractId,
+        assignment_type: AssignmentType,
+    ) -> Self {
+        Self::with_blinding(value, BlindingFactor::random(), contract_id, assignment_type)
+    }
+
     /// Constructs new state using the provided value and random generator for
     /// creating blinding factor.
-    pub fn new<R: Rng + RngCore>(value: impl Into<FungibleState>, rng: &mut R) -> Self {
-        Self {
-            value: value.into(),
-            blinding: BlindingFactor::from(secp256k1_zkp::SecretKey::new(rng)),
-        }
+    pub fn with_random_blinding<R: Rng + RngCore>(
+        value: impl Into<FungibleState>,
+        rng: &mut R,
+        contract_id: ContractId,
+        assignment_type: AssignmentType,
+    ) -> Self {
+        Self::with_blinding(value, BlindingFactor::random_custom(rng), contract_id, assignment_type)
     }
 
     /// Convenience constructor.
-    pub fn with(value: impl Into<FungibleState>, blinding: impl Into<BlindingFactor>) -> Self {
+    pub fn with_blinding(
+        value: impl Into<FungibleState>,
+        blinding: BlindingFactor,
+        contract_id: ContractId,
+        assignment_type: AssignmentType,
+    ) -> Self {
+        let mut engine = Sha256::default();
+        engine.input_raw(&contract_id.to_byte_array());
+        engine.input_raw(&assignment_type.to_le_bytes());
+        let asset_tag = engine.finish().into();
         Self {
             value: value.into(),
-            blinding: blinding.into(),
+            blinding,
+            asset_tag,
         }
     }
 }
@@ -286,12 +371,7 @@ impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
             .expect("type guarantees of BlindingFactor are broken");
         let FungibleState::Bits64(value) = revealed.value;
 
-        // TODO: Check that we create correct generator value.
-        let one_key = secp256k1_zkp::SecretKey::from_slice(&secp256k1_zkp::constants::ONE)
-            .expect("secret key from a constant");
-        let g = secp256k1_zkp::PublicKey::from_secret_key(SECP256K1, &one_key);
-        let h: [u8; 32] = Sha256::digest(g.serialize_uncompressed()).into();
-        let tag = Tag::from(h);
+        let tag = Tag::from(revealed.asset_tag.to_byte_array());
         let generator = Generator::new_unblinded(SECP256K1, tag);
 
         secp256k1_zkp::PedersenCommitment::new(SECP256K1, value, blinding, generator).into()
@@ -420,11 +500,15 @@ impl ConcealedValue {
 mod test {
     use std::collections::HashSet;
 
+    use amplify::ByteArray;
+
     use super::*;
 
     #[test]
     fn commitments_determinism() {
-        let value = RevealedValue::new(15, &mut thread_rng());
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+
+        let value = RevealedValue::with_random_blinding(15, &mut thread_rng(), tag, 0);
 
         let generators = (0..10)
             .map(|_| {
@@ -434,5 +518,115 @@ mod test {
             })
             .collect::<HashSet<_>>();
         assert_eq!(generators.len(), 1);
+    }
+
+    #[test]
+    fn pedersen_blinding_mismatch() {
+        let mut r = thread_rng();
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+
+        let a =
+            PedersenCommitment::commit(&RevealedValue::with_random_blinding(15, &mut r, tag, 0))
+                .into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with_random_blinding(7, &mut r, tag, 0))
+            .into_inner();
+
+        let c =
+            PedersenCommitment::commit(&RevealedValue::with_random_blinding(13, &mut r, tag, 0))
+                .into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with_random_blinding(9, &mut r, tag, 0))
+            .into_inner();
+
+        assert!(!secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
+    }
+
+    #[test]
+    fn pedersen_blinding_same() {
+        let blinding =
+            BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+
+        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag, 0))
+            .into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag, 0))
+            .into_inner();
+
+        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag, 0))
+            .into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag, 0))
+            .into_inner();
+
+        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
+    }
+
+    #[test]
+    fn pedersen_blinding_same_tag_differ() {
+        let blinding =
+            BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+        let tag2: ContractId = ContractId::from_byte_array([2u8; 32]);
+
+        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag2, 0))
+            .into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag, 0))
+            .into_inner();
+
+        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag2, 0))
+            .into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag, 0))
+            .into_inner();
+
+        assert!(!secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
+    }
+
+    #[test]
+    fn pedersen_two_tags() {
+        let blinding =
+            BlindingFactor::from(secp256k1_zkp::SecretKey::from_slice(&[1u8; 32]).unwrap());
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+        let tag2: ContractId = ContractId::from_byte_array([2u8; 32]);
+
+        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding, tag2, 0))
+            .into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding, tag2, 0))
+            .into_inner();
+        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(2, blinding, tag, 0))
+            .into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(4, blinding, tag, 0))
+            .into_inner();
+
+        let e = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding, tag2, 0))
+            .into_inner();
+        let f = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding, tag2, 0))
+            .into_inner();
+        let g = PedersenCommitment::commit(&RevealedValue::with_blinding(1, blinding, tag, 0))
+            .into_inner();
+        let h = PedersenCommitment::commit(&RevealedValue::with_blinding(5, blinding, tag, 0))
+            .into_inner();
+
+        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b, c, d], &[
+            e, f, g, h
+        ]))
+    }
+
+    #[test]
+    fn pedersen_blinding_balance() {
+        let blinding1 = BlindingFactor::random();
+        let blinding2 = BlindingFactor::random();
+        let blinding3 = BlindingFactor::random();
+        let blinding4 = BlindingFactor::zero_balanced([blinding1, blinding2], [blinding3]).unwrap();
+        let tag: ContractId = ContractId::from_byte_array([1u8; 32]);
+
+        let a = PedersenCommitment::commit(&RevealedValue::with_blinding(15, blinding1, tag, 0))
+            .into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with_blinding(7, blinding2, tag, 0))
+            .into_inner();
+
+        let c = PedersenCommitment::commit(&RevealedValue::with_blinding(13, blinding3, tag, 0))
+            .into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with_blinding(9, blinding4, tag, 0))
+            .into_inner();
+
+        assert!(secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
     }
 }

@@ -29,9 +29,9 @@ use strict_types::SemId;
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
-    validation, Assignments, AssignmentsRef, ExposedSeal, GlobalState, GlobalStateSchema,
-    GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef, Operation, Opout, Redeemed, Schema,
-    SchemaRoot, TypedAssigns, Valencies, BLANK_TRANSITION_ID,
+    validation, Assignments, AssignmentsRef, ContractId, ExposedSeal, GlobalState,
+    GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef, Operation, Opout,
+    Redeemed, Schema, SchemaRoot, TypedAssigns, Valencies, BLANK_TRANSITION_ID,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -165,7 +165,14 @@ impl<Root: SchemaRoot> Schema<Root> {
 
         status += self.validate_valencies(id, op.valencies(), valency_schema);
 
-        let op_info = OpInfo::with(id, self.subset_of.is_some(), &op, &prev_state, &redeemed);
+        let op_info = OpInfo::with(
+            consignment.genesis().contract_id(),
+            id,
+            self.subset_of.is_some(),
+            &op,
+            &prev_state,
+            &redeemed,
+        );
 
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the operation data match the schema, so
@@ -421,6 +428,7 @@ impl<Root: SchemaRoot> Schema<Root> {
 
 pub struct OpInfo<'op> {
     pub subschema: bool,
+    pub contract_id: ContractId,
     pub id: OpId,
     pub ty: OpFullType,
     pub metadata: &'op SmallBlob,
@@ -433,6 +441,7 @@ pub struct OpInfo<'op> {
 
 impl<'op> OpInfo<'op> {
     pub fn with(
+        contract_id: ContractId,
         id: OpId,
         subschema: bool,
         op: &'op OpRef<'op>,
@@ -442,6 +451,7 @@ impl<'op> OpInfo<'op> {
         OpInfo {
             id,
             subschema,
+            contract_id,
             ty: op.full_type(),
             metadata: op.metadata(),
             prev_state,

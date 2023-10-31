@@ -502,14 +502,11 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
 
         // [VALIDATION]: Checking anchor deterministic bitcoin commitment
-        match anchor.verify(self.contract_id, message, &witness.tx) {
-            Err(err) => {
-                // The operation is not committed to bitcoin transaction graph!
-                // Ultimate failure. But continuing to detect the rest (after reporting it).
-                self.status
-                    .add_failure(Failure::AnchorInvalid(opid, txid, err));
-            }
-            _ => {}
+        if let Err(err) = anchor.verify(self.contract_id, message, &witness.tx) {
+            // The operation is not committed to bitcoin transaction graph!
+            // Ultimate failure. But continuing to detect the rest (after reporting it).
+            self.status
+                .add_failure(Failure::AnchorInvalid(opid, txid, err));
         }
     }
 }

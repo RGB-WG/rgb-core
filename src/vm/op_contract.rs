@@ -31,11 +31,12 @@ use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg16, RegA, RegS};
 use amplify::num::u4;
 use amplify::Wrapper;
+use commit_verify::Conceal;
 use strict_encoding::StrictSerialize;
 
 use super::opcodes::*;
 use crate::validation::OpInfo;
-use crate::{Assign, TypedAssigns};
+use crate::{Assign, RevealedValue, TypedAssigns};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp {
@@ -127,13 +128,28 @@ pub enum ContractOp {
     /// to `false`.
     #[display("pcvs     {0}")]
     PcVs(u16),
-    /*
-    /// Verifies corrected sum of pedersen commitments adding a value taken from `RegR` to the list
-    /// of inputs (negatives).
-    PcCs(u16, RegR),
-     */
+
+    /// Verifies equivalence of a sum of pedersen commitments for the list of
+    /// outputs with a given owned state type against a value taken from a
+    /// global state.
+    ///
+    /// The first argument specifies owned state type for the sum operation. If
+    /// this state does not exist, either inputs or outputs do not have
+    /// any data for the state, or the state is not
+    /// of `FungibleState::Bits64`, the verification fails.
+    ///
+    /// The second argument specifies global state type. If the state does not
+    /// exist, there is more than one value, or it is not a u64 value, the
+    /// verification fails.
+    ///
+    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
+    /// to `false`.
+    #[display("pccs     {0},{1}")]
+    PcCs(/** owned state type */ u16, /** global state type */ u16),
+
     /// All other future unsupported operations, which must set `st0` to
     /// `false`.
+    #[display("fail     {0}")]
     Fail(u8),
 }
 
@@ -147,6 +163,42 @@ impl InstructionSet for ContractOp {
             () => {{
                 isa::ControlFlowOp::Fail.exec(regs, site, &());
                 return ExecStep::Stop;
+            }};
+        }
+        macro_rules! load_inputs {
+            ($state_type:ident) => {{
+                if !context.prev_state.contains_key($state_type) {
+                    return ExecStep::Next;
+                }
+                let Some(prev_state) = context.prev_state.get($state_type) else {
+                    fail!()
+                };
+                match prev_state {
+                    TypedAssigns::Fungible(state) => state
+                        .iter()
+                        .map(Assign::to_confidential_state)
+                        .map(|s| s.commitment.into_inner())
+                        .collect::<Vec<_>>(),
+                    _ => fail!(),
+                }
+            }};
+        }
+        macro_rules! load_outputs {
+            ($state_type:ident) => {{
+                if !context.owned_state.has_type(*$state_type) {
+                    return ExecStep::Next;
+                }
+                let Some(new_state) = context.owned_state.get(*$state_type) else {
+                    fail!()
+                };
+                match new_state {
+                    TypedAssigns::Fungible(state) => state
+                        .iter()
+                        .map(Assign::to_confidential_state)
+                        .map(|s| s.commitment.into_inner())
+                        .collect::<Vec<_>>(),
+                    _ => fail!(),
+                }
             }};
         }
 
@@ -225,35 +277,36 @@ impl InstructionSet for ContractOp {
             }
 
             ContractOp::PcVs(state_type) => {
-                if !context.prev_state.contains_key(state_type) &&
-                    !context.owned_state.has_type(*state_type)
-                {
-                    return ExecStep::Next;
+                let inputs = load_inputs!(state_type);
+                let outputs = load_outputs!(state_type);
+                if !secp256k1_zkp::verify_commitments_sum_to_equal(
+                    secp256k1_zkp::SECP256K1,
+                    &inputs,
+                    &outputs,
+                ) {
+                    fail!()
                 }
+            }
 
-                let Some(prev_state) = context.prev_state.get(state_type) else {
+            ContractOp::PcCs(owned_state, global_state) => {
+                let Some(sum) = context.global.get(global_state) else {
                     fail!()
                 };
-                let Some(new_state) = context.owned_state.get(*state_type) else {
+                if sum.len() != 1 {
                     fail!()
-                };
+                }
+                if sum[0].as_inner().len() != 8 {
+                    fail!()
+                }
+                let mut bytes = [0u8; 8];
+                bytes.copy_from_slice(sum[0].as_inner());
+                let sum = u64::from_le_bytes(bytes);
 
-                let inputs = match prev_state {
-                    TypedAssigns::Fungible(state) => state
-                        .iter()
-                        .map(Assign::to_confidential_state)
-                        .map(|s| s.commitment.into_inner())
-                        .collect::<Vec<_>>(),
-                    _ => fail!(),
-                };
-                let outputs = match new_state {
-                    TypedAssigns::Fungible(state) => state
-                        .iter()
-                        .map(Assign::to_confidential_state)
-                        .map(|s| s.commitment.into_inner())
-                        .collect::<Vec<_>>(),
-                    _ => fail!(),
-                };
+                let sum =
+                    RevealedValue::with_blinding(sum, zero!(), context.contract_id, *owned_state);
+
+                let inputs = [sum.conceal().commitment.into()];
+                let outputs = load_outputs!(owned_state);
 
                 if !secp256k1_zkp::verify_commitments_sum_to_equal(
                     secp256k1_zkp::SECP256K1,
@@ -287,6 +340,7 @@ impl Bytecode for ContractOp {
             ContractOp::LdM(_) => 1,
 
             ContractOp::PcVs(_) => 2,
+            ContractOp::PcCs(_, _) => 4,
 
             ContractOp::Fail(_) => 0,
         }
@@ -309,6 +363,7 @@ impl Bytecode for ContractOp {
             ContractOp::LdM(_) => INSTR_LDM,
 
             ContractOp::PcVs(_) => INSTR_PCVS,
+            ContractOp::PcCs(_, _) => INSTR_PCCS,
 
             ContractOp::Fail(other) => *other,
         }
@@ -373,6 +428,10 @@ impl Bytecode for ContractOp {
             }
 
             ContractOp::PcVs(state_type) => writer.write_u16(*state_type)?,
+            ContractOp::PcCs(owned_type, global_type) => {
+                writer.write_u16(*owned_type)?;
+                writer.write_u16(*global_type)?;
+            }
 
             ContractOp::Fail(_) => {}
         }
@@ -438,6 +497,7 @@ impl Bytecode for ContractOp {
             }
 
             INSTR_PCVS => Self::PcVs(reader.read_u16()?),
+            INSTR_PCCS => Self::PcCs(reader.read_u16()?, reader.read_u16()?),
 
             x => Self::Fail(x),
         })

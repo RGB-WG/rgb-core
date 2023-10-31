@@ -22,7 +22,7 @@ name = "rgbcore-stl"
 required-features = ["stl"]
 
 [dependencies]
-amplify = "~4.5.0"
+amplify = { version = "~4.5.0", features = ["rand"] }
 strict_encoding = "~2.6.1"
 strict_types = "~1.6.3"
 aluvm = { version = "~0.10.6", features = ["std"] }
