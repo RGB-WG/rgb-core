@@ -27,6 +27,7 @@ use aluvm::data::encoding::{Decode, Encode};
 use aluvm::library::{Lib, LibId, LibSite};
 use aluvm::Program;
 use amplify::confinement::{Confined, SmallBlob, SmallOrdMap, TinyOrdMap};
+use amplify::Wrapper;
 use strict_encoding::{
     DecodeError, ReadStruct, StrictDecode, StrictEncode, StrictProduct, StrictStruct, StrictTuple,
     StrictType, TypedRead, TypedWrite, WriteStruct,
@@ -63,7 +64,7 @@ impl From<EntryPoint> for u32 {
             EntryPoint::ValidateTransition(t) => (0x186a_u32 << 16) | t as u32,
             EntryPoint::ValidateExtension(t) => (0x249f_u32 << 16) | t as u32,
             EntryPoint::ValidateGlobalState(t) => (0x8647_u32 << 16) | t as u32,
-            EntryPoint::ValidateOwnedState(t) => (0x927c_u32 << 16) | t as u32,
+            EntryPoint::ValidateOwnedState(t) => (0x927c_u32 << 16) | t.into_inner() as u32,
         }
     }
 }
@@ -79,7 +80,7 @@ impl TryFrom<u32> for EntryPoint {
             0x186a => EntryPoint::ValidateTransition(t),
             0x249f => EntryPoint::ValidateExtension(t),
             0x8647 => EntryPoint::ValidateGlobalState(t),
-            0x927c => EntryPoint::ValidateOwnedState(t),
+            0x927c => EntryPoint::ValidateOwnedState(t.into()),
             _ => return Err(u8::try_from(0xFFFF).unwrap_err()),
         })
     }
@@ -100,7 +101,7 @@ impl StrictEncode for EntryPoint {
             EntryPoint::ValidateTransition(ty) => (1, *ty),
             EntryPoint::ValidateExtension(ty) => (2, *ty),
             EntryPoint::ValidateGlobalState(ty) => (3, *ty),
-            EntryPoint::ValidateOwnedState(ty) => (4, *ty),
+            EntryPoint::ValidateOwnedState(ty) => (4, ty.to_inner()),
         };
         val[0] = ty;
         val[1..].copy_from_slice(&subty.to_le_bytes());
@@ -118,7 +119,7 @@ impl StrictDecode for EntryPoint {
             1 => EntryPoint::ValidateTransition(ty),
             2 => EntryPoint::ValidateExtension(ty),
             3 => EntryPoint::ValidateGlobalState(ty),
-            4 => EntryPoint::ValidateOwnedState(ty),
+            4 => EntryPoint::ValidateOwnedState(ty.into()),
             x => return Err(DecodeError::EnumTagNotKnown(s!("EntryPoint"), x)),
         })
     }

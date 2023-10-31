@@ -26,9 +26,22 @@ use strict_types::SemId;
 use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
 use crate::LIB_NAME_RGB;
 
-// Here we can use usize since encoding/decoding makes sure that it's u16
-// TODO: Do custom types
-pub type AssignmentType = u16;
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
+#[display(LowerHex)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct AssignmentType(u16);
+impl AssignmentType {
+    #[inline]
+    pub fn to_le_bytes(&self) -> [u8; 2] { self.0.to_le_bytes() }
+}
+
 pub type ValencyType = u16;
 pub type GlobalSchema = TinyOrdMap<GlobalStateType, Occurrences>;
 pub type ValencySchema = TinyOrdSet<ValencyType>;

@@ -371,12 +371,12 @@ pub enum Failure {
     /// it to be {expected}.
     FungibleTypeMismatch {
         opid: OpId,
-        state_type: schema::AssignmentType,
+        state_type: AssignmentType,
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },
     /// invalid bulletproofs in {0}:{1}: {2}
-    BulletproofsInvalid(OpId, u16, String),
+    BulletproofsInvalid(OpId, AssignmentType, String),
     /// operation {0} is invalid: {1}
     ScriptFailure(OpId, String),
 
