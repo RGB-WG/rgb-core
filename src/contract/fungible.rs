@@ -122,7 +122,7 @@ pub enum BlindingParseError {
     #[from]
     Hex(hex::Error),
 
-    /// blinding factor value is invalid and does not belongs to the Secp256k1
+    /// blinding factor value is invalid and does not belong to the Secp256k1
     /// curve field.
     #[from(InvalidFieldElement)]
     InvalidFieldElement,

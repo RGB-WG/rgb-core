@@ -134,15 +134,15 @@ pub enum ContractOp {
     /// global state.
     ///
     /// The first argument specifies owned state type for the sum operation. If
-    /// this state does not exists, either inputs or outputs does not have
+    /// this state does not exist, either inputs or outputs do not have
     /// any data for the state, or the state is not
-    /// of `FungibleState::Bits64` fails the verification.
+    /// of `FungibleState::Bits64`, the verification fails.
     ///
     /// The second argument specifies global state type. If the state does not
     /// exist, there is more than one value, or it is not a u64 value, the
     /// verification fails.
     ///
-    /// If verification succeeds, doesn't changes `st0` value; otherwise sets it
+    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false`.
     #[display("pccs     {0},{1}")]
     PcCs(/** owned state type */ u16, /** global state type */ u16),
