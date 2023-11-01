@@ -5,8 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e624a600eaf54f24da48e42604ffb0fbd543808a078e5081a9441243077233df"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.11#3b46772f30129a89734003c1c7962a3773f61ac8"
 dependencies = [
  "amplify",
  "baid58",

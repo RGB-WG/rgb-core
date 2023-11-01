@@ -63,6 +63,7 @@ features = [ "all" ]
 [patch.crates-io]
 commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.11" }
 single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.11" }
+aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.11" }
 bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
