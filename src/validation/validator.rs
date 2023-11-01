@@ -135,7 +135,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         let anchor_validation_index = BTreeSet::<OpId>::new();
 
         let mut layers1 = bset! { Layer1::Bitcoin };
-        layers1.extend(genesis.alt_layer1.iter().map(AltLayer1::layer1));
+        layers1.extend(genesis.alt_layers1.iter().map(AltLayer1::layer1));
 
         let vm = match &consignment.schema().script {
             Script::AluVM(lib) => {

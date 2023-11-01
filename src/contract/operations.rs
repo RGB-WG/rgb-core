@@ -278,7 +278,7 @@ pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
     pub testnet: bool,
-    pub alt_layer1: AltLayer1Set,
+    pub alt_layers1: AltLayer1Set,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
