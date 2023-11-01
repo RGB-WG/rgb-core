@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:AjePbbRf34u9Vx4iN8uyPZSaS5XC4jnTDpvMDePnerd1#medusa-boris-virtual
+  Id: urn:ubideco:stl:8JJbdG72z9GsZaW5q3wKE7fMCm6ZEraLQDLKwcVjmJkB#moses-package-wonder
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -51,7 +51,6 @@ import urn:ubideco:stl:6GgF7biXPVNcus2FfQj2pQuRzau11rXApMQLfCZhojgi#money-pardon
 -- Vout := urn:ubideco:semid:3HHRtSJW5fnGkdVW1EVDH7B97Y79WhwvKyyfsaBkuQkk#chrome-robin-gallop
 -- ScriptBytes := urn:ubideco:semid:3Y4AgjkFbDusgo3YqRDWv9BznDeAJEUDEPeEq1mpSkAR#maestro-source-jackson
 -- TapNodeHash := urn:ubideco:semid:4M8xyvABKKKJseN6Pme5eKrAuusMNMXoY5s6ifsEcreC#crash-culture-jamaica
--- Chain := urn:ubideco:semid:6aRP3odHaTGySvSWHjreC8HsbX5ss9LxkQqwcjaoxhpv#aspirin-brown-alpine
 -- LeafScript := urn:ubideco:semid:7SUbonQ62tSaBTPpbZPACQo2NogXodi2mW5WEEDfBvp4#brenda-round-micro
 -- Txid := urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty
 -- LeafVer := urn:ubideco:semid:DGELfUvcU62GNQRo7HaMbKDzYQwdYRMW3b91JHd4d3WY#tunnel-lagoon-cowboy
@@ -59,6 +58,7 @@ import urn:ubideco:stl:6GgF7biXPVNcus2FfQj2pQuRzau11rXApMQLfCZhojgi#money-pardon
 
 import urn:ubideco:stl:9KALDYR8Nyjq4FdMW6kYoL7vdkWnqPqNuFnmE9qHpNjZ#justice-rocket-type as Std
 -- Imports:
+-- Bool := urn:ubideco:semid:7ZhBHGSJm9ixmm8Z9vCX7i5Ga7j5xrW8t11nsb1Cgpnx#laser-madam-maxwell
 -- AlphaNumLodash := urn:ubideco:semid:8iBe2dh8beD1KUairdqCacEcxAr4h55XfUQN2PspWXjz#north-sound-salsa
 
 import urn:ubideco:stl:DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy as AluVM
@@ -160,11 +160,11 @@ data FungibleState    :: bits64:8 U64
 -- urn:ubideco:semid:HpiuYTT7BuhCmoNs2GrwNrHNUx3i3yf6GjDiFphLKeQV#profit-bazooka-present
 data FungibleType     :: unsigned64Bit:8
 
--- urn:ubideco:semid:5gwA5ScPHt1SRRPvzvhACqiv48XFa3hhgqtTJF9b1cjY#direct-action-benny
+-- urn:ubideco:semid:F7ZK3wjiiBY57d8tMRbXW6nsDb86Lnjbq1GXRvbGv34c#relax-emotion-nitro
 data Genesis          :: ffv Ffv
                        , schemaId SchemaId
-                       , chain Bitcoin.Chain {- urn:ubideco:semid:6aRP3odHaTGySvSWHjreC8HsbX5ss9LxkQqwcjaoxhpv#aspirin-brown-alpine -}
-                       , altLayer1 AltLayer1Set
+                       , testnet Std.Bool {- urn:ubideco:semid:7ZhBHGSJm9ixmm8Z9vCX7i5Ga7j5xrW8t11nsb1Cgpnx#laser-madam-maxwell -}
+                       , altLayers1 AltLayer1Set
                        , metadata [Byte]
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
