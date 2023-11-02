@@ -188,6 +188,10 @@ impl Status {
 )]
 #[display(doc_comments)]
 pub enum Failure {
+    /// the contract network doesn't match (validator runs in testnet={0}
+    /// configuration).
+    NetworkMismatch(bool),
+
     /// schema {actual} provided for the consignment validation doesn't match
     /// schema {expected} used by the contract. This means that the consignment
     /// is invalid.

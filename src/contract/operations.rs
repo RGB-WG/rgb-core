@@ -30,7 +30,6 @@ use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, ByteArray, Bytes32, Wrapper};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
-use bp::Chain;
 use commit_verify::{mpc, CommitmentId, Conceal};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
@@ -278,8 +277,8 @@ pub trait Operation {
 pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
-    pub chain: Chain,
-    pub alt_layer1: AltLayer1Set,
+    pub testnet: bool,
+    pub alt_layers1: AltLayer1Set,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,

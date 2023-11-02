@@ -296,7 +296,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.10.0"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#5d1e05803158dc6a59599dcf43657d31ff6911e8"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#08ef1beccac4a833a72264c4047516728f6b2337"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -308,7 +308,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0-beta.1"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#5d1e05803158dc6a59599dcf43657d31ff6911e8"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#08ef1beccac4a833a72264c4047516728f6b2337"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -752,7 +752,7 @@ dependencies = [
 [[package]]
 name = "single_use_seals"
 version = "0.11.0-beta.1"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#5d1e05803158dc6a59599dcf43657d31ff6911e8"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#08ef1beccac4a833a72264c4047516728f6b2337"
 dependencies = [
  "amplify_derive",
 ]
