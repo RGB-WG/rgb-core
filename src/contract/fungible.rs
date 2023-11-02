@@ -253,7 +253,7 @@ impl RevealedValue {
     pub fn new_random_blinding(
         value: impl Into<FungibleState>,
         contract_id: ContractId,
-        assignment_type: AssignmentType,
+        assignment_type: impl Into<AssignmentType>,
     ) -> Self {
         Self::with_blinding(value, BlindingFactor::random(), contract_id, assignment_type)
     }
@@ -264,7 +264,7 @@ impl RevealedValue {
         value: impl Into<FungibleState>,
         rng: &mut R,
         contract_id: ContractId,
-        assignment_type: AssignmentType,
+        assignment_type: impl Into<AssignmentType>,
     ) -> Self {
         Self::with_blinding(value, BlindingFactor::random_custom(rng), contract_id, assignment_type)
     }
@@ -274,11 +274,11 @@ impl RevealedValue {
         value: impl Into<FungibleState>,
         blinding: BlindingFactor,
         contract_id: ContractId,
-        assignment_type: AssignmentType,
+        assignment_type: impl Into<AssignmentType>,
     ) -> Self {
         let mut engine = Sha256::default();
         engine.input_raw(&contract_id.to_byte_array());
-        engine.input_raw(&assignment_type.to_le_bytes());
+        engine.input_raw(&assignment_type.into().to_le_bytes());
         let asset_tag = engine.finish().into();
         Self {
             value: value.into(),

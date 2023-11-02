@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:8JJbdG72z9GsZaW5q3wKE7fMCm6ZEraLQDLKwcVjmJkB#moses-package-wonder
+  Id: urn:ubideco:stl:7SnLNKfMjzfz2R7axJKnTuUxzcbU46WFAKcQxS6ki4nU#jordan-karl-egypt
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -120,10 +120,12 @@ data AssignVoidStateBlindSealTxid :: confidential (seal BPCore.SecretSeal {- urn
                        | confidentialState (seal SealDefinitionBlindSealTxid, state VoidState)
                        | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state VoidState)
                        | revealed (seal SealDefinitionBlindSealTxid, state VoidState)
--- urn:ubideco:semid:6jnUE9dFA7Lyc5tFCcqvbAka64k1ASEJu3VXHQdcFN2V#balsa-melon-rocket
-data AssignmentsBlindSealTxPtr :: {U16 -> ^ ..0xff TypedAssignsBlindSealTxPtr}
--- urn:ubideco:semid:HhrRhDUZ8UGq9Wv69jGDNLRF4J3uQUKtbwv9fsn4uSUp#orca-immune-logo
-data AssignmentsBlindSealTxid :: {U16 -> ^ ..0xff TypedAssignsBlindSealTxid}
+-- urn:ubideco:semid:A9sThAqgwKPfuJcR4GDfTQHUAbbS5sbEXG5XVk7FZHEg#hunter-hello-retro
+data AssignmentType   :: U16
+-- urn:ubideco:semid:Bu8iXz4MmJnuUMW6AFAepa8BAa4DXLVAMdrNrkLh3S7a#granite-history-canvas
+data AssignmentsBlindSealTxPtr :: {AssignmentType -> ^ ..0xff TypedAssignsBlindSealTxPtr}
+-- urn:ubideco:semid:7ZGXPWXsK641fCB8nipeDy4ZR9BTQ9Q8c9E2vj2ufNq5#center-nevada-promise
+data AssignmentsBlindSealTxid :: {AssignmentType -> ^ ..0xff TypedAssignsBlindSealTxid}
 -- urn:ubideco:semid:9uzoSojhudYvNZYgTmJ5sMwwxzLtdLnfUeudT6Ro8i23#delta-member-agenda
 data AttachId         :: [Byte ^ 32]
 -- urn:ubideco:semid:9zzp5XyDaLvZSGhCEWtey1Y7xdD1soEYdGaimjyZexyf#agenda-ivory-blast
@@ -138,21 +140,23 @@ data ConcealedData    :: [Byte ^ 32]
 data ConcealedFungible :: commitment PedersenCommitment, rangeProof RangeProof
 -- urn:ubideco:semid:Bho42Xw8wPy2nWxgz6H51rNdBBusaPyrVQT8VypvpZ3w#alarm-danube-vampire
 data ContractId       :: [Byte ^ 32]
--- urn:ubideco:semid:8FWPS3rgRKKR9RcuhigbVsF7C6aaHckbNptsRMghvBYh#drama-lithium-almond
+-- urn:ubideco:semid:4wCasNtcxRnicsUakyXzzRdzemmUk8deBzrCqyRLiesL#deluxe-history-acrobat
 data Extension        :: ffv Ffv
                        , contractId ContractId
-                       , extensionType U16
+                       , extensionType ExtensionType
                        , metadata [Byte]
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
                        , redeemed Redeemed
                        , valencies Valencies
--- urn:ubideco:semid:67iYChNuFcHJb8MdL6QLu3UN3iBhcowquxQUEVRR8fyT#courage-yoyo-flex
+-- urn:ubideco:semid:5EA8tZw7MhL13SCX33m98QLykB6iZFJ3ynukkiCqnh6U#peace-tiger-elastic
 data ExtensionSchema  :: metadata StrictTypes.SemId {- urn:ubideco:semid:8Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp#cargo-plasma-catalog -}
-                       , globals {U16 -> ^ ..0xff Occurrences}
-                       , redeems {U16 ^ ..0xff}
-                       , assignments {U16 -> ^ ..0xff Occurrences}
-                       , valencies {U16 ^ ..0xff}
+                       , globals {GlobalStateType -> ^ ..0xff Occurrences}
+                       , redeems {ValencyType ^ ..0xff}
+                       , assignments {AssignmentType -> ^ ..0xff Occurrences}
+                       , valencies {ValencyType ^ ..0xff}
+-- urn:ubideco:semid:7m9MHRdHSXnhYiheDeXybxnHAxPRgs84USnVELFH98Cd#mission-salsa-parole
+data ExtensionType    :: U16
 -- urn:ubideco:semid:FiMEyh3t5FKEsUqVTgQFYJ5XfJF9m2RwKMN9NckympSG#silence-motel-toronto
 data Ffv              :: U16
 -- urn:ubideco:semid:CD8fR4UCdn4ZE6Y6bNPFkDpXdMCMH1Y8nVPx7NGqqYHB#natasha-profit-winter
@@ -169,15 +173,17 @@ data Genesis          :: ffv Ffv
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
                        , valencies Valencies
--- urn:ubideco:semid:GvvGuP4YdifMMF4EEJ1LvRFkdynnxprngeSkiXKGY17N#oxford-pigment-speech
+-- urn:ubideco:semid:7vb54CDdNg8xJtKZjnbYReqaxHAdmbfoFezH8CsLQWsS#andrea-amigo-grid
 data GenesisSchema    :: metadata StrictTypes.SemId {- urn:ubideco:semid:8Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp#cargo-plasma-catalog -}
-                       , globals {U16 -> ^ ..0xff Occurrences}
-                       , assignments {U16 -> ^ ..0xff Occurrences}
-                       , valencies {U16 ^ ..0xff}
--- urn:ubideco:semid:EoJnj2ziA7oichNMM7Gazqe2eYwGvkwyscCgKnGCtuU8#needle-riviera-copper
-data GlobalState      :: {U16 -> ^ ..0xff GlobalValues}
+                       , globals {GlobalStateType -> ^ ..0xff Occurrences}
+                       , assignments {AssignmentType -> ^ ..0xff Occurrences}
+                       , valencies {ValencyType ^ ..0xff}
+-- urn:ubideco:semid:Ekg4cNmYPqSZn14jQ4GD2tStBFX6S6aUk5bmLDRTaap8#ranger-middle-roman
+data GlobalState      :: {GlobalStateType -> ^ ..0xff GlobalValues}
 -- urn:ubideco:semid:ES98zed1FQ1XHZJptvv3ecWF6XFCdQsG1NvtkADYkugP#night-mixer-monaco
 data GlobalStateSchema :: semId StrictTypes.SemId {- urn:ubideco:semid:8Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp#cargo-plasma-catalog -}, maxItems U16
+-- urn:ubideco:semid:FQ6qHu9gQzjZu3i7dasU7T1PGi4qZi1a4goxJbHxHkbU#seminar-major-tape
+data GlobalStateType  :: U16
 -- urn:ubideco:semid:AnBpS97EbffL9PYZLfHKESeLoNeosEbLinQM9VqGeG2x#bicycle-europe-shampoo
 data GlobalValues     :: [RevealedData ^ 1..]
 -- urn:ubideco:semid:MXcKv35FafL8vRPoxfaZaG96L3bLiNsTtfsJiCLwc23#classic-chariot-domino
@@ -193,16 +199,16 @@ data NoiseDumb        :: [Byte ^ 512]
 data Occurrences      :: min U16, max U16
 -- urn:ubideco:semid:B5hRc3ekuQsCAgsk8dmPVfytVDbvECJ3g2ANqrwSLE2p#slow-samuel-ceramic
 data OpId             :: [Byte ^ 32]
--- urn:ubideco:semid:GSmFccVSeMFC6HwwWDciYseMvBWANxXt8Si8ZRLG2p48#dynasty-totem-finance
+-- urn:ubideco:semid:8EYQPboNCwpv9Nt9FQ47idjzNwCFBtDzRUmAuYEheahW#shallow-match-tokyo
 data Opout            :: op OpId
-                       , ty U16
+                       , ty AssignmentType
                        , no U16
 -- urn:ubideco:semid:5twbh2U5hyaowidwum1iRNCqebBLxTuZTuNPt3SaRT13#nepal-delta-earth
 data PedersenCommitment :: [Byte ^ 33]
 -- urn:ubideco:semid:73TpZuiyRWAuV9GRSj9H7tDf3JXwVvmT4teTXhKxdue1#invent-stock-result
 data RangeProof       :: placeholder:255 NoiseDumb
--- urn:ubideco:semid:2yFKSw4b9ydgvD95xiGnbyDauwyxZ3LdGiS9VQX2ntZg#agent-survive-virus
-data Redeemed         :: {U16 -> ^ ..0xff OpId}
+-- urn:ubideco:semid:9gee8HH6yNbqyLe9tA3N5zcCTReMDe6y2yfcybWyYApm#scoop-press-scuba
+data Redeemed         :: {ValencyType -> ^ ..0xff OpId}
 -- urn:ubideco:semid:5ezr9uJrSdzez89fTCRWvKwGv6coMmQeXizK371oYdZ2#balloon-justin-place
 data ReservedByte     :: U8
 -- urn:ubideco:semid:2odg1kiUEtjxBa9MzQmkyDPxKe2hdt6aASEGQTEHAJYU#cigar-network-event
@@ -215,28 +221,28 @@ data RevealedData     :: [Byte]
 data RevealedFungible :: value FungibleState
                        , blinding BlindingFactor
                        , assetTag [Byte ^ 32]
--- urn:ubideco:semid:4SSnBqnEDnPxoBokzJpFx6XLrdWpRCBVhxmmVt6xsh8Z#gong-version-snow
+-- urn:ubideco:semid:Df1oP2CtYZ1aULEoV5oicwQkNVgGkaFuqW3dktV847k5#margo-mission-virus
 data Schema           :: ffv Ffv
                        , subsetOf ()?
-                       , globalTypes {U16 -> ^ ..0xff GlobalStateSchema}
-                       , ownedTypes {U16 -> ^ ..0xff StateSchema}
-                       , valencyTypes {U16 ^ ..0xff}
+                       , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
+                       , ownedTypes {AssignmentType -> ^ ..0xff StateSchema}
+                       , valencyTypes {ValencyType ^ ..0xff}
                        , genesis GenesisSchema
-                       , extensions {U16 -> ^ ..0xff ExtensionSchema}
-                       , transitions {U16 -> ^ ..0xff TransitionSchema}
+                       , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
+                       , transitions {TransitionType -> ^ ..0xff TransitionSchema}
                        , typeSystem StrictTypes.TypeSystem {- urn:ubideco:semid:47es12nMYaA5M7zMejQHAydsRPW6juta8ensLigXMBDP#linda-yellow-rival -}
                        , script Script
 -- urn:ubideco:semid:AyzbMn4ux89LLU8ho1L4pQa5TXsmRdHd79oh6SXdrCmd#garcia-smoke-ozone
 data SchemaId         :: [Byte ^ 32]
--- urn:ubideco:semid:GgLsfG1yRBKp7NzCFgKidxVc5MhEBxn7dhZ3Z5NnoMKE#madonna-nerve-valery
+-- urn:ubideco:semid:AjnKkNbkCAtjJaTJUW2F36wcPEApCtTWCzm6RUWBVQzB#tourist-monday-exile
 data SchemaSchema     :: ffv Ffv
                        , subsetOf Schema?
-                       , globalTypes {U16 -> ^ ..0xff GlobalStateSchema}
-                       , ownedTypes {U16 -> ^ ..0xff StateSchema}
-                       , valencyTypes {U16 ^ ..0xff}
+                       , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
+                       , ownedTypes {AssignmentType -> ^ ..0xff StateSchema}
+                       , valencyTypes {ValencyType ^ ..0xff}
                        , genesis GenesisSchema
-                       , extensions {U16 -> ^ ..0xff ExtensionSchema}
-                       , transitions {U16 -> ^ ..0xff TransitionSchema}
+                       , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
+                       , transitions {TransitionType -> ^ ..0xff TransitionSchema}
                        , typeSystem StrictTypes.TypeSystem {- urn:ubideco:semid:47es12nMYaA5M7zMejQHAydsRPW6juta8ensLigXMBDP#linda-yellow-rival -}
                        , script Script
 -- urn:ubideco:semid:HyVVQCc7o1wnC3oo1VTHzcpMuVsvzFBTnSFe6xVSiDAV#process-media-second
@@ -252,10 +258,10 @@ data StateSchema      :: declarative ()
                        | fungible FungibleType
                        | structured StrictTypes.SemId {- urn:ubideco:semid:8Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp#cargo-plasma-catalog -}
                        | attachment MediaType
--- urn:ubideco:semid:2ASRU1YKjydnDTbLWLCQzV1XzCe15rJihXP61KfrgL5p#salute-scarlet-speed
+-- urn:ubideco:semid:GLm25xw5WvH5UBJHQw6FVyZbAHYVjXtS1HtkYVPJ1FjT#folio-barbara-guru
 data Transition       :: ffv Ffv
                        , contractId ContractId
-                       , transitionType U16
+                       , transitionType TransitionType
                        , metadata [Byte]
                        , globals GlobalState
                        , inputs Inputs
@@ -263,12 +269,14 @@ data Transition       :: ffv Ffv
                        , valencies Valencies
 -- urn:ubideco:semid:6CpmR5xzubTM5JnF7jQxVd4e17s4iJKMXeshqeb2bHGj#malta-heavy-harris
 data TransitionBundle :: {OpId -> ^ ..0xff BundleItem}
--- urn:ubideco:semid:6G2jfCxjg5UPgkgPZSSnQy2147gindeKGjs3SDWbPFcC#gold-nirvana-vista
+-- urn:ubideco:semid:4d7FmcvNey5X175gyggcn4wftcf7mtGyn6N4r6Ek4roX#fiction-caramel-fractal
 data TransitionSchema :: metadata StrictTypes.SemId {- urn:ubideco:semid:8Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp#cargo-plasma-catalog -}
-                       , globals {U16 -> ^ ..0xff Occurrences}
-                       , inputs {U16 -> ^ ..0xff Occurrences}
-                       , assignments {U16 -> ^ ..0xff Occurrences}
-                       , valencies {U16 ^ ..0xff}
+                       , globals {GlobalStateType -> ^ ..0xff Occurrences}
+                       , inputs {AssignmentType -> ^ ..0xff Occurrences}
+                       , assignments {AssignmentType -> ^ ..0xff Occurrences}
+                       , valencies {ValencyType ^ ..0xff}
+-- urn:ubideco:semid:4XEmzMLZTXc4XB3njvemMq5qdMmx5EKJPAXpJaBPrqCb#puma-joshua-evita
+data TransitionType   :: U16
 -- urn:ubideco:semid:Gbg8NjDV5x6NnhVzmqksPgAc2hgYzMNcgiu4iHggmQcB#orchid-season-bishop
 data TypedAssignsBlindSealTxPtr :: declarative [AssignVoidStateBlindSealTxPtr]
                        | fungible [AssignRevealedValueBlindSealTxPtr]
@@ -279,8 +287,10 @@ data TypedAssignsBlindSealTxid :: declarative [AssignVoidStateBlindSealTxid]
                        | fungible [AssignRevealedValueBlindSealTxid]
                        | structured [AssignRevealedDataBlindSealTxid]
                        | attachment:255 [AssignRevealedAttachBlindSealTxid]
--- urn:ubideco:semid:CuTKkWVTMmWsLXdxt9CZ7T2zeeeJP5PNd5fQF8CqfKVG#robert-neptune-meter
-data Valencies        :: {U16 ^ ..0xff}
+-- urn:ubideco:semid:FXixNMTaiMJMqp5qQCyb67oPrzryjAXxsk6kvsFQoHTi#andy-mango-brother
+data Valencies        :: {ValencyType ^ ..0xff}
+-- urn:ubideco:semid:5mswXMrudHpJEnuoLA86YY2VHN5iL56hmKcmh5k1h3e5#palma-exit-pupil
+data ValencyType      :: U16
 -- urn:ubideco:semid:49HkbZvGaJE3phHjLBMQCR3NK1sGA462HJr5BkqQ6YQr#nectar-ceramic-driver
 data VoidState        :: ()
 

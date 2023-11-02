@@ -81,7 +81,7 @@ pub struct Opout {
 }
 
 impl Opout {
-    pub fn new(op: OpId, ty: u16, no: u16) -> Opout { Opout { op, ty, no } }
+    pub fn new(op: OpId, ty: AssignmentType, no: u16) -> Opout { Opout { op, ty, no } }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]

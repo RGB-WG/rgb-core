@@ -31,7 +31,7 @@ use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
     validation, Assignments, AssignmentsRef, ContractId, ExposedSeal, GlobalState,
     GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef, Operation, Opout,
-    Redeemed, Schema, SchemaRoot, TypedAssigns, Valencies, BLANK_TRANSITION_ID,
+    Redeemed, Schema, SchemaRoot, TransitionType, TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -84,7 +84,7 @@ impl<Root: SchemaRoot> Schema<Root> {
                  */
 
                 let transition_schema = match self.transitions.get(&transition_type) {
-                    None if transition_type == BLANK_TRANSITION_ID => &blank_transition,
+                    None if transition_type == TransitionType::BLANK => &blank_transition,
                     None => {
                         return validation::Status::with_failure(
                             validation::Failure::SchemaUnknownTransitionType(id, transition_type),

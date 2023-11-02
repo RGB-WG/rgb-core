@@ -36,29 +36,29 @@ use strict_encoding::StrictSerialize;
 
 use super::opcodes::*;
 use crate::validation::OpInfo;
-use crate::{Assign, RevealedValue, TypedAssigns};
+use crate::{Assign, AssignmentType, GlobalStateType, RevealedValue, TypedAssigns};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp {
     /// Counts number of inputs (previous state entries) of the provided type
     /// and assigns the number to the destination `a16` register.
     #[display("cnp      {0},a16{1}")]
-    CnP(u16, Reg16),
+    CnP(AssignmentType, Reg16),
 
     /// Counts number of outputs (owned state entries) of the provided type
     /// and assigns the number to the destination `a16` register.
     #[display("cns      {0},a16{1}")]
-    CnS(u16, Reg16),
+    CnS(AssignmentType, Reg16),
 
     /// Counts number of inputs (previous state entries) of the provided type
     /// and assigns the number to the destination `a8` register.
     #[display("cng      {0},a8{1}")]
-    CnG(u16, Reg16),
+    CnG(GlobalStateType, Reg16),
 
     /// Counts number of inputs (previous state entries) of the provided type
     /// and assigns the number to the destination `a16` register.
     #[display("cnc      {0},a16{1}")]
-    CnC(u16, Reg16),
+    CnC(AssignmentType, Reg16),
 
     /// Loads input (previous) state with type id from the first argument and
     /// index from the second argument into a register provided in the third
@@ -69,7 +69,7 @@ pub enum ContractOp {
     ///
     /// If the state at the index is concealed, sets destination to `None`.
     #[display("ldp      {0},{1},{2}")]
-    LdP(u16, u16, RegS),
+    LdP(AssignmentType, u16, RegS),
 
     /// Loads owned structured state with type id from the first argument and
     /// index from the second argument into a register provided in the third
@@ -80,7 +80,7 @@ pub enum ContractOp {
     ///
     /// If the state at the index is concealed, sets destination to `None`.
     #[display("lds      {0},{1},{2}")]
-    LdS(u16, u16, RegS),
+    LdS(AssignmentType, u16, RegS),
 
     /// Loads owned fungible state with type id from the first argument and
     /// index from the second argument into `a64` register provided in the third
@@ -91,7 +91,7 @@ pub enum ContractOp {
     ///
     /// If the state at the index is concealed, sets destination to `None`.
     #[display("ldf      {0},{1},a64{2}")]
-    LdF(u16, u16, Reg16),
+    LdF(AssignmentType, u16, Reg16),
 
     /// Loads global state from the current operation with type id from the
     /// first argument and index from the second argument into a register
@@ -99,7 +99,7 @@ pub enum ContractOp {
     ///
     /// If the state is absent sets `st0` to `false` and terminates the program.
     #[display("ldg      {0},{1},{2}")]
-    LdG(u16, u8, RegS),
+    LdG(GlobalStateType, u8, RegS),
 
     /// Loads part of the contract global state with type id from the first
     /// argument at the depth from the second argument into a register
@@ -108,7 +108,7 @@ pub enum ContractOp {
     /// If the state is absent or concealed sets destination to `None`.
     /// Does not modify content of `st0` register.
     #[display("ldc      {0},{1},{2}")]
-    LdC(u16, u16, RegS),
+    LdC(GlobalStateType, u16, RegS),
 
     /// Loads operation metadata into a register provided in the third argument.
     ///
@@ -127,7 +127,7 @@ pub enum ContractOp {
     /// If verification succeeds, doesn't changes `st0` value; otherwise sets it
     /// to `false`.
     #[display("pcvs     {0}")]
-    PcVs(u16),
+    PcVs(AssignmentType),
 
     /// Verifies equivalence of a sum of pedersen commitments for the list of
     /// outputs with a given owned state type against a value taken from a
@@ -145,7 +145,7 @@ pub enum ContractOp {
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false`.
     #[display("pccs     {0},{1}")]
-    PcCs(/** owned state type */ u16, /** global state type */ u16),
+    PcCs(/** owned state type */ AssignmentType, /** global state type */ GlobalStateType),
 
     /// All other future unsupported operations, which must set `st0` to
     /// `false`.
@@ -445,48 +445,68 @@ impl Bytecode for ContractOp {
     {
         Ok(match reader.read_u8()? {
             INSTR_CNP => {
-                let i = Self::CnP(reader.read_u16()?, reader.read_u4()?.into());
+                let i = Self::CnP(reader.read_u16()?.into(), reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_CNS => {
-                let i = Self::CnS(reader.read_u16()?, reader.read_u4()?.into());
+                let i = Self::CnS(reader.read_u16()?.into(), reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_CNG => {
-                let i = Self::CnG(reader.read_u16()?, reader.read_u4()?.into());
+                let i = Self::CnG(reader.read_u16()?.into(), reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_CNC => {
-                let i = Self::CnC(reader.read_u16()?, reader.read_u4()?.into());
+                let i = Self::CnC(reader.read_u16()?.into(), reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
 
             INSTR_LDP => {
-                let i = Self::LdP(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
+                let i = Self::LdP(
+                    reader.read_u16()?.into(),
+                    reader.read_u16()?,
+                    reader.read_u4()?.into(),
+                );
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_LDS => {
-                let i = Self::LdS(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
+                let i = Self::LdS(
+                    reader.read_u16()?.into(),
+                    reader.read_u16()?,
+                    reader.read_u4()?.into(),
+                );
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_LDF => {
-                let i = Self::LdF(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
+                let i = Self::LdF(
+                    reader.read_u16()?.into(),
+                    reader.read_u16()?,
+                    reader.read_u4()?.into(),
+                );
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_LDG => {
-                let i = Self::LdG(reader.read_u16()?, reader.read_u8()?, reader.read_u4()?.into());
+                let i = Self::LdG(
+                    reader.read_u16()?.into(),
+                    reader.read_u8()?,
+                    reader.read_u4()?.into(),
+                );
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_LDC => {
-                let i = Self::LdC(reader.read_u16()?, reader.read_u16()?, reader.read_u4()?.into());
+                let i = Self::LdC(
+                    reader.read_u16()?.into(),
+                    reader.read_u16()?,
+                    reader.read_u4()?.into(),
+                );
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
@@ -496,8 +516,8 @@ impl Bytecode for ContractOp {
                 i
             }
 
-            INSTR_PCVS => Self::PcVs(reader.read_u16()?),
-            INSTR_PCCS => Self::PcCs(reader.read_u16()?, reader.read_u16()?),
+            INSTR_PCVS => Self::PcVs(reader.read_u16()?.into()),
+            INSTR_PCCS => Self::PcCs(reader.read_u16()?.into(), reader.read_u16()?.into()),
 
             x => Self::Fail(x),
         })
