@@ -529,9 +529,46 @@ mod test {
     use aluvm::data::encoding::Encode;
     use aluvm::library::Lib;
     use amplify::hex::ToHex;
+    use amplify::confinement::SmallBlob;
 
     use super::*;
+    use crate::{
+        Assignments, ContractId, GlobalState, GraphSeal, OpFullType, OpId, TransitionType,
+        Valencies,
+    };
+    use super::*;
     use crate::vm::RgbIsa;
+
+    struct Executor {
+        regs: CoreRegs,
+
+        contract_id: ContractId,
+        id: OpId,
+        ty: OpFullType,
+        metadata: SmallBlob,
+        prev_state: Assignments<GraphSeal>,
+        owned_state: Assignments<GraphSeal>,
+        redeemed: Valencies,
+        valencies: Valencies,
+        global: GlobalState,
+    }
+
+    impl Executor {
+        pub fn dumb() -> Self {
+            Self {
+                regs: CoreRegs::new(),
+                contract_id: OpId::strict_dumb(),
+                id: OpId::strict_dumb(),
+                ty: OpFullType::StateTransition(TransitionType::from(5)),
+                metadata: none!(),
+                prev_state: Assignments::default(),
+                owned_state: Default::default(),
+                redeemed: Default::default(),
+                valencies: Default::default(),
+                global: Default::default(),
+            }
+        }
+    }
 
     #[test]
     fn encoding() {
