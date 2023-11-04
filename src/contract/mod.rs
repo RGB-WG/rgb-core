@@ -89,9 +89,9 @@ impl AltLayer1 {
     }
 }
 
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = super::LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
