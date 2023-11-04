@@ -28,9 +28,9 @@ use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::CoreRegs;
 
-use super::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
 use super::{ContractOp, TimechainOp};
 use crate::validation::OpInfo;
+use crate::vm::opcodes::{INSTR_RGBISA_FROM, INSTR_RGBISA_TO};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]
@@ -73,7 +73,7 @@ impl Bytecode for RgbIsa {
         }
     }
 
-    fn instr_range() -> RangeInclusive<u8> { INSTR_ISAE_FROM..=INSTR_ISAE_TO }
+    fn instr_range() -> RangeInclusive<u8> { INSTR_RGBISA_FROM..=INSTR_RGBISA_TO }
 
     fn instr_byte(&self) -> u8 {
         match self {

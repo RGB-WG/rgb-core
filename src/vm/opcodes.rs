@@ -22,6 +22,11 @@
 
 #![allow(clippy::unusual_byte_groupings)]
 
+use aluvm::isa::opcodes::INSTR_ISAE_TO;
+
+pub const INSTR_RGBISA_FROM: u8 = INSTR_CONTRACT_FROM;
+pub const INSTR_RGBISA_TO: u8 = INSTR_ISAE_TO;
+
 // CONTRACTS:
 pub const INSTR_CNP: u8 = 0b11_000_000;
 pub const INSTR_CNS: u8 = 0b11_000_001;
@@ -42,18 +47,14 @@ pub const INSTR_PCVS: u8 = 0b11_010_000;
 pub const INSTR_PCCS: u8 = 0b11_010_001;
 // Reserved 0b11_010_010
 // Reserved 0b11_010_011
+pub const INSTR_CONTRACT_FROM: u8 = 0b11_000_000;
+pub const INSTR_CONTRACT_TO: u8 = 0b11_010_011;
+
+// TIMECHAIN:
+pub const INSTR_TIMECHAIN_FROM: u8 = 0b11_011_100;
+pub const INSTR_TIMECHAIN_TO: u8 = 0b11_011_111;
 
 // Reserved 0b11_011_100
 // Reserved 0b11_011_101
 // Reserved 0b11_011_110
 // Reserved 0b11_011_111
-
-// TIMECHAIN:
-
-// DATA:
-
-// NB: For now we prohibit all other ISAE than this one. More ISAEs can be
-// allowed in a future with fast-forwards.
-pub use aluvm::isa::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
-// pub const INSTR_ISAE_FROM: u8 = 0b11_000_000;
-// pub const INSTR_ISAE_TO: u8 = 0b11_000_000;

@@ -27,7 +27,7 @@ use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::CoreRegs;
 
-use super::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
+use crate::vm::opcodes::{INSTR_TIMECHAIN_FROM, INSTR_TIMECHAIN_TO};
 
 // TODO: Implement bitcoin blockchain introspection
 
@@ -56,11 +56,11 @@ impl InstructionSet for TimechainOp {
 impl Bytecode for TimechainOp {
     fn byte_count(&self) -> u16 { 0 }
 
-    fn instr_range() -> RangeInclusive<u8> { INSTR_ISAE_FROM..=INSTR_ISAE_TO }
+    fn instr_range() -> RangeInclusive<u8> { INSTR_TIMECHAIN_FROM..=INSTR_TIMECHAIN_TO }
 
     fn instr_byte(&self) -> u8 {
         match self {
-            TimechainOp::Fail => INSTR_ISAE_FROM,
+            TimechainOp::Fail => INSTR_TIMECHAIN_FROM,
         }
     }
 
@@ -77,7 +77,7 @@ impl Bytecode for TimechainOp {
         R: Read,
     {
         match reader.read_u8()? {
-            INSTR_ISAE_FROM..=INSTR_ISAE_TO => Ok(Self::Fail),
+            INSTR_TIMECHAIN_FROM..=INSTR_TIMECHAIN_TO => Ok(Self::Fail),
             _ => unreachable!(),
         }
     }
