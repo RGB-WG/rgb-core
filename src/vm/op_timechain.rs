@@ -27,7 +27,9 @@ use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::CoreRegs;
 
-use super::opcodes::{INSTR_ISAE_FROM, INSTR_ISAE_TO};
+use crate::vm::opcodes::{INSTR_TIMECHAIN_FROM, INSTR_TIMECHAIN_TO};
+
+// TODO: Implement bitcoin blockchain introspection
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]
@@ -41,28 +43,42 @@ impl InstructionSet for TimechainOp {
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
-    fn exec(&self, _regs: &mut CoreRegs, _site: LibSite, _context: &Self::Context<'_>) -> ExecStep {
-        unreachable!()
+    fn exec(&self, regs: &mut CoreRegs, _site: LibSite, _context: &Self::Context<'_>) -> ExecStep {
+        match self {
+            TimechainOp::Fail => {
+                regs.set_failure();
+                ExecStep::Stop
+            }
+        }
     }
 }
 
 impl Bytecode for TimechainOp {
     fn byte_count(&self) -> u16 { 0 }
 
-    fn instr_range() -> RangeInclusive<u8> { INSTR_ISAE_FROM..=INSTR_ISAE_TO }
+    fn instr_range() -> RangeInclusive<u8> { INSTR_TIMECHAIN_FROM..=INSTR_TIMECHAIN_TO }
 
-    fn instr_byte(&self) -> u8 { unreachable!() }
+    fn instr_byte(&self) -> u8 {
+        match self {
+            TimechainOp::Fail => INSTR_TIMECHAIN_FROM,
+        }
+    }
 
     fn encode_args<W>(&self, _writer: &mut W) -> Result<(), BytecodeError>
     where W: Write {
-        unreachable!()
+        match self {
+            TimechainOp::Fail => Ok(()),
+        }
     }
 
-    fn decode<R>(_reader: &mut R) -> Result<Self, CodeEofError>
+    fn decode<R>(reader: &mut R) -> Result<Self, CodeEofError>
     where
         Self: Sized,
         R: Read,
     {
-        unreachable!()
+        match reader.read_u8()? {
+            INSTR_TIMECHAIN_FROM..=INSTR_TIMECHAIN_TO => Ok(Self::Fail),
+            _ => unreachable!(),
+        }
     }
 }

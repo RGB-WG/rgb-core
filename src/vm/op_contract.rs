@@ -346,7 +346,7 @@ impl Bytecode for ContractOp {
         }
     }
 
-    fn instr_range() -> RangeInclusive<u8> { INSTR_CNP..=0b11_001_111 }
+    fn instr_range() -> RangeInclusive<u8> { INSTR_CONTRACT_FROM..=INSTR_CONTRACT_TO }
 
     fn instr_byte(&self) -> u8 {
         match self {
@@ -521,5 +521,30 @@ impl Bytecode for ContractOp {
 
             x => Self::Fail(x),
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use aluvm::data::encoding::Encode;
+    use aluvm::library::Lib;
+    use amplify::hex::ToHex;
+
+    use super::*;
+    use crate::vm::RgbIsa;
+
+    #[test]
+    fn encoding() {
+        let code = [RgbIsa::Contract(ContractOp::PcVs(AssignmentType::from(4000)))];
+        let alu_lib = Lib::assemble(&code).unwrap();
+        let alu_id = alu_lib.id();
+
+        assert_eq!(
+            alu_id.to_string(),
+            "urn:ubideco:alu:AXicg5WYSF3R36coefDodDX2owpSaZJgco7PHMj8qwiv#china-chant-triton"
+        );
+        assert_eq!(alu_lib.code.as_ref().to_hex(), "d0a00f");
+        assert_eq!(alu_lib.serialize().to_hex(), "035247420300d0a00f000000");
+        assert_eq!(alu_lib.disassemble::<RgbIsa>().unwrap(), code);
     }
 }
