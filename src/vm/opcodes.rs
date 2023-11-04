@@ -24,7 +24,7 @@
 
 use aluvm::isa::opcodes::INSTR_ISAE_TO;
 
-pub const INSTR_RGBISA_FROM: u8 = INSTR_CONTRACT_FROM;
+pub const INSTR_RGBISA_FROM: u8 = 0b10_010_000;
 pub const INSTR_RGBISA_TO: u8 = INSTR_ISAE_TO;
 
 // CONTRACTS:
