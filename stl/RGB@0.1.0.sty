@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:QCWZgHu1BuSsrvMVd448bkaSPE7rf6FMrNda32xZobZ#madam-peru-amadeus
+  Id: urn:ubideco:stl:FJu4K5SusGVZNSAgyhY4i3gQknbbAjB9pKK3fHaZJVWi#element-peru-plaza
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -81,6 +81,8 @@ data Anchor           :: bitcoin BPCore.AnchorMerkleProof {- urn:ubideco:semid:5
                        | liquid BPCore.AnchorMerkleProof {- urn:ubideco:semid:5YGZTLPUCHos5Wg8Gm5cLgMPZijqHQLp8CGTMoXTNPf1#coral-vienna-horizon -}
 -- urn:ubideco:semid:3wnGtf3mZhoFh3zXkSppQCDFesMZzj8dxmXCcEf7EgPP#picture-service-index
 data AnchoredBundle   :: anchor Anchor, bundle TransitionBundle
+-- urn:ubideco:semid:EZoxBpGenvb9UVze1zuwuEHqQJAqw2m3T8za5gbX1JZk#buzzer-pattern-craft
+data AssetTag         :: [Byte ^ 32]
 -- urn:ubideco:semid:8Ffm9AttRojBCspPTxazNdaPB3BcFD2cr9c2sES1T7ox#desert-bambino-size
 data AssignRevealedAttachBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state ConcealedAttach)
                        | confidentialState (seal SealDefinitionBlindSealTxPtr, state ConcealedAttach)
@@ -218,10 +220,10 @@ data RevealedAttach   :: id AttachId
                        , salt U64
 -- urn:ubideco:semid:3DcMJ3YRokNwKN8Cce1ZqsYpiTEuto7EY1szCMEDH97A#velvet-david-manual
 data RevealedData     :: [Byte]
--- urn:ubideco:semid:GC8sb7Aw4uY6qVvFP3yy7th3onHPtxcqbuqn6pzpvWKN#pirate-evening-neon
+-- urn:ubideco:semid:5rdcWxUW6LxoRQKrPs2EszvTTPrjmKKWPzHeZi1FjWhX#canal-pagoda-ralph
 data RevealedFungible :: value FungibleState
                        , blinding BlindingFactor
-                       , assetTag [Byte ^ 32]
+                       , tag AssetTag
 -- urn:ubideco:semid:Df1oP2CtYZ1aULEoV5oicwQkNVgGkaFuqW3dktV847k5#margo-mission-virus
 data Schema           :: ffv Ffv
                        , subsetOf ()?

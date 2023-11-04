@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
@@ -29,9 +29,9 @@ use strict_types::SemId;
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{ConsignmentApi, VirtualMachine};
 use crate::{
-    validation, Assignments, AssignmentsRef, ContractId, ExposedSeal, GlobalState,
-    GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef, Operation, Opout,
-    Redeemed, Schema, SchemaRoot, TransitionType, TypedAssigns, Valencies,
+    validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
+    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
+    Operation, Opout, Redeemed, Schema, SchemaRoot, TransitionType, TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -172,6 +172,7 @@ impl<Root: SchemaRoot> Schema<Root> {
             &op,
             &prev_state,
             &redeemed,
+            consignment.asset_tags(),
         );
 
         // We need to run scripts as the very last step, since before that
@@ -431,6 +432,7 @@ pub struct OpInfo<'op> {
     pub contract_id: ContractId,
     pub id: OpId,
     pub ty: OpFullType,
+    pub asset_tags: &'op BTreeMap<AssignmentType, AssetTag>,
     pub metadata: &'op SmallBlob,
     pub prev_state: &'op Assignments<GraphSeal>,
     pub owned_state: AssignmentsRef<'op>,
@@ -447,12 +449,14 @@ impl<'op> OpInfo<'op> {
         op: &'op OpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
+        asset_tags: &'op BTreeMap<AssignmentType, AssetTag>,
     ) -> Self {
         OpInfo {
             id,
             subschema,
             contract_id,
             ty: op.full_type(),
+            asset_tags,
             metadata: op.metadata(),
             prev_state,
             owned_state: op.assignments(),

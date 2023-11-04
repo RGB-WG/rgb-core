@@ -24,11 +24,11 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
-    AnchoredBundle, BundleId, Extension, Genesis, OpId, OpRef, SecretSeal, SubSchema, Transition,
-    TransitionBundle,
+    AnchoredBundle, AssetTag, AssignmentType, BundleId, Extension, Genesis, OpId, OpRef,
+    SecretSeal, SubSchema, Transition, TransitionBundle,
 };
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -46,6 +46,9 @@ pub trait ConsignmentApi {
     where Self: 'container;
 
     fn schema(&self) -> &SubSchema;
+
+    /// Asset tags uses in the confidential asset validation.
+    fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;
 
     /// Retrieves reference to a operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise

@@ -48,8 +48,8 @@ pub use contract::{
 };
 pub use data::{ConcealedData, RevealedData, VoidState};
 pub use fungible::{
-    BlindingFactor, BlindingParseError, ConcealedValue, FungibleState, InvalidFieldElement,
-    NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
+    AssetTag, BlindingFactor, BlindingParseError, ConcealedValue, FungibleState,
+    InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
 };
 pub use global::{GlobalState, GlobalValues};
 pub use operations::{
