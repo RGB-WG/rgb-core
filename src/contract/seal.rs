@@ -21,6 +21,7 @@
 // limitations under the License.
 
 use core::fmt::Debug;
+use std::cmp::Ordering;
 use std::hash::Hash;
 use std::num::NonZeroU32;
 
@@ -189,7 +190,7 @@ impl WitnessOrd {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = WitnessId::Bitcoin(strict_dumb!()))]
 #[cfg_attr(
@@ -208,4 +209,21 @@ pub enum WitnessId {
     Liquid(Txid),
     // Prime,
     // Abraxas,
+}
+
+impl PartialOrd for WitnessId {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for WitnessId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (WitnessId::Bitcoin(_), WitnessId::Liquid(_)) => Ordering::Greater,
+            (WitnessId::Liquid(_), WitnessId::Bitcoin(_)) => Ordering::Less,
+            (
+                WitnessId::Bitcoin(txid1) | WitnessId::Liquid(txid1),
+                WitnessId::Bitcoin(txid2) | WitnessId::Liquid(txid2),
+            ) => txid1.cmp(txid2),
+        }
+    }
 }

@@ -403,7 +403,7 @@ impl ContractHistory {
         }
          */
 
-        let witness_id = witness_anchor.map(WitnessAnchor::witness_id);
+        let witness_id = witness_anchor.map(|wa| wa.witness_id);
         match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
                 self.add_assignments(witness_id, opid, assignments)

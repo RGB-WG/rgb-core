@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:3FFmBTHAR7p7VDdQqyXmEgSHAWV7QCmfcGBUgn3ERVTw#office-bruce-karma
+  Id: urn:ubideco:stl:2oawnoM4M7dB1N1Wd9gADK3bvxGsh21gAt1fgc9QUMYw#italian-harvard-tribal
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -333,9 +333,8 @@ data Valencies        :: {ValencyType ^ ..0xff}
 data ValencyType      :: U16
 -- urn:ubideco:semid:49HkbZvGaJE3phHjLBMQCR3NK1sGA462HJr5BkqQ6YQr#nectar-ceramic-driver
 data VoidState        :: ()
--- urn:ubideco:semid:4BHtWv9wZtBhtpjPLhA8DNztuDZsYZwJ1XReFf8ReRRk#bombay-bridge-slow
-data WitnessAnchor    :: bitcoin (WitnessOrd, Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -})
-                       | liquid (WitnessOrd, Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -})
+-- urn:ubideco:semid:6tBUyNPX3Y24WzHhEXjr4E3wASpLTWqoUhEWSuvsjWEq#carrot-iris-wheel
+data WitnessAnchor    :: witnessOrd WitnessOrd, witnessId WitnessId
 -- urn:ubideco:semid:2cFbhJu6CbwA4bgB2DvsZQWUMBR4Ju4ANCPUA6QBfAhJ#broken-spring-maximum
 data WitnessHeight    :: U32
 -- urn:ubideco:semid:EEYT7goTNgX2nNFoKosg6FKx1CDSyFWHKNK1TRySs6gr#axiom-gyro-album
