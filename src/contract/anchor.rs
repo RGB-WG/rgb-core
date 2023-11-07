@@ -24,7 +24,7 @@ use std::cmp::Ordering;
 use std::ops::{Deref, DerefMut};
 
 use bp::dbc;
-use commit_verify::mpc;
+use commit_verify::mpc::{self, Message, ProtocolId};
 use strict_encoding::StrictDumb;
 
 use crate::{TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
@@ -86,6 +86,33 @@ impl<P: mpc::Proof + StrictDumb> Anchor<P> {
             Anchor::Bitcoin(_) => Layer1::Bitcoin,
             Anchor::Liquid(_) => Layer1::Liquid,
         }
+    }
+}
+
+impl Anchor {
+    /// Reconstructs anchor containing merkle block
+    pub fn into_merkle_block(
+        self,
+        protocol_id: impl Into<ProtocolId>,
+        message: Message,
+    ) -> Result<Anchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+        match self {
+            Anchor::Bitcoin(anchor) => anchor
+                .into_merkle_block(protocol_id, message)
+                .map(Anchor::Bitcoin),
+            Anchor::Liquid(anchor) => anchor
+                .into_merkle_block(protocol_id, message)
+                .map(Anchor::Liquid),
+        }
+    }
+
+    /// Reconstructs anchor containing merkle block
+    pub fn to_merkle_block(
+        &self,
+        protocol_id: impl Into<ProtocolId>,
+        message: Message,
+    ) -> Result<Anchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+        self.clone().into_merkle_block(protocol_id, message)
     }
 }
 
