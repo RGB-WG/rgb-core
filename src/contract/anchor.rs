@@ -21,10 +21,10 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use bp::dbc;
-use commit_verify::mpc::{self, Message, ProtocolId};
+use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
 use crate::{TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
@@ -70,15 +70,6 @@ impl<P: mpc::Proof + StrictDumb> Deref for Anchor<P> {
     }
 }
 
-impl<P: mpc::Proof + StrictDumb> DerefMut for Anchor<P> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        match self {
-            Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
-        }
-    }
-}
-
 impl<P: mpc::Proof + StrictDumb> Anchor<P> {
     #[inline]
     pub fn layer1(&self) -> Layer1 {
@@ -87,32 +78,23 @@ impl<P: mpc::Proof + StrictDumb> Anchor<P> {
             Anchor::Liquid(_) => Layer1::Liquid,
         }
     }
-}
 
-impl Anchor {
-    /// Reconstructs anchor containing merkle block
-    pub fn into_merkle_block(
-        self,
-        protocol_id: impl Into<ProtocolId>,
-        message: Message,
-    ) -> Result<Anchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+    #[inline]
+    pub fn witness_id(&self) -> WitnessId {
         match self {
-            Anchor::Bitcoin(anchor) => anchor
-                .into_merkle_block(protocol_id, message)
-                .map(Anchor::Bitcoin),
-            Anchor::Liquid(anchor) => anchor
-                .into_merkle_block(protocol_id, message)
-                .map(Anchor::Liquid),
+            Anchor::Bitcoin(anchor) => WitnessId::Bitcoin(anchor.txid),
+            Anchor::Liquid(anchor) => WitnessId::Liquid(anchor.txid),
         }
     }
 
-    /// Reconstructs anchor containing merkle block
-    pub fn to_merkle_block(
-        &self,
-        protocol_id: impl Into<ProtocolId>,
-        message: Message,
-    ) -> Result<Anchor<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.clone().into_merkle_block(protocol_id, message)
+    pub fn map<Q: mpc::Proof + StrictDumb>(
+        self,
+        f: impl FnOnce(dbc::Anchor<P>) -> dbc::Anchor<Q>,
+    ) -> Anchor<Q> {
+        match self {
+            Anchor::Bitcoin(anchor) => Anchor::Bitcoin(f(anchor)),
+            Anchor::Liquid(anchor) => Anchor::Liquid(f(anchor)),
+        }
     }
 }
 
@@ -145,6 +127,15 @@ impl Ord for WitnessAnchor {
             Ordering::Less => Ordering::Less,
             Ordering::Greater => Ordering::Greater,
             Ordering::Equal => self.witness_id.cmp(&other.witness_id),
+        }
+    }
+}
+
+impl WitnessAnchor {
+    pub fn from_mempool(witness_id: WitnessId) -> Self {
+        WitnessAnchor {
+            witness_ord: WitnessOrd::OffChain,
+            witness_id,
         }
     }
 }
