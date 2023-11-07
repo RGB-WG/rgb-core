@@ -44,7 +44,7 @@ pub use bundle::{BundleId, BundleItem, TransitionBundle};
 use commit_verify::CommitEncode;
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
-    OpoutParseError, OutputAssignment, RightsOutput, WitnessAnchor, WitnessHeight, WitnessOrd,
+    OpoutParseError, OutputAssignment, RightsOutput,
 };
 pub use data::{ConcealedData, RevealedData, VoidState};
 pub use fungible::{
@@ -57,7 +57,8 @@ pub use operations::{
     Valencies,
 };
 pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, SealDefinition, SecretSeal, TxoSeal, WitnessId,
+    ExposedSeal, GenesisSeal, GraphSeal, SealDefinition, SecretSeal, TxoSeal, WitnessAnchor,
+    WitnessHeight, WitnessId, WitnessOrd,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 

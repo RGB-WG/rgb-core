@@ -21,7 +21,9 @@
 // limitations under the License.
 
 use core::fmt::Debug;
+use std::cmp::Ordering;
 use std::hash::Hash;
+use std::num::NonZeroU32;
 
 pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
@@ -135,6 +137,108 @@ impl<U: ExposedSeal> SealDefinition<U> {
                 Ok(Output::Liquid(seal.outpoint_or(txid)))
             }
             (me, _) => Err(me),
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, dumb = { Self(1) })]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[display(inner)]
+pub struct WitnessHeight(u32);
+
+impl WitnessHeight {
+    pub fn new(height: u32) -> Option<Self> {
+        match height {
+            0 => None,
+            height => Some(WitnessHeight(height)),
+        }
+    }
+
+    pub fn get(&self) -> NonZeroU32 { NonZeroU32::new(self.0).expect("invariant") }
+}
+
+/// RGB consensus information about the current mined height of a witness
+/// transaction defining the ordering of the contract state data.
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = order)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum WitnessOrd {
+    #[display(inner)]
+    OnChain(WitnessHeight),
+
+    #[display("offchain")]
+    #[strict_type(dumb)]
+    OffChain,
+}
+
+impl WitnessOrd {
+    pub fn with_mempool_or_height(height: u32) -> Self {
+        WitnessHeight::new(height)
+            .map(WitnessOrd::OnChain)
+            .unwrap_or(WitnessOrd::OffChain)
+    }
+}
+
+/// Txid and height information ordered according to the RGB consensus rules.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!(), strict_dumb!()))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[non_exhaustive]
+pub enum WitnessAnchor {
+    #[strict_type(tag = 1, dumb)]
+    #[display("bitcoin:{0}/{1}")]
+    Bitcoin(WitnessOrd, Txid),
+
+    #[strict_type(tag = 2)]
+    #[display("liquid:{0}/{1}")]
+    Liquid(WitnessOrd, Txid),
+}
+
+impl PartialOrd for WitnessAnchor {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for WitnessAnchor {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self == other {
+            return Ordering::Equal;
+        }
+        match (self, other) {
+            (WitnessAnchor::Bitcoin(..), WitnessAnchor::Liquid(..)) => Ordering::Less,
+            (WitnessAnchor::Liquid(..), WitnessAnchor::Bitcoin(..)) => Ordering::Greater,
+            (
+                WitnessAnchor::Bitcoin(ord1, txid1) | WitnessAnchor::Liquid(ord1, txid1),
+                WitnessAnchor::Bitcoin(ord2, txid2) | WitnessAnchor::Liquid(ord2, txid2),
+            ) if ord1 == ord2 => txid1.cmp(txid2),
+            (
+                WitnessAnchor::Bitcoin(ord1, _) | WitnessAnchor::Liquid(ord1, _),
+                WitnessAnchor::Bitcoin(ord2, _) | WitnessAnchor::Liquid(ord2, _),
+            ) => ord1.cmp(ord2),
+        }
+    }
+}
+
+impl WitnessAnchor {
+    pub fn witness_id(self) -> WitnessId {
+        match self {
+            WitnessAnchor::Bitcoin(_, txid) => WitnessId::Bitcoin(txid),
+            WitnessAnchor::Liquid(_, txid) => WitnessId::Liquid(txid),
         }
     }
 }
