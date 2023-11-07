@@ -201,11 +201,11 @@ impl WitnessOrd {
 )]
 #[non_exhaustive]
 pub enum WitnessAnchor {
-    #[strict_type(tag = 1, dumb)]
+    #[strict_type(tag = 0x00, dumb)]
     #[display("bitcoin:{0}/{1}")]
     Bitcoin(WitnessOrd, Txid),
 
-    #[strict_type(tag = 2)]
+    #[strict_type(tag = 0x01)]
     #[display("liquid:{0}/{1}")]
     Liquid(WitnessOrd, Txid),
 }
