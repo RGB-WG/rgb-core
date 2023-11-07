@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:2oawnoM4M7dB1N1Wd9gADK3bvxGsh21gAt1fgc9QUMYw#italian-harvard-tribal
+  Id: urn:ubideco:stl:5dLgsvZEbhQekV5j7ghFCTyu3JPZ1B99SqhqPEA4Fdc#pigment-evita-clone
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -335,12 +335,12 @@ data ValencyType      :: U16
 data VoidState        :: ()
 -- urn:ubideco:semid:6tBUyNPX3Y24WzHhEXjr4E3wASpLTWqoUhEWSuvsjWEq#carrot-iris-wheel
 data WitnessAnchor    :: witnessOrd WitnessOrd, witnessId WitnessId
--- urn:ubideco:semid:2cFbhJu6CbwA4bgB2DvsZQWUMBR4Ju4ANCPUA6QBfAhJ#broken-spring-maximum
-data WitnessHeight    :: U32
 -- urn:ubideco:semid:EEYT7goTNgX2nNFoKosg6FKx1CDSyFWHKNK1TRySs6gr#axiom-gyro-album
 data WitnessId        :: bitcoin Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -}
                        | liquid Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -}
--- urn:ubideco:semid:7jsRc7DEpRa2Aa33qSrAydJahgfZnD1qY94GgXoSdjBW#society-invite-private
-data WitnessOrd       :: onChain WitnessHeight
+-- urn:ubideco:semid:JAhqqYxn4oDEDefAeAHFcAtNQJqQBHo6q5xqbviV3L3q#jacket-fiction-sound
+data WitnessOrd       :: onChain WitnessPos
                        | offChain ()
+-- urn:ubideco:semid:zaGYZruf2pxiZqk1bjmoivxK8DkFycoyjQB52uHYhGL#robert-average-artist
+data WitnessPos       :: height U32, timestamp I64
 

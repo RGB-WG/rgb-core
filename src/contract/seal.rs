@@ -141,31 +141,42 @@ impl<U: ExposedSeal> SealDefinition<U> {
     }
 }
 
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, dumb = { Self(1) })]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[display(inner)]
-pub struct WitnessHeight(u32);
+#[display("{height}@{timestamp}")]
+pub struct WitnessPos {
+    height: u32,
+    timestamp: i64,
+}
 
-impl WitnessHeight {
-    pub fn new(height: u32) -> Option<Self> {
-        match height {
-            0 => None,
-            height => Some(WitnessHeight(height)),
+impl WitnessPos {
+    pub fn new(height: u32, timestamp: i64) -> Option<Self> {
+        if height == 0 || timestamp < 1231006505 {
+            return None;
         }
+        Some(WitnessPos { height, timestamp })
     }
 
-    pub fn get(&self) -> NonZeroU32 { NonZeroU32::new(self.0).expect("invariant") }
+    pub fn height(&self) -> NonZeroU32 { NonZeroU32::new(self.height).expect("invariant") }
+}
+
+impl PartialOrd for WitnessPos {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for WitnessPos {
+    fn cmp(&self, other: &Self) -> Ordering { self.timestamp.cmp(&other.timestamp) }
 }
 
 /// RGB consensus information about the current mined height of a witness
 /// transaction defining the ordering of the contract state data.
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = order)]
 #[cfg_attr(
@@ -174,8 +185,9 @@ impl WitnessHeight {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum WitnessOrd {
+    #[from]
     #[display(inner)]
-    OnChain(WitnessHeight),
+    OnChain(WitnessPos),
 
     #[display("offchain")]
     #[strict_type(dumb)]
@@ -183,8 +195,8 @@ pub enum WitnessOrd {
 }
 
 impl WitnessOrd {
-    pub fn with_mempool_or_height(height: u32) -> Self {
-        WitnessHeight::new(height)
+    pub fn with_mempool_or_height(height: u32, timestamp: i64) -> Self {
+        WitnessPos::new(height, timestamp)
             .map(WitnessOrd::OnChain)
             .unwrap_or(WitnessOrd::OffChain)
     }
