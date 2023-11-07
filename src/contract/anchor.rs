@@ -21,10 +21,11 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::ops::{Deref, DerefMut};
 
 use bp::dbc;
 use commit_verify::mpc;
-use commit_verify::mpc::{Message, ProtocolId};
+use strict_encoding::StrictDumb;
 
 use crate::{TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
 
@@ -50,33 +51,40 @@ pub struct AnchoredBundle {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[non_exhaustive]
-pub enum Anchor {
+pub enum Anchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     #[strict_type(tag = 0x00)]
-    Bitcoin(dbc::Anchor<mpc::MerkleProof>),
+    Bitcoin(dbc::Anchor<P>),
 
     #[strict_type(tag = 0x01)]
-    Liquid(dbc::Anchor<mpc::MerkleProof>),
+    Liquid(dbc::Anchor<P>),
 }
 
-impl Anchor {
+impl<P: mpc::Proof + StrictDumb> Deref for Anchor<P> {
+    type Target = dbc::Anchor<P>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
+        }
+    }
+}
+
+impl<P: mpc::Proof + StrictDumb> DerefMut for Anchor<P> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
+        }
+    }
+}
+
+impl<P: mpc::Proof + StrictDumb> Anchor<P> {
+    #[inline]
     pub fn layer1(&self) -> Layer1 {
         match self {
             Anchor::Bitcoin(_) => Layer1::Bitcoin,
             Anchor::Liquid(_) => Layer1::Liquid,
-        }
-    }
-
-    /// Verifies that the anchor commits to the given message under the given
-    /// protocol.
-    pub fn convolve(
-        &self,
-        protocol_id: impl Into<ProtocolId>,
-        message: Message,
-    ) -> Result<mpc::Commitment, mpc::InvalidProof> {
-        match self {
-            Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => {
-                anchor.mpc_proof.convolve(protocol_id.into(), message)
-            }
         }
     }
 }
