@@ -24,6 +24,7 @@ use std::cmp::Ordering;
 use std::ops::Deref;
 
 use bp::dbc;
+use bp::dbc::anchor::MergeError;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
@@ -87,13 +88,27 @@ impl<P: mpc::Proof + StrictDumb> Anchor<P> {
         }
     }
 
-    pub fn map<Q: mpc::Proof + StrictDumb>(
+    pub fn map<Q: mpc::Proof + StrictDumb, E>(
         self,
-        f: impl FnOnce(dbc::Anchor<P>) -> dbc::Anchor<Q>,
-    ) -> Anchor<Q> {
+        f: impl FnOnce(dbc::Anchor<P>) -> Result<dbc::Anchor<Q>, E>,
+    ) -> Result<Anchor<Q>, E> {
         match self {
-            Anchor::Bitcoin(anchor) => Anchor::Bitcoin(f(anchor)),
-            Anchor::Liquid(anchor) => Anchor::Liquid(f(anchor)),
+            Anchor::Bitcoin(anchor) => f(anchor).map(Anchor::Bitcoin),
+            Anchor::Liquid(anchor) => f(anchor).map(Anchor::Liquid),
+        }
+    }
+}
+
+impl Anchor<mpc::MerkleBlock> {
+    pub fn merge_reveal(self, other: Self) -> Result<Self, MergeError> {
+        match (self, other) {
+            (Anchor::Bitcoin(anchor), Anchor::Bitcoin(other)) => {
+                anchor.merge_reveal(other).map(Anchor::Bitcoin)
+            }
+            (Anchor::Liquid(anchor), Anchor::Liquid(other)) => {
+                anchor.merge_reveal(other).map(Anchor::Liquid)
+            }
+            _ => Err(MergeError::ProofMismatch),
         }
     }
 }
