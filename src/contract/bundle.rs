@@ -90,6 +90,7 @@ impl Conceal for TransitionBundle {
 }
 
 impl CommitStrategy for TransitionBundle {
+    // TODO: Use merklization strategy
     type Strategy = commit_verify::strategies::ConcealStrict;
 }
 

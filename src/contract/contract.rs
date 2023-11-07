@@ -38,13 +38,15 @@ use crate::contract::contract::WitnessOrd::OffChain;
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
     Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
-    RevealedValue, SchemaId, SealDefinition, SealWitness, SubSchema, Transition, TypedAssigns,
-    VoidState, LIB_NAME_RGB,
+    RevealedValue, SchemaId, SealDefinition, SubSchema, Transition, TypedAssigns, VoidState,
+    WitnessId, LIB_NAME_RGB,
 };
 
+/// Seal outpoint is **not a seal definition**. It is an accessory structure
+/// allowing to
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -57,10 +59,12 @@ pub enum Output {
     Bitcoin(Outpoint),
     #[strict_type(tag = 0x01)]
     Liquid(Outpoint),
+    /*
     #[strict_type(tag = 0x10)]
     Abraxas,
-    #[strict_type(tag = 0x11, dumb)]
+    #[strict_type(tag = 0x11)]
     Prime,
+     */
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -125,15 +129,15 @@ impl FromStr for Opout {
 )]
 pub struct OutputAssignment<State: ExposedState> {
     pub opout: Opout,
-    pub seal: Outpoint,
+    pub output: Output,
     pub state: State,
-    pub witness: SealWitness,
+    pub witness: Option<WitnessId>,
 }
 
 impl<State: ExposedState> PartialEq for OutputAssignment<State> {
     fn eq(&self, other: &Self) -> bool {
         if self.opout == other.opout &&
-            (self.seal != other.seal ||
+            (self.output != other.output ||
                 self.witness != other.witness ||
                 self.state != other.state)
         {
@@ -164,9 +168,13 @@ impl<State: ExposedState> Ord for OutputAssignment<State> {
 }
 
 impl<State: ExposedState> OutputAssignment<State> {
+    /// # Panics
+    ///
+    /// If the processing is done on invalid stash data, the seal is
+    /// witness-based and the anchor chain doesn't match the seal chain.
     pub fn with_witness<Seal: ExposedSeal>(
         seal: SealDefinition<Seal>,
-        witness_txid: Txid,
+        witness_id: WitnessId,
         state: State,
         opid: OpId,
         ty: AssignmentType,
@@ -174,13 +182,23 @@ impl<State: ExposedState> OutputAssignment<State> {
     ) -> Self {
         OutputAssignment {
             opout: Opout::new(opid, ty, no),
-            seal: seal.outpoint_or(witness_txid),
+            output: seal
+                .output_or_witness(witness_id)
+                .expect(
+                    "processing contract from unverified/invalid stash: witness seal chain \
+                     doesn't match anchor's chain",
+                )
+                .into(),
             state,
-            witness: SealWitness::Present(witness_txid),
+            witness: Some(witness_id),
         }
     }
 
-    pub fn with_genesis<Seal: ExposedSeal>(
+    /// # Panics
+    ///
+    /// If the processing is done on invalid stash data, the seal is
+    /// witness-based and the anchor chain doesn't match the seal chain.
+    pub fn with_no_witness<Seal: ExposedSeal>(
         seal: SealDefinition<Seal>,
         state: State,
         opid: OpId,
@@ -189,32 +207,17 @@ impl<State: ExposedState> OutputAssignment<State> {
     ) -> Self {
         OutputAssignment {
             opout: Opout::new(opid, ty, no),
-            seal: seal
-                .outpoint()
-                .expect("seal must have txid information and come from genesis"),
+            output: seal.output().expect(
+                "processing contract from unverified/invalid stash: seal must have txid \
+                 information since it comes from genesis or extension",
+            ),
             state,
-            witness: SealWitness::Genesis,
-        }
-    }
-
-    pub fn with_extension<Seal: ExposedSeal>(
-        seal: SealDefinition<Seal>,
-        state: State,
-        opid: OpId,
-        ty: AssignmentType,
-        no: u16,
-    ) -> Self {
-        OutputAssignment {
-            opout: Opout::new(opid, ty, no),
-            seal: seal
-                .outpoint()
-                .expect("seal must have txid information and come from state extension"),
-            state,
-            witness: SealWitness::Extension,
+            witness: None,
         }
     }
 }
 
+// TODO: Move to seals mod
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, dumb = { Self(1) })]
@@ -237,6 +240,7 @@ impl WitnessHeight {
     pub fn get(&self) -> NonZeroU32 { NonZeroU32::new(self.0).expect("invariant") }
 }
 
+// TODO: Move to seals mod
 /// RGB consensus information about the current mined height of a witness
 /// transaction defining the ordering of the contract state data.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
@@ -264,19 +268,25 @@ impl WitnessOrd {
     }
 }
 
+// TODO: Move to seals mod
 /// Txid and height information ordered according to the RGB consensus rules.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[display("{ord}/{txid}")]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!(), strict_dumb!()))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct WitnessAnchor {
-    pub ord: WitnessOrd,
-    pub txid: Txid,
+#[non_exhaustive]
+pub enum WitnessAnchor {
+    #[strict_type(tag = 1, dumb)]
+    #[display("bitcoin:{0}/{1}")]
+    Bitcoin(WitnessOrd, Txid),
+
+    #[strict_type(tag = 2)]
+    #[display("liquid:{0}/{1}")]
+    Liquid(WitnessOrd, Txid),
 }
 
 impl PartialOrd for WitnessAnchor {
@@ -288,25 +298,26 @@ impl Ord for WitnessAnchor {
         if self == other {
             return Ordering::Equal;
         }
-        if self.ord != other.ord {
-            return self.ord.cmp(&other.ord);
+        match (self, other) {
+            (WitnessAnchor::Bitcoin(..), WitnessAnchor::Liquid(..)) => Ordering::Less,
+            (WitnessAnchor::Liquid(..), WitnessAnchor::Bitcoin(..)) => Ordering::Greater,
+            (
+                WitnessAnchor::Bitcoin(ord1, txid1) | WitnessAnchor::Liquid(ord1, txid1),
+                WitnessAnchor::Bitcoin(ord2, txid2) | WitnessAnchor::Liquid(ord2, txid2),
+            ) if ord1 == ord2 => txid1.cmp(txid2),
+            (
+                WitnessAnchor::Bitcoin(ord1, _) | WitnessAnchor::Liquid(ord1, _),
+                WitnessAnchor::Bitcoin(ord2, _) | WitnessAnchor::Liquid(ord2, _),
+            ) => ord1.cmp(ord2),
         }
-        self.txid.cmp(&other.txid)
     }
 }
 
 impl WitnessAnchor {
-    pub fn new(ord: WitnessOrd, txid: Txid) -> Self { WitnessAnchor { ord, txid } }
-    pub fn from_mempool(txid: Txid) -> Self {
-        WitnessAnchor {
-            ord: WitnessOrd::OffChain,
-            txid,
-        }
-    }
-    pub fn with_mempool_or_height(mempool_or_height: u32, txid: Txid) -> Self {
-        WitnessAnchor {
-            ord: WitnessOrd::with_mempool_or_height(mempool_or_height),
-            txid,
+    pub fn witness_id(self) -> WitnessId {
+        match self {
+            WitnessAnchor::Bitcoin(_, txid) => WitnessId::Bitcoin(txid),
+            WitnessAnchor::Liquid(_, txid) => WitnessId::Liquid(txid),
         }
     }
 }
@@ -320,7 +331,7 @@ impl WitnessAnchor {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalOrd {
-    pub ord_txid: Option<WitnessAnchor>,
+    pub witness_anchor: Option<WitnessAnchor>,
     pub idx: u16,
 }
 
@@ -333,7 +344,7 @@ impl Ord for GlobalOrd {
         if self == other {
             return Ordering::Equal;
         }
-        match (self.ord_txid, &other.ord_txid) {
+        match (self.witness_anchor, &other.witness_anchor) {
             (None, None) => self.idx.cmp(&other.idx),
             (None, Some(_)) => Ordering::Less,
             (Some(_), None) => Ordering::Greater,
@@ -344,27 +355,15 @@ impl Ord for GlobalOrd {
 }
 
 impl GlobalOrd {
-    pub fn new(ord: WitnessOrd, txid: Txid, idx: u16) -> Self {
-        GlobalOrd {
-            ord_txid: Some(WitnessAnchor::new(ord, txid)),
-            idx,
-        }
-    }
-    pub fn with_electrum_height(height: u32, txid: Txid, idx: u16) -> Self {
-        GlobalOrd {
-            ord_txid: Some(WitnessAnchor::with_mempool_or_height(height, txid)),
-            idx,
-        }
-    }
     pub fn with_anchor(ord_txid: WitnessAnchor, idx: u16) -> Self {
         GlobalOrd {
-            ord_txid: Some(ord_txid),
+            witness_anchor: Some(ord_txid),
             idx,
         }
     }
     pub fn genesis(idx: u16) -> Self {
         GlobalOrd {
-            ord_txid: None,
+            witness_anchor: None,
             idx,
         }
     }
@@ -433,32 +432,25 @@ impl ContractHistory {
     ///
     /// If genesis violates RGB consensus rules and wasn't checked against the
     /// schema before adding to the history.
-    pub fn update_genesis(&mut self, genesis: &Genesis) {
-        self.add_operation(SealWitness::Genesis, genesis, None);
-    }
+    pub fn update_genesis(&mut self, genesis: &Genesis) { self.add_operation(genesis, None); }
 
     /// # Panics
     ///
     /// If state transition violates RGB consensus rules and wasn't checked
     /// against the schema before adding to the history.
-    pub fn add_transition(&mut self, transition: &Transition, ord_txid: WitnessAnchor) {
-        self.add_operation(SealWitness::Present(ord_txid.txid), transition, Some(ord_txid));
+    pub fn add_transition(&mut self, transition: &Transition, witness_anchor: WitnessAnchor) {
+        self.add_operation(transition, Some(witness_anchor));
     }
 
     /// # Panics
     ///
     /// If state extension violates RGB consensus rules and wasn't checked
     /// against the schema before adding to the history.
-    pub fn add_extension(&mut self, extension: &Extension, ord_txid: WitnessAnchor) {
-        self.add_operation(SealWitness::Extension, extension, Some(ord_txid));
+    pub fn add_extension(&mut self, extension: &Extension, witness_anchor: WitnessAnchor) {
+        self.add_operation(extension, Some(witness_anchor));
     }
 
-    fn add_operation(
-        &mut self,
-        witness: SealWitness,
-        op: &impl Operation,
-        ord_txid: Option<WitnessAnchor>,
-    ) {
+    fn add_operation(&mut self, op: &impl Operation, witness_anchor: Option<WitnessAnchor>) {
         let opid = op.id();
 
         for (ty, state) in op.globals() {
@@ -475,7 +467,10 @@ impl ContractHistory {
             };
             for (idx, s) in state.iter().enumerate() {
                 let idx = idx as u16;
-                let glob_idx = GlobalOrd { ord_txid, idx };
+                let glob_idx = GlobalOrd {
+                    witness_anchor,
+                    idx,
+                };
                 map.insert(glob_idx, s.clone())
                     .expect("contract global state exceeded 2^32 items, which is unrealistic");
             }
@@ -514,17 +509,20 @@ impl ContractHistory {
         }
          */
 
+        let witness_id = witness_anchor.map(WitnessAnchor::witness_id);
         match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
-                self.add_assignments(witness, opid, assignments)
+                self.add_assignments(witness_id, opid, assignments)
             }
-            AssignmentsRef::Graph(assignments) => self.add_assignments(witness, opid, assignments),
+            AssignmentsRef::Graph(assignments) => {
+                self.add_assignments(witness_id, opid, assignments)
+            }
         }
     }
 
     fn add_assignments<Seal: ExposedSeal>(
         &mut self,
-        witness: SealWitness,
+        witness_id: Option<WitnessId>,
         opid: OpId,
         assignments: &Assignments<Seal>,
     ) {
@@ -533,23 +531,18 @@ impl ContractHistory {
             assignments: &[Assign<State, Seal>],
             opid: OpId,
             ty: AssignmentType,
-            witness: SealWitness,
+            witness_id: Option<WitnessId>,
         ) {
             for (no, seal, state) in assignments
                 .iter()
                 .enumerate()
                 .filter_map(|(n, a)| a.to_revealed().map(|(seal, state)| (n, seal, state)))
             {
-                let assigned_state = match witness {
-                    SealWitness::Present(txid) => {
-                        OutputAssignment::with_witness(seal, txid, state, opid, ty, no as u16)
+                let assigned_state = match witness_id {
+                    Some(witness_id) => {
+                        OutputAssignment::with_witness(seal, witness_id, state, opid, ty, no as u16)
                     }
-                    SealWitness::Genesis => {
-                        OutputAssignment::with_genesis(seal, state, opid, ty, no as u16)
-                    }
-                    SealWitness::Extension => {
-                        OutputAssignment::with_extension(seal, state, opid, ty, no as u16)
-                    }
+                    None => OutputAssignment::with_no_witness(seal, state, opid, ty, no as u16),
                 };
                 contract_state
                     .push(assigned_state)
@@ -560,16 +553,16 @@ impl ContractHistory {
         for (ty, assignments) in assignments.iter() {
             match assignments {
                 TypedAssigns::Declarative(assignments) => {
-                    process(&mut self.rights, assignments, opid, *ty, witness)
+                    process(&mut self.rights, assignments, opid, *ty, witness_id)
                 }
                 TypedAssigns::Fungible(assignments) => {
-                    process(&mut self.fungibles, assignments, opid, *ty, witness)
+                    process(&mut self.fungibles, assignments, opid, *ty, witness_id)
                 }
                 TypedAssigns::Structured(assignments) => {
-                    process(&mut self.data, assignments, opid, *ty, witness)
+                    process(&mut self.data, assignments, opid, *ty, witness_id)
                 }
                 TypedAssigns::Attachment(assignments) => {
-                    process(&mut self.attach, assignments, opid, *ty, witness)
+                    process(&mut self.attach, assignments, opid, *ty, witness_id)
                 }
             }
         }
