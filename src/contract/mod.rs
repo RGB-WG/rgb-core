@@ -90,8 +90,9 @@ impl AltLayer1 {
     }
 }
 
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
+#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = super::LIB_NAME_RGB)]
 #[cfg_attr(
