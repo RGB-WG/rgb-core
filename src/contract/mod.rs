@@ -25,6 +25,7 @@ mod data;
 mod fungible;
 mod attachment;
 mod state;
+mod anchor;
 pub mod seal;
 pub mod assignments;
 mod operations;
@@ -35,6 +36,7 @@ mod contract;
 use std::io::Write;
 
 use amplify::confinement::TinyOrdSet;
+pub use anchor::{Anchor, AnchoredBundle, Layer1, WitnessAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
@@ -57,12 +59,10 @@ pub use operations::{
     Valencies,
 };
 pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, SealDefinition, SecretSeal, TxoSeal, WitnessAnchor,
-    WitnessHeight, WitnessId, WitnessOrd,
+    ExposedSeal, GenesisSeal, GraphSeal, SealDefinition, SecretSeal, TxoSeal, WitnessHeight,
+    WitnessId, WitnessOrd,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
-
-use crate::Layer1;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]

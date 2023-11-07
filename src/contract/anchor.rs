@@ -20,11 +20,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bp::dbc;
+use std::cmp::Ordering;
+
+use bp::{dbc, Txid};
 use commit_verify::mpc;
 use commit_verify::mpc::{Message, ProtocolId};
 
-use crate::{TransitionBundle, LIB_NAME_RGB};
+use crate::{TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -75,6 +77,59 @@ impl Anchor {
             Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => {
                 anchor.mpc_proof.convolve(protocol_id.into(), message)
             }
+        }
+    }
+}
+
+/// Txid and height information ordered according to the RGB consensus rules.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!(), strict_dumb!()))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[non_exhaustive]
+pub enum WitnessAnchor {
+    #[strict_type(tag = 0x00, dumb)]
+    #[display("bitcoin:{0}/{1}")]
+    Bitcoin(WitnessOrd, Txid),
+
+    #[strict_type(tag = 0x01)]
+    #[display("liquid:{0}/{1}")]
+    Liquid(WitnessOrd, Txid),
+}
+
+impl PartialOrd for WitnessAnchor {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for WitnessAnchor {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self == other {
+            return Ordering::Equal;
+        }
+        match (self, other) {
+            (WitnessAnchor::Bitcoin(..), WitnessAnchor::Liquid(..)) => Ordering::Less,
+            (WitnessAnchor::Liquid(..), WitnessAnchor::Bitcoin(..)) => Ordering::Greater,
+            (
+                WitnessAnchor::Bitcoin(ord1, txid1) | WitnessAnchor::Liquid(ord1, txid1),
+                WitnessAnchor::Bitcoin(ord2, txid2) | WitnessAnchor::Liquid(ord2, txid2),
+            ) if ord1 == ord2 => txid1.cmp(txid2),
+            (
+                WitnessAnchor::Bitcoin(ord1, _) | WitnessAnchor::Liquid(ord1, _),
+                WitnessAnchor::Bitcoin(ord2, _) | WitnessAnchor::Liquid(ord2, _),
+            ) => ord1.cmp(ord2),
+        }
+    }
+}
+
+impl WitnessAnchor {
+    pub fn witness_id(self) -> WitnessId {
+        match self {
+            WitnessAnchor::Bitcoin(_, txid) => WitnessId::Bitcoin(txid),
+            WitnessAnchor::Liquid(_, txid) => WitnessId::Liquid(txid),
         }
     }
 }

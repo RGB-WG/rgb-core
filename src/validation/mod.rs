@@ -26,10 +26,8 @@ mod model;
 mod state;
 mod validator;
 mod consignment;
-mod anchor;
 mod status;
 
-pub use anchor::{Anchor, AnchoredBundle, Layer1};
 pub use consignment::ConsignmentApi;
 pub(crate) use model::OpInfo;
 pub use script::VirtualMachine;
