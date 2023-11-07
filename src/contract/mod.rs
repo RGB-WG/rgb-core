@@ -44,7 +44,7 @@ pub use bundle::{BundleId, BundleItem, TransitionBundle};
 use commit_verify::CommitEncode;
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
-    OpoutParseError, OutputAssignment, RightsOutput,
+    OpoutParseError, Output, OutputAssignment, RightsOutput,
 };
 pub use data::{ConcealedData, RevealedData, VoidState};
 pub use fungible::{
