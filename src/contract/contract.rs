@@ -181,13 +181,10 @@ impl<State: ExposedState> OutputAssignment<State> {
     ) -> Self {
         OutputAssignment {
             opout: Opout::new(opid, ty, no),
-            output: seal
-                .output_or_witness(witness_id)
-                .expect(
-                    "processing contract from unverified/invalid stash: witness seal chain \
-                     doesn't match anchor's chain",
-                )
-                .into(),
+            output: seal.output_or_witness(witness_id).expect(
+                "processing contract from unverified/invalid stash: witness seal chain doesn't \
+                 match anchor's chain",
+            ),
             state,
             witness: Some(witness_id),
         }
