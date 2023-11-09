@@ -25,6 +25,7 @@ mod data;
 mod fungible;
 mod attachment;
 mod state;
+mod anchor;
 pub mod seal;
 pub mod assignments;
 mod operations;
@@ -35,6 +36,7 @@ mod contract;
 use std::io::Write;
 
 use amplify::confinement::TinyOrdSet;
+pub use anchor::{Anchor, AnchoredBundle, Layer1, WitnessAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
@@ -44,12 +46,12 @@ pub use bundle::{BundleId, BundleItem, TransitionBundle};
 use commit_verify::CommitEncode;
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
-    OpoutParseError, OutputAssignment, RightsOutput, WitnessAnchor, WitnessHeight, WitnessOrd,
+    OpoutParseError, Output, OutputAssignment, RightsOutput,
 };
 pub use data::{ConcealedData, RevealedData, VoidState};
 pub use fungible::{
-    BlindingFactor, BlindingParseError, ConcealedValue, FungibleState, InvalidFieldElement,
-    NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
+    AssetTag, BlindingFactor, BlindingParseError, ConcealedValue, FungibleState,
+    InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
 };
 pub use global::{GlobalState, GlobalValues};
 pub use operations::{
@@ -57,11 +59,10 @@ pub use operations::{
     Valencies,
 };
 pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, SealDefinition, SealWitness, SecretSeal, TxoSeal,
+    ExposedSeal, GenesisSeal, GraphSeal, SealDefinition, SecretSeal, TxoSeal, WitnessId,
+    WitnessOrd, WitnessPos,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
-
-use crate::Layer1;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
@@ -89,9 +90,10 @@ impl AltLayer1 {
     }
 }
 
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = super::LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",

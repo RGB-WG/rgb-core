@@ -37,12 +37,6 @@ use super::{
 };
 use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
 
-pub trait SchemaTypeIndex:
-    Copy + Eq + Ord + Default + StrictType + StrictEncode + StrictDecode
-{
-}
-impl SchemaTypeIndex for u16 {}
-
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
 #[display(LowerHex)]

@@ -302,8 +302,10 @@ impl InstructionSet for ContractOp {
                 bytes.copy_from_slice(sum[0].as_inner());
                 let sum = u64::from_le_bytes(bytes);
 
-                let sum =
-                    RevealedValue::with_blinding(sum, zero!(), context.contract_id, *owned_state);
+                let Some(tag) = context.asset_tags.get(owned_state) else {
+                    fail!()
+                };
+                let sum = RevealedValue::with_blinding(sum, zero!(), *tag);
 
                 let inputs = [sum.conceal().commitment.into()];
                 let outputs = load_outputs!(owned_state);

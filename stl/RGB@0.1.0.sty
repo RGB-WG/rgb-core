@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:QCWZgHu1BuSsrvMVd448bkaSPE7rf6FMrNda32xZobZ#madam-peru-amadeus
+  Id: urn:ubideco:stl:5dLgsvZEbhQekV5j7ghFCTyu3JPZ1B99SqhqPEA4Fdc#pigment-evita-clone
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -65,6 +65,7 @@ import urn:ubideco:stl:HX2UBak8vPsTokug1DGMDvTpzns3xUdwZ7QJdyt4qBA9#speed-atlant
 -- Txid := urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty
 -- InternalPk := urn:ubideco:semid:CQjz6cdRfD4cr8oUKmgBUEVkjbcNJ5L8eLc7qGeNHQVu#meter-nerve-chicken
 -- LeafVer := urn:ubideco:semid:DGELfUvcU62GNQRo7HaMbKDzYQwdYRMW3b91JHd4d3WY#tunnel-lagoon-cowboy
+-- Outpoint := urn:ubideco:semid:GeFZHi1RYCrrcH1LG4Fo2SWW5M6KLJ8yvoGkFjRWZaA9#dinner-yoga-danube
 -- XOnlyPk := urn:ubideco:semid:J1BbH2Lx8P3yw9G244d92MMTP5jrkiaVzsr6FzRxpfur#evident-finance-promo
 
 
@@ -81,6 +82,8 @@ data Anchor           :: bitcoin BPCore.AnchorMerkleProof {- urn:ubideco:semid:5
                        | liquid BPCore.AnchorMerkleProof {- urn:ubideco:semid:5YGZTLPUCHos5Wg8Gm5cLgMPZijqHQLp8CGTMoXTNPf1#coral-vienna-horizon -}
 -- urn:ubideco:semid:3wnGtf3mZhoFh3zXkSppQCDFesMZzj8dxmXCcEf7EgPP#picture-service-index
 data AnchoredBundle   :: anchor Anchor, bundle TransitionBundle
+-- urn:ubideco:semid:EZoxBpGenvb9UVze1zuwuEHqQJAqw2m3T8za5gbX1JZk#buzzer-pattern-craft
+data AssetTag         :: [Byte ^ 32]
 -- urn:ubideco:semid:8Ffm9AttRojBCspPTxazNdaPB3BcFD2cr9c2sES1T7ox#desert-bambino-size
 data AssignRevealedAttachBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state ConcealedAttach)
                        | confidentialState (seal SealDefinitionBlindSealTxPtr, state ConcealedAttach)
@@ -139,8 +142,19 @@ data ConcealedAttach  :: [Byte ^ 32]
 data ConcealedData    :: [Byte ^ 32]
 -- urn:ubideco:semid:5UUVzBtqMkymxQmDry4ay4aoXLLojTQQyHGrdSWis3Jt#window-basket-actor
 data ConcealedFungible :: commitment PedersenCommitment, rangeProof RangeProof
+-- urn:ubideco:semid:AKAMGBAMmu7DZ9kMpwqSfDepEJf5PUB6BsufJ4zz88QB#beast-korea-perfect
+data ContractHistory  :: schemaId SchemaId
+                       , rootSchemaId SchemaId?
+                       , contractId ContractId
+                       , global {GlobalStateType -> ^ ..0xff {GlobalOrd -> ^ ..0xffffffff RevealedData}}
+                       , rights {OutputAssignmentVoidState ^ ..0xffffffff}
+                       , fungibles {OutputAssignmentRevealedValue ^ ..0xffffffff}
+                       , data {OutputAssignmentRevealedData ^ ..0xffffffff}
+                       , attach {OutputAssignmentRevealedAttach ^ ..0xffffffff}
 -- urn:ubideco:semid:Bho42Xw8wPy2nWxgz6H51rNdBBusaPyrVQT8VypvpZ3w#alarm-danube-vampire
 data ContractId       :: [Byte ^ 32]
+-- urn:ubideco:semid:AGRkqu4XCz7HJnTiG3DbE6xvMrU1D9vwH2gtJiuHtAyQ#client-major-stamp
+data ContractState    :: schema SchemaSchema, history ContractHistory
 -- urn:ubideco:semid:4wCasNtcxRnicsUakyXzzRdzemmUk8deBzrCqyRLiesL#deluxe-history-acrobat
 data Extension        :: ffv Ffv
                        , contractId ContractId
@@ -179,6 +193,8 @@ data GenesisSchema    :: metadata StrictTypes.SemId {- urn:ubideco:semid:8Ckj2p3
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
+-- urn:ubideco:semid:9UUjMhuGNyLiWhT9hC2wCVfzBfABUHMtqcEqVykQTTBm#north-llama-empire
+data GlobalOrd        :: witnessAnchor WitnessAnchor?, idx U16
 -- urn:ubideco:semid:Ekg4cNmYPqSZn14jQ4GD2tStBFX6S6aUk5bmLDRTaap8#ranger-middle-roman
 data GlobalState      :: {GlobalStateType -> ^ ..0xff GlobalValues}
 -- urn:ubideco:semid:ES98zed1FQ1XHZJptvv3ecWF6XFCdQsG1NvtkADYkugP#night-mixer-monaco
@@ -204,6 +220,29 @@ data OpId             :: [Byte ^ 32]
 data Opout            :: op OpId
                        , ty AssignmentType
                        , no U16
+-- urn:ubideco:semid:6UuNtgzG3HDCodyMVSNFS5C9k3bb9hPM7WFZUxpvgkWt#plume-credit-spider
+data Output           :: bitcoin Bitcoin.Outpoint {- urn:ubideco:semid:GeFZHi1RYCrrcH1LG4Fo2SWW5M6KLJ8yvoGkFjRWZaA9#dinner-yoga-danube -}
+                       | liquid Bitcoin.Outpoint {- urn:ubideco:semid:GeFZHi1RYCrrcH1LG4Fo2SWW5M6KLJ8yvoGkFjRWZaA9#dinner-yoga-danube -}
+-- urn:ubideco:semid:FGqfmEVzLu17kbH9T2zct9i1j8Kf61mGrRMKezobVFRi#panther-nickel-jazz
+data OutputAssignmentRevealedAttach :: opout Opout
+                       , output Output
+                       , state RevealedAttach
+                       , witness WitnessId?
+-- urn:ubideco:semid:FCXSfXiFAdDL2vysh73sf6qn7qpJoMBt9d6ac1LCNevt#convert-rainbow-abraham
+data OutputAssignmentRevealedData :: opout Opout
+                       , output Output
+                       , state RevealedData
+                       , witness WitnessId?
+-- urn:ubideco:semid:BTsK8XY8K3Ab2ZcLx9V99pinZqtpRRkdogXkGnZL8K1b#quota-winter-athlete
+data OutputAssignmentRevealedValue :: opout Opout
+                       , output Output
+                       , state RevealedFungible
+                       , witness WitnessId?
+-- urn:ubideco:semid:H5wB8BKCunCJiej5zyAfJBPyPEdg42Sfv56vc1zvgpVn#dialog-arcade-family
+data OutputAssignmentVoidState :: opout Opout
+                       , output Output
+                       , state VoidState
+                       , witness WitnessId?
 -- urn:ubideco:semid:5twbh2U5hyaowidwum1iRNCqebBLxTuZTuNPt3SaRT13#nepal-delta-earth
 data PedersenCommitment :: [Byte ^ 33]
 -- urn:ubideco:semid:73TpZuiyRWAuV9GRSj9H7tDf3JXwVvmT4teTXhKxdue1#invent-stock-result
@@ -218,10 +257,10 @@ data RevealedAttach   :: id AttachId
                        , salt U64
 -- urn:ubideco:semid:3DcMJ3YRokNwKN8Cce1ZqsYpiTEuto7EY1szCMEDH97A#velvet-david-manual
 data RevealedData     :: [Byte]
--- urn:ubideco:semid:GC8sb7Aw4uY6qVvFP3yy7th3onHPtxcqbuqn6pzpvWKN#pirate-evening-neon
+-- urn:ubideco:semid:5rdcWxUW6LxoRQKrPs2EszvTTPrjmKKWPzHeZi1FjWhX#canal-pagoda-ralph
 data RevealedFungible :: value FungibleState
                        , blinding BlindingFactor
-                       , assetTag [Byte ^ 32]
+                       , tag AssetTag
 -- urn:ubideco:semid:Df1oP2CtYZ1aULEoV5oicwQkNVgGkaFuqW3dktV847k5#margo-mission-virus
 data Schema           :: ffv Ffv
                        , subsetOf ()?
@@ -294,4 +333,14 @@ data Valencies        :: {ValencyType ^ ..0xff}
 data ValencyType      :: U16
 -- urn:ubideco:semid:49HkbZvGaJE3phHjLBMQCR3NK1sGA462HJr5BkqQ6YQr#nectar-ceramic-driver
 data VoidState        :: ()
+-- urn:ubideco:semid:6tBUyNPX3Y24WzHhEXjr4E3wASpLTWqoUhEWSuvsjWEq#carrot-iris-wheel
+data WitnessAnchor    :: witnessOrd WitnessOrd, witnessId WitnessId
+-- urn:ubideco:semid:EEYT7goTNgX2nNFoKosg6FKx1CDSyFWHKNK1TRySs6gr#axiom-gyro-album
+data WitnessId        :: bitcoin Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -}
+                       | liquid Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -}
+-- urn:ubideco:semid:JAhqqYxn4oDEDefAeAHFcAtNQJqQBHo6q5xqbviV3L3q#jacket-fiction-sound
+data WitnessOrd       :: onChain WitnessPos
+                       | offChain ()
+-- urn:ubideco:semid:zaGYZruf2pxiZqk1bjmoivxK8DkFycoyjQB52uHYhGL#robert-average-artist
+data WitnessPos       :: height U32, timestamp I64
 

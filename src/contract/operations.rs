@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp::Ordering;
 use std::collections::{btree_map, btree_set};
 use std::fmt::{self, Display, Formatter};
 use std::iter;
@@ -28,7 +27,7 @@ use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::hex::{FromHex, ToHex};
-use amplify::{hex, ByteArray, Bytes32, Wrapper};
+use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
 use commit_verify::{mpc, CommitmentId, Conceal};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
@@ -149,9 +148,8 @@ impl FromStr for OpId {
 }
 
 impl OpId {
-    // TODO: Add failable version
-    pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
-        Bytes32::copy_from_slice(slice).ok().map(Self)
+    pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
+        Bytes32::copy_from_slice(slice).map(Self)
     }
 }
 
@@ -179,9 +177,8 @@ impl PartialEq<ContractId> for OpId {
 }
 
 impl ContractId {
-    // TODO: Add failable version
-    pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Self> {
-        Bytes32::copy_from_slice(slice).ok().map(Self)
+    pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
+        Bytes32::copy_from_slice(slice).map(Self)
     }
 }
 
@@ -333,15 +330,6 @@ pub struct Transition {
 
 impl StrictSerialize for Transition {}
 impl StrictDeserialize for Transition {}
-
-// TODO: Remove after TransitionBundling refactoring
-impl Ord for Transition {
-    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
-}
-
-impl PartialOrd for Transition {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
 
 impl Conceal for Genesis {
     type Concealed = Genesis;
