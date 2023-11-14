@@ -39,6 +39,7 @@ use crate::LIB_NAME_RGB;
 )]
 pub struct AssignmentType(u16);
 impl AssignmentType {
+    pub const fn with(ty: u16) -> Self { Self(ty) }
     #[inline]
     pub fn to_le_bytes(&self) -> [u8; 2] { self.0.to_le_bytes() }
 }
@@ -54,6 +55,9 @@ impl AssignmentType {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct ValencyType(u16);
+impl ValencyType {
+    pub const fn with(ty: u16) -> Self { Self(ty) }
+}
 
 pub type GlobalSchema = TinyOrdMap<GlobalStateType, Occurrences>;
 pub type ValencySchema = TinyOrdSet<ValencyType>;

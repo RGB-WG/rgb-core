@@ -48,6 +48,9 @@ use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalStateType(u16);
+impl GlobalStateType {
+    pub const fn with(ty: u16) -> Self { Self(ty) }
+}
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -61,6 +64,9 @@ pub struct GlobalStateType(u16);
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct ExtensionType(u16);
+impl ExtensionType {
+    pub const fn with(ty: u16) -> Self { Self(ty) }
+}
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -74,6 +80,9 @@ pub struct ExtensionType(u16);
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct TransitionType(u16);
+impl TransitionType {
+    pub const fn with(ty: u16) -> Self { Self(ty) }
+}
 
 impl TransitionType {
     pub const BLANK: Self = TransitionType(u16::MAX);
