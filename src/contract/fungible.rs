@@ -452,11 +452,10 @@ impl ConfidentialState for ConcealedValue {
 }
 
 impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
-    #[allow(dead_code, unreachable_code, unused_variables)]
     fn commit(revealed: &RevealedValue) -> Self {
-        panic!(
-            "Error: current version of RGB Core doesn't support production of bulletproofs; thus, \
-             fungible state must be never concealed"
+        eprintln!(
+            "Warning: current version of RGB Core doesn't support production of bulletproofs; \
+             thus, fungible state must be never kept concealed"
         );
         let commitment = PedersenCommitment::commit(revealed);
         // TODO: Do actual conceal upon integration of bulletproofs library
