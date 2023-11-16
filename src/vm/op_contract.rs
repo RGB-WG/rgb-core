@@ -44,22 +44,22 @@ use crate::{
 pub enum ContractOp {
     /// Counts number of inputs (previous state entries) of the provided type
     /// and assigns the number to the destination `a16` register.
-    #[display("cnp      {0},a16{1}")]
+    #[display("cnp     {0},a16{1}")]
     CnP(AssignmentType, Reg16),
 
     /// Counts number of outputs (owned state entries) of the provided type
     /// and assigns the number to the destination `a16` register.
-    #[display("cns      {0},a16{1}")]
+    #[display("cns     {0},a16{1}")]
     CnS(AssignmentType, Reg16),
 
     /// Counts number of inputs (previous state entries) of the provided type
     /// and assigns the number to the destination `a8` register.
-    #[display("cng      {0},a8{1}")]
+    #[display("cng     {0},a8{1}")]
     CnG(GlobalStateType, Reg16),
 
     /// Counts number of inputs (previous state entries) of the provided type
     /// and assigns the number to the destination `a16` register.
-    #[display("cnc      {0},a16{1}")]
+    #[display("cnc     {0},a16{1}")]
     CnC(AssignmentType, Reg16),
 
     /// Loads input (previous) state with type id from the first argument and
@@ -70,7 +70,7 @@ pub enum ContractOp {
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldp      {0},{1},{2}")]
+    #[display("ldp     {0},{1},{2}")]
     LdP(AssignmentType, u16, RegS),
 
     /// Loads owned structured state with type id from the first argument and
@@ -81,7 +81,7 @@ pub enum ContractOp {
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("lds      {0},{1},{2}")]
+    #[display("lds     {0},{1},{2}")]
     LdS(AssignmentType, u16, RegS),
 
     /// Loads owned fungible state with type id from the first argument and
@@ -92,7 +92,7 @@ pub enum ContractOp {
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldf      {0},{1},a64{2}")]
+    #[display("ldf     {0},{1},a64{2}")]
     LdF(AssignmentType, u16, Reg16),
 
     /// Loads global state from the current operation with type id from the
@@ -100,7 +100,7 @@ pub enum ContractOp {
     /// provided in the third argument.
     ///
     /// If the state is absent sets `st0` to `false` and terminates the program.
-    #[display("ldg      {0},{1},{2}")]
+    #[display("ldg     {0},{1},{2}")]
     LdG(GlobalStateType, u8, RegS),
 
     /// Loads part of the contract global state with type id from the first
@@ -109,14 +109,14 @@ pub enum ContractOp {
     ///
     /// If the state is absent or concealed sets destination to `None`.
     /// Does not modify content of `st0` register.
-    #[display("ldc      {0},{1},{2}")]
+    #[display("ldc     {0},{1},{2}")]
     LdC(GlobalStateType, u16, RegS),
 
     /// Loads operation metadata into a register provided in the third argument.
     ///
     /// If the operation doesn't have metadata sets destination to `None`.
     /// Does not modify content of `st0` register.
-    #[display("ldm      {0}")]
+    #[display("ldm     {0}")]
     LdM(RegS),
 
     /// Verify sum of pedersen commitments from inputs and outputs.
@@ -128,7 +128,7 @@ pub enum ContractOp {
     ///
     /// If verification succeeds, doesn't changes `st0` value; otherwise sets it
     /// to `false`.
-    #[display("pcvs     {0}")]
+    #[display("pcvs    {0}")]
     PcVs(AssignmentType),
 
     /// Verifies equivalence of a sum of pedersen commitments for the list of
@@ -146,12 +146,12 @@ pub enum ContractOp {
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false`.
-    #[display("pccs     {0},{1}")]
+    #[display("pccs    {0},{1}")]
     PcCs(/** owned state type */ AssignmentType, /** global state type */ GlobalStateType),
 
     /// All other future unsupported operations, which must set `st0` to
     /// `false`.
-    #[display("fail     {0}")]
+    #[display("fail    {0}")]
     Fail(u8),
 }
 
