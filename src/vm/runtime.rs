@@ -23,11 +23,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use aluvm::data::{ByteStr, Number};
+use aluvm::isa::Instr;
 use aluvm::reg::{Reg32, RegA, RegAFR, RegS};
 use aluvm::Vm;
 
 use crate::validation::OpInfo;
-use crate::vm::{AluScript, EntryPoint};
+use crate::vm::{AluScript, EntryPoint, RgbIsa};
 use crate::OpFullType;
 
 pub struct AluRuntime<'script> {
@@ -73,7 +74,7 @@ impl<'script> AluRuntime<'script> {
     }
 
     fn run(&self, entry: EntryPoint, regs: &RegSetup, info: &OpInfo) -> Result<(), String> {
-        let mut vm = Vm::new();
+        let mut vm = Vm::<Instr<RgbIsa>>::new();
 
         for ((reg, idx), val) in &regs.nums {
             vm.registers.set(*reg, *idx, *val);

@@ -24,6 +24,7 @@ use std::collections::{btree_map, BTreeMap};
 use std::io;
 
 use aluvm::data::encoding::{Decode, Encode};
+use aluvm::isa::Instr;
 use aluvm::library::{Lib, LibId, LibSite};
 use aluvm::Program;
 use amplify::confinement::{Confined, SmallBlob, SmallOrdMap, TinyOrdMap};
@@ -194,7 +195,7 @@ impl StrictDecode for AluScript {
 }
 
 impl Program for AluScript {
-    type Isa = RgbIsa;
+    type Isa = Instr<RgbIsa>;
     type Iter<'a> = btree_map::Values<'a, LibId, Lib> where Self: 'a;
 
     fn lib_count(&self) -> u16 { self.libs.len() as u16 }
