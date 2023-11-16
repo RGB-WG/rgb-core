@@ -37,7 +37,8 @@ use strict_encoding::StrictSerialize;
 use super::opcodes::*;
 use crate::validation::OpInfo;
 use crate::{
-    Assign, AssignmentType, GlobalStateType, PedersenCommitment, RevealedValue, TypedAssigns,
+    Assign, AssignmentType, BlindingFactor, GlobalStateType, PedersenCommitment, RevealedValue,
+    TypedAssigns,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -307,7 +308,7 @@ impl InstructionSet for ContractOp {
                 let Some(tag) = context.asset_tags.get(owned_state) else {
                     fail!()
                 };
-                let sum = RevealedValue::with_blinding(sum, zero!(), *tag);
+                let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
 
                 let inputs = [PedersenCommitment::commit(&sum).into_inner()];
                 let outputs = load_outputs!(owned_state);
