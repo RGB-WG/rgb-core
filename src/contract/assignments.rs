@@ -173,6 +173,13 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
         }
     }
 
+    pub fn as_revealed_state_mut(&mut self) -> Option<&mut State> {
+        match self {
+            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => Some(state),
+            Assign::Confidential { .. } | Assign::ConfidentialState { .. } => None,
+        }
+    }
+
     pub fn into_revealed_state(self) -> Option<State> {
         match self {
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => Some(state),
