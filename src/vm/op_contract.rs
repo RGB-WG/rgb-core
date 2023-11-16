@@ -332,19 +332,19 @@ impl Bytecode for ContractOp {
             ContractOp::CnP(_, _) |
             ContractOp::CnS(_, _) |
             ContractOp::CnG(_, _) |
-            ContractOp::CnC(_, _) => 3,
+            ContractOp::CnC(_, _) => 4,
 
             ContractOp::LdP(_, _, _) |
             ContractOp::LdS(_, _, _) |
             ContractOp::LdF(_, _, _) |
-            ContractOp::LdC(_, _, _) => 5,
-            ContractOp::LdG(_, _, _) => 4,
-            ContractOp::LdM(_) => 1,
+            ContractOp::LdC(_, _, _) => 6,
+            ContractOp::LdG(_, _, _) => 5,
+            ContractOp::LdM(_) => 2,
 
-            ContractOp::PcVs(_) => 2,
-            ContractOp::PcCs(_, _) => 4,
+            ContractOp::PcVs(_) => 3,
+            ContractOp::PcCs(_, _) => 5,
 
-            ContractOp::Fail(_) => 0,
+            ContractOp::Fail(_) => 1,
         }
     }
 
