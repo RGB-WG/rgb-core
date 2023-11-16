@@ -26,6 +26,7 @@ use aluvm::data::{ByteStr, Number};
 use aluvm::isa::Instr;
 use aluvm::reg::{Reg32, RegA, RegAFR, RegS};
 use aluvm::Vm;
+use amplify::Wrapper;
 
 use crate::validation::OpInfo;
 use crate::vm::{AluScript, EntryPoint, RgbIsa};
@@ -48,14 +49,20 @@ impl<'script> AluRuntime<'script> {
                 self.run(EntryPoint::ValidateGenesis, &regs, info)?;
             }
             OpFullType::StateTransition(ty) => {
+                regs.nums
+                    .insert((RegAFR::A(RegA::A16), Reg32::Reg1), ty.into_inner().into());
                 self.run(EntryPoint::ValidateTransition(ty), &regs, info)?;
             }
             OpFullType::StateExtension(ty) => {
+                regs.nums
+                    .insert((RegAFR::A(RegA::A16), Reg32::Reg1), ty.into_inner().into());
                 self.run(EntryPoint::ValidateExtension(ty), &regs, info)?;
             }
         }
 
         for ty in info.global.keys() {
+            regs.nums
+                .insert((RegAFR::A(RegA::A16), Reg32::Reg1), ty.into_inner().into());
             self.run(EntryPoint::ValidateGlobalState(*ty), &regs, info)?;
         }
 
@@ -67,6 +74,8 @@ impl<'script> AluRuntime<'script> {
             .copied()
             .collect::<BTreeSet<_>>();
         for ty in used_state {
+            regs.nums
+                .insert((RegAFR::A(RegA::A16), Reg32::Reg1), ty.into_inner().into());
             self.run(EntryPoint::ValidateOwnedState(ty), &regs, info)?;
         }
 
