@@ -31,12 +31,14 @@ use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg16, RegA, RegS};
 use amplify::num::u4;
 use amplify::Wrapper;
-use commit_verify::Conceal;
+use commit_verify::CommitVerify;
 use strict_encoding::StrictSerialize;
 
 use super::opcodes::*;
 use crate::validation::OpInfo;
-use crate::{Assign, AssignmentType, GlobalStateType, RevealedValue, TypedAssigns};
+use crate::{
+    Assign, AssignmentType, GlobalStateType, PedersenCommitment, RevealedValue, TypedAssigns,
+};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp {
@@ -307,7 +309,7 @@ impl InstructionSet for ContractOp {
                 };
                 let sum = RevealedValue::with_blinding(sum, zero!(), *tag);
 
-                let inputs = [sum.conceal().commitment.into()];
+                let inputs = [PedersenCommitment::commit(&sum).into_inner()];
                 let outputs = load_outputs!(owned_state);
 
                 if !secp256k1_zkp::verify_commitments_sum_to_equal(
