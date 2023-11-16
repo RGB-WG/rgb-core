@@ -43,22 +43,22 @@ use crate::{
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp {
     /// Counts number of inputs (previous state entries) of the provided type
-    /// and assigns the number to the destination `a16` register.
+    /// and puts the number to the destination `a16` register.
     #[display("cnp     {0},a16{1}")]
     CnP(AssignmentType, Reg16),
 
     /// Counts number of outputs (owned state entries) of the provided type
-    /// and assigns the number to the destination `a16` register.
+    /// and puts the number to the destination `a16` register.
     #[display("cns     {0},a16{1}")]
     CnS(AssignmentType, Reg16),
 
-    /// Counts number of inputs (previous state entries) of the provided type
-    /// and assigns the number to the destination `a8` register.
+    /// Counts number of global state items of the provided type affected by the
+    /// current operation and puts the number to the destination `a8` register.
     #[display("cng     {0},a8{1}")]
     CnG(GlobalStateType, Reg16),
 
-    /// Counts number of inputs (previous state entries) of the provided type
-    /// and assigns the number to the destination `a16` register.
+    /// Counts number of global state items of the provided type in the contract
+    /// state and puts the number to the destination `a16` register.
     #[display("cnc     {0},a16{1}")]
     CnC(AssignmentType, Reg16),
 
@@ -122,12 +122,11 @@ pub enum ContractOp {
     /// Verify sum of pedersen commitments from inputs and outputs.
     ///
     /// The only argument specifies owned state type for the sum operation. If
-    /// this state does not exists, either inputs or outputs does not have
-    /// any data for the state, or the state is not
-    /// of `FungibleState::Bits64` fails the verification.
+    /// this state does not exist, or either inputs or outputs does not have
+    /// any data for the state, the verification fails.
     ///
     /// If verification succeeds, doesn't changes `st0` value; otherwise sets it
-    /// to `false`.
+    /// to `false` and stops execution.
     #[display("pcvs    {0}")]
     PcVs(AssignmentType),
 
@@ -136,21 +135,20 @@ pub enum ContractOp {
     /// global state.
     ///
     /// The first argument specifies owned state type for the sum operation. If
-    /// this state does not exist, either inputs or outputs do not have
-    /// any data for the state, or the state is not
-    /// of `FungibleState::Bits64`, the verification fails.
+    /// this state does not exist, or either inputs or outputs does not have
+    /// any data for the state, the verification fails.
     ///
     /// The second argument specifies global state type. If the state does not
     /// exist, there is more than one value, or it is not a u64 value, the
     /// verification fails.
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
-    /// to `false`.
+    /// to `false` and stops execution.
     #[display("pccs    {0},{1}")]
     PcCs(/** owned state type */ AssignmentType, /** global state type */ GlobalStateType),
 
     /// All other future unsupported operations, which must set `st0` to
-    /// `false`.
+    /// `false` and stop the execution.
     #[display("fail    {0}")]
     Fail(u8),
 }
