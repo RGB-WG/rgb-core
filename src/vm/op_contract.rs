@@ -25,7 +25,6 @@
 use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
-use aluvm::isa;
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg16, RegA, RegS};
@@ -161,10 +160,10 @@ impl InstructionSet for ContractOp {
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
-    fn exec(&self, regs: &mut CoreRegs, site: LibSite, context: &Self::Context<'_>) -> ExecStep {
+    fn exec(&self, regs: &mut CoreRegs, _site: LibSite, context: &Self::Context<'_>) -> ExecStep {
         macro_rules! fail {
             () => {{
-                isa::ControlFlowOp::Fail.exec(regs, site, &());
+                regs.set_failure();
                 return ExecStep::Stop;
             }};
         }
