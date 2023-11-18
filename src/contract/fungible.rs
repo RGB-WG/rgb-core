@@ -37,13 +37,17 @@ use core::ops::Deref;
 use core::str::FromStr;
 use std::io;
 use std::io::Write;
+use std::time::SystemTime;
 
+use amplify::confinement::U8;
 use amplify::hex::ToHex;
 // We do not import particular modules to keep aware with namespace prefixes
 // that we do not use the standard secp256k1zkp library
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
-use commit_verify::{CommitEncode, CommitVerify, CommitmentProtocol, Conceal, UntaggedProtocol};
+use commit_verify::{
+    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256, UntaggedProtocol,
+};
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
 use strict_encoding::{
@@ -52,7 +56,7 @@ use strict_encoding::{
 };
 
 use super::{ConfidentialState, ExposedState};
-use crate::{schema, StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{schema, AssignmentType, StateCommitment, StateData, StateType, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
@@ -68,6 +72,19 @@ pub struct AssetTag(
     #[from([u8; 32])]
     Bytes32,
 );
+
+impl AssetTag {
+    pub fn new_random(contract_domain: impl AsRef<str>, assignment_type: AssignmentType) -> Self {
+        let rand = thread_rng().next_u64();
+        let timestamp = SystemTime::now().elapsed().expect("system time error");
+        let mut hasher = Sha256::default();
+        hasher.input_with_len::<U8>(contract_domain.as_ref().as_bytes());
+        hasher.input_raw(&assignment_type.to_le_bytes());
+        hasher.input_raw(&timestamp.as_nanos().to_le_bytes());
+        hasher.input_raw(&rand.to_le_bytes());
+        AssetTag::from(hasher.finish())
+    }
+}
 
 /// An atom of an additive state, which thus can be monomorphically encrypted.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
