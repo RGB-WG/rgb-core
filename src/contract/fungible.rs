@@ -143,9 +143,9 @@ pub enum BlindingParseError {
 ///
 /// Knowledge of the blinding factor is important to reproduce the commitment
 /// process if the original value is kept.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(Self::to_hex)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
@@ -153,6 +153,10 @@ pub enum BlindingParseError {
     serde(crate = "serde_crate", try_from = "secp256k1_zkp::SecretKey")
 )]
 pub struct BlindingFactor(Bytes32);
+
+impl BlindingFactor {
+    pub const EMPTY: Self = BlindingFactor(Bytes32::from_array([0x7E; 32]));
+}
 
 impl Deref for BlindingFactor {
     type Target = [u8; 32];
@@ -195,9 +199,11 @@ impl BlindingFactor {
     ///
     /// # Errors
     ///
-    /// If any subset of the negatives or positives are inverses of other
-    /// negatives or positives, or if the balancing factor is zero (sum of
-    /// negatives already equal to the sum of positives).
+    /// * if negatives are empty set;
+    /// * if any subset of the negatives or positives are inverses of other
+    ///   negatives or positives,
+    /// * if the balancing factor is zero (sum of negatives already equal to the
+    ///   sum of positives).
     pub fn zero_balanced(
         negative: impl IntoIterator<Item = BlindingFactor>,
         positive: impl IntoIterator<Item = BlindingFactor>,
@@ -452,11 +458,10 @@ impl ConfidentialState for ConcealedValue {
 }
 
 impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
-    #[allow(dead_code, unreachable_code, unused_variables)]
     fn commit(revealed: &RevealedValue) -> Self {
-        panic!(
-            "Error: current version of RGB Core doesn't support production of bulletproofs; thus, \
-             fungible state must be never concealed"
+        eprintln!(
+            "Warning: current version of RGB Core doesn't support production of bulletproofs; \
+             thus, fungible state must be never kept concealed"
         );
         let commitment = PedersenCommitment::commit(revealed);
         // TODO: Do actual conceal upon integration of bulletproofs library

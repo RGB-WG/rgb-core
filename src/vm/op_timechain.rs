@@ -54,7 +54,7 @@ impl InstructionSet for TimechainOp {
 }
 
 impl Bytecode for TimechainOp {
-    fn byte_count(&self) -> u16 { 0 }
+    fn byte_count(&self) -> u16 { 1 }
 
     fn instr_range() -> RangeInclusive<u8> { INSTR_TIMECHAIN_FROM..=INSTR_TIMECHAIN_TO }
 

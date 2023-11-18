@@ -283,8 +283,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         while let Some(operation) = queue.pop_front() {
             let opid = operation.id();
 
-            // [VALIDATION]: Verify operation against the schema. Here we check only a single
-            //               operation, not state evolution (it will be checked lately)
+            // [VALIDATION]: Verify operation against the schema and scripts
             if !self.validation_index.contains(&opid) {
                 self.status += schema.validate(self.consignment, operation, self.vm.as_ref());
                 self.validation_index.insert(opid);

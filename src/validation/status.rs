@@ -67,7 +67,9 @@ pub struct Status {
 
 impl Display for Status {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Consignment {}", self.validity())?;
+        if f.alternate() {
+            writeln!(f, "Consignment {}", self.validity())?;
+        }
 
         if !self.unresolved_txids.is_empty() {
             f.write_str("Unknown witness transactions:\n")?;

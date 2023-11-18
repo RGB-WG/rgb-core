@@ -25,39 +25,41 @@
 use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
-use aluvm::isa;
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg16, RegA, RegS};
 use amplify::num::u4;
 use amplify::Wrapper;
-use commit_verify::Conceal;
+use commit_verify::CommitVerify;
 use strict_encoding::StrictSerialize;
 
 use super::opcodes::*;
 use crate::validation::OpInfo;
-use crate::{Assign, AssignmentType, GlobalStateType, RevealedValue, TypedAssigns};
+use crate::{
+    Assign, AssignmentType, BlindingFactor, GlobalStateType, PedersenCommitment, RevealedValue,
+    TypedAssigns,
+};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp {
     /// Counts number of inputs (previous state entries) of the provided type
-    /// and assigns the number to the destination `a16` register.
-    #[display("cnp      {0},a16{1}")]
+    /// and puts the number to the destination `a16` register.
+    #[display("cnp     {0},a16{1}")]
     CnP(AssignmentType, Reg16),
 
     /// Counts number of outputs (owned state entries) of the provided type
-    /// and assigns the number to the destination `a16` register.
-    #[display("cns      {0},a16{1}")]
+    /// and puts the number to the destination `a16` register.
+    #[display("cns     {0},a16{1}")]
     CnS(AssignmentType, Reg16),
 
-    /// Counts number of inputs (previous state entries) of the provided type
-    /// and assigns the number to the destination `a8` register.
-    #[display("cng      {0},a8{1}")]
+    /// Counts number of global state items of the provided type affected by the
+    /// current operation and puts the number to the destination `a8` register.
+    #[display("cng     {0},a8{1}")]
     CnG(GlobalStateType, Reg16),
 
-    /// Counts number of inputs (previous state entries) of the provided type
-    /// and assigns the number to the destination `a16` register.
-    #[display("cnc      {0},a16{1}")]
+    /// Counts number of global state items of the provided type in the contract
+    /// state and puts the number to the destination `a16` register.
+    #[display("cnc     {0},a16{1}")]
     CnC(AssignmentType, Reg16),
 
     /// Loads input (previous) state with type id from the first argument and
@@ -68,7 +70,7 @@ pub enum ContractOp {
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldp      {0},{1},{2}")]
+    #[display("ldp     {0},{1},{2}")]
     LdP(AssignmentType, u16, RegS),
 
     /// Loads owned structured state with type id from the first argument and
@@ -79,7 +81,7 @@ pub enum ContractOp {
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("lds      {0},{1},{2}")]
+    #[display("lds     {0},{1},{2}")]
     LdS(AssignmentType, u16, RegS),
 
     /// Loads owned fungible state with type id from the first argument and
@@ -90,7 +92,7 @@ pub enum ContractOp {
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldf      {0},{1},a64{2}")]
+    #[display("ldf     {0},{1},a64{2}")]
     LdF(AssignmentType, u16, Reg16),
 
     /// Loads global state from the current operation with type id from the
@@ -98,7 +100,7 @@ pub enum ContractOp {
     /// provided in the third argument.
     ///
     /// If the state is absent sets `st0` to `false` and terminates the program.
-    #[display("ldg      {0},{1},{2}")]
+    #[display("ldg     {0},{1},{2}")]
     LdG(GlobalStateType, u8, RegS),
 
     /// Loads part of the contract global state with type id from the first
@@ -107,26 +109,25 @@ pub enum ContractOp {
     ///
     /// If the state is absent or concealed sets destination to `None`.
     /// Does not modify content of `st0` register.
-    #[display("ldc      {0},{1},{2}")]
+    #[display("ldc     {0},{1},{2}")]
     LdC(GlobalStateType, u16, RegS),
 
     /// Loads operation metadata into a register provided in the third argument.
     ///
     /// If the operation doesn't have metadata sets destination to `None`.
     /// Does not modify content of `st0` register.
-    #[display("ldm      {0}")]
+    #[display("ldm     {0}")]
     LdM(RegS),
 
     /// Verify sum of pedersen commitments from inputs and outputs.
     ///
     /// The only argument specifies owned state type for the sum operation. If
-    /// this state does not exists, either inputs or outputs does not have
-    /// any data for the state, or the state is not
-    /// of `FungibleState::Bits64` fails the verification.
+    /// this state does not exist, or either inputs or outputs does not have
+    /// any data for the state, the verification fails.
     ///
     /// If verification succeeds, doesn't changes `st0` value; otherwise sets it
-    /// to `false`.
-    #[display("pcvs     {0}")]
+    /// to `false` and stops execution.
+    #[display("pcvs    {0}")]
     PcVs(AssignmentType),
 
     /// Verifies equivalence of a sum of pedersen commitments for the list of
@@ -134,22 +135,21 @@ pub enum ContractOp {
     /// global state.
     ///
     /// The first argument specifies owned state type for the sum operation. If
-    /// this state does not exist, either inputs or outputs do not have
-    /// any data for the state, or the state is not
-    /// of `FungibleState::Bits64`, the verification fails.
+    /// this state does not exist, or either inputs or outputs does not have
+    /// any data for the state, the verification fails.
     ///
     /// The second argument specifies global state type. If the state does not
     /// exist, there is more than one value, or it is not a u64 value, the
     /// verification fails.
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
-    /// to `false`.
-    #[display("pccs     {0},{1}")]
+    /// to `false` and stops execution.
+    #[display("pccs    {0},{1}")]
     PcCs(/** owned state type */ AssignmentType, /** global state type */ GlobalStateType),
 
     /// All other future unsupported operations, which must set `st0` to
-    /// `false`.
-    #[display("fail     {0}")]
+    /// `false` and stop the execution.
+    #[display("fail    {0}")]
     Fail(u8),
 }
 
@@ -158,10 +158,10 @@ impl InstructionSet for ContractOp {
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
-    fn exec(&self, regs: &mut CoreRegs, site: LibSite, context: &Self::Context<'_>) -> ExecStep {
+    fn exec(&self, regs: &mut CoreRegs, _site: LibSite, context: &Self::Context<'_>) -> ExecStep {
         macro_rules! fail {
             () => {{
-                isa::ControlFlowOp::Fail.exec(regs, site, &());
+                regs.set_failure();
                 return ExecStep::Stop;
             }};
         }
@@ -305,9 +305,9 @@ impl InstructionSet for ContractOp {
                 let Some(tag) = context.asset_tags.get(owned_state) else {
                     fail!()
                 };
-                let sum = RevealedValue::with_blinding(sum, zero!(), *tag);
+                let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
 
-                let inputs = [sum.conceal().commitment.into()];
+                let inputs = [PedersenCommitment::commit(&sum).into_inner()];
                 let outputs = load_outputs!(owned_state);
 
                 if !secp256k1_zkp::verify_commitments_sum_to_equal(
@@ -332,19 +332,19 @@ impl Bytecode for ContractOp {
             ContractOp::CnP(_, _) |
             ContractOp::CnS(_, _) |
             ContractOp::CnG(_, _) |
-            ContractOp::CnC(_, _) => 3,
+            ContractOp::CnC(_, _) => 4,
 
             ContractOp::LdP(_, _, _) |
             ContractOp::LdS(_, _, _) |
             ContractOp::LdF(_, _, _) |
-            ContractOp::LdC(_, _, _) => 5,
-            ContractOp::LdG(_, _, _) => 4,
-            ContractOp::LdM(_) => 1,
+            ContractOp::LdC(_, _, _) => 6,
+            ContractOp::LdG(_, _, _) => 5,
+            ContractOp::LdM(_) => 2,
 
-            ContractOp::PcVs(_) => 2,
-            ContractOp::PcCs(_, _) => 4,
+            ContractOp::PcVs(_) => 3,
+            ContractOp::PcCs(_, _) => 5,
 
-            ContractOp::Fail(_) => 0,
+            ContractOp::Fail(_) => 1,
         }
     }
 
