@@ -36,7 +36,7 @@ use crate::{
 /// # Verification
 ///
 /// The function does not verify the internal consistency, schema conformance or
-/// validation status of the RGB contract data withing the storage or container;
+/// validation status of the RGB contract data within the storage or container;
 /// these checks must be performed as a separate step before calling any of the
 /// [`ContainerApi`] methods. If the methods are called on
 /// non-validated/unchecked data this may result in returned [`Error`] or
