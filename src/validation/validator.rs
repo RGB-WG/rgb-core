@@ -88,8 +88,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             ref bundle,
         } in consignment.anchored_bundles()
         {
-            if !TransitionBundle::validate(bundle) {
-                status.add_failure(Failure::BundleInvalid(bundle.bundle_id()));
+            if let Err(err) = TransitionBundle::validate(bundle) {
+                status.add_failure(Failure::BundleInvalid(bundle.bundle_id(), err));
             }
             for transition in bundle.values().filter_map(|item| item.transition.as_ref()) {
                 let opid = transition.id();
@@ -104,7 +104,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         let mut end_transitions = Vec::<(&Transition, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.terminals() {
             let Some(transitions) = consignment.known_transitions_by_bundle_id(bundle_id) else {
-                status.add_failure(Failure::BundleInvalid(bundle_id));
+                status.add_failure(Failure::BundleMissed(bundle_id));
                 continue;
             };
             for transition in transitions {

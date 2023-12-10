@@ -32,7 +32,8 @@ use strict_types::SemId;
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SealDefinition, SecretSeal, StateType,
+    BundleError, BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SealDefinition,
+    SecretSeal, StateType,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -298,8 +299,11 @@ pub enum Failure {
     OperationAbsent(OpId),
     /// state transition {0} is absent from the consignment.
     TransitionAbsent(OpId),
-    /// bundle with id {0} is invalid.
-    BundleInvalid(BundleId),
+    /// bundle with id {0} {1}
+    BundleInvalid(BundleId, BundleError),
+    /// consignment misses bundle with id {0} which must contain one of
+    /// terminals.
+    BundleMissed(BundleId),
 
     // Errors checking seal closing
     /// transition {0} is not anchored.

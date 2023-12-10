@@ -25,7 +25,23 @@ use amplify::{Bytes32, Wrapper};
 use commit_verify::{mpc, CommitStrategy, CommitmentId, Conceal};
 
 use super::{OpId, Transition};
-use crate::LIB_NAME_RGB;
+use crate::{ContractId, LIB_NAME_RGB};
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
+#[display(doc_comments)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum BundleError {
+    /// state transitions created under different contracts.
+    DivergentContracts,
+    /// no state transitions.
+    EmptyBundle,
+    /// state transitions reference to the same input multiple times ({0}).
+    RepeatedInputs(usize),
+}
 
 /// Unique state transition bundle identifier equivalent to the bundle
 /// commitment hash
@@ -104,14 +120,28 @@ impl TransitionBundle {
 }
 
 impl TransitionBundle {
-    pub fn validate(&self) -> bool {
+    pub fn validate(&self) -> Result<ContractId, BundleError> {
+        let mut contract_id = None;
         let mut used_inputs = bset! {};
         for item in self.values() {
-            if used_inputs.intersection(&item.inputs).count() > 0 {
-                return false;
+            if !contract_id
+                .and_then(|id| {
+                    item.transition
+                        .as_ref()
+                        .map(|t| (id, t))
+                        .map(|(id, t)| id == t.contract_id)
+                })
+                .unwrap_or_default()
+            {
+                return Err(BundleError::DivergentContracts);
+            }
+            contract_id = item.transition.as_ref().map(|t| t.contract_id);
+            let repeated_inputs = used_inputs.intersection(&item.inputs).count();
+            if repeated_inputs > 0 {
+                return Err(BundleError::RepeatedInputs(repeated_inputs));
             }
             used_inputs.extend(&item.inputs);
         }
-        true
+        contract_id.ok_or(BundleError::EmptyBundle)
     }
 }
