@@ -113,6 +113,13 @@ impl SealDefinition<GenesisSeal> {
 }
 
 impl<U: ExposedSeal> SealDefinition<U> {
+    pub fn with(layer1: Layer1, seal: impl Into<U>) -> Self {
+        match layer1 {
+            Layer1::Bitcoin => SealDefinition::Bitcoin(seal.into()),
+            Layer1::Liquid => SealDefinition::Liquid(seal.into()),
+        }
+    }
+
     pub fn layer1(self) -> Layer1 {
         match self {
             SealDefinition::Bitcoin(_) => Layer1::Bitcoin,
