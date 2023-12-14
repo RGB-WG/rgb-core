@@ -31,7 +31,7 @@ pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
 };
 pub use bp::seals::txout::TxoSeal;
-use bp::seals::txout::{ExplicitSeal, SealTxid};
+use bp::seals::txout::{CloseMethod, ExplicitSeal, SealTxid};
 use bp::Txid;
 use commit_verify::{strategies, CommitVerify, Conceal, DigestExt, Sha256, UntaggedProtocol};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType, StrictWriter};
@@ -129,6 +129,13 @@ impl<U: ExposedSeal> Xchain<U> {
         match self {
             Xchain::Bitcoin(_) => Layer1::Bitcoin,
             Xchain::Liquid(_) => Layer1::Liquid,
+        }
+    }
+
+    pub fn method(self) -> CloseMethod {
+        match self {
+            Xchain::Bitcoin(seal) => seal.method(),
+            Xchain::Liquid(seal) => seal.method(),
         }
     }
 
