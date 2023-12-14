@@ -156,10 +156,10 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
     /// transaction id, and returns a validation object listing all detected
     /// failures, warnings and additional information.
     ///
-    /// When a failure detected, it not stopped; the failure is is logged into
-    /// the status object, but the validation continues for the rest of the
-    /// consignment data. This can help it debugging and detecting all problems
-    /// with the consignment.
+    /// When a failure detected, validation is not stopped; the failure is
+    /// logged into the status object, but the validation continues for the
+    /// rest of the consignment data. This can help it debugging and
+    /// detecting all problems with the consignment.
     pub fn validate(consignment: &'consignment C, resolver: &'resolver R, testnet: bool) -> Status {
         let mut validator = Validator::init(consignment, resolver);
 
@@ -176,12 +176,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
 
         // We must return here, since if the schema is not valid there is no reason to
-        // validate contract nodes against it: it will produce a plenty of errors
+        // validate contract nodes against it: it will produce a plenty of errors.
         if validator.status.validity() == Validity::Invalid {
             return validator.status;
         }
 
-        validator.validate_contract(consignment.schema());
+        validator.validate_logic(consignment.schema());
+        validator.validate_commitments();
 
         // Done. Returning status report with all possible failures, issues, warnings
         // and notifications about transactions we were unable to obtain.
@@ -190,7 +191,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
     fn validate_schema(&mut self, schema: &SubSchema) { self.status += schema.verify(); }
 
-    fn validate_contract<Root: SchemaRoot>(&mut self, schema: &Schema<Root>) {
+    fn validate_logic<Root: SchemaRoot>(&mut self, schema: &Schema<Root>) {
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != self.schema_id {
@@ -217,13 +218,43 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // NB: We are not aiming to validate the consignment as a whole, but instead
         // treat it as a superposition of subgraphs, one for each endpoint; and validate
         // them independently.
-        for (operation, bundle_id) in self.end_transitions.clone() {
-            self.validate_branch(schema, operation, bundle_id);
+        for (transition, _) in &self.end_transitions {
+            self.validate_branch(schema, transition);
         }
+
+        // Generate warning if some of the transitions within the consignment were
+        // excessive (i.e. not part of validation_index). Nothing critical, but still
+        // good to report the user that the consignment is not perfect
+        for opid in self.consignment.op_ids_except(&self.validation_index) {
+            self.status.add_warning(Warning::ExcessiveOperation(opid));
+        }
+    }
+
+    fn validate_commitments(&mut self) {
         // Replace missed (not yet mined) endpoint witness transaction failures
         // with a dedicated type
-        for (operation, _) in &self.end_transitions {
-            if let Some(anchor) = self.anchor_index.get(&operation.id()) {
+        for (transition, bundle_id) in &self.end_transitions {
+            let opid = transition.id();
+
+            if let Some(anchor) = self.anchor_index.get(&opid) {
+                // Making sure we do have a corresponding anchor; otherwise reporting failure
+                // (see below) - with the except of genesis and extension nodes, which does not
+                // have a corresponding anchor
+                if !self.anchor_validation_index.contains(&opid) {
+                    // Ok, now we have the `transition` and the `anchor`, let's do all
+                    // required checks
+
+                    // [VALIDATION]: Check that transition is committed into the anchor.
+                    //               This must be done with deterministic bitcoin
+                    //               commitments & LNPBP-4.
+                    if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
+                        self.status.add_failure(Failure::NotInAnchor(opid));
+                    }
+
+                    self.validate_anchor(transition, *bundle_id, anchor);
+                    self.anchor_validation_index.insert(opid);
+                }
+
                 let anchor = match anchor {
                     Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
                 };
@@ -243,14 +274,11 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                         .warnings
                         .push(Warning::TerminalWitnessNotMined(anchor.txid));
                 }
+            } else {
+                // If we've got here there is something broken with the consignment
+                // provider.
+                self.status.add_failure(Failure::NotAnchored(opid));
             }
-        }
-
-        // Generate warning if some of the transitions within the consignment were
-        // excessive (i.e. not part of validation_index). Nothing critical, but still
-        // good to report the user that the consignment is not perfect
-        for opid in self.consignment.op_ids_except(&self.validation_index) {
-            self.status.add_warning(Warning::ExcessiveOperation(opid));
         }
     }
 
@@ -258,7 +286,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         &mut self,
         schema: &Schema<Root>,
         transition: &'consignment Transition,
-        bundle_id: BundleId,
     ) {
         let mut queue: VecDeque<OpRef> = VecDeque::new();
 
@@ -275,6 +302,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         while let Some(operation) = queue.pop_front() {
             let opid = operation.id();
 
+            if operation.contract_id() != self.contract_id {
+                self.status
+                    .add_failure(Failure::ContractMismatch(opid, operation.contract_id()));
+                continue;
+            }
+
             // [VALIDATION]: Verify operation against the schema and scripts
             if !self.validation_index.contains(&opid) {
                 self.status += schema.validate(self.consignment, operation, self.vm.as_ref());
@@ -286,30 +319,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     // nothing to add to the queue here
                 }
                 OpRef::Transition(transition) => {
-                    // Making sure we do have a corresponding anchor; otherwise reporting failure
-                    // (see below) - with the except of genesis and extension nodes, which does not
-                    // have a corresponding anchor
-                    if let Some(anchor) = self.anchor_index.get(&opid).cloned() {
-                        if !self.anchor_validation_index.contains(&opid) {
-                            // Ok, now we have the `operation` and the `anchor`, let's do all
-                            // required checks
-
-                            // [VALIDATION]: Check that transition is committed into the anchor.
-                            //               This must be done with deterministic bitcoin
-                            //               commitments & LNPBP-4.
-                            if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
-                                self.status.add_failure(Failure::NotInAnchor(opid));
-                            }
-
-                            self.validate_transition(transition, bundle_id, anchor);
-                            self.anchor_validation_index.insert(opid);
-                        }
-                    } else {
-                        // If we've got here there is something broken with the consignment
-                        // provider.
-                        self.status.add_failure(Failure::NotAnchored(opid));
-                    }
-
                     // Now, we must collect all parent nodes and add them to the verification queue
                     let parent_nodes = transition.inputs.iter().filter_map(|input| {
                         self.consignment.operation(input.prev_out.op).or_else(|| {
@@ -351,18 +360,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
     }
 
-    fn validate_transition(
+    fn validate_anchor(
         &mut self,
         transition: &'consignment Transition,
         bundle_id: BundleId,
         anchor: &'consignment Anchor,
     ) {
-        if transition.contract_id != self.contract_id {
-            self.status
-                .add_failure(Failure::ContractMismatch(transition.id(), transition.contract_id));
-            return;
-        }
-
         let (layer1, anchor) = match anchor {
             Anchor::Bitcoin(a) | Anchor::Liquid(a) => (anchor.layer1(), a),
         };
