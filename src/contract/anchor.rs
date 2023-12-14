@@ -25,6 +25,8 @@ use std::ops::Deref;
 
 use bp::dbc;
 use bp::dbc::anchor::MergeError;
+use bp::dbc::opret::OpretProof;
+use bp::dbc::tapret::TapretProof;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
@@ -53,14 +55,14 @@ pub struct AnchoredBundle {
 )]
 pub enum Anchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     #[strict_type(tag = 0x00)]
-    Bitcoin(dbc::Anchor<P>),
+    Bitcoin(AnchorSet<P>),
 
     #[strict_type(tag = 0x01)]
-    Liquid(dbc::Anchor<P>),
+    Liquid(AnchorSet<P>),
 }
 
 impl<P: mpc::Proof + StrictDumb> Deref for Anchor<P> {
-    type Target = dbc::Anchor<P>;
+    type Target = AnchorSet<P>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -87,10 +89,10 @@ impl<P: mpc::Proof + StrictDumb> Anchor<P> {
         }
     }
 
-    pub fn map<Q: mpc::Proof + StrictDumb, E>(
+    pub fn map<Q: mpc::Proof + StrictDumb, D: dbc::Proof, E>(
         self,
-        f: impl FnOnce(dbc::Anchor<P>) -> Result<dbc::Anchor<Q>, E>,
-    ) -> Result<Anchor<Q>, E> {
+        f: impl FnOnce(dbc::Anchor<P, D>) -> Result<dbc::Anchor<Q, D>, E>,
+    ) -> Result<AnchorSet<Q>, E> {
         match self {
             Anchor::Bitcoin(anchor) => f(anchor).map(Anchor::Bitcoin),
             Anchor::Liquid(anchor) => f(anchor).map(Anchor::Liquid),
@@ -110,6 +112,26 @@ impl Anchor<mpc::MerkleBlock> {
             _ => Err(MergeError::ProofMismatch),
         }
     }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Taptet(strict_dumb!()))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
+    #[strict_type(tag = 0x01)]
+    Taptet(dbc::Anchor<P, TapretProof>),
+    #[strict_type(tag = 0x02)]
+    Opret(dbc::Anchor<P, OpretProof>),
+    #[strict_type(tag = 0x03)]
+    Dual {
+        tapret: dbc::Anchor<P, TapretProof>,
+        opret: dbc::Anchor<P, OpretProof>,
+    },
 }
 
 /// Txid and height information ordered according to the RGB consensus rules.

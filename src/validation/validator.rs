@@ -32,8 +32,8 @@ use super::{ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, Anchor, AnchoredBundle, BundleId, ContractId, GraphSeal, Layer1, OpId, OpRef,
-    Operation, Opout, Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition,
-    TransitionBundle, TypedAssigns, Xchain,
+    Operation, Opout, Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition, TypedAssigns,
+    Xchain,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -88,12 +88,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             ref bundle,
         } in consignment.anchored_bundles()
         {
-            if let Err(err) = TransitionBundle::validate(bundle) {
-                status.add_failure(Failure::BundleInvalid(bundle.bundle_id(), err));
-            }
-            for transition in bundle.values().filter_map(|item| item.transition.as_ref()) {
-                let opid = transition.id();
-                anchor_index.insert(opid, anchor);
+            for opid in bundle.values() {
+                anchor_index.insert(*opid, anchor);
             }
         }
 
@@ -103,11 +99,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // about them (in form of generated warnings)
         let mut end_transitions = Vec::<(&Transition, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.terminals() {
-            let Some(transitions) = consignment.known_transitions_by_bundle_id(bundle_id) else {
-                status.add_failure(Failure::BundleMissed(bundle_id));
-                continue;
-            };
-            for transition in transitions {
+            for transition in consignment.known_transitions_in_bundle(bundle_id) {
                 let opid = transition.id();
                 // Checking for endpoint definition duplicates
                 if !transition
@@ -365,6 +357,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         bundle_id: BundleId,
         anchor: &'consignment Anchor,
     ) {
+        if transition.contract_id != self.contract_id {
+            self.status
+                .add_failure(Failure::ContractMismatch(transition.id(), transition.contract_id));
+            return;
+        }
+
         let (layer1, anchor) = match anchor {
             Anchor::Bitcoin(a) | Anchor::Liquid(a) => (anchor.layer1(), a),
         };
@@ -495,9 +493,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
 
         let message = mpc::Message::from(bundle_id);
-        match anchor.convolve(self.contract_id, message) {
-            Err(_) => {
-                self.status.add_failure(Failure::MpcInvalid(opid, txid));
+        // [VALIDATION]: Checking anchor deterministic bitcoin commitment
+        match anchor.verify(self.contract_id, message, &witness.tx) {
+            Err(err) => {
+                // The operation is not committed to bitcoin transaction graph!
+                // Ultimate failure. But continuing to detect the rest (after reporting it).
+                self.status
+                    .add_failure(Failure::AnchorInvalid(opid, txid, err));
             }
             Ok(commitment) => {
                 // [VALIDATION]: CHECKING SINGLE-USE-SEALS
@@ -509,14 +511,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     })
                     .ok();
             }
-        }
-
-        // [VALIDATION]: Checking anchor deterministic bitcoin commitment
-        if let Err(err) = anchor.verify(self.contract_id, message, &witness.tx) {
-            // The operation is not committed to bitcoin transaction graph!
-            // Ultimate failure. But continuing to detect the rest (after reporting it).
-            self.status
-                .add_failure(Failure::AnchorInvalid(opid, txid, err));
         }
     }
 }

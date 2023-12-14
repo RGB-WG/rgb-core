@@ -27,8 +27,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
-    AnchoredBundle, AssetTag, AssignmentType, BundleId, Extension, Genesis, OpId, OpRef,
-    SecretSeal, SubSchema, Transition, TransitionBundle,
+    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, SecretSeal,
+    SubSchema, Transition,
 };
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -44,6 +44,8 @@ use crate::{
 pub trait ConsignmentApi {
     type BundleIter<'container>: Iterator<Item = &'container AnchoredBundle>
     where Self: 'container;
+    type TransitionIter<'container>: Iterator<Item = &'container Transition>
+    where Self: 'container;
 
     fn schema(&self) -> &SubSchema;
 
@@ -56,30 +58,6 @@ pub trait ConsignmentApi {
 
     /// Contract genesis.
     fn genesis(&self) -> &Genesis;
-
-    /// Returns reference to a state transition, if known, matching the provided
-    /// id. If id is unknown, or corresponds to other type of the operation
-    /// (genesis or state extensions) a error is returned.
-    ///
-    /// # Errors
-    ///
-    /// - [`Error::WrongNodeType`] when operation is present, but has some other
-    ///   operation type
-    /// - [`Error::TransitionAbsent`] when operation with the given id is absent
-    ///   from the storage/container
-    fn transition(&self, opid: OpId) -> Option<&Transition>;
-
-    /// Returns reference to a state extension, if known, matching the provided
-    /// id. If id is unknown, or corresponds to other type of the operation
-    /// (genesis or state transition) a error is returned.
-    ///
-    /// # Errors
-    ///
-    /// - [`Error::WrongNodeType`] when operation is present, but has some other
-    ///   operation type
-    /// - [`Error::ExtensionAbsent`] when operation with the given id is absent
-    ///   from the storage/container
-    fn extension(&self, opid: OpId) -> Option<&Extension>;
 
     /// The final state ("endpoints") provided by this consignment.
     ///
@@ -95,11 +73,9 @@ pub trait ConsignmentApi {
     /// Data on all anchored state transitions contained in the consignment
     fn anchored_bundles(&self) -> Self::BundleIter<'_>;
 
-    fn bundle_by_id(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
-
     fn op_ids_except(&self, ids: &BTreeSet<OpId>) -> BTreeSet<OpId>;
 
     fn has_operation(&self, opid: OpId) -> bool;
 
-    fn known_transitions_by_bundle_id(&self, bundle_id: BundleId) -> Option<Vec<&Transition>>;
+    fn known_transitions_in_bundle(&self, bundle_id: BundleId) -> Self::TransitionIter<'_>;
 }

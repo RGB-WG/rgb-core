@@ -20,28 +20,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use amplify::confinement::{TinyOrdMap, TinyOrdSet};
+use std::collections::BTreeMap;
+
+use amplify::confinement::{Confined, TinyOrdMap, U16};
 use amplify::{Bytes32, Wrapper};
 use commit_verify::{mpc, CommitStrategy, CommitmentId, Conceal};
 
-use super::{OpId, Transition};
-use crate::{ContractId, LIB_NAME_RGB};
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
-#[display(doc_comments)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub enum BundleError {
-    /// state transitions created under different contracts.
-    DivergentContracts,
-    /// no state transitions.
-    EmptyBundle,
-    /// state transitions reference to the same input multiple times ({0}).
-    RepeatedInputs(usize),
-}
+use super::OpId;
+use crate::LIB_NAME_RGB;
 
 /// Unique state transition bundle identifier equivalent to the bundle
 /// commitment hash
@@ -68,33 +54,13 @@ impl From<mpc::Message> for BundleId {
     fn from(id: mpc::Message) -> Self { BundleId(id.into_inner()) }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct BundleItem {
-    pub inputs: TinyOrdSet<u16>,
-    pub transition: Option<Transition>,
-}
-
-impl Conceal for BundleItem {
-    type Concealed = Self;
-
-    fn conceal(&self) -> Self::Concealed {
-        BundleItem {
-            inputs: self.inputs.clone(),
-            transition: None,
-        }
-    }
-}
-
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct TransitionBundle(TinyOrdMap<OpId, BundleItem>);
+pub struct TransitionBundle(Confined<BTreeMap<Vin, OpId>, 1, U16>);
 
 impl Conceal for TransitionBundle {
     type Concealed = Self;
@@ -117,31 +83,4 @@ impl CommitmentId for TransitionBundle {
 
 impl TransitionBundle {
     pub fn bundle_id(&self) -> BundleId { self.commitment_id() }
-}
-
-impl TransitionBundle {
-    pub fn validate(&self) -> Result<ContractId, BundleError> {
-        let mut contract_id = None;
-        let mut used_inputs = bset! {};
-        for item in self.values() {
-            if !contract_id
-                .and_then(|id| {
-                    item.transition
-                        .as_ref()
-                        .map(|t| (id, t))
-                        .map(|(id, t)| id == t.contract_id)
-                })
-                .unwrap_or_default()
-            {
-                return Err(BundleError::DivergentContracts);
-            }
-            contract_id = item.transition.as_ref().map(|t| t.contract_id);
-            let repeated_inputs = used_inputs.intersection(&item.inputs).count();
-            if repeated_inputs > 0 {
-                return Err(BundleError::RepeatedInputs(repeated_inputs));
-            }
-            used_inputs.extend(&item.inputs);
-        }
-        contract_id.ok_or(BundleError::EmptyBundle)
-    }
 }

@@ -42,7 +42,7 @@ pub use assignments::{
     TypedAssigns,
 };
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
-pub use bundle::{BundleError, BundleId, BundleItem, TransitionBundle};
+pub use bundle::{BundleId, TransitionBundle};
 use commit_verify::CommitEncode;
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,

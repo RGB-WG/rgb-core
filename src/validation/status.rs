@@ -32,8 +32,7 @@ use strict_types::SemId;
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    BundleError, BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
-    Xchain,
+    ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType, Xchain,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -299,11 +298,8 @@ pub enum Failure {
     OperationAbsent(OpId),
     /// state transition {0} is absent from the consignment.
     TransitionAbsent(OpId),
-    /// bundle with id {0} {1}
-    BundleInvalid(BundleId, BundleError),
-    /// consignment misses bundle with id {0} which must contain one of
-    /// terminals.
-    BundleMissed(BundleId),
+    /// operation {0} is under a different contract {1}.
+    ContractMismatch(OpId, ContractId),
 
     // Errors checking seal closing
     /// transition {0} is not anchored.
@@ -322,9 +318,6 @@ pub enum Failure {
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
-    /// transition {0} is not a part of multi-protocol commitment for witness
-    /// {1}; anchor is invalid.
-    MpcInvalid(OpId, Txid),
     /// witness transaction {0} is not known to the transaction resolver.
     SealNoWitnessTx(Txid),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
