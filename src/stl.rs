@@ -32,7 +32,7 @@ use crate::{AnchoredBundle, ContractState, Extension, Genesis, SubSchema, LIB_NA
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB: &str =
-    "urn:ubideco:stl:5dLgsvZEbhQekV5j7ghFCTyu3JPZ1B99SqhqPEA4Fdc#pigment-evita-clone";
+    "urn:ubideco:stl:7Py6B6RnaEobvsQroWzjeAMBhf5MtXxqyeC7rjEXmUeP#india-section-prime";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {

@@ -29,11 +29,11 @@ pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
 };
 pub use bp::seals::txout::TxoSeal;
+use bp::seals::txout::{ExplicitSeal, SealTxid};
 use bp::Txid;
 use commit_verify::{strategies, CommitVerify, Conceal, DigestExt, Sha256, UntaggedProtocol};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictWriter};
 
-use crate::contract::contract::Output;
 use crate::{Layer1, LIB_NAME_RGB};
 
 pub trait ExposedSeal:
@@ -44,6 +44,10 @@ pub trait ExposedSeal:
 impl ExposedSeal for GraphSeal {}
 
 impl ExposedSeal for GenesisSeal {}
+
+impl<Id: SealTxid> ExposedSeal for ExplicitSeal<Id> {}
+
+pub type OutputSeal = SealDefinition<ExplicitSeal<Txid>>;
 
 /*
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -128,20 +132,26 @@ impl<U: ExposedSeal> SealDefinition<U> {
     }
 
     #[inline]
-    pub fn output(self) -> Option<Output> {
-        match self {
-            SealDefinition::Bitcoin(seal) => seal.outpoint().map(Output::Bitcoin),
-            SealDefinition::Liquid(seal) => seal.outpoint().map(Output::Liquid),
-        }
+    pub fn to_output_seal(self) -> Option<OutputSeal> {
+        Some(match self {
+            SealDefinition::Bitcoin(seal) => {
+                let outpoint = seal.outpoint()?;
+                SealDefinition::Bitcoin(ExplicitSeal::new(seal.method(), outpoint))
+            }
+            SealDefinition::Liquid(seal) => {
+                let outpoint = seal.outpoint()?;
+                SealDefinition::Liquid(ExplicitSeal::new(seal.method(), outpoint))
+            }
+        })
     }
 
-    pub fn output_or_witness(self, witness_id: WitnessId) -> Result<Output, Self> {
+    pub fn try_to_output_seal(self, witness_id: WitnessId) -> Result<OutputSeal, Self> {
         match (self, witness_id) {
-            (SealDefinition::Bitcoin(seal), WitnessId::Bitcoin(txid)) => {
-                Ok(Output::Bitcoin(seal.outpoint_or(txid)))
-            }
+            (SealDefinition::Bitcoin(seal), WitnessId::Bitcoin(txid)) => Ok(
+                SealDefinition::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))),
+            ),
             (SealDefinition::Liquid(seal), WitnessId::Liquid(txid)) => {
-                Ok(Output::Liquid(seal.outpoint_or(txid)))
+                Ok(SealDefinition::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
             (me, _) => Err(me),
         }
