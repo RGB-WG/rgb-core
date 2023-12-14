@@ -22,8 +22,10 @@
 
 use core::fmt::Debug;
 use std::cmp::Ordering;
+use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
 use std::num::NonZeroU32;
+use std::str::FromStr;
 
 pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
@@ -154,6 +156,51 @@ impl<U: ExposedSeal> Xchain<U> {
                 Ok(Xchain::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
             (me, _) => Err(me),
+        }
+    }
+}
+
+impl<U: ExposedSeal + Display> Display for Xchain<U> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Xchain::Bitcoin(seal) => write!(f, "bitcoin:{seal}"),
+            Xchain::Liquid(seal) => write!(f, "liquid:{seal}"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Display, Error, From)]
+pub enum XchainParseError<E: Debug + Display> {
+    #[display("unknown seal prefix '{0}'; only 'bitcoin:' and 'liquid:' are currently supported")]
+    UnknownPrefix(String),
+
+    #[from]
+    #[display(inner)]
+    Seal(E),
+}
+
+impl<U: ExposedSeal + FromStr> FromStr for Xchain<U>
+where U::Err: Debug + Display
+{
+    type Err = XchainParseError<U::Err>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((prefix, s)) = s.split_once(':') {
+            match prefix {
+                "bitcoin" => s
+                    .parse()
+                    .map(Xchain::Bitcoin)
+                    .map_err(XchainParseError::from),
+                "liquid" => s
+                    .parse()
+                    .map(Xchain::Liquid)
+                    .map_err(XchainParseError::from),
+                unknown => Err(XchainParseError::UnknownPrefix(unknown.to_owned())),
+            }
+        } else {
+            s.parse()
+                .map(Xchain::Bitcoin)
+                .map_err(XchainParseError::from)
         }
     }
 }

@@ -60,7 +60,7 @@ pub use operations::{
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
-    WitnessPos, Xchain,
+    WitnessPos, Xchain, XchainParseError,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 
