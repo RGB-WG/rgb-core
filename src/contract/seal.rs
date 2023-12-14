@@ -71,7 +71,6 @@ pub struct SealPreimage(Bytes32);
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[non_exhaustive]
 pub enum Xchain<U: ExposedSeal> {
     #[strict_type(tag = 0x00)]
     Bitcoin(U),
@@ -274,7 +273,6 @@ impl WitnessOrd {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[non_exhaustive]
 pub enum WitnessId {
     #[strict_type(tag = 0x00)]
     #[display("bitcoin:{0}")]

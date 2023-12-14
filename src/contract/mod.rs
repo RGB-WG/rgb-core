@@ -74,7 +74,6 @@ pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, Sta
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[repr(u8)]
-#[non_exhaustive]
 pub enum AltLayer1 {
     #[strict_type(dumb)]
     Liquid = 1,

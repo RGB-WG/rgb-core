@@ -51,7 +51,6 @@ pub struct AnchoredBundle {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[non_exhaustive]
 pub enum Anchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     #[strict_type(tag = 0x00)]
     Bitcoin(dbc::Anchor<P>),
@@ -123,7 +122,6 @@ impl Anchor<mpc::MerkleBlock> {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[display("{witness_id}/{witness_ord}")]
-#[non_exhaustive]
 pub struct WitnessAnchor {
     pub witness_ord: WitnessOrd,
     pub witness_id: WitnessId,
@@ -165,7 +163,6 @@ impl WitnessAnchor {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[repr(u8)]
-#[non_exhaustive]
 pub enum Layer1 {
     #[strict_type(dumb)]
     Bitcoin = 0,
