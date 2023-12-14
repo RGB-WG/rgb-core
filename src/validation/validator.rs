@@ -32,8 +32,8 @@ use super::{ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, Anchor, AnchoredBundle, BundleId, ContractId, GraphSeal, Layer1, OpId, OpRef,
-    Operation, Opout, Schema, SchemaId, SchemaRoot, Script, SealDefinition, SubSchema, Transition,
-    TransitionBundle, TypedAssigns,
+    Operation, Opout, Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition,
+    TransitionBundle, TypedAssigns, Xchain,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -458,13 +458,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
             let seal = match (seal, anchor) {
                 (
-                    SealDefinition::Bitcoin(
+                    Xchain::Bitcoin(
                         seal @ GraphSeal {
                             txid: TxPtr::WitnessTx,
                             ..
                         },
                     ) |
-                    SealDefinition::Liquid(
+                    Xchain::Liquid(
                         seal @ GraphSeal {
                             txid: TxPtr::WitnessTx,
                             ..
@@ -476,13 +476,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     seal.resolve(prev_witness_txid)
                 }
                 (
-                    SealDefinition::Bitcoin(
+                    Xchain::Bitcoin(
                         seal @ GraphSeal {
                             txid: TxPtr::Txid(txid),
                             ..
                         },
                     ) |
-                    SealDefinition::Liquid(
+                    Xchain::Liquid(
                         seal @ GraphSeal {
                             txid: TxPtr::Txid(txid),
                             ..

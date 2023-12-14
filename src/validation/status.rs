@@ -32,8 +32,8 @@ use strict_types::SemId;
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    BundleError, BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SealDefinition,
-    SecretSeal, StateType,
+    BundleError, BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
+    Xchain,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -331,7 +331,7 @@ pub enum Failure {
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1:?} is defined on {0} which is not in the set of layers allowed
     /// by the contract genesis.
-    SealInvalidLayer1(Layer1, SealDefinition<ChainBlindSeal>),
+    SealInvalidLayer1(Layer1, Xchain<ChainBlindSeal>),
     /// transition {0} doesn't close seal with the witness transaction {1}.
     /// Details: {2}
     SealInvalid(OpId, Txid, seals::txout::VerifyError),

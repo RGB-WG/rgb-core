@@ -59,8 +59,8 @@ pub use operations::{
     Valencies,
 };
 pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SealDefinition, SecretSeal, TxoSeal,
-    WitnessId, WitnessOrd, WitnessPos,
+    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
+    WitnessPos, Xchain,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 
