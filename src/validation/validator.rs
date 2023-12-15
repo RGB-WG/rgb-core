@@ -231,6 +231,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
     }
 
     fn validate_commitments(&mut self) {
+        for anchor in &self.anchor_index {}
+
         // Replace missed (not yet mined) endpoint witness transaction failures
         // with a dedicated type
         for (transition, bundle_id) in &self.end_transitions {
@@ -396,12 +398,22 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
     }
 
-    fn validate_witness(
+    /// Single-use-seal closing validation.
+    ///
+    /// Takes state transition, extracts all seals from its inputs. Checks that
+    /// the set of seals is closed over the message, which is multi-protocol
+    /// commitment, by utilizing witness, consisting of transaction with
+    /// deterministic bitcoin commitments (defined by generic type `Dbc`) and
+    /// extra-transaction data, which are taken from anchors DBC proof.
+    ///
+    /// Additionally checks that the provided message contains commitment to the
+    /// bundle under the current contract.
+    fn validate_witness<Dbc: dbc::Proof>(
         &mut self,
         transition: &'consignment Transition,
-        witness: Witness,
+        witness: Witness<Dbc>,
         bundle_id: BundleId,
-        anchor: &'consignment dbc::Anchor<mpc::MerkleProof>,
+        anchor: &'consignment dbc::Anchor<mpc::MerkleProof, Dbc>,
     ) {
         let opid = transition.id();
         let txid = witness.txid;
@@ -496,13 +508,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
 
         let message = mpc::Message::from(bundle_id);
-        // [VALIDATION]: Checking anchor deterministic bitcoin commitment
-        match anchor.verify(self.contract_id, message, &witness.tx) {
+        // [VALIDATION]: Checking anchor MPC commitment
+        match anchor.convolve(self.contract_id, message) {
             Err(err) => {
                 // The operation is not committed to bitcoin transaction graph!
                 // Ultimate failure. But continuing to detect the rest (after reporting it).
                 self.status
-                    .add_failure(Failure::AnchorInvalid(opid, txid, err));
+                    .add_failure(Failure::MpcInvalid(opid, txid, err));
             }
             Ok(commitment) => {
                 // [VALIDATION]: CHECKING SINGLE-USE-SEALS

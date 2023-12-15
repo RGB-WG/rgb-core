@@ -27,6 +27,7 @@ use std::fmt::{self, Display, Formatter};
 use bp::dbc::anchor;
 use bp::seals::txout::blind::ChainBlindSeal;
 use bp::{seals, Txid};
+use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 
 use crate::contract::Opout;
@@ -330,7 +331,7 @@ pub enum Failure {
     SealInvalid(OpId, Txid, seals::txout::VerifyError),
     /// transition {0} is not properly anchored to the witness transaction {1}.
     /// Details: {2}
-    AnchorInvalid(OpId, Txid, anchor::VerifyError),
+    MpcInvalid(OpId, Txid, InvalidProof),
 
     // State extensions errors
     /// valency {valency} redeemed by state extension {opid} references
