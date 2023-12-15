@@ -162,12 +162,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
     /// detecting all problems with the consignment.
     pub fn validate(consignment: &'consignment C, resolver: &'resolver R, testnet: bool) -> Status {
         let mut validator = Validator::init(consignment, resolver);
-
-        validator.validate_schema(consignment.schema());
-
         // If the network mismatches there is no point in validating the contract since
-        // all witness transactions will be missed. Thus, we return early (however after
-        // schema validation, which is not network-specific).
+        // all witness transactions will be missed.
         if testnet != validator.consignment.genesis().testnet {
             validator
                 .status
@@ -175,15 +171,21 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             return validator.status;
         }
 
+        validator.validate_schema(consignment.schema());
         // We must return here, since if the schema is not valid there is no reason to
         // validate contract nodes against it: it will produce a plenty of errors.
         if validator.status.validity() == Validity::Invalid {
             return validator.status;
         }
 
-        validator.validate_logic(consignment.schema());
         validator.validate_commitments();
+        // We must return here, since if there were no proper commitments, it is
+        // pointless to validate the contract state.
+        if validator.status.validity() == Validity::Invalid {
+            return validator.status;
+        }
 
+        validator.validate_logic(consignment.schema());
         // Done. Returning status report with all possible failures, issues, warnings
         // and notifications about transactions we were unable to obtain.
         validator.status
