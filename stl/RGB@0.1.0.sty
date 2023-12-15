@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:9gBiimtSnE1Qxwa49rbdPpv2s5ggXfitb6aktnunpDjX#cosmos-gentle-goblin
+  Id: urn:ubideco:stl:Cx3Lxt83gdcuXnTxTvSXfxyZUeNi5fqaiibEYr6o7jxy#panic-genius-delphi
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -14,6 +14,22 @@ import urn:ubideco:stl:ZtHaBzu9ojbDahaGKEXe5v9DfSDxLERbLkEB23R6Q6V#rhino-cover-f
 -- Imports:
 -- MerkleProof := urn:ubideco:semid:4E7NDL8Nm1EXtcenS9idAx1LAXvTu2wRdYsxT8Q2hgRC#carol-alamo-denver
 -- MerkleNode := urn:ubideco:semid:6kxYeCatpncbA9UiTdsFbxbxJdU56x6MdmTRkEeGAv6R#iceberg-rocket-velvet
+
+import urn:ubideco:stl:5UnRmQChaU5Czu3AQHxDHPzW9JKARBWoMcVYamwoCLPP#siren-stone-soda as BPCore
+-- Imports:
+-- TapretNodePartner := urn:ubideco:semid:6o6mGBNbDXJCcNgk5ohP6wgXcdXZvYd1ZWy1GMBy5q2#iceberg-poker-active
+-- BlindSealTxid := urn:ubideco:semid:q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE#raymond-reply-phrase
+-- TapretProof := urn:ubideco:semid:24LBor5ZVKjGk4uBbEb28w6D7rroV3mpVAntNAWQsYaP#forum-paint-tunnel
+-- TapretPathProof := urn:ubideco:semid:2LANtvWZDRes61SHKFxtFPzSuTzaKQGCUvYsNowNf3n3#stage-element-update
+-- AnchorMerkleProofTapretProof := urn:ubideco:semid:2RRuXmkGM51gpruJzNCL6mSFm7nQFrP6zXm6CmNr77uE#arcade-modest-fossil
+-- TapretRightBranch := urn:ubideco:semid:4nZtVVw7QJaMDHYffkHBWhxXSkLXLcJ89qTLZH4Z3xck#basket-prelude-bridge
+-- OpretProof := urn:ubideco:semid:5oMeVsXXeicrdvrCCEZQiKWcrDHy4nQPbaQGhtnwM3ug#segment-ambient-totem
+-- ExplicitSeal := urn:ubideco:semid:6xYzjyQ958BPRsJgBXL4N2DhswvgHWLp769Uzo4ybbUV#turtle-phoenix-panda
+-- AnchorMerkleProofOpretProof := urn:ubideco:semid:7mkYAw62Vi8BuyQ16qGg3bgFw8WVtTXUkJoYBv1qoNg4#tape-mental-legacy
+-- SecretSeal := urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle
+-- BlindSealTxPtr := urn:ubideco:semid:9XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8#metro-chris-olympic
+-- TxPtr := urn:ubideco:semid:CyRtMpPJkKLX3AdhgY7ZyA7PnYAzCo7yFTeYwwGsUBhn#strange-source-father
+-- CloseMethod := urn:ubideco:semid:FA1JhsEFKi2LLpuAjuvLA3qiBuEJrwpKyypB9J2aPicr#july-salmon-contact
 
 import urn:ubideco:stl:5XLKQ1sNryZm9bdFKU2kBY3MPYdZXhchVdQKBbHA3gby#south-strong-welcome as StrictTypes
 -- Imports:
@@ -36,21 +52,6 @@ import urn:ubideco:stl:9KALDYR8Nyjq4FdMW6kYoL7vdkWnqPqNuFnmE9qHpNjZ#justice-rock
 -- Imports:
 -- Bool := urn:ubideco:semid:7ZhBHGSJm9ixmm8Z9vCX7i5Ga7j5xrW8t11nsb1Cgpnx#laser-madam-maxwell
 -- AlphaNumLodash := urn:ubideco:semid:8iBe2dh8beD1KUairdqCacEcxAr4h55XfUQN2PspWXjz#north-sound-salsa
-
-import urn:ubideco:stl:BrKg2wSDRFDFSGzn2RrQkbwFeuLw2yDAFtpQ7WRh3nrz#dance-swim-liter as BPCore
--- Imports:
--- TapretNodePartner := urn:ubideco:semid:6o6mGBNbDXJCcNgk5ohP6wgXcdXZvYd1ZWy1GMBy5q2#iceberg-poker-active
--- BlindSealTxid := urn:ubideco:semid:q529pAPHhD1aFgueAHy8QtfjUayszR85WgEg7s2a3KE#raymond-reply-phrase
--- TapretProof := urn:ubideco:semid:24LBor5ZVKjGk4uBbEb28w6D7rroV3mpVAntNAWQsYaP#forum-paint-tunnel
--- TapretPathProof := urn:ubideco:semid:2LANtvWZDRes61SHKFxtFPzSuTzaKQGCUvYsNowNf3n3#stage-element-update
--- TapretRightBranch := urn:ubideco:semid:4nZtVVw7QJaMDHYffkHBWhxXSkLXLcJ89qTLZH4Z3xck#basket-prelude-bridge
--- AnchorMerkleProof := urn:ubideco:semid:5YGZTLPUCHos5Wg8Gm5cLgMPZijqHQLp8CGTMoXTNPf1#coral-vienna-horizon
--- ExplicitSeal := urn:ubideco:semid:6xYzjyQ958BPRsJgBXL4N2DhswvgHWLp769Uzo4ybbUV#turtle-phoenix-panda
--- SecretSeal := urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle
--- BlindSealTxPtr := urn:ubideco:semid:9XdJg1BFMpMXPfaiw4Te79W2qYgArsEye6XPJUtj31L8#metro-chris-olympic
--- TxPtr := urn:ubideco:semid:CyRtMpPJkKLX3AdhgY7ZyA7PnYAzCo7yFTeYwwGsUBhn#strange-source-father
--- CloseMethod := urn:ubideco:semid:FA1JhsEFKi2LLpuAjuvLA3qiBuEJrwpKyypB9J2aPicr#july-salmon-contact
--- Proof := urn:ubideco:semid:FJrSpHdBSVvF5B8YAq3vY15Qh2k3NUXvdkt8ESb1hLW7#hello-america-origin
 
 import urn:ubideco:stl:DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy as AluVM
 -- Imports:
@@ -77,9 +78,13 @@ data AltLayer1        :: liquid:1
 data AltLayer1Set     :: {AltLayer1 ^ ..0xff}
 -- urn:ubideco:semid:ByCxcZ2hYTTJ8yoUhpUuHaxceQoAjqsxSF9zJkED3JuM#soviet-arsenal-complex
 data AluScript        :: libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite {- urn:ubideco:semid:8Q9NNyK2PCcjZ7U7rDGUJBhk8q37hAnWLgSizGLmr56g#mission-papa-mercy -}}
--- urn:ubideco:semid:2kbCRxs1hpVo6C9XpXBysmxSyx4HhE6ounqggmvWA1wW#spring-felix-model
-data Anchor           :: bitcoin BPCore.AnchorMerkleProof {- urn:ubideco:semid:5YGZTLPUCHos5Wg8Gm5cLgMPZijqHQLp8CGTMoXTNPf1#coral-vienna-horizon -}
-                       | liquid BPCore.AnchorMerkleProof {- urn:ubideco:semid:5YGZTLPUCHos5Wg8Gm5cLgMPZijqHQLp8CGTMoXTNPf1#coral-vienna-horizon -}
+-- urn:ubideco:semid:5Q2bLHrWvtLLdB1egx6BDDpwnxbNw4wgyBoC7VL9PYmq#king-scorpio-thermos
+data Anchor           :: bitcoin AnchorSet
+                       | liquid AnchorSet
+-- urn:ubideco:semid:4GL38RVDhs4JkL5phqyF6pguwL6Av8qTUWCVNfGeWdUg#history-joel-ivory
+data AnchorSet        :: tapret:1 BPCore.AnchorMerkleProofTapretProof {- urn:ubideco:semid:2RRuXmkGM51gpruJzNCL6mSFm7nQFrP6zXm6CmNr77uE#arcade-modest-fossil -}
+                       | opret BPCore.AnchorMerkleProofOpretProof {- urn:ubideco:semid:7mkYAw62Vi8BuyQ16qGg3bgFw8WVtTXUkJoYBv1qoNg4#tape-mental-legacy -}
+                       | dual (tapret BPCore.AnchorMerkleProofTapretProof {- urn:ubideco:semid:2RRuXmkGM51gpruJzNCL6mSFm7nQFrP6zXm6CmNr77uE#arcade-modest-fossil -}, opret BPCore.AnchorMerkleProofOpretProof {- urn:ubideco:semid:7mkYAw62Vi8BuyQ16qGg3bgFw8WVtTXUkJoYBv1qoNg4#tape-mental-legacy -})
 -- urn:ubideco:semid:3wnGtf3mZhoFh3zXkSppQCDFesMZzj8dxmXCcEf7EgPP#picture-service-index
 data AnchoredBundle   :: anchor Anchor, bundle TransitionBundle
 -- urn:ubideco:semid:EZoxBpGenvb9UVze1zuwuEHqQJAqw2m3T8za5gbX1JZk#buzzer-pattern-craft
@@ -134,8 +139,6 @@ data AssignmentsBlindSealTxid :: {AssignmentType -> ^ ..0xff TypedAssignsBlindSe
 data AttachId         :: [Byte ^ 32]
 -- urn:ubideco:semid:9zzp5XyDaLvZSGhCEWtey1Y7xdD1soEYdGaimjyZexyf#agenda-ivory-blast
 data BlindingFactor   :: [Byte ^ 32]
--- urn:ubideco:semid:8Gjujg1Dk1CV23Pn7CWBdn7vq9rGUS7CZXQmh6MbR4B1#light-manual-neuron
-data BundleItem       :: inputs {U16 ^ ..0xff}, transition Transition?
 -- urn:ubideco:semid:HyVyGxhRswAZ3BHJqx6PKmcEGCUSHaL1Rc7qxxi811qE#pizza-natural-cyclone
 data ConcealedAttach  :: [Byte ^ 32]
 -- urn:ubideco:semid:8YQWVpKJBaYsAwrXvuLDNEDEKRZxfoQJpu1G7X2ZN1tL#mirage-invite-newton
@@ -298,8 +301,8 @@ data Transition       :: ffv Ffv
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
                        , valencies Valencies
--- urn:ubideco:semid:6CpmR5xzubTM5JnF7jQxVd4e17s4iJKMXeshqeb2bHGj#malta-heavy-harris
-data TransitionBundle :: {OpId -> ^ ..0xff BundleItem}
+-- urn:ubideco:semid:LnohmzqG7bkCL7hAjWd2tUrvEP1Pe5C6oiv5r5KjF2G#boxer-nadia-alias
+data TransitionBundle :: inputMap {Bitcoin.Vout -> ^ 1.. OpId}, knownTransitions {OpId -> ^ 1.. Transition}
 -- urn:ubideco:semid:4d7FmcvNey5X175gyggcn4wftcf7mtGyn6N4r6Ek4roX#fiction-caramel-fractal
 data TransitionSchema :: metadata StrictTypes.SemId {- urn:ubideco:semid:8Ckj2p3GLKina636pSKJkj7GB6ft8XeoP4jfGkRUNwtp#cargo-plasma-catalog -}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}

@@ -84,15 +84,15 @@ impl<P: mpc::Proof + StrictDumb> Anchor<P> {
     #[inline]
     pub fn witness_id(&self) -> WitnessId {
         match self {
-            Anchor::Bitcoin(anchor) => WitnessId::Bitcoin(anchor.txid),
-            Anchor::Liquid(anchor) => WitnessId::Liquid(anchor.txid),
+            Anchor::Bitcoin(anchor) => WitnessId::Bitcoin(anchor.txid_unchecked()),
+            Anchor::Liquid(anchor) => WitnessId::Liquid(anchor.txid_unchecked()),
         }
     }
 
-    pub fn map<Q: mpc::Proof + StrictDumb, D: dbc::Proof, E>(
+    pub fn map<Q: mpc::Proof + StrictDumb, E>(
         self,
-        f: impl FnOnce(dbc::Anchor<P, D>) -> Result<dbc::Anchor<Q, D>, E>,
-    ) -> Result<AnchorSet<Q>, E> {
+        f: impl FnOnce(AnchorSet<P>) -> Result<AnchorSet<Q>, E>,
+    ) -> Result<Anchor<Q>, E> {
         match self {
             Anchor::Bitcoin(anchor) => f(anchor).map(Anchor::Bitcoin),
             Anchor::Liquid(anchor) => f(anchor).map(Anchor::Liquid),
@@ -142,6 +142,60 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
             AnchorSet::Dual { tapret, opret } if tapret.txid == opret.txid => Some(tapret.txid),
             _ => None,
         }
+    }
+
+    pub(crate) fn txid_unchecked(&self) -> Txid {
+        match self {
+            AnchorSet::Tapret(a) => a.txid,
+            AnchorSet::Opret(a) => a.txid,
+            AnchorSet::Dual { tapret, .. } => tapret.txid,
+        }
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn as_split(
+        &self,
+    ) -> (Option<&dbc::Anchor<P, TapretProof>>, Option<&dbc::Anchor<P, OpretProof>>) {
+        match self {
+            AnchorSet::Tapret(tapret) => (Some(tapret), None),
+            AnchorSet::Opret(opret) => (None, Some(opret)),
+            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
+        }
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn into_split(
+        self,
+    ) -> (Option<dbc::Anchor<P, TapretProof>>, Option<dbc::Anchor<P, OpretProof>>) {
+        match self {
+            AnchorSet::Tapret(tapret) => (Some(tapret), None),
+            AnchorSet::Opret(opret) => (None, Some(opret)),
+            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
+        }
+    }
+}
+
+impl AnchorSet<mpc::MerkleBlock> {
+    pub fn merge_reveal(self, other: Self) -> Result<Self, MergeError> {
+        let (tapret1, opret1) = self.into_split();
+        let (tapret2, opret2) = other.into_split();
+
+        let tapret = match (tapret1, tapret2) {
+            (Some(tr), None) | (None, Some(tr)) => Some(tr),
+            (Some(tapret1), Some(tapret2)) => Some(tapret1.merge_reveal(tapret2)?),
+            (None, None) => None,
+        };
+        let opret = match (opret1, opret2) {
+            (Some(or), None) | (None, Some(or)) => Some(or),
+            (Some(opret1), Some(opret2)) => Some(opret1.merge_reveal(opret2)?),
+            (None, None) => None,
+        };
+        Ok(match (tapret, opret) {
+            (Some(tapret), None) => Self::Tapret(tapret),
+            (None, Some(opret)) => Self::Opret(opret),
+            (Some(tapret), Some(opret)) => Self::Dual { tapret, opret },
+            _ => unreachable!(),
+        })
     }
 }
 

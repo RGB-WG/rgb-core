@@ -35,11 +35,11 @@ use crate::{
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
-    pub fn validate_state<'validator, 'consignment, 'vm, C: ConsignmentApi>(
+    pub fn validate_state<'validator, 'consignment, C: ConsignmentApi>(
         &'validator self,
         consignment: &'validator CheckedConsignment<'consignment, C>,
         op: OpRef,
-        vm: &'vm dyn VirtualMachine,
+        vm: &'consignment dyn VirtualMachine,
     ) -> validation::Status {
         let id = op.id();
 

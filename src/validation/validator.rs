@@ -49,7 +49,7 @@ pub trait ResolveTx {
     fn resolve_bp_tx(&self, layer1: Layer1, txid: Txid) -> Result<Tx, TxResolverError>;
 }
 
-pub struct Validator<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx> {
+pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
     consignment: CheckedConsignment<'consignment, C>,
 
     status: Status,
@@ -62,17 +62,22 @@ pub struct Validator<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: Resolve
     validated_op_seals: BTreeSet<OpId>,
     validated_op_state: BTreeSet<OpId>,
 
-    vm: Box<dyn VirtualMachine + 'vm>,
+    vm: Box<dyn VirtualMachine + 'consignment>,
     resolver: &'resolver R,
 }
 
-impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
-    Validator<'consignment, 'vm, 'resolver, C, R>
+impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
+    Validator<'consignment, 'resolver, C, R>
 {
     fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
+        let vm = match consignment.schema().script {
+            Script::AluVM(ref lib) => {
+                Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine + 'consignment>
+            }
+        };
         let consignment = CheckedConsignment::new(consignment);
 
         // Frequently used computation-heavy data
@@ -113,12 +118,6 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
         let mut layers1 = bset! { Layer1::Bitcoin };
         layers1.extend(genesis.alt_layers1.iter().map(AltLayer1::layer1));
-
-        let vm = match &consignment.schema().script {
-            Script::AluVM(lib) => {
-                Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine + 'consignment>
-            }
-        };
 
         Self {
             consignment,
@@ -178,7 +177,7 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
     fn validate_schema(&mut self, schema: &SubSchema) { self.status += schema.verify(); }
 
     // *** PART II: Validating business logic
-    fn validate_logic<Root: SchemaRoot>(&mut self, schema: &Schema<Root>) {
+    fn validate_logic<Root: SchemaRoot>(&mut self, schema: &'consignment Schema<Root>) {
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != self.schema_id {
@@ -220,7 +219,7 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
     fn validate_logic_on_route<Root: SchemaRoot>(
         &mut self,
         schema: &Schema<Root>,
-        transition: &'consignment Transition,
+        transition: &Transition,
     ) {
         let mut queue: VecDeque<OpRef> = VecDeque::new();
 
@@ -315,17 +314,11 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
             let bundle = &anchored_bundle.bundle;
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
-            let (tapret_seals, opret_seals, input_map) =
-                self.validate_seal_definitions(layer1, witness_id, bundle);
+            let (seals, input_map) = self.validate_seal_definitions(layer1, witness_id, bundle);
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
-            let Some(witness_tx) = self.validate_commitments_bp(
-                layer1,
-                &tapret_seals,
-                &opret_seals,
-                bundle_id,
-                anchors,
-            ) else {
+            let Some(witness_tx) = self.validate_commitments_bp(layer1, &seals, bundle_id, anchors)
+            else {
                 continue;
             };
 
@@ -341,20 +334,20 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
     fn validate_bundle_commitments(
         &mut self,
         bundle_id: BundleId,
-        bundle: &'consignment TransitionBundle,
+        bundle: &TransitionBundle,
         witness_tx: Tx,
         input_map: BTreeMap<OpId, BTreeSet<Outpoint>>,
     ) {
-        for (vin, opid) in bundle.input_map {
-            let Some(outpoints) = input_map.get(&opid) else {
+        for (vin, opid) in &bundle.input_map {
+            let Some(outpoints) = input_map.get(opid) else {
                 self.status
-                    .add_failure(Failure::BundleExtraTransition(bundle_id, opid));
+                    .add_failure(Failure::BundleExtraTransition(bundle_id, *opid));
                 continue;
             };
             let Some(input) = witness_tx.inputs.get(vin.to_usize()) else {
                 self.status.add_failure(Failure::BundleInvalidInput(
                     bundle_id,
-                    opid,
+                    *opid,
                     witness_tx.txid(),
                 ));
                 continue;
@@ -362,9 +355,9 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
             if !outpoints.contains(&input.prev_output) {
                 self.status.add_failure(Failure::BundleInvalidCommitment(
                     bundle_id,
-                    vin,
+                    *vin,
                     witness_tx.txid(),
-                    opid,
+                    *opid,
                 ));
             }
         }
@@ -372,13 +365,12 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
     /// Bitcoin- and liquid-specific commitment validation using deterministic
     /// bitcoin commitments with opret and tapret schema.
-    fn validate_commitments_bp<'seal>(
+    fn validate_commitments_bp(
         &mut self,
         layer1: Layer1,
-        tapret_seals: impl IntoIterator<Item = &'seal ExplicitSeal<Txid>>,
-        opret_seals: impl IntoIterator<Item = &'seal ExplicitSeal<Txid>>,
+        seals: impl AsRef<[ExplicitSeal<Txid>]>,
         bundle_id: BundleId,
-        anchors: &'consignment AnchorSet,
+        anchors: &AnchorSet,
     ) -> Option<Tx> {
         let Some(txid) = anchors.txid() else {
             self.status
@@ -405,22 +397,27 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 None
             }
             Ok(witness_tx) => {
-                let (tapret, opret) = match anchors {
-                    AnchorSet::Tapret(tapret) => (Some(tapret), None),
-                    AnchorSet::Opret(opret) => (None, Some(opret)),
-                    AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
-                };
+                let (tapret, opret) = anchors.as_split();
 
+                let tapret_seals = seals
+                    .as_ref()
+                    .iter()
+                    .filter(|seal| seal.method() == CloseMethod::TapretFirst);
                 if let Some(tapret) = tapret {
                     let witness = Witness::with(witness_tx.clone(), tapret.clone());
                     self.validate_seal_closing_bp(tapret_seals, witness, bundle_id, tapret)
-                } else if tapret_seals.into_iter().count() > 0 {
+                } else if tapret_seals.count() > 0 {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
                 }
+
+                let opret_seals = seals
+                    .as_ref()
+                    .iter()
+                    .filter(|seal| seal.method() == CloseMethod::OpretFirst);
                 if let Some(opret) = opret {
                     let witness = Witness::with(witness_tx.clone(), opret.clone());
                     self.validate_seal_closing_bp(opret_seals, witness, bundle_id, opret)
-                } else if opret_seals.into_iter().count() > 0 {
+                } else if opret_seals.count() > 0 {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
                 }
                 Some(witness_tx)
@@ -436,11 +433,10 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
         &mut self,
         layer1: Layer1,
         witness_id: WitnessId,
-        bundle: &'consignment TransitionBundle,
-    ) -> (Vec<ExplicitSeal<Txid>>, Vec<ExplicitSeal<Txid>>, BTreeMap<OpId, BTreeSet<Outpoint>>)
-    {
+        bundle: &TransitionBundle,
+    ) -> (Vec<ExplicitSeal<Txid>>, BTreeMap<OpId, BTreeSet<Outpoint>>) {
         let mut input_map: BTreeMap<OpId, BTreeSet<Outpoint>> = bmap!();
-        let (mut tapret_seals, mut opret_seals) = (vec![], vec![]);
+        let mut seals = vec![];
         for (opid, transition) in &bundle.known_transitions {
             let opid = *opid;
 
@@ -500,17 +496,14 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     .expect("method must be called only on BP-compatible layer 1")
                     .reduce_to_bp()
                     .expect("method must be called only on BP-compatible layer 1");
-                match seal.method() {
-                    CloseMethod::OpretFirst => opret_seals.push(seal),
-                    CloseMethod::TapretFirst => tapret_seals.push(seal),
-                }
+                seals.push(seal);
                 input_map
                     .entry(opid)
                     .or_default()
                     .insert(Outpoint::new(seal.txid, seal.vout));
             }
         }
-        (tapret_seals, opret_seals, input_map)
+        (seals, input_map)
     }
 
     /// Single-use-seal closing validation.
@@ -523,12 +516,12 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
     ///
     /// Additionally checks that the provided message contains commitment to the
     /// bundle under the current contract.
-    fn validate_seal_closing_bp<'seal, Seal: TxoSeal + 'seal, Dbc: dbc::Proof>(
+    fn validate_seal_closing_bp<'seal, 'temp, Seal: TxoSeal + 'seal, Dbc: dbc::Proof>(
         &mut self,
         seals: impl IntoIterator<Item = &'seal Seal>,
         witness: Witness<Dbc>,
         bundle_id: BundleId,
-        anchor: &'consignment dbc::Anchor<mpc::MerkleProof, Dbc>,
+        anchor: &'temp dbc::Anchor<mpc::MerkleProof, Dbc>,
     ) {
         let message = mpc::Message::from(bundle_id);
         // [VALIDATION]: Checking anchor MPC commitment
