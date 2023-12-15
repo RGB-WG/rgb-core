@@ -39,7 +39,7 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 }
 
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
-    type Iter = C::Iter;
+    type Iter<'placeholder> = C::Iter<'placeholder>;
 
     fn schema(&self) -> &SubSchema { self.0.schema() }
 
@@ -53,7 +53,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn terminals(&self) -> BTreeSet<(BundleId, SecretSeal)> { self.0.terminals() }
 
-    fn bundle_ids(&self) -> Self::Iter { self.0.bundle_ids() }
+    fn bundle_ids<'a>(&self) -> Self::Iter<'a> { self.0.bundle_ids() }
 
     fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>> {
         self.0
@@ -70,7 +70,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 /// invalid or absent data, the API must always return [`None`] or empty
 /// collections/iterators.
 pub trait ConsignmentApi {
-    type Iter: Iterator<Item = BundleId>;
+    type Iter<'a>: Iterator<Item = BundleId>;
 
     fn schema(&self) -> &SubSchema;
 
@@ -95,7 +95,7 @@ pub trait ConsignmentApi {
     ///   state transitions represent the final state
     fn terminals(&self) -> BTreeSet<(BundleId, SecretSeal)>;
 
-    fn bundle_ids(&self) -> Self::Iter;
+    fn bundle_ids<'a>(&self) -> Self::Iter<'a>;
 
     fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>>;
 }
