@@ -24,7 +24,6 @@ use core::iter::FromIterator;
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
-use bp::dbc::anchor;
 use bp::seals::txout::blind::ChainBlindSeal;
 use bp::{seals, Txid};
 use commit_verify::mpc::InvalidProof;

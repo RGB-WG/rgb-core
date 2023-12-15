@@ -21,13 +21,18 @@
 // limitations under the License.
 
 use std::collections::BTreeMap;
+use std::io::Write;
 
-use amplify::confinement::{Confined, TinyOrdMap, U16};
+use amplify::confinement::{Confined, U16};
 use amplify::{Bytes32, Wrapper};
-use commit_verify::{mpc, CommitStrategy, CommitmentId, Conceal};
+use bp::Vout;
+use commit_verify::{mpc, CommitEncode, CommitmentId};
+use strict_encoding::{StrictEncode, StrictWriter};
 
 use super::OpId;
-use crate::LIB_NAME_RGB;
+use crate::{Transition, LIB_NAME_RGB};
+
+pub type Vin = Vout;
 
 /// Unique state transition bundle identifier equivalent to the bundle
 /// commitment hash
@@ -54,26 +59,24 @@ impl From<mpc::Message> for BundleId {
     fn from(id: mpc::Message) -> Self { BundleId(id.into_inner()) }
 }
 
-#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Debug, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
+#[derive(Clone, PartialEq, Eq, Debug, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct TransitionBundle(Confined<BTreeMap<Vin, OpId>, 1, U16>);
-
-impl Conceal for TransitionBundle {
-    type Concealed = Self;
-
-    fn conceal(&self) -> Self::Concealed {
-        let concealed = self.iter().map(|(id, item)| (*id, item.conceal()));
-        TransitionBundle(TinyOrdMap::try_from_iter(concealed).expect("same size"))
-    }
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct TransitionBundle {
+    input_map: Confined<BTreeMap<Vin, OpId>, 1, U16>,
+    known_transitions: Confined<BTreeMap<OpId, Transition>, 1, U16>,
 }
 
-impl CommitStrategy for TransitionBundle {
-    // TODO: Use merklization strategy
-    type Strategy = commit_verify::strategies::ConcealStrict;
+impl CommitEncode for TransitionBundle {
+    fn commit_encode(&self, e: &mut impl Write) {
+        let w = StrictWriter::with(u32::MAX as usize, e);
+        self.input_map.strict_encode(w).ok();
+    }
 }
 
 impl CommitmentId for TransitionBundle {
