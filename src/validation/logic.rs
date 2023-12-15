@@ -31,7 +31,7 @@ use crate::validation::{CheckedConsignment, ConsignmentApi, VirtualMachine};
 use crate::{
     validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
-    Operation, Opout, Redeemed, Schema, SchemaRoot, TransitionType, TypedAssigns, Valencies,
+    Operation, Opout, Schema, SchemaRoot, TransitionType, TypedAssigns, Valencies,
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
@@ -146,14 +146,13 @@ impl<Root: SchemaRoot> Schema<Root> {
         } else {
             Assignments::default()
         };
-        let redeemed = if let OpRef::Extension(extension) = op {
-            let redeemed =
-                extract_redeemed_valencies(consignment, &extension.redeemed, &mut status);
+        let mut redeemed = Valencies::default();
+        if let OpRef::Extension(extension) = op {
+            for valency in extension.redeemed.keys() {
+                redeemed.push(*valency).expect("same size");
+            }
             status += self.validate_redeemed(id, &redeemed, redeem_schema);
-            redeemed
-        } else {
-            Valencies::default()
-        };
+        }
         status += match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
                 self.validate_owned_state(id, assignments, assign_schema)
@@ -549,20 +548,4 @@ fn extract_prev_state<C: ConsignmentApi>(
     Confined::try_from(assignments)
         .expect("collections is assembled from another collection with the same size requirements")
         .into()
-}
-
-fn extract_redeemed_valencies<C: ConsignmentApi>(
-    consignment: &C,
-    redeemed: &Redeemed,
-    status: &mut validation::Status,
-) -> Valencies {
-    let mut valencies = Valencies::default();
-    for (valency, id) in redeemed.iter() {
-        if consignment.has_operation(*id) {
-            valencies.push(*valency).expect("same size");
-        } else {
-            status.add_failure(validation::Failure::OperationAbsent(*id));
-        }
-    }
-    valencies
 }
