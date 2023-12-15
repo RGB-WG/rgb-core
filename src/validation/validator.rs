@@ -301,14 +301,19 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
             };
 
             let layer1 = anchored_bundle.anchor.layer1();
+
+            // For now we use just Bitcoin and Liquid as layer1, but in the
+            // future we may have more validation routes for other types of
+            // layer1 structure.
             let anchor = match &anchored_bundle.anchor {
                 Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
             };
-
             self.validate_commitments_bp(layer1, bundle_id, &anchored_bundle.bundle, anchor);
         }
     }
 
+    /// Bitcoin- and liquid-specific commitment validation using deterministic
+    /// bitcoin commitments with opret and tapret schema.
     fn validate_commitments_bp(
         &mut self,
         layer1: Layer1,
@@ -364,6 +369,10 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
     }
 
+    /// Single-use-seal definition validation.
+    ///
+    /// Takes state transition, extracts all seals from its inputs and makes
+    /// sure they are defined or a correct layer1.
     fn validate_seal_definitions(
         &mut self,
         layer1: Layer1,
@@ -436,11 +445,11 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
     /// Single-use-seal closing validation.
     ///
-    /// Takes state transition, extracts all seals from its inputs. Checks that
-    /// the set of seals is closed over the message, which is multi-protocol
-    /// commitment, by utilizing witness, consisting of transaction with
-    /// deterministic bitcoin commitments (defined by generic type `Dbc`) and
-    /// extra-transaction data, which are taken from anchors DBC proof.
+    /// Checks that the set of seals is closed over the message, which is
+    /// multi-protocol commitment, by utilizing witness, consisting of
+    /// transaction with deterministic bitcoin commitments (defined by
+    /// generic type `Dbc`) and extra-transaction data, which are taken from
+    /// anchors DBC proof.
     ///
     /// Additionally checks that the provided message contains commitment to the
     /// bundle under the current contract.

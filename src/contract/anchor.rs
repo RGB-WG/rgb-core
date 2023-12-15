@@ -109,7 +109,7 @@ impl Anchor<mpc::MerkleBlock> {
             (Anchor::Liquid(anchor), Anchor::Liquid(other)) => {
                 anchor.merge_reveal(other).map(Anchor::Liquid)
             }
-            _ => Err(MergeError::ProofMismatch),
+            _ => Err(MergeError::TxidMismatch),
         }
     }
 }
@@ -124,7 +124,7 @@ impl Anchor<mpc::MerkleBlock> {
 )]
 pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     #[strict_type(tag = 0x01)]
-    Taptet(dbc::Anchor<P, TapretProof>),
+    Tapret(dbc::Anchor<P, TapretProof>),
     #[strict_type(tag = 0x02)]
     Opret(dbc::Anchor<P, OpretProof>),
     #[strict_type(tag = 0x03)]
@@ -137,7 +137,7 @@ pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
 impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
     pub fn txid(&self) -> Option<Txid> {
         match self {
-            AnchorSet::Taptet(a) => Some(a.txid),
+            AnchorSet::Tapret(a) => Some(a.txid),
             AnchorSet::Opret(a) => Some(a.txid),
             AnchorSet::Dual { tapret, opret } if tapret.txid == opret.txid => Some(tapret.txid),
             _ => None,
