@@ -21,7 +21,6 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
-use std::ops::Deref;
 
 use bp::dbc::anchor::MergeError;
 use bp::dbc::opret::OpretProof;
@@ -30,7 +29,7 @@ use bp::{dbc, Txid};
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
-use crate::{BundleId, TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
+use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -66,17 +65,6 @@ pub enum Anchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     Liquid(AnchorSet<P>),
 }
 
-impl<P: mpc::Proof + StrictDumb> Deref for Anchor<P> {
-    type Target = AnchorSet<P>;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
-        }
-    }
-}
-
 impl<P: mpc::Proof + StrictDumb> Anchor<P> {
     #[inline]
     pub fn layer1(&self) -> Layer1 {
@@ -94,7 +82,7 @@ impl<P: mpc::Proof + StrictDumb> Anchor<P> {
         }
     }
 
-    pub fn map<Q: mpc::Proof + StrictDumb, E>(
+    fn map<Q: mpc::Proof + StrictDumb, E>(
         self,
         f: impl FnOnce(AnchorSet<P>) -> Result<AnchorSet<Q>, E>,
     ) -> Result<Anchor<Q>, E> {
@@ -106,6 +94,26 @@ impl<P: mpc::Proof + StrictDumb> Anchor<P> {
 }
 
 impl Anchor<mpc::MerkleBlock> {
+    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
+        match self {
+            Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor.known_bundle_ids(),
+        }
+    }
+
+    pub fn to_merkle_proof(
+        &self,
+        contract_id: ContractId,
+    ) -> Result<Anchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
+        self.clone().into_merkle_proof(contract_id)
+    }
+
+    pub fn into_merkle_proof(
+        self,
+        contract_id: ContractId,
+    ) -> Result<Anchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
+        self.map(|a| a.into_merkle_proof(contract_id))
+    }
+
     pub fn merge_reveal(self, other: Self) -> Result<Self, MergeError> {
         match (self, other) {
             (Anchor::Bitcoin(anchor), Anchor::Bitcoin(other)) => {
@@ -116,6 +124,24 @@ impl Anchor<mpc::MerkleBlock> {
             }
             _ => Err(MergeError::TxidMismatch),
         }
+    }
+}
+
+impl Anchor<mpc::MerkleProof> {
+    pub fn to_merkle_block(
+        &self,
+        contract_id: ContractId,
+        bundle_id: BundleId,
+    ) -> Result<Anchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+        self.clone().into_merkle_block(contract_id, bundle_id)
+    }
+
+    pub fn into_merkle_block(
+        self,
+        contract_id: ContractId,
+        bundle_id: BundleId,
+    ) -> Result<Anchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+        self.map(|a| a.into_merkle_block(contract_id, bundle_id))
     }
 }
 
@@ -157,6 +183,18 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
         }
     }
 
+    pub fn from_split(
+        tapret: Option<dbc::Anchor<P, TapretProof>>,
+        opret: Option<dbc::Anchor<P, OpretProof>>,
+    ) -> Option<Self> {
+        Some(match (tapret, opret) {
+            (Some(tapret), Some(opret)) => Self::Dual { tapret, opret },
+            (Some(tapret), None) => Self::Tapret(tapret),
+            (None, Some(opret)) => Self::Opret(opret),
+            (None, None) => return None,
+        })
+    }
+
     #[allow(clippy::type_complexity)]
     pub fn as_split(
         &self,
@@ -178,9 +216,72 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
             AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
         }
     }
+
+    pub fn mpc_proofs(&self) -> impl Iterator<Item = &P> {
+        let (t, o) = self.as_split();
+        t.map(|a| &a.mpc_proof)
+            .into_iter()
+            .chain(o.map(|a| &a.mpc_proof))
+    }
+}
+
+impl AnchorSet<mpc::MerkleProof> {
+    pub fn to_merkle_block(
+        &self,
+        contract_id: ContractId,
+        bundle_id: BundleId,
+    ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
+        self.clone().into_merkle_block(contract_id, bundle_id)
+    }
+
+    pub fn into_merkle_block(
+        self,
+        contract_id: ContractId,
+        bundle_id: BundleId,
+    ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
+        let (tapret, opret) = self.into_split();
+        let tapret = tapret
+            .map(|t| t.into_merkle_block(contract_id, bundle_id))
+            .transpose()?;
+        let opret = opret
+            .map(|o| o.into_merkle_block(contract_id, bundle_id))
+            .transpose()?;
+        Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
+    }
 }
 
 impl AnchorSet<mpc::MerkleBlock> {
+    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
+        self.mpc_proofs()
+            .map(|p| {
+                p.to_known_message_map()
+                    .into_iter()
+                    .map(|(p, m)| (m.into(), p.into()))
+            })
+            .flatten()
+    }
+
+    pub fn to_merkle_proof(
+        &self,
+        contract_id: ContractId,
+    ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
+        self.clone().into_merkle_proof(contract_id)
+    }
+
+    pub fn into_merkle_proof(
+        self,
+        contract_id: ContractId,
+    ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
+        let (tapret, opret) = self.into_split();
+        let tapret = tapret
+            .map(|t| t.into_merkle_proof(contract_id))
+            .transpose()?;
+        let opret = opret
+            .map(|o| o.into_merkle_proof(contract_id))
+            .transpose()?;
+        Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
+    }
+
     pub fn merge_reveal(self, other: Self) -> Result<Self, MergeError> {
         let (tapret1, opret1) = self.into_split();
         let (tapret2, opret2) = other.into_split();
