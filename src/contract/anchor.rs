@@ -30,7 +30,7 @@ use bp::{dbc, Txid};
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
-use crate::{TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
+use crate::{BundleId, TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -43,6 +43,11 @@ use crate::{TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
 pub struct AnchoredBundle {
     pub anchor: Anchor,
     pub bundle: TransitionBundle,
+}
+
+impl AnchoredBundle {
+    #[inline]
+    pub fn bundle_id(&self) -> BundleId { self.bundle.bundle_id() }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
