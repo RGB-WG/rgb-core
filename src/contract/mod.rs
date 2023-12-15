@@ -36,7 +36,7 @@ mod contract;
 use std::io::Write;
 
 use amplify::confinement::TinyOrdSet;
-pub use anchor::{Anchor, AnchoredBundle, Layer1, WitnessAnchor};
+pub use anchor::{Anchor, AnchorSet, AnchoredBundle, Layer1, WitnessAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,

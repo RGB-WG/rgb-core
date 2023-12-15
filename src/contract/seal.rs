@@ -132,6 +132,13 @@ impl<U: ExposedSeal> Xchain<U> {
         }
     }
 
+    pub fn reduce_to_bp(self) -> Option<U> {
+        Some(match self {
+            Xchain::Bitcoin(seal) => seal,
+            Xchain::Liquid(seal) => seal,
+        })
+    }
+
     pub fn method(self) -> CloseMethod {
         match self {
             Xchain::Bitcoin(seal) => seal.method(),

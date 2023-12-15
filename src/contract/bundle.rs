@@ -27,7 +27,7 @@ use amplify::confinement::{Confined, U16};
 use amplify::{Bytes32, Wrapper};
 use bp::Vout;
 use commit_verify::{mpc, CommitEncode, CommitmentId};
-use strict_encoding::{StrictEncode, StrictWriter};
+use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
 
 use super::OpId;
 use crate::{Transition, LIB_NAME_RGB};
@@ -60,7 +60,7 @@ impl From<mpc::Message> for BundleId {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, From)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
@@ -68,8 +68,8 @@ impl From<mpc::Message> for BundleId {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct TransitionBundle {
-    input_map: Confined<BTreeMap<Vin, OpId>, 1, U16>,
-    known_transitions: Confined<BTreeMap<OpId, Transition>, 1, U16>,
+    pub input_map: Confined<BTreeMap<Vin, OpId>, 1, U16>,
+    pub known_transitions: Confined<BTreeMap<OpId, Transition>, 1, U16>,
 }
 
 impl CommitEncode for TransitionBundle {
@@ -82,6 +82,15 @@ impl CommitEncode for TransitionBundle {
 impl CommitmentId for TransitionBundle {
     const TAG: [u8; 32] = *b"urn:lnpbp:rgb:bundle:v1#20230306";
     type Id = BundleId;
+}
+
+impl StrictDumb for TransitionBundle {
+    fn strict_dumb() -> Self {
+        Self {
+            input_map: confined_bmap! { strict_dumb!() => strict_dumb!() },
+            known_transitions: confined_bmap! { strict_dumb!() => strict_dumb!() },
+        }
+    }
 }
 
 impl TransitionBundle {

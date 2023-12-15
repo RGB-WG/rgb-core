@@ -23,10 +23,10 @@
 use std::cmp::Ordering;
 use std::ops::Deref;
 
-use bp::dbc;
 use bp::dbc::anchor::MergeError;
 use bp::dbc::opret::OpretProof;
 use bp::dbc::tapret::TapretProof;
+use bp::{dbc, Txid};
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
@@ -132,6 +132,17 @@ pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
         tapret: dbc::Anchor<P, TapretProof>,
         opret: dbc::Anchor<P, OpretProof>,
     },
+}
+
+impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
+    pub fn txid(&self) -> Option<Txid> {
+        match self {
+            AnchorSet::Taptet(a) => Some(a.txid),
+            AnchorSet::Opret(a) => Some(a.txid),
+            AnchorSet::Dual { tapret, opret } if tapret.txid == opret.txid => Some(tapret.txid),
+            _ => None,
+        }
+    }
 }
 
 /// Txid and height information ordered according to the RGB consensus rules.

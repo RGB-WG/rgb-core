@@ -25,27 +25,52 @@
 //! single-use-seal data.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::rc::Rc;
 
 use crate::{
-    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, SecretSeal,
-    SubSchema, Transition,
+    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation,
+    SecretSeal, SubSchema,
 };
+
+pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
+
+impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
+    pub fn new(consignment: &'consignment C) -> Self { Self(consignment) }
+}
+
+impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
+    type Iter = C::Iter;
+
+    fn schema(&self) -> &SubSchema { self.0.schema() }
+
+    fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag> { self.0.asset_tags() }
+
+    fn operation(&self, opid: OpId) -> Option<OpRef> {
+        self.0.operation(opid).filter(|op| op.id() == opid)
+    }
+
+    fn genesis(&self) -> &Genesis { self.0.genesis() }
+
+    fn terminals(&self) -> BTreeSet<(BundleId, SecretSeal)> { self.0.terminals() }
+
+    fn bundle_ids(&self) -> Self::Iter { self.0.bundle_ids() }
+
+    fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>> {
+        self.0
+            .anchored_bundle(bundle_id)
+            .filter(|ab| ab.bundle.bundle_id() == bundle_id)
+    }
+}
 
 /// Trait defining common data access API for all storage-related RGB structures
 ///
-/// # Verification
-///
-/// The function does not verify the internal consistency, schema conformance or
-/// validation status of the RGB contract data within the storage or container;
-/// these checks must be performed as a separate step before calling any of the
-/// [`ContainerApi`] methods. If the methods are called on
-/// non-validated/unchecked data this may result in returned [`Error`] or
-/// [`None`] values from the API methods.
+/// The API provided for the consignment should not verify the internal
+/// consistency, schema conformance or validation status of the RGB contract
+/// data within the storage or container. If the methods are called on an
+/// invalid or absent data, the API must always return [`None`] or empty
+/// collections/iterators.
 pub trait ConsignmentApi {
-    type BundleIter<'container>: Iterator<Item = &'container AnchoredBundle>
-    where Self: 'container;
-    type TransitionIter<'container>: Iterator<Item = &'container Transition>
-    where Self: 'container;
+    type Iter: Iterator<Item = BundleId>;
 
     fn schema(&self) -> &SubSchema;
 
@@ -70,10 +95,7 @@ pub trait ConsignmentApi {
     ///   state transitions represent the final state
     fn terminals(&self) -> BTreeSet<(BundleId, SecretSeal)>;
 
-    /// Data on all anchored state transitions contained in the consignment
-    fn anchored_bundles(&self) -> Self::BundleIter<'_>;
+    fn bundle_ids(&self) -> Self::Iter;
 
-    fn op_ids_except(&self, ids: &BTreeSet<OpId>) -> BTreeSet<OpId>;
-
-    fn has_operation(&self, opid: OpId) -> bool;
+    fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>>;
 }

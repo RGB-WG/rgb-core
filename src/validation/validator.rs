@@ -20,20 +20,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeSet, VecDeque};
 
-use bp::seals::txout::{TxPtr, Witness};
+use bp::seals::txout::{CloseMethod, TxoSeal, Witness};
 use bp::{dbc, Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::{ConsignmentApi, Status, Validity, VirtualMachine};
+use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
-    AltLayer1, Anchor, AnchoredBundle, BundleId, ContractId, GraphSeal, Layer1, OpId, OpRef,
-    Operation, Opout, Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition, TypedAssigns,
-    Xchain,
+    AltLayer1, Anchor, AnchorSet, BundleId, ContractId, GenesisSeal, Layer1, OpId, OpRef,
+    Operation, Opout, Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition,
+    TransitionBundle, TypedAssigns,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -46,11 +46,11 @@ pub enum TxResolverError {
 }
 
 pub trait ResolveTx {
-    fn resolve_tx(&self, layer1: Layer1, txid: Txid) -> Result<Tx, TxResolverError>;
+    fn resolve_bp_tx(&self, layer1: Layer1, txid: Txid) -> Result<Tx, TxResolverError>;
 }
 
-pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
-    consignment: &'consignment C,
+pub struct Validator<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx> {
+    consignment: CheckedConsignment<'consignment, C>,
 
     status: Status,
 
@@ -58,40 +58,27 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
     genesis_id: OpId,
     contract_id: ContractId,
     layers1: BTreeSet<Layer1>,
-    anchor_index: BTreeMap<OpId, &'consignment Anchor>,
     end_transitions: Vec<(&'consignment Transition, BundleId)>,
-    validation_index: BTreeSet<OpId>,
-    anchor_validation_index: BTreeSet<OpId>,
+    validated_op_state: BTreeSet<OpId>,
 
-    vm: Box<dyn VirtualMachine + 'consignment>,
+    vm: Box<dyn VirtualMachine + 'vm>,
     resolver: &'resolver R,
 }
 
-impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
-    Validator<'consignment, 'resolver, C, R>
+impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
+    Validator<'consignment, 'vm, 'resolver, C, R>
 {
     fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
+        let consignment = CheckedConsignment::new(consignment);
 
         // Frequently used computation-heavy data
         let genesis = consignment.genesis();
         let genesis_id = genesis.id();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
-
-        // Create indexes
-        let mut anchor_index = BTreeMap::<OpId, &Anchor>::new();
-        for AnchoredBundle {
-            ref anchor,
-            ref bundle,
-        } in consignment.anchored_bundles()
-        {
-            for opid in bundle.values() {
-                anchor_index.insert(*opid, anchor);
-            }
-        }
 
         // Collect all endpoint transitions.
         // This is pretty simple operation; it takes a lot of code because we would like
@@ -121,10 +108,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // Validation index is used to check that all transitions presented in the
         // consignment were validated. Also, we use it to avoid double schema
         // validations for transitions.
-        let validation_index = BTreeSet::<OpId>::new();
-
-        // Index used to avoid repeated validations of the same anchor+transition pairs
-        let anchor_validation_index = BTreeSet::<OpId>::new();
+        let validated_op_state = BTreeSet::<OpId>::new();
 
         let mut layers1 = bset! { Layer1::Bitcoin };
         layers1.extend(genesis.alt_layers1.iter().map(AltLayer1::layer1));
@@ -142,10 +126,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             genesis_id,
             contract_id,
             layers1,
-            anchor_index,
             end_transitions,
-            validation_index,
-            anchor_validation_index,
+            validated_op_state,
             vm,
             resolver,
         }
@@ -210,12 +192,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
 
         // [VALIDATION]: Validate genesis
-        self.status += schema.validate(
-            self.consignment,
+        self.status += schema.validate_state(
+            &self.consignment,
             OpRef::Genesis(self.consignment.genesis()),
             self.vm.as_ref(),
         );
-        self.validation_index.insert(self.genesis_id);
+        self.validated_op_state.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing operation
         //               graph up to genesis for each one of them.
@@ -229,7 +211,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // Generate warning if some of the transitions within the consignment were
         // excessive (i.e. not part of validation_index). Nothing critical, but still
         // good to report the user that the consignment is not perfect
-        for opid in self.consignment.op_ids_except(&self.validation_index) {
+        for opid in self.consignment.op_ids_except(&self.validated_op_state) {
             self.status.add_warning(Warning::ExcessiveOperation(opid));
         }
     }
@@ -261,9 +243,10 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             }
 
             // [VALIDATION]: Verify operation against the schema and scripts
-            if !self.validation_index.contains(&opid) {
-                self.status += schema.validate(self.consignment, operation, self.vm.as_ref());
-                self.validation_index.insert(opid);
+            if !self.validated_op_state.contains(&opid) {
+                self.status +=
+                    schema.validate_state(&self.consignment, operation, self.vm.as_ref());
+                self.validated_op_state.insert(opid);
             }
 
             match operation {
@@ -274,11 +257,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     // Now, we must collect all parent nodes and add them to the verification queue
                     let parent_nodes = transition.inputs.iter().filter_map(|input| {
                         self.consignment.operation(input.prev_out.op).or_else(|| {
-                            // This will not actually happen since we already checked that each
-                            // ancestor reference has a corresponding operation in the code above.
-                            // But lets double-check :)
                             self.status
-                                .add_failure(Failure::TransitionAbsent(input.prev_out.op));
+                                .add_failure(Failure::OperationAbsent(input.prev_out.op));
                             None
                         })
                     });
@@ -314,74 +294,39 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
     // *** PART III: Validating single-use-seals
     fn validate_commitments(&mut self) {
-        for anchor in &self.anchor_index {}
+        for bundle_id in self.consignment.bundle_ids() {
+            let Some(anchored_bundle) = self.consignment.anchored_bundle(bundle_id) else {
+                self.status.add_failure(Failure::BundleAbsent(bundle_id));
+                continue;
+            };
 
-        // Replace missed (not yet mined) endpoint witness transaction failures
-        // with a dedicated type
-        for (transition, bundle_id) in &self.end_transitions {
-            let opid = transition.id();
+            let layer1 = anchored_bundle.anchor.layer1();
+            let anchor = match &anchored_bundle.anchor {
+                Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
+            };
 
-            if let Some(anchor) = self.anchor_index.get(&opid) {
-                // Making sure we do have a corresponding anchor; otherwise reporting failure
-                // (see below) - with the except of genesis and extension nodes, which does not
-                // have a corresponding anchor
-                if !self.anchor_validation_index.contains(&opid) {
-                    // Ok, now we have the `transition` and the `anchor`, let's do all
-                    // required checks
-
-                    // [VALIDATION]: Check that transition is committed into the anchor.
-                    //               This must be done with deterministic bitcoin
-                    //               commitments & LNPBP-4.
-                    if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
-                        self.status.add_failure(Failure::NotInAnchor(opid));
-                    }
-
-                    self.validate_anchor(transition, *bundle_id, anchor);
-                    self.anchor_validation_index.insert(opid);
-                }
-
-                let anchor = match anchor {
-                    Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
-                };
-
-                if let Some(pos) = self
-                    .status
-                    .failures
-                    .iter()
-                    .position(|f| f == &Failure::SealNoWitnessTx(anchor.txid))
-                {
-                    self.status.failures.remove(pos);
-                    self.status
-                        .unresolved_txids
-                        .retain(|txid| *txid != anchor.txid);
-                    self.status.unmined_terminals.push(anchor.txid);
-                    self.status
-                        .warnings
-                        .push(Warning::TerminalWitnessNotMined(anchor.txid));
-                }
-            } else {
-                // If we've got here there is something broken with the consignment
-                // provider.
-                self.status.add_failure(Failure::NotAnchored(opid));
-            }
+            self.validate_commitments_bp(layer1, bundle_id, &anchored_bundle.bundle, anchor);
         }
     }
 
-    fn validate_anchor(
+    fn validate_commitments_bp(
         &mut self,
-        transition: &'consignment Transition,
+        layer1: Layer1,
         bundle_id: BundleId,
-        anchor: &'consignment Anchor,
+        bundle: &'consignment TransitionBundle,
+        anchor: &'consignment AnchorSet,
     ) {
-        let (layer1, anchor) = match anchor {
-            Anchor::Bitcoin(a) | Anchor::Liquid(a) => (anchor.layer1(), a),
+        let Some(txid) = anchor.txid() else {
+            self.status
+                .add_failure(Failure::AnchorSetInvalid(bundle_id));
+            return;
         };
 
-        let txid = anchor.txid;
+        let (tapret_seals, opret_seals) = self.validate_seal_definitions(layer1, txid, bundle);
 
         // Check that the anchor is committed into a transaction spending all of the
         // transition inputs.
-        match self.resolver.resolve_tx(layer1, txid) {
+        match self.resolver.resolve_bp_tx(layer1, txid) {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't check.
                 // Reporting this incident and continuing further. Why this happens? No
@@ -397,10 +342,96 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 self.status.add_failure(Failure::SealNoWitnessTx(txid));
             }
             Ok(witness_tx) => {
-                let witness = Witness::with(witness_tx, anchor.clone());
-                self.validate_witness(transition, witness, bundle_id, anchor)
+                let (tapret, opret) = match anchor {
+                    AnchorSet::Taptet(tapret) => (Some(tapret), None),
+                    AnchorSet::Opret(opret) => (None, Some(opret)),
+                    AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
+                };
+
+                if let Some(tapret) = tapret {
+                    let witness = Witness::with(witness_tx.clone(), tapret.clone());
+                    self.validate_seal_closing(&tapret_seals, witness, bundle_id, tapret)
+                } else if !tapret_seals.is_empty() {
+                    self.status.add_warning(Warning::UnclosedSeals(bundle_id));
+                }
+                if let Some(opret) = opret {
+                    let witness = Witness::with(witness_tx, opret.clone());
+                    self.validate_seal_closing(&opret_seals, witness, bundle_id, opret)
+                } else if !opret_seals.is_empty() {
+                    self.status.add_warning(Warning::UnclosedSeals(bundle_id));
+                }
             }
         }
+    }
+
+    fn validate_seal_definitions(
+        &mut self,
+        layer1: Layer1,
+        witness_txid: Txid,
+        bundle: &'consignment TransitionBundle,
+    ) -> (Vec<GenesisSeal>, Vec<GenesisSeal>) {
+        let (mut tapret_seals, mut opret_seals) = (vec![], vec![]);
+        for (opid, transition) in &bundle.known_transitions {
+            let opid = *opid;
+
+            // Checking that witness transaction closes seals defined by transition previous
+            // outputs.
+            for input in &transition.inputs {
+                let Opout { op, ty, no } = input.prev_out;
+
+                let Some(prev_op) = self.consignment.operation(op) else {
+                    // Node, referenced as the ancestor, was not found in the consignment.
+                    // Usually this means that the consignment data are broken
+                    self.status.add_failure(Failure::OperationAbsent(op));
+                    continue;
+                };
+
+                let Some(variant) = prev_op.assignments_by_type(ty) else {
+                    self.status.add_failure(Failure::NoPrevState {
+                        opid,
+                        prev_id: op,
+                        state_type: ty,
+                    });
+                    continue;
+                };
+
+                let Ok(seal) = variant.revealed_seal_at(no) else {
+                    self.status
+                        .add_failure(Failure::NoPrevOut(opid, input.prev_out));
+                    continue;
+                };
+                let Some(seal) = seal else {
+                    // Everything is ok, but we have incomplete data (confidential), thus can't do a
+                    // full verification and have to report the failure
+                    self.status
+                        .add_failure(Failure::ConfidentialSeal(input.prev_out));
+                    continue;
+                };
+
+                if seal.layer1() != layer1 {
+                    self.status.add_failure(Failure::SealWitnessLayer1Mismatch {
+                        seal: seal.layer1(),
+                        anchor: layer1,
+                    });
+                    continue;
+                }
+                if !self.layers1.contains(&seal.layer1()) {
+                    self.status
+                        .add_failure(Failure::SealLayerMismatch(seal.layer1(), seal));
+                    continue;
+                }
+
+                let seal = seal
+                    .reduce_to_bp()
+                    .expect("method must be called only on BP-compatible layer 1")
+                    .resolve(witness_txid);
+                match seal.method() {
+                    CloseMethod::OpretFirst => opret_seals.push(seal),
+                    CloseMethod::TapretFirst => tapret_seals.push(seal),
+                }
+            }
+        }
+        (tapret_seals, opret_seals)
     }
 
     /// Single-use-seal closing validation.
@@ -413,105 +444,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
     ///
     /// Additionally checks that the provided message contains commitment to the
     /// bundle under the current contract.
-    fn validate_witness<Dbc: dbc::Proof>(
+    fn validate_seal_closing<'seal, Seal: TxoSeal + 'seal, Dbc: dbc::Proof>(
         &mut self,
-        transition: &'consignment Transition,
+        seals: impl IntoIterator<Item = &'seal Seal>,
         witness: Witness<Dbc>,
         bundle_id: BundleId,
         anchor: &'consignment dbc::Anchor<mpc::MerkleProof, Dbc>,
     ) {
-        let opid = transition.id();
-        let txid = witness.txid;
-
-        // Checking that witness transaction closes seals defined by transition previous
-        // outputs.
-        let mut seals = vec![];
-        for input in &transition.inputs {
-            let Opout { op, ty, no } = input.prev_out;
-
-            let Some(prev_op) = self.consignment.operation(op) else {
-                // Node, referenced as the ancestor, was not found in the consignment.
-                // Usually this means that the consignment data are broken
-                self.status.add_failure(Failure::OperationAbsent(op));
-                continue;
-            };
-
-            let Some(variant) = prev_op.assignments_by_type(ty) else {
-                self.status.add_failure(Failure::NoPrevState {
-                    opid,
-                    prev_id: op,
-                    state_type: ty,
-                });
-                continue;
-            };
-
-            let Ok(seal) = variant.revealed_seal_at(no) else {
-                self.status
-                    .add_failure(Failure::NoPrevOut(opid, input.prev_out));
-                continue;
-            };
-            let Some(seal) = seal else {
-                // Everything is ok, but we have incomplete data (confidential), thus can't do a
-                // full verification and have to report the failure
-                self.status
-                    .add_failure(Failure::ConfidentialSeal(input.prev_out));
-                continue;
-            };
-
-            let Some(anchor) = self.anchor_index.get(&op) else {
-                panic!("anchor for the operation {op} was not indexed by the validator");
-            };
-            if seal.layer1() != anchor.layer1() {
-                self.status.add_failure(Failure::SealWitnessLayer1Mismatch {
-                    seal: seal.layer1(),
-                    anchor: anchor.layer1(),
-                });
-                continue;
-            }
-            if !self.layers1.contains(&seal.layer1()) {
-                self.status
-                    .add_failure(Failure::SealInvalidLayer1(seal.layer1(), seal));
-                continue;
-            }
-
-            let seal = match (seal, anchor) {
-                (
-                    Xchain::Bitcoin(
-                        seal @ GraphSeal {
-                            txid: TxPtr::WitnessTx,
-                            ..
-                        },
-                    ) |
-                    Xchain::Liquid(
-                        seal @ GraphSeal {
-                            txid: TxPtr::WitnessTx,
-                            ..
-                        },
-                    ),
-                    Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor),
-                ) => {
-                    let prev_witness_txid = anchor.txid;
-                    seal.resolve(prev_witness_txid)
-                }
-                (
-                    Xchain::Bitcoin(
-                        seal @ GraphSeal {
-                            txid: TxPtr::Txid(txid),
-                            ..
-                        },
-                    ) |
-                    Xchain::Liquid(
-                        seal @ GraphSeal {
-                            txid: TxPtr::Txid(txid),
-                            ..
-                        },
-                    ),
-                    Anchor::Bitcoin(_) | Anchor::Liquid(_),
-                ) => seal.resolve(txid),
-            };
-            seals.push(seal);
-        }
-
         let message = mpc::Message::from(bundle_id);
         // [VALIDATION]: Checking anchor MPC commitment
         match anchor.convolve(self.contract_id, message) {
@@ -519,15 +458,18 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 // The operation is not committed to bitcoin transaction graph!
                 // Ultimate failure. But continuing to detect the rest (after reporting it).
                 self.status
-                    .add_failure(Failure::MpcInvalid(opid, txid, err));
+                    .add_failure(Failure::MpcInvalid(bundle_id, witness.txid, err));
             }
             Ok(commitment) => {
                 // [VALIDATION]: CHECKING SINGLE-USE-SEALS
                 witness
-                    .verify_many_seals(&seals, &commitment)
+                    .verify_many_seals(seals, &commitment)
                     .map_err(|err| {
-                        self.status
-                            .add_failure(Failure::SealInvalid(opid, txid, err));
+                        self.status.add_failure(Failure::SealsInvalid(
+                            bundle_id,
+                            witness.txid,
+                            err.to_string(),
+                        ));
                     })
                     .ok();
             }

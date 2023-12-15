@@ -27,7 +27,7 @@ use amplify::Wrapper;
 use strict_types::SemId;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
-use crate::validation::{ConsignmentApi, VirtualMachine};
+use crate::validation::{CheckedConsignment, ConsignmentApi, VirtualMachine};
 use crate::{
     validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
@@ -35,11 +35,11 @@ use crate::{
 };
 
 impl<Root: SchemaRoot> Schema<Root> {
-    pub fn validate<C: ConsignmentApi>(
-        &self,
-        consignment: &C,
+    pub fn validate_state<'validator, 'consignment, 'vm, C: ConsignmentApi>(
+        &'validator self,
+        consignment: &'validator CheckedConsignment<'consignment, C>,
         op: OpRef,
-        vm: &dyn VirtualMachine,
+        vm: &'vm dyn VirtualMachine,
     ) -> validation::Status {
         let id = op.id();
 
