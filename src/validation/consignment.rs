@@ -76,6 +76,4 @@ pub trait ConsignmentApi {
     fn op_ids_except(&self, ids: &BTreeSet<OpId>) -> BTreeSet<OpId>;
 
     fn has_operation(&self, opid: OpId) -> bool;
-
-    fn known_transitions_in_bundle(&self, bundle_id: BundleId) -> Self::TransitionIter<'_>;
 }
