@@ -20,10 +20,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::seals::txout::{CloseMethod, ExplicitSeal, TxoSeal, Witness};
-use bp::{dbc, Tx, Txid};
+use bp::{dbc, Outpoint, Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
@@ -58,7 +58,8 @@ pub struct Validator<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: Resolve
     genesis_id: OpId,
     contract_id: ContractId,
     layers1: BTreeSet<Layer1>,
-    end_transitions: Vec<(&'consignment Transition, BundleId)>,
+
+    validated_op_seals: BTreeSet<OpId>,
     validated_op_state: BTreeSet<OpId>,
 
     vm: Box<dyn VirtualMachine + 'vm>,
@@ -84,10 +85,12 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // This is pretty simple operation; it takes a lot of code because we would like
         // to detect any potential issues with the consignment structure and notify user
         // about them (in form of generated warnings)
-        let mut end_transitions = Vec::<(&Transition, BundleId)>::new();
         for (bundle_id, seal_endpoint) in consignment.terminals() {
-            for transition in consignment.known_transitions_in_bundle(bundle_id) {
-                let opid = transition.id();
+            let Some(anchored_bundle) = consignment.anchored_bundle(bundle_id) else {
+                status.add_failure(Failure::TerminalBundleAbsent(bundle_id));
+                continue;
+            };
+            for (opid, transition) in &anchored_bundle.bundle.known_transitions {
                 // Checking for endpoint definition duplicates
                 if !transition
                     .assignments
@@ -97,10 +100,7 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 {
                     // We generate just a warning here because it's up to a user to decide whether
                     // to accept consignment with wrong endpoint list
-                    status.add_warning(Warning::TerminalSealAbsent(opid, seal_endpoint));
-                }
-                if end_transitions.iter().all(|(n, _)| n.id() != opid) {
-                    end_transitions.push((transition, bundle_id));
+                    status.add_warning(Warning::TerminalSealAbsent(*opid, seal_endpoint));
                 }
             }
         }
@@ -109,6 +109,7 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // consignment were validated. Also, we use it to avoid double schema
         // validations for transitions.
         let validated_op_state = BTreeSet::<OpId>::new();
+        let validated_op_seals = BTreeSet::<OpId>::new();
 
         let mut layers1 = bset! { Layer1::Bitcoin };
         layers1.extend(genesis.alt_layers1.iter().map(AltLayer1::layer1));
@@ -126,8 +127,8 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
             genesis_id,
             contract_id,
             layers1,
-            end_transitions,
             validated_op_state,
+            validated_op_seals,
             vm,
             resolver,
         }
@@ -204,15 +205,15 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // NB: We are not aiming to validate the consignment as a whole, but instead
         // treat it as a superposition of subgraphs, one for each endpoint; and validate
         // them independently.
-        for (transition, _) in &self.end_transitions {
-            self.validate_logic_on_route(schema, transition);
-        }
-
-        // Generate warning if some of the transitions within the consignment were
-        // excessive (i.e. not part of validation_index). Nothing critical, but still
-        // good to report the user that the consignment is not perfect
-        for opid in self.consignment.op_ids_except(&self.validated_op_state) {
-            self.status.add_warning(Warning::ExcessiveOperation(opid));
+        for (bundle_id, _) in self.consignment.terminals() {
+            let Some(anchored_bundle) = self.consignment.anchored_bundle(bundle_id) else {
+                // We already checked and errored here during the terminal validation, so just
+                // skipping.
+                continue;
+            };
+            for transition in anchored_bundle.bundle.known_transitions.values() {
+                self.validate_logic_on_route(schema, transition);
+            }
         }
     }
 
@@ -242,11 +243,13 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 continue;
             }
 
+            if !self.validated_op_seals.contains(&opid) {
+                self.status.add_failure(Failure::SealsUnvalidated(opid));
+            }
             // [VALIDATION]: Verify operation against the schema and scripts
-            if !self.validated_op_state.contains(&opid) {
-                self.status +=
-                    schema.validate_state(&self.consignment, operation, self.vm.as_ref());
-                self.validated_op_state.insert(opid);
+            self.status += schema.validate_state(&self.consignment, operation, self.vm.as_ref());
+            if !self.validated_op_state.insert(opid) {
+                self.status.add_failure(Failure::CyclicGraph(opid));
             }
 
             match operation {
@@ -311,27 +314,76 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
             };
             let bundle = &anchored_bundle.bundle;
 
-            let (tapret_seals, opret_seals) =
+            // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
+            let (tapret_seals, opret_seals, input_map) =
                 self.validate_seal_definitions(layer1, witness_id, bundle);
 
-            self.validate_commitments_bp(layer1, tapret_seals, opret_seals, bundle_id, anchors);
+            // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
+            let Some(witness_tx) = self.validate_commitments_bp(
+                layer1,
+                &tapret_seals,
+                &opret_seals,
+                bundle_id,
+                anchors,
+            ) else {
+                continue;
+            };
+
+            // [VALIDATION]: We validate bundle commitments to the input map
+            self.validate_bundle_commitments(bundle_id, bundle, witness_tx, input_map);
+        }
+    }
+
+    /// Validates that the transition bundle is internally consistent: inputs of
+    /// its state transitions correspond to the way how they are committed
+    /// in the input map of the bundle; and these inputs are real inputs of
+    /// the transaction.
+    fn validate_bundle_commitments(
+        &mut self,
+        bundle_id: BundleId,
+        bundle: &'consignment TransitionBundle,
+        witness_tx: Tx,
+        input_map: BTreeMap<OpId, BTreeSet<Outpoint>>,
+    ) {
+        for (vin, opid) in bundle.input_map {
+            let Some(outpoints) = input_map.get(&opid) else {
+                self.status
+                    .add_failure(Failure::BundleExtraTransition(bundle_id, opid));
+                continue;
+            };
+            let Some(input) = witness_tx.inputs.get(vin.to_usize()) else {
+                self.status.add_failure(Failure::BundleInvalidInput(
+                    bundle_id,
+                    opid,
+                    witness_tx.txid(),
+                ));
+                continue;
+            };
+            if !outpoints.contains(&input.prev_output) {
+                self.status.add_failure(Failure::BundleInvalidCommitment(
+                    bundle_id,
+                    vin,
+                    witness_tx.txid(),
+                    opid,
+                ));
+            }
         }
     }
 
     /// Bitcoin- and liquid-specific commitment validation using deterministic
     /// bitcoin commitments with opret and tapret schema.
-    fn validate_commitments_bp(
+    fn validate_commitments_bp<'seal>(
         &mut self,
         layer1: Layer1,
-        tapret_seals: Vec<ExplicitSeal<Txid>>,
-        opret_seals: Vec<ExplicitSeal<Txid>>,
+        tapret_seals: impl IntoIterator<Item = &'seal ExplicitSeal<Txid>>,
+        opret_seals: impl IntoIterator<Item = &'seal ExplicitSeal<Txid>>,
         bundle_id: BundleId,
         anchors: &'consignment AnchorSet,
-    ) {
+    ) -> Option<Tx> {
         let Some(txid) = anchors.txid() else {
             self.status
                 .add_failure(Failure::AnchorSetInvalid(bundle_id));
-            return;
+            return None;
         };
 
         // Check that the anchor is committed into a transaction spending all of the
@@ -350,6 +402,7 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 // validation in order to detect the rest of problems (and reporting the
                 // failure!)
                 self.status.add_failure(Failure::SealNoWitnessTx(txid));
+                None
             }
             Ok(witness_tx) => {
                 let (tapret, opret) = match anchors {
@@ -360,16 +413,17 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
                 if let Some(tapret) = tapret {
                     let witness = Witness::with(witness_tx.clone(), tapret.clone());
-                    self.validate_seal_closing_bp(&tapret_seals, witness, bundle_id, tapret)
-                } else if !tapret_seals.is_empty() {
+                    self.validate_seal_closing_bp(tapret_seals, witness, bundle_id, tapret)
+                } else if tapret_seals.into_iter().count() > 0 {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
                 }
                 if let Some(opret) = opret {
-                    let witness = Witness::with(witness_tx, opret.clone());
-                    self.validate_seal_closing_bp(&opret_seals, witness, bundle_id, opret)
-                } else if !opret_seals.is_empty() {
+                    let witness = Witness::with(witness_tx.clone(), opret.clone());
+                    self.validate_seal_closing_bp(opret_seals, witness, bundle_id, opret)
+                } else if opret_seals.into_iter().count() > 0 {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
                 }
+                Some(witness_tx)
             }
         }
     }
@@ -383,10 +437,16 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
         layer1: Layer1,
         witness_id: WitnessId,
         bundle: &'consignment TransitionBundle,
-    ) -> (Vec<ExplicitSeal<Txid>>, Vec<ExplicitSeal<Txid>>) {
+    ) -> (Vec<ExplicitSeal<Txid>>, Vec<ExplicitSeal<Txid>>, BTreeMap<OpId, BTreeSet<Outpoint>>)
+    {
+        let mut input_map: BTreeMap<OpId, BTreeSet<Outpoint>> = bmap!();
         let (mut tapret_seals, mut opret_seals) = (vec![], vec![]);
         for (opid, transition) in &bundle.known_transitions {
             let opid = *opid;
+
+            if !self.validated_op_seals.insert(opid) {
+                self.status.add_failure(Failure::CyclicGraph(opid));
+            }
 
             // Checking that witness transaction closes seals defined by transition previous
             // outputs.
@@ -444,9 +504,13 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     CloseMethod::OpretFirst => opret_seals.push(seal),
                     CloseMethod::TapretFirst => tapret_seals.push(seal),
                 }
+                input_map
+                    .entry(opid)
+                    .or_default()
+                    .insert(Outpoint::new(seal.txid, seal.vout));
             }
         }
-        (tapret_seals, opret_seals)
+        (tapret_seals, opret_seals, input_map)
     }
 
     /// Single-use-seal closing validation.
