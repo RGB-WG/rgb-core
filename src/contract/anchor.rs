@@ -116,7 +116,7 @@ impl Anchor<mpc::MerkleBlock> {
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Taptet(strict_dumb!()))]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Tapret(strict_dumb!()))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

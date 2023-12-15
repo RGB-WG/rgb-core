@@ -22,7 +22,7 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use bp::seals::txout::{CloseMethod, TxoSeal, Witness};
+use bp::seals::txout::{CloseMethod, ExplicitSeal, TxoSeal, Witness};
 use bp::{dbc, Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
@@ -31,9 +31,9 @@ use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
-    AltLayer1, Anchor, AnchorSet, BundleId, ContractId, GenesisSeal, Layer1, OpId, OpRef,
-    Operation, Opout, Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition,
-    TransitionBundle, TypedAssigns,
+    AltLayer1, Anchor, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, Operation, Opout,
+    Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
+    WitnessId,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -305,10 +305,16 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
             // For now we use just Bitcoin and Liquid as layer1, but in the
             // future we may have more validation routes for other types of
             // layer1 structure.
-            let anchor = match &anchored_bundle.anchor {
+            let witness_id = anchored_bundle.anchor.witness_id();
+            let anchors = match &anchored_bundle.anchor {
                 Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
             };
-            self.validate_commitments_bp(layer1, bundle_id, &anchored_bundle.bundle, anchor);
+            let bundle = &anchored_bundle.bundle;
+
+            let (tapret_seals, opret_seals) =
+                self.validate_seal_definitions(layer1, witness_id, bundle);
+
+            self.validate_commitments_bp(layer1, tapret_seals, opret_seals, bundle_id, anchors);
         }
     }
 
@@ -317,17 +323,16 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
     fn validate_commitments_bp(
         &mut self,
         layer1: Layer1,
+        tapret_seals: Vec<ExplicitSeal<Txid>>,
+        opret_seals: Vec<ExplicitSeal<Txid>>,
         bundle_id: BundleId,
-        bundle: &'consignment TransitionBundle,
-        anchor: &'consignment AnchorSet,
+        anchors: &'consignment AnchorSet,
     ) {
-        let Some(txid) = anchor.txid() else {
+        let Some(txid) = anchors.txid() else {
             self.status
                 .add_failure(Failure::AnchorSetInvalid(bundle_id));
             return;
         };
-
-        let (tapret_seals, opret_seals) = self.validate_seal_definitions(layer1, txid, bundle);
 
         // Check that the anchor is committed into a transaction spending all of the
         // transition inputs.
@@ -347,21 +352,21 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 self.status.add_failure(Failure::SealNoWitnessTx(txid));
             }
             Ok(witness_tx) => {
-                let (tapret, opret) = match anchor {
-                    AnchorSet::Taptet(tapret) => (Some(tapret), None),
+                let (tapret, opret) = match anchors {
+                    AnchorSet::Tapret(tapret) => (Some(tapret), None),
                     AnchorSet::Opret(opret) => (None, Some(opret)),
                     AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
                 };
 
                 if let Some(tapret) = tapret {
                     let witness = Witness::with(witness_tx.clone(), tapret.clone());
-                    self.validate_seal_closing(&tapret_seals, witness, bundle_id, tapret)
+                    self.validate_seal_closing_bp(&tapret_seals, witness, bundle_id, tapret)
                 } else if !tapret_seals.is_empty() {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
                 }
                 if let Some(opret) = opret {
                     let witness = Witness::with(witness_tx, opret.clone());
-                    self.validate_seal_closing(&opret_seals, witness, bundle_id, opret)
+                    self.validate_seal_closing_bp(&opret_seals, witness, bundle_id, opret)
                 } else if !opret_seals.is_empty() {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
                 }
@@ -376,9 +381,9 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
     fn validate_seal_definitions(
         &mut self,
         layer1: Layer1,
-        witness_txid: Txid,
+        witness_id: WitnessId,
         bundle: &'consignment TransitionBundle,
-    ) -> (Vec<GenesisSeal>, Vec<GenesisSeal>) {
+    ) -> (Vec<ExplicitSeal<Txid>>, Vec<ExplicitSeal<Txid>>) {
         let (mut tapret_seals, mut opret_seals) = (vec![], vec![]);
         for (opid, transition) in &bundle.known_transitions {
             let opid = *opid;
@@ -431,9 +436,10 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 }
 
                 let seal = seal
-                    .reduce_to_bp()
+                    .try_to_output_seal(witness_id)
                     .expect("method must be called only on BP-compatible layer 1")
-                    .resolve(witness_txid);
+                    .reduce_to_bp()
+                    .expect("method must be called only on BP-compatible layer 1");
                 match seal.method() {
                     CloseMethod::OpretFirst => opret_seals.push(seal),
                     CloseMethod::TapretFirst => tapret_seals.push(seal),
@@ -453,7 +459,7 @@ impl<'consignment, 'vm, 'resolver, C: ConsignmentApi, R: ResolveTx>
     ///
     /// Additionally checks that the provided message contains commitment to the
     /// bundle under the current contract.
-    fn validate_seal_closing<'seal, Seal: TxoSeal + 'seal, Dbc: dbc::Proof>(
+    fn validate_seal_closing_bp<'seal, Seal: TxoSeal + 'seal, Dbc: dbc::Proof>(
         &mut self,
         seals: impl IntoIterator<Item = &'seal Seal>,
         witness: Witness<Dbc>,
