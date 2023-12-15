@@ -24,7 +24,8 @@ use std::cmp::Ordering;
 
 use bp::dbc::opret::OpretProof;
 use bp::dbc::tapret::TapretProof;
-use bp::{dbc, Txid};
+use bp::dbc::Anchor;
+use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
@@ -39,7 +40,7 @@ use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, LIB_N
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct AnchoredBundle {
-    pub anchor: Anchor,
+    pub anchor: XAnchor,
     pub bundle: TransitionBundle,
 }
 
@@ -56,7 +57,7 @@ impl AnchoredBundle {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum Anchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
+pub enum XAnchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     #[strict_type(tag = 0x00)]
     Bitcoin(AnchorSet<P>),
 
@@ -64,62 +65,62 @@ pub enum Anchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     Liquid(AnchorSet<P>),
 }
 
-impl<P: mpc::Proof + StrictDumb> Anchor<P> {
+impl<P: mpc::Proof + StrictDumb> XAnchor<P> {
     #[inline]
     pub fn layer1(&self) -> Layer1 {
         match self {
-            Anchor::Bitcoin(_) => Layer1::Bitcoin,
-            Anchor::Liquid(_) => Layer1::Liquid,
+            XAnchor::Bitcoin(_) => Layer1::Bitcoin,
+            XAnchor::Liquid(_) => Layer1::Liquid,
         }
     }
 
     #[inline]
     pub fn witness_id(&self) -> WitnessId {
         match self {
-            Anchor::Bitcoin(anchor) => WitnessId::Bitcoin(anchor.txid_unchecked()),
-            Anchor::Liquid(anchor) => WitnessId::Liquid(anchor.txid_unchecked()),
+            XAnchor::Bitcoin(anchor) => WitnessId::Bitcoin(anchor.txid_unchecked()),
+            XAnchor::Liquid(anchor) => WitnessId::Liquid(anchor.txid_unchecked()),
         }
     }
 
     fn map<Q: mpc::Proof + StrictDumb, E>(
         self,
         f: impl FnOnce(AnchorSet<P>) -> Result<AnchorSet<Q>, E>,
-    ) -> Result<Anchor<Q>, E> {
+    ) -> Result<XAnchor<Q>, E> {
         match self {
-            Anchor::Bitcoin(anchor) => f(anchor).map(Anchor::Bitcoin),
-            Anchor::Liquid(anchor) => f(anchor).map(Anchor::Liquid),
+            XAnchor::Bitcoin(anchor) => f(anchor).map(XAnchor::Bitcoin),
+            XAnchor::Liquid(anchor) => f(anchor).map(XAnchor::Liquid),
         }
     }
 }
 
-impl Anchor<mpc::MerkleBlock> {
+impl XAnchor<mpc::MerkleBlock> {
     pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
         match self {
-            Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor.known_bundle_ids(),
+            XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor.known_bundle_ids(),
         }
     }
 
     pub fn to_merkle_proof(
         &self,
         contract_id: ContractId,
-    ) -> Result<Anchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
+    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
         self.clone().into_merkle_proof(contract_id)
     }
 
     pub fn into_merkle_proof(
         self,
         contract_id: ContractId,
-    ) -> Result<Anchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
+    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
         self.map(|a| a.into_merkle_proof(contract_id))
     }
 }
 
-impl Anchor<mpc::MerkleProof> {
+impl XAnchor<mpc::MerkleProof> {
     pub fn to_merkle_block(
         &self,
         contract_id: ContractId,
         bundle_id: BundleId,
-    ) -> Result<Anchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
         self.clone().into_merkle_block(contract_id, bundle_id)
     }
 
@@ -127,7 +128,7 @@ impl Anchor<mpc::MerkleProof> {
         self,
         contract_id: ContractId,
         bundle_id: BundleId,
-    ) -> Result<Anchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
         self.map(|a| a.into_merkle_block(contract_id, bundle_id))
     }
 }
@@ -142,13 +143,13 @@ impl Anchor<mpc::MerkleProof> {
 )]
 pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     #[strict_type(tag = 0x01)]
-    Tapret(dbc::Anchor<P, TapretProof>),
+    Tapret(Anchor<P, TapretProof>),
     #[strict_type(tag = 0x02)]
-    Opret(dbc::Anchor<P, OpretProof>),
+    Opret(Anchor<P, OpretProof>),
     #[strict_type(tag = 0x03)]
     Dual {
-        tapret: dbc::Anchor<P, TapretProof>,
-        opret: dbc::Anchor<P, OpretProof>,
+        tapret: Anchor<P, TapretProof>,
+        opret: Anchor<P, OpretProof>,
     },
 }
 
@@ -171,8 +172,8 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
     }
 
     pub fn from_split(
-        tapret: Option<dbc::Anchor<P, TapretProof>>,
-        opret: Option<dbc::Anchor<P, OpretProof>>,
+        tapret: Option<Anchor<P, TapretProof>>,
+        opret: Option<Anchor<P, OpretProof>>,
     ) -> Option<Self> {
         Some(match (tapret, opret) {
             (Some(tapret), Some(opret)) => Self::Dual { tapret, opret },
@@ -183,9 +184,7 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
     }
 
     #[allow(clippy::type_complexity)]
-    pub fn as_split(
-        &self,
-    ) -> (Option<&dbc::Anchor<P, TapretProof>>, Option<&dbc::Anchor<P, OpretProof>>) {
+    pub fn as_split(&self) -> (Option<&Anchor<P, TapretProof>>, Option<&Anchor<P, OpretProof>>) {
         match self {
             AnchorSet::Tapret(tapret) => (Some(tapret), None),
             AnchorSet::Opret(opret) => (None, Some(opret)),
@@ -194,9 +193,7 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
     }
 
     #[allow(clippy::type_complexity)]
-    pub fn into_split(
-        self,
-    ) -> (Option<dbc::Anchor<P, TapretProof>>, Option<dbc::Anchor<P, OpretProof>>) {
+    pub fn into_split(self) -> (Option<Anchor<P, TapretProof>>, Option<Anchor<P, OpretProof>>) {
         match self {
             AnchorSet::Tapret(tapret) => (Some(tapret), None),
             AnchorSet::Opret(opret) => (None, Some(opret)),
@@ -239,13 +236,11 @@ impl AnchorSet<mpc::MerkleProof> {
 
 impl AnchorSet<mpc::MerkleBlock> {
     pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
-        self.mpc_proofs()
-            .map(|p| {
-                p.to_known_message_map()
-                    .into_iter()
-                    .map(|(p, m)| (m.into(), p.into()))
-            })
-            .flatten()
+        self.mpc_proofs().flat_map(|p| {
+            p.to_known_message_map()
+                .into_iter()
+                .map(|(p, m)| (m.into(), p.into()))
+        })
     }
 
     pub fn to_merkle_proof(

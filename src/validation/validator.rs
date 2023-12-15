@@ -22,6 +22,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
+use bp::dbc::Anchor;
 use bp::seals::txout::{CloseMethod, ExplicitSeal, TxoSeal, Witness};
 use bp::{dbc, Outpoint, Tx, Txid};
 use commit_verify::mpc;
@@ -31,9 +32,9 @@ use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
-    AltLayer1, Anchor, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, Operation, Opout,
-    Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
-    WitnessId,
+    AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, Operation, Opout, Schema,
+    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, WitnessId,
+    XAnchor,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -309,7 +310,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             // layer1 structure.
             let witness_id = anchored_bundle.anchor.witness_id();
             let anchors = match &anchored_bundle.anchor {
-                Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
+                XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor,
             };
             let bundle = &anchored_bundle.bundle;
 
@@ -521,7 +522,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         seals: impl IntoIterator<Item = &'seal Seal>,
         witness: Witness<Dbc>,
         bundle_id: BundleId,
-        anchor: &'temp dbc::Anchor<mpc::MerkleProof, Dbc>,
+        anchor: &'temp Anchor<mpc::MerkleProof, Dbc>,
     ) {
         let message = mpc::Message::from(bundle_id);
         // [VALIDATION]: Checking anchor MPC commitment
