@@ -22,7 +22,6 @@
 
 use std::cmp::Ordering;
 
-use bp::dbc::anchor::MergeError;
 use bp::dbc::opret::OpretProof;
 use bp::dbc::tapret::TapretProof;
 use bp::{dbc, Txid};
@@ -112,18 +111,6 @@ impl Anchor<mpc::MerkleBlock> {
         contract_id: ContractId,
     ) -> Result<Anchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
         self.map(|a| a.into_merkle_proof(contract_id))
-    }
-
-    pub fn merge_reveal(self, other: Self) -> Result<Self, MergeError> {
-        match (self, other) {
-            (Anchor::Bitcoin(anchor), Anchor::Bitcoin(other)) => {
-                anchor.merge_reveal(other).map(Anchor::Bitcoin)
-            }
-            (Anchor::Liquid(anchor), Anchor::Liquid(other)) => {
-                anchor.merge_reveal(other).map(Anchor::Liquid)
-            }
-            _ => Err(MergeError::TxidMismatch),
-        }
     }
 }
 
@@ -280,28 +267,6 @@ impl AnchorSet<mpc::MerkleBlock> {
             .map(|o| o.into_merkle_proof(contract_id))
             .transpose()?;
         Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
-    }
-
-    pub fn merge_reveal(self, other: Self) -> Result<Self, MergeError> {
-        let (tapret1, opret1) = self.into_split();
-        let (tapret2, opret2) = other.into_split();
-
-        let tapret = match (tapret1, tapret2) {
-            (Some(tr), None) | (None, Some(tr)) => Some(tr),
-            (Some(tapret1), Some(tapret2)) => Some(tapret1.merge_reveal(tapret2)?),
-            (None, None) => None,
-        };
-        let opret = match (opret1, opret2) {
-            (Some(or), None) | (None, Some(or)) => Some(or),
-            (Some(opret1), Some(opret2)) => Some(opret1.merge_reveal(opret2)?),
-            (None, None) => None,
-        };
-        Ok(match (tapret, opret) {
-            (Some(tapret), None) => Self::Tapret(tapret),
-            (None, Some(opret)) => Self::Opret(opret),
-            (Some(tapret), Some(opret)) => Self::Dual { tapret, opret },
-            _ => unreachable!(),
-        })
     }
 }
 
