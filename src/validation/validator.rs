@@ -189,8 +189,10 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         validator.status
     }
 
+    // *** PART I: Schema validation
     fn validate_schema(&mut self, schema: &SubSchema) { self.status += schema.verify(); }
 
+    // *** PART II: Validating business logic
     fn validate_logic<Root: SchemaRoot>(&mut self, schema: &Schema<Root>) {
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
@@ -219,7 +221,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         // treat it as a superposition of subgraphs, one for each endpoint; and validate
         // them independently.
         for (transition, _) in &self.end_transitions {
-            self.validate_branch(schema, transition);
+            self.validate_logic_on_route(schema, transition);
         }
 
         // Generate warning if some of the transitions within the consignment were
@@ -230,61 +232,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         }
     }
 
-    fn validate_commitments(&mut self) {
-        for anchor in &self.anchor_index {}
-
-        // Replace missed (not yet mined) endpoint witness transaction failures
-        // with a dedicated type
-        for (transition, bundle_id) in &self.end_transitions {
-            let opid = transition.id();
-
-            if let Some(anchor) = self.anchor_index.get(&opid) {
-                // Making sure we do have a corresponding anchor; otherwise reporting failure
-                // (see below) - with the except of genesis and extension nodes, which does not
-                // have a corresponding anchor
-                if !self.anchor_validation_index.contains(&opid) {
-                    // Ok, now we have the `transition` and the `anchor`, let's do all
-                    // required checks
-
-                    // [VALIDATION]: Check that transition is committed into the anchor.
-                    //               This must be done with deterministic bitcoin
-                    //               commitments & LNPBP-4.
-                    if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
-                        self.status.add_failure(Failure::NotInAnchor(opid));
-                    }
-
-                    self.validate_anchor(transition, *bundle_id, anchor);
-                    self.anchor_validation_index.insert(opid);
-                }
-
-                let anchor = match anchor {
-                    Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
-                };
-
-                if let Some(pos) = self
-                    .status
-                    .failures
-                    .iter()
-                    .position(|f| f == &Failure::SealNoWitnessTx(anchor.txid))
-                {
-                    self.status.failures.remove(pos);
-                    self.status
-                        .unresolved_txids
-                        .retain(|txid| *txid != anchor.txid);
-                    self.status.unmined_terminals.push(anchor.txid);
-                    self.status
-                        .warnings
-                        .push(Warning::TerminalWitnessNotMined(anchor.txid));
-                }
-            } else {
-                // If we've got here there is something broken with the consignment
-                // provider.
-                self.status.add_failure(Failure::NotAnchored(opid));
-            }
-        }
-    }
-
-    fn validate_branch<Root: SchemaRoot>(
+    fn validate_logic_on_route<Root: SchemaRoot>(
         &mut self,
         schema: &Schema<Root>,
         transition: &'consignment Transition,
@@ -358,6 +306,61 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                         queue.push_back(prev_op);
                     }
                 }
+            }
+        }
+    }
+
+    // *** PART III: Validating single-use-seals
+    fn validate_commitments(&mut self) {
+        for anchor in &self.anchor_index {}
+
+        // Replace missed (not yet mined) endpoint witness transaction failures
+        // with a dedicated type
+        for (transition, bundle_id) in &self.end_transitions {
+            let opid = transition.id();
+
+            if let Some(anchor) = self.anchor_index.get(&opid) {
+                // Making sure we do have a corresponding anchor; otherwise reporting failure
+                // (see below) - with the except of genesis and extension nodes, which does not
+                // have a corresponding anchor
+                if !self.anchor_validation_index.contains(&opid) {
+                    // Ok, now we have the `transition` and the `anchor`, let's do all
+                    // required checks
+
+                    // [VALIDATION]: Check that transition is committed into the anchor.
+                    //               This must be done with deterministic bitcoin
+                    //               commitments & LNPBP-4.
+                    if anchor.convolve(self.contract_id, bundle_id.into()).is_err() {
+                        self.status.add_failure(Failure::NotInAnchor(opid));
+                    }
+
+                    self.validate_anchor(transition, *bundle_id, anchor);
+                    self.anchor_validation_index.insert(opid);
+                }
+
+                let anchor = match anchor {
+                    Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
+                };
+
+                if let Some(pos) = self
+                    .status
+                    .failures
+                    .iter()
+                    .position(|f| f == &Failure::SealNoWitnessTx(anchor.txid))
+                {
+                    self.status.failures.remove(pos);
+                    self.status
+                        .unresolved_txids
+                        .retain(|txid| *txid != anchor.txid);
+                    self.status.unmined_terminals.push(anchor.txid);
+                    self.status
+                        .warnings
+                        .push(Warning::TerminalWitnessNotMined(anchor.txid));
+                }
+            } else {
+                // If we've got here there is something broken with the consignment
+                // provider.
+                self.status.add_failure(Failure::NotAnchored(opid));
             }
         }
     }
