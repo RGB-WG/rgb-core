@@ -22,13 +22,13 @@
 
 #![allow(clippy::unusual_byte_groupings)]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
-use aluvm::reg::{CoreRegs, Reg16, RegA, RegS};
-use amplify::num::u4;
+use aluvm::reg::{CoreRegs, Reg, Reg32, RegA, RegS};
+use amplify::num::{u3, u4};
 use amplify::Wrapper;
 use commit_verify::CommitVerify;
 use strict_encoding::StrictSerialize;
@@ -45,22 +45,22 @@ pub enum ContractOp {
     /// Counts number of inputs (previous state entries) of the provided type
     /// and puts the number to the destination `a16` register.
     #[display("cnp     {0},a16{1}")]
-    CnP(AssignmentType, Reg16),
+    CnP(AssignmentType, Reg32),
 
     /// Counts number of outputs (owned state entries) of the provided type
     /// and puts the number to the destination `a16` register.
     #[display("cns     {0},a16{1}")]
-    CnS(AssignmentType, Reg16),
+    CnS(AssignmentType, Reg32),
 
     /// Counts number of global state items of the provided type affected by the
     /// current operation and puts the number to the destination `a8` register.
     #[display("cng     {0},a8{1}")]
-    CnG(GlobalStateType, Reg16),
+    CnG(GlobalStateType, Reg32),
 
     /// Counts number of global state items of the provided type in the contract
     /// state and puts the number to the destination `a16` register.
     #[display("cnc     {0},a16{1}")]
-    CnC(AssignmentType, Reg16),
+    CnC(AssignmentType, Reg32),
 
     /// Loads input (previous) state with type id from the first argument and
     /// index from the second argument into a register provided in the third
@@ -93,7 +93,7 @@ pub enum ContractOp {
     ///
     /// If the state at the index is concealed, sets destination to `None`.
     #[display("ldf     {0},{1},a64{2}")]
-    LdF(AssignmentType, u16, Reg16),
+    LdF(AssignmentType, u16, Reg32),
 
     /// Loads global state from the current operation with type id from the
     /// first argument and index from the second argument into a register
@@ -158,6 +158,35 @@ impl InstructionSet for ContractOp {
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
+    fn src_regs(&self) -> HashSet<Reg> { set![] }
+
+    fn dst_regs(&self) -> HashSet<Reg> {
+        match self {
+            ContractOp::CnP(_, reg) |
+            ContractOp::CnS(_, reg) |
+            ContractOp::CnG(_, reg) |
+            ContractOp::CnC(_, reg) => {
+                set![Reg::A(RegA::A16, *reg)]
+            }
+            ContractOp::LdF(_, _, reg) => {
+                set![Reg::A(RegA::A64, *reg)]
+            }
+            ContractOp::LdP(_, _, reg) |
+            ContractOp::LdS(_, _, reg) |
+            ContractOp::LdG(_, _, reg) |
+            ContractOp::LdC(_, _, reg) |
+            ContractOp::LdM(reg) => {
+                set![Reg::S(*reg)]
+            }
+
+            ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => {
+                set![]
+            }
+
+            ContractOp::Fail(_) => set![],
+        }
+    }
+
     fn exec(&self, regs: &mut CoreRegs, _site: LibSite, context: &Self::Context<'_>) -> ExecStep {
         macro_rules! fail {
             () => {{
@@ -204,17 +233,21 @@ impl InstructionSet for ContractOp {
 
         match self {
             ContractOp::CnP(state_type, reg) => {
-                regs.set(RegA::A16, *reg, context.prev_state.get(state_type).map(|a| a.len_u16()));
+                regs.set_n(
+                    RegA::A16,
+                    *reg,
+                    context.prev_state.get(state_type).map(|a| a.len_u16()),
+                );
             }
             ContractOp::CnS(state_type, reg) => {
-                regs.set(
+                regs.set_n(
                     RegA::A16,
                     *reg,
                     context.owned_state.get(*state_type).map(|a| a.len_u16()),
                 );
             }
             ContractOp::CnG(state_type, reg) => {
-                regs.set(RegA::A16, *reg, context.global.get(state_type).map(|a| a.len_u16()));
+                regs.set_n(RegA::A16, *reg, context.global.get(state_type).map(|a| a.len_u16()));
             }
             ContractOp::CnC(_state_type, _reg) => {
                 // TODO: implement global contract state
@@ -256,7 +289,7 @@ impl InstructionSet for ContractOp {
                 else {
                     fail!()
                 };
-                regs.set(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
+                regs.set_n(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
             }
             ContractOp::LdG(state_type, index, reg) => {
                 let Some(state) = context
@@ -376,23 +409,23 @@ impl Bytecode for ContractOp {
         match self {
             ContractOp::CnP(state_type, reg) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u5(reg)?;
+                writer.write_u3(u3::ZERO)?;
             }
             ContractOp::CnS(state_type, reg) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u5(reg)?;
+                writer.write_u3(u3::ZERO)?;
             }
             ContractOp::CnG(state_type, reg) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u5(reg)?;
+                writer.write_u3(u3::ZERO)?;
             }
             ContractOp::CnC(state_type, reg) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u5(reg)?;
+                writer.write_u3(u3::ZERO)?;
             }
             ContractOp::LdP(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
@@ -409,8 +442,8 @@ impl Bytecode for ContractOp {
             ContractOp::LdF(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u16(*index)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u5(reg)?;
+                writer.write_u3(u3::ZERO)?;
             }
             ContractOp::LdG(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
@@ -447,22 +480,22 @@ impl Bytecode for ContractOp {
     {
         Ok(match reader.read_u8()? {
             INSTR_CNP => {
-                let i = Self::CnP(reader.read_u16()?.into(), reader.read_u4()?.into());
+                let i = Self::CnP(reader.read_u16()?.into(), reader.read_u5()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_CNS => {
-                let i = Self::CnS(reader.read_u16()?.into(), reader.read_u4()?.into());
+                let i = Self::CnS(reader.read_u16()?.into(), reader.read_u5()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_CNG => {
-                let i = Self::CnG(reader.read_u16()?.into(), reader.read_u4()?.into());
+                let i = Self::CnG(reader.read_u16()?.into(), reader.read_u5()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_CNC => {
-                let i = Self::CnC(reader.read_u16()?.into(), reader.read_u4()?.into());
+                let i = Self::CnC(reader.read_u16()?.into(), reader.read_u5()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
@@ -489,7 +522,7 @@ impl Bytecode for ContractOp {
                 let i = Self::LdF(
                     reader.read_u16()?.into(),
                     reader.read_u16()?,
-                    reader.read_u4()?.into(),
+                    reader.read_u5()?.into(),
                 );
                 reader.read_u4()?; // Discard garbage bits
                 i

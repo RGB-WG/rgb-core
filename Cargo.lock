@@ -5,8 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.11.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "134a93e142c6aabca39c69c501c7d34ec99b04a5cb25738e1c0d1382f14b02a1"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.11#4077ebb1e68aaf42e6fa721d503db6cf236be52f"
 dependencies = [
  "amplify",
  "baid58",
@@ -65,11 +64,12 @@ dependencies = [
 
 [[package]]
 name = "amplify_num"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddce3bc63e807ea02065e8d8b702695f3d302ae4158baddff8b0ce5c73947251"
+checksum = "9681187211554ab98f138ba159e90861b136c20afc680dcff2ba82d020721e27"
 dependencies = [
  "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -195,7 +195,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.11.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#ea4e7c753cecfeabe252916a3c9651719364e70c"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#14175ef6668ccbdc15a33d6b94926b0ea663a8d6"
 dependencies = [
  "amplify",
  "chrono",
@@ -209,7 +209,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.11.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#ea4e7c753cecfeabe252916a3c9651719364e70c"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#14175ef6668ccbdc15a33d6b94926b0ea663a8d6"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -225,7 +225,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.11.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#ea4e7c753cecfeabe252916a3c9651719364e70c"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#14175ef6668ccbdc15a33d6b94926b0ea663a8d6"
 dependencies = [
  "amplify",
  "base85",
@@ -239,7 +239,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.0-beta.1"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#ea4e7c753cecfeabe252916a3c9651719364e70c"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#14175ef6668ccbdc15a33d6b94926b0ea663a8d6"
 dependencies = [
  "amplify",
  "baid58",
@@ -858,18 +858,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.50"
+version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9a7210f5c9a7156bb50aa36aed4c95afb51df0df00713949448cf9e97d382d2"
+checksum = "f11c217e1416d6f036b870f14e0413d480dbf28edbee1f877abaf0206af43bb7"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.50"
+version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "266b2e40bc00e5a6c09c3584011e08b06f123c00362c92b975ba9843aaaa14b8"
+checksum = "01742297787513b79cf8e29d1056ede1313e2420b7b3b15d0a768b4921f549df"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -924,9 +924,9 @@ checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 
 [[package]]
 name = "unsafe-libyaml"
-version = "0.2.9"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f28467d3e1d3c6586d8f25fa243f544f5800fec42d97032474e17222c2b75cfa"
+checksum = "ab4c90930b95a82d00dc9e9ac071b4991924390d46cbd0dfe566148667605e4b"
 
 [[package]]
 name = "version_check"
