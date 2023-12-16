@@ -39,7 +39,7 @@ use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-#[display(LowerHex)]
+#[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -54,7 +54,7 @@ impl GlobalStateType {
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-#[display(LowerHex)]
+#[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
@@ -70,7 +70,7 @@ impl ExtensionType {
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-#[display(LowerHex)]
+#[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
