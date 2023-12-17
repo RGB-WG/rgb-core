@@ -20,22 +20,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! API for interfacing different virtual machines
-//!
-//! Concrete virtual machine implementations must be wrapped into this API
+#[macro_export]
+macro_rules! rgbasm {
+    ($( $tt:tt )+) => {{ #[allow(unused_imports)] {
+        use $crate::vm::{RgbIsa, ContractOp, TimechainOp};
+        use $crate::vm::aluasm_isa;
+        use $crate::isa_instr;
+        aluasm_isa! { RgbIsa => $( $tt )+ }
+    } }};
+}
 
-pub mod opcodes;
-mod isa;
-mod op_contract;
-mod op_timechain;
-mod script;
-mod runtime;
-#[macro_use]
-mod macroasm;
-
-pub use aluvm::aluasm_isa;
-pub use isa::RgbIsa;
-pub use op_contract::ContractOp;
-pub use op_timechain::TimechainOp;
-pub use runtime::AluRuntime;
-pub use script::{AluScript, EntryPoint, LIBS_MAX_TOTAL};
+#[macro_export]
+macro_rules! isa_instr {
+    (ldg $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdG($t.into(), $no, RegS::from($s_idx))) }};
+    (lds $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdS($t.into(), $no, RegS::from($s_idx))) }};
+    (ldp $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdP($t.into(), $no, RegS::from($s_idx))) }};
+    ($op:ident $($tt:tt)+) => {{ compile_error!(concat!("unknown RGB assembly opcode `", stringify!($op), "`")) }};
+}
