@@ -27,8 +27,8 @@ use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
-use aluvm::reg::{CoreRegs, Reg, Reg32, RegA, RegS};
-use amplify::num::{u3, u4};
+use aluvm::reg::{CoreRegs, Reg16, Reg32, RegA, RegAFR, RegS};
+use amplify::num::u4;
 use amplify::Wrapper;
 use commit_verify::CommitVerify;
 
@@ -40,28 +40,32 @@ use crate::{
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[repr(u8)]
+pub enum InpOutp {
+    #[display("inp")]
+    Input = 0,
+    #[display("out")]
+    Output = 1,
+}
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+pub enum DataType {
+    #[display("glop {0},a8")]
+    OperationGlobal(GlobalStateType),
+    #[display("glc  {0},a32")]
+    ContractGlobal(GlobalStateType),
+    #[display("{0}  {1},a16")]
+    OwnedState(InpOutp, AssignmentType),
+}
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp {
     /// Counts number of inputs (previous state entries) of the provided type
     /// and puts the number to the destination `a16` register.
-    #[display("cnp     {0},a16{1}")]
-    CnP(AssignmentType, Reg32),
+    #[display("cn.{0},a16{1}")]
+    Count(DataType, Reg32),
 
-    /// Counts number of outputs (owned state entries) of the provided type
-    /// and puts the number to the destination `a16` register.
-    #[display("cns     {0},a16{1}")]
-    CnS(AssignmentType, Reg32),
-
-    /// Counts number of global state items of the provided type affected by the
-    /// current operation and puts the number to the destination `a8` register.
-    #[display("cng     {0},a8{1}")]
-    CnG(GlobalStateType, Reg32),
-
-    /// Counts number of global state items of the provided type in the contract
-    /// state and puts the number to the destination `a16` register.
-    #[display("cnc     {0},a16{1}")]
-    CnC(AssignmentType, Reg32),
-
-    /// Loads input (previous) state with type id from the first argument and
+    /// Loads state with type id from the first argument and
     /// index from the second argument into a register provided in the third
     /// argument.
     ///
@@ -69,19 +73,8 @@ pub enum ContractOp {
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldp     {0},{1},{2}")]
-    LdP(AssignmentType, u16, RegS),
-
-    /// Loads owned structured state with type id from the first argument and
-    /// index from the second argument into a register provided in the third
-    /// argument.
-    ///
-    /// If the state is absent or is not a structured state sets `st0` to
-    /// `false` and terminates the program.
-    ///
-    /// If the state at the index is concealed, sets destination to `None`.
-    #[display("lds     {0},{1},{2}")]
-    LdS(AssignmentType, u16, RegS),
+    #[display("ld.{0},{1},{2}")]
+    Load(DataType, Reg32, RegS),
 
     /// Loads owned fungible state with type id from the first argument and
     /// index from the second argument into `a64` register provided in the third
@@ -91,32 +84,49 @@ pub enum ContractOp {
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldf     {0},{1},a64{2}")]
-    LdF(AssignmentType, u16, Reg32),
+    #[display("val.{0} {1},a8{2},a64{3}")]
+    Val(InpOutp, AssignmentType, Reg32, Reg32),
 
-    /// Loads global state from the current operation with type id from the
-    /// first argument and index from the second argument into a register
-    /// provided in the third argument.
+    /// Put bytes at a given offset from the state with type id from the first
+    /// argument and index from the second argument into a register provided
+    /// in the third argument.
     ///
-    /// If the state is absent sets `st0` to `false` and terminates the program.
-    #[display("ldg     {0},{1},{2}")]
-    LdG(GlobalStateType, u8, RegS),
-
-    /// Loads part of the contract global state with type id from the first
-    /// argument at the depth from the second argument into a register
-    /// provided in the third argument.
+    /// Bytes are extracted from the strict-serialized state representation,
+    /// the total number of bytes extracted matches the dimension of the
+    /// destination register.
     ///
-    /// If the state is absent or concealed sets destination to `None`.
-    /// Does not modify content of `st0` register.
-    #[display("ldc     {0},{1},{2}")]
-    LdC(GlobalStateType, u16, RegS),
+    /// If the state is absent, doesn't have necessary number of bytes at the
+    /// provided offset, or is not a structured state sets `st0` to
+    /// `false` and terminates the program.
+    ///
+    /// If the state at the index is concealed, sets destination to `None`.
+    #[display("tk.{0},{1},a16{2},{3}{4}")]
+    Take(
+        DataType,
+        /** Register with the state type */ Reg32,
+        /** Register with the offset */ Reg32,
+        /** Destination register */ RegAFR,
+        Reg32,
+    ),
 
     /// Loads operation metadata into a register provided in the third argument.
     ///
     /// If the operation doesn't have metadata sets destination to `None`.
     /// Does not modify content of `st0` register.
-    #[display("ldm     {0}")]
-    LdM(RegS),
+    #[display("ld.meta {0}")]
+    LoadMeta(RegS),
+
+    /// Loads operation metadata into a register provided in the third argument.
+    ///
+    /// If the operation doesn't have metadata sets destination to `None`.
+    /// Does not modify content of `st0` register.
+    #[display("tk.meta {0}")]
+    TakeMeta(
+        /** Register with the state type */ Reg32,
+        /** Register with the offset */ Reg32,
+        /** Destination register */ RegAFR,
+        Reg32,
+    ),
 
     /// Verify sum of pedersen commitments from inputs and outputs.
     ///
@@ -126,7 +136,7 @@ pub enum ContractOp {
     ///
     /// If verification succeeds, doesn't changes `st0` value; otherwise sets it
     /// to `false` and stops execution.
-    #[display("pcvs    {0}")]
+    #[display("pc.vs   {0}")]
     PcVs(AssignmentType),
 
     /// Verifies equivalence of a sum of pedersen commitments for the list of
@@ -143,13 +153,8 @@ pub enum ContractOp {
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false` and stops execution.
-    #[display("pccs    {0},{1}")]
+    #[display("pc.cs   {0},{1}")]
     PcCs(/** owned state type */ AssignmentType, /** global state type */ GlobalStateType),
-
-    /// All other future unsupported operations, which must set `st0` to
-    /// `false` and stop the execution.
-    #[display("fail    {0}")]
-    Fail(u8),
 }
 
 impl InstructionSet for ContractOp {
@@ -274,7 +279,7 @@ impl InstructionSet for ContractOp {
                 let state = state.map(|s| s.to_inner());
                 regs.set_s(*reg, state);
             }
-            ContractOp::LdF(state_type, index, reg) => {
+            ContractOp::LoadVal(state_type, index, reg) => {
                 let Some(Ok(state)) = context
                     .owned_state
                     .get(*state_type)
@@ -298,7 +303,7 @@ impl InstructionSet for ContractOp {
                 // TODO: implement global contract state
                 fail!()
             }
-            ContractOp::LdM(reg) => {
+            ContractOp::LoadMeta(reg) => {
                 regs.set_s(*reg, Some(context.metadata));
             }
 
@@ -362,10 +367,10 @@ impl Bytecode for ContractOp {
 
             ContractOp::LdP(_, _, _) |
             ContractOp::LdS(_, _, _) |
-            ContractOp::LdF(_, _, _) |
+            ContractOp::LoadVal(_, _, _) |
             ContractOp::LdC(_, _, _) => 6,
             ContractOp::LdG(_, _, _) => 5,
-            ContractOp::LdM(_) => 2,
+            ContractOp::LoadMeta(_) => 2,
 
             ContractOp::PcVs(_) => 3,
             ContractOp::PcCs(_, _) => 5,
@@ -385,10 +390,10 @@ impl Bytecode for ContractOp {
 
             ContractOp::LdP(_, _, _) => INSTR_LDP,
             ContractOp::LdS(_, _, _) => INSTR_LDS,
-            ContractOp::LdF(_, _, _) => INSTR_LDF,
+            ContractOp::LoadVal(_, _, _) => INSTR_LDF,
             ContractOp::LdG(_, _, _) => INSTR_LDG,
             ContractOp::LdC(_, _, _) => INSTR_LDC,
-            ContractOp::LdM(_) => INSTR_LDM,
+            ContractOp::LoadMeta(_) => INSTR_LDM,
 
             ContractOp::PcVs(_) => INSTR_PCVS,
             ContractOp::PcCs(_, _) => INSTR_PCCS,
@@ -432,7 +437,7 @@ impl Bytecode for ContractOp {
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            ContractOp::LdF(state_type, index, reg) => {
+            ContractOp::LoadVal(state_type, index, reg) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u16(*index)?;
                 writer.write_u5(reg)?;
@@ -450,7 +455,7 @@ impl Bytecode for ContractOp {
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-            ContractOp::LdM(reg) => {
+            ContractOp::LoadMeta(reg) => {
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
@@ -512,7 +517,7 @@ impl Bytecode for ContractOp {
                 i
             }
             INSTR_LDF => {
-                let i = Self::LdF(
+                let i = Self::LoadVal(
                     reader.read_u16()?.into(),
                     reader.read_u16()?,
                     reader.read_u5()?.into(),
@@ -539,7 +544,7 @@ impl Bytecode for ContractOp {
                 i
             }
             INSTR_LDM => {
-                let i = Self::LdM(reader.read_u4()?.into());
+                let i = Self::LoadMeta(reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
