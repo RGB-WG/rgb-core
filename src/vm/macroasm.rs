@@ -32,6 +32,8 @@ macro_rules! rgbasm {
 
 #[macro_export]
 macro_rules! isa_instr {
+    (pcvs $no:literal) => {{ RgbIsa::Contract(ContractOp::PcVs($no.into())) }};
+    (pccs $no1:literal, $no2:literal) => {{ RgbIsa::Contract(ContractOp::PcCs($no1.into(), $no2.into())) }};
     (ldg $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdG($t.into(), $no, RegS::from($s_idx))) }};
     (lds $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdS($t.into(), $no, RegS::from($s_idx))) }};
     (ldp $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdP($t.into(), $no, RegS::from($s_idx))) }};
