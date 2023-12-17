@@ -31,7 +31,6 @@ use aluvm::reg::{CoreRegs, Reg, Reg32, RegA, RegS};
 use amplify::num::{u3, u4};
 use amplify::Wrapper;
 use commit_verify::CommitVerify;
-use strict_encoding::StrictSerialize;
 
 use super::opcodes::*;
 use crate::validation::OpInfo;
@@ -261,10 +260,7 @@ impl InstructionSet for ContractOp {
                 else {
                     fail!()
                 };
-                let state = state.map(|s| {
-                    s.to_strict_serialized::<{ u16::MAX as usize }>()
-                        .expect("type guarantees")
-                });
+                let state = state.map(|s| s.to_inner());
                 regs.set_s(*reg, state);
             }
             ContractOp::LdS(state_type, index, reg) => {
@@ -275,10 +271,7 @@ impl InstructionSet for ContractOp {
                 else {
                     fail!()
                 };
-                let state = state.map(|s| {
-                    s.to_strict_serialized::<{ u16::MAX as usize }>()
-                        .expect("type guarantees")
-                });
+                let state = state.map(|s| s.to_inner());
                 regs.set_s(*reg, state);
             }
             ContractOp::LdF(state_type, index, reg) => {
