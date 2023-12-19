@@ -1,0 +1,9 @@
+[files]
+# exclude the directory "stl/"
+extend-exclude = ["stl/"]
+
+[default.extend-words]
+# Don't correct the name "Jon Atack".
+Atack = "Atack"
+# Don't correct the Seh in "pkXwpsb-aemTWhtSg-VDGF25hEi-jtTAnPjzh-B63ZwSehE-WvfhF9".
+Seh = "Seh"
