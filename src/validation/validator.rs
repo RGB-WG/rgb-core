@@ -41,7 +41,7 @@ use crate::{
 pub enum TxResolverError {
     /// transaction {0} is not mined
     Unknown(Txid),
-    /// unable to retriev transaction {0}, {1}
+    /// unable to retrieve transaction {0}, {1}
     Other(Txid, String),
 }
 

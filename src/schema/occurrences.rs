@@ -167,97 +167,97 @@ mod test {
 
     #[test]
     fn test_once_check_count() {
-        let occurence: Occurrences = Occurrences::Once;
-        occurence.check(1).unwrap();
+        let occurrence: Occurrences = Occurrences::Once;
+        occurrence.check(1).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 1, found: 0 }")]
     fn test_once_check_count_fail_zero() {
-        let occurence: Occurrences = Occurrences::Once;
-        occurence.check(0).unwrap();
+        let occurrence: Occurrences = Occurrences::Once;
+        occurrence.check(0).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 1, found: 2 }")]
     fn test_once_check_count_fail_two() {
-        let occurence: Occurrences = Occurrences::Once;
-        occurence.check(2).unwrap();
+        let occurrence: Occurrences = Occurrences::Once;
+        occurrence.check(2).unwrap();
     }
 
     #[test]
     fn test_none_or_once_check_count() {
-        let occurence: Occurrences = Occurrences::NoneOrOnce;
-        occurence.check(1).unwrap();
+        let occurrence: Occurrences = Occurrences::NoneOrOnce;
+        occurrence.check(1).unwrap();
     }
     #[test]
     fn test_none_or_once_check_count_zero() {
-        let occurence: Occurrences = Occurrences::NoneOrOnce;
-        occurence.check(0).unwrap();
+        let occurrence: Occurrences = Occurrences::NoneOrOnce;
+        occurrence.check(0).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 0, max: 1, found: 2 }")]
     fn test_none_or_once_check_count_fail_two() {
-        let occurence: Occurrences = Occurrences::NoneOrOnce;
-        occurence.check(2).unwrap();
+        let occurrence: Occurrences = Occurrences::NoneOrOnce;
+        occurrence.check(2).unwrap();
     }
 
     #[test]
     fn test_once_or_up_to_none() {
-        let occurence: Occurrences = Occurrences::OnceOrMore;
-        occurence.check(1).unwrap();
+        let occurrence: Occurrences = Occurrences::OnceOrMore;
+        occurrence.check(1).unwrap();
     }
     #[test]
     fn test_once_or_up_to_none_large() {
-        let occurence: Occurrences = Occurrences::OnceOrMore;
-        occurence.check(core::u16::MAX).unwrap();
+        let occurrence: Occurrences = Occurrences::OnceOrMore;
+        occurrence.check(core::u16::MAX).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 65535, found: 0 }")]
     fn test_once_or_up_to_none_fail_zero() {
-        let occurence: Occurrences = Occurrences::OnceOrMore;
-        occurence.check(0).unwrap();
+        let occurrence: Occurrences = Occurrences::OnceOrMore;
+        occurrence.check(0).unwrap();
     }
     #[test]
     fn test_once_or_up_to_42() {
-        let occurence: Occurrences = Occurrences::OnceOrUpTo(42);
-        occurence.check(42).unwrap();
+        let occurrence: Occurrences = Occurrences::OnceOrUpTo(42);
+        occurrence.check(42).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 42, found: 43 }")]
     fn test_once_or_up_to_42_large() {
-        let occurence: Occurrences = Occurrences::OnceOrUpTo(42);
-        occurence.check(43).unwrap();
+        let occurrence: Occurrences = Occurrences::OnceOrUpTo(42);
+        occurrence.check(43).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 42, found: 0 }")]
     fn test_once_or_up_to_42_fail_zero() {
-        let occurence: Occurrences = Occurrences::OnceOrUpTo(42);
-        occurence.check(0).unwrap();
+        let occurrence: Occurrences = Occurrences::OnceOrUpTo(42);
+        occurrence.check(0).unwrap();
     }
 
     #[test]
     fn test_none_or_up_to_none_zero() {
-        let occurence: Occurrences = Occurrences::NoneOrMore;
-        occurence.check(0).unwrap();
+        let occurrence: Occurrences = Occurrences::NoneOrMore;
+        occurrence.check(0).unwrap();
     }
     #[test]
     fn test_none_or_up_to_none_large() {
-        let occurence: Occurrences = Occurrences::NoneOrMore;
-        occurence.check(core::u16::MAX).unwrap();
+        let occurrence: Occurrences = Occurrences::NoneOrMore;
+        occurrence.check(core::u16::MAX).unwrap();
     }
     #[test]
     fn test_none_or_up_to_42_zero() {
-        let occurence: Occurrences = Occurrences::NoneOrMore;
-        occurence.check(0).unwrap();
+        let occurrence: Occurrences = Occurrences::NoneOrMore;
+        occurrence.check(0).unwrap();
     }
     #[test]
     fn test_none_or_up_to_42() {
-        let occurence: Occurrences = Occurrences::NoneOrMore;
-        occurence.check(42).unwrap();
+        let occurrence: Occurrences = Occurrences::NoneOrMore;
+        occurrence.check(42).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 0, max: 42, found: 43 }")]
     fn test_none_or_up_to_42_large() {
-        let occurence: Occurrences = Occurrences::NoneOrUpTo(42);
-        occurence.check(43).unwrap();
+        let occurrence: Occurrences = Occurrences::NoneOrUpTo(42);
+        occurrence.check(43).unwrap();
     }
 }
