@@ -54,7 +54,7 @@ The current list of the projects based on the library include:
 Minimum supported rust compiler version (MSRV): 1.66, rust 2021 edition.
 
 The library can be integrated into other rust projects via `Cargo.toml` 
-`[dependecies]` section:
+`[dependencies]` section:
 
 ```toml
 [dependencies]
