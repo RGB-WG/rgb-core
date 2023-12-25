@@ -61,7 +61,8 @@ wasm-bindgen-test = "0.3"
 features = [ "all" ]
 
 [patch.crates-io]
-bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "doubleanchors" }
-bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "doubleanchors" }
-bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "doubleanchors" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "doubleanchors" }
+bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
+bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
+bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
+aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.11" }

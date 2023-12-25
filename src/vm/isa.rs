@@ -20,13 +20,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::ops::RangeInclusive;
 
 use aluvm::isa;
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
-use aluvm::reg::CoreRegs;
+use aluvm::reg::{CoreRegs, Reg};
 
 use super::{ContractOp, TimechainOp};
 use crate::validation::OpInfo;
@@ -50,6 +50,22 @@ impl InstructionSet for RgbIsa {
 
     fn isa_ids() -> BTreeSet<&'static str> {
         bset! {"RGB"}
+    }
+
+    fn src_regs(&self) -> HashSet<Reg> {
+        match self {
+            RgbIsa::Contract(op) => op.src_regs(),
+            RgbIsa::Timechain(op) => op.src_regs(),
+            RgbIsa::Fail(_) => set![],
+        }
+    }
+
+    fn dst_regs(&self) -> HashSet<Reg> {
+        match self {
+            RgbIsa::Contract(op) => op.dst_regs(),
+            RgbIsa::Timechain(op) => op.dst_regs(),
+            RgbIsa::Fail(_) => set![],
+        }
     }
 
     fn exec(&self, regs: &mut CoreRegs, site: LibSite, context: &Self::Context<'_>) -> ExecStep {
