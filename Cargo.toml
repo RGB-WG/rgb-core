@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.11.0-beta.2"
+version = "0.11.0-beta.3"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -25,10 +25,10 @@ required-features = ["stl"]
 amplify = { version = "~4.5.0", features = ["rand"] }
 strict_encoding = "~2.6.1"
 strict_types = "~1.6.3"
-aluvm = { version = "~0.11.0-beta.1", features = ["std"] }
-commit_verify = { version = "~0.11.0-beta.1", features = ["rand", "derive"] }
-single_use_seals = "~0.11.0-beta.1"
-bp-core = { version = "~0.11.0-beta.1" }
+aluvm = { version = "~0.11.0-beta.2", features = ["std"] }
+commit_verify = { version = "~0.11.0-beta.2", features = ["rand", "derive"] }
+single_use_seals = "~0.11.0-beta.2"
+bp-core = { version = "~0.11.0-beta.2" }
 secp256k1-zkp = { version = "0.9.2", features = ["rand", "rand-std", "global-context"] } # TODO: Update version before the relese
 baid58 = "~0.4.4"
 mime = "~0.3.17"

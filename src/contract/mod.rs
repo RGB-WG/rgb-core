@@ -36,17 +36,17 @@ mod contract;
 use std::io::Write;
 
 use amplify::confinement::TinyOrdSet;
-pub use anchor::{Anchor, AnchoredBundle, Layer1, WitnessAnchor};
+pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
 };
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
-pub use bundle::{BundleId, BundleItem, TransitionBundle};
+pub use bundle::{BundleId, TransitionBundle, Vin};
 use commit_verify::CommitEncode;
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
-    OpoutParseError, Output, OutputAssignment, RightsOutput,
+    OpoutParseError, OutputAssignment, RightsOutput,
 };
 pub use data::{ConcealedData, RevealedData, VoidState};
 pub use fungible::{
@@ -59,8 +59,8 @@ pub use operations::{
     Valencies,
 };
 pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, SealDefinition, SecretSeal, TxoSeal, WitnessId,
-    WitnessOrd, WitnessPos,
+    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
+    WitnessPos, XSeal, XchainParseError,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 
@@ -74,7 +74,6 @@ pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, Sta
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[repr(u8)]
-#[non_exhaustive]
 pub enum AltLayer1 {
     #[strict_type(dumb)]
     Liquid = 1,

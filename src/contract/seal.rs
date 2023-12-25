@@ -22,18 +22,20 @@
 
 use core::fmt::Debug;
 use std::cmp::Ordering;
+use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
 use std::num::NonZeroU32;
+use std::str::FromStr;
 
 pub use bp::seals::txout::blind::{
     ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
 };
 pub use bp::seals::txout::TxoSeal;
+use bp::seals::txout::{CloseMethod, ExplicitSeal, SealTxid};
 use bp::Txid;
 use commit_verify::{strategies, CommitVerify, Conceal, DigestExt, Sha256, UntaggedProtocol};
-use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictWriter};
+use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType, StrictWriter};
 
-use crate::contract::contract::Output;
 use crate::{Layer1, LIB_NAME_RGB};
 
 pub trait ExposedSeal:
@@ -44,6 +46,10 @@ pub trait ExposedSeal:
 impl ExposedSeal for GraphSeal {}
 
 impl ExposedSeal for GenesisSeal {}
+
+impl<Id: SealTxid> ExposedSeal for ExplicitSeal<Id> {}
+
+pub type OutputSeal = XSeal<ExplicitSeal<Txid>>;
 
 /*
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -65,8 +71,7 @@ pub struct SealPreimage(Bytes32);
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[non_exhaustive]
-pub enum SealDefinition<U: ExposedSeal> {
+pub enum XSeal<U: ExposedSeal> {
     #[strict_type(tag = 0x00)]
     Bitcoin(U),
     #[strict_type(tag = 0x01)]
@@ -79,15 +84,15 @@ pub enum SealDefinition<U: ExposedSeal> {
      */
 }
 
-impl<U: ExposedSeal> Conceal for SealDefinition<U> {
+impl<U: ExposedSeal> Conceal for XSeal<U> {
     type Concealed = SecretSeal;
 
     #[inline]
     fn conceal(&self) -> Self::Concealed { SecretSeal::commit(self) }
 }
 
-impl<U: ExposedSeal> CommitVerify<SealDefinition<U>, UntaggedProtocol> for SecretSeal {
-    fn commit(reveal: &SealDefinition<U>) -> Self {
+impl<U: ExposedSeal> CommitVerify<XSeal<U>, UntaggedProtocol> for SecretSeal {
+    fn commit(reveal: &XSeal<U>) -> Self {
         let mut engine = Sha256::default();
         let w = StrictWriter::with(u32::MAX as usize, &mut engine);
         reveal.strict_encode(w).ok();
@@ -95,15 +100,15 @@ impl<U: ExposedSeal> CommitVerify<SealDefinition<U>, UntaggedProtocol> for Secre
     }
 }
 
-impl<U: ExposedSeal> commit_verify::CommitStrategy for SealDefinition<U> {
+impl<U: ExposedSeal> commit_verify::CommitStrategy for XSeal<U> {
     type Strategy = strategies::ConcealStrict;
 }
 
-impl SealDefinition<GenesisSeal> {
-    pub fn transmutate(self) -> SealDefinition<GraphSeal> {
+impl XSeal<GenesisSeal> {
+    pub fn transmutate(self) -> XSeal<GraphSeal> {
         match self {
-            SealDefinition::Bitcoin(seal) => SealDefinition::Bitcoin(seal.transmutate()),
-            SealDefinition::Liquid(seal) => SealDefinition::Liquid(seal.transmutate()),
+            XSeal::Bitcoin(seal) => XSeal::Bitcoin(seal.transmutate()),
+            XSeal::Liquid(seal) => XSeal::Liquid(seal.transmutate()),
             /*
             SealDefinition::Abraxas(seal) => SealDefinition::Abraxas(seal),
             SealDefinition::Prime(seal) => SealDefinition::Prime(seal),
@@ -112,31 +117,100 @@ impl SealDefinition<GenesisSeal> {
     }
 }
 
-impl<U: ExposedSeal> SealDefinition<U> {
+impl<U: ExposedSeal> XSeal<U> {
+    pub fn with(layer1: Layer1, seal: impl Into<U>) -> Self {
+        match layer1 {
+            Layer1::Bitcoin => XSeal::Bitcoin(seal.into()),
+            Layer1::Liquid => XSeal::Liquid(seal.into()),
+        }
+    }
+
     pub fn layer1(self) -> Layer1 {
         match self {
-            SealDefinition::Bitcoin(_) => Layer1::Bitcoin,
-            SealDefinition::Liquid(_) => Layer1::Liquid,
+            XSeal::Bitcoin(_) => Layer1::Bitcoin,
+            XSeal::Liquid(_) => Layer1::Liquid,
+        }
+    }
+
+    pub fn reduce_to_bp(self) -> Option<U> {
+        Some(match self {
+            XSeal::Bitcoin(seal) => seal,
+            XSeal::Liquid(seal) => seal,
+        })
+    }
+
+    pub fn method(self) -> CloseMethod {
+        match self {
+            XSeal::Bitcoin(seal) => seal.method(),
+            XSeal::Liquid(seal) => seal.method(),
         }
     }
 
     #[inline]
-    pub fn output(self) -> Option<Output> {
-        match self {
-            SealDefinition::Bitcoin(seal) => seal.outpoint().map(Output::Bitcoin),
-            SealDefinition::Liquid(seal) => seal.outpoint().map(Output::Liquid),
-        }
+    pub fn to_output_seal(self) -> Option<OutputSeal> {
+        Some(match self {
+            XSeal::Bitcoin(seal) => {
+                let outpoint = seal.outpoint()?;
+                XSeal::Bitcoin(ExplicitSeal::new(seal.method(), outpoint))
+            }
+            XSeal::Liquid(seal) => {
+                let outpoint = seal.outpoint()?;
+                XSeal::Liquid(ExplicitSeal::new(seal.method(), outpoint))
+            }
+        })
     }
 
-    pub fn output_or_witness(self, witness_id: WitnessId) -> Result<Output, Self> {
+    pub fn try_to_output_seal(self, witness_id: WitnessId) -> Result<OutputSeal, Self> {
         match (self, witness_id) {
-            (SealDefinition::Bitcoin(seal), WitnessId::Bitcoin(txid)) => {
-                Ok(Output::Bitcoin(seal.outpoint_or(txid)))
+            (XSeal::Bitcoin(seal), WitnessId::Bitcoin(txid)) => {
+                Ok(XSeal::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
-            (SealDefinition::Liquid(seal), WitnessId::Liquid(txid)) => {
-                Ok(Output::Liquid(seal.outpoint_or(txid)))
+            (XSeal::Liquid(seal), WitnessId::Liquid(txid)) => {
+                Ok(XSeal::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
             (me, _) => Err(me),
+        }
+    }
+}
+
+impl<U: ExposedSeal + Display> Display for XSeal<U> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            XSeal::Bitcoin(seal) => write!(f, "bitcoin:{seal}"),
+            XSeal::Liquid(seal) => write!(f, "liquid:{seal}"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Display, Error, From)]
+pub enum XchainParseError<E: Debug + Display> {
+    #[display("unknown seal prefix '{0}'; only 'bitcoin:' and 'liquid:' are currently supported")]
+    UnknownPrefix(String),
+
+    #[from]
+    #[display(inner)]
+    Seal(E),
+}
+
+impl<U: ExposedSeal + FromStr> FromStr for XSeal<U>
+where U::Err: Debug + Display
+{
+    type Err = XchainParseError<U::Err>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((prefix, s)) = s.split_once(':') {
+            match prefix {
+                "bitcoin" => s
+                    .parse()
+                    .map(XSeal::Bitcoin)
+                    .map_err(XchainParseError::from),
+                "liquid" => s.parse().map(XSeal::Liquid).map_err(XchainParseError::from),
+                unknown => Err(XchainParseError::UnknownPrefix(unknown.to_owned())),
+            }
+        } else {
+            s.parse()
+                .map(XSeal::Bitcoin)
+                .map_err(XchainParseError::from)
         }
     }
 }
@@ -210,7 +284,6 @@ impl WitnessOrd {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[non_exhaustive]
 pub enum WitnessId {
     #[strict_type(tag = 0x00)]
     #[display("bitcoin:{0}")]

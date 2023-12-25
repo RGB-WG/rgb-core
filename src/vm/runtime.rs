@@ -86,7 +86,7 @@ impl<'script> AluRuntime<'script> {
         let mut vm = Vm::<Instr<RgbIsa>>::new();
 
         for ((reg, idx), val) in &regs.nums {
-            vm.registers.set(*reg, *idx, *val);
+            vm.registers.set_n(*reg, *idx, *val);
         }
         for (reg, val) in &regs.data {
             vm.registers.set_s(

@@ -20,12 +20,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
-use aluvm::reg::CoreRegs;
+use aluvm::reg::{CoreRegs, Reg};
 
 use crate::vm::opcodes::{INSTR_TIMECHAIN_FROM, INSTR_TIMECHAIN_TO};
 
@@ -42,6 +42,10 @@ impl InstructionSet for TimechainOp {
     type Context<'ctx> = ();
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
+
+    fn src_regs(&self) -> HashSet<Reg> { set![] }
+
+    fn dst_regs(&self) -> HashSet<Reg> { set![] }
 
     fn exec(&self, regs: &mut CoreRegs, _site: LibSite, _context: &Self::Context<'_>) -> ExecStep {
         match self {

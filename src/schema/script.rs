@@ -69,4 +69,9 @@ impl Script {
             Script::AluVM(_) => VmType::AluVM,
         }
     }
+
+    pub fn as_alu_script(&self) -> &AluScript {
+        let Script::AluVM(alu) = self;
+        alu
+    }
 }

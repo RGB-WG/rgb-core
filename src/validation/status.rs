@@ -24,15 +24,16 @@ use core::iter::FromIterator;
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
-use bp::dbc::anchor;
 use bp::seals::txout::blind::ChainBlindSeal;
-use bp::{seals, Txid};
+use bp::Txid;
+use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    BundleId, Layer1, OccurrencesMismatch, OpFullType, OpId, SealDefinition, SecretSeal, StateType,
+    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
+    Vin, XSeal,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -294,18 +295,31 @@ pub enum Failure {
     SchemaAssignmentOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
 
     // Consignment consistency errors
+    /// operation {0} is referenced within the history multiple times. RGB
+    /// contracts allow only direct acyclic graphs.
+    CyclicGraph(OpId),
     /// operation {0} is absent from the consignment.
     OperationAbsent(OpId),
-    /// state transition {0} is absent from the consignment.
-    TransitionAbsent(OpId),
-    /// bundle with id {0} is invalid.
-    BundleInvalid(BundleId),
+    /// transition bundle {0} referenced in consignment terminals is absent from
+    /// the consignment.
+    TerminalBundleAbsent(BundleId),
+    /// transition bundle {0} is absent from the consignment.
+    BundleAbsent(BundleId),
+    /// operation {0} is under a different contract {1}.
+    ContractMismatch(OpId, ContractId),
+
+    // Errors checking bundle commitments
+    /// transition bundle {0} references state transition {1} which is not
+    /// included into the bundle input map.
+    BundleExtraTransition(BundleId, OpId),
+    /// transition bundle {0} references non-existing input in witness
+    /// transaction {2} for the state transition {1}.
+    BundleInvalidInput(BundleId, OpId, Txid),
+    /// transition bundle {0} doesn't commit to the input {1} in the witness
+    /// transaction {2} which is an input of the state transition {3}.
+    BundleInvalidCommitment(BundleId, Vin, Txid, OpId),
 
     // Errors checking seal closing
-    /// transition {0} is not anchored.
-    NotAnchored(OpId),
-    /// anchor for transition {0} doesn't commit to the actual transition data.
-    NotInAnchor(OpId),
     /// transition {opid} references state type {state_type} absent in the
     /// outputs of previous state transition {prev_id}.
     NoPrevState {
@@ -315,25 +329,27 @@ pub enum Failure {
     },
     /// transition {0} references non-existing previous output {1}.
     NoPrevOut(OpId, Opout),
+    /// anchors used inside bundle {0} reference different transaction ids.
+    AnchorSetInvalid(BundleId),
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
-    /// transition {0} is not a part of multi-protocol commitment for witness
-    /// {1}; anchor is invalid.
-    MpcInvalid(OpId, Txid),
     /// witness transaction {0} is not known to the transaction resolver.
     SealNoWitnessTx(Txid),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1:?} is defined on {0} which is not in the set of layers allowed
     /// by the contract genesis.
-    SealInvalidLayer1(Layer1, SealDefinition<ChainBlindSeal>),
-    /// transition {0} doesn't close seal with the witness transaction {1}.
-    /// Details: {2}
-    SealInvalid(OpId, Txid, seals::txout::VerifyError),
-    /// transition {0} is not properly anchored to the witness transaction {1}.
-    /// Details: {2}
-    AnchorInvalid(OpId, Txid, anchor::VerifyError),
+    SealLayerMismatch(Layer1, XSeal<ChainBlindSeal>),
+    /// transition bundle {0} doesn't close seal with the witness transaction
+    /// {1}. Details: {2}
+    SealsInvalid(BundleId, Txid, String),
+    /// single-use seals for the operation {0} were not validated, which
+    /// probably indicates unanchored state transition.
+    SealsUnvalidated(OpId),
+    /// transition bundle {0} is not properly anchored to the witness
+    /// transaction {1}. Details: {2}
+    MpcInvalid(BundleId, Txid, InvalidProof),
 
     // State extensions errors
     /// valency {valency} redeemed by state extension {opid} references
@@ -351,7 +367,7 @@ pub enum Failure {
         valency: schema::ValencyType,
     },
 
-    // Data check errors
+    // State check errors
     /// state in {opid}/{state_type} is of {found} type, while schema requires
     /// it to be {expected}.
     StateTypeMismatch {
@@ -397,11 +413,11 @@ pub enum Warning {
     /// terminal seal {1} referencing operation {0} is not present in operation
     /// assignments.
     TerminalSealAbsent(OpId, SecretSeal),
-    /// operation {0} present in the consignment is excessive and not a part of
-    /// the validated contract history.
-    ExcessiveOperation(OpId),
     /// terminal witness transaction {0} is not yet mined.
     TerminalWitnessNotMined(Txid),
+    /// transition bundle {0} doesn't close all the seals defined for its
+    /// inputs.
+    UnclosedSeals(BundleId),
 
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
