@@ -32,9 +32,9 @@ use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
-    AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, Operation, Opout, Schema,
-    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, WitnessId,
-    XAnchor,
+    AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
+    Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
+    WitnessId, XAnchor,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -243,13 +243,15 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 continue;
             }
 
-            if !self.validated_op_seals.contains(&opid) {
+            if !self.validated_op_seals.contains(&opid) &&
+                operation.op_type() == OpType::StateTransition
+            {
                 self.status.add_failure(Failure::SealsUnvalidated(opid));
             }
             // [VALIDATION]: Verify operation against the schema and scripts
-            self.status += schema.validate_state(&self.consignment, operation, self.vm.as_ref());
-            if !self.validated_op_state.insert(opid) {
-                self.status.add_failure(Failure::CyclicGraph(opid));
+            if self.validated_op_state.insert(opid) {
+                self.status +=
+                    schema.validate_state(&self.consignment, operation, self.vm.as_ref());
             }
 
             match operation {

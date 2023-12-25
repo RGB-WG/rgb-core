@@ -345,7 +345,7 @@ pub enum Failure {
     /// {1}. Details: {2}
     SealsInvalid(BundleId, Txid, String),
     /// single-use seals for the operation {0} were not validated, which
-    /// probably indicateds unanchored state transition.
+    /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
     /// transition bundle {0} is not properly anchored to the witness
     /// transaction {1}. Details: {2}
