@@ -49,7 +49,7 @@ impl ExposedSeal for GenesisSeal {}
 
 impl<Id: SealTxid> ExposedSeal for ExplicitSeal<Id> {}
 
-pub type OutputSeal = Xchain<ExplicitSeal<Txid>>;
+pub type OutputSeal = XSeal<ExplicitSeal<Txid>>;
 
 /*
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -71,7 +71,7 @@ pub struct SealPreimage(Bytes32);
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum Xchain<U: ExposedSeal> {
+pub enum XSeal<U: ExposedSeal> {
     #[strict_type(tag = 0x00)]
     Bitcoin(U),
     #[strict_type(tag = 0x01)]
@@ -84,15 +84,15 @@ pub enum Xchain<U: ExposedSeal> {
      */
 }
 
-impl<U: ExposedSeal> Conceal for Xchain<U> {
+impl<U: ExposedSeal> Conceal for XSeal<U> {
     type Concealed = SecretSeal;
 
     #[inline]
     fn conceal(&self) -> Self::Concealed { SecretSeal::commit(self) }
 }
 
-impl<U: ExposedSeal> CommitVerify<Xchain<U>, UntaggedProtocol> for SecretSeal {
-    fn commit(reveal: &Xchain<U>) -> Self {
+impl<U: ExposedSeal> CommitVerify<XSeal<U>, UntaggedProtocol> for SecretSeal {
+    fn commit(reveal: &XSeal<U>) -> Self {
         let mut engine = Sha256::default();
         let w = StrictWriter::with(u32::MAX as usize, &mut engine);
         reveal.strict_encode(w).ok();
@@ -100,15 +100,15 @@ impl<U: ExposedSeal> CommitVerify<Xchain<U>, UntaggedProtocol> for SecretSeal {
     }
 }
 
-impl<U: ExposedSeal> commit_verify::CommitStrategy for Xchain<U> {
+impl<U: ExposedSeal> commit_verify::CommitStrategy for XSeal<U> {
     type Strategy = strategies::ConcealStrict;
 }
 
-impl Xchain<GenesisSeal> {
-    pub fn transmutate(self) -> Xchain<GraphSeal> {
+impl XSeal<GenesisSeal> {
+    pub fn transmutate(self) -> XSeal<GraphSeal> {
         match self {
-            Xchain::Bitcoin(seal) => Xchain::Bitcoin(seal.transmutate()),
-            Xchain::Liquid(seal) => Xchain::Liquid(seal.transmutate()),
+            XSeal::Bitcoin(seal) => XSeal::Bitcoin(seal.transmutate()),
+            XSeal::Liquid(seal) => XSeal::Liquid(seal.transmutate()),
             /*
             SealDefinition::Abraxas(seal) => SealDefinition::Abraxas(seal),
             SealDefinition::Prime(seal) => SealDefinition::Prime(seal),
@@ -117,60 +117,67 @@ impl Xchain<GenesisSeal> {
     }
 }
 
-impl<U: ExposedSeal> Xchain<U> {
+impl<U: ExposedSeal> XSeal<U> {
     pub fn with(layer1: Layer1, seal: impl Into<U>) -> Self {
         match layer1 {
-            Layer1::Bitcoin => Xchain::Bitcoin(seal.into()),
-            Layer1::Liquid => Xchain::Liquid(seal.into()),
+            Layer1::Bitcoin => XSeal::Bitcoin(seal.into()),
+            Layer1::Liquid => XSeal::Liquid(seal.into()),
         }
     }
 
     pub fn layer1(self) -> Layer1 {
         match self {
-            Xchain::Bitcoin(_) => Layer1::Bitcoin,
-            Xchain::Liquid(_) => Layer1::Liquid,
+            XSeal::Bitcoin(_) => Layer1::Bitcoin,
+            XSeal::Liquid(_) => Layer1::Liquid,
         }
+    }
+
+    pub fn reduce_to_bp(self) -> Option<U> {
+        Some(match self {
+            XSeal::Bitcoin(seal) => seal,
+            XSeal::Liquid(seal) => seal,
+        })
     }
 
     pub fn method(self) -> CloseMethod {
         match self {
-            Xchain::Bitcoin(seal) => seal.method(),
-            Xchain::Liquid(seal) => seal.method(),
+            XSeal::Bitcoin(seal) => seal.method(),
+            XSeal::Liquid(seal) => seal.method(),
         }
     }
 
     #[inline]
     pub fn to_output_seal(self) -> Option<OutputSeal> {
         Some(match self {
-            Xchain::Bitcoin(seal) => {
+            XSeal::Bitcoin(seal) => {
                 let outpoint = seal.outpoint()?;
-                Xchain::Bitcoin(ExplicitSeal::new(seal.method(), outpoint))
+                XSeal::Bitcoin(ExplicitSeal::new(seal.method(), outpoint))
             }
-            Xchain::Liquid(seal) => {
+            XSeal::Liquid(seal) => {
                 let outpoint = seal.outpoint()?;
-                Xchain::Liquid(ExplicitSeal::new(seal.method(), outpoint))
+                XSeal::Liquid(ExplicitSeal::new(seal.method(), outpoint))
             }
         })
     }
 
     pub fn try_to_output_seal(self, witness_id: WitnessId) -> Result<OutputSeal, Self> {
         match (self, witness_id) {
-            (Xchain::Bitcoin(seal), WitnessId::Bitcoin(txid)) => {
-                Ok(Xchain::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
+            (XSeal::Bitcoin(seal), WitnessId::Bitcoin(txid)) => {
+                Ok(XSeal::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
-            (Xchain::Liquid(seal), WitnessId::Liquid(txid)) => {
-                Ok(Xchain::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
+            (XSeal::Liquid(seal), WitnessId::Liquid(txid)) => {
+                Ok(XSeal::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
             (me, _) => Err(me),
         }
     }
 }
 
-impl<U: ExposedSeal + Display> Display for Xchain<U> {
+impl<U: ExposedSeal + Display> Display for XSeal<U> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Xchain::Bitcoin(seal) => write!(f, "bitcoin:{seal}"),
-            Xchain::Liquid(seal) => write!(f, "liquid:{seal}"),
+            XSeal::Bitcoin(seal) => write!(f, "bitcoin:{seal}"),
+            XSeal::Liquid(seal) => write!(f, "liquid:{seal}"),
         }
     }
 }
@@ -185,7 +192,7 @@ pub enum XchainParseError<E: Debug + Display> {
     Seal(E),
 }
 
-impl<U: ExposedSeal + FromStr> FromStr for Xchain<U>
+impl<U: ExposedSeal + FromStr> FromStr for XSeal<U>
 where U::Err: Debug + Display
 {
     type Err = XchainParseError<U::Err>;
@@ -195,17 +202,14 @@ where U::Err: Debug + Display
             match prefix {
                 "bitcoin" => s
                     .parse()
-                    .map(Xchain::Bitcoin)
+                    .map(XSeal::Bitcoin)
                     .map_err(XchainParseError::from),
-                "liquid" => s
-                    .parse()
-                    .map(Xchain::Liquid)
-                    .map_err(XchainParseError::from),
+                "liquid" => s.parse().map(XSeal::Liquid).map_err(XchainParseError::from),
                 unknown => Err(XchainParseError::UnknownPrefix(unknown.to_owned())),
             }
         } else {
             s.parse()
-                .map(Xchain::Bitcoin)
+                .map(XSeal::Bitcoin)
                 .map_err(XchainParseError::from)
         }
     }

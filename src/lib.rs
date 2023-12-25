@@ -52,7 +52,6 @@ pub mod vm;
 pub mod stl;
 
 pub mod prelude {
-    pub use bp::dbc::AnchorId;
     pub use contract::*;
     pub use schema::*;
 

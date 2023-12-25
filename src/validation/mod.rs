@@ -22,14 +22,14 @@
 
 mod script;
 mod schema;
-mod model;
+mod logic;
 mod state;
 mod validator;
 mod consignment;
 mod status;
 
-pub use consignment::ConsignmentApi;
-pub(crate) use model::OpInfo;
+pub use consignment::{CheckedConsignment, ConsignmentApi};
+pub(crate) use logic::OpInfo;
 pub use script::VirtualMachine;
 pub use status::{Failure, Info, Status, Validity, Warning};
 pub use validator::{ResolveTx, TxResolverError, Validator};

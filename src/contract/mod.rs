@@ -36,13 +36,13 @@ mod contract;
 use std::io::Write;
 
 use amplify::confinement::TinyOrdSet;
-pub use anchor::{Anchor, AnchoredBundle, Layer1, WitnessAnchor};
+pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
 };
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
-pub use bundle::{BundleError, BundleId, BundleItem, TransitionBundle};
+pub use bundle::{BundleId, TransitionBundle, Vin};
 use commit_verify::CommitEncode;
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
@@ -60,7 +60,7 @@ pub use operations::{
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
-    WitnessPos, Xchain, XchainParseError,
+    WitnessPos, XSeal, XchainParseError,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 

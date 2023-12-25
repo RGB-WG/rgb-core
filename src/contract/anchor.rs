@@ -21,14 +21,15 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
-use std::ops::Deref;
 
-use bp::dbc;
-use bp::dbc::anchor::MergeError;
+use bp::dbc::opret::OpretProof;
+use bp::dbc::tapret::TapretProof;
+use bp::dbc::Anchor;
+use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
-use crate::{TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
+use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -39,8 +40,13 @@ use crate::{TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct AnchoredBundle {
-    pub anchor: Anchor,
+    pub anchor: XAnchor,
     pub bundle: TransitionBundle,
+}
+
+impl AnchoredBundle {
+    #[inline]
+    pub fn bundle_id(&self) -> BundleId { self.bundle.bundle_id() }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -51,64 +57,211 @@ pub struct AnchoredBundle {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum Anchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
+pub enum XAnchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     #[strict_type(tag = 0x00)]
-    Bitcoin(dbc::Anchor<P>),
+    Bitcoin(AnchorSet<P>),
 
     #[strict_type(tag = 0x01)]
-    Liquid(dbc::Anchor<P>),
+    Liquid(AnchorSet<P>),
 }
 
-impl<P: mpc::Proof + StrictDumb> Deref for Anchor<P> {
-    type Target = dbc::Anchor<P>;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Anchor::Bitcoin(anchor) | Anchor::Liquid(anchor) => anchor,
-        }
-    }
-}
-
-impl<P: mpc::Proof + StrictDumb> Anchor<P> {
+impl<P: mpc::Proof + StrictDumb> XAnchor<P> {
     #[inline]
     pub fn layer1(&self) -> Layer1 {
         match self {
-            Anchor::Bitcoin(_) => Layer1::Bitcoin,
-            Anchor::Liquid(_) => Layer1::Liquid,
+            XAnchor::Bitcoin(_) => Layer1::Bitcoin,
+            XAnchor::Liquid(_) => Layer1::Liquid,
         }
     }
 
     #[inline]
     pub fn witness_id(&self) -> WitnessId {
         match self {
-            Anchor::Bitcoin(anchor) => WitnessId::Bitcoin(anchor.txid),
-            Anchor::Liquid(anchor) => WitnessId::Liquid(anchor.txid),
+            XAnchor::Bitcoin(anchor) => WitnessId::Bitcoin(anchor.txid_unchecked()),
+            XAnchor::Liquid(anchor) => WitnessId::Liquid(anchor.txid_unchecked()),
         }
     }
 
-    pub fn map<Q: mpc::Proof + StrictDumb, E>(
+    fn map<Q: mpc::Proof + StrictDumb, E>(
         self,
-        f: impl FnOnce(dbc::Anchor<P>) -> Result<dbc::Anchor<Q>, E>,
-    ) -> Result<Anchor<Q>, E> {
+        f: impl FnOnce(AnchorSet<P>) -> Result<AnchorSet<Q>, E>,
+    ) -> Result<XAnchor<Q>, E> {
         match self {
-            Anchor::Bitcoin(anchor) => f(anchor).map(Anchor::Bitcoin),
-            Anchor::Liquid(anchor) => f(anchor).map(Anchor::Liquid),
+            XAnchor::Bitcoin(anchor) => f(anchor).map(XAnchor::Bitcoin),
+            XAnchor::Liquid(anchor) => f(anchor).map(XAnchor::Liquid),
         }
     }
 }
 
-impl Anchor<mpc::MerkleBlock> {
-    pub fn merge_reveal(self, other: Self) -> Result<Self, MergeError> {
-        match (self, other) {
-            (Anchor::Bitcoin(anchor), Anchor::Bitcoin(other)) => {
-                anchor.merge_reveal(other).map(Anchor::Bitcoin)
-            }
-            (Anchor::Liquid(anchor), Anchor::Liquid(other)) => {
-                anchor.merge_reveal(other).map(Anchor::Liquid)
-            }
-            _ => Err(MergeError::ProofMismatch),
+impl XAnchor<mpc::MerkleBlock> {
+    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
+        match self {
+            XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor.known_bundle_ids(),
         }
+    }
+
+    pub fn to_merkle_proof(
+        &self,
+        contract_id: ContractId,
+    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
+        self.clone().into_merkle_proof(contract_id)
+    }
+
+    pub fn into_merkle_proof(
+        self,
+        contract_id: ContractId,
+    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
+        self.map(|a| a.into_merkle_proof(contract_id))
+    }
+}
+
+impl XAnchor<mpc::MerkleProof> {
+    pub fn to_merkle_block(
+        &self,
+        contract_id: ContractId,
+        bundle_id: BundleId,
+    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+        self.clone().into_merkle_block(contract_id, bundle_id)
+    }
+
+    pub fn into_merkle_block(
+        self,
+        contract_id: ContractId,
+        bundle_id: BundleId,
+    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
+        self.map(|a| a.into_merkle_block(contract_id, bundle_id))
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Tapret(strict_dumb!()))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
+    #[strict_type(tag = 0x01)]
+    Tapret(Anchor<P, TapretProof>),
+    #[strict_type(tag = 0x02)]
+    Opret(Anchor<P, OpretProof>),
+    #[strict_type(tag = 0x03)]
+    Dual {
+        tapret: Anchor<P, TapretProof>,
+        opret: Anchor<P, OpretProof>,
+    },
+}
+
+impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
+    pub fn txid(&self) -> Option<Txid> {
+        match self {
+            AnchorSet::Tapret(a) => Some(a.txid),
+            AnchorSet::Opret(a) => Some(a.txid),
+            AnchorSet::Dual { tapret, opret } if tapret.txid == opret.txid => Some(tapret.txid),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn txid_unchecked(&self) -> Txid {
+        match self {
+            AnchorSet::Tapret(a) => a.txid,
+            AnchorSet::Opret(a) => a.txid,
+            AnchorSet::Dual { tapret, .. } => tapret.txid,
+        }
+    }
+
+    pub fn from_split(
+        tapret: Option<Anchor<P, TapretProof>>,
+        opret: Option<Anchor<P, OpretProof>>,
+    ) -> Option<Self> {
+        Some(match (tapret, opret) {
+            (Some(tapret), Some(opret)) => Self::Dual { tapret, opret },
+            (Some(tapret), None) => Self::Tapret(tapret),
+            (None, Some(opret)) => Self::Opret(opret),
+            (None, None) => return None,
+        })
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn as_split(&self) -> (Option<&Anchor<P, TapretProof>>, Option<&Anchor<P, OpretProof>>) {
+        match self {
+            AnchorSet::Tapret(tapret) => (Some(tapret), None),
+            AnchorSet::Opret(opret) => (None, Some(opret)),
+            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
+        }
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn into_split(self) -> (Option<Anchor<P, TapretProof>>, Option<Anchor<P, OpretProof>>) {
+        match self {
+            AnchorSet::Tapret(tapret) => (Some(tapret), None),
+            AnchorSet::Opret(opret) => (None, Some(opret)),
+            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
+        }
+    }
+
+    pub fn mpc_proofs(&self) -> impl Iterator<Item = &P> {
+        let (t, o) = self.as_split();
+        t.map(|a| &a.mpc_proof)
+            .into_iter()
+            .chain(o.map(|a| &a.mpc_proof))
+    }
+}
+
+impl AnchorSet<mpc::MerkleProof> {
+    pub fn to_merkle_block(
+        &self,
+        contract_id: ContractId,
+        bundle_id: BundleId,
+    ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
+        self.clone().into_merkle_block(contract_id, bundle_id)
+    }
+
+    pub fn into_merkle_block(
+        self,
+        contract_id: ContractId,
+        bundle_id: BundleId,
+    ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
+        let (tapret, opret) = self.into_split();
+        let tapret = tapret
+            .map(|t| t.into_merkle_block(contract_id, bundle_id))
+            .transpose()?;
+        let opret = opret
+            .map(|o| o.into_merkle_block(contract_id, bundle_id))
+            .transpose()?;
+        Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
+    }
+}
+
+impl AnchorSet<mpc::MerkleBlock> {
+    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
+        self.mpc_proofs().flat_map(|p| {
+            p.to_known_message_map()
+                .into_iter()
+                .map(|(p, m)| (m.into(), p.into()))
+        })
+    }
+
+    pub fn to_merkle_proof(
+        &self,
+        contract_id: ContractId,
+    ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
+        self.clone().into_merkle_proof(contract_id)
+    }
+
+    pub fn into_merkle_proof(
+        self,
+        contract_id: ContractId,
+    ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
+        let (tapret, opret) = self.into_split();
+        let tapret = tapret
+            .map(|t| t.into_merkle_proof(contract_id))
+            .transpose()?;
+        let opret = opret
+            .map(|o| o.into_merkle_proof(contract_id))
+            .transpose()?;
+        Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
     }
 }
 
