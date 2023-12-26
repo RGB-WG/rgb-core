@@ -55,3 +55,8 @@ jobs:
         with:
           command: doc
           args: --workspace --all-features
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: crate-ci/typos@master
