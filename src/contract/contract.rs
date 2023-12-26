@@ -31,40 +31,14 @@ use std::str::FromStr;
 
 use amplify::confinement::{LargeOrdMap, LargeOrdSet, SmallVec, TinyOrdMap};
 use amplify::hex;
-use bp::Outpoint;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
-    Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
-    RevealedValue, SchemaId, SealDefinition, SubSchema, Transition, TypedAssigns, VoidState,
-    WitnessAnchor, WitnessId, LIB_NAME_RGB,
+    Extension, Genesis, GlobalStateType, OpId, Operation, OutputSeal, RevealedAttach, RevealedData,
+    RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState, WitnessAnchor,
+    WitnessId, XSeal, LIB_NAME_RGB,
 };
-
-/// Seal outpoint is **not a seal definition**. It is an accessory structure
-/// allowing to
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[display(inner)]
-#[non_exhaustive]
-pub enum Output {
-    #[strict_type(tag = 0x00)]
-    Bitcoin(Outpoint),
-    #[strict_type(tag = 0x01)]
-    Liquid(Outpoint),
-    /*
-    #[strict_type(tag = 0x10)]
-    Abraxas,
-    #[strict_type(tag = 0x11)]
-    Prime,
-     */
-}
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -128,7 +102,7 @@ impl FromStr for Opout {
 )]
 pub struct OutputAssignment<State: ExposedState> {
     pub opout: Opout,
-    pub output: Output,
+    pub seal: OutputSeal,
     pub state: State,
     pub witness: Option<WitnessId>,
 }
@@ -136,7 +110,7 @@ pub struct OutputAssignment<State: ExposedState> {
 impl<State: ExposedState> PartialEq for OutputAssignment<State> {
     fn eq(&self, other: &Self) -> bool {
         if self.opout == other.opout &&
-            (self.output != other.output ||
+            (self.seal != other.seal ||
                 self.witness != other.witness ||
                 self.state != other.state)
         {
@@ -172,7 +146,7 @@ impl<State: ExposedState> OutputAssignment<State> {
     /// If the processing is done on invalid stash data, the seal is
     /// witness-based and the anchor chain doesn't match the seal chain.
     pub fn with_witness<Seal: ExposedSeal>(
-        seal: SealDefinition<Seal>,
+        seal: XSeal<Seal>,
         witness_id: WitnessId,
         state: State,
         opid: OpId,
@@ -181,7 +155,7 @@ impl<State: ExposedState> OutputAssignment<State> {
     ) -> Self {
         OutputAssignment {
             opout: Opout::new(opid, ty, no),
-            output: seal.output_or_witness(witness_id).expect(
+            seal: seal.try_to_output_seal(witness_id).expect(
                 "processing contract from unverified/invalid stash: witness seal chain doesn't \
                  match anchor's chain",
             ),
@@ -195,7 +169,7 @@ impl<State: ExposedState> OutputAssignment<State> {
     /// If the processing is done on invalid stash data, the seal is
     /// witness-based and the anchor chain doesn't match the seal chain.
     pub fn with_no_witness<Seal: ExposedSeal>(
-        seal: SealDefinition<Seal>,
+        seal: XSeal<Seal>,
         state: State,
         opid: OpId,
         ty: AssignmentType,
@@ -203,7 +177,7 @@ impl<State: ExposedState> OutputAssignment<State> {
     ) -> Self {
         OutputAssignment {
             opout: Opout::new(opid, ty, no),
-            output: seal.output().expect(
+            seal: seal.to_output_seal().expect(
                 "processing contract from unverified/invalid stash: seal must have txid \
                  information since it comes from genesis or extension",
             ),
