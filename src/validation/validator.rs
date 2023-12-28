@@ -492,17 +492,21 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     continue;
                 }
 
-                let Some(witness_id) = self.consignment.op_witness_id(op) else {
-                    self.status
-                        .add_failure(Failure::OperationAbsent(op));
-                    continue;
-                };
+                let seal = if prev_op.op_type() == OpType::StateTransition {
+                    let Some(witness_id) = self.consignment.op_witness_id(op) else {
+                        self.status.add_failure(Failure::OperationAbsent(op));
+                        continue;
+                    };
 
-                let seal = seal
-                    .try_to_output_seal(witness_id)
-                    .expect("method must be called only on BP-compatible layer 1")
-                    .reduce_to_bp()
-                    .expect("method must be called only on BP-compatible layer 1");
+                    seal.try_to_output_seal(witness_id)
+                        .expect("method must be called only on BP-compatible layer 1")
+                } else {
+                    seal.to_output_seal()
+                        .expect("genesis and state extensions must have explicit seals")
+                }
+                .reduce_to_bp()
+                .expect("method must be called only on BP-compatible layer 1");
+
                 seals.push(seal);
                 input_map
                     .entry(opid)
