@@ -27,10 +27,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
-use crate::{
-    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation,
-    SecretSeal, SubSchema,
-};
+use crate::{AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, SecretSeal, SubSchema, WitnessId};
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
 
@@ -60,6 +57,10 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
             .anchored_bundle(bundle_id)
             .filter(|ab| ab.bundle.bundle_id() == bundle_id)
     }
+
+    fn op_witness_id(&self, opid: OpId) -> Option<WitnessId> {
+        self.0.op_witness_id(opid)
+    }
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -70,8 +71,10 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 /// invalid or absent data, the API must always return [`None`] or empty
 /// collections/iterators.
 pub trait ConsignmentApi {
+    /// Iterator for all bundle ids present in the consignment.
     type Iter<'a>: Iterator<Item = BundleId>;
 
+    /// Returns reference to the schema object used by the consignment.
     fn schema(&self) -> &SubSchema;
 
     /// Asset tags uses in the confidential asset validation.
@@ -95,7 +98,12 @@ pub trait ConsignmentApi {
     ///   state transitions represent the final state
     fn terminals(&self) -> BTreeSet<(BundleId, SecretSeal)>;
 
+    /// Returns iterator over all bundle ids present in the consignment.
     fn bundle_ids<'a>(&self) -> Self::Iter<'a>;
 
+    /// Returns reference to an anchored bundle given a bundle id.
     fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>>;
+
+    /// Returns witness id for a given operaiton.
+    fn op_witness_id(&self, opid: OpId) -> Option<WitnessId>;
 }
