@@ -27,7 +27,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
-use crate::{AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, SecretSeal, SubSchema, WitnessId};
+use crate::{
+    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation,
+    SecretSeal, SubSchema, WitnessId, XChain,
+};
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
 
@@ -48,7 +51,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
 
-    fn terminals(&self) -> BTreeSet<(BundleId, SecretSeal)> { self.0.terminals() }
+    fn terminals(&self) -> BTreeSet<(BundleId, XChain<SecretSeal>)> { self.0.terminals() }
 
     fn bundle_ids<'a>(&self) -> Self::Iter<'a> { self.0.bundle_ids() }
 
@@ -58,9 +61,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
             .filter(|ab| ab.bundle.bundle_id() == bundle_id)
     }
 
-    fn op_witness_id(&self, opid: OpId) -> Option<WitnessId> {
-        self.0.op_witness_id(opid)
-    }
+    fn op_witness_id(&self, opid: OpId) -> Option<WitnessId> { self.0.op_witness_id(opid) }
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -96,7 +97,7 @@ pub trait ConsignmentApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn terminals(&self) -> BTreeSet<(BundleId, SecretSeal)>;
+    fn terminals(&self) -> BTreeSet<(BundleId, XChain<SecretSeal>)>;
 
     /// Returns iterator over all bundle ids present in the consignment.
     fn bundle_ids<'a>(&self) -> Self::Iter<'a>;

@@ -23,7 +23,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
-use bp::seals::txout::{CloseMethod, ExplicitSeal, Witness};
+use bp::seals::txout::{CloseMethod, ExplicitSeal, TxoSeal, Witness};
 use bp::{dbc, Outpoint, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;

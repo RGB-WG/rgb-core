@@ -48,7 +48,7 @@ pub use assignments::{
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
 use bp::Bp;
 pub use bundle::{BundleId, TransitionBundle, Vin};
-use commit_verify::CommitEncode;
+use commit_verify::{CommitEncode, Conceal};
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
     OpoutParseError, OutputAssignment, RightsOutput,
@@ -65,7 +65,7 @@ pub use operations::{
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
-    WitnessPos, XGenesisSeal, XGraphSeal, XOutputSeal, XPubWitness, XSeal, XWitness,
+    WitnessPos, XGenesisSeal, XGraphSeal, XOutputSeal, XPubWitness, XWitness,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 use strict_encoding::{
@@ -147,6 +147,13 @@ impl<T: Ord> Ord for XChain<T> {
             }
         }
     }
+}
+
+impl<T: Conceal> Conceal for XChain<T> {
+    type Concealed = XChain<T::Concealed>;
+
+    #[inline]
+    fn conceal(&self) -> Self::Concealed { self.map_ref(|t| t.conceal()) }
 }
 
 impl<T> StrictType for XChain<T>
@@ -250,6 +257,14 @@ impl<T> XChain<T> {
 
     /// Maps the value from one internal type into another.
     pub fn map<U>(self, f: impl FnOnce(T) -> U) -> XChain<U> {
+        match self {
+            Self::Bitcoin(t) => XChain::Bitcoin(f(t)),
+            Self::Liquid(t) => XChain::Liquid(f(t)),
+        }
+    }
+
+    /// Maps the value from a reference on internal type into another.
+    pub fn map_ref<U>(&self, f: impl FnOnce(&T) -> U) -> XChain<U> {
         match self {
             Self::Bitcoin(t) => XChain::Bitcoin(f(t)),
             Self::Liquid(t) => XChain::Liquid(f(t)),

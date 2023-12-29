@@ -32,7 +32,7 @@ use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
     BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
-    Vin, WitnessId, XGraphSeal,
+    Vin, WitnessId, XChain, XGraphSeal,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -412,7 +412,7 @@ pub enum Warning {
     // TODO: Replace debug with display
     /// terminal seal {1:?} referencing operation {0} is not present in
     /// operation assignments.
-    TerminalSealAbsent(OpId, SecretSeal),
+    TerminalSealAbsent(OpId, XChain<SecretSeal>),
     /// terminal witness transaction {0} is not yet mined.
     TerminalWitnessNotMined(Txid),
     /// transition bundle {0} doesn't close all the seals defined for its
