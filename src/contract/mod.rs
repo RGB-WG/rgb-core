@@ -33,10 +33,11 @@ mod bundle;
 #[allow(clippy::module_inception)]
 mod contract;
 
-use std::fmt;
+use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
 use std::str::FromStr;
+use std::{fmt, io};
 
 use amplify::confinement::TinyOrdSet;
 pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
@@ -64,10 +65,13 @@ pub use operations::{
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
-    WitnessPos, XSeal,
+    WitnessPos, XGenesisSeal, XGraphSeal, XOutputSeal, XPubWitness, XSeal, XWitness,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
-use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
+use strict_encoding::{
+    DecodeError, DefineUnion, ReadTuple, ReadUnion, StrictDecode, StrictDumb, StrictEncode,
+    StrictSum, StrictType, StrictUnion, TypedRead, TypedWrite, WriteUnion,
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
@@ -114,25 +118,99 @@ impl CommitEncode for AltLayer1Set {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = super::LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
+pub const XCHAIN_BITCOIN_PREFIX: &str = "bc";
+pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum XChain<T>
-where T: StrictDumb + StrictEncode + StrictDecode
-{
-    #[strict_type(tag = 0x00)]
+pub enum XChain<T> {
     Bitcoin(T),
 
-    #[strict_type(tag = 0x01)]
     Liquid(T),
 }
 
-impl<T: StrictDumb + StrictEncode + StrictDecode> XChain<T> {
+impl<T: Ord> PartialOrd for XChain<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl<T: Ord> Ord for XChain<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::Bitcoin(_), Self::Liquid(_)) => Ordering::Greater,
+            (Self::Liquid(_), Self::Bitcoin(_)) => Ordering::Less,
+            (Self::Bitcoin(t1) | Self::Liquid(t1), Self::Bitcoin(t2) | Self::Liquid(t2)) => {
+                t1.cmp(t2)
+            }
+        }
+    }
+}
+
+impl<T> StrictType for XChain<T>
+where T: StrictDumb + StrictType
+{
+    const STRICT_LIB_NAME: &'static str = super::LIB_NAME_RGB;
+}
+impl<T> StrictSum for XChain<T>
+where T: StrictDumb + StrictType
+{
+    const ALL_VARIANTS: &'static [(u8, &'static str)] = &[(0x00, "bitcoin"), (0x01, "liquid")];
+
+    fn variant_name(&self) -> &'static str {
+        match self {
+            XChain::Bitcoin(_) => Self::ALL_VARIANTS[0].1,
+            XChain::Liquid(_) => Self::ALL_VARIANTS[1].1,
+        }
+    }
+}
+impl<T> StrictUnion for XChain<T> where T: StrictDumb + StrictType {}
+impl<T> StrictDumb for XChain<T>
+where T: StrictDumb
+{
+    fn strict_dumb() -> Self { XChain::Bitcoin(strict_dumb!()) }
+}
+impl<T> StrictEncode for XChain<T>
+where T: StrictDumb + StrictEncode
+{
+    fn strict_encode<W: TypedWrite>(&self, writer: W) -> io::Result<W> {
+        writer.write_union::<Self>(|w| {
+            let w = w
+                .define_newtype::<T>(fname!(Self::ALL_VARIANTS[0].1))
+                .define_newtype::<T>(fname!(Self::ALL_VARIANTS[1].1))
+                .complete();
+            Ok(match self {
+                XChain::Bitcoin(t) => w.write_newtype(fname!(Self::ALL_VARIANTS[0].1), t)?,
+                XChain::Liquid(t) => w.write_newtype(fname!(Self::ALL_VARIANTS[1].1), t)?,
+            }
+            .complete())
+        })
+    }
+}
+impl<T> StrictDecode for XChain<T>
+where T: StrictDumb + StrictDecode
+{
+    fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
+        reader.read_union(|field, r| match field.as_str() {
+            x if x == Self::ALL_VARIANTS[0].1 => {
+                r.read_tuple(|r| r.read_field().map(Self::Bitcoin))
+            }
+            x if x == Self::ALL_VARIANTS[1].1 => r.read_tuple(|r| r.read_field().map(Self::Liquid)),
+            _ => unreachable!(),
+        })
+    }
+}
+
+impl<T> XChain<T> {
+    pub fn with(layer1: Layer1, data: impl Into<T>) -> Self {
+        match layer1 {
+            Layer1::Bitcoin => XChain::Bitcoin(data.into()),
+            Layer1::Liquid => XChain::Liquid(data.into()),
+        }
+    }
+
     pub fn is_bitcoin(&self) -> bool { matches!(self, XChain::Bitcoin(_)) }
     pub fn is_liquid(&self) -> bool { matches!(self, XChain::Liquid(_)) }
     pub fn is_bp(&self) -> bool {
@@ -140,21 +218,66 @@ impl<T: StrictDumb + StrictEncode + StrictDecode> XChain<T> {
             XChain::Bitcoin(_) | XChain::Liquid(_) => true,
         }
     }
-    pub fn into_bp(self) -> Option<Bp<T>> {
-        Some(match self {
+
+    pub fn layer1(&self) -> Layer1 {
+        match self {
+            XChain::Bitcoin(_) => Layer1::Bitcoin,
+            XChain::Liquid(_) => Layer1::Liquid,
+        }
+    }
+
+    pub fn as_bp(&self) -> Bp<&T>
+    where for<'a> &'a T: StrictDumb + StrictEncode + StrictDecode {
+        match self {
             XChain::Bitcoin(t) => Bp::Bitcoin(t),
             XChain::Liquid(t) => Bp::Liquid(t),
-        })
+        }
     }
-    pub fn unwrap_into_bp(self) -> Bp<T> {
-        self.into_bp()
-            .expect("only Bitcoin and Liquid chains are supported at this moment")
+
+    pub fn into_bp(self) -> Bp<T>
+    where T: StrictDumb + StrictEncode + StrictDecode {
+        match self {
+            XChain::Bitcoin(t) => Bp::Bitcoin(t),
+            XChain::Liquid(t) => Bp::Liquid(t),
+        }
+    }
+
+    pub fn as_reduced_unsafe(&self) -> &T {
+        match self {
+            XChain::Bitcoin(t) | XChain::Liquid(t) => t,
+        }
+    }
+
+    /// Maps the value from one internal type into another.
+    pub fn map<U>(self, f: impl FnOnce(T) -> U) -> XChain<U> {
+        match self {
+            Self::Bitcoin(t) => XChain::Bitcoin(f(t)),
+            Self::Liquid(t) => XChain::Liquid(f(t)),
+        }
+    }
+
+    /// Maps the value from one internal type into another, covering cases which
+    /// may error.
+    pub fn try_map<U, E>(self, f: impl FnOnce(T) -> Result<U, E>) -> Result<XChain<U>, E> {
+        match self {
+            Self::Bitcoin(t) => f(t).map(XChain::Bitcoin),
+            Self::Liquid(t) => f(t).map(XChain::Liquid),
+        }
+    }
+
+    /// Maps the value from one internal type into another, covering cases which
+    /// may result in an optional value.
+    pub fn maybe_map<U>(self, f: impl FnOnce(T) -> Option<U>) -> Option<XChain<U>> {
+        match self {
+            Self::Bitcoin(t) => f(t).map(XChain::Bitcoin),
+            Self::Liquid(t) => f(t).map(XChain::Liquid),
+        }
     }
 }
 
 #[derive(Clone, Debug, Display, Error, From)]
 pub enum XChainParseError<E: Debug + Display> {
-    #[display("unknown chain prefix '{0}'; only 'bitcoin:' and 'liquid:' are currently supported")]
+    #[display("unknown chain prefix '{0}'; only 'bc:' and 'lq:' are currently supported")]
     UnknownPrefix(String),
 
     #[from]
@@ -172,11 +295,11 @@ where
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((prefix, s)) = s.split_once(':') {
             match prefix {
-                "bitcoin" => s
+                XCHAIN_BITCOIN_PREFIX => s
                     .parse()
                     .map(XChain::Bitcoin)
                     .map_err(XChainParseError::from),
-                "liquid" => s
+                XCHAIN_LIQUID_PREFIX => s
                     .parse()
                     .map(XChain::Liquid)
                     .map_err(XChainParseError::from),
@@ -195,8 +318,8 @@ where T: StrictDumb + StrictEncode + StrictDecode
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            XChain::Bitcoin(t) => write!(f, "bitcoin:{t}"),
-            XChain::Liquid(t) => write!(f, "liquid:{t}"),
+            XChain::Bitcoin(t) => write!(f, "{XCHAIN_BITCOIN_PREFIX}:{t}"),
+            XChain::Liquid(t) => write!(f, "{XCHAIN_LIQUID_PREFIX}:{t}"),
         }
     }
 }

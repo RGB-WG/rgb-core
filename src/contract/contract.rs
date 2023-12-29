@@ -35,9 +35,9 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
-    Extension, Genesis, GlobalStateType, OpId, Operation, OutputSeal, RevealedAttach, RevealedData,
+    Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
     RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState, WitnessAnchor,
-    WitnessId, XSeal, LIB_NAME_RGB,
+    WitnessId, XOutputSeal, XSeal, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -102,7 +102,7 @@ impl FromStr for Opout {
 )]
 pub struct OutputAssignment<State: ExposedState> {
     pub opout: Opout,
-    pub seal: OutputSeal,
+    pub seal: XOutputSeal,
     pub state: State,
     pub witness: Option<WitnessId>,
 }
