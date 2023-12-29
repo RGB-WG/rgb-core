@@ -24,7 +24,6 @@ use core::iter::FromIterator;
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
-use bp::seals::txout::blind::ChainBlindSeal;
 use bp::Txid;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
@@ -32,8 +31,8 @@ use strict_types::SemId;
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
-    Vin, XSeal,
+    BundleId, ContractId, GraphSeal, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal,
+    StateType, Vin, XSeal,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -340,7 +339,7 @@ pub enum Failure {
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1:?} is defined on {0} which is not in the set of layers allowed
     /// by the contract genesis.
-    SealLayerMismatch(Layer1, XSeal<ChainBlindSeal>),
+    SealLayerMismatch(Layer1, XSeal<GraphSeal>),
     /// transition bundle {0} doesn't close seal with the witness transaction
     /// {1}. Details: {2}
     SealsInvalid(BundleId, Txid, String),
@@ -410,8 +409,9 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    /// terminal seal {1} referencing operation {0} is not present in operation
-    /// assignments.
+    // TODO: Replace debug with display
+    /// terminal seal {1:?} referencing operation {0} is not present in
+    /// operation assignments.
     TerminalSealAbsent(OpId, SecretSeal),
     /// terminal witness transaction {0} is not yet mined.
     TerminalWitnessNotMined(Txid),

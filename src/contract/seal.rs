@@ -27,11 +27,11 @@ use std::hash::Hash;
 use std::num::NonZeroU32;
 use std::str::FromStr;
 
-pub use bp::seals::txout::blind::{
-    ChainBlindSeal as GraphSeal, ParseError, SecretSeal, SingleBlindSeal as GenesisSeal,
-};
+use bp::dbc::Method;
+pub use bp::seals::txout::blind::{ChainBlindSeal, ParseError, SingleBlindSeal};
 pub use bp::seals::txout::TxoSeal;
 use bp::seals::txout::{CloseMethod, ExplicitSeal, SealTxid};
+pub use bp::seals::SecretSeal;
 use bp::Txid;
 use commit_verify::{strategies, CommitVerify, Conceal, DigestExt, Sha256, UntaggedProtocol};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType, StrictWriter};
