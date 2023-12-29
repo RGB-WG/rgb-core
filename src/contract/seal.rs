@@ -38,6 +38,92 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType, Strict
 
 use crate::{Layer1, LIB_NAME_RGB};
 
+pub type GenesisSeal = SingleBlindSeal<Method>;
+pub type GraphSeal = ChainBlindSeal<Method>;
+
+/*
+impl ToBaid58<32> for SecretSeal {
+    const HRI: &'static str = "utxob";
+    const CHUNKING: Option<Chunking> = CHUNKING_32CHECKSUM;
+    fn to_baid58_payload(&self) -> [u8; 32] { self.0.into_inner() }
+    fn to_baid58_string(&self) -> String { self.to_string() }
+}
+impl FromBaid58<32> for SecretSeal {}
+impl FromStr for SecretSeal {
+    type Err = Baid58ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        SecretSeal::from_baid58_maybe_chunked_str(s, ':', ' ')
+    }
+}
+impl Display for SecretSeal {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            write!(f, "{::^}", self.to_baid58())
+        } else {
+            write!(f, "{::^.3}", self.to_baid58())
+        }
+    }
+}
+
+impl<Id: SealTxid> CommitVerify<BlindSeal<Id>, TapretFirst> for SecretSeal {
+    fn commit(reveal: &BlindSeal<Id>) -> Self { Bytes32::commit(reveal).into() }
+}
+
+impl<Id: SealTxid> Conceal for BlindSeal<Id> {
+    type Concealed = SecretSeal;
+
+    #[inline]
+    fn conceal(&self) -> Self::Concealed { SecretSeal::commit(self) }
+}
+
+impl<Id: SealTxid> BlindSeal<Id> {
+    /// Converts revealed seal into concealed.
+    #[inline]
+    pub fn to_concealed_seal(&self) -> SecretSeal { self.conceal() }
+}
+
+mod test {
+    use super::*;
+
+    #[test]
+    fn secret_seal_is_sha256d() {
+        let reveal = BlindSeal {
+            method: CloseMethod::TapretFirst,
+            blinding: 54683213134637,
+            txid: TxPtr::Txid(
+                Txid::from_hex("646ca5c1062619e2a2d60771c9dfd820551fb773e4dc8c4ed67965a8d1fae839")
+                    .unwrap(),
+            ),
+            vout: Vout::from(2),
+        };
+        assert_eq!(reveal.to_concealed_seal(), reveal.conceal())
+    }
+
+    #[test]
+    fn secret_seal_baid58() {
+        let seal = BlindSeal {
+            method: CloseMethod::TapretFirst,
+            blinding: 54683213134637,
+            txid: TxPtr::Txid(
+                Txid::from_hex("646ca5c1062619e2a2d60771c9dfd820551fb773e4dc8c4ed67965a8d1fae839")
+                    .unwrap(),
+            ),
+            vout: Vout::from(2),
+        }
+        .to_concealed_seal();
+
+        let baid58 = "utxob:2eFrirU-RjqLnqR74-AKRfdnc9M-DpvSRjmZG-mFPrw7nvu-Te1wy83";
+        assert_eq!(baid58, seal.to_string());
+        assert_eq!(baid58.replace('-', ""), format!("{seal:#}"));
+        assert_eq!(seal.to_string(), seal.to_baid58_string());
+        let reconstructed = SecretSeal::from_str(baid58).unwrap();
+        assert_eq!(reconstructed, seal);
+        let reconstructed = SecretSeal::from_str(&baid58.replace('-', "")).unwrap();
+        assert_eq!(reconstructed, seal);
+    }
+}
+ */
+
 pub trait ExposedSeal:
     Debug + StrictDumb + StrictEncode + StrictDecode + Eq + Ord + Copy + Hash + TxoSeal
 {

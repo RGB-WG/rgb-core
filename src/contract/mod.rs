@@ -42,6 +42,7 @@ pub use assignments::{
     TypedAssigns,
 };
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
+use bp::Bp;
 pub use bundle::{BundleId, TransitionBundle, Vin};
 use commit_verify::CommitEncode;
 pub use contract::{
@@ -63,6 +64,7 @@ pub use seal::{
     WitnessPos, XSeal, XchainParseError,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
+use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
@@ -106,5 +108,43 @@ impl CommitEncode for AltLayer1Set {
         for c in self.iter() {
             e.write_all(&[*c as u8]).ok();
         }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = super::LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum Xchain<T>
+where T: StrictDumb + StrictEncode + StrictDecode
+{
+    #[strict_type(tag = 0x00)]
+    Bitcoin(T),
+
+    #[strict_type(tag = 0x01)]
+    Liquid(T),
+}
+
+impl<T: StrictDumb + StrictEncode + StrictDecode> Xchain<T> {
+    pub fn is_bitcoin(&self) -> bool { matches!(self, Xchain::Bitcoin(_)) }
+    pub fn is_liquid(&self) -> bool { matches!(self, Xchain::Liquid(_)) }
+    pub fn is_bp(&self) -> bool {
+        match self {
+            Xchain::Bitcoin(_) | Xchain::Liquid(_) => true,
+        }
+    }
+    pub fn into_bp(self) -> Option<Bp<T>> {
+        Some(match self {
+            Xchain::Bitcoin(t) => Bp::Bitcoin(t),
+            Xchain::Liquid(t) => Bp::Liquid(t),
+        })
+    }
+    pub fn unwrap_into_bp(self) -> Bp<T> {
+        self.into_bp()
+            .expect("only Bitcoin and Liquid chains are supported at this moment")
     }
 }
