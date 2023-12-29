@@ -34,7 +34,7 @@ use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
     Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
-    WitnessId, XAnchor,
+    XAnchor,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -310,14 +310,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
             // For now we use just Bitcoin and Liquid as layer1, but in the
             // future we may have more validation routes for other types of
             // layer1 structure.
-            let witness_id = anchored_bundle.anchor.witness_id();
             let anchors = match &anchored_bundle.anchor {
                 XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor,
             };
             let bundle = &anchored_bundle.bundle;
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
-            let (seals, input_map) = self.validate_seal_definitions(layer1, witness_id, bundle);
+            let (seals, input_map) = self.validate_seal_definitions(layer1, bundle);
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
             let Some(witness_tx) = self.validate_commitments_bp(layer1, &seals, bundle_id, anchors)
@@ -435,7 +434,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
     fn validate_seal_definitions(
         &mut self,
         layer1: Layer1,
-        witness_id: WitnessId,
         bundle: &TransitionBundle,
     ) -> (Vec<ExplicitSeal<Txid>>, BTreeMap<OpId, BTreeSet<Outpoint>>) {
         let mut input_map: BTreeMap<OpId, BTreeSet<Outpoint>> = bmap!();
@@ -494,11 +492,21 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     continue;
                 }
 
-                let seal = seal
-                    .try_to_output_seal(witness_id)
-                    .expect("method must be called only on BP-compatible layer 1")
-                    .reduce_to_bp()
-                    .expect("method must be called only on BP-compatible layer 1");
+                let seal = if prev_op.op_type() == OpType::StateTransition {
+                    let Some(witness_id) = self.consignment.op_witness_id(op) else {
+                        self.status.add_failure(Failure::OperationAbsent(op));
+                        continue;
+                    };
+
+                    seal.try_to_output_seal(witness_id)
+                        .expect("method must be called only on BP-compatible layer 1")
+                } else {
+                    seal.to_output_seal()
+                        .expect("genesis and state extensions must have explicit seals")
+                }
+                .reduce_to_bp()
+                .expect("method must be called only on BP-compatible layer 1");
+
                 seals.push(seal);
                 input_map
                     .entry(opid)
