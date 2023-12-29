@@ -306,6 +306,28 @@ impl<T> XChain<T> {
             Self::Liquid(t) => f(t).map(XChain::Liquid),
         }
     }
+
+    /// Returns iterator over elements
+    pub fn iter<'i>(
+        &'i self,
+    ) -> Box<dyn Iterator<Item = XChain<<&'i T as IntoIterator>::Item>> + 'i>
+    where &'i T: IntoIterator {
+        match self {
+            XChain::Bitcoin(t) => Box::new(t.into_iter().map(XChain::Bitcoin)),
+            XChain::Liquid(t) => Box::new(t.into_iter().map(XChain::Liquid)),
+        }
+    }
+}
+
+impl<I: Iterator> Iterator for XChain<I> {
+    type Item = XChain<<I as Iterator>::Item>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            XChain::Bitcoin(t) => t.next().map(XChain::Bitcoin),
+            XChain::Liquid(t) => t.next().map(XChain::Liquid),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Display, Error, From)]
