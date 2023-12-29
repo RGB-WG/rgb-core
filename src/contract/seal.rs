@@ -22,10 +22,8 @@
 
 use core::fmt::Debug;
 use std::cmp::Ordering;
-use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
 use std::num::NonZeroU32;
-use std::str::FromStr;
 
 use bp::dbc::Method;
 pub use bp::seals::txout::blind::{ChainBlindSeal, ParseError, SingleBlindSeal};
@@ -36,7 +34,7 @@ use bp::Txid;
 use commit_verify::{strategies, CommitVerify, Conceal, DigestExt, Sha256, UntaggedProtocol};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType, StrictWriter};
 
-use crate::{Layer1, LIB_NAME_RGB};
+use crate::{Layer1, XChain, LIB_NAME_RGB};
 
 pub type GenesisSeal = SingleBlindSeal<Method>;
 pub type GraphSeal = ChainBlindSeal<Method>;
@@ -149,26 +147,7 @@ pub type OutputSeal = XSeal<ExplicitSeal<Txid>>;
 pub struct SealPreimage(Bytes32);
  */
 
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub enum XSeal<U: ExposedSeal> {
-    #[strict_type(tag = 0x00)]
-    Bitcoin(U),
-    #[strict_type(tag = 0x01)]
-    Liquid(U),
-    /*
-    #[strict_type(tag = 0x10)]
-    Abraxas(SealPreimage),
-    #[strict_type(tag = 0x11)]
-    Prime(SealPreimage),
-     */
-}
+pub type XSeal<T> = XChain<T>;
 
 impl<U: ExposedSeal> Conceal for XSeal<U> {
     type Concealed = SecretSeal;
@@ -255,48 +234,6 @@ impl<U: ExposedSeal> XSeal<U> {
                 Ok(XSeal::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
             (me, _) => Err(me),
-        }
-    }
-}
-
-impl<U: ExposedSeal + Display> Display for XSeal<U> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            XSeal::Bitcoin(seal) => write!(f, "bitcoin:{seal}"),
-            XSeal::Liquid(seal) => write!(f, "liquid:{seal}"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Display, Error, From)]
-pub enum XchainParseError<E: Debug + Display> {
-    #[display("unknown seal prefix '{0}'; only 'bitcoin:' and 'liquid:' are currently supported")]
-    UnknownPrefix(String),
-
-    #[from]
-    #[display(inner)]
-    Seal(E),
-}
-
-impl<U: ExposedSeal + FromStr> FromStr for XSeal<U>
-where U::Err: Debug + Display
-{
-    type Err = XchainParseError<U::Err>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some((prefix, s)) = s.split_once(':') {
-            match prefix {
-                "bitcoin" => s
-                    .parse()
-                    .map(XSeal::Bitcoin)
-                    .map_err(XchainParseError::from),
-                "liquid" => s.parse().map(XSeal::Liquid).map_err(XchainParseError::from),
-                unknown => Err(XchainParseError::UnknownPrefix(unknown.to_owned())),
-            }
-        } else {
-            s.parse()
-                .map(XSeal::Bitcoin)
-                .map_err(XchainParseError::from)
         }
     }
 }

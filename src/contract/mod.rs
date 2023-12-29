@@ -33,7 +33,10 @@ mod bundle;
 #[allow(clippy::module_inception)]
 mod contract;
 
+use std::fmt;
+use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
+use std::str::FromStr;
 
 use amplify::confinement::TinyOrdSet;
 pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
@@ -61,7 +64,7 @@ pub use operations::{
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
-    WitnessPos, XSeal, XchainParseError,
+    WitnessPos, XSeal,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
@@ -111,7 +114,7 @@ impl CommitEncode for AltLayer1Set {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = super::LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
 #[cfg_attr(
@@ -119,7 +122,7 @@ impl CommitEncode for AltLayer1Set {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum Xchain<T>
+pub enum XChain<T>
 where T: StrictDumb + StrictEncode + StrictDecode
 {
     #[strict_type(tag = 0x00)]
@@ -129,22 +132,71 @@ where T: StrictDumb + StrictEncode + StrictDecode
     Liquid(T),
 }
 
-impl<T: StrictDumb + StrictEncode + StrictDecode> Xchain<T> {
-    pub fn is_bitcoin(&self) -> bool { matches!(self, Xchain::Bitcoin(_)) }
-    pub fn is_liquid(&self) -> bool { matches!(self, Xchain::Liquid(_)) }
+impl<T: StrictDumb + StrictEncode + StrictDecode> XChain<T> {
+    pub fn is_bitcoin(&self) -> bool { matches!(self, XChain::Bitcoin(_)) }
+    pub fn is_liquid(&self) -> bool { matches!(self, XChain::Liquid(_)) }
     pub fn is_bp(&self) -> bool {
         match self {
-            Xchain::Bitcoin(_) | Xchain::Liquid(_) => true,
+            XChain::Bitcoin(_) | XChain::Liquid(_) => true,
         }
     }
     pub fn into_bp(self) -> Option<Bp<T>> {
         Some(match self {
-            Xchain::Bitcoin(t) => Bp::Bitcoin(t),
-            Xchain::Liquid(t) => Bp::Liquid(t),
+            XChain::Bitcoin(t) => Bp::Bitcoin(t),
+            XChain::Liquid(t) => Bp::Liquid(t),
         })
     }
     pub fn unwrap_into_bp(self) -> Bp<T> {
         self.into_bp()
             .expect("only Bitcoin and Liquid chains are supported at this moment")
+    }
+}
+
+#[derive(Clone, Debug, Display, Error, From)]
+pub enum XChainParseError<E: Debug + Display> {
+    #[display("unknown chain prefix '{0}'; only 'bitcoin:' and 'liquid:' are currently supported")]
+    UnknownPrefix(String),
+
+    #[from]
+    #[display(inner)]
+    Inner(E),
+}
+
+impl<T: FromStr> FromStr for XChain<T>
+where
+    T: StrictDumb + StrictEncode + StrictDecode,
+    T::Err: Debug + Display,
+{
+    type Err = XChainParseError<T::Err>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((prefix, s)) = s.split_once(':') {
+            match prefix {
+                "bitcoin" => s
+                    .parse()
+                    .map(XChain::Bitcoin)
+                    .map_err(XChainParseError::from),
+                "liquid" => s
+                    .parse()
+                    .map(XChain::Liquid)
+                    .map_err(XChainParseError::from),
+                unknown => Err(XChainParseError::UnknownPrefix(unknown.to_owned())),
+            }
+        } else {
+            s.parse()
+                .map(XChain::Bitcoin)
+                .map_err(XChainParseError::from)
+        }
+    }
+}
+
+impl<T: Display> Display for XChain<T>
+where T: StrictDumb + StrictEncode + StrictDecode
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            XChain::Bitcoin(t) => write!(f, "bitcoin:{t}"),
+            XChain::Liquid(t) => write!(f, "liquid:{t}"),
+        }
     }
 }
