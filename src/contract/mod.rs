@@ -281,8 +281,26 @@ impl<T> XChain<T> {
     }
 
     /// Maps the value from one internal type into another, covering cases which
+    /// may error.
+    pub fn try_map_ref<U, E>(&self, f: impl FnOnce(&T) -> Result<U, E>) -> Result<XChain<U>, E> {
+        match self {
+            Self::Bitcoin(t) => f(t).map(XChain::Bitcoin),
+            Self::Liquid(t) => f(t).map(XChain::Liquid),
+        }
+    }
+
+    /// Maps the value from one internal type into another, covering cases which
     /// may result in an optional value.
     pub fn maybe_map<U>(self, f: impl FnOnce(T) -> Option<U>) -> Option<XChain<U>> {
+        match self {
+            Self::Bitcoin(t) => f(t).map(XChain::Bitcoin),
+            Self::Liquid(t) => f(t).map(XChain::Liquid),
+        }
+    }
+
+    /// Maps the value from one internal type into another, covering cases which
+    /// may result in an optional value.
+    pub fn maybe_map_ref<U>(&self, f: impl FnOnce(&T) -> Option<U>) -> Option<XChain<U>> {
         match self {
             Self::Bitcoin(t) => f(t).map(XChain::Bitcoin),
             Self::Liquid(t) => f(t).map(XChain::Liquid),

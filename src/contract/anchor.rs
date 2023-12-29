@@ -53,12 +53,10 @@ pub type XAnchor<P = mpc::MerkleProof> = XChain<AnchorSet<P>>;
 
 impl<P: mpc::Proof + StrictDumb> XAnchor<P> {
     #[inline]
-    pub fn witness_id(&self) -> Option<WitnessId> {
-        match self {
-            XAnchor::Bitcoin(anchor) => anchor.txid().map(WitnessId::Bitcoin),
-            XAnchor::Liquid(anchor) => anchor.txid().map(WitnessId::Liquid),
-        }
-    }
+    pub fn witness_id(&self) -> Option<WitnessId> { self.maybe_map_ref(|set| set.txid()) }
+
+    #[inline]
+    pub fn witness_id_unchecked(&self) -> WitnessId { self.map_ref(|set| set.txid_unchecked()) }
 }
 
 impl XAnchor<mpc::MerkleBlock> {
@@ -128,6 +126,14 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
             AnchorSet::Opret(a) => Some(a.txid),
             AnchorSet::Dual { tapret, opret } if tapret.txid == opret.txid => Some(tapret.txid),
             _ => None,
+        }
+    }
+
+    pub fn txid_unchecked(&self) -> Txid {
+        match self {
+            AnchorSet::Tapret(a) => a.txid,
+            AnchorSet::Opret(a) => a.txid,
+            AnchorSet::Dual { tapret, opret: _ } => tapret.txid,
         }
     }
 
