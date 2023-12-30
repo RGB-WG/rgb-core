@@ -34,7 +34,16 @@ use strict_encoding::{
     StrictSum, StrictType, StrictUnion, TypedRead, TypedWrite, WriteUnion,
 };
 
-use crate::{Layer1, OutputSeal, LIB_NAME_RGB};
+use crate::{Layer1, OutputSeal, XOutputSeal, LIB_NAME_RGB};
+
+pub const XCHAIN_BITCOIN_PREFIX: &str = "bc";
+pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
+
+pub type XOutpoint = XChain<Outpoint>;
+
+impl From<XOutputSeal> for XOutpoint {
+    fn from(seal: XChain<OutputSeal>) -> Self { seal.map(Outpoint::from) }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
@@ -80,9 +89,6 @@ impl CommitEncode for AltLayer1Set {
         }
     }
 }
-
-pub const XCHAIN_BITCOIN_PREFIX: &str = "bc";
-pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(
@@ -340,8 +346,4 @@ where T: StrictDumb + StrictEncode + StrictDecode
             XChain::Liquid(t) => write!(f, "{XCHAIN_LIQUID_PREFIX}:{t}"),
         }
     }
-}
-
-impl From<XChain<OutputSeal>> for XChain<Outpoint> {
-    fn from(seal: XChain<OutputSeal>) -> Self { seal.map(Outpoint::from) }
 }

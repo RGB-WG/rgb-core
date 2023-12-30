@@ -105,6 +105,6 @@ pub trait ConsignmentApi {
     /// Returns reference to an anchored bundle given a bundle id.
     fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>>;
 
-    /// Returns witness id for a given operaiton.
+    /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<WitnessId>;
 }

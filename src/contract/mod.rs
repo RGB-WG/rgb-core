@@ -61,5 +61,6 @@ pub use seal::{
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
 pub use xchain::{
-    AltLayer1, AltLayer1Set, XChain, XChainParseError, XCHAIN_BITCOIN_PREFIX, XCHAIN_LIQUID_PREFIX,
+    AltLayer1, AltLayer1Set, XChain, XChainParseError, XOutpoint, XCHAIN_BITCOIN_PREFIX,
+    XCHAIN_LIQUID_PREFIX,
 };

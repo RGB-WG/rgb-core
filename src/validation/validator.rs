@@ -23,8 +23,8 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
-use bp::seals::txout::{CloseMethod, ExplicitSeal, TxoSeal, Witness};
-use bp::{dbc, Outpoint, Txid};
+use bp::seals::txout::{CloseMethod, TxoSeal, Witness};
+use bp::{dbc, Outpoint};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
@@ -34,7 +34,7 @@ use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
     SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, WitnessId,
-    XAnchor, XChain, XOutputSeal, XPubWitness, XWitness,
+    XAnchor, XChain, XOutpoint, XOutputSeal, XPubWitness, XWitness,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -434,8 +434,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         &mut self,
         layer1: Layer1,
         bundle: &TransitionBundle,
-    ) -> (Vec<XChain<ExplicitSeal<Txid>>>, BTreeMap<OpId, BTreeSet<XChain<Outpoint>>>) {
-        let mut input_map: BTreeMap<OpId, BTreeSet<XChain<Outpoint>>> = bmap!();
+    ) -> (Vec<XOutputSeal>, BTreeMap<OpId, BTreeSet<XOutpoint>>) {
+        let mut input_map: BTreeMap<OpId, BTreeSet<XOutpoint>> = bmap!();
         let mut seals = vec![];
         for (opid, transition) in &bundle.known_transitions {
             let opid = *opid;
