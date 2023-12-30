@@ -27,14 +27,14 @@ use std::str::FromStr;
 use std::{fmt, io};
 
 use amplify::confinement::TinyOrdSet;
-use bp::Bp;
+use bp::{Bp, Outpoint};
 use commit_verify::{CommitEncode, Conceal};
 use strict_encoding::{
     DecodeError, DefineUnion, ReadTuple, ReadUnion, StrictDecode, StrictDumb, StrictEncode,
     StrictSum, StrictType, StrictUnion, TypedRead, TypedWrite, WriteUnion,
 };
 
-use crate::{Layer1, LIB_NAME_RGB};
+use crate::{Layer1, OutputSeal, LIB_NAME_RGB};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
@@ -340,4 +340,8 @@ where T: StrictDumb + StrictEncode + StrictDecode
             XChain::Liquid(t) => write!(f, "{XCHAIN_LIQUID_PREFIX}:{t}"),
         }
     }
+}
+
+impl From<XChain<OutputSeal>> for XChain<Outpoint> {
+    fn from(seal: XChain<OutputSeal>) -> Self { seal.map(Outpoint::from) }
 }
