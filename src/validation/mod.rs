@@ -32,4 +32,4 @@ pub use consignment::{CheckedConsignment, ConsignmentApi};
 pub(crate) use logic::OpInfo;
 pub use script::VirtualMachine;
 pub use status::{Failure, Info, Status, Validity, Warning};
-pub use validator::{ResolveTx, TxResolverError, Validator};
+pub use validator::{ResolveWitness, Validator, WitnessResolverError};

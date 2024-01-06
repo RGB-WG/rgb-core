@@ -23,8 +23,8 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
-use bp::seals::txout::{CloseMethod, ExplicitSeal, TxoSeal, Witness};
-use bp::{dbc, Outpoint, Tx, Txid};
+use bp::seals::txout::{CloseMethod, TxoSeal, Witness};
+use bp::{dbc, Outpoint};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
@@ -32,25 +32,28 @@ use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
-    AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
-    Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
-    XAnchor,
+    AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
+    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, WitnessId,
+    XAnchor, XChain, XOutpoint, XOutputSeal, XPubWitness, XWitness,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
 #[display(doc_comments)]
-pub enum TxResolverError {
-    /// transaction {0} is not mined
-    Unknown(Txid),
-    /// unable to retrieve transaction {0}, {1}
-    Other(Txid, String),
+pub enum WitnessResolverError {
+    /// witness {0} does not exists.
+    Unknown(WitnessId),
+    /// unable to retrieve witness {0}, {1}
+    Other(WitnessId, String),
 }
 
-pub trait ResolveTx {
-    fn resolve_bp_tx(&self, layer1: Layer1, txid: Txid) -> Result<Tx, TxResolverError>;
+pub trait ResolveWitness {
+    fn resolve_pub_witness(
+        &self,
+        witness_id: WitnessId,
+    ) -> Result<XPubWitness, WitnessResolverError>;
 }
 
-pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
+pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness> {
     consignment: CheckedConsignment<'consignment, C>,
 
     status: Status,
@@ -67,7 +70,7 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx> {
     resolver: &'resolver R,
 }
 
-impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
+impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     Validator<'consignment, 'resolver, C, R>
 {
     fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {
@@ -307,19 +310,14 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
             let layer1 = anchored_bundle.anchor.layer1();
 
-            // For now we use just Bitcoin and Liquid as layer1, but in the
-            // future we may have more validation routes for other types of
-            // layer1 structure.
-            let anchors = match &anchored_bundle.anchor {
-                XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor,
-            };
+            let anchors = &anchored_bundle.anchor;
             let bundle = &anchored_bundle.bundle;
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
             let (seals, input_map) = self.validate_seal_definitions(layer1, bundle);
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
-            let Some(witness_tx) = self.validate_commitments_bp(layer1, &seals, bundle_id, anchors)
+            let Some(witness_tx) = self.validate_seal_commitments(&seals, bundle_id, anchors)
             else {
                 continue;
             };
@@ -337,29 +335,26 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         &mut self,
         bundle_id: BundleId,
         bundle: &TransitionBundle,
-        witness_tx: Tx,
-        input_map: BTreeMap<OpId, BTreeSet<Outpoint>>,
+        pub_witness: XPubWitness,
+        input_map: BTreeMap<OpId, BTreeSet<XChain<Outpoint>>>,
     ) {
+        let witness_id = pub_witness.witness_id();
         for (vin, opid) in &bundle.input_map {
             let Some(outpoints) = input_map.get(opid) else {
                 self.status
                     .add_failure(Failure::BundleExtraTransition(bundle_id, *opid));
                 continue;
             };
-            let Some(input) = witness_tx.inputs.get(vin.to_usize()) else {
-                self.status.add_failure(Failure::BundleInvalidInput(
-                    bundle_id,
-                    *opid,
-                    witness_tx.txid(),
-                ));
+            let layer1 = pub_witness.layer1();
+            let pub_witness = pub_witness.as_reduced_unsafe();
+            let Some(input) = pub_witness.inputs.get(vin.to_usize()) else {
+                self.status
+                    .add_failure(Failure::BundleInvalidInput(bundle_id, *opid, witness_id));
                 continue;
             };
-            if !outpoints.contains(&input.prev_output) {
+            if !outpoints.contains(&XChain::with(layer1, input.prev_output)) {
                 self.status.add_failure(Failure::BundleInvalidCommitment(
-                    bundle_id,
-                    *vin,
-                    witness_tx.txid(),
-                    *opid,
+                    bundle_id, *vin, witness_id, *opid,
                 ));
             }
         }
@@ -367,14 +362,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
     /// Bitcoin- and liquid-specific commitment validation using deterministic
     /// bitcoin commitments with opret and tapret schema.
-    fn validate_commitments_bp(
+    fn validate_seal_commitments(
         &mut self,
-        layer1: Layer1,
-        seals: impl AsRef<[ExplicitSeal<Txid>]>,
+        seals: impl AsRef<[XOutputSeal]>,
         bundle_id: BundleId,
-        anchors: &AnchorSet,
-    ) -> Option<Tx> {
-        let Some(txid) = anchors.txid() else {
+        anchors: &XAnchor,
+    ) -> Option<XPubWitness> {
+        let Some(witness_id) = anchors.witness_id() else {
             self.status
                 .add_failure(Failure::AnchorSetInvalid(bundle_id));
             return None;
@@ -382,7 +376,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
 
         // Check that the anchor is committed into a transaction spending all of the
         // transition inputs.
-        match self.resolver.resolve_bp_tx(layer1, txid) {
+        match self.resolver.resolve_pub_witness(witness_id) {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't check.
                 // Reporting this incident and continuing further. Why this happens? No
@@ -390,24 +384,27 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                 // failure in a strict sense, however we can't be sure that the consignment is
                 // valid. That's why we keep the track of such information in a separate place
                 // (`unresolved_txids` field of the validation status object).
-                self.status.unresolved_txids.push(txid);
+                self.status.absent_pub_witnesses.push(witness_id);
                 // This also can mean that there is no known transaction with the id provided by
                 // the anchor, i.e. consignment is invalid. We are proceeding with further
                 // validation in order to detect the rest of problems (and reporting the
                 // failure!)
-                self.status.add_failure(Failure::SealNoWitnessTx(txid));
+                self.status
+                    .add_failure(Failure::SealNoWitnessTx(witness_id));
                 None
             }
-            Ok(witness_tx) => {
-                let (tapret, opret) = anchors.as_split();
+            Ok(pub_witness) => {
+                let (tapret, opret) = anchors.as_reduced_unsafe().as_split();
 
                 let tapret_seals = seals
                     .as_ref()
                     .iter()
                     .filter(|seal| seal.method() == CloseMethod::TapretFirst);
                 if let Some(tapret) = tapret {
-                    let witness = Witness::with(witness_tx.clone(), tapret.clone());
-                    self.validate_seal_closing_bp(tapret_seals, witness, bundle_id, tapret)
+                    let witness = pub_witness
+                        .clone()
+                        .map(|tx| Witness::with(tx, tapret.clone()));
+                    self.validate_seal_closing(tapret_seals, witness, bundle_id, tapret)
                 } else if tapret_seals.count() > 0 {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
                 }
@@ -417,12 +414,14 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     .iter()
                     .filter(|seal| seal.method() == CloseMethod::OpretFirst);
                 if let Some(opret) = opret {
-                    let witness = Witness::with(witness_tx.clone(), opret.clone());
-                    self.validate_seal_closing_bp(opret_seals, witness, bundle_id, opret)
+                    let witness = pub_witness
+                        .clone()
+                        .map(|tx| Witness::with(tx, opret.clone()));
+                    self.validate_seal_closing(opret_seals, witness, bundle_id, opret)
                 } else if opret_seals.count() > 0 {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
                 }
-                Some(witness_tx)
+                Some(pub_witness)
             }
         }
     }
@@ -435,8 +434,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
         &mut self,
         layer1: Layer1,
         bundle: &TransitionBundle,
-    ) -> (Vec<ExplicitSeal<Txid>>, BTreeMap<OpId, BTreeSet<Outpoint>>) {
-        let mut input_map: BTreeMap<OpId, BTreeSet<Outpoint>> = bmap!();
+    ) -> (Vec<XOutputSeal>, BTreeMap<OpId, BTreeSet<XOutpoint>>) {
+        let mut input_map: BTreeMap<OpId, BTreeSet<XOutpoint>> = bmap!();
         let mut seals = vec![];
         for (opid, transition) in &bundle.known_transitions {
             let opid = *opid;
@@ -498,20 +497,26 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                         continue;
                     };
 
-                    seal.try_to_output_seal(witness_id)
-                        .expect("method must be called only on BP-compatible layer 1")
+                    match seal.try_to_output_seal(witness_id) {
+                        Ok(seal) => seal,
+                        Err(_) => {
+                            self.status.add_failure(Failure::SealWitnessLayer1Mismatch {
+                                seal: seal.layer1(),
+                                anchor: witness_id.layer1(),
+                            });
+                            continue;
+                        }
+                    }
                 } else {
                     seal.to_output_seal()
                         .expect("genesis and state extensions must have explicit seals")
-                }
-                .reduce_to_bp()
-                .expect("method must be called only on BP-compatible layer 1");
+                };
 
                 seals.push(seal);
                 input_map
                     .entry(opid)
                     .or_default()
-                    .insert(Outpoint::new(seal.txid, seal.vout));
+                    .insert(seal.map(|seal| Outpoint::new(seal.txid, seal.vout)));
             }
         }
         (seals, input_map)
@@ -527,21 +532,24 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
     ///
     /// Additionally checks that the provided message contains commitment to the
     /// bundle under the current contract.
-    fn validate_seal_closing_bp<'seal, 'temp, Seal: TxoSeal + 'seal, Dbc: dbc::Proof>(
+    fn validate_seal_closing<'seal, 'temp, Seal: 'seal, Dbc: dbc::Proof>(
         &mut self,
         seals: impl IntoIterator<Item = &'seal Seal>,
-        witness: Witness<Dbc>,
+        witness: XWitness<Dbc>,
         bundle_id: BundleId,
         anchor: &'temp Anchor<mpc::MerkleProof, Dbc>,
-    ) {
+    ) where
+        XWitness<Dbc>: SealWitness<Seal, Message = mpc::Commitment>,
+    {
         let message = mpc::Message::from(bundle_id);
+        let witness_id = witness.witness_id();
         // [VALIDATION]: Checking anchor MPC commitment
         match anchor.convolve(self.contract_id, message) {
             Err(err) => {
                 // The operation is not committed to bitcoin transaction graph!
                 // Ultimate failure. But continuing to detect the rest (after reporting it).
                 self.status
-                    .add_failure(Failure::MpcInvalid(bundle_id, witness.txid, err));
+                    .add_failure(Failure::MpcInvalid(bundle_id, witness_id, err));
             }
             Ok(commitment) => {
                 // [VALIDATION]: CHECKING SINGLE-USE-SEALS
@@ -550,7 +558,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveTx>
                     .map_err(|err| {
                         self.status.add_failure(Failure::SealsInvalid(
                             bundle_id,
-                            witness.txid,
+                            witness_id,
                             err.to_string(),
                         ));
                     })

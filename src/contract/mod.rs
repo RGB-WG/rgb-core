@@ -32,10 +32,8 @@ mod operations;
 mod bundle;
 #[allow(clippy::module_inception)]
 mod contract;
+mod xchain;
 
-use std::io::Write;
-
-use amplify::confinement::TinyOrdSet;
 pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
@@ -43,7 +41,6 @@ pub use assignments::{
 };
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
 pub use bundle::{BundleId, TransitionBundle, Vin};
-use commit_verify::CommitEncode;
 pub use contract::{
     AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
     OpoutParseError, OutputAssignment, RightsOutput,
@@ -60,51 +57,10 @@ pub use operations::{
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
-    WitnessPos, XSeal, XchainParseError,
+    WitnessPos, XGenesisSeal, XGraphSeal, XOutputSeal, XPubWitness, XWitness,
 };
 pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(lowercase)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = super::LIB_NAME_RGB, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[repr(u8)]
-pub enum AltLayer1 {
-    #[strict_type(dumb)]
-    Liquid = 1,
-    // Abraxas = 0x10,
-    // Prime = 0x11,
-}
-
-impl AltLayer1 {
-    pub fn layer1(&self) -> Layer1 {
-        match self {
-            AltLayer1::Liquid => Layer1::Liquid,
-        }
-    }
-}
-
-#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = super::LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct AltLayer1Set(TinyOrdSet<AltLayer1>);
-
-impl CommitEncode for AltLayer1Set {
-    fn commit_encode(&self, e: &mut impl Write) {
-        for c in self.iter() {
-            e.write_all(&[*c as u8]).ok();
-        }
-    }
-}
+pub use xchain::{
+    AltLayer1, AltLayer1Set, XChain, XChainParseError, XOutpoint, XCHAIN_BITCOIN_PREFIX,
+    XCHAIN_LIQUID_PREFIX,
+};

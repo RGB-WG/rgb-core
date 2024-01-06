@@ -35,9 +35,9 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
-    Extension, Genesis, GlobalStateType, OpId, Operation, OutputSeal, RevealedAttach, RevealedData,
+    Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
     RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState, WitnessAnchor,
-    WitnessId, XSeal, LIB_NAME_RGB,
+    WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -102,7 +102,7 @@ impl FromStr for Opout {
 )]
 pub struct OutputAssignment<State: ExposedState> {
     pub opout: Opout,
-    pub seal: OutputSeal,
+    pub seal: XOutputSeal,
     pub state: State,
     pub witness: Option<WitnessId>,
 }
@@ -146,7 +146,7 @@ impl<State: ExposedState> OutputAssignment<State> {
     /// If the processing is done on invalid stash data, the seal is
     /// witness-based and the anchor chain doesn't match the seal chain.
     pub fn with_witness<Seal: ExposedSeal>(
-        seal: XSeal<Seal>,
+        seal: XChain<Seal>,
         witness_id: WitnessId,
         state: State,
         opid: OpId,
@@ -169,7 +169,7 @@ impl<State: ExposedState> OutputAssignment<State> {
     /// If the processing is done on invalid stash data, the seal is
     /// witness-based and the anchor chain doesn't match the seal chain.
     pub fn with_no_witness<Seal: ExposedSeal>(
-        seal: XSeal<Seal>,
+        seal: XChain<Seal>,
         state: State,
         opid: OpId,
         ty: AssignmentType,

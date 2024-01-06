@@ -24,7 +24,6 @@ use core::iter::FromIterator;
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
-use bp::seals::txout::blind::ChainBlindSeal;
 use bp::Txid;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
@@ -33,7 +32,7 @@ use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
     BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
-    Vin, XSeal,
+    Vin, WitnessId, XChain, XGraphSeal,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -59,7 +58,7 @@ pub enum Validity {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct Status {
-    pub unresolved_txids: Vec<Txid>,
+    pub absent_pub_witnesses: Vec<WitnessId>,
     pub unmined_terminals: Vec<Txid>,
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
@@ -72,9 +71,9 @@ impl Display for Status {
             writeln!(f, "Consignment {}", self.validity())?;
         }
 
-        if !self.unresolved_txids.is_empty() {
-            f.write_str("Unknown witness transactions:\n")?;
-            for txid in &self.unresolved_txids {
+        if !self.absent_pub_witnesses.is_empty() {
+            f.write_str("Unknown public witnesses:\n")?;
+            for txid in &self.absent_pub_witnesses {
                 writeln!(f, "- {txid}")?;
             }
         }
@@ -113,7 +112,7 @@ impl Display for Status {
 
 impl AddAssign for Status {
     fn add_assign(&mut self, rhs: Self) {
-        self.unresolved_txids.extend(rhs.unresolved_txids);
+        self.absent_pub_witnesses.extend(rhs.absent_pub_witnesses);
         self.unmined_terminals.extend(rhs.unmined_terminals);
         self.failures.extend(rhs.failures);
         self.warnings.extend(rhs.warnings);
@@ -124,7 +123,7 @@ impl AddAssign for Status {
 impl Status {
     pub fn from_error(v: Failure) -> Self {
         Status {
-            unresolved_txids: vec![],
+            absent_pub_witnesses: vec![],
             unmined_terminals: vec![],
             failures: vec![v],
             warnings: vec![],
@@ -174,7 +173,7 @@ impl Status {
             } else {
                 Validity::UnminedTerminals
             }
-        } else if self.unresolved_txids.is_empty() {
+        } else if self.absent_pub_witnesses.is_empty() {
             Validity::Invalid
         } else {
             Validity::UnresolvedTransactions
@@ -312,12 +311,12 @@ pub enum Failure {
     /// transition bundle {0} references state transition {1} which is not
     /// included into the bundle input map.
     BundleExtraTransition(BundleId, OpId),
-    /// transition bundle {0} references non-existing input in witness
-    /// transaction {2} for the state transition {1}.
-    BundleInvalidInput(BundleId, OpId, Txid),
-    /// transition bundle {0} doesn't commit to the input {1} in the witness
-    /// transaction {2} which is an input of the state transition {3}.
-    BundleInvalidCommitment(BundleId, Vin, Txid, OpId),
+    /// transition bundle {0} references non-existing input in witness {2} for
+    /// the state transition {1}.
+    BundleInvalidInput(BundleId, OpId, WitnessId),
+    /// transition bundle {0} doesn't commit to the input {1} in the witness {2}
+    /// which is an input of the state transition {3}.
+    BundleInvalidCommitment(BundleId, Vin, WitnessId, OpId),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
@@ -329,27 +328,27 @@ pub enum Failure {
     },
     /// transition {0} references non-existing previous output {1}.
     NoPrevOut(OpId, Opout),
-    /// anchors used inside bundle {0} reference different transaction ids.
+    /// anchors used inside bundle {0} reference different public witness ids.
     AnchorSetInvalid(BundleId),
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
-    /// witness transaction {0} is not known to the transaction resolver.
-    SealNoWitnessTx(Txid),
+    /// witness {0} is not known to the transaction resolver.
+    SealNoWitnessTx(WitnessId),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1:?} is defined on {0} which is not in the set of layers allowed
     /// by the contract genesis.
-    SealLayerMismatch(Layer1, XSeal<ChainBlindSeal>),
-    /// transition bundle {0} doesn't close seal with the witness transaction
-    /// {1}. Details: {2}
-    SealsInvalid(BundleId, Txid, String),
+    SealLayerMismatch(Layer1, XGraphSeal),
+    /// transition bundle {0} doesn't close seal with the witness {1}. Details:
+    /// {2}
+    SealsInvalid(BundleId, WitnessId, String),
     /// single-use seals for the operation {0} were not validated, which
     /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
-    /// transition bundle {0} is not properly anchored to the witness
-    /// transaction {1}. Details: {2}
-    MpcInvalid(BundleId, Txid, InvalidProof),
+    /// transition bundle {0} is not properly anchored to the witness {1}.
+    /// Details: {2}
+    MpcInvalid(BundleId, WitnessId, InvalidProof),
 
     // State extensions errors
     /// valency {valency} redeemed by state extension {opid} references
@@ -410,9 +409,10 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    /// terminal seal {1} referencing operation {0} is not present in operation
-    /// assignments.
-    TerminalSealAbsent(OpId, SecretSeal),
+    // TODO: Replace debug with display
+    /// terminal seal {1:?} referencing operation {0} is not present in
+    /// operation assignments.
+    TerminalSealAbsent(OpId, XChain<SecretSeal>),
     /// terminal witness transaction {0} is not yet mined.
     TerminalWitnessNotMined(Txid),
     /// transition bundle {0} doesn't close all the seals defined for its

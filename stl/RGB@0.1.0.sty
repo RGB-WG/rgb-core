@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:EZiZRCHpyqJakmTU1zkwczq5YKMbapfMhVLhS8DbkpwC#premium-honey-scarlet
+  Id: urn:ubideco:stl:2PcZtrPrfQCu27qw8b4Wz4cEqUn2PpgSkDHwF4qVyyrq#russian-child-member
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -32,6 +32,22 @@ import urn:ubideco:stl:5XLKQ1sNryZm9bdFKU2kBY3MPYdZXhchVdQKBbHA3gby#south-strong
 -- Sizing := urn:ubideco:semid:9jnMbAs5A91zjK9KDrLuFH42WtinmB8GY6JE6BMY31hw#canoe-gordon-amazon
 -- FieldName := urn:ubideco:semid:CK7zqXpkDGwatYDy1bVHoARAq1xTi85DFueWrZdFE7du#orient-spell-talent
 
+import urn:ubideco:stl:8wHziC7Bxa3BwctUh6EVBanosrvRHecCTPUjkZT4btNd#ruby-heaven-madrid as BPCore
+-- Imports:
+-- TapretNodePartner := urn:ubideco:semid:6o6mGBNbDXJCcNgk5ohP6wgXcdXZvYd1ZWy1GMBy5q2#iceberg-poker-active
+-- ExplicitSealTxid := urn:ubideco:semid:FxnQvXfa6koZmm6uyZCPwnGrMi3UzY588kKN9ipN72L#antenna-darwin-emotion
+-- TapretProof := urn:ubideco:semid:24LBor5ZVKjGk4uBbEb28w6D7rroV3mpVAntNAWQsYaP#forum-paint-tunnel
+-- TapretPathProof := urn:ubideco:semid:2LANtvWZDRes61SHKFxtFPzSuTzaKQGCUvYsNowNf3n3#stage-element-update
+-- AnchorMerkleProofTapretProof := urn:ubideco:semid:2RRuXmkGM51gpruJzNCL6mSFm7nQFrP6zXm6CmNr77uE#arcade-modest-fossil
+-- Method := urn:ubideco:semid:49Mf3pFa3gZNQXJarv9nKCMrZ3NFn2ME9Q3dCAsXhpAe#trilogy-tahiti-valid
+-- TapretRightBranch := urn:ubideco:semid:4nZtVVw7QJaMDHYffkHBWhxXSkLXLcJ89qTLZH4Z3xck#basket-prelude-bridge
+-- BlindSealTxPtr := urn:ubideco:semid:5ircUcbD1UjEKsAKMcvdfjS9UcVCEcs47BWAZ5UDqYdr#austria-icon-waiter
+-- OpretProof := urn:ubideco:semid:5oMeVsXXeicrdvrCCEZQiKWcrDHy4nQPbaQGhtnwM3ug#segment-ambient-totem
+-- AnchorMerkleProofOpretProof := urn:ubideco:semid:7mkYAw62Vi8BuyQ16qGg3bgFw8WVtTXUkJoYBv1qoNg4#tape-mental-legacy
+-- SecretSeal := urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle
+-- BlindSealTxid := urn:ubideco:semid:Cu4G4njDjd2mgmz4FsvFAwRKwBpksmZ9CB9AJhSNx5dk#kimono-golf-price
+-- TxPtr := urn:ubideco:semid:CyRtMpPJkKLX3AdhgY7ZyA7PnYAzCo7yFTeYwwGsUBhn#strange-source-father
+
 import urn:ubideco:stl:9KALDYR8Nyjq4FdMW6kYoL7vdkWnqPqNuFnmE9qHpNjZ#justice-rocket-type as Std
 -- Imports:
 -- Bool := urn:ubideco:semid:7ZhBHGSJm9ixmm8Z9vCX7i5Ga7j5xrW8t11nsb1Cgpnx#laser-madam-maxwell
@@ -53,22 +69,6 @@ import urn:ubideco:stl:HX2UBak8vPsTokug1DGMDvTpzns3xUdwZ7QJdyt4qBA9#speed-atlant
 -- LeafVer := urn:ubideco:semid:DGELfUvcU62GNQRo7HaMbKDzYQwdYRMW3b91JHd4d3WY#tunnel-lagoon-cowboy
 -- XOnlyPk := urn:ubideco:semid:J1BbH2Lx8P3yw9G244d92MMTP5jrkiaVzsr6FzRxpfur#evident-finance-promo
 
-import urn:ubideco:stl:JAeer3PsTTQRrGttsnPXJKdBTJqQwQ5ZwWHiABEDoCyd#simple-lava-lady as BPCore
--- Imports:
--- TapretNodePartner := urn:ubideco:semid:6o6mGBNbDXJCcNgk5ohP6wgXcdXZvYd1ZWy1GMBy5q2#iceberg-poker-active
--- TapretProof := urn:ubideco:semid:24LBor5ZVKjGk4uBbEb28w6D7rroV3mpVAntNAWQsYaP#forum-paint-tunnel
--- TapretPathProof := urn:ubideco:semid:2LANtvWZDRes61SHKFxtFPzSuTzaKQGCUvYsNowNf3n3#stage-element-update
--- AnchorMerkleProofTapretProof := urn:ubideco:semid:2RRuXmkGM51gpruJzNCL6mSFm7nQFrP6zXm6CmNr77uE#arcade-modest-fossil
--- Method := urn:ubideco:semid:49Mf3pFa3gZNQXJarv9nKCMrZ3NFn2ME9Q3dCAsXhpAe#trilogy-tahiti-valid
--- TapretRightBranch := urn:ubideco:semid:4nZtVVw7QJaMDHYffkHBWhxXSkLXLcJ89qTLZH4Z3xck#basket-prelude-bridge
--- ExplicitSeal := urn:ubideco:semid:4rfbAaHqg7T4ukXDQRtFZzXipcf9FJwr5eUUXsj6YWJo#table-liberal-hope
--- BlindSealTxPtr := urn:ubideco:semid:5ircUcbD1UjEKsAKMcvdfjS9UcVCEcs47BWAZ5UDqYdr#austria-icon-waiter
--- OpretProof := urn:ubideco:semid:5oMeVsXXeicrdvrCCEZQiKWcrDHy4nQPbaQGhtnwM3ug#segment-ambient-totem
--- AnchorMerkleProofOpretProof := urn:ubideco:semid:7mkYAw62Vi8BuyQ16qGg3bgFw8WVtTXUkJoYBv1qoNg4#tape-mental-legacy
--- SecretSeal := urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle
--- BlindSealTxid := urn:ubideco:semid:Cu4G4njDjd2mgmz4FsvFAwRKwBpksmZ9CB9AJhSNx5dk#kimono-golf-price
--- TxPtr := urn:ubideco:semid:CyRtMpPJkKLX3AdhgY7ZyA7PnYAzCo7yFTeYwwGsUBhn#strange-source-father
-
 
 
 -- urn:ubideco:semid:EVMd4HiFWvuPQv5JaVPecRY8oyqRNR92gxYUaCFFWqXp#banana-mouse-plaster
@@ -82,50 +82,50 @@ data AluScript        :: libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[By
 data AnchorSet        :: tapret:1 BPCore.AnchorMerkleProofTapretProof {- urn:ubideco:semid:2RRuXmkGM51gpruJzNCL6mSFm7nQFrP6zXm6CmNr77uE#arcade-modest-fossil -}
                        | opret BPCore.AnchorMerkleProofOpretProof {- urn:ubideco:semid:7mkYAw62Vi8BuyQ16qGg3bgFw8WVtTXUkJoYBv1qoNg4#tape-mental-legacy -}
                        | dual (tapret BPCore.AnchorMerkleProofTapretProof {- urn:ubideco:semid:2RRuXmkGM51gpruJzNCL6mSFm7nQFrP6zXm6CmNr77uE#arcade-modest-fossil -}, opret BPCore.AnchorMerkleProofOpretProof {- urn:ubideco:semid:7mkYAw62Vi8BuyQ16qGg3bgFw8WVtTXUkJoYBv1qoNg4#tape-mental-legacy -})
--- urn:ubideco:semid:Af6Yix94PXQE73AAR55UvXUsSZgARZEnAZGiJYeo987E#cowboy-gallop-miller
-data AnchoredBundle   :: anchor XAnchor, bundle TransitionBundle
+-- urn:ubideco:semid:8N8sQGRwEmmxKLwUiE4GQ89ziPzgBi7BfSjaNz9ozRKv#verbal-slow-lemon
+data AnchoredBundle   :: anchor XChainAnchorSet, bundle TransitionBundle
 -- urn:ubideco:semid:EZoxBpGenvb9UVze1zuwuEHqQJAqw2m3T8za5gbX1JZk#buzzer-pattern-craft
 data AssetTag         :: [Byte ^ 32]
--- urn:ubideco:semid:FoWWT72VexCqqTZe4BTUWd3rGFmdgmjgzG4BtEXAhrFG#clark-yoga-needle
-data AssignRevealedAttachBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state ConcealedAttach)
-                       | confidentialState (seal XSealBlindSealTxPtr, state ConcealedAttach)
-                       | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state RevealedAttach)
-                       | revealed (seal XSealBlindSealTxPtr, state RevealedAttach)
--- urn:ubideco:semid:9sXC96VNRB6EjYqvNHf621Tc34As2ym7hPZYzGocZcjv#british-castro-cannon
-data AssignRevealedAttachBlindSealTxid :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state ConcealedAttach)
-                       | confidentialState (seal XSealBlindSealTxid, state ConcealedAttach)
-                       | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state RevealedAttach)
-                       | revealed (seal XSealBlindSealTxid, state RevealedAttach)
--- urn:ubideco:semid:8TYdgvgzXVeSDtSx4N4NBFaZX6yseoN8wdu2UmjyG4kf#brain-echo-chant
-data AssignRevealedDataBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state ConcealedData)
-                       | confidentialState (seal XSealBlindSealTxPtr, state ConcealedData)
-                       | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state RevealedData)
-                       | revealed (seal XSealBlindSealTxPtr, state RevealedData)
--- urn:ubideco:semid:GBLt8m4DjojpH2tLJQdSYjCpfmYEQzMY6MDptoUiqBsU#kilo-family-minimum
-data AssignRevealedDataBlindSealTxid :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state ConcealedData)
-                       | confidentialState (seal XSealBlindSealTxid, state ConcealedData)
-                       | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state RevealedData)
-                       | revealed (seal XSealBlindSealTxid, state RevealedData)
--- urn:ubideco:semid:9C9FFDS8HCuTpseRp8R4B8XULZsWdp9JTvrmXmJjWKLX#moment-rabbit-ambient
-data AssignRevealedValueBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state ConcealedFungible)
-                       | confidentialState (seal XSealBlindSealTxPtr, state ConcealedFungible)
-                       | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state RevealedFungible)
-                       | revealed (seal XSealBlindSealTxPtr, state RevealedFungible)
--- urn:ubideco:semid:CZ6L13AWVT2QFdgjzWTca9pvLEFsm3wmszKrvJ3u4JjA#cabaret-asia-flipper
-data AssignRevealedValueBlindSealTxid :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state ConcealedFungible)
-                       | confidentialState (seal XSealBlindSealTxid, state ConcealedFungible)
-                       | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state RevealedFungible)
-                       | revealed (seal XSealBlindSealTxid, state RevealedFungible)
--- urn:ubideco:semid:8V73NTKvhVbbofS9Ne2KmDKC4ZjnWxK5iGaavvmMQWkU#uncle-smoke-bishop
-data AssignVoidStateBlindSealTxPtr :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state VoidState)
-                       | confidentialState (seal XSealBlindSealTxPtr, state VoidState)
-                       | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state VoidState)
-                       | revealed (seal XSealBlindSealTxPtr, state VoidState)
--- urn:ubideco:semid:FSUnkjzFs2NyU91Q5mfqQ46eLdjmi3m4eh8afpc39ScM#blue-general-sting
-data AssignVoidStateBlindSealTxid :: confidential (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state VoidState)
-                       | confidentialState (seal XSealBlindSealTxid, state VoidState)
-                       | confidentialSeal (seal BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}, state VoidState)
-                       | revealed (seal XSealBlindSealTxid, state VoidState)
+-- urn:ubideco:semid:86oEReUQtpkBF5ag57qt8QYeRoADcnsYVWUhd1hZYF9B#police-castle-fractal
+data AssignRevealedAttachBlindSealTxPtr :: confidential (seal XChainSecretSeal, state ConcealedAttach)
+                       | confidentialState (seal XChainBlindSealTxPtr, state ConcealedAttach)
+                       | confidentialSeal (seal XChainSecretSeal, state RevealedAttach)
+                       | revealed (seal XChainBlindSealTxPtr, state RevealedAttach)
+-- urn:ubideco:semid:GMetkMHmE6pvWF7v4cVkh5FQW1cBWSb4F38oge4Le8wG#parker-locate-madrid
+data AssignRevealedAttachBlindSealTxid :: confidential (seal XChainSecretSeal, state ConcealedAttach)
+                       | confidentialState (seal XChainBlindSealTxid, state ConcealedAttach)
+                       | confidentialSeal (seal XChainSecretSeal, state RevealedAttach)
+                       | revealed (seal XChainBlindSealTxid, state RevealedAttach)
+-- urn:ubideco:semid:AbqXzWbeC4QTe3RGDg1tgZoq8Cg79wPfgxC418mbLZWc#fabric-exotic-road
+data AssignRevealedDataBlindSealTxPtr :: confidential (seal XChainSecretSeal, state ConcealedData)
+                       | confidentialState (seal XChainBlindSealTxPtr, state ConcealedData)
+                       | confidentialSeal (seal XChainSecretSeal, state RevealedData)
+                       | revealed (seal XChainBlindSealTxPtr, state RevealedData)
+-- urn:ubideco:semid:8DRTcwcPXjALBUhs8QSutcQj4KyxejP6nVGpmSPcma5s#iron-design-king
+data AssignRevealedDataBlindSealTxid :: confidential (seal XChainSecretSeal, state ConcealedData)
+                       | confidentialState (seal XChainBlindSealTxid, state ConcealedData)
+                       | confidentialSeal (seal XChainSecretSeal, state RevealedData)
+                       | revealed (seal XChainBlindSealTxid, state RevealedData)
+-- urn:ubideco:semid:HpDAZ3iWVWNFP5oUrXNSifNop1wHGmfK7csUXkWbf3jE#avatar-house-ammonia
+data AssignRevealedValueBlindSealTxPtr :: confidential (seal XChainSecretSeal, state ConcealedFungible)
+                       | confidentialState (seal XChainBlindSealTxPtr, state ConcealedFungible)
+                       | confidentialSeal (seal XChainSecretSeal, state RevealedFungible)
+                       | revealed (seal XChainBlindSealTxPtr, state RevealedFungible)
+-- urn:ubideco:semid:DFdcr9izr4NmVJJojKFXWPPYnWVM3RNU2K6oxMhDZmYx#popular-vista-urgent
+data AssignRevealedValueBlindSealTxid :: confidential (seal XChainSecretSeal, state ConcealedFungible)
+                       | confidentialState (seal XChainBlindSealTxid, state ConcealedFungible)
+                       | confidentialSeal (seal XChainSecretSeal, state RevealedFungible)
+                       | revealed (seal XChainBlindSealTxid, state RevealedFungible)
+-- urn:ubideco:semid:6Nr3ZJAAV8ukSmVJHChmUkbGFzdAbCjzXbmoxrDNcmwc#slogan-change-green
+data AssignVoidStateBlindSealTxPtr :: confidential (seal XChainSecretSeal, state VoidState)
+                       | confidentialState (seal XChainBlindSealTxPtr, state VoidState)
+                       | confidentialSeal (seal XChainSecretSeal, state VoidState)
+                       | revealed (seal XChainBlindSealTxPtr, state VoidState)
+-- urn:ubideco:semid:BqQbSTu2tdDVLMnTx2rpKFYF47oEwrc2fGrTZGzDrueV#classic-cubic-ingrid
+data AssignVoidStateBlindSealTxid :: confidential (seal XChainSecretSeal, state VoidState)
+                       | confidentialState (seal XChainBlindSealTxid, state VoidState)
+                       | confidentialSeal (seal XChainSecretSeal, state VoidState)
+                       | revealed (seal XChainBlindSealTxid, state VoidState)
 -- urn:ubideco:semid:A9sThAqgwKPfuJcR4GDfTQHUAbbS5sbEXG5XVk7FZHEg#hunter-hello-retro
 data AssignmentType   :: U16
 -- urn:ubideco:semid:Bu8iXz4MmJnuUMW6AFAepa8BAa4DXLVAMdrNrkLh3S7a#granite-history-canvas
@@ -220,26 +220,26 @@ data OpId             :: [Byte ^ 32]
 data Opout            :: op OpId
                        , ty AssignmentType
                        , no U16
--- urn:ubideco:semid:GNcKtjWdcEiXtDX9RQuR8zwNB845PScyvgjzuCvy5Dsu#algebra-pardon-othello
+-- urn:ubideco:semid:6D7oEZGP4eHYSgfJeP1Dyc6Qgc4ph4budoDSuFmtJ5zj#jungle-quota-front
 data OutputAssignmentRevealedAttach :: opout Opout
-                       , seal XSealExplicitSeal
+                       , seal XChainExplicitSealTxid
                        , state RevealedAttach
-                       , witness WitnessId?
--- urn:ubideco:semid:3PB4sX4TDJMyLTk5yzm7DQbWhpcMzoHDriV3dYZd9VcL#alibi-credit-spain
+                       , witness XChainTxid?
+-- urn:ubideco:semid:7eRgyX7MZuLw9bdqGZRMJezC36u53CQ8vUsrwpuU3ATz#shake-vega-snow
 data OutputAssignmentRevealedData :: opout Opout
-                       , seal XSealExplicitSeal
+                       , seal XChainExplicitSealTxid
                        , state RevealedData
-                       , witness WitnessId?
--- urn:ubideco:semid:J1nZUtrWPX18FyXxDcRvyZK8tv2BKLJN6G8riUETUKNm#mars-scholar-potato
+                       , witness XChainTxid?
+-- urn:ubideco:semid:4SNmowDSb3dv7WASKKpiRRWsmr9t5VjULSmYRPV3CcyC#burma-plate-degree
 data OutputAssignmentRevealedValue :: opout Opout
-                       , seal XSealExplicitSeal
+                       , seal XChainExplicitSealTxid
                        , state RevealedFungible
-                       , witness WitnessId?
--- urn:ubideco:semid:9tNXvuRwNLhtMduizsdKtiUhLSewRmwRL7knBegcQ7o4#sunday-random-vincent
+                       , witness XChainTxid?
+-- urn:ubideco:semid:3EAtrfNu9ptxdaoZkCzj2UvzUMSwDci52kkgJoYBWuz3#garden-eagle-bagel
 data OutputAssignmentVoidState :: opout Opout
-                       , seal XSealExplicitSeal
+                       , seal XChainExplicitSealTxid
                        , state VoidState
-                       , witness WitnessId?
+                       , witness XChainTxid?
 -- urn:ubideco:semid:5twbh2U5hyaowidwum1iRNCqebBLxTuZTuNPt3SaRT13#nepal-delta-earth
 data PedersenCommitment :: [Byte ^ 33]
 -- urn:ubideco:semid:73TpZuiyRWAuV9GRSj9H7tDf3JXwVvmT4teTXhKxdue1#invent-stock-result
@@ -324,26 +324,29 @@ data Valencies        :: {ValencyType ^ ..0xff}
 data ValencyType      :: U16
 -- urn:ubideco:semid:49HkbZvGaJE3phHjLBMQCR3NK1sGA462HJr5BkqQ6YQr#nectar-ceramic-driver
 data VoidState        :: ()
--- urn:ubideco:semid:6tBUyNPX3Y24WzHhEXjr4E3wASpLTWqoUhEWSuvsjWEq#carrot-iris-wheel
-data WitnessAnchor    :: witnessOrd WitnessOrd, witnessId WitnessId
--- urn:ubideco:semid:EEYT7goTNgX2nNFoKosg6FKx1CDSyFWHKNK1TRySs6gr#axiom-gyro-album
-data WitnessId        :: bitcoin Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -}
-                       | liquid Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -}
+-- urn:ubideco:semid:HtyS3FW8duiA8o1TV13jiK5BUJtebY1JvghTkz9sVuNM#henry-prepare-company
+data WitnessAnchor    :: witnessOrd WitnessOrd, witnessId XChainTxid
 -- urn:ubideco:semid:JAhqqYxn4oDEDefAeAHFcAtNQJqQBHo6q5xqbviV3L3q#jacket-fiction-sound
 data WitnessOrd       :: onChain WitnessPos
                        | offChain ()
 -- urn:ubideco:semid:zaGYZruf2pxiZqk1bjmoivxK8DkFycoyjQB52uHYhGL#robert-average-artist
 data WitnessPos       :: height U32, timestamp I64
--- urn:ubideco:semid:6WtKj1L8L7zpomz5ExJnV6wBrsbtLnshuJLrkCids7ky#camera-kilo-morning
-data XAnchor          :: bitcoin AnchorSet
+-- urn:ubideco:semid:7ypgzk2JFQpQQbtUFua1uyGu6N7aUxkiXokmjrJDNQnq#floor-emotion-riviera
+data XChainAnchorSet  :: bitcoin AnchorSet
                        | liquid AnchorSet
--- urn:ubideco:semid:4Nr4GNjqYM4KpeLkWEFjy8FxYs1jVV6CCum7CMftHCm9#studio-evening-camera
-data XSealBlindSealTxPtr :: bitcoin BPCore.BlindSealTxPtr {- urn:ubideco:semid:5ircUcbD1UjEKsAKMcvdfjS9UcVCEcs47BWAZ5UDqYdr#austria-icon-waiter -}
+-- urn:ubideco:semid:Ag5MktqPQsAWFoJEaUfNw6AvjYtLFXMwupw9chdEwEKE#prime-loyal-escort
+data XChainBlindSealTxPtr :: bitcoin BPCore.BlindSealTxPtr {- urn:ubideco:semid:5ircUcbD1UjEKsAKMcvdfjS9UcVCEcs47BWAZ5UDqYdr#austria-icon-waiter -}
                        | liquid BPCore.BlindSealTxPtr {- urn:ubideco:semid:5ircUcbD1UjEKsAKMcvdfjS9UcVCEcs47BWAZ5UDqYdr#austria-icon-waiter -}
--- urn:ubideco:semid:Age9RPnuptagg4d8Q6wixptyT6y6yRFvTSWEkrT6H6Vc#ford-guitar-tonight
-data XSealBlindSealTxid :: bitcoin BPCore.BlindSealTxid {- urn:ubideco:semid:Cu4G4njDjd2mgmz4FsvFAwRKwBpksmZ9CB9AJhSNx5dk#kimono-golf-price -}
+-- urn:ubideco:semid:9kefL6S8Tr5a7hMTPg6M8Ruh9Da7s3LV6L4HJDQH69vJ#biology-domain-domain
+data XChainBlindSealTxid :: bitcoin BPCore.BlindSealTxid {- urn:ubideco:semid:Cu4G4njDjd2mgmz4FsvFAwRKwBpksmZ9CB9AJhSNx5dk#kimono-golf-price -}
                        | liquid BPCore.BlindSealTxid {- urn:ubideco:semid:Cu4G4njDjd2mgmz4FsvFAwRKwBpksmZ9CB9AJhSNx5dk#kimono-golf-price -}
--- urn:ubideco:semid:5yxE75Qk7ScEuNdG4NXGASsGkpyUVQB3FVaxm3q8w1zK#carbon-network-hilton
-data XSealExplicitSeal :: bitcoin BPCore.ExplicitSeal {- urn:ubideco:semid:4rfbAaHqg7T4ukXDQRtFZzXipcf9FJwr5eUUXsj6YWJo#table-liberal-hope -}
-                       | liquid BPCore.ExplicitSeal {- urn:ubideco:semid:4rfbAaHqg7T4ukXDQRtFZzXipcf9FJwr5eUUXsj6YWJo#table-liberal-hope -}
+-- urn:ubideco:semid:F6RPJgZMGop2K5QBdWK1bP57ifXo5g76Jet1fEtbi3Wh#ozone-quick-hippie
+data XChainExplicitSealTxid :: bitcoin BPCore.ExplicitSealTxid {- urn:ubideco:semid:FxnQvXfa6koZmm6uyZCPwnGrMi3UzY588kKN9ipN72L#antenna-darwin-emotion -}
+                       | liquid BPCore.ExplicitSealTxid {- urn:ubideco:semid:FxnQvXfa6koZmm6uyZCPwnGrMi3UzY588kKN9ipN72L#antenna-darwin-emotion -}
+-- urn:ubideco:semid:FmzeQkRM31bz3UNNTZTV2DWDyCMVSabzQWcdb1PpL2Ao#palace-random-taxi
+data XChainSecretSeal :: bitcoin BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}
+                       | liquid BPCore.SecretSeal {- urn:ubideco:semid:81NKrdc9pBoBjsKaGBVN9wXLG4tKjkK4f8DLj7TNMZxh#santana-domingo-needle -}
+-- urn:ubideco:semid:AFRnr7FmAC7DtKDQZj9eCzuf9Tp8E6UckpVouwDmwq5S#cubic-museum-lemon
+data XChainTxid       :: bitcoin Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -}
+                       | liquid Bitcoin.Txid {- urn:ubideco:semid:C1GfCrG7AXu2sFhRBspd7KpJK2YgyTkVy6pty5rZynRs#cowboy-diego-betty -}
 

@@ -29,7 +29,7 @@ use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
-use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, LIB_NAME_RGB};
+use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, XChain, LIB_NAME_RGB};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -49,48 +49,14 @@ impl AnchoredBundle {
     pub fn bundle_id(&self) -> BundleId { self.bundle.bundle_id() }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub enum XAnchor<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
-    #[strict_type(tag = 0x00)]
-    Bitcoin(AnchorSet<P>),
-
-    #[strict_type(tag = 0x01)]
-    Liquid(AnchorSet<P>),
-}
+pub type XAnchor<P = mpc::MerkleProof> = XChain<AnchorSet<P>>;
 
 impl<P: mpc::Proof + StrictDumb> XAnchor<P> {
     #[inline]
-    pub fn layer1(&self) -> Layer1 {
-        match self {
-            XAnchor::Bitcoin(_) => Layer1::Bitcoin,
-            XAnchor::Liquid(_) => Layer1::Liquid,
-        }
-    }
+    pub fn witness_id(&self) -> Option<WitnessId> { self.maybe_map_ref(|set| set.txid()) }
 
     #[inline]
-    pub fn witness_id(&self) -> WitnessId {
-        match self {
-            XAnchor::Bitcoin(anchor) => WitnessId::Bitcoin(anchor.txid_unchecked()),
-            XAnchor::Liquid(anchor) => WitnessId::Liquid(anchor.txid_unchecked()),
-        }
-    }
-
-    fn map<Q: mpc::Proof + StrictDumb, E>(
-        self,
-        f: impl FnOnce(AnchorSet<P>) -> Result<AnchorSet<Q>, E>,
-    ) -> Result<XAnchor<Q>, E> {
-        match self {
-            XAnchor::Bitcoin(anchor) => f(anchor).map(XAnchor::Bitcoin),
-            XAnchor::Liquid(anchor) => f(anchor).map(XAnchor::Liquid),
-        }
-    }
+    pub fn witness_id_unchecked(&self) -> WitnessId { self.map_ref(|set| set.txid_unchecked()) }
 }
 
 impl XAnchor<mpc::MerkleBlock> {
@@ -111,7 +77,7 @@ impl XAnchor<mpc::MerkleBlock> {
         self,
         contract_id: ContractId,
     ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.map(|a| a.into_merkle_proof(contract_id))
+        self.try_map(|a| a.into_merkle_proof(contract_id))
     }
 }
 
@@ -129,7 +95,7 @@ impl XAnchor<mpc::MerkleProof> {
         contract_id: ContractId,
         bundle_id: BundleId,
     ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.map(|a| a.into_merkle_block(contract_id, bundle_id))
+        self.try_map(|a| a.into_merkle_block(contract_id, bundle_id))
     }
 }
 
@@ -163,11 +129,11 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
         }
     }
 
-    pub(crate) fn txid_unchecked(&self) -> Txid {
+    pub fn txid_unchecked(&self) -> Txid {
         match self {
             AnchorSet::Tapret(a) => a.txid,
             AnchorSet::Opret(a) => a.txid,
-            AnchorSet::Dual { tapret, .. } => tapret.txid,
+            AnchorSet::Dual { tapret, opret: _ } => tapret.txid,
         }
     }
 
