@@ -42,7 +42,8 @@ pub use assignments::{
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
 pub use bundle::{BundleId, TransitionBundle, Vin};
 pub use contract::{
-    ContractHistory, ContractState, GlobalOrd, KnownState, Opout, OpoutParseError, OutputAssignment,
+    AssignmentWitness, ContractHistory, ContractState, GlobalOrd, KnownState, Opout,
+    OpoutParseError, OutputAssignment,
 };
 pub use data::{ConcealedData, RevealedData, VoidState};
 pub use fungible::{

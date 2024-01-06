@@ -98,6 +98,34 @@ impl FromStr for Opout {
 pub trait KnownState: Debug + StrictDumb + StrictEncode + StrictDecode + Ord + Clone {}
 impl<S: ExposedState> KnownState for S {}
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, From)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum AssignmentWitness {
+    #[display("~")]
+    #[strict_type(tag = 0, dumb)]
+    Absent,
+
+    #[from]
+    #[display(inner)]
+    #[strict_type(tag = 1)]
+    Present(WitnessId),
+}
+
+impl From<Option<WitnessId>> for AssignmentWitness {
+    fn from(value: Option<WitnessId>) -> Self {
+        match value {
+            None => AssignmentWitness::Absent,
+            Some(id) => AssignmentWitness::Present(id),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -110,7 +138,7 @@ pub struct OutputAssignment<State: KnownState> {
     pub opout: Opout,
     pub seal: XOutputSeal,
     pub state: State,
-    pub witness: Option<WitnessId>,
+    pub witness: AssignmentWitness,
 }
 
 impl<State: KnownState> PartialEq for OutputAssignment<State> {
@@ -166,7 +194,7 @@ impl<State: KnownState> OutputAssignment<State> {
                  match anchor's chain",
             ),
             state,
-            witness: Some(witness_id),
+            witness: witness_id.into(),
         }
     }
 
@@ -188,7 +216,7 @@ impl<State: KnownState> OutputAssignment<State> {
                  information since it comes from genesis or extension",
             ),
             state,
-            witness: None,
+            witness: AssignmentWitness::Absent,
         }
     }
 
