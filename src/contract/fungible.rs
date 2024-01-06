@@ -290,7 +290,7 @@ impl RevealedValue {
 
     /// Constructs new state using the provided value and random generator for
     /// creating blinding factor.
-    pub fn with_random_blinding<R: Rng + RngCore>(
+    pub fn with_rng<R: Rng + RngCore>(
         value: impl Into<FungibleState>,
         rng: &mut R,
         tag: AssetTag,
@@ -531,7 +531,7 @@ mod test {
     fn commitments_determinism() {
         let tag = AssetTag::from_byte_array([1u8; 32]);
 
-        let value = RevealedValue::with_random_blinding(15, &mut thread_rng(), tag);
+        let value = RevealedValue::with_rng(15, &mut thread_rng(), tag);
 
         let generators = (0..10)
             .map(|_| {
@@ -548,15 +548,11 @@ mod test {
         let mut r = thread_rng();
         let tag = AssetTag::from_byte_array([1u8; 32]);
 
-        let a = PedersenCommitment::commit(&RevealedValue::with_random_blinding(15, &mut r, tag))
-            .into_inner();
-        let b = PedersenCommitment::commit(&RevealedValue::with_random_blinding(7, &mut r, tag))
-            .into_inner();
+        let a = PedersenCommitment::commit(&RevealedValue::with_rng(15, &mut r, tag)).into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::with_rng(7, &mut r, tag)).into_inner();
 
-        let c = PedersenCommitment::commit(&RevealedValue::with_random_blinding(13, &mut r, tag))
-            .into_inner();
-        let d = PedersenCommitment::commit(&RevealedValue::with_random_blinding(9, &mut r, tag))
-            .into_inner();
+        let c = PedersenCommitment::commit(&RevealedValue::with_rng(13, &mut r, tag)).into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::with_rng(9, &mut r, tag)).into_inner();
 
         assert!(!secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
     }

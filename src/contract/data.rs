@@ -27,6 +27,7 @@ use std::io::Write;
 use amplify::confinement::SmallBlob;
 use amplify::hex::ToHex;
 use amplify::{Bytes32, Wrapper};
+use bp::secp256k1::rand::{random, Rng, RngCore};
 use commit_verify::{CommitEncode, CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
 
@@ -77,6 +78,26 @@ impl StrictSerialize for DataState {}
 pub struct RevealedData {
     pub value: DataState,
     pub salt: u128,
+}
+
+impl RevealedData {
+    /// Constructs new state using the provided value using random blinding
+    /// factor.
+    pub fn new_random_salt(value: impl Into<DataState>) -> Self { Self::with_salt(value, random()) }
+
+    /// Constructs new state using the provided value and random generator for
+    /// creating blinding factor.
+    pub fn with_rng<R: Rng + RngCore>(value: impl Into<DataState>, rng: &mut R) -> Self {
+        Self::with_salt(value, rng.gen())
+    }
+
+    /// Convenience constructor.
+    pub fn with_salt(value: impl Into<DataState>, salt: u128) -> Self {
+        Self {
+            value: value.into(),
+            salt,
+        }
+    }
 }
 
 impl ExposedState for RevealedData {
