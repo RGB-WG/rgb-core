@@ -95,7 +95,7 @@ impl FromStr for Opout {
 /// Trait used by contract state. Unlike [`ExposedState`] it doesn't allow
 /// concealment of the state, i.e. may contain incomplete data without blinding
 /// factors, asset tags etc.
-pub trait KnownState: Debug + StrictDumb + StrictEncode + StrictDecode + Ord + Clone {}
+pub trait KnownState: Debug + StrictDumb + StrictEncode + StrictDecode + Eq + Clone {}
 impl<S: ExposedState> KnownState for S {}
 
 impl KnownState for () {}
