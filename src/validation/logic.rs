@@ -260,7 +260,7 @@ impl<Root: SchemaRoot> Schema<Root> {
             for data in set {
                 if self
                     .type_system
-                    .strict_deserialize_type(*sem_id, data.as_ref())
+                    .strict_deserialize_type(*sem_id, data.value.as_ref())
                     .is_err()
                 {
                     status.add_failure(validation::Failure::SchemaInvalidGlobalValue(

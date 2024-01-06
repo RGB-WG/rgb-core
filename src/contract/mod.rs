@@ -45,7 +45,7 @@ pub use contract::{
     AssignmentWitness, ContractHistory, ContractState, GlobalOrd, KnownState, Opout,
     OpoutParseError, OutputAssignment,
 };
-pub use data::{ConcealedData, RevealedData, VoidState};
+pub use data::{ConcealedData, DataState, RevealedData, VoidState};
 pub use fungible::{
     AssetTag, BlindingFactor, BlindingParseError, ConcealedValue, FungibleState,
     InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,

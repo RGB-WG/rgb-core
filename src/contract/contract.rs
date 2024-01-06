@@ -34,10 +34,10 @@ use amplify::hex;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
-    Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
-    RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState, WitnessAnchor,
-    WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
+    Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, DataState, ExposedSeal,
+    ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach,
+    RevealedData, RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState,
+    WitnessAnchor, WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -97,6 +97,9 @@ impl FromStr for Opout {
 /// factors, asset tags etc.
 pub trait KnownState: Debug + StrictDumb + StrictEncode + StrictDecode + Ord + Clone {}
 impl<S: ExposedState> KnownState for S {}
+
+impl KnownState for () {}
+impl KnownState for DataState {}
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
