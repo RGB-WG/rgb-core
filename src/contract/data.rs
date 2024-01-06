@@ -71,6 +71,10 @@ impl Conceal for VoidState {
 pub struct DataState(SmallBlob);
 impl StrictSerialize for DataState {}
 
+impl From<RevealedData> for DataState {
+    fn from(data: RevealedData) -> Self { data.value }
+}
+
 #[derive(Clone, Eq, PartialEq, Hash)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
