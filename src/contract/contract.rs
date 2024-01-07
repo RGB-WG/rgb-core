@@ -101,7 +101,7 @@ impl<S: ExposedState> KnownState for S {}
 impl KnownState for () {}
 impl KnownState for DataState {}
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, From)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom)]
 #[cfg_attr(
