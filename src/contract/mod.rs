@@ -42,10 +42,10 @@ pub use assignments::{
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
 pub use bundle::{BundleId, TransitionBundle, Vin};
 pub use contract::{
-    AttachOutput, ContractHistory, ContractState, DataOutput, FungibleOutput, GlobalOrd, Opout,
-    OpoutParseError, OutputAssignment, RightsOutput,
+    AssignmentWitness, ContractHistory, ContractState, GlobalOrd, KnownState, Opout,
+    OpoutParseError, OutputAssignment,
 };
-pub use data::{ConcealedData, RevealedData, VoidState};
+pub use data::{ConcealedData, DataState, RevealedData, VoidState};
 pub use fungible::{
     AssetTag, BlindingFactor, BlindingParseError, ConcealedValue, FungibleState,
     InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,

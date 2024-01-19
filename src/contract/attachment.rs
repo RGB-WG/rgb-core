@@ -24,7 +24,7 @@ use std::str::FromStr;
 
 use amplify::{ByteArray, Bytes32};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
-use bp::secp256k1::rand::{thread_rng, RngCore};
+use bp::secp256k1::rand::{random, Rng, RngCore};
 use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::StrictEncode;
 
@@ -83,13 +83,28 @@ pub struct RevealedAttach {
 }
 
 impl RevealedAttach {
-    /// Creates new revealed attachment for the attachment id and MIME type.
-    /// Uses `thread_rng` to initialize [`RevealedAttach::salt`].
-    pub fn new(id: AttachId, media_type: MediaType) -> Self {
+    /// Constructs new state using the provided value using random blinding
+    /// factor.
+    pub fn new_random_salt(id: AttachId, media_type: impl Into<MediaType>) -> Self {
+        Self::with_salt(id, media_type, random())
+    }
+
+    /// Constructs new state using the provided value and random generator for
+    /// creating blinding factor.
+    pub fn with_rng<R: Rng + RngCore>(
+        id: AttachId,
+        media_type: impl Into<MediaType>,
+        rng: &mut R,
+    ) -> Self {
+        Self::with_salt(id, media_type, rng.next_u64())
+    }
+
+    /// Convenience constructor.
+    pub fn with_salt(id: AttachId, media_type: impl Into<MediaType>, salt: u64) -> Self {
         Self {
             id,
-            media_type,
-            salt: thread_rng().next_u64(),
+            media_type: media_type.into(),
+            salt,
         }
     }
 }

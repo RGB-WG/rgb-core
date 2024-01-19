@@ -20,12 +20,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::fmt::{self, Debug, Display, Formatter};
+use core::fmt::{self, Debug, Formatter};
+use std::cmp::Ordering;
+use std::io::Write;
 
-use amplify::confinement::SmallVec;
+use amplify::confinement::SmallBlob;
 use amplify::hex::ToHex;
 use amplify::{Bytes32, Wrapper};
-use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
+use bp::secp256k1::rand::{random, Rng, RngCore};
+use commit_verify::{CommitEncode, CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, ExposedState};
@@ -57,13 +60,49 @@ impl Conceal for VoidState {
     fn conceal(&self) -> Self::Concealed { *self }
 }
 
-#[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, From)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(Wrapper, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, From, Display, Default)]
+#[display(LowerHex)]
+#[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
-#[commit_encode(conceal)]
+#[commit_encode(strategy = strict)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct RevealedData(SmallVec<u8>);
+pub struct DataState(SmallBlob);
+impl StrictSerialize for DataState {}
+
+impl From<RevealedData> for DataState {
+    fn from(data: RevealedData) -> Self { data.value }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
+pub struct RevealedData {
+    pub value: DataState,
+    pub salt: u128,
+}
+
+impl RevealedData {
+    /// Constructs new state using the provided value using random blinding
+    /// factor.
+    pub fn new_random_salt(value: impl Into<DataState>) -> Self { Self::with_salt(value, random()) }
+
+    /// Constructs new state using the provided value and random generator for
+    /// creating blinding factor.
+    pub fn with_rng<R: Rng + RngCore>(value: impl Into<DataState>, rng: &mut R) -> Self {
+        Self::with_salt(value, rng.gen())
+    }
+
+    /// Convenience constructor.
+    pub fn with_salt(value: impl Into<DataState>, salt: u128) -> Self {
+        Self {
+            value: value.into(),
+            salt,
+        }
+    }
+}
 
 impl ExposedState for RevealedData {
     type Confidential = ConcealedData;
@@ -73,24 +112,39 @@ impl ExposedState for RevealedData {
 
 impl Conceal for RevealedData {
     type Concealed = ConcealedData;
+
     fn conceal(&self) -> Self::Concealed { ConcealedData::commit(self) }
 }
 
-impl StrictSerialize for RevealedData {}
-
-impl Debug for RevealedData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let val = match String::from_utf8(self.0.to_inner()) {
-            Ok(s) => s,
-            Err(_) => self.0.to_hex(),
-        };
-
-        f.debug_tuple("RevealedData").field(&val).finish()
+impl CommitEncode for RevealedData {
+    fn commit_encode(&self, e: &mut impl Write) {
+        e.write_all(&self.value).ok();
+        e.write_all(&self.salt.to_le_bytes()).ok();
     }
 }
 
-impl Display for RevealedData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { f.write_str(&self.as_ref().to_hex()) }
+impl PartialOrd for RevealedData {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for RevealedData {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.value.cmp(&other.value) {
+            Ordering::Equal => self.salt.cmp(&other.salt),
+            other => other,
+        }
+    }
+}
+
+impl Debug for RevealedData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let val = String::from_utf8(self.value.to_vec()).unwrap_or_else(|_| self.value.to_hex());
+
+        f.debug_struct("RevealedData")
+            .field("value", &val)
+            .field("salt", &self.salt)
+            .finish()
+    }
 }
 
 /// Confidential version of an structured state data.

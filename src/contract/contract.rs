@@ -34,10 +34,10 @@ use amplify::hex;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, ExposedState,
-    Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach, RevealedData,
-    RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState, WitnessAnchor,
-    WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
+    Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, DataState, ExposedSeal,
+    ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach,
+    RevealedData, RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState,
+    WitnessAnchor, WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -92,7 +92,44 @@ impl FromStr for Opout {
     }
 }
 
-#[derive(Clone, Eq, Debug)]
+/// Trait used by contract state. Unlike [`ExposedState`] it doesn't allow
+/// concealment of the state, i.e. may contain incomplete data without blinding
+/// factors, asset tags etc.
+pub trait KnownState: Debug + StrictDumb + StrictEncode + StrictDecode + Eq + Clone {}
+impl<S: ExposedState> KnownState for S {}
+
+impl KnownState for () {}
+impl KnownState for DataState {}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum AssignmentWitness {
+    #[display("~")]
+    #[strict_type(tag = 0, dumb)]
+    Absent,
+
+    #[from]
+    #[display(inner)]
+    #[strict_type(tag = 1)]
+    Present(WitnessId),
+}
+
+impl From<Option<WitnessId>> for AssignmentWitness {
+    fn from(value: Option<WitnessId>) -> Self {
+        match value {
+            None => AssignmentWitness::Absent,
+            Some(id) => AssignmentWitness::Present(id),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -100,14 +137,14 @@ impl FromStr for Opout {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct OutputAssignment<State: ExposedState> {
+pub struct OutputAssignment<State: KnownState> {
     pub opout: Opout,
     pub seal: XOutputSeal,
     pub state: State,
-    pub witness: Option<WitnessId>,
+    pub witness: AssignmentWitness,
 }
 
-impl<State: ExposedState> PartialEq for OutputAssignment<State> {
+impl<State: KnownState> PartialEq for OutputAssignment<State> {
     fn eq(&self, other: &Self) -> bool {
         if self.opout == other.opout &&
             (self.seal != other.seal ||
@@ -127,11 +164,11 @@ impl<State: ExposedState> PartialEq for OutputAssignment<State> {
     }
 }
 
-impl<State: ExposedState> PartialOrd for OutputAssignment<State> {
+impl<State: KnownState> PartialOrd for OutputAssignment<State> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl<State: ExposedState> Ord for OutputAssignment<State> {
+impl<State: KnownState> Ord for OutputAssignment<State> {
     fn cmp(&self, other: &Self) -> Ordering {
         if self == other {
             return Ordering::Equal;
@@ -140,7 +177,7 @@ impl<State: ExposedState> Ord for OutputAssignment<State> {
     }
 }
 
-impl<State: ExposedState> OutputAssignment<State> {
+impl<State: KnownState> OutputAssignment<State> {
     /// # Panics
     ///
     /// If the processing is done on invalid stash data, the seal is
@@ -160,7 +197,7 @@ impl<State: ExposedState> OutputAssignment<State> {
                  match anchor's chain",
             ),
             state,
-            witness: Some(witness_id),
+            witness: witness_id.into(),
         }
     }
 
@@ -182,7 +219,17 @@ impl<State: ExposedState> OutputAssignment<State> {
                  information since it comes from genesis or extension",
             ),
             state,
-            witness: None,
+            witness: AssignmentWitness::Absent,
+        }
+    }
+
+    pub fn transmute<S: KnownState>(self) -> OutputAssignment<S>
+    where S: From<State> {
+        OutputAssignment {
+            opout: self.opout,
+            seal: self.seal,
+            state: self.state.into(),
+            witness: self.witness,
         }
     }
 }
@@ -234,11 +281,6 @@ impl GlobalOrd {
     }
 }
 
-pub type RightsOutput = OutputAssignment<VoidState>;
-pub type FungibleOutput = OutputAssignment<RevealedValue>;
-pub type DataOutput = OutputAssignment<RevealedData>;
-pub type AttachOutput = OutputAssignment<RevealedAttach>;
-
 /// Contract history accumulates raw data from the contract history, extracted
 /// from a series of consignments over the time. It does consensus ordering of
 /// the state data, but it doesn't interpret or validates the state against the
@@ -262,10 +304,10 @@ pub struct ContractHistory {
     contract_id: ContractId,
     #[getter(skip)]
     global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, RevealedData>>,
-    rights: LargeOrdSet<RightsOutput>,
-    fungibles: LargeOrdSet<FungibleOutput>,
-    data: LargeOrdSet<DataOutput>,
-    attach: LargeOrdSet<AttachOutput>,
+    rights: LargeOrdSet<OutputAssignment<VoidState>>,
+    fungibles: LargeOrdSet<OutputAssignment<RevealedValue>>,
+    data: LargeOrdSet<OutputAssignment<RevealedData>>,
+    attach: LargeOrdSet<OutputAssignment<RevealedAttach>>,
 }
 
 impl ContractHistory {
