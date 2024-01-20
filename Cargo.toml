@@ -29,7 +29,7 @@ aluvm = { version = "~0.11.0-beta.2", features = ["std"] }
 commit_verify = { version = "~0.11.0-beta.3", features = ["rand", "derive"] }
 single_use_seals = "~0.11.0-beta.3"
 bp-core = { version = "~0.11.0-beta.3" }
-secp256k1-zkp = { version = "0.9.2", features = ["rand", "rand-std", "global-context"] } # TODO: Update version before the release
+secp256k1-zkp = { version = "0.10.1", features = ["rand", "rand-std", "global-context"] } # TODO: Update version before the release
 baid58 = "~0.4.4"
 mime = "~0.3.17"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
