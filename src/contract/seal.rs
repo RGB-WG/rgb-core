@@ -36,7 +36,7 @@ use commit_verify::{mpc, strategies, CommitEncode, CommitStrategy, Conceal};
 use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType};
 
-use crate::{XChain, LIB_NAME_RGB};
+use crate::{XChain, XOutpoint, LIB_NAME_RGB};
 
 pub type GenesisSeal = SingleBlindSeal<Method>;
 pub type GraphSeal = ChainBlindSeal<Method>;
@@ -117,8 +117,17 @@ impl<Seal: TxoSeal> TxoSeal for XChain<Seal> {
 pub struct SealPreimage(Bytes32);
  */
 
+impl From<XChain<GenesisSeal>> for XOutpoint {
+    #[inline]
+    fn from(seal: XChain<GenesisSeal>) -> Self { seal.to_outpoint() }
+}
+
 impl XChain<GenesisSeal> {
-    pub fn transmutate(self) -> XChain<GraphSeal> { self.map(|seal| seal.transmutate()) }
+    pub fn transmutate(self) -> XChain<GraphSeal> { self.map_ref(|seal| seal.transmutate()) }
+
+    /// Converts seal into a transaction outpoint.
+    #[inline]
+    pub fn to_outpoint(&self) -> XOutpoint { self.map_ref(GenesisSeal::to_outpoint) }
 }
 
 impl<U: ExposedSeal> XChain<U> {

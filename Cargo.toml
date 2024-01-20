@@ -60,3 +60,6 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = [ "all" ]
+
+[patch.crates-io]
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
