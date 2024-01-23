@@ -37,7 +37,6 @@ use core::ops::Deref;
 use core::str::FromStr;
 use std::io;
 use std::io::Write;
-use std::time::SystemTime;
 
 use amplify::confinement::U8;
 use amplify::hex::ToHex;
@@ -45,6 +44,7 @@ use amplify::hex::ToHex;
 // that we do not use the standard secp256k1zkp library
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
+use chrono::Local;
 use commit_verify::{
     CommitEncode, CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256, UntaggedProtocol,
 };
@@ -76,11 +76,13 @@ pub struct AssetTag(
 impl AssetTag {
     pub fn new_random(contract_domain: impl AsRef<str>, assignment_type: AssignmentType) -> Self {
         let rand = thread_rng().next_u64();
-        let timestamp = SystemTime::now().elapsed().expect("system time error");
+        let timestamp = Local::now()
+            .timestamp_nanos_opt()
+            .expect("local time error");
         let mut hasher = Sha256::default();
         hasher.input_with_len::<U8>(contract_domain.as_ref().as_bytes());
         hasher.input_raw(&assignment_type.to_le_bytes());
-        hasher.input_raw(&timestamp.as_nanos().to_le_bytes());
+        hasher.input_raw(&timestamp.to_le_bytes());
         hasher.input_raw(&rand.to_le_bytes());
         AssetTag::from(hasher.finish())
     }
