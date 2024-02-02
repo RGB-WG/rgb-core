@@ -161,12 +161,12 @@ where T: StrictDumb + StrictEncode
     fn strict_encode<W: TypedWrite>(&self, writer: W) -> io::Result<W> {
         writer.write_union::<Self>(|w| {
             let w = w
-                .define_newtype::<T>(fname!(Self::ALL_VARIANTS[0].1))
-                .define_newtype::<T>(fname!(Self::ALL_VARIANTS[1].1))
+                .define_newtype::<T>(vname!(Self::ALL_VARIANTS[0].1))
+                .define_newtype::<T>(vname!(Self::ALL_VARIANTS[1].1))
                 .complete();
             Ok(match self {
-                XChain::Bitcoin(t) => w.write_newtype(fname!(Self::ALL_VARIANTS[0].1), t)?,
-                XChain::Liquid(t) => w.write_newtype(fname!(Self::ALL_VARIANTS[1].1), t)?,
+                XChain::Bitcoin(t) => w.write_newtype(vname!(Self::ALL_VARIANTS[0].1), t)?,
+                XChain::Liquid(t) => w.write_newtype(vname!(Self::ALL_VARIANTS[1].1), t)?,
             }
             .complete())
         })
