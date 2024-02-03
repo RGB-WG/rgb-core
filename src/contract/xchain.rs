@@ -22,13 +22,12 @@
 
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
-use std::io::Write;
 use std::str::FromStr;
 use std::{fmt, io};
 
 use amplify::confinement::TinyOrdSet;
 use bp::{Bp, Outpoint};
-use commit_verify::{CommitEncode, Conceal};
+use commit_verify::Conceal;
 use strict_encoding::{
     DecodeError, DefineUnion, ReadTuple, ReadUnion, StrictDecode, StrictDumb, StrictEncode,
     StrictSum, StrictType, StrictUnion, TypedRead, TypedWrite, WriteUnion,
@@ -88,14 +87,6 @@ impl AltLayer1 {
     serde(crate = "serde_crate", transparent)
 )]
 pub struct AltLayer1Set(TinyOrdSet<AltLayer1>);
-
-impl CommitEncode for AltLayer1Set {
-    fn commit_encode(&self, e: &mut impl Write) {
-        for c in self.iter() {
-            e.write_all(&[*c as u8]).ok();
-        }
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(

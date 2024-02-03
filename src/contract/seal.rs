@@ -23,7 +23,6 @@
 use core::fmt::Debug;
 use std::cmp::Ordering;
 use std::hash::Hash;
-use std::io::Write;
 use std::num::NonZeroU32;
 
 use bp::dbc::Method;
@@ -32,7 +31,7 @@ pub use bp::seals::txout::TxoSeal;
 use bp::seals::txout::{BlindSeal, CloseMethod, ExplicitSeal, SealTxid, VerifyError, Witness};
 pub use bp::seals::SecretSeal;
 use bp::{dbc, Outpoint, Tx, Txid, Vout};
-use commit_verify::{mpc, strategies, CommitEncode, CommitStrategy, Conceal};
+use commit_verify::{mpc, Conceal};
 use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType};
 
@@ -275,21 +274,10 @@ impl<Dbc: dbc::Proof, Seal: TxoSeal> SealWitness<Seal> for XWitness<Dbc> {
     }
 }
 
-impl<Id: SealTxid> CommitStrategy for XChain<BlindSeal<Id>> {
-    type Strategy = strategies::Strict;
-}
-
 impl<Id: SealTxid> XChain<BlindSeal<Id>> {
     /// Converts revealed seal into concealed.
     #[inline]
     pub fn to_secret_seal(&self) -> XChain<SecretSeal> { self.conceal() }
-}
-
-impl CommitEncode for XChain<SecretSeal> {
-    fn commit_encode(&self, e: &mut impl Write) {
-        e.write_all(&[self.layer1() as u8]).ok();
-        self.as_reduced_unsafe().commit_encode(e);
-    }
 }
 
 #[cfg(test)]
@@ -313,7 +301,7 @@ mod test {
         let secret = reveal.to_secret_seal();
         assert_eq!(
             secret.to_string(),
-            "bc:utxob:6JZb8te-bSUsZzCJk-op9E4D8zf-SHTDu2t4W-T21NaPNnb-58DFM9"
+            "bc:utxob:MEtUtHY-Nk2QBNbkL-vnV1aAHcx-eYAwSr16Q-qGa5tKND8-MR3WG6"
         );
         assert_eq!(reveal.to_secret_seal(), reveal.conceal())
     }

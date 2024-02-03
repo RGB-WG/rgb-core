@@ -27,7 +27,7 @@ use std::str::FromStr;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
-use commit_verify::{CommitStrategy, CommitmentId};
+use commit_verify::{CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
 use strict_types::TypeSystem;
 
@@ -57,7 +57,6 @@ impl GlobalStateType {
 #[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -73,7 +72,6 @@ impl ExtensionType {
 #[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -90,7 +88,7 @@ impl TransitionType {
 
 /// Schema identifier.
 ///
-/// Schema identifier commits to all of the schema data.
+/// Schema identifier commits to all the schema data.
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -105,6 +103,14 @@ pub struct SchemaId(
     #[from([u8; 32])]
     Bytes32,
 );
+
+impl From<Sha256> for SchemaId {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for SchemaId {
+    const TAG: &'static str = "urn:lnpbp:rgb:schema#2024-02-03";
+}
 
 impl ToBaid58<32> for SchemaId {
     const HRI: &'static str = "sc";
@@ -144,6 +150,8 @@ pub type SubSchema = Schema<RootSchema>;
 #[derive(Clone, Eq, Default, Debug)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = SchemaId)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -161,6 +169,7 @@ pub struct Schema<Root: SchemaRoot> {
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
     /// Type system
+    // TODO: Commit to type system id, not the type system itself
     pub type_system: TypeSystem,
     /// Validation code.
     pub script: Script,
@@ -178,21 +187,12 @@ impl<Root: SchemaRoot> PartialOrd for Schema<Root> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl<Root: SchemaRoot> CommitStrategy for Schema<Root> {
-    type Strategy = commit_verify::strategies::Strict;
-}
-
-impl<Root: SchemaRoot> CommitmentId for Schema<Root> {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:schema:v01#202302A";
-    type Id = SchemaId;
-}
-
 impl<Root: SchemaRoot> StrictSerialize for Schema<Root> {}
 impl<Root: SchemaRoot> StrictDeserialize for Schema<Root> {}
 
 impl<Root: SchemaRoot> Schema<Root> {
     #[inline]
-    pub fn schema_id(&self) -> SchemaId { self.commitment_id() }
+    pub fn schema_id(&self) -> SchemaId { self.commit_id() }
 
     pub fn blank_transition(&self) -> TransitionSchema {
         let mut schema = TransitionSchema::default();

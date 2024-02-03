@@ -29,7 +29,7 @@ use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::hex::{FromHex, ToHex};
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
-use commit_verify::{mpc, CommitmentId, Conceal};
+use commit_verify::{mpc, CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
@@ -43,8 +43,6 @@ use crate::{
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -64,8 +62,6 @@ impl<'a> IntoIterator for &'a Valencies {
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -85,8 +81,6 @@ impl<'a> IntoIterator for &'a Redeemed {
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -141,6 +135,14 @@ pub struct OpId(
     #[from([u8; 32])]
     Bytes32,
 );
+
+impl From<Sha256> for OpId {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for OpId {
+    const TAG: &'static str = "urn:lnpbp:rgb:operation#2024-02-03";
+}
 
 impl FromStr for OpId {
     type Err = hex::Error;
@@ -266,6 +268,7 @@ pub trait Operation {
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
+#[commit_encode(strategy = conceal, id = OpId)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -278,6 +281,7 @@ pub struct Genesis {
     pub alt_layers1: AltLayer1Set,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
+    // TODO: Merklize assignments for the commitment
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
 }
@@ -289,6 +293,7 @@ impl StrictDeserialize for Genesis {}
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
+#[commit_encode(strategy = conceal, id = OpId)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -300,6 +305,7 @@ pub struct Extension {
     pub extension_type: ExtensionType,
     pub metadata: SmallBlob,
     pub globals: GlobalState,
+    // TODO: Merklize assignments for the commitment
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
@@ -312,6 +318,7 @@ impl StrictDeserialize for Extension {}
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
+#[commit_encode(strategy = conceal, id = OpId)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -324,6 +331,7 @@ pub struct Transition {
     pub metadata: SmallBlob,
     pub globals: GlobalState,
     pub inputs: Inputs,
+    // TODO: Merklize assignments for the commitment
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
 }
@@ -332,7 +340,7 @@ impl StrictSerialize for Transition {}
 impl StrictDeserialize for Transition {}
 
 impl Conceal for Genesis {
-    type Concealed = Genesis;
+    type Concealed = Self;
     fn conceal(&self) -> Self::Concealed {
         let mut concealed = self.clone();
         concealed
@@ -341,15 +349,10 @@ impl Conceal for Genesis {
             .for_each(|(_, a)| *a = a.conceal());
         concealed
     }
-}
-
-impl CommitmentId for Genesis {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:genesis:v02#202304";
-    type Id = ContractId;
 }
 
 impl Conceal for Transition {
-    type Concealed = Transition;
+    type Concealed = Self;
     fn conceal(&self) -> Self::Concealed {
         let mut concealed = self.clone();
         concealed
@@ -358,15 +361,10 @@ impl Conceal for Transition {
             .for_each(|(_, a)| *a = a.conceal());
         concealed
     }
-}
-
-impl CommitmentId for Transition {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v02#23B";
-    type Id = OpId;
 }
 
 impl Conceal for Extension {
-    type Concealed = Extension;
+    type Concealed = Self;
     fn conceal(&self) -> Self::Concealed {
         let mut concealed = self.clone();
         concealed
@@ -375,11 +373,6 @@ impl Conceal for Extension {
             .for_each(|(_, a)| *a = a.conceal());
         concealed
     }
-}
-
-impl CommitmentId for Extension {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:extension:v02#2304";
-    type Id = OpId;
 }
 
 impl Transition {
@@ -406,7 +399,7 @@ impl Operation for Genesis {
     fn full_type(&self) -> OpFullType { OpFullType::Genesis }
 
     #[inline]
-    fn id(&self) -> OpId { OpId(self.commitment_id().into_inner()) }
+    fn id(&self) -> OpId { OpId(self.commit_id().into_inner()) }
 
     #[inline]
     fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
@@ -448,7 +441,7 @@ impl Operation for Extension {
     fn full_type(&self) -> OpFullType { OpFullType::StateExtension(self.extension_type) }
 
     #[inline]
-    fn id(&self) -> OpId { self.commitment_id() }
+    fn id(&self) -> OpId { self.commit_id() }
 
     #[inline]
     fn contract_id(&self) -> ContractId { self.contract_id }
@@ -490,7 +483,7 @@ impl Operation for Transition {
     fn full_type(&self) -> OpFullType { OpFullType::StateTransition(self.transition_type) }
 
     #[inline]
-    fn id(&self) -> OpId { self.commitment_id() }
+    fn id(&self) -> OpId { self.commit_id() }
 
     #[inline]
     fn contract_id(&self) -> ContractId { self.contract_id }
