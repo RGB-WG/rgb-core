@@ -21,13 +21,12 @@
 // limitations under the License.
 
 use std::collections::BTreeMap;
-use std::io::Write;
 
 use amplify::confinement::{Confined, U16};
 use amplify::{Bytes32, Wrapper};
 use bp::Vout;
-use commit_verify::{mpc, CommitEncode, CommitmentId};
-use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
+use commit_verify::{mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
+use strict_encoding::{StrictDumb, StrictEncode};
 
 use super::OpId;
 use crate::{Transition, LIB_NAME_RGB};
@@ -51,6 +50,14 @@ pub struct BundleId(
     Bytes32,
 );
 
+impl From<Sha256> for BundleId {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for BundleId {
+    const TAG: &'static str = "urn:lnpbp:rgb:bundle#2024-02-03";
+}
+
 impl From<BundleId> for mpc::Message {
     fn from(id: BundleId) -> Self { mpc::Message::from_inner(id.into_inner()) }
 }
@@ -73,15 +80,9 @@ pub struct TransitionBundle {
 }
 
 impl CommitEncode for TransitionBundle {
-    fn commit_encode(&self, e: &mut impl Write) {
-        let w = StrictWriter::with(u32::MAX as usize, e);
-        self.input_map.strict_encode(w).ok();
-    }
-}
+    type CommitmentId = BundleId;
 
-impl CommitmentId for TransitionBundle {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:bundle:v1#20230306";
-    type Id = BundleId;
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to(&self.input_map); }
 }
 
 impl StrictDumb for TransitionBundle {
@@ -94,5 +95,5 @@ impl StrictDumb for TransitionBundle {
 }
 
 impl TransitionBundle {
-    pub fn bundle_id(&self) -> BundleId { self.commitment_id() }
+    pub fn bundle_id(&self) -> BundleId { self.commit_id() }
 }

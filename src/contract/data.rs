@@ -22,13 +22,12 @@
 
 use core::fmt::{self, Debug, Formatter};
 use std::cmp::Ordering;
-use std::io::Write;
 
 use amplify::confinement::SmallBlob;
 use amplify::hex::ToHex;
 use amplify::{Bytes32, Wrapper};
 use bp::secp256k1::rand::{random, Rng, RngCore};
-use commit_verify::{CommitEncode, CommitVerify, Conceal, StrictEncodedProtocol};
+use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, ExposedState};
@@ -39,8 +38,6 @@ use crate::{StateCommitment, StateData, StateType, LIB_NAME_RGB};
 #[display("void")]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct VoidState(());
 
@@ -65,8 +62,6 @@ impl Conceal for VoidState {
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct DataState(SmallBlob);
 impl StrictSerialize for DataState {}
@@ -116,13 +111,6 @@ impl Conceal for RevealedData {
     fn conceal(&self) -> Self::Concealed { ConcealedData::commit(self) }
 }
 
-impl CommitEncode for RevealedData {
-    fn commit_encode(&self, e: &mut impl Write) {
-        e.write_all(&self.value).ok();
-        e.write_all(&self.salt.to_le_bytes()).ok();
-    }
-}
-
 impl PartialOrd for RevealedData {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
@@ -154,8 +142,6 @@ impl Debug for RevealedData {
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedData")]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
