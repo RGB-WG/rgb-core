@@ -5,7 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.11.0-beta.2"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.11#084d3b96dde13b666917783849c30e35bd150548"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.11#d218e9a770618db53187ec2ef02b7b4ace72c54a"
 dependencies = [
  "amplify",
  "baid58",
@@ -189,7 +189,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#43c5ea00bdd538d4f2c1170a0c8fb2444c67da29"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#e5da72f8ffae49ccca6a9dbabf24f961cb619761"
 dependencies = [
  "amplify",
  "chrono",
@@ -203,7 +203,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#43c5ea00bdd538d4f2c1170a0c8fb2444c67da29"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#e5da72f8ffae49ccca6a9dbabf24f961cb619761"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -221,7 +221,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#43c5ea00bdd538d4f2c1170a0c8fb2444c67da29"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#e5da72f8ffae49ccca6a9dbabf24f961cb619761"
 dependencies = [
  "amplify",
  "base85",
@@ -235,7 +235,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#43c5ea00bdd538d4f2c1170a0c8fb2444c67da29"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#e5da72f8ffae49ccca6a9dbabf24f961cb619761"
 dependencies = [
  "amplify",
  "baid58",
@@ -292,7 +292,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#ca6866221b9cdcd9d68297753cf75af57aa7ef86"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#61b0f4969da8a69cef438de6b3085344c5626ec2"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -304,7 +304,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#ca6866221b9cdcd9d68297753cf75af57aa7ef86"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#61b0f4969da8a69cef438de6b3085344c5626ec2"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -757,8 +757,8 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "2.6.2"
-source = "git+https://github.com/strict-types/strict-encoding?branch=ident#9c20b327178b449cbb24a18c7db65edeb50a9d5b"
+version = "2.7.0"
+source = "git+https://github.com/strict-types/strict-encoding?branch=refactor/io#f95dbcbf8b01a4ea92dea92bd6492e9ae8c73c67"
 dependencies = [
  "amplify",
  "half",
@@ -768,8 +768,8 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding_derive"
-version = "2.0.1"
-source = "git+https://github.com/strict-types/strict-encoding?branch=ident#9c20b327178b449cbb24a18c7db65edeb50a9d5b"
+version = "2.7.0"
+source = "git+https://github.com/strict-types/strict-encoding?branch=refactor/io#f95dbcbf8b01a4ea92dea92bd6492e9ae8c73c67"
 dependencies = [
  "amplify_syn",
  "heck",
@@ -780,8 +780,8 @@ dependencies = [
 
 [[package]]
 name = "strict_types"
-version = "1.6.3"
-source = "git+https://github.com/strict-types/strict-types?branch=vesper#b424b47eff526088417eccf85441211db4f953a1"
+version = "2.7.0"
+source = "git+https://github.com/strict-types/strict-types?branch=refactor/io#ada11c04ab6e6483e769885f2fe93eae0bd42f85"
 dependencies = [
  "amplify",
  "baid58",
