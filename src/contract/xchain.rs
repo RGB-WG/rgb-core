@@ -42,7 +42,14 @@ pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
 pub type XOutpoint = XChain<Outpoint>;
 
 impl From<XOutputSeal> for XOutpoint {
-    fn from(seal: XChain<OutputSeal>) -> Self { seal.map(Outpoint::from) }
+    #[inline]
+    fn from(seal: XChain<OutputSeal>) -> Self { seal.to_outpoint() }
+}
+
+impl XOutputSeal {
+    /// Converts seal into a transaction outpoint.
+    #[inline]
+    pub fn to_outpoint(&self) -> XOutpoint { self.map_ref(OutputSeal::to_outpoint) }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]

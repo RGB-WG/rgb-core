@@ -44,7 +44,7 @@ use amplify::hex::ToHex;
 // that we do not use the standard secp256k1zkp library
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
-use chrono::Local;
+use chrono::{DateTime, Utc};
 use commit_verify::{
     CommitEncode, CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256, UntaggedProtocol,
 };
@@ -75,15 +75,26 @@ pub struct AssetTag(
 
 impl AssetTag {
     pub fn new_random(contract_domain: impl AsRef<str>, assignment_type: AssignmentType) -> Self {
-        let rand = thread_rng().next_u64();
-        let timestamp = Local::now()
-            .timestamp_nanos_opt()
-            .expect("local time error");
+        AssetTag::new_deterministic(
+            contract_domain,
+            assignment_type,
+            Utc::now(),
+            thread_rng().next_u64(),
+        )
+    }
+
+    pub fn new_deterministic(
+        contract_domain: impl AsRef<str>,
+        assignment_type: AssignmentType,
+        timestamp: DateTime<Utc>,
+        salt: u64,
+    ) -> Self {
+        let timestamp = timestamp.timestamp();
         let mut hasher = Sha256::default();
         hasher.input_with_len::<U8>(contract_domain.as_ref().as_bytes());
         hasher.input_raw(&assignment_type.to_le_bytes());
         hasher.input_raw(&timestamp.to_le_bytes());
-        hasher.input_raw(&rand.to_le_bytes());
+        hasher.input_raw(&salt.to_le_bytes());
         AssetTag::from(hasher.finish())
     }
 }
