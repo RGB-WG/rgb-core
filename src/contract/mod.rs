@@ -33,6 +33,7 @@ mod bundle;
 #[allow(clippy::module_inception)]
 mod contract;
 mod xchain;
+mod id;
 
 pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
 pub use assignments::{
@@ -51,9 +52,9 @@ pub use fungible::{
     InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
 };
 pub use global::{GlobalState, GlobalValues};
+pub use id::{ContractId, OpId};
 pub use operations::{
-    ContractId, Extension, Genesis, Input, Inputs, OpId, OpRef, Operation, Redeemed, Transition,
-    Valencies,
+    Extension, Genesis, Input, Inputs, OpRef, Operation, Redeemed, Transition, Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,

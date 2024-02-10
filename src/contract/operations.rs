@@ -21,21 +21,17 @@
 // limitations under the License.
 
 use std::collections::{btree_map, btree_set};
-use std::fmt::{self, Display, Formatter};
 use std::iter;
-use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
-use amplify::hex::{FromHex, ToHex};
-use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
-use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
-use commit_verify::{mpc, CommitId, CommitmentId, Conceal, DigestExt, Sha256};
+use amplify::Wrapper;
+use commit_verify::{CommitId, Conceal};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, AssignmentType, Assignments, AssignmentsRef, Ffv, GenesisSeal, GlobalState,
-    GraphSeal, Opout, ReservedByte, TypedAssigns, LIB_NAME_RGB,
+    AltLayer1Set, AssignmentType, Assignments, AssignmentsRef, ContractId, Ffv, GenesisSeal,
+    GlobalState, GraphSeal, OpId, Opout, ReservedByte, TypedAssigns, LIB_NAME_RGB,
 };
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
@@ -116,103 +112,6 @@ impl Input {
             reserved: default!(),
         }
     }
-}
-
-/// Unique operation (genesis, extensions & state transition) identifier
-/// equivalent to the commitment hash
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
-#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[display(Self::to_hex)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct OpId(
-    #[from]
-    #[from([u8; 32])]
-    Bytes32,
-);
-
-impl From<Sha256> for OpId {
-    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
-}
-
-impl CommitmentId for OpId {
-    const TAG: &'static str = "urn:lnpbp:rgb:operation#2024-02-03";
-}
-
-impl FromStr for OpId {
-    type Err = hex::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
-}
-
-impl OpId {
-    pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
-        Bytes32::copy_from_slice(slice).map(Self)
-    }
-}
-
-/// Unique contract identifier equivalent to the contract genesis commitment
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
-#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct ContractId(
-    #[from]
-    #[from([u8; 32])]
-    Bytes32,
-);
-
-impl PartialEq<OpId> for ContractId {
-    fn eq(&self, other: &OpId) -> bool { self.to_byte_array() == other.to_byte_array() }
-}
-impl PartialEq<ContractId> for OpId {
-    fn eq(&self, other: &ContractId) -> bool { self.to_byte_array() == other.to_byte_array() }
-}
-
-impl ContractId {
-    pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
-        Bytes32::copy_from_slice(slice).map(Self)
-    }
-}
-
-impl ToBaid58<32> for ContractId {
-    const HRI: &'static str = "rgb";
-    const CHUNKING: Option<Chunking> = CHUNKING_32CHECKSUM;
-    fn to_baid58_payload(&self) -> [u8; 32] { self.to_byte_array() }
-    fn to_baid58_string(&self) -> String { self.to_string() }
-}
-impl FromBaid58<32> for ContractId {}
-impl Display for ContractId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
-            write!(f, "{::^}", self.to_baid58())
-        } else {
-            write!(f, "{::^.3}", self.to_baid58())
-        }
-    }
-}
-impl FromStr for ContractId {
-    type Err = Baid58ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_baid58_maybe_chunked_str(s, ':', '#')
-    }
-}
-
-impl From<mpc::ProtocolId> for ContractId {
-    fn from(id: mpc::ProtocolId) -> Self { ContractId(id.into_inner()) }
-}
-
-impl From<ContractId> for mpc::ProtocolId {
-    fn from(id: ContractId) -> Self { mpc::ProtocolId::from_inner(id.into_inner()) }
 }
 
 /// RGB contract operation API, defined as trait
@@ -399,7 +298,7 @@ impl Operation for Genesis {
     fn full_type(&self) -> OpFullType { OpFullType::Genesis }
 
     #[inline]
-    fn id(&self) -> OpId { OpId(self.commit_id().into_inner()) }
+    fn id(&self) -> OpId { self.commit_id() }
 
     #[inline]
     fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
@@ -624,6 +523,11 @@ impl<'op> Operation for OpRef<'op> {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
+    use amplify::ByteArray;
+    use baid58::ToBaid58;
+
     use super::*;
 
     #[test]
