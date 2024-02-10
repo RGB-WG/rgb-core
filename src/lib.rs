@@ -64,26 +64,25 @@ pub use prelude::*;
 pub const LIB_NAME_RGB: &str = "RGB";
 
 /// Reserved byte.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display("reserved")]
 #[derive(StrictType, StrictEncode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct ReservedByte(u8);
+pub struct ReservedBytes<const LEN: usize>([u8; LEN]);
+
+impl<const LEN: usize> Default for ReservedBytes<LEN> {
+    fn default() -> Self { Self([0; LEN]) }
+}
 
 mod _reserved {
     use strict_encoding::{DecodeError, ReadTuple, StrictDecode, TypedRead};
 
-    use crate::ReservedByte;
+    use crate::ReservedBytes;
 
-    impl StrictDecode for ReservedByte {
+    impl<const LEN: usize> StrictDecode for ReservedBytes<LEN> {
         fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
             let reserved = reader.read_tuple(|r| r.read_field().map(Self))?;
-            if reserved != ReservedByte::default() {
+            if reserved != ReservedBytes::<LEN>::default() {
                 Err(DecodeError::DataIntegrityError(format!(
                     "unsupported reserved byte value indicating a future RGB version. Please \
                      update your software, or, if the problem persists, contact your vendor \

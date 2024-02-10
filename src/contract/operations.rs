@@ -31,7 +31,7 @@ use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
     AltLayer1Set, AssignmentType, Assignments, AssignmentsRef, ContractId, Ffv, GenesisSeal,
-    GlobalState, GraphSeal, OpId, Opout, ReservedByte, TypedAssigns, LIB_NAME_RGB,
+    GlobalState, GraphSeal, OpId, Opout, ReservedBytes, TypedAssigns, LIB_NAME_RGB,
 };
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
@@ -102,7 +102,8 @@ impl<'a> IntoIterator for &'a Inputs {
 #[display("{prev_out}")]
 pub struct Input {
     pub prev_out: Opout,
-    reserved: ReservedByte,
+    #[cfg_attr(feature = "serde", serde(skip))]
+    reserved: ReservedBytes<2>,
 }
 
 impl Input {
