@@ -2,7 +2,7 @@ Transition rec
   ffv is U16 aka=Ffv
   contractId bytes len=32 aka=ContractId
   transitionType is U16 aka=TransitionType
-  metadata bytes len=0..MAX16
+  metadata bytes len=0..MAX16 aka=Metadata
   globals map len=0..MAX8 aka=GlobalState
     key is U16 aka=GlobalStateType
     value list len=1..MAX16 aka=GlobalValues
@@ -15,7 +15,7 @@ Transition rec
         op bytes len=32 aka=OpId
         ty is U16 aka=AssignmentType
         no is U16
-      reserved is U8 aka=ReservedByte
+      reserved bytes len=2 aka=ReservedBytes2
   assignments map len=0..MAX8 aka=AssignmentsBlindSealTxPtr
     key is U16 aka=AssignmentType
     TypedAssignsBlindSealTxPtr union -- mapped to

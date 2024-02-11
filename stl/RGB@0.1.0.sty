@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:ENn5cEDW7QUStLzY6HBXjZFARAbrGHv3tXmdQ3QGzoU3#option-data-mimosa
+  Id: urn:ubideco:stl:BQugurBw6JSc3iF92RZipSMbFgsRU9M6jkYjSctpMzX2#ecology-nobel-prince
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -13,6 +13,7 @@ typelib RGB
 
 import CommitVerify#4SZ2EgWWtC5LsNXmNpAzogNHZoaZNTCwU3SQhAYwDX6A#citizen-fiction-corner
   use MerkleHash#culture-metro-modular
+  use StrictHash#cheese-final-locate
   use MerkleProof#labor-hilton-magenta
 
 import Std#55f8bsTvyh7zAeYAiNwL9G1DxgwXzDvE8edcTFJz3Q9H#milan-poncho-gray
@@ -151,6 +152,11 @@ data AssignmentsBlindSealTxid : {AssignmentType -> ^ ..0xff TypedAssignsBlindSea
 @mnemonic(delta-member-agenda)
 data AttachId          : [Byte ^ 32]
 
+@mnemonic(goblin-accent-number)
+data BaseCommitment    : schemaId SchemaId
+                       , testnet Std.Bool#laser-madam-maxwell
+                       , altLayers1 CommitVerify.StrictHash#cheese-final-locate
+
 @mnemonic(agenda-ivory-blast)
 data BlindingFactor    : [Byte ^ 32]
 
@@ -182,11 +188,11 @@ data ContractState     : schema SchemaSchema, history ContractHistory
 @mnemonic(diana-archive-liquid)
 data DataState         : [Byte]
 
-@mnemonic(deluxe-history-acrobat)
+@mnemonic(cubic-inca-maestro)
 data Extension         : ffv Ffv
                        , contractId ContractId
                        , extensionType ExtensionType
-                       , metadata [Byte]
+                       , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
                        , redeemed Redeemed
@@ -212,12 +218,12 @@ data FungibleState     : bits64#8 U64
 data FungibleType      : unsigned64Bit#8
 
 
-@mnemonic(relax-emotion-nitro)
+@mnemonic(darwin-between-pilot)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , testnet Std.Bool#laser-madam-maxwell
                        , altLayers1 AltLayer1Set
-                       , metadata [Byte]
+                       , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
                        , valencies Valencies
@@ -243,8 +249,8 @@ data GlobalStateType   : U16
 @mnemonic(bicycle-europe-shampoo)
 data GlobalValues      : [RevealedData ^ 1..]
 
-@mnemonic(classic-chariot-domino)
-data Input             : prevOut Opout, reserved ReservedByte
+@mnemonic(joseph-price-summer)
+data Input             : prevOut Opout, reserved ReservedBytes2
 
 @mnemonic(puzzle-guru-oregano)
 data Inputs            : {Input ^ ..0xff}
@@ -253,11 +259,24 @@ data Inputs            : {Input ^ ..0xff}
 data MediaType         : any#255
 
 
+@mnemonic(moment-patriot-patron)
+data Metadata          : [Byte]
+
 @mnemonic(deal-orca-aztec)
 data NoiseDumb         : [Byte ^ 512]
 
 @mnemonic(unicorn-empire-mama)
 data Occurrences       : min U16, max U16
+
+@mnemonic(canyon-climax-promo)
+data OpCommitment      : ffv Ffv
+                       , opType TypeCommitment
+                       , metadata CommitVerify.StrictHash#cheese-final-locate
+                       , globals CommitVerify.MerkleHash#culture-metro-modular
+                       , inputs CommitVerify.MerkleHash#culture-metro-modular
+                       , assignments CommitVerify.MerkleHash#culture-metro-modular
+                       , redeemed CommitVerify.StrictHash#cheese-final-locate
+                       , valencies CommitVerify.StrictHash#cheese-final-locate
 
 @mnemonic(slow-samuel-ceramic)
 data OpId              : [Byte ^ 32]
@@ -300,8 +319,8 @@ data RangeProof        : placeholder#255 NoiseDumb
 @mnemonic(scoop-press-scuba)
 data Redeemed          : {ValencyType -> ^ ..0xff OpId}
 
-@mnemonic(balloon-justin-place)
-data ReservedByte      : U8
+@mnemonic(pocket-habitat-soviet)
+data ReservedBytes2    : [Byte ^ 2]
 
 @mnemonic(cigar-network-event)
 data RevealedAttach    : id AttachId
@@ -352,11 +371,11 @@ data StateSchema       : declarative ()
                        | structured StrictTypes.SemId#cargo-plasma-catalog
                        | attachment MediaType
 
-@mnemonic(folio-barbara-guru)
+@mnemonic(morph-romeo-float)
 data Transition        : ffv Ffv
                        , contractId ContractId
                        , transitionType TransitionType
-                       , metadata [Byte]
+                       , metadata Metadata
                        , globals GlobalState
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
@@ -374,6 +393,11 @@ data TransitionSchema  : metadata StrictTypes.SemId#cargo-plasma-catalog
 
 @mnemonic(puma-joshua-evita)
 data TransitionType    : U16
+
+@mnemonic(medusa-amigo-reunion)
+data TypeCommitment    : genesis BaseCommitment
+                       | transition (ContractId, TransitionType)
+                       | extension (ContractId, ExtensionType)
 
 @mnemonic(orchid-season-bishop)
 data TypedAssignsBlindSealTxPtr : declarative [AssignVoidStateBlindSealTxPtr]
