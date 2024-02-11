@@ -52,9 +52,12 @@ pub use fungible::{
     InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
 };
 pub use global::{GlobalState, GlobalValues};
-pub use id::{ContractId, OpId};
+pub use id::{
+    AssignmentCommitment, BaseCommitment, ContractId, GlobalCommitment, OpCommitment, OpId,
+    TypeCommitment,
+};
 pub use operations::{
-    Extension, Genesis, Input, Inputs, OpRef, Operation, Redeemed, Transition, Valencies,
+    Extension, Genesis, Input, Inputs, Metadata, OpRef, Operation, Redeemed, Transition, Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,

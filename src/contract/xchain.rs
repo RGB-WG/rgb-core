@@ -27,7 +27,7 @@ use std::{fmt, io};
 
 use amplify::confinement::TinyOrdSet;
 use bp::{Bp, Outpoint};
-use commit_verify::Conceal;
+use commit_verify::{Conceal, StrictHash};
 use strict_encoding::{
     DecodeError, DefineUnion, ReadTuple, ReadUnion, StrictDecode, StrictDumb, StrictEncode,
     StrictSum, StrictType, StrictUnion, TypedRead, TypedWrite, WriteUnion,
@@ -81,6 +81,8 @@ impl AltLayer1 {
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

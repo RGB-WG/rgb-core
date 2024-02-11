@@ -25,7 +25,7 @@ use std::iter;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
-use commit_verify::{CommitId, Conceal};
+use commit_verify::{CommitId, Conceal, MerkleHash, MerkleLeaves, StrictHash};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
@@ -39,10 +39,26 @@ use crate::{
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct Metadata(SmallBlob);
+
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
 )]
 pub struct Valencies(TinyOrdSet<schema::ValencyType>);
 
@@ -58,10 +74,12 @@ impl<'a> IntoIterator for &'a Valencies {
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", transparent)
 )]
 pub struct Redeemed(TinyOrdMap<schema::ValencyType, OpId>);
 
@@ -80,7 +98,7 @@ impl<'a> IntoIterator for &'a Redeemed {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", transparent)
 )]
 pub struct Inputs(TinyOrdSet<Input>);
 
@@ -91,9 +109,18 @@ impl<'a> IntoIterator for &'a Inputs {
     fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
 }
 
+impl MerkleLeaves for Inputs {
+    type Leaf = Input;
+    type LeafIter<'tmp> = <TinyOrdSet<Input> as MerkleLeaves>::LeafIter<'tmp>;
+
+    fn merkle_leaves(&self) -> Self::LeafIter<'_> { self.0.merkle_leaves() }
+}
+
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = MerkleHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -179,9 +206,8 @@ pub struct Genesis {
     pub schema_id: SchemaId,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
-    pub metadata: SmallBlob,
+    pub metadata: Metadata,
     pub globals: GlobalState,
-    // TODO: Merklize assignments for the commitment
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
 }
@@ -203,9 +229,8 @@ pub struct Extension {
     pub ffv: Ffv,
     pub contract_id: ContractId,
     pub extension_type: ExtensionType,
-    pub metadata: SmallBlob,
+    pub metadata: Metadata,
     pub globals: GlobalState,
-    // TODO: Merklize assignments for the commitment
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
@@ -228,10 +253,9 @@ pub struct Transition {
     pub ffv: Ffv,
     pub contract_id: ContractId,
     pub transition_type: TransitionType,
-    pub metadata: SmallBlob,
+    pub metadata: Metadata,
     pub globals: GlobalState,
     pub inputs: Inputs,
-    // TODO: Merklize assignments for the commitment
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
 }

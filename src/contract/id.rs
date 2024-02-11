@@ -20,16 +20,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::{fmt, vec};
 
 use amplify::hex::{FromHex, ToHex};
+use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
-use commit_verify::{mpc, CommitmentId, DigestExt, Sha256};
+use commit_verify::{
+    mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, Conceal, DigestExt, MerkleHash,
+    MerkleLeaves, Sha256, StrictHash,
+};
+use strict_encoding::StrictEncode;
 
-use crate::LIB_NAME_RGB;
+use crate::{
+    Assign, AssignmentType, Assignments, ConcealedData, ConcealedState, ConfidentialState,
+    ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState,
+    GlobalStateType, Redeemed, SchemaId, SecretSeal, Transition, TransitionType, TypedAssigns,
+    XChain, LIB_NAME_RGB,
+};
 
 /// Unique contract identifier equivalent to the contract genesis commitment
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
@@ -125,5 +135,197 @@ impl FromStr for OpId {
 impl OpId {
     pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
         Bytes32::copy_from_slice(slice).map(Self)
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+pub struct BaseCommitment {
+    pub schema_id: SchemaId,
+    pub testnet: bool,
+    pub alt_layers1: StrictHash,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Transition(strict_dumb!(), strict_dumb!()))]
+pub enum TypeCommitment {
+    #[strict_type(tag = 0)]
+    Genesis(BaseCommitment),
+
+    #[strict_type(tag = 1)]
+    Transition(ContractId, TransitionType),
+
+    #[strict_type(tag = 2)]
+    Extension(ContractId, ExtensionType),
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = OpId)]
+pub struct OpCommitment {
+    pub ffv: Ffv,
+    pub op_type: TypeCommitment,
+    pub metadata: StrictHash,
+    pub globals: MerkleHash,
+    pub inputs: MerkleHash,
+    pub assignments: MerkleHash,
+    pub redeemed: StrictHash,
+    pub valencies: StrictHash,
+}
+
+impl Genesis {
+    pub fn commit(&self) -> OpCommitment {
+        let base = BaseCommitment {
+            schema_id: self.schema_id,
+            testnet: self.testnet,
+            alt_layers1: self.alt_layers1.commit_id(),
+        };
+        OpCommitment {
+            ffv: self.ffv,
+            op_type: TypeCommitment::Genesis(base),
+            metadata: self.metadata.commit_id(),
+            globals: MerkleHash::merklize(&self.globals),
+            inputs: MerkleHash::void(0, u256::ZERO),
+            assignments: MerkleHash::merklize(&self.assignments),
+            redeemed: Redeemed::default().commit_id(),
+            valencies: self.valencies.commit_id(),
+        }
+    }
+}
+
+impl Transition {
+    pub fn commit(&self) -> OpCommitment {
+        OpCommitment {
+            ffv: self.ffv,
+            op_type: TypeCommitment::Transition(self.contract_id, self.transition_type),
+            metadata: self.metadata.commit_id(),
+            globals: MerkleHash::merklize(&self.globals),
+            inputs: MerkleHash::merklize(&self.inputs),
+            assignments: MerkleHash::merklize(&self.assignments),
+            redeemed: Redeemed::default().commit_id(),
+            valencies: self.valencies.commit_id(),
+        }
+    }
+}
+
+impl Extension {
+    pub fn commit(&self) -> OpCommitment {
+        OpCommitment {
+            ffv: self.ffv,
+            op_type: TypeCommitment::Extension(self.contract_id, self.extension_type),
+            metadata: self.metadata.commit_id(),
+            globals: MerkleHash::merklize(&self.globals),
+            inputs: MerkleHash::void(0, u256::ZERO),
+            assignments: MerkleHash::merklize(&self.assignments),
+            redeemed: self.redeemed.commit_id(),
+            valencies: self.valencies.commit_id(),
+        }
+    }
+}
+
+impl ConcealedState {
+    fn commit_encode(&self, e: &mut CommitEngine) {
+        match self {
+            ConcealedState::Void => {}
+            ConcealedState::Fungible(val) => e.commit_to(&val.commitment),
+            ConcealedState::Structured(dat) => e.commit_to(dat),
+            ConcealedState::Attachment(att) => e.commit_to(att),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+pub struct AssignmentCommitment {
+    pub ty: AssignmentType,
+    pub state: ConcealedState,
+    pub seal: XChain<SecretSeal>,
+}
+
+impl CommitEncode for AssignmentCommitment {
+    type CommitmentId = MerkleHash;
+
+    fn commit_encode(&self, e: &mut CommitEngine) {
+        e.commit_to(&self.ty);
+        self.state.commit_encode(e);
+        e.commit_to(&self.seal);
+        e.set_finished();
+    }
+}
+
+impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
+    pub fn commitment(&self, ty: AssignmentType) -> AssignmentCommitment {
+        let Self::Confidential { seal, state } = self.conceal() else {
+            unreachable!();
+        };
+        AssignmentCommitment {
+            ty,
+            state: state.state_commitment(),
+            seal,
+        }
+    }
+}
+
+impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
+    type Leaf = AssignmentCommitment;
+    type LeafIter<'tmp> = vec::IntoIter<AssignmentCommitment> where Seal: 'tmp;
+
+    fn merkle_leaves(&self) -> Self::LeafIter<'_> {
+        self.iter()
+            .flat_map(|(ty, a)| {
+                match a {
+                    TypedAssigns::Declarative(list) => {
+                        list.iter().map(|a| a.commitment(*ty)).collect::<Vec<_>>()
+                    }
+                    TypedAssigns::Fungible(list) => {
+                        list.iter().map(|a| a.commitment(*ty)).collect()
+                    }
+                    TypedAssigns::Structured(list) => {
+                        list.iter().map(|a| a.commitment(*ty)).collect()
+                    }
+                    TypedAssigns::Attachment(list) => {
+                        list.iter().map(|a| a.commitment(*ty)).collect()
+                    }
+                }
+                .into_iter()
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+pub struct GlobalCommitment {
+    pub ty: GlobalStateType,
+    pub state: ConcealedData,
+}
+
+impl CommitEncode for GlobalCommitment {
+    type CommitmentId = MerkleHash;
+
+    fn commit_encode(&self, e: &mut CommitEngine) {
+        e.commit_to(&self.ty);
+        e.commit_to(&self.state);
+        e.set_finished();
+    }
+}
+
+impl MerkleLeaves for GlobalState {
+    type Leaf = GlobalCommitment;
+    type LeafIter<'tmp> = vec::IntoIter<GlobalCommitment>;
+
+    fn merkle_leaves(&self) -> Self::LeafIter<'_> {
+        self.iter()
+            .flat_map(|(ty, list)| {
+                list.iter().map(|val| GlobalCommitment {
+                    ty: *ty,
+                    state: val.conceal(),
+                })
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 }
