@@ -84,4 +84,7 @@ fn main() {
 
     let tt = sys.type_tree("RGB.AnchoredBundle").unwrap();
     fs::write(format!("{dir}/AnchoredBundle.vesper",), format!("{tt}")).unwrap();
+
+    let tt = sys.type_tree("CommitVerify.MerkleNode").unwrap();
+    fs::write(format!("{dir}/MerkleNode.vesper",), format!("{tt}")).unwrap();
 }
