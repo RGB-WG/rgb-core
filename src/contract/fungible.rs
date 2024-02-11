@@ -55,7 +55,7 @@ use strict_encoding::{
 };
 
 use super::{ConfidentialState, ExposedState};
-use crate::{schema, AssignmentType, StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{schema, AssignmentType, ConcealedState, RevealedState, StateType, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
@@ -327,7 +327,7 @@ impl RevealedValue {
 impl ExposedState for RevealedValue {
     type Confidential = ConcealedValue;
     fn state_type(&self) -> StateType { StateType::Fungible }
-    fn state_data(&self) -> StateData { StateData::Fungible(*self) }
+    fn state_data(&self) -> RevealedState { RevealedState::Fungible(*self) }
 }
 
 impl Conceal for RevealedValue {
@@ -470,7 +470,7 @@ pub struct ConcealedValue {
 
 impl ConfidentialState for ConcealedValue {
     fn state_type(&self) -> StateType { StateType::Fungible }
-    fn state_commitment(&self) -> StateCommitment { StateCommitment::Fungible(*self) }
+    fn state_commitment(&self) -> ConcealedState { ConcealedState::Fungible(*self) }
 }
 
 impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {

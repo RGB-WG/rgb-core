@@ -31,7 +31,7 @@ use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, ExposedState};
-use crate::{StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{ConcealedState, RevealedState, StateType, LIB_NAME_RGB};
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Default)]
@@ -43,13 +43,13 @@ pub struct VoidState(());
 
 impl ConfidentialState for VoidState {
     fn state_type(&self) -> StateType { StateType::Void }
-    fn state_commitment(&self) -> StateCommitment { StateCommitment::Void }
+    fn state_commitment(&self) -> ConcealedState { ConcealedState::Void }
 }
 
 impl ExposedState for VoidState {
     type Confidential = VoidState;
     fn state_type(&self) -> StateType { StateType::Void }
-    fn state_data(&self) -> StateData { StateData::Void }
+    fn state_data(&self) -> RevealedState { RevealedState::Void }
 }
 
 impl Conceal for VoidState {
@@ -102,7 +102,7 @@ impl RevealedData {
 impl ExposedState for RevealedData {
     type Confidential = ConcealedData;
     fn state_type(&self) -> StateType { StateType::Structured }
-    fn state_data(&self) -> StateData { StateData::Structured(self.clone()) }
+    fn state_data(&self) -> RevealedState { RevealedState::Structured(self.clone()) }
 }
 
 impl Conceal for RevealedData {
@@ -155,7 +155,7 @@ pub struct ConcealedData(
 
 impl ConfidentialState for ConcealedData {
     fn state_type(&self) -> StateType { StateType::Structured }
-    fn state_commitment(&self) -> StateCommitment { StateCommitment::Structured(*self) }
+    fn state_commitment(&self) -> ConcealedState { ConcealedState::Structured(*self) }
 }
 
 impl CommitVerify<RevealedData, StrictEncodedProtocol> for ConcealedData {
