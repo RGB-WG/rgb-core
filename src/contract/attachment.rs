@@ -149,7 +149,7 @@ impl From<Sha256> for ConcealedAttach {
 }
 
 impl CommitmentId for ConcealedAttach {
-    const TAG: &'static str = "urn:lnpbp:rgb:state-attach#2024-02-12";
+    const TAG: &'static str = "urn:lnp-bp:rgb:state-attach#2024-02-12";
 }
 
 #[cfg(test)]

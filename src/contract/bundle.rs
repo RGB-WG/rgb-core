@@ -55,7 +55,7 @@ impl From<Sha256> for BundleId {
 }
 
 impl CommitmentId for BundleId {
-    const TAG: &'static str = "urn:lnpbp:rgb:bundle#2024-02-03";
+    const TAG: &'static str = "urn:lnp-bp:rgb:bundle#2024-02-03";
 }
 
 impl From<BundleId> for mpc::Message {

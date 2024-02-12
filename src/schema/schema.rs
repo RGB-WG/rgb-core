@@ -109,7 +109,7 @@ impl From<Sha256> for SchemaId {
 }
 
 impl CommitmentId for SchemaId {
-    const TAG: &'static str = "urn:lnpbp:rgb:schema#2024-02-03";
+    const TAG: &'static str = "urn:lnp-bp:rgb:schema#2024-02-03";
 }
 
 impl ToBaid58<32> for SchemaId {

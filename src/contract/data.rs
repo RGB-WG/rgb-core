@@ -165,5 +165,5 @@ impl From<Sha256> for ConcealedData {
 }
 
 impl CommitmentId for ConcealedData {
-    const TAG: &'static str = "urn:lnpbp:rgb:state-data#2024-02-12";
+    const TAG: &'static str = "urn:lnp-bp:rgb:state-data#2024-02-12";
 }

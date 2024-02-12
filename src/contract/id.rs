@@ -124,7 +124,7 @@ impl From<Sha256> for OpId {
 }
 
 impl CommitmentId for OpId {
-    const TAG: &'static str = "urn:lnpbp:rgb:operation#2024-02-03";
+    const TAG: &'static str = "urn:lnp-bp:rgb:operation#2024-02-03";
 }
 
 impl FromStr for OpId {

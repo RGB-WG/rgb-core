@@ -76,7 +76,7 @@ elements, depth of the tree, as well as depth of each node; and uses tagged
 SHA256, like the rest of the commitment procedures used here.
 
 The main data type, related to the merklization, is `MerkleHash`: it is a tagged
-hash (using `urn:lnpbp:merkle:node#2024-01-31` tag) representing node at any 
+hash (using `urn:ubideco:merkle:node#2024-01-31` tag) representing node at any 
 position of the tree: leafs, branch nodes and merkle tree root. `MerkleHash` 
 can be produced in the following ways:
 - as a result of merklziation procedure, when it represents Merkle tree root;
@@ -138,40 +138,47 @@ the equal result.
 
 Here are more details on each type of the commitments:
 
-| Commitment ID        | Produced by                          | Procedure                                                                                      | Tag URN suffix(1)         |
-|----------------------|--------------------------------------|------------------------------------------------------------------------------------------------|---------------------------|
-| `SchemaID`           | `RootSchema`, `SubSchema`            | strict serialization                                                                           | `schema#2024-02-03`       |
-| `OpId`, `ContractId` | `Genesis`, `Transition`, `Extension` | nested commitments with concealing, merklization etc via intermediate `OpCommitment` structure | `operation#2024-02-03`    |
-| `BundleId`           | `TransitionBundle`                   | conceal and partial strict serialization                                                       | `bundle#2024-02-03`       |
-| `ConcealedData`      | `RevealedData`                       | strict serialization                                                                           | `state-data#2024-02-12`   |
-| `ConcealedAttach`    | `RevealedAttach`                     | strict serialization                                                                           | `state-attach#2024-02-12` |
+| Commitment ID        | Produced by                          | Procedure                                                                                      | Tag URN suffix(1)             |
+|----------------------|--------------------------------------|------------------------------------------------------------------------------------------------|-------------------------------|
+| `SchemaID`           | `RootSchema`, `SubSchema`            | strict serialization                                                                           | `rgb:schema#2024-02-03`       |
+| `OpId`, `ContractId` | `Genesis`, `Transition`, `Extension` | nested commitments with concealing, merklization etc via intermediate `OpCommitment` structure | `rgb:operation#2024-02-03`    |
+| `BundleId`           | `TransitionBundle`                   | conceal and partial strict serialization                                                       | `rgb:bundle#2024-02-03`       |
+| `SecretSeal`         | `BlindSeal`                          | strict serialization                                                                           | `seals:secret#2024-02-03`     |
+| `ConcealedData`      | `RevealedData`                       | strict serialization                                                                           | `rgb:state-data#2024-02-12`   |
+| `ConcealedAttach`    | `RevealedAttach`                     | strict serialization                                                                           | `rgb:state-attach#2024-02-12` |
 
-(1): "URN suffix" is a part which follows "urn:lnpbp:rgb:" prefix.
+(1): "URN suffix" is a part which follows "urn:lnp-bp:" prefix.
 
-The last two commitments co-incede to be a concealed form for an RGB state.
-They can be produced by either calling `commit_id` or `conceal` methods of
-revealed state types (`RevealedData` and `RevealedAttach`).
+The last three commitments coincide to be a concealed form of BP seals and RGB state.
+These commitments produced by either calling `commit_id` or `conceal` methods of
+revealed seal (`BlindSeal`) and state types (`RevealedData` and `RevealedAttach`).
 
 Additionally to these types there are two other commitment ids used internally
 by merklization and strict encoding procedures: `MerkleHash` (discussed in the
 Merklization section above) and `StrictHash` from `commit_verify` crate:
 
-| Commitment ID | Tag URN suffix                                   |
-|---------------|--------------------------------------------------|
-| `MerkleHash`  | `urn:lnpbp:merkle:node#2024-01-31`               |
-| `StrictHash`  | `urn:ubideco:strict-types:value-hash#2024-02-10` |
+| Commitment ID     | Tag URN suffix                                   |
+|-------------------|--------------------------------------------------|
+| `MerkleHash`      | `urn:ubideco:merkle:node#2024-01-31`             |
+| `StrictHash`      | `urn:ubideco:strict-types:value-hash#2024-02-10` |
+| `mpc::Commitment` | `urn:ubideco:mpc:commitment#2024-01-31`          |
 
 `StrictHash` can be produced as a result of serialization of any 
 strict-encodable data; for instance, it is used in compactifying collections 
 into a single hash field in the process of computing operation ids (described
 below).
 
+Finally, in `commit_verify::mpc`, multi-protocol commitment protocol 
+implementation, we have a type named `mpc::Commitment`, which is a commitment 
+to a root of the MPC tree (i.e. the tree's root `MerkleHash` is tag-hashed once
+again to produce the final commitment value).
+
 
 ### Schema ID
 
 Schema id, represented by `SchemaId` data type, is produced from `Schema` type
 via strict serialization of all the schema data using 
-`urn:lnpbp:rgb:schema#2024-02-03` hash tag. No conceal or merklization 
+`urn:lnp-bp:rgb:schema#2024-02-03` hash tag. No conceal or merklization 
 procedures are applied; i.e. the commitment id is the same as hashing serialized
 schema with the given tag. The full description of how schema data are 
 serialized into the hasher can be found in [`Schema.vesper`](
@@ -183,7 +190,7 @@ code.
 Operation id is represented by a `OpId` type and produced for `Genesis`, 
 `Transition` and `Extension` types via custom algorithm, which first creates a
 dedicated `OpCommitment` structure, and strict-serializes it to hasher, 
-initialized with `urn:lnpbp:rgb:operation#2024-02-03` hash tag. 
+initialized with `urn:lnp-bp:rgb:operation#2024-02-03` hash tag. 
   
 The `OpCommitment` by itself consists of a sub-commitments to blocks of the
 operation data, where each sub-commitment is created with a custom procedure.
@@ -244,7 +251,7 @@ constructing multi-protocol commitment tree. Bundle id commits to operation ids
 for the participating state transitions and maps of the witness transaction 
 input to the operation ids. For this purpose, the commitment is created by 
 strict-encoding `input_map` field of `TransitionBundle` into the hasher, 
-initialized with tag `urn:lnpbp:rgb:bundle#2024-02-03`. Input map is serialzied
+initialized with tag `urn:lnp-bp:rgb:bundle#2024-02-03`. Input map is serialzied
 first as a 16-bit little-endian integer specifying the number of the items in
 the map, followed by the sequence of pairs of input number (32-bit LE value) 
 and `OpId` (32-bytes).
