@@ -138,11 +138,19 @@ the equal result.
 
 Here are more details on each type of the commitments:
 
-| Commitment ID        | Produced by                          | Procedure                                                                                      | Tag URN suffix         |
-|----------------------|--------------------------------------|------------------------------------------------------------------------------------------------|------------------------|
-| `SchemaID`           | `RootSchema`, `SubSchema`            | strict serialization                                                                           | `schema#2024-02-03`    |
-| `OpId`, `ContractId` | `Genesis`, `Transition`, `Extension` | nested commitments with concealing, merklization etc via intermediate `OpCommitment` structure | `operation#2024-02-03` |
-| `BundleId`           | `TransitionBundle`                   | conceal and partial strict serialization                                                       | `bundle#2024-02-03`    |
+| Commitment ID        | Produced by                          | Procedure                                                                                      | Tag URN suffix(1)         |
+|----------------------|--------------------------------------|------------------------------------------------------------------------------------------------|---------------------------|
+| `SchemaID`           | `RootSchema`, `SubSchema`            | strict serialization                                                                           | `schema#2024-02-03`       |
+| `OpId`, `ContractId` | `Genesis`, `Transition`, `Extension` | nested commitments with concealing, merklization etc via intermediate `OpCommitment` structure | `operation#2024-02-03`    |
+| `BundleId`           | `TransitionBundle`                   | conceal and partial strict serialization                                                       | `bundle#2024-02-03`       |
+| `ConcealedData`      | `RevealedData`                       | strict serialization                                                                           | `state-data#2024-02-12`   |
+| `ConcealedAttach`    | `RevealedAttach`                     | strict serialization                                                                           | `state-attach#2024-02-12` |
+
+(1): "URN suffix" is a part which follows "urn:lnpbp:rgb:" prefix.
+
+The last two commitments co-incede to be a concealed form for an RGB state.
+They can be produced by either calling `commit_id` or `conceal` methods of
+revealed state types (`RevealedData` and `RevealedAttach`).
 
 Additionally to these types there are two other commitment ids used internally
 by merklization and strict encoding procedures: `MerkleHash` (discussed in the

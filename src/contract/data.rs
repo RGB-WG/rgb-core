@@ -27,7 +27,7 @@ use amplify::confinement::SmallBlob;
 use amplify::hex::ToHex;
 use amplify::{Bytes32, Wrapper};
 use bp::secp256k1::rand::{random, Rng, RngCore};
-use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
+use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, ExposedState};
@@ -73,6 +73,8 @@ impl From<RevealedData> for DataState {
 #[derive(Clone, Eq, PartialEq, Hash)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = ConcealedData)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct RevealedData {
     pub value: DataState,
@@ -108,7 +110,7 @@ impl ExposedState for RevealedData {
 impl Conceal for RevealedData {
     type Concealed = ConcealedData;
 
-    fn conceal(&self) -> Self::Concealed { ConcealedData::commit(self) }
+    fn conceal(&self) -> Self::Concealed { self.commit_id() }
 }
 
 impl PartialOrd for RevealedData {
@@ -158,6 +160,10 @@ impl ConfidentialState for ConcealedData {
     fn state_commitment(&self) -> ConcealedState { ConcealedState::Structured(*self) }
 }
 
-impl CommitVerify<RevealedData, StrictEncodedProtocol> for ConcealedData {
-    fn commit(revealed: &RevealedData) -> Self { Bytes32::commit(revealed).into() }
+impl From<Sha256> for ConcealedData {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for ConcealedData {
+    const TAG: &'static str = "urn:lnpbp:rgb:state-data#2024-02-12";
 }

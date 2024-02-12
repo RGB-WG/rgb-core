@@ -25,7 +25,7 @@ use std::str::FromStr;
 use amplify::{ByteArray, Bytes32};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use bp::secp256k1::rand::{random, Rng, RngCore};
-use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
+use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, ExposedState};
@@ -67,6 +67,8 @@ impl AttachId {
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = ConcealedAttach)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -116,7 +118,7 @@ impl ExposedState for RevealedAttach {
 impl Conceal for RevealedAttach {
     type Concealed = ConcealedAttach;
 
-    fn conceal(&self) -> Self::Concealed { ConcealedAttach::commit(self) }
+    fn conceal(&self) -> Self::Concealed { self.commit_id() }
 }
 
 /// Confidential version of an attachment information.
@@ -142,8 +144,12 @@ impl ConfidentialState for ConcealedAttach {
     fn state_commitment(&self) -> ConcealedState { ConcealedState::Attachment(*self) }
 }
 
-impl CommitVerify<RevealedAttach, StrictEncodedProtocol> for ConcealedAttach {
-    fn commit(revealed: &RevealedAttach) -> Self { Bytes32::commit(revealed).into() }
+impl From<Sha256> for ConcealedAttach {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for ConcealedAttach {
+    const TAG: &'static str = "urn:lnpbp:rgb:state-attach#2024-02-12";
 }
 
 #[cfg(test)]
