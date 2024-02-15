@@ -25,7 +25,9 @@ use std::iter;
 
 use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
-use commit_verify::{CommitId, Conceal, MerkleHash, MerkleLeaves, StrictHash};
+use commit_verify::{
+    CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, StrictHash,
+};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
@@ -194,8 +196,6 @@ pub trait Operation {
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = conceal, id = OpId)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -218,8 +218,6 @@ impl StrictDeserialize for Genesis {}
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = conceal, id = OpId)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -242,8 +240,6 @@ impl StrictDeserialize for Extension {}
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = conceal, id = OpId)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -297,6 +293,21 @@ impl Conceal for Extension {
             .for_each(|(_, a)| *a = a.conceal());
         concealed
     }
+}
+
+impl CommitEncode for Genesis {
+    type CommitmentId = OpId;
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to(&self.commit()) }
+}
+
+impl CommitEncode for Transition {
+    type CommitmentId = OpId;
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to(&self.commit()) }
+}
+
+impl CommitEncode for Extension {
+    type CommitmentId = OpId;
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to(&self.commit()) }
 }
 
 impl Transition {
