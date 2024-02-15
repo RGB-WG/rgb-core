@@ -77,7 +77,7 @@ SHA256, like the rest of the commitment procedures used here.
 
 The main data type, related to the merklization, is `MerkleHash`: it is a tagged
 hash (using `urn:ubideco:merkle:node#2024-01-31` tag) representing node at any 
-position of the tree: leafs, branch nodes and merkle tree root. `MerkleHash` 
+position of the tree: leaves, branch nodes and merkle tree root. `MerkleHash` 
 can be produced in the following ways:
 - as a result of merklziation procedure, when it represents Merkle tree root;
 - as a root of empty Merkle tree (i.e. collection having 0 elements), by calling
@@ -86,7 +86,7 @@ can be produced in the following ways:
   commitment id to be `MerkleHash`.
   
 In all of the above cases the hash commits to the tree parameters, which makes
-it safe to use the same type for leafs, branches and root nodes. Specifically,
+it safe to use the same type for leaves, branches and root nodes. Specifically,
 it uses an intermediate structure `MerkleNode`, which is filled with information
 on (see [`MerkleNode.vesper`](../stl/MerkleNode.vesper) for details):
 - type of node branching (no branches, one branch or two branches),
@@ -103,7 +103,7 @@ call. The API puts the following requirements on the collection: either
 - maximum number of elements must be either 0xFF or 0xFFFF **and** each 
   collection element must implement `CommitEncode` trait with target id set to
   `MerkleHash`,
-- or there is a manual implementation of `MerkleLeafs` trait.
+- or there is a manual implementation of `MerkleLeaves` trait.
 
 ```mermaid
 flowchart BT
@@ -251,7 +251,7 @@ constructing multi-protocol commitment tree. Bundle id commits to operation ids
 for the participating state transitions and maps of the witness transaction 
 input to the operation ids. For this purpose, the commitment is created by 
 strict-encoding `input_map` field of `TransitionBundle` into the hasher, 
-initialized with tag `urn:lnp-bp:rgb:bundle#2024-02-03`. Input map is serialzied
+initialized with tag `urn:lnp-bp:rgb:bundle#2024-02-03`. Input map is serialized
 first as a 16-bit little-endian integer specifying the number of the items in
 the map, followed by the sequence of pairs of input number (32-bit LE value) 
 and `OpId` (32-bytes).
