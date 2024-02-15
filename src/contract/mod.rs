@@ -41,7 +41,7 @@ pub use assignments::{
     TypedAssigns,
 };
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
-pub use bundle::{BundleId, TransitionBundle, Vin};
+pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
 pub use contract::{
     AssignmentWitness, ContractHistory, ContractState, GlobalOrd, KnownState, Opout,
     OpoutParseError, OutputAssignment,
