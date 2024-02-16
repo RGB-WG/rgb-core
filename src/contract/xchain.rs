@@ -288,6 +288,15 @@ impl<T> XChain<T> {
     }
 }
 
+impl<T> XChain<Option<T>> {
+    pub fn transpose(self) -> Option<XChain<T>> {
+        match self {
+            XChain::Bitcoin(inner) => inner.map(XChain::Bitcoin),
+            XChain::Liquid(inner) => inner.map(XChain::Liquid),
+        }
+    }
+}
+
 impl<I: Iterator> Iterator for XChain<I> {
     type Item = XChain<<I as Iterator>::Item>;
 
