@@ -138,6 +138,43 @@ impl OpId {
     }
 }
 
+/// Hash committing to all data which are disclosed by a contract or some part
+/// of it (operation, bundle, consignment, disclosure).
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
+#[display(Self::to_hex)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct DiscloseHash(
+    #[from]
+    #[from([u8; 32])]
+    Bytes32,
+);
+
+impl From<Sha256> for DiscloseHash {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for DiscloseHash {
+    const TAG: &'static str = "urn:lnp-bp:rgb:disclose#2024-02-16";
+}
+
+impl FromStr for DiscloseHash {
+    type Err = hex::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
+}
+
+impl DiscloseHash {
+    pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
+        Bytes32::copy_from_slice(slice).map(Self)
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]

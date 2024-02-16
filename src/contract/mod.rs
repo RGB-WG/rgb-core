@@ -53,8 +53,8 @@ pub use fungible::{
 };
 pub use global::{GlobalState, GlobalValues};
 pub use id::{
-    AssignmentCommitment, BaseCommitment, ContractId, GlobalCommitment, OpCommitment, OpId,
-    TypeCommitment,
+    AssignmentCommitment, BaseCommitment, ContractId, DiscloseHash, GlobalCommitment, OpCommitment,
+    OpId, TypeCommitment,
 };
 pub use operations::{
     Extension, Genesis, Input, Inputs, Metadata, OpRef, Operation, Redeemed, Transition, Valencies,
