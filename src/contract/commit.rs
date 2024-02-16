@@ -24,6 +24,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::{fmt, vec};
 
+use amplify::confinement::MediumOrdMap;
 use amplify::hex::{FromHex, ToHex};
 use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
@@ -32,13 +33,12 @@ use commit_verify::{
     mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, Conceal, DigestExt, MerkleHash,
     MerkleLeaves, Sha256, StrictHash,
 };
-use strict_encoding::StrictEncode;
 
 use crate::{
-    Assign, AssignmentType, Assignments, ConcealedData, ConcealedState, ConfidentialState,
-    ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState,
-    GlobalStateType, Redeemed, SchemaId, SecretSeal, Transition, TransitionType, TypedAssigns,
-    XChain, LIB_NAME_RGB,
+    Assign, AssignmentType, Assignments, ConcealedAttach, ConcealedData, ConcealedState,
+    ConfidentialState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis,
+    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal,
+    Transition, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -175,6 +175,31 @@ impl DiscloseHash {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+pub struct AssignmentIndex {
+    pub ty: AssignmentType,
+    pub pos: u16,
+}
+
+impl AssignmentIndex {
+    pub fn new(ty: AssignmentType, pos: u16) -> Self { AssignmentIndex { ty, pos } }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = DiscloseHash)]
+pub struct OpDisclose {
+    pub id: OpId,
+    pub seals: MediumOrdMap<AssignmentIndex, XChain<SecretSeal>>,
+    pub fungible: MediumOrdMap<AssignmentIndex, PedersenCommitment>,
+    pub data: MediumOrdMap<AssignmentIndex, ConcealedData>,
+    pub attach: MediumOrdMap<AssignmentIndex, ConcealedAttach>,
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -232,6 +257,8 @@ impl Genesis {
             valencies: self.valencies.commit_id(),
         }
     }
+
+    pub fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
 impl Transition {

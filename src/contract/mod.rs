@@ -43,8 +43,8 @@ pub use assignments::{
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
 pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
 pub use commit::{
-    AssignmentCommitment, BaseCommitment, ContractId, DiscloseHash, GlobalCommitment, OpCommitment,
-    OpId, TypeCommitment,
+    AssignmentCommitment, AssignmentIndex, BaseCommitment, ContractId, DiscloseHash,
+    GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
 pub use contract::{
     AssignmentWitness, ContractHistory, ContractState, GlobalOrd, KnownState, Opout,

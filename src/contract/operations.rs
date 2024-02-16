@@ -20,10 +20,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{btree_map, btree_set};
+use std::collections::{btree_map, btree_set, BTreeMap};
 use std::iter;
 
-use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
+use amplify::confinement::{Confined, SmallBlob, TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, StrictHash,
@@ -32,8 +32,10 @@ use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, AssignmentType, Assignments, AssignmentsRef, ContractId, Ffv, GenesisSeal,
-    GlobalState, GraphSeal, OpId, Opout, ReservedBytes, TypedAssigns, LIB_NAME_RGB,
+    AltLayer1Set, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
+    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, ExposedState, Ffv, GenesisSeal,
+    GlobalState, GraphSeal, OpDisclose, OpId, Opout, ReservedBytes, SecretSeal, TypedAssigns,
+    VoidState, XChain, LIB_NAME_RGB,
 };
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
@@ -191,6 +193,57 @@ pub trait Operation {
     /// While public state extension do have parent nodes, they do not contain
     /// indexed rights.
     fn inputs(&self) -> Inputs;
+
+    /// Provides summary about parts of the operation which are revealed.
+    fn disclose(&self) -> OpDisclose {
+        fn proc_seals<State: ExposedState>(
+            ty: AssignmentType,
+            a: &[Assign<State, GraphSeal>],
+            seals: &mut BTreeMap<AssignmentIndex, XChain<SecretSeal>>,
+            state: &mut BTreeMap<AssignmentIndex, State::Concealed>,
+        ) {
+            for (index, assignment) in a.iter().enumerate() {
+                if let Some(seal) = assignment.revealed_seal() {
+                    seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
+                }
+                if let Some(revealed) = assignment.as_revealed_state() {
+                    state.insert(AssignmentIndex::new(ty, index as u16), revealed.conceal());
+                }
+            }
+        }
+
+        let mut seals: BTreeMap<AssignmentIndex, XChain<SecretSeal>> = bmap!();
+        let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
+        let mut fungible: BTreeMap<AssignmentIndex, ConcealedValue> = bmap!();
+        let mut data: BTreeMap<AssignmentIndex, ConcealedData> = bmap!();
+        let mut attach: BTreeMap<AssignmentIndex, ConcealedAttach> = bmap!();
+        for (ty, assigns) in self.assignments().flat() {
+            match assigns {
+                TypedAssigns::Declarative(a) => {
+                    proc_seals(ty, &a, &mut seals, &mut void);
+                }
+                TypedAssigns::Fungible(a) => {
+                    proc_seals(ty, &a, &mut seals, &mut fungible);
+                }
+                TypedAssigns::Structured(a) => {
+                    proc_seals(ty, &a, &mut seals, &mut data);
+                }
+                TypedAssigns::Attachment(a) => {
+                    proc_seals(ty, &a, &mut seals, &mut attach);
+                }
+            }
+        }
+
+        OpDisclose {
+            id: self.id(),
+            seals: Confined::from_collection_unsafe(seals),
+            fungible: Confined::from_iter_unsafe(
+                fungible.into_iter().map(|(k, s)| (k, s.commitment)),
+            ),
+            data: Confined::from_collection_unsafe(data),
+            attach: Confined::from_collection_unsafe(attach),
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
