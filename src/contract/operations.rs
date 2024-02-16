@@ -33,9 +33,9 @@ use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
     AltLayer1Set, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
-    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, ExposedState, Ffv, GenesisSeal,
-    GlobalState, GraphSeal, OpDisclose, OpId, Opout, ReservedBytes, SecretSeal, TypedAssigns,
-    VoidState, XChain, LIB_NAME_RGB,
+    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
+    GenesisSeal, GlobalState, GraphSeal, OpDisclose, OpId, Opout, ReservedBytes, SecretSeal,
+    TypedAssigns, VoidState, XChain, LIB_NAME_RGB,
 };
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
@@ -244,6 +244,8 @@ pub trait Operation {
             attach: Confined::from_collection_unsafe(attach),
         }
     }
+
+    fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]

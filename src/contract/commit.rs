@@ -20,11 +20,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::{fmt, vec};
 
-use amplify::confinement::MediumOrdMap;
+use amplify::confinement::{Confined, MediumOrdMap, U16 as U16MAX};
 use amplify::hex::{FromHex, ToHex};
 use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
@@ -33,12 +34,13 @@ use commit_verify::{
     mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, Conceal, DigestExt, MerkleHash,
     MerkleLeaves, Sha256, StrictHash,
 };
+use strict_encoding::StrictDumb;
 
 use crate::{
-    Assign, AssignmentType, Assignments, ConcealedAttach, ConcealedData, ConcealedState,
+    Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis,
     GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal,
-    Transition, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -198,6 +200,40 @@ pub struct OpDisclose {
     pub fungible: MediumOrdMap<AssignmentIndex, PedersenCommitment>,
     pub data: MediumOrdMap<AssignmentIndex, ConcealedData>,
     pub attach: MediumOrdMap<AssignmentIndex, ConcealedAttach>,
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = DiscloseHash)]
+pub struct BundleDisclosure {
+    pub id: BundleId,
+    pub known_transitions: Confined<BTreeSet<DiscloseHash>, 1, U16MAX>,
+}
+
+impl StrictDumb for BundleDisclosure {
+    fn strict_dumb() -> Self {
+        Self {
+            id: strict_dumb!(),
+            known_transitions: confined_bset! { strict_dumb!() },
+        }
+    }
+}
+
+impl TransitionBundle {
+    /// Provides summary about parts of the bundle which are revealed.
+    pub fn disclose(&self) -> BundleDisclosure {
+        BundleDisclosure {
+            id: self.bundle_id(),
+            known_transitions: Confined::from_iter_unsafe(
+                self.known_transitions.values().map(|t| t.disclose_hash()),
+            ),
+        }
+    }
+
+    /// Returns commitment to the bundle plus revealed data within it.
+    pub fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]

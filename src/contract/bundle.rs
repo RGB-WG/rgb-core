@@ -22,7 +22,7 @@
 
 use std::collections::{btree_map, BTreeMap};
 
-use amplify::confinement::{Confined, U16};
+use amplify::confinement::{Confined, U16 as U16MAX};
 use amplify::{Bytes32, Wrapper};
 use bp::Vout;
 use commit_verify::{mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
@@ -75,7 +75,7 @@ impl From<mpc::Message> for BundleId {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct InputMap(Confined<BTreeMap<Vin, OpId>, 1, U16>);
+pub struct InputMap(Confined<BTreeMap<Vin, OpId>, 1, U16MAX>);
 
 impl StrictDumb for InputMap {
     fn strict_dumb() -> Self { Self(confined_bmap!(strict_dumb!() => strict_dumb!())) }
@@ -109,7 +109,7 @@ impl<'a> IntoIterator for &'a InputMap {
 )]
 pub struct TransitionBundle {
     pub input_map: InputMap,
-    pub known_transitions: Confined<BTreeMap<OpId, Transition>, 1, U16>,
+    pub known_transitions: Confined<BTreeMap<OpId, Transition>, 1, U16MAX>,
 }
 
 impl CommitEncode for TransitionBundle {
