@@ -85,7 +85,7 @@ AnchoredBundle rec
               element bytes len=32 aka=MerkleHash
           dbcProof is Unit aka=OpretProof
   bundle rec -- TransitionBundle
-    inputMap map len=1..MAX16
+    inputMap map len=1..MAX16 aka=InputMap
       key is U32 aka=Vout
       value bytes len=32 aka=OpId
     knownTransitions map len=1..MAX16

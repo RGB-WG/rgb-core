@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:35cF57bXFVGRrGsPBW7D9wh49BeAZpBgSwBGQxSXDFDH#station-product-conduct
+  Id: urn:ubideco:stl:Hzv1xPBtQfqcGYeisvS2V9DPj1VRC5WyYfME2RtmuRpu#blitz-english-eric
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -11,11 +11,7 @@
 @context
 typelib RGB
 
-import Std#55f8bsTvyh7zAeYAiNwL9G1DxgwXzDvE8edcTFJz3Q9H#milan-poncho-gray
-  use Bool#laser-madam-maxwell
-  use AlphaNumLodash#north-sound-salsa
-
-import BPCore#698cwwfCJw4pzQicV8jBaQJ2rLLphub4qJGYbMndqC2C#bless-rebel-panic
+import BPCore#c8Tnib31q1p7szyPukEGDoQzJQ5qJwPCn5uZCHUXzB9#cupid-metro-warning
   use TapretNodePartner#iceberg-poker-active
   use ExplicitSealTxid#antenna-darwin-emotion
   use TapretProof#forum-paint-tunnel
@@ -30,7 +26,12 @@ import BPCore#698cwwfCJw4pzQicV8jBaQJ2rLLphub4qJGYbMndqC2C#bless-rebel-panic
   use TxPtr#strange-source-father
   use AnchorMerkleProofTapretProof#forward-chemist-panda
 
-import StrictTypes#BADMWBVQ6sMJGfELP13cjeZPNutGuLzZtNNZirJQsz9e#tower-monaco-corona
+import CommitVerify#57sPvZcwQaziec3ux249XoCMhziQpKB8Yw99U5oRwfqW#deluxe-safari-random
+  use MerkleHash#culture-metro-modular
+  use StrictHash#cheese-final-locate
+  use MerkleProof#labor-hilton-magenta
+
+import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-pelican
   use VariantName#snow-gray-extreme
   use Primitive#hobby-cable-puzzle
   use VariantInfoSemId#clone-panama-guru
@@ -51,10 +52,9 @@ import AluVM#DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy
   use LibSite#mission-papa-mercy
   use LibId#rebel-factor-rodeo
 
-import CommitVerify#DYafq9UACuYbTpduhcqywBGH97wHYtSUNPiXh5v2Zub9#drama-imagine-extreme
-  use MerkleHash#culture-metro-modular
-  use StrictHash#cheese-final-locate
-  use MerkleProof#labor-hilton-magenta
+import Std#DzTvt9gGhPUKD8Dkkjk9PDBhkJ4gtWxXWQjxnmUYLNrs#voyage-kimono-disco
+  use Bool#laser-madam-maxwell
+  use AlphaNumLodash#north-sound-salsa
 
 import Bitcoin#HX2UBak8vPsTokug1DGMDvTpzns3xUdwZ7QJdyt4qBA9#speed-atlanta-trilogy
   use Vout#chrome-robin-gallop
@@ -252,6 +252,9 @@ data GlobalValues      : [RevealedData ^ 1..]
 @mnemonic(joseph-price-summer)
 data Input             : prevOut Opout, reserved ReservedBytes2
 
+@mnemonic(canada-chicken-analyze)
+data InputMap          : {Bitcoin.Vout -> ^ 1.. OpId}
+
 @mnemonic(puzzle-guru-oregano)
 data Inputs            : {Input ^ ..0xff}
 
@@ -381,8 +384,8 @@ data Transition        : ffv Ffv
                        , assignments AssignmentsBlindSealTxPtr
                        , valencies Valencies
 
-@mnemonic(boxer-nadia-alias)
-data TransitionBundle  : inputMap {Bitcoin.Vout -> ^ 1.. OpId}, knownTransitions {OpId -> ^ 1.. Transition}
+@mnemonic(museum-result-logic)
+data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
 
 @mnemonic(fiction-caramel-fractal)
 data TransitionSchema  : metadata StrictTypes.SemId#cargo-plasma-catalog

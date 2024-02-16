@@ -22,10 +22,10 @@ name = "rgbcore-stl"
 required-features = ["stl"]
 
 [dependencies]
-amplify = { version = "~4.5.1", features = ["rand"] }
-strict_encoding = "~2.7.0"
-strict_types = "~2.7.0"
-aluvm = { version = "~0.11.0-beta.2", features = ["std"] }
+amplify = { version = "~4.6.0", features = ["rand"] }
+strict_encoding = "~2.7.0-beta.1"
+strict_types = "~2.7.0-beta.1"
+aluvm = { version = "~0.11.0-beta.3", features = ["std"] }
 commit_verify = { version = "~0.11.0-beta.3", features = ["rand", "derive"] }
 single_use_seals = "~0.11.0-beta.3"
 bp-core = { version = "~0.11.0-beta.3" }
@@ -62,11 +62,8 @@ wasm-bindgen-test = "0.3"
 features = [ "all" ]
 
 [patch.crates-io]
-strict_encoding = { git = "https://github.com/strict-types/strict-encoding", branch = "refactor/io" }
-strict_types = { git = "https://github.com/strict-types/strict-types", branch = "refactor/io" }
 commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.11" }
 bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
-aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.11" }
