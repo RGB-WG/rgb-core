@@ -27,7 +27,7 @@ use std::str::FromStr;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
-use commit_verify::{CommitId, CommitmentId, DigestExt, Sha256};
+use commit_verify::{CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
 use strict_types::TypeSystem;
 
@@ -141,17 +141,21 @@ impl SchemaId {
     pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
 }
 
-pub trait SchemaRoot: Clone + Eq + StrictType + StrictEncode + StrictDecode + Default {}
-impl SchemaRoot for () {}
-impl SchemaRoot for RootSchema {}
+pub trait SchemaRoot: Clone + Eq + StrictType + StrictEncode + StrictDecode + Default {
+    fn schema_id(&self) -> SchemaId;
+}
+impl SchemaRoot for () {
+    fn schema_id(&self) -> SchemaId { SchemaId::from_byte_array([0u8; 32]) }
+}
+impl SchemaRoot for RootSchema {
+    fn schema_id(&self) -> SchemaId { self.schema_id() }
+}
 pub type RootSchema = Schema<()>;
 pub type SubSchema = Schema<RootSchema>;
 
 #[derive(Clone, Eq, Default, Debug)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = SchemaId)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -169,10 +173,28 @@ pub struct Schema<Root: SchemaRoot> {
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
     /// Type system
-    // TODO: Commit to type system id, not the type system itself
     pub type_system: TypeSystem,
     /// Validation code.
     pub script: Script,
+}
+
+impl<Root: SchemaRoot> CommitEncode for Schema<Root> {
+    type CommitmentId = SchemaId;
+
+    fn commit_encode(&self, e: &mut CommitEngine) {
+        e.commit_to(&self.ffv);
+        e.commit_to(&self.subset_of.as_ref().map(Root::schema_id));
+
+        e.commit_to(&self.global_types);
+        e.commit_to(&self.owned_types);
+        e.commit_to(&self.valency_types);
+        e.commit_to(&self.genesis);
+        e.commit_to(&self.extensions);
+        e.commit_to(&self.transitions);
+
+        e.commit_to(&self.type_system.id());
+        e.commit_to(&self.script);
+    }
 }
 
 impl<Root: SchemaRoot> PartialEq for Schema<Root> {
