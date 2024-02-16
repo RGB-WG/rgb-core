@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cmp::Ordering;
 use std::collections::{btree_map, btree_set, BTreeMap};
 use std::iter;
 
@@ -292,6 +293,14 @@ pub struct Extension {
 impl StrictSerialize for Extension {}
 impl StrictDeserialize for Extension {}
 
+impl Ord for Extension {
+    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
+}
+
+impl PartialOrd for Extension {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -313,6 +322,14 @@ pub struct Transition {
 
 impl StrictSerialize for Transition {}
 impl StrictDeserialize for Transition {}
+
+impl Ord for Transition {
+    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
+}
+
+impl PartialOrd for Transition {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
 
 impl Conceal for Genesis {
     type Concealed = Self;

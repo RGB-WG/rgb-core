@@ -49,6 +49,14 @@ impl AnchoredBundle {
     pub fn bundle_id(&self) -> BundleId { self.bundle.bundle_id() }
 }
 
+impl Ord for AnchoredBundle {
+    fn cmp(&self, other: &Self) -> Ordering { self.bundle_id().cmp(&other.bundle_id()) }
+}
+
+impl PartialOrd for AnchoredBundle {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
 pub type XAnchor<P = mpc::MerkleProof> = XChain<AnchorSet<P>>;
 
 impl<P: mpc::Proof + StrictDumb> XAnchor<P> {
