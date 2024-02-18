@@ -39,6 +39,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         &'validator self,
         consignment: &'validator CheckedConsignment<'consignment, C>,
         op: OpRef,
+        globals: &'consignment GlobalState,
         vm: &'consignment dyn VirtualMachine,
     ) -> validation::Status {
         let id = op.id();
@@ -168,6 +169,7 @@ impl<Root: SchemaRoot> Schema<Root> {
             consignment.genesis().contract_id(),
             id,
             self.subset_of.is_some(),
+            globals,
             &op,
             &prev_state,
             &redeemed,
@@ -426,7 +428,7 @@ impl<Root: SchemaRoot> Schema<Root> {
     }
 }
 
-pub struct OpInfo<'op> {
+pub struct OpInfo<'contract, 'op> {
     pub subschema: bool,
     pub contract_id: ContractId,
     pub id: OpId,
@@ -437,14 +439,16 @@ pub struct OpInfo<'op> {
     pub owned_state: AssignmentsRef<'op>,
     pub redeemed: &'op Valencies,
     pub valencies: &'op Valencies,
-    pub global: &'op GlobalState,
+    pub op_global: &'op GlobalState,
+    pub contract_global: &'contract GlobalState,
 }
 
-impl<'op> OpInfo<'op> {
+impl<'contract, 'op> OpInfo<'contract, 'op> {
     pub fn with(
         contract_id: ContractId,
         id: OpId,
         subschema: bool,
+        globals: &'contract GlobalState,
         op: &'op OpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
@@ -461,7 +465,8 @@ impl<'op> OpInfo<'op> {
             owned_state: op.assignments(),
             redeemed,
             valencies: op.valencies(),
-            global: op.globals(),
+            op_global: op.globals(),
+            contract_global: globals,
         }
     }
 }
