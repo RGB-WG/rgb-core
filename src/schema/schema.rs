@@ -183,7 +183,7 @@ impl<Root: SchemaRoot> CommitEncode for Schema<Root> {
 
     fn commit_encode(&self, e: &mut CommitEngine) {
         e.commit_to_serialized(&self.ffv);
-        e.commit_to_serialized(&self.subset_of.as_ref().map(Root::schema_id));
+        e.commit_to_option(&self.subset_of.as_ref().map(Root::schema_id));
 
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
