@@ -331,9 +331,9 @@ impl ConcealedState {
     fn commit_encode(&self, e: &mut CommitEngine) {
         match self {
             ConcealedState::Void => {}
-            ConcealedState::Fungible(val) => e.commit_to(&val.commitment),
-            ConcealedState::Structured(dat) => e.commit_to(dat),
-            ConcealedState::Attachment(att) => e.commit_to(att),
+            ConcealedState::Fungible(val) => e.commit_to_serialized(&val.commitment),
+            ConcealedState::Structured(dat) => e.commit_to_serialized(dat),
+            ConcealedState::Attachment(att) => e.commit_to_serialized(att),
         }
     }
 }
@@ -349,9 +349,9 @@ impl CommitEncode for AssignmentCommitment {
     type CommitmentId = MerkleHash;
 
     fn commit_encode(&self, e: &mut CommitEngine) {
-        e.commit_to(&self.ty);
+        e.commit_to_serialized(&self.ty);
         self.state.commit_encode(e);
-        e.commit_to(&self.seal);
+        e.commit_to_serialized(&self.seal);
         e.set_finished();
     }
 }
@@ -407,8 +407,8 @@ impl CommitEncode for GlobalCommitment {
     type CommitmentId = MerkleHash;
 
     fn commit_encode(&self, e: &mut CommitEngine) {
-        e.commit_to(&self.ty);
-        e.commit_to(&self.state);
+        e.commit_to_serialized(&self.ty);
+        e.commit_to_serialized(&self.state);
         e.set_finished();
     }
 }

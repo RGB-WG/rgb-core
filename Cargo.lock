@@ -291,7 +291,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#5359d8437f5e63289ad0a63ecb66a3bd7d42f816"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=layouts#49345a16d6125af5aab58b2b4e83f3bfd222b097"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -303,7 +303,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#5359d8437f5e63289ad0a63ecb66a3bd7d42f816"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=layouts#49345a16d6125af5aab58b2b4e83f3bfd222b097"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -313,6 +313,7 @@ dependencies = [
  "sha2",
  "strict_encoding",
  "strict_types",
+ "vesper-lang",
 ]
 
 [[package]]
@@ -782,8 +783,7 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "2.7.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d66de5cdf197b68e13fcac9fad7ed288f44052a319a3df3abbaba9c6e52f735b"
+source = "git+https://github.com/strict-types/strict-types?branch=vesper#266f2d8b6e015522e9e7e72af663af9c9d3c7d2c"
 dependencies = [
  "amplify",
  "baid58",

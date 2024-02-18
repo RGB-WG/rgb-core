@@ -115,7 +115,7 @@ pub struct TransitionBundle {
 impl CommitEncode for TransitionBundle {
     type CommitmentId = BundleId;
 
-    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to(&self.input_map); }
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.input_map); }
 }
 
 impl StrictDumb for TransitionBundle {

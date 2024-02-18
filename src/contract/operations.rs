@@ -369,17 +369,17 @@ impl Conceal for Extension {
 
 impl CommitEncode for Genesis {
     type CommitmentId = OpId;
-    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to(&self.commit()) }
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
 }
 
 impl CommitEncode for Transition {
     type CommitmentId = OpId;
-    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to(&self.commit()) }
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
 }
 
 impl CommitEncode for Extension {
     type CommitmentId = OpId;
-    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to(&self.commit()) }
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
 }
 
 impl Transition {

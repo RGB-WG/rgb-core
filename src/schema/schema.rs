@@ -182,18 +182,18 @@ impl<Root: SchemaRoot> CommitEncode for Schema<Root> {
     type CommitmentId = SchemaId;
 
     fn commit_encode(&self, e: &mut CommitEngine) {
-        e.commit_to(&self.ffv);
-        e.commit_to(&self.subset_of.as_ref().map(Root::schema_id));
+        e.commit_to_serialized(&self.ffv);
+        e.commit_to_serialized(&self.subset_of.as_ref().map(Root::schema_id));
 
-        e.commit_to(&self.global_types);
-        e.commit_to(&self.owned_types);
-        e.commit_to(&self.valency_types);
-        e.commit_to(&self.genesis);
-        e.commit_to(&self.extensions);
-        e.commit_to(&self.transitions);
+        e.commit_to_map(&self.global_types);
+        e.commit_to_map(&self.owned_types);
+        e.commit_to_set(&self.valency_types);
+        e.commit_to_serialized(&self.genesis);
+        e.commit_to_map(&self.extensions);
+        e.commit_to_map(&self.transitions);
 
-        e.commit_to(&self.type_system.id());
-        e.commit_to(&self.script);
+        e.commit_to_serialized(&self.type_system.id());
+        e.commit_to_serialized(&self.script);
     }
 }
 
