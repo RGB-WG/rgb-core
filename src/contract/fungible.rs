@@ -439,7 +439,7 @@ impl Default for NoiseDumb {
 /// Range proofs must be used alongside [`PedersenCommitment`]s to ensure that
 /// the value do not overflow on arithmetic operations with the commitments.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
+#[derive(StrictType)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom)]
 #[cfg_attr(
     feature = "serde",
@@ -456,6 +456,18 @@ pub enum RangeProof {
 
 impl Default for RangeProof {
     fn default() -> Self { RangeProof::Placeholder(default!()) }
+}
+
+impl StrictEncode for RangeProof {
+    fn strict_encode<W: TypedWrite>(&self, _: W) -> io::Result<W> {
+        panic!("bulletproof dummies must never be stored")
+    }
+}
+
+impl StrictDecode for RangeProof {
+    fn strict_decode(_: &mut impl TypedRead) -> Result<Self, DecodeError> {
+        panic!("bulletproofs dummies must never be read")
+    }
 }
 
 pub struct PedersenProtocol;
@@ -489,25 +501,12 @@ impl ConfidentialState for ConcealedValue {
 
 impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
     fn commit(revealed: &RevealedValue) -> Self {
-        eprintln!(
-            "Warning: current version of RGB Core doesn't support production of bulletproofs; \
-             thus, fungible state must be never kept concealed"
-        );
         let commitment = PedersenCommitment::commit(revealed);
         // TODO: Do actual conceal upon integration of bulletproofs library
         let range_proof = RangeProof::default();
         ConcealedValue {
             commitment,
             range_proof,
-        }
-    }
-}
-
-impl ConcealedValue {
-    /// Verifies bulletproof against the commitment.
-    pub fn verify(&self) -> bool {
-        match self.range_proof {
-            RangeProof::Placeholder(_) => false,
         }
     }
 }
@@ -528,6 +527,7 @@ pub enum RangeProofError {
 impl ConcealedValue {
     /// Verifies validity of the range proof.
     pub fn verify_range_proof(&self) -> Result<bool, RangeProofError> {
+        // We always fail here
         Err(RangeProofError::BulletproofsAbsent)
     }
 }
