@@ -28,11 +28,13 @@ use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
-use crate::{AnchoredBundle, ContractState, Extension, Genesis, SubSchema, LIB_NAME_RGB};
+use crate::{
+    AnchoredBundle, ContractState, Extension, Genesis, OpCommitment, SubSchema, LIB_NAME_RGB,
+};
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB: &str =
-    "urn:ubideco:stl:141hHBYBr2mzKyskZbRuwazYC9ki5x9ZrrzQHLbgBzx#oscar-rufus-tractor";
+    "urn:ubideco:stl:Hzv1xPBtQfqcGYeisvS2V9DPj1VRC5WyYfME2RtmuRpu#blitz-english-eric";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {
@@ -48,6 +50,7 @@ fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     .transpile::<AnchoredBundle>()
     .transpile::<Extension>()
     .transpile::<ContractState>()
+    .transpile::<OpCommitment>()
     .compile()
 }
 

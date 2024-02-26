@@ -22,13 +22,12 @@
 
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
-use std::io::Write;
 use std::str::FromStr;
 use std::{fmt, io};
 
 use amplify::confinement::TinyOrdSet;
 use bp::{Bp, Outpoint};
-use commit_verify::{CommitEncode, Conceal};
+use commit_verify::{Conceal, StrictHash};
 use strict_encoding::{
     DecodeError, DefineUnion, ReadTuple, ReadUnion, StrictDecode, StrictDumb, StrictEncode,
     StrictSum, StrictType, StrictUnion, TypedRead, TypedWrite, WriteUnion,
@@ -82,20 +81,14 @@ impl AltLayer1 {
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
 pub struct AltLayer1Set(TinyOrdSet<AltLayer1>);
-
-impl CommitEncode for AltLayer1Set {
-    fn commit_encode(&self, e: &mut impl Write) {
-        for c in self.iter() {
-            e.write_all(&[*c as u8]).ok();
-        }
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(
@@ -161,12 +154,12 @@ where T: StrictDumb + StrictEncode
     fn strict_encode<W: TypedWrite>(&self, writer: W) -> io::Result<W> {
         writer.write_union::<Self>(|w| {
             let w = w
-                .define_newtype::<T>(fname!(Self::ALL_VARIANTS[0].1))
-                .define_newtype::<T>(fname!(Self::ALL_VARIANTS[1].1))
+                .define_newtype::<T>(vname!(Self::ALL_VARIANTS[0].1))
+                .define_newtype::<T>(vname!(Self::ALL_VARIANTS[1].1))
                 .complete();
             Ok(match self {
-                XChain::Bitcoin(t) => w.write_newtype(fname!(Self::ALL_VARIANTS[0].1), t)?,
-                XChain::Liquid(t) => w.write_newtype(fname!(Self::ALL_VARIANTS[1].1), t)?,
+                XChain::Bitcoin(t) => w.write_newtype(vname!(Self::ALL_VARIANTS[0].1), t)?,
+                XChain::Liquid(t) => w.write_newtype(vname!(Self::ALL_VARIANTS[1].1), t)?,
             }
             .complete())
         })
@@ -291,6 +284,23 @@ impl<T> XChain<T> {
         match self {
             XChain::Bitcoin(t) => Box::new(t.into_iter().map(XChain::Bitcoin)),
             XChain::Liquid(t) => Box::new(t.into_iter().map(XChain::Liquid)),
+        }
+    }
+}
+
+impl<'a, T: Copy> XChain<&'a T> {
+    pub fn copied(self) -> XChain<T> { self.map(|t| *t) }
+}
+
+impl<'a, T: Clone> XChain<&'a T> {
+    pub fn cloned(self) -> XChain<T> { self.map(T::clone) }
+}
+
+impl<T> XChain<Option<T>> {
+    pub fn transpose(self) -> Option<XChain<T>> {
+        match self {
+            XChain::Bitcoin(inner) => inner.map(XChain::Bitcoin),
+            XChain::Liquid(inner) => inner.map(XChain::Liquid),
         }
     }
 }

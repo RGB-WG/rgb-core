@@ -23,21 +23,18 @@
 use core::fmt::Debug;
 use core::hash::Hash;
 
-use commit_verify::{CommitEncode, Conceal};
+use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     ConcealedAttach, ConcealedData, ConcealedValue, RevealedAttach, RevealedData, RevealedValue,
-    LIB_NAME_RGB,
 };
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
-pub trait ConfidentialState:
-    Debug + Hash + StrictDumb + StrictEncode + StrictDecode + CommitEncode + Eq + Copy
-{
+pub trait ConfidentialState: Debug + Hash + Eq + Copy {
     fn state_type(&self) -> StateType;
-    fn state_commitment(&self) -> StateCommitment;
+    fn state_commitment(&self) -> ConcealedState;
 }
 
 /// Marker trait for types of state holding explicit state data.
@@ -47,14 +44,13 @@ pub trait ExposedState:
     + StrictEncode
     + StrictDecode
     + Conceal<Concealed = Self::Confidential>
-    + CommitEncode
     + Eq
     + Ord
     + Clone
 {
-    type Confidential: ConfidentialState;
+    type Confidential: ConfidentialState + StrictEncode + StrictDecode + StrictDumb;
     fn state_type(&self) -> StateType;
-    fn state_data(&self) -> StateData;
+    fn state_data(&self) -> RevealedState;
 }
 
 /// Categories of the state
@@ -82,79 +78,51 @@ pub enum StateType {
 
 /// Categories of the state
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
-#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum StateData {
-    #[strict_type(tag = 0x00, dumb)]
+pub enum RevealedState {
     Void,
-    #[strict_type(tag = 0x01)]
     Fungible(RevealedValue),
-    #[strict_type(tag = 0x02)]
     Structured(RevealedData),
-    #[strict_type(tag = 0xFF)]
     Attachment(RevealedAttach),
 }
 
-impl ExposedState for StateData {
-    type Confidential = StateCommitment;
-    fn state_type(&self) -> StateType {
+impl RevealedState {
+    pub fn state_type(&self) -> StateType {
         match self {
-            StateData::Void => StateType::Void,
-            StateData::Fungible(_) => StateType::Fungible,
-            StateData::Structured(_) => StateType::Structured,
-            StateData::Attachment(_) => StateType::Attachment,
-        }
-    }
-    fn state_data(&self) -> StateData { self.clone() }
-}
-
-impl Conceal for StateData {
-    type Concealed = StateCommitment;
-    fn conceal(&self) -> Self::Concealed {
-        match self {
-            StateData::Void => StateCommitment::Void,
-            StateData::Fungible(value) => StateCommitment::Fungible(value.conceal()),
-            StateData::Structured(data) => StateCommitment::Structured(data.conceal()),
-            StateData::Attachment(attach) => StateCommitment::Attachment(attach.conceal()),
+            RevealedState::Void => StateType::Void,
+            RevealedState::Fungible(_) => StateType::Fungible,
+            RevealedState::Structured(_) => StateType::Structured,
+            RevealedState::Attachment(_) => StateType::Attachment,
         }
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
-#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[allow(clippy::large_enum_variant)]
-pub enum StateCommitment {
-    #[strict_type(tag = 0x00, dumb)]
+pub enum ConcealedState {
     Void,
-    #[strict_type(tag = 0x01)]
     Fungible(ConcealedValue),
-    #[strict_type(tag = 0x02)]
     Structured(ConcealedData),
-    #[strict_type(tag = 0xFF)]
     Attachment(ConcealedAttach),
 }
 
-impl ConfidentialState for StateCommitment {
+impl ConfidentialState for ConcealedState {
     fn state_type(&self) -> StateType {
         match self {
-            StateCommitment::Void => StateType::Void,
-            StateCommitment::Fungible(_) => StateType::Fungible,
-            StateCommitment::Structured(_) => StateType::Structured,
-            StateCommitment::Attachment(_) => StateType::Attachment,
+            ConcealedState::Void => StateType::Void,
+            ConcealedState::Fungible(_) => StateType::Fungible,
+            ConcealedState::Structured(_) => StateType::Structured,
+            ConcealedState::Attachment(_) => StateType::Attachment,
         }
     }
-    fn state_commitment(&self) -> StateCommitment { *self }
+    fn state_commitment(&self) -> ConcealedState { *self }
 }

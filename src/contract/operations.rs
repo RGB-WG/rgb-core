@@ -20,22 +20,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{btree_map, btree_set};
-use std::fmt::{self, Display, Formatter};
+use std::cmp::Ordering;
+use std::collections::{btree_map, btree_set, BTreeMap};
 use std::iter;
-use std::str::FromStr;
 
-use amplify::confinement::{SmallBlob, TinyOrdMap, TinyOrdSet};
-use amplify::hex::{FromHex, ToHex};
-use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
-use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
-use commit_verify::{mpc, CommitmentId, Conceal};
+use amplify::confinement::{Confined, SmallBlob, TinyOrdMap, TinyOrdSet};
+use amplify::Wrapper;
+use commit_verify::{
+    CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, StrictHash,
+};
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, AssignmentType, Assignments, AssignmentsRef, Ffv, GenesisSeal, GlobalState,
-    GraphSeal, Opout, ReservedByte, TypedAssigns, LIB_NAME_RGB,
+    AltLayer1Set, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
+    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
+    GenesisSeal, GlobalState, GraphSeal, OpDisclose, OpId, Opout, ReservedBytes, SecretSeal,
+    TypedAssigns, VoidState, XChain, LIB_NAME_RGB,
 };
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
@@ -44,11 +45,25 @@ use crate::{
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
+#[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct Metadata(SmallBlob);
+
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
 )]
 pub struct Valencies(TinyOrdSet<schema::ValencyType>);
 
@@ -65,11 +80,11 @@ impl<'a> IntoIterator for &'a Valencies {
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
+#[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", transparent)
 )]
 pub struct Redeemed(TinyOrdMap<schema::ValencyType, OpId>);
 
@@ -85,12 +100,10 @@ impl<'a> IntoIterator for &'a Redeemed {
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", transparent)
 )]
 pub struct Inputs(TinyOrdSet<Input>);
 
@@ -101,9 +114,18 @@ impl<'a> IntoIterator for &'a Inputs {
     fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
 }
 
+impl MerkleLeaves for Inputs {
+    type Leaf = Input;
+    type LeafIter<'tmp> = <TinyOrdSet<Input> as MerkleLeaves>::LeafIter<'tmp>;
+
+    fn merkle_leaves(&self) -> Self::LeafIter<'_> { self.0.merkle_leaves() }
+}
+
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = MerkleHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -112,7 +134,8 @@ impl<'a> IntoIterator for &'a Inputs {
 #[display("{prev_out}")]
 pub struct Input {
     pub prev_out: Opout,
-    reserved: ReservedByte,
+    #[cfg_attr(feature = "serde", serde(skip))]
+    reserved: ReservedBytes<2>,
 }
 
 impl Input {
@@ -122,95 +145,6 @@ impl Input {
             reserved: default!(),
         }
     }
-}
-
-/// Unique operation (genesis, extensions & state transition) identifier
-/// equivalent to the commitment hash
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
-#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[display(Self::to_hex)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct OpId(
-    #[from]
-    #[from([u8; 32])]
-    Bytes32,
-);
-
-impl FromStr for OpId {
-    type Err = hex::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
-}
-
-impl OpId {
-    pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
-        Bytes32::copy_from_slice(slice).map(Self)
-    }
-}
-
-/// Unique contract identifier equivalent to the contract genesis commitment
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
-#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct ContractId(
-    #[from]
-    #[from([u8; 32])]
-    Bytes32,
-);
-
-impl PartialEq<OpId> for ContractId {
-    fn eq(&self, other: &OpId) -> bool { self.to_byte_array() == other.to_byte_array() }
-}
-impl PartialEq<ContractId> for OpId {
-    fn eq(&self, other: &ContractId) -> bool { self.to_byte_array() == other.to_byte_array() }
-}
-
-impl ContractId {
-    pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
-        Bytes32::copy_from_slice(slice).map(Self)
-    }
-}
-
-impl ToBaid58<32> for ContractId {
-    const HRI: &'static str = "rgb";
-    const CHUNKING: Option<Chunking> = CHUNKING_32CHECKSUM;
-    fn to_baid58_payload(&self) -> [u8; 32] { self.to_byte_array() }
-    fn to_baid58_string(&self) -> String { self.to_string() }
-}
-impl FromBaid58<32> for ContractId {}
-impl Display for ContractId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
-            write!(f, "{::^}", self.to_baid58())
-        } else {
-            write!(f, "{::^.3}", self.to_baid58())
-        }
-    }
-}
-impl FromStr for ContractId {
-    type Err = Baid58ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_baid58_maybe_chunked_str(s, ':', '#')
-    }
-}
-
-impl From<mpc::ProtocolId> for ContractId {
-    fn from(id: mpc::ProtocolId) -> Self { ContractId(id.into_inner()) }
-}
-
-impl From<ContractId> for mpc::ProtocolId {
-    fn from(id: ContractId) -> Self { mpc::ProtocolId::from_inner(id.into_inner()) }
 }
 
 /// RGB contract operation API, defined as trait
@@ -260,12 +194,64 @@ pub trait Operation {
     /// While public state extension do have parent nodes, they do not contain
     /// indexed rights.
     fn inputs(&self) -> Inputs;
+
+    /// Provides summary about parts of the operation which are revealed.
+    fn disclose(&self) -> OpDisclose {
+        fn proc_seals<State: ExposedState>(
+            ty: AssignmentType,
+            a: &[Assign<State, GraphSeal>],
+            seals: &mut BTreeMap<AssignmentIndex, XChain<SecretSeal>>,
+            state: &mut BTreeMap<AssignmentIndex, State::Concealed>,
+        ) {
+            for (index, assignment) in a.iter().enumerate() {
+                if let Some(seal) = assignment.revealed_seal() {
+                    seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
+                }
+                if let Some(revealed) = assignment.as_revealed_state() {
+                    state.insert(AssignmentIndex::new(ty, index as u16), revealed.conceal());
+                }
+            }
+        }
+
+        let mut seals: BTreeMap<AssignmentIndex, XChain<SecretSeal>> = bmap!();
+        let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
+        let mut fungible: BTreeMap<AssignmentIndex, ConcealedValue> = bmap!();
+        let mut data: BTreeMap<AssignmentIndex, ConcealedData> = bmap!();
+        let mut attach: BTreeMap<AssignmentIndex, ConcealedAttach> = bmap!();
+        for (ty, assigns) in self.assignments().flat() {
+            match assigns {
+                TypedAssigns::Declarative(a) => {
+                    proc_seals(ty, &a, &mut seals, &mut void);
+                }
+                TypedAssigns::Fungible(a) => {
+                    proc_seals(ty, &a, &mut seals, &mut fungible);
+                }
+                TypedAssigns::Structured(a) => {
+                    proc_seals(ty, &a, &mut seals, &mut data);
+                }
+                TypedAssigns::Attachment(a) => {
+                    proc_seals(ty, &a, &mut seals, &mut attach);
+                }
+            }
+        }
+
+        OpDisclose {
+            id: self.id(),
+            seals: Confined::from_collection_unsafe(seals),
+            fungible: Confined::from_iter_unsafe(
+                fungible.into_iter().map(|(k, s)| (k, s.commitment)),
+            ),
+            data: Confined::from_collection_unsafe(data),
+            attach: Confined::from_collection_unsafe(attach),
+        }
+    }
+
+    fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -276,7 +262,7 @@ pub struct Genesis {
     pub schema_id: SchemaId,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
-    pub metadata: SmallBlob,
+    pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
@@ -288,7 +274,6 @@ impl StrictDeserialize for Genesis {}
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -298,7 +283,7 @@ pub struct Extension {
     pub ffv: Ffv,
     pub contract_id: ContractId,
     pub extension_type: ExtensionType,
-    pub metadata: SmallBlob,
+    pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
@@ -308,10 +293,17 @@ pub struct Extension {
 impl StrictSerialize for Extension {}
 impl StrictDeserialize for Extension {}
 
+impl Ord for Extension {
+    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
+}
+
+impl PartialOrd for Extension {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -321,7 +313,7 @@ pub struct Transition {
     pub ffv: Ffv,
     pub contract_id: ContractId,
     pub transition_type: TransitionType,
-    pub metadata: SmallBlob,
+    pub metadata: Metadata,
     pub globals: GlobalState,
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
@@ -331,8 +323,16 @@ pub struct Transition {
 impl StrictSerialize for Transition {}
 impl StrictDeserialize for Transition {}
 
+impl Ord for Transition {
+    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
+}
+
+impl PartialOrd for Transition {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
 impl Conceal for Genesis {
-    type Concealed = Genesis;
+    type Concealed = Self;
     fn conceal(&self) -> Self::Concealed {
         let mut concealed = self.clone();
         concealed
@@ -341,15 +341,10 @@ impl Conceal for Genesis {
             .for_each(|(_, a)| *a = a.conceal());
         concealed
     }
-}
-
-impl CommitmentId for Genesis {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:genesis:v02#202304";
-    type Id = ContractId;
 }
 
 impl Conceal for Transition {
-    type Concealed = Transition;
+    type Concealed = Self;
     fn conceal(&self) -> Self::Concealed {
         let mut concealed = self.clone();
         concealed
@@ -358,15 +353,10 @@ impl Conceal for Transition {
             .for_each(|(_, a)| *a = a.conceal());
         concealed
     }
-}
-
-impl CommitmentId for Transition {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:transition:v02#23B";
-    type Id = OpId;
 }
 
 impl Conceal for Extension {
-    type Concealed = Extension;
+    type Concealed = Self;
     fn conceal(&self) -> Self::Concealed {
         let mut concealed = self.clone();
         concealed
@@ -377,9 +367,19 @@ impl Conceal for Extension {
     }
 }
 
-impl CommitmentId for Extension {
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:extension:v02#2304";
-    type Id = OpId;
+impl CommitEncode for Genesis {
+    type CommitmentId = OpId;
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
+}
+
+impl CommitEncode for Transition {
+    type CommitmentId = OpId;
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
+}
+
+impl CommitEncode for Extension {
+    type CommitmentId = OpId;
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
 }
 
 impl Transition {
@@ -406,7 +406,7 @@ impl Operation for Genesis {
     fn full_type(&self) -> OpFullType { OpFullType::Genesis }
 
     #[inline]
-    fn id(&self) -> OpId { OpId(self.commitment_id().into_inner()) }
+    fn id(&self) -> OpId { self.commit_id() }
 
     #[inline]
     fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
@@ -448,7 +448,7 @@ impl Operation for Extension {
     fn full_type(&self) -> OpFullType { OpFullType::StateExtension(self.extension_type) }
 
     #[inline]
-    fn id(&self) -> OpId { self.commitment_id() }
+    fn id(&self) -> OpId { self.commit_id() }
 
     #[inline]
     fn contract_id(&self) -> ContractId { self.contract_id }
@@ -490,7 +490,7 @@ impl Operation for Transition {
     fn full_type(&self) -> OpFullType { OpFullType::StateTransition(self.transition_type) }
 
     #[inline]
-    fn id(&self) -> OpId { self.commitment_id() }
+    fn id(&self) -> OpId { self.commit_id() }
 
     #[inline]
     fn contract_id(&self) -> ContractId { self.contract_id }
@@ -631,6 +631,11 @@ impl<'op> Operation for OpRef<'op> {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
+    use amplify::ByteArray;
+    use baid58::ToBaid58;
+
     use super::*;
 
     #[test]

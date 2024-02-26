@@ -22,37 +22,34 @@
 
 use core::fmt::{self, Debug, Formatter};
 use std::cmp::Ordering;
-use std::io::Write;
 
 use amplify::confinement::SmallBlob;
 use amplify::hex::ToHex;
 use amplify::{Bytes32, Wrapper};
 use bp::secp256k1::rand::{random, Rng, RngCore};
-use commit_verify::{CommitEncode, CommitVerify, Conceal, StrictEncodedProtocol};
+use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, ExposedState};
-use crate::{StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{ConcealedState, RevealedState, StateType, LIB_NAME_RGB};
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Default)]
 #[display("void")]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct VoidState(());
 
 impl ConfidentialState for VoidState {
     fn state_type(&self) -> StateType { StateType::Void }
-    fn state_commitment(&self) -> StateCommitment { StateCommitment::Void }
+    fn state_commitment(&self) -> ConcealedState { ConcealedState::Void }
 }
 
 impl ExposedState for VoidState {
     type Confidential = VoidState;
     fn state_type(&self) -> StateType { StateType::Void }
-    fn state_data(&self) -> StateData { StateData::Void }
+    fn state_data(&self) -> RevealedState { RevealedState::Void }
 }
 
 impl Conceal for VoidState {
@@ -65,8 +62,6 @@ impl Conceal for VoidState {
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct DataState(SmallBlob);
 impl StrictSerialize for DataState {}
@@ -78,6 +73,8 @@ impl From<RevealedData> for DataState {
 #[derive(Clone, Eq, PartialEq, Hash)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = ConcealedData)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct RevealedData {
     pub value: DataState,
@@ -107,20 +104,13 @@ impl RevealedData {
 impl ExposedState for RevealedData {
     type Confidential = ConcealedData;
     fn state_type(&self) -> StateType { StateType::Structured }
-    fn state_data(&self) -> StateData { StateData::Structured(self.clone()) }
+    fn state_data(&self) -> RevealedState { RevealedState::Structured(self.clone()) }
 }
 
 impl Conceal for RevealedData {
     type Concealed = ConcealedData;
 
-    fn conceal(&self) -> Self::Concealed { ConcealedData::commit(self) }
-}
-
-impl CommitEncode for RevealedData {
-    fn commit_encode(&self, e: &mut impl Write) {
-        e.write_all(&self.value).ok();
-        e.write_all(&self.salt.to_le_bytes()).ok();
-    }
+    fn conceal(&self) -> Self::Concealed { self.commit_id() }
 }
 
 impl PartialOrd for RevealedData {
@@ -154,8 +144,6 @@ impl Debug for RevealedData {
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedData")]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -169,9 +157,13 @@ pub struct ConcealedData(
 
 impl ConfidentialState for ConcealedData {
     fn state_type(&self) -> StateType { StateType::Structured }
-    fn state_commitment(&self) -> StateCommitment { StateCommitment::Structured(*self) }
+    fn state_commitment(&self) -> ConcealedState { ConcealedState::Structured(*self) }
 }
 
-impl CommitVerify<RevealedData, StrictEncodedProtocol> for ConcealedData {
-    fn commit(revealed: &RevealedData) -> Self { Bytes32::commit(revealed).into() }
+impl From<Sha256> for ConcealedData {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for ConcealedData {
+    const TAG: &'static str = "urn:lnp-bp:rgb:state-data#2024-02-12";
 }

@@ -33,6 +33,7 @@ mod bundle;
 #[allow(clippy::module_inception)]
 mod contract;
 mod xchain;
+mod commit;
 
 pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
 pub use assignments::{
@@ -40,7 +41,11 @@ pub use assignments::{
     TypedAssigns,
 };
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
-pub use bundle::{BundleId, TransitionBundle, Vin};
+pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
+pub use commit::{
+    AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
+    DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
+};
 pub use contract::{
     AssignmentWitness, ContractHistory, ContractState, GlobalOrd, KnownState, Opout,
     OpoutParseError, OutputAssignment,
@@ -52,14 +57,13 @@ pub use fungible::{
 };
 pub use global::{GlobalState, GlobalValues};
 pub use operations::{
-    ContractId, Extension, Genesis, Input, Inputs, OpId, OpRef, Operation, Redeemed, Transition,
-    Valencies,
+    Extension, Genesis, Input, Inputs, Metadata, OpRef, Operation, Redeemed, Transition, Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
     WitnessPos, XGenesisSeal, XGraphSeal, XOutputSeal, XPubWitness, XWitness,
 };
-pub use state::{ConfidentialState, ExposedState, StateCommitment, StateData, StateType};
+pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
 pub use xchain::{
     AltLayer1, AltLayer1Set, XChain, XChainParseError, XOutpoint, XCHAIN_BITCOIN_PREFIX,
     XCHAIN_LIQUID_PREFIX,

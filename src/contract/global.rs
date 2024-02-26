@@ -61,8 +61,6 @@ impl IntoIterator for GlobalValues {
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

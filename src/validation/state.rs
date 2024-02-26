@@ -24,8 +24,8 @@ use strict_types::TypeSystem;
 
 use crate::schema::AssignmentType;
 use crate::{
-    validation, Assign, ConfidentialState, ExposedSeal, ExposedState, OpId, StateCommitment,
-    StateData, StateSchema,
+    validation, Assign, ConcealedState, ConfidentialState, ExposedSeal, ExposedState, OpId,
+    RevealedState, StateSchema,
 };
 
 impl StateSchema {
@@ -40,8 +40,8 @@ impl StateSchema {
         match data {
             Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
                 match (self, state.state_commitment()) {
-                    (StateSchema::Declarative, StateCommitment::Void) => {}
-                    (StateSchema::Fungible(_), StateCommitment::Fungible(value)) => {
+                    (StateSchema::Declarative, ConcealedState::Void) => {}
+                    (StateSchema::Fungible(_), ConcealedState::Fungible(value)) => {
                         // [SECURITY-CRITICAL]: Bulletproofs validation
                         if let Err(err) = value.verify_range_proof() {
                             status.add_failure(validation::Failure::BulletproofsInvalid(
@@ -51,12 +51,12 @@ impl StateSchema {
                             ));
                         }
                     }
-                    (StateSchema::Structured(_), StateCommitment::Structured(_)) => {
+                    (StateSchema::Structured(_), ConcealedState::Structured(_)) => {
                         status.add_info(validation::Info::UncheckableConfidentialState(
                             *opid, state_type,
                         ));
                     }
-                    (StateSchema::Attachment(_), StateCommitment::Attachment(_)) => {
+                    (StateSchema::Attachment(_), ConcealedState::Attachment(_)) => {
                         status.add_info(validation::Info::UncheckableConfidentialState(
                             *opid, state_type,
                         ));
@@ -74,8 +74,8 @@ impl StateSchema {
             }
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 match (self, state.state_data()) {
-                    (StateSchema::Declarative, StateData::Void) => {}
-                    (StateSchema::Attachment(media_type), StateData::Attachment(attach))
+                    (StateSchema::Declarative, RevealedState::Void) => {}
+                    (StateSchema::Attachment(media_type), RevealedState::Attachment(attach))
                         if !attach.media_type.conforms(media_type) =>
                     {
                         status.add_failure(validation::Failure::MediaTypeMismatch {
@@ -85,7 +85,7 @@ impl StateSchema {
                             found: attach.media_type,
                         });
                     }
-                    (StateSchema::Fungible(schema), StateData::Fungible(v))
+                    (StateSchema::Fungible(schema), RevealedState::Fungible(v))
                         if v.value.fungible_type() != *schema =>
                     {
                         status.add_failure(validation::Failure::FungibleTypeMismatch {
@@ -95,8 +95,8 @@ impl StateSchema {
                             found: v.value.fungible_type(),
                         });
                     }
-                    (StateSchema::Fungible(_), StateData::Fungible(_)) => {}
-                    (StateSchema::Structured(sem_id), StateData::Structured(data)) => {
+                    (StateSchema::Fungible(_), RevealedState::Fungible(_)) => {}
+                    (StateSchema::Structured(sem_id), RevealedState::Structured(data)) => {
                         if type_system
                             .strict_deserialize_type(*sem_id, data.value.as_ref())
                             .is_err()

@@ -63,27 +63,35 @@ pub use prelude::*;
 
 pub const LIB_NAME_RGB: &str = "RGB";
 
-/// Reserved byte.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
+// TODO: Move to amplify crate
+
+/// Reserved bytes.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display("reserved")]
 #[derive(StrictType, StrictEncode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct ReservedByte(u8);
+pub struct ReservedBytes<const LEN: usize, const VAL: u8 = 0>([u8; LEN]);
+
+impl<const LEN: usize, const VAL: u8> Default for ReservedBytes<LEN, VAL> {
+    fn default() -> Self { Self([VAL; LEN]) }
+}
+
+impl<const LEN: usize, const VAL: u8> From<[u8; LEN]> for ReservedBytes<LEN, VAL> {
+    fn from(value: [u8; LEN]) -> Self {
+        assert_eq!(value, [VAL; LEN]);
+        Self(value)
+    }
+}
 
 mod _reserved {
     use strict_encoding::{DecodeError, ReadTuple, StrictDecode, TypedRead};
 
-    use crate::ReservedByte;
+    use crate::ReservedBytes;
 
-    impl StrictDecode for ReservedByte {
+    impl<const LEN: usize, const VAL: u8> StrictDecode for ReservedBytes<LEN, VAL> {
         fn strict_decode(reader: &mut impl TypedRead) -> Result<Self, DecodeError> {
             let reserved = reader.read_tuple(|r| r.read_field().map(Self))?;
-            if reserved != ReservedByte::default() {
+            if reserved != ReservedBytes::<LEN, VAL>::default() {
                 Err(DecodeError::DataIntegrityError(format!(
                     "unsupported reserved byte value indicating a future RGB version. Please \
                      update your software, or, if the problem persists, contact your vendor \
@@ -94,6 +102,53 @@ mod _reserved {
             }
         }
     }
+
+    #[cfg(feature = "serde")]
+    mod _serde {
+        use std::fmt;
+
+        use serde_crate::de::Visitor;
+        use serde_crate::{de, Deserialize, Deserializer, Serialize, Serializer};
+
+        use super::*;
+
+        impl<const LEN: usize, const VAL: u8> Serialize for ReservedBytes<LEN, VAL> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: Serializer {
+                // Doing nothing
+                serializer.serialize_unit()
+            }
+        }
+
+        impl<'de, const LEN: usize, const VAL: u8> Deserialize<'de> for ReservedBytes<LEN, VAL> {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where D: Deserializer<'de> {
+                #[derive(Default)]
+                pub struct UntaggedUnitVisitor;
+
+                impl<'de> Visitor<'de> for UntaggedUnitVisitor {
+                    type Value = ();
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        write!(formatter, "reserved unit")
+                    }
+
+                    fn visit_none<E>(self) -> Result<(), E>
+                    where E: de::Error {
+                        Ok(())
+                    }
+
+                    fn visit_unit<E>(self) -> Result<(), E>
+                    where E: de::Error {
+                        Ok(())
+                    }
+                }
+
+                deserializer.deserialize_unit(UntaggedUnitVisitor)?;
+                Ok(default!())
+            }
+        }
+    }
 }
 
 /// Fast-forward version code
@@ -101,8 +156,6 @@ mod _reserved {
 #[display("RGB/1.{0}")]
 #[derive(StrictType, StrictEncode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

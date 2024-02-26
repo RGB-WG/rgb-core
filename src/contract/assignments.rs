@@ -22,14 +22,12 @@
 
 use core::cmp::Ordering;
 use core::fmt::Debug;
-use std::collections::BTreeSet;
+use std::collections::{btree_map, BTreeSet};
 use std::hash::{Hash, Hasher};
-use std::{io, vec};
 
 use amplify::confinement::{Confined, SmallVec, TinyOrdMap};
-use commit_verify::merkle::{MerkleLeaves, MerkleNode};
-use commit_verify::{CommitEncode, CommitStrategy, CommitmentId, Conceal};
-use strict_encoding::{StrictDumb, StrictEncode, StrictWriter};
+use commit_verify::Conceal;
+use strict_encoding::{StrictDumb, StrictEncode};
 
 use super::ExposedState;
 use crate::contract::seal::GenesisSeal;
@@ -229,40 +227,6 @@ where Self: Clone
             },
         }
     }
-}
-
-// We do not derive here since we omit serialization of the tag: all data are
-// concealed, thus no tag is needed.
-impl<State: ExposedState, Seal: ExposedSeal> CommitEncode for Assign<State, Seal>
-where Self: Clone
-{
-    fn commit_encode(&self, e: &mut impl io::Write) {
-        match self {
-            Assign::Confidential { seal, state } => {
-                seal.commit_encode(e);
-                state.commit_encode(e);
-            }
-            Assign::ConfidentialState { seal, state } => {
-                seal.conceal().commit_encode(e);
-                state.commit_encode(e);
-            }
-            Assign::Revealed { seal, state } => {
-                seal.conceal().commit_encode(e);
-                state.commit_encode(e);
-            }
-            Assign::ConfidentialSeal { seal, state } => {
-                seal.commit_encode(e);
-                state.commit_encode(e);
-            }
-        }
-    }
-}
-
-impl<State: ExposedState, Seal: ExposedSeal> CommitmentId for Assign<State, Seal>
-where Self: Clone
-{
-    const TAG: [u8; 32] = *b"urn:lnpbp:rgb:owned-state:v1#23A";
-    type Id = MerkleNode;
 }
 
 impl<State: ExposedState> Assign<State, GenesisSeal> {
@@ -553,38 +517,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     }
 }
 
-impl<Seal: ExposedSeal> CommitStrategy for TypedAssigns<Seal> {
-    type Strategy =
-        commit_verify::strategies::Merklize<{ u128::from_be_bytes(*b"rgb:state:owned*") }>;
-}
-
-impl<Seal: ExposedSeal> MerkleLeaves for TypedAssigns<Seal> {
-    type Leaf = MerkleNode;
-    type LeafIter<'tmp> = vec::IntoIter<MerkleNode> where Self: 'tmp;
-
-    fn merkle_leaves(&self) -> Self::LeafIter<'_> {
-        match self {
-            TypedAssigns::Declarative(vec) => vec
-                .iter()
-                .map(AssignRights::commitment_id)
-                .collect::<Vec<_>>(),
-            TypedAssigns::Fungible(vec) => vec
-                .iter()
-                .map(AssignFungible::commitment_id)
-                .collect::<Vec<_>>(),
-            TypedAssigns::Structured(vec) => vec
-                .iter()
-                .map(AssignData::commitment_id)
-                .collect::<Vec<_>>(),
-            TypedAssigns::Attachment(vec) => vec
-                .iter()
-                .map(AssignAttach::commitment_id)
-                .collect::<Vec<_>>(),
-        }
-        .into_iter()
-    }
-}
-
 impl TypedAssigns<GenesisSeal> {
     pub fn transmutate_seals(&self) -> TypedAssigns<GraphSeal> {
         match self {
@@ -629,18 +561,6 @@ impl<Seal: ExposedSeal> Default for Assignments<Seal> {
     fn default() -> Self { Self(empty!()) }
 }
 
-impl<Seal: ExposedSeal> CommitEncode for Assignments<Seal> {
-    fn commit_encode(&self, mut e: &mut impl io::Write) {
-        let w = StrictWriter::with(u32::MAX as usize, &mut e);
-        self.0.len_u8().strict_encode(w).ok();
-        for (ty, state) in &self.0 {
-            let w = StrictWriter::with(u32::MAX as usize, &mut e);
-            ty.strict_encode(w).ok();
-            state.commit_encode(e);
-        }
-    }
-}
-
 impl Assignments<GenesisSeal> {
     pub fn transmutate_seals(&self) -> Assignments<GraphSeal> {
         Assignments(
@@ -648,6 +568,13 @@ impl Assignments<GenesisSeal> {
                 .expect("same size"),
         )
     }
+}
+
+impl<Seal: ExposedSeal> IntoIterator for Assignments<Seal> {
+    type Item = (AssignmentType, TypedAssigns<Seal>);
+    type IntoIter = btree_map::IntoIter<AssignmentType, TypedAssigns<Seal>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, From)]
@@ -668,6 +595,13 @@ impl AssignmentsRef<'_> {
     }
 
     pub fn is_empty(&self) -> bool { self.len() == 0 }
+
+    pub fn flat(&self) -> Assignments<GraphSeal> {
+        match *self {
+            AssignmentsRef::Genesis(a) => a.transmutate_seals(),
+            AssignmentsRef::Graph(a) => a.clone(),
+        }
+    }
 
     pub fn types(&self) -> BTreeSet<AssignmentType> {
         match self {

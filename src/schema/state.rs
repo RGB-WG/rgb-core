@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use strict_encoding::constants::U64;
+use strict_encoding::Primitive;
 use strict_types::SemId;
 
 use crate::{StateType, LIB_NAME_RGB};
@@ -96,7 +96,7 @@ impl StateSchema {
 pub enum FungibleType {
     #[default]
     #[display("64bit")]
-    Unsigned64Bit = U64.into_code(),
+    Unsigned64Bit = Primitive::U64.into_code(),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]

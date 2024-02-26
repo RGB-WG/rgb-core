@@ -25,11 +25,11 @@ use std::str::FromStr;
 use amplify::{ByteArray, Bytes32};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use bp::secp256k1::rand::{random, Rng, RngCore};
-use commit_verify::{CommitVerify, Conceal, StrictEncodedProtocol};
+use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, ExposedState};
-use crate::{MediaType, StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{ConcealedState, MediaType, RevealedState, StateType, LIB_NAME_RGB};
 
 /// Unique data attachment identifier
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
@@ -68,7 +68,7 @@ impl AttachId {
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
-#[commit_encode(conceal, strategy = strict)]
+#[commit_encode(strategy = strict, id = ConcealedAttach)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -112,13 +112,13 @@ impl RevealedAttach {
 impl ExposedState for RevealedAttach {
     type Confidential = ConcealedAttach;
     fn state_type(&self) -> StateType { StateType::Attachment }
-    fn state_data(&self) -> StateData { StateData::Attachment(self.clone()) }
+    fn state_data(&self) -> RevealedState { RevealedState::Attachment(self.clone()) }
 }
 
 impl Conceal for RevealedAttach {
     type Concealed = ConcealedAttach;
 
-    fn conceal(&self) -> Self::Concealed { ConcealedAttach::commit(self) }
+    fn conceal(&self) -> Self::Concealed { self.commit_id() }
 }
 
 /// Confidential version of an attachment information.
@@ -128,8 +128,6 @@ impl Conceal for RevealedAttach {
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -143,11 +141,15 @@ pub struct ConcealedAttach(
 
 impl ConfidentialState for ConcealedAttach {
     fn state_type(&self) -> StateType { StateType::Attachment }
-    fn state_commitment(&self) -> StateCommitment { StateCommitment::Attachment(*self) }
+    fn state_commitment(&self) -> ConcealedState { ConcealedState::Attachment(*self) }
 }
 
-impl CommitVerify<RevealedAttach, StrictEncodedProtocol> for ConcealedAttach {
-    fn commit(revealed: &RevealedAttach) -> Self { Bytes32::commit(revealed).into() }
+impl From<Sha256> for ConcealedAttach {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for ConcealedAttach {
+    const TAG: &'static str = "urn:lnp-bp:rgb:state-attach#2024-02-12";
 }
 
 #[cfg(test)]

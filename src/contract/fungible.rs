@@ -36,7 +36,6 @@ use core::num::ParseIntError;
 use core::ops::Deref;
 use core::str::FromStr;
 use std::io;
-use std::io::Write;
 
 use amplify::confinement::U8;
 use amplify::hex::ToHex;
@@ -46,7 +45,7 @@ use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use chrono::{DateTime, Utc};
 use commit_verify::{
-    CommitEncode, CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256, UntaggedProtocol,
+    CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256, UntaggedProtocol,
 };
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
@@ -56,7 +55,7 @@ use strict_encoding::{
 };
 
 use super::{ConfidentialState, ExposedState};
-use crate::{schema, AssignmentType, StateCommitment, StateData, StateType, LIB_NAME_RGB};
+use crate::{schema, AssignmentType, ConcealedState, RevealedState, StateType, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
@@ -328,22 +327,13 @@ impl RevealedValue {
 impl ExposedState for RevealedValue {
     type Confidential = ConcealedValue;
     fn state_type(&self) -> StateType { StateType::Fungible }
-    fn state_data(&self) -> StateData { StateData::Fungible(*self) }
+    fn state_data(&self) -> RevealedState { RevealedState::Fungible(*self) }
 }
 
 impl Conceal for RevealedValue {
     type Concealed = ConcealedValue;
 
     fn conceal(&self) -> Self::Concealed { ConcealedValue::commit(self) }
-}
-
-// We need this manual implementation while conceal procedure is inaccessible
-// w/o bulletproofs operational
-impl CommitEncode for RevealedValue {
-    fn commit_encode(&self, e: &mut impl Write) {
-        let commitment = PedersenCommitment::commit(self);
-        commitment.commit_encode(e);
-    }
 }
 
 impl PartialOrd for RevealedValue {
@@ -364,8 +354,6 @@ impl Ord for RevealedValue {
 #[wrapper(Deref, FromStr, Display, LowerHex)]
 #[derive(StrictType)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -480,7 +468,6 @@ impl CommitmentProtocol for PedersenProtocol {}
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedFungible")]
-#[derive(CommitEncode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -490,13 +477,12 @@ pub struct ConcealedValue {
     /// Pedersen commitment to the original [`FungibleState`].
     pub commitment: PedersenCommitment,
     /// Range proof for the [`FungibleState`] not exceeding type boundaries.
-    #[commit_encode(skip)]
     pub range_proof: RangeProof,
 }
 
 impl ConfidentialState for ConcealedValue {
     fn state_type(&self) -> StateType { StateType::Fungible }
-    fn state_commitment(&self) -> StateCommitment { StateCommitment::Fungible(*self) }
+    fn state_commitment(&self) -> ConcealedState { ConcealedState::Fungible(*self) }
 }
 
 impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
@@ -534,27 +520,9 @@ impl ConcealedValue {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashSet;
-
     use amplify::ByteArray;
 
     use super::*;
-
-    #[test]
-    fn commitments_determinism() {
-        let tag = AssetTag::from_byte_array([1u8; 32]);
-
-        let value = RevealedValue::with_rng(15, &mut thread_rng(), tag);
-
-        let generators = (0..10)
-            .map(|_| {
-                let mut val = vec![];
-                value.commit_encode(&mut val);
-                val
-            })
-            .collect::<HashSet<_>>();
-        assert_eq!(generators.len(), 1);
-    }
 
     #[test]
     fn pedersen_blinding_mismatch() {

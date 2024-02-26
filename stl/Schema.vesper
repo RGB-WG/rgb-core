@@ -1,0 +1,150 @@
+{-
+  Description: RGB Schema
+  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+  Copyright (C) 2024 LNP/BP Standards Association. All rights reserved.
+  License: Apache-2.0
+-}
+
+Seals vesper lexicon=types+commitments
+
+SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
+  Ffv serialized
+  SchemaId serialized
+  GlobalStateSchema map len=0..MAX8
+    GlobalStateType mapKey
+    GlobalStateSchema mapValue
+  StateSchema map len=0..MAX8
+    AssignmentType mapKey
+    StateSchema mapValue
+  ValencyType set len=0..MAX8
+    ValencyType element
+  GenesisSchema serialized
+  ExtensionSchema map len=0..MAX8
+    ExtensionType mapKey
+    ExtensionSchema mapValue
+  TransitionSchema map len=0..MAX8
+    TransitionType mapKey
+    TransitionSchema mapValue
+  TypeSysId serialized
+  Script serialized
+
+Schema rec
+  ffv is U16 aka=Ffv
+    some is Unit option wrapped tag=1
+  globalTypes map len=0..MAX8
+    key is U16 aka=GlobalStateType
+    value rec GlobalStateSchema
+      semId bytes len=32 aka=SemId
+      maxItems is U16
+  ownedTypes map len=0..MAX8
+    key is U16 aka=AssignmentType
+    value union StateSchema
+      declarative is Unit tag=0
+      fungible enum FungibleType wrapped unsigned64Bit=8 tag=1
+      structured bytes len=32 wrapped aka=SemId tag=2
+      attachment enum MediaType wrapped any=255 tag=3
+  valencyTypes set len=0..MAX8
+    element is U16 aka=ValencyType
+  genesis rec GenesisSchema
+    metadata bytes len=32 aka=SemId
+    globals map len=0..MAX8
+      key is U16 aka=GlobalStateType
+      value rec Occurrences
+        min is U16
+        max is U16
+    assignments map len=0..MAX8
+      key is U16 aka=AssignmentType
+      value rec Occurrences
+        min is U16
+        max is U16
+    valencies set len=0..MAX8
+      element is U16 aka=ValencyType
+  extensions map len=0..MAX8
+    key is U16 aka=ExtensionType
+    value rec ExtensionSchema
+      metadata bytes len=32 aka=SemId
+      globals map len=0..MAX8
+        key is U16 aka=GlobalStateType
+        value rec Occurrences
+          min is U16
+          max is U16
+      redeems set len=0..MAX8
+        element is U16 aka=ValencyType
+      assignments map len=0..MAX8
+        key is U16 aka=AssignmentType
+        value rec Occurrences
+          min is U16
+          max is U16
+      valencies set len=0..MAX8
+        element is U16 aka=ValencyType
+  transitions map len=0..MAX8
+    key is U16 aka=TransitionType
+    value rec TransitionSchema
+      metadata bytes len=32 aka=SemId
+      globals map len=0..MAX8
+        key is U16 aka=GlobalStateType
+        value rec Occurrences
+          min is U16
+          max is U16
+      inputs map len=0..MAX8
+        key is U16 aka=AssignmentType
+        value rec Occurrences
+          min is U16
+          max is U16
+      assignments map len=0..MAX8
+        key is U16 aka=AssignmentType
+        value rec Occurrences
+          min is U16
+          max is U16
+      valencies set len=0..MAX8
+        element is U16 aka=ValencyType
+  typeSystem map len=0..MAX24 aka=TypeSystem
+    key bytes len=32 aka=SemId
+    value union TySemId
+      primitive is U8 wrapped aka=Primitive tag=0
+      unicode is Unit tag=1
+      enum set len=1..MAX8 wrapped aka=EnumVariants tag=2
+        Variant rec
+          name ascii len=1..100 aka=VariantName aka=Ident charset=AlphaNumLodash
+          tag is U8
+      union map len=0..MAX8 wrapped aka=UnionVariantsSemId tag=3
+        key is U8
+        value rec VariantInfoSemId
+          name ascii len=1..100 aka=VariantName aka=Ident charset=AlphaNumLodash
+          ty bytes len=32 aka=SemId
+      tuple list len=1..MAX8 wrapped aka=UnnamedFieldsSemId tag=4
+        element bytes len=32 aka=SemId
+      struct list len=1..MAX8 wrapped aka=NamedFieldsSemId tag=5
+        FieldSemId rec
+          name ascii len=1..100 aka=FieldName aka=Ident charset=AlphaNumLodash
+          ty bytes len=32 aka=SemId
+      array tuple tag=6
+        _ bytes len=32 aka=SemId
+        _ is U16
+      list tuple tag=7
+        _ bytes len=32 aka=SemId
+        Sizing rec
+          min is U64
+          max is U64
+      set tuple tag=8
+        _ bytes len=32 aka=SemId
+        Sizing rec
+          min is U64
+          max is U64
+      map tuple tag=9
+        _ bytes len=32 aka=SemId
+        _ bytes len=32 aka=SemId
+        Sizing rec
+          min is U64
+          max is U64
+  script union Script
+    aluVm rec AluScript wrapped tag=0
+      libs map len=0..MAX8
+        key bytes len=32 aka=LibId
+        value bytes len=0..MAX16
+      entryPoints map len=0..MAX16
+        key bytes len=3
+        value rec LibSite
+          lib bytes len=32 aka=LibId
+          pos is U16
+
