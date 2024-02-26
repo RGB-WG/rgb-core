@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
 use aluvm::isa;
@@ -52,19 +52,19 @@ impl InstructionSet for RgbIsa {
         bset! {"RGB"}
     }
 
-    fn src_regs(&self) -> HashSet<Reg> {
+    fn src_regs(&self) -> BTreeSet<Reg> {
         match self {
             RgbIsa::Contract(op) => op.src_regs(),
             RgbIsa::Timechain(op) => op.src_regs(),
-            RgbIsa::Fail(_) => set![],
+            RgbIsa::Fail(_) => bset![],
         }
     }
 
-    fn dst_regs(&self) -> HashSet<Reg> {
+    fn dst_regs(&self) -> BTreeSet<Reg> {
         match self {
             RgbIsa::Contract(op) => op.dst_regs(),
             RgbIsa::Timechain(op) => op.dst_regs(),
-            RgbIsa::Fail(_) => set![],
+            RgbIsa::Fail(_) => bset![],
         }
     }
 

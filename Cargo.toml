@@ -25,10 +25,10 @@ required-features = ["stl"]
 amplify = { version = "~4.6.0", features = ["rand"] }
 strict_encoding = "~2.7.0-beta.1"
 strict_types = "~2.7.0-beta.1"
-aluvm = { version = "~0.11.0-beta.3", features = ["std"] }
-commit_verify = { version = "~0.11.0-beta.3", features = ["rand", "derive"] }
-single_use_seals = "~0.11.0-beta.3"
-bp-core = { version = "~0.11.0-beta.3" }
+aluvm = { version = "~0.11.0-beta.4", features = ["std"] }
+commit_verify = { version = "~0.11.0-beta.4", features = ["rand", "derive"] }
+single_use_seals = "~0.11.0-beta.4"
+bp-core = { version = "~0.11.0-beta.4" }
 secp256k1-zkp = { version = "0.10.1", features = ["rand", "rand-std", "global-context"] } # TODO: Update version before the release
 baid58 = "~0.4.4"
 mime = "~0.3.17"
@@ -60,11 +60,3 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = [ "all" ]
-
-[patch.crates-io]
-strict_types = { git = "https://github.com/strict-types/strict-types", branch = "vesper" }
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "layouts" }
-bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
-bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
-bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }

@@ -447,8 +447,9 @@ impl Default for RangeProof {
 }
 
 impl StrictEncode for RangeProof {
-    fn strict_encode<W: TypedWrite>(&self, _: W) -> io::Result<W> {
-        panic!("bulletproof dummies must never be stored")
+    fn strict_encode<W: TypedWrite>(&self, writer: W) -> io::Result<W> {
+        eprintln!("bulletproof dummies must never be stored");
+        Ok(writer)
     }
 }
 

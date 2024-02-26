@@ -22,7 +22,7 @@
 
 #![allow(clippy::unusual_byte_groupings)]
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
@@ -157,32 +157,32 @@ impl InstructionSet for ContractOp {
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
-    fn src_regs(&self) -> HashSet<Reg> { set![] }
+    fn src_regs(&self) -> BTreeSet<Reg> { bset![] }
 
-    fn dst_regs(&self) -> HashSet<Reg> {
+    fn dst_regs(&self) -> BTreeSet<Reg> {
         match self {
             ContractOp::CnP(_, reg) |
             ContractOp::CnS(_, reg) |
             ContractOp::CnG(_, reg) |
             ContractOp::CnC(_, reg) => {
-                set![Reg::A(RegA::A16, *reg)]
+                bset![Reg::A(RegA::A16, *reg)]
             }
             ContractOp::LdF(_, _, reg) => {
-                set![Reg::A(RegA::A64, *reg)]
+                bset![Reg::A(RegA::A64, *reg)]
             }
             ContractOp::LdP(_, _, reg) |
             ContractOp::LdS(_, _, reg) |
             ContractOp::LdG(_, _, reg) |
             ContractOp::LdC(_, _, reg) |
             ContractOp::LdM(reg) => {
-                set![Reg::S(*reg)]
+                bset![Reg::S(*reg)]
             }
 
             ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => {
-                set![]
+                bset![]
             }
 
-            ContractOp::Fail(_) => set![],
+            ContractOp::Fail(_) => bset![],
         }
     }
 

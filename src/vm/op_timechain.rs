@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
@@ -43,9 +43,9 @@ impl InstructionSet for TimechainOp {
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
-    fn src_regs(&self) -> HashSet<Reg> { set![] }
+    fn src_regs(&self) -> BTreeSet<Reg> { bset![] }
 
-    fn dst_regs(&self) -> HashSet<Reg> { set![] }
+    fn dst_regs(&self) -> BTreeSet<Reg> { bset![] }
 
     fn exec(&self, regs: &mut CoreRegs, _site: LibSite, _context: &Self::Context<'_>) -> ExecStep {
         match self {
