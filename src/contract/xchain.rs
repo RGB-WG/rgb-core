@@ -288,6 +288,23 @@ impl<T> XChain<T> {
     }
 }
 
+impl<'a, T: Copy> XChain<&'a T> {
+    pub fn copied(self) -> XChain<T> { self.map(|t| *t) }
+}
+
+impl<'a, T: Clone> XChain<&'a T> {
+    pub fn cloned(self) -> XChain<T> { self.map(T::clone) }
+}
+
+impl<T> XChain<Option<T>> {
+    pub fn transpose(self) -> Option<XChain<T>> {
+        match self {
+            XChain::Bitcoin(inner) => inner.map(XChain::Bitcoin),
+            XChain::Liquid(inner) => inner.map(XChain::Liquid),
+        }
+    }
+}
+
 impl<I: Iterator> Iterator for XChain<I> {
     type Item = XChain<<I as Iterator>::Item>;
 

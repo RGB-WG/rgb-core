@@ -33,7 +33,7 @@ mod bundle;
 #[allow(clippy::module_inception)]
 mod contract;
 mod xchain;
-mod id;
+mod commit;
 
 pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
 pub use assignments::{
@@ -42,6 +42,10 @@ pub use assignments::{
 };
 pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
 pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
+pub use commit::{
+    AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
+    DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
+};
 pub use contract::{
     AssignmentWitness, ContractHistory, ContractState, GlobalOrd, KnownState, Opout,
     OpoutParseError, OutputAssignment,
@@ -52,10 +56,6 @@ pub use fungible::{
     InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
 };
 pub use global::{GlobalState, GlobalValues};
-pub use id::{
-    AssignmentCommitment, BaseCommitment, ContractId, GlobalCommitment, OpCommitment, OpId,
-    TypeCommitment,
-};
 pub use operations::{
     Extension, Genesis, Input, Inputs, Metadata, OpRef, Operation, Redeemed, Transition, Valencies,
 };

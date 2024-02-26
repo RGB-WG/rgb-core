@@ -22,7 +22,7 @@
 
 use core::cmp::Ordering;
 use core::fmt::Debug;
-use std::collections::BTreeSet;
+use std::collections::{btree_map, BTreeSet};
 use std::hash::{Hash, Hasher};
 
 use amplify::confinement::{Confined, SmallVec, TinyOrdMap};
@@ -570,6 +570,13 @@ impl Assignments<GenesisSeal> {
     }
 }
 
+impl<Seal: ExposedSeal> IntoIterator for Assignments<Seal> {
+    type Item = (AssignmentType, TypedAssigns<Seal>);
+    type IntoIter = btree_map::IntoIter<AssignmentType, TypedAssigns<Seal>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Debug, From)]
 pub enum AssignmentsRef<'op> {
     #[from]
@@ -588,6 +595,13 @@ impl AssignmentsRef<'_> {
     }
 
     pub fn is_empty(&self) -> bool { self.len() == 0 }
+
+    pub fn flat(&self) -> Assignments<GraphSeal> {
+        match *self {
+            AssignmentsRef::Genesis(a) => a.transmutate_seals(),
+            AssignmentsRef::Graph(a) => a.clone(),
+        }
+    }
 
     pub fn types(&self) -> BTreeSet<AssignmentType> {
         match self {

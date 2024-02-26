@@ -4,8 +4,9 @@ version = 3
 
 [[package]]
 name = "aluvm"
-version = "0.11.0-beta.2"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.11#d218e9a770618db53187ec2ef02b7b4ace72c54a"
+version = "0.11.0-beta.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60bd5631720ae3b92182387baa647e34a45b56ea3e359fa756866a95a64e48f4"
 dependencies = [
  "amplify",
  "baid58",
@@ -22,9 +23,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "4.5.1"
+version = "4.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8dd50780fa78a67bae725dd164bc993500656112815a9301fd8b797e9006803"
+checksum = "9e711289a6cb28171b4f0e6c8019c69ff9476050508dc082167575d458ff74d0"
 dependencies = [
  "amplify_apfloat",
  "amplify_derive",
@@ -33,21 +34,19 @@ dependencies = [
  "ascii",
  "rand",
  "serde",
- "serde_json",
- "serde_yaml",
  "stringly_conversions",
- "toml 0.7.8",
  "wasm-bindgen",
 ]
 
 [[package]]
 name = "amplify_apfloat"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5b7f29fad2a3def5dfbfed0da85b886eb927a18fe0296c06e39880b7a96db05"
+checksum = "72e23f5ede99065fa6957a633498d2728d51016d61dae23b69c866112b7c61ee"
 dependencies = [
  "amplify_num",
  "bitflags",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -64,9 +63,9 @@ dependencies = [
 
 [[package]]
 name = "amplify_num"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9681187211554ab98f138ba159e90861b136c20afc680dcff2ba82d020721e27"
+checksum = "04c009c5c4de814911b177e2ea59e4930bb918978ed3cce4900d846a6ceb0838"
 dependencies = [
  "serde",
  "wasm-bindgen",
@@ -160,9 +159,9 @@ checksum = "73290177011694f38ec25e165d0387ab7ea749a4b81cd4c80dae5988229f7a57"
 
 [[package]]
 name = "bitflags"
-version = "1.3.2"
+version = "2.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
 
 [[package]]
 name = "blake3"
@@ -189,7 +188,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#0a84072daaa8ca7d81d4bb3064b813d8c382b27b"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#19cf59adea068dbda7a617a1c514b544c008b10d"
 dependencies = [
  "amplify",
  "chrono",
@@ -203,7 +202,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#0a84072daaa8ca7d81d4bb3064b813d8c382b27b"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#19cf59adea068dbda7a617a1c514b544c008b10d"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -221,7 +220,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#0a84072daaa8ca7d81d4bb3064b813d8c382b27b"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#19cf59adea068dbda7a617a1c514b544c008b10d"
 dependencies = [
  "amplify",
  "base85",
@@ -235,7 +234,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#0a84072daaa8ca7d81d4bb3064b813d8c382b27b"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#19cf59adea068dbda7a617a1c514b544c008b10d"
 dependencies = [
  "amplify",
  "baid58",
@@ -250,9 +249,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.14.0"
+version = "3.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
+checksum = "d32a994c2b3ca201d9b263612a374263f05e7adde37c4707f693dcd375076d1f"
 
 [[package]]
 name = "byteorder"
@@ -292,7 +291,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#9562563e1fde21fe7ae6a6a9d36c0115f654a59e"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=layouts#d81288a7df7d52e5dfc4b2a17ad43780d6107cc4"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -304,7 +303,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0-beta.3"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#9562563e1fde21fe7ae6a6a9d36c0115f654a59e"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=layouts#d81288a7df7d52e5dfc4b2a17ad43780d6107cc4"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -314,6 +313,7 @@ dependencies = [
  "sha2",
  "strict_encoding",
  "strict_types",
+ "vesper-lang",
 ]
 
 [[package]]
@@ -689,7 +689,7 @@ checksum = "33c85360c95e7d137454dc81d9a4ed2b8efd8fbe19cee57357b32b9771fccb67"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.49",
 ]
 
 [[package]]
@@ -757,8 +757,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "2.7.0"
-source = "git+https://github.com/strict-types/strict-encoding?branch=refactor/io#bdd35d550369590a3e6a86439a55e0b2f2d06766"
+version = "2.7.0-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a12eaa6985afa31deacc86cdc4935a36960ae09131a1f4e1db430127ebc4f05d"
 dependencies = [
  "amplify",
  "half",
@@ -768,8 +769,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding_derive"
-version = "2.7.0"
-source = "git+https://github.com/strict-types/strict-encoding?branch=refactor/io#bdd35d550369590a3e6a86439a55e0b2f2d06766"
+version = "2.7.0-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b1b064a62618a785e6d8f4df13d905dc335b56400d48f9b4f8b12dcba82b260"
 dependencies = [
  "amplify_syn",
  "heck",
@@ -780,8 +782,8 @@ dependencies = [
 
 [[package]]
 name = "strict_types"
-version = "2.7.0"
-source = "git+https://github.com/strict-types/strict-types?branch=refactor/io#abc6133b6cfdb9699714c493e5f62175d99fd752"
+version = "2.7.0-beta.1"
+source = "git+https://github.com/strict-types/strict-types?branch=vesper#266f2d8b6e015522e9e7e72af663af9c9d3c7d2c"
 dependencies = [
  "amplify",
  "baid58",
@@ -793,8 +795,8 @@ dependencies = [
  "serde_yaml",
  "sha2",
  "strict_encoding",
- "toml 0.8.10",
- "vesper",
+ "toml",
+ "vesper-lang",
 ]
 
 [[package]]
@@ -820,9 +822,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.48"
+version = "2.0.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f3531638e407dfc0814761abb7c00a5b54992b849452a0646b7f65c9f770f3f"
+checksum = "915aea9e586f80826ee59f8453c1101f9d1c4b3964cd2460185ee8e299ada496"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -846,19 +848,7 @@ checksum = "a953cb265bef375dae3de6663da4d3804eee9682ea80d8e2542529b73c531c81"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
-]
-
-[[package]]
-name = "toml"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd79e69d3b627db300ff956027cc6c3798cef26d22526befdfcd12feeb6d2257"
-dependencies = [
- "serde",
- "serde_spanned",
- "toml_datetime",
- "toml_edit 0.19.15",
+ "syn 2.0.49",
 ]
 
 [[package]]
@@ -870,7 +860,7 @@ dependencies = [
  "serde",
  "serde_spanned",
  "toml_datetime",
- "toml_edit 0.22.4",
+ "toml_edit",
 ]
 
 [[package]]
@@ -884,22 +874,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.19.15"
+version = "0.22.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b5bb770da30e5cbfde35a2d7b9b8a2c4b8ef89548a7a6aeab5c9a576e3e7421"
-dependencies = [
- "indexmap",
- "serde",
- "serde_spanned",
- "toml_datetime",
- "winnow",
-]
-
-[[package]]
-name = "toml_edit"
-version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c9ffdf896f8daaabf9b66ba8e77ea1ed5ed0f72821b398aba62352e95062951"
+checksum = "2c1b5fd4128cc8d3e0cb74d4ed9a9cc7c7284becd4df68f5f940e1ad123606f6"
 dependencies = [
  "indexmap",
  "serde",
@@ -933,9 +910,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
-name = "vesper"
+name = "vesper-lang"
 version = "0.1.0"
-source = "git+https://github.com/UBIDECO/vesper#18107cbbdffeb91d992dc7c76da0640aea152e8f"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f72ebd3b32f16ee8ace2bd3058c2bfa0f4820992bd4ea86e73ba228bb13dd2b0"
 dependencies = [
  "amplify",
  "strict_encoding",
@@ -968,7 +946,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.49",
  "wasm-bindgen-shared",
 ]
 
@@ -1002,7 +980,7 @@ checksum = "642f325be6301eb8107a83d12a8ac6c1e1c54345a7ef1a9261962dfefda09e66"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.49",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -1035,7 +1013,7 @@ checksum = "a5211b7550606857312bba1d978a8ec75692eae187becc5e680444fffc5e6f89"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.49",
 ]
 
 [[package]]
@@ -1116,9 +1094,9 @@ checksum = "dff9641d1cd4be8d1a070daf9e3773c5f67e78b4d9d42263020c057706765c04"
 
 [[package]]
 name = "winnow"
-version = "0.5.39"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5389a154b01683d28c77f8f68f49dea75f0a4da32557a58f68ee51ebba472d29"
+checksum = "d90f4e0f530c4c69f62b80d839e9ef3855edc9cba471a160c4d692deed62b401"
 dependencies = [
  "memchr",
 ]

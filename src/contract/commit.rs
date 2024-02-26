@@ -20,10 +20,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::{fmt, vec};
 
+use amplify::confinement::{Confined, MediumOrdMap, U16 as U16MAX};
 use amplify::hex::{FromHex, ToHex};
 use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
@@ -32,13 +34,13 @@ use commit_verify::{
     mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, Conceal, DigestExt, MerkleHash,
     MerkleLeaves, Sha256, StrictHash,
 };
-use strict_encoding::StrictEncode;
+use strict_encoding::StrictDumb;
 
 use crate::{
-    Assign, AssignmentType, Assignments, ConcealedData, ConcealedState, ConfidentialState,
-    ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState,
-    GlobalStateType, Redeemed, SchemaId, SecretSeal, Transition, TransitionType, TypedAssigns,
-    XChain, LIB_NAME_RGB,
+    Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
+    ConfidentialState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis,
+    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal,
+    Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -138,6 +140,102 @@ impl OpId {
     }
 }
 
+/// Hash committing to all data which are disclosed by a contract or some part
+/// of it (operation, bundle, consignment, disclosure).
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
+#[display(Self::to_hex)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct DiscloseHash(
+    #[from]
+    #[from([u8; 32])]
+    Bytes32,
+);
+
+impl From<Sha256> for DiscloseHash {
+    fn from(hasher: Sha256) -> Self { hasher.finish().into() }
+}
+
+impl CommitmentId for DiscloseHash {
+    const TAG: &'static str = "urn:lnp-bp:rgb:disclose#2024-02-16";
+}
+
+impl FromStr for DiscloseHash {
+    type Err = hex::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
+}
+
+impl DiscloseHash {
+    pub fn copy_from_slice(slice: impl AsRef<[u8]>) -> Result<Self, FromSliceError> {
+        Bytes32::copy_from_slice(slice).map(Self)
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+pub struct AssignmentIndex {
+    pub ty: AssignmentType,
+    pub pos: u16,
+}
+
+impl AssignmentIndex {
+    pub fn new(ty: AssignmentType, pos: u16) -> Self { AssignmentIndex { ty, pos } }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = DiscloseHash)]
+pub struct OpDisclose {
+    pub id: OpId,
+    pub seals: MediumOrdMap<AssignmentIndex, XChain<SecretSeal>>,
+    pub fungible: MediumOrdMap<AssignmentIndex, PedersenCommitment>,
+    pub data: MediumOrdMap<AssignmentIndex, ConcealedData>,
+    pub attach: MediumOrdMap<AssignmentIndex, ConcealedAttach>,
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = DiscloseHash)]
+pub struct BundleDisclosure {
+    pub id: BundleId,
+    pub known_transitions: Confined<BTreeSet<DiscloseHash>, 1, U16MAX>,
+}
+
+impl StrictDumb for BundleDisclosure {
+    fn strict_dumb() -> Self {
+        Self {
+            id: strict_dumb!(),
+            known_transitions: confined_bset! { strict_dumb!() },
+        }
+    }
+}
+
+impl TransitionBundle {
+    /// Provides summary about parts of the bundle which are revealed.
+    pub fn disclose(&self) -> BundleDisclosure {
+        BundleDisclosure {
+            id: self.bundle_id(),
+            known_transitions: Confined::from_iter_unsafe(
+                self.known_transitions.values().map(|t| t.disclose_hash()),
+            ),
+        }
+    }
+
+    /// Returns commitment to the bundle plus revealed data within it.
+    pub fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -195,6 +293,8 @@ impl Genesis {
             valencies: self.valencies.commit_id(),
         }
     }
+
+    pub fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
 impl Transition {
@@ -231,9 +331,9 @@ impl ConcealedState {
     fn commit_encode(&self, e: &mut CommitEngine) {
         match self {
             ConcealedState::Void => {}
-            ConcealedState::Fungible(val) => e.commit_to(&val.commitment),
-            ConcealedState::Structured(dat) => e.commit_to(dat),
-            ConcealedState::Attachment(att) => e.commit_to(att),
+            ConcealedState::Fungible(val) => e.commit_to_serialized(&val.commitment),
+            ConcealedState::Structured(dat) => e.commit_to_serialized(dat),
+            ConcealedState::Attachment(att) => e.commit_to_serialized(att),
         }
     }
 }
@@ -249,9 +349,9 @@ impl CommitEncode for AssignmentCommitment {
     type CommitmentId = MerkleHash;
 
     fn commit_encode(&self, e: &mut CommitEngine) {
-        e.commit_to(&self.ty);
+        e.commit_to_serialized(&self.ty);
         self.state.commit_encode(e);
-        e.commit_to(&self.seal);
+        e.commit_to_serialized(&self.seal);
         e.set_finished();
     }
 }
@@ -307,8 +407,8 @@ impl CommitEncode for GlobalCommitment {
     type CommitmentId = MerkleHash;
 
     fn commit_encode(&self, e: &mut CommitEngine) {
-        e.commit_to(&self.ty);
-        e.commit_to(&self.state);
+        e.commit_to_serialized(&self.ty);
+        e.commit_to_serialized(&self.state);
         e.set_finished();
     }
 }
