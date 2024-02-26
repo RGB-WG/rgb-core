@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:Hzv1xPBtQfqcGYeisvS2V9DPj1VRC5WyYfME2RtmuRpu#blitz-english-eric
+  Id: urn:ubideco:stl:2nWgjeSMhVE2mKgC7WyE5Dn8a6tZJDMoNugDWdc4vcZZ#spring-moral-almanac
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -166,8 +166,8 @@ data ConcealedAttach   : [Byte ^ 32]
 @mnemonic(mirage-invite-newton)
 data ConcealedData     : [Byte ^ 32]
 
-@mnemonic(window-basket-actor)
-data ConcealedFungible : commitment PedersenCommitment, rangeProof RangeProof
+@mnemonic(small-melody-empty)
+data ConcealedFungible : commitment PedersenCommitment, rangeProof PedersenCommitment
 
 @mnemonic(beast-korea-perfect)
 data ContractHistory   : schemaId SchemaId
@@ -265,9 +265,6 @@ data MediaType         : any#255
 @mnemonic(moment-patriot-patron)
 data Metadata          : [Byte]
 
-@mnemonic(deal-orca-aztec)
-data NoiseDumb         : [Byte ^ 512]
-
 @mnemonic(unicorn-empire-mama)
 data Occurrences       : min U16, max U16
 
@@ -315,9 +312,6 @@ data OutputAssignmentVoidState : opout Opout
 
 @mnemonic(nepal-delta-earth)
 data PedersenCommitment : [Byte ^ 33]
-
-@mnemonic(invent-stock-result)
-data RangeProof        : placeholder#255 NoiseDumb
 
 @mnemonic(scoop-press-scuba)
 data Redeemed          : {ValencyType -> ^ ..0xff OpId}
