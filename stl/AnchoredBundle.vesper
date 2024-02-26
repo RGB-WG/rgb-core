@@ -1,3 +1,19 @@
+{-
+  Description: RGB Anchored Bundle
+  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+  Copyright (C) 2024 LNP/BP Standards Association. All rights reserved.
+  License: Apache-2.0
+-}
+
+Seals vesper lexicon=types+commitments
+
+BundleId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:bundle#2024-02-03
+  InputMap serialized
+
+_ map len=1..MAX16 aka=InputMap
+  key is U32 aka=Vout
+  value bytes len=32 aka=OpId
+
 AnchoredBundle rec
   anchor union -- XChainAnchorSet
     bitcoin union wrapped tag=0 -- AnchorSet
@@ -319,3 +335,4 @@ AnchoredBundle rec
                     salt is U64
         valencies set len=0..MAX8 aka=Valencies
           element is U16 aka=ValencyType
+
