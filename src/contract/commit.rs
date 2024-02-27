@@ -39,8 +39,8 @@ use strict_encoding::StrictDumb;
 use crate::{
     Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis,
-    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal,
-    Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, ReservedBytes, SchemaId,
+    SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -240,6 +240,7 @@ impl TransitionBundle {
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 pub struct BaseCommitment {
+    pub flags: ReservedBytes<1, 0>,
     pub schema_id: SchemaId,
     pub testnet: bool,
     pub alt_layers1: StrictHash,
@@ -278,6 +279,7 @@ pub struct OpCommitment {
 impl Genesis {
     pub fn commit(&self) -> OpCommitment {
         let base = BaseCommitment {
+            flags: self.flags,
             schema_id: self.schema_id,
             testnet: self.testnet,
             alt_layers1: self.alt_layers1.commit_id(),

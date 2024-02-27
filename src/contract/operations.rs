@@ -260,6 +260,7 @@ pub trait Operation {
 pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
+    pub flags: ReservedBytes<1, 0>,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
     pub metadata: Metadata,
