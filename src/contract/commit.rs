@@ -274,6 +274,7 @@ pub struct OpCommitment {
     pub assignments: MerkleHash,
     pub redeemed: StrictHash,
     pub valencies: StrictHash,
+    pub script: StrictHash,
 }
 
 impl Genesis {
@@ -293,6 +294,7 @@ impl Genesis {
             assignments: MerkleHash::merklize(&self.assignments),
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
+            script: self.script.commit_id(),
         }
     }
 
@@ -310,6 +312,7 @@ impl Transition {
             assignments: MerkleHash::merklize(&self.assignments),
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
+            script: self.script.commit_id(),
         }
     }
 }
@@ -325,6 +328,7 @@ impl Extension {
             assignments: MerkleHash::merklize(&self.assignments),
             redeemed: self.redeemed.commit_id(),
             valencies: self.valencies.commit_id(),
+            script: self.script.commit_id(),
         }
     }
 }

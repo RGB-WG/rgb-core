@@ -267,6 +267,7 @@ pub struct Genesis {
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
+    pub script: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Genesis {}
@@ -289,6 +290,7 @@ pub struct Extension {
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
+    pub script: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Extension {}
@@ -319,6 +321,7 @@ pub struct Transition {
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
+    pub script: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Transition {}

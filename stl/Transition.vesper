@@ -30,6 +30,7 @@ OpCommitment rec
   assignments bytes len=32 aka=MerkleHash
   redeemed bytes len=32 aka=StrictHash
   valencies bytes len=32 aka=StrictHash
+  script bytes len=32 aka=StrictHash
 
 Transition rec
   ffv is U16 aka=Ffv
@@ -276,4 +277,5 @@ Transition rec
             lock bytes len=2 aka=ReservedBytes2
   valencies set len=0..MAX8 aka=Valencies
     element is U16 aka=ValencyType
+  script bytes len=1 aka=ReservedBytes1
 

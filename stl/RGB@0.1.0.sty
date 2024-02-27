@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:AdsYXPsV27aqRCBxrrMs55FPZRAMxhEjyezr5ULGNY8J#gemini-plato-license
+  Id: urn:ubideco:stl:ao23KCrknowke3n17nwhHfdjHSvBLuCseJACVhNXcdP#promo-metro-survive
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -253,7 +253,7 @@ data ContractState     : schema SchemaSchema, history ContractHistory
 @mnemonic(diana-archive-liquid)
 data DataState         : [Byte]
 
-@mnemonic(cubic-inca-maestro)
+@mnemonic(tina-forest-eagle)
 data Extension         : ffv Ffv
                        , contractId ContractId
                        , extensionType ExtensionType
@@ -262,6 +262,7 @@ data Extension         : ffv Ffv
                        , assignments AssignmentsBlindSealTxid
                        , redeemed Redeemed
                        , valencies Valencies
+                       , script ReservedBytes1
 
 @mnemonic(peace-tiger-elastic)
 data ExtensionSchema   : metadata StrictTypes.SemId#cargo-plasma-catalog
@@ -283,7 +284,7 @@ data FungibleState     : bits64#8 U64
 data FungibleType      : unsigned64Bit#8
 
 
-@mnemonic(lola-gentle-condor)
+@mnemonic(delphi-rufus-night)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags ReservedBytes1
@@ -293,6 +294,7 @@ data Genesis           : ffv Ffv
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
                        , valencies Valencies
+                       , script ReservedBytes1
 
 @mnemonic(andrea-amigo-grid)
 data GenesisSchema     : metadata StrictTypes.SemId#cargo-plasma-catalog
@@ -334,7 +336,7 @@ data Metadata          : [Byte]
 @mnemonic(unicorn-empire-mama)
 data Occurrences       : min U16, max U16
 
-@mnemonic(canyon-climax-promo)
+@mnemonic(pupil-modern-mixer)
 data OpCommitment      : ffv Ffv
                        , opType TypeCommitment
                        , metadata CommitVerify.StrictHash#cheese-final-locate
@@ -343,6 +345,7 @@ data OpCommitment      : ffv Ffv
                        , assignments CommitVerify.MerkleHash#culture-metro-modular
                        , redeemed CommitVerify.StrictHash#cheese-final-locate
                        , valencies CommitVerify.StrictHash#cheese-final-locate
+                       , script CommitVerify.StrictHash#cheese-final-locate
 
 @mnemonic(slow-samuel-ceramic)
 data OpId              : [Byte ^ 32]
@@ -430,8 +433,8 @@ data SchemaSchema      : ffv Ffv
                        , typeSystem StrictTypes.TypeSystem#panel-data-lazarus
                        , script Script
 
-@mnemonic(process-media-second)
-data Script            : aluVm AluScript
+@mnemonic(venus-trust-north)
+data Script            : aluVm#1 AluScript
 
 @mnemonic(report-agatha-level)
 data StateSchema       : declarative ()
@@ -439,7 +442,7 @@ data StateSchema       : declarative ()
                        | structured StrictTypes.SemId#cargo-plasma-catalog
                        | attachment MediaType
 
-@mnemonic(morph-romeo-float)
+@mnemonic(pastel-bread-calypso)
 data Transition        : ffv Ffv
                        , contractId ContractId
                        , transitionType TransitionType
@@ -448,6 +451,7 @@ data Transition        : ffv Ffv
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
                        , valencies Valencies
+                       , script ReservedBytes1
 
 @mnemonic(museum-result-logic)
 data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
