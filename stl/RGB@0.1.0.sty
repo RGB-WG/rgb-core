@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:HqdNNAehK3yaQ1AC5pQmEuNNS1zgyo2Jw31fdUNKb9MU#annual-virus-garlic
+  Id: urn:ubideco:stl:AdsYXPsV27aqRCBxrrMs55FPZRAMxhEjyezr5ULGNY8J#gemini-plato-license
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -88,53 +88,117 @@ data AnchoredBundle    : anchor XChainAnchorSet, bundle TransitionBundle
 @mnemonic(buzzer-pattern-craft)
 data AssetTag          : [Byte ^ 32]
 
-@mnemonic(police-castle-fractal)
-data AssignRevealedAttachBlindSealTxPtr : confidential (seal XChainSecretSeal, state ConcealedAttach)
-                       | confidentialState (seal XChainBlindSealTxPtr, state ConcealedAttach)
-                       | confidentialSeal (seal XChainSecretSeal, state RevealedAttach)
-                       | revealed (seal XChainBlindSealTxPtr, state RevealedAttach)
+@mnemonic(snake-john-trident)
+data AssignRevealedAttachBlindSealTxPtr : confidential (seal XChainSecretSeal
+                       , state ConcealedAttach
+                       , lock ReservedBytes2)
+                       | confidentialState (seal XChainBlindSealTxPtr
+                       , state ConcealedAttach
+                       , lock ReservedBytes2)
+                       | confidentialSeal (seal XChainSecretSeal
+                       , state RevealedAttach
+                       , lock ReservedBytes2)
+                       | revealed (seal XChainBlindSealTxPtr
+                       , state RevealedAttach
+                       , lock ReservedBytes2)
 
-@mnemonic(parker-locate-madrid)
-data AssignRevealedAttachBlindSealTxid : confidential (seal XChainSecretSeal, state ConcealedAttach)
-                       | confidentialState (seal XChainBlindSealTxid, state ConcealedAttach)
-                       | confidentialSeal (seal XChainSecretSeal, state RevealedAttach)
-                       | revealed (seal XChainBlindSealTxid, state RevealedAttach)
+@mnemonic(shrink-mother-donor)
+data AssignRevealedAttachBlindSealTxid : confidential (seal XChainSecretSeal
+                       , state ConcealedAttach
+                       , lock ReservedBytes2)
+                       | confidentialState (seal XChainBlindSealTxid
+                       , state ConcealedAttach
+                       , lock ReservedBytes2)
+                       | confidentialSeal (seal XChainSecretSeal
+                       , state RevealedAttach
+                       , lock ReservedBytes2)
+                       | revealed (seal XChainBlindSealTxid
+                       , state RevealedAttach
+                       , lock ReservedBytes2)
 
-@mnemonic(fabric-exotic-road)
-data AssignRevealedDataBlindSealTxPtr : confidential (seal XChainSecretSeal, state ConcealedData)
-                       | confidentialState (seal XChainBlindSealTxPtr, state ConcealedData)
-                       | confidentialSeal (seal XChainSecretSeal, state RevealedData)
-                       | revealed (seal XChainBlindSealTxPtr, state RevealedData)
+@mnemonic(vincent-eagle-nancy)
+data AssignRevealedDataBlindSealTxPtr : confidential (seal XChainSecretSeal
+                       , state ConcealedData
+                       , lock ReservedBytes2)
+                       | confidentialState (seal XChainBlindSealTxPtr
+                       , state ConcealedData
+                       , lock ReservedBytes2)
+                       | confidentialSeal (seal XChainSecretSeal
+                       , state RevealedData
+                       , lock ReservedBytes2)
+                       | revealed (seal XChainBlindSealTxPtr
+                       , state RevealedData
+                       , lock ReservedBytes2)
 
-@mnemonic(iron-design-king)
-data AssignRevealedDataBlindSealTxid : confidential (seal XChainSecretSeal, state ConcealedData)
-                       | confidentialState (seal XChainBlindSealTxid, state ConcealedData)
-                       | confidentialSeal (seal XChainSecretSeal, state RevealedData)
-                       | revealed (seal XChainBlindSealTxid, state RevealedData)
+@mnemonic(admiral-origin-optic)
+data AssignRevealedDataBlindSealTxid : confidential (seal XChainSecretSeal
+                       , state ConcealedData
+                       , lock ReservedBytes2)
+                       | confidentialState (seal XChainBlindSealTxid
+                       , state ConcealedData
+                       , lock ReservedBytes2)
+                       | confidentialSeal (seal XChainSecretSeal
+                       , state RevealedData
+                       , lock ReservedBytes2)
+                       | revealed (seal XChainBlindSealTxid
+                       , state RevealedData
+                       , lock ReservedBytes2)
 
-@mnemonic(avatar-house-ammonia)
-data AssignRevealedValueBlindSealTxPtr : confidential (seal XChainSecretSeal, state ConcealedFungible)
-                       | confidentialState (seal XChainBlindSealTxPtr, state ConcealedFungible)
-                       | confidentialSeal (seal XChainSecretSeal, state RevealedFungible)
-                       | revealed (seal XChainBlindSealTxPtr, state RevealedFungible)
+@mnemonic(savage-tibet-virgo)
+data AssignRevealedValueBlindSealTxPtr : confidential (seal XChainSecretSeal
+                       , state ConcealedFungible
+                       , lock ReservedBytes2)
+                       | confidentialState (seal XChainBlindSealTxPtr
+                       , state ConcealedFungible
+                       , lock ReservedBytes2)
+                       | confidentialSeal (seal XChainSecretSeal
+                       , state RevealedFungible
+                       , lock ReservedBytes2)
+                       | revealed (seal XChainBlindSealTxPtr
+                       , state RevealedFungible
+                       , lock ReservedBytes2)
 
-@mnemonic(popular-vista-urgent)
-data AssignRevealedValueBlindSealTxid : confidential (seal XChainSecretSeal, state ConcealedFungible)
-                       | confidentialState (seal XChainBlindSealTxid, state ConcealedFungible)
-                       | confidentialSeal (seal XChainSecretSeal, state RevealedFungible)
-                       | revealed (seal XChainBlindSealTxid, state RevealedFungible)
+@mnemonic(unicorn-lady-ribbon)
+data AssignRevealedValueBlindSealTxid : confidential (seal XChainSecretSeal
+                       , state ConcealedFungible
+                       , lock ReservedBytes2)
+                       | confidentialState (seal XChainBlindSealTxid
+                       , state ConcealedFungible
+                       , lock ReservedBytes2)
+                       | confidentialSeal (seal XChainSecretSeal
+                       , state RevealedFungible
+                       , lock ReservedBytes2)
+                       | revealed (seal XChainBlindSealTxid
+                       , state RevealedFungible
+                       , lock ReservedBytes2)
 
-@mnemonic(slogan-change-green)
-data AssignVoidStateBlindSealTxPtr : confidential (seal XChainSecretSeal, state VoidState)
-                       | confidentialState (seal XChainBlindSealTxPtr, state VoidState)
-                       | confidentialSeal (seal XChainSecretSeal, state VoidState)
-                       | revealed (seal XChainBlindSealTxPtr, state VoidState)
+@mnemonic(seminar-capsule-price)
+data AssignVoidStateBlindSealTxPtr : confidential (seal XChainSecretSeal
+                       , state VoidState
+                       , lock ReservedBytes2)
+                       | confidentialState (seal XChainBlindSealTxPtr
+                       , state VoidState
+                       , lock ReservedBytes2)
+                       | confidentialSeal (seal XChainSecretSeal
+                       , state VoidState
+                       , lock ReservedBytes2)
+                       | revealed (seal XChainBlindSealTxPtr
+                       , state VoidState
+                       , lock ReservedBytes2)
 
-@mnemonic(classic-cubic-ingrid)
-data AssignVoidStateBlindSealTxid : confidential (seal XChainSecretSeal, state VoidState)
-                       | confidentialState (seal XChainBlindSealTxid, state VoidState)
-                       | confidentialSeal (seal XChainSecretSeal, state VoidState)
-                       | revealed (seal XChainBlindSealTxid, state VoidState)
+@mnemonic(career-society-diana)
+data AssignVoidStateBlindSealTxid : confidential (seal XChainSecretSeal
+                       , state VoidState
+                       , lock ReservedBytes2)
+                       | confidentialState (seal XChainBlindSealTxid
+                       , state VoidState
+                       , lock ReservedBytes2)
+                       | confidentialSeal (seal XChainSecretSeal
+                       , state VoidState
+                       , lock ReservedBytes2)
+                       | revealed (seal XChainBlindSealTxid
+                       , state VoidState
+                       , lock ReservedBytes2)
 
 @mnemonic(hunter-hello-retro)
 data AssignmentType    : U16
@@ -152,8 +216,9 @@ data AssignmentsBlindSealTxid : {AssignmentType -> ^ ..0xff TypedAssignsBlindSea
 @mnemonic(delta-member-agenda)
 data AttachId          : [Byte ^ 32]
 
-@mnemonic(goblin-accent-number)
-data BaseCommitment    : schemaId SchemaId
+@mnemonic(brush-shannon-victor)
+data BaseCommitment    : flags ReservedBytes1
+                       , schemaId SchemaId
                        , testnet Std.Bool#laser-madam-maxwell
                        , altLayers1 CommitVerify.StrictHash#cheese-final-locate
 
@@ -218,9 +283,10 @@ data FungibleState     : bits64#8 U64
 data FungibleType      : unsigned64Bit#8
 
 
-@mnemonic(darwin-between-pilot)
+@mnemonic(lola-gentle-condor)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
+                       , flags ReservedBytes1
                        , testnet Std.Bool#laser-madam-maxwell
                        , altLayers1 AltLayer1Set
                        , metadata Metadata
@@ -316,6 +382,9 @@ data PedersenCommitment : [Byte ^ 33]
 @mnemonic(scoop-press-scuba)
 data Redeemed          : {ValencyType -> ^ ..0xff OpId}
 
+@mnemonic(joker-lemon-mental)
+data ReservedBytes1    : [Byte ^ 1]
+
 @mnemonic(pocket-habitat-soviet)
 data ReservedBytes2    : [Byte ^ 2]
 
@@ -332,8 +401,9 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(fresh-beatles-empire)
+@mnemonic(divide-heavy-culture)
 data Schema            : ffv Ffv
+                       , flags ReservedBytes1
                        , subsetOf ()?
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff StateSchema}
@@ -347,8 +417,9 @@ data Schema            : ffv Ffv
 @mnemonic(garcia-smoke-ozone)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(heaven-object-august)
+@mnemonic(archive-number-arnold)
 data SchemaSchema      : ffv Ffv
+                       , flags ReservedBytes1
                        , subsetOf Schema?
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff StateSchema}
