@@ -15,8 +15,10 @@ OpCommitment rec
   opType union -- TypeCommitment
     genesis rec wrapped tag=0 -- BaseCommitment
       schemaId bytes len=32 aka=SchemaId
+      timestamp is I64
       testnet enum false=0 true=1 -- Bool
       altLayers1 bytes len=32 aka=StrictHash
+      issuer bytes len=32 aka=StrictHash
     transition tuple tag=1
       _ bytes len=32 aka=ContractId
       _ is U16 aka=TransitionType
