@@ -23,6 +23,7 @@
 #[macro_export]
 macro_rules! rgbasm {
     ($( $tt:tt )+) => {{ #[allow(unused_imports)] {
+        use amplify::num::u5;
         use $crate::vm::{RgbIsa, ContractOp, TimechainOp};
         use $crate::vm::aluasm_isa;
         use $crate::isa_instr;
@@ -34,6 +35,8 @@ macro_rules! rgbasm {
 macro_rules! isa_instr {
     (pcvs $no:literal) => {{ RgbIsa::Contract(ContractOp::PcVs($no.into())) }};
     (pccs $no1:literal, $no2:literal) => {{ RgbIsa::Contract(ContractOp::PcCs($no1.into(), $no2.into())) }};
+    (cng $t:literal,a8[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnG($t.into(), Reg32::from(u5::with($a_idx)))) }};
+    (cnc $t:literal,a16[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnC($t.into(), Reg32::from(u5::with($a_idx)))) }};
     (ldg $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdG($t.into(), $no, RegS::from($s_idx))) }};
     (lds $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdS($t.into(), $no, RegS::from($s_idx))) }};
     (ldp $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdP($t.into(), $no, RegS::from($s_idx))) }};
