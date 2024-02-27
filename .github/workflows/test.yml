@@ -31,7 +31,7 @@ jobs:
       - name: Install rust nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
       - uses: Swatinem/rust-cache@v2
       - uses: jetli/wasm-pack-action@v0.3.0

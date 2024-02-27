@@ -47,7 +47,7 @@ jobs:
       - name: Install rustc nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
           components: rust-docs
       - uses: actions-rs/cargo@v1
