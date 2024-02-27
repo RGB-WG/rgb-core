@@ -24,6 +24,7 @@
 macro_rules! rgbasm {
     ($( $tt:tt )+) => {{ #[allow(unused_imports)] {
         use amplify::num::u5;
+        use $crate::{AssignmentType, GlobalStateType};
         use $crate::vm::{RgbIsa, ContractOp, TimechainOp};
         use $crate::vm::aluasm_isa;
         use $crate::isa_instr;
@@ -37,8 +38,26 @@ macro_rules! isa_instr {
     (pccs $no1:literal, $no2:literal) => {{ RgbIsa::Contract(ContractOp::PcCs($no1.into(), $no2.into())) }};
     (cng $t:literal,a8[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnG($t.into(), Reg32::from(u5::with($a_idx)))) }};
     (cnc $t:literal,a16[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnC($t.into(), Reg32::from(u5::with($a_idx)))) }};
-    (ldg $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdG($t.into(), $no, RegS::from($s_idx))) }};
-    (lds $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdS($t.into(), $no, RegS::from($s_idx))) }};
-    (ldp $t:literal, $no:literal,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdP($t.into(), $no, RegS::from($s_idx))) }};
+    (ldg $t:literal,a8[$a_idx:literal],s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdG(
+            GlobalStateType::from($t as u16),
+            Reg32::from(u5::with($a_idx)),
+            RegS::from($s_idx),
+        ))
+    }};
+    (ldp $t:literal,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdP(
+            AssignmentType::from($t as u16),
+            Reg32::from(u5::with($a_idx)),
+            RegS::from($s_idx),
+        ))
+    }};
+    (lds $t:literal,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdS(
+            AssignmentType::from($t as u16),
+            Reg32::from(u5::with($a_idx)),
+            RegS::from($s_idx),
+        ))
+    }};
     ($op:ident $($tt:tt)+) => {{ compile_error!(concat!("unknown RGB assembly opcode `", stringify!($op), "`")) }};
 }
