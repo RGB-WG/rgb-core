@@ -32,8 +32,8 @@ use strict_encoding::{StrictDumb, StrictEncode};
 use super::ExposedState;
 use crate::contract::seal::GenesisSeal;
 use crate::{
-    AssignmentType, ExposedSeal, GraphSeal, RevealedAttach, RevealedData, RevealedValue,
-    SecretSeal, StateType, VoidState, XChain, LIB_NAME_RGB,
+    AssignmentType, ExposedSeal, GraphSeal, ReservedBytes, RevealedAttach, RevealedData,
+    RevealedValue, SecretSeal, StateType, VoidState, XChain, LIB_NAME_RGB,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
@@ -54,7 +54,7 @@ pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
 #[strict_type(
     lib = LIB_NAME_RGB,
     tags = custom,
-    dumb = { Self::Confidential { seal: strict_dumb!(), state: strict_dumb!() } }
+    dumb = { Self::Confidential { seal: strict_dumb!(), state: strict_dumb!(), lock: default!() } }
 )]
 #[cfg_attr(
     feature = "serde",
@@ -72,18 +72,25 @@ pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
     Confidential {
         seal: XChain<SecretSeal>,
         state: State::Confidential,
+        lock: ReservedBytes<2, 0>,
     },
     #[strict_type(tag = 0x03)]
-    Revealed { seal: XChain<Seal>, state: State },
+    Revealed {
+        seal: XChain<Seal>,
+        state: State,
+        lock: ReservedBytes<2, 0>,
+    },
     #[strict_type(tag = 0x02)]
     ConfidentialSeal {
         seal: XChain<SecretSeal>,
         state: State,
+        lock: ReservedBytes<2, 0>,
     },
     #[strict_type(tag = 0x01)]
     ConfidentialState {
         seal: XChain<Seal>,
         state: State::Confidential,
+        lock: ReservedBytes<2, 0>,
     },
 }
 
@@ -119,21 +126,44 @@ impl<State: ExposedState, Seal: ExposedSeal> Hash for Assign<State, Seal> {
 }
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
-    pub fn revealed(seal: XChain<Seal>, state: State) -> Self { Assign::Revealed { seal, state } }
+    pub fn revealed(seal: XChain<Seal>, state: State) -> Self {
+        Assign::Revealed {
+            seal,
+            state,
+            lock: default!(),
+        }
+    }
 
     pub fn with_seal_replaced(assignment: &Self, seal: XChain<Seal>) -> Self {
         match assignment {
-            Assign::Confidential { seal: _, state } |
-            Assign::ConfidentialState { seal: _, state } => Assign::ConfidentialState {
+            Assign::Confidential {
+                seal: _,
+                state,
+                lock,
+            } |
+            Assign::ConfidentialState {
+                seal: _,
+                state,
+                lock,
+            } => Assign::ConfidentialState {
                 seal,
                 state: *state,
+                lock: *lock,
             },
-            Assign::ConfidentialSeal { seal: _, state } | Assign::Revealed { seal: _, state } => {
-                Assign::Revealed {
-                    seal,
-                    state: state.clone(),
-                }
-            }
+            Assign::ConfidentialSeal {
+                seal: _,
+                state,
+                lock,
+            } |
+            Assign::Revealed {
+                seal: _,
+                state,
+                lock,
+            } => Assign::Revealed {
+                seal,
+                state: state.clone(),
+                lock: *lock,
+            },
         }
     }
 
@@ -185,21 +215,21 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
 
     pub fn as_revealed(&self) -> Option<(&XChain<Seal>, &State)> {
         match self {
-            Assign::Revealed { seal, state } => Some((seal, state)),
+            Assign::Revealed { seal, state, .. } => Some((seal, state)),
             _ => None,
         }
     }
 
     pub fn to_revealed(&self) -> Option<(XChain<Seal>, State)> {
         match self {
-            Assign::Revealed { seal, state } => Some((*seal, state.clone())),
+            Assign::Revealed { seal, state, .. } => Some((*seal, state.clone())),
             _ => None,
         }
     }
 
     pub fn into_revealed(self) -> Option<(XChain<Seal>, State)> {
         match self {
-            Assign::Revealed { seal, state } => Some((seal, state)),
+            Assign::Revealed { seal, state, .. } => Some((seal, state)),
             _ => None,
         }
     }
@@ -213,17 +243,20 @@ where Self: Clone
     fn conceal(&self) -> Self::Concealed {
         match self {
             Assign::Confidential { .. } => self.clone(),
-            Assign::ConfidentialState { seal, state } => Self::Confidential {
+            Assign::ConfidentialState { seal, state, lock } => Self::Confidential {
                 seal: seal.conceal(),
                 state: *state,
+                lock: *lock,
             },
-            Assign::Revealed { seal, state } => Self::Confidential {
+            Assign::Revealed { seal, state, lock } => Self::Confidential {
                 seal: seal.conceal(),
                 state: state.conceal(),
+                lock: *lock,
             },
-            Assign::ConfidentialSeal { seal, state } => Self::Confidential {
+            Assign::ConfidentialSeal { seal, state, lock } => Self::Confidential {
                 seal: *seal,
                 state: state.conceal(),
+                lock: *lock,
             },
         }
     }
@@ -232,21 +265,25 @@ where Self: Clone
 impl<State: ExposedState> Assign<State, GenesisSeal> {
     pub fn transmutate_seals(&self) -> Assign<State, GraphSeal> {
         match self {
-            Assign::Confidential { seal, state } => Assign::Confidential {
+            Assign::Confidential { seal, state, lock } => Assign::Confidential {
                 seal: *seal,
                 state: *state,
+                lock: *lock,
             },
-            Assign::ConfidentialSeal { seal, state } => Assign::ConfidentialSeal {
+            Assign::ConfidentialSeal { seal, state, lock } => Assign::ConfidentialSeal {
                 seal: *seal,
                 state: state.clone(),
+                lock: *lock,
             },
-            Assign::Revealed { seal, state } => Assign::Revealed {
+            Assign::Revealed { seal, state, lock } => Assign::Revealed {
                 seal: seal.transmutate(),
                 state: state.clone(),
+                lock: *lock,
             },
-            Assign::ConfidentialState { seal, state } => Assign::ConfidentialState {
+            Assign::ConfidentialState { seal, state, lock } => Assign::ConfidentialState {
                 seal: seal.transmutate(),
                 state: *state,
+                lock: *lock,
             },
         }
     }

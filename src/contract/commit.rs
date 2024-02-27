@@ -345,6 +345,7 @@ pub struct AssignmentCommitment {
     pub ty: AssignmentType,
     pub state: ConcealedState,
     pub seal: XChain<SecretSeal>,
+    pub lock: ReservedBytes<2, 0>,
 }
 
 impl CommitEncode for AssignmentCommitment {
@@ -354,19 +355,21 @@ impl CommitEncode for AssignmentCommitment {
         e.commit_to_serialized(&self.ty);
         self.state.commit_encode(e);
         e.commit_to_serialized(&self.seal);
+        e.commit_to_serialized(&self.lock);
         e.set_finished();
     }
 }
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn commitment(&self, ty: AssignmentType) -> AssignmentCommitment {
-        let Self::Confidential { seal, state } = self.conceal() else {
+        let Self::Confidential { seal, state, lock } = self.conceal() else {
             unreachable!();
         };
         AssignmentCommitment {
             ty,
             state: state.state_commitment(),
             seal,
+            lock,
         }
     }
 }
