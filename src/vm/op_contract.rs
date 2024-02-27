@@ -523,46 +523,31 @@ impl Bytecode for ContractOp {
                 i
             }
 
-            INSTR_LDP => {
-                let i = Self::LdP(
-                    reader.read_u16()?.into(),
-                    reader.read_u4()?.into(),
-                    reader.read_u4()?.into(),
-                );
-                i
-            }
-            INSTR_LDF => {
-                let i = Self::LdF(
-                    reader.read_u16()?.into(),
-                    reader.read_u4()?.into(),
-                    reader.read_u4()?.into(),
-                );
-                i
-            }
-            INSTR_LDG => {
-                let i = Self::LdG(
-                    reader.read_u16()?.into(),
-                    reader.read_u4()?.into(),
-                    reader.read_u4()?.into(),
-                );
-                i
-            }
-            INSTR_LDS => {
-                let i = Self::LdS(
-                    reader.read_u16()?.into(),
-                    reader.read_u4()?.into(),
-                    reader.read_u4()?.into(),
-                );
-                i
-            }
-            INSTR_LDC => {
-                let i = Self::LdC(
-                    reader.read_u16()?.into(),
-                    reader.read_u4()?.into(),
-                    reader.read_u4()?.into(),
-                );
-                i
-            }
+            INSTR_LDP => Self::LdP(
+                reader.read_u16()?.into(),
+                reader.read_u4()?.into(),
+                reader.read_u4()?.into(),
+            ),
+            INSTR_LDF => Self::LdF(
+                reader.read_u16()?.into(),
+                reader.read_u4()?.into(),
+                reader.read_u4()?.into(),
+            ),
+            INSTR_LDG => Self::LdG(
+                reader.read_u16()?.into(),
+                reader.read_u4()?.into(),
+                reader.read_u4()?.into(),
+            ),
+            INSTR_LDS => Self::LdS(
+                reader.read_u16()?.into(),
+                reader.read_u4()?.into(),
+                reader.read_u4()?.into(),
+            ),
+            INSTR_LDC => Self::LdC(
+                reader.read_u16()?.into(),
+                reader.read_u4()?.into(),
+                reader.read_u4()?.into(),
+            ),
             INSTR_LDM => {
                 let i = Self::LdM(reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
