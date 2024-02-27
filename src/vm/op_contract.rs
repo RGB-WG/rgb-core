@@ -27,7 +27,7 @@ use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, LibSite, Read, Write};
-use aluvm::reg::{CoreRegs, Reg, Reg32, RegA, RegS};
+use aluvm::reg::{CoreRegs, Reg, Reg16, Reg32, RegA, RegS};
 use amplify::num::{u3, u4};
 use amplify::Wrapper;
 use commit_verify::CommitVerify;
@@ -61,55 +61,55 @@ pub enum ContractOp {
     #[display("cnc     {0},a16{1}")]
     CnC(AssignmentType, Reg32),
 
-    /// Loads input (previous) state with type id from the first argument and
-    /// index from the second argument into a register provided in the third
-    /// argument.
+    /// Loads input (previous) structured state with type id from the first
+    /// argument and index from the second argument `a16` register into a
+    /// register provided in the third argument.
     ///
     /// If the state is absent or is not a structured state sets `st0` to
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldp     {0},{1},{2}")]
-    LdP(AssignmentType, u16, RegS),
+    #[display("ldp     {0},a16{1},{2}")]
+    LdP(AssignmentType, Reg16, RegS),
 
     /// Loads owned structured state with type id from the first argument and
-    /// index from the second argument into a register provided in the third
-    /// argument.
+    /// index from the second argument `a16` register into a register provided
+    /// in the third argument.
     ///
     /// If the state is absent or is not a structured state sets `st0` to
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("lds     {0},{1},{2}")]
-    LdS(AssignmentType, u16, RegS),
+    #[display("lds     {0},a16{1},{2}")]
+    LdS(AssignmentType, Reg16, RegS),
 
     /// Loads owned fungible state with type id from the first argument and
-    /// index from the second argument into `a64` register provided in the third
-    /// argument.
+    /// index from the second argument `a16` register into `a64` register
+    /// provided in the third argument.
     ///
     /// If the state is absent or is not a fungible state sets `st0` to
     /// `false` and terminates the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldf     {0},{1},a64{2}")]
-    LdF(AssignmentType, u16, Reg32),
+    #[display("ldf     {0},a16{1},a64{2}")]
+    LdF(AssignmentType, Reg16, Reg16),
 
     /// Loads global state from the current operation with type id from the
-    /// first argument and index from the second argument into a register
-    /// provided in the third argument.
+    /// first argument and index from the second argument `a8` register into a
+    /// register provided in the third argument.
     ///
     /// If the state is absent sets `st0` to `false` and terminates the program.
-    #[display("ldg     {0},{1},{2}")]
-    LdG(GlobalStateType, u8, RegS),
+    #[display("ldg     {0},a8{1},{2}")]
+    LdG(GlobalStateType, Reg16, RegS),
 
     /// Loads part of the contract global state with type id from the first
-    /// argument at the depth from the second argument into a register
-    /// provided in the third argument.
+    /// argument at the depth from the second argument `a32` register into a
+    /// register provided in the third argument.
     ///
     /// If the state is absent or concealed sets destination to `None`.
     /// Does not modify content of `st0` register.
-    #[display("ldc     {0},{1},{2}")]
-    LdC(GlobalStateType, u16, RegS),
+    #[display("ldc     {0},a32{1},{2}")]
+    LdC(GlobalStateType, Reg16, RegS),
 
     /// Loads operation metadata into a register provided in the third argument.
     ///
@@ -157,18 +157,34 @@ impl InstructionSet for ContractOp {
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
-    fn src_regs(&self) -> BTreeSet<Reg> { bset![] }
+    fn src_regs(&self) -> BTreeSet<Reg> {
+        match self {
+            ContractOp::LdP(_, reg, _) |
+            ContractOp::LdF(_, reg, _) |
+            ContractOp::LdS(_, reg, _) => bset![Reg::A(RegA::A16, (*reg).into())],
+            ContractOp::LdG(_, reg, _) => bset![Reg::A(RegA::A8, (*reg).into())],
+            ContractOp::LdC(_, reg, _) => bset![Reg::A(RegA::A32, (*reg).into())],
+
+            ContractOp::CnP(_, _) |
+            ContractOp::CnS(_, _) |
+            ContractOp::CnG(_, _) |
+            ContractOp::CnC(_, _) => bset![],
+            ContractOp::LdM(_) => bset![],
+            ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => bset![],
+            ContractOp::Fail(_) => bset![],
+        }
+    }
 
     fn dst_regs(&self) -> BTreeSet<Reg> {
         match self {
-            ContractOp::CnP(_, reg) |
-            ContractOp::CnS(_, reg) |
-            ContractOp::CnG(_, reg) |
-            ContractOp::CnC(_, reg) => {
+            ContractOp::CnG(_, reg) => {
+                bset![Reg::A(RegA::A8, *reg)]
+            }
+            ContractOp::CnP(_, reg) | ContractOp::CnS(_, reg) | ContractOp::CnC(_, reg) => {
                 bset![Reg::A(RegA::A16, *reg)]
             }
             ContractOp::LdF(_, _, reg) => {
-                bset![Reg::A(RegA::A64, *reg)]
+                bset![Reg::A(RegA::A64, (*reg).into())]
             }
             ContractOp::LdP(_, _, reg) |
             ContractOp::LdS(_, _, reg) |
@@ -252,49 +268,70 @@ impl InstructionSet for ContractOp {
                 // TODO: implement global contract state
                 fail!()
             }
-            ContractOp::LdP(state_type, index, reg) => {
+            ContractOp::LdP(state_type, reg_32, reg) => {
+                let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
+                    fail!()
+                };
+                let index: u16 = reg_32.into();
+
                 let Some(Ok(state)) = context
                     .prev_state
                     .get(state_type)
-                    .map(|a| a.as_structured_state_at(*index))
+                    .map(|a| a.as_structured_state_at(index))
                 else {
                     fail!()
                 };
                 let state = state.map(|s| s.value.as_inner());
                 regs.set_s(*reg, state);
             }
-            ContractOp::LdS(state_type, index, reg) => {
+            ContractOp::LdS(state_type, reg_32, reg) => {
+                let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
+                    fail!()
+                };
+                let index: u16 = reg_32.into();
+
                 let Some(Ok(state)) = context
                     .owned_state
                     .get(*state_type)
-                    .map(|a| a.into_structured_state_at(*index))
+                    .map(|a| a.into_structured_state_at(index))
                 else {
                     fail!()
                 };
                 let state = state.map(|s| s.value.into_inner());
                 regs.set_s(*reg, state);
             }
-            ContractOp::LdF(state_type, index, reg) => {
+            ContractOp::LdF(state_type, reg_32, reg) => {
+                let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
+                    fail!()
+                };
+                let index: u16 = reg_32.into();
+
                 let Some(Ok(state)) = context
                     .owned_state
                     .get(*state_type)
-                    .map(|a| a.into_fungible_state_at(*index))
+                    .map(|a| a.into_fungible_state_at(index))
                 else {
                     fail!()
                 };
                 regs.set_n(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
             }
-            ContractOp::LdG(state_type, index, reg) => {
+            ContractOp::LdG(state_type, reg_32, reg_s) => {
+                let Some(reg_32) = *regs.get_n(RegA::A8, *reg_32) else {
+                    fail!()
+                };
+                let index: u8 = reg_32.into();
+
                 let Some(state) = context
                     .global
                     .get(state_type)
-                    .and_then(|a| a.get(*index as usize))
+                    .and_then(|a| a.get(index as usize))
                 else {
                     fail!()
                 };
-                regs.set_s(*reg, Some(state.value.as_inner()));
+                regs.set_s(*reg_s, Some(state.value.as_inner()));
             }
-            ContractOp::LdC(_state_type, _index, _reg) => {
+
+            ContractOp::LdC(_state_type, _reg_32, _reg_s) => {
                 // TODO: implement global contract state
                 fail!()
             }
@@ -363,8 +400,8 @@ impl Bytecode for ContractOp {
             ContractOp::LdP(_, _, _) |
             ContractOp::LdS(_, _, _) |
             ContractOp::LdF(_, _, _) |
-            ContractOp::LdC(_, _, _) => 6,
-            ContractOp::LdG(_, _, _) => 5,
+            ContractOp::LdC(_, _, _) |
+            ContractOp::LdG(_, _, _) => 4,
             ContractOp::LdM(_) => 2,
 
             ContractOp::PcVs(_) => 3,
@@ -420,35 +457,30 @@ impl Bytecode for ContractOp {
                 writer.write_u5(reg)?;
                 writer.write_u3(u3::ZERO)?;
             }
-            ContractOp::LdP(state_type, index, reg) => {
+            ContractOp::LdP(state_type, reg_a, reg_s) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u16(*index)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u4(reg_a)?;
+                writer.write_u4(reg_s)?;
             }
-            ContractOp::LdS(state_type, index, reg) => {
+            ContractOp::LdS(state_type, reg_a, reg_s) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u16(*index)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u4(reg_a)?;
+                writer.write_u4(reg_s)?;
             }
-            ContractOp::LdF(state_type, index, reg) => {
+            ContractOp::LdF(state_type, reg_a, reg_dst) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u16(*index)?;
-                writer.write_u5(reg)?;
-                writer.write_u3(u3::ZERO)?;
+                writer.write_u4(reg_a)?;
+                writer.write_u4(reg_dst)?;
             }
-            ContractOp::LdG(state_type, index, reg) => {
+            ContractOp::LdG(state_type, reg_a, reg_s) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u8(*index)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u4(reg_a)?;
+                writer.write_u4(reg_s)?;
             }
-            ContractOp::LdC(state_type, index, reg) => {
+            ContractOp::LdC(state_type, reg_a, reg_s) => {
                 writer.write_u16(*state_type)?;
-                writer.write_u16(*index)?;
-                writer.write_u4(reg)?;
-                writer.write_u4(u4::ZERO)?;
+                writer.write_u4(reg_a)?;
+                writer.write_u4(reg_s)?;
             }
             ContractOp::LdM(reg) => {
                 writer.write_u4(reg)?;
@@ -474,68 +506,63 @@ impl Bytecode for ContractOp {
         Ok(match reader.read_u8()? {
             INSTR_CNP => {
                 let i = Self::CnP(reader.read_u16()?.into(), reader.read_u5()?.into());
-                reader.read_u4()?; // Discard garbage bits
+                reader.read_u3()?; // Discard garbage bits
                 i
             }
             INSTR_CNS => {
                 let i = Self::CnS(reader.read_u16()?.into(), reader.read_u5()?.into());
-                reader.read_u4()?; // Discard garbage bits
+                reader.read_u3()?; // Discard garbage bits
                 i
             }
             INSTR_CNG => {
                 let i = Self::CnG(reader.read_u16()?.into(), reader.read_u5()?.into());
-                reader.read_u4()?; // Discard garbage bits
+                reader.read_u3()?; // Discard garbage bits
                 i
             }
             INSTR_CNC => {
                 let i = Self::CnC(reader.read_u16()?.into(), reader.read_u5()?.into());
-                reader.read_u4()?; // Discard garbage bits
+                reader.read_u3()?; // Discard garbage bits
                 i
             }
 
             INSTR_LDP => {
                 let i = Self::LdP(
                     reader.read_u16()?.into(),
-                    reader.read_u16()?,
+                    reader.read_u4()?.into(),
                     reader.read_u4()?.into(),
                 );
-                reader.read_u4()?; // Discard garbage bits
-                i
-            }
-            INSTR_LDS => {
-                let i = Self::LdS(
-                    reader.read_u16()?.into(),
-                    reader.read_u16()?,
-                    reader.read_u4()?.into(),
-                );
-                reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_LDF => {
                 let i = Self::LdF(
                     reader.read_u16()?.into(),
-                    reader.read_u16()?,
-                    reader.read_u5()?.into(),
+                    reader.read_u4()?.into(),
+                    reader.read_u4()?.into(),
                 );
-                reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_LDG => {
                 let i = Self::LdG(
                     reader.read_u16()?.into(),
-                    reader.read_u8()?,
+                    reader.read_u4()?.into(),
                     reader.read_u4()?.into(),
                 );
-                reader.read_u4()?; // Discard garbage bits
+                i
+            }
+            INSTR_LDS => {
+                let i = Self::LdS(
+                    reader.read_u16()?.into(),
+                    reader.read_u4()?.into(),
+                    reader.read_u4()?.into(),
+                );
                 i
             }
             INSTR_LDC => {
                 let i = Self::LdC(
                     reader.read_u16()?.into(),
-                    reader.read_u16()?,
+                    reader.read_u4()?.into(),
                     reader.read_u4()?.into(),
                 );
-                reader.read_u4()?; // Discard garbage bits
                 i
             }
             INSTR_LDM => {
