@@ -41,7 +41,7 @@ Transition rec
       RevealedData rec
         value bytes len=0..MAX16 aka=DataState
         salt is U128
-  inputs set len=0..MAX8 aka=Inputs
+  inputs set len=0..MAX16 aka=Inputs
     Input rec
       prevOut rec -- Opout
         op bytes len=32 aka=OpId

@@ -24,7 +24,7 @@ use std::cmp::Ordering;
 use std::collections::{btree_map, btree_set, BTreeMap};
 use std::iter;
 
-use amplify::confinement::{Confined, SmallBlob, TinyOrdMap, TinyOrdSet};
+use amplify::confinement::{Confined, SmallBlob, SmallOrdSet, TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, StrictHash,
@@ -105,7 +105,7 @@ impl<'a> IntoIterator for &'a Redeemed {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Inputs(TinyOrdSet<Input>);
+pub struct Inputs(SmallOrdSet<Input>);
 
 impl<'a> IntoIterator for &'a Inputs {
     type Item = Input;
