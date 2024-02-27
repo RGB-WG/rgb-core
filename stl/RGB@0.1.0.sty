@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:ao23KCrknowke3n17nwhHfdjHSvBLuCseJACVhNXcdP#promo-metro-survive
+  Id: urn:ubideco:stl:9KYkZKFu8F1NLqEZ8d2hfNHRb2LJuU2H6emXgHp1NAxF#context-oasis-mirage
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -253,7 +253,7 @@ data ContractState     : schema SchemaSchema, history ContractHistory
 @mnemonic(diana-archive-liquid)
 data DataState         : [Byte]
 
-@mnemonic(tina-forest-eagle)
+@mnemonic(shake-respond-vendor)
 data Extension         : ffv Ffv
                        , contractId ContractId
                        , extensionType ExtensionType
@@ -262,6 +262,7 @@ data Extension         : ffv Ffv
                        , assignments AssignmentsBlindSealTxid
                        , redeemed Redeemed
                        , valencies Valencies
+                       , witness ReservedBytes1
                        , script ReservedBytes1
 
 @mnemonic(peace-tiger-elastic)
@@ -336,7 +337,7 @@ data Metadata          : [Byte]
 @mnemonic(unicorn-empire-mama)
 data Occurrences       : min U16, max U16
 
-@mnemonic(pupil-modern-mixer)
+@mnemonic(herbert-amadeus-college)
 data OpCommitment      : ffv Ffv
                        , opType TypeCommitment
                        , metadata CommitVerify.StrictHash#cheese-final-locate
@@ -345,6 +346,7 @@ data OpCommitment      : ffv Ffv
                        , assignments CommitVerify.MerkleHash#culture-metro-modular
                        , redeemed CommitVerify.StrictHash#cheese-final-locate
                        , valencies CommitVerify.StrictHash#cheese-final-locate
+                       , witness CommitVerify.MerkleHash#culture-metro-modular
                        , script CommitVerify.StrictHash#cheese-final-locate
 
 @mnemonic(slow-samuel-ceramic)
@@ -442,7 +444,7 @@ data StateSchema       : declarative ()
                        | structured StrictTypes.SemId#cargo-plasma-catalog
                        | attachment MediaType
 
-@mnemonic(pastel-bread-calypso)
+@mnemonic(green-athena-mammal)
 data Transition        : ffv Ffv
                        , contractId ContractId
                        , transitionType TransitionType
@@ -451,6 +453,7 @@ data Transition        : ffv Ffv
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
                        , valencies Valencies
+                       , witness ReservedBytes1
                        , script ReservedBytes1
 
 @mnemonic(museum-result-logic)

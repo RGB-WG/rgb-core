@@ -290,6 +290,7 @@ pub struct Extension {
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
+    pub witness: ReservedBytes<1, 0>,
     pub script: ReservedBytes<1, 0>,
 }
 
@@ -321,6 +322,7 @@ pub struct Transition {
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
+    pub witness: ReservedBytes<1, 0>,
     pub script: ReservedBytes<1, 0>,
 }
 
