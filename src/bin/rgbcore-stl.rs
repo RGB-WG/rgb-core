@@ -89,7 +89,7 @@ fn main() {
   License: Apache-2.0
 -}}
 
-Seals vesper lexicon=types+commitments
+Schema vesper lexicon=types+commitments
 "
     )
     .unwrap();
@@ -108,7 +108,7 @@ Seals vesper lexicon=types+commitments
   License: Apache-2.0
 -}}
 
-Seals vesper lexicon=types+commitments
+Transition vesper lexicon=types+commitments
 "
     )
     .unwrap();
@@ -129,7 +129,7 @@ Seals vesper lexicon=types+commitments
   License: Apache-2.0
 -}}
 
-Seals vesper lexicon=types+commitments
+Bundles vesper lexicon=types+commitments
 "
     )
     .unwrap();
@@ -139,7 +139,4 @@ Seals vesper lexicon=types+commitments
     writeln!(file, "{tt}").unwrap();
     let tt = sys.type_tree("RGB.AnchoredBundle").unwrap();
     writeln!(file, "{tt}").unwrap();
-
-    let tt = sys.type_tree("CommitVerify.MerkleNode").unwrap();
-    fs::write(format!("{dir}/MerkleNode.vesper",), format!("{tt}")).unwrap();
 }

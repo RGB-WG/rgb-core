@@ -1,6 +1,0 @@
-MerkleNode rec
-  branching enum void=0 single=1 branch=2 -- NodeBranching
-  depth is U8
-  width is U256
-  node1 bytes len=32 aka=MerkleHash
-  node2 bytes len=32 aka=MerkleHash

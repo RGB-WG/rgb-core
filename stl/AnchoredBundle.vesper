@@ -5,7 +5,7 @@
   License: Apache-2.0
 -}
 
-Seals vesper lexicon=types+commitments
+Bundles vesper lexicon=types+commitments
 
 BundleId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:bundle#2024-02-03
   InputMap serialized

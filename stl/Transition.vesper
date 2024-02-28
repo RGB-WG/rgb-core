@@ -5,7 +5,7 @@
   License: Apache-2.0
 -}
 
-Seals vesper lexicon=types+commitments
+Transition vesper lexicon=types+commitments
 
 OpId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:operation#2024-02-03
   OpCommitment serialized

@@ -5,7 +5,7 @@
   License: Apache-2.0
 -}
 
-Seals vesper lexicon=types+commitments
+Schema vesper lexicon=types+commitments
 
 SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
   Ffv serialized
