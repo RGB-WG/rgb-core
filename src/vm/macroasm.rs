@@ -23,7 +23,7 @@
 #[macro_export]
 macro_rules! rgbasm {
     ($( $tt:tt )+) => {{ #[allow(unused_imports)] {
-        use amplify::num::u5;
+        use amplify::num::{u4, u5};
         use $crate::{AssignmentType, GlobalStateType};
         use $crate::vm::{RgbIsa, ContractOp, TimechainOp};
         use $crate::vm::aluasm_isa;
