@@ -46,7 +46,7 @@ pub enum RgbIsa {
 }
 
 impl InstructionSet for RgbIsa {
-    type Context<'ctx> = OpInfo<'ctx>;
+    type Context<'ctx> = OpInfo<'ctx, 'ctx>;
 
     fn isa_ids() -> BTreeSet<&'static str> {
         bset! {"RGB"}

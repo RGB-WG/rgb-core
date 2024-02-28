@@ -153,7 +153,7 @@ pub enum ContractOp {
 }
 
 impl InstructionSet for ContractOp {
-    type Context<'ctx> = OpInfo<'ctx>;
+    type Context<'ctx> = OpInfo<'ctx, 'ctx>;
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
@@ -246,7 +246,7 @@ impl InstructionSet for ContractOp {
                 );
             }
             ContractOp::CnG(state_type, reg) => {
-                regs.set_n(RegA::A16, *reg, context.global.get(state_type).map(|a| a.len_u16()));
+                regs.set_n(RegA::A16, *reg, context.op_global.get(state_type).map(|a| a.len_u16()));
             }
             ContractOp::CnC(_state_type, _reg) => {
                 // TODO: implement global contract state
@@ -286,7 +286,7 @@ impl InstructionSet for ContractOp {
             }
             ContractOp::LdG(state_type, index, reg) => {
                 let Some(state) = context
-                    .global
+                    .op_global
                     .get(state_type)
                     .and_then(|a| a.get(*index as usize))
                 else {
@@ -315,7 +315,7 @@ impl InstructionSet for ContractOp {
             }
 
             ContractOp::PcCs(owned_state, global_state) => {
-                let Some(sum) = context.global.get(global_state) else {
+                let Some(sum) = context.op_global.get(global_state) else {
                     fail!()
                 };
                 if sum.len() != 1 {

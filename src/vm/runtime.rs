@@ -60,7 +60,7 @@ impl<'script> AluRuntime<'script> {
             }
         }
 
-        for ty in info.global.keys() {
+        for ty in info.op_global.keys() {
             regs.nums
                 .insert((RegAFR::A(RegA::A16), Reg32::Reg1), ty.into_inner().into());
             self.run(EntryPoint::ValidateGlobalState(*ty), &regs, info)?;

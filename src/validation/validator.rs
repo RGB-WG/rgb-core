@@ -32,9 +32,9 @@ use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
-    AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
-    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, WitnessId,
-    XAnchor, XChain, XOutpoint, XOutputSeal, XPubWitness, XWitness,
+    AltLayer1, BundleId, ContractId, GlobalState, Layer1, OpId, OpRef, OpType, Operation, Opout,
+    Schema, SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns,
+    WitnessId, XAnchor, XChain, XOutpoint, XOutputSeal, XPubWitness, XWitness,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -65,6 +65,8 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitne
 
     validated_op_seals: BTreeSet<OpId>,
     validated_op_state: BTreeSet<OpId>,
+
+    global_state: GlobalState,
 
     vm: Box<dyn VirtualMachine + 'consignment>,
     resolver: &'resolver R,
@@ -134,6 +136,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             validated_op_seals,
             vm,
             resolver,
+            global_state: none!(),
         }
     }
 
@@ -199,6 +202,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         self.status += schema.validate_state(
             &self.consignment,
             OpRef::Genesis(self.consignment.genesis()),
+            &self.global_state,
             self.vm.as_ref(),
         );
         self.validated_op_state.insert(self.genesis_id);
@@ -231,7 +235,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // utilize queue to keep the track of the upstream (ancestor) nodes and make
         // sure that ve have validated each one of them up to genesis. The graph is
         // valid when each of its nodes and each of its edges is valid, i.e. when all
-        // individual nodes has passed validation against the schema (we track
+        // individual nodes have passed validation against the schema (we track
         // that fact with `validation_index`) and each of the operation ancestor state
         // change to a given operation is valid against the schema + committed
         // into bitcoin transaction graph with proper anchor. That is what we are
@@ -253,8 +257,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             }
             // [VALIDATION]: Verify operation against the schema and scripts
             if self.validated_op_state.insert(opid) {
-                self.status +=
-                    schema.validate_state(&self.consignment, operation, self.vm.as_ref());
+                self.status += schema.validate_state(
+                    &self.consignment,
+                    operation,
+                    &self.global_state,
+                    self.vm.as_ref(),
+                );
             }
 
             match operation {
@@ -530,8 +538,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     /// generic type `Dbc`) and extra-transaction data, which are taken from
     /// anchors DBC proof.
     ///
-    /// Additionally checks that the provided message contains commitment to the
-    /// bundle under the current contract.
+    /// Additionally, checks that the provided message contains commitment to
+    /// the bundle under the current contract.
     fn validate_seal_closing<'seal, 'temp, Seal: 'seal, Dbc: dbc::Proof>(
         &mut self,
         seals: impl IntoIterator<Item = &'seal Seal>,
