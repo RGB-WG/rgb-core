@@ -33,6 +33,7 @@ secp256k1-zkp = { version = "0.10.1", features = ["rand", "rand-std", "global-co
 baid58 = "~0.4.4"
 mime = "~0.3.17"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+serde_yaml = { version = "0.9.32", optional = true }
 chrono = "0.4.31"
 
 [features]
@@ -41,6 +42,7 @@ all = ["stl", "serde"]
 stl = ["commit_verify/stl", "bp-core/stl", "aluvm/stl"]
 serde = [
     "serde_crate",
+    "serde_yaml",
     "amplify/serde",
     "strict_encoding/serde",
     "strict_types/serde",

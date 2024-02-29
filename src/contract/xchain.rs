@@ -91,15 +91,41 @@ impl AltLayer1 {
 pub struct AltLayer1Set(TinyOrdSet<AltLayer1>);
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
 pub enum XChain<T> {
     Bitcoin(T),
 
     Liquid(T),
+}
+
+#[cfg(feature = "serde")]
+impl<T: serde::Serialize> serde_crate::Serialize for XChain<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: serde_crate::Serializer {
+        use serde_crate::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("XChain", 1)?;
+        match self {
+            XChain::Bitcoin(content) => state.serialize_field("Bitcoin", &content)?,
+            XChain::Liquid(content) => state.serialize_field("Liquid", &content)?,
+        }
+        state.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T: serde_crate::Deserialize<'de>> serde_crate::Deserialize<'de> for XChain<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: serde_crate::Deserializer<'de> {
+        #[cfg_attr(feature = "serde", derive(Deserialize), serde(crate = "serde_crate"))]
+        enum Helper<T> {
+            Bitcoin(T),
+            Liquid(T),
+        }
+        let helper: Helper<T> = serde_yaml::with::singleton_map::deserialize(deserializer)?;
+        Ok(match helper {
+            Helper::Bitcoin(content) => XChain::Bitcoin(content),
+            Helper::Liquid(content) => XChain::Liquid(content),
+        })
+    }
 }
 
 impl<T: Ord> PartialOrd for XChain<T> {

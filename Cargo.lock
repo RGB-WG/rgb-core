@@ -604,6 +604,7 @@ dependencies = [
  "rand",
  "secp256k1-zkp",
  "serde",
+ "serde_yaml",
  "single_use_seals",
  "strict_encoding",
  "strict_types",
