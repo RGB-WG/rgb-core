@@ -134,6 +134,7 @@ AnchoredBundle rec
                     bitcoin bytes len=32 wrapped aka=SecretSeal tag=0
                     liquid bytes len=32 wrapped aka=SecretSeal tag=1
                   state is Unit aka=VoidState
+                  lock bytes len=2 aka=ReservedBytes2
                 confidentialState rec tag=1
                   seal union -- XChainBlindSealTxPtr
                     bitcoin rec wrapped tag=0 -- BlindSealTxPtr
@@ -151,11 +152,13 @@ AnchoredBundle rec
                       vout is U32 aka=Vout
                       blinding is U64
                   state is Unit aka=VoidState
+                  lock bytes len=2 aka=ReservedBytes2
                 confidentialSeal rec tag=2
                   seal union -- XChainSecretSeal
                     bitcoin bytes len=32 wrapped aka=SecretSeal tag=0
                     liquid bytes len=32 wrapped aka=SecretSeal tag=1
                   state is Unit aka=VoidState
+                  lock bytes len=2 aka=ReservedBytes2
                 revealed rec tag=3
                   seal union -- XChainBlindSealTxPtr
                     bitcoin rec wrapped tag=0 -- BlindSealTxPtr
@@ -173,6 +176,7 @@ AnchoredBundle rec
                       vout is U32 aka=Vout
                       blinding is U64
                   state is Unit aka=VoidState
+                  lock bytes len=2 aka=ReservedBytes2
             fungible list len=0..MAX16 wrapped tag=1
               AssignRevealedValueBlindSealTxPtr union
                 confidential rec tag=0
@@ -182,6 +186,7 @@ AnchoredBundle rec
                   state rec -- ConcealedFungible
                     commitment bytes len=33 aka=PedersenCommitment
                     rangeProof bytes len=33 aka=PedersenCommitment
+                  lock bytes len=2 aka=ReservedBytes2
                 confidentialState rec tag=1
                   seal union -- XChainBlindSealTxPtr
                     bitcoin rec wrapped tag=0 -- BlindSealTxPtr
@@ -201,6 +206,7 @@ AnchoredBundle rec
                   state rec -- ConcealedFungible
                     commitment bytes len=33 aka=PedersenCommitment
                     rangeProof bytes len=33 aka=PedersenCommitment
+                  lock bytes len=2 aka=ReservedBytes2
                 confidentialSeal rec tag=2
                   seal union -- XChainSecretSeal
                     bitcoin bytes len=32 wrapped aka=SecretSeal tag=0
@@ -210,6 +216,7 @@ AnchoredBundle rec
                       bits64 is U64 wrapped tag=0
                     blinding bytes len=32 aka=BlindingFactor
                     tag bytes len=32 aka=AssetTag
+                  lock bytes len=2 aka=ReservedBytes2
                 revealed rec tag=3
                   seal union -- XChainBlindSealTxPtr
                     bitcoin rec wrapped tag=0 -- BlindSealTxPtr
@@ -231,6 +238,7 @@ AnchoredBundle rec
                       bits64 is U64 wrapped tag=0
                     blinding bytes len=32 aka=BlindingFactor
                     tag bytes len=32 aka=AssetTag
+                  lock bytes len=2 aka=ReservedBytes2
             structured list len=0..MAX16 wrapped tag=2
               AssignRevealedDataBlindSealTxPtr union
                 confidential rec tag=0
@@ -238,6 +246,7 @@ AnchoredBundle rec
                     bitcoin bytes len=32 wrapped aka=SecretSeal tag=0
                     liquid bytes len=32 wrapped aka=SecretSeal tag=1
                   state bytes len=32 aka=ConcealedData
+                  lock bytes len=2 aka=ReservedBytes2
                 confidentialState rec tag=1
                   seal union -- XChainBlindSealTxPtr
                     bitcoin rec wrapped tag=0 -- BlindSealTxPtr
@@ -255,6 +264,7 @@ AnchoredBundle rec
                       vout is U32 aka=Vout
                       blinding is U64
                   state bytes len=32 aka=ConcealedData
+                  lock bytes len=2 aka=ReservedBytes2
                 confidentialSeal rec tag=2
                   seal union -- XChainSecretSeal
                     bitcoin bytes len=32 wrapped aka=SecretSeal tag=0
@@ -262,6 +272,7 @@ AnchoredBundle rec
                   state rec -- RevealedData
                     value bytes len=0..MAX16 aka=DataState
                     salt is U128
+                  lock bytes len=2 aka=ReservedBytes2
                 revealed rec tag=3
                   seal union -- XChainBlindSealTxPtr
                     bitcoin rec wrapped tag=0 -- BlindSealTxPtr
@@ -281,6 +292,7 @@ AnchoredBundle rec
                   state rec -- RevealedData
                     value bytes len=0..MAX16 aka=DataState
                     salt is U128
+                  lock bytes len=2 aka=ReservedBytes2
             attachment list len=0..MAX16 wrapped tag=3
               AssignRevealedAttachBlindSealTxPtr union
                 confidential rec tag=0
@@ -288,6 +300,7 @@ AnchoredBundle rec
                     bitcoin bytes len=32 wrapped aka=SecretSeal tag=0
                     liquid bytes len=32 wrapped aka=SecretSeal tag=1
                   state bytes len=32 aka=ConcealedAttach
+                  lock bytes len=2 aka=ReservedBytes2
                 confidentialState rec tag=1
                   seal union -- XChainBlindSealTxPtr
                     bitcoin rec wrapped tag=0 -- BlindSealTxPtr
@@ -305,6 +318,7 @@ AnchoredBundle rec
                       vout is U32 aka=Vout
                       blinding is U64
                   state bytes len=32 aka=ConcealedAttach
+                  lock bytes len=2 aka=ReservedBytes2
                 confidentialSeal rec tag=2
                   seal union -- XChainSecretSeal
                     bitcoin bytes len=32 wrapped aka=SecretSeal tag=0
@@ -313,6 +327,7 @@ AnchoredBundle rec
                     id bytes len=32 aka=AttachId
                     mediaType enum any=255 -- MediaType
                     salt is U64
+                  lock bytes len=2 aka=ReservedBytes2
                 revealed rec tag=3
                   seal union -- XChainBlindSealTxPtr
                     bitcoin rec wrapped tag=0 -- BlindSealTxPtr
@@ -333,6 +348,9 @@ AnchoredBundle rec
                     id bytes len=32 aka=AttachId
                     mediaType enum any=255 -- MediaType
                     salt is U64
+                  lock bytes len=2 aka=ReservedBytes2
         valencies set len=0..MAX8 aka=Valencies
           element is U16 aka=ValencyType
+        witness bytes len=1 aka=ReservedBytes1
+        script bytes len=1 aka=ReservedBytes1
 

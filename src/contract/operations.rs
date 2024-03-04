@@ -280,6 +280,7 @@ pub struct Issuer(SmallBlob);
 pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
+    pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
@@ -288,6 +289,7 @@ pub struct Genesis {
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
     pub issuer: Issuer,
+    pub script: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Genesis {}
@@ -310,6 +312,8 @@ pub struct Extension {
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
+    pub witness: ReservedBytes<1, 0>,
+    pub script: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Extension {}
@@ -340,6 +344,8 @@ pub struct Transition {
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
+    pub witness: ReservedBytes<1, 0>,
+    pub script: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Transition {}

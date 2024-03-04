@@ -35,7 +35,7 @@ use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
     ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
+use crate::{Ffv, GlobalStateSchema, Occurrences, ReservedBytes, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -163,6 +163,7 @@ pub type SubSchema = Schema<RootSchema>;
 )]
 pub struct Schema<Root: SchemaRoot> {
     pub ffv: Ffv,
+    pub flags: ReservedBytes<1, 0>,
     pub subset_of: Option<Root>,
 
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
@@ -183,6 +184,7 @@ impl<Root: SchemaRoot> CommitEncode for Schema<Root> {
 
     fn commit_encode(&self, e: &mut CommitEngine) {
         e.commit_to_serialized(&self.ffv);
+        e.commit_to_serialized(&self.flags);
         e.commit_to_option(&self.subset_of.as_ref().map(Root::schema_id));
 
         e.commit_to_map(&self.global_types);

@@ -70,6 +70,8 @@ pub const LIB_NAME_RGB: &str = "RGB";
 #[display("reserved")]
 #[derive(StrictType, StrictEncode)]
 #[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = commit_verify::StrictHash)]
 pub struct ReservedBytes<const LEN: usize, const VAL: u8 = 0>([u8; LEN]);
 
 impl<const LEN: usize, const VAL: u8> Default for ReservedBytes<LEN, VAL> {

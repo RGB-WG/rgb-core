@@ -40,7 +40,7 @@ pub enum VmType {
 /// Virtual machine and machine-specific script data.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = order)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -56,6 +56,7 @@ pub enum Script {
     ///
     /// Its routines can be accessed only through well-typed ABI entrance
     /// pointers, defined as a part of the schema.
+    #[strict_type(tag = 0x01)]
     AluVM(AluScript),
 }
 

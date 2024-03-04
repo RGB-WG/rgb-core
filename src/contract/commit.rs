@@ -39,8 +39,8 @@ use strict_encoding::StrictDumb;
 use crate::{
     Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis,
-    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal,
-    Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, ReservedBytes, SchemaId,
+    SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -240,6 +240,7 @@ impl TransitionBundle {
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 pub struct BaseCommitment {
+    pub flags: ReservedBytes<1, 0>,
     pub schema_id: SchemaId,
     pub timestamp: i64,
     pub testnet: bool,
@@ -275,11 +276,14 @@ pub struct OpCommitment {
     pub assignments: MerkleHash,
     pub redeemed: StrictHash,
     pub valencies: StrictHash,
+    pub witness: MerkleHash,
+    pub script: StrictHash,
 }
 
 impl Genesis {
     pub fn commit(&self) -> OpCommitment {
         let base = BaseCommitment {
+            flags: self.flags,
             schema_id: self.schema_id,
             timestamp: self.timestamp,
             testnet: self.testnet,
@@ -295,6 +299,8 @@ impl Genesis {
             assignments: MerkleHash::merklize(&self.assignments),
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
+            witness: MerkleHash::void(0, u256::ZERO),
+            script: self.script.commit_id(),
         }
     }
 
@@ -312,6 +318,8 @@ impl Transition {
             assignments: MerkleHash::merklize(&self.assignments),
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
+            witness: MerkleHash::void(0, u256::ZERO),
+            script: self.script.commit_id(),
         }
     }
 }
@@ -327,6 +335,8 @@ impl Extension {
             assignments: MerkleHash::merklize(&self.assignments),
             redeemed: self.redeemed.commit_id(),
             valencies: self.valencies.commit_id(),
+            witness: MerkleHash::void(0, u256::ZERO),
+            script: self.script.commit_id(),
         }
     }
 }
@@ -347,6 +357,7 @@ pub struct AssignmentCommitment {
     pub ty: AssignmentType,
     pub state: ConcealedState,
     pub seal: XChain<SecretSeal>,
+    pub lock: ReservedBytes<2, 0>,
 }
 
 impl CommitEncode for AssignmentCommitment {
@@ -356,19 +367,21 @@ impl CommitEncode for AssignmentCommitment {
         e.commit_to_serialized(&self.ty);
         self.state.commit_encode(e);
         e.commit_to_serialized(&self.seal);
+        e.commit_to_serialized(&self.lock);
         e.set_finished();
     }
 }
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn commitment(&self, ty: AssignmentType) -> AssignmentCommitment {
-        let Self::Confidential { seal, state } = self.conceal() else {
+        let Self::Confidential { seal, state, lock } = self.conceal() else {
             unreachable!();
         };
         AssignmentCommitment {
             ty,
             state: state.state_commitment(),
             seal,
+            lock,
         }
     }
 }
