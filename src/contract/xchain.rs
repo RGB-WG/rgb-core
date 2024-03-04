@@ -38,7 +38,10 @@ use crate::{Layer1, OutputSeal, XOutputSeal, LIB_NAME_RGB};
 pub const XCHAIN_BITCOIN_PREFIX: &str = "bc";
 pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
 
-pub type XOutpoint = XChain<Outpoint>;
+#[derive(Wrapper, WrapperMut, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, From)]
+#[wrapper(Deref, FromStr, Display)]
+#[wrapper_mut(DerefMut)]
+pub struct XOutpoint(XChain<Outpoint>);
 
 impl From<XOutputSeal> for XOutpoint {
     #[inline]
@@ -48,7 +51,7 @@ impl From<XOutputSeal> for XOutpoint {
 impl XOutputSeal {
     /// Converts seal into a transaction outpoint.
     #[inline]
-    pub fn to_outpoint(&self) -> XOutpoint { self.map_ref(OutputSeal::to_outpoint) }
+    pub fn to_outpoint(&self) -> XOutpoint { self.map_ref(OutputSeal::to_outpoint).into() }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]

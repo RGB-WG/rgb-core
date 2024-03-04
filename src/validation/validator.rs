@@ -516,7 +516,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 input_map
                     .entry(opid)
                     .or_default()
-                    .insert(seal.map(|seal| Outpoint::new(seal.txid, seal.vout)));
+                    .insert(seal.map(|seal| Outpoint::new(seal.txid, seal.vout)).into());
             }
         }
         (seals, input_map)
