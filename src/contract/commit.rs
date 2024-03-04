@@ -242,8 +242,10 @@ impl TransitionBundle {
 pub struct BaseCommitment {
     pub flags: ReservedBytes<1, 0>,
     pub schema_id: SchemaId,
+    pub timestamp: i64,
     pub testnet: bool,
     pub alt_layers1: StrictHash,
+    pub issuer: StrictHash,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -283,8 +285,10 @@ impl Genesis {
         let base = BaseCommitment {
             flags: self.flags,
             schema_id: self.schema_id,
+            timestamp: self.timestamp,
             testnet: self.testnet,
             alt_layers1: self.alt_layers1.commit_id(),
+            issuer: self.issuer.commit_id(),
         };
         OpCommitment {
             ffv: self.ffv,

@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:9KYkZKFu8F1NLqEZ8d2hfNHRb2LJuU2H6emXgHp1NAxF#context-oasis-mirage
+  Id: urn:ubideco:stl:4Q4DnsLMN2YERM8yrZWoDx6tUBwkR3A9SHhCFYxNSaeW#miranda-romeo-value
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -216,11 +216,13 @@ data AssignmentsBlindSealTxid : {AssignmentType -> ^ ..0xff TypedAssignsBlindSea
 @mnemonic(delta-member-agenda)
 data AttachId          : [Byte ^ 32]
 
-@mnemonic(brush-shannon-victor)
+@mnemonic(fabric-guide-poker)
 data BaseCommitment    : flags ReservedBytes1
                        , schemaId SchemaId
+                       , timestamp I64
                        , testnet Std.Bool#laser-madam-maxwell
                        , altLayers1 CommitVerify.StrictHash#cheese-final-locate
+                       , issuer CommitVerify.StrictHash#cheese-final-locate
 
 @mnemonic(agenda-ivory-blast)
 data BlindingFactor    : [Byte ^ 32]
@@ -285,16 +287,18 @@ data FungibleState     : bits64#8 U64
 data FungibleType      : unsigned64Bit#8
 
 
-@mnemonic(delphi-rufus-night)
+@mnemonic(canal-diego-india)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags ReservedBytes1
+                       , timestamp I64
                        , testnet Std.Bool#laser-madam-maxwell
                        , altLayers1 AltLayer1Set
                        , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
                        , valencies Valencies
+                       , issuer Issuer
                        , script ReservedBytes1
 
 @mnemonic(andrea-amigo-grid)
@@ -326,6 +330,9 @@ data InputMap          : {Bitcoin.Vout -> ^ 1.. OpId}
 
 @mnemonic(liquid-meaning-convert)
 data Inputs            : {Input}
+
+@mnemonic(veteran-tango-content)
+data Issuer            : [Byte]
 
 @mnemonic(light-nelson-brain)
 data MediaType         : any#255
