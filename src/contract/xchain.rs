@@ -38,9 +38,11 @@ use crate::{Layer1, OutputSeal, XOutputSeal, LIB_NAME_RGB};
 pub const XCHAIN_BITCOIN_PREFIX: &str = "bc";
 pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
 
-#[derive(Wrapper, WrapperMut, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, From)]
+#[derive(Wrapper, WrapperMut, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
 #[wrapper(Deref, FromStr, Display)]
 #[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
 pub struct XOutpoint(XChain<Outpoint>);
 
 impl From<XOutputSeal> for XOutpoint {
