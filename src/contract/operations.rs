@@ -257,8 +257,8 @@ pub trait Operation {
 ///
 /// Contract validity doesn't assume any checks on the issuer identity; these
 /// checks must be performed at the application level.
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
