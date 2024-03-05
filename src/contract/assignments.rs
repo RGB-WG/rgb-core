@@ -23,7 +23,7 @@
 use core::cmp::Ordering;
 use core::fmt::Debug;
 use std::collections::{btree_map, BTreeSet};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 use amplify::confinement::{Confined, SmallVec, TinyOrdMap};
 use commit_verify::Conceal;
@@ -117,13 +117,6 @@ impl<State: ExposedState, Seal: ExposedSeal> PartialEq for Assign<State, Seal> {
 }
 
 impl<State: ExposedState, Seal: ExposedSeal> Eq for Assign<State, Seal> {}
-
-impl<State: ExposedState, Seal: ExposedSeal> Hash for Assign<State, Seal> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.to_confidential_seal().hash(state);
-        self.to_confidential_state().hash(state);
-    }
-}
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn revealed(seal: XChain<Seal>, state: State) -> Self {
@@ -289,7 +282,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Declarative(strict_dumb!()))]
 #[cfg_attr(
@@ -577,7 +570,7 @@ impl TypedAssigns<GenesisSeal> {
     }
 }
 
-#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]

@@ -32,7 +32,7 @@ use crate::{
 
 /// Marker trait for types of state which are just a commitment to the actual
 /// state data.
-pub trait ConfidentialState: Debug + Hash + Eq + Copy {
+pub trait ConfidentialState: Debug + Eq + Copy {
     fn state_type(&self) -> StateType;
     fn state_commitment(&self) -> ConcealedState;
 }
@@ -101,7 +101,7 @@ impl RevealedState {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

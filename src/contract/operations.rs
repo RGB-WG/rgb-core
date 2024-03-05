@@ -269,7 +269,7 @@ pub trait Operation {
 )]
 pub struct Issuer(SmallBlob);
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -295,7 +295,7 @@ pub struct Genesis {
 impl StrictSerialize for Genesis {}
 impl StrictDeserialize for Genesis {}
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -327,7 +327,7 @@ impl PartialOrd for Extension {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -549,7 +549,7 @@ impl Operation for Transition {
     fn inputs(&self) -> Inputs { self.inputs.clone() }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
 pub enum OpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
