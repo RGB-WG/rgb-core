@@ -85,11 +85,6 @@ impl Script {
 #[derive(Clone, Eq, PartialEq, Debug, From)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
 pub enum Types {
     #[from]
     #[strict_type(tag = 0x01)]
@@ -108,4 +103,25 @@ impl Deref for Types {
 
 impl Default for Types {
     fn default() -> Self { Types::Strict(none!()) }
+}
+
+#[cfg(feature = "serde")]
+mod _serde {
+    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for Types {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Types {
+        fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de> {
+            todo!()
+        }
+    }
 }
