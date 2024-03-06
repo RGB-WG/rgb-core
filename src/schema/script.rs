@@ -25,6 +25,10 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract operation level
 
+use std::ops::Deref;
+
+use strict_types::TypeSystem;
+
 use crate::vm::AluScript;
 use crate::LIB_NAME_RGB;
 
@@ -75,4 +79,33 @@ impl Script {
         let Script::AluVM(alu) = self;
         alu
     }
+}
+
+/// Types used by a schema and virtual machine
+#[derive(Clone, Eq, PartialEq, Debug, From)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum Types {
+    #[from]
+    #[strict_type(tag = 0x01)]
+    Strict(TypeSystem),
+}
+
+impl Deref for Types {
+    type Target = TypeSystem;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Types::Strict(sys) => sys,
+        }
+    }
+}
+
+impl Default for Types {
+    fn default() -> Self { Types::Strict(none!()) }
 }
