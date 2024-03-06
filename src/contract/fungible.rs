@@ -106,7 +106,7 @@ impl AssetTag {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum FungibleState {
     /// 64-bit value.
@@ -432,7 +432,7 @@ impl Default for NoiseDumb {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum RangeProof {
     /// Value used when bulletproofs library is not available.

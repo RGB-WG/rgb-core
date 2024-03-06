@@ -208,7 +208,7 @@ impl Ord for WitnessPos {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum WitnessOrd {
     #[from]

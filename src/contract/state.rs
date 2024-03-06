@@ -81,7 +81,7 @@ pub enum StateType {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
 )]
 pub enum RevealedState {
     Void,
@@ -105,7 +105,7 @@ impl RevealedState {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
 )]
 #[allow(clippy::large_enum_variant)]
 pub enum ConcealedState {

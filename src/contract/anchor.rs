@@ -113,7 +113,7 @@ impl XAnchor<mpc::MerkleProof> {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     #[strict_type(tag = 0x01)]
