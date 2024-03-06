@@ -62,12 +62,35 @@ impl Conceal for VoidState {
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct DataState(SmallBlob);
 impl StrictSerialize for DataState {}
 
 impl From<RevealedData> for DataState {
     fn from(data: RevealedData) -> Self { data.value }
+}
+
+#[cfg(feature = "serde")]
+mod _serde {
+    use amplify::hex::FromHex;
+    use serde_crate::de::Error;
+    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for DataState {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    impl<'de> Deserialize<'de> for DataState {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de> {
+            let s = String::deserialize(deserializer)?;
+            Self::from_hex(&s).map_err(D::Error::custom)
+        }
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Hash)]
