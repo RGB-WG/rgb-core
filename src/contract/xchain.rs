@@ -130,7 +130,7 @@ pub struct AltLayer1Set(TinyOrdSet<AltLayer1>);
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", tag = "chain")
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "chain", content = "data")
 )]
 pub enum XChain<T> {
     Bitcoin(T),

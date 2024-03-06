@@ -300,6 +300,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
         crate = "serde_crate",
         rename_all = "camelCase",
         tag = "type",
+        content = "assignments",
         bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
