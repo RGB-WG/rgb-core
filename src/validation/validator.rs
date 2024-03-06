@@ -336,7 +336,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         bundle_id: BundleId,
         bundle: &TransitionBundle,
         pub_witness: XPubWitness,
-        input_map: BTreeMap<OpId, BTreeSet<XChain<Outpoint>>>,
+        input_map: BTreeMap<OpId, BTreeSet<XOutpoint>>,
     ) {
         let witness_id = pub_witness.witness_id();
         for (vin, opid) in &bundle.input_map {

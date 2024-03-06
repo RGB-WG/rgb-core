@@ -42,7 +42,7 @@ pub type XOutpoint = XChain<Outpoint>;
 
 impl From<XOutputSeal> for XOutpoint {
     #[inline]
-    fn from(seal: XChain<OutputSeal>) -> Self { seal.to_outpoint() }
+    fn from(seal: XOutputSeal) -> Self { seal.to_outpoint() }
 }
 
 impl XOutputSeal {
