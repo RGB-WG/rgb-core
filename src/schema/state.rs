@@ -31,7 +31,7 @@ use crate::{StateType, LIB_NAME_RGB};
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
 )]
 #[non_exhaustive]
 #[repr(u8)]

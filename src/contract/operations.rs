@@ -39,19 +39,41 @@ use crate::{
     TypedAssigns, VoidState, XChain, LIB_NAME_RGB,
 };
 
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
+#[derive(
+    Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default, From
+)]
+#[display(LowerHex)]
+#[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
 pub struct Metadata(SmallBlob);
+
+#[cfg(feature = "serde")]
+mod _serde {
+    use amplify::hex::FromHex;
+    use serde_crate::de::Error;
+    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for Metadata {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Metadata {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de> {
+            let s = String::deserialize(deserializer)?;
+            Self::from_hex(&s).map_err(D::Error::custom)
+        }
+    }
+}
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]

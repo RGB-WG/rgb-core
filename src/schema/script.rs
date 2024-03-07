@@ -25,6 +25,10 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract operation level
 
+use std::ops::Deref;
+
+use strict_types::TypeSystem;
+
 use crate::vm::AluScript;
 use crate::LIB_NAME_RGB;
 
@@ -74,5 +78,50 @@ impl Script {
     pub fn as_alu_script(&self) -> &AluScript {
         let Script::AluVM(alu) = self;
         alu
+    }
+}
+
+/// Types used by a schema and virtual machine
+#[derive(Clone, Eq, PartialEq, Debug, From)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+pub enum Types {
+    #[from]
+    #[strict_type(tag = 0x01)]
+    Strict(TypeSystem),
+}
+
+impl Deref for Types {
+    type Target = TypeSystem;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Types::Strict(sys) => sys,
+        }
+    }
+}
+
+impl Default for Types {
+    fn default() -> Self { Types::Strict(none!()) }
+}
+
+#[cfg(feature = "serde")]
+mod _serde {
+    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for Types {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Types {
+        fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de> {
+            todo!()
+        }
     }
 }

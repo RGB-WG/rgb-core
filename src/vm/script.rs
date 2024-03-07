@@ -21,11 +21,12 @@
 // limitations under the License.
 
 use std::collections::{btree_map, BTreeMap};
-use std::io;
+use std::ops::Deref;
+use std::{io, iter};
 
 use aluvm::data::encoding::{Decode, Encode};
 use aluvm::isa::Instr;
-use aluvm::library::{Lib, LibId, LibSite};
+use aluvm::library::{LibId, LibSite};
 use aluvm::Program;
 use amplify::confinement::{Confined, SmallBlob, SmallOrdMap, TinyOrdMap};
 use amplify::Wrapper;
@@ -126,9 +127,37 @@ impl StrictDecode for EntryPoint {
     }
 }
 
+#[derive(Wrapper, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, From)]
+#[wrapper(Deref, Display)]
+pub struct AluLib(pub aluvm::library::Lib);
+
+#[cfg(feature = "serde")]
+mod _serde {
+    use serde_crate::ser::Error;
+    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for AluLib {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+            let mut buf = Vec::<u8>::new();
+            self.print_disassemble::<RgbIsa>(&mut buf)
+                .map_err(S::Error::custom)?;
+            let s = String::from_utf8(buf).map_err(S::Error::custom)?;
+            serializer.serialize_str(&s)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for AluLib {
+        fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de> {
+            todo!()
+        }
+    }
+}
+
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
-//#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-//#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -136,7 +165,7 @@ impl StrictDecode for EntryPoint {
 )]
 pub struct AluScript {
     /// Libraries known to the runtime, identified by their hashes.
-    pub libs: Confined<BTreeMap<LibId, Lib>, 0, LIBS_MAX_TOTAL>,
+    pub libs: Confined<BTreeMap<LibId, AluLib>, 0, LIBS_MAX_TOTAL>,
 
     /// Set of entry points.
     pub entry_points: SmallOrdMap<EntryPoint, LibSite>,
@@ -179,9 +208,9 @@ impl StrictDecode for AluScript {
                 .read_field::<TinyOrdMap<LibId, SmallBlob>>(fname!("libs"))?
                 .into_iter()
                 .map(|(id, lib)| {
-                    let lib = Lib::deserialize(lib)
+                    let lib = aluvm::library::Lib::deserialize(lib)
                         .map_err(|err| DecodeError::DataIntegrityError(err.to_string()))?;
-                    Ok((id, lib))
+                    Ok((id, AluLib(lib)))
                 })
                 .collect::<Result<BTreeMap<_, _>, DecodeError>>()?;
 
@@ -196,13 +225,15 @@ impl StrictDecode for AluScript {
 
 impl Program for AluScript {
     type Isa = Instr<RgbIsa>;
-    type Iter<'a> = btree_map::Values<'a, LibId, Lib> where Self: 'a;
+    type Iter<'a> = iter::Map<btree_map::Values<'a, LibId, AluLib>, fn(&'a AluLib) -> &'a <AluLib as Deref>::Target> where Self: 'a;
 
     fn lib_count(&self) -> u16 { self.libs.len() as u16 }
 
-    fn libs(&self) -> Self::Iter<'_> { self.libs.values() }
+    fn libs(&self) -> Self::Iter<'_> { self.libs.values().map(AluLib::deref) }
 
-    fn lib(&self, id: LibId) -> Option<&Lib> { self.libs.get(&id) }
+    fn lib(&self, id: LibId) -> Option<&aluvm::library::Lib> {
+        self.libs.get(&id).map(AluLib::deref)
+    }
 
     fn entrypoint(&self) -> LibSite { panic!("AluScript doesn't have a single entry point") }
 }

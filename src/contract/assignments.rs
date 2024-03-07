@@ -62,6 +62,7 @@ pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
     serde(
         crate = "serde_crate",
         rename_all = "camelCase",
+        untagged,
         bound = "State::Confidential: serde::Serialize + serde::de::DeserializeOwned, State: \
                  serde::Serialize + serde::de::DeserializeOwned, Seal: serde::Serialize + \
                  serde::de::DeserializeOwned"
@@ -291,6 +292,8 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
     serde(
         crate = "serde_crate",
         rename_all = "camelCase",
+        tag = "type",
+        content = "items",
         bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]

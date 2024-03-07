@@ -53,7 +53,7 @@ impl SubSchema {
         }
 
         for (type_id, schema) in &self.global_types {
-            if !self.type_system.contains_key(&schema.sem_id) {
+            if !self.types.contains_key(&schema.sem_id) {
                 status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
                     *type_id,
                     schema.sem_id,
@@ -63,7 +63,7 @@ impl SubSchema {
 
         for (type_id, schema) in &self.owned_types {
             if let StateSchema::Structured(sem_id) = schema {
-                if !self.type_system.contains_key(sem_id) {
+                if !self.types.contains_key(sem_id) {
                     status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
                         *type_id, *sem_id,
                     ));
@@ -77,7 +77,7 @@ impl SubSchema {
     fn verify_operation(&self, op_type: OpFullType, schema: &impl OpSchema) -> Status {
         let mut status = validation::Status::new();
 
-        if !self.type_system.contains_key(&schema.metadata()) {
+        if !self.types.contains_key(&schema.metadata()) {
             status.add_failure(validation::Failure::SchemaOpMetaSemIdUnknown(
                 op_type,
                 schema.metadata(),

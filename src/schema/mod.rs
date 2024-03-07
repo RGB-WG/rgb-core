@@ -36,5 +36,5 @@ pub use schema::{
     ExtensionType, GlobalStateType, RootSchema, Schema, SchemaId, SchemaRoot, SubSchema,
     TransitionType,
 };
-pub use script::{Script, VmType};
+pub use script::{Script, Types, VmType};
 pub use state::{FungibleType, GlobalStateSchema, MediaType, StateSchema};

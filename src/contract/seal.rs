@@ -126,7 +126,7 @@ impl XChain<GenesisSeal> {
 
     /// Converts seal into a transaction outpoint.
     #[inline]
-    pub fn to_outpoint(&self) -> XOutpoint { self.map_ref(GenesisSeal::to_outpoint) }
+    pub fn to_outpoint(&self) -> XOutpoint { self.map_ref(GenesisSeal::to_outpoint).into() }
 }
 
 impl<U: ExposedSeal> XChain<U> {
@@ -208,7 +208,7 @@ impl Ord for WitnessPos {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum WitnessOrd {
     #[from]

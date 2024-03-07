@@ -29,13 +29,12 @@ use amplify::{ByteArray, Bytes32};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use commit_verify::{CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
-use strict_types::TypeSystem;
 
 use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
     ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, Occurrences, ReservedBytes, LIB_NAME_RGB};
+use crate::{Ffv, GlobalStateSchema, Occurrences, ReservedBytes, Types, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -174,7 +173,7 @@ pub struct Schema<Root: SchemaRoot> {
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
     /// Type system
-    pub type_system: TypeSystem,
+    pub types: Types,
     /// Validation code.
     pub script: Script,
 }
@@ -194,7 +193,7 @@ impl<Root: SchemaRoot> CommitEncode for Schema<Root> {
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
 
-        e.commit_to_serialized(&self.type_system.id());
+        e.commit_to_serialized(&self.types.id());
         e.commit_to_serialized(&self.script);
     }
 }

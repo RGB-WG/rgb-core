@@ -38,17 +38,53 @@ use crate::{Layer1, OutputSeal, XOutputSeal, LIB_NAME_RGB};
 pub const XCHAIN_BITCOIN_PREFIX: &str = "bc";
 pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
 
-pub type XOutpoint = XChain<Outpoint>;
+#[derive(Wrapper, WrapperMut, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
+#[wrapper(Deref, FromStr, Display)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+pub struct XOutpoint(XChain<Outpoint>);
 
 impl From<XOutputSeal> for XOutpoint {
     #[inline]
-    fn from(seal: XChain<OutputSeal>) -> Self { seal.to_outpoint() }
+    fn from(seal: XOutputSeal) -> Self { seal.to_outpoint() }
 }
 
 impl XOutputSeal {
     /// Converts seal into a transaction outpoint.
     #[inline]
-    pub fn to_outpoint(&self) -> XOutpoint { self.map_ref(OutputSeal::to_outpoint) }
+    pub fn to_outpoint(&self) -> XOutpoint { self.map_ref(OutputSeal::to_outpoint).into() }
+}
+
+#[cfg(feature = "serde")]
+mod _serde {
+    use serde_crate::de::Error;
+    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for XOutpoint {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+            if serializer.is_human_readable() {
+                serializer.serialize_str(&self.to_string())
+            } else {
+                self.0.serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for XOutpoint {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de> {
+            if deserializer.is_human_readable() {
+                let s = String::deserialize(deserializer)?;
+                Self::from_str(&s).map_err(D::Error::custom)
+            } else {
+                XChain::<Outpoint>::deserialize(deserializer).map(Self)
+            }
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
@@ -94,7 +130,7 @@ pub struct AltLayer1Set(TinyOrdSet<AltLayer1>);
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "chain", content = "data")
 )]
 pub enum XChain<T> {
     Bitcoin(T),

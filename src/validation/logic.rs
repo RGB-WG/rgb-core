@@ -202,7 +202,7 @@ impl<Root: SchemaRoot> Schema<Root> {
         let mut status = validation::Status::new();
 
         if self
-            .type_system
+            .types
             .strict_deserialize_type(sem_id, metadata.as_ref())
             .is_err()
         {
@@ -259,7 +259,7 @@ impl<Root: SchemaRoot> Schema<Root> {
             // Validating data types
             for data in set {
                 if self
-                    .type_system
+                    .types
                     .strict_deserialize_type(*sem_id, data.value.as_ref())
                     .is_err()
                 {
@@ -371,16 +371,16 @@ impl<Root: SchemaRoot> Schema<Root> {
             match owned_state.get(state_id) {
                 None => {}
                 Some(TypedAssigns::Declarative(set)) => set.iter().for_each(|data| {
-                    status += assignment.validate(&self.type_system, &id, *state_id, data)
+                    status += assignment.validate(&self.types, &id, *state_id, data)
                 }),
                 Some(TypedAssigns::Fungible(set)) => set.iter().for_each(|data| {
-                    status += assignment.validate(&self.type_system, &id, *state_id, data)
+                    status += assignment.validate(&self.types, &id, *state_id, data)
                 }),
                 Some(TypedAssigns::Structured(set)) => set.iter().for_each(|data| {
-                    status += assignment.validate(&self.type_system, &id, *state_id, data)
+                    status += assignment.validate(&self.types, &id, *state_id, data)
                 }),
                 Some(TypedAssigns::Attachment(set)) => set.iter().for_each(|data| {
-                    status += assignment.validate(&self.type_system, &id, *state_id, data)
+                    status += assignment.validate(&self.types, &id, *state_id, data)
                 }),
             };
         }
