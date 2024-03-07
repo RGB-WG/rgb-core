@@ -35,6 +35,7 @@ use core::fmt::Debug;
 use core::num::ParseIntError;
 use core::ops::Deref;
 use core::str::FromStr;
+use std::hash::Hash;
 use std::io;
 
 use amplify::confinement::U8;
@@ -466,7 +467,7 @@ impl CommitmentProtocol for PedersenProtocol {}
 /// Confidential version of the additive state.
 ///
 /// See also revealed version [`RevealedValue`].
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedFungible")]
 #[cfg_attr(
@@ -479,6 +480,10 @@ pub struct ConcealedValue {
     pub commitment: PedersenCommitment,
     /// Range proof for the [`FungibleState`] not exceeding type boundaries.
     pub range_proof: RangeProof,
+}
+
+impl PartialEq for ConcealedValue {
+    fn eq(&self, other: &Self) -> bool { self.commitment == other.commitment }
 }
 
 impl ConfidentialState for ConcealedValue {
