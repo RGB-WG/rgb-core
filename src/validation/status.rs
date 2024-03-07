@@ -393,8 +393,9 @@ pub enum Failure {
     },
     /// invalid bulletproofs in {0}:{1}: {2}
     BulletproofsInvalid(OpId, schema::AssignmentType, String),
-    /// operation {0} is invalid: {1}
-    ScriptFailure(OpId, String),
+    /// evaluation of AluVM script for operation {0} has failed with the code
+    /// {1:?}
+    ScriptFailure(OpId, Option<u8>),
 
     /// Custom error by external services on top of RGB Core.
     #[display(inner)]

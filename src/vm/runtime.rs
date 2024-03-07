@@ -39,7 +39,7 @@ pub struct AluRuntime<'script> {
 impl<'script> AluRuntime<'script> {
     pub fn new(script: &'script AluScript) -> Self { AluRuntime { script } }
 
-    pub fn run_validations(&self, info: &OpInfo) -> Result<(), String> {
+    pub fn run_validations(&self, info: &OpInfo) -> Result<(), Option<u8>> {
         let mut regs = RegSetup::default();
 
         match info.ty {
@@ -82,7 +82,7 @@ impl<'script> AluRuntime<'script> {
         Ok(())
     }
 
-    fn run(&self, entry: EntryPoint, regs: &RegSetup, info: &OpInfo) -> Result<(), String> {
+    fn run(&self, entry: EntryPoint, regs: &RegSetup, info: &OpInfo) -> Result<(), Option<u8>> {
         let mut vm = Vm::<Instr<RgbIsa>>::new();
 
         for ((reg, idx), val) in &regs.nums {
@@ -100,11 +100,10 @@ impl<'script> AluRuntime<'script> {
         match self.script.entry_points.get(&entry) {
             Some(site) => match vm.call(self.script, *site, info) {
                 true => Ok(()),
-                false => Err(vm
-                    .registers
-                    .get_s(0)
-                    .and_then(|bs| String::from_utf8(bs.to_vec()).ok())
-                    .unwrap_or_else(|| s!("unspecified error"))),
+                false => {
+                    let val: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg31).into();
+                    Err(val.map(|n| n[0]))
+                }
             },
             None => Ok(()),
         }
