@@ -38,4 +38,4 @@ pub use isa::RgbIsa;
 pub use op_contract::ContractOp;
 pub use op_timechain::TimechainOp;
 pub use runtime::AluRuntime;
-pub use script::{AluScript, EntryPoint, LIBS_MAX_TOTAL, AluLib};
+pub use script::{AluLib, AluScript, EntryPoint, LIBS_MAX_TOTAL};
