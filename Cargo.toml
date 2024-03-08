@@ -59,4 +59,4 @@ getrandom = { version = "0.2", features = ["js"] }
 wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
-features = [ "all" ]
+features = ["all"]
