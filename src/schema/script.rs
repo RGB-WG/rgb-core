@@ -105,8 +105,18 @@ impl Default for Types {
     fn default() -> Self { Types::Strict(none!()) }
 }
 
+impl Types {
+    pub fn as_strict(&self) -> &TypeSystem {
+        match self {
+            Types::Strict(ts) => ts,
+        }
+    }
+}
+
 #[cfg(feature = "serde")]
 mod _serde {
+    use armor::AsciiArmor;
+    use serde_crate::de::Error;
     use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
 
     use super::*;
@@ -114,14 +124,24 @@ mod _serde {
     impl Serialize for Types {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer {
-            serializer.serialize_str(&self.to_string())
+            if serializer.is_human_readable() {
+                serializer.serialize_str(&self.as_strict().to_ascii_armored_string())
+            } else {
+                self.as_strict().serialize(serializer)
+            }
         }
     }
 
     impl<'de> Deserialize<'de> for Types {
-        fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de> {
-            todo!()
+            if deserializer.is_human_readable() {
+                let s = String::deserialize(deserializer)?;
+                let sys = TypeSystem::from_ascii_armored_str(&s).map_err(D::Error::custom)?;
+                Ok(Types::Strict(sys))
+            } else {
+                Ok(Types::Strict(TypeSystem::deserialize(deserializer)?))
+            }
         }
     }
 }

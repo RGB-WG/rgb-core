@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:4Q4DnsLMN2YERM8yrZWoDx6tUBwkR3A9SHhCFYxNSaeW#miranda-romeo-value
+  Id: urn:ubideco:stl:6NAFZspAZ14Y1NynHeQBJVNqep4arKkKx8zchhHrESvr#airport-border-match
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -10,26 +10,6 @@
 
 @context
 typelib RGB
-
-import BPCore#c8Tnib31q1p7szyPukEGDoQzJQ5qJwPCn5uZCHUXzB9#cupid-metro-warning
-  use TapretNodePartner#iceberg-poker-active
-  use ExplicitSealTxid#antenna-darwin-emotion
-  use TapretProof#forum-paint-tunnel
-  use TapretPathProof#stage-element-update
-  use Method#trilogy-tahiti-valid
-  use TapretRightBranch#basket-prelude-bridge
-  use BlindSealTxPtr#austria-icon-waiter
-  use OpretProof#segment-ambient-totem
-  use SecretSeal#santana-domingo-needle
-  use AnchorMerkleProofOpretProof#mammal-ethnic-crown
-  use BlindSealTxid#kimono-golf-price
-  use TxPtr#strange-source-father
-  use AnchorMerkleProofTapretProof#forward-chemist-panda
-
-import CommitVerify#57sPvZcwQaziec3ux249XoCMhziQpKB8Yw99U5oRwfqW#deluxe-safari-random
-  use MerkleHash#culture-metro-modular
-  use StrictHash#cheese-final-locate
-  use MerkleProof#labor-hilton-magenta
 
 import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-pelican
   use VariantName#snow-gray-extreme
@@ -47,6 +27,26 @@ import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-
   use TySemId#kimono-catalog-mango
   use Variant#textile-cowboy-dragon
   use UnionVariantsSemId#iceberg-road-crack
+
+import CommitVerify#7qvjR4HCwJKF3mxE5GqsAaADces5JDRwb8ajAse9mkz3#exhibit-karate-ritual
+  use MerkleHash#culture-metro-modular
+  use StrictHash#cheese-final-locate
+  use MerkleProof#labor-hilton-magenta
+
+import BPCore#BeAiDVK898mzgHrmWgxHtysDhmffgMEoDwBgNuZo7QeZ#connect-verona-secret
+  use TapretNodePartner#iceberg-poker-active
+  use ExplicitSealTxid#antenna-darwin-emotion
+  use TapretProof#forum-paint-tunnel
+  use TapretPathProof#stage-element-update
+  use Method#trilogy-tahiti-valid
+  use TapretRightBranch#basket-prelude-bridge
+  use BlindSealTxPtr#austria-icon-waiter
+  use OpretProof#segment-ambient-totem
+  use SecretSeal#santana-domingo-needle
+  use AnchorMerkleProofOpretProof#mammal-ethnic-crown
+  use BlindSealTxid#kimono-golf-price
+  use TxPtr#strange-source-father
+  use AnchorMerkleProofTapretProof#forward-chemist-panda
 
 import AluVM#DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy
   use LibSite#mission-papa-mercy
@@ -413,7 +413,7 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(divide-heavy-culture)
+@mnemonic(data-buenos-bikini)
 data Schema            : ffv Ffv
                        , flags ReservedBytes1
                        , subsetOf ()?
@@ -423,13 +423,13 @@ data Schema            : ffv Ffv
                        , genesis GenesisSchema
                        , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
                        , transitions {TransitionType -> ^ ..0xff TransitionSchema}
-                       , typeSystem StrictTypes.TypeSystem#panel-data-lazarus
+                       , types Types
                        , script Script
 
 @mnemonic(garcia-smoke-ozone)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(archive-number-arnold)
+@mnemonic(zebra-amanda-linear)
 data SchemaSchema      : ffv Ffv
                        , flags ReservedBytes1
                        , subsetOf Schema?
@@ -439,7 +439,7 @@ data SchemaSchema      : ffv Ffv
                        , genesis GenesisSchema
                        , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
                        , transitions {TransitionType -> ^ ..0xff TransitionSchema}
-                       , typeSystem StrictTypes.TypeSystem#panel-data-lazarus
+                       , types Types
                        , script Script
 
 @mnemonic(venus-trust-north)
@@ -492,6 +492,9 @@ data TypedAssignsBlindSealTxid : declarative [AssignVoidStateBlindSealTxid]
                        | fungible [AssignRevealedValueBlindSealTxid]
                        | structured [AssignRevealedDataBlindSealTxid]
                        | attachment#255 [AssignRevealedAttachBlindSealTxid]
+
+@mnemonic(titanic-front-courage)
+data Types             : strict#1 StrictTypes.TypeSystem#panel-data-lazarus
 
 @mnemonic(andy-mango-brother)
 data Valencies         : {ValencyType ^ ..0xff}

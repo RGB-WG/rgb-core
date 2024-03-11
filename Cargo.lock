@@ -5,10 +5,10 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.11.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0278873e02b7eca06433f4f13aaf77bbf6e6976444d17c811e140c254a67c38"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=armor#3bf009122c09a90df495049e0182712c675c2b26"
 dependencies = [
  "amplify",
+ "ascii-armor",
  "baid58",
  "getrandom",
  "half",
@@ -119,6 +119,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ascii-armor"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "743d90b41a39d6e3920eef64a70f6411097cbb47141606a45b2a96533ec7111c"
+dependencies = [
+ "amplify",
+ "baid58",
+ "base85",
+ "sha2",
+ "strict_encoding",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -188,8 +201,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.11.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4455276e0c26bc4a742b8cf2a2a8fe1a42b06f15873dd6145c32af9a7a387a94"
+source = "git+https://github.com/BP-WG/bp-core?branch=armor#628854dff6f82f873d6389e1ec8c7ec0b7d00c2d"
 dependencies = [
  "amplify",
  "chrono",
@@ -203,8 +215,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.11.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83c1a3c6505e4fbf81d3f7ba5b79c789336e7b959d6b87ff3f37e0b70df68a51"
+source = "git+https://github.com/BP-WG/bp-core?branch=armor#628854dff6f82f873d6389e1ec8c7ec0b7d00c2d"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -222,8 +233,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.11.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9efc8f72528ae16a84aeac95657f326268289bb5b5b64c24309c1a6bc0b97caa"
+source = "git+https://github.com/BP-WG/bp-core?branch=armor#628854dff6f82f873d6389e1ec8c7ec0b7d00c2d"
 dependencies = [
  "amplify",
  "base85",
@@ -237,8 +247,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a54af971320d2b3358eb7b4380d0dda72810b8f8b417790f38e2a8f28a10cad"
+source = "git+https://github.com/BP-WG/bp-core?branch=armor#628854dff6f82f873d6389e1ec8c7ec0b7d00c2d"
 dependencies = [
  "amplify",
  "baid58",
@@ -292,8 +301,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.11.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d25b4b09de08ea8530138fb8a7ca45d90b53fef8d582a944a1b08eedf3f2583e"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=armor#78f22a51b87115869f454ed0516a1bcdd8994db4"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -305,8 +313,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00351b49be0ce72775b37cca336c3c10e958d810ca097f0712d95a63684b4f99"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=armor#78f22a51b87115869f454ed0516a1bcdd8994db4"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -595,6 +602,7 @@ version = "0.11.0-beta.4"
 dependencies = [
  "aluvm",
  "amplify",
+ "ascii-armor",
  "baid58",
  "bp-core",
  "chrono",
@@ -786,12 +794,11 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "2.7.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d66de5cdf197b68e13fcac9fad7ed288f44052a319a3df3abbaba9c6e52f735b"
+source = "git+https://github.com/strict-types/strict-types?branch=armor#00741ba09189536d8cdaf048a7f17795393ee382"
 dependencies = [
  "amplify",
+ "ascii-armor",
  "baid58",
- "base85",
  "half",
  "indexmap",
  "serde",
