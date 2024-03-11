@@ -133,7 +133,9 @@ pub struct AluLib(pub aluvm::library::Lib);
 
 #[cfg(feature = "serde")]
 mod _serde {
-    use serde_crate::ser::Error;
+    use aluvm::library::Lib;
+    use armor::AsciiArmor;
+    use serde_crate::de::Error;
     use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
 
     use super::*;
@@ -141,18 +143,25 @@ mod _serde {
     impl Serialize for AluLib {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer {
-            let mut buf = Vec::<u8>::new();
-            self.print_disassemble::<RgbIsa>(&mut buf)
-                .map_err(S::Error::custom)?;
-            let s = String::from_utf8(buf).map_err(S::Error::custom)?;
-            serializer.serialize_str(&s)
+            if serializer.is_human_readable() {
+                serializer.serialize_str(&self.0.to_ascii_armored_string())
+            } else {
+                Serialize::serialize(&self.0, serializer)
+            }
         }
     }
 
     impl<'de> Deserialize<'de> for AluLib {
-        fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de> {
-            todo!()
+            if deserializer.is_human_readable() {
+                let s: String = Deserialize::deserialize(deserializer)?;
+                let lib = Lib::from_ascii_armored_str(&s).map_err(D::Error::custom)?;
+                Ok(lib.into())
+            } else {
+                let lib: Lib = Deserialize::deserialize(deserializer)?;
+                Ok(lib.into())
+            }
         }
     }
 }
