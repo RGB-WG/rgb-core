@@ -24,20 +24,31 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use aluvm::data::{ByteStr, Number};
 use aluvm::isa::Instr;
+use aluvm::library::LibSite;
 use aluvm::reg::{Reg32, RegA, RegAFR, RegS};
-use aluvm::Vm;
+use aluvm::{Program, Vm};
+use amplify::confinement::SmallOrdMap;
 use amplify::Wrapper;
 
 use crate::validation::OpInfo;
-use crate::vm::{AluScript, EntryPoint, RgbIsa};
+use crate::vm::{EntryPoint, RgbIsa};
 use crate::OpFullType;
 
-pub struct AluRuntime<'script> {
-    script: &'script AluScript,
+pub struct AluRuntime<'consignment, P: Program<Isa = Instr<RgbIsa>>> {
+    program: &'consignment P,
+    entry_points: &'consignment SmallOrdMap<EntryPoint, LibSite>,
 }
 
-impl<'script> AluRuntime<'script> {
-    pub fn new(script: &'script AluScript) -> Self { AluRuntime { script } }
+impl<'consignment, P: Program<Isa = Instr<RgbIsa>>> AluRuntime<'consignment, P> {
+    pub fn new(
+        program: &'consignment P,
+        entry_points: &'consignment SmallOrdMap<EntryPoint, LibSite>,
+    ) -> Self {
+        AluRuntime {
+            program,
+            entry_points,
+        }
+    }
 
     pub fn run_validations(&self, info: &OpInfo) -> Result<(), Option<u8>> {
         let mut regs = RegSetup::default();
@@ -97,8 +108,8 @@ impl<'script> AluRuntime<'script> {
             );
         }
 
-        match self.script.entry_points.get(&entry) {
-            Some(site) => match vm.call(self.script, *site, info) {
+        match self.entry_points.get(&entry) {
+            Some(site) => match vm.call(self.program, *site, info) {
                 true => Ok(()),
                 false => {
                     let val: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg31).into();

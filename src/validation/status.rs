@@ -24,9 +24,10 @@ use core::iter::FromIterator;
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
+use aluvm::library::LibId;
 use bp::Txid;
 use commit_verify::mpc::InvalidProof;
-use strict_types::SemId;
+use strict_types::{SemId, TypeSysId};
 
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
@@ -205,16 +206,6 @@ pub enum Failure {
     /// schema uses reserved type for the blank state transition.
     SchemaBlankTransitionRedefined,
 
-    /// schema global state #{0} uses semantic data type absent in type library
-    /// ({1}).
-    SchemaGlobalSemIdUnknown(schema::GlobalStateType, SemId),
-    /// schema owned state #{0} uses semantic data type absent in type library
-    /// ({1}).
-    SchemaOwnedSemIdUnknown(schema::AssignmentType, SemId),
-    /// schema metadata in {0} uses semantic data type absent in type library
-    /// ({1}).
-    SchemaOpMetaSemIdUnknown(OpFullType, SemId),
-
     /// schema for {0} has zero inputs.
     SchemaOpEmptyInputs(OpFullType),
     /// schema for {0} references undeclared global state type {1}.
@@ -391,10 +382,14 @@ pub enum Failure {
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },
-    /// invalid bulletproofs in {0}:{1}: {2}
+    /// invalid bulletproofs in {0}:{1}: {2}.
     BulletproofsInvalid(OpId, schema::AssignmentType, String),
+    /// Strict types system {0} is not found.
+    TypesAbsent(TypeSysId),
+    /// AluVM library {0} is not found.
+    LibraryAbsent(LibId),
     /// evaluation of AluVM script for operation {0} has failed with the code
-    /// {1:?}
+    /// {1:?}.
     ScriptFailure(OpId, Option<u8>),
 
     /// Custom error by external services on top of RGB Core.

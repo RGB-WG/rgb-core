@@ -20,9 +20,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use aluvm::isa::Instr;
+use aluvm::Program;
+
+use crate::validation;
 use crate::validation::OpInfo;
-use crate::vm::AluRuntime;
-use crate::{validation, Script};
+use crate::vm::{AluRuntime, RgbIsa};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
@@ -32,15 +35,7 @@ pub trait VirtualMachine {
     fn validate(&self, info: OpInfo) -> Result<(), validation::Failure>;
 }
 
-impl VirtualMachine for Script {
-    fn validate(&self, info: OpInfo) -> Result<(), validation::Failure> {
-        match self {
-            Script::AluVM(script) => AluRuntime::new(script).validate(info),
-        }
-    }
-}
-
-impl<'script> VirtualMachine for AluRuntime<'script> {
+impl<'consignment, P: Program<Isa = Instr<RgbIsa>>> VirtualMachine for AluRuntime<'consignment, P> {
     fn validate(&self, info: OpInfo) -> Result<(), validation::Failure> {
         let id = info.id;
         self.run_validations(&info)

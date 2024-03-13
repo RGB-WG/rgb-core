@@ -27,7 +27,7 @@
 
 use std::ops::Deref;
 
-use strict_types::TypeSystem;
+use strict_types::TypeSysId;
 
 use crate::vm::AluScript;
 use crate::LIB_NAME_RGB;
@@ -83,16 +83,21 @@ impl Script {
 
 /// Types used by a schema and virtual machine
 #[derive(Clone, Eq, PartialEq, Debug, From)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Strict(strict_dumb!()))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
+)]
 pub enum Types {
     #[from]
     #[strict_type(tag = 0x01)]
-    Strict(TypeSystem),
+    Strict(TypeSysId),
 }
 
 impl Deref for Types {
-    type Target = TypeSystem;
+    type Target = TypeSysId;
 
     fn deref(&self) -> &Self::Target {
         match self {
@@ -101,47 +106,10 @@ impl Deref for Types {
     }
 }
 
-impl Default for Types {
-    fn default() -> Self { Types::Strict(none!()) }
-}
-
 impl Types {
-    pub fn as_strict(&self) -> &TypeSystem {
+    pub fn as_strict(&self) -> &TypeSysId {
         match self {
-            Types::Strict(ts) => ts,
-        }
-    }
-}
-
-#[cfg(feature = "serde")]
-mod _serde {
-    use armor::AsciiArmor;
-    use serde_crate::de::Error;
-    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
-
-    use super::*;
-
-    impl Serialize for Types {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer {
-            if serializer.is_human_readable() {
-                serializer.serialize_str(&self.as_strict().to_ascii_armored_string())
-            } else {
-                self.as_strict().serialize(serializer)
-            }
-        }
-    }
-
-    impl<'de> Deserialize<'de> for Types {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de> {
-            if deserializer.is_human_readable() {
-                let s = String::deserialize(deserializer)?;
-                let sys = TypeSystem::from_ascii_armored_str(&s).map_err(D::Error::custom)?;
-                Ok(Types::Strict(sys))
-            } else {
-                Ok(Types::Strict(TypeSystem::deserialize(deserializer)?))
-            }
+            Types::Strict(id) => id,
         }
     }
 }
