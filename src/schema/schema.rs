@@ -26,6 +26,7 @@ use std::str::FromStr;
 
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
+use armor::StrictArmor;
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use commit_verify::{CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
@@ -225,6 +226,13 @@ impl<Root: SchemaRoot> Schema<Root> {
         }
         schema
     }
+}
+
+impl<Root: SchemaRoot> StrictArmor for Schema<Root> {
+    type Id = SchemaId;
+    const PLATE_TITLE: &'static str = "RGB SCHEMA";
+
+    fn armor_id(&self) -> Self::Id { self.schema_id() }
 }
 
 #[cfg(test)]
