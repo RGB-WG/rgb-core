@@ -4,8 +4,9 @@ version = 3
 
 [[package]]
 name = "aluvm"
-version = "0.11.0-beta.4"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=armor#3bf009122c09a90df495049e0182712c675c2b26"
+version = "0.11.0-beta.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2032d213fd6b80b26217efb9846b273671acff3f696ada7e0314c6af2b4c3275"
 dependencies = [
  "amplify",
  "ascii-armor",
@@ -201,7 +202,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core?branch=armor#628854dff6f82f873d6389e1ec8c7ec0b7d00c2d"
+source = "git+https://github.com/BP-WG/bp-core?branch=master#1339f9fd96bbba0b3b949c65af1598496ba930eb"
 dependencies = [
  "amplify",
  "chrono",
@@ -215,7 +216,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core?branch=armor#628854dff6f82f873d6389e1ec8c7ec0b7d00c2d"
+source = "git+https://github.com/BP-WG/bp-core?branch=master#1339f9fd96bbba0b3b949c65af1598496ba930eb"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -233,7 +234,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core?branch=armor#628854dff6f82f873d6389e1ec8c7ec0b7d00c2d"
+source = "git+https://github.com/BP-WG/bp-core?branch=master#1339f9fd96bbba0b3b949c65af1598496ba930eb"
 dependencies = [
  "amplify",
  "base85",
@@ -247,7 +248,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core?branch=armor#628854dff6f82f873d6389e1ec8c7ec0b7d00c2d"
+source = "git+https://github.com/BP-WG/bp-core?branch=master#1339f9fd96bbba0b3b949c65af1598496ba930eb"
 dependencies = [
  "amplify",
  "baid58",
@@ -301,7 +302,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=armor#78f22a51b87115869f454ed0516a1bcdd8994db4"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=master#e963d5df29e9c04cb24dfc7d0b3553d286bb1986"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -313,7 +314,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=armor#78f22a51b87115869f454ed0516a1bcdd8994db4"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=master#e963d5df29e9c04cb24dfc7d0b3553d286bb1986"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -793,8 +794,9 @@ dependencies = [
 
 [[package]]
 name = "strict_types"
-version = "2.7.0-beta.1"
-source = "git+https://github.com/strict-types/strict-types?branch=armor#00741ba09189536d8cdaf048a7f17795393ee382"
+version = "2.7.0-beta.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78c32716de4b99b0e8fb0c114e99b6929613e8d7302999c6b8c77251783923ad"
 dependencies = [
  "amplify",
  "ascii-armor",
