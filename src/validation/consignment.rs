@@ -27,6 +27,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
+use aluvm::isa::Instr;
+use aluvm::library::LibId;
+use aluvm::Program;
+use strict_types::{TypeSysId, TypeSystem};
+
+use crate::vm::RgbIsa;
 use crate::{
     AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation,
     SecretSeal, SubSchema, WitnessId, XChain,
@@ -40,6 +46,7 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
     type Iter<'placeholder> = C::Iter<'placeholder>;
+    type Program = C::Program;
 
     fn schema(&self) -> &SubSchema { self.0.schema() }
 
@@ -62,6 +69,15 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
     }
 
     fn op_witness_id(&self, opid: OpId) -> Option<WitnessId> { self.0.op_witness_id(opid) }
+
+    fn program<'a>(
+        &self,
+        libs: impl IntoIterator<Item = &'a LibId>,
+    ) -> Result<&Self::Program, LibId> {
+        self.0.program(libs)
+    }
+
+    fn type_system(&self, id: TypeSysId) -> Option<&TypeSystem> { self.0.type_system(id) }
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -75,13 +91,15 @@ pub trait ConsignmentApi {
     /// Iterator for all bundle ids present in the consignment.
     type Iter<'a>: Iterator<Item = BundleId>;
 
+    type Program: Program<Isa = Instr<RgbIsa>>;
+
     /// Returns reference to the schema object used by the consignment.
     fn schema(&self) -> &SubSchema;
 
     /// Asset tags uses in the confidential asset validation.
     fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;
 
-    /// Retrieves reference to a operation (genesis, state transition or state
+    /// Retrieves reference to an operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
     fn operation(&self, opid: OpId) -> Option<OpRef>;
 
@@ -107,4 +125,11 @@ pub trait ConsignmentApi {
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<WitnessId>;
+
+    fn program<'a>(
+        &self,
+        libs: impl IntoIterator<Item = &'a LibId>,
+    ) -> Result<&Self::Program, LibId>;
+
+    fn type_system(&self, id: TypeSysId) -> Option<&TypeSystem>;
 }

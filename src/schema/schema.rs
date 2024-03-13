@@ -29,7 +29,9 @@ use amplify::{ByteArray, Bytes32};
 use armor::StrictArmor;
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use commit_verify::{CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
-use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
+use strict_encoding::{
+    StrictDecode, StrictDeserialize, StrictDumb, StrictEncode, StrictSerialize, StrictType,
+};
 
 use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
@@ -141,7 +143,7 @@ impl SchemaId {
     pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
 }
 
-pub trait SchemaRoot: Clone + Eq + StrictType + StrictEncode + StrictDecode + Default {
+pub trait SchemaRoot: Clone + Eq + StrictType + StrictEncode + StrictDecode + StrictDumb {
     fn schema_id(&self) -> SchemaId;
 }
 impl SchemaRoot for () {
@@ -153,8 +155,8 @@ impl SchemaRoot for RootSchema {
 pub type RootSchema = Schema<()>;
 pub type SubSchema = Schema<RootSchema>;
 
-#[derive(Clone, Eq, Default, Debug)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
+#[derive(Clone, Eq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
@@ -194,7 +196,7 @@ impl<Root: SchemaRoot> CommitEncode for Schema<Root> {
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
 
-        e.commit_to_serialized(&self.types.id());
+        e.commit_to_serialized(&*self.types);
         e.commit_to_serialized(&self.script);
     }
 }

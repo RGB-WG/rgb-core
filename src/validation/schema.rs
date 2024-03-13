@@ -21,7 +21,7 @@
 // limitations under the License.
 
 use crate::validation::Status;
-use crate::{validation, OpFullType, OpSchema, Schema, StateSchema, SubSchema, TransitionType};
+use crate::{validation, OpFullType, OpSchema, Schema, SubSchema, TransitionType};
 
 impl SubSchema {
     pub fn verify(&self) -> validation::Status {
@@ -52,37 +52,12 @@ impl SubSchema {
             status.add_failure(validation::Failure::SchemaBlankTransitionRedefined);
         }
 
-        for (type_id, schema) in &self.global_types {
-            if !self.types.contains_key(&schema.sem_id) {
-                status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
-                    *type_id,
-                    schema.sem_id,
-                ));
-            }
-        }
-
-        for (type_id, schema) in &self.owned_types {
-            if let StateSchema::Structured(sem_id) = schema {
-                if !self.types.contains_key(sem_id) {
-                    status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
-                        *type_id, *sem_id,
-                    ));
-                }
-            }
-        }
-
         status
     }
 
     fn verify_operation(&self, op_type: OpFullType, schema: &impl OpSchema) -> Status {
         let mut status = validation::Status::new();
 
-        if !self.types.contains_key(&schema.metadata()) {
-            status.add_failure(validation::Failure::SchemaOpMetaSemIdUnknown(
-                op_type,
-                schema.metadata(),
-            ));
-        }
         if matches!(schema.inputs(), Some(inputs) if inputs.is_empty()) {
             status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));
         }

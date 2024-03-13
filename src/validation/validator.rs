@@ -22,6 +22,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
+use aluvm::library::LibId;
 use bp::dbc::Anchor;
 use bp::seals::txout::{CloseMethod, TxoSeal, Witness};
 use bp::{dbc, Outpoint};
@@ -73,13 +74,14 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitne
 impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     Validator<'consignment, 'resolver, C, R>
 {
-    fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {
+    fn init(consignment: &'consignment C, resolver: &'resolver R) -> Result<Self, LibId> {
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
         let vm = match consignment.schema().script {
-            Script::AluVM(ref lib) => {
-                Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine + 'consignment>
+            Script::AluVM(ref script) => {
+                Box::new(AluRuntime::new(consignment.program(&script.libs)?, &script.entry_points))
+                    as Box<dyn VirtualMachine + 'consignment>
             }
         };
         let consignment = CheckedConsignment::new(consignment);
@@ -123,7 +125,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         let mut layers1 = bset! { Layer1::Bitcoin };
         layers1.extend(genesis.alt_layers1.iter().map(AltLayer1::layer1));
 
-        Self {
+        Ok(Self {
             consignment,
             status,
             schema_id,
@@ -134,7 +136,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             validated_op_seals,
             vm,
             resolver,
-        }
+        })
     }
 
     /// Validation procedure takes a schema object, root schema (if any),
@@ -147,7 +149,10 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     /// rest of the consignment data. This can help it debugging and
     /// detecting all problems with the consignment.
     pub fn validate(consignment: &'consignment C, resolver: &'resolver R, testnet: bool) -> Status {
-        let mut validator = Validator::init(consignment, resolver);
+        let mut validator = match Validator::init(consignment, resolver) {
+            Ok(v) => v,
+            Err(id) => return Status::with_failure(Failure::LibraryAbsent(id)),
+        };
         // If the network mismatches there is no point in validating the contract since
         // all witness transactions will be missed.
         if testnet != validator.consignment.genesis().testnet {
