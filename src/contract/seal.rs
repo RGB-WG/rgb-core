@@ -35,6 +35,7 @@ use commit_verify::{mpc, Conceal};
 use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType};
 
+use crate::contract::xchain::Impossible;
 use crate::{XChain, XOutpoint, LIB_NAME_RGB};
 
 pub type GenesisSeal = SingleBlindSeal<Method>;
@@ -70,36 +71,42 @@ impl<Seal: TxoSeal> TxoSeal for XChain<Seal> {
     fn method(&self) -> CloseMethod {
         match self {
             XChain::Bitcoin(seal) | XChain::Liquid(seal) => seal.method(),
+            XChain::Other(_) => unreachable!(),
         }
     }
 
     fn txid(&self) -> Option<Txid> {
         match self {
             XChain::Bitcoin(seal) | XChain::Liquid(seal) => seal.txid(),
+            XChain::Other(_) => unreachable!(),
         }
     }
 
     fn vout(&self) -> Vout {
         match self {
             XChain::Bitcoin(seal) | XChain::Liquid(seal) => seal.vout(),
+            XChain::Other(_) => unreachable!(),
         }
     }
 
     fn outpoint(&self) -> Option<Outpoint> {
         match self {
             XChain::Bitcoin(seal) | XChain::Liquid(seal) => seal.outpoint(),
+            XChain::Other(_) => unreachable!(),
         }
     }
 
     fn txid_or(&self, default_txid: Txid) -> Txid {
         match self {
             XChain::Bitcoin(seal) | XChain::Liquid(seal) => seal.txid_or(default_txid),
+            XChain::Other(_) => unreachable!(),
         }
     }
 
     fn outpoint_or(&self, default_txid: Txid) -> Outpoint {
         match self {
             XChain::Bitcoin(seal) | XChain::Liquid(seal) => seal.outpoint_or(default_txid),
+            XChain::Other(_) => unreachable!(),
         }
     }
 }
@@ -135,6 +142,7 @@ impl<U: ExposedSeal> XChain<U> {
         match self {
             XChain::Bitcoin(seal) => seal.method(),
             XChain::Liquid(seal) => seal.method(),
+            XChain::Other(_) => unreachable!(),
         }
     }
 
@@ -150,6 +158,7 @@ impl<U: ExposedSeal> XChain<U> {
                 let outpoint = seal.outpoint()?;
                 XChain::Liquid(ExplicitSeal::new(seal.method(), outpoint))
             }
+            XChain::Other(_) => unreachable!(),
         })
     }
 
@@ -228,7 +237,7 @@ impl WitnessOrd {
     }
 }
 
-pub type XPubWitness = XChain<Tx>;
+pub type XPubWitness<X = Impossible> = XChain<Tx, X>;
 
 pub type XWitness<Dbc> = XChain<Witness<Dbc>>;
 
@@ -237,6 +246,7 @@ impl XPubWitness {
         match self {
             Self::Bitcoin(tx) => WitnessId::Bitcoin(tx.txid()),
             Self::Liquid(tx) => WitnessId::Liquid(tx.txid()),
+            Self::Other(_) => unreachable!(),
         }
     }
 }
@@ -246,6 +256,7 @@ impl<Dbc: dbc::Proof> XWitness<Dbc> {
         match self {
             Self::Bitcoin(w) => WitnessId::Bitcoin(w.txid),
             Self::Liquid(w) => WitnessId::Liquid(w.txid),
+            Self::Other(_) => unreachable!(),
         }
     }
 }
@@ -257,6 +268,7 @@ impl<Dbc: dbc::Proof, Seal: TxoSeal> SealWitness<Seal> for XWitness<Dbc> {
     fn verify_seal(&self, seal: &Seal, msg: &Self::Message) -> Result<(), Self::Error> {
         match self {
             Self::Bitcoin(witness) | Self::Liquid(witness) => witness.verify_seal(seal, msg),
+            Self::Other(_) => unreachable!(),
         }
     }
 
@@ -270,6 +282,7 @@ impl<Dbc: dbc::Proof, Seal: TxoSeal> SealWitness<Seal> for XWitness<Dbc> {
     {
         match self {
             Self::Bitcoin(witness) | Self::Liquid(witness) => witness.verify_many_seals(seals, msg),
+            Self::Other(_) => unreachable!(),
         }
     }
 }
