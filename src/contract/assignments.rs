@@ -26,14 +26,14 @@ use std::collections::{btree_map, BTreeSet};
 use std::hash::Hash;
 
 use amplify::confinement::{Confined, SmallVec, TinyOrdMap};
-use commit_verify::Conceal;
+use commit_verify::{Conceal, ReservedBytes};
 use strict_encoding::{StrictDumb, StrictEncode};
 
 use super::ExposedState;
 use crate::contract::seal::GenesisSeal;
 use crate::{
-    AssignmentType, ExposedSeal, GraphSeal, ReservedBytes, RevealedAttach, RevealedData,
-    RevealedValue, SecretSeal, StateType, VoidState, XChain, LIB_NAME_RGB,
+    AssignmentType, ExposedSeal, GraphSeal, RevealedAttach, RevealedData, RevealedValue,
+    SecretSeal, StateType, VoidState, XChain, LIB_NAME_RGB,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]

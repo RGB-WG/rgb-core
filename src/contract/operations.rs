@@ -27,7 +27,8 @@ use std::iter;
 use amplify::confinement::{Confined, SmallBlob, SmallOrdSet, TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
 use commit_verify::{
-    CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, StrictHash,
+    CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
+    StrictHash,
 };
 use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
@@ -35,8 +36,8 @@ use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, Transitio
 use crate::{
     AltLayer1Set, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
     ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, OpDisclose, OpId, Opout, ReservedBytes, SecretSeal,
-    TypedAssigns, VoidState, XChain, LIB_NAME_RGB,
+    GenesisSeal, GlobalState, GraphSeal, OpDisclose, OpId, Opout, SecretSeal, TypedAssigns,
+    VoidState, XChain, LIB_NAME_RGB,
 };
 
 #[derive(

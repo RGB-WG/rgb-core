@@ -32,15 +32,15 @@ use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
 use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
 use commit_verify::{
     mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, Conceal, DigestExt, MerkleHash,
-    MerkleLeaves, Sha256, StrictHash,
+    MerkleLeaves, ReservedBytes, Sha256, StrictHash,
 };
 use strict_encoding::StrictDumb;
 
 use crate::{
     Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis,
-    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, ReservedBytes, SchemaId,
-    SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal,
+    Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment

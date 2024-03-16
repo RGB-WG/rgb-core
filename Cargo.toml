@@ -63,5 +63,5 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "master" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "master" }
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "reserved" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "reserved" }
