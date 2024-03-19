@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::iter::FromIterator;
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
