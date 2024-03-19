@@ -52,6 +52,7 @@ pub mod vm;
 pub mod stl;
 
 pub mod prelude {
+    pub use commit_verify::ReservedBytes;
     pub use contract::*;
     pub use schema::*;
 
