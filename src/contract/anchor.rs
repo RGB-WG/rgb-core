@@ -71,6 +71,7 @@ impl XAnchor<mpc::MerkleBlock> {
     pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
         match self {
             XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor.known_bundle_ids(),
+            _ => unreachable!(),
         }
     }
 
