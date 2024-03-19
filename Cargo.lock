@@ -202,7 +202,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core?branch=master#1339f9fd96bbba0b3b949c65af1598496ba930eb"
+source = "git+https://github.com/BP-WG/bp-core?branch=reserved#5d492b1aee96935a13be2da0918939ecf524e329"
 dependencies = [
  "amplify",
  "chrono",
@@ -216,7 +216,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core?branch=master#1339f9fd96bbba0b3b949c65af1598496ba930eb"
+source = "git+https://github.com/BP-WG/bp-core?branch=reserved#5d492b1aee96935a13be2da0918939ecf524e329"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -234,7 +234,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core?branch=master#1339f9fd96bbba0b3b949c65af1598496ba930eb"
+source = "git+https://github.com/BP-WG/bp-core?branch=reserved#5d492b1aee96935a13be2da0918939ecf524e329"
 dependencies = [
  "amplify",
  "base85",
@@ -248,7 +248,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/BP-WG/bp-core?branch=master#1339f9fd96bbba0b3b949c65af1598496ba930eb"
+source = "git+https://github.com/BP-WG/bp-core?branch=reserved#5d492b1aee96935a13be2da0918939ecf524e329"
 dependencies = [
  "amplify",
  "baid58",
@@ -302,7 +302,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=master#e963d5df29e9c04cb24dfc7d0b3553d286bb1986"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=reserved#98ed7451b89c83acca540d061cb134fd78290a7d"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -314,7 +314,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0-beta.4"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=master#e963d5df29e9c04cb24dfc7d0b3553d286bb1986"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=reserved#98ed7451b89c83acca540d061cb134fd78290a7d"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
