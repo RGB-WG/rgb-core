@@ -36,7 +36,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, DataState, ExposedSeal,
     ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach,
-    RevealedData, RevealedValue, SchemaId, Schema, Transition, TypedAssigns, VoidState,
+    RevealedData, RevealedValue, Schema, SchemaId, Transition, TypedAssigns, VoidState,
     WitnessAnchor, WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
 };
 
@@ -299,8 +299,6 @@ pub struct ContractHistory {
     #[getter(as_copy)]
     schema_id: SchemaId,
     #[getter(as_copy)]
-    root_schema_id: Option<SchemaId>,
-    #[getter(as_copy)]
     contract_id: ContractId,
     #[getter(skip)]
     global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, RevealedData>>,
@@ -315,15 +313,9 @@ impl ContractHistory {
     ///
     /// If genesis violates RGB consensus rules and wasn't checked against the
     /// schema before adding to the history.
-    pub fn with(
-        schema_id: SchemaId,
-        root_schema_id: Option<SchemaId>,
-        contract_id: ContractId,
-        genesis: &Genesis,
-    ) -> Self {
+    pub fn with(schema_id: SchemaId, contract_id: ContractId, genesis: &Genesis) -> Self {
         let mut state = ContractHistory {
             schema_id,
-            root_schema_id,
             contract_id,
             global: empty!(),
             rights: empty!(),
