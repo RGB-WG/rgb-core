@@ -36,7 +36,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, DataState, ExposedSeal,
     ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach,
-    RevealedData, RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState,
+    RevealedData, RevealedValue, SchemaId, Schema, Transition, TypedAssigns, VoidState,
     WitnessAnchor, WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
 };
 
@@ -487,7 +487,7 @@ impl ContractHistory {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct ContractState {
-    pub schema: SubSchema,
+    pub schema: Schema,
     pub history: ContractHistory,
 }
 

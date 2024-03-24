@@ -44,8 +44,6 @@ impl<'script> AluRuntime<'script> {
 
         match info.ty {
             OpFullType::Genesis => {
-                regs.nums
-                    .insert((RegAFR::A(RegA::A16), Reg32::Reg1), (info.subschema as u8).into());
                 self.run(EntryPoint::ValidateGenesis, &regs, info)?;
             }
             OpFullType::StateTransition(ty) => {
