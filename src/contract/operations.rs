@@ -23,9 +23,11 @@
 use std::cmp::Ordering;
 use std::collections::{btree_map, btree_set, BTreeMap};
 use std::iter;
+use std::str::FromStr;
 
 use amplify::confinement::{Confined, SmallBlob, SmallOrdSet, TinyOrdMap, TinyOrdSet};
-use amplify::Wrapper;
+use amplify::hex::FromHex;
+use amplify::{hex, Wrapper};
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
     StrictHash,
@@ -280,7 +282,9 @@ pub trait Operation {
 ///
 /// Contract validity doesn't assume any checks on the issuer identity; these
 /// checks must be performed at the application level.
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From, Display)]
+#[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
+#[display(LowerHex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
@@ -291,6 +295,12 @@ pub trait Operation {
     serde(crate = "serde_crate", transparent)
 )]
 pub struct Issuer(SmallBlob);
+
+impl FromStr for Issuer {
+    type Err = hex::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Issuer::from_hex(s) }
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
