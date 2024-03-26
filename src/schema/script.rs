@@ -111,6 +111,12 @@ impl Types {
             Types::Strict(ts) => ts,
         }
     }
+
+    pub fn into_strict(self) -> TypeSystem {
+        match self {
+            Types::Strict(ts) => ts,
+        }
+    }
 }
 
 #[cfg(feature = "serde")]
