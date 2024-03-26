@@ -25,7 +25,7 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract operation level
 
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use strict_types::TypeSystem;
 
@@ -95,6 +95,14 @@ impl Deref for Types {
     type Target = TypeSystem;
 
     fn deref(&self) -> &Self::Target {
+        match self {
+            Types::Strict(sys) => sys,
+        }
+    }
+}
+
+impl DerefMut for Types {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
             Types::Strict(sys) => sys,
         }
