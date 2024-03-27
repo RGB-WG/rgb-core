@@ -29,7 +29,7 @@ use std::rc::Rc;
 
 use crate::{
     AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation,
-    SecretSeal, SubSchema, WitnessId, XChain,
+    SecretSeal, Schema, WitnessId, XChain,
 };
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
@@ -41,7 +41,7 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
     type Iter<'placeholder> = C::Iter<'placeholder>;
 
-    fn schema(&self) -> &SubSchema { self.0.schema() }
+    fn schema(&self) -> &Schema { self.0.schema() }
 
     fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag> { self.0.asset_tags() }
 
@@ -76,7 +76,7 @@ pub trait ConsignmentApi {
     type Iter<'a>: Iterator<Item = BundleId>;
 
     /// Returns reference to the schema object used by the consignment.
-    fn schema(&self) -> &SubSchema;
+    fn schema(&self) -> &Schema;
 
     /// Asset tags uses in the confidential asset validation.
     fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;

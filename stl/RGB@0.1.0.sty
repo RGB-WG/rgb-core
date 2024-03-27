@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:py61NAh7V4xHa7if2mF88KL3Z11rUruBNQEAsEqaf2Q#stock-sonata-carlo
+  Id: urn:ubideco:stl:HNHSRrMb1RYUxFTjUFgRLide7CpC8fFQfxmqJnJ8oBVc#granite-canvas-edition
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -251,8 +251,8 @@ data ContractHistory   : schemaId SchemaId
 @mnemonic(alarm-danube-vampire)
 data ContractId        : [Byte ^ 32]
 
-@mnemonic(client-major-stamp)
-data ContractState     : schema SchemaSchema, history ContractHistory
+@mnemonic(forward-marina-needle)
+data ContractState     : schema Schema, history ContractHistory
 
 @mnemonic(diana-archive-liquid)
 data DataState         : [Byte]
@@ -409,10 +409,9 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(mother-legend-polo)
+@mnemonic(enrico-meaning-quebec)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
-                       , subsetOf ()?
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff StateSchema}
                        , valencyTypes {ValencyType ^ ..0xff}
@@ -424,19 +423,6 @@ data Schema            : ffv Ffv
 
 @mnemonic(garcia-smoke-ozone)
 data SchemaId          : [Byte ^ 32]
-
-@mnemonic(simple-gong-radius)
-data SchemaSchema      : ffv Ffv
-                       , flags CommitVerify.ReservedBytes1#joker-lemon-mental
-                       , subsetOf Schema?
-                       , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
-                       , ownedTypes {AssignmentType -> ^ ..0xff StateSchema}
-                       , valencyTypes {ValencyType ^ ..0xff}
-                       , genesis GenesisSchema
-                       , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
-                       , transitions {TransitionType -> ^ ..0xff TransitionSchema}
-                       , types Types
-                       , script Script
 
 @mnemonic(venus-trust-north)
 data Script            : aluVm#1 AluScript

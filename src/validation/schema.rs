@@ -21,23 +21,10 @@
 // limitations under the License.
 
 use crate::validation::Status;
-use crate::{validation, OpFullType, OpSchema, Schema, StateSchema, SubSchema, TransitionType};
+use crate::{validation, OpFullType, OpSchema, Schema, StateSchema, TransitionType};
 
-impl SubSchema {
+impl Schema {
     pub fn verify(&self) -> validation::Status {
-        let mut status = validation::Status::new();
-
-        if let Some(ref root) = self.subset_of {
-            status += self.verify_subschema(root);
-        }
-
-        // Validate internal schema consistency
-        status += self.verify_consistency();
-
-        status
-    }
-
-    fn verify_consistency(&self) -> validation::Status {
         let mut status = validation::Status::new();
 
         status += self.verify_operation(OpFullType::Genesis, &self.genesis);
@@ -113,12 +100,9 @@ impl SubSchema {
         status
     }
 
-    fn verify_subschema(&self, root: &Schema<()>) -> validation::Status {
+    // TODO: Move to standard library
+    pub fn verify_subschema(&self, root: &Schema) -> validation::Status {
         let mut status = validation::Status::new();
-
-        if self.subset_of.as_ref() != Some(root) {
-            panic!("SubSchema::schema_verify called with a root schema not matching subset_of");
-        }
 
         for (global_type, data_format) in &self.global_types {
             match root.global_types.get(global_type) {
