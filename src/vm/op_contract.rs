@@ -157,6 +157,28 @@ impl InstructionSet for ContractOp {
 
     fn isa_ids() -> BTreeSet<&'static str> { none!() }
 
+    #[inline]
+    fn complexity(&self) -> u64 {
+        match self {
+            ContractOp::CnP(_, _)
+            | ContractOp::CnS(_, _)
+            | ContractOp::CnG(_, _)
+            | ContractOp::CnC(_, _) => 1,
+
+            ContractOp::LdP(_, _, _)
+            | ContractOp::LdS(_, _, _)
+            | ContractOp::LdF(_, _, _)
+            | ContractOp::LdG(_, _, _)
+            | ContractOp::LdM(_)
+            | ContractOp::LdC(_, _, _) => 2,
+
+            ContractOp::PcVs(_)
+            | ContractOp::PcCs(_, _) => 10,
+            
+            ContractOp::Fail(_) => 1,
+        }
+    }
+
     fn src_regs(&self) -> BTreeSet<Reg> {
         match self {
             ContractOp::LdP(_, reg, _) |
