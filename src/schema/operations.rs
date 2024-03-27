@@ -24,7 +24,7 @@ use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
 use strict_types::SemId;
 
-use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
+use super::{ExtensionType, GlobalStateType, Occurrences, ScriptRef, TransitionType};
 use crate::LIB_NAME_RGB;
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
@@ -152,6 +152,7 @@ pub struct GenesisSchema {
     pub globals: GlobalSchema,
     pub assignments: AssignmentsSchema,
     pub valencies: ValencySchema,
+    pub validator: ScriptRef,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
@@ -168,6 +169,7 @@ pub struct ExtensionSchema {
     pub redeems: ValencySchema,
     pub assignments: AssignmentsSchema,
     pub valencies: ValencySchema,
+    pub validator: ScriptRef,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
@@ -184,6 +186,7 @@ pub struct TransitionSchema {
     pub inputs: InputsSchema,
     pub assignments: AssignmentsSchema,
     pub valencies: ValencySchema,
+    pub validator: ScriptRef,
 }
 
 impl OpSchema for GenesisSchema {

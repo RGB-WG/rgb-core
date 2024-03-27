@@ -30,11 +30,10 @@ use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
-use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
-    SchemaId, Script, Transition, TransitionBundle, TypedAssigns, WitnessId, XAnchor, XChain,
-    XOutpoint, XOutputSeal, XPubWitness, XWitness,
+    SchemaId, Transition, TransitionBundle, TypedAssigns, WitnessId, XAnchor, XChain, XOutpoint,
+    XOutputSeal, XPubWitness, XWitness,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -77,11 +76,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
-        let vm = match consignment.schema().script {
-            Script::AluVM(ref lib) => {
-                Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine + 'consignment>
-            }
-        };
+        let vm = consignment.vm();
         let consignment = CheckedConsignment::new(consignment);
 
         // Frequently used computation-heavy data

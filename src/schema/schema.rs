@@ -34,8 +34,7 @@ use commit_verify::{
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
 
 use super::{
-    AssignmentType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
-    ValencyType,
+    AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
 use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
 
@@ -156,14 +155,11 @@ pub struct Schema {
     pub flags: ReservedBytes<1, 0>,
 
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
-    pub owned_types: TinyOrdMap<AssignmentType, StateSchema>,
+    pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
     pub valency_types: TinyOrdSet<ValencyType>,
     pub genesis: GenesisSchema,
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
-
-    /// Validation code.
-    pub script: Script,
 }
 
 impl CommitEncode for Schema {
@@ -179,8 +175,6 @@ impl CommitEncode for Schema {
         e.commit_to_serialized(&self.genesis);
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
-
-        e.commit_to_serialized(&self.script);
     }
 }
 
