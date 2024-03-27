@@ -321,7 +321,7 @@ pub struct Genesis {
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
     pub issuer: Issuer,
-    pub script: ReservedBytes<1, 0>,
+    pub validator: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Genesis {}
@@ -344,8 +344,8 @@ pub struct Extension {
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
-    pub witness: ReservedBytes<1, 0>,
-    pub script: ReservedBytes<1, 0>,
+    pub validator: ReservedBytes<1, 0>,
+    pub witness: ReservedBytes<2, 0>,
 }
 
 impl StrictSerialize for Extension {}
@@ -376,8 +376,8 @@ pub struct Transition {
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
-    pub witness: ReservedBytes<1, 0>,
-    pub script: ReservedBytes<1, 0>,
+    pub validator: ReservedBytes<1, 0>,
+    pub witness: ReservedBytes<2, 0>,
 }
 
 impl StrictSerialize for Transition {}

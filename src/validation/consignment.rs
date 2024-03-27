@@ -26,6 +26,7 @@
 
 use strict_types::TypeSystem;
 
+use crate::validation::VirtualMachine;
 use crate::{
     AnchorSet, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema,
     SecretSeal, TransitionBundle, XChain, XWitnessId,
@@ -41,6 +42,8 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
     fn schema(&self) -> &Schema { self.0.schema() }
 
     fn types(&self) -> &TypeSystem { self.0.types() }
+
+    fn vm(&self) -> Box<dyn VirtualMachine> { self.0.vm() }
 
     fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter {
         self.0.asset_tags()
@@ -84,6 +87,8 @@ pub trait ConsignmentApi {
 
     /// Returns reference to the type system.
     fn types(&self) -> &TypeSystem;
+
+    fn vm(&self) -> Box<dyn VirtualMachine>;
 
     /// Asset tags uses in the confidential asset validation.
     fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter;

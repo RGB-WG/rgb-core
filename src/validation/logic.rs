@@ -31,7 +31,7 @@ use crate::validation::{CheckedConsignment, ConsignmentApi, VirtualMachine};
 use crate::{
     validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
-    Operation, Opout, Schema, TransitionType, TypedAssigns, Valencies,
+    Operation, Opout, Schema, ScriptRef, TransitionType, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -53,6 +53,7 @@ impl Schema {
             redeem_schema,
             assign_schema,
             valency_schema,
+            validator,
         ) = match (op.transition_type(), op.extension_type()) {
             (None, None) => {
                 // Right now we do not have actions to implement; but later
@@ -71,6 +72,7 @@ impl Schema {
                     &empty_valency_schema,
                     &self.genesis.assignments,
                     &self.genesis.valencies,
+                    self.genesis.validator,
                 )
             }
             (Some(transition_type), None) => {
@@ -100,6 +102,7 @@ impl Schema {
                     &empty_valency_schema,
                     &transition_schema.assignments,
                     &transition_schema.valencies,
+                    transition_schema.validator,
                 )
             }
             (None, Some(extension_type)) => {
@@ -128,6 +131,7 @@ impl Schema {
                     &extension_schema.redeems,
                     &extension_schema.assignments,
                     &extension_schema.redeems,
+                    extension_schema.validator,
                 )
             }
             _ => unreachable!("Node can't be extension and state transition at the same time"),
@@ -176,7 +180,7 @@ impl Schema {
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the operation data match the schema, so
         // scripts are not required to validate the structure of the state
-        status += self.validate_state_evolution(op_info, vm);
+        status += self.validate_state_evolution(validator, op_info, vm);
         status
     }
 
@@ -238,7 +242,11 @@ impl Schema {
                 .map(Confined::unbox)
                 .unwrap_or_default();
 
-            let GlobalStateSchema { sem_id, max_items } = self.global_types.get(type_id).expect(
+            let GlobalStateSchema {
+                sem_id,
+                max_items,
+                reserved: _,
+            } = self.global_types.get(type_id).expect(
                 "if the field were absent, the schema would not be able to pass the internal \
                  validation and we would not reach this point",
             );
@@ -410,6 +418,7 @@ impl Schema {
 
     fn validate_state_evolution(
         &self,
+        entry_point: ScriptRef,
         op_info: OpInfo,
         vm: &dyn VirtualMachine,
     ) -> validation::Status {
@@ -418,7 +427,7 @@ impl Schema {
         // We do not validate public rights, since they do not have an
         // associated state and there is nothing to validate beyond schema
 
-        if let Err(err) = vm.validate(op_info) {
+        if let Err(err) = vm.validate(entry_point, op_info) {
             status.add_failure(err);
         }
 

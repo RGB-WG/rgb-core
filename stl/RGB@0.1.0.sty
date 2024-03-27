@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:7TxW6uXGwaJQdMNkzem86ev2wc7njCWeq3sA4Q3tLFEQ#engine-import-private
+  Id: urn:ubideco:stl:7v1PLA73ZrTHC3kTNRYLc8sCjLGaePvhLee9dn4j6imH#magic-pablo-cool
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -60,9 +60,6 @@ data AltLayer1         : liquid#1
 
 @mnemonic(salmon-taxi-ohio)
 data AltLayer1Set      : {AltLayer1 ^ ..0xff}
-
-@mnemonic(soviet-arsenal-complex)
-data AluScript         : libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite#mission-papa-mercy}
 
 @mnemonic(status-motel-economy)
 data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#everest-laura-modem
@@ -238,7 +235,7 @@ data ContractState     : schema Schema, history ContractHistory
 @mnemonic(diana-archive-liquid)
 data DataState         : [Byte]
 
-@mnemonic(balance-sector-virus)
+@mnemonic(mayor-archive-navy)
 data Extension         : ffv Ffv
                        , contractId ContractId
                        , extensionType ExtensionType
@@ -247,15 +244,16 @@ data Extension         : ffv Ffv
                        , assignments AssignmentsBlindSealTxid
                        , redeemed Redeemed
                        , valencies Valencies
-                       , witness CommitVerify.ReservedBytes1#joker-lemon-mental
-                       , script CommitVerify.ReservedBytes1#joker-lemon-mental
+                       , validator CommitVerify.ReservedBytes1#joker-lemon-mental
+                       , witness CommitVerify.ReservedBytes2#pocket-habitat-soviet
 
-@mnemonic(peace-tiger-elastic)
+@mnemonic(journal-trade-memphis)
 data ExtensionSchema   : metadata StrictTypes.SemId#cargo-plasma-catalog
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , redeems {ValencyType ^ ..0xff}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
+                       , validator ScriptRef
 
 @mnemonic(mission-salsa-parole)
 data ExtensionType     : U16
@@ -270,7 +268,7 @@ data FungibleState     : bits64#8 U64
 data FungibleType      : unsigned64Bit#8
 
 
-@mnemonic(yoyo-bravo-orion)
+@mnemonic(super-hexagon-sample)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
@@ -282,13 +280,14 @@ data Genesis           : ffv Ffv
                        , assignments AssignmentsBlindSealTxid
                        , valencies Valencies
                        , issuer Issuer
-                       , script CommitVerify.ReservedBytes1#joker-lemon-mental
+                       , validator CommitVerify.ReservedBytes1#joker-lemon-mental
 
-@mnemonic(andrea-amigo-grid)
+@mnemonic(extend-bermuda-orchid)
 data GenesisSchema     : metadata StrictTypes.SemId#cargo-plasma-catalog
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
+                       , validator ScriptRef
 
 @mnemonic(north-llama-empire)
 data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
@@ -296,8 +295,10 @@ data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
 @mnemonic(ranger-middle-roman)
 data GlobalState       : {GlobalStateType -> ^ ..0xff GlobalValues}
 
-@mnemonic(night-mixer-monaco)
-data GlobalStateSchema : semId StrictTypes.SemId#cargo-plasma-catalog, maxItems U16
+@mnemonic(warning-magnet-blonde)
+data GlobalStateSchema : reserved CommitVerify.ReservedBytes1#joker-lemon-mental
+                       , semId StrictTypes.SemId#cargo-plasma-catalog
+                       , maxItems U16
 
 @mnemonic(seminar-major-tape)
 data GlobalStateType   : U16
@@ -371,6 +372,12 @@ data OutputAssignmentVoidState : opout Opout
                        , state VoidState
                        , witness AssignmentWitness
 
+@mnemonic(phone-lola-empty)
+data OwnedStateSchema  : declarative ()
+                       | fungible FungibleType
+                       | structured StrictTypes.SemId#cargo-plasma-catalog
+                       | attachment MediaType
+
 @mnemonic(nepal-delta-earth)
 data PedersenCommitment : [Byte ^ 33]
 
@@ -390,30 +397,24 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(disney-loyal-norway)
+@mnemonic(office-profile-travel)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
-                       , ownedTypes {AssignmentType -> ^ ..0xff StateSchema}
+                       , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}
                        , valencyTypes {ValencyType ^ ..0xff}
                        , genesis GenesisSchema
                        , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
                        , transitions {TransitionType -> ^ ..0xff TransitionSchema}
-                       , script Script
 
 @mnemonic(garcia-smoke-ozone)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(venus-trust-north)
-data Script            : aluVm#1 AluScript
+@mnemonic(alpha-rufus-front)
+data ScriptRef         : none ()
+                       | aluVm AluVM.LibSite#mission-papa-mercy
 
-@mnemonic(report-agatha-level)
-data StateSchema       : declarative ()
-                       | fungible FungibleType
-                       | structured StrictTypes.SemId#cargo-plasma-catalog
-                       | attachment MediaType
-
-@mnemonic(phoenix-bruce-binary)
+@mnemonic(canary-first-under)
 data Transition        : ffv Ffv
                        , contractId ContractId
                        , transitionType TransitionType
@@ -422,18 +423,19 @@ data Transition        : ffv Ffv
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
                        , valencies Valencies
-                       , witness CommitVerify.ReservedBytes1#joker-lemon-mental
-                       , script CommitVerify.ReservedBytes1#joker-lemon-mental
+                       , validator CommitVerify.ReservedBytes1#joker-lemon-mental
+                       , witness CommitVerify.ReservedBytes2#pocket-habitat-soviet
 
 @mnemonic(museum-result-logic)
 data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
 
-@mnemonic(fiction-caramel-fractal)
+@mnemonic(remote-jupiter-denmark)
 data TransitionSchema  : metadata StrictTypes.SemId#cargo-plasma-catalog
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , inputs {AssignmentType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
+                       , validator ScriptRef
 
 @mnemonic(puma-joshua-evita)
 data TransitionType    : U16

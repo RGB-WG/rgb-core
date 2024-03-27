@@ -21,29 +21,12 @@
 // limitations under the License.
 
 use crate::validation::OpInfo;
-use crate::vm::AluRuntime;
-use crate::{validation, Script};
+use crate::{validation, ScriptRef};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
 pub trait VirtualMachine {
     /// Validates state change in a contract operation.
     #[allow(clippy::result_large_err)]
-    fn validate(&self, info: OpInfo) -> Result<(), validation::Failure>;
-}
-
-impl VirtualMachine for Script {
-    fn validate(&self, info: OpInfo) -> Result<(), validation::Failure> {
-        match self {
-            Script::AluVM(script) => AluRuntime::new(script).validate(info),
-        }
-    }
-}
-
-impl<'script> VirtualMachine for AluRuntime<'script> {
-    fn validate(&self, info: OpInfo) -> Result<(), validation::Failure> {
-        let id = info.id;
-        self.run_validations(&info)
-            .map_err(|msg| validation::Failure::ScriptFailure(id, msg))
-    }
+    fn validate(&self, entry_point: ScriptRef, info: OpInfo) -> Result<(), validation::Failure>;
 }

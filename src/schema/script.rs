@@ -25,54 +25,26 @@
 //! Components related to the scripting system used by schema or applied at the
 //! specific contract operation level
 
-use crate::vm::AluScript;
+use aluvm::library::LibSite;
+
 use crate::LIB_NAME_RGB;
 
-/// Virtual machine types.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[display(Debug)]
-pub enum VmType {
-    /// AluVM: pure functional register-based virtual machine designed for RGB
-    /// and multiparty computing.
-    AluVM,
-}
-
-/// Virtual machine and machine-specific script data.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+/// Virtual machine-specific script calling information.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, Display)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
 )]
-pub enum Script {
-    /// AluVM: pure functional register-based virtual machine designed for RGB
-    /// and multiparty computing.
-    ///
-    /// The inner data contains actual executable code in form of complete set
-    /// of AliVM libraries, which must be holistic and not dependent on any
-    /// external libraries (i.e. must contain all libraries embedded).
-    ///
-    /// Its routines can be accessed only through well-typed ABI entrance
-    /// pointers, defined as a part of the schema.
+pub enum ScriptRef {
+    #[default]
+    #[display("~")]
+    #[strict_type(tag = 0x00)]
+    None,
+
+    #[display("alu({0})")]
     #[strict_type(tag = 0x01)]
-    AluVM(AluScript),
-}
-
-impl Default for Script {
-    fn default() -> Self { Script::AluVM(none!()) }
-}
-
-impl Script {
-    pub fn vm_type(&self) -> VmType {
-        match self {
-            Script::AluVM(_) => VmType::AluVM,
-        }
-    }
-
-    pub fn as_alu_script(&self) -> &AluScript {
-        let Script::AluVM(alu) = self;
-        alu
-    }
+    AluVM(LibSite),
 }

@@ -300,7 +300,7 @@ impl Genesis {
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.script.commit_id(),
+            script: self.validator.commit_id(),
         }
     }
 
@@ -319,7 +319,7 @@ impl Transition {
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.script.commit_id(),
+            script: self.validator.commit_id(),
         }
     }
 }
@@ -336,7 +336,7 @@ impl Extension {
             redeemed: self.redeemed.commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.script.commit_id(),
+            script: self.validator.commit_id(),
         }
     }
 }

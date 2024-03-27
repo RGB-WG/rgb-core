@@ -31,11 +31,10 @@ use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
-use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
-    Schema, SchemaId, Script, TransitionBundle, TypedAssigns, XChain, XOutpoint, XOutputSeal,
-    XWitnessId, XWitnessTx,
+    Schema, SchemaId, TransitionBundle, TypedAssigns, XChain, XOutpoint, XOutputSeal, XWitnessId,
+    XWitnessTx,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -79,11 +78,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
-        let vm = match consignment.schema().script {
-            Script::AluVM(ref lib) => {
-                Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine + 'consignment>
-            }
-        };
+        let vm = consignment.vm();
         let consignment = CheckedConsignment::new(consignment);
 
         // Frequently used computation-heavy data
@@ -181,7 +176,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     }
 
     // *** PART I: Schema validation
-    fn validate_schema(&mut self, schema: &Schema) { *self.status.borrow_mut() += schema.verify(self.consignment.types()); }
+    fn validate_schema(&mut self, schema: &Schema) {
+        *self.status.borrow_mut() += schema.verify(self.consignment.types());
+    }
 
     // *** PART II: Validating business logic
     fn validate_logic(&self) {
