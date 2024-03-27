@@ -57,8 +57,6 @@ pub enum Validity {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct Status {
-    pub absent_pub_witnesses: Vec<WitnessId>,
-    pub unmined_terminals: Vec<Txid>,
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
     pub info: Vec<Info>,
@@ -68,20 +66,6 @@ impl Display for Status {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             writeln!(f, "Consignment {}", self.validity())?;
-        }
-
-        if !self.absent_pub_witnesses.is_empty() {
-            f.write_str("Unknown public witnesses:\n")?;
-            for txid in &self.absent_pub_witnesses {
-                writeln!(f, "- {txid}")?;
-            }
-        }
-
-        if !self.unmined_terminals.is_empty() {
-            f.write_str("Non-mined terminals:\n")?;
-            for txid in &self.unmined_terminals {
-                writeln!(f, "- {txid}")?;
-            }
         }
 
         if !self.failures.is_empty() {
@@ -111,8 +95,6 @@ impl Display for Status {
 
 impl AddAssign for Status {
     fn add_assign(&mut self, rhs: Self) {
-        self.absent_pub_witnesses.extend(rhs.absent_pub_witnesses);
-        self.unmined_terminals.extend(rhs.unmined_terminals);
         self.failures.extend(rhs.failures);
         self.warnings.extend(rhs.warnings);
         self.info.extend(rhs.info);
@@ -122,8 +104,6 @@ impl AddAssign for Status {
 impl Status {
     pub fn from_error(v: Failure) -> Self {
         Status {
-            absent_pub_witnesses: vec![],
-            unmined_terminals: vec![],
             failures: vec![v],
             warnings: vec![],
             info: vec![],
@@ -166,16 +146,22 @@ impl Status {
     }
 
     pub fn validity(&self) -> Validity {
-        if self.failures.is_empty() {
-            if self.unmined_terminals.is_empty() {
-                Validity::Valid
-            } else {
-                Validity::UnminedTerminals
-            }
-        } else if self.absent_pub_witnesses.is_empty() {
-            Validity::Invalid
-        } else {
+        if self
+            .warnings
+            .iter()
+            .any(|w| matches!(w, Warning::AbsentWitness(_)))
+        {
             Validity::UnresolvedTransactions
+        } else if !self.failures.is_empty() {
+            Validity::Invalid
+        } else if self
+            .warnings
+            .iter()
+            .any(|w| matches!(w, Warning::TerminalWitnessNotMined(_)))
+        {
+            Validity::UnminedTerminals
+        } else {
+            Validity::Valid
         }
     }
 }
@@ -413,8 +399,10 @@ pub enum Warning {
     /// terminal seal {1:?} referencing operation {0} is not present in
     /// operation assignments.
     TerminalSealAbsent(OpId, XChain<SecretSeal>),
-    /// terminal witness transaction {0} is not yet mined.
+    /// non-mined terminal witness transaction {0}.
     TerminalWitnessNotMined(Txid),
+    /// unknown public witness {0}.
+    AbsentWitness(WitnessId),
     /// transition bundle {0} doesn't close all the seals defined for its
     /// inputs.
     UnclosedSeals(BundleId),
