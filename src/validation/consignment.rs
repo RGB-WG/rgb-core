@@ -24,6 +24,8 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
+use strict_types::TypeSystem;
+
 use crate::{
     AnchorSet, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema,
     SecretSeal, TransitionBundle, XChain, XWitnessId,
@@ -37,6 +39,8 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
     fn schema(&self) -> &Schema { self.0.schema() }
+
+    fn types(&self) -> &TypeSystem { self.0.types() }
 
     fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter {
         self.0.asset_tags()
@@ -77,6 +81,9 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 pub trait ConsignmentApi {
     /// Returns reference to the schema object used by the consignment.
     fn schema(&self) -> &Schema;
+
+    /// Returns reference to the type system.
+    fn types(&self) -> &TypeSystem;
 
     /// Asset tags uses in the confidential asset validation.
     fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter;

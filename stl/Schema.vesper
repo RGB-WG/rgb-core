@@ -25,7 +25,6 @@ SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
   TransitionSchema map len=0..MAX8
     TransitionType mapKey
     TransitionSchema mapValue
-  TypeSysId serialized
   Script serialized
 
 Schema rec
@@ -98,46 +97,6 @@ Schema rec
           max is U16
       valencies set len=0..MAX8
         element is U16 aka=ValencyType
-  types union Types
-    strict map len=0..MAX24 wrapped aka=TypeSystem tag=0
-      key bytes len=32 aka=SemId
-      value union TySemId
-        primitive is U8 wrapped aka=Primitive tag=0
-        unicode is Unit tag=1
-        enum set len=1..MAX8 wrapped aka=EnumVariants tag=2
-          Variant rec
-            name ascii len=1..100 aka=VariantName aka=Ident charset=AlphaNumLodash
-            tag is U8
-        union map len=0..MAX8 wrapped aka=UnionVariantsSemId tag=3
-          key is U8
-          value rec VariantInfoSemId
-            name ascii len=1..100 aka=VariantName aka=Ident charset=AlphaNumLodash
-            ty bytes len=32 aka=SemId
-        tuple list len=1..MAX8 wrapped aka=UnnamedFieldsSemId tag=4
-          element bytes len=32 aka=SemId
-        struct list len=1..MAX8 wrapped aka=NamedFieldsSemId tag=5
-          FieldSemId rec
-            name ascii len=1..100 aka=FieldName aka=Ident charset=AlphaNumLodash
-            ty bytes len=32 aka=SemId
-        array tuple tag=6
-          _ bytes len=32 aka=SemId
-          _ is U16
-        list tuple tag=7
-          _ bytes len=32 aka=SemId
-          Sizing rec
-            min is U64
-            max is U64
-        set tuple tag=8
-          _ bytes len=32 aka=SemId
-          Sizing rec
-            min is U64
-            max is U64
-        map tuple tag=9
-          _ bytes len=32 aka=SemId
-          _ bytes len=32 aka=SemId
-          Sizing rec
-            min is U64
-            max is U64
   script union Script
     aluVm rec AluScript wrapped tag=0
       libs map len=0..MAX8

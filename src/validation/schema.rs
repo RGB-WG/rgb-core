@@ -20,18 +20,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use strict_types::TypeSystem;
+
 use crate::{validation, OpFullType, OpSchema, Schema, StateSchema, TransitionType};
 
 impl Schema {
-    pub fn verify(&self) -> validation::Status {
+    pub fn verify(&self, types: &TypeSystem) -> validation::Status {
         let mut status = validation::Status::new();
 
-        status += self.verify_operation(OpFullType::Genesis, &self.genesis);
+        status += self.verify_operation(OpFullType::Genesis, &self.genesis, types);
         for (type_id, schema) in &self.transitions {
-            status += self.verify_operation(OpFullType::StateTransition(*type_id), schema);
+            status += self.verify_operation(OpFullType::StateTransition(*type_id), schema, types);
         }
         for (type_id, schema) in &self.extensions {
-            status += self.verify_operation(OpFullType::StateExtension(*type_id), schema);
+            status += self.verify_operation(OpFullType::StateExtension(*type_id), schema, types);
         }
         // Check that the schema doesn't contain reserved type ids
         if self.transitions.contains_key(&TransitionType::BLANK) {
@@ -39,7 +41,7 @@ impl Schema {
         }
 
         for (type_id, schema) in &self.global_types {
-            if !self.types.contains_key(&schema.sem_id) {
+            if !types.contains_key(&schema.sem_id) {
                 status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
                     *type_id,
                     schema.sem_id,
@@ -49,7 +51,7 @@ impl Schema {
 
         for (type_id, schema) in &self.owned_types {
             if let StateSchema::Structured(sem_id) = schema {
-                if !self.types.contains_key(sem_id) {
+                if !types.contains_key(sem_id) {
                     status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
                         *type_id, *sem_id,
                     ));
@@ -60,10 +62,15 @@ impl Schema {
         status
     }
 
-    fn verify_operation(&self, op_type: OpFullType, schema: &impl OpSchema) -> validation::Status {
+    fn verify_operation(
+        &self,
+        op_type: OpFullType,
+        schema: &impl OpSchema,
+        types: &TypeSystem,
+    ) -> validation::Status {
         let mut status = validation::Status::new();
 
-        if !self.types.contains_key(&schema.metadata()) {
+        if !types.contains_key(&schema.metadata()) {
             status.add_failure(validation::Failure::SchemaOpMetaSemIdUnknown(
                 op_type,
                 schema.metadata(),

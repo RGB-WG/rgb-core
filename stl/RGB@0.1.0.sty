@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:6Yx8ib21pu6se8asaV7z9MQNUuemRZ8iQWhFZFBWcsDp#java-navy-xray
+  Id: urn:ubideco:stl:7TxW6uXGwaJQdMNkzem86ev2wc7njCWeq3sA4Q3tLFEQ#engine-import-private
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -12,21 +12,7 @@
 typelib RGB
 
 import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-pelican
-  use VariantName#snow-gray-extreme
-  use Primitive#hobby-cable-puzzle
-  use VariantInfoSemId#clone-panama-guru
-  use UnnamedFieldsSemId#hippie-world-sandra
-  use NamedFieldsSemId#jordan-kiwi-nickel
-  use FieldSemId#speed-patriot-gallery
   use SemId#cargo-plasma-catalog
-  use Ident#connect-fragile-exile
-  use Sizing#canoe-gordon-amazon
-  use EnumVariants#correct-dream-albert
-  use TypeSystem#panel-data-lazarus
-  use FieldName#orient-spell-talent
-  use TySemId#kimono-catalog-mango
-  use Variant#textile-cowboy-dragon
-  use UnionVariantsSemId#iceberg-road-crack
 
 import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
   use MerkleHash#culture-metro-modular
@@ -56,7 +42,6 @@ import AluVM#DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy
 
 import Std#DzTvt9gGhPUKD8Dkkjk9PDBhkJ4gtWxXWQjxnmUYLNrs#voyage-kimono-disco
   use Bool#laser-madam-maxwell
-  use AlphaNumLodash#north-sound-salsa
 
 import Bitcoin#HX2UBak8vPsTokug1DGMDvTpzns3xUdwZ7QJdyt4qBA9#speed-atlanta-trilogy
   use Vout#chrome-robin-gallop
@@ -405,7 +390,7 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(enrico-meaning-quebec)
+@mnemonic(disney-loyal-norway)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
@@ -414,7 +399,6 @@ data Schema            : ffv Ffv
                        , genesis GenesisSchema
                        , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
                        , transitions {TransitionType -> ^ ..0xff TransitionSchema}
-                       , types Types
                        , script Script
 
 @mnemonic(garcia-smoke-ozone)
@@ -470,9 +454,6 @@ data TypedAssignsBlindSealTxid : declarative [AssignVoidStateBlindSealTxid]
                        | fungible [AssignRevealedValueBlindSealTxid]
                        | structured [AssignRevealedDataBlindSealTxid]
                        | attachment#255 [AssignRevealedAttachBlindSealTxid]
-
-@mnemonic(titanic-front-courage)
-data Types             : strict#1 StrictTypes.TypeSystem#panel-data-lazarus
 
 @mnemonic(andy-mango-brother)
 data Valencies         : {ValencyType ^ ..0xff}

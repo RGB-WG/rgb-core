@@ -31,10 +31,10 @@ use crate::{
 impl StateSchema {
     pub fn validate<State: ExposedState, Seal: ExposedSeal>(
         &self,
-        type_system: &TypeSystem,
-        opid: &OpId,
+        opid: OpId,
         state_type: AssignmentType,
         data: &Assign<State, Seal>,
+        type_system: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
         match data {
@@ -45,7 +45,7 @@ impl StateSchema {
                         // [SECURITY-CRITICAL]: Bulletproofs validation
                         if let Err(err) = value.verify_range_proof() {
                             status.add_failure(validation::Failure::BulletproofsInvalid(
-                                *opid,
+                                opid,
                                 state_type,
                                 err.to_string(),
                             ));
@@ -53,18 +53,18 @@ impl StateSchema {
                     }
                     (StateSchema::Structured(_), ConcealedState::Structured(_)) => {
                         status.add_info(validation::Info::UncheckableConfidentialState(
-                            *opid, state_type,
+                            opid, state_type,
                         ));
                     }
                     (StateSchema::Attachment(_), ConcealedState::Attachment(_)) => {
                         status.add_info(validation::Info::UncheckableConfidentialState(
-                            *opid, state_type,
+                            opid, state_type,
                         ));
                     }
                     // all other options are mismatches
                     (state_schema, found) => {
                         status.add_failure(validation::Failure::StateTypeMismatch {
-                            opid: *opid,
+                            opid,
                             state_type,
                             expected: state_schema.state_type(),
                             found: found.state_type(),
@@ -79,7 +79,7 @@ impl StateSchema {
                         if !attach.media_type.conforms(media_type) =>
                     {
                         status.add_failure(validation::Failure::MediaTypeMismatch {
-                            opid: *opid,
+                            opid,
                             state_type,
                             expected: *media_type,
                             found: attach.media_type,
@@ -89,7 +89,7 @@ impl StateSchema {
                         if v.value.fungible_type() != *schema =>
                     {
                         status.add_failure(validation::Failure::FungibleTypeMismatch {
-                            opid: *opid,
+                            opid,
                             state_type,
                             expected: *schema,
                             found: v.value.fungible_type(),
@@ -102,14 +102,14 @@ impl StateSchema {
                             .is_err()
                         {
                             status.add_failure(validation::Failure::SchemaInvalidOwnedValue(
-                                *opid, state_type, *sem_id,
+                                opid, state_type, *sem_id,
                             ));
                         };
                     }
                     // all other options are mismatches
                     (state_schema, found) => {
                         status.add_failure(validation::Failure::StateTypeMismatch {
-                            opid: *opid,
+                            opid,
                             state_type,
                             expected: state_schema.state_type(),
                             found: found.state_type(),
