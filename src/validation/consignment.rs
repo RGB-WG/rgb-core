@@ -27,9 +27,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
+use strict_types::TypeSystem;
+
 use crate::{
-    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation,
-    SecretSeal, Schema, WitnessId, XChain,
+    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema,
+    SecretSeal, WitnessId, XChain,
 };
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
@@ -42,6 +44,8 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
     type Iter<'placeholder> = C::Iter<'placeholder>;
 
     fn schema(&self) -> &Schema { self.0.schema() }
+
+    fn types(&self) -> &TypeSystem { self.0.types() }
 
     fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag> { self.0.asset_tags() }
 
@@ -77,6 +81,9 @@ pub trait ConsignmentApi {
 
     /// Returns reference to the schema object used by the consignment.
     fn schema(&self) -> &Schema;
+
+    /// Returns reference to the type system.
+    fn types(&self) -> &TypeSystem;
 
     /// Asset tags uses in the confidential asset validation.
     fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;

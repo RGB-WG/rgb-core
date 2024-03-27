@@ -37,7 +37,7 @@ use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
     ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, Occurrences, Types, LIB_NAME_RGB};
+use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -162,8 +162,6 @@ pub struct Schema {
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
-    /// Type system
-    pub types: Types,
     /// Validation code.
     pub script: Script,
 }
@@ -182,7 +180,6 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
 
-        e.commit_to_serialized(&self.types.id());
         e.commit_to_serialized(&self.script);
     }
 }

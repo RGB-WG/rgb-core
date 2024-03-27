@@ -178,7 +178,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     }
 
     // *** PART I: Schema validation
-    fn validate_schema(&mut self, schema: &Schema) { self.status += schema.verify(); }
+    fn validate_schema(&mut self, schema: &Schema) {
+        self.status += schema.verify(self.consignment.types());
+    }
 
     // *** PART II: Validating business logic
     fn validate_logic(&mut self, schema: &'consignment Schema) {

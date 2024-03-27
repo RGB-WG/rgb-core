@@ -24,7 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
-use strict_types::SemId;
+use strict_types::{SemId, TypeSystem};
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi, VirtualMachine};
@@ -137,8 +137,8 @@ impl Schema {
 
         // Validate type system
         status += self.validate_type_system();
-        status += self.validate_metadata(id, *metadata_schema, op.metadata());
-        status += self.validate_global_state(id, op.globals(), global_schema);
+        status += self.validate_metadata(id, *metadata_schema, op.metadata(), consignment.types());
+        status += self.validate_global_state(id, op.globals(), global_schema, consignment.types());
         let prev_state = if let OpRef::Transition(transition) = op {
             let prev_state = extract_prev_state(consignment, id, &transition.inputs, &mut status);
             status += self.validate_prev_state(id, &prev_state, owned_schema);
@@ -155,10 +155,10 @@ impl Schema {
         }
         status += match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
-                self.validate_owned_state(id, assignments, assign_schema)
+                self.validate_owned_state(id, assignments, assign_schema, consignment.types())
             }
             AssignmentsRef::Graph(assignments) => {
-                self.validate_owned_state(id, assignments, assign_schema)
+                self.validate_owned_state(id, assignments, assign_schema, consignment.types())
             }
         };
 
@@ -197,11 +197,11 @@ impl Schema {
         opid: OpId,
         sem_id: SemId,
         metadata: &SmallBlob,
+        types: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
-        if self
-            .types
+        if types
             .strict_deserialize_type(sem_id, metadata.as_ref())
             .is_err()
         {
@@ -216,6 +216,7 @@ impl Schema {
         opid: OpId,
         global: &GlobalState,
         global_schema: &GlobalSchema,
+        types: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -257,8 +258,7 @@ impl Schema {
 
             // Validating data types
             for data in set {
-                if self
-                    .types
+                if types
                     .strict_deserialize_type(*sem_id, data.value.as_ref())
                     .is_err()
                 {
@@ -335,6 +335,7 @@ impl Schema {
         id: OpId,
         owned_state: &Assignments<Seal>,
         assign_schema: &AssignmentsSchema,
+        types: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -369,18 +370,18 @@ impl Schema {
 
             match owned_state.get(state_id) {
                 None => {}
-                Some(TypedAssigns::Declarative(set)) => set.iter().for_each(|data| {
-                    status += assignment.validate(&self.types, &id, *state_id, data)
-                }),
-                Some(TypedAssigns::Fungible(set)) => set.iter().for_each(|data| {
-                    status += assignment.validate(&self.types, &id, *state_id, data)
-                }),
-                Some(TypedAssigns::Structured(set)) => set.iter().for_each(|data| {
-                    status += assignment.validate(&self.types, &id, *state_id, data)
-                }),
-                Some(TypedAssigns::Attachment(set)) => set.iter().for_each(|data| {
-                    status += assignment.validate(&self.types, &id, *state_id, data)
-                }),
+                Some(TypedAssigns::Declarative(set)) => set
+                    .iter()
+                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
+                Some(TypedAssigns::Fungible(set)) => set
+                    .iter()
+                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
+                Some(TypedAssigns::Structured(set)) => set
+                    .iter()
+                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
+                Some(TypedAssigns::Attachment(set)) => set
+                    .iter()
+                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
             };
         }
 

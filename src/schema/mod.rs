@@ -32,9 +32,6 @@ pub use operations::{
     AssignmentType, AssignmentsSchema, ExtensionSchema, GenesisSchema, GlobalSchema, OpFullType,
     OpSchema, OpType, TransitionSchema, ValencySchema, ValencyType,
 };
-pub use schema::{
-    ExtensionType, GlobalStateType, Schema, SchemaId,
-    TransitionType,
-};
-pub use script::{Script, Types, VmType};
+pub use schema::{ExtensionType, GlobalStateType, Schema, SchemaId, TransitionType};
+pub use script::{Script, VmType};
 pub use state::{FungibleType, GlobalStateSchema, MediaType, StateSchema};
