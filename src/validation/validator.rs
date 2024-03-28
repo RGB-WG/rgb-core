@@ -30,7 +30,7 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
+use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
 use crate::{
     AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
     Schema, SchemaId, TransitionBundle, TypedAssigns, XChain, XOutpoint, XOutputSeal, XWitnessId,
@@ -67,7 +67,6 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitne
     validated_op_seals: RefCell<BTreeSet<OpId>>,
     validated_op_state: RefCell<BTreeSet<OpId>>,
 
-    vm: Box<dyn VirtualMachine + 'consignment>,
     resolver: &'resolver R,
 }
 
@@ -78,7 +77,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
-        let vm = consignment.vm();
         let consignment = CheckedConsignment::new(consignment);
 
         // Frequently used computation-heavy data
@@ -129,7 +127,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             layers1,
             validated_op_state,
             validated_op_seals,
-            vm,
             resolver,
         }
     }
@@ -202,8 +199,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // [VALIDATION]: Validate genesis
         *self.status.borrow_mut() += schema.validate_state(
             &self.consignment,
-            OpRef::Genesis(self.consignment.genesis()),
-            self.vm.as_ref(),
+            OpRef::Genesis(self.consignment.genesis())
         );
         self.validated_op_state.borrow_mut().insert(self.genesis_id);
 
@@ -262,7 +258,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             // [VALIDATION]: Verify operation against the schema and scripts
             if self.validated_op_state.borrow_mut().insert(opid) {
                 *self.status.borrow_mut() +=
-                    schema.validate_state(&self.consignment, operation, self.vm.as_ref());
+                    schema.validate_state(&self.consignment, operation);
             }
 
             match operation {

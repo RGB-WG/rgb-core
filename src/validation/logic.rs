@@ -22,13 +22,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use aluvm::library::LibSite;
+use aluvm::data::Number;
+use aluvm::reg::{Reg32, RegA};
+use aluvm::Vm;
 use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
 use strict_types::{SemId, TypeSystem};
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
-use crate::validation::{CheckedConsignment, ConsignmentApi, VirtualMachine};
+use crate::validation::{CheckedConsignment, ConsignmentApi, Failure};
+use crate::vm::RgbIsa;
 use crate::{
     validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
@@ -40,9 +43,8 @@ impl Schema {
         &'validator self,
         consignment: &'validator CheckedConsignment<'consignment, C>,
         op: OpRef,
-        vm: &'consignment dyn VirtualMachine,
     ) -> validation::Status {
-        let id = op.id();
+        let opid = op.id();
 
         let empty_assign_schema = AssignmentsSchema::default();
         let empty_valency_schema = ValencySchema::default();
@@ -90,7 +92,7 @@ impl Schema {
                     None if transition_type == TransitionType::BLANK => &blank_transition,
                     None => {
                         return validation::Status::with_failure(
-                            validation::Failure::SchemaUnknownTransitionType(id, transition_type),
+                            validation::Failure::SchemaUnknownTransitionType(opid, transition_type),
                         );
                     }
                     Some(transition_schema) => transition_schema,
@@ -119,7 +121,7 @@ impl Schema {
                 let extension_schema = match self.extensions.get(&extension_type) {
                     None => {
                         return validation::Status::with_failure(
-                            validation::Failure::SchemaUnknownExtensionType(id, extension_type),
+                            validation::Failure::SchemaUnknownExtensionType(opid, extension_type),
                         );
                     }
                     Some(extension_schema) => extension_schema,
@@ -142,11 +144,13 @@ impl Schema {
 
         // Validate type system
         status += self.validate_type_system();
-        status += self.validate_metadata(id, *metadata_schema, op.metadata(), consignment.types());
-        status += self.validate_global_state(id, op.globals(), global_schema, consignment.types());
+        status +=
+            self.validate_metadata(opid, *metadata_schema, op.metadata(), consignment.types());
+        status +=
+            self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
         let prev_state = if let OpRef::Transition(transition) = op {
-            let prev_state = extract_prev_state(consignment, id, &transition.inputs, &mut status);
-            status += self.validate_prev_state(id, &prev_state, owned_schema);
+            let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
+            status += self.validate_prev_state(opid, &prev_state, owned_schema);
             prev_state
         } else {
             Assignments::default()
@@ -156,22 +160,22 @@ impl Schema {
             for valency in extension.redeemed.keys() {
                 redeemed.push(*valency).expect("same size");
             }
-            status += self.validate_redeemed(id, &redeemed, redeem_schema);
+            status += self.validate_redeemed(opid, &redeemed, redeem_schema);
         }
         status += match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
-                self.validate_owned_state(id, assignments, assign_schema, consignment.types())
+                self.validate_owned_state(opid, assignments, assign_schema, consignment.types())
             }
             AssignmentsRef::Graph(assignments) => {
-                self.validate_owned_state(id, assignments, assign_schema, consignment.types())
+                self.validate_owned_state(opid, assignments, assign_schema, consignment.types())
             }
         };
 
-        status += self.validate_valencies(id, op.valencies(), valency_schema);
+        status += self.validate_valencies(opid, op.valencies(), valency_schema);
 
         let op_info = OpInfo::with(
             consignment.genesis().contract_id(),
-            id,
+            opid,
             &op,
             &prev_state,
             &redeemed,
@@ -182,7 +186,12 @@ impl Schema {
         // we need to make sure that the operation data match the schema, so
         // scripts are not required to validate the structure of the state
         if let Some(validator) = validator {
-            status += self.validate_state_evolution(validator, op_info, vm);
+            let scripts = consignment.scripts();
+            let mut vm = Vm::<RgbIsa>::new();
+            if !vm.exec(validator, |id| scripts.get(&id), &op_info) {
+                let error_code: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg0).into();
+                status.add_failure(Failure::ScriptFailure(opid, error_code.map(u8::from)));
+            }
         }
         status
     }
@@ -415,24 +424,6 @@ impl Schema {
                     *public_type_id,
                 ));
             });
-
-        status
-    }
-
-    fn validate_state_evolution(
-        &self,
-        validator: LibSite,
-        op_info: OpInfo,
-        vm: &dyn VirtualMachine,
-    ) -> validation::Status {
-        let mut status = validation::Status::new();
-
-        // We do not validate public rights, since they do not have an
-        // associated state and there is nothing to validate beyond schema
-
-        if let Err(err) = vm.validate(validator, op_info) {
-            status.add_failure(err);
-        }
 
         status
     }
