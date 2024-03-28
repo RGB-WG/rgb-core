@@ -656,8 +656,6 @@ impl<'op> Operation for OpRef<'op> {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use amplify::ByteArray;
     use baid58::ToBaid58;
 
