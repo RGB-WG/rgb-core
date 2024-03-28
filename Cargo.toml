@@ -61,3 +61,6 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = ["all"]
+
+[patch.crates-io]
+aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "simplify" }

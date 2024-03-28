@@ -23,7 +23,6 @@
 mod operations;
 #[allow(clippy::module_inception)]
 mod schema;
-pub mod script;
 mod state;
 mod occurrences;
 
@@ -32,9 +31,5 @@ pub use operations::{
     AssignmentType, AssignmentsSchema, ExtensionSchema, GenesisSchema, GlobalSchema, OpFullType,
     OpSchema, OpType, TransitionSchema, ValencySchema, ValencyType,
 };
-pub use schema::{
-    ExtensionType, GlobalStateType, RootSchema, Schema, SchemaId, SchemaRoot, SubSchema,
-    TransitionType,
-};
-pub use script::{Script, Types, VmType};
-pub use state::{FungibleType, GlobalStateSchema, MediaType, StateSchema};
+pub use schema::{ExtensionType, GlobalStateType, Schema, SchemaId, TransitionType};
+pub use state::{FungibleType, GlobalStateSchema, MediaType, OwnedStateSchema};

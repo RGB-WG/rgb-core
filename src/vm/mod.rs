@@ -28,8 +28,6 @@ pub mod opcodes;
 mod isa;
 mod op_contract;
 mod op_timechain;
-mod script;
-mod runtime;
 #[macro_use]
 mod macroasm;
 
@@ -37,5 +35,3 @@ pub use aluvm::aluasm_isa;
 pub use isa::RgbIsa;
 pub use op_contract::ContractOp;
 pub use op_timechain::TimechainOp;
-pub use runtime::AluRuntime;
-pub use script::{AluLib, AluScript, EntryPoint, LIBS_MAX_TOTAL};

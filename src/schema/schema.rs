@@ -34,10 +34,9 @@ use commit_verify::{
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
 
 use super::{
-    AssignmentType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
-    ValencyType,
+    AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, Occurrences, Types, LIB_NAME_RGB};
+use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -143,18 +142,6 @@ impl SchemaId {
     pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
 }
 
-pub trait SchemaRoot: Clone + Eq + StrictType + StrictEncode + StrictDecode + Default {
-    fn schema_id(&self) -> SchemaId;
-}
-impl SchemaRoot for () {
-    fn schema_id(&self) -> SchemaId { SchemaId::from_byte_array([0u8; 32]) }
-}
-impl SchemaRoot for RootSchema {
-    fn schema_id(&self) -> SchemaId { self.schema_id() }
-}
-pub type RootSchema = Schema<()>;
-pub type SubSchema = Schema<RootSchema>;
-
 #[derive(Clone, Eq, Default, Debug)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
@@ -163,31 +150,24 @@ pub type SubSchema = Schema<RootSchema>;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct Schema<Root: SchemaRoot> {
+pub struct Schema {
     pub ffv: Ffv,
     pub flags: ReservedBytes<1, 0>,
-    pub subset_of: Option<Root>,
 
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
-    pub owned_types: TinyOrdMap<AssignmentType, StateSchema>,
+    pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
     pub valency_types: TinyOrdSet<ValencyType>,
     pub genesis: GenesisSchema,
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
-
-    /// Type system
-    pub types: Types,
-    /// Validation code.
-    pub script: Script,
 }
 
-impl<Root: SchemaRoot> CommitEncode for Schema<Root> {
+impl CommitEncode for Schema {
     type CommitmentId = SchemaId;
 
     fn commit_encode(&self, e: &mut CommitEngine) {
         e.commit_to_serialized(&self.ffv);
         e.commit_to_serialized(&self.flags);
-        e.commit_to_option(&self.subset_of.as_ref().map(Root::schema_id));
 
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
@@ -195,28 +175,25 @@ impl<Root: SchemaRoot> CommitEncode for Schema<Root> {
         e.commit_to_serialized(&self.genesis);
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
-
-        e.commit_to_serialized(&self.types.id());
-        e.commit_to_serialized(&self.script);
     }
 }
 
-impl<Root: SchemaRoot> PartialEq for Schema<Root> {
+impl PartialEq for Schema {
     fn eq(&self, other: &Self) -> bool { self.schema_id() == other.schema_id() }
 }
 
-impl<Root: SchemaRoot> Ord for Schema<Root> {
+impl Ord for Schema {
     fn cmp(&self, other: &Self) -> Ordering { self.schema_id().cmp(&other.schema_id()) }
 }
 
-impl<Root: SchemaRoot> PartialOrd for Schema<Root> {
+impl PartialOrd for Schema {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl<Root: SchemaRoot> StrictSerialize for Schema<Root> {}
-impl<Root: SchemaRoot> StrictDeserialize for Schema<Root> {}
+impl StrictSerialize for Schema {}
+impl StrictDeserialize for Schema {}
 
-impl<Root: SchemaRoot> Schema<Root> {
+impl Schema {
     #[inline]
     pub fn schema_id(&self) -> SchemaId { self.commit_id() }
 
@@ -230,7 +207,7 @@ impl<Root: SchemaRoot> Schema<Root> {
     }
 }
 
-impl<Root: SchemaRoot> StrictArmor for Schema<Root> {
+impl StrictArmor for Schema {
     type Id = SchemaId;
     const PLATE_TITLE: &'static str = "RGB SCHEMA";
 

@@ -196,7 +196,7 @@ pub enum Failure {
     /// schema {expected} used by the contract. This means that the consignment
     /// is invalid.
     SchemaMismatch {
-        /// Expected schema id required by the contracts genesis.
+        /// Expected schema id required by the contract genesis.
         expected: SchemaId,
         /// Actual schema id provided by the consignment.
         actual: SchemaId,
@@ -222,45 +222,6 @@ pub enum Failure {
     SchemaOpAssignmentTypeUnknown(OpFullType, schema::AssignmentType),
     /// schema for {0} references undeclared valency type {1}.
     SchemaOpValencyTypeUnknown(OpFullType, schema::ValencyType),
-
-    /// invalid schema - no match with root schema requirements for global state
-    /// type #{0}.
-    SubschemaGlobalStateMismatch(schema::GlobalStateType),
-    /// invalid schema - no match with root schema requirements for assignment
-    /// type #{0}.
-    SubschemaAssignmentTypeMismatch(schema::AssignmentType),
-    /// invalid schema - no match with root schema requirements for valency
-    /// type #{0}.
-    SubschemaValencyTypeMismatch(schema::ValencyType),
-    /// invalid schema - no match with root schema requirements for transition
-    /// type #{0}.
-    SubschemaTransitionTypeMismatch(schema::TransitionType),
-    /// invalid schema - no match with root schema requirements for extension
-    /// type #{0}.
-    SubschemaExtensionTypeMismatch(schema::ExtensionType),
-
-    /// invalid schema - no match with root schema requirements for metadata
-    /// type (required {expected}, found {actual}).
-    SubschemaOpMetaMismatch {
-        op_type: OpFullType,
-        expected: SemId,
-        actual: SemId,
-    },
-    /// invalid schema - no match with root schema requirements for global state
-    /// type #{1} used in {0}.
-    SubschemaOpGlobalStateMismatch(OpFullType, schema::GlobalStateType),
-    /// invalid schema - no match with root schema requirements for input
-    /// type #{1} used in {0}.
-    SubschemaOpInputMismatch(OpFullType, schema::AssignmentType),
-    /// invalid schema - no match with root schema requirements for redeem
-    /// type #{1} used in {0}.
-    SubschemaOpRedeemMismatch(OpFullType, schema::ValencyType),
-    /// invalid schema - no match with root schema requirements for assignment
-    /// type #{1} used in {0}.
-    SubschemaOpAssignmentsMismatch(OpFullType, schema::AssignmentType),
-    /// invalid schema - no match with root schema requirements for valency
-    /// type #{1} used in {0}.
-    SubschemaOpValencyMismatch(OpFullType, schema::ValencyType),
 
     /// operation {0} uses invalid state extension type {1}.
     SchemaUnknownExtensionType(OpId, schema::ExtensionType),

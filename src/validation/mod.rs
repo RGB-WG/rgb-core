@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod script;
 mod schema;
 mod logic;
 mod state;
@@ -30,6 +29,5 @@ mod status;
 
 pub use consignment::{CheckedConsignment, ConsignmentApi};
 pub(crate) use logic::OpInfo;
-pub use script::VirtualMachine;
 pub use status::{Failure, Info, Status, Validity, Warning};
 pub use validator::{ResolveWitness, Validator, WitnessResolverError};

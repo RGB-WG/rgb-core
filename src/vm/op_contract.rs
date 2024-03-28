@@ -200,6 +200,23 @@ impl InstructionSet for ContractOp {
         }
     }
 
+    fn complexity(&self) -> u64 {
+        match self {
+            ContractOp::CnP(_, _) |
+            ContractOp::CnS(_, _) |
+            ContractOp::CnG(_, _) |
+            ContractOp::CnC(_, _) => 2,
+            ContractOp::LdP(_, _, _) |
+            ContractOp::LdS(_, _, _) |
+            ContractOp::LdF(_, _, _) |
+            ContractOp::LdG(_, _, _) => 8,
+            ContractOp::LdC(_, _, _) => 16,
+            ContractOp::LdM(_) => 4,
+            ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => 1024,
+            ContractOp::Fail(_) => u64::MAX,
+        }
+    }
+
     fn exec(&self, regs: &mut CoreRegs, _site: LibSite, context: &Self::Context<'_>) -> ExecStep {
         macro_rules! fail {
             () => {{
