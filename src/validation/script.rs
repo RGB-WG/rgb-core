@@ -20,13 +20,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::validation::OpInfo;
-use crate::{validation, ScriptRef};
+use aluvm::library::LibSite;
+
+use crate::validation::{self, OpInfo};
 
 /// Trait for concrete types wrapping virtual machines to be used from inside
 /// RGB schema validation routines.
 pub trait VirtualMachine {
     /// Validates state change in a contract operation.
     #[allow(clippy::result_large_err)]
-    fn validate(&self, entry_point: ScriptRef, info: OpInfo) -> Result<(), validation::Failure>;
+    fn validate(&self, entry_point: LibSite, info: OpInfo) -> Result<(), validation::Failure>;
 }
