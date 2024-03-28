@@ -23,9 +23,9 @@
 use aluvm::library::LibSite;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
-use strict_types::SemId;
 
 use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
+use crate::schema::schema::MetaType;
 use crate::LIB_NAME_RGB;
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
@@ -60,6 +60,7 @@ impl ValencyType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
 }
 
+pub type MetaSchema = TinyOrdSet<MetaType>;
 pub type GlobalSchema = TinyOrdMap<GlobalStateType, Occurrences>;
 pub type ValencySchema = TinyOrdSet<ValencyType>;
 pub type InputsSchema = TinyOrdMap<AssignmentType, Occurrences>;
@@ -132,7 +133,7 @@ impl OpFullType {
 /// Trait defining common API for all operation type schemata
 pub trait OpSchema {
     fn op_type(&self) -> OpType;
-    fn metadata(&self) -> SemId;
+    fn metadata(&self) -> &MetaSchema;
     fn globals(&self) -> &GlobalSchema;
     fn inputs(&self) -> Option<&InputsSchema>;
     fn redeems(&self) -> Option<&ValencySchema>;
@@ -149,7 +150,7 @@ pub trait OpSchema {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GenesisSchema {
-    pub metadata: SemId,
+    pub metadata: MetaSchema,
     pub globals: GlobalSchema,
     pub assignments: AssignmentsSchema,
     pub valencies: ValencySchema,
@@ -166,7 +167,7 @@ pub struct GenesisSchema {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct ExtensionSchema {
-    pub metadata: SemId,
+    pub metadata: MetaSchema,
     pub globals: GlobalSchema,
     pub redeems: ValencySchema,
     pub assignments: AssignmentsSchema,
@@ -183,7 +184,7 @@ pub struct ExtensionSchema {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct TransitionSchema {
-    pub metadata: SemId,
+    pub metadata: MetaSchema,
     pub globals: GlobalSchema,
     pub inputs: InputsSchema,
     pub assignments: AssignmentsSchema,
@@ -195,7 +196,7 @@ impl OpSchema for GenesisSchema {
     #[inline]
     fn op_type(&self) -> OpType { OpType::Genesis }
     #[inline]
-    fn metadata(&self) -> SemId { self.metadata }
+    fn metadata(&self) -> &MetaSchema { &self.metadata }
     #[inline]
     fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
@@ -212,7 +213,7 @@ impl OpSchema for ExtensionSchema {
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateExtension }
     #[inline]
-    fn metadata(&self) -> SemId { self.metadata }
+    fn metadata(&self) -> &MetaSchema { &self.metadata }
     #[inline]
     fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
@@ -229,7 +230,7 @@ impl OpSchema for TransitionSchema {
     #[inline]
     fn op_type(&self) -> OpType { OpType::StateTransition }
     #[inline]
-    fn metadata(&self) -> SemId { self.metadata }
+    fn metadata(&self) -> &MetaSchema { &self.metadata }
     #[inline]
     fn globals(&self) -> &GlobalSchema { &self.globals }
     #[inline]
