@@ -22,6 +22,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use aluvm::library::LibSite;
 use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
 use strict_types::{SemId, TypeSystem};
@@ -31,7 +32,7 @@ use crate::validation::{CheckedConsignment, ConsignmentApi, VirtualMachine};
 use crate::{
     validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
-    Operation, Opout, Schema, ScriptRef, TransitionType, TypedAssigns, Valencies,
+    Operation, Opout, Schema, TransitionType, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -180,7 +181,9 @@ impl Schema {
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the operation data match the schema, so
         // scripts are not required to validate the structure of the state
-        status += self.validate_state_evolution(validator, op_info, vm);
+        if let Some(validator) = validator {
+            status += self.validate_state_evolution(validator, op_info, vm);
+        }
         status
     }
 
@@ -418,7 +421,7 @@ impl Schema {
 
     fn validate_state_evolution(
         &self,
-        entry_point: ScriptRef,
+        validator: LibSite,
         op_info: OpInfo,
         vm: &dyn VirtualMachine,
     ) -> validation::Status {
@@ -427,7 +430,7 @@ impl Schema {
         // We do not validate public rights, since they do not have an
         // associated state and there is nothing to validate beyond schema
 
-        if let Err(err) = vm.validate(entry_point, op_info) {
+        if let Err(err) = vm.validate(validator, op_info) {
             status.add_failure(err);
         }
 

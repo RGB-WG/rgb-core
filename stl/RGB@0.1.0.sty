@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:7v1PLA73ZrTHC3kTNRYLc8sCjLGaePvhLee9dn4j6imH#magic-pablo-cool
+  Id: urn:ubideco:stl:BY6yB8BM671zEPh64jPNRG4hHNB8U9rFBGHWydVMRXGF#glass-perfect-almanac
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -247,13 +247,13 @@ data Extension         : ffv Ffv
                        , validator CommitVerify.ReservedBytes1#joker-lemon-mental
                        , witness CommitVerify.ReservedBytes2#pocket-habitat-soviet
 
-@mnemonic(journal-trade-memphis)
+@mnemonic(green-absorb-event)
 data ExtensionSchema   : metadata StrictTypes.SemId#cargo-plasma-catalog
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , redeems {ValencyType ^ ..0xff}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
-                       , validator ScriptRef
+                       , validator AluVM.LibSite#mission-papa-mercy?
 
 @mnemonic(mission-salsa-parole)
 data ExtensionType     : U16
@@ -282,12 +282,12 @@ data Genesis           : ffv Ffv
                        , issuer Issuer
                        , validator CommitVerify.ReservedBytes1#joker-lemon-mental
 
-@mnemonic(extend-bermuda-orchid)
+@mnemonic(joel-amigo-heaven)
 data GenesisSchema     : metadata StrictTypes.SemId#cargo-plasma-catalog
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
-                       , validator ScriptRef
+                       , validator AluVM.LibSite#mission-papa-mercy?
 
 @mnemonic(north-llama-empire)
 data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
@@ -410,10 +410,6 @@ data Schema            : ffv Ffv
 @mnemonic(garcia-smoke-ozone)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(alpha-rufus-front)
-data ScriptRef         : none ()
-                       | aluVm AluVM.LibSite#mission-papa-mercy
-
 @mnemonic(canary-first-under)
 data Transition        : ffv Ffv
                        , contractId ContractId
@@ -429,13 +425,13 @@ data Transition        : ffv Ffv
 @mnemonic(museum-result-logic)
 data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
 
-@mnemonic(remote-jupiter-denmark)
+@mnemonic(british-quiz-alice)
 data TransitionSchema  : metadata StrictTypes.SemId#cargo-plasma-catalog
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , inputs {AssignmentType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
-                       , validator ScriptRef
+                       , validator AluVM.LibSite#mission-papa-mercy?
 
 @mnemonic(puma-joshua-evita)
 data TransitionType    : U16

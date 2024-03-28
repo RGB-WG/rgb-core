@@ -58,9 +58,7 @@ Schema rec
         max is U16
     valencies set len=0..MAX8
       element is U16 aka=ValencyType
-    validator union ScriptRef
-      none is Unit tag=0
-      aluVm rec LibSite wrapped tag=1
+      some rec LibSite option wrapped tag=1
         lib bytes len=32 aka=LibId
         pos is U16
   extensions map len=0..MAX8
@@ -81,9 +79,7 @@ Schema rec
           max is U16
       valencies set len=0..MAX8
         element is U16 aka=ValencyType
-      validator union ScriptRef
-        none is Unit tag=0
-        aluVm rec LibSite wrapped tag=1
+        some rec LibSite option wrapped tag=1
           lib bytes len=32 aka=LibId
           pos is U16
   transitions map len=0..MAX8
@@ -107,9 +103,7 @@ Schema rec
           max is U16
       valencies set len=0..MAX8
         element is U16 aka=ValencyType
-      validator union ScriptRef
-        none is Unit tag=0
-        aluVm rec LibSite wrapped tag=1
+        some rec LibSite option wrapped tag=1
           lib bytes len=32 aka=LibId
           pos is U16
 
