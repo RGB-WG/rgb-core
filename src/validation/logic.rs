@@ -39,9 +39,9 @@ use crate::{
 };
 
 impl Schema {
-    pub fn validate_state<'validator, 'consignment, C: ConsignmentApi>(
+    pub fn validate_state<'validator, C: ConsignmentApi>(
         &'validator self,
-        consignment: &'validator CheckedConsignment<'consignment, C>,
+        consignment: &'validator CheckedConsignment<'_, C>,
         op: OpRef,
     ) -> validation::Status {
         let opid = op.id();
