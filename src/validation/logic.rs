@@ -57,6 +57,7 @@ impl Schema {
             assign_schema,
             valency_schema,
             validator,
+            ty,
         ) = match (op.transition_type(), op.extension_type()) {
             (None, None) => {
                 // Right now we do not have actions to implement; but later
@@ -76,6 +77,7 @@ impl Schema {
                     &self.genesis.assignments,
                     &self.genesis.valencies,
                     self.genesis.validator,
+                    None::<u16>,
                 )
             }
             (Some(transition_type), None) => {
@@ -106,6 +108,7 @@ impl Schema {
                     &transition_schema.assignments,
                     &transition_schema.valencies,
                     transition_schema.validator,
+                    Some(transition_type.into_inner()),
                 )
             }
             (None, Some(extension_type)) => {
@@ -135,6 +138,7 @@ impl Schema {
                     &extension_schema.assignments,
                     &extension_schema.redeems,
                     extension_schema.validator,
+                    Some(extension_type.into_inner()),
                 )
             }
             _ => unreachable!("Node can't be extension and state transition at the same time"),
@@ -188,6 +192,9 @@ impl Schema {
         if let Some(validator) = validator {
             let scripts = consignment.scripts();
             let mut vm = Vm::<RgbIsa>::new();
+            if let Some(ty) = ty {
+                vm.registers.set_n(RegA::A16, Reg32::Reg0, ty);
+            }
             if !vm.exec(validator, |id| scripts.get(&id), &op_info) {
                 let error_code: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg0).into();
                 status.add_failure(Failure::ScriptFailure(opid, error_code.map(u8::from)));
