@@ -25,17 +25,17 @@ use std::collections::{BTreeMap, BTreeSet};
 use aluvm::data::Number;
 use aluvm::reg::{Reg32, RegA};
 use aluvm::Vm;
-use amplify::confinement::{Confined, SmallBlob};
+use amplify::confinement::Confined;
 use amplify::Wrapper;
-use strict_types::{SemId, TypeSystem};
+use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
-use crate::validation::{CheckedConsignment, ConsignmentApi, Failure};
+use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::RgbIsa;
 use crate::{
     validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
-    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
-    Operation, Opout, Schema, TransitionType, TypedAssigns, Valencies,
+    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata,
+    OpFullType, OpId, OpRef, Operation, Opout, Schema, TransitionType, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -148,8 +148,7 @@ impl Schema {
 
         // Validate type system
         status += self.validate_type_system();
-        status +=
-            self.validate_metadata(opid, *metadata_schema, op.metadata(), consignment.types());
+        status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
         let prev_state = if let OpRef::Transition(transition) = op {
@@ -197,7 +196,10 @@ impl Schema {
             }
             if !vm.exec(validator, |id| scripts.get(&id), &op_info) {
                 let error_code: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg0).into();
-                status.add_failure(Failure::ScriptFailure(opid, error_code.map(u8::from)));
+                status.add_failure(validation::Failure::ScriptFailure(
+                    opid,
+                    error_code.map(u8::from),
+                ));
             }
         }
         status
@@ -218,18 +220,39 @@ impl Schema {
     fn validate_metadata(
         &self,
         opid: OpId,
-        sem_id: SemId,
-        metadata: &SmallBlob,
+        metadata: &Metadata,
+        metadata_schema: &MetaSchema,
         types: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
-        if types
-            .strict_deserialize_type(sem_id, metadata.as_ref())
-            .is_err()
-        {
-            status.add_failure(validation::Failure::SchemaInvalidMetadata(opid, sem_id));
-        };
+        metadata
+            .keys()
+            .copied()
+            .collect::<BTreeSet<_>>()
+            .difference(metadata_schema.as_inner())
+            .for_each(|type_id| {
+                status.add_failure(validation::Failure::SchemaUnknownMetaType(opid, *type_id));
+            });
+
+        for type_id in metadata_schema {
+            let Some(value) = metadata.get(type_id) else {
+                status.add_failure(validation::Failure::SchemaNoMetadata(opid, *type_id));
+                continue;
+            };
+
+            let sem_id = self.meta_types.get(type_id).expect(
+                "if this metadata type were absent, the schema would not be able to pass the \
+                 internal validation and we would not reach this point",
+            );
+
+            if types
+                .strict_deserialize_type(*sem_id, value.as_ref())
+                .is_err()
+            {
+                status.add_failure(validation::Failure::SchemaInvalidMetadata(opid, *sem_id));
+            };
+        }
 
         status
     }
@@ -441,7 +464,7 @@ pub struct OpInfo<'op> {
     pub id: OpId,
     pub ty: OpFullType,
     pub asset_tags: BTreeMap<AssignmentType, AssetTag>,
-    pub metadata: &'op SmallBlob,
+    pub metadata: &'op Metadata,
     pub prev_state: &'op Assignments<GraphSeal>,
     pub owned_state: AssignmentsRef<'op>,
     pub redeemed: &'op Valencies,

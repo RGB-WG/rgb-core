@@ -28,16 +28,22 @@ impl Schema {
     pub fn verify(&self, types: &TypeSystem) -> validation::Status {
         let mut status = validation::Status::new();
 
-        status += self.verify_operation(OpFullType::Genesis, &self.genesis, types);
+        status += self.verify_operation(OpFullType::Genesis, &self.genesis);
         for (type_id, schema) in &self.transitions {
-            status += self.verify_operation(OpFullType::StateTransition(*type_id), schema, types);
+            status += self.verify_operation(OpFullType::StateTransition(*type_id), schema);
         }
         for (type_id, schema) in &self.extensions {
-            status += self.verify_operation(OpFullType::StateExtension(*type_id), schema, types);
+            status += self.verify_operation(OpFullType::StateExtension(*type_id), schema);
         }
         // Check that the schema doesn't contain reserved type ids
         if self.transitions.contains_key(&TransitionType::BLANK) {
             status.add_failure(validation::Failure::SchemaBlankTransitionRedefined);
+        }
+
+        for (type_id, sem_id) in &self.meta_types {
+            if !types.contains_key(sem_id) {
+                status.add_failure(validation::Failure::SchemaMetaSemIdUnknown(*type_id, *sem_id));
+            }
         }
 
         for (type_id, schema) in &self.global_types {
@@ -62,19 +68,13 @@ impl Schema {
         status
     }
 
-    fn verify_operation(
-        &self,
-        op_type: OpFullType,
-        schema: &impl OpSchema,
-        types: &TypeSystem,
-    ) -> validation::Status {
+    fn verify_operation(&self, op_type: OpFullType, schema: &impl OpSchema) -> validation::Status {
         let mut status = validation::Status::new();
 
-        if !types.contains_key(&schema.metadata()) {
-            status.add_failure(validation::Failure::SchemaOpMetaSemIdUnknown(
-                op_type,
-                schema.metadata(),
-            ));
+        for type_id in schema.metadata() {
+            if !self.meta_types.contains_key(type_id) {
+                status.add_failure(validation::Failure::SchemaOpMetaTypeUnknown(op_type, *type_id));
+            }
         }
         if matches!(schema.inputs(), Some(inputs) if inputs.is_empty()) {
             status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));

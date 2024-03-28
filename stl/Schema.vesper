@@ -10,6 +10,9 @@ Schema vesper lexicon=types+commitments
 SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
   Ffv serialized
   ReservedBytes1 serialized
+  SemId map len=0..MAX8
+    MetaType mapKey
+    SemId mapValue
   GlobalStateSchema map len=0..MAX8
     GlobalStateType mapKey
     GlobalStateSchema mapValue
@@ -29,6 +32,9 @@ SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
 Schema rec
   ffv is U16 aka=Ffv
   flags bytes len=1 aka=ReservedBytes1
+  metaTypes map len=0..MAX8
+    key is U16 aka=MetaType
+    value bytes len=32 aka=SemId
   globalTypes map len=0..MAX8
     key is U16 aka=GlobalStateType
     value rec GlobalStateSchema
@@ -45,7 +51,8 @@ Schema rec
   valencyTypes set len=0..MAX8
     element is U16 aka=ValencyType
   genesis rec GenesisSchema
-    metadata bytes len=32 aka=SemId
+    metadata set len=0..MAX8
+      element is U16 aka=MetaType
     globals map len=0..MAX8
       key is U16 aka=GlobalStateType
       value rec Occurrences
@@ -64,7 +71,8 @@ Schema rec
   extensions map len=0..MAX8
     key is U16 aka=ExtensionType
     value rec ExtensionSchema
-      metadata bytes len=32 aka=SemId
+      metadata set len=0..MAX8
+        element is U16 aka=MetaType
       globals map len=0..MAX8
         key is U16 aka=GlobalStateType
         value rec Occurrences
@@ -85,7 +93,8 @@ Schema rec
   transitions map len=0..MAX8
     key is U16 aka=TransitionType
     value rec TransitionSchema
-      metadata bytes len=32 aka=SemId
+      metadata set len=0..MAX8
+        element is U16 aka=MetaType
       globals map len=0..MAX8
         key is U16 aka=GlobalStateType
         value rec Occurrences

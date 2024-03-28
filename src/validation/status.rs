@@ -210,12 +210,14 @@ pub enum Failure {
     /// schema owned state #{0} uses semantic data type absent in type library
     /// ({1}).
     SchemaOwnedSemIdUnknown(schema::AssignmentType, SemId),
-    /// schema metadata in {0} uses semantic data type absent in type library
+    /// schema metadata #{0} uses semantic data type absent in type library
     /// ({1}).
-    SchemaOpMetaSemIdUnknown(OpFullType, SemId),
+    SchemaMetaSemIdUnknown(schema::MetaType, SemId),
 
     /// schema for {0} has zero inputs.
     SchemaOpEmptyInputs(OpFullType),
+    /// schema for {0} references undeclared metadata type {1}.
+    SchemaOpMetaTypeUnknown(OpFullType, schema::MetaType),
     /// schema for {0} references undeclared global state type {1}.
     SchemaOpGlobalTypeUnknown(OpFullType, schema::GlobalStateType),
     /// schema for {0} references undeclared owned state type {1}.
@@ -227,6 +229,8 @@ pub enum Failure {
     SchemaUnknownExtensionType(OpId, schema::ExtensionType),
     /// operation {0} uses invalid state transition type {1}.
     SchemaUnknownTransitionType(OpId, schema::TransitionType),
+    /// operation {0} uses invalid metadata type {1}.
+    SchemaUnknownMetaType(OpId, schema::MetaType),
     /// operation {0} uses invalid global state type {1}.
     SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
     /// operation {0} uses invalid assignment type {1}.
@@ -240,6 +244,8 @@ pub enum Failure {
     /// number of global state entries of type {1} in operation {0} exceeds
     /// schema-defined maximum for that global state type ({2} vs {3}).
     SchemaGlobalStateLimit(OpId, schema::GlobalStateType, u16, u16),
+    /// required metadata type {1} is not present in the operation {0}.
+    SchemaNoMetadata(OpId, schema::MetaType),
     /// invalid metadata in operation {0} not matching semantic type id {1}.
     SchemaInvalidMetadata(OpId, SemId),
     /// invalid global state value in operation {0}, state type #{1} which does

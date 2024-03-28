@@ -39,7 +39,9 @@ Transition rec
   ffv is U16 aka=Ffv
   contractId bytes len=32 aka=ContractId
   transitionType is U16 aka=TransitionType
-  metadata bytes len=0..MAX16 aka=Metadata
+  metadata map len=0..MAX8 aka=Metadata
+    key is U16 aka=MetaType
+    value bytes len=0..MAX16 aka=MetaValue
   globals map len=0..MAX8 aka=GlobalState
     key is U16 aka=GlobalStateType
     value list len=1..MAX16 aka=GlobalValues

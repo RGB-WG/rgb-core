@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:BY6yB8BM671zEPh64jPNRG4hHNB8U9rFBGHWydVMRXGF#glass-perfect-almanac
+  Id: urn:ubideco:stl:8rz82XXwUaYjQuL6rmZAHiqpqgLVGC6bVtpFHQ7h8KL2#castro-volcano-complex
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -247,8 +247,8 @@ data Extension         : ffv Ffv
                        , validator CommitVerify.ReservedBytes1#joker-lemon-mental
                        , witness CommitVerify.ReservedBytes2#pocket-habitat-soviet
 
-@mnemonic(green-absorb-event)
-data ExtensionSchema   : metadata StrictTypes.SemId#cargo-plasma-catalog
+@mnemonic(joshua-company-orchid)
+data ExtensionSchema   : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , redeems {ValencyType ^ ..0xff}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
@@ -282,8 +282,8 @@ data Genesis           : ffv Ffv
                        , issuer Issuer
                        , validator CommitVerify.ReservedBytes1#joker-lemon-mental
 
-@mnemonic(joel-amigo-heaven)
-data GenesisSchema     : metadata StrictTypes.SemId#cargo-plasma-catalog
+@mnemonic(formal-door-pixel)
+data GenesisSchema     : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
@@ -322,8 +322,14 @@ data Issuer            : [Byte]
 data MediaType         : any#255
 
 
-@mnemonic(moment-patriot-patron)
-data Metadata          : [Byte]
+@mnemonic(index-shadow-pattern)
+data MetaType          : U16
+
+@mnemonic(voodoo-budget-weekend)
+data MetaValue         : [Byte]
+
+@mnemonic(carmen-critic-metal)
+data Metadata          : {MetaType -> ^ ..0xff MetaValue}
 
 @mnemonic(unicorn-empire-mama)
 data Occurrences       : min U16, max U16
@@ -397,9 +403,10 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(office-profile-travel)
+@mnemonic(scale-initial-anita)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
+                       , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId#cargo-plasma-catalog}
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}
                        , valencyTypes {ValencyType ^ ..0xff}
@@ -425,8 +432,8 @@ data Transition        : ffv Ffv
 @mnemonic(museum-result-logic)
 data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
 
-@mnemonic(british-quiz-alice)
-data TransitionSchema  : metadata StrictTypes.SemId#cargo-plasma-catalog
+@mnemonic(window-basil-little)
+data TransitionSchema  : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , inputs {AssignmentType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}

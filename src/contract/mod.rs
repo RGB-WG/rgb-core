@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod meta;
 mod global;
 mod data;
 mod fungible;
@@ -56,9 +57,9 @@ pub use fungible::{
     InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
 };
 pub use global::{GlobalState, GlobalValues};
+pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    Extension, Genesis, Input, Inputs, Issuer, Metadata, OpRef, Operation, Redeemed, Transition,
-    Valencies,
+    Extension, Genesis, Input, Inputs, Issuer, OpRef, Operation, Redeemed, Transition, Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessOrd, WitnessPos,
