@@ -47,6 +47,8 @@ impl InstructionSet for TimechainOp {
 
     fn dst_regs(&self) -> BTreeSet<Reg> { bset![] }
 
+    fn complexity(&self) -> u64 { u64::MAX }
+
     fn exec(&self, regs: &mut CoreRegs, _site: LibSite, _context: &Self::Context<'_>) -> ExecStep {
         match self {
             TimechainOp::Fail => {

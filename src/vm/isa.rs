@@ -68,6 +68,14 @@ impl InstructionSet for RgbIsa {
         }
     }
 
+    fn complexity(&self) -> u64 {
+        match self {
+            RgbIsa::Contract(op) => op.complexity(),
+            RgbIsa::Timechain(op) => op.complexity(),
+            RgbIsa::Fail(_) => u64::MAX,
+        }
+    }
+
     fn exec(&self, regs: &mut CoreRegs, site: LibSite, context: &Self::Context<'_>) -> ExecStep {
         match self {
             RgbIsa::Contract(op) => op.exec(regs, site, context),
