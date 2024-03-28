@@ -29,7 +29,7 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
+use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
 use crate::{
     AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
     SchemaId, Transition, TransitionBundle, TypedAssigns, WitnessId, XAnchor, XChain, XOutpoint,
@@ -65,7 +65,6 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitne
     validated_op_seals: BTreeSet<OpId>,
     validated_op_state: BTreeSet<OpId>,
 
-    vm: Box<dyn VirtualMachine + 'consignment>,
     resolver: &'resolver R,
 }
 
@@ -76,7 +75,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
-        let vm = consignment.vm();
         let consignment = CheckedConsignment::new(consignment);
 
         // Frequently used computation-heavy data
@@ -127,7 +125,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             layers1,
             validated_op_state,
             validated_op_seals,
-            vm,
             resolver,
         }
     }
@@ -193,11 +190,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         }
 
         // [VALIDATION]: Validate genesis
-        self.status += schema.validate_state(
-            &self.consignment,
-            OpRef::Genesis(self.consignment.genesis()),
-            self.vm.as_ref(),
-        );
+        self.status +=
+            schema.validate_state(&self.consignment, OpRef::Genesis(self.consignment.genesis()));
         self.validated_op_state.insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing operation
@@ -246,8 +240,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             }
             // [VALIDATION]: Verify operation against the schema and scripts
             if self.validated_op_state.insert(opid) {
-                self.status +=
-                    schema.validate_state(&self.consignment, operation, self.vm.as_ref());
+                self.status += schema.validate_state(&self.consignment, operation);
             }
 
             match operation {

@@ -27,13 +27,18 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
+use aluvm::library::{Lib, LibId};
+use amplify::confinement::Confined;
 use strict_types::TypeSystem;
 
-use crate::validation::VirtualMachine;
 use crate::{
     AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema,
     SecretSeal, WitnessId, XChain,
 };
+
+pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
+
+pub type Scripts = Confined<BTreeMap<LibId, Lib>, 0, CONSIGNMENT_MAX_LIBS>;
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
 
@@ -48,7 +53,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn types(&self) -> &TypeSystem { self.0.types() }
 
-    fn vm(&self) -> Box<dyn VirtualMachine> { self.0.vm() }
+    fn scripts(&self) -> &Scripts { self.0.scripts() }
 
     fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag> { self.0.asset_tags() }
 
@@ -88,7 +93,9 @@ pub trait ConsignmentApi {
     /// Returns reference to the type system.
     fn types(&self) -> &TypeSystem;
 
-    fn vm(&self) -> Box<dyn VirtualMachine>;
+    /// Returns reference to a collection of AluVM libraries used for the
+    /// validation.
+    fn scripts(&self) -> &Scripts;
 
     /// Asset tags uses in the confidential asset validation.
     fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;
