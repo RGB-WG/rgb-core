@@ -126,7 +126,9 @@ AnchoredBundle rec
         ffv is U16 aka=Ffv
         contractId bytes len=32 aka=ContractId
         transitionType is U16 aka=TransitionType
-        metadata bytes len=0..MAX16 aka=Metadata
+        metadata map len=0..MAX8 aka=Metadata
+          key is U16 aka=MetaType
+          value bytes len=0..MAX16 aka=MetaValue
         globals map len=0..MAX8 aka=GlobalState
           key is U16 aka=GlobalStateType
           value list len=1..MAX16 aka=GlobalValues
@@ -367,6 +369,6 @@ AnchoredBundle rec
                   lock bytes len=2 aka=ReservedBytes2
         valencies set len=0..MAX8 aka=Valencies
           element is U16 aka=ValencyType
-        witness bytes len=1 aka=ReservedBytes1
-        script bytes len=1 aka=ReservedBytes1
+        validator bytes len=1 aka=ReservedBytes1
+        witness bytes len=2 aka=ReservedBytes2
 
