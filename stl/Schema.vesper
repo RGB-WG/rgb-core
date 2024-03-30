@@ -28,6 +28,7 @@ SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
   TransitionSchema map len=0..MAX8
     TransitionType mapKey
     TransitionSchema mapValue
+  Identity serialized
 
 Schema rec
   ffv is U16 aka=Ffv
@@ -115,4 +116,5 @@ Schema rec
         some rec LibSite option wrapped tag=1
           lib bytes len=32 aka=LibId
           pos is U16
+  developer bytes len=0..MAX16 aka=Identity
 

@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:8rz82XXwUaYjQuL6rmZAHiqpqgLVGC6bVtpFHQ7h8KL2#castro-volcano-complex
+  Id: urn:ubideco:stl:JBghvBPcaSHpzxugPepHsAYa6FgpjJhPLvgV9dvkBUDL#colony-betty-freddie
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -268,7 +268,7 @@ data FungibleState     : bits64#8 U64
 data FungibleType      : unsigned64Bit#8
 
 
-@mnemonic(super-hexagon-sample)
+@mnemonic(photo-peru-rider)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
@@ -279,7 +279,7 @@ data Genesis           : ffv Ffv
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
                        , valencies Valencies
-                       , issuer Issuer
+                       , issuer Identity
                        , validator CommitVerify.ReservedBytes1#joker-lemon-mental
 
 @mnemonic(formal-door-pixel)
@@ -306,6 +306,9 @@ data GlobalStateType   : U16
 @mnemonic(bicycle-europe-shampoo)
 data GlobalValues      : [RevealedData ^ 1..]
 
+@mnemonic(instant-tiger-athena)
+data Identity          : [Byte]
+
 @mnemonic(press-egypt-helena)
 data Input             : prevOut Opout, reserved CommitVerify.ReservedBytes2#pocket-habitat-soviet
 
@@ -314,9 +317,6 @@ data InputMap          : {Bitcoin.Vout -> ^ 1.. OpId}
 
 @mnemonic(liquid-meaning-convert)
 data Inputs            : {Input}
-
-@mnemonic(veteran-tango-content)
-data Issuer            : [Byte]
 
 @mnemonic(light-nelson-brain)
 data MediaType         : any#255
@@ -403,7 +403,7 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(scale-initial-anita)
+@mnemonic(pump-popular-sensor)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
                        , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId#cargo-plasma-catalog}
@@ -413,6 +413,7 @@ data Schema            : ffv Ffv
                        , genesis GenesisSchema
                        , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
                        , transitions {TransitionType -> ^ ..0xff TransitionSchema}
+                       , developer Identity
 
 @mnemonic(garcia-smoke-ozone)
 data SchemaId          : [Byte ^ 32]

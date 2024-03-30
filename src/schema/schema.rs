@@ -37,7 +37,7 @@ use strict_types::SemId;
 use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, Occurrences, LIB_NAME_RGB};
+use crate::{Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -177,6 +177,8 @@ pub struct Schema {
     pub genesis: GenesisSchema,
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
+
+    pub developer: Identity,
 }
 
 impl CommitEncode for Schema {
@@ -193,6 +195,8 @@ impl CommitEncode for Schema {
         e.commit_to_serialized(&self.genesis);
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
+
+        e.commit_to_serialized(&self.developer);
     }
 }
 
