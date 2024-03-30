@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:py61NAh7V4xHa7if2mF88KL3Z11rUruBNQEAsEqaf2Q#stock-sonata-carlo
+  Id: urn:ubideco:stl:9B8mwkJrtk1nkptoEHaXWunxdRdR4S21DKD5F2quGJDG#doctor-society-gabriel
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -28,14 +28,7 @@ import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-
   use Variant#textile-cowboy-dragon
   use UnionVariantsSemId#iceberg-road-crack
 
-import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
-  use MerkleHash#culture-metro-modular
-  use StrictHash#cheese-final-locate
-  use MerkleProof#labor-hilton-magenta
-  use ReservedBytes1#joker-lemon-mental
-  use ReservedBytes2#pocket-habitat-soviet
-
-import BPCore#9pKFs7Gw7gwerYGVcPCDqiCv5fa165qC6PvFxiotJjaG#rebel-herbert-tourist
+import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
   use TapretNodePartner#iceberg-poker-active
   use ExplicitSealTxid#antenna-darwin-emotion
   use TapretProof#forum-paint-tunnel
@@ -44,11 +37,18 @@ import BPCore#9pKFs7Gw7gwerYGVcPCDqiCv5fa165qC6PvFxiotJjaG#rebel-herbert-tourist
   use TapretRightBranch#basket-prelude-bridge
   use BlindSealTxPtr#austria-icon-waiter
   use OpretProof#segment-ambient-totem
+  use AnchorMerkleProofTapretProof#hotel-telecom-politic
   use SecretSeal#santana-domingo-needle
-  use AnchorMerkleProofOpretProof#break-water-octavia
-  use AnchorMerkleProofTapretProof#noise-flag-special
   use BlindSealTxid#kimono-golf-price
   use TxPtr#strange-source-father
+  use AnchorMerkleProofOpretProof#miranda-chance-extreme
+
+import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
+  use MerkleHash#culture-metro-modular
+  use StrictHash#cheese-final-locate
+  use MerkleProof#labor-hilton-magenta
+  use ReservedBytes1#joker-lemon-mental
+  use ReservedBytes2#pocket-habitat-soviet
 
 import AluVM#DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy
   use LibSite#mission-papa-mercy
@@ -79,13 +79,10 @@ data AltLayer1Set      : {AltLayer1 ^ ..0xff}
 @mnemonic(soviet-arsenal-complex)
 data AluScript         : libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite#mission-papa-mercy}
 
-@mnemonic(pinball-doctor-guide)
-data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#noise-flag-special
-                       | opret BPCore.AnchorMerkleProofOpretProof#break-water-octavia
-                       | dual (tapret BPCore.AnchorMerkleProofTapretProof#noise-flag-special, opret BPCore.AnchorMerkleProofOpretProof#break-water-octavia)
-
-@mnemonic(verbal-slow-lemon)
-data AnchoredBundle    : anchor XChainAnchorSet, bundle TransitionBundle
+@mnemonic(modern-cabaret-citrus)
+data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#hotel-telecom-politic
+                       | opret BPCore.AnchorMerkleProofOpretProof#miranda-chance-extreme
+                       | dual (tapret BPCore.AnchorMerkleProofTapretProof#hotel-telecom-politic, opret BPCore.AnchorMerkleProofOpretProof#miranda-chance-extreme)
 
 @mnemonic(buzzer-pattern-craft)
 data AssetTag          : [Byte ^ 32]
