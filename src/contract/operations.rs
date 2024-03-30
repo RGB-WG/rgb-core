@@ -56,7 +56,6 @@ pub struct Metadata(SmallBlob);
 
 #[cfg(feature = "serde")]
 mod _serde {
-    use amplify::hex::FromHex;
     use serde_crate::de::Error;
     use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -692,8 +691,6 @@ impl<'op> Operation for OpRef<'op> {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use amplify::ByteArray;
     use baid58::ToBaid58;
 
