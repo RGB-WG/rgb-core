@@ -35,7 +35,7 @@ mod contract;
 mod xchain;
 mod commit;
 
-pub use anchor::{AnchorSet, Layer1, WitnessAnchor, XAnchor};
+pub use anchor::{AnchorSet, Grip, Layer1, WitnessAnchor, XGrip};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,

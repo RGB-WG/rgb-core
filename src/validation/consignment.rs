@@ -29,7 +29,7 @@ use std::rc::Rc;
 
 use crate::{
     AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, SecretSeal, SubSchema,
-    TransitionBundle, WitnessId, XAnchor, XChain,
+    TransitionBundle, WitnessId, XChain, XGrip,
 };
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
@@ -61,11 +61,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
             .filter(|b| b.bundle_id() == bundle_id)
     }
 
-    fn anchor(&self, bundle_id: BundleId) -> Option<Rc<XAnchor>> { self.0.anchor(bundle_id) }
-
-    fn bundle_witness_id(&self, bundle_id: BundleId) -> Option<WitnessId> {
-        self.0.bundle_witness_id(bundle_id)
-    }
+    fn grip(&self, bundle_id: BundleId) -> Option<XGrip> { self.0.grip(bundle_id) }
 
     fn op_witness_id(&self, opid: OpId) -> Option<WitnessId> { self.0.op_witness_id(opid) }
 }
@@ -111,11 +107,8 @@ pub trait ConsignmentApi {
     /// Returns reference to a bundle given a bundle id.
     fn bundle(&self, bundle_id: BundleId) -> Option<Rc<TransitionBundle>>;
 
-    /// Returns reference to an anchor given a bundle id.
-    fn anchor(&self, bundle_id: BundleId) -> Option<Rc<XAnchor>>;
-
-    /// Returns witness id for a given transition bundle.
-    fn bundle_witness_id(&self, bundle_id: BundleId) -> Option<WitnessId>;
+    /// Returns a grip given a bundle id.
+    fn grip(&self, bundle_id: BundleId) -> Option<XGrip>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<WitnessId>;

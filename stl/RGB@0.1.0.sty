@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:9B8mwkJrtk1nkptoEHaXWunxdRdR4S21DKD5F2quGJDG#doctor-society-gabriel
+  Id: urn:ubideco:stl:5mAFkM5R9wkRErCxG8nC97hqubayp5MaLpuNrupugTYC#bikini-oscar-logic
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -321,6 +321,9 @@ data GlobalStateType   : U16
 @mnemonic(bicycle-europe-shampoo)
 data GlobalValues      : [RevealedData ^ 1..]
 
+@mnemonic(poem-under-square)
+data Grip              : id Bitcoin.Txid#cowboy-diego-betty, anchors AnchorSet
+
 @mnemonic(press-egypt-helena)
 data Input             : prevOut Opout, reserved CommitVerify.ReservedBytes2#pocket-habitat-soviet
 
@@ -508,10 +511,6 @@ data WitnessOrd        : onChain WitnessPos
 @mnemonic(robert-average-artist)
 data WitnessPos        : height U32, timestamp I64
 
-@mnemonic(floor-emotion-riviera)
-data XChainAnchorSet   : bitcoin AnchorSet
-                       | liquid AnchorSet
-
 @mnemonic(prime-loyal-escort)
 data XChainBlindSealTxPtr : bitcoin BPCore.BlindSealTxPtr#austria-icon-waiter
                        | liquid BPCore.BlindSealTxPtr#austria-icon-waiter
@@ -523,6 +522,10 @@ data XChainBlindSealTxid : bitcoin BPCore.BlindSealTxid#kimono-golf-price
 @mnemonic(ozone-quick-hippie)
 data XChainExplicitSealTxid : bitcoin BPCore.ExplicitSealTxid#antenna-darwin-emotion
                        | liquid BPCore.ExplicitSealTxid#antenna-darwin-emotion
+
+@mnemonic(tobacco-initial-flame)
+data XChainGrip        : bitcoin Grip
+                       | liquid Grip
 
 @mnemonic(palace-random-taxi)
 data XChainSecretSeal  : bitcoin BPCore.SecretSeal#santana-domingo-needle

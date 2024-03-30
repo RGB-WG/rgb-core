@@ -25,52 +25,47 @@ use std::cmp::Ordering;
 use bp::dbc::opret::OpretProof;
 use bp::dbc::tapret::TapretProof;
 use bp::dbc::Anchor;
+use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
 use crate::{BundleId, ContractId, WitnessId, WitnessOrd, XChain, LIB_NAME_RGB};
 
-pub type XAnchor<P = mpc::MerkleProof> = XChain<AnchorSet<P>>;
+pub type XGrip = XChain<Grip>;
 
-impl XAnchor<mpc::MerkleBlock> {
-    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
+impl XGrip {
+    pub fn witness_id(&self) -> WitnessId {
         match self {
-            XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor.known_bundle_ids(),
-            _ => unreachable!(),
+            XGrip::Bitcoin(g) => WitnessId::Bitcoin(g.id),
+            XGrip::Liquid(g) => WitnessId::Liquid(g.id),
+            XGrip::Other(_) => unreachable!(),
         }
-    }
-
-    pub fn to_merkle_proof(
-        &self,
-        contract_id: ContractId,
-    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.clone().into_merkle_proof(contract_id)
-    }
-
-    pub fn into_merkle_proof(
-        self,
-        contract_id: ContractId,
-    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.try_map(|a| a.into_merkle_proof(contract_id))
     }
 }
 
-impl XAnchor<mpc::MerkleProof> {
-    pub fn to_merkle_block(
-        &self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.clone().into_merkle_block(contract_id, bundle_id)
-    }
+#[derive(Clone, Eq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct Grip {
+    pub id: Txid,
+    pub anchors: AnchorSet,
+}
 
-    pub fn into_merkle_block(
-        self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.try_map(|a| a.into_merkle_block(contract_id, bundle_id))
-    }
+impl PartialEq for Grip {
+    fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+
+impl Ord for Grip {
+    fn cmp(&self, other: &Self) -> Ordering { self.id.cmp(&other.id) }
+}
+
+impl PartialOrd for Grip {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

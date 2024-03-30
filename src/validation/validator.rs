@@ -34,7 +34,7 @@ use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
     SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, WitnessId,
-    XAnchor, XChain, XOutpoint, XOutputSeal, XPubWitness, XWitness,
+    XChain, XGrip, XOutpoint, XOutputSeal, XPubWitness, XWitness,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -308,23 +308,16 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 self.status.add_failure(Failure::BundleAbsent(bundle_id));
                 continue;
             };
-            let Some(anchor) = self.consignment.anchor(bundle_id) else {
+            let Some(grip) = self.consignment.grip(bundle_id) else {
                 self.status.add_failure(Failure::AnchorAbsent(bundle_id));
-                continue;
-            };
-            let Some(witness_id) = self.consignment.bundle_witness_id(bundle_id) else {
-                self.status.add_failure(Failure::WitnessIdAbsent(bundle_id));
                 continue;
             };
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
-            let (seals, input_map) =
-                self.validate_seal_definitions(witness_id.layer1(), bundle.as_ref());
+            let (seals, input_map) = self.validate_seal_definitions(grip.layer1(), bundle.as_ref());
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
-            let Some(witness_tx) =
-                self.validate_seal_commitments(&seals, bundle_id, anchor.as_ref(), witness_id)
-            else {
+            let Some(witness_tx) = self.validate_seal_commitments(&seals, bundle_id, &grip) else {
                 continue;
             };
 
@@ -372,13 +365,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         &mut self,
         seals: impl AsRef<[XOutputSeal]>,
         bundle_id: BundleId,
-        anchors: &XAnchor,
-        witness_id: WitnessId,
+        grip: &XGrip,
     ) -> Option<XPubWitness> {
         // Check that the anchor is committed into a transaction spending all the
         // transition inputs.
         // Here the method can do SPV proof instead of querying the indexer. The SPV
         // proofs can be part of the consignments, but do not require .
+        let witness_id = grip.witness_id();
         match self.resolver.resolve_pub_witness(witness_id) {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't check.
@@ -397,7 +390,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 None
             }
             Ok(pub_witness) => {
-                let (tapret, opret) = anchors.as_reduced_unsafe().as_split();
+                let (tapret, opret) = grip.as_reduced_unsafe().anchors.as_split();
 
                 let tapret_seals = seals
                     .as_ref()
