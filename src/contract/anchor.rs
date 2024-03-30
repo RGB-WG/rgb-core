@@ -25,47 +25,12 @@ use std::cmp::Ordering;
 use bp::dbc::opret::OpretProof;
 use bp::dbc::tapret::TapretProof;
 use bp::dbc::Anchor;
-use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
-use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, XChain, LIB_NAME_RGB};
-
-#[derive(Clone, Eq, PartialEq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct AnchoredBundle {
-    pub anchor: XAnchor,
-    pub bundle: TransitionBundle,
-}
-
-impl AnchoredBundle {
-    #[inline]
-    pub fn bundle_id(&self) -> BundleId { self.bundle.bundle_id() }
-}
-
-impl Ord for AnchoredBundle {
-    fn cmp(&self, other: &Self) -> Ordering { self.bundle_id().cmp(&other.bundle_id()) }
-}
-
-impl PartialOrd for AnchoredBundle {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
+use crate::{BundleId, ContractId, WitnessId, WitnessOrd, XChain, LIB_NAME_RGB};
 
 pub type XAnchor<P = mpc::MerkleProof> = XChain<AnchorSet<P>>;
-
-impl<P: mpc::Proof + StrictDumb> XAnchor<P> {
-    #[inline]
-    pub fn witness_id(&self) -> Option<WitnessId> { self.maybe_map_ref(|set| set.txid()) }
-
-    #[inline]
-    pub fn witness_id_unchecked(&self) -> WitnessId { self.map_ref(|set| set.txid_unchecked()) }
-}
 
 impl XAnchor<mpc::MerkleBlock> {
     pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
@@ -129,23 +94,6 @@ pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
 }
 
 impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
-    pub fn txid(&self) -> Option<Txid> {
-        match self {
-            AnchorSet::Tapret(a) => Some(a.txid),
-            AnchorSet::Opret(a) => Some(a.txid),
-            AnchorSet::Dual { tapret, opret } if tapret.txid == opret.txid => Some(tapret.txid),
-            _ => None,
-        }
-    }
-
-    pub fn txid_unchecked(&self) -> Txid {
-        match self {
-            AnchorSet::Tapret(a) => a.txid,
-            AnchorSet::Opret(a) => a.txid,
-            AnchorSet::Dual { tapret, opret: _ } => tapret.txid,
-        }
-    }
-
     pub fn from_split(
         tapret: Option<Anchor<P, TapretProof>>,
         opret: Option<Anchor<P, OpretProof>>,

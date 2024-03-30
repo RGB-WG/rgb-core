@@ -301,8 +301,12 @@ pub enum Failure {
     /// transition bundle {0} referenced in consignment terminals is absent from
     /// the consignment.
     TerminalBundleAbsent(BundleId),
-    /// transition bundle {0} is absent from the consignment.
+    /// transition bundle {0} is absent in the consignment.
     BundleAbsent(BundleId),
+    /// anchor for transitio bundle {0} is absent in the consignment.
+    AnchorAbsent(BundleId),
+    /// witness id for transition bundle {0} is absent in the consignment.
+    WitnessIdAbsent(BundleId),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
 
@@ -327,8 +331,6 @@ pub enum Failure {
     },
     /// transition {0} references non-existing previous output {1}.
     NoPrevOut(OpId, Opout),
-    /// anchors used inside bundle {0} reference different public witness ids.
-    AnchorSetInvalid(BundleId),
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),

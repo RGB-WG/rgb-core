@@ -28,9 +28,7 @@ use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
-use crate::{
-    AnchoredBundle, ContractState, Extension, Genesis, OpCommitment, SubSchema, LIB_NAME_RGB,
-};
+use crate::{ContractState, Extension, Genesis, OpCommitment, SubSchema, XAnchor, LIB_NAME_RGB};
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB: &str =
@@ -47,7 +45,7 @@ fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     })
     .transpile::<SubSchema>()
     .transpile::<Genesis>()
-    .transpile::<AnchoredBundle>()
+    .transpile::<XAnchor>()
     .transpile::<Extension>()
     .transpile::<ContractState>()
     .transpile::<OpCommitment>()

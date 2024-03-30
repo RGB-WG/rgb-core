@@ -28,8 +28,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
 use crate::{
-    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation,
-    SecretSeal, SubSchema, WitnessId, XChain,
+    AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, SecretSeal, SubSchema,
+    TransitionBundle, WitnessId, XAnchor, XChain,
 };
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
@@ -55,10 +55,16 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn bundle_ids<'a>(&self) -> Self::Iter<'a> { self.0.bundle_ids() }
 
-    fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>> {
+    fn bundle(&self, bundle_id: BundleId) -> Option<Rc<TransitionBundle>> {
         self.0
-            .anchored_bundle(bundle_id)
-            .filter(|ab| ab.bundle.bundle_id() == bundle_id)
+            .bundle(bundle_id)
+            .filter(|b| b.bundle_id() == bundle_id)
+    }
+
+    fn anchor(&self, bundle_id: BundleId) -> Option<Rc<XAnchor>> { self.0.anchor(bundle_id) }
+
+    fn bundle_witness_id(&self, bundle_id: BundleId) -> Option<WitnessId> {
+        self.0.bundle_witness_id(bundle_id)
     }
 
     fn op_witness_id(&self, opid: OpId) -> Option<WitnessId> { self.0.op_witness_id(opid) }
@@ -81,7 +87,7 @@ pub trait ConsignmentApi {
     /// Asset tags uses in the confidential asset validation.
     fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;
 
-    /// Retrieves reference to a operation (genesis, state transition or state
+    /// Retrieves reference to an operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
     fn operation(&self, opid: OpId) -> Option<OpRef>;
 
@@ -102,8 +108,14 @@ pub trait ConsignmentApi {
     /// Returns iterator over all bundle ids present in the consignment.
     fn bundle_ids<'a>(&self) -> Self::Iter<'a>;
 
-    /// Returns reference to an anchored bundle given a bundle id.
-    fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>>;
+    /// Returns reference to a bundle given a bundle id.
+    fn bundle(&self, bundle_id: BundleId) -> Option<Rc<TransitionBundle>>;
+
+    /// Returns reference to an anchor given a bundle id.
+    fn anchor(&self, bundle_id: BundleId) -> Option<Rc<XAnchor>>;
+
+    /// Returns witness id for a given transition bundle.
+    fn bundle_witness_id(&self, bundle_id: BundleId) -> Option<WitnessId>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<WitnessId>;
