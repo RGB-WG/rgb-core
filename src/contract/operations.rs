@@ -238,13 +238,10 @@ pub trait Operation {
     fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
-/// Issuer is a binary string which must be encoded into the issuer identity in
-/// the application.
-///
 /// We deliberately do not define the internal structure of the identity such
 /// that it can be updated without changes to the consensus level.
 ///
-/// Contract validity doesn't assume any checks on the issuer identity; these
+/// Contract or schema validity doesn't assume any checks on the identity; these
 /// checks must be performed at the application level.
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From, Display)]
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
@@ -258,12 +255,12 @@ pub trait Operation {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Issuer(SmallBlob);
+pub struct Identity(SmallBlob);
 
-impl FromStr for Issuer {
+impl FromStr for Identity {
     type Err = hex::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Issuer::from_hex(s) }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Identity::from_hex(s) }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -285,7 +282,7 @@ pub struct Genesis {
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
-    pub issuer: Issuer,
+    pub issuer: Identity,
     pub validator: ReservedBytes<1, 0>,
 }
 

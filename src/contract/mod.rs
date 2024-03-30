@@ -59,7 +59,7 @@ pub use fungible::{
 pub use global::{GlobalState, GlobalValues};
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    Extension, Genesis, Input, Inputs, Issuer, OpRef, Operation, Redeemed, Transition, Valencies,
+    Extension, Genesis, Identity, Input, Inputs, OpRef, Operation, Redeemed, Transition, Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
