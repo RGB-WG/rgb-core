@@ -27,7 +27,7 @@ mod validator;
 mod consignment;
 mod status;
 
-pub use consignment::{CheckedConsignment, ConsignmentApi};
+pub use consignment::{CheckedConsignment, ConsignmentApi, Scripts};
 pub(crate) use logic::OpInfo;
 pub use status::{Failure, Info, Status, Validity, Warning};
 pub use validator::{ResolveWitness, Validator, WitnessResolverError};
