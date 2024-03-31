@@ -20,10 +20,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{validation, OpFullType, OpSchema, Schema, StateSchema, TransitionType};
+use strict_types::TypeSystem;
+
+use crate::{validation, OpFullType, OpSchema, OwnedStateSchema, Schema, TransitionType};
 
 impl Schema {
-    pub fn verify(&self) -> validation::Status {
+    pub fn verify(&self, types: &TypeSystem) -> validation::Status {
         let mut status = validation::Status::new();
 
         status += self.verify_operation(OpFullType::Genesis, &self.genesis);
@@ -38,8 +40,14 @@ impl Schema {
             status.add_failure(validation::Failure::SchemaBlankTransitionRedefined);
         }
 
+        for (type_id, sem_id) in &self.meta_types {
+            if !types.contains_key(sem_id) {
+                status.add_failure(validation::Failure::SchemaMetaSemIdUnknown(*type_id, *sem_id));
+            }
+        }
+
         for (type_id, schema) in &self.global_types {
-            if !self.types.contains_key(&schema.sem_id) {
+            if !types.contains_key(&schema.sem_id) {
                 status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
                     *type_id,
                     schema.sem_id,
@@ -48,8 +56,8 @@ impl Schema {
         }
 
         for (type_id, schema) in &self.owned_types {
-            if let StateSchema::Structured(sem_id) = schema {
-                if !self.types.contains_key(sem_id) {
+            if let OwnedStateSchema::Structured(sem_id) = schema {
+                if !types.contains_key(sem_id) {
                     status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
                         *type_id, *sem_id,
                     ));
@@ -63,11 +71,10 @@ impl Schema {
     fn verify_operation(&self, op_type: OpFullType, schema: &impl OpSchema) -> validation::Status {
         let mut status = validation::Status::new();
 
-        if !self.types.contains_key(&schema.metadata()) {
-            status.add_failure(validation::Failure::SchemaOpMetaSemIdUnknown(
-                op_type,
-                schema.metadata(),
-            ));
+        for type_id in schema.metadata() {
+            if !self.meta_types.contains_key(type_id) {
+                status.add_failure(validation::Failure::SchemaOpMetaTypeUnknown(op_type, *type_id));
+            }
         }
         if matches!(schema.inputs(), Some(inputs) if inputs.is_empty()) {
             status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));

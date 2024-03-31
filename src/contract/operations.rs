@@ -38,44 +38,9 @@ use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, Transitio
 use crate::{
     AltLayer1Set, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
     ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, OpDisclose, OpId, Opout, SecretSeal, TypedAssigns,
-    VoidState, XChain, LIB_NAME_RGB,
+    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, Opout, SecretSeal,
+    TypedAssigns, VoidState, XChain, LIB_NAME_RGB,
 };
-
-#[derive(
-    Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default, From
-)]
-#[display(LowerHex)]
-#[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = StrictHash)]
-pub struct Metadata(SmallBlob);
-
-#[cfg(feature = "serde")]
-mod _serde {
-    use serde_crate::de::Error;
-    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
-
-    use super::*;
-
-    impl Serialize for Metadata {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer {
-            serializer.serialize_str(&self.to_string())
-        }
-    }
-
-    impl<'de> Deserialize<'de> for Metadata {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de> {
-            let s = String::deserialize(deserializer)?;
-            Self::from_hex(&s).map_err(D::Error::custom)
-        }
-    }
-}
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
@@ -203,7 +168,7 @@ pub trait Operation {
     fn extension_type(&self) -> Option<ExtensionType>;
 
     /// Returns metadata associated with the operation, if any.
-    fn metadata(&self) -> &SmallBlob;
+    fn metadata(&self) -> &Metadata;
 
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract operation.
@@ -273,13 +238,10 @@ pub trait Operation {
     fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
-/// Issuer is a binary string which must be encoded into the issuer identity in
-/// the application.
-///
 /// We deliberately do not define the internal structure of the identity such
 /// that it can be updated without changes to the consensus level.
 ///
-/// Contract validity doesn't assume any checks on the issuer identity; these
+/// Contract or schema validity doesn't assume any checks on the identity; these
 /// checks must be performed at the application level.
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From, Display)]
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
@@ -293,12 +255,12 @@ pub trait Operation {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Issuer(SmallBlob);
+pub struct Identity(SmallBlob);
 
-impl FromStr for Issuer {
+impl FromStr for Identity {
     type Err = hex::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Issuer::from_hex(s) }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Identity::from_hex(s) }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -320,8 +282,8 @@ pub struct Genesis {
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
-    pub issuer: Issuer,
-    pub script: ReservedBytes<1, 0>,
+    pub issuer: Identity,
+    pub validator: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Genesis {}
@@ -344,8 +306,8 @@ pub struct Extension {
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
-    pub witness: ReservedBytes<1, 0>,
-    pub script: ReservedBytes<1, 0>,
+    pub validator: ReservedBytes<1, 0>,
+    pub witness: ReservedBytes<2, 0>,
 }
 
 impl StrictSerialize for Extension {}
@@ -376,8 +338,8 @@ pub struct Transition {
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
-    pub witness: ReservedBytes<1, 0>,
-    pub script: ReservedBytes<1, 0>,
+    pub validator: ReservedBytes<1, 0>,
+    pub witness: ReservedBytes<2, 0>,
 }
 
 impl StrictSerialize for Transition {}
@@ -478,7 +440,7 @@ impl Operation for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> &SmallBlob { &self.metadata }
+    fn metadata(&self) -> &Metadata { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -520,7 +482,7 @@ impl Operation for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn metadata(&self) -> &SmallBlob { &self.metadata }
+    fn metadata(&self) -> &Metadata { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -562,7 +524,7 @@ impl Operation for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> &SmallBlob { &self.metadata }
+    fn metadata(&self) -> &Metadata { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -640,7 +602,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn metadata(&self) -> &SmallBlob {
+    fn metadata(&self) -> &Metadata {
         match self {
             OpRef::Genesis(op) => op.metadata(),
             OpRef::Transition(op) => op.metadata(),

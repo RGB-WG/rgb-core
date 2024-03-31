@@ -32,12 +32,27 @@ use commit_verify::{
     CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, ReservedBytes, Sha256,
 };
 use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
+use strict_types::SemId;
 
 use super::{
-    AssignmentType, ExtensionSchema, GenesisSchema, Script, StateSchema, TransitionSchema,
-    ValencyType,
+    AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, Occurrences, Types, LIB_NAME_RGB};
+use crate::{Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
+
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
+#[wrapper(FromStr, LowerHex, UpperHex)]
+#[display("0x{0:04X}")]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct MetaType(u16);
+impl MetaType {
+    pub const fn with(ty: u16) -> Self { Self(ty) }
+}
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -155,17 +170,15 @@ pub struct Schema {
     pub ffv: Ffv,
     pub flags: ReservedBytes<1, 0>,
 
+    pub meta_types: TinyOrdMap<MetaType, SemId>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
-    pub owned_types: TinyOrdMap<AssignmentType, StateSchema>,
+    pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
     pub valency_types: TinyOrdSet<ValencyType>,
     pub genesis: GenesisSchema,
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
-    /// Type system
-    pub types: Types,
-    /// Validation code.
-    pub script: Script,
+    pub developer: Identity,
 }
 
 impl CommitEncode for Schema {
@@ -175,6 +188,7 @@ impl CommitEncode for Schema {
         e.commit_to_serialized(&self.ffv);
         e.commit_to_serialized(&self.flags);
 
+        e.commit_to_map(&self.meta_types);
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
         e.commit_to_set(&self.valency_types);
@@ -182,8 +196,7 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
 
-        e.commit_to_serialized(&self.types.id());
-        e.commit_to_serialized(&self.script);
+        e.commit_to_serialized(&self.developer);
     }
 }
 
