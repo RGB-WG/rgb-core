@@ -33,8 +33,8 @@ use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine
 use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
-    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, XChain,
-    XGrip, XOutpoint, XOutputSeal, XPubWitness, XWitness, XWitnessId,
+    SchemaId, Script, Transition, TransitionBundle, TypedAssigns, XChain, XGrip, XOutpoint,
+    XOutputSeal, XPubWitness, XWitness, XWitnessId,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -179,10 +179,10 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     }
 
     // *** PART I: Schema validation
-    fn validate_schema(&mut self, schema: &SubSchema) { self.status += schema.verify(); }
+    fn validate_schema(&mut self, schema: &Schema) { self.status += schema.verify(); }
 
     // *** PART II: Validating business logic
-    fn validate_logic<Root: SchemaRoot>(&mut self, schema: &'consignment Schema<Root>) {
+    fn validate_logic(&mut self, schema: &'consignment Schema) {
         // [VALIDATION]: Making sure that we were supplied with the schema
         //               that corresponds to the schema of the contract genesis
         if schema.schema_id() != self.schema_id {
@@ -221,11 +221,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         }
     }
 
-    fn validate_logic_on_route<Root: SchemaRoot>(
-        &mut self,
-        schema: &Schema<Root>,
-        transition: &Transition,
-    ) {
+    fn validate_logic_on_route(&mut self, schema: &Schema, transition: &Transition) {
         let mut queue: VecDeque<OpRef> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a recursions we

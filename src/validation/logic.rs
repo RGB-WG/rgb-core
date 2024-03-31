@@ -31,10 +31,10 @@ use crate::validation::{CheckedConsignment, ConsignmentApi, VirtualMachine};
 use crate::{
     validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
-    Operation, Opout, Schema, SchemaRoot, TransitionType, TypedAssigns, Valencies,
+    Operation, Opout, Schema, TransitionType, TypedAssigns, Valencies,
 };
 
-impl<Root: SchemaRoot> Schema<Root> {
+impl Schema {
     pub fn validate_state<'validator, 'consignment, C: ConsignmentApi>(
         &'validator self,
         consignment: &'validator CheckedConsignment<'consignment, C>,
@@ -167,7 +167,6 @@ impl<Root: SchemaRoot> Schema<Root> {
         let op_info = OpInfo::with(
             consignment.genesis().contract_id(),
             id,
-            self.subset_of.is_some(),
             &op,
             &prev_state,
             &redeemed,
@@ -427,7 +426,6 @@ impl<Root: SchemaRoot> Schema<Root> {
 }
 
 pub struct OpInfo<'op> {
-    pub subschema: bool,
     pub contract_id: ContractId,
     pub id: OpId,
     pub ty: OpFullType,
@@ -444,7 +442,6 @@ impl<'op> OpInfo<'op> {
     pub fn with(
         contract_id: ContractId,
         id: OpId,
-        subschema: bool,
         op: &'op OpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
@@ -452,7 +449,6 @@ impl<'op> OpInfo<'op> {
     ) -> Self {
         OpInfo {
             id,
-            subschema,
             contract_id,
             ty: op.full_type(),
             asset_tags,
