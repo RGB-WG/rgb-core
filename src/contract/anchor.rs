@@ -29,15 +29,15 @@ use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
-use crate::{BundleId, ContractId, WitnessId, WitnessOrd, XChain, LIB_NAME_RGB};
+use crate::{BundleId, ContractId, WitnessOrd, XChain, XWitnessId, LIB_NAME_RGB};
 
 pub type XGrip<P = mpc::MerkleProof> = XChain<Grip<P>>;
 
 impl<P: mpc::Proof + StrictDumb> XGrip<P> {
-    pub fn witness_id(&self) -> WitnessId {
+    pub fn witness_id(&self) -> XWitnessId {
         match self {
-            XGrip::Bitcoin(g) => WitnessId::Bitcoin(g.id),
-            XGrip::Liquid(g) => WitnessId::Liquid(g.id),
+            XGrip::Bitcoin(g) => XWitnessId::Bitcoin(g.id),
+            XGrip::Liquid(g) => XWitnessId::Liquid(g.id),
             XGrip::Other(_) => unreachable!(),
         }
     }
@@ -198,7 +198,7 @@ impl AnchorSet<mpc::MerkleBlock> {
 #[display("{witness_id}/{witness_ord}")]
 pub struct WitnessAnchor {
     pub witness_ord: WitnessOrd,
-    pub witness_id: WitnessId,
+    pub witness_id: XWitnessId,
 }
 
 impl PartialOrd for WitnessAnchor {
@@ -219,7 +219,7 @@ impl Ord for WitnessAnchor {
 }
 
 impl WitnessAnchor {
-    pub fn from_mempool(witness_id: WitnessId) -> Self {
+    pub fn from_mempool(witness_id: XWitnessId) -> Self {
         WitnessAnchor {
             witness_ord: WitnessOrd::OffChain,
             witness_id,

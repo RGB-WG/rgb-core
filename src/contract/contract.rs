@@ -37,7 +37,7 @@ use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, DataState, ExposedSeal,
     ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach,
     RevealedData, RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState,
-    WitnessAnchor, WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
+    WitnessAnchor, XChain, XOutputSeal, XWitnessId, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -117,11 +117,11 @@ pub enum AssignmentWitness {
     #[from]
     #[display(inner)]
     #[strict_type(tag = 1)]
-    Present(WitnessId),
+    Present(XWitnessId),
 }
 
-impl From<Option<WitnessId>> for AssignmentWitness {
-    fn from(value: Option<WitnessId>) -> Self {
+impl From<Option<XWitnessId>> for AssignmentWitness {
+    fn from(value: Option<XWitnessId>) -> Self {
         match value {
             None => AssignmentWitness::Absent,
             Some(id) => AssignmentWitness::Present(id),
@@ -184,7 +184,7 @@ impl<State: KnownState> OutputAssignment<State> {
     /// witness-based and the anchor chain doesn't match the seal chain.
     pub fn with_witness<Seal: ExposedSeal>(
         seal: XChain<Seal>,
-        witness_id: WitnessId,
+        witness_id: XWitnessId,
         state: State,
         opid: OpId,
         ty: AssignmentType,
@@ -429,7 +429,7 @@ impl ContractHistory {
 
     fn add_assignments<Seal: ExposedSeal>(
         &mut self,
-        witness_id: Option<WitnessId>,
+        witness_id: Option<XWitnessId>,
         opid: OpId,
         assignments: &Assignments<Seal>,
     ) {
@@ -438,7 +438,7 @@ impl ContractHistory {
             assignments: &[Assign<State, Seal>],
             opid: OpId,
             ty: AssignmentType,
-            witness_id: Option<WitnessId>,
+            witness_id: Option<XWitnessId>,
         ) {
             for (no, seal, state) in assignments
                 .iter()

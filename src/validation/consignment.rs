@@ -29,7 +29,7 @@ use std::rc::Rc;
 
 use crate::{
     AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, SecretSeal, SubSchema,
-    TransitionBundle, WitnessId, XChain, XGrip,
+    TransitionBundle, XChain, XGrip, XWitnessId,
 };
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
@@ -63,7 +63,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn grip(&self, bundle_id: BundleId) -> Option<XGrip> { self.0.grip(bundle_id) }
 
-    fn op_witness_id(&self, opid: OpId) -> Option<WitnessId> { self.0.op_witness_id(opid) }
+    fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -111,5 +111,5 @@ pub trait ConsignmentApi {
     fn grip(&self, bundle_id: BundleId) -> Option<XGrip>;
 
     /// Returns witness id for a given operation.
-    fn op_witness_id(&self, opid: OpId) -> Option<WitnessId>;
+    fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;
 }

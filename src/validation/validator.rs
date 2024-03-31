@@ -33,24 +33,24 @@ use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine
 use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
-    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, WitnessId,
-    XChain, XGrip, XOutpoint, XOutputSeal, XPubWitness, XWitness,
+    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, XChain,
+    XGrip, XOutpoint, XOutputSeal, XPubWitness, XWitness, XWitnessId,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum WitnessResolverError {
     /// witness {0} does not exist.
-    Unknown(WitnessId),
+    Unknown(XWitnessId),
     /// unable to retrieve witness {0}, {1}
-    Other(WitnessId, String),
+    Other(XWitnessId, String),
 }
 
 pub trait ResolveWitness {
     // TODO: Return with SPV proof data
     fn resolve_pub_witness(
         &self,
-        witness_id: WitnessId,
+        witness_id: XWitnessId,
     ) -> Result<XPubWitness, WitnessResolverError>;
 }
 
