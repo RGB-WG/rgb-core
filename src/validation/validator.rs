@@ -33,23 +33,24 @@ use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine
 use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
-    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, WitnessId,
-    XAnchor, XChain, XOutpoint, XOutputSeal, XPubWitness, XWitness,
+    SchemaId, SchemaRoot, Script, SubSchema, Transition, TransitionBundle, TypedAssigns, XChain,
+    XGrip, XOutpoint, XOutputSeal, XPubWitness, XWitness, XWitnessId,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum WitnessResolverError {
-    /// witness {0} does not exists.
-    Unknown(WitnessId),
+    /// witness {0} does not exist.
+    Unknown(XWitnessId),
     /// unable to retrieve witness {0}, {1}
-    Other(WitnessId, String),
+    Other(XWitnessId, String),
 }
 
 pub trait ResolveWitness {
+    // TODO: Return with SPV proof data
     fn resolve_pub_witness(
         &self,
-        witness_id: WitnessId,
+        witness_id: XWitnessId,
     ) -> Result<XPubWitness, WitnessResolverError>;
 }
 
@@ -95,11 +96,11 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // to detect any potential issues with the consignment structure and notify user
         // about them (in form of generated warnings)
         for (bundle_id, seal_endpoint) in consignment.terminals() {
-            let Some(anchored_bundle) = consignment.anchored_bundle(bundle_id) else {
+            let Some(bundle) = consignment.bundle(bundle_id) else {
                 status.add_failure(Failure::TerminalBundleAbsent(bundle_id));
                 continue;
             };
-            for (opid, transition) in &anchored_bundle.bundle.known_transitions {
+            for (opid, transition) in &bundle.known_transitions {
                 // Checking for endpoint definition duplicates
                 if !transition
                     .assignments
@@ -209,12 +210,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // treat it as a superposition of subgraphs, one for each endpoint; and validate
         // them independently.
         for (bundle_id, _) in self.consignment.terminals() {
-            let Some(anchored_bundle) = self.consignment.anchored_bundle(bundle_id) else {
+            let Some(bundle) = self.consignment.bundle(bundle_id) else {
                 // We already checked and errored here during the terminal validation, so just
                 // skipping.
                 continue;
             };
-            for transition in anchored_bundle.bundle.known_transitions.values() {
+            for transition in bundle.known_transitions.values() {
                 self.validate_logic_on_route(schema, transition);
             }
         }
@@ -303,27 +304,25 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     // *** PART III: Validating single-use-seals
     fn validate_commitments(&mut self) {
         for bundle_id in self.consignment.bundle_ids() {
-            let Some(anchored_bundle) = self.consignment.anchored_bundle(bundle_id) else {
+            let Some(bundle) = self.consignment.bundle(bundle_id) else {
                 self.status.add_failure(Failure::BundleAbsent(bundle_id));
                 continue;
             };
-
-            let layer1 = anchored_bundle.anchor.layer1();
-
-            let anchors = &anchored_bundle.anchor;
-            let bundle = &anchored_bundle.bundle;
+            let Some(grip) = self.consignment.grip(bundle_id) else {
+                self.status.add_failure(Failure::AnchorAbsent(bundle_id));
+                continue;
+            };
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
-            let (seals, input_map) = self.validate_seal_definitions(layer1, bundle);
+            let (seals, input_map) = self.validate_seal_definitions(grip.layer1(), bundle.as_ref());
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
-            let Some(witness_tx) = self.validate_seal_commitments(&seals, bundle_id, anchors)
-            else {
+            let Some(witness_tx) = self.validate_seal_commitments(&seals, bundle_id, &grip) else {
                 continue;
             };
 
             // [VALIDATION]: We validate bundle commitments to the input map
-            self.validate_bundle_commitments(bundle_id, bundle, witness_tx, input_map);
+            self.validate_bundle_commitments(bundle_id, bundle.as_ref(), witness_tx, input_map);
         }
     }
 
@@ -366,16 +365,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         &mut self,
         seals: impl AsRef<[XOutputSeal]>,
         bundle_id: BundleId,
-        anchors: &XAnchor,
+        grip: &XGrip,
     ) -> Option<XPubWitness> {
-        let Some(witness_id) = anchors.witness_id() else {
-            self.status
-                .add_failure(Failure::AnchorSetInvalid(bundle_id));
-            return None;
-        };
-
-        // Check that the anchor is committed into a transaction spending all of the
+        // Check that the anchor is committed into a transaction spending all the
         // transition inputs.
+        // Here the method can do SPV proof instead of querying the indexer. The SPV
+        // proofs can be part of the consignments, but do not require .
+        let witness_id = grip.witness_id();
         match self.resolver.resolve_pub_witness(witness_id) {
             Err(_) => {
                 // We wre unable to retrieve corresponding transaction, so can't check.
@@ -394,7 +390,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 None
             }
             Ok(pub_witness) => {
-                let (tapret, opret) = anchors.as_reduced_unsafe().as_split();
+                let (tapret, opret) = grip.as_reduced_unsafe().anchors.as_split();
 
                 let tapret_seals = seals
                     .as_ref()
@@ -403,7 +399,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 if let Some(tapret) = tapret {
                     let witness = pub_witness
                         .clone()
-                        .map(|tx| Witness::with(tx, tapret.clone()));
+                        .map(|tx| Witness::with(tx, tapret.dbc_proof.clone()));
                     self.validate_seal_closing(tapret_seals, witness, bundle_id, tapret)
                 } else if tapret_seals.count() > 0 {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
@@ -416,7 +412,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 if let Some(opret) = opret {
                     let witness = pub_witness
                         .clone()
-                        .map(|tx| Witness::with(tx, opret.clone()));
+                        .map(|tx| Witness::with(tx, opret.dbc_proof));
                     self.validate_seal_closing(opret_seals, witness, bundle_id, opret)
                 } else if opret_seals.count() > 0 {
                     self.status.add_warning(Warning::UnclosedSeals(bundle_id));
@@ -530,8 +526,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     /// generic type `Dbc`) and extra-transaction data, which are taken from
     /// anchors DBC proof.
     ///
-    /// Additionally checks that the provided message contains commitment to the
-    /// bundle under the current contract.
+    /// Additionally, checks that the provided message contains commitment to
+    /// the bundle under the current contract.
     fn validate_seal_closing<'seal, 'temp, Seal: 'seal, Dbc: dbc::Proof>(
         &mut self,
         seals: impl IntoIterator<Item = &'seal Seal>,

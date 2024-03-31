@@ -29,9 +29,24 @@ use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
-use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, XChain, LIB_NAME_RGB};
+use crate::{BundleId, ContractId, WitnessOrd, XChain, XWitnessId, LIB_NAME_RGB};
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+pub type XGrip<P = mpc::MerkleProof> = XChain<Grip<P>>;
+
+impl<P: mpc::Proof + StrictDumb> XGrip<P> {
+    pub fn witness_id(&self) -> XWitnessId {
+        match self {
+            XGrip::Bitcoin(g) => XWitnessId::Bitcoin(g.id),
+            XGrip::Liquid(g) => XWitnessId::Liquid(g.id),
+            XGrip::Other(_) => unreachable!(),
+        }
+    }
+}
+
+/// Grip is a combination of one or two anchors (one per seal closing method
+/// type), packed as [`AnchorSet`], with information of the witness transaction
+/// id.
+#[derive(Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
@@ -39,73 +54,21 @@ use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, XChai
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct AnchoredBundle {
-    pub anchor: XAnchor,
-    pub bundle: TransitionBundle,
+pub struct Grip<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
+    pub id: Txid,
+    pub anchors: AnchorSet<P>,
 }
 
-impl AnchoredBundle {
-    #[inline]
-    pub fn bundle_id(&self) -> BundleId { self.bundle.bundle_id() }
+impl<P: mpc::Proof + StrictDumb> PartialEq for Grip<P> {
+    fn eq(&self, other: &Self) -> bool { self.id == other.id }
 }
 
-impl Ord for AnchoredBundle {
-    fn cmp(&self, other: &Self) -> Ordering { self.bundle_id().cmp(&other.bundle_id()) }
+impl<P: mpc::Proof + StrictDumb> Ord for Grip<P> {
+    fn cmp(&self, other: &Self) -> Ordering { self.id.cmp(&other.id) }
 }
 
-impl PartialOrd for AnchoredBundle {
+impl<P: mpc::Proof + StrictDumb> PartialOrd for Grip<P> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-pub type XAnchor<P = mpc::MerkleProof> = XChain<AnchorSet<P>>;
-
-impl<P: mpc::Proof + StrictDumb> XAnchor<P> {
-    #[inline]
-    pub fn witness_id(&self) -> Option<WitnessId> { self.maybe_map_ref(|set| set.txid()) }
-
-    #[inline]
-    pub fn witness_id_unchecked(&self) -> WitnessId { self.map_ref(|set| set.txid_unchecked()) }
-}
-
-impl XAnchor<mpc::MerkleBlock> {
-    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
-        match self {
-            XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor.known_bundle_ids(),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn to_merkle_proof(
-        &self,
-        contract_id: ContractId,
-    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.clone().into_merkle_proof(contract_id)
-    }
-
-    pub fn into_merkle_proof(
-        self,
-        contract_id: ContractId,
-    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.try_map(|a| a.into_merkle_proof(contract_id))
-    }
-}
-
-impl XAnchor<mpc::MerkleProof> {
-    pub fn to_merkle_block(
-        &self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.clone().into_merkle_block(contract_id, bundle_id)
-    }
-
-    pub fn into_merkle_block(
-        self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.try_map(|a| a.into_merkle_block(contract_id, bundle_id))
-    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -129,23 +92,6 @@ pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
 }
 
 impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
-    pub fn txid(&self) -> Option<Txid> {
-        match self {
-            AnchorSet::Tapret(a) => Some(a.txid),
-            AnchorSet::Opret(a) => Some(a.txid),
-            AnchorSet::Dual { tapret, opret } if tapret.txid == opret.txid => Some(tapret.txid),
-            _ => None,
-        }
-    }
-
-    pub fn txid_unchecked(&self) -> Txid {
-        match self {
-            AnchorSet::Tapret(a) => a.txid,
-            AnchorSet::Opret(a) => a.txid,
-            AnchorSet::Dual { tapret, opret: _ } => tapret.txid,
-        }
-    }
-
     pub fn from_split(
         tapret: Option<Anchor<P, TapretProof>>,
         opret: Option<Anchor<P, OpretProof>>,
@@ -252,7 +198,7 @@ impl AnchorSet<mpc::MerkleBlock> {
 #[display("{witness_id}/{witness_ord}")]
 pub struct WitnessAnchor {
     pub witness_ord: WitnessOrd,
-    pub witness_id: WitnessId,
+    pub witness_id: XWitnessId,
 }
 
 impl PartialOrd for WitnessAnchor {
@@ -273,7 +219,7 @@ impl Ord for WitnessAnchor {
 }
 
 impl WitnessAnchor {
-    pub fn from_mempool(witness_id: WitnessId) -> Self {
+    pub fn from_mempool(witness_id: XWitnessId) -> Self {
         WitnessAnchor {
             witness_ord: WitnessOrd::OffChain,
             witness_id,

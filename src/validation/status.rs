@@ -31,7 +31,7 @@ use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
     BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
-    Vin, WitnessId, XChain, XGraphSeal,
+    Vin, XChain, XGraphSeal, XWitnessId,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -57,7 +57,7 @@ pub enum Validity {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct Status {
-    pub absent_pub_witnesses: Vec<WitnessId>,
+    pub absent_pub_witnesses: Vec<XWitnessId>,
     pub unmined_terminals: Vec<Txid>,
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
@@ -301,8 +301,12 @@ pub enum Failure {
     /// transition bundle {0} referenced in consignment terminals is absent from
     /// the consignment.
     TerminalBundleAbsent(BundleId),
-    /// transition bundle {0} is absent from the consignment.
+    /// transition bundle {0} is absent in the consignment.
     BundleAbsent(BundleId),
+    /// anchor for transitio bundle {0} is absent in the consignment.
+    AnchorAbsent(BundleId),
+    /// witness id for transition bundle {0} is absent in the consignment.
+    WitnessIdAbsent(BundleId),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
 
@@ -312,10 +316,10 @@ pub enum Failure {
     BundleExtraTransition(BundleId, OpId),
     /// transition bundle {0} references non-existing input in witness {2} for
     /// the state transition {1}.
-    BundleInvalidInput(BundleId, OpId, WitnessId),
+    BundleInvalidInput(BundleId, OpId, XWitnessId),
     /// transition bundle {0} doesn't commit to the input {1} in the witness {2}
     /// which is an input of the state transition {3}.
-    BundleInvalidCommitment(BundleId, Vin, WitnessId, OpId),
+    BundleInvalidCommitment(BundleId, Vin, XWitnessId, OpId),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
@@ -327,13 +331,11 @@ pub enum Failure {
     },
     /// transition {0} references non-existing previous output {1}.
     NoPrevOut(OpId, Opout),
-    /// anchors used inside bundle {0} reference different public witness ids.
-    AnchorSetInvalid(BundleId),
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
     /// witness {0} is not known to the transaction resolver.
-    SealNoWitnessTx(WitnessId),
+    SealNoWitnessTx(XWitnessId),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1:?} is defined on {0} which is not in the set of layers allowed
@@ -341,13 +343,13 @@ pub enum Failure {
     SealLayerMismatch(Layer1, XGraphSeal),
     /// transition bundle {0} doesn't close seal with the witness {1}. Details:
     /// {2}
-    SealsInvalid(BundleId, WitnessId, String),
+    SealsInvalid(BundleId, XWitnessId, String),
     /// single-use seals for the operation {0} were not validated, which
     /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
     /// transition bundle {0} is not properly anchored to the witness {1}.
     /// Details: {2}
-    MpcInvalid(BundleId, WitnessId, InvalidProof),
+    MpcInvalid(BundleId, XWitnessId, InvalidProof),
 
     // State extensions errors
     /// valency {valency} redeemed by state extension {opid} references

@@ -43,7 +43,7 @@ pub type GraphSeal = ChainBlindSeal<Method>;
 
 pub type OutputSeal = ExplicitSeal<Txid, Method>;
 
-pub type WitnessId = XChain<Txid>;
+pub type XWitnessId = XChain<Txid>;
 
 pub type XGenesisSeal = XChain<GenesisSeal>;
 pub type XGraphSeal = XChain<GraphSeal>;
@@ -162,13 +162,13 @@ impl<U: ExposedSeal> XChain<U> {
         })
     }
 
-    pub fn try_to_output_seal(self, witness_id: WitnessId) -> Result<XOutputSeal, Self>
+    pub fn try_to_output_seal(self, witness_id: XWitnessId) -> Result<XOutputSeal, Self>
     where U: TxoSeal {
         match (self, witness_id) {
-            (XChain::Bitcoin(seal), WitnessId::Bitcoin(txid)) => {
+            (XChain::Bitcoin(seal), XWitnessId::Bitcoin(txid)) => {
                 Ok(XChain::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
-            (XChain::Liquid(seal), WitnessId::Liquid(txid)) => {
+            (XChain::Liquid(seal), XWitnessId::Liquid(txid)) => {
                 Ok(XChain::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
             }
             (me, _) => Err(me),
@@ -242,20 +242,20 @@ pub type XPubWitness<X = Impossible> = XChain<Tx, X>;
 pub type XWitness<Dbc> = XChain<Witness<Dbc>>;
 
 impl XPubWitness {
-    pub fn witness_id(&self) -> WitnessId {
+    pub fn witness_id(&self) -> XWitnessId {
         match self {
-            Self::Bitcoin(tx) => WitnessId::Bitcoin(tx.txid()),
-            Self::Liquid(tx) => WitnessId::Liquid(tx.txid()),
+            Self::Bitcoin(tx) => XWitnessId::Bitcoin(tx.txid()),
+            Self::Liquid(tx) => XWitnessId::Liquid(tx.txid()),
             Self::Other(_) => unreachable!(),
         }
     }
 }
 
 impl<Dbc: dbc::Proof> XWitness<Dbc> {
-    pub fn witness_id(&self) -> WitnessId {
+    pub fn witness_id(&self) -> XWitnessId {
         match self {
-            Self::Bitcoin(w) => WitnessId::Bitcoin(w.txid),
-            Self::Liquid(w) => WitnessId::Liquid(w.txid),
+            Self::Bitcoin(w) => XWitnessId::Bitcoin(w.txid),
+            Self::Liquid(w) => XWitnessId::Liquid(w.txid),
             Self::Other(_) => unreachable!(),
         }
     }
