@@ -300,7 +300,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             };
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
-            let (seals, input_map) = self.validate_seal_definitions(grip.layer1(), bundle.as_ref());
+            let (seals, input_map) =
+                self.validate_seal_definitions(grip.layer1().grip.close_method(), bundle.as_ref());
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
             let Some(witness_tx) = self.validate_seal_commitments(&seals, bundle_id, &grip) else {
@@ -415,6 +416,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     fn validate_seal_definitions(
         &mut self,
         layer1: Layer1,
+        method: CloseMethod,
         bundle: &TransitionBundle,
     ) -> (Vec<XOutputSeal>, BTreeMap<OpId, BTreeSet<XOutpoint>>) {
         let mut input_map: BTreeMap<OpId, BTreeSet<XOutpoint>> = bmap!();
@@ -493,6 +495,15 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                     seal.to_output_seal()
                         .expect("genesis and state extensions must have explicit seals")
                 };
+
+                // Check that the seal matches the closing method
+                if seal.close_method() != method {
+                    self.status.add_failure(Failure::SealMethodMismatch {
+                        seal,
+                        expected: method,
+                    });
+                    continue;
+                }
 
                 seals.push(seal);
                 input_map
