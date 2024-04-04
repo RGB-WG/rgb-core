@@ -301,7 +301,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
             let (seals, input_map) =
-                self.validate_seal_definitions(grip.layer1().grip.close_method(), bundle.as_ref());
+                self.validate_seal_definitions(grip.layer1(), grip.close_method(), bundle.as_ref());
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
             let Some(witness_tx) = self.validate_seal_commitments(&seals, bundle_id, &grip) else {
@@ -377,7 +377,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 None
             }
             Ok(pub_witness) => {
-                let (tapret, opret) = grip.as_reduced_unsafe().anchors.as_split();
+                let (tapret, opret) = grip.as_reduced_unsafe().anchor.as_split();
 
                 let tapret_seals = seals
                     .as_ref()
@@ -497,11 +497,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 };
 
                 // Check that the seal matches the closing method
-                if seal.close_method() != method {
-                    self.status.add_failure(Failure::SealMethodMismatch {
-                        seal,
-                        expected: method,
-                    });
+                if seal.as_reduced_unsafe().method != method {
+                    self.status
+                        .add_failure(Failure::SealMethodMismatch(seal, method));
                     continue;
                 }
 

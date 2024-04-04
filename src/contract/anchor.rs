@@ -25,6 +25,7 @@ use std::cmp::Ordering;
 use bp::dbc::opret::OpretProof;
 use bp::dbc::tapret::TapretProof;
 use bp::dbc::Anchor;
+use bp::seals::txout::CloseMethod;
 use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
@@ -41,6 +42,8 @@ impl<P: mpc::Proof + StrictDumb> XGrip<P> {
             XGrip::Other(_) => unreachable!(),
         }
     }
+
+    pub fn close_method(&self) -> CloseMethod { self.as_reduced_unsafe().anchor.close_method() }
 }
 
 /// Grip is a combination of one or two anchors (one per seal closing method
@@ -56,7 +59,7 @@ impl<P: mpc::Proof + StrictDumb> XGrip<P> {
 )]
 pub struct Grip<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     pub id: Txid,
-    pub anchors: AnchorSet<P>,
+    pub anchor: AnchorSet<P>,
 }
 
 impl<P: mpc::Proof + StrictDumb> PartialEq for Grip<P> {
@@ -84,11 +87,6 @@ pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     Tapret(Anchor<P, TapretProof>),
     #[strict_type(tag = 0x02)]
     Opret(Anchor<P, OpretProof>),
-    #[strict_type(tag = 0x03)]
-    Dual {
-        tapret: Anchor<P, TapretProof>,
-        opret: Anchor<P, OpretProof>,
-    },
 }
 
 impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
@@ -97,10 +95,9 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
         opret: Option<Anchor<P, OpretProof>>,
     ) -> Option<Self> {
         Some(match (tapret, opret) {
-            (Some(tapret), Some(opret)) => Self::Dual { tapret, opret },
+            (Some(_), Some(_)) | (None, None) => return None,
             (Some(tapret), None) => Self::Tapret(tapret),
             (None, Some(opret)) => Self::Opret(opret),
-            (None, None) => return None,
         })
     }
 
@@ -109,7 +106,6 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
         match self {
             AnchorSet::Tapret(tapret) => (Some(tapret), None),
             AnchorSet::Opret(opret) => (None, Some(opret)),
-            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
         }
     }
 
@@ -118,7 +114,6 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
         match self {
             AnchorSet::Tapret(tapret) => (Some(tapret), None),
             AnchorSet::Opret(opret) => (None, Some(opret)),
-            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
         }
     }
 
@@ -127,6 +122,13 @@ impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
         t.map(|a| &a.mpc_proof)
             .into_iter()
             .chain(o.map(|a| &a.mpc_proof))
+    }
+
+    pub fn close_method(&self) -> CloseMethod {
+        match self {
+            AnchorSet::Tapret(_) => CloseMethod::TapretFirst,
+            AnchorSet::Opret(_) => CloseMethod::OpretFirst,
+        }
     }
 }
 

@@ -23,6 +23,7 @@
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
+use bp::seals::txout::CloseMethod;
 use bp::Txid;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
@@ -31,7 +32,7 @@ use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
     BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
-    Vin, XChain, XGraphSeal, XWitnessId,
+    Vin, XChain, XGraphSeal, XOutputSeal, XWitnessId,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -308,6 +309,9 @@ pub enum Failure {
     /// seal {1:?} is defined on {0} which is not in the set of layers allowed
     /// by the contract genesis.
     SealLayerMismatch(Layer1, XGraphSeal),
+    /// seal {0} uses different closing method than {1} required by the used
+    /// commitment scheme.
+    SealMethodMismatch(XOutputSeal, CloseMethod),
     /// transition bundle {0} doesn't close seal with the witness {1}. Details:
     /// {2}
     SealsInvalid(BundleId, XWitnessId, String),
