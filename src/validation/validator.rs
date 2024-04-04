@@ -23,7 +23,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bp::dbc::Anchor;
-use bp::seals::txout::{CloseMethod, TxoSeal, Witness};
+use bp::seals::txout::{CloseMethod, Witness};
 use bp::{dbc, Outpoint};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
@@ -31,9 +31,9 @@ use single_use_seals::SealWitness;
 use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
 use crate::{
-    AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
-    SchemaId, Transition, TransitionBundle, TypedAssigns, XChain, XGrip, XOutpoint, XOutputSeal,
-    XPubWitness, XWitness, XWitnessId,
+    AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
+    Schema, SchemaId, Transition, TransitionBundle, TypedAssigns, XChain, XGrip, XOutpoint,
+    XOutputSeal, XPubWitness, XWitness, XWitnessId,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -377,32 +377,19 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 None
             }
             Ok(pub_witness) => {
-                let (tapret, opret) = grip.as_reduced_unsafe().anchor.as_split();
-
-                let tapret_seals = seals
-                    .as_ref()
-                    .iter()
-                    .filter(|seal| seal.method() == CloseMethod::TapretFirst);
-                if let Some(tapret) = tapret {
-                    let witness = pub_witness
-                        .clone()
-                        .map(|tx| Witness::with(tx, tapret.dbc_proof.clone()));
-                    self.validate_seal_closing(tapret_seals, witness, bundle_id, tapret)
-                } else if tapret_seals.count() > 0 {
-                    self.status.add_warning(Warning::UnclosedSeals(bundle_id));
-                }
-
-                let opret_seals = seals
-                    .as_ref()
-                    .iter()
-                    .filter(|seal| seal.method() == CloseMethod::OpretFirst);
-                if let Some(opret) = opret {
-                    let witness = pub_witness
-                        .clone()
-                        .map(|tx| Witness::with(tx, opret.dbc_proof));
-                    self.validate_seal_closing(opret_seals, witness, bundle_id, opret)
-                } else if opret_seals.count() > 0 {
-                    self.status.add_warning(Warning::UnclosedSeals(bundle_id));
+                match &grip.as_reduced_unsafe().anchor {
+                    AnchorSet::Tapret(anchor) => {
+                        let witness = pub_witness
+                            .clone()
+                            .map(|tx| Witness::with(tx, anchor.clone().dbc_proof));
+                        self.validate_seal_closing(seals.as_ref(), witness, bundle_id, anchor);
+                    }
+                    AnchorSet::Opret(anchor) => {
+                        let witness = pub_witness
+                            .clone()
+                            .map(|tx| Witness::with(tx, anchor.dbc_proof));
+                        self.validate_seal_closing(seals.as_ref(), witness, bundle_id, anchor)
+                    }
                 }
                 Some(pub_witness)
             }
