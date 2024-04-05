@@ -62,7 +62,7 @@ pub use operations::{
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessOrd, WitnessPos,
-    XGenesisSeal, XGraphSeal, XOutputSeal, XPubWitness, XWitness, XWitnessId,
+    XGenesisSeal, XGraphSeal, XOutputSeal, XWitness, XWitnessId, XWitnessTx,
 };
 pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
 pub use xchain::{

@@ -237,11 +237,11 @@ impl WitnessOrd {
     }
 }
 
-pub type XPubWitness<X = Impossible> = XChain<Tx, X>;
+pub type XWitnessTx<X = Impossible> = XChain<Tx, X>;
 
 pub type XWitness<Dbc> = XChain<Witness<Dbc>>;
 
-impl XPubWitness {
+impl XWitnessTx {
     pub fn witness_id(&self) -> XWitnessId {
         match self {
             Self::Bitcoin(tx) => XWitnessId::Bitcoin(tx.txid()),

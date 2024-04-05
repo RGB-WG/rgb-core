@@ -34,7 +34,7 @@ use crate::vm::AluRuntime;
 use crate::{
     AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
     SchemaId, Script, Transition, TransitionBundle, TypedAssigns, XChain, XGrip, XOutpoint,
-    XOutputSeal, XPubWitness, XWitness, XWitnessId,
+    XOutputSeal, XWitness, XWitnessId, XWitnessTx,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -51,7 +51,7 @@ pub trait ResolveWitness {
     fn resolve_pub_witness(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<XPubWitness, WitnessResolverError>;
+    ) -> Result<XWitnessTx, WitnessResolverError>;
 }
 
 pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness> {
@@ -330,7 +330,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         &mut self,
         bundle_id: BundleId,
         bundle: &TransitionBundle,
-        pub_witness: XPubWitness,
+        pub_witness: XWitnessTx,
         input_map: BTreeMap<OpId, BTreeSet<XOutpoint>>,
     ) {
         let witness_id = pub_witness.witness_id();
@@ -362,7 +362,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         seals: impl AsRef<[XOutputSeal]>,
         bundle_id: BundleId,
         grip: &XGrip,
-    ) -> Option<XPubWitness> {
+    ) -> Option<XWitnessTx> {
         // Check that the anchor is committed into a transaction spending all the
         // transition inputs.
         // Here the method can do SPV proof instead of querying the indexer. The SPV
