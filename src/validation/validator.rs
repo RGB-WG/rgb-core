@@ -100,7 +100,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 status.add_failure(Failure::TerminalBundleAbsent(bundle_id));
                 continue;
             };
-            for (opid, transition) in &bundle.known_transitions {
+            for (opid, transition) in &bundle.as_ref().known_transitions {
                 // Checking for endpoint definition duplicates
                 if !transition
                     .assignments
@@ -215,7 +215,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 // skipping.
                 continue;
             };
-            for transition in bundle.known_transitions.values() {
+            for transition in bundle.as_ref().known_transitions.values() {
                 self.validate_logic_on_route(schema, transition);
             }
         }
@@ -310,10 +310,12 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             };
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
-            let (seals, input_map) = self.validate_seal_definitions(grip.layer1(), bundle.as_ref());
+            let (seals, input_map) =
+                self.validate_seal_definitions(grip.as_ref().layer1(), bundle.as_ref());
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
-            let Some(witness_tx) = self.validate_seal_commitments(&seals, bundle_id, &grip) else {
+            let Some(witness_tx) = self.validate_seal_commitments(&seals, bundle_id, grip.as_ref())
+            else {
                 continue;
             };
 
