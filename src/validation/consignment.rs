@@ -61,7 +61,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
             .filter(|b| b.bundle_id() == bundle_id)
     }
 
-    fn grip(&self, bundle_id: BundleId) -> Option<XGrip> { self.0.grip(bundle_id) }
+    fn grip(&self, bundle_id: BundleId) -> Option<Rc<XGrip>> { self.0.grip(bundle_id) }
 
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
 }
@@ -108,7 +108,7 @@ pub trait ConsignmentApi {
     fn bundle(&self, bundle_id: BundleId) -> Option<Rc<TransitionBundle>>;
 
     /// Returns a grip given a bundle id.
-    fn grip(&self, bundle_id: BundleId) -> Option<XGrip>;
+    fn grip(&self, bundle_id: BundleId) -> Option<Rc<XGrip>>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;
