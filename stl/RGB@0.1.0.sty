@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:DrbuGvUZWK777emjDL5MqAmEeQ2ai93sysVeC2oPidve#canyon-switch-manual
+  Id: urn:ubideco:stl:92Mxq1uEtLf9k3kiRKhMRr3tm3X8B6VLuAYEeMXNcQpk#numeric-average-malta
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -29,15 +29,10 @@ import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-
   use UnionVariantsSemId#iceberg-road-crack
 
 import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
-  use TapretNodePartner#iceberg-poker-active
   use ExplicitSealTxid#antenna-darwin-emotion
-  use TapretProof#forum-paint-tunnel
-  use TapretPathProof#stage-element-update
   use Method#trilogy-tahiti-valid
-  use TapretRightBranch#basket-prelude-bridge
   use BlindSealTxPtr#austria-icon-waiter
   use OpretProof#segment-ambient-totem
-  use AnchorMerkleProofTapretProof#hotel-telecom-politic
   use SecretSeal#santana-domingo-needle
   use BlindSealTxid#kimono-golf-price
   use TxPtr#strange-source-father
@@ -47,6 +42,7 @@ import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-
   use MerkleHash#culture-metro-modular
   use StrictHash#cheese-final-locate
   use MerkleProof#labor-hilton-magenta
+  use ReservedBytes12#sonic-mary-plate
   use ReservedBytes1#joker-lemon-mental
   use ReservedBytes2#pocket-habitat-soviet
 
@@ -60,13 +56,7 @@ import Std#DzTvt9gGhPUKD8Dkkjk9PDBhkJ4gtWxXWQjxnmUYLNrs#voyage-kimono-disco
 
 import Bitcoin#HX2UBak8vPsTokug1DGMDvTpzns3xUdwZ7QJdyt4qBA9#speed-atlanta-trilogy
   use Vout#chrome-robin-gallop
-  use ScriptBytes#maestro-source-jackson
-  use TapNodeHash#crash-culture-jamaica
-  use LeafScript#brenda-round-micro
   use Txid#cowboy-diego-betty
-  use InternalPk#meter-nerve-chicken
-  use LeafVer#tunnel-lagoon-cowboy
-  use XOnlyPk#evident-finance-promo
 
 
 @mnemonic(banana-mouse-plaster)
@@ -79,9 +69,8 @@ data AltLayer1Set      : {AltLayer1 ^ ..0xff}
 @mnemonic(soviet-arsenal-complex)
 data AluScript         : libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite#mission-papa-mercy}
 
-@mnemonic(ruby-song-begin)
-data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#hotel-telecom-politic
-                       | opret BPCore.AnchorMerkleProofOpretProof#miranda-chance-extreme
+@mnemonic(hexagon-zipper-nixon)
+data AnchorSet         : opret#2 BPCore.AnchorMerkleProofOpretProof#miranda-chance-extreme
 
 @mnemonic(buzzer-pattern-craft)
 data AssetTag          : [Byte ^ 32]
@@ -440,8 +429,8 @@ data Transition        : ffv Ffv
                        , witness CommitVerify.ReservedBytes1#joker-lemon-mental
                        , script CommitVerify.ReservedBytes1#joker-lemon-mental
 
-@mnemonic(nancy-current-menu)
-data TransitionBundle  : closeMethod BPCore.Method#trilogy-tahiti-valid
+@mnemonic(maestro-toronto-gemini)
+data TransitionBundle  : closeMethod CommitVerify.ReservedBytes12#sonic-mary-plate
                        , inputMap InputMap
                        , knownTransitions {OpId -> ^ 1.. Transition}
 

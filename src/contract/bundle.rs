@@ -24,9 +24,10 @@ use std::collections::{btree_map, BTreeMap};
 
 use amplify::confinement::{Confined, U16 as U16MAX};
 use amplify::{Bytes32, Wrapper};
-use bp::seals::txout::CloseMethod;
 use bp::Vout;
-use commit_verify::{mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
+use commit_verify::{
+    mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, ReservedBytes, Sha256,
+};
 use strict_encoding::{StrictDumb, StrictEncode};
 
 use crate::{OpId, Transition, LIB_NAME_RGB};
@@ -109,7 +110,7 @@ impl<'a> IntoIterator for &'a InputMap {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct TransitionBundle {
-    pub close_method: CloseMethod,
+    pub close_method: ReservedBytes<1, 2>,
     pub input_map: InputMap,
     pub known_transitions: Confined<BTreeMap<OpId, Transition>, 1, U16MAX>,
 }

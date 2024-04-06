@@ -23,7 +23,6 @@
 use std::cmp::Ordering;
 
 use bp::dbc::opret::OpretProof;
-use bp::dbc::tapret::TapretProof;
 use bp::dbc::Anchor;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
@@ -32,15 +31,13 @@ use crate::{BundleId, ContractId, WitnessOrd, XWitnessId, LIB_NAME_RGB};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Tapret(strict_dumb!()))]
+#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Opret(strict_dumb!()))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
-    #[strict_type(tag = 0x01)]
-    Tapret(Anchor<P, TapretProof>),
     #[strict_type(tag = 0x02)]
     Opret(Anchor<P, OpretProof>),
 }
@@ -48,11 +45,6 @@ pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
 impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
     pub fn mpc_proof(&self) -> &P {
         match self {
-            AnchorSet::Tapret(Anchor {
-                mpc_proof,
-                dbc_proof: _,
-                _method,
-            }) |
             AnchorSet::Opret(Anchor {
                 mpc_proof,
                 dbc_proof: _,
@@ -77,9 +69,6 @@ impl AnchorSet<mpc::MerkleProof> {
         bundle_id: BundleId,
     ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
         match self {
-            AnchorSet::Tapret(anchor) => anchor
-                .into_merkle_block(contract_id, bundle_id)
-                .map(AnchorSet::Tapret),
             AnchorSet::Opret(anchor) => anchor
                 .into_merkle_block(contract_id, bundle_id)
                 .map(AnchorSet::Opret),
@@ -107,9 +96,6 @@ impl AnchorSet<mpc::MerkleBlock> {
         contract_id: ContractId,
     ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
         match self {
-            AnchorSet::Tapret(anchor) => {
-                anchor.into_merkle_proof(contract_id).map(AnchorSet::Tapret)
-            }
             AnchorSet::Opret(anchor) => anchor.into_merkle_proof(contract_id).map(AnchorSet::Opret),
         }
     }

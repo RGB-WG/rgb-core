@@ -8,22 +8,11 @@
 Bundles vesper lexicon=types+commitments
 
 BundleId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:bundle#2024-02-03
-  Method serialized
+  ReservedBytes12 serialized
   InputMap serialized
 
 AnchorSet union
-  tapret rec AnchorMerkleProofTapretProof wrapped tag=0
-    mpcProof rec MerkleProof
-      pos is U32
-      cofactor is U16
-      path list len=0..32
-        element bytes len=32 aka=MerkleHash
-    dbcProof rec TapretProof
-      pathProof rec TapretPathProof
-        some union TapretNodePartner option wrapped tag=1
-          rightBranch rec TapretRightBranch wrapped tag=2
-        nonce is U8
-  opret rec AnchorMerkleProofOpretProof wrapped tag=1
+  opret rec AnchorMerkleProofOpretProof wrapped tag=0
     mpcProof rec MerkleProof
       pos is U32
       cofactor is U16
@@ -32,7 +21,6 @@ AnchorSet union
     dbcProof is Unit aka=OpretProof
 
 TransitionBundle rec
-  closeMethod enum Method opretFirst=0 tapretFirst=1
   inputMap map len=1..MAX16 aka=InputMap
     key is U32 aka=Vout
     value bytes len=32 aka=OpId
