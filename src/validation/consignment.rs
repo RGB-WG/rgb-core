@@ -52,15 +52,13 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn bundle_ids<'a>(&self) -> impl Iterator<Item = BundleId> + 'a { self.0.bundle_ids() }
 
-    fn bundle<'a>(&self, bundle_id: BundleId) -> Option<impl AsRef<TransitionBundle> + 'a> {
+    fn bundle<'a>(&self, bundle_id: BundleId) -> Option<&'a TransitionBundle> {
         self.0
             .bundle(bundle_id)
-            .filter(|b| b.as_ref().bundle_id() == bundle_id)
+            .filter(|b| b.bundle_id() == bundle_id)
     }
 
-    fn grip<'a>(&self, bundle_id: BundleId) -> Option<impl AsRef<XGrip> + 'a> {
-        self.0.grip(bundle_id)
-    }
+    fn grip<'a>(&self, bundle_id: BundleId) -> Option<&'a XGrip> { self.0.grip(bundle_id) }
 
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
 }
@@ -101,10 +99,10 @@ pub trait ConsignmentApi {
     fn bundle_ids<'a>(&self) -> impl Iterator<Item = BundleId> + 'a;
 
     /// Returns reference to a bundle given a bundle id.
-    fn bundle<'a>(&self, bundle_id: BundleId) -> Option<impl AsRef<TransitionBundle> + 'a>;
+    fn bundle<'a>(&self, bundle_id: BundleId) -> Option<&'a TransitionBundle>;
 
     /// Returns a grip given a bundle id.
-    fn grip<'a>(&self, bundle_id: BundleId) -> Option<impl AsRef<XGrip> + 'a>;
+    fn grip<'a>(&self, bundle_id: BundleId) -> Option<&'a XGrip>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;
