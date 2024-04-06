@@ -38,7 +38,7 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
     fn schema(&self) -> &Schema { self.0.schema() }
 
-    fn asset_tags<'a>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'a {
+    fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter {
         self.0.asset_tags()
     }
 
@@ -48,19 +48,19 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
 
-    fn terminals<'a>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'a {
+    fn terminals<'iter>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'iter {
         self.0.terminals()
     }
 
-    fn bundle_ids<'a>(&self) -> impl Iterator<Item = BundleId> + 'a { self.0.bundle_ids() }
+    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter { self.0.bundle_ids() }
 
-    fn bundle<'a>(&self, bundle_id: BundleId) -> Option<&'a TransitionBundle> {
+    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle> {
         self.0
             .bundle(bundle_id)
             .filter(|b| b.bundle_id() == bundle_id)
     }
 
-    fn anchors<'a>(&self, bundle_id: BundleId) -> Option<(XWitnessId, &'a AnchorSet)> {
+    fn anchors(&self, bundle_id: BundleId) -> Option<(XWitnessId, &AnchorSet)> {
         self.0.anchors(bundle_id)
     }
 
@@ -79,7 +79,7 @@ pub trait ConsignmentApi {
     fn schema(&self) -> &Schema;
 
     /// Asset tags uses in the confidential asset validation.
-    fn asset_tags<'a>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'a;
+    fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter;
 
     /// Retrieves reference to an operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
@@ -97,16 +97,16 @@ pub trait ConsignmentApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn terminals<'a>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'a;
+    fn terminals<'iter>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'iter;
 
     /// Returns iterator over all bundle ids present in the consignment.
-    fn bundle_ids<'a>(&self) -> impl Iterator<Item = BundleId> + 'a;
+    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter;
 
     /// Returns reference to a bundle given a bundle id.
-    fn bundle<'a>(&self, bundle_id: BundleId) -> Option<&'a TransitionBundle>;
+    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
 
     /// Returns a grip given a bundle id.
-    fn anchors<'a>(&self, bundle_id: BundleId) -> Option<(XWitnessId, &'a AnchorSet)>;
+    fn anchors(&self, bundle_id: BundleId) -> Option<(XWitnessId, &AnchorSet)>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;
