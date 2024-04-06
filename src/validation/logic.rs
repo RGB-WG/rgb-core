@@ -170,7 +170,7 @@ impl Schema {
             &op,
             &prev_state,
             &redeemed,
-            consignment.asset_tags(),
+            consignment.asset_tags().collect(),
         );
 
         // We need to run scripts as the very last step, since before that
@@ -429,7 +429,7 @@ pub struct OpInfo<'op> {
     pub contract_id: ContractId,
     pub id: OpId,
     pub ty: OpFullType,
-    pub asset_tags: &'op BTreeMap<AssignmentType, AssetTag>,
+    pub asset_tags: BTreeMap<AssignmentType, AssetTag>,
     pub metadata: &'op SmallBlob,
     pub prev_state: &'op Assignments<GraphSeal>,
     pub owned_state: AssignmentsRef<'op>,
@@ -445,7 +445,7 @@ impl<'op> OpInfo<'op> {
         op: &'op OpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
-        asset_tags: &'op BTreeMap<AssignmentType, AssetTag>,
+        asset_tags: BTreeMap<AssignmentType, AssetTag>,
     ) -> Self {
         OpInfo {
             id,

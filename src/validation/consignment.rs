@@ -24,8 +24,6 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
-use std::collections::{BTreeMap, BTreeSet};
-
 use crate::{
     AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema, SecretSeal,
     TransitionBundle, XChain, XGrip, XWitnessId,
@@ -40,7 +38,9 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
     fn schema(&self) -> &Schema { self.0.schema() }
 
-    fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag> { self.0.asset_tags() }
+    fn asset_tags<'a>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'a {
+        self.0.asset_tags()
+    }
 
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
@@ -48,7 +48,9 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
 
-    fn terminals(&self) -> BTreeSet<(BundleId, XChain<SecretSeal>)> { self.0.terminals() }
+    fn terminals<'a>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'a {
+        self.0.terminals()
+    }
 
     fn bundle_ids<'a>(&self) -> impl Iterator<Item = BundleId> + 'a { self.0.bundle_ids() }
 
@@ -75,7 +77,7 @@ pub trait ConsignmentApi {
     fn schema(&self) -> &Schema;
 
     /// Asset tags uses in the confidential asset validation.
-    fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;
+    fn asset_tags<'a>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'a;
 
     /// Retrieves reference to an operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
@@ -93,7 +95,7 @@ pub trait ConsignmentApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn terminals(&self) -> BTreeSet<(BundleId, XChain<SecretSeal>)>;
+    fn terminals<'a>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'a;
 
     /// Returns iterator over all bundle ids present in the consignment.
     fn bundle_ids<'a>(&self) -> impl Iterator<Item = BundleId> + 'a;
