@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:6Yx8ib21pu6se8asaV7z9MQNUuemRZ8iQWhFZFBWcsDp#java-navy-xray
+  Id: urn:ubideco:stl:DrbuGvUZWK777emjDL5MqAmEeQ2ai93sysVeC2oPidve#canyon-switch-manual
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -28,14 +28,7 @@ import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-
   use Variant#textile-cowboy-dragon
   use UnionVariantsSemId#iceberg-road-crack
 
-import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
-  use MerkleHash#culture-metro-modular
-  use StrictHash#cheese-final-locate
-  use MerkleProof#labor-hilton-magenta
-  use ReservedBytes1#joker-lemon-mental
-  use ReservedBytes2#pocket-habitat-soviet
-
-import BPCore#C5EbVby4rry8esHwoPrGUfhe7yqJgoyA1DBcyuBRf2rZ#granite-target-table
+import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
   use TapretNodePartner#iceberg-poker-active
   use ExplicitSealTxid#antenna-darwin-emotion
   use TapretProof#forum-paint-tunnel
@@ -44,11 +37,18 @@ import BPCore#C5EbVby4rry8esHwoPrGUfhe7yqJgoyA1DBcyuBRf2rZ#granite-target-table
   use TapretRightBranch#basket-prelude-bridge
   use BlindSealTxPtr#austria-icon-waiter
   use OpretProof#segment-ambient-totem
-  use AnchorMerkleProofTapretProof#everest-laura-modem
+  use AnchorMerkleProofTapretProof#hotel-telecom-politic
   use SecretSeal#santana-domingo-needle
-  use AnchorMerkleProofOpretProof#cable-final-podium
   use BlindSealTxid#kimono-golf-price
   use TxPtr#strange-source-father
+  use AnchorMerkleProofOpretProof#miranda-chance-extreme
+
+import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
+  use MerkleHash#culture-metro-modular
+  use StrictHash#cheese-final-locate
+  use MerkleProof#labor-hilton-magenta
+  use ReservedBytes1#joker-lemon-mental
+  use ReservedBytes2#pocket-habitat-soviet
 
 import AluVM#DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy
   use LibSite#mission-papa-mercy
@@ -79,10 +79,9 @@ data AltLayer1Set      : {AltLayer1 ^ ..0xff}
 @mnemonic(soviet-arsenal-complex)
 data AluScript         : libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite#mission-papa-mercy}
 
-@mnemonic(status-motel-economy)
-data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#everest-laura-modem
-                       | opret BPCore.AnchorMerkleProofOpretProof#cable-final-podium
-                       | dual (tapret BPCore.AnchorMerkleProofTapretProof#everest-laura-modem, opret BPCore.AnchorMerkleProofOpretProof#cable-final-podium)
+@mnemonic(ruby-song-begin)
+data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#hotel-telecom-politic
+                       | opret BPCore.AnchorMerkleProofOpretProof#miranda-chance-extreme
 
 @mnemonic(buzzer-pattern-craft)
 data AssetTag          : [Byte ^ 32]
@@ -441,8 +440,10 @@ data Transition        : ffv Ffv
                        , witness CommitVerify.ReservedBytes1#joker-lemon-mental
                        , script CommitVerify.ReservedBytes1#joker-lemon-mental
 
-@mnemonic(museum-result-logic)
-data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
+@mnemonic(nancy-current-menu)
+data TransitionBundle  : closeMethod BPCore.Method#trilogy-tahiti-valid
+                       , inputMap InputMap
+                       , knownTransitions {OpId -> ^ 1.. Transition}
 
 @mnemonic(fiction-caramel-fractal)
 data TransitionSchema  : metadata StrictTypes.SemId#cargo-plasma-catalog

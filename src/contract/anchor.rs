@@ -43,49 +43,22 @@ pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
     Tapret(Anchor<P, TapretProof>),
     #[strict_type(tag = 0x02)]
     Opret(Anchor<P, OpretProof>),
-    #[strict_type(tag = 0x03)]
-    Dual {
-        tapret: Anchor<P, TapretProof>,
-        opret: Anchor<P, OpretProof>,
-    },
 }
 
 impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
-    pub fn from_split(
-        tapret: Option<Anchor<P, TapretProof>>,
-        opret: Option<Anchor<P, OpretProof>>,
-    ) -> Option<Self> {
-        Some(match (tapret, opret) {
-            (Some(tapret), Some(opret)) => Self::Dual { tapret, opret },
-            (Some(tapret), None) => Self::Tapret(tapret),
-            (None, Some(opret)) => Self::Opret(opret),
-            (None, None) => return None,
-        })
-    }
-
-    #[allow(clippy::type_complexity)]
-    pub fn as_split(&self) -> (Option<&Anchor<P, TapretProof>>, Option<&Anchor<P, OpretProof>>) {
+    pub fn mpc_proof(&self) -> &P {
         match self {
-            AnchorSet::Tapret(tapret) => (Some(tapret), None),
-            AnchorSet::Opret(opret) => (None, Some(opret)),
-            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
+            AnchorSet::Tapret(Anchor {
+                mpc_proof,
+                dbc_proof: _,
+                _method,
+            }) |
+            AnchorSet::Opret(Anchor {
+                mpc_proof,
+                dbc_proof: _,
+                _method,
+            }) => mpc_proof,
         }
-    }
-
-    #[allow(clippy::type_complexity)]
-    pub fn into_split(self) -> (Option<Anchor<P, TapretProof>>, Option<Anchor<P, OpretProof>>) {
-        match self {
-            AnchorSet::Tapret(tapret) => (Some(tapret), None),
-            AnchorSet::Opret(opret) => (None, Some(opret)),
-            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
-        }
-    }
-
-    pub fn mpc_proofs(&self) -> impl Iterator<Item = &P> {
-        let (t, o) = self.as_split();
-        t.map(|a| &a.mpc_proof)
-            .into_iter()
-            .chain(o.map(|a| &a.mpc_proof))
     }
 }
 
@@ -103,24 +76,23 @@ impl AnchorSet<mpc::MerkleProof> {
         contract_id: ContractId,
         bundle_id: BundleId,
     ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
-        let (tapret, opret) = self.into_split();
-        let tapret = tapret
-            .map(|t| t.into_merkle_block(contract_id, bundle_id))
-            .transpose()?;
-        let opret = opret
-            .map(|o| o.into_merkle_block(contract_id, bundle_id))
-            .transpose()?;
-        Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
+        match self {
+            AnchorSet::Tapret(anchor) => anchor
+                .into_merkle_block(contract_id, bundle_id)
+                .map(AnchorSet::Tapret),
+            AnchorSet::Opret(anchor) => anchor
+                .into_merkle_block(contract_id, bundle_id)
+                .map(AnchorSet::Opret),
+        }
     }
 }
 
 impl AnchorSet<mpc::MerkleBlock> {
     pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
-        self.mpc_proofs().flat_map(|p| {
-            p.to_known_message_map()
-                .into_iter()
-                .map(|(p, m)| (m.into(), p.into()))
-        })
+        self.mpc_proof()
+            .to_known_message_map()
+            .into_iter()
+            .map(|(p, m)| (m.into(), p.into()))
     }
 
     pub fn to_merkle_proof(
@@ -134,14 +106,12 @@ impl AnchorSet<mpc::MerkleBlock> {
         self,
         contract_id: ContractId,
     ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        let (tapret, opret) = self.into_split();
-        let tapret = tapret
-            .map(|t| t.into_merkle_proof(contract_id))
-            .transpose()?;
-        let opret = opret
-            .map(|o| o.into_merkle_proof(contract_id))
-            .transpose()?;
-        Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
+        match self {
+            AnchorSet::Tapret(anchor) => {
+                anchor.into_merkle_proof(contract_id).map(AnchorSet::Tapret)
+            }
+            AnchorSet::Opret(anchor) => anchor.into_merkle_proof(contract_id).map(AnchorSet::Opret),
+        }
     }
 }
 

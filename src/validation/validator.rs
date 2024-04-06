@@ -336,9 +336,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             let (seals, input_map) = self.validate_seal_definitions(witness_id.layer1(), bundle);
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
-            let Some(witness_tx) =
-                self.validate_seal_commitments(&seals, bundle_id, witness_id, anchor_set)
-            else {
+            let Some(witness_tx) = self.validate_seal_commitments(
+                &seals,
+                bundle_id,
+                witness_id,
+                bundle.close_method,
+                anchor_set,
+            ) else {
                 continue;
             };
 
@@ -391,6 +395,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         seals: impl AsRef<[XOutputSeal]>,
         bundle_id: BundleId,
         witness_id: XWitnessId,
+        close_method: CloseMethod,
         anchor_set: &AnchorSet,
     ) -> Option<XWitnessTx> {
         // Check that the anchor is committed into a transaction spending all the
@@ -419,37 +424,32 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 None
             }
             Ok(pub_witness) => {
-                let (tapret, opret) = anchor_set.as_split();
-
-                let tapret_seals = seals
-                    .as_ref()
-                    .iter()
-                    .filter(|seal| seal.method() == CloseMethod::TapretFirst);
-                if let Some(tapret) = tapret {
-                    let witness = pub_witness
-                        .clone()
-                        .map(|tx| Witness::with(tx, tapret.dbc_proof.clone()));
-                    self.validate_seal_closing(tapret_seals, witness, bundle_id, tapret)
-                } else if tapret_seals.count() > 0 {
+                let seals = seals.as_ref();
+                for seal in seals.iter().filter(|seal| seal.method() != close_method) {
                     self.status
                         .borrow_mut()
-                        .add_warning(Warning::UnclosedSeals(bundle_id));
+                        .add_failure(Failure::SealInvalidMethod(bundle_id, seal.clone()));
+                }
+                match (close_method, anchor_set) {
+                    (CloseMethod::TapretFirst, AnchorSet::Tapret(tapret)) => {
+                        let witness = pub_witness
+                            .clone()
+                            .map(|tx| Witness::with(tx, tapret.dbc_proof.clone()));
+                        self.validate_seal_closing(seals, witness, bundle_id, tapret)
+                    }
+                    (CloseMethod::OpretFirst, AnchorSet::Opret(opret)) => {
+                        let witness = pub_witness
+                            .clone()
+                            .map(|tx| Witness::with(tx, opret.dbc_proof));
+                        self.validate_seal_closing(seals, witness, bundle_id, opret)
+                    }
+                    (_, _) => {
+                        self.status
+                            .borrow_mut()
+                            .add_failure(Failure::AnchorMethodMismatch(bundle_id));
+                    }
                 }
 
-                let opret_seals = seals
-                    .as_ref()
-                    .iter()
-                    .filter(|seal| seal.method() == CloseMethod::OpretFirst);
-                if let Some(opret) = opret {
-                    let witness = pub_witness
-                        .clone()
-                        .map(|tx| Witness::with(tx, opret.dbc_proof));
-                    self.validate_seal_closing(opret_seals, witness, bundle_id, opret)
-                } else if opret_seals.count() > 0 {
-                    self.status
-                        .borrow_mut()
-                        .add_warning(Warning::UnclosedSeals(bundle_id));
-                }
                 Some(pub_witness)
             }
         }
