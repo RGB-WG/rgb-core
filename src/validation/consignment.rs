@@ -25,8 +25,8 @@
 //! single-use-seal data.
 
 use crate::{
-    AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema, SecretSeal,
-    TransitionBundle, XChain, XGrip, XWitnessId,
+    AnchorSet, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema,
+    SecretSeal, TransitionBundle, XChain, XWitnessId,
 };
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
@@ -60,7 +60,9 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
             .filter(|b| b.bundle_id() == bundle_id)
     }
 
-    fn grip<'a>(&self, bundle_id: BundleId) -> Option<&'a XGrip> { self.0.grip(bundle_id) }
+    fn anchors<'a>(&self, bundle_id: BundleId) -> Option<(XWitnessId, &'a AnchorSet)> {
+        self.0.anchors(bundle_id)
+    }
 
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
 }
@@ -104,7 +106,7 @@ pub trait ConsignmentApi {
     fn bundle<'a>(&self, bundle_id: BundleId) -> Option<&'a TransitionBundle>;
 
     /// Returns a grip given a bundle id.
-    fn grip<'a>(&self, bundle_id: BundleId) -> Option<&'a XGrip>;
+    fn anchors<'a>(&self, bundle_id: BundleId) -> Option<(XWitnessId, &'a AnchorSet)>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;

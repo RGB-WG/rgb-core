@@ -239,8 +239,6 @@ impl WitnessOrd {
 
 pub type XWitnessTx<X = Impossible> = XChain<Tx, X>;
 
-pub type XWitness<Dbc> = XChain<Witness<Dbc>>;
-
 impl XWitnessTx {
     pub fn witness_id(&self) -> XWitnessId {
         match self {
@@ -251,7 +249,7 @@ impl XWitnessTx {
     }
 }
 
-impl<Dbc: dbc::Proof> XWitness<Dbc> {
+impl<Dbc: dbc::Proof> XChain<Witness<Dbc>> {
     pub fn witness_id(&self) -> XWitnessId {
         match self {
             Self::Bitcoin(w) => XWitnessId::Bitcoin(w.txid),
@@ -261,7 +259,7 @@ impl<Dbc: dbc::Proof> XWitness<Dbc> {
     }
 }
 
-impl<Dbc: dbc::Proof, Seal: TxoSeal> SealWitness<Seal> for XWitness<Dbc> {
+impl<Dbc: dbc::Proof, Seal: TxoSeal> SealWitness<Seal> for XChain<Witness<Dbc>> {
     type Message = mpc::Commitment;
     type Error = VerifyError<Dbc::Error>;
 
