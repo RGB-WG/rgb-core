@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:BdxvFi2JckXJ3uE4PkJy81BnM7RnbhwA8Mif6c9maP7n#garden-diesel-cable
+  Id: urn:ubideco:stl:6Yx8ib21pu6se8asaV7z9MQNUuemRZ8iQWhFZFBWcsDp#java-navy-xray
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -28,7 +28,14 @@ import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-
   use Variant#textile-cowboy-dragon
   use UnionVariantsSemId#iceberg-road-crack
 
-import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
+import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
+  use MerkleHash#culture-metro-modular
+  use StrictHash#cheese-final-locate
+  use MerkleProof#labor-hilton-magenta
+  use ReservedBytes1#joker-lemon-mental
+  use ReservedBytes2#pocket-habitat-soviet
+
+import BPCore#C5EbVby4rry8esHwoPrGUfhe7yqJgoyA1DBcyuBRf2rZ#granite-target-table
   use TapretNodePartner#iceberg-poker-active
   use ExplicitSealTxid#antenna-darwin-emotion
   use TapretProof#forum-paint-tunnel
@@ -37,18 +44,11 @@ import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
   use TapretRightBranch#basket-prelude-bridge
   use BlindSealTxPtr#austria-icon-waiter
   use OpretProof#segment-ambient-totem
-  use AnchorMerkleProofTapretProof#hotel-telecom-politic
+  use AnchorMerkleProofTapretProof#everest-laura-modem
   use SecretSeal#santana-domingo-needle
+  use AnchorMerkleProofOpretProof#cable-final-podium
   use BlindSealTxid#kimono-golf-price
   use TxPtr#strange-source-father
-  use AnchorMerkleProofOpretProof#miranda-chance-extreme
-
-import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
-  use MerkleHash#culture-metro-modular
-  use StrictHash#cheese-final-locate
-  use MerkleProof#labor-hilton-magenta
-  use ReservedBytes1#joker-lemon-mental
-  use ReservedBytes2#pocket-habitat-soviet
 
 import AluVM#DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy
   use LibSite#mission-papa-mercy
@@ -79,10 +79,10 @@ data AltLayer1Set      : {AltLayer1 ^ ..0xff}
 @mnemonic(soviet-arsenal-complex)
 data AluScript         : libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite#mission-papa-mercy}
 
-@mnemonic(modern-cabaret-citrus)
-data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#hotel-telecom-politic
-                       | opret BPCore.AnchorMerkleProofOpretProof#miranda-chance-extreme
-                       | dual (tapret BPCore.AnchorMerkleProofTapretProof#hotel-telecom-politic, opret BPCore.AnchorMerkleProofOpretProof#miranda-chance-extreme)
+@mnemonic(status-motel-economy)
+data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#everest-laura-modem
+                       | opret BPCore.AnchorMerkleProofOpretProof#cable-final-podium
+                       | dual (tapret BPCore.AnchorMerkleProofTapretProof#everest-laura-modem, opret BPCore.AnchorMerkleProofOpretProof#cable-final-podium)
 
 @mnemonic(buzzer-pattern-craft)
 data AssetTag          : [Byte ^ 32]
@@ -320,9 +320,6 @@ data GlobalStateType   : U16
 @mnemonic(bicycle-europe-shampoo)
 data GlobalValues      : [RevealedData ^ 1..]
 
-@mnemonic(poem-under-square)
-data Grip              : id Bitcoin.Txid#cowboy-diego-betty, anchors AnchorSet
-
 @mnemonic(press-egypt-helena)
 data Input             : prevOut Opout, reserved CommitVerify.ReservedBytes2#pocket-habitat-soviet
 
@@ -507,10 +504,6 @@ data XChainBlindSealTxid : bitcoin BPCore.BlindSealTxid#kimono-golf-price
 @mnemonic(ozone-quick-hippie)
 data XChainExplicitSealTxid : bitcoin BPCore.ExplicitSealTxid#antenna-darwin-emotion
                        | liquid BPCore.ExplicitSealTxid#antenna-darwin-emotion
-
-@mnemonic(tobacco-initial-flame)
-data XChainGrip        : bitcoin Grip
-                       | liquid Grip
 
 @mnemonic(palace-random-taxi)
 data XChainSecretSeal  : bitcoin BPCore.SecretSeal#santana-domingo-needle

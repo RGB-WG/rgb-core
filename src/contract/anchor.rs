@@ -25,51 +25,10 @@ use std::cmp::Ordering;
 use bp::dbc::opret::OpretProof;
 use bp::dbc::tapret::TapretProof;
 use bp::dbc::Anchor;
-use bp::Txid;
 use commit_verify::mpc;
 use strict_encoding::StrictDumb;
 
-use crate::{BundleId, ContractId, WitnessOrd, XChain, XWitnessId, LIB_NAME_RGB};
-
-pub type XGrip<P = mpc::MerkleProof> = XChain<Grip<P>>;
-
-impl<P: mpc::Proof + StrictDumb> XGrip<P> {
-    pub fn witness_id(&self) -> XWitnessId {
-        match self {
-            XGrip::Bitcoin(g) => XWitnessId::Bitcoin(g.id),
-            XGrip::Liquid(g) => XWitnessId::Liquid(g.id),
-            XGrip::Other(_) => unreachable!(),
-        }
-    }
-}
-
-/// Grip is a combination of one or two anchors (one per seal closing method
-/// type), packed as [`AnchorSet`], with information of the witness transaction
-/// id.
-#[derive(Clone, Eq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct Grip<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
-    pub id: Txid,
-    pub anchors: AnchorSet<P>,
-}
-
-impl<P: mpc::Proof + StrictDumb> PartialEq for Grip<P> {
-    fn eq(&self, other: &Self) -> bool { self.id == other.id }
-}
-
-impl<P: mpc::Proof + StrictDumb> Ord for Grip<P> {
-    fn cmp(&self, other: &Self) -> Ordering { self.id.cmp(&other.id) }
-}
-
-impl<P: mpc::Proof + StrictDumb> PartialOrd for Grip<P> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
+use crate::{BundleId, ContractId, WitnessOrd, XWitnessId, LIB_NAME_RGB};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

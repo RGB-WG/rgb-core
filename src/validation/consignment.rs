@@ -24,12 +24,9 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::rc::Rc;
-
 use crate::{
-    AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema, SecretSeal,
-    TransitionBundle, XChain, XGrip, XWitnessId,
+    AnchorSet, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema,
+    SecretSeal, TransitionBundle, XChain, XWitnessId,
 };
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
@@ -39,11 +36,11 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 }
 
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
-    type Iter<'placeholder> = C::Iter<'placeholder>;
-
     fn schema(&self) -> &Schema { self.0.schema() }
 
-    fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag> { self.0.asset_tags() }
+    fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter {
+        self.0.asset_tags()
+    }
 
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
@@ -51,17 +48,21 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
 
-    fn terminals(&self) -> BTreeSet<(BundleId, XChain<SecretSeal>)> { self.0.terminals() }
+    fn terminals<'iter>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'iter {
+        self.0.terminals()
+    }
 
-    fn bundle_ids<'a>(&self) -> Self::Iter<'a> { self.0.bundle_ids() }
+    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter { self.0.bundle_ids() }
 
-    fn bundle(&self, bundle_id: BundleId) -> Option<Rc<TransitionBundle>> {
+    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle> {
         self.0
             .bundle(bundle_id)
             .filter(|b| b.bundle_id() == bundle_id)
     }
 
-    fn grip(&self, bundle_id: BundleId) -> Option<XGrip> { self.0.grip(bundle_id) }
+    fn anchors(&self, bundle_id: BundleId) -> Option<(XWitnessId, &AnchorSet)> {
+        self.0.anchors(bundle_id)
+    }
 
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
 }
@@ -74,14 +75,11 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 /// invalid or absent data, the API must always return [`None`] or empty
 /// collections/iterators.
 pub trait ConsignmentApi {
-    /// Iterator for all bundle ids present in the consignment.
-    type Iter<'a>: Iterator<Item = BundleId>;
-
     /// Returns reference to the schema object used by the consignment.
     fn schema(&self) -> &Schema;
 
     /// Asset tags uses in the confidential asset validation.
-    fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;
+    fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter;
 
     /// Retrieves reference to an operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
@@ -99,16 +97,16 @@ pub trait ConsignmentApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn terminals(&self) -> BTreeSet<(BundleId, XChain<SecretSeal>)>;
+    fn terminals<'iter>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'iter;
 
     /// Returns iterator over all bundle ids present in the consignment.
-    fn bundle_ids<'a>(&self) -> Self::Iter<'a>;
+    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter;
 
     /// Returns reference to a bundle given a bundle id.
-    fn bundle(&self, bundle_id: BundleId) -> Option<Rc<TransitionBundle>>;
+    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
 
     /// Returns a grip given a bundle id.
-    fn grip(&self, bundle_id: BundleId) -> Option<XGrip>;
+    fn anchors(&self, bundle_id: BundleId) -> Option<(XWitnessId, &AnchorSet)>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;

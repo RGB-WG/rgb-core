@@ -35,7 +35,7 @@ mod contract;
 mod xchain;
 mod commit;
 
-pub use anchor::{AnchorSet, Grip, Layer1, WitnessAnchor, XGrip};
+pub use anchor::{AnchorSet, Layer1, WitnessAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
@@ -62,7 +62,7 @@ pub use operations::{
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessOrd, WitnessPos,
-    XGenesisSeal, XGraphSeal, XOutputSeal, XPubWitness, XWitness, XWitnessId,
+    XGenesisSeal, XGraphSeal, XOutputSeal, XWitnessId, XWitnessTx,
 };
 pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
 pub use xchain::{
