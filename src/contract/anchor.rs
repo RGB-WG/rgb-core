@@ -22,15 +22,50 @@
 
 use std::cmp::Ordering;
 
-use bp::dbc::opret::OpretProof;
+use bp::dbc::opret::{OpretError, OpretProof};
 use bp::dbc::tapret::TapretProof;
-use bp::dbc::Anchor;
-use commit_verify::mpc;
-use strict_encoding::StrictDumb;
+use bp::dbc::Method;
+use bp::{dbc, Tx};
+use commit_verify::mpc::Commitment;
+use commit_verify::{mpc, ConvolveVerifyError, EmbedVerifyError};
+use strict_encoding::{StrictDeserialize, StrictDumb, StrictSerialize};
 
-use crate::{BundleId, ContractId, WitnessOrd, XWitnessId, LIB_NAME_RGB};
+use crate::{WitnessOrd, XWitnessId, LIB_NAME_RGB};
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[display(doc_comments)]
+pub enum DbcError {
+    /// transaction doesn't contain OP_RETURN output.
+    NoOpretOutput,
+
+    /// first OP_RETURN output inside the transaction already contains some
+    /// data.
+    InvalidOpretScript,
+
+    /// commitment doesn't match the message.
+    CommitmentMismatch,
+
+    /// the proof is invalid and the commitment can't be verified since the
+    /// original container can't be restored from it.
+    UnrestorableProof,
+
+    /// the proof does not match to the proof generated for the same message
+    /// during the verification.
+    ProofMismatch,
+
+    /// the message is invalid since a valid commitment to it can't be created.
+    ImpossibleMessage,
+
+    /// the proof is invalid and the commitment can't be verified.
+    InvalidProof,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Tapret(strict_dumb!()))]
 #[cfg_attr(
@@ -38,82 +73,47 @@ use crate::{BundleId, ContractId, WitnessOrd, XWitnessId, LIB_NAME_RGB};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
-pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
+pub enum DbcProof {
+    #[from]
     #[strict_type(tag = 0x01)]
-    Tapret(Anchor<P, TapretProof>),
+    Tapret(TapretProof),
+
+    #[from]
     #[strict_type(tag = 0x02)]
-    Opret(Anchor<P, OpretProof>),
+    Opret(OpretProof),
 }
 
-impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
-    pub fn mpc_proof(&self) -> &P {
+impl StrictSerialize for DbcProof {}
+impl StrictDeserialize for DbcProof {}
+
+impl dbc::Proof for DbcProof {
+    type Error = DbcError;
+    const METHOD: Method = Method::OpretFirst;
+
+    fn verify(&self, msg: &Commitment, tx: &Tx) -> Result<(), Self::Error> {
         match self {
-            AnchorSet::Tapret(Anchor {
-                mpc_proof,
-                dbc_proof: _,
-                _method,
-            }) |
-            AnchorSet::Opret(Anchor {
-                mpc_proof,
-                dbc_proof: _,
-                _method,
-            }) => mpc_proof,
+            DbcProof::Tapret(tapret) => tapret.verify(msg, tx).map_err(|err| match err {
+                ConvolveVerifyError::CommitmentMismatch => DbcError::CommitmentMismatch,
+                ConvolveVerifyError::ImpossibleMessage => DbcError::ImpossibleMessage,
+                ConvolveVerifyError::InvalidProof => DbcError::InvalidProof,
+            }),
+            DbcProof::Opret(opret) => opret.verify(msg, tx).map_err(|err| match err {
+                EmbedVerifyError::CommitmentMismatch => DbcError::CommitmentMismatch,
+                EmbedVerifyError::InvalidMessage(OpretError::NoOpretOutput) => {
+                    DbcError::NoOpretOutput
+                }
+                EmbedVerifyError::InvalidMessage(OpretError::InvalidOpretScript) => {
+                    DbcError::InvalidOpretScript
+                }
+                EmbedVerifyError::InvalidProof => DbcError::UnrestorableProof,
+                EmbedVerifyError::ProofMismatch => DbcError::ProofMismatch,
+            }),
         }
     }
 }
 
-impl AnchorSet<mpc::MerkleProof> {
-    pub fn to_merkle_block(
-        &self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.clone().into_merkle_block(contract_id, bundle_id)
-    }
-
-    pub fn into_merkle_block(
-        self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
-        match self {
-            AnchorSet::Tapret(anchor) => anchor
-                .into_merkle_block(contract_id, bundle_id)
-                .map(AnchorSet::Tapret),
-            AnchorSet::Opret(anchor) => anchor
-                .into_merkle_block(contract_id, bundle_id)
-                .map(AnchorSet::Opret),
-        }
-    }
-}
-
-impl AnchorSet<mpc::MerkleBlock> {
-    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
-        self.mpc_proof()
-            .to_known_message_map()
-            .into_iter()
-            .map(|(p, m)| (m.into(), p.into()))
-    }
-
-    pub fn to_merkle_proof(
-        &self,
-        contract_id: ContractId,
-    ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.clone().into_merkle_proof(contract_id)
-    }
-
-    pub fn into_merkle_proof(
-        self,
-        contract_id: ContractId,
-    ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        match self {
-            AnchorSet::Tapret(anchor) => {
-                anchor.into_merkle_proof(contract_id).map(AnchorSet::Tapret)
-            }
-            AnchorSet::Opret(anchor) => anchor.into_merkle_proof(contract_id).map(AnchorSet::Opret),
-        }
-    }
-}
+/// Anchor which DBC proof is either Tapret or Opret.
+pub type EAnchor<P = mpc::MerkleProof> = dbc::Anchor<P, DbcProof>;
 
 /// Txid and height information ordered according to the RGB consensus rules.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]

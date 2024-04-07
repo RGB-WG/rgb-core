@@ -29,13 +29,13 @@ use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
 use crate::{
-    AnchorSet, ContractState, Extension, Genesis, OpCommitment, Schema, TransitionBundle,
+    ContractState, DbcProof, Extension, Genesis, OpCommitment, Schema, TransitionBundle,
     XWitnessId, LIB_NAME_RGB,
 };
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB: &str =
-    "urn:ubideco:stl:DrbuGvUZWK777emjDL5MqAmEeQ2ai93sysVeC2oPidve#canyon-switch-manual";
+    "urn:ubideco:stl:CpiRnYcWXa6vzULgHPdTQiXyGq2yUiJNKvqGMXZVePf8#castle-crystal-chicken";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {
@@ -48,7 +48,7 @@ fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     })
     .transpile::<Schema>()
     .transpile::<Genesis>()
-    .transpile::<AnchorSet>()
+    .transpile::<DbcProof>()
     .transpile::<XWitnessId>()
     .transpile::<TransitionBundle>()
     .transpile::<Extension>()

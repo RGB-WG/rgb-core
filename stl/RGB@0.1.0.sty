@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:DrbuGvUZWK777emjDL5MqAmEeQ2ai93sysVeC2oPidve#canyon-switch-manual
+  Id: urn:ubideco:stl:CpiRnYcWXa6vzULgHPdTQiXyGq2yUiJNKvqGMXZVePf8#castle-crystal-chicken
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -37,16 +37,13 @@ import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
   use TapretRightBranch#basket-prelude-bridge
   use BlindSealTxPtr#austria-icon-waiter
   use OpretProof#segment-ambient-totem
-  use AnchorMerkleProofTapretProof#hotel-telecom-politic
   use SecretSeal#santana-domingo-needle
   use BlindSealTxid#kimono-golf-price
   use TxPtr#strange-source-father
-  use AnchorMerkleProofOpretProof#miranda-chance-extreme
 
 import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
   use MerkleHash#culture-metro-modular
   use StrictHash#cheese-final-locate
-  use MerkleProof#labor-hilton-magenta
   use ReservedBytes1#joker-lemon-mental
   use ReservedBytes2#pocket-habitat-soviet
 
@@ -78,10 +75,6 @@ data AltLayer1Set      : {AltLayer1 ^ ..0xff}
 
 @mnemonic(soviet-arsenal-complex)
 data AluScript         : libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite#mission-papa-mercy}
-
-@mnemonic(ruby-song-begin)
-data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#hotel-telecom-politic
-                       | opret BPCore.AnchorMerkleProofOpretProof#miranda-chance-extreme
 
 @mnemonic(buzzer-pattern-craft)
 data AssetTag          : [Byte ^ 32]
@@ -251,6 +244,10 @@ data ContractState     : schema Schema, history ContractHistory
 
 @mnemonic(diana-archive-liquid)
 data DataState         : [Byte]
+
+@mnemonic(fidel-swim-chicago)
+data DbcProof          : tapret#1 BPCore.TapretProof#forum-paint-tunnel
+                       | opret BPCore.OpretProof#segment-ambient-totem
 
 @mnemonic(balance-sector-virus)
 data Extension         : ffv Ffv

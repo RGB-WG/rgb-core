@@ -135,7 +135,7 @@ Bundles vesper lexicon=types+commitments
     .unwrap();
     let layout = TransitionBundle::commitment_layout();
     writeln!(file, "{layout}").unwrap();
-    let tt = sys.type_tree("RGB.AnchorSet").unwrap();
+    let tt = sys.type_tree("RGB.DbcProof").unwrap();
     writeln!(file, "{tt}").unwrap();
     let tt = sys.type_tree("RGB.TransitionBundle").unwrap();
     writeln!(file, "{tt}").unwrap();

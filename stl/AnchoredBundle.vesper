@@ -11,25 +11,13 @@ BundleId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:bundle#2024-02-03
   Method serialized
   InputMap serialized
 
-AnchorSet union
-  tapret rec AnchorMerkleProofTapretProof wrapped tag=0
-    mpcProof rec MerkleProof
-      pos is U32
-      cofactor is U16
-      path list len=0..32
-        element bytes len=32 aka=MerkleHash
-    dbcProof rec TapretProof
-      pathProof rec TapretPathProof
-        some union TapretNodePartner option wrapped tag=1
-          rightBranch rec TapretRightBranch wrapped tag=2
-        nonce is U8
-  opret rec AnchorMerkleProofOpretProof wrapped tag=1
-    mpcProof rec MerkleProof
-      pos is U32
-      cofactor is U16
-      path list len=0..32
-        element bytes len=32 aka=MerkleHash
-    dbcProof is Unit aka=OpretProof
+DbcProof union
+  tapret rec TapretProof wrapped tag=0
+    pathProof rec TapretPathProof
+      some union TapretNodePartner option wrapped tag=1
+        rightBranch rec TapretRightBranch wrapped tag=2
+      nonce is U8
+  opret is Unit wrapped aka=OpretProof tag=1
 
 TransitionBundle rec
   closeMethod enum Method opretFirst=0 tapretFirst=1

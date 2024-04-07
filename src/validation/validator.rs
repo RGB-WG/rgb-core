@@ -33,9 +33,9 @@ use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
 use crate::vm::AluRuntime;
 use crate::{
-    AltLayer1, AnchorSet, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
-    Schema, SchemaId, Script, TransitionBundle, TypedAssigns, XChain, XOutpoint, XOutputSeal,
-    XWitnessId, XWitnessTx,
+    AltLayer1, BundleId, ContractId, DbcProof, EAnchor, Layer1, OpId, OpRef, OpType, Operation,
+    Opout, Schema, SchemaId, Script, TransitionBundle, TypedAssigns, XChain, XOutpoint,
+    XOutputSeal, XWitnessId, XWitnessTx,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -325,7 +325,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                     .add_failure(Failure::BundleAbsent(bundle_id));
                 continue;
             };
-            let Some((witness_id, anchor_set)) = self.consignment.anchors(bundle_id) else {
+            let Some((witness_id, anchor)) = self.consignment.anchor(bundle_id) else {
                 self.status
                     .borrow_mut()
                     .add_failure(Failure::AnchorAbsent(bundle_id));
@@ -341,7 +341,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 bundle_id,
                 witness_id,
                 bundle.close_method,
-                anchor_set,
+                anchor,
             ) else {
                 continue;
             };
@@ -396,7 +396,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         bundle_id: BundleId,
         witness_id: XWitnessId,
         close_method: CloseMethod,
-        anchor_set: &AnchorSet,
+        anchor: &EAnchor,
     ) -> Option<XWitnessTx> {
         // Check that the anchor is committed into a transaction spending all the
         // transition inputs.
@@ -430,18 +430,28 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                         .borrow_mut()
                         .add_failure(Failure::SealInvalidMethod(bundle_id, seal.clone()));
                 }
-                match (close_method, anchor_set) {
-                    (CloseMethod::TapretFirst, AnchorSet::Tapret(tapret)) => {
-                        let witness = pub_witness
-                            .clone()
-                            .map(|tx| Witness::with(tx, tapret.dbc_proof.clone()));
-                        self.validate_seal_closing(seals, witness, bundle_id, tapret)
+                match (close_method, anchor.clone()) {
+                    (
+                        CloseMethod::TapretFirst,
+                        EAnchor {
+                            mpc_proof,
+                            dbc_proof: DbcProof::Tapret(tapret),
+                            ..
+                        },
+                    ) => {
+                        let witness = pub_witness.clone().map(|tx| Witness::with(tx, tapret));
+                        self.validate_seal_closing(seals, bundle_id, witness, mpc_proof)
                     }
-                    (CloseMethod::OpretFirst, AnchorSet::Opret(opret)) => {
-                        let witness = pub_witness
-                            .clone()
-                            .map(|tx| Witness::with(tx, opret.dbc_proof));
-                        self.validate_seal_closing(seals, witness, bundle_id, opret)
+                    (
+                        CloseMethod::OpretFirst,
+                        EAnchor {
+                            mpc_proof,
+                            dbc_proof: DbcProof::Opret(opret),
+                            ..
+                        },
+                    ) => {
+                        let witness = pub_witness.clone().map(|tx| Witness::with(tx, opret));
+                        self.validate_seal_closing(seals, bundle_id, witness, mpc_proof)
                     }
                     (_, _) => {
                         self.status
@@ -570,21 +580,22 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     /// multi-protocol commitment, by utilizing witness, consisting of
     /// transaction with deterministic bitcoin commitments (defined by
     /// generic type `Dbc`) and extra-transaction data, which are taken from
-    /// anchors DBC proof.
+    /// anchor's DBC proof.
     ///
     /// Additionally, checks that the provided message contains commitment to
     /// the bundle under the current contract.
-    fn validate_seal_closing<'seal, 'temp, Seal: 'seal, Dbc: dbc::Proof>(
+    fn validate_seal_closing<'seal, Seal: 'seal, Dbc: dbc::Proof>(
         &self,
         seals: impl IntoIterator<Item = &'seal Seal>,
-        witness: XChain<Witness<Dbc>>,
         bundle_id: BundleId,
-        anchor: &'temp Anchor<mpc::MerkleProof, Dbc>,
+        witness: XChain<Witness<Dbc>>,
+        mpc_proof: mpc::MerkleProof,
     ) where
         XChain<Witness<Dbc>>: SealWitness<Seal, Message = mpc::Commitment>,
     {
         let message = mpc::Message::from(bundle_id);
         let witness_id = witness.witness_id();
+        let anchor = Anchor::new(mpc_proof, witness.as_reduced_unsafe().proof.clone());
         // [VALIDATION]: Checking anchor MPC commitment
         match anchor.convolve(self.contract_id, message) {
             Err(err) => {
