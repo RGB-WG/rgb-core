@@ -72,16 +72,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [ nightly, beta, stable, 1.75.0 ]
+        toolchain: [ nightly, beta, stable, msrv ]
     steps:
-      - uses: actions/checkout@v2
-      - name: Install rust ${{ matrix.toolchain }}
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.toolchain }}
-          override: true
-      - name: All features
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --workspace --all-targets --all-features
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v5
+      - name: Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+      - name: Check rgb-core
+        run: nix develop ".#${{ matrix.toolchain }}" -c cargo check --workspace --all-targets --all-features
