@@ -63,8 +63,13 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
+strict_encoding_derive = { git = "https://github.com/strict-types/strict-encoding", branch = "rstring" }
+strict_encoding = { git = "https://github.com/strict-types/strict-encoding", branch = "rstring" }
+strict_types = { git = "https://github.com/strict-types/strict-types", branch = "rstring" }
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.11" }
+single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.11" }
 bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
-aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "simplify" }
+aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.11" }

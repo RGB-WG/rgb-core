@@ -25,7 +25,7 @@ use std::ops::RangeInclusive;
 
 use aluvm::isa;
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
-use aluvm::library::{CodeEofError, LibSite, Read, Write};
+use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg};
 
 use super::{ContractOp, TimechainOp};
@@ -48,9 +48,7 @@ pub enum RgbIsa {
 impl InstructionSet for RgbIsa {
     type Context<'ctx> = OpInfo<'ctx>;
 
-    fn isa_ids() -> BTreeSet<&'static str> {
-        bset! {"RGB"}
-    }
+    fn isa_ids() -> IsaSeg { IsaSeg::with("RGB") }
 
     fn src_regs(&self) -> BTreeSet<Reg> {
         match self {

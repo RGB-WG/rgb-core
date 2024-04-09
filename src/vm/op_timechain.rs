@@ -24,7 +24,7 @@ use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
-use aluvm::library::{CodeEofError, LibSite, Read, Write};
+use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg};
 
 use crate::vm::opcodes::{INSTR_TIMECHAIN_FROM, INSTR_TIMECHAIN_TO};
@@ -41,7 +41,7 @@ pub enum TimechainOp {
 impl InstructionSet for TimechainOp {
     type Context<'ctx> = ();
 
-    fn isa_ids() -> BTreeSet<&'static str> { none!() }
+    fn isa_ids() -> IsaSeg { IsaSeg::with("RGB") }
 
     fn src_regs(&self) -> BTreeSet<Reg> { bset![] }
 

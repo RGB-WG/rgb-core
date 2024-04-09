@@ -26,7 +26,7 @@ use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
-use aluvm::library::{CodeEofError, LibSite, Read, Write};
+use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg, Reg16, Reg32, RegA, RegS};
 use amplify::num::{u3, u4};
 use amplify::Wrapper;
@@ -156,7 +156,7 @@ pub enum ContractOp {
 impl InstructionSet for ContractOp {
     type Context<'ctx> = OpInfo<'ctx>;
 
-    fn isa_ids() -> BTreeSet<&'static str> { none!() }
+    fn isa_ids() -> IsaSeg { IsaSeg::with("RGB") }
 
     fn src_regs(&self) -> BTreeSet<Reg> {
         match self {
@@ -586,9 +586,9 @@ impl Bytecode for ContractOp {
 
 #[cfg(test)]
 mod test {
-    use aluvm::data::encoding::Encode;
     use aluvm::library::Lib;
     use amplify::hex::ToHex;
+    use strict_encoding::StrictSerialize;
 
     use super::*;
     use crate::vm::RgbIsa;
@@ -597,14 +597,21 @@ mod test {
     fn encoding() {
         let code = [RgbIsa::Contract(ContractOp::PcVs(AssignmentType::from(4000)))];
         let alu_lib = Lib::assemble(&code).unwrap();
+        eprintln!("{alu_lib}");
         let alu_id = alu_lib.id();
 
         assert_eq!(
             alu_id.to_string(),
-            "urn:ubideco:alu:AXicg5WYSF3R36coefDodDX2owpSaZJgco7PHMj8qwiv#china-chant-triton"
+            "urn:ubideco:alu:Bitw9SnAnKhEyuwjjAgM1pLtnvQfQiE8y9NLPAxcXd64#miami-minute-next"
         );
         assert_eq!(alu_lib.code.as_ref().to_hex(), "d0a00f");
-        assert_eq!(alu_lib.serialize().to_hex(), "035247420300d0a00f000000");
+        assert_eq!(
+            alu_lib
+                .to_strict_serialized::<{ usize::MAX }>()
+                .unwrap()
+                .to_hex(),
+            "035247420300d0a00f000000"
+        );
         assert_eq!(alu_lib.disassemble::<RgbIsa>().unwrap(), code);
     }
 }
