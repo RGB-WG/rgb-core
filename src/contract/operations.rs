@@ -243,7 +243,7 @@ pub trait Operation {
 ///
 /// Contract or schema validity doesn't assume any checks on the identity; these
 /// checks must be performed at the application level.
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From, Display)]
+#[derive(Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, From, Display)]
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[display(LowerHex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
