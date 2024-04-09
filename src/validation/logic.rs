@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
@@ -29,9 +29,9 @@ use strict_types::SemId;
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi, Failure, VirtualMachine};
 use crate::{
-    validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
-    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
-    Operation, Opout, Schema, StateSchema, TransitionType, TypedAssigns, Valencies,
+    validation, AssetTags, Assignments, AssignmentsRef, ContractId, ExposedSeal, GlobalState,
+    GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef, Operation, Opout,
+    Schema, StateSchema, TransitionType, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -165,13 +165,14 @@ impl Schema {
 
         status += self.validate_valencies(id, op.valencies(), valency_schema);
 
+        let genesis = consignment.genesis();
         let op_info = OpInfo::with(
-            consignment.genesis().contract_id(),
+            genesis.contract_id(),
             id,
             &op,
             &prev_state,
             &redeemed,
-            consignment.asset_tags().collect(),
+            &genesis.asset_tags,
         );
 
         // We need to run scripts as the very last step, since before that
@@ -430,7 +431,7 @@ pub struct OpInfo<'op> {
     pub contract_id: ContractId,
     pub id: OpId,
     pub ty: OpFullType,
-    pub asset_tags: BTreeMap<AssignmentType, AssetTag>,
+    pub asset_tags: &'op AssetTags,
     pub metadata: &'op SmallBlob,
     pub prev_state: &'op Assignments<GraphSeal>,
     pub owned_state: AssignmentsRef<'op>,
@@ -446,7 +447,7 @@ impl<'op> OpInfo<'op> {
         op: &'op OpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
-        asset_tags: BTreeMap<AssignmentType, AssetTag>,
+        asset_tags: &'op AssetTags,
     ) -> Self {
         OpInfo {
             id,
