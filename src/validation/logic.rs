@@ -27,11 +27,11 @@ use amplify::Wrapper;
 use strict_types::SemId;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
-use crate::validation::{CheckedConsignment, ConsignmentApi, VirtualMachine};
+use crate::validation::{CheckedConsignment, ConsignmentApi, Failure, VirtualMachine};
 use crate::{
     validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef,
-    Operation, Opout, Schema, TransitionType, TypedAssigns, Valencies,
+    Operation, Opout, Schema, StateSchema, TransitionType, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -42,6 +42,7 @@ impl Schema {
         vm: &'consignment dyn VirtualMachine,
     ) -> validation::Status {
         let id = op.id();
+        let mut status = validation::Status::new();
 
         let empty_assign_schema = AssignmentsSchema::default();
         let empty_valency_schema = ValencySchema::default();
@@ -53,16 +54,18 @@ impl Schema {
             redeem_schema,
             assign_schema,
             valency_schema,
-        ) = match (op.transition_type(), op.extension_type()) {
-            (None, None) => {
-                // Right now we do not have actions to implement; but later
-                // we may have embedded procedures which must be verified
-                // here
-                /*
-                if let Some(procedure) = self.genesis.abi.get(&GenesisAction::NoOp) {
-
+        ) = match (op, op.transition_type(), op.extension_type()) {
+            (OpRef::Genesis(genesis), None, None) => {
+                for id in genesis.asset_tags.keys() {
+                    if !matches!(self.owned_types.get(id), Some(StateSchema::Fungible(_))) {
+                        status.add_failure(Failure::AssetTagNoState(*id));
+                    }
                 }
-                 */
+                for id in self.owned_types.keys() {
+                    if !genesis.asset_tags.contains_key(id) {
+                        status.add_failure(Failure::FungibleStateNoTag(*id));
+                    }
+                }
 
                 (
                     &self.genesis.metadata,
@@ -73,7 +76,7 @@ impl Schema {
                     &self.genesis.valencies,
                 )
             }
-            (Some(transition_type), None) => {
+            (OpRef::Transition(_), Some(transition_type), None) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -102,7 +105,7 @@ impl Schema {
                     &transition_schema.valencies,
                 )
             }
-            (None, Some(extension_type)) => {
+            (OpRef::Extension(_), None, Some(extension_type)) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -132,8 +135,6 @@ impl Schema {
             }
             _ => unreachable!("Node can't be extension and state transition at the same time"),
         };
-
-        let mut status = validation::Status::new();
 
         // Validate type system
         status += self.validate_type_system();
