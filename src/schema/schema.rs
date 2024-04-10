@@ -24,6 +24,7 @@ use std::cmp::Ordering;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
+use aluvm::library::LibId;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
 use armor::StrictArmor;
@@ -226,6 +227,28 @@ impl Schema {
             schema.assignments.insert(*id, Occurrences::NoneOrMore).ok();
         }
         schema
+    }
+
+    pub fn types(&self) -> impl Iterator<Item = SemId> + '_ {
+        self.meta_types
+            .values()
+            .copied()
+            .chain(self.global_types.values().map(|i| i.sem_id))
+            .chain(
+                self.owned_types
+                    .values()
+                    .filter_map(OwnedStateSchema::sem_id),
+            )
+    }
+
+    pub fn libs(&self) -> impl Iterator<Item = LibId> + '_ {
+        self.genesis
+            .validator
+            .iter()
+            .copied()
+            .chain(self.transitions.values().filter_map(|i| i.validator))
+            .chain(self.extensions.values().filter_map(|i| i.validator))
+            .map(|site| site.lib)
     }
 }
 

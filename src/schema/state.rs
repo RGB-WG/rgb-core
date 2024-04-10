@@ -77,6 +77,14 @@ impl OwnedStateSchema {
             OwnedStateSchema::Attachment(_) => StateType::Attachment,
         }
     }
+
+    pub fn sem_id(&self) -> Option<SemId> {
+        if let Self::Structured(id) = self {
+            Some(*id)
+        } else {
+            None
+        }
+    }
 }
 
 /// Today we support only a single format of confidential data, because of the
