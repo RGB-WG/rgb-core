@@ -87,7 +87,7 @@ impl TransitionType {
 impl TransitionType {
     pub const BLANK: Self = TransitionType(u16::MAX);
     /// Easily check if the TransitionType is blank with convention method
-    pub fn is_empty(self) -> bool { self.0 == u16::MAX }
+    pub fn is_blank(self) -> bool { self == Self::BLANK }
 }
 
 /// Schema identifier.

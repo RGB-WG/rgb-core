@@ -90,7 +90,7 @@ impl Schema {
                  */
 
                 let transition_schema = match self.transitions.get(transition_type) {
-                    None if transition_type.is_empty() => &blank_transition,
+                    None if transition_type.is_blank() => &blank_transition,
                     None => {
                         return validation::Status::with_failure(
                             validation::Failure::SchemaUnknownTransitionType(id, *transition_type),
