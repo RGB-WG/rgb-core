@@ -3,7 +3,7 @@ Type: Library
 Kind: Free software
 License: Apache-2.0
 Language: Rust
-Compiler: 1.70
+Compiler: 1.75
 Author: Maxim Orlovsky
 Maintained: LNP/BP Standards Association, Switzerland
 Maintainers:
