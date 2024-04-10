@@ -26,12 +26,13 @@ use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
 use strict_types::SemId;
 
+use crate::contract::operations::{Extension, Transition};
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi, Failure, VirtualMachine};
 use crate::{
     validation, AssetTags, Assignments, AssignmentsRef, ContractId, ExposedSeal, GlobalState,
     GlobalStateSchema, GlobalValues, GraphSeal, Inputs, OpFullType, OpId, OpRef, Operation, Opout,
-    Schema, StateSchema, TransitionType, TypedAssigns, Valencies,
+    Schema, StateSchema, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -54,8 +55,8 @@ impl Schema {
             redeem_schema,
             assign_schema,
             valency_schema,
-        ) = match (op, op.transition_type(), op.extension_type()) {
-            (OpRef::Genesis(genesis), None, None) => {
+        ) = match op {
+            OpRef::Genesis(genesis) => {
                 for id in genesis.asset_tags.keys() {
                     if !matches!(self.owned_types.get(id), Some(StateSchema::Fungible(_))) {
                         status.add_failure(Failure::AssetTagNoState(*id));
@@ -76,7 +77,9 @@ impl Schema {
                     &self.genesis.valencies,
                 )
             }
-            (OpRef::Transition(_), Some(transition_type), None) => {
+            OpRef::Transition(Transition {
+                transition_type, ..
+            }) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -86,11 +89,11 @@ impl Schema {
                 }
                  */
 
-                let transition_schema = match self.transitions.get(&transition_type) {
-                    None if transition_type == TransitionType::BLANK => &blank_transition,
+                let transition_schema = match self.transitions.get(transition_type) {
+                    None if transition_type.is_empty() => &blank_transition,
                     None => {
                         return validation::Status::with_failure(
-                            validation::Failure::SchemaUnknownTransitionType(id, transition_type),
+                            validation::Failure::SchemaUnknownTransitionType(id, *transition_type),
                         );
                     }
                     Some(transition_schema) => transition_schema,
@@ -105,7 +108,7 @@ impl Schema {
                     &transition_schema.valencies,
                 )
             }
-            (OpRef::Extension(_), None, Some(extension_type)) => {
+            OpRef::Extension(Extension { extension_type, .. }) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -115,10 +118,10 @@ impl Schema {
                 }
                  */
 
-                let extension_schema = match self.extensions.get(&extension_type) {
+                let extension_schema = match self.extensions.get(extension_type) {
                     None => {
                         return validation::Status::with_failure(
-                            validation::Failure::SchemaUnknownExtensionType(id, extension_type),
+                            validation::Failure::SchemaUnknownExtensionType(id, *extension_type),
                         );
                     }
                     Some(extension_schema) => extension_schema,
@@ -133,7 +136,6 @@ impl Schema {
                     &extension_schema.redeems,
                 )
             }
-            _ => unreachable!("Node can't be extension and state transition at the same time"),
         };
 
         // Validate type system

@@ -28,7 +28,7 @@ mod state;
 mod anchor;
 pub mod seal;
 pub mod assignments;
-mod operations;
+pub(crate) mod operations;
 mod bundle;
 #[allow(clippy::module_inception)]
 mod contract;
