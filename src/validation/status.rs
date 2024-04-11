@@ -30,8 +30,8 @@ use strict_types::SemId;
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
-    Vin, XChain, XGraphSeal, XWitnessId,
+    AssignmentType, BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId,
+    SecretSeal, StateType, Vin, XChain, XGraphSeal, XWitnessId,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -281,6 +281,13 @@ pub enum Failure {
     /// transition bundle {0} doesn't commit to the input {1} in the witness {2}
     /// which is an input of the state transition {3}.
     BundleInvalidCommitment(BundleId, Vin, XWitnessId, OpId),
+
+    // Errors checking asset tags
+    /// asset type provided in genesis references unknown fungible state of type
+    /// {0}.
+    AssetTagNoState(AssignmentType),
+    /// fungible state {0} has no asset tag defined.
+    FungibleStateNoTag(AssignmentType),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the

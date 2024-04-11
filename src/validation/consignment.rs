@@ -25,8 +25,8 @@
 //! single-use-seal data.
 
 use crate::{
-    AnchorSet, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema,
-    SecretSeal, TransitionBundle, XChain, XWitnessId,
+    AnchorSet, BundleId, Genesis, OpId, OpRef, Operation, Schema, SecretSeal, TransitionBundle,
+    XChain, XWitnessId,
 };
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
@@ -37,10 +37,6 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
     fn schema(&self) -> &Schema { self.0.schema() }
-
-    fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter {
-        self.0.asset_tags()
-    }
 
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
@@ -77,9 +73,6 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 pub trait ConsignmentApi {
     /// Returns reference to the schema object used by the consignment.
     fn schema(&self) -> &Schema;
-
-    /// Asset tags uses in the confidential asset validation.
-    fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter;
 
     /// Retrieves reference to an operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise

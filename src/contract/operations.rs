@@ -36,11 +36,32 @@ use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
+    AltLayer1Set, AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
     ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
     GenesisSeal, GlobalState, GraphSeal, OpDisclose, OpId, Opout, SecretSeal, TypedAssigns,
     VoidState, XChain, LIB_NAME_RGB,
 };
+
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct AssetTags(TinyOrdMap<AssignmentType, AssetTag>);
+
+impl<'a> IntoIterator for &'a AssetTags {
+    type Item = (&'a AssignmentType, &'a AssetTag);
+    type IntoIter = btree_map::Iter<'a, AssignmentType, AssetTag>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
 
 #[derive(
     Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default, From
@@ -316,6 +337,7 @@ pub struct Genesis {
     pub timestamp: i64,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
+    pub asset_tags: AssetTags,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,

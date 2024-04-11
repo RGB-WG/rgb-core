@@ -246,6 +246,7 @@ pub struct BaseCommitment {
     pub testnet: bool,
     pub alt_layers1: StrictHash,
     pub issuer: StrictHash,
+    pub asset_tags: StrictHash,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -289,6 +290,7 @@ impl Genesis {
             testnet: self.testnet,
             alt_layers1: self.alt_layers1.commit_id(),
             issuer: self.issuer.commit_id(),
+            asset_tags: self.asset_tags.commit_id(),
         };
         OpCommitment {
             ffv: self.ffv,
