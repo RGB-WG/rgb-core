@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:6Yx8ib21pu6se8asaV7z9MQNUuemRZ8iQWhFZFBWcsDp#java-navy-xray
+  Id: urn:ubideco:stl:7oRjK3fd128oNpMWv1ajhBZq6EotU5Zn1sd3LNNADv4w#laptop-humor-film
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -28,14 +28,7 @@ import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-
   use Variant#textile-cowboy-dragon
   use UnionVariantsSemId#iceberg-road-crack
 
-import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
-  use MerkleHash#culture-metro-modular
-  use StrictHash#cheese-final-locate
-  use MerkleProof#labor-hilton-magenta
-  use ReservedBytes1#joker-lemon-mental
-  use ReservedBytes2#pocket-habitat-soviet
-
-import BPCore#C5EbVby4rry8esHwoPrGUfhe7yqJgoyA1DBcyuBRf2rZ#granite-target-table
+import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
   use TapretNodePartner#iceberg-poker-active
   use ExplicitSealTxid#antenna-darwin-emotion
   use TapretProof#forum-paint-tunnel
@@ -44,11 +37,15 @@ import BPCore#C5EbVby4rry8esHwoPrGUfhe7yqJgoyA1DBcyuBRf2rZ#granite-target-table
   use TapretRightBranch#basket-prelude-bridge
   use BlindSealTxPtr#austria-icon-waiter
   use OpretProof#segment-ambient-totem
-  use AnchorMerkleProofTapretProof#everest-laura-modem
   use SecretSeal#santana-domingo-needle
-  use AnchorMerkleProofOpretProof#cable-final-podium
   use BlindSealTxid#kimono-golf-price
   use TxPtr#strange-source-father
+
+import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
+  use MerkleHash#culture-metro-modular
+  use StrictHash#cheese-final-locate
+  use ReservedBytes1#joker-lemon-mental
+  use ReservedBytes2#pocket-habitat-soviet
 
 import AluVM#DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy
   use LibSite#mission-papa-mercy
@@ -79,13 +76,11 @@ data AltLayer1Set      : {AltLayer1 ^ ..0xff}
 @mnemonic(soviet-arsenal-complex)
 data AluScript         : libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite#mission-papa-mercy}
 
-@mnemonic(status-motel-economy)
-data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#everest-laura-modem
-                       | opret BPCore.AnchorMerkleProofOpretProof#cable-final-podium
-                       | dual (tapret BPCore.AnchorMerkleProofTapretProof#everest-laura-modem, opret BPCore.AnchorMerkleProofOpretProof#cable-final-podium)
-
 @mnemonic(buzzer-pattern-craft)
 data AssetTag          : [Byte ^ 32]
+
+@mnemonic(silicon-brush-horizon)
+data AssetTags         : {AssignmentType -> ^ ..0xff AssetTag}
 
 @mnemonic(robin-blitz-andrea)
 data AssignRevealedAttachBlindSealTxPtr : confidential (seal XChainSecretSeal
@@ -215,13 +210,14 @@ data AssignmentsBlindSealTxid : {AssignmentType -> ^ ..0xff TypedAssignsBlindSea
 @mnemonic(delta-member-agenda)
 data AttachId          : [Byte ^ 32]
 
-@mnemonic(magenta-forward-capitan)
+@mnemonic(nominal-decade-fiona)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1#joker-lemon-mental
                        , schemaId SchemaId
                        , timestamp I64
                        , testnet Std.Bool#laser-madam-maxwell
                        , altLayers1 CommitVerify.StrictHash#cheese-final-locate
                        , issuer CommitVerify.StrictHash#cheese-final-locate
+                       , assetTags CommitVerify.StrictHash#cheese-final-locate
 
 @mnemonic(agenda-ivory-blast)
 data BlindingFactor    : [Byte ^ 32]
@@ -252,6 +248,10 @@ data ContractState     : schema Schema, history ContractHistory
 
 @mnemonic(diana-archive-liquid)
 data DataState         : [Byte]
+
+@mnemonic(fidel-swim-chicago)
+data DbcProof          : tapret#1 BPCore.TapretProof#forum-paint-tunnel
+                       | opret BPCore.OpretProof#segment-ambient-totem
 
 @mnemonic(balance-sector-virus)
 data Extension         : ffv Ffv
@@ -285,13 +285,14 @@ data FungibleState     : bits64#8 U64
 data FungibleType      : unsigned64Bit#8
 
 
-@mnemonic(yoyo-bravo-orion)
+@mnemonic(ceramic-sound-maestro)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
                        , timestamp I64
                        , testnet Std.Bool#laser-madam-maxwell
                        , altLayers1 AltLayer1Set
+                       , assetTags AssetTags
                        , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
@@ -441,8 +442,10 @@ data Transition        : ffv Ffv
                        , witness CommitVerify.ReservedBytes1#joker-lemon-mental
                        , script CommitVerify.ReservedBytes1#joker-lemon-mental
 
-@mnemonic(museum-result-logic)
-data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
+@mnemonic(nancy-current-menu)
+data TransitionBundle  : closeMethod BPCore.Method#trilogy-tahiti-valid
+                       , inputMap InputMap
+                       , knownTransitions {OpId -> ^ 1.. Transition}
 
 @mnemonic(fiction-caramel-fractal)
 data TransitionSchema  : metadata StrictTypes.SemId#cargo-plasma-catalog

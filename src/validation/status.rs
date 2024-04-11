@@ -31,7 +31,7 @@ use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
     AssignmentType, BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId,
-    SecretSeal, StateType, Vin, XChain, XGraphSeal, XWitnessId,
+    SecretSeal, StateType, Vin, XChain, XGraphSeal, XOutputSeal, XWitnessId,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -306,15 +306,20 @@ pub enum Failure {
     SealNoWitnessTx(XWitnessId),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
-    /// seal {1:?} is defined on {0} which is not in the set of layers allowed
+    /// seal {1} is defined on {0} which is not in the set of layers allowed
     /// by the contract genesis.
     SealLayerMismatch(Layer1, XGraphSeal),
+    /// seal {1} has a different closing method from the bundle {0} requirement.
+    SealInvalidMethod(BundleId, XOutputSeal),
     /// transition bundle {0} doesn't close seal with the witness {1}. Details:
     /// {2}
     SealsInvalid(BundleId, XWitnessId, String),
     /// single-use seals for the operation {0} were not validated, which
     /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
+    /// anchor provides different type of DBC proof than required by the bundle
+    /// {0}.
+    AnchorMethodMismatch(BundleId),
     /// transition bundle {0} is not properly anchored to the witness {1}.
     /// Details: {2}
     MpcInvalid(BundleId, XWitnessId, InvalidProof),
@@ -385,9 +390,6 @@ pub enum Warning {
     TerminalSealAbsent(OpId, XChain<SecretSeal>),
     /// terminal witness transaction {0} is not yet mined.
     TerminalWitnessNotMined(Txid),
-    /// transition bundle {0} doesn't close all the seals defined for its
-    /// inputs.
-    UnclosedSeals(BundleId),
 
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
