@@ -20,7 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use aluvm::data::Number;
 use aluvm::reg::{Reg32, RegA};
@@ -30,12 +30,13 @@ use amplify::Wrapper;
 use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
-use crate::validation::{CheckedConsignment, ConsignmentApi};
+use crate::validation::{CheckedConsignment, ConsignmentApi, Failure};
 use crate::vm::RgbIsa;
 use crate::{
-    validation, AssetTag, AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal,
+    validation, AssetTags, Assignments, AssignmentsRef, ContractId, ExposedSeal, Extension,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata,
-    OpFullType, OpId, OpRef, Operation, Opout, Schema, TransitionType, TypedAssigns, Valencies,
+    OpFullType, OpId, OpRef, Operation, Opout, OwnedStateSchema, Schema, Transition, TypedAssigns,
+    Valencies,
 };
 
 impl Schema {
@@ -45,6 +46,7 @@ impl Schema {
         op: OpRef,
     ) -> validation::Status {
         let opid = op.id();
+        let mut status = validation::Status::new();
 
         let empty_assign_schema = AssignmentsSchema::default();
         let empty_valency_schema = ValencySchema::default();
@@ -58,16 +60,18 @@ impl Schema {
             valency_schema,
             validator,
             ty,
-        ) = match (op.transition_type(), op.extension_type()) {
-            (None, None) => {
-                // Right now we do not have actions to implement; but later
-                // we may have embedded procedures which must be verified
-                // here
-                /*
-                if let Some(procedure) = self.genesis.abi.get(&GenesisAction::NoOp) {
-
+        ) = match op {
+            OpRef::Genesis(genesis) => {
+                for id in genesis.asset_tags.keys() {
+                    if !matches!(self.owned_types.get(id), Some(OwnedStateSchema::Fungible(_))) {
+                        status.add_failure(Failure::AssetTagNoState(*id));
+                    }
                 }
-                 */
+                for id in self.owned_types.keys() {
+                    if !genesis.asset_tags.contains_key(id) {
+                        status.add_failure(Failure::FungibleStateNoTag(*id));
+                    }
+                }
 
                 (
                     &self.genesis.metadata,
@@ -80,7 +84,9 @@ impl Schema {
                     None::<u16>,
                 )
             }
-            (Some(transition_type), None) => {
+            OpRef::Transition(Transition {
+                transition_type, ..
+            }) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -90,11 +96,14 @@ impl Schema {
                 }
                  */
 
-                let transition_schema = match self.transitions.get(&transition_type) {
-                    None if transition_type == TransitionType::BLANK => &blank_transition,
+                let transition_schema = match self.transitions.get(transition_type) {
+                    None if transition_type.is_blank() => &blank_transition,
                     None => {
                         return validation::Status::with_failure(
-                            validation::Failure::SchemaUnknownTransitionType(opid, transition_type),
+                            validation::Failure::SchemaUnknownTransitionType(
+                                opid,
+                                *transition_type,
+                            ),
                         );
                     }
                     Some(transition_schema) => transition_schema,
@@ -111,7 +120,7 @@ impl Schema {
                     Some(transition_type.into_inner()),
                 )
             }
-            (None, Some(extension_type)) => {
+            OpRef::Extension(Extension { extension_type, .. }) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -121,10 +130,10 @@ impl Schema {
                 }
                  */
 
-                let extension_schema = match self.extensions.get(&extension_type) {
+                let extension_schema = match self.extensions.get(extension_type) {
                     None => {
                         return validation::Status::with_failure(
-                            validation::Failure::SchemaUnknownExtensionType(opid, extension_type),
+                            validation::Failure::SchemaUnknownExtensionType(opid, *extension_type),
                         );
                     }
                     Some(extension_schema) => extension_schema,
@@ -141,10 +150,7 @@ impl Schema {
                     Some(extension_type.into_inner()),
                 )
             }
-            _ => unreachable!("Node can't be extension and state transition at the same time"),
         };
-
-        let mut status = validation::Status::new();
 
         // Validate type system
         status += self.validate_type_system();
@@ -176,13 +182,14 @@ impl Schema {
 
         status += self.validate_valencies(opid, op.valencies(), valency_schema);
 
+        let genesis = consignment.genesis();
         let op_info = OpInfo::with(
-            consignment.genesis().contract_id(),
+            genesis.contract_id(),
             opid,
             &op,
             &prev_state,
             &redeemed,
-            consignment.asset_tags().collect(),
+            &genesis.asset_tags,
         );
 
         // We need to run scripts as the very last step, since before that
@@ -463,7 +470,7 @@ pub struct OpInfo<'op> {
     pub contract_id: ContractId,
     pub id: OpId,
     pub ty: OpFullType,
-    pub asset_tags: BTreeMap<AssignmentType, AssetTag>,
+    pub asset_tags: &'op AssetTags,
     pub metadata: &'op Metadata,
     pub prev_state: &'op Assignments<GraphSeal>,
     pub owned_state: AssignmentsRef<'op>,
@@ -479,7 +486,7 @@ impl<'op> OpInfo<'op> {
         op: &'op OpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
-        asset_tags: BTreeMap<AssignmentType, AssetTag>,
+        asset_tags: &'op AssetTags,
     ) -> Self {
         OpInfo {
             id,

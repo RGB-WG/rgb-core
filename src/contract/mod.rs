@@ -36,7 +36,7 @@ mod contract;
 mod xchain;
 mod commit;
 
-pub use anchor::{AnchorSet, Layer1, WitnessAnchor};
+pub use anchor::{DbcError, DbcProof, EAnchor, Layer1, WitnessAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
@@ -59,7 +59,8 @@ pub use fungible::{
 pub use global::{GlobalState, GlobalValues};
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    Extension, Genesis, Identity, Input, Inputs, OpRef, Operation, Redeemed, Transition, Valencies,
+    AssetTags, Extension, Genesis, Identity, Input, Inputs, OpRef, Operation, Redeemed, Transition,
+    Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessOrd, WitnessPos,

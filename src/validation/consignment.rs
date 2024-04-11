@@ -31,8 +31,8 @@ use amplify::confinement::Confined;
 use strict_types::TypeSystem;
 
 use crate::{
-    AnchorSet, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation, Schema,
-    SecretSeal, TransitionBundle, XChain, XWitnessId,
+    BundleId, EAnchor, Genesis, OpId, OpRef, Operation, Schema, SecretSeal, TransitionBundle,
+    XChain, XWitnessId,
 };
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
@@ -52,10 +52,6 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn scripts(&self) -> &Scripts { self.0.scripts() }
 
-    fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter {
-        self.0.asset_tags()
-    }
-
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
     }
@@ -74,8 +70,8 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
             .filter(|b| b.bundle_id() == bundle_id)
     }
 
-    fn anchors(&self, bundle_id: BundleId) -> Option<(XWitnessId, &AnchorSet)> {
-        self.0.anchors(bundle_id)
+    fn anchor(&self, bundle_id: BundleId) -> Option<(XWitnessId, &EAnchor)> {
+        self.0.anchor(bundle_id)
     }
 
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
@@ -98,9 +94,6 @@ pub trait ConsignmentApi {
     /// Returns reference to a collection of AluVM libraries used for the
     /// validation.
     fn scripts(&self) -> &Scripts;
-
-    /// Asset tags uses in the confidential asset validation.
-    fn asset_tags<'iter>(&self) -> impl Iterator<Item = (AssignmentType, AssetTag)> + 'iter;
 
     /// Retrieves reference to an operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
@@ -127,7 +120,7 @@ pub trait ConsignmentApi {
     fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
 
     /// Returns a grip given a bundle id.
-    fn anchors(&self, bundle_id: BundleId) -> Option<(XWitnessId, &AnchorSet)>;
+    fn anchor(&self, bundle_id: BundleId) -> Option<(XWitnessId, &EAnchor)>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;

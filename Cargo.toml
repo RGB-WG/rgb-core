@@ -10,7 +10,7 @@ categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
 license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.70.0" # Due to TOML dependency in amplify crate
+rust-version = "1.75.0"
 exclude = [".github"]
 
 [lib]
