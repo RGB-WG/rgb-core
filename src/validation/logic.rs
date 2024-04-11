@@ -26,7 +26,7 @@ use amplify::confinement::{Confined, SmallBlob};
 use amplify::Wrapper;
 use strict_types::SemId;
 
-use crate::contract::operations::{Extension, Transition};
+use crate::{Extension, Transition};
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi, Failure, VirtualMachine};
 use crate::{
