@@ -1,4 +1,4 @@
-name: Build
+name: Build Check
 
 on:
   push:
@@ -62,7 +62,7 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Build with all features
+      - name: Build check with all features
         uses: actions-rs/cargo@v1
         with:
           command: check
