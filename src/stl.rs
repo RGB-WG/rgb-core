@@ -35,7 +35,7 @@ use crate::{
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB: &str =
-    "urn:ubideco:stl:7oRjK3fd128oNpMWv1ajhBZq6EotU5Zn1sd3LNNADv4w#laptop-humor-film";
+    "urn:ubideco:stl:857acgFnhGJYCfmxgVBzb9RmmnXg4FWHfbCTXToTHrSF#parole-taboo-echo";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {

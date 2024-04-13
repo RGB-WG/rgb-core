@@ -1,9 +1,5 @@
 {-
-<<<<<<< HEAD
-  Id: urn:ubideco:stl:JBghvBPcaSHpzxugPepHsAYa6FgpjJhPLvgV9dvkBUDL#colony-betty-freddie
-=======
-  Id: urn:ubideco:stl:7oRjK3fd128oNpMWv1ajhBZq6EotU5Zn1sd3LNNADv4w#laptop-humor-film
->>>>>>> origin/v0.11
+  Id: urn:ubideco:stl:857acgFnhGJYCfmxgVBzb9RmmnXg4FWHfbCTXToTHrSF#parole-taboo-echo
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -15,10 +11,35 @@
 @context
 typelib RGB
 
-import StrictTypes#5teCJyjMWaxbQK8vdga2soWh2U7waERS3ev8KHShJcgv#trumpet-scratch-pelican
+import StrictTypes#ACBoDKVqDSuPrZLs2W2bLVj2TnpThzUMcJJrC3GhsQ79#idea-judo-benny
   use SemId#cargo-plasma-catalog
+  use TypeName#gray-bonanza-kilo
 
-import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
+import AluVM#APYERRUMyWqLadwTv8tEFifHMPGpL3xGFSBxwaKYpmcV#square-mammal-uncle
+  use LibSite#mission-papa-mercy
+  use LibId#rebel-factor-rodeo
+
+import Std#EcCNgrgLaygt3tCZNu2ZVEzMzSAZYEUeTNAVi5E81YWi#aspirin-mango-average
+  use Bool#laser-madam-maxwell
+  use AlphaCapsLodash#winter-vampire-energy
+
+import CommitVerify#GCWLX5TjFmMDCJr5cxWtwoSajBWDWbkQVSuTNbrtD1tg#egypt-wedding-cupid
+  use MerkleHash#culture-metro-modular
+  use StrictHash#cheese-final-locate
+  use ReservedBytes1#joker-lemon-mental
+  use ReservedBytes2#pocket-habitat-soviet
+
+import Bitcoin#HX2UBak8vPsTokug1DGMDvTpzns3xUdwZ7QJdyt4qBA9#speed-atlanta-trilogy
+  use Vout#chrome-robin-gallop
+  use ScriptBytes#maestro-source-jackson
+  use TapNodeHash#crash-culture-jamaica
+  use LeafScript#brenda-round-micro
+  use Txid#cowboy-diego-betty
+  use InternalPk#meter-nerve-chicken
+  use LeafVer#tunnel-lagoon-cowboy
+  use XOnlyPk#evident-finance-promo
+
+import BPCore#HhQGTxbqQpEbkdHmsBKbPxfgA6VNdDAGeg3gzd9CmF1m#taboo-gregory-solar
   use TapretNodePartner#iceberg-poker-active
   use ExplicitSealTxid#antenna-darwin-emotion
   use TapretProof#forum-paint-tunnel
@@ -31,29 +52,6 @@ import BPCore#6skrch4mJzDzVaTYnCgCxFJLw23SSUxNhK7PKgPdSapR#roof-parent-reunion
   use BlindSealTxid#kimono-golf-price
   use TxPtr#strange-source-father
 
-import CommitVerify#7EpM1uymEteG4g4xmF5ntKYX1wXXpbQj5iLiDreH4jWa#protein-donald-cool
-  use MerkleHash#culture-metro-modular
-  use StrictHash#cheese-final-locate
-  use ReservedBytes1#joker-lemon-mental
-  use ReservedBytes2#pocket-habitat-soviet
-
-import AluVM#DVtm25LRKU4TjbyZmVxPhvCmctZ6vKkPKqfpU2QsDNUo#exodus-axiom-tommy
-  use LibSite#mission-papa-mercy
-  use LibId#rebel-factor-rodeo
-
-import Std#DzTvt9gGhPUKD8Dkkjk9PDBhkJ4gtWxXWQjxnmUYLNrs#voyage-kimono-disco
-  use Bool#laser-madam-maxwell
-
-import Bitcoin#HX2UBak8vPsTokug1DGMDvTpzns3xUdwZ7QJdyt4qBA9#speed-atlanta-trilogy
-  use Vout#chrome-robin-gallop
-  use ScriptBytes#maestro-source-jackson
-  use TapNodeHash#crash-culture-jamaica
-  use LeafScript#brenda-round-micro
-  use Txid#cowboy-diego-betty
-  use InternalPk#meter-nerve-chicken
-  use LeafVer#tunnel-lagoon-cowboy
-  use XOnlyPk#evident-finance-promo
-
 
 @mnemonic(banana-mouse-plaster)
 data AltLayer1         : liquid#1
@@ -61,16 +59,6 @@ data AltLayer1         : liquid#1
 
 @mnemonic(salmon-taxi-ohio)
 data AltLayer1Set      : {AltLayer1 ^ ..0xff}
-
-<<<<<<< HEAD
-@mnemonic(status-motel-economy)
-data AnchorSet         : tapret#1 BPCore.AnchorMerkleProofTapretProof#everest-laura-modem
-                       | opret BPCore.AnchorMerkleProofOpretProof#cable-final-podium
-                       | dual (tapret BPCore.AnchorMerkleProofTapretProof#everest-laura-modem, opret BPCore.AnchorMerkleProofOpretProof#cable-final-podium)
-=======
-@mnemonic(soviet-arsenal-complex)
-data AluScript         : libs {AluVM.LibId -> ^ ..0xff [Byte]}, entryPoints {[Byte ^ 3] -> AluVM.LibSite#mission-papa-mercy}
->>>>>>> origin/v0.11
 
 @mnemonic(buzzer-pattern-craft)
 data AssetTag          : [Byte ^ 32]
@@ -245,15 +233,11 @@ data ContractState     : schema Schema, history ContractHistory
 @mnemonic(diana-archive-liquid)
 data DataState         : [Byte]
 
-<<<<<<< HEAD
-@mnemonic(mayor-archive-navy)
-=======
 @mnemonic(fidel-swim-chicago)
 data DbcProof          : tapret#1 BPCore.TapretProof#forum-paint-tunnel
                        | opret BPCore.OpretProof#segment-ambient-totem
 
-@mnemonic(balance-sector-virus)
->>>>>>> origin/v0.11
+@mnemonic(mayor-archive-navy)
 data Extension         : ffv Ffv
                        , contractId ContractId
                        , extensionType ExtensionType
@@ -286,11 +270,7 @@ data FungibleState     : bits64#8 U64
 data FungibleType      : unsigned64Bit#8
 
 
-<<<<<<< HEAD
-@mnemonic(photo-peru-rider)
-=======
-@mnemonic(ceramic-sound-maestro)
->>>>>>> origin/v0.11
+@mnemonic(example-twist-crimson)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
@@ -426,9 +406,10 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(pump-popular-sensor)
+@mnemonic(linear-avatar-salsa)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
+                       , name StrictTypes.TypeName#gray-bonanza-kilo
                        , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId#cargo-plasma-catalog}
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}
