@@ -602,7 +602,7 @@ mod test {
 
         assert_eq!(
             alu_id.to_string(),
-            "urn:ubideco:alu:Bitw9SnAnKhEyuwjjAgM1pLtnvQfQiE8y9NLPAxcXd64#miami-minute-next"
+            "urn:ubideco:alu:AXicg5WYSF3R36coefDodDX2owpSaZJgco7PHMj8qwiv#china-chant-triton"
         );
         assert_eq!(alu_lib.code.as_ref().to_hex(), "d0a00f");
         assert_eq!(
@@ -610,7 +610,7 @@ mod test {
                 .to_strict_serialized::<{ usize::MAX }>()
                 .unwrap()
                 .to_hex(),
-            "035247420300d0a00f000000"
+            "01035247420300d0a00f000000"
         );
         assert_eq!(alu_lib.disassemble::<RgbIsa>().unwrap(), code);
     }
