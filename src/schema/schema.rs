@@ -32,7 +32,9 @@ use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, ReservedBytes, Sha256,
 };
-use strict_encoding::{StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType};
+use strict_encoding::{
+    StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType, TypeName,
+};
 use strict_types::SemId;
 
 use super::{
@@ -161,8 +163,8 @@ impl SchemaId {
     pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
 }
 
-#[derive(Clone, Eq, Default, Debug)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
+#[derive(Clone, Eq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
@@ -173,6 +175,7 @@ pub struct Schema {
     pub ffv: Ffv,
     pub flags: ReservedBytes<1, 0>,
 
+    pub name: TypeName,
     pub meta_types: TinyOrdMap<MetaType, SemId>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
@@ -191,6 +194,7 @@ impl CommitEncode for Schema {
         e.commit_to_serialized(&self.ffv);
         e.commit_to_serialized(&self.flags);
 
+        e.commit_to_serialized(&self.name);
         e.commit_to_map(&self.meta_types);
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
