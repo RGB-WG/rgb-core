@@ -23,6 +23,7 @@
 use std::collections::BTreeSet;
 
 use aluvm::data::Number;
+use aluvm::isa::Instr;
 use aluvm::reg::{Reg32, RegA};
 use aluvm::Vm;
 use amplify::confinement::Confined;
@@ -197,7 +198,7 @@ impl Schema {
         // scripts are not required to validate the structure of the state
         if let Some(validator) = validator {
             let scripts = consignment.scripts();
-            let mut vm = Vm::<RgbIsa>::new();
+            let mut vm = Vm::<Instr<RgbIsa>>::new();
             if let Some(ty) = ty {
                 vm.registers.set_n(RegA::A16, Reg32::Reg0, ty);
             }

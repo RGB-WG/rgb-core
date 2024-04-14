@@ -586,6 +586,7 @@ impl Bytecode for ContractOp {
 
 #[cfg(test)]
 mod test {
+    use aluvm::isa::Instr;
     use aluvm::library::Lib;
     use amplify::hex::ToHex;
     use strict_encoding::StrictSerialize;
@@ -595,14 +596,15 @@ mod test {
 
     #[test]
     fn encoding() {
-        let code = [RgbIsa::Contract(ContractOp::PcVs(AssignmentType::from(4000)))];
+        let code =
+            [Instr::ExtensionCodes(RgbIsa::Contract(ContractOp::PcVs(AssignmentType::from(4000))))];
         let alu_lib = Lib::assemble(&code).unwrap();
         eprintln!("{alu_lib}");
         let alu_id = alu_lib.id();
 
         assert_eq!(
             alu_id.to_string(),
-            "urn:ubideco:alu:AXicg5WYSF3R36coefDodDX2owpSaZJgco7PHMj8qwiv#china-chant-triton"
+            "urn:ubideco:alu:EmVozGDJcSo417yx7R3CFfhBRDnY66w7sQ412VGFL6Zz#plaster-ferrari-dollar"
         );
         assert_eq!(alu_lib.code.as_ref().to_hex(), "d0a00f");
         assert_eq!(
@@ -610,8 +612,8 @@ mod test {
                 .to_strict_serialized::<{ usize::MAX }>()
                 .unwrap()
                 .to_hex(),
-            "01035247420300d0a00f000000"
+            "0303414c55084250444947455354035247420300d0a00f000000"
         );
-        assert_eq!(alu_lib.disassemble::<RgbIsa>().unwrap(), code);
+        assert_eq!(alu_lib.disassemble::<Instr<RgbIsa>>().unwrap(), code);
     }
 }
