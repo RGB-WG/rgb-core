@@ -23,16 +23,15 @@
 use std::cmp::Ordering;
 use std::collections::{btree_map, btree_set, BTreeMap};
 use std::iter;
-use std::str::FromStr;
 
-use amplify::confinement::{Confined, SmallBlob, SmallOrdSet, TinyOrdMap, TinyOrdSet};
-use amplify::hex::FromHex;
-use amplify::{hex, Wrapper};
+use amplify::confinement::{Confined, SmallOrdSet, TinyOrdMap, TinyOrdSet};
+use amplify::Wrapper;
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
     StrictHash,
 };
-use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
+use strict_encoding::stl::AsciiPrintable;
+use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
@@ -252,14 +251,17 @@ pub trait Operation {
     fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
+/// An ASCII printable string up to 4096 chars representing identity of the
+/// developer.
+///
 /// We deliberately do not define the internal structure of the identity such
 /// that it can be updated without changes to the consensus level.
 ///
 /// Contract or schema validity doesn't assume any checks on the identity; these
 /// checks must be performed at the application level.
-#[derive(Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default, From, Display)]
-#[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
-#[display(LowerHex)]
+#[derive(Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From, Display)]
+#[wrapper(Deref, FromStr)]
+#[display(inner)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
@@ -269,12 +271,14 @@ pub trait Operation {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Identity(SmallBlob);
+pub struct Identity(RString<AsciiPrintable, AsciiPrintable, 0, 4096>);
 
-impl FromStr for Identity {
-    type Err = hex::Error;
+impl Default for Identity {
+    fn default() -> Self { Self::from("") }
+}
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Identity::from_hex(s) }
+impl From<&'static str> for Identity {
+    fn from(s: &'static str) -> Self { Self(RString::from(s)) }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -668,6 +672,8 @@ impl<'op> Operation for OpRef<'op> {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use amplify::ByteArray;
     use baid58::ToBaid58;
 

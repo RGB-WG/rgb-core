@@ -118,5 +118,5 @@ Schema rec
         some rec LibSite option wrapped tag=1
           lib bytes len=32 aka=LibId
           pos is U16
-  developer bytes len=0..MAX16 aka=Identity
+  developer ascii len=0..4096 aka=Identity charset=AsciiPrintable
 
