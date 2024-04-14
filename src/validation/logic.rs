@@ -36,8 +36,8 @@ use crate::vm::RgbIsa;
 use crate::{
     validation, AssetTags, Assignments, AssignmentsRef, ContractId, ExposedSeal, Extension,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata,
-    OpFullType, OpId, OpRef, Operation, Opout, OwnedStateSchema, Schema, Transition, TypedAssigns,
-    Valencies,
+    OpFullType, OpId, OpRef, Operation, Opout, OwnedStateSchema, Schema, StateType, Transition,
+    TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -68,8 +68,10 @@ impl Schema {
                         status.add_failure(Failure::AssetTagNoState(*id));
                     }
                 }
-                for id in self.owned_types.keys() {
-                    if !genesis.asset_tags.contains_key(id) {
+                for (id, ss) in &self.owned_types {
+                    if ss.state_type() == StateType::Fungible &&
+                        !genesis.asset_tags.contains_key(id)
+                    {
                         status.add_failure(Failure::FungibleStateNoTag(*id));
                     }
                 }
