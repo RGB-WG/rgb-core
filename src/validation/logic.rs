@@ -209,6 +209,7 @@ impl Schema {
                 status.add_failure(validation::Failure::ScriptFailure(
                     opid,
                     error_code.map(u8::from),
+                    None,
                 ));
             }
         }
