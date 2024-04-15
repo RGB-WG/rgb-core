@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:36LPfKEfPcq357ua9BVuvYd7MvpF3EJEUsUPd3Rydbur#exhibit-berlin-chemist
+  Id: urn:ubideco:stl:EGAfKx8XqgxQV4spXziQHj1hXNuFckmgtn5df1YgrqGG#alfonso-journal-medusa
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -407,10 +407,11 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(linear-avatar-salsa)
+@mnemonic(crimson-rabbit-karma)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
                        , name StrictTypes.TypeName#gray-bonanza-kilo
+                       , timestamp I64
                        , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId#cargo-plasma-catalog}
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}

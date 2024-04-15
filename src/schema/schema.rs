@@ -176,6 +176,7 @@ pub struct Schema {
     pub flags: ReservedBytes<1, 0>,
 
     pub name: TypeName,
+    pub timestamp: i64,
     pub meta_types: TinyOrdMap<MetaType, SemId>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
