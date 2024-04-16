@@ -177,6 +177,8 @@ pub struct Schema {
 
     pub name: TypeName,
     pub timestamp: i64,
+    pub developer: Identity,
+
     pub meta_types: TinyOrdMap<MetaType, SemId>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
@@ -185,7 +187,7 @@ pub struct Schema {
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
-    pub developer: Identity,
+    pub reserved: ReservedBytes<8, 0>,
 }
 
 impl CommitEncode for Schema {
@@ -205,6 +207,8 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.transitions);
 
         e.commit_to_serialized(&self.developer);
+
+        e.commit_to_serialized(&self.reserved);
     }
 }
 

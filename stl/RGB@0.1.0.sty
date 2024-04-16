@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:EGAfKx8XqgxQV4spXziQHj1hXNuFckmgtn5df1YgrqGG#alfonso-journal-medusa
+  Id: urn:ubideco:stl:7kcfYU9L6bj6FdcZeBWgxLj5gPd6prrmbh7UwQdBEAq2#roof-plume-final
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -29,6 +29,7 @@ import CommitVerify#GCWLX5TjFmMDCJr5cxWtwoSajBWDWbkQVSuTNbrtD1tg#egypt-wedding-c
   use StrictHash#cheese-final-locate
   use ReservedBytes1#joker-lemon-mental
   use ReservedBytes2#pocket-habitat-soviet
+  use ReservedBytes8#helena-button-combat
 
 import Bitcoin#HX2UBak8vPsTokug1DGMDvTpzns3xUdwZ7QJdyt4qBA9#speed-atlanta-trilogy
   use Vout#chrome-robin-gallop
@@ -338,7 +339,7 @@ data Metadata          : {MetaType -> ^ ..0xff MetaValue}
 @mnemonic(unicorn-empire-mama)
 data Occurrences       : min U16, max U16
 
-@mnemonic(herbert-amadeus-college)
+@mnemonic(road-norway-oregano)
 data OpCommitment      : ffv Ffv
                        , opType TypeCommitment
                        , metadata CommitVerify.StrictHash#cheese-final-locate
@@ -348,7 +349,7 @@ data OpCommitment      : ffv Ffv
                        , redeemed CommitVerify.StrictHash#cheese-final-locate
                        , valencies CommitVerify.StrictHash#cheese-final-locate
                        , witness CommitVerify.MerkleHash#culture-metro-modular
-                       , script CommitVerify.StrictHash#cheese-final-locate
+                       , validator CommitVerify.StrictHash#cheese-final-locate
 
 @mnemonic(slow-samuel-ceramic)
 data OpId              : [Byte ^ 32]
@@ -407,11 +408,12 @@ data RevealedFungible  : value FungibleState
                        , blinding BlindingFactor
                        , tag AssetTag
 
-@mnemonic(crimson-rabbit-karma)
+@mnemonic(nerve-minimum-shampoo)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1#joker-lemon-mental
                        , name StrictTypes.TypeName#gray-bonanza-kilo
                        , timestamp I64
+                       , developer Identity
                        , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId#cargo-plasma-catalog}
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}
@@ -419,7 +421,7 @@ data Schema            : ffv Ffv
                        , genesis GenesisSchema
                        , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
                        , transitions {TransitionType -> ^ ..0xff TransitionSchema}
-                       , developer Identity
+                       , reserved CommitVerify.ReservedBytes8#helena-button-combat
 
 @mnemonic(garcia-smoke-ozone)
 data SchemaId          : [Byte ^ 32]

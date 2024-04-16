@@ -34,7 +34,7 @@ OpCommitment rec
   redeemed bytes len=32 aka=StrictHash
   valencies bytes len=32 aka=StrictHash
   witness bytes len=32 aka=MerkleHash
-  script bytes len=32 aka=StrictHash
+  validator bytes len=32 aka=StrictHash
 
 Transition rec
   ffv is U16 aka=Ffv
