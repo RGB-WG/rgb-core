@@ -38,9 +38,9 @@ use strict_encoding::StrictDumb;
 
 use crate::{
     Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
-    ConfidentialState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis,
-    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal,
-    Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    ConfidentialState, DataState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv,
+    Genesis, GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId,
+    SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -416,10 +416,10 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GlobalCommitment {
     pub ty: GlobalStateType,
-    pub state: ConcealedData,
+    pub state: DataState,
 }
 
 impl CommitEncode for GlobalCommitment {
@@ -441,7 +441,7 @@ impl MerkleLeaves for GlobalState {
             .flat_map(|(ty, list)| {
                 list.iter().map(|val| GlobalCommitment {
                     ty: *ty,
-                    state: val.conceal(),
+                    state: val.clone(),
                 })
             })
             .collect::<Vec<_>>()
