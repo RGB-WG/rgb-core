@@ -418,7 +418,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 for seal in seals.iter().filter(|seal| seal.method() != close_method) {
                     self.status
                         .borrow_mut()
-                        .add_failure(Failure::SealInvalidMethod(bundle_id, seal.clone()));
+                        .add_failure(Failure::SealInvalidMethod(bundle_id, *seal));
                 }
                 match (close_method, anchor.clone()) {
                     (
