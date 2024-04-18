@@ -164,15 +164,17 @@ impl<U: ExposedSeal> XChain<U> {
 
     pub fn try_to_output_seal(self, witness_id: XWitnessId) -> Result<XOutputSeal, Self>
     where U: TxoSeal {
-        match (self, witness_id) {
-            (XChain::Bitcoin(seal), XWitnessId::Bitcoin(txid)) => {
-                Ok(XChain::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
-            }
-            (XChain::Liquid(seal), XWitnessId::Liquid(txid)) => {
-                Ok(XChain::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
-            }
-            (me, _) => Err(me),
-        }
+        self.to_output_seal()
+            .or(match (self, witness_id) {
+                (XChain::Bitcoin(seal), XWitnessId::Bitcoin(txid)) => {
+                    Some(XChain::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
+                }
+                (XChain::Liquid(seal), XWitnessId::Liquid(txid)) => {
+                    Some(XChain::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
+                }
+                _ => None,
+            })
+            .ok_or(self)
     }
 }
 

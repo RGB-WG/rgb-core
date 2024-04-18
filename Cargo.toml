@@ -24,8 +24,8 @@ required-features = ["stl"]
 [dependencies]
 amplify = { version = "~4.6.0", features = ["rand"] }
 ascii-armor = "0.2.0"
-strict_encoding = "~2.7.0-beta.1"
-strict_types = { version = "~2.7.0-beta.2", features = ["armor"] }
+strict_encoding = "~2.7.0-beta.3"
+strict_types = { version = "~2.7.0-beta.3", features = ["armor"] }
 aluvm = { version = "~0.11.0-beta.5", features = ["std", "ascii-armor"] }
 commit_verify = { version = "~0.11.0-beta.5", features = ["rand", "derive"] }
 single_use_seals = "~0.11.0-beta.5"
@@ -63,7 +63,10 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.11" }
+single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.11" }
 bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
 bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11" }
+aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.11" }

@@ -26,7 +26,7 @@ use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
-use aluvm::library::{CodeEofError, LibSite, Read, Write};
+use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg, Reg16, Reg32, RegA, RegS};
 use amplify::num::{u3, u4};
 use amplify::Wrapper;
@@ -35,8 +35,8 @@ use commit_verify::CommitVerify;
 use super::opcodes::*;
 use crate::validation::OpInfo;
 use crate::{
-    Assign, AssignmentType, BlindingFactor, GlobalStateType, PedersenCommitment, RevealedValue,
-    TypedAssigns,
+    Assign, AssignmentType, BlindingFactor, GlobalStateType, MetaType, PedersenCommitment,
+    RevealedValue, TypedAssigns,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -111,12 +111,13 @@ pub enum ContractOp {
     #[display("ldc     {0},a32{1},{2}")]
     LdC(GlobalStateType, Reg16, RegS),
 
-    /// Loads operation metadata into a register provided in the third argument.
+    /// Loads operation metadata with a type id from the first argument into a
+    /// register provided in the second argument.
     ///
-    /// If the operation doesn't have metadata sets destination to `None`.
-    /// Does not modify content of `st0` register.
-    #[display("ldm     {0}")]
-    LdM(RegS),
+    /// If the operation doesn't have metadata fails and sets `st0` to fail
+    /// state.
+    #[display("ldm     {0},{1}")]
+    LdM(MetaType, RegS),
 
     /// Verify sum of pedersen commitments from inputs and outputs.
     ///
@@ -155,7 +156,7 @@ pub enum ContractOp {
 impl InstructionSet for ContractOp {
     type Context<'ctx> = OpInfo<'ctx>;
 
-    fn isa_ids() -> BTreeSet<&'static str> { none!() }
+    fn isa_ids() -> IsaSeg { IsaSeg::with("RGB") }
 
     fn src_regs(&self) -> BTreeSet<Reg> {
         match self {
@@ -168,8 +169,8 @@ impl InstructionSet for ContractOp {
             ContractOp::CnP(_, _) |
             ContractOp::CnS(_, _) |
             ContractOp::CnG(_, _) |
-            ContractOp::CnC(_, _) => bset![],
-            ContractOp::LdM(_) => bset![],
+            ContractOp::CnC(_, _) |
+            ContractOp::LdM(_, _) => bset![],
             ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => bset![],
             ContractOp::Fail(_) => bset![],
         }
@@ -190,13 +191,30 @@ impl InstructionSet for ContractOp {
             ContractOp::LdS(_, _, reg) |
             ContractOp::LdP(_, _, reg) |
             ContractOp::LdC(_, _, reg) |
-            ContractOp::LdM(reg) => {
+            ContractOp::LdM(_, reg) => {
                 bset![Reg::S(*reg)]
             }
             ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => {
                 bset![]
             }
             ContractOp::Fail(_) => bset![],
+        }
+    }
+
+    fn complexity(&self) -> u64 {
+        match self {
+            ContractOp::CnP(_, _) |
+            ContractOp::CnS(_, _) |
+            ContractOp::CnG(_, _) |
+            ContractOp::CnC(_, _) => 2,
+            ContractOp::LdP(_, _, _) |
+            ContractOp::LdS(_, _, _) |
+            ContractOp::LdF(_, _, _) |
+            ContractOp::LdG(_, _, _) |
+            ContractOp::LdC(_, _, _) => 8,
+            ContractOp::LdM(_, _) => 6,
+            ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => 1024,
+            ContractOp::Fail(_) => u64::MAX,
         }
     }
 
@@ -326,15 +344,18 @@ impl InstructionSet for ContractOp {
                 else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(state.value.as_inner()));
+                regs.set_s(*reg_s, Some(state.as_inner()));
             }
 
             ContractOp::LdC(_state_type, _reg_32, _reg_s) => {
                 // TODO: implement global contract state
                 fail!()
             }
-            ContractOp::LdM(reg) => {
-                regs.set_s(*reg, Some(context.metadata));
+            ContractOp::LdM(type_id, reg) => {
+                let Some(meta) = context.metadata.get(type_id) else {
+                    fail!()
+                };
+                regs.set_s(*reg, Some(meta.to_inner()));
             }
 
             ContractOp::PcVs(state_type) => {
@@ -356,11 +377,11 @@ impl InstructionSet for ContractOp {
                 if sum.len() != 1 {
                     fail!()
                 }
-                if sum[0].value.as_inner().len() != 8 {
+                if sum[0].as_inner().len() != 8 {
                     fail!()
                 }
                 let mut bytes = [0u8; 8];
-                bytes.copy_from_slice(sum[0].value.as_inner());
+                bytes.copy_from_slice(sum[0].as_inner());
                 let sum = u64::from_le_bytes(bytes);
 
                 let Some(tag) = context.asset_tags.get(owned_state) else {
@@ -399,8 +420,8 @@ impl Bytecode for ContractOp {
             ContractOp::LdP(_, _, _) |
             ContractOp::LdF(_, _, _) |
             ContractOp::LdC(_, _, _) |
-            ContractOp::LdG(_, _, _) => 4,
-            ContractOp::LdM(_) => 2,
+            ContractOp::LdG(_, _, _) |
+            ContractOp::LdM(_, _) => 4,
 
             ContractOp::PcVs(_) => 3,
             ContractOp::PcCs(_, _) => 5,
@@ -423,7 +444,7 @@ impl Bytecode for ContractOp {
             ContractOp::LdP(_, _, _) => INSTR_LDP,
             ContractOp::LdF(_, _, _) => INSTR_LDF,
             ContractOp::LdC(_, _, _) => INSTR_LDC,
-            ContractOp::LdM(_) => INSTR_LDM,
+            ContractOp::LdM(_, _) => INSTR_LDM,
 
             ContractOp::PcVs(_) => INSTR_PCVS,
             ContractOp::PcCs(_, _) => INSTR_PCCS,
@@ -480,7 +501,8 @@ impl Bytecode for ContractOp {
                 writer.write_u4(reg_a)?;
                 writer.write_u4(reg_s)?;
             }
-            ContractOp::LdM(reg) => {
+            ContractOp::LdM(state_type, reg) => {
+                writer.write_u16(*state_type)?;
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
@@ -549,7 +571,7 @@ impl Bytecode for ContractOp {
                 reader.read_u4()?.into(),
             ),
             INSTR_LDM => {
-                let i = Self::LdM(reader.read_u4()?.into());
+                let i = Self::LdM(reader.read_u16()?.into(), reader.read_u4()?.into());
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
@@ -564,25 +586,34 @@ impl Bytecode for ContractOp {
 
 #[cfg(test)]
 mod test {
-    use aluvm::data::encoding::Encode;
+    use aluvm::isa::Instr;
     use aluvm::library::Lib;
     use amplify::hex::ToHex;
+    use strict_encoding::StrictSerialize;
 
     use super::*;
     use crate::vm::RgbIsa;
 
     #[test]
     fn encoding() {
-        let code = [RgbIsa::Contract(ContractOp::PcVs(AssignmentType::from(4000)))];
+        let code =
+            [Instr::ExtensionCodes(RgbIsa::Contract(ContractOp::PcVs(AssignmentType::from(4000))))];
         let alu_lib = Lib::assemble(&code).unwrap();
+        eprintln!("{alu_lib}");
         let alu_id = alu_lib.id();
 
         assert_eq!(
             alu_id.to_string(),
-            "urn:ubideco:alu:AXicg5WYSF3R36coefDodDX2owpSaZJgco7PHMj8qwiv#china-chant-triton"
+            "urn:ubideco:alu:EmVozGDJcSo417yx7R3CFfhBRDnY66w7sQ412VGFL6Zz#plaster-ferrari-dollar"
         );
         assert_eq!(alu_lib.code.as_ref().to_hex(), "d0a00f");
-        assert_eq!(alu_lib.serialize().to_hex(), "035247420300d0a00f000000");
-        assert_eq!(alu_lib.disassemble::<RgbIsa>().unwrap(), code);
+        assert_eq!(
+            alu_lib
+                .to_strict_serialized::<{ usize::MAX }>()
+                .unwrap()
+                .to_hex(),
+            "0303414c55084250444947455354035247420300d0a00f000000"
+        );
+        assert_eq!(alu_lib.disassemble::<Instr<RgbIsa>>().unwrap(), code);
     }
 }

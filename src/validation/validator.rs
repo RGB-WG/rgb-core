@@ -30,12 +30,11 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::{CheckedConsignment, ConsignmentApi, Status, Validity, VirtualMachine};
-use crate::vm::AluRuntime;
+use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
 use crate::{
     AltLayer1, BundleId, ContractId, DbcProof, EAnchor, Layer1, OpId, OpRef, OpType, Operation,
-    Opout, Schema, SchemaId, Script, TransitionBundle, TypedAssigns, XChain, XOutpoint,
-    XOutputSeal, XWitnessId, XWitnessTx,
+    Opout, Schema, SchemaId, TransitionBundle, TypedAssigns, XChain, XOutpoint, XOutputSeal,
+    XWitnessId, XWitnessTx,
 };
 
 #[derive(Clone, Debug, Display, Error, From)]
@@ -68,7 +67,6 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitne
     validated_op_seals: RefCell<BTreeSet<OpId>>,
     validated_op_state: RefCell<BTreeSet<OpId>>,
 
-    vm: Box<dyn VirtualMachine + 'consignment>,
     resolver: &'resolver R,
 }
 
@@ -79,11 +77,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // We use validation status object to store all detected failures and
         // warnings
         let mut status = Status::default();
-        let vm = match consignment.schema().script {
-            Script::AluVM(ref lib) => {
-                Box::new(AluRuntime::new(lib)) as Box<dyn VirtualMachine + 'consignment>
-            }
-        };
         let consignment = CheckedConsignment::new(consignment);
 
         // Frequently used computation-heavy data
@@ -134,7 +127,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             layers1,
             validated_op_state,
             validated_op_seals,
-            vm,
             resolver,
         }
     }
@@ -181,7 +173,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     }
 
     // *** PART I: Schema validation
-    fn validate_schema(&mut self, schema: &Schema) { *self.status.borrow_mut() += schema.verify(); }
+    fn validate_schema(&mut self, schema: &Schema) {
+        *self.status.borrow_mut() += schema.verify(self.consignment.types());
+    }
 
     // *** PART II: Validating business logic
     fn validate_logic(&self) {
@@ -203,11 +197,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         }
 
         // [VALIDATION]: Validate genesis
-        *self.status.borrow_mut() += schema.validate_state(
-            &self.consignment,
-            OpRef::Genesis(self.consignment.genesis()),
-            self.vm.as_ref(),
-        );
+        *self.status.borrow_mut() +=
+            schema.validate_state(&self.consignment, OpRef::Genesis(self.consignment.genesis()));
         self.validated_op_state.borrow_mut().insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over each endpoint, reconstructing operation
@@ -264,8 +255,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             }
             // [VALIDATION]: Verify operation against the schema and scripts
             if self.validated_op_state.borrow_mut().insert(opid) {
-                *self.status.borrow_mut() +=
-                    schema.validate_state(&self.consignment, operation, self.vm.as_ref());
+                *self.status.borrow_mut() += schema.validate_state(&self.consignment, operation);
             }
 
             match operation {

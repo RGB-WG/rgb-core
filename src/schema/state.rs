@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use commit_verify::ReservedBytes;
 use strict_encoding::Primitive;
 use strict_types::SemId;
 
@@ -58,21 +59,30 @@ impl MediaType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum StateSchema {
+pub enum OwnedStateSchema {
     #[strict_type(dumb)]
     Declarative,
     Fungible(FungibleType),
     Structured(SemId),
     Attachment(MediaType),
+    // TODO: Computed state (RCP240327A) will be added here
 }
 
-impl StateSchema {
+impl OwnedStateSchema {
     pub fn state_type(&self) -> StateType {
         match self {
-            StateSchema::Declarative => StateType::Void,
-            StateSchema::Fungible(_) => StateType::Fungible,
-            StateSchema::Structured(_) => StateType::Structured,
-            StateSchema::Attachment(_) => StateType::Attachment,
+            OwnedStateSchema::Declarative => StateType::Void,
+            OwnedStateSchema::Fungible(_) => StateType::Fungible,
+            OwnedStateSchema::Structured(_) => StateType::Structured,
+            OwnedStateSchema::Attachment(_) => StateType::Attachment,
+        }
+    }
+
+    pub fn sem_id(&self) -> Option<SemId> {
+        if let Self::Structured(id) = self {
+            Some(*id)
+        } else {
+            None
         }
     }
 }
@@ -108,6 +118,9 @@ pub enum FungibleType {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalStateSchema {
+    // TODO: Reserved for computed state (RCP240327A): will be used as an enum tag with computed
+    //       state having value 1.
+    pub reserved: ReservedBytes<1>,
     pub sem_id: SemId,
     pub max_items: u16,
 }
@@ -115,6 +128,7 @@ pub struct GlobalStateSchema {
 impl GlobalStateSchema {
     pub fn once(sem_id: SemId) -> Self {
         GlobalStateSchema {
+            reserved: default!(),
             sem_id,
             max_items: 1,
         }
@@ -122,6 +136,7 @@ impl GlobalStateSchema {
 
     pub fn many(sem_id: SemId) -> Self {
         GlobalStateSchema {
+            reserved: default!(),
             sem_id,
             max_items: u16::MAX,
         }
