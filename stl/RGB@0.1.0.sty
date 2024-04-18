@@ -1,5 +1,5 @@
 {-
-  Id: urn:ubideco:stl:36LPfKEfPcq357ua9BVuvYd7MvpF3EJEUsUPd3Rydbur#exhibit-berlin-chemist
+  Id: urn:ubideco:stl:AqsDwRyBmsT4WJEpyFpvjoJtEcCzc81YTNNmnWEaiZAc#finland-bonus-gondola
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -216,10 +216,10 @@ data ConcealedData     : [Byte ^ 32]
 @mnemonic(small-melody-empty)
 data ConcealedFungible : commitment PedersenCommitment, rangeProof PedersenCommitment
 
-@mnemonic(color-candid-polite)
+@mnemonic(oliver-viking-bison)
 data ContractHistory   : schemaId SchemaId
                        , contractId ContractId
-                       , global {GlobalStateType -> ^ ..0xff {GlobalOrd -> ^ ..0xffffffff RevealedData}}
+                       , global {GlobalStateType -> ^ ..0xff {GlobalOrd -> ^ ..0xffffffff DataState}}
                        , rights {OutputAssignmentVoidState ^ ..0xffffffff}
                        , fungibles {OutputAssignmentRevealedValue ^ ..0xffffffff}
                        , data {OutputAssignmentRevealedData ^ ..0xffffffff}
@@ -307,8 +307,8 @@ data GlobalStateSchema : reserved CommitVerify.ReservedBytes1#joker-lemon-mental
 @mnemonic(seminar-major-tape)
 data GlobalStateType   : U16
 
-@mnemonic(bicycle-europe-shampoo)
-data GlobalValues      : [RevealedData ^ 1..]
+@mnemonic(burger-arrow-slogan)
+data GlobalValues      : [DataState ^ 1..]
 
 @mnemonic(stock-teacher-falcon)
 data Identity          : [Std.AsciiPrintable#prize-solar-driver ^ ..0x1000]

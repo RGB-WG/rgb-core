@@ -320,7 +320,7 @@ impl Schema {
             // Validating data types
             for data in set {
                 if types
-                    .strict_deserialize_type(*sem_id, data.value.as_ref())
+                    .strict_deserialize_type(*sem_id, data.as_ref())
                     .is_err()
                 {
                     status.add_failure(validation::Failure::SchemaInvalidGlobalValue(

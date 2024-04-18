@@ -301,7 +301,7 @@ pub struct ContractHistory {
     #[getter(as_copy)]
     contract_id: ContractId,
     #[getter(skip)]
-    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, RevealedData>>,
+    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, DataState>>,
     rights: LargeOrdSet<OutputAssignment<VoidState>>,
     fungibles: LargeOrdSet<OutputAssignment<RevealedValue>>,
     data: LargeOrdSet<OutputAssignment<RevealedData>>,
@@ -496,7 +496,7 @@ impl ContractState {
     /// # Safety
     ///
     /// If the specified state type is not part of the schema.
-    pub unsafe fn global_unchecked(&self, state_type: GlobalStateType) -> SmallVec<&RevealedData> {
+    pub unsafe fn global_unchecked(&self, state_type: GlobalStateType) -> SmallVec<&DataState> {
         let schema = self
             .schema
             .global_types

@@ -344,7 +344,7 @@ impl InstructionSet for ContractOp {
                 else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(state.value.as_inner()));
+                regs.set_s(*reg_s, Some(state.as_inner()));
             }
 
             ContractOp::LdC(_state_type, _reg_32, _reg_s) => {
@@ -377,11 +377,11 @@ impl InstructionSet for ContractOp {
                 if sum.len() != 1 {
                     fail!()
                 }
-                if sum[0].value.as_inner().len() != 8 {
+                if sum[0].as_inner().len() != 8 {
                     fail!()
                 }
                 let mut bytes = [0u8; 8];
-                bytes.copy_from_slice(sum[0].value.as_inner());
+                bytes.copy_from_slice(sum[0].as_inner());
                 let sum = u64::from_le_bytes(bytes);
 
                 let Some(tag) = context.asset_tags.get(owned_state) else {
